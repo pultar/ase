@@ -171,7 +171,6 @@ News
 * A beta version of the new ASE-3.0 will be used for the
   electronic structure course at CAMd_.  (10 Jan 2008)
 
-
 .. _Sphinx: http://sphinx.pocoo.org
 .. _Asap: http://wiki.fysik.dtu.dk/asap
 .. _CAMd: http://www.camd.dtu.dk
