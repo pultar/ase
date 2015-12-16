@@ -133,7 +133,34 @@ def read_gpaw_out(fileobj, index):
                     return string
                 eFermi = [float(strip(fields[2])),
                           float(strip(fields[3]))]
-        # read Eigenvalues and occupations
+
+        def read_eigenvalues(kpts, ii, gamma=True):
+            ii += 1
+            words = lines[ii].split()
+            vals = []
+            while(len(words) > 2):
+                vals.append([float(w) for w in words])
+                ii += 1
+                words = lines[ii].split()
+            vals = np.array(vals).transpose()
+            k = 0
+            ik = 0
+            if not gamma:
+                ik = 1
+                k = int(vals[0][0])
+            kpts.append(SinglePointKPoint(1, 0, k))
+            kpts[-1].i_n = vals[0 + ik].astype(int)
+            kpts[-1].eps_n = vals[1 + ik]
+            kpts[-1].f_n = vals[2 + ik]
+            if vals.shape[0] > (3 + ik):
+                kpts.append(SinglePointKPoint(1, 1, k))
+                kpts[-1].i_n = vals[0 + ik].astype(int)
+                kpts[-1].eps_n = vals[3 + ik]
+                kpts[-1].f_n = vals[4 + ik]
+            return ii
+ 
+        # read Eigenvalues and occupations - single k-point
+        kpts = None
         ii1 = ii2 = 1e32
         try:
             ii1 = index_startswith(lines, ' Band   Eigenvalues  Occupancy')
@@ -144,24 +171,23 @@ def read_gpaw_out(fileobj, index):
         except ValueError:
             pass
         ii = min(ii1, ii2)
-        if ii == 1e32:
-            kpts = None
+        if ii != 1e32:
+            kpts = []
+            ii = read_eigenvalues(kpts, ii)
         else:
-            ii += 1
-            words = lines[ii].split()
-            vals = []
-            while(len(words) > 2):
-                vals.append([float(w) for w in words])
-                ii += 1
-                words = lines[ii].split()
-            vals = np.array(vals).transpose()
-            kpts = [SinglePointKPoint(1, 0, 0)]
-            kpts[0].eps_n = vals[1]
-            kpts[0].f_n = vals[2]
-            if vals.shape[0] > 3:
-                kpts.append(SinglePointKPoint(1, 1, 0))
-                kpts[1].eps_n = vals[3]
-                kpts[1].f_n = vals[4]
+            # read Eigenvalues and occupations - multiple k-points
+            try:
+                ii = index_startswith(lines, 
+                                      ' Kpt  Band  Eigenvalues  Occupancy')
+                if ii != 1e32:
+                    kpts = []
+                    while True:
+                        try:
+                            ii = read_eigenvalues(kpts, ii, gamma=False)
+                        except IndexError:
+                            break
+            except ValueError:
+                pass
         # read charge
         try:
             ii = index_startswith(lines, 'Total Charge:')

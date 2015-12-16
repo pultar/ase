@@ -54,10 +54,11 @@ class SinglePointCalculator(Calculator):
 
     
 class SinglePointKPoint:
-    def __init__(self, weight, s, k, eps_n=[], f_n=[]):
+    def __init__(self, weight, s, k, i_n=[], eps_n=[], f_n=[]):
         self.weight = weight
         self.s = s  # spin index
         self.k = k  # k-point index
+        self.i_n = i_n
         self.eps_n = eps_n
         self.f_n = f_n
 
