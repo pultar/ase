@@ -213,14 +213,14 @@ class SQLite3Database(Database):
                   row.ctime,
                   mtime,
                   row.user,
-                  blob(row.numbers),
+                  blob(row.numbers, np.int32),
                   blob(row.positions),
                   blob(row.cell),
                   int(np.dot(row.pbc, [1, 2, 4])),
                   blob(row.get('initial_magmoms')),
                   blob(row.get('initial_charges')),
                   blob(row.get('masses')),
-                  blob(row.get('tags')),
+                  blob(row.get('tags'), np.int32),
                   blob(row.get('momenta')),
                   constraints)
 
@@ -577,13 +577,12 @@ class SQLite3Database(Database):
                             ((id,) for id in ids))
 
 
-def blob(array):
+def blob(array, dtype=float):
     """Convert array to blob/buffer object."""
 
     if array is None:
         return None
-    if array.dtype == np.int64:
-        array = array.astype(np.int32)
+    array = array.astype(dtype)
     return buffer(np.ascontiguousarray(array))
 
 
