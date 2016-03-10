@@ -67,7 +67,7 @@ class Atoms(object):
         Unit cell vectors.  Can also be given as just three
         numbers for orthorhombic cells.  Default value: [1, 1, 1].
     cell_vectors_and_angles:
-        6 numbers containing 3 lengths of unit cell vectors and 
+        6 numbers containing 3 lengths of unit cell vectors and
         3 angles between them, in following order:
         [len(a), len(b), len(c), angle(a,b), angle(a,c), angle(b,c)]
         Can not be set at the same time as cell.
@@ -206,9 +206,9 @@ class Atoms(object):
                 cell = np.eye(3)
             else:
                 self.set_cell_length_and_angles(cell_lengths_and_angles)
-        else:        
+        else:
             if cell_lengths_and_angles in nit None:
-                raise RuntimeError('Both cell parameters and 
+                raise RuntimeError('Both cell parameters and
                                     cell lengths and angles set!')
         self.set_cell(cell)
 
@@ -364,8 +364,8 @@ class Atoms(object):
         >>> a.set_cell_length_and_angles([a, a, a, alpha, alpha, alpha])
         """
 
-        a, b, c, alpha, beta, gamma = lengths_and_angles
-        cell = zeros((3,3))
+        a, b, c, alpha, beta, gamma = abs(lengths_and_angles)
+        cell = zeros((3, 3))
         
         cell[0][0] = a
         cell[1][0] = b*cos(alpha)
@@ -384,9 +384,9 @@ class Atoms(object):
         a = np.linalg.norm(self._cell[0])
         b = np.linalg.norm(self._cell[1])
         c = np.linalg.norm(self._cell[2])
-        alpha = abs(np.arccos(np.vdot(self._cell[0],self._cell[1])/a/b))
-        beta  = abs(np.arccos(np.vdot(self._cell[0],self._cell[2])/a/c))
-        gamma = abs(np.arccos(np.vdot(self._cell[1],self._cell[2])/b/c))
+        alpha = abs(np.arccos(np.vdot(self._cell[0], self._cell[1])/a/b))
+        beta  = abs(np.arccos(np.vdot(self._cell[0], self._cell[2])/a/c))
+        gamma = abs(np.arccos(np.vdot(self._cell[1], self._cell[2])/b/c))
         return np.array([a, b, c, alpha, beta, gamma])
 
     def get_reciprocal_cell(self):
