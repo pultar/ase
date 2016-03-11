@@ -159,7 +159,7 @@ class NEB:
         allenergiesknown = True
         try:
             allenergies[0] = images[0].get_potential_energy()
-        except AttributeError:
+        except RuntimeError:
             allenergies[0] = np.NaN
             allenergiesknown = False
         for i in range(1, self.nimages - 1):
@@ -167,7 +167,7 @@ class NEB:
         try:
             allenergies[self.nimages - 1] = \
                 images[self.nimages - 1].get_potential_energy()
-        except AttributeError:
+        except RuntimeError:
             allenergies[self.nimages - 1] = np.NaN
             allenergiesknown = False
 
