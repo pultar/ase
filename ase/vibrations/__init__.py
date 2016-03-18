@@ -4,7 +4,7 @@ from __future__ import division
 
 import pickle
 from math import sin, pi, sqrt, log
-from os import remove
+from os import remove, stat
 from os.path import isfile, getsize
 import sys
 
@@ -133,7 +133,10 @@ class Vibrations:
                             rank == 0):
                             remove(filename)
                         fd = opencew(filename)
-                        if fd is not None:
+                        # Make a calculation if file does not exist
+                        # or file is empty
+                        statinfo = stat(filename)
+                        if (fd is not None) or (statinfo.st_size == 0):
                             disp = ndis * sign * self.delta
                             self.atoms.positions[a, i] = p[a, i] + disp
                             self.calculate(filename, fd)
