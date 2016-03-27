@@ -501,8 +501,8 @@ class Atoms(object):
 
     def set_momenta(self, momenta, apply_constraint=True):
         """Set momenta."""
-        if (apply_constraint and len(self.constraints) > 0 and
-            momenta is not None):
+        if (apply_constraint and len(self.constraints) > 0
+           and momenta is not None):
             momenta = np.array(momenta)  # modify a copy
             for constraint in self.constraints:
                 if hasattr(constraint, 'adjust_momenta'):
@@ -682,14 +682,14 @@ class Atoms(object):
         Ask the attached calculator to calculate the forces and apply
         constraints.  Use *apply_constraint=False* to get the raw
         forces.
-        
+
         For molecular dynamics (md=True) we don't apply the constraint
         to the forces but to the momenta."""
 
         if self._calc is None:
             raise RuntimeError('Atoms object has no calculator.')
         forces = self._calc.get_forces(self)
-        
+
         if apply_constraint:
             # We need a special md flag here because for MD we want
             # to skip real constraints but include special "constraints"
@@ -767,15 +767,17 @@ class Atoms(object):
         return len(self.arrays['positions'])
 
     def get_number_of_atoms(self):
-        """Returns the global number of atoms in a distributed-atoms parallel simulation.
+        """Returns the global number of atoms in a distributed-atoms
+        parallel simulation.
 
         DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING!
-        
-        Equivalent to len(atoms) in the standard ASE Atoms class.  You should normally
-        use len(atoms) instead.  This function's only purpose is to make compatibility
-        between ASE and Asap easier to maintain by having a few places in ASE use this
-        function instead.  It is typically only when counting the global number of
-        degrees of freedom or in similar situations.
+
+        Equivalent to len(atoms) in the standard ASE Atoms class.
+        You should normally use len(atoms) instead.  This function's
+        only purpose is to make compatibility between ASE and Asap
+        easier to maintain by having a few places in ASE use this
+        function instead.  It is typically only when counting the
+        global number of degrees of freedom or in similar situations.
         """
         return len(self)
 
@@ -1499,7 +1501,7 @@ class Atoms(object):
         self.positions[:] = wrap_positions(self.positions, self.cell,
                                            pbc, center, eps)
 
-    def stack(self, other, distance, axis=2, scale_cell=True, 
+    def stack(self, other, distance, axis=2, scale_cell=True,
               maintain_vacuum=True):
         """Stack another atoms object on top of the current atoms
         object.  The stacking is based on the min/max position
@@ -1521,20 +1523,20 @@ class Atoms(object):
             object on the non-stacking axis before stacking?
         maintain_vacuum: bool
             Should vacuum be added to maintain the current empty
-            vacuum space? 
+            vacuum space?
 
         Note: The cell vector for the given axis of the cell should be
         directly aligned with the axis, if this is not true, you may
         get strange results.
         """
 
-        other = other.copy() 
+        other = other.copy()
         self = self.copy()
 
-        # Critical positions along the axis 
+        # Critical positions along the axis
         # [self min, self max, other min, other max]
-        cps = [self.positions[:,axis].min(), self.positions[:,axis].max(),
-               other.positions[:,axis].min(), other.positions[:,axis].max()]
+        cps = [self.positions[:, axis].min(), self.positions[:, axis].max(),
+               other.positions[:, axis].min(), other.positions[:, axis].max()]
         if maintain_vacuum:
             self._cell[axis][axis] += distance + cps[3] - cps[2]
         if scale_cell:
