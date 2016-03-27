@@ -11,7 +11,7 @@ sub = root_surface(sub, 3)
 film = root_surface(film, 4)
 
 interface = sub.stack(film, 3)
-interface.edit()
+# interface.edit()
 
 assert(len(interface) == len(sub) + len(film))
 assert(interface[0].position[2] < interface[-1].position[2])
