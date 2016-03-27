@@ -1499,6 +1499,31 @@ class Atoms(object):
         self.positions[:] = wrap_positions(self.positions, self.cell,
                                            pbc, center, eps)
 
+    def stack(self, other, distance, axis=2, scale_cell=True, 
+              maintain_vacuum=True):
+        """Stack another atoms object on top of the current atoms
+        object.
+
+        Parameters:
+
+        other: ase.atoms
+            The other atoms object that is to be stacked with
+            this one.
+        distance: float
+            The distance between the two atoms objects (from the
+            atomic centers, not radii)
+        axis: 0, 1, 2
+            The axis to stack on, defaults to the z axis (2).
+        scale_cell: bool
+            Should the *other* atoms object be scaled to this
+            object on the non-stacking axis before stacking?
+        maintain_vacuum: bool
+            Should vacuum be added to maintain the current empty
+            vacuum space? 
+        """
+
+
+
     def get_temperature(self):
         """Get the temperature in Kelvin."""
         ekin = self.get_kinetic_energy() / len(self)
