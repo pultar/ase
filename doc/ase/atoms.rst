@@ -305,6 +305,7 @@ Other methods
 
 * :meth:`~Atoms.center`
 * :meth:`~Atoms.wrap`
+* :meth:`~Atoms.stack`
 * :meth:`~Atoms.translate`
 * :meth:`~Atoms.rotate`
 * :meth:`~Atoms.rotate_euler`
@@ -322,7 +323,6 @@ Other methods
 * :meth:`~Atoms.get_volume`
 * :meth:`~Atoms.has`
 * :meth:`~Atoms.edit`
-
 
 
 List of all Methods
