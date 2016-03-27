@@ -1502,7 +1502,8 @@ class Atoms(object):
     def stack(self, other, distance, axis=2, scale_cell=True, 
               maintain_vacuum=True):
         """Stack another atoms object on top of the current atoms
-        object.
+        object.  The stacking is based on the min/max position
+        along the given axis of both atoms objects.
 
         Parameters:
 
@@ -1512,17 +1513,40 @@ class Atoms(object):
         distance: float
             The distance between the two atoms objects (from the
             atomic centers, not radii)
-        axis: 0, 1, 2
-            The axis to stack on, defaults to the z axis (2).
+        axis: +/- 0, 1, 2
+            The axis to stack on, defaults to the z axis (2). The
+            sign can be flipped to stack on the other opposite side.
         scale_cell: bool
             Should the *other* atoms object be scaled to this
             object on the non-stacking axis before stacking?
         maintain_vacuum: bool
             Should vacuum be added to maintain the current empty
             vacuum space? 
+
+        Note: The cell vector for the given axis of the cell should be
+        directly aligned with the axis, if this is not true, you may
+        get strange results.
         """
 
+        other = other.copy() 
+        self = self.copy()
 
+        # Critical positions along the axis 
+        # [self min, self max, other min, other max]
+        cps = [self.positions[:,axis].min(), self.positions[:,axis].max(),
+               other.positions[:,axis].min(), other.positions[:,axis].max()]
+        if maintain_vacuum:
+            self._cell[axis][axis] += distance + cps[3] - cps[2]
+        if scale_cell:
+            new_cell = self.get_cell()
+            new_cell[axis] = other._cell[axis]
+            other.set_cell(new_cell, scale_atoms=True)
+        shift = distance + cps[1] - cps[2]
+        trans = [0, 0, 0]
+        trans[axis] = shift
+        other.translate(trans)
+        self.extend(other)
+        return self
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""
