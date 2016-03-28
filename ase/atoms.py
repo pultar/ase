@@ -1501,8 +1501,8 @@ class Atoms(object):
         self.positions[:] = wrap_positions(self.positions, self.cell,
                                            pbc, center, eps)
 
-    def stack(self, other, distance, axis=2, scale_cell=True,
-              maintain_vacuum=True):
+    def stack(self, other, distance, axis=2, flip_stack=False,
+              scale_cell=True, maintain_vacuum=True):
         """Stack another atoms object on top of the current atoms
         object.  The stacking is based on the min/max position
         along the given axis of both atoms objects.
@@ -1515,9 +1515,12 @@ class Atoms(object):
         distance: float
             The distance between the two atoms objects (from the
             atomic centers, not radii)
-        axis: +/- 0, 1, 2
-            The axis to stack on, defaults to the z axis (2). The
-            sign can be flipped to stack on the other opposite side.
+        axis: 0, 1, 2
+            The axis to stack on, defaults to the z axis (2).
+        flip_stack:
+            Should the other object be placed under the current
+            atoms object?  Under is defined as towards negative on
+            a given axis
         scale_cell: bool
             Should the *other* atoms object be scaled to this
             object on the non-stacking axis before stacking?
@@ -1530,23 +1533,31 @@ class Atoms(object):
         get strange results.
         """
 
+        # Make sure we are working on copies, not the original
         other = other.copy()
         self = self.copy()
-
         # Critical positions along the axis
         # [self min, self max, other min, other max]
         cps = [self.positions[:, axis].min(), self.positions[:, axis].max(),
                other.positions[:, axis].min(), other.positions[:, axis].max()]
+        # Add vacuum if required
         if maintain_vacuum:
             self._cell[axis][axis] += distance + cps[3] - cps[2]
+        # Fit other cell to this cell
         if scale_cell:
             new_cell = self.get_cell()
             new_cell[axis] = other._cell[axis]
             other.set_cell(new_cell, scale_atoms=True)
-        shift = distance + cps[1] - cps[2]
+        # Changes shift to place other at bottom of stack
+        if flip_stack:
+            shift = -distance - cps[3] + cps[0]
+        else:
+            shift = distance + cps[1] - cps[2]
+        # Shift to translation
         trans = [0, 0, 0]
         trans[axis] = shift
         other.translate(trans)
+        # Actually combine the objects
         self.extend(other)
         return self
 
