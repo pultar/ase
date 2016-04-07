@@ -1517,10 +1517,10 @@ class Atoms(object):
             atomic centers, not radii)
         axis: 0, 1, 2
             The axis to stack on, defaults to the z axis (2).
-        flip_stack:
+        flip_stack: bool
             Should the other object be placed under the current
             atoms object?  Under is defined as towards negative on
-            a given axis
+            a given axis.
         scale_cell: bool
             Should the *other* atoms object be scaled to this
             object on the non-stacking axis before stacking?
