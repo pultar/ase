@@ -134,28 +134,28 @@ def read_vasp(filename='CONTCAR'):
     # in the first line
     # or in the POTCAR or OUTCAR file
     atom_symbols = []
-    numofatoms = f.readline().split()
+    atomcounts = f.readline().split()
     # Check whether we have a VASP 4.x or 5.x format file. If the
     # format is 5.x, use the fifth line to provide information about
     # the atomic symbols.
     vasp5 = False
     try:
-        int(numofatoms[0])
+        int(atomcounts[0])
     except ValueError:
         vasp5 = True
-        atomtypes = numofatoms
-        numofatoms = f.readline().split()
+        atomtypes = atomcounts
+        atomcounts = f.readline().split()
 
-    # check for comments in numofatoms line and get rid of them if necessary
-    commentcheck = np.array(['!' in s for s in numofatoms])
+    # check for comments in atomcounts line and get rid of them if necessary
+    commentcheck = np.array(['!' in s for s in atomcounts])
     if commentcheck.any():
         # only keep the elements up to the first including a '!':
-        numofatoms = numofatoms[:np.arange(len(numofatoms))[commentcheck][0]]
+        atomcounts = atomcounts[:np.arange(len(atomcounts))[commentcheck][0]]
 
     if not vasp5:
         atomtypes = line1.split()
        
-        numsyms = len(numofatoms)
+        numsyms = len(atomcounts)
         if len(atomtypes) < numsyms:
             # First line in POSCAR/CONTCAR didn't contain enough symbols.
 
@@ -173,9 +173,8 @@ def read_vasp(filename='CONTCAR'):
             except KeyError:
                 atomtypes = atomtypes_outpot(f.name, numsyms)
 
-    for i, num in enumerate(numofatoms):
-        numofatoms[i] = int(num)
-        [atom_symbols.append(atomtypes[i]) for na in range(numofatoms[i])]
+    atomcounts = [int(n) for n in atomcounts]
+    atom_symbols = [a.capitalize() for a, x in zip(atomtypes, atomcounts) for _ in range(x)]
 
     # Check if Selective dynamics is switched on
     sdyn = f.readline()
@@ -187,7 +186,7 @@ def read_vasp(filename='CONTCAR'):
     else:
         ac_type = sdyn
     cartesian = ac_type[0].lower() == 'c' or ac_type[0].lower() == 'k'
-    tot_natoms = sum(numofatoms)
+    tot_natoms = sum(atomcounts)
     atoms_pos = np.empty((tot_natoms, 3))
     if selective_dynamics:
         selective_flags = np.empty((tot_natoms, 3), dtype=bool)
@@ -525,7 +524,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
 
 
 def write_vasp(filename, atoms, label='', direct=False, sort=None,
-               symbol_count=None, long_format=True, vasp5=False):
+               symbol_count=None, long_format=True, vasp_major_ver=5):
     """Method to write VASP position (POSCAR/CONTCAR) files.
 
     Writes label, scalefactor, unitcell, # of various kinds of atoms,
@@ -533,7 +532,7 @@ def write_vasp(filename, atoms, label='', direct=False, sort=None,
     to file. Cartesian coordiantes is default and default label is the
     atomic species, e.g. 'C N H Cu'.
     """
-    
+
     import numpy as np
     from ase.constraints import FixAtoms, FixScaled, FixedPlane, FixedLine
 
@@ -541,7 +540,7 @@ def write_vasp(filename, atoms, label='', direct=False, sort=None,
         f = open(filename, 'w')
     else:  # Assume it's a 'file-like object'
         f = filename
-    
+
     if isinstance(atoms, (list, tuple)):
         if len(atoms) > 1:
             raise RuntimeError('Don\'t know how to save more than ' +
@@ -563,16 +562,14 @@ def write_vasp(filename, atoms, label='', direct=False, sort=None,
             elif isinstance(constr, FixAtoms):
                 sflags[constr.index] = [True, True, True]
             elif isinstance(constr, FixedPlane):
-                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, 
-                              axis=1)
+                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5,  axis=1)
                 if sum(mask) != 1:
                     raise RuntimeError(
                         'VASP requires that the direction of FixedPlane '
                         'constraints is parallel with one of the cell axis')
                 sflags[constr.a] = mask
             elif isinstance(constr, FixedLine):
-                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, 
-                              axis=1)
+                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, axis=1)
                 if sum(mask) != 1:
                     raise RuntimeError(
                         'VASP requires that the direction of FixedLine '
@@ -627,7 +624,7 @@ def write_vasp(filename, atoms, label='', direct=False, sort=None,
 
     # If we're writing a VASP 5.x format POSCAR file, write out the
     # atomic symbols
-    if vasp5:
+    if vasp_major_ver >= 5:
         for sym, c in sc:
             f.write(' %3s' % sym)
         f.write('\n')
@@ -663,3 +660,37 @@ def write_vasp(filename, atoms, label='', direct=False, sort=None,
 
     if isinstance(filename, str):
         f.close()
+
+def read_hessian(outcar='OUTCAR'):
+    '''
+    Parse the hessian from the VASP ``OUTCAR`` file into a numpy array
+
+    Args:
+        outcar : str
+            Name of the VASP output file
+    '''
+
+    import re
+    import numpy as np
+
+    if os.path.exists(outcar):
+        with open(outcar, 'r') as foutcar:
+            lines = foutcar.readlines()
+    else:
+        raise OSError("File {} doesn't exist".format(outcar))
+
+    for n, line in enumerate(lines):
+
+        if 'SECOND DERIVATIVES ' in line:
+            dofpatt = re.compile(r'Degrees of freedom DOF\s*=\s*(\d+)')
+            match = next(dofpatt.search(line) for line in lines if dofpatt.search(line))
+            dof = int(match.group(1))
+
+            hessian = np.zeros((dof, dof), dtype=float)
+
+            for i, row in enumerate(lines[n + 3 : n + 3 + dof]):
+                hessian[i] = [float(x) for x in row.split()[1:]]
+
+            return hessian
+    else:
+        raise ValueError('No hessian found in file: {}'.format(outcar))

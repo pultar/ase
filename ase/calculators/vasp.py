@@ -319,6 +319,7 @@ class Vasp(Calculator):
     def __init__(self, restart=None,
                  output_template='vasp',
                  track_output=False,
+                 vasp_major_ver=5,
                  **kwargs):
         self.float_params = {}
         self.exp_params = {}
@@ -374,6 +375,7 @@ class Vasp(Calculator):
         self.restart = restart
         self.track_output = track_output
         self.output_template = output_template
+        self.vasp_major_ver = vasp_major_ver
         if restart:
             self.restart_load()
             return
@@ -575,7 +577,8 @@ class Vasp(Calculator):
         from ase.io.vasp import write_vasp
         write_vasp('POSCAR',
                    self.atoms_sorted,
-                   symbol_count=self.symbol_count)
+                   symbol_count=self.symbol_count,
+                   vasp_major_ver=self.vasp_major_ver)
         self.write_incar(atoms)
         self.write_potcar()
         self.write_kpoints()
