@@ -125,7 +125,7 @@ exp_keys = [
 
 string_keys = [
     'algo',       # algorithm: Normal (Davidson) | Fast | Very_Fast (RMM-DIIS)
-    'gga',        # xc-type: PW PB LM or 91
+    'gga',        # xc-type: 91, PE, RP, AM, PS
     'metagga',    #
     'prec',       # Precission of calculation (Low, Normal, Accurate)
     'system',     # name of System
@@ -348,17 +348,17 @@ class Vasp(Calculator):
 
         # self.string_params['prec'] = 'Normal'
 
-        if kwargs.get('xc', None):
-            if kwargs['xc'] not in ['PW91', 'LDA', 'PBE']:
+        if kwargs.get('gga', None):
+            if kwargs['gga'] not in ['91', 'PE', 'RP', 'AM', 'PS']:
                 raise ValueError(
-                    '%s not supported for xc! use one of: PW91, LDA or PBE.' %
-                    kwargs['xc'])
+                    '%s not supported for GGA! use one of: 91, PE, RP, AM, PS.' %
+                    kwargs['gga'])
             # exchange correlation functional
-            self.input_params = {'xc': kwargs['xc']}
+            self.input_params = {'gga': kwargs['gga']}
 
         else:
             # exchange correlation functional
-            self.input_params = {'xc': 'PW91'}
+            self.input_params = {'gga': 'PE'}
 
         self.input_params.update({
             'setups': None,  # Special setups (e.g pv, sv, ...)
@@ -505,9 +505,9 @@ class Vasp(Calculator):
         sys.stdout.flush()
         xc = '/'
 
-        if p['xc'] == 'PW91':
+        if p['gga'] == '91':
             xc = '_gga/'
-        elif p['xc'] == 'PBE':
+        elif p['gga'] == 'PE':
             xc = '_pbe/'
         if 'VASP_PP_PATH' in os.environ:
             pppaths = os.environ['VASP_PP_PATH'].split(':')
@@ -907,7 +907,7 @@ class Vasp(Calculator):
         return self.dipole
 
     def get_xc_functional(self):
-        return self.input_params['xc']
+        return self.input_params['gga']
 
     def write_incar(self, atoms, **kwargs):
         """Writes the INCAR file."""
