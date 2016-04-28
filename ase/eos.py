@@ -235,7 +235,7 @@ class EquationOfState:
 
         # now fit the equation of state
         p0 = initial_guess
-        popt, pcov = curve_fit(eval(self.eos_string), self.v, self.e, p0)
+        popt, pcov = curve_fit(globals()[self.eos_string], self.v, self.e, p0)
 
         self.eos_parameters = popt
 
@@ -282,7 +282,7 @@ class EquationOfState:
         if self.eos_string == 'sjeos':
             y = self.fit0(x**-(1.0 / 3))
         else:
-            y = eval(self.eos_string)(x, *self.eos_parameters)
+            y = globals()[self.eos_string](x, *self.eos_parameters)
             
         plt.plot(x, y, '-r')
         try:
