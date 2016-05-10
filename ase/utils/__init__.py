@@ -1,12 +1,23 @@
+import errno
 import os
 import sys
 import time
 from math import sin, cos, radians, atan2, degrees
 from contextlib import contextmanager
 
+try:
+    from math import gcd
+except ImportError:
+    from fractions import gcd
+
 import numpy as np
 
 from ase.data import chemical_symbols
+
+__all__ = ['_exec', 'basestring', 'import_module', 'seterr', 'plural',
+           'devnull', 'gcd', 'convert_string_to_fd', 'Lock',
+           'opencew', 'OpenLock', 'hill', 'rotate', 'irotate', 'givens',
+           'hsv2rgb', 'hsv']
 
 
 # Python 2+3 compatibility stuff:
@@ -19,7 +30,17 @@ else:
         exec('exec code in dct')
     basestring = basestring
     
-
+if sys.version_info >= (2, 7):
+    from importlib import import_module
+else:
+    # Python 2.6:
+    def import_module(name):
+        module = __import__(name)
+        for part in name.split('.')[1:]:
+            module = getattr(module, part)
+        return module
+    
+        
 @contextmanager
 def seterr(**kwargs):
     """Set how floating-point errors are handled.
@@ -38,6 +59,8 @@ def plural(n, word):
 
     
 class DevNull:
+    encoding = 'UTF-8'
+    
     def write(self, string):
         pass
 
@@ -60,6 +83,23 @@ class DevNull:
 devnull = DevNull()
 
 
+def convert_string_to_fd(name, world=None):
+    """Create a file-descriptor for text output.
+    
+    Will open a file for writing with given name.  Use None for no output and
+    '-' for sys.stdout.
+    """
+    if world is None:
+        from ase.parallel import world
+    if name is None or world.rank != 0:
+        return devnull
+    if name == '-':
+        return sys.stdout
+    if isinstance(name, str):
+        return open(name, 'w')
+    return name  # we assume name is already a file-descriptor
+
+    
 # Only Windows has O_BINARY:
 CEW_FLAGS = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, 'O_BINARY', 0)
 
@@ -78,20 +118,22 @@ def opencew(filename, world=None):
     if world.rank == 0:
         try:
             fd = os.open(filename, CEW_FLAGS)
-        except OSError:
-            ok = 0
+        except OSError as ex:
+            error = ex.errno
         else:
-            ok = 1
+            error = 0
             fd = os.fdopen(fd, 'wb')
     else:
-        ok = 0
+        error = 0
         fd = devnull
 
     # Syncronize:
-    if world.sum(ok) == 0:
+    error = world.sum(error)
+    if error == errno.EEXIST:
         return None
-    else:
-        return fd
+    if error:
+        raise OSError(error, 'Error', filename)
+    return fd
 
 
 class Lock:
@@ -151,26 +193,6 @@ def hill(numbers):
     result += [(s, count[s]) for s in sorted(count)]
     return ''.join('{0}{1}'.format(symbol, n) if n > 1 else symbol
                    for symbol, n in result)
-
-
-def prnt(*args, **kwargs):
-    """Python 3 style print function."""
-    fd = kwargs.pop('file', sys.stdout)
-    fd.write(
-        kwargs.pop('sep', ' ').join(str(arg) for arg in args) +
-        kwargs.pop('end', '\n'))
-    if kwargs.pop('flush', False):
-        fd.flush()
-    if kwargs:
-        raise TypeError('%r is an invalid keyword argument for this function' %
-                        kwargs.keys()[0])
-
-
-def gcd(a, b):
-    """Greatest common divisor of a and b."""
-    while a != 0:
-        a, b = b % a, a
-    return b
 
 
 def rotate(rotations, rotation=np.identity(3)):
@@ -290,16 +312,3 @@ def hsv(array, s=.9, v=.9):
 #     a = (array + array.min()) / array.ptp()
 #     rgba = getattr(pylab.cm, name)(a)
 #     return rgba[:-1] # return rgb only (not alpha)
-
-ON_POSIX = 'posix' in sys.builtin_module_names
-
-try:
-    from subprocess import Popen
-except ImportError:
-    from os import popen3
-else:
-    def popen3(cmd):
-        from subprocess import PIPE
-        p = Popen(cmd, shell=True, close_fds=ON_POSIX,
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        return p.stdin, p.stdout, p.stderr

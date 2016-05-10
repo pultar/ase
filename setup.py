@@ -4,15 +4,15 @@
 # Please see the accompanying LICENSE file for further information.
 
 from __future__ import print_function
-from distutils.core import setup, Command
+import os
+import re
+import sys
+from distutils.core import setup
 from distutils.command.build_py import build_py as _build_py
+from distutils.command.sdist import sdist as _sdist
 from glob import glob
 from os.path import join
 
-import os
-import sys
-
-import shutil
 
 long_description = """\
 ASE is a python package providing an open source Atomic Simulation
@@ -22,56 +22,31 @@ Environment in the Python language."""
 if sys.version_info < (2, 6, 0, 'final', 0):
     raise SystemExit('Python 2.6 or later is required!')
 
+    
+class sdist(_sdist):
+    """Fix distutils.
+    
+    Distutils insists that there should be a README or README.txt,
+    but GitLab.com needs README.rst in order to parse it as reStructureText."""
+    
+    def warn(self, msg):
+        if msg.startswith('standard file not found: should have one of'):
+            self.filelist.append('README.rst')
+        else:
+            _sdist.warn(self, msg)
+            
+    
 packages = []
 for dirname, dirnames, filenames in os.walk('ase'):
-        if '__init__.py' in filenames:
-            packages.append(dirname.replace('/', '.'))
+    if '__init__.py' in filenames:
+        packages.append(dirname.replace('/', '.'))
 
 package_dir = {'ase': 'ase'}
 
-package_data = {'ase': ['lattice/spacegroup/spacegroup.dat']}
-
-
-class test(Command):
-    description = 'build and run test suite; exit code is number of failures'
-    user_options = [('calculators=', 'c',
-                     'Comma separated list of calculators to test')]
-    
-    def __init__(self, dist):
-        Command.__init__(self, dist)
-        self.sub_commands = ['build']
-
-    def initialize_options(self):
-        self.calculators = None
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        self.run_command('build')
-        buildcmd = self.get_finalized_command('build')
-        sys.path.insert(0, buildcmd.build_lib)
-
-        if self.calculators is not None:
-            calculators = self.calculators.split(',')
-        elif 'ASE_CALCULATORS' in os.environ:
-            calculators = os.environ['ASE_CALCULATORS'].split(',')
-        else:
-            calculators = []
-        from ase.test import test as _test
-        testdir = '%s/testase-tempfiles' % buildcmd.build_base
-        origcwd = os.getcwd()
-        if os.path.isdir(testdir):
-            shutil.rmtree(testdir)  # clean before running tests!
-        os.mkdir(testdir)
-        os.chdir(testdir)
-        try:
-            results = _test(2, calculators, display=False)
-            if results.failures or results.errors:
-                print('Test suite failed', file=sys.stderr)
-                raise SystemExit(len(results.failures) + len(results.errors))
-        finally:
-            os.chdir(origcwd)
+package_data = {'ase': ['spacegroup/spacegroup.dat',
+                        'collection/*.json',
+                        'db/templates/*',
+                        'db/static/*']}
 
 
 class build_py(_build_py):
@@ -102,23 +77,14 @@ class build_py(_build_py):
         return _build_py.get_outputs(self, *args, **kwargs) + self.mofiles
 
 # Get the current version number:
-exec(compile(open('ase/svnversion_io.py').read(), 'ase/svnversion_io.py',
-             'exec'))  # write ase/svnversion.py and get svnversion
-exec(compile(open('ase/version.py').read(), 'ase/version.py',
-             'exec'))  # get version_base
-if svnversion and os.name not in ['ce', 'nt']:
-    # MSI accepts only version X.X.X
-    version = version_base + '.' + svnversion
-else:
-    version = version_base
+with open('ase/__init__.py') as fd:
+    version = re.search("__version__ = '(.*)'", fd.read()).group(1)
+    
+name = 'ase'  # PyPI name
 
-name = 'python-ase'
-
-# PyPI:
+# Linux-distributions may want to change the name:
 if 0:
-    # python(3) setup.py sdist upload
-    version = '3.9.0'
-    name = 'ase'
+    name = 'python-ase'
     
 scripts = ['tools/ase-gui', 'tools/ase-db', 'tools/ase-info',
            'tools/ase-build', 'tools/ase-run']
@@ -127,17 +93,6 @@ if 'sdist' in sys.argv or os.name in ['ce', 'nt']:
     for s in scripts[:]:
         scripts.append(s + '.bat')
 
-# data_files needs (directory, files-in-this-directory) tuples
-data_files = []
-for dirname, dirnames, filenames in os.walk('doc'):
-    if '.svn' not in dirname:  # skip .svn dirs
-        fileslist = []
-        for filename in filenames:
-            fullname = os.path.join(dirname, filename)
-            if '.svn' not in fullname:
-                fileslist.append(fullname)
-        data_files.append(('share/python-ase/' + dirname, fileslist))
-
 setup(name=name,
       version=version,
       description='Atomic Simulation Environment',
@@ -145,15 +100,14 @@ setup(name=name,
       maintainer='ASE-community',
       maintainer_email='ase-developers@listserv.fysik.dtu.dk',
       license='LGPLv2.1+',
-      platforms=['linux'],
+      platforms=['unix'],
       packages=packages,
       package_dir=package_dir,
       package_data=package_data,
       scripts=scripts,
-      data_files=data_files,
       long_description=long_description,
       cmdclass={'build_py': build_py,
-                'test': test},
+                'sdist': sdist},
       classifiers=[
           'Development Status :: 6 - Mature',
           'License :: OSI Approved :: '
@@ -164,4 +118,5 @@ setup(name=name,
           'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
           'Topic :: Scientific/Engineering :: Physics'])

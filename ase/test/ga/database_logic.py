@@ -2,9 +2,10 @@ from ase.ga.data import PrepareDB
 from ase.ga.data import DataConnection
 from ase.ga.startgenerator import StartGenerator
 from ase.ga.utilities import closest_distances_generator
+from ase.ga import set_raw_score
 import os
 import numpy as np
-from ase.lattice.surface import fcc111
+from ase.build import fcc111
 from ase.constraints import FixAtoms
 
 db_file = 'gadb_logics_test.db'
@@ -60,7 +61,7 @@ dc.mark_as_queued(a1)
 assert dc.get_number_of_unrelaxed_candidates() == 19
 assert len(dc.get_all_candidates_in_queue()) == 1
 
-a1.set_raw_score(0.0)
+set_raw_score(a1, 0.0)
 dc.add_relaxed_step(a1)
 
 assert dc.get_number_of_unrelaxed_candidates() == 19

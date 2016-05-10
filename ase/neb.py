@@ -5,16 +5,17 @@ from math import sqrt
 import numpy as np
 
 import ase.parallel as mpi
+from ase.build import minimize_rotation_and_translation
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
 from ase.optimize import BFGS
-from ase.utils.geometry import find_mic
+from ase.geometry import find_mic
 
 
 class NEB:
     def __init__(self, images, k=0.1, climb=False, parallel=False,
-                 world=None):
+                 remove_rotation_and_translation=False, world=None):
         """Nudged elastic band.
 
         images: list of Atoms objects
@@ -25,6 +26,10 @@ class NEB:
             Use a climbing image (default is no climbing image).
         parallel: bool
             Distribute images over processors.
+        remove_rotation_and_translation: bool
+            TRUE actives NEB-TR for removing translation and
+            rotation during NEB. By default applied non-periodic
+            systems
         """
         self.images = images
         self.climb = climb
@@ -32,7 +37,9 @@ class NEB:
         self.natoms = len(images[0])
         self.nimages = len(images)
         self.emax = np.nan
-
+        
+        self.remove_rotation_and_translation = remove_rotation_and_translation
+        
         if isinstance(k, (float, int)):
             k = [k] * (self.nimages - 1)
         self.k = list(k)
@@ -44,26 +51,29 @@ class NEB:
         if parallel:
             assert world.size == 1 or world.size % (self.nimages - 2) == 0
 
-    def interpolate(self, method='linear'):
-        interpolate(self.images)
-
+    def interpolate(self, method='linear', mic=False):
+        if self.remove_rotation_and_translation:
+            minimize_rotation_and_translation(self.images[0], self.images[-1])
+        
+        interpolate(self.images, mic)
+                 
         if method == 'idpp':
-            self.idpp_interpolate(traj=None, log=None)
-            
+            self.idpp_interpolate(traj=None, log=None, mic=mic)
+
     def idpp_interpolate(self, traj='idpp.traj', log='idpp.log', fmax=0.1,
-                         optimizer=BFGS):
-        d1 = self.images[0].get_all_distances()
-        d2 = self.images[-1].get_all_distances()
+                         optimizer=BFGS, mic=False):
+        d1 = self.images[0].get_all_distances(mic=mic)
+        d2 = self.images[-1].get_all_distances(mic=mic)
         d = (d2 - d1) / (self.nimages - 1)
         old = []
         for i, image in enumerate(self.images):
             old.append(image.calc)
-            image.calc = IDPP(d1 + i * d)
-        opt = BFGS(self, trajectory=traj, logfile=log)
-        opt.run(fmax=0.1)
+            image.calc = IDPP(d1 + i * d, mic=mic)
+        opt = optimizer(self, trajectory=traj, logfile=log)
+        opt.run(fmax=fmax)
         for image, calc in zip(self.images, old):
             image.calc = calc
-        
+
     def get_positions(self):
         positions = np.empty(((self.nimages - 2) * self.natoms, 3))
         n1 = 0
@@ -85,12 +95,18 @@ class NEB:
                 image.get_calculator().set_atoms(image)
             except AttributeError:
                 pass
-        
+
     def get_forces(self):
         """Evaluate and return the forces."""
         images = self.images
         forces = np.empty(((self.nimages - 2), self.natoms, 3))
         energies = np.empty(self.nimages - 2)
+
+        if self.remove_rotation_and_translation:
+            # Remove translation and rotation between
+            # images before computing forces:
+            for i in range(1, self.nimages):
+                minimize_rotation_and_translation(images[i - 1], images[i])
 
         if not self.parallel:
             # Do all images - one at a time:
@@ -124,7 +140,7 @@ class NEB:
                 error = self.world.sum(0.0)
                 if error:
                     raise RuntimeError('Parallel NEB failed!')
-                
+
             for i in range(1, self.nimages - 1):
                 root = (i - 1) * self.world.size // (self.nimages - 2)
                 self.world.broadcast(energies[i - 1:i], root)
@@ -132,18 +148,22 @@ class NEB:
 
         imax = 1 + np.argsort(energies)[-1]
         self.emax = energies[imax - 1]
-        
-        tangent1 = images[1].get_positions() - images[0].get_positions()
+
+        tangent1 = find_mic(images[1].get_positions() -
+                            images[0].get_positions(),
+                            images[0].get_cell(), images[0].pbc)[0]
         for i in range(1, self.nimages - 1):
-            tangent2 = (images[i + 1].get_positions() -
-                        images[i].get_positions())
+            tangent2 = find_mic(images[i + 1].get_positions() -
+                                images[i].get_positions(),
+                                images[i].get_cell(),
+                                images[i].pbc)[0]
             if i < imax:
                 tangent = tangent2
             elif i > imax:
                 tangent = tangent1
             else:
                 tangent = tangent1 + tangent2
-                
+
             tt = np.vdot(tangent, tangent)
             f = forces[i - 1]
             ft = np.vdot(f, tangent)
@@ -153,7 +173,7 @@ class NEB:
                 f -= ft / tt * tangent
                 f -= np.vdot(tangent1 * self.k[i - 1] -
                              tangent2 * self.k[i], tangent) / tt * tangent
-                
+
             tangent1 = tangent2
 
         return forces.reshape((-1, 3))
@@ -179,16 +199,28 @@ class IDPP(Calculator):
 
     implemented_properties = ['energy', 'forces']
 
-    def __init__(self, target):
+    def __init__(self, target, mic):
         Calculator.__init__(self)
         self.target = target
+        self.mic = mic
 
     def calculate(self, atoms, properties, system_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
 
-        P = atoms.positions
-        D = np.array([P - p for p in P])  # all distance vectors
-        d = (D**2).sum(2)**0.5
+        P = atoms.get_positions()
+        d = []
+        D = []
+        for p in P:
+            Di = P - p
+            if self.mic:
+                Di, di = find_mic(Di, atoms.get_cell(), atoms.get_pbc())
+            else:
+                di = np.sqrt((Di**2).sum(1))
+            d.append(di)
+            D.append(Di)
+        d = np.array(d)
+        D = np.array(D)
+
         dd = d - self.target
         d.ravel()[::len(d) + 1] = 1  # avoid dividing by zero
         d4 = d**4
@@ -201,16 +233,13 @@ class SingleCalculatorNEB(NEB):
     def __init__(self, images, k=0.1, climb=False):
         if isinstance(images, str):
             # this is a filename
-            traj = read(images, '0:')
-            images = []
-            for atoms in traj:
-                images.append(atoms)
+            images = read(images)
 
         NEB.__init__(self, images, k, climb, False)
         self.calculators = [None] * self.nimages
         self.energies_ok = False
         self.first = True
- 
+
     def interpolate(self, initial=0, final=-1, mic=False):
         """Interpolate linearly between initial and final images."""
         if final < 0:
@@ -260,7 +289,7 @@ class SingleCalculatorNEB(NEB):
             else:
                 calculators.append(self.calculators[i])
         return calculators
-    
+
     def set_calculators(self, calculators):
         """Set new calculators to the images."""
         self.energies_ok = False
@@ -314,7 +343,7 @@ class SingleCalculatorNEB(NEB):
             self.first = False
 
         self.energies_ok = True
-       
+
     def get_forces(self):
         self.get_energies_and_forces()
         return NEB.get_forces(self)
@@ -334,7 +363,7 @@ class SingleCalculatorNEB(NEB):
         return self
 
 
-def fit0(E, F, R):
+def fit0(E, F, R, cell=None, pbc=None):
     """Constructs curve parameters from the NEB images."""
     E = np.array(E) - E[0]
     n = len(E)
@@ -342,20 +371,27 @@ def fit0(E, F, R):
     Sfit = np.empty((n - 1) * 20 + 1)
 
     s = [0]
-    for i in range(n - 1):
-        s.append(s[-1] + sqrt(((R[i + 1] - R[i])**2).sum()))
+    dR = np.zeros_like(R)
+    for i in range(n):
+        if i < n - 1:
+            dR[i] = R[i + 1] - R[i]
+            if cell is not None and pbc is not None:
+                dR[i], _ = find_mic(dR[i], cell, pbc)
+            s.append(s[i] + sqrt((dR[i]**2).sum()))
+        else:
+            dR[i] = R[i] - R[i - 1]
+            if cell is not None and pbc is not None:
+                dR[i], _ = find_mic(dR[i], cell, pbc)
 
     lines = []
     dEds0 = None
     for i in range(n):
+        d = dR[i]
         if i == 0:
-            d = R[1] - R[0]
             ds = 0.5 * s[1]
         elif i == n - 1:
-            d = R[-1] - R[-2]
             ds = 0.5 * (s[-1] - s[-2])
         else:
-            d = R[i + 1] - R[i - 1]
             ds = 0.25 * (s[i + 1] - s[i - 1])
 
         d = d / sqrt((d**2).sum())
@@ -376,7 +412,7 @@ def fit0(E, F, R):
             y = c[0] + x * (c[1] + x * (c[2] + x * c[3]))
             Sfit[(i - 1) * 20:i * 20] = x
             Efit[(i - 1) * 20:i * 20] = y
-        
+
         dEds0 = dEds
 
     Sfit[-1] = s[-1]
@@ -434,9 +470,9 @@ class NEBtools:
                      % (Ef, Er, dE))
         return fig
 
-    def get_fmax(self):
+    def get_fmax(self, **kwargs):
         """Returns fmax, as used by optimizers with NEB."""
-        neb = NEB(self._images)
+        neb = NEB(self._images, **kwargs)
         forces = neb.get_forces()
         return np.sqrt((forces**2).sum(axis=1).max())
 
@@ -451,16 +487,19 @@ class NEBtools:
         R = images.P[:, :natoms]
         E = images.E
         F = images.F[:, :natoms]
-        s, E, Sfit, Efit, lines = fit0(E, F, R)
+        s, E, Sfit, Efit, lines = fit0(E, F, R, images.A[0], images.pbc)
         return s, E, Sfit, Efit, lines
 
 
-def interpolate(images):
+def interpolate(images, mic=False):
     """Given a list of images, linearly interpolate the positions of the
     interior images."""
     pos1 = images[0].get_positions()
     pos2 = images[-1].get_positions()
-    d = (pos2 - pos1) / (len(images) - 1.0)
+    d = pos2 - pos1
+    if mic:
+        d = find_mic(d, images[0].get_cell(), images[0].pbc)[0]
+    d /= (len(images) - 1.0)
     for i in range(1, len(images) - 1):
         images[i].set_positions(pos1 + i * d)
         # Parallel NEB with Jacapo needs this:

@@ -46,7 +46,7 @@ You can also build crystals using, for example, the lattice module
 which returns :class:`~ase.atoms.Atoms` objects corresponding to
 common crystal structures. Let us make a Cu (111) surface::
 
-  from ase.lattice.surface import fcc111
+  from ase.build import fcc111
   slab = fcc111('Cu', size=(4,4,2), vacuum=10.0)
 
 
@@ -196,5 +196,5 @@ take::
   for i in range(10):
      pot = molecule.get_potential_energy()
      kin = molecule.get_kinetic_energy()
-     print '%2d: %.5f eV, %.5f eV, %.5f eV' % (i, pot + kin, pot, kin)
+     print('%2d: %.5f eV, %.5f eV, %.5f eV' % (i, pot + kin, pot, kin))
      dyn.run(steps=20)

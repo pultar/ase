@@ -22,7 +22,7 @@ all_changes = ['positions', 'numbers', 'cell', 'pbc',
 names = ['abinit', 'aims', 'asap', 'castep', 'cp2k', 'dftb', 'eam', 'elk',
          'emt', 'exciting', 'fleur', 'gaussian', 'gpaw', 'gromacs', 'hotbit',
          'jacapo', 'lammps', 'lammpslib', 'lj', 'mopac', 'morse',
-         'nwchem', 'siesta', 'turbomole', 'vasp']
+         'nwchem', 'octopus', 'siesta', 'tip3p', 'turbomole', 'vasp']
 
 
 special = {'cp2k': 'CP2K',
@@ -33,8 +33,10 @@ special = {'cp2k': 'CP2K',
            'lammps': 'LAMMPS',
            'lammpslib': 'LAMMPSlib',
            'lj': 'LennardJones',
+           'mopac': 'MOPAC',
            'morse': 'MorsePotential',
-           'nwchem': 'NWChem'}
+           'nwchem': 'NWChem',
+           'tip3p': 'TIP3P'}
 
 
 def get_calculator(name):
@@ -105,11 +107,11 @@ def kpts2mp(atoms, kpts, even=False):
 
 class Parameters(dict):
     """Dictionary for parameters.
-    
+
     Special feature: If param is a Parameters instance, then param.xc
     is a shorthand for param['xc'].
     """
-    
+
     def __getattr__(self, key):
         if key not in self:
             return dict.__getattribute__(self, key)
@@ -130,7 +132,7 @@ class Parameters(dict):
         keys = sorted(self.keys())
         return 'dict(' + ',\n     '.join(
             '%s=%r' % (key, self[key]) for key in keys) + ')\n'
-    
+
     def write(self, filename):
         file = open(filename, 'w')
         file.write(self.tostring())
@@ -173,7 +175,6 @@ class Calculator:
             attached.  When restarting, atoms will get its positions and
             unit-cell updated from file.
         """
-
         self.atoms = None  # copy of atoms object from last calculation
         self.results = {}  # calculated properties (energy, forces, ...)
         self.parameters = None  # calculational parameters
@@ -186,13 +187,13 @@ class Calculator:
                     self.reset()
                 else:
                     raise
-        
+
         self.label = None
         self.directory = None
         self.prefix = None
 
         self.set_label(label)
-        
+
         if self.parameters is None:
             # Use default parameters if they were not read from file:
             self.parameters = self.get_default_parameters()
@@ -206,7 +207,7 @@ class Calculator:
                     raise RuntimeError('Atoms not compatible with file')
                 atoms.positions = self.atoms.positions
                 atoms.cell = self.atoms.cell
-                
+
         self.set(**kwargs)
 
         if not hasattr(self, 'name'):
@@ -283,7 +284,7 @@ class Calculator:
 
     def set(self, **kwargs):
         """Set parameters like set(key1=value1, key2=value2, ...).
-        
+
         A dictionary containing the parameters that have been changed
         is returned.
 
@@ -379,7 +380,6 @@ class Calculator:
             system_changes = self.check_state(atoms)
             if system_changes:
                 self.reset()
-
         if name not in self.results:
             if not allow_calculation:
                 return None
@@ -408,7 +408,7 @@ class Calculator:
             if name not in self.results:
                 return True
         return False
-        
+
     def calculate(self, atoms=None, properties=['energy'],
                   system_changes=all_changes):
         """Do the calculation.
@@ -451,6 +451,46 @@ class Calculator:
         return np.array([[numeric_force(atoms, a, i, d)
                           for i in range(3)] for a in range(len(atoms))])
 
+    def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
+        """Calculate numerical stress using finite difference."""
+
+        stress = np.zeros((3, 3), dtype=float)
+
+        cell = atoms.cell.copy()
+        V = atoms.get_volume()
+        for i in range(3):
+            x = np.eye(3)
+            x[i, i] += d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = atoms.get_potential_energy()
+
+            x[i, i] -= 2 * d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = atoms.get_potential_energy()
+
+            stress[i, i] = (eplus - eminus) / (2 * d * V)
+            x[i, i] += d
+
+            j = (i + 1) % 3
+            x[i, j] = d
+            x[j, i] = d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = atoms.get_potential_energy()
+
+            x[i, j] = -d
+            x[j, i] = -d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = atoms.get_potential_energy()
+
+            stress[i, j] = (eplus - eminus) / (4 * d * V)
+            stress[j, i] = stress[i, j]
+        atoms.set_cell(cell, scale_atoms=True)
+
+        if voigt:
+            return stress.flat[[0, 4, 8, 5, 2, 1]]
+        else:
+            return stress
+
     def get_spin_polarized(self):
         return False
 
@@ -464,7 +504,7 @@ class FileIOCalculator(Calculator):
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label=None, atoms=None, command=None, **kwargs):
         """File-IO calculator.
-        
+
         command: str
             Command used to start calculation.
         """
@@ -493,7 +533,7 @@ class FileIOCalculator(Calculator):
             errorcode = subprocess.call(command, shell=True)
         finally:
             os.chdir(olddir)
-        
+
         if errorcode:
             raise RuntimeError('%s returned an error: %d' %
                                (self.name, errorcode))

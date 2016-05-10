@@ -10,7 +10,7 @@ Modules for creating crystal structures are found in the module
 are a few important lattices with a basis.  The modules can create
 lattices with any orientation (see below).  These modules can be used
 to create surfaces with any crystal structure and any orientation by
-later adding a vacuum layer with :func:`ase.lattice.surface.add_vacuum`.
+later adding a vacuum layer with :func:`ase.build.add_vacuum`.
 
 
 Example
@@ -93,7 +93,7 @@ with a basis):
 * ``lattice.compounds``
 
   Lattices with more than one element.  These are mainly intended as
-  examples allowing you to define new such lattices.  Currenly, the
+  examples allowing you to define new such lattices.  Currently, the
   following are defined
 
   - ``B1`` = ``NaCl`` = ``Rocksalt``
@@ -254,4 +254,4 @@ use the simple cubic lattice with a larger basis::
 
   B1 = NaCl = Rocksalt = NaClFactory()
 
-More examples can be found in the file :trac:`ase/lattice/compounds.py`.
+More examples can be found in the file :git:`ase/lattice/compounds.py`.

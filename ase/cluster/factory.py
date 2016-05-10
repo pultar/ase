@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 
 from ase.data import atomic_numbers as ref_atomic_numbers
-from ase.lattice.spacegroup import Spacegroup
+from ase.spacegroup import Spacegroup
 from ase.cluster.base import ClusterBase
 from ase.cluster.cluster import Cluster
 
@@ -216,6 +216,7 @@ def cross(a, b):
                      a[2]*b[0] - b[2]*a[0],
                      a[0]*b[1] - b[0]*a[1]])
 
+    
 def GCD(a,b):
     """Greatest Common Divisor of a and b."""
     #print "--"
@@ -225,6 +226,7 @@ def GCD(a,b):
         #print a,b
     return b
 
+    
 def reduce_miller(hkl):
     """Reduce Miller index to the lowest equivalent integers."""
     hkl = np.array(hkl)
@@ -232,11 +234,10 @@ def reduce_miller(hkl):
 
     d = GCD(GCD(hkl[0], hkl[1]), hkl[2])
     while d != 1:
-        hkl = hkl / d
+        hkl = hkl // d
         d = GCD(GCD(hkl[0], hkl[1]), hkl[2])
 
     if np.dot(old, hkl) > 0:
         return hkl
     else:
         return -hkl
-

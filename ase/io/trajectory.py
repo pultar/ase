@@ -2,7 +2,6 @@ from __future__ import print_function
 import warnings
 
 from ase.calculators.singlepoint import SinglePointCalculator, all_properties
-from ase.calculators.calculator import Calculator
 from ase.constraints import dict2constraint
 from ase.atoms import Atoms
 from ase.io.aff import affopen, DummyWriter, InvalidAFFError
@@ -23,11 +22,9 @@ def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
     mode: str
         The mode.  'r' is read mode, the file should already exist, and
         no atoms argument should be specified.
-        'w' is write mode.  If the file already exists, it is
-        renamed by appending .bak to the file name.  The atoms
-        argument specifies the Atoms object to be written to the
-        file, if not given it must instead be given as an argument
-        to the write() method.
+        'w' is write mode.  The atoms argument specifies the Atoms
+        object to be written to the file, if not given it must instead
+        be given as an argument to the write() method.
         'a' is append mode.  It acts as write mode, except that
         data is appended to a preexisting file.
     atoms: Atoms object
@@ -62,11 +59,9 @@ class TrajectoryWriter:
         mode: str
             The mode.  'r' is read mode, the file should already exist, and
             no atoms argument should be specified.
-            'w' is write mode.  If the file already exists, it is
-            renamed by appending .bak to the file name.  The atoms
-            argument specifies the Atoms object to be written to the
-            file, if not given it must instead be given as an argument
-            to the write() method.
+            'w' is write mode.  The atoms argument specifies the Atoms
+            object to be written to the file, if not given it must instead
+            be given as an argument to the write() method.
             'a' is append mode.  It acts as write mode, except that
             data is appended to a preexisting file.
         atoms: Atoms object
@@ -127,6 +122,10 @@ class TrajectoryWriter:
             for image in neb.images:
                 self.write(image)
             return
+        while hasattr(atoms, 'atoms_for_saving'):
+            # Seems to be a Filter or similar, instructing us to
+            # save the original atoms.
+            atoms = atoms.atoms_for_saving
 
         if len(b) == 0:
             self.write_header(atoms)
@@ -159,7 +158,7 @@ class TrajectoryWriter:
             calc = SinglePointCalculator(atoms)
 
         if calc is not None:
-            if not isinstance(calc, Calculator):
+            if not hasattr(calc, 'get_property'):
                 calc = OldCalculatorWrapper(calc)
             c = b.child('calculator')
             c.write(name=calc.name)
@@ -209,7 +208,8 @@ class TrajectoryWriter:
                 pbc=self.pbc.tolist(),
                 numbers=self.numbers)
         if atoms.constraints:
-            b.write(constraints=encode(atoms.constraints))
+            if all(hasattr(c, 'todict') for c in atoms.constraints):
+                b.write(constraints=encode(atoms.constraints))
         if atoms.has('masses'):
             b.write(masses=atoms.get_masses())
 
@@ -252,10 +252,11 @@ class TrajectoryReader:
         if b.get_tag() != 'ASE-Trajectory':
             raise IOError('This is not a trajectory file!')
 
-        self.pbc = b.pbc
-        self.numbers = b.numbers
-        self.masses = b.get('masses')
-        self.constraints = b.get('constraints', '[]')
+        if len(b) > 0:
+            self.pbc = b.pbc
+            self.numbers = b.numbers
+            self.masses = b.get('masses')
+            self.constraints = b.get('constraints', '[]')
 
     def close(self):
         """Close the trajectory file."""
@@ -294,15 +295,13 @@ class TrajectoryReader:
             yield self[i]
 
 
-def read_trajectory(filename, index=-1):
+def read_traj(filename, index):
     trj = TrajectoryReader(filename)
-    if isinstance(index, int):
-        return trj[index]
-    else:
-        return [trj[i] for i in range(*index.indices(len(trj)))]
+    for i in range(*index.indices(len(trj))):
+        yield trj[i]
 
 
-def write_trajectory(filename, images):
+def write_traj(filename, images):
     """Write image(s) to trajectory."""
     trj = TrajectoryWriter(filename, mode='w')
     if isinstance(images, Atoms):
@@ -346,7 +345,7 @@ def convert(name):
     
 def main():
     import optparse
-    parser = optparse.OptionParser(usage='python -m ase.io.pickletrajectory '
+    parser = optparse.OptionParser(usage='python -m ase.io.trajectory '
                                    'a1.traj [a2.traj ...]',
                                    description='Convert old trajectory '
                                    'file(s) to new format. '

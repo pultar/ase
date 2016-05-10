@@ -1,8 +1,9 @@
 from __future__ import print_function
+import atexit
+import functools
+import pickle
 import sys
 import time
-import atexit
-import pickle
 
 import numpy as np
 
@@ -24,7 +25,7 @@ def get_txt(txt, rank):
         return devnull
 
 
-def paropen(name, mode='r'):
+def paropen(name, mode='r', buffering=-1):
     """MPI-safe version of open function.
 
     In read mode, the file is opened on all nodes.  In write and
@@ -33,12 +34,11 @@ def paropen(name, mode='r'):
     """
     if rank > 0 and mode[0] != 'r':
         name = '/dev/null'
-    return open(name, mode)
+    return open(name, mode, buffering)
 
 
 def parprint(*args, **kwargs):
-    """MPI-safe print - prints only from master.
-    """
+    """MPI-safe print - prints only from master. """
     if rank == 0:
         print(*args, **kwargs)
 
@@ -81,7 +81,7 @@ class MPI4PY:
 
 
 # Check for special MPI-enabled Python interpreters:
-if '_gpaw' in sys.modules:
+if '_gpaw' in sys.builtin_module_names:
     # http://wiki.fysik.dtu.dk/gpaw
     from gpaw.mpi import world
 elif 'asapparallel3' in sys.modules:
@@ -120,6 +120,64 @@ def broadcast(obj, root=0, comm=world):
         return obj
     else:
         return pickle.loads(string.tostring())
+
+
+def parallel_function(func):
+    """Decorator for broadcasting from master to slaves using MPI."""
+    if world.size == 1:
+        return func
+        
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        # Hook to disable.  Use self.serial = True
+        if args and getattr(args[0], 'serial', False):
+            return func(*args, **kwargs)
+        ex = None
+        result = None
+        if world.rank == 0:
+            try:
+                result = func(*args, **kwargs)
+            except Exception as ex:
+                pass
+        ex, result = broadcast((ex, result))
+        if ex is not None:
+            raise ex
+        return result
+    return new_func
+
+
+def parallel_generator(generator):
+    """Decorator for broadcasting yields from master to slaves using MPI."""
+    if world.size == 1:
+        return generator
+        
+    @functools.wraps(generator)
+    def new_generator(*args, **kwargs):
+        # Hook to disable.  Use self.serial = True
+        if args and getattr(args[0], 'serial', False):
+            for result in generator(*args, **kwargs):
+                yield result
+            return
+        if world.rank == 0:
+            try:
+                for result in generator(*args, **kwargs):
+                    ex, result = broadcast((None, result))
+                    yield result
+            except Exception as ex:
+                pass
+            broadcast((ex, None))
+            if ex is not None:
+                raise ex
+        else:
+            ex, result = broadcast((None, None))
+            if ex is not None:
+                raise ex
+            while result is not None:
+                yield result
+                ex, result = broadcast((None, None))
+                if ex is not None:
+                    raise ex
+    return new_generator
 
 
 def register_parallel_cleanup_function():
@@ -165,4 +223,4 @@ def distribute_cpus(size, comm):
     ranks = np.arange(r0, r0 + size)
     mycomm = comm.new_communicator(ranks)
 
-    return mycomm, comm.size / size, tasks_rank
+    return mycomm, comm.size // size, tasks_rank

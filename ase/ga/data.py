@@ -3,7 +3,8 @@
 """
 import os
 from ase import Atoms
-from ase.ga.atoms_attach import enable_raw_score_methods
+from ase.ga import get_raw_score
+from ase.ga import set_parametrization, set_neighbor_list
 import ase.db
 
 
@@ -50,7 +51,7 @@ class DataConnection(object):
         #                      add_additional_information=True)
         a = self.__get_latest_traj_for_confid__(to_get[0])
         a.info['confid'] = to_get[0]
-        if not 'data' in a.info:
+        if 'data' not in a.info:
             a.info['data'] = {}
         return a
 
@@ -88,19 +89,28 @@ class DataConnection(object):
 #             raise ValueError('Wrong stoichiometry')
 #         self.c.write(a, gaid=gaid, queued=1)
 
-    def add_relaxed_step(self, a):
-        """ After a candidate is relaxed it must be marked as such. """
+    def add_relaxed_step(self, a, find_neighbors=None,
+                         perform_parametrization=None):
+        """ After a candidate is relaxed it must be marked
+            as such. As well add the possible neighbor list
+            and parametrization parameters to screen
+            candidates before relaxation (default not in use) """
         # test that raw_score can be extracted
         try:
             a.info['key_value_pairs']['raw_score']
         except KeyError:
             print("raw_score not put in atoms.info['key_value_pairs']")
         gaid = a.info['confid']
-        
+
         if 'generation' not in a.info['key_value_pairs']:
             g = self.get_generation_number()
             a.info['key_value_pairs']['generation'] = g
-            
+
+        if find_neighbors is not None:
+            set_neighbor_list(a, find_neighbors(a))
+        if perform_parametrization is not None:
+            set_parametrization(a, perform_parametrization(a))
+
         relax_id = self.c.write(a, gaid=gaid, relaxed=1,
                                 key_value_pairs=a.info['key_value_pairs'],
                                 data=a.info['data'])
@@ -118,7 +128,7 @@ class DataConnection(object):
                   'extinct': 0,
                   t: 1,
                   'description': desc}
-        
+
         if 'generation' not in candidate.info['key_value_pairs']:
             kwargs.update({'generation': self.get_generation_number()})
 
@@ -179,11 +189,8 @@ class DataConnection(object):
         frequency = dict()
         pairs = []
         for e in entries:
-            txt = e.description
-            tsplit = txt.split(' ')
-            c1 = int(tsplit[1])
-            c2 = int(tsplit[2])
-            pairs.append((min(c1, c2), max(c1, c2)))
+            c1, c2 = e.data['parents']
+            pairs.append(tuple(sorted([c1, c2])))
             if c1 not in frequency.keys():
                 frequency[c1] = 0
             frequency[c1] += 1
@@ -220,7 +227,6 @@ class DataConnection(object):
             t.info['relax_id'] = v.id
             trajs.append(t)
             self.already_returned.add(v.gaid)
-        # trajs.sort(key=lambda x: x.get_raw_score(), reverse=True)
         return trajs
 
     def get_all_relaxed_candidates_after_generation(self, gen):
@@ -236,7 +242,8 @@ class DataConnection(object):
             t.info['confid'] = v.gaid
             t.info['relax_id'] = v.id
             trajs.append(t)
-        trajs.sort(key=lambda x: x.get_raw_score(), reverse=True)
+        trajs.sort(key=lambda x: get_raw_score(x),
+                   reverse=True)
         return trajs
 
     def get_all_candidates_in_queue(self):
@@ -283,7 +290,6 @@ class DataConnection(object):
     def get_atoms(self, id, add_info=True):
         """Return the atoms object with the specified id"""
         a = self.c.get_atoms(id, add_additional_information=add_info)
-        enable_raw_score_methods(a)
         return a
 
     def get_param(self, parameter):
@@ -298,7 +304,7 @@ class DataConnection(object):
     def is_duplicate(self, **kwargs):
         """Check if the key-value pair is already present in the database"""
         return len(list(self.c.select(**kwargs))) > 0
-        
+
     def kill_candidate(self, confid):
         """Sets extinct=1 in the key_value_pairs of the candidate
         with gaid=confid. This could be used in the

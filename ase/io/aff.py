@@ -38,7 +38,6 @@ To see what's inside 'x.aff' do this::
     x.aff  (tag: "", 1 item)
     item #0:
     {
-        _little_endian: True,
         a: <ndarray shape=(7,) dtype=float64>,
         b: 42,
         c: abc,
@@ -46,10 +45,10 @@ To see what's inside 'x.aff' do this::
 
 Versions:
     
-1) Intial version.
+1) Initial version.
 
-2) Added support for big endian machines.  Json data now has '_little_endian'
-   bool.
+2) Added support for big endian machines.  Json data may now have
+  _little_endian=False item.
 """
 
 import optparse
@@ -121,7 +120,10 @@ class Writer:
         self.header = b''
         
         if data is None:
-            data = {'_little_endian': np.little_endian}
+            if np.little_endian:
+                data = {}
+            else:
+                data = {'_little_endian': False}
             if mode == 'w' or not os.path.isfile(fd):
                 self.nitems = 0
                 self.pos0 = 48
@@ -151,7 +153,7 @@ class Writer:
         self.fd = fd
         self.data = data
         
-        # Shape and dtype of array beeing filled:
+        # Shape and dtype of array being filled:
         self.shape = (0,)
         self.dtype = None
         
@@ -224,7 +226,10 @@ class Writer:
         writeint(self.fd, self.nitems, 32)
         self.fd.flush()
         self.fd.seek(0, 2)  # end of file
-        self.data = {'_little_endian': np.little_endian}
+        if np.little_endian:
+            self.data = {}
+        else:
+            self.data = {'_little_endian': False}
         
     def write(self, *args, **kwargs):
         """Write data.
@@ -258,10 +263,14 @@ class Writer:
         return Writer(self.fd, data=dct)
         
     def close(self):
-        assert '_little_endian' in self.data
-        if len(self.data) > 1:
-            # There is more than the "_little_endian" key:
+        n = int('_little_endian' in self.data)
+        if len(self.data) > n:
+            # There is more than the "_little_endian" key.
+            # Write that stuff before closing:
             self.sync()
+        else:
+            # Make sure header has been written (empty aff-file):
+            self._write_header()
         self.fd.close()
         
     def __len__(self):
@@ -319,7 +328,10 @@ class Reader:
         if data is None:
             (self._tag, self._version, self._nitems, self._pos0,
              self._offsets) = read_header(fd)
-            data = self._read_data(index)
+            if self._nitems > 0:
+                data = self._read_data(index)
+            else:
+                data = {}
             self._little_endian = data.pop('_little_endian', True)
         else:
             self._little_endian = little_endian
@@ -454,9 +466,12 @@ class NDArrayReader:
         return a
 
         
-def print_aff_info(filename, verbose=False, *args):
+def print_aff_info(filename, index=None, verbose=False):
     b = affopen(filename, 'r')
-    indices = [int(args.pop())] if args else range(len(b))
+    if index is None:
+        indices = range(len(b))
+    else:
+        indices = [index]
     print('{0}  (tag: "{1}", {2})'.format(filename, b.get_tag(),
                                           plural(len(b), 'item')))
     for i in indices:
@@ -473,11 +488,15 @@ def main():
     add('-v', '--verbose', action='store_true')
     opts, args = parser.parse_args()
 
-    if not args:
-        parser.error('No aff-file given')
+    if len(args) not in [1, 2]:
+        parser.error('Wrong number of arguments')
 
     filename = args.pop(0)
-    print_aff_info(filename, verbose=opts.verbose, *args)
+    if args:
+        index = int(args[0])
+    else:
+        index = None
+    print_aff_info(filename, index, verbose=opts.verbose)
 
     
 if __name__ == '__main__':

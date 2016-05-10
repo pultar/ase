@@ -1,14 +1,16 @@
+from __future__ import print_function
 import os
-import sys
 import platform
-import unittest
+import sys
+import shutil
 import subprocess
+import tempfile
+import unittest
 from glob import glob
 
-import numpy as np
-
-from ase.parallel import paropen
 from ase.calculators.calculator import names as calc_names, get_calculator
+from ase.parallel import paropen
+from ase.utils import import_module, devnull
 
 
 class NotAvailable(Exception):
@@ -53,8 +55,8 @@ class ScriptTestCase(unittest.TestCase):
             raise RuntimeError('Keyboard interrupt')
         except ImportError as ex:
             module = ex.args[0].split()[-1].replace("'", '').split('.')[0]
-            if module in ['scipy', 'cmr', 'Scientific', 'lxml']:
-                sys.__stdout__.write('(skipped) ')
+            if module in ['scipy', 'Scientific', 'lxml']:
+                sys.__stdout__.write('skipped (no {0} module) '.format(module))
             else:
                 raise
         except NotAvailable:
@@ -64,41 +66,25 @@ class ScriptTestCase(unittest.TestCase):
         return self.filename
 
     def __str__(self):
-        f = self.filename
-        dir = os.path.basename(os.path.dirname(f))
-        file = os.path.basename(f)
-        if f.find('test') + len('test') + 1 == f.find(file):
-            return '%s (ScriptTestCase)' % file
-        else:
-            return '%s (ScriptTestCase)' % os.path.join(dir, file)
+        return self.filename.split('test/')[-1]
 
     def __repr__(self):
         return "ScriptTestCase(filename='%s')" % self.filename
 
 
 def test(verbosity=1, calculators=[],
-         dir=None, display=True, stream=sys.stdout):
+         testdir=None, display=True, stream=sys.stdout):
     test_calculator_names.extend(calculators)
     disable_calculators([name for name in calc_names
                          if name not in calculators])
     ts = unittest.TestSuite()
-    if dir is None:
-        # ase/test (__path__[0])
-        testdir = __path__[0]
-    else:
-        if os.path.isdir(dir):
-            # absolute path
-            testdir = dir
-        else:
-            # relative to ase/test (__path__[0])
-            testdir = os.path.join(__path__[0], dir)
-    files = glob(testdir + '/*')
+    files = glob(__path__[0] + '/*')
     sdirtests = []  # tests from subdirectories: only one level assumed
     tests = []
     for f in files:
         if os.path.isdir(f):
             # add test subdirectories (like calculators)
-            sdirtests.extend(glob(os.path.join(testdir, f) + '/*.py'))
+            sdirtests.extend(glob(f + '/*.py'))
         else:
             # add py files in testdir
             if f.endswith('.py'):
@@ -108,30 +94,50 @@ def test(verbosity=1, calculators=[],
     tests.extend(sdirtests)  # run test subdirectories at the end
     lasttest = None  # is COCu111.py in the current set
     for test in tests:
-        if test.endswith('vtk_data.py'):
-            continue
-        if test.endswith('__init__.py'):
+        if test.endswith('__.py'):
             continue
         if test.endswith('COCu111.py'):
             lasttest = test
             continue
-        ts.addTest(ScriptTestCase(filename=test, display=display))
+        ts.addTest(ScriptTestCase(filename=os.path.abspath(test),
+                                  display=display))
     if lasttest:
-        ts.addTest(ScriptTestCase(filename=lasttest, display=display))
+        ts.addTest(ScriptTestCase(filename=os.path.abspath(lasttest),
+                                  display=display))
 
-    operating_system = platform.system() + ' ' + platform.machine()
-    operating_system += ' ' + ' '.join(platform.dist())
-    python = platform.python_version() + ' ' + platform.python_compiler()
-    python += ' ' + ' '.join(platform.architecture())
-    print('python %s on %s' % (python, operating_system))
+    versions = [('platform', platform.platform()),
+                ('python-' + sys.version.split()[0], sys.executable)]
+    for name in ['ase', 'numpy', 'scipy']:
+        try:
+            module = import_module(name)
+        except ImportError:
+            versions.append((name, 'no'))
+        else:
+            versions.append((name + '-' + module.__version__,
+                            module.__file__.rsplit('/', 1)[0] + '/'))
 
-    from ase.utils import devnull
+    for a, b in versions:
+        print('{0:16}{1}'.format(a, b))
+        
     sys.stdout = devnull
 
     ttr = unittest.TextTestRunner(verbosity=verbosity, stream=stream)
-    results = ttr.run(ts)
 
-    sys.stdout = sys.__stdout__
+    origcwd = os.getcwd()
+    
+    if testdir is None:
+        testdir = tempfile.mkdtemp(prefix='ase-test-')
+    else:
+        if os.path.isdir(testdir):
+            shutil.rmtree(testdir)  # clean before running tests!
+        os.mkdir(testdir)
+    os.chdir(testdir)
+    print('test-dir       ', testdir, '\n', file=sys.__stdout__)
+    try:
+        results = ttr.run(ts)
+    finally:
+        os.chdir(origcwd)
+        sys.stdout = sys.__stdout__
 
     return results
 
@@ -144,7 +150,7 @@ def disable_calculators(names):
         pass
         
     for name in names:
-        if name in ['emt', 'lj', 'eam', 'morse']:
+        if name in ['emt', 'lj', 'eam', 'morse', 'tip3p']:
             continue
         try:
             cls = get_calculator(name)
@@ -163,16 +169,6 @@ def cli(command, calculator_name=None):
     assert error == 0
     
 
-class World:
-    """Class for testing parallelization with MPI"""
-    def __init__(self, size):
-        self.size = size
-        self.data = {}
-
-    def get_rank(self, rank):
-        return CPU(self, rank)
-
-
 class must_raise:
     """Context manager for checking raising of exceptions."""
     def __init__(self, exception):
@@ -185,44 +181,24 @@ class must_raise:
         if exc_type is None:
             raise RuntimeError('Failed to fail: ' + str(self.exception))
         return issubclass(exc_type, self.exception)
-        
-        
-class CPU:
-    def __init__(self, world, rank):
-        self.world = world
-        self.rank = rank
-        self.size = world.size
 
-    def send(self, x, rank):
-        while (self.rank, rank) in self.world.data:
-            pass
-        self.world.data[(self.rank, rank)] = x
+            
+if __name__ == '__main__':
+    # Run pyflakes3 on all code in ASE:
+    try:
+        output = subprocess.check_output(['pyflakes3', 'ase', 'doc'])
+    except subprocess.CalledProcessError as ex:
+        output = ex.output.decode()
 
-    def receive(self, x, rank):
-        while (rank, self.rank) not in self.world.data:
-            pass
-        x[:] = self.world.data.pop((rank, self.rank))
-
-    def sum(self, x):
-        if not isinstance(x, np.ndarray):
-            x = np.array([x])
-            self.sum(x)
-            return x[0]
-
-        if self.rank == 0:
-            y = np.empty_like(x)
-            for rank in range(1, self.size):
-                self.receive(y, rank)
-                x += y
+    lines = []
+    for line in output.splitlines():
+        # Ignore these:
+        for txt in ['jacapo', 'tasks', 'execute.py',
+                    'list comprehension redefines']:
+            if txt in line:
+                break
         else:
-            self.send(x, 0)
-
-        self.broadcast(x, 0)
-
-    def broadcast(self, x, root):
-        if self.rank == root:
-            for rank in range(self.size):
-                if rank != root:
-                    self.send(x, rank)
-        else:
-            self.receive(x, root)
+            lines.append(line)
+    if lines:
+        print('\n'.join(lines))
+        sys.exit(1)

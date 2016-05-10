@@ -3,9 +3,9 @@
 
 .. _ase:
 
-================================
-Documentation for modules in ASE
-================================
+=======
+Modules
+=======
 
 Quick links:
 
@@ -13,25 +13,25 @@ Quick links:
 
   * - :mod:`~ase.atom`
     - :mod:`~ase.atoms`
+    - :mod:`~ase.build`
     - :mod:`~ase.calculators`
+  * - :mod:`~ase.collection`
     - :mod:`~ase.constraints`
-  * - :mod:`~ase.db`
+    - :mod:`~ase.db`
     - :mod:`~ase.dft`
-    - :mod:`~ase.data`
+  * - :mod:`~ase.data`
     - :mod:`~ase.ga`
-  * - :mod:`~ase.gui`
-    - :mod:`~ase.infrared`
+    - :mod:`~ase.gui`
     - :mod:`~ase.io`
-    - :mod:`~ase.lattice`
-  * - :mod:`~ase.md`
+  * - :mod:`~ase.lattice`
+    - :mod:`~ase.md`
     - :mod:`~ase.neb`
-    - :mod:`~ase.optimize`
+    - :mod:`~ase.neighborlist`
+  * - :mod:`~ase.optimize`
     - :mod:`~ase.parallel`
-  * - :mod:`~ase.phasediagram`
+    - :mod:`~ase.phasediagram`
     - :mod:`~ase.phonons`
-    - :mod:`~ase.lattice.spacegroup`
-    - :mod:`~ase.structure`
-  * - :mod:`~ase.lattice.surface`
+  * - :mod:`~ase.spacegroup`
     - :mod:`~ase.transport`
     - :mod:`~ase.thermochemistry`
     - :mod:`~ase.units`
@@ -45,8 +45,8 @@ Quick links:
 
    * :ref:`tutorials`
    * :ref:`cli`
-   * :epydoc:`Automatically generated documentation <ase>` (:term:`API`)
-   * :trac:`Source code <>`
+   * :epydoc:`Automatically generated documentation <ase>` (API)
+   * :git:`Source code <>`
    * Presentation about ASE: :download:`ase-talk.pdf`
 
 
@@ -56,32 +56,32 @@ List of all modules:
    :maxdepth: 2
 
    atoms
-   atom
    units
-   io
-   gui/gui
-   cmdline
-   setup-overview
+   io/io
+   build/build
+   eos
+   collection
+   data
    optimize
-   parallel
-   visualize/visualize
-   visualize/vtk
-   calculators/calculators
+   md
    constraints
+   spacegroup/spacegroup
+   neighborlist
+   geometry
+   db/db
    neb
-   vibrations
+   ga
+   gui/gui
+   lattice
+   visualize/visualize
+   calculators/calculators
+   dft/dft
+   vibrations/vibrations
    phonons
    phasediagram/phasediagram
    thermochemistry/thermochemistry
-   infrared
-   md
-   dft/dft
-   transport/transport
-   data
-   trajectory
    utils
-   neighbors
-   io/opls
-   db/db
-   ga
-   dimermethod
+   parallel
+   dimer
+   atom
+   transport/transport

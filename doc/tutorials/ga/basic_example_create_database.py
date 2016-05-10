@@ -4,7 +4,7 @@ from ase.ga.utilities import closest_distances_generator
 from ase.ga.utilities import get_all_atom_types
 from ase.constraints import FixAtoms
 import numpy as np
-from ase.lattice.surface import fcc111
+from ase.build import fcc111
 
 db_file = 'gadb.db'
 
@@ -47,8 +47,7 @@ starting_population = [sg.get_new_candidate() for i in range(population_size)]
 # create the database to store information in
 d = PrepareDB(db_file_name=db_file,
               simulation_cell=slab,
-              stoichiometry=atom_numbers,)
-              # population_size=population_size)
+              stoichiometry=atom_numbers)
 
 for a in starting_population:
     d.add_unrelaxed_candidate(a)

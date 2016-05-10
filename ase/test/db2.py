@@ -5,7 +5,7 @@ from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixBondLength
 from ase.db import connect
 from ase.io import read
-from ase.structure import molecule
+from ase.build import molecule
 from ase.test import must_raise
 
 
@@ -40,7 +40,7 @@ for name in ['y2.json', 'y2.db']:
     assert abs(f2.sum(0)).max() < 1e-14
     f3 = c.get_atoms(C=1).get_forces()
     assert abs(f1 - f3).max() < 1e-14
-    a = read(name + '@' + str(id))
+    a = read(name + '@id=' + str(id))[0]
     f4 = a.get_forces()
     assert abs(f1 - f4).max() < 1e-14
 
@@ -54,3 +54,6 @@ for name in ['y2.json', 'y2.db']:
 
     with must_raise(ValueError):
         c.write(ch4, foo=['bar', 2])
+        
+    with must_raise(ValueError):
+        c.write(Atoms(), pi='3.14')

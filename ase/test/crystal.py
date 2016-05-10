@@ -1,8 +1,7 @@
 import numpy as np
 
-from ase.lattice.spacegroup import crystal
+from ase.spacegroup import crystal
 from ase.io import write
-
 
 # A diamond unit cell
 diamond = crystal('C', [(0, 0, 0)], spacegroup=227,

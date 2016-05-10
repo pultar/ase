@@ -66,11 +66,14 @@ def read_gaussian_out(filename, index=-1, quantity='atoms'):
             energy = value
 
     try:
-# Re-read in the log file
-        f = open(filename, 'r')
-        lines = f.readlines()
-        f.close()
+        if isinstance(filename, str):
+            fileobj = open(filename, 'r')
+        else:
+            fileobj = filename
+            # Re-wind the file in case it was previously read.
+            fileobj.seek(0)
 
+        lines = fileobj.readlines()
         iforces = list()
         for n, line in enumerate(lines):
             if ('Forces (Hartrees/Bohr)' in line):

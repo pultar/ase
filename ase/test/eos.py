@@ -2,19 +2,13 @@
 # test ASE3 eos vs ASE2' on EMT Al bulk
 
 import numpy as np
+import scipy  # skip test early if no scipy
 
-from ase.test import NotAvailable
-
-try:
-    import scipy
-except ImportError:
-    raise NotAvailable('This needs scipy module.')
-
-from ase.lattice import bulk
-
+from ase.build import bulk
 from ase.io.trajectory import Trajectory
-
 from ase.calculators.emt import EMT
+
+scipy  # silence pyflakes
 
 # old ASE2 conversion factor
 eVA3ToGPA = 160.21773
@@ -110,7 +104,7 @@ except (ImportError, TypeError, ValueError):
 
 # ASE3
 
-from ase.utils.eos import EquationOfState as eos3
+from ase.eos import EquationOfState as eos3
 
 for e in eos_strl3 + ['sjeos', 'p3']:
     eos = eos3(volumes, energies, eos=e.lower())

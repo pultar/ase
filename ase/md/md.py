@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 
 from ase.optimize.optimize import Dynamics
-from ase.data import atomic_masses
 from ase.md.logger import MDLogger
 
 
@@ -26,7 +25,7 @@ class MolecularDynamics(Dynamics):
 
     def run(self, steps=50):
         """Integrate equation of motion."""
-        f = self.atoms.get_forces()
+        f = self.atoms.get_forces(md=True)
 
         if not self.atoms.has('momenta'):
             self.atoms.set_momenta(np.zeros_like(f))
@@ -38,4 +37,3 @@ class MolecularDynamics(Dynamics):
 
     def get_time(self):
         return self.nsteps * self.dt
-    

@@ -110,7 +110,7 @@ class RandomMutation(Mutation):
         indi.info['data']['parents'] = [f.info['confid']]
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
 
     @classmethod
     def random_vector(cls, l):
@@ -147,7 +147,7 @@ class RandomPermutation(Mutation):
             indi.append(atom)
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
 
     @classmethod
     def mutate(cls, atoms, elements=None):
@@ -176,7 +176,7 @@ class COM2surfPermutation(Mutation):
     min_ratio: minimum ratio of each element in the core or surface region.
         If elements=[a, b] then ratio of a is Na / (Na + Nb) (N: Number of).
         If less than minimum ratio is present in the core, the region defining
-        the core will be extended untill the minimum ratio is met, and vice
+        the core will be extended until the minimum ratio is met, and vice
         versa for the surface region. It has the potential reach the
         recursive limit if an element has a smaller total ratio in the
         complete particle. In that case remember to decrease this min_ratio.
@@ -206,7 +206,7 @@ class COM2surfPermutation(Mutation):
             indi.append(atom)
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
 
     @classmethod
     def mutate(cls, atoms, elements, min_ratio):
@@ -352,7 +352,7 @@ class Poor2richPermutation(_NeighborhoodPermutation):
             indi.append(atom)
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
 
     @classmethod
     def mutate(cls, atoms, elements):
@@ -404,7 +404,7 @@ class Rich2poorPermutation(_NeighborhoodPermutation):
             indi.append(atom)
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
         
     @classmethod
     def mutate(cls, atoms, elements):
@@ -450,7 +450,7 @@ class SymmetricSubstitute(Mutation):
         indi.info['data']['parents'] = [f.info['confid']]
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))
 
 
 class RandomSubstitute(Mutation):
@@ -485,4 +485,4 @@ class RandomSubstitute(Mutation):
         indi.info['data']['parents'] = [f.info['confid']]
 
         return (self.finalize_individual(indi),
-                self.descriptor + ': {0}'.format(f.info['confid']))
+                self.descriptor + ':Parent {0}'.format(f.info['confid']))

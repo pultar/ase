@@ -1,4 +1,4 @@
-.. _python_codingstandard:
+.. _coding conventions:
 
 ==================
 Coding Conventions
@@ -120,7 +120,10 @@ your code (or use a text editor that does it automatically)::
     
 or equivalently::
 
-  $ python -m ase.utils.stylecheck filename.py
+    $ alias check="python -m ase.utils.stylecheck"
+    $ check filename.py
+
+Install ``pep8`` and ``pyflakes`` like this: ``pip install pep8 pyflakes``.
 
 .. _pyflakes: https://github.com/pyflakes/pyflakes
     
@@ -152,8 +155,8 @@ should be retested after cleaning it. Try::
 Using pylint to check your code
 ===============================
 
-A pylintrc trying to follow ASE :ref:`python_codingstandard` can be found here:
-:svn:`doc/development/pylintrc`
+A pylintrc trying to follow ASE :ref:`coding conventions` can be found here:
+:download:`pylintrc`.
 
 
 .. _epydoc:

@@ -8,6 +8,7 @@ Versions:
    a version number.
 4) Got rid of keywords.
 5) Add fmax, smax, mass, volume, charge
+6) Use REAL for magmom and drop possibility for non-collinear spin
 """
 
 from __future__ import absolute_import, print_function
@@ -19,14 +20,15 @@ import numpy as np
 
 from ase.data import atomic_numbers
 from ase.db.row import AtomsRow
-from ase.db.core import Database, ops, now, lock, parallel, invop
+from ase.db.core import Database, ops, now, lock, invop
 from ase.io.jsonio import encode, decode
+from ase.parallel import parallel_function
 from ase.utils import basestring
 
 if sys.version >= '3':
     buffer = memoryview
 
-VERSION = 5
+VERSION = 6
 
 init_statements = [
     """CREATE TABLE systems (
@@ -53,7 +55,7 @@ init_statements = [
     stress BLOB,
     dipole BLOB,
     magmoms BLOB,
-    magmom BLOB,
+    magmom REAL,
     charges BLOB,
     key_value_pairs TEXT,  -- key-value pairs and data as json
     data TEXT,
@@ -165,7 +167,11 @@ class SQLite3Database(Database):
                 else:
                     self.version = int(cur.fetchone()[0])
                     
-        if self.version < VERSION and not self._allow_reading_old_format:
+        if self.version > VERSION:
+            raise IOError('Can not read new ase.db format '
+                          '(version {0}).  Please update to latest ASE.'
+                          .format(self.version))
+        if self.version < 5 and not self._allow_reading_old_format:
             raise IOError('Please convert to new format. ' +
                           'Use: python -m ase.db.convert ' + self.filename)
             
@@ -223,11 +229,6 @@ class SQLite3Database(Database):
                        encode(row.calculator_parameters))
         else:
             values += (None, None)
-
-        magmom = row.get('magmom')
-        if magmom is not None:
-            # magmom can be one or three numbers (non-collinear case)
-            magmom = np.array(magmom)
             
         if not key_value_pairs:
             key_value_pairs = row.key_value_pairs
@@ -243,7 +244,7 @@ class SQLite3Database(Database):
                    blob(row.get('stress')),
                    blob(row.get('dipole')),
                    blob(row.get('magmoms')),
-                   blob(magmom),
+                   row.get('magmom'),
                    blob(row.get('charges')),
                    encode(key_value_pairs),
                    data,
@@ -312,11 +313,11 @@ class SQLite3Database(Database):
             c.execute('SELECT * FROM systems WHERE id=?', (id,))
         values = c.fetchone()
 
-        if self.version < VERSION:
-            values = self._old2new(values)
+        values = self._old2new(values)
         return self._convert_tuple_to_row(values)
 
     def _convert_tuple_to_row(self, values):
+        values = self._old2new(values)
         dct = {'id': values[0],
                'unique_id': values[1],
                'ctime': values[2],
@@ -354,7 +355,7 @@ class SQLite3Database(Database):
         if values[22] is not None:
             dct['magmoms'] = deblob(values[22])
         if values[23] is not None:
-            dct['magmom'] = deblob(values[23])[0]
+            dct['magmom'] = values[23]
         if values[24] is not None:
             dct['charges'] = deblob(values[24])
         if values[25] != '{}':
@@ -365,18 +366,15 @@ class SQLite3Database(Database):
         return AtomsRow(dct)
 
     def _old2new(self, values):
-        if self.version == 4:
-            return values  # should be ok for reading by convert.py script
-        if len(values) == 26:
-            extra = decode(values[25])
-            return values[:-1] + (encode(extra['key_value_pairs']),
-                                  encode(extra['data']))
-        elif len(values) == 29:
-            keywords = decode(values[-4])
-            kvp = decode(values[-3])
-            kvp.update(dict((keyword, 1) for keyword in keywords))
-            return values[:-4] + (encode(kvp),) + values[-2:]
-        assert False
+        assert self.version >= 4, 'Your db-file is too old!'
+        if self.version < 5:
+            pass  # should be ok for reading by convert.py script
+        if self.version < 6:
+            m = values[23]
+            if m is not None and not isinstance(m, float):
+                magmom = float(deblob(m, shape=()))
+                values = values[:23] + (magmom,) + values[24:]
+        return values
         
     def create_select_statement(self, keys, cmps,
                                 sort=None, order=None, sort_table=None,
@@ -386,9 +384,18 @@ class SQLite3Database(Database):
         args = []
         
         for n, key in enumerate(keys):
-            tables.append('keys AS keys{0}'.format(n))
-            where.append('systems.id=keys{0}.id AND keys{0}.key=?'.format(n))
-            args.append(key)
+            if key == 'forces':
+                where.append('systems.fmax IS NOT NULL')
+            elif key == 'strain':
+                where.append('systems.smax IS NOT NULL')
+            elif key in ['energy', 'fmax', 'smax',
+                         'constraints', 'calculator']:
+                where.append('systems.{0} IS NOT NULL'.format(key))
+            else:
+                tables.append('keys AS keys{0}'.format(n))
+                where.append('systems.id=keys{0}.id AND keys{0}.key=?'
+                             .format(n))
+                args.append(key)
 
         # Special handling of "H=0" and "H<2" type of selections:
         bad = {}
@@ -402,12 +409,15 @@ class SQLite3Database(Database):
         nnumber = 0
         for key, op, value in cmps:
             if key in ['id', 'energy', 'magmom', 'ctime', 'user',
-                       'calculator', 'natoms', 'pbc', 'unique_id']:
+                       'calculator', 'natoms', 'pbc', 'unique_id',
+                       'fmax', 'smax', 'volume', 'mass', 'charge']:
                 if key == 'user' and self.version >= 2:
                     key = 'username'
                 elif key == 'pbc':
                     assert op in ['=', '!=']
                     value = int(np.dot([x == 'T' for x in value], [1, 2, 4]))
+                elif key == 'magmom':
+                    assert self.version >= 6, 'Update you db-file'
                 where.append('systems.{0}{1}?'.format(key, op))
                 args.append(value)
             elif isinstance(key, int):
@@ -518,8 +528,7 @@ class SQLite3Database(Database):
             for values in cur.fetchall():
                 yield self._convert_tuple_to_row(values)
                     
-    @parallel
-    @lock
+    @parallel_function
     def count(self, selection=None, **kwargs):
         keys, cmps = self.parse_selection(selection, **kwargs)
         sql, args = self.create_select_statement(keys, cmps, what='COUNT(*)')
@@ -563,7 +572,7 @@ class SQLite3Database(Database):
                 self._write(row, kvp, None)
         return m, n
 
-    @parallel
+    @parallel_function
     @lock
     def delete(self, ids):
         con = self._connect()
@@ -585,6 +594,8 @@ def blob(array):
         return None
     if array.dtype == np.int64:
         array = array.astype(np.int32)
+    if not np.little_endian:
+        array.byteswap(True)
     return buffer(np.ascontiguousarray(array))
 
 
@@ -598,7 +609,13 @@ def deblob(buf, dtype=float, shape=None):
     if len(buf) == 0:
         array = np.zeros(0, dtype)
     else:
-        array = np.frombuffer(buf, dtype)
+        if len(buf) % 2 == 1:
+            # old psycopg2:
+            array = np.fromstring(str(buf)[1:].decode('hex'), dtype)
+        else:
+            array = np.frombuffer(buf, dtype)
+        if not np.little_endian:
+            array.byteswap(True)
     if shape is not None:
         array.shape = shape
     return array

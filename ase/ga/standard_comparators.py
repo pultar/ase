@@ -1,4 +1,5 @@
 import numpy as np
+from ase.ga import get_raw_score
 
 
 def get_sorted_dist_list(atoms, mic=False):
@@ -172,7 +173,7 @@ class RawScoreComparator(object):
         self.dist = dist
         
     def looks_like(self, a1, a2):
-        d = abs(a1.get_raw_score() - a2.get_raw_score())
+        d = abs(get_raw_score(a1) - get_raw_score(a2))
         if d >= self.dist:
             return False
         else:
@@ -180,7 +181,7 @@ class RawScoreComparator(object):
 
             
 class NoComparator(object):
-    """Returns False allways. If you don't want any comparator."""
+    """Returns False always. If you don't want any comparator."""
     def looks_like(self, *args):
         return False
         
@@ -189,3 +190,9 @@ class AtomsComparator(object):
     """Compares the Atoms objects directly."""
     def looks_like(self, a1, a2):
         return a1 == a2
+
+
+class CompositionComparator(object):
+    """Compares the composition of the Atoms objects."""
+    def looks_like(self, a1, a2):
+        return a1.get_chemical_formula() == a2.get_chemical_formula()

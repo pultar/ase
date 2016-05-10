@@ -7,12 +7,17 @@ import subprocess
 import sys
 
 
-def svn_update(name='ase'):
+def git_pull(name='ase'):
     os.chdir(name)
-    output = subprocess.check_output('svn update', shell=True)
-    os.chdir('..')
+    try:
+        output = subprocess.check_output(
+            'GIT_HTTP_LOW_SPEED_LIMIT=1000 '
+            'GIT_HTTP_LOW_SPEED_TIME=20 '  # make sure we get a timeout
+            'git pull 2>> pull.err', shell=True)
+    finally:
+        os.chdir('..')
     lastline = output.splitlines()[-1]
-    return not lastline.startswith('At revision')
+    return not lastline.startswith('Already up-to-date')
 
         
 def build(force_build, name='ase', env=''):
@@ -25,7 +30,7 @@ def build(force_build, name='ase', env=''):
 
     # Clean up:
     shutil.rmtree('doc')
-    subprocess.check_call('svn update', shell=True)
+    subprocess.check_call('git checkout .', shell=True)
 
     # Create development snapshot tar-file and install:
     try:
@@ -54,23 +59,25 @@ def build(force_build, name='ase', env=''):
     
     # Set correct version of snapshot tar-file:
     subprocess.check_call(
-        'find build/html -name download.html | '
+        'find build/html -name install.html | '
         'xargs sed -i s/snapshot.tar.gz/{}/g'.format(tar),
         shell=True)
     
     os.chdir('..')
-    output = subprocess.check_output(
-        'epydoc --docformat restructuredtext --parse-only '
-        '--name {0} --url http://wiki.fysik.dtu.dk/{1} '
-        '--show-imports --no-frames -v {1}'.format(name.upper(), name),
-        shell=True)
     
-    # Check for warnings:
-    for line in output.splitlines():
-        if line.startswith('|'):
-            print(line)
-
-    os.rename('html', 'doc/build/html/epydoc')
+    if name == 'ase':
+        output = subprocess.check_output(
+            'epydoc --docformat restructuredtext --parse-only '
+            '--name {0} --url http://wiki.fysik.dtu.dk/{1} '
+            '--show-imports --no-frames -v {1}'.format(name.upper(), name),
+            shell=True)
+        
+        # Check for warnings:
+        for line in output.splitlines():
+            if line.startswith('|'):
+                print(line)
+    
+        os.rename('html', 'doc/build/html/epydoc')
     
     os.chdir('doc/build')
     dir = name + '-web-page'
@@ -85,7 +92,6 @@ def build(force_build, name='ase', env=''):
         pass
     shutil.rmtree('lib')
     shutil.rmtree('bin')
-    shutil.rmtree('share')
 
 
 def main(build=build):
@@ -97,6 +103,7 @@ def main(build=build):
         print('Locked', file=sys.stderr)
         return
     try:
+        home = os.getcwd()
         open('build-web-page.lock', 'w').close()
             
         parser = optparse.OptionParser(usage='Usage: %prog [-f]',
@@ -106,10 +113,10 @@ def main(build=build):
                           'there are changes to the docs or code.')
         opts, args = parser.parse_args()
         assert len(args) == 0
-        changes = svn_update('ase')
+        changes = git_pull('ase')
         build(opts.force_build or changes)
     finally:
-        os.remove('build-web-page.lock')
+        os.remove(os.path.join(home, 'build-web-page.lock'))
 
         
 if __name__ == '__main__':

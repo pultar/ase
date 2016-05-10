@@ -31,6 +31,15 @@ class Args:
 args = Args
 
 
+class Error:
+    def __init__(self, code, error, methname):
+        self.code = code
+        self.error = error
+        self.methname = methname
+        self.txt = traceback.format_exc()
+        self.callstring = None
+
+
 class InterfaceChecker:
     def __init__(self, obj):
         self.obj = obj
@@ -40,32 +49,25 @@ class InterfaceChecker:
     def _check(self, methname, args=args(), rtype=None):
         args, kwargs = args.unpack()
 
-        class Error:
-            def __init__(self, code, error):
-                self.code = code
-                self.error = error
-                self.methname = methname
-                self.txt = traceback.format_exc()
-                self.callstring = None
-        
         try:
             meth = getattr(self.obj, methname)
         except AttributeError as err:
-            return Error('MISSING', err)
+            return Error('MISSING', err, methname)
 
         try:
             value = meth(*args, **kwargs)
         except NotImplementedError as err:
-            return Error('not implemented', err)
-        except StandardError as err:
-            return Error(err.__class__.__name__, err)
+            return Error('not implemented', err, methname)
+        except Exception as err:
+            return Error(err.__class__.__name__, err, methname)
         else:
             self.returnvalues[methname] = value
 
         if rtype is not None:
             if not isinstance(value, rtype):
                 return Error('TYPE', TypeError('got %s but expected %s'
-                                               % (type(value), rtype)))
+                                               % (type(value), rtype)),
+                             methname)
         return None
 
     def check(self, methname, args=args(), rtype=None):
@@ -116,10 +118,18 @@ def check_interface(calc):
     c('get_spin_polarized', rtype=bool)
     c('get_ibz_k_points', rtype=np.ndarray)
     c('get_k_point_weights', rtype=np.ndarray)
-    c('get_pseudo_density', rtype=np.ndarray)
+
     for meth in ['get_pseudo_density', 'get_effective_potential']:
-        c(meth, args(spin=None, pad=False), rtype=np.ndarray)
-        c(meth, args(spin=None, pad=True), rtype=np.ndarray)
+        c(meth, rtype=np.ndarray)
+        c(meth, args(spin=0, pad=False), rtype=np.ndarray)
+        spinpol = tester.returnvalues.get('get_spin_polarized')
+        if spinpol:
+            c(meth, args(spin=1, pad=True), rtype=np.ndarray)
+
+    for pad in [False, True]:
+        c('get_pseudo_density', args(spin=None, pad=pad), rtype=np.ndarray)
+
+    for meth in ['get_pseudo_density', 'get_effective_potential']:
         c(meth, args(spin=0, pad=False), rtype=np.ndarray)
         spinpol = tester.returnvalues.get('get_spin_polarized')
         if spinpol:
@@ -134,10 +144,10 @@ def check_interface(calc):
     c('get_eigenvalues', args(kpt=0, spin=0), rtype=np.ndarray)
     c('get_occupation_numbers', args(kpt=0, spin=0), rtype=np.ndarray)
     c('get_fermi_level', rtype=float)
-    #c('initial_wanner', ........) what the heck?
-    #c('get_wannier_localization_matrix', ...)  No.
+    # c('initial_wanner', ........) what the heck?
+    # c('get_wannier_localization_matrix', ...)  No.
     c('get_magnetic_moment', args(atoms=system), rtype=float)
-    #c('get_number_of_grid_points', rtype=tuple) # Hmmmm.  Not for now...
+    # c('get_number_of_grid_points', rtype=tuple) # Hmmmm.  Not for now...
 
     # Optional methods sometimes invoked by ase.atoms.Atoms
     c('get_magnetic_moments', rtype=np.ndarray)
@@ -157,10 +167,12 @@ def check_interface(calc):
             print(err.txt)
             print()
 
+    return tester.errors
+
 
 def main_gpaw():
     from gpaw import GPAW
-    from ase.structure import molecule
+    from ase.build import molecule
     system = molecule('H2')
     system.center(vacuum=1.5)
     system.pbc = 1
@@ -172,7 +184,7 @@ def main_gpaw():
 
 def main_octopus():
     from octopus import Octopus
-    from ase.structure import molecule
+    from ase.build import molecule
     system = molecule('H2')
     system.center(vacuum=1.5)
     system.pbc = 1

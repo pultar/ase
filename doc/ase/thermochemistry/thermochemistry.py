@@ -1,14 +1,18 @@
-# creates:  nitrogen.txt
+# creates:  nitrogen.txt, gold.txt
+import io
 import os
 import sys
-from StringIO import StringIO
+
 
 def output_to_string(pythonfile):
     """Returns the stdout of executing the code in pythonfile
     as a string."""
-    buffer = StringIO()
+    if sys.version_info.major == 2:
+        buffer = io.BytesIO()
+    else:
+        buffer = io.StringIO()
     sys.stdout = buffer
-    execfile(pythonfile)
+    exec(open(pythonfile).read())
     sys.stdout = sys.__stdout__
     return buffer.getvalue()
 
@@ -27,5 +31,3 @@ vibfiles = [file for file in os.listdir(os.getcwd()) if
             file.startswith('vib.') or file.startswith('phonon.')]
 for file in vibfiles:
     os.remove(file)
-
-

@@ -26,10 +26,9 @@ import os
 import numpy as np
 
 import ase
-import ase.version
 
 from ase.data import atomic_masses
-from ase.lattice.spacegroup.cell import cellpar_to_cell, cell_to_cellpar
+from ase.geometry import cellpar_to_cell, cell_to_cellpar
 import collections
 from functools import reduce
 
@@ -77,7 +76,7 @@ class NetCDFTrajectory:
     _cell_spatial_var = 'cell_spatial'
     _cell_angular_var = 'cell_angular'
     _time_var = 'time'
-    _numbers_var = ['Z', 'atom_types', 'type']
+    _numbers_var = ['atom_types', 'type', 'Z']
     _positions_var = 'coordinates'
     _velocities_var = 'velocities'
     _cell_origin_var = 'cell_origin'
@@ -346,6 +345,8 @@ class NetCDFTrajectory:
             self._add_time()
             self._get_variable(self._time_var)[i] = time
 
+        self.sync()
+
         self._call_observers(self.post_observers)
         self.frame += 1
         self._close()
@@ -376,7 +377,7 @@ class NetCDFTrajectory:
         if not hasattr(self.nc, 'program'):
             self.nc.program = 'ASE'
         if not hasattr(self.nc, 'programVersion'):
-            self.nc.programVersion = ase.version.version
+            self.nc.programVersion = ase.__version__
 
         if self._frame_dim not in self.nc.dimensions:
             self.nc.createDimension(self._frame_dim, None)
@@ -502,6 +503,9 @@ class NetCDFTrajectory:
             self.close()
             if self.mode == 'w':
                 self.mode = 'a'
+
+    def sync(self):
+        self.nc.sync()
 
     def __getitem__(self, i=-1):
         self._open()

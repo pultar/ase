@@ -13,6 +13,7 @@ from ase.ga.offspring_creator import OperationSelector
 from ase.ga.standardmutations import MirrorMutation
 from ase.ga.standardmutations import RattleMutation
 from ase.ga.standardmutations import PermutationMutation
+from ase.ga import set_raw_score
 
 # Change the following three parameters to suit your needs
 population_size = 5
@@ -47,7 +48,7 @@ while da.get_number_of_unrelaxed_candidates() > 0:
     print('Relaxing starting candidate {0}'.format(a.info['confid']))
     dyn = BFGS(a, trajectory=None, logfile=None)
     dyn.run(fmax=0.05, steps=100)
-    a.set_raw_score(-a.get_potential_energy())
+    set_raw_score(a, -a.get_potential_energy())
     da.add_relaxed_step(a)
 
 # create the population
@@ -60,14 +61,14 @@ for i in range(n_to_test):
     print('Now starting configuration number {0}'.format(i))
     a1, a2 = population.get_two_candidates()
     a3, desc = pairing.get_new_individual([a1, a2])
-    if a3 == None:
+    if a3 is None:
         continue
     da.add_unrelaxed_candidate(a3, description=desc)
 
     # Check if we want to do a mutation
     if random() < mutation_probability:
         a3_mut, desc = mutations.get_new_individual([a3])
-        if a3_mut != None:
+        if a3_mut is not None:
             da.add_unrelaxed_step(a3_mut, desc)
             a3 = a3_mut
         
@@ -75,7 +76,7 @@ for i in range(n_to_test):
     a3.set_calculator(EMT())
     dyn = BFGS(a3, trajectory=None, logfile=None)
     dyn.run(fmax=0.05, steps=100)
-    a3.set_raw_score(-a3.get_potential_energy())
+    set_raw_score(a3, -a3.get_potential_energy())
     da.add_relaxed_step(a3)
     population.update()
 

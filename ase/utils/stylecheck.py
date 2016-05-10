@@ -1,3 +1,9 @@
+# Check coding style compliance.
+#
+# For a description of error codes see:
+#
+#     http://pep8.readthedocs.org/en/latest/intro.html#error-codes
+
 import argparse
 import os
 import smtplib
@@ -28,7 +34,8 @@ def pep8(name):
     lines = []
     for line in output.decode().splitlines():
         name, l, c, error = line.split(':', 3)
-        if error.startswith(' E226'):
+        # Allow 'a**b' while still disallowing 'a+b':
+        if error.startswith(' E225') or error.startswith(' E226'):
             ln = open(name).readlines()[int(l) - 1]
             c = int(c) - 1
             if ln[c:c + 2] == '**':
@@ -53,6 +60,19 @@ def check_file(name):
         print(line)
     
         
+grrr = """Please always run this check on Python source-code before committing:
+
+    $ alias check="python -m ase.utils.stylecheck"
+    $ check foo.py bar.py ...
+    
+This will run pep8 and pyflakes on you source.  Install pep8 and pyflakes
+like this:
+    
+    $ pip install pep8 pyflakes
+    
+"""
+
+
 def check_repository(to):
     output = subprocess.check_output('svn merge --dry-run -r BASE:HEAD .',
                                      shell=True)
@@ -105,7 +125,7 @@ def check_repository(to):
             subject.append('PyFlakes warnings: {}'.format(nf))
         txt = '\n'.join(txt)
         if to:
-            mail(to, ' - '.join(subject), txt)
+            mail(to, ' - '.join(subject), grrr + txt)
         else:
             print(txt)
         
