@@ -1055,7 +1055,7 @@ class Vasp(Calculator):
         potfile = open('POTCAR' + suffix, 'wb')
         for filename in self.ppp_list:
             if filename.endswith('R'):
-                for line in open(filename, 'r'):
+                for line in open(filename, 'rb'):
                     potfile.write(line)
             elif filename.endswith('.Z'):
                 file_tmp = tempfile.NamedTemporaryFile()
