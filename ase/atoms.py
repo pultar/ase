@@ -756,6 +756,7 @@ class Atoms(object):
 
     def copy(self):
         """Return a copy."""
+        return copy.deepcopy(self)
         atoms = self.__class__(cell=self._cell, pbc=self._pbc, info=self.info)
 
         atoms.arrays = {}
