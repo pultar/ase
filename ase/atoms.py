@@ -756,7 +756,6 @@ class Atoms(object):
 
     def copy(self):
         """Return a copy."""
-        return copy.deepcopy(self)
         atoms = self.__class__(cell=self._cell, pbc=self._pbc, info=self.info)
 
         atoms.arrays = {}
@@ -764,6 +763,9 @@ class Atoms(object):
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
         atoms.adsorbate_info = copy.deepcopy(self.adsorbate_info)
+        diff_attributes = [a for a in vars(self) if a not in vars(atoms)]
+        for attribute in diff_attributes:
+            setattr(atoms, attribute, getattr(self, attribute))
         return atoms
 
     def __len__(self):
