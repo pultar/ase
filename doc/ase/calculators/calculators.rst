@@ -57,9 +57,7 @@ The calculators can be divided in four groups:
    Lennard-Jones and Morse.
 
 4) Calculators that wrap others, included in the ASE package:
-   :class:`ase.calculators.checkpoint.CheckpointCalculator` and
-   the :ref:`Grimme-D3 <grimme>` potential.
-   
+   Checkpoint calculator
 
 ==================================  ===========================================
 name                                description
@@ -93,7 +91,6 @@ morse                               Morse potential
 ==================================  ===========================================
 
 .. index:: D3, Grimme
-.. _grimme:
 
 .. note::
     
@@ -111,7 +108,7 @@ where ``abc`` is the module name and ``ABC`` is the class name.
 
 .. _Asap: http://wiki.fysik.dtu.dk/asap
 .. _GPAW: http://wiki.fysik.dtu.dk/gpaw
-.. _Hotbit: https://github.com/pekkosk/hotbit
+.. _Hotbit: https://trac.cc.jyu.fi/projects/hotbit
 
 
 Calculator keywords
@@ -185,6 +182,7 @@ the :meth:`set` method:
 
 
 .. toctree::
+   :hidden:
 
    eam
    emt
@@ -205,7 +203,6 @@ the :meth:`set` method:
    turbomole
    vasp
    qmmm
-   checkpointing
    others
    ase_qmmm_manyqm
 
