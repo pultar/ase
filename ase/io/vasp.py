@@ -470,7 +470,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         if isinstance(index, int):
             steps = [calculation[index]]
         else:
-            steps = calculation[index]
+            steps = [calc for calc in calculation]
     else:
         steps = []
 
