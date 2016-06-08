@@ -1507,8 +1507,14 @@ class Atoms(object):
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""
-        ekin = self.get_kinetic_energy() / len(self)
-        return ekin / (1.5 * units.kB)
+        if self.constraints: # Constraints are not saved in traj
+            ekin = self.get_kinetic_energy()
+            rem_dofs = len(self.constraints) 
+            temp = 2 * ekin  / ((3 * len(self) - rem_dofs) * units.kB ) 
+        else:
+            ekin = self.get_kinetic_energy() / len(self)
+            temp = ekin / (1.5 * units.kB)
+        return temp
 
     def __eq__(self, other):
         """Check for identity of two atoms objects.
