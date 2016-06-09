@@ -1507,10 +1507,16 @@ class Atoms(object):
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""
-        if self.constraints: # Constraints are not saved in traj
-            ekin = self.get_kinetic_energy()
-            rem_dofs = len(self.constraints) 
-            temp = 2 * ekin  / ((3 * len(self) - rem_dofs) * units.kB ) 
+        # Currently only for FixBondLength class.
+        # Every constraint class should produce #DOFs removed  
+        if self.constraints:
+            if hasattr(self.constraints[0], 'pairs'):
+                ekin = self.get_kinetic_energy()
+                rem_dofs = len(self.constraints[0].pairs)
+                temp = 2 * ekin  / ((3 * len(self) - rem_dofs) * units.kB )
+            else: 
+                ekin = self.get_kinetic_energy() / len(self)
+                temp = ekin / (1.5 * units.kB)
         else:
             ekin = self.get_kinetic_energy() / len(self)
             temp = ekin / (1.5 * units.kB)
