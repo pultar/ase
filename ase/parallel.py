@@ -4,6 +4,7 @@ import functools
 import pickle
 import sys
 import time
+import inspect
 
 import numpy as np
 
@@ -136,6 +137,15 @@ def parallel_function(func):
         result = None
         if world.rank == 0:
             try:
+                fileandfuncname = [s[1]+s[3] for s in inspect.stack()]
+                try:
+                    # current filename and function has another occurence
+                    # raise NotImplementedError to warn about nesting
+                    fileandfuncname.index(fileandfuncname[0],1)
+                    raise NotImplementedError(
+                        "Cannot handle nested parallel_function!")
+                except ValueError:
+                    pass
                 result = func(*args, **kwargs)
             except Exception as ex:
                 pass
