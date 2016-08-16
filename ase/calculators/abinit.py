@@ -434,7 +434,7 @@ class Abinit(FileIOCalculator):
                         filenames = max(filenames)  # Semicore - highest electron count
                     elif pps == 'hgh.sc':
                         filenames = max(filenames)  # Semicore - highest electron count
-                    else
+                    else:
                         filenames = filenames[0]    # first match in list
 
                     if filenames:
