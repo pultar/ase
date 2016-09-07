@@ -42,7 +42,7 @@ class LoggingCalculator(Calculator):
             try:
                 energy = results[properties.index('energy')]
             except IndexError:
-                energy = sum128(results[properties.index('energies')])
+                energy = sum(results[properties.index('energies')])
             logger.info('energy call count=%d energy=%.3f', self.energy_evals[self.label], energy)
         self.results = dict(zip(properties, results))
 
