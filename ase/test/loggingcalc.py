@@ -9,8 +9,8 @@ a0 = bulk('Cu', cubic=True)
 
 # perturb the atoms
 s = a0.get_scaled_positions()
-# s[:, 0] *= 0.995
-# a0.set_scaled_positions(s)
+s[:, 0] *= 0.995
+a0.set_scaled_positions(s)
 a0.rattle(0.05)
 
 log_calc = LoggingCalculator(LennardJones())
