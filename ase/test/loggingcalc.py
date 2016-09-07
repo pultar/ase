@@ -1,5 +1,3 @@
-import numpy as np
-
 from ase.build import bulk
 from ase.calculators.lj import LennardJones
 from ase.calculators.loggingcalc import LoggingCalculator
