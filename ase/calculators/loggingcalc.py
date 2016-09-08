@@ -18,6 +18,15 @@ class LoggingCalculator(Calculator):
     Calculator wrapper to record and plot history of energy and function evaluations
     """
     implemented_properties = all_properties
+    default_parameters = {}
+    name = 'LoggingCalculator'
+
+    property_to_method_name = {
+        'energy': 'get_potential_energy',
+        'energies': 'get_potential_energies',
+        'forces': 'get_forces',
+        'stress': 'get_stress',
+        'stresses': 'get_stresses'}
 
     def __init__(self, calculator, jsonfile=None, dumpjson=False):
         Calculator.__init__(self)
@@ -34,7 +43,14 @@ class LoggingCalculator(Calculator):
     def calculate(self, atoms, properties, system_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
 
-        results = [self.calculator.get_property(prop, atoms) for prop in properties]
+        if isinstance(self.calculator, Calculator):
+            results = [self.calculator.get_property(prop, atoms) for prop in properties]
+        else:
+            results = []
+            for prop in properties:
+                method_name = self.property_to_method_name[prop]
+                method = getattr(self.calculator, method_name)
+                results.append(method(atoms))
 
         if 'energy' in properties or 'energies' in properties:
             self.energy_evals.setdefault(self.label, 0)
@@ -88,6 +104,16 @@ class LoggingCalculator(Calculator):
         self.walltime.update(dct['walltime'])
         self.energy_evals.update(dct['energy_evals'])
         self.energy_count.update(dct['energy_count'])
+
+    def tabulate(self):
+        fmt1 = '%-10s %10s %10s %8s'
+        title = fmt1 % ('Label', '# Force', '# Energy', 'Walltime/s')
+        print(title)
+        print('-'*len(title))
+        fmt2 = '%-10s %10d %10d %8.2f'
+        for label in sorted(self.fmax.keys()):
+            print(fmt2 % (label, len(self.fmax[label]), len(self.energy_count[label]),
+                            self.walltime[label][-1] - self.walltime[label][0]))
 
     def plot(self, fmaxlim=(1e-2, 1e2), forces=True, energy=True, walltime=True,
             markers=None, labels=None, **kwargs):

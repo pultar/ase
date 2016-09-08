@@ -20,6 +20,7 @@ for OPT, label in zip([FIRE, BFGS],
     atoms.set_calculator(log_calc)
     opt = OPT(atoms)
     opt.run(fmax=1e-3)
+log_calc.tabulate()
 
 #log_calc.plot([1e-3, 1e2], markers=['r-', 'g-'])
 #import matplotlib.pyplot as plt
