@@ -18,18 +18,6 @@ from scipy.io import netcdf
 class Amber(FileIOCalculator):
     """Class for doing Amber classical MM calculations.
 
-    Example:
-    mm.in:
-
-    Minimization with Cartesian restraints
-    &cntrl
-    imin=1, maxcyc=200, (invoke minimization)
-    ntpr=5, (print frequency)
-    &end
-
-
-
- 
     """
 
     implemented_properties = ['energy', 'forces']
@@ -70,7 +58,7 @@ class Amber(FileIOCalculator):
             It is only relevant
             if you run MD/optimisation many steps with amber.
 
-        Examples (optimise 2 water molecules in vacuum)
+        Example (optimise 2 water molecules in vacuum)
         ========
         You need three input files for this (with the names given):
         1) MD instructions for amber
