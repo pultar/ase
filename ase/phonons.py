@@ -34,7 +34,7 @@ class Displacement:
     """
 
     def __init__(self, atoms, calc=None, supercell=(1, 1, 1), name=None,
-                 delta=0.01, refcell=None):
+                 delta=0.01, refcell=None, use_initial_magmom=False):
         """Init with an instance of class ``Atoms`` and a calculator.
 
         Parameters:
@@ -66,6 +66,7 @@ class Displacement:
         self.name = name
         self.delta = delta
         self.N_c = supercell
+        self.use_initial_magmom = use_initial_magmom
 
         # Reference cell offset
         if refcell is None:
@@ -137,6 +138,11 @@ class Displacement:
         # Atoms in the supercell -- repeated in the lattice vector directions
         # beginning with the last
         atoms_N = self.atoms * self.N_c
+        if self.use_initial_magmom:
+            magmoms = self.atoms.get_initial_magnetic_moments()
+            N = reduce(lambda x, y: x*y, self.N_c)
+            new_magmoms = magmoms.repeat(N)
+            atoms_N.set_initial_magnetic_moments(new_magmoms)
         
         # Set calculator if provided
         assert self.calc is not None, "Provide calculator in __init__ method"
@@ -644,7 +650,7 @@ class Phonons(Displacement):
         
         return omega_kl
 
-    def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
+    def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None, verbose=False):
         """Calculate phonon dos as a function of energy.
 
         Parameters:
@@ -665,7 +671,7 @@ class Phonons(Displacement):
         kpts_kc = monkhorst_pack(kpts)
         N = np.prod(kpts)
         # Get frequencies
-        omega_kl = self.band_structure(kpts_kc)
+        omega_kl = self.band_structure(kpts_kc, verbose=verbose)
         # Energy axis and dos
         omega_e = np.linspace(0., np.amax(omega_kl) + 5e-3, num=npts)
         dos_e = np.zeros_like(omega_e)
