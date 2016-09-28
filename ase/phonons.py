@@ -34,7 +34,7 @@ class Displacement:
     """
 
     def __init__(self, atoms, calc=None, supercell=(1, 1, 1), name=None,
-                 delta=0.01, refcell=None):
+                 delta=0.01, refcell=None, use_initial_magmom=False):
         """Init with an instance of class ``Atoms`` and a calculator.
 
         Parameters:
@@ -54,7 +54,11 @@ class Displacement:
             Reference cell in which the atoms will be displaced. If ``None``,
             corner cell in supercell is used. If ``str``, cell in the center of
             the supercell is used.
-
+        use_initial_magmom: bool
+            Whether the initial magnetic moments of the atoms object should be
+            used. If True, the initial magnetic moment of each atom in the
+            supercell is set to be the same as that of the corresponding atom
+            in the primitive cell of the provided Atoms object.
         """
 
         # Store atoms and calculator
@@ -66,6 +70,7 @@ class Displacement:
         self.name = name
         self.delta = delta
         self.N_c = supercell
+        self.use_initial_magmom = use_initial_magmom
 
         # Reference cell offset
         if refcell is None:
@@ -137,6 +142,11 @@ class Displacement:
         # Atoms in the supercell -- repeated in the lattice vector directions
         # beginning with the last
         atoms_N = self.atoms * self.N_c
+        if self.use_initial_magmom:
+            magmoms = self.atoms.get_initial_magnetic_moments()
+            N = reduce(lambda x, y: x*y, self.N_c)
+            new_magmoms = magmoms.repeat(N)
+            atoms_N.set_initial_magnetic_moments(new_magmoms)
 
         # Set calculator if provided
         assert self.calc is not None, "Provide calculator in __init__ method"
