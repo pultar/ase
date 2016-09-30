@@ -1697,8 +1697,10 @@ class Atoms(object):
             positions = self[1]
         elif isinstance(self, ase.atoms.Atoms):
             positions = self.get_scaled_positions(wrap=True)
-
-        for nb in range(1,230):
+        
+        # search space groups from the highest symmetry to the lowest
+        # retain the first match
+        for nb in range(230,1,-1):
             sg        = Spacegroup(nb)
             
 
@@ -1713,16 +1715,12 @@ class Atoms(object):
             # as the spacegroup transforms the unit cell in itself
             if len(sites) == len(positions):
                 # store the space group into the list
-                keep_sg.append(sg)
+                keep_sg = sg
+                break
         
-        # return None when no space group is found (would be surprising)
-        if len(keep_sg) == 0:
-            keep_sg = None
-        else:
-            keep_sg = keep_sg[-1]
-            # store the spacegroup guess if nothing has been set yet
-            if 'spacegroup' not in self.info:
-              self.info["spacegroup"] = keep_sg
+        # store the spacegroup guess if nothing has been set yet
+        if keep_sg is not None and 'spacegroup' not in self.info:
+            self.info["spacegroup"] = keep_sg
             
         return keep_sg
 
