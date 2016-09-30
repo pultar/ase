@@ -1664,6 +1664,67 @@ class Atoms(object):
             edited_atoms.get_initial_magnetic_moments())
         self.set_tags(edited_atoms.get_tags())
         return
+        
+    def get_spacegroup(self, symprec=1e-5):
+        """Determine the spacegroup to which belongs the Atoms object.
+        
+        Parameters:
+        
+        symprec:  Symmetry tolerance, i.e. distance tolerance in Cartesian 
+                  coordinates to find crystal symmetry.
+         
+        The Spacegroup object is returned, and stored in info['spacegroup'] when 
+        this key does not exist yet (avoids overwrite).
+                      
+        Examples:
+        
+        >>> from ase.lattice import bulk
+        >>> atoms = bulk("Cu", "fcc", a=3.6, cubic=True)
+        >>> sg = atoms.get_spacegroup()
+        sg
+            Spacegroup(225, setting=1)
+        sg.symbol
+            'F m -3 m'
+        """
+        
+        from ase.spacegroup import Spacegroup
+        
+        # we try all available spacegroups from 1 to 230
+        # a Space group is the collection of all symmetry operations which let the 
+        # unit cell invariant.
+        keep_sg = []
+        if isinstance(self, tuple):
+            positions = self[1]
+        elif isinstance(self, ase.atoms.Atoms):
+            positions = self.get_scaled_positions(wrap=True)
+
+        for nb in range(1,230):
+            sg        = Spacegroup(nb)
+            
+
+            # now we scan all atoms in the cell and look for equivalent sites
+            try:
+                sites,kinds = sg.equivalent_sites(positions, 
+                    onduplicates='replace', symprec=symprec)
+            except:
+                sites=[]
+                
+            # the equivalent sites should match all other atom location in the cell
+            # as the spacegroup transforms the unit cell in itself
+            if len(sites) == len(positions):
+                # store the space group into the list
+                keep_sg.append(sg)
+        
+        # return None when no space group is found (would be surprising)
+        if len(keep_sg) == 0:
+            keep_sg = None
+        else:
+            keep_sg = keep_sg[-1]
+            # store the spacegroup guess if nothing has been set yet
+            if 'spacegroup' not in self.info:
+              self.info["spacegroup"] = keep_sg
+            
+        return keep_sg
 
 
 def string2symbols(s):
