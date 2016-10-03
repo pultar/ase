@@ -1665,7 +1665,7 @@ class Atoms(object):
         self.set_tags(edited_atoms.get_tags())
         return
 
-        def get_spacegroup(self, symprec=1e-5):
+    def get_spacegroup(self, symprec=1e-5):
         """Determine the spacegroup to which belongs the Atoms object.
         
         Parameters:
