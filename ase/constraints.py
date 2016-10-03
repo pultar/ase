@@ -22,19 +22,6 @@ def slice2enlist(s, n):
         return enumerate(range(*s.indices(n)))
     return enumerate(s)
 
-def constrainted_indices(atoms, only_include=None):
-        """Returns a list of indices for the atoms that are constrained
-        by a constraint that is applied.  By setting only_include to a 
-        specific type of constraint you can make it only look for that
-        given constraint.
-        """
-        indices = []
-        for constraint in atoms._constraints:
-            if only_include is not None:
-                if not isinstance(constraint, only_include):
-                    continue
-            indices.extend(np.array(constraint.get_affected()))
-        return np.array(np.unique(indices))
 
 def constrained_indices(atoms, only_include=None):
     """Returns a list of indices for the atoms that are constrained
@@ -153,6 +140,8 @@ class FixAtoms(FixConstraint):
         if self.index.ndim != 1:
             raise ValueError('Wrong argument to FixAtoms class!')
 
+        self.removed_dof = 3 * len(self.index)
+
     def adjust_positions(self, atoms, new):
         new[self.index] = atoms.positions[self.index]
 
@@ -195,16 +184,20 @@ class FixAtoms(FixConstraint):
         self.index = np.asarray(index_new, int)
         return self
 
-    def delete_atom(self, ind):
-        """ Removes atom number ind from the index array, if present.
+    def delete_atoms(self, indices, natoms):
+        """Removes atom number ind from the index array, if present.
+
         Required for removing atoms with existing FixAtoms constraints.
         """
-        if ind in self.index:
-            i = list(self.index).index(ind)
-            self.index = np.delete(self.index, i)
-        for i in range(len(self.index)):
-            if self.index[i] >= ind:
-                self.index[i] -= 1
+
+        i = np.zeros(natoms, int) - 1
+        new = np.delete(np.arange(natoms), indices)
+        i[new] = np.arange(len(new))
+        index = i[self.index]
+        self.index = index[index >= 0]
+        if len(self.index) == 0:
+            return None
+        return self
 
 
 def ints2string(x, threshold=None):
@@ -215,58 +208,69 @@ def ints2string(x, threshold=None):
 
 
 class FixBondLengths(FixConstraint):
-    def __init__(self, pairs, iterations=10):
-        self.constraints = [FixBondLength(a1, a2) for a1, a2 in pairs]
-        self.iterations = iterations
+    maxiter = 500
+
+    def __init__(self, pairs, tolerance=1e-13, iterations=None):
+        """iterations:
+                Ignored"""
+        self.pairs = np.asarray(pairs)
+        self.tolerance = tolerance
+
+        self.removed_dof = len(pairs)
 
     def adjust_positions(self, atoms, new):
-        for i in range(self.iterations):
-            for constraint in self.constraints:
-                constraint.adjust_positions(atoms, new)
+        old = atoms.positions
+        masses = atoms.get_masses()
+
+        for i in range(self.maxiter):
+            converged = True
+            for a, b in self.pairs:
+                r0 = old[a] - old[b]
+                d0 = find_mic([r0], atoms._cell, atoms._pbc)[0][0]
+                d1 = new[a] - new[b] - r0 + d0
+                m = 1 / (1 / masses[a] + 1 / masses[b])
+                x = 0.5 * (np.dot(d0, d0) - np.dot(d1, d1)) / np.dot(d0, d1)
+                if abs(x) > self.tolerance:
+                    new[a] += x * m / masses[a] * d0
+                    new[b] -= x * m / masses[b] * d0
+                    converged = False
+            if converged:
+                break
+        else:
+            raise RuntimeError('Did not converge')
+
+    def adjust_momenta(self, atoms, p):
+        old = atoms.positions
+        masses = atoms.get_masses()
+        for i in range(self.maxiter):
+            converged = True
+            for a, b in self.pairs:
+                d = old[a] - old[b]
+                d = find_mic([d], atoms._cell, atoms._pbc)[0][0]
+                dv = p[a] / masses[a] - p[b] / masses[b]
+                m = 1 / (1 / masses[a] + 1 / masses[b])
+                x = -np.dot(dv, d) / np.dot(d, d)
+                if abs(x) > self.tolerance:
+                    p[a] += x * m * d
+                    p[b] -= x * m * d
+                    converged = False
+            if converged:
+                break
+        else:
+            raise RuntimeError('Did not converge')
 
     def adjust_forces(self, atoms, forces):
-        for i in range(self.iterations):
-            for constraint in self.constraints:
-                constraint.adjust_forces(atoms, forces)
+        self.constraint_forces = -forces
+        self.adjust_momenta(atoms, forces)
+        self.constraint_forces += forces
 
     def get_indices(self):
-        return np.unique(np.ravel([constraint.indices
-                                   for constraint in self.constraints]))
+        return np.unique(self.pairs.ravel())
 
     def todict(self):
         return {'name': 'FixBondLengths',
-                'kwargs': {'pairs': [constraint.indices
-                                     for constraint in self.constraints],
-                           'iterations': self.iterations}}
-
-
-class FixBondLength(FixConstraint):
-    """Constraint object for fixing a bond length."""
-
-    def __init__(self, a1, a2):
-        """Fix distance between atoms with indices a1 and a2. If mic is
-        True, follows the minimum image convention to keep constant the
-        shortest distance between a1 and a2 in any periodic direction.
-        atoms only needs to be supplied if mic=True.
-        """
-        self.indices = [a1, a2]
-        self.constraint_force = None
-
-    def adjust_positions(self, atoms, new):
-        p1, p2 = atoms.positions[self.indices]
-        d, p = find_mic(np.array([p2 - p1]), atoms._cell, atoms._pbc)
-        q1, q2 = new[self.indices]
-        d, q = find_mic(np.array([q2 - q1]), atoms._cell, atoms._pbc)
-        d *= 0.5 * (p - q) / q
-        new[self.indices] = (q1 - d[0], q2 + d[0])
-
-    def adjust_forces(self, atoms, forces):
-        d = np.subtract.reduce(atoms.positions[self.indices])
-        d, p = find_mic(np.array([d]), atoms._cell, atoms._pbc)
-        d = d[0]
-        d *= 0.5 * np.dot(np.subtract.reduce(forces[self.indices]), d) / p**2
-        self.constraint_force = d
-        forces[self.indices] += (-d, d)
+                'kwargs': {'pairs': self.pairs,
+                           'tolerance': self.tolerance}}
 
     def index_shuffle(self, atoms, ind):
         """Shuffle the indices of the two atoms in this constraint"""
@@ -280,19 +284,10 @@ class FixBondLength(FixConstraint):
         if len(self.pairs) == 0:
             raise IndexError('Constraint not part of slice')
 
-    def get_constraint_force(self):
-        """Return the (scalar) force required to maintain the constraint"""
-        return self.constraint_force
 
-    def get_indices(self):
-        return self.indices
-
-    def __repr__(self):
-        return 'FixBondLength(%d, %d)' % tuple(self.indices)
-
-    def todict(self):
-        return {'name': 'FixBondLength',
-                'kwargs': {'a1': self.indices[0], 'a2': self.indices[1]}}
+def FixBondLength(a1, a2):
+    """Fix distance between atoms with indices a1 and a2."""
+    return FixBondLengths([(a1, a2)])
 
 
 
@@ -342,6 +337,8 @@ class FixedPlane(FixConstraintSingle):
 
     The plane is defined by its normal vector *direction*."""
 
+    removed_dof = 1
+
     def __init__(self, a, direction):
         self.a = a
         self.dir = np.asarray(direction) / sqrt(np.dot(direction, direction))
@@ -365,6 +362,8 @@ class FixedLine(FixConstraintSingle):
     """Constrain an atom index *a* to move on a given line only.
 
     The line is defined by its vector *direction*."""
+
+    removed_dof = 2
 
     def __init__(self, a, direction):
         self.a = a
@@ -392,6 +391,7 @@ class FixCartesian(FixConstraintSingle):
     def __init__(self, a, mask=(1, 1, 1)):
         self.a = a
         self.mask = ~np.asarray(mask, bool)
+        self.removed_dof = 3 - self.mask.sum()
 
     def adjust_positions(self, atoms, new):
         step = new[self.a] - atoms.positions[self.a]
@@ -416,7 +416,8 @@ class FixScaled(FixConstraintSingle):
     def __init__(self, cell, a, mask=(1, 1, 1)):
         self.cell = np.asarray(cell)
         self.a = a
-        self.mask = np.array(mask)
+        self.mask = np.array(mask, bool)
+        self.removed_dof = self.mask.sum()
 
     def adjust_positions(self, atoms, new):
         scaled_old = np.linalg.solve(self.cell.T, atoms.positions.T).T
@@ -462,6 +463,9 @@ class FixInternals(FixConstraint):
         self.epsilon = epsilon
 
         self.initialized = False
+        self.removed_dof = (len(self.bonds) +
+                            len(self.angles) +
+                            len(self.dihedrals))
 
     def initialize(self, atoms):
         if self.initialized:
@@ -957,12 +961,16 @@ class Hookean(FixConstraint):
 
 class ExternalForce(FixConstraint):
     """Constraint object for pulling two atoms apart by an external force.
+
     You can combine this constraint for example with FixBondLength but make
     sure that the ExternalForce-constraint comes first in the list:
+
     >>> con1 = ExternalForce(atom1, atom2, f_ext)
     >>> con2 = FixBondLength(atom3, atom4)
     >>> atoms.set_constraint([con1, con2])
+
     see ase/test/external_force.py"""
+
     def __init__(self, a1, a2, f_ext):
         self.indices = [a1, a2]
         self.external_force = f_ext

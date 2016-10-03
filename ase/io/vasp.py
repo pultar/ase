@@ -363,7 +363,7 @@ def read_vasp_xdatcar(filename, index=-1):
     atomic_formula = str()
 
     with open(filename, 'r') as xdatcar:
-        
+
         while True:
             comment_line = xdatcar.readline()
             if "Direct configuration=" not in comment_line:
@@ -371,7 +371,7 @@ def read_vasp_xdatcar(filename, index=-1):
                     lattice_constant = float(xdatcar.readline())
                 except:
                     break
-                
+
                 xx = [float(x) for x in xdatcar.readline().split()]
                 yy = [float(y) for y in xdatcar.readline().split()]
                 zz = [float(z) for z in xdatcar.readline().split()]
@@ -387,7 +387,8 @@ def read_vasp_xdatcar(filename, index=-1):
 
                 xdatcar.readline()
 
-            coords = [ np.array(xdatcar.readline().split(), np.float) for ii in range(total) ]
+            coords = [np.array(xdatcar.readline().split(), np.float)
+                      for ii in range(total)]
 
             image = Atoms(atomic_formula, cell=cell, pbc=True)
             image.set_scaled_positions(np.array(coords))
@@ -397,6 +398,37 @@ def read_vasp_xdatcar(filename, index=-1):
         return images
     else:
         return images[index]
+
+
+def __get_xml_parameter(par):
+    """An auxillary function that enables convenient extraction of
+    parameter values from a vasprun.xml file with proper type
+    handling.
+
+    """
+
+    def to_bool(b):
+        if b == 'T':
+            return True
+        else:
+            return False
+
+    to_type = {'int': int,
+               'logical': to_bool,
+               'string': str,
+               'float': float}
+
+    text = par.text
+    if text is None:
+        text = ''
+
+    # Float parameters do not have a 'type' attrib
+    var_type = to_type[par.attrib.get('type', 'float')]
+
+    if par.tag == 'v':
+        return map(var_type, text.split())
+    else:
+        return var_type(text.strip())
 
 
 def read_vasp_xml(filename='vasprun.xml', index=-1):
@@ -416,42 +448,24 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
     from collections import OrderedDict
 
     tree = ET.iterparse(filename, events=['start', 'end'])
-    
+
     atoms_init = None
     calculation = []
     ibz_kpts = None
     parameters = OrderedDict()
 
-    to_bool = lambda b: True if b == 'T' else False
-                    
-    to_type = {'int': int,
-               'logical': to_bool,
-               'string': str,
-               'float': float}
-
     try:
         for event, elem in tree:
-            
+
             if event == 'end':
                 if elem.tag == 'kpoints':
                     for subelem in elem.iter(tag='generation'):
-                        kpoints_generation = OrderedDict()
-                        parameters['kpoints_generation'] = kpoints_generation
+                        kpts_params = OrderedDict()
+                        parameters['kpoints_generation'] = kpts_params
                         for par in subelem.iter():
                             if par.tag in ['v', 'i']:
-                                name = par.attrib['name'].lower()
-
-                                text = par.text
-                                if text is None:
-                                    text = ''
-
-                                # Float parameters do not have a 'type' attrib
-                                var_type = to_type[par.attrib.get('type', 'float')]
-
-                                if par.tag == 'v':
-                                    kpoints_generation[name] = map(var_type, text.split())
-                                else:
-                                    kpoints_generation[name] = var_type(text.strip())
+                                parname = par.attrib['name'].lower()
+                                kpts_params[parname] = __get_xml_parameter(par)
 
                     kpts = elem.findall("varray[@name='kpointlist']/v")
                     ibz_kpts = np.zeros((len(kpts), 3))
@@ -462,19 +476,8 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                 elif elem.tag == 'parameters':
                     for par in elem.iter():
                         if par.tag in ['v', 'i']:
-                            name = par.attrib['name'].upper()
-
-                            text = par.text
-                            if text is None:
-                                text = ''
-
-                            # Float parameters do not have a 'type' attrib
-                            var_type = to_type[par.attrib.get('type', 'float')]
-
-                            if par.tag == 'v':
-                                parameters[name] = map(var_type, text.split())
-                            else:
-                                parameters[name] = var_type(text.strip())
+                            parname = par.attrib['name'].lower()
+                            parameters[parname] = __get_xml_parameter(par)
 
                 elif elem.tag == 'atominfo':
                     species = []
@@ -604,7 +607,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                     kpoints.append(SinglePointKPoint(1, 0, ikpt, eps_n, f_n))
         if len(kpoints) == 0:
             kpoints = None
-                
+
         atoms = atoms_init.copy()
         atoms.set_cell(cell)
         atoms.set_scaled_positions(scpos)

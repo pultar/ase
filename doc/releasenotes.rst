@@ -10,6 +10,8 @@ Git master branch
 
 :git:`master <>`.
 
+* New :class:`ase.constraints.ExternalForce` constraint.
+
 * Updated :mod:`ase.units` definition to CODATA 2014. Additionally, support
   for older versions of CODATA was added such that the respective units can
   be created by the user when needed (e.g. interfacing codes with different
@@ -23,13 +25,41 @@ Git master branch
 
 * :func:`ase.io.write` can now write XSD files.
 
-* Interface for deMon and ONETEP added.
+* Interfaces for deMon and ONETEP added.
 
 * New :ref:`defects` tutorial and new super-cell functions:
   :func:`~ase.build.get_deviation_from_optimal_cell_shape`,
   :func:`~ase.build.find_optimal_cell_shape`,
   :func:`~ase.build.find_optimal_cell_shape_pure_python`,
   :func:`~ase.build.make_supercell`.
+
+* New :class:`~ase.dft.band_structure.BandStructure` object.  Can identify
+  special points and create nice plots.
+
+* Calculators that inherit from :class:`ase.calculators.calculator.Calculator`
+  will now have a :meth:`~ase.calculators.calculator.Calculator.band_structure`
+  method that creates a :class:`~ase.dft.band_structure.BandStructure` object.
+
+* Addition to :mod:`~ase.geometry` module:
+  :func:`~ase.geometry.crystal_structure_from_cell`.
+
+* New functions in :mod:`ase.dft.kpoints` module:
+  :func:`~ase.dft.kpoints.parse_path_string`,
+  :func:`~ase.dft.kpoints.labels_from_kpts` and
+  :func:`~ase.dft.kpoints.bandpath`.
+
+* Helper function for generation of Monkhors-Pack samplings and BZ-paths:
+  :func:`ase.calculators.calculator.kpts2ndarray`.
+
+* Useful class for testing band-structure stuff:
+  :class:`ase.calculators.test.FreeElectrons`.
+
+* The ``cell`` attribute of an :class:`~ase.Atoms` object and the ``cell``
+  keyword for the :class:`~ase.Atoms` constructor and the
+  :meth:`~ase.Atoms.set_cell` method now accepts unit cells given ase
+  ``[a, b, c, alpha, beta, gamma]``, where the three angles are in degrees.
+  There is also a corresponding :meth:`~ase.Atoms.get_cell_lengths_and_angles`
+  method.
 
 
 Version 3.11.0
