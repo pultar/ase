@@ -177,6 +177,9 @@ def parallel_generator(generator):
                 yield result
             return
         if world.rank == 0:
+            # If the generator is empty, broadcasting ex will lead to
+            # an UnboundLocalError, therefore we initialize ex
+            ex = None
             try:
                 for result in generator(*args, **kwargs):
                     ex, result = broadcast((None, result))
