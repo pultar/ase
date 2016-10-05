@@ -1665,56 +1665,6 @@ class Atoms(object):
         self.set_tags(edited_atoms.get_tags())
         return
 
-    def get_spacegroup(self, symprec=1e-5):
-        """Determine the spacegroup to which belongs the Atoms object.
-        
-        Parameters:
-        
-        symprec:  Symmetry tolerance, i.e. distance tolerance in Cartesian 
-                  coordinates to find crystal symmetry.
-                  
-        The Spacegroup object is returned, and stored in info['spacegroup'] when this
-        key does not exist (avoids overwrite).
-                      
-        Examples:
-        
-        >>> from ase.lattice import bulk
-        >>> atoms = bulk("Cu", "fcc", a=3.6, cubic=True)
-        >>> sg = atoms.get_spacegroup()
-        """
-        
-        from ase.spacegroup import Spacegroup
-        
-        # we try all available spacegroups from 1 to 230
-        # a Space group is the collection of all symmetry operations which let the 
-        # unit cell invariant.
-        keep_sg = []
-        positions = self.get_scaled_positions(wrap=True)
-        
-        # search space groups from the highest symmetry to the lowest
-        # retain the first match
-        for nb in range(230,1,-1):
-            sg        = Spacegroup(nb)
-
-            # now we scan all atoms in the cell and look for equivalent sites
-            try:
-                sites,kinds = sg.equivalent_sites(positions, 
-                    ondublicates='replace', symprec=symprec)
-            except:
-                sites=[]
-                
-            # the equivalent sites should match all other atom locations in the cell
-            # as the spacegroup transforms the unit cell in itself
-            if len(sites) == len(positions):
-                # store the space group into the list
-                keep_sg = sg
-                break
-        
-        # return None when no space group is found (would be surprising)
-        if keep_sg is not None and 'spacegroup' not in self.info:
-              self.info["spacegroup"] = keep_sg
-            
-        return keep_sg
 
 def string2symbols(s):
     """Convert string to list of chemical symbols."""
