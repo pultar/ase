@@ -1,6 +1,7 @@
 from math import sqrt
 
 import numpy as np
+from ase.cell import same_cell
 
 
 class NeighborList:
@@ -46,7 +47,7 @@ class NeighborList:
             return True
 
         if ((self.pbc != atoms.get_pbc()).any() or
-            (self.cell != atoms.get_cell()).any() or
+            not same_cell(self.cell, atoms.cell) or
             ((self.positions - atoms.get_positions())**2).sum(1).max() >
             self.skin**2):
             self.build(atoms)
@@ -63,30 +64,39 @@ class NeighborList:
         if len(self.cutoffs) != len(atoms):
             raise ValueError('Wrong number of cutoff radii: {0} != {1}'
                              .format(len(self.cutoffs), len(atoms)))
-        
+
         if len(self.cutoffs) > 0:
             rcmax = self.cutoffs.max()
         else:
             rcmax = 0.0
 
-        icell = np.linalg.inv(self.cell)
-        scaled = np.dot(self.positions, icell)
-        scaled0 = scaled.copy()
-
-        N = []
-        for i in range(3):
-            if self.pbc[i]:
-                scaled0[:, i] %= 1.0
-                v = icell[:, i]
-                h = 1 / sqrt(np.dot(v, v))
-                n = int(2 * rcmax / h) + 1
-            else:
-                n = 0
-            N.append(n)
-
-        offsets = (scaled0 - scaled).round().astype(int)
-        positions0 = np.dot(scaled0, self.cell)
         natoms = len(atoms)
+
+        assert self.cell is not None
+
+        if self.cell is not None:
+            icell = np.linalg.inv(self.cell)
+            scaled = np.dot(self.positions, icell)
+            scaled0 = scaled.copy()
+
+            N = []
+            for i in range(3):
+                if self.pbc[i]:
+                    scaled0[:, i] %= 1.0
+                    v = icell[:, i]
+                    h = 1 / sqrt(np.dot(v, v))
+                    n = int(2 * rcmax / h) + 1
+                else:
+                    n = 0
+                N.append(n)
+
+            offsets = (scaled0 - scaled).round().astype(int)
+            positions0 = np.dot(scaled0, self.cell)
+        else:
+            offsets = np.zeros((natoms, 3), dtype=int)
+            positions0 = self.positions.copy()  # copy unnecessary?
+            N = [0, 0, 0]
+
         indices = np.arange(natoms)
 
         self.nneighbors = 0
@@ -98,7 +108,10 @@ class NeighborList:
                 for n3 in range(-N[2], N[2] + 1):
                     if n1 == 0 and (n2 < 0 or n2 == 0 and n3 < 0):
                         continue
-                    displacement = np.dot((n1, n2, n3), self.cell)
+                    if self.cell is None:
+                        displacement = np.zeros(3)  # XXX check
+                    else:
+                        displacement = np.dot((n1, n2, n3), self.cell)
                     for a in range(natoms):
                         d = positions0 + displacement - positions0[a]
                         i = indices[(d**2).sum(1) <

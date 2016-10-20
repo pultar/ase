@@ -58,6 +58,11 @@ def get_calculator(name):
 
 def equal(a, b, tol=None):
     """ndarray-enabled comparison function."""
+    if (a is None) != (b is None):
+        return False
+    if a is None:
+        return True  # Both are None
+
     if isinstance(a, np.ndarray):
         b = np.array(b)
         if a.shape != b.shape:
@@ -87,6 +92,8 @@ def kptdensity2monkhorstpack(atoms, kptdensity=3.5, even=True):
     even: bool
         Round up to even numbers.
     """
+    if atoms.cell is None:
+        raise AttributeError('Atoms have no cell')
 
     recipcell = atoms.get_reciprocal_cell()
     kpts = []
@@ -150,6 +157,9 @@ def kpts2sizeandoffsets(size=None, density=None, gamma=None, even=None,
 
 def kpts2ndarray(kpts, atoms=None):
     """Convert kpts keyword to 2-d ndarray of scaled k-points."""
+
+    if atoms.cell is None:
+        raise AttributeError('Atoms have no cell')
 
     if kpts is None:
         return np.zeros((1, 3))

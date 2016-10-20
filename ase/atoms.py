@@ -16,6 +16,7 @@ import numpy as np
 
 import ase.units as units
 from ase.atom import Atom
+from ase.cell import same_cell
 from ase.data import atomic_numbers, chemical_symbols, atomic_masses
 from ase.utils import basestring
 from ase.geometry import (wrap_positions, find_mic, cellpar_to_cell,
@@ -26,7 +27,7 @@ class Atoms(object):
     """Atoms object.
 
     The Atoms object can represent an isolated molecule, or a
-    periodically repeated structure.  It has a unit cell and
+    periodically repeated structure.  It can have a unit cell, and
     there may be periodic boundary conditions along any of the three
     unit cell axes.
     Information about the atoms (atomic numbers and position) is
@@ -63,15 +64,17 @@ class Atoms(object):
         non-collinear calculations.
     charges: list of float
         Atomic charges.
-    cell: 3x3 matrix or length 3 or 6 vector
+    cell: 3x3 matrix, length 3 or 6 vector, or None
         Unit cell vectors.  Can also be given as just three
         numbers for orthorhombic cells, or 6 numbers, where
         first three are lengths of unit cell vectors, and the
         other three are angles between them (in degrees), in following order:
         [len(a), len(b), len(c), angle(b,c), angle(a,c), angle(a,b)].
         First vector will lie in x-direction, second in xy-plane,
-        and the third one in z-positive subspace.
-        Default value: [1, 1, 1].
+        and the third one in z-positive subspace.  A unit cell of
+        None means anything that can not be described by three vectors,
+        typically irregular or infinite systems.
+        Default value: None.
     celldisp: Vector
         Unit cell displacement vector. To visualize a displaced cell
         around the center of mass of a Systems of atoms. Default value
@@ -170,6 +173,12 @@ class Atoms(object):
             if charges is None and atoms.has('charges'):
                 charges = atoms.get_initial_charges()
             if cell is None:
+                # XXX Warning!  If user called Atoms(old_atoms,
+                # cell=None), and old_atoms has a cell, then this cell
+                # will override the explicit None passed by the user.
+                # Only way to fix this is to make self._cell an actual
+                # Cell object that knows things (user does not need to
+                # ever know)
                 cell = atoms.get_cell()
             if celldisp is None:
                 celldisp = atoms.get_celldisp()
@@ -213,6 +222,9 @@ class Atoms(object):
             if scaled_positions is None:
                 positions = np.zeros((len(self.arrays['numbers']), 3))
             else:
+                if self._cell is None:
+                    raise ValueError('Scaled positions meaningless without '
+                                     'cell')
                 positions = np.dot(scaled_positions, self._cell)
         else:
             if scaled_positions is not None:
@@ -281,7 +293,7 @@ class Atoms(object):
 
         Parameters:
 
-        cell: 3x3 matrix or length 3 or 6 vector
+        cell: 3x3 matrix, length 3 or 6 vector, or None
             Unit cell.  A 3x3 matrix (the three unit cell vectors) or
             just three numbers for an orthorhombic cell. Another option is
             6 numbers, which describes unit cell with lengths of unit cell
@@ -289,6 +301,8 @@ class Atoms(object):
             order: [len(a), len(b), len(c), angle(b,c), angle(a,c),
             angle(a,b)].  First vector will lie in x-direction, second in
             xy-plane, and the third one in z-positive subspace.
+            None means anything that can not be described by three vectors,
+            typically irregular or infinite systems.
         scale_atoms: bool
             Fix atomic positions or move atoms with the unit cell?
             Default behavior is to *not* move the atoms (scale_atoms=False).
@@ -319,6 +333,11 @@ class Atoms(object):
         if fix is not None:
             raise TypeError('Please use scale_atoms=%s' % (not fix))
 
+        if cell is None:
+            assert False
+            self._cell = None
+            return
+
         cell = np.array(cell, float)
 
         if cell.shape == (3,):
@@ -327,7 +346,7 @@ class Atoms(object):
             cell = cellpar_to_cell(cell)
         elif cell.shape != (3, 3):
             raise ValueError('Cell must be length 3 sequence, length 6 '
-                             'sequence or 3x3 matrix!')
+                             'sequence, 3x3 matrix, or None!')
 
         if scale_atoms:
             M = np.linalg.solve(self._cell, cell)
@@ -345,6 +364,10 @@ class Atoms(object):
 
     def get_cell(self):
         """Get the three unit cell vectors as a 3x3 ndarray."""
+        assert self._cell is not None
+
+        if self._cell is None:
+            return None
         return self._cell.copy()
 
     def get_cell_lengths_and_angles(self):
@@ -357,6 +380,8 @@ class Atoms(object):
 
         in degrees.
         """
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
         return cell_to_cellpar(self._cell)
 
     def get_reciprocal_cell(self):
@@ -365,6 +390,8 @@ class Atoms(object):
         Note that the commonly used factor of 2 pi for Fourier
         transforms is not included here."""
 
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
         rec_unit_cell = np.linalg.inv(self.get_cell()).transpose()
         return rec_unit_cell
 
@@ -649,7 +676,7 @@ class Atoms(object):
         """Get array of positions. If wrap==True, wraps atoms back
         into unit cell.
         """
-        if wrap:
+        if wrap and self._cell is not None:
             scaled = self.get_scaled_positions()
             return np.dot(scaled, self._cell)
         else:
@@ -828,7 +855,9 @@ class Atoms(object):
 
         tokens.append('pbc={0}'.format(self._pbc.tolist()))
 
-        if (self._cell - np.diag(self._cell.diagonal())).any():
+        if self._cell is None:
+            cell = self._cell
+        elif (self._cell - np.diag(self._cell.diagonal())).any():
             cell = self._cell.tolist()
         else:
             cell = self._cell.diagonal().tolist()
@@ -974,6 +1003,10 @@ class Atoms(object):
 
     def __imul__(self, m):
         """In-place repeat of atoms."""
+
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
+
         if isinstance(m, int):
             m = (m, m, m)
 
@@ -1037,50 +1070,73 @@ class Atoms(object):
             I.e., about=(0., 0., 0.) (or just "about=0.", interpreted
             identically), to center about the origin.
         """
-        # Find the orientations of the faces of the unit cell
-        c = self.get_cell()
-        dirs = np.zeros_like(c)
-        for i in range(3):
-            dirs[i] = np.cross(c[i - 1], c[i - 2])
-            dirs[i] /= np.sqrt(np.dot(dirs[i], dirs[i]))  # normalize
-            if np.dot(dirs[i], c[i]) < 0.0:
-                dirs[i] *= -1
-
-        # Now, decide how much each basis vector should be made longer
         if isinstance(axis, int):
             axes = (axis,)
         else:
             axes = axis
+
+        # Find the orientations of the faces of the unit cell
+        cell = self.cell
+        if cell is None:
+            # Set a fake 1x1x1 cell
+            cell = np.eye(3)
+            dirs = cell.copy()
+
+            if vacuum is not None:
+                if set(axes) != set(range(3)):
+                    msg = ('Cannot add vacuum along only some directions '
+                           'when atoms have no cell.')
+                    raise AttributeError(msg)
+                # Store the fake cell; it will be changed later
+                self.cell = cell
+
+            if about is None:
+                about = (0., 0., 0.)
+        else:
+            dirs = np.zeros_like(cell)
+            for i in range(3):
+                dirs[i] = np.cross(cell[i - 1], cell[i - 2])
+                dirs[i] /= np.sqrt(np.dot(dirs[i], dirs[i]))  # normalize
+                if np.dot(dirs[i], cell[i]) < 0.0:
+                    dirs[i] *= -1
+
+        # Now, decide how much each basis vector should be made longer
         p = self.arrays['positions']
         longer = np.zeros(3)
         shift = np.zeros(3)
         for i in axes:
             p0 = np.dot(p, dirs[i]).min()
             p1 = np.dot(p, dirs[i]).max()
-            height = np.dot(c[i], dirs[i])
+            height = np.dot(cell[i], dirs[i])
             if vacuum is not None:
                 lng = (p1 - p0 + 2 * vacuum) - height
             else:
                 lng = 0.0  # Do not change unit cell size!
             top = lng + height - p1
             shf = 0.5 * (top - p0)
-            cosphi = np.dot(c[i], dirs[i]) / np.sqrt(np.dot(c[i], c[i]))
+            cosphi = np.dot(cell[i], dirs[i]) / np.sqrt(np.dot(cell[i],
+                                                               cell[i]))
             longer[i] = lng / cosphi
             shift[i] = shf / cosphi
 
         # Now, do it!
         translation = np.zeros(3)
         for i in axes:
-            nowlen = np.sqrt(np.dot(c[i], c[i]))
-            self._cell[i] *= 1 + longer[i] / nowlen
-            translation += shift[i] * c[i] / nowlen
+            nowlen = np.sqrt(np.dot(cell[i], cell[i]))
+            translation += shift[i] * cell[i] / nowlen
+            cell[i] *= 1 + longer[i] / nowlen
         self.arrays['positions'] += translation
 
         # Optionally, translate to center about a point in space.
         if about is not None:
-            for vector in self.cell:
+            for vector in cell:
                 self.positions -= vector / 2.0
             self.positions += about
+
+        # self.cell may be None; in that case we are just centering about
+        # a point, and should not store the current 'fake' cell
+        if self.cell is not None:
+            self.cell = cell
 
     def get_center_of_mass(self, scaled=False):
         """Get the center of mass.
@@ -1090,6 +1146,8 @@ class Atoms(object):
         m = self.get_masses()
         com = np.dot(m, self.arrays['positions']) / m.sum()
         if scaled:
+            if self._cell is None:
+                raise AttributeError('Atoms have no cell')
             return np.linalg.solve(self._cell.T, com)
         else:
             return com
@@ -1208,6 +1266,8 @@ class Atoms(object):
             elif center.lower() == 'cop':
                 center = self.get_positions().mean(axis=0)
             elif center.lower() == 'cou':
+                if self._cell is None:
+                    raise AttributeError('Atoms have no cell')
                 center = self.get_cell().sum(axis=0) / 2
             else:
                 raise ValueError('Cannot interpret center')
@@ -1220,6 +1280,8 @@ class Atoms(object):
                                        np.outer(np.dot(p, v), (1.0 - c) * v) +
                                        center)
         if rotate_cell:
+            if self._cell is None:
+                raise AttributeError('Atoms have no cell')
             rotcell = self.get_cell()
             rotcell[:] = (c * rotcell -
                           np.cross(rotcell, s * v) +
@@ -1251,6 +1313,8 @@ class Atoms(object):
             elif center.lower() == 'cop':
                 center = self.get_positions().mean(axis=0)
             elif center.lower() == 'cou':
+                if self._cell is None:
+                    raise AttributeError('Atoms have no cell')
                 center = self.get_cell().sum(axis=0) / 2
             else:
                 raise ValueError('Cannot interpret center')
@@ -1431,7 +1495,7 @@ class Atoms(object):
 
         R = self.arrays['positions']
         D = np.array([R[a1] - R[a0]])
-        if mic:
+        if mic and self._cell is not None:
             D, D_len = find_mic(D, self._cell, self._pbc)
         else:
             D_len = np.array([np.sqrt((D**2).sum())])
@@ -1470,7 +1534,7 @@ class Atoms(object):
             D.append(R[i + 1:] - R[i])
         D = np.concatenate(D)
 
-        if mic:
+        if mic and self._cell is not None:
             D, D_len = find_mic(D, self._cell, self._pbc)
         else:
             D_len = np.sqrt((D**2).sum(1))
@@ -1493,7 +1557,7 @@ class Atoms(object):
         R = self.arrays['positions']
         D = np.array([R[a1] - R[a0]])
 
-        if mic:
+        if mic and self._cell is not None:
             D, D_len = find_mic(D, self._cell, self._pbc)
         else:
             D_len = np.array([np.sqrt((D**2).sum())])
@@ -1507,6 +1571,9 @@ class Atoms(object):
         If wrap is True, atoms outside the unit cell will be wrapped into
         the cell in those directions with periodic boundary conditions
         so that the scaled coordinates are between zero and one."""
+
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
 
         fractional = np.linalg.solve(self.cell.T, self.positions.T).T
 
@@ -1522,6 +1589,9 @@ class Atoms(object):
 
     def set_scaled_positions(self, scaled):
         """Set positions relative to unit cell."""
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
+
         self.arrays['positions'][:] = np.dot(scaled, self._cell)
 
     def wrap(self, center=(0.5, 0.5, 0.5), pbc=None, eps=1e-7):
@@ -1552,6 +1622,9 @@ class Atoms(object):
         array([[ 0.9 ,  0.01, -0.5 ]])
         """
 
+        if self._cell is None:
+            return
+
         if pbc is None:
             pbc = self.pbc
         self.positions[:] = wrap_positions(self.positions, self.cell,
@@ -1573,13 +1646,14 @@ class Atoms(object):
         try:
             a = self.arrays
             b = other.arrays
+        except AttributeError:
+            return NotImplemented
+        else:
             return (len(self) == len(other) and
                     (a['positions'] == b['positions']).all() and
                     (a['numbers'] == b['numbers']).all() and
-                    (self._cell == other.cell).all() and
+                    same_cell(self.cell, other.cell) and
                     (self._pbc == other.pbc).all())
-        except AttributeError:
-            return NotImplemented
 
     def __ne__(self, other):
         """Check if two atoms objects are not equal.
@@ -1597,6 +1671,8 @@ class Atoms(object):
 
     def get_volume(self):
         """Get volume of unit cell."""
+        if self._cell is None:
+            raise AttributeError('Atoms have no cell')
         return abs(np.linalg.det(self._cell))
 
     def _get_positions(self):
