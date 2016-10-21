@@ -217,7 +217,7 @@ class Abinit(FileIOCalculator):
         fh.write('acell\n')
         fh.write('%.14f %.14f %.14f Angstrom\n' % (1.0, 1.0, 1.0))
         fh.write('rprim\n')
-        for v in atoms.cell:
+        for v in atoms.get_cell(True):
             fh.write('%.14f %.14f %.14f\n' %  tuple(v))
 
         fh.write('chkprim 0 # Allow non-primitive cells\n')

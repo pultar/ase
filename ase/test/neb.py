@@ -4,11 +4,34 @@ from ase.calculators.morse import MorsePotential
 from ase.optimize import BFGS
 
 
+import numpy as np
+np.seterr(all='raise')
+np.seterr(under='ignore')
+from ase import Atoms
+from ase.constraints import FixAtoms
+from ase.optimize import QuasiNewton
+atoms = Atoms('H7',
+              positions=[(0, 0, 0),
+                         (1, 0, 0),
+                         (0, 1, 0),
+                         (1, 1, 0),
+                         (0, 2, 0),
+                         (1, 2, 0),
+                         (0.5, 0.5, 1)],
+              constraint=[FixAtoms(range(6))],
+              calculator=MorsePotential())
+#atoms.cell = np.eye(3)
+traj = Trajectory('H_grrr.traj', 'w', atoms)
+dyn = QuasiNewton(atoms, maxstep=0.2)
+dyn.attach(traj.write)
+dyn.run(fmax=0.01, steps=100)
+
+
 fmax = 0.05
 nimages = 3
 
-print([a.get_potential_energy() for a in Trajectory('H.traj')])
-images = [Trajectory('H.traj')[-1]]
+print([a.get_potential_energy() for a in Trajectory('H_grrr.traj')])
+images = [Trajectory('H_grrr.traj')[-1]]
 for i in range(nimages):
     images.append(images[0].copy())
 images[-1].positions[6, 1] = 2 - images[0].positions[6, 1]
@@ -38,4 +61,5 @@ nt_fmax = nebtools.get_fmax(climb=True)
 Ef, dE = nebtools.get_barrier()
 print(Ef, dE, fmax, nt_fmax)
 assert nt_fmax < fmax
-assert abs(Ef - 1.389) < 0.001
+err = abs(Ef - 1.389)
+assert err < 0.001, err

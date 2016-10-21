@@ -37,10 +37,15 @@ def write_xsf(fileobj, images, data=None):
         assert npbc == 0
 
     cell_variable = False
-    for image in images[1:]:
-        if np.abs(images[0].cell - image.cell).max() > 1e-14:
-            cell_variable = True
-            break
+    if images[0].cell is None:
+        for image in images:
+            if image.cell is not None:
+                raise ValueError('Either all images or none must have a cell')
+    else:
+        for image in images[1:]:
+            if np.abs(images[0].cell - image.cell).max() > 1e-14:
+                cell_variable = True
+                break
 
     for n, atoms in enumerate(images):
         anim_token = ' %d' % (n + 1) if is_anim else ''
@@ -94,7 +99,8 @@ def write_xsf(fileobj, images, data=None):
     shape = data.shape
     fileobj.write('  %d %d %d\n' % shape)
 
-    cell = atoms.get_cell()
+    # XXX what if atoms have no cell?
+    cell = atoms.get_cell(True)
     origin = np.zeros(3)
     for i in range(3):
         if not pbc[i]:

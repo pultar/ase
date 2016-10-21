@@ -72,8 +72,6 @@ class NeighborList:
 
         natoms = len(atoms)
 
-        assert self.cell is not None
-
         if self.cell is not None:
             icell = np.linalg.inv(self.cell)
             scaled = np.dot(self.positions, icell)

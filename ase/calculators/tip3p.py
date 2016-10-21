@@ -48,10 +48,10 @@ class TIP3P(Calculator):
         R = self.atoms.positions.reshape((-1, 3, 3))
         Z = self.atoms.numbers
         pbc = self.atoms.pbc
-        cell = self.atoms.cell.diagonal()
+        cell = self.atoms.get_cell(True).diagonal()
         nh2o = len(R)
         
-        assert (self.atoms.cell == np.diag(cell)).all(), 'not orthorhombic'
+        assert (self.atoms.get_cell(True) == np.diag(cell)).all(), 'not orthorhombic'
         assert ((cell >= 2 * self.rc) | ~pbc).all(), 'cutoff too large'  # ???
         if Z[0] == 8:
             o = 0

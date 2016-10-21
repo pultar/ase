@@ -29,9 +29,14 @@ def atoms2dict(atoms):
     dct = {
         'numbers': atoms.numbers,
         'pbc': atoms.pbc,
-        'cell': atoms.cell,
         'positions': atoms.positions,
         'unique_id': '%x' % randint(16**31, 16**32 - 1)}
+    if 1:#if atoms.cell is not None:
+        # XXXXXXXXXXX
+        # XXXXXXXXXXX
+        # XXXXXXXXXXX
+        # Handle None cell properly
+        dct['cell'] = atoms.get_cell(True)
     if atoms.has('magmoms'):
         dct['initial_magmoms'] = atoms.get_initial_magnetic_moments()
     if atoms.has('charges'):

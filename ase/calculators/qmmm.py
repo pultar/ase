@@ -238,15 +238,17 @@ class Embedding:
         """Update point-charge positions."""
         # Wrap point-charge positions to the MM-cell closest to the
         # center of the the QM box, but avoid ripping molecules apart:
-        qmcenter = self.qmatoms.cell.diagonal() / 2
+        qmcenter = self.qmatoms.get_cell(True).diagonal() / 2
+        # XXX what if there is no cell?
         n = self.molecule_size
         positions = self.mmatoms.positions.reshape((-1, n, 3)) + shift
         
         # Distances from the center of the QM box to the first atom of
         # each molecule:
         distances = positions[:, 0] - qmcenter
-        
-        wrap(distances, self.mmatoms.cell.diagonal(), self.mmatoms.pbc)
+
+        if self.mmatoms.cell is not None:
+            wrap(distances, self.mmatoms.cell.diagonal(), self.mmatoms.pbc)
         offsets = distances - positions[:, 0]
         positions += offsets[:, np.newaxis] + qmcenter
         self.pcpot.set_positions(positions.reshape((-1, 3)))
@@ -290,7 +292,8 @@ class LJInteractions:
                 epsilon, sigma = self.parameters[(Z1, Z2)]
                 mask = (mmatoms.numbers == Z2)
                 D = mmatoms.positions[mask] + shift - R1
-                wrap(D, mmatoms.cell.diagonal(), mmatoms.pbc)
+                if mmatoms.cell is not None:
+                    wrap(D, mmatoms.cell.diagonal(), mmatoms.pbc)
                 d2 = (D**2).sum(1)
                 c6 = (sigma**2 / d2)**3
                 c12 = c6**2

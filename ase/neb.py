@@ -8,6 +8,7 @@ import ase.parallel as mpi
 from ase.build import minimize_rotation_and_translation
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointCalculator
+from ase.cell import same_cell
 from ase.io import read
 from ase.optimize import MDMin
 from ase.geometry import find_mic
@@ -344,7 +345,7 @@ class SingleCalculatorNEB(NEB):
         dist = (pos2 - pos1)
         if mic:
             cell = self.images[initial].get_cell()
-            assert((cell == self.images[final].get_cell()).all())
+            assert same_cell(cell, self.images[final].cell)
             pbc = self.images[initial].get_pbc()
             assert((pbc == self.images[final].get_pbc()).all())
             dist, D_len = find_mic(dist, cell, pbc)

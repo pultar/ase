@@ -121,6 +121,11 @@ def get_layers(atoms, miller, tolerance=0.001):
 def find_mic(D, cell, pbc=True):
     """Finds the minimum-image representation of vector(s) D"""
     # Calculate the 4 unique unit cell diagonal lengths
+    if cell is None:
+        if np.any(pbc):
+            raise ValueError('Cannot find mic representation without cell')
+        cell = np.eye(3)  # Dummy cell for compatibility.
+
     diags = np.sqrt((np.dot([[1, 1, 1],
                              [-1, 1, 1],
                              [1, -1, 1],

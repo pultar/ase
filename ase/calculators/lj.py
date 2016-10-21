@@ -45,8 +45,10 @@ class LennardJones(Calculator):
 
         for a1 in range(natoms):
             neighbors, offsets = self.nl.get_neighbors(a1)
-            cells = np.dot(offsets, cell)
-            d = positions[neighbors] + cells - positions[a1]
+            d = positions[neighbors]
+            if offsets.any():
+                d += np.dot(offsets, cell)
+            d -= positions[a1]
             r2 = (d**2).sum(1)
             c6 = (sigma**2 / r2)**3
             c6[r2 > rc**2] = 0.0
@@ -58,10 +60,13 @@ class LennardJones(Calculator):
             for a2, f2 in zip(neighbors, f):
                 forces[a2] += f2
             stress += np.dot(f.T, d)
-        
-        stress += stress.T.copy()
-        stress *= -0.5 / self.atoms.get_volume()
-        
+
+        if self.atoms.cell is None:
+            stress *= 0.0
+        else:
+            stress += stress.T.copy()
+            stress *= -0.5 / self.atoms.get_volume()
+
         self.results['energy'] = energy
         self.results['forces'] = forces
         self.results['stress'] = stress.flat[[0, 4, 8, 5, 2, 1]]

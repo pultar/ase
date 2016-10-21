@@ -75,14 +75,14 @@ def read_exciting(fileobj, index=-1):
 
 def write_exciting(filename, images):
     """writes exciting input structure in XML
-    
+
     Parameters
     ----------
     filename : str
         Name of file to which data should be written.
     images : Atom Object or List of Atoms objects
         This function will write the first Atoms object to file.
-    
+
     Returns
     -------
     """
@@ -97,12 +97,12 @@ def write_exciting(filename, images):
 def atoms2etree(images):
     """This function creates the XML DOM corresponding
      to the structure for use in write and calculator
-    
+
     Parameters
     ----------
-    
+
     images : Atom Object or List of Atoms objects
-    
+
     Returns
     -------
     root : etree object
@@ -116,20 +116,23 @@ def atoms2etree(images):
     root.set(
         '{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation',
         'http://xml.exciting-code.org/excitinginput.xsd')
-     
+
     title = ET.SubElement(root, 'title')
     title.text = ''
     structure = ET.SubElement(root, 'structure')
     crystal = ET.SubElement(structure, 'crystal')
     atoms = images[0]
-    for vec in atoms.cell:
+    for vec in atoms.get_cell(True):  # XXX what if cell is None?
         basevect = ET.SubElement(crystal, 'basevect')
         basevect.text = '%.14f %.14f %.14f' % tuple(vec / Bohr)
-                            
+
     oldsymbol = ''
     oldrmt = -1
     newrmt = -1
-    scaled = atoms.get_scaled_positions()
+    if atoms.cell is None:
+        scaled = atoms.get_positions()
+    else:
+        scaled = atoms.get_scaled_positions()
     for aindex, symbol in enumerate(atoms.get_chemical_symbols()):
         if 'rmt' in atoms.arrays:
             newrmt = atoms.get_array('rmt')[aindex] / Bohr
@@ -142,11 +145,11 @@ def atoms2etree(images):
                 oldrmt = atoms.get_array('rmt')[aindex] / Bohr
                 if oldrmt > 0:
                     speciesnode.attrib['rmt'] = '%.4f' % oldrmt
-           
+
         atom = ET.SubElement(speciesnode, 'atom',
                              coord='%.14f %.14f %.14f' % tuple(scaled[aindex]))
         if 'momenta' in atoms.arrays:
             atom.attrib['bfcmt'] = '%.14f %.14f %.14f' % tuple(
                 atoms.get_array('mommenta')[aindex])
-        
+
     return root

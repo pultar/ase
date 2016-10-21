@@ -272,7 +272,7 @@ class TrajectoryReader:
         for i in range(len(self)):
             yield self[i]
 
-            
+
 def read_atoms(backend, header=None):
     b = backend
     if header:
@@ -282,10 +282,10 @@ def read_atoms(backend, header=None):
         numbers = b.numbers
         masses = b.get('masses')
         constraints = b.get('constraints', '[]')
-        
+
     atoms = Atoms(positions=b.positions,
                   numbers=numbers,
-                  cell=b.cell,
+                  cell=b.cell if 'cell' in b else None,
                   masses=masses,
                   pbc=pbc,
                   info=b.get('info'),
@@ -296,11 +296,11 @@ def read_atoms(backend, header=None):
                   charges=b.get('charges'),
                   tags=b.get('tags'))
     return atoms
-    
-    
+
+
 def write_atoms(backend, atoms, write_header=True):
     b = backend
-    
+
     if write_header:
         b.write(pbc=atoms.pbc.tolist(),
                 numbers=atoms.numbers)
@@ -311,9 +311,10 @@ def write_atoms(backend, atoms, write_header=True):
         if atoms.has('masses'):
             b.write(masses=atoms.get_masses())
 
-    b.write(positions=atoms.get_positions(),
-            cell=atoms.get_cell().tolist())
-    
+    b.write(positions=atoms.get_positions())
+    if atoms.cell is not None:
+        b.write(cell=atoms.get_cell().tolist())
+
     if atoms.has('tags'):
         b.write(tags=atoms.get_tags())
     if atoms.has('momenta'):
@@ -323,7 +324,7 @@ def write_atoms(backend, atoms, write_header=True):
     if atoms.has('charges'):
         b.write(charges=atoms.get_initial_charges())
 
-        
+
 def read_traj(filename, index):
     trj = TrajectoryReader(filename)
     for i in range(*index.indices(len(trj))):

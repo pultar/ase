@@ -49,24 +49,24 @@ def read_xsd(file):
         # if non-periodic system
     elif atomtreeroot.find('Molecule') is not None:
         system = atomtreeroot.find('Molecule')
-    
+
         coords = list()
         formula = str()
-    
+
         for atom in system:
             if atom.tag == 'Atom3d':
                 symbol = atom.get('Components')
                 formula += symbol
-            
+
                 xyz = atom.get('XYZ')
                 coord = [float(coord) for coord in xyz.split(',')]
                 coords.append(coord)
 
         atoms = Atoms(formula, pbc=False)
-        atoms.set_scaled_positions(coords)
+        atoms.set_positions(coords)
         return atoms
 
-    
+
 def CPK_or_BnS(element):
     """Determine how atom is visualized"""
     if element in ['C', 'H', 'O', 'S', 'N']:
@@ -87,7 +87,7 @@ def write_xsd(filename, atoms):
     
     natoms = atoms.get_number_of_atoms()
     atom_element = atoms.get_chemical_symbols()
-    atom_cell = atoms.get_cell()
+    atom_cell = atoms.get_cell(True)
     atom_positions = atoms.get_positions()
     
     XSD = ET.Element('XSD')

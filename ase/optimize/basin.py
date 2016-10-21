@@ -142,6 +142,7 @@ class BasinHopping(Dynamics):
 
                 self.energy = self.atoms.get_potential_energy()
             except:
+                # XXXXXXXXXX get rid of this bare except clause!!
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.
                 return None

@@ -4,6 +4,7 @@ import os
 import numpy as np
 from lxml import etree as ET
 
+from ase.cell import same_cell
 from ase.io.exciting import atoms2etree
 from ase.units import Bohr, Hartree
 
@@ -57,7 +58,7 @@ class Exciting:
             self.calculate(atoms)
         elif ((self.positions != atoms.get_positions()).any() or
               (self.pbc != atoms.get_pbc()).any() or
-              (self.cell != atoms.get_cell()).any()):
+              not same_cell(self.cell, atoms.cell)):
             self.calculate(atoms)
 
     def initialize(self, atoms):

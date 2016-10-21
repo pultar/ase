@@ -210,8 +210,8 @@ class Atoms(object):
             else:
                 self.new_array('numbers', symbols2numbers(symbols), int)
 
-        if cell is None:
-            cell = np.eye(3)
+        #if cell is None:
+        #    cell = np.eye(3)
         self.set_cell(cell)
 
         if celldisp is None:
@@ -334,7 +334,7 @@ class Atoms(object):
             raise TypeError('Please use scale_atoms=%s' % (not fix))
 
         if cell is None:
-            assert False
+            #assert False
             self._cell = None
             return
 
@@ -349,6 +349,8 @@ class Atoms(object):
                              'sequence, 3x3 matrix, or None!')
 
         if scale_atoms:
+            if self._cell is None:
+                self._cell = np.eye(3)
             M = np.linalg.solve(self._cell, cell)
             self.arrays['positions'][:] = np.dot(self.arrays['positions'], M)
         self._cell = cell
@@ -362,12 +364,15 @@ class Atoms(object):
         """Get the unit cell displacement vectors."""
         return self._celldisp.copy()
 
-    def get_cell(self):
+    def get_cell(self, fake_cell_if_none=False):
         """Get the three unit cell vectors as a 3x3 ndarray."""
-        assert self._cell is not None
+        #assert self._cell is not None
 
         if self._cell is None:
-            return None
+            if fake_cell_if_none:
+                return np.eye(3)
+            else:
+                return None
         return self._cell.copy()
 
     def get_cell_lengths_and_angles(self):
@@ -1090,7 +1095,7 @@ class Atoms(object):
                 # Store the fake cell; it will be changed later
                 self.cell = cell
 
-            if about is None:
+            if vacuum is None and about is None:
                 about = (0., 0., 0.)
         else:
             dirs = np.zeros_like(cell)

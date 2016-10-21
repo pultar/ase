@@ -75,7 +75,7 @@ class Images:
             self.V[i] = atoms.get_velocities()
             if hasattr(self, 'Q'):
                 self.Q[i] = atoms.get_quaternions()
-            self.A[i] = atoms.get_cell()
+            self.A[i] = atoms.get_cell(True)  # XXXXXXXXXXXXXXXXXXX None
             self.D[i] = atoms.get_celldisp().reshape((3,))
             if (atoms.get_pbc() != self.pbc).any():
                 warning = True
