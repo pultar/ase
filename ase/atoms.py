@@ -18,7 +18,8 @@ import ase.units as units
 from ase.atom import Atom
 from ase.data import atomic_numbers, chemical_symbols, atomic_masses
 from ase.utils import basestring
-from ase.geometry import wrap_positions, find_mic
+from ase.geometry import (wrap_positions, find_mic, cellpar_to_cell,
+                          cell_to_cellpar)
 
 
 class Atoms(object):
@@ -28,7 +29,6 @@ class Atoms(object):
     periodically repeated structure.  It has a unit cell and
     there may be periodic boundary conditions along any of the three
     unit cell axes.
-
     Information about the atoms (atomic numbers and position) is
     stored in ndarrays.  Optionally, there can be information about
     tags, momenta, masses, magnetic moments and charges.
@@ -63,9 +63,15 @@ class Atoms(object):
         non-collinear calculations.
     charges: list of float
         Atomic charges.
-    cell: 3x3 matrix
+    cell: 3x3 matrix or length 3 or 6 vector
         Unit cell vectors.  Can also be given as just three
-        numbers for orthorhombic cells.  Default value: [1, 1, 1].
+        numbers for orthorhombic cells, or 6 numbers, where
+        first three are lengths of unit cell vectors, and the
+        other three are angles between them (in degrees), in following order:
+        [len(a), len(b), len(c), angle(b,c), angle(a,c), angle(a,b)].
+        First vector will lie in x-direction, second in xy-plane,
+        and the third one in z-positive subspace.
+        Default value: [1, 1, 1].
     celldisp: Vector
         Unit cell displacement vector. To visualize a displaced cell
         around the center of mass of a Systems of atoms. Default value
@@ -89,8 +95,8 @@ class Atoms(object):
           - adsorbate_info:
 
         Items in the info attribute survives copy and slicing and can
-        be store to and retrieved from trajectory files given that the
-        key is a string, the value is picklable and, if the value is a
+        be stored in and retrieved from trajectory files given that the
+        key is a string, the value is JSON-compatible and, if the value is a
         user-defined object, its base class is importable.  One should
         not make any assumptions about the existence of keys.
 
@@ -234,12 +240,9 @@ class Atoms(object):
 
     def set_calculator(self, calc=None):
         """Attach calculator object."""
-        if hasattr(calc, '_SetListOfAtoms'):
-            from ase.old import OldASECalculatorWrapper
-            calc = OldASECalculatorWrapper(calc, self)
+        self._calc = calc
         if hasattr(calc, 'set_atoms'):
             calc.set_atoms(self)
-        self._calc = calc
 
     def get_calculator(self):
         """Get currently attached calculator object."""
@@ -278,10 +281,15 @@ class Atoms(object):
 
         Parameters:
 
-        cell :
+        cell: 3x3 matrix or length 3 or 6 vector
             Unit cell.  A 3x3 matrix (the three unit cell vectors) or
-            just three numbers for an orthorhombic cell.
-        scale_atoms : bool
+            just three numbers for an orthorhombic cell. Another option is
+            6 numbers, which describes unit cell with lengths of unit cell
+            vectors and with angles between them (in degrees), in following
+            order: [len(a), len(b), len(c), angle(b,c), angle(a,c),
+            angle(a,b)].  First vector will lie in x-direction, second in
+            xy-plane, and the third one in z-positive subspace.
+        scale_atoms: bool
             Fix atomic positions or move atoms with the unit cell?
             Default behavior is to *not* move the atoms (scale_atoms=False).
 
@@ -297,17 +305,30 @@ class Atoms(object):
         FCC unit cell:
 
         >>> atoms.set_cell([(0, b, b), (b, 0, b), (b, b, 0)])
+
+        Hexagonal unit cell:
+
+        >>> atoms.set_cell([a, a, c, 90, 90, 120])
+
+        Rhombohedral unit cell:
+
+        >>> alpha = 77
+        >>> atoms.set_cell([a, a, a, alpha, alpha, alpha])
         """
 
         if fix is not None:
             raise TypeError('Please use scale_atoms=%s' % (not fix))
 
         cell = np.array(cell, float)
+
         if cell.shape == (3,):
             cell = np.diag(cell)
+        elif cell.shape == (6,):
+            cell = cellpar_to_cell(cell)
         elif cell.shape != (3, 3):
-            raise ValueError('Cell must be length 3 sequence or '
-                             '3x3 matrix!')
+            raise ValueError('Cell must be length 3 sequence, length 6 '
+                             'sequence or 3x3 matrix!')
+
         if scale_atoms:
             M = np.linalg.solve(self._cell, cell)
             self.arrays['positions'][:] = np.dot(self.arrays['positions'], M)
@@ -325,6 +346,18 @@ class Atoms(object):
     def get_cell(self):
         """Get the three unit cell vectors as a 3x3 ndarray."""
         return self._cell.copy()
+
+    def get_cell_lengths_and_angles(self):
+        """Get unit cell parameters. Sequence of 6 numbers.
+
+        First three are unit cell vector lengths and second three
+        are angles between them::
+
+            [len(a), len(b), len(c), angle(a,b), angle(a,c), angle(b,c)]
+
+        in degrees.
+        """
+        return cell_to_cellpar(self._cell)
 
     def get_reciprocal_cell(self):
         """Get the three reciprocal lattice vectors as a 3x3 ndarray.
@@ -684,14 +717,14 @@ class Atoms(object):
         Ask the attached calculator to calculate the forces and apply
         constraints.  Use *apply_constraint=False* to get the raw
         forces.
-        
+
         For molecular dynamics (md=True) we don't apply the constraint
         to the forces but to the momenta."""
 
         if self._calc is None:
             raise RuntimeError('Atoms object has no calculator.')
         forces = self._calc.get_forces(self)
-        
+
         if apply_constraint:
             # We need a special md flag here because for MD we want
             # to skip real constraints but include special "constraints"
@@ -769,44 +802,55 @@ class Atoms(object):
         return len(self.arrays['positions'])
 
     def get_number_of_atoms(self):
-        """Returns the global number of atoms in a distributed-atoms parallel simulation.
+        """Returns the global number of atoms in a distributed-atoms parallel
+        simulation.
 
         DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING!
-        
-        Equivalent to len(atoms) in the standard ASE Atoms class.  You should normally
-        use len(atoms) instead.  This function's only purpose is to make compatibility
-        between ASE and Asap easier to maintain by having a few places in ASE use this
-        function instead.  It is typically only when counting the global number of
-        degrees of freedom or in similar situations.
+
+        Equivalent to len(atoms) in the standard ASE Atoms class.  You should
+        normally use len(atoms) instead.  This function's only purpose is to
+        make compatibility between ASE and Asap easier to maintain by having a
+        few places in ASE use this function instead.  It is typically only
+        when counting the global number of degrees of freedom or in similar
+        situations.
         """
         return len(self)
 
     def __repr__(self):
-        num = self.get_atomic_numbers()
-        N = len(num)
-        if N == 0:
-            symbols = ''
-        elif N <= 60:
+        tokens = []
+
+        N = len(self)
+        if N <= 60:
             symbols = self.get_chemical_formula('reduce')
         else:
             symbols = self.get_chemical_formula('hill')
-        s = "%s(symbols='%s', " % (self.__class__.__name__, symbols)
-        for name in self.arrays:
+        tokens.append("symbols='{0}'".format(symbols))
+
+        tokens.append('pbc={0}'.format(self._pbc.tolist()))
+
+        if (self._cell - np.diag(self._cell.diagonal())).any():
+            cell = self._cell.tolist()
+        else:
+            cell = self._cell.diagonal().tolist()
+        tokens.append('cell={0}'.format(cell))
+
+        for name in sorted(self.arrays):
             if name == 'numbers':
                 continue
-            s += '%s=..., ' % name
-        if (self._cell - np.diag(self._cell.diagonal())).any():
-            s += 'cell=%s, ' % self._cell.tolist()
-        else:
-            s += 'cell=%s, ' % self._cell.diagonal().tolist()
-        s += 'pbc=%s, ' % self._pbc.tolist()
-        if len(self.constraints) == 1:
-            s += 'constraint=%s, ' % repr(self.constraints[0])
-        if len(self.constraints) > 1:
-            s += 'constraint=%s, ' % repr(self.constraints)
+            tokens.append('{0}=...'.format(name))
+
+        if self.constraints:
+            if len(self.constraints) == 1:
+                constraint = self.constraints[0]
+            else:
+                constraint = self.constraints
+            tokens.append('constraint={0}'.format(repr(constraint)))
+
         if self._calc is not None:
-            s += 'calculator=%s(...), ' % self._calc.__class__.__name__
-        return s[:-2] + ')'
+            tokens.append('calculator={0}(...)'
+                          .format(self._calc.__class__.__name__))
+
+        return '{0}({1})'.format(self.__class__.__name__, ', '.join(tokens))
 
     def __add__(self, other):
         atoms = self.copy()
@@ -873,7 +917,7 @@ class Atoms(object):
             return Atom(atoms=self, index=i)
 
         import copy
-        from ase.constraints import FixConstraint
+        from ase.constraints import FixConstraint, FixBondLengths
 
         atoms = self.__class__(cell=self._cell, pbc=self._pbc, info=self.info)
         # TODO: Do we need to shuffle indices in adsorbate_info too?
@@ -888,7 +932,7 @@ class Atoms(object):
         atoms.constraints = copy.deepcopy(self.constraints)
         condel = []
         for con in atoms.constraints:
-            if isinstance(con, FixConstraint):
+            if isinstance(con, (FixConstraint, FixBondLengths)):
                 try:
                     con.index_shuffle(self, i)
                 except IndexError:
@@ -899,19 +943,27 @@ class Atoms(object):
 
     def __delitem__(self, i):
         from ase.constraints import FixAtoms
-        check_constraint = np.array([isinstance(c, FixAtoms)
-                                     for c in self._constraints])
-        if (len(self._constraints) > 0 and (not check_constraint.all() or
-                                            isinstance(i, list))):
-            raise RuntimeError('Remove constraint using set_constraint() '
-                               'before deleting atoms.')
+        for c in self._constraints:
+            if not isinstance(c, FixAtoms):
+                raise RuntimeError('Remove constraint using set_constraint() '
+                                   'before deleting atoms.')
+
+        if len(self._constraints) > 0:
+            n = len(self)
+            i = np.arange(n)[i]
+            if isinstance(i, int):
+                i = [i]
+            constraints = []
+            for c in self._constraints:
+                c = c.delete_atoms(i, n)
+                if c is not None:
+                    constraints.append(c)
+            self.constraints = constraints
+
         mask = np.ones(len(self), bool)
         mask[i] = False
         for name, a in self.arrays.items():
             self.arrays[name] = a[mask]
-        if len(self._constraints) > 0:
-            for n in range(len(self._constraints)):
-                self._constraints[n].delete_atom(range(len(mask))[i])
 
     def pop(self, i=-1):
         """Remove and return atom at index *i* (default last)."""
@@ -1507,8 +1559,11 @@ class Atoms(object):
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""
-        ekin = self.get_kinetic_energy() / len(self)
-        return ekin / (1.5 * units.kB)
+        dof = len(self) * 3
+        for constraint in self._constraints:
+            dof -= constraint.removed_dof
+        ekin = self.get_kinetic_energy()
+        return 2 * ekin / (dof * units.kB)
 
     def __eq__(self, other):
         """Check for identity of two atoms objects.
