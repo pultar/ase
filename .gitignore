@@ -2,6 +2,9 @@
 doc/build/
 /dist
 MANIFEST
+.DS_Store
+ase/.DS_Store
+ase/calculators/.DS_Store
 
 # If you build the documentation in the source tree, you will create a
 # lot of files that we don't want to see with "git status":
