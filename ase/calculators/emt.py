@@ -53,6 +53,9 @@ class EMT(Calculator):
 
     default_parameters = {'fixed_cutoff': True}
 
+    # Ratio between center of cutoff Fermi function and "hard" cutoff
+    nbcutfactor = 1.045 
+    
     def __init__(self, **kwargs):
         Calculator.__init__(self, **kwargs)
 
@@ -138,7 +141,7 @@ class EMT(Calculator):
             for a2, offset in zip(neighbors, offsets):
                 d = positions[a2] + offset - positions[a1]
                 r = sqrt(np.dot(d, d))
-                if r < self.rc + 0.5:
+                if r < self.rc * self.nbcutfactor:
                     Z2 = numbers[a2]
                     p2 = self.par[Z2]
                     self.interact1(a1, a2, d, r, p1, p2, ksi[Z2])
@@ -168,7 +171,7 @@ class EMT(Calculator):
             for a2, offset in zip(neighbors, offsets):
                 d = positions[a2] + offset - positions[a1]
                 r = sqrt(np.dot(d, d))
-                if r < self.rc + 0.5:
+                if r < self.rc * self.nbcutfactor:
                     Z2 = numbers[a2]
                     p2 = self.par[Z2]
                     self.interact2(a1, a2, d, r, p1, p2, ksi[Z2])

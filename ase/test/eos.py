@@ -24,9 +24,9 @@ for name in eos_names:
     eos = EOS(volumes, energies, name)
     v, e, b = eos.fit()
     print('{0:20} {1:.8f} {2:.8f} {3:.8f} '.format(name, v, e, b))
-    assert abs(v - 3.18658700e+01) < 4e-4
-    assert abs(e - -9.76187802e-03) < 5e-7
-    assert abs(b - 2.46812688e-01) < 2e-4
+    assert abs(v - 3.18653628e+01) < 4e-4
+    assert abs(e - -9.71501875e-03) < 1e-6
+    assert abs(b - 2.44867454e-01) < 3e-4
     results.append((v, e, b))
 
 print(np.ptp(results, 0))
