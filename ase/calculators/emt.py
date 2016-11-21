@@ -110,7 +110,7 @@ class EMT(Calculator):
         self.sigma1 = np.empty(len(atoms))
         self.deds = np.empty(len(atoms))
                     
-        self.nl = NeighborList([0.5 * self.rc + 0.25] * len(atoms),
+        self.nl = NeighborList([0.5 * self.rc * 1.045] * len(atoms),
                                self_interaction=False)
 
     def calculate(self, atoms=None, properties=['energy'],
