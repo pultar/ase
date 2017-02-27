@@ -180,7 +180,42 @@ def numeric_force(atoms, a, i, d=0.001):
     return (eminus - eplus) / (2 * d)
 
 
-def gradient_test(atoms, indices=None):
+def numeric_stress(atoms, d=1e-6):
+    """Evaluate stress tensor using finite differences.
+
+    This will trigger 18 calls to get_potential_energy(), with appropriate
+    cell deformation.
+    """
+    stress = np.zeros([3, 3])
+    cell0 = atoms.get_cell().copy()
+
+    for i in range(3):
+        for j in range(3):
+            cell = cell0.copy()
+            eps0 = np.eye(3)
+            eps = eps0.copy()
+
+            eps[i, j] = eps0[i, j]-d
+            cell = np.dot(cell0, eps)
+            atoms.set_cell(cell, scale_atoms=True)
+            e1 = atoms.get_potential_energy()
+
+            eps[i, j] = eps0[i, j]+d
+            cell = np.dot(cell0, eps)
+            atoms.set_cell(cell, scale_atoms=True)
+            e2 = atoms.get_potential_energy()
+
+            stress[i, j] = (e2-e1)/(2*d)
+
+    atoms.set_cell(cell0, scale_atoms=True)
+
+    return np.array([stress[0,0], stress[1,1], stress[2,2],
+                     (stress[1,2]+stress[2,1])/2,
+                     (stress[0,2]+stress[2,0])/2,
+                     (stress[0,1]+stress[1,0])/2])/atoms.get_volume()
+
+
+def gradient_test(atoms, indices=None, test_stress=False):
     """
     Use numeric_force to compare analytical and numerical forces on atoms
 
@@ -189,6 +224,7 @@ def gradient_test(atoms, indices=None):
     if indices is None:
         indices = range(len(atoms))
     f = atoms.get_forces()[indices]
+    print('forces:')
     print('{0:>16} {1:>20}'.format('eps', 'max(abs(df))'))
     for eps in np.logspace(-1, -8, 8):
         fn = np.zeros((len(indices), 3))
@@ -196,4 +232,11 @@ def gradient_test(atoms, indices=None):
             for j in range(3):
                 fn[idx, j] = numeric_force(atoms, i, j, eps)
         print('{0:16.12f} {1:20.12f}'.format(eps, abs(fn - f).max()))
+    if test_stress:
+        print('stress:')
+        for eps in np.logspace(-1, -8, 8):
+            s = atoms.get_stress()
+            sn = numeric_stress(atoms)
+            print('{0:16.12f} {1:20.12f}'.format(eps, abs(sn - s).max()))
+        return f, fn, s, sn
     return f, fn
