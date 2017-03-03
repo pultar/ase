@@ -102,11 +102,12 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
-        if imagetype=='atoms':
+        if self.imagetype=='atoms':
             self.fixed_atoms = constraints.constrained_indices(atoms[0])
             self.allatoms = np.array(range(0,len(atoms[0])))
             self.free_atoms = [i for i in self.allatoms if i not in self.fixed_atoms]
             self.free_list = range(0,len(self.free_atoms))
+            self.atom = atoms[0].copy()
 
     def run(self):
         """Run the vibration calculations.
@@ -191,12 +192,9 @@ class Vibrations:
                     n += 1
         return n
 
-    def read(self, method='standard', direction='central', imagetype='pickle'):
+    def read(self, method='standard', direction='central'):
         self.method = method.lower()
         self.direction = direction.lower()
-        
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower() 
             
         assert self.method in ['standard', 'frederiksen']
         assert self.direction in ['central', 'forward', 'backward']
@@ -311,23 +309,19 @@ class Vibrations:
         s = units._hbar * 1e10 / sqrt(units._e * units._amu)
         self.hnu = s * omega2.astype(complex)**0.5
 
-    def get_energies(self, method='standard', direction='central', imagetype='pickle'):
+    def get_energies(self, method='standard', direction='central'):
         """Get vibration energies in eV."""
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower() 
         if (self.H is None or method.lower() != self.method or
-            direction.lower() != self.direction or imagetype.lower() != self.imagetype):
-            self.read(method, direction, self.imagetype)
+            direction.lower() != self.direction):
+            self.read(method, direction)
         return self.hnu
 
-    def get_frequencies(self, method='standard', direction='central', imagetype='pickle'):
+    def get_frequencies(self, method='standard', direction='central'):
         """Get vibration frequencies in cm^-1."""
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower() 
         s = 1. / units.invcm
-        return s * self.get_energies(method, direction, self.imagetype)
+        return s * self.get_energies(method, direction)
 
-    def summary(self, method='standard', direction='central', imagetype='pickle', freq=None,
+    def summary(self, method='standard', direction='central', freq=None,
                 log=sys.stdout):
         """Print a summary of the vibrational frequencies.
 
@@ -345,8 +339,6 @@ class Vibrations:
             stdout. Can be an object with a write() method or the name of a
             file to create.
         """
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower() 
         if isinstance(log, basestring):
             log = paropen(log, 'a')
         write = log.write
@@ -355,7 +347,7 @@ class Vibrations:
         if freq is not None:
             hnu = freq / s
         else:
-            hnu = self.get_energies(method, direction, imagetype)
+            hnu = self.get_energies(method, direction)
         write('---------------------\n')
         write('  #    meV     cm^-1\n')
         write('---------------------\n')
@@ -380,38 +372,49 @@ class Vibrations:
 
     def get_mode(self, n):
         """Get mode number ."""
-        mode = np.zeros((len(self.atoms), 3))
-        mode[self.indices] = (self.modes[n] * self.im).reshape((-1, 3))
+        if self.imagetype=='pickle':
+            mode = np.zeros((len(self.atoms), 3))
+            mode[self.indices] = (self.modes[n] * self.im).reshape((-1, 3))
+        if self.imagetype=='atoms':
+            mode = np.zeros((len(self.atoms[0]), 3))
+            mode[self.free_atoms] = (self.modes[n] * self.im).reshape((-1, 3))
         return mode
 
-    def write_mode(self, n=None, kT=units.kB * 300, nimages=30, imagetype='pickle'):
+    def write_mode(self, n=None, kT=units.kB * 300, nimages=30):
         """Write mode number n to trajectory file. If n is not specified,
-        writes all non-zero modes."""
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower()         
+        writes all non-zero modes."""        
         if n is None:
             for index, energy in enumerate(self.get_energies()):
                 if abs(energy) > 1e-5:
                     self.write_mode(n=index, kT=kT, nimages=nimages)
             return
         mode = self.get_mode(n) * sqrt(kT / abs(self.hnu[n]))
-        p = self.atoms.positions.copy()
-        n %= 3 * len(self.indices)
-        traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
-        calc = self.atoms.get_calculator()
-        self.atoms.set_calculator()
-        for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
-            self.atoms.set_positions(p + sin(x) * mode)
-            traj.write(self.atoms)
-        self.atoms.set_positions(p)
-        self.atoms.set_calculator(calc)
+        
+        if self.imagetype=='pickle':        
+            p = self.atoms.positions.copy()
+            n %= 3 * len(self.indices)
+            traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
+            calc = self.atoms.get_calculator()
+            self.atoms.set_calculator()
+            for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
+                self.atoms.set_positions(p + sin(x) * mode)
+                traj.write(self.atoms)
+            self.atoms.set_positions(p)
+            self.atoms.set_calculator(calc)
+        
+        if self.imagetype=='atoms':        
+            p = self.atom.positions.copy()
+            n %= 3 * len(self.free_atoms)
+            traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
+            for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
+                self.atom.set_positions(p + sin(x) * mode)
+                traj.write(self.atom)
+            self.atom.set_positions(p)
         traj.close()
 
-    def write_jmol(self, imagetype='pickle'):
+    def write_jmol(self):
         """Writes file for viewing of the modes with jmol."""
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower() 
-            
+     
         fd = open(self.name + '.xyz', 'w')
         symbols = self.atoms.get_chemical_symbols()
         f = self.get_frequencies()
@@ -475,17 +478,15 @@ class Vibrations:
 
     def write_dos(self, out='vib-dos.dat', start=800, end=4000,
                   npts=None, width=10,
-                  type='Gaussian', method='standard', direction='central',imagetype='pickle'):
+                  type='Gaussian', method='standard', direction='central'):
         """Write out the vibrational density of states to file.
 
         First column is the wavenumber in cm^-1, the second column the
         folded vibrational density of states.
         Start and end points, and width of the Gaussian/Lorentzian
-        should be given in cm^-1."""
-        if self.imagetype is None:
-            self.imagetype = imagetype.lower()         
+        should be given in cm^-1."""         
 
-        frequencies = self.get_frequencies(method, direction, imagetype).real
+        frequencies = self.get_frequencies(method, direction).real
         intensities = np.ones(len(frequencies))
         energies, spectrum = self.fold(frequencies, intensities,
                                        start, end, npts, width, type)
