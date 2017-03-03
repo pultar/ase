@@ -11,6 +11,7 @@ from math import sin, pi, sqrt, log
 import numpy as np
 
 import ase.units as units
+from ase import constraints
 from ase.io.trajectory import Trajectory
 from ase.parallel import rank, paropen
 from ase.utils import opencew, pickleload, basestring
@@ -88,7 +89,7 @@ class Vibrations:
 
     """
 
-    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2):
+    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2, imagetype='pickle'):
         assert nfree in [2, 4]
         self.atoms = atoms
         if indices is None:
@@ -100,6 +101,10 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
+        if imagetype=='atoms':
+            fixed_atoms = constraints.constrained_indices(atoms[0])
+            Allatoms = np.array(range(0,len(atoms[0])))
+            free_atoms = [i for i in Allatoms if i not in fixed_atoms]
 
     def run(self):
         """Run the vibration calculations.
@@ -189,15 +194,17 @@ class Vibrations:
         self.direction = direction.lower()
         assert self.method in ['standard', 'frederiksen']
         assert self.direction in ['central', 'forward', 'backward']
+        
+        if imagetype =='pickle':
+            def load(fname):
+                with open(fname, 'rb') as fl:
+                    f = pickleload(fl)
+                if not hasattr(f, 'shape'):
+                    # output from InfraRed
+                    return f[0]
+                return f
 
-        def load(fname):
-            with open(fname, 'rb') as fl:
-                f = pickleload(fl)
-            if not hasattr(f, 'shape'):
-                # output from InfraRed
-                return f[0]
-            return f
-
+        
         n = 3 * len(self.indices)
         H = np.empty((n, n))
         r = 0
