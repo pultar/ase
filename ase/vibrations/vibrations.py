@@ -15,6 +15,7 @@ from ase import constraints
 from ase.io.trajectory import Trajectory
 from ase.parallel import rank, paropen
 from ase.utils import opencew, pickleload, basestring
+from copy import deepcopy
 
 
 class Vibrations:
@@ -44,6 +45,14 @@ class Vibrations:
         Number of displacements per atom and cartesian coordinate, 2 and 4 are
         supported. Default is 2 which will displace each atom +delta and
         -delta for each cartesian coordinate.
+    imagetype: str
+        Either 'pickle' or 'atoms'. Determines whether forces are calculated
+        and saved into pickle files or read from an atoms object. Also
+        determines if forces are read from pickle files or atoms objects.
+        'pickle' is default. For 'atoms' option the atoms object can be created
+        and read ('vasprun.xml',index=':') after a vibrational calculation. 
+        For the 'atoms' option, it is assumed that the first embedded atoms
+        object is the equilibrium position.
 
     Example:
 
@@ -103,12 +112,41 @@ class Vibrations:
         self.ir = None
         self.ram = None
         if self.imagetype=='atoms':
-            self.fixed_atoms = constraints.constrained_indices(atoms[0])
-            self.allatoms = np.array(range(0,len(atoms[0])))
-            self.free_atoms = [i for i in self.allatoms if i not in self.fixed_atoms]
+            fixed_atoms = constraints.constrained_indices(atoms[0])
+            allatoms = np.array(range(0,len(atoms[0])))
+            self.free_atoms = [i for i in allatoms if i not in fixed_atoms]
             self.free_list = range(0,len(self.free_atoms))
             self.atom = atoms[0].copy()
-
+            """reorder displacements in the format +x,-x,++x,--x, +y, -y, etc."""
+            imageindex = range(0,len(self.atoms))
+            atoms2 = deepcopy(self.atoms)
+            """the first embedded atoms objects"""
+            atoms2[0] = deepcopy(self.atoms[0])
+            poschange = [max(abs(self.atoms[i].get_positions()-self.atoms[0].get_positions()).ravel()) for i in imageindex[1:]]
+            negchange = [min(-1*abs(self.atoms[i].get_positions()-self.atoms[0].get_positions()).ravel()) for i in imageindex[1:]]
+            maxnegchange = max(negchange)
+            minposchange = min(poschange)
+            """reording embedded atoms objects in the format +x,-x,++x,--x, +y, -y, etc."""
+            i=1
+            for j in self.free_atoms:
+                for m in [0,1,2]:
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) < minposchange*1.5 and (self.atoms[k][j].position[m] - self.atoms[0][j].position[m])>minposchange*.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) > maxnegchange*1.5 and (self.atoms[k][j].position[m] - self.atoms[0][j].position[m])<maxnegchange*.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) > minposchange*1.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) < maxnegchange*1.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+            self.atoms = deepcopy(atoms2)
     def run(self):
         """Run the vibration calculations.
 
@@ -213,7 +251,7 @@ class Vibrations:
         
         if self.imagetype == 'atoms':
             n = 3 * len(self.free_atoms)
-            feq = self.atoms[0].get_forces()[self.fixed_atoms]
+            feq = self.atoms[0].get_forces()[self.free_atoms]
             
         
         H = np.empty((n, n))
@@ -414,27 +452,49 @@ class Vibrations:
 
     def write_jmol(self):
         """Writes file for viewing of the modes with jmol."""
-     
         fd = open(self.name + '.xyz', 'w')
-        symbols = self.atoms.get_chemical_symbols()
-        f = self.get_frequencies()
-        for n in range(3 * len(self.indices)):
-            fd.write('%6d\n' % len(self.atoms))
-            if f[n].imag != 0:
-                c = 'i'
-                f[n] = f[n].imag
-            else:
-                c = ' '
-            fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
-            if self.ir:
-                fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
-            else:
-                fd.write('.\n')
-            mode = self.get_mode(n)
-            for i, pos in enumerate(self.atoms.positions):
-                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
-                         (symbols[i], pos[0], pos[1], pos[2],
-                          mode[i, 0], mode[i, 1], mode[i, 2]))
+        
+        if self.imagetype=='pickle':
+            symbols = self.atoms.get_chemical_symbols()
+            f = self.get_frequencies()
+            for n in range(3 * len(self.indices)):
+                fd.write('%6d\n' % len(self.atoms))
+                if f[n].imag != 0:
+                    c = 'i'
+                    f[n] = f[n].imag
+                else:
+                    c = ' '
+                fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
+                if self.ir:
+                    fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
+                else:
+                    fd.write('.\n')
+                mode = self.get_mode(n)
+                for i, pos in enumerate(self.atoms.positions):
+                    fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                             (symbols[i], pos[0], pos[1], pos[2],
+                              mode[i, 0], mode[i, 1], mode[i, 2]))
+                              
+        if self.imagetype=='atoms':
+            symbols = self.atoms[0].get_chemical_symbols()
+            f = self.get_frequencies()
+            for n in range(3 * len(self.free_atoms)):
+                fd.write('%6d\n' % len(self.atoms[0]))
+                if f[n].imag != 0:
+                    c = 'i'
+                    f[n] = f[n].imag
+                else:
+                    c = ' '
+                fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
+                if self.ir:
+                    fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
+                else:
+                    fd.write('.\n')
+                mode = self.get_mode(n)
+                for i, pos in enumerate(self.atoms[0].positions):
+                    fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                             (symbols[i], pos[0], pos[1], pos[2],
+                              mode[i, 0], mode[i, 1], mode[i, 2]))
         fd.close()
 
     def fold(self, frequencies, intensities,
