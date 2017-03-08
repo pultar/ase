@@ -199,7 +199,7 @@ class Infrared(Vibrations):
                             atoms2[i] = deepcopy(self.atoms[k])
                             i=i+1
             self.atoms = deepcopy(atoms2)
-	else:
+        else:
             self.imagetype='pickle'
             if atoms.constraints:
                 print('WARNING! \n Your Atoms object is constrained. '

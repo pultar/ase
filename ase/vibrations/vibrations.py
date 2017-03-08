@@ -108,7 +108,6 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
-	self.imagetype='pickle'
         if str(type(self.atoms[0])) == "<class 'ase.atoms.Atoms'>":
             self.imagetype='atoms'
             fixed_atoms = constraints.constrained_indices(atoms[0])
@@ -146,6 +145,8 @@ class Vibrations:
                             atoms2[i] = deepcopy(self.atoms[k])
                             i=i+1
             self.atoms = deepcopy(atoms2)
+        else:
+            self.imagetype='pickle'
 	    
     def run(self):
         """Run the vibration calculations.
