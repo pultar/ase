@@ -11,9 +11,11 @@ from math import sin, pi, sqrt, log
 import numpy as np
 
 import ase.units as units
+from ase import constraints
 from ase.io.trajectory import Trajectory
 from ase.parallel import rank, paropen
 from ase.utils import opencew, pickleload, basestring
+from copy import deepcopy
 
 
 class Vibrations:
@@ -21,6 +23,12 @@ class Vibrations:
 
     The vibrational modes are calculated from a finite difference
     approximation of the Hessian matrix.
+    
+    Vibrations either gets the positions and forces from a calculator or from
+    a list of atoms objects. If it gets positions and forces from a list of
+    of atoms objects, self.imagetype is set to 'atoms'. This would be the case
+    if all positions and forces were read from a vasprun.xml file after a
+    vibrational calculation.
 
     The *summary()*, *get_energies()* and *get_frequencies()* methods all take
     an optional *method* keyword.  Use method='Frederiksen' to use the method
@@ -100,7 +108,45 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
-
+        if str(type(self.atoms[0])) == "<class 'ase.atoms.Atoms'>":
+            self.imagetype='atoms'
+            fixed_atoms = constraints.constrained_indices(atoms[0])
+            allatoms = np.array(range(0,len(atoms[0])))
+            self.free_atoms = [i for i in allatoms if i not in fixed_atoms]
+            self.free_list = range(0,len(self.free_atoms))
+            self.atom = atoms[0].copy()
+            """reorder displacements in the format +x,-x,++x,--x, +y, -y, etc."""
+            imageindex = range(0,len(self.atoms))
+            atoms2 = deepcopy(self.atoms)
+            """the first embedded atoms objects is assumed to be the equilbrium position"""
+            atoms2[0] = deepcopy(self.atoms[0])
+            poschange = [max(abs(self.atoms[i].get_positions()-self.atoms[0].get_positions()).ravel()) for i in imageindex[1:]]
+            negchange = [min(-1*abs(self.atoms[i].get_positions()-self.atoms[0].get_positions()).ravel()) for i in imageindex[1:]]
+            maxnegchange = max(negchange)
+            minposchange = min(poschange)
+            """reording embedded atoms objects in the format +x,-x,++x,--x, +y, -y, etc."""
+            i=1
+            for j in self.free_atoms:
+                for m in [0,1,2]:
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) < minposchange*1.5 and (self.atoms[k][j].position[m] - self.atoms[0][j].position[m])>minposchange*.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) > maxnegchange*1.5 and (self.atoms[k][j].position[m] - self.atoms[0][j].position[m])<maxnegchange*.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) > minposchange*1.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+                    for k in imageindex[1:]:
+                        if (self.atoms[k][j].position[m] - self.atoms[0][j].position[m]) < maxnegchange*1.5:
+                            atoms2[i] = deepcopy(self.atoms[k])
+                            i=i+1
+            self.atoms = deepcopy(atoms2)
+	else:
+            self.imagetype='pickle'
     def run(self):
         """Run the vibration calculations.
 
@@ -187,60 +233,113 @@ class Vibrations:
     def read(self, method='standard', direction='central'):
         self.method = method.lower()
         self.direction = direction.lower()
+            
         assert self.method in ['standard', 'frederiksen']
         assert self.direction in ['central', 'forward', 'backward']
-
-        def load(fname):
-            with open(fname, 'rb') as fl:
-                f = pickleload(fl)
-            if not hasattr(f, 'shape'):
-                # output from InfraRed
-                return f[0]
-            return f
-
-        n = 3 * len(self.indices)
+        
+        if self.imagetype == 'pickle':
+            def load(fname):
+                with open(fname, 'rb') as fl:
+                    f = pickleload(fl)
+                if not hasattr(f, 'shape'):
+                    # output from InfraRed
+                    return f[0]
+                return f
+            if direction != 'central':
+                feq = load(self.name + '.eq.pckl')
+            n = 3 * len(self.indices)
+        
+        if self.imagetype == 'atoms':
+            n = 3 * len(self.free_atoms)
+            feq = self.atoms[0].get_forces()[self.free_atoms]
+            
+        
         H = np.empty((n, n))
         r = 0
-        if direction != 'central':
-            feq = load(self.name + '.eq.pckl')
-        for a in self.indices:
-            for i in 'xyz':
-                name = '%s.%d%s' % (self.name, a, i)
-                fminus = load(name + '-.pckl')
-                fplus = load(name + '+.pckl')
-                if self.method == 'frederiksen':
-                    fminus[a] -= fminus.sum(0)
-                    fplus[a] -= fplus.sum(0)
-                if self.nfree == 4:
-                    fminusminus = load(name + '--.pckl')
-                    fplusplus = load(name + '++.pckl')
+        
+        if self.imagetype == 'pickle':
+            for a in self.indices:
+                for i in 'xyz':
+                    name = '%s.%d%s' % (self.name, a, i)
+                    fminus = load(name + '-.pckl')
+                    fplus = load(name + '+.pckl')
                     if self.method == 'frederiksen':
-                        fminusminus[a] -= fminusminus.sum(0)
-                        fplusplus[a] -= fplusplus.sum(0)
-                if self.direction == 'central':
-                    if self.nfree == 2:
-                        H[r] = .5 * (fminus - fplus)[self.indices].ravel()
+                        fminus[a] -= fminus.sum(0)
+                        fplus[a] -= fplus.sum(0)
+                    if self.nfree == 4:
+                        fminusminus = load(name + '--.pckl')
+                        fplusplus = load(name + '++.pckl')
+                        if self.method == 'frederiksen':
+                            fminusminus[a] -= fminusminus.sum(0)
+                            fplusplus[a] -= fplusplus.sum(0)
+                    if self.direction == 'central':
+                        if self.nfree == 2:
+                            H[r] = .5 * (fminus - fplus)[self.indices].ravel()
+                        else:
+                            H[r] = H[r] = (-fminusminus +
+                                           8 * fminus -
+                                           8 * fplus +
+                                           fplusplus)[self.indices].ravel() / 12.0
+                    elif self.direction == 'forward':
+                        H[r] = (feq - fplus)[self.indices].ravel()
                     else:
-                        H[r] = H[r] = (-fminusminus +
-                                       8 * fminus -
-                                       8 * fplus +
-                                       fplusplus)[self.indices].ravel() / 12.0
-                elif self.direction == 'forward':
-                    H[r] = (feq - fplus)[self.indices].ravel()
-                else:
-                    assert self.direction == 'backward'
-                    H[r] = (fminus - feq)[self.indices].ravel()
-                H[r] /= 2 * self.delta
-                r += 1
-        H += H.copy().T
-        self.H = H
-        m = self.atoms.get_masses()
-        if 0 in [m[index] for index in self.indices]:
-            raise RuntimeError('Zero mass encountered in one or more of '
-                               'the vibrated atoms. Use Atoms.set_masses()'
-                               ' to set all masses to non-zero values.')
-
-        self.im = np.repeat(m[self.indices]**-0.5, 3)
+                        assert self.direction == 'backward'
+                        H[r] = (fminus - feq)[self.indices].ravel()
+                    
+                    H[r] /= 2 * self.delta
+                    r += 1
+            H += H.copy().T
+            self.H = H
+            m = self.atoms.get_masses()
+            if 0 in [m[index] for index in self.indices]:
+                raise RuntimeError('Zero mass encountered in one or more of '
+                                   'the vibrated atoms. Use Atoms.set_masses()'
+                                   ' to set all masses to non-zero values.')
+    
+            self.im = np.repeat(m[self.indices]**-0.5, 3)
+            
+        if self.imagetype == 'atoms':
+            for a in self.free_list:
+                for i in [0,1,2]:
+                    fplus = self.atoms[self.nfree*(3*a+i)+1].get_forces()[self.free_atoms]
+                    fminus = self.atoms[self.nfree*(3*a+i)+2].get_forces()[self.free_atoms]
+                    if self.method == 'frederiksen':
+                        fminus[a] -= fminus.sum(0)
+                        fplus[a] -= fplus.sum(0)
+                    if self.nfree == 4:
+                        fplusplus = self.atoms[self.nfree*(3*a+i)+3].get_forces()[self.free_atoms]
+                        fminusminus = self.atoms[self.nfree*(3*a+i)+4].get_forces()[self.free_atoms]
+                        if self.method == 'frederiksen':
+                            fminusminus[a] -= fminusminus.sum(0)
+                            fplusplus[a] -= fplusplus.sum(0)
+                    if self.direction == 'central':
+                        if self.nfree == 2:
+                            H[r] = .5 * (fminus - fplus)[self.free_list].ravel()
+                        else:
+                            H[r] = H[r] = (-fminusminus +
+                                           8 * fminus -
+                                           8 * fplus +
+                                           fplusplus)[self.free_list].ravel() / 12.0
+                    elif self.direction == 'forward':
+                        H[r] = (feq - fplus)[self.free_list].ravel()
+                    else:
+                        assert self.direction == 'backward'
+                        H[r] = (fminus - feq)[self.free_list].ravel()
+                    self.delta = max(abs(self.atoms[self.nfree*(3*a+i)+1].positions - self.atoms[0].positions).ravel())
+                    H[r] /= 2 * self.delta
+                    r += 1
+            H += H.copy().T
+            self.H = H
+            m = self.atoms[0][self.free_atoms].get_masses()
+            if 0 in [m[index] for index in self.free_list]:
+                raise RuntimeError('Zero mass encountered in one or more of '
+                                   'the vibrated atoms. Use Atoms.set_masses()'
+                                   ' to set all masses to non-zero values.')
+    
+            self.im = np.repeat(m[self.free_list]**-0.5, 3)
+        
+        
+        
         omega2, modes = np.linalg.eigh(self.im[:, None] * H * self.im)
         self.modes = modes.T.copy()
 
@@ -250,7 +349,6 @@ class Vibrations:
 
     def get_energies(self, method='standard', direction='central'):
         """Get vibration energies in eV."""
-
         if (self.H is None or method.lower() != self.method or
             direction.lower() != self.direction):
             self.read(method, direction)
@@ -258,7 +356,6 @@ class Vibrations:
 
     def get_frequencies(self, method='standard', direction='central'):
         """Get vibration frequencies in cm^-1."""
-
         s = 1. / units.invcm
         return s * self.get_energies(method, direction)
 
@@ -280,7 +377,6 @@ class Vibrations:
             stdout. Can be an object with a write() method or the name of a
             file to create.
         """
-
         if isinstance(log, basestring):
             log = paropen(log, 'a')
         write = log.write
@@ -314,54 +410,91 @@ class Vibrations:
 
     def get_mode(self, n):
         """Get mode number ."""
-        mode = np.zeros((len(self.atoms), 3))
-        mode[self.indices] = (self.modes[n] * self.im).reshape((-1, 3))
+        if self.imagetype=='pickle':
+            mode = np.zeros((len(self.atoms), 3))
+            mode[self.indices] = (self.modes[n] * self.im).reshape((-1, 3))
+        if self.imagetype=='atoms':
+            mode = np.zeros((len(self.atoms[0]), 3))
+            mode[self.free_atoms] = (self.modes[n] * self.im).reshape((-1, 3))
         return mode
 
     def write_mode(self, n=None, kT=units.kB * 300, nimages=30):
         """Write mode number n to trajectory file. If n is not specified,
-        writes all non-zero modes."""
+        writes all non-zero modes."""        
         if n is None:
             for index, energy in enumerate(self.get_energies()):
                 if abs(energy) > 1e-5:
                     self.write_mode(n=index, kT=kT, nimages=nimages)
             return
         mode = self.get_mode(n) * sqrt(kT / abs(self.hnu[n]))
-        p = self.atoms.positions.copy()
-        n %= 3 * len(self.indices)
-        traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
-        calc = self.atoms.get_calculator()
-        self.atoms.set_calculator()
-        for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
-            self.atoms.set_positions(p + sin(x) * mode)
-            traj.write(self.atoms)
-        self.atoms.set_positions(p)
-        self.atoms.set_calculator(calc)
+        
+        if self.imagetype=='pickle':        
+            p = self.atoms.positions.copy()
+            n %= 3 * len(self.indices)
+            traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
+            calc = self.atoms.get_calculator()
+            self.atoms.set_calculator()
+            for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
+                self.atoms.set_positions(p + sin(x) * mode)
+                traj.write(self.atoms)
+            self.atoms.set_positions(p)
+            self.atoms.set_calculator(calc)
+        
+        if self.imagetype=='atoms':        
+            p = self.atom.positions.copy()
+            n %= 3 * len(self.free_atoms)
+            traj = Trajectory('%s.%d.traj' % (self.name, n), 'w')
+            for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
+                self.atom.set_positions(p + sin(x) * mode)
+                traj.write(self.atom)
+            self.atom.set_positions(p)
         traj.close()
 
     def write_jmol(self):
         """Writes file for viewing of the modes with jmol."""
-
         fd = open(self.name + '.xyz', 'w')
-        symbols = self.atoms.get_chemical_symbols()
-        f = self.get_frequencies()
-        for n in range(3 * len(self.indices)):
-            fd.write('%6d\n' % len(self.atoms))
-            if f[n].imag != 0:
-                c = 'i'
-                f[n] = f[n].imag
-            else:
-                c = ' '
-            fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
-            if self.ir:
-                fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
-            else:
-                fd.write('.\n')
-            mode = self.get_mode(n)
-            for i, pos in enumerate(self.atoms.positions):
-                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
-                         (symbols[i], pos[0], pos[1], pos[2],
-                          mode[i, 0], mode[i, 1], mode[i, 2]))
+        
+        if self.imagetype=='pickle':
+            symbols = self.atoms.get_chemical_symbols()
+            f = self.get_frequencies()
+            for n in range(3 * len(self.indices)):
+                fd.write('%6d\n' % len(self.atoms))
+                if f[n].imag != 0:
+                    c = 'i'
+                    f[n] = f[n].imag
+                else:
+                    c = ' '
+                fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
+                if self.ir:
+                    fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
+                else:
+                    fd.write('.\n')
+                mode = self.get_mode(n)
+                for i, pos in enumerate(self.atoms.positions):
+                    fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                             (symbols[i], pos[0], pos[1], pos[2],
+                              mode[i, 0], mode[i, 1], mode[i, 2]))
+                              
+        if self.imagetype=='atoms':
+            symbols = self.atoms[0].get_chemical_symbols()
+            f = self.get_frequencies()
+            for n in range(3 * len(self.free_atoms)):
+                fd.write('%6d\n' % len(self.atoms[0]))
+                if f[n].imag != 0:
+                    c = 'i'
+                    f[n] = f[n].imag
+                else:
+                    c = ' '
+                fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, f[n], c))
+                if self.ir:
+                    fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
+                else:
+                    fd.write('.\n')
+                mode = self.get_mode(n)
+                for i, pos in enumerate(self.atoms[0].positions):
+                    fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f \n' %
+                             (symbols[i], pos[0], pos[1], pos[2],
+                              mode[i, 0], mode[i, 1], mode[i, 2]))
         fd.close()
 
     def fold(self, frequencies, intensities,
@@ -411,7 +544,8 @@ class Vibrations:
         First column is the wavenumber in cm^-1, the second column the
         folded vibrational density of states.
         Start and end points, and width of the Gaussian/Lorentzian
-        should be given in cm^-1."""
+        should be given in cm^-1."""         
+
         frequencies = self.get_frequencies(method, direction).real
         intensities = np.ones(len(frequencies))
         energies, spectrum = self.fold(frequencies, intensities,
