@@ -202,10 +202,10 @@ class SetupSurfaceSlab:
                     # or "Au fcc100 surface with 2 atoms. Vacuum: 5 Å."
                     '{symbol} {surf} surface with one atom.{vacuum}',
                     '{symbol} {surf} surface with {natoms} atoms.{vacuum}',
-                    natoms).format(symbol=symbol,
-                                   surf=surface[3].__name__,
-                                   natoms=len(self.atoms),
-                                   vacuum=vacuumtext)
+                    len(self.atoms)).format(symbol=symbol,
+                                            surf=surface[3].__name__,
+                                            natoms=len(self.atoms),
+                                            vacuum=vacuumtext)
 
                 self.description.text = label
                 return py_template.format(func=surface[3].__name__, a=a,
