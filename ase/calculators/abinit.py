@@ -265,7 +265,7 @@ class Abinit(FileIOCalculator):
         FileIOCalculator.read(self, label)
         filename = self.label + '.txt'
         if not os.path.isfile(filename):
-            raise ReadError
+            raise ReadError('ABINIT output file '+filename+' is missing.')
 
         self.atoms = read_abinit(self.label + '.in')
         self.parameters = Parameters.read(self.label + '.ase')
