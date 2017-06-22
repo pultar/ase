@@ -4,7 +4,7 @@ from __future__ import division
 
 import numpy as np
 import ase.units as units
-from ase.io.trajectory import Trajectory
+#from ase.io.trajectory import Trajectory
 
 
 
@@ -13,17 +13,30 @@ class Montecarlo:
 
     """
 
-    def __init__(self,atoms,temp):
+    def __init__(self,atoms,temp,indeces = None):
         """ Initiliaze Monte Carlo simulations object
+
+        Arguments:
+        atoms : ASE atoms object 
+        temp  : Temperature of Monte Carlo simulation in Kelvin
+        indeves; List of atoms involved Monte Carlo swaps. default is all atoms.
 
         """
         self.atoms = atoms
         self.T = temp
+        if indeces == None:
+            self.indeces = range(len(self.atoms))
+        else:
+            self.indeces = indeces
 
 
         
     def runMC(self,steps = 10):
-        """ Run Monte Carlo steps
+        """ Run Monte Carlo simulation
+
+        Arguments:
+        steps : Number of steps in the MC simulation
+
         """
 
         # Atoms object should have attached calculator
@@ -41,13 +54,18 @@ class Montecarlo:
             
 
     def _mc_step(self):
-        """ Make one Monte Carlo step  by swithcin two atoms """
+        """ Make one Monte Carlo step by swithing two atoms """
 
         number_of_atoms = len(self.atoms)
-        rand_a = np.random.randint(0,number_of_atoms)
-        rand_b = np.random.randint(0,number_of_atoms)
+        
+        rand_a = self.indeces[np.random.randint(0,len(self.indeces))]
+        rand_b = self.indeces[np.random.randint(0,len(self.indeces))]
+        # At the moment rand_a and rand_b could be the same atom
+
+#        rand_b = np.random.randint(0,number_of_atoms)
         #while (rand_a == rand_b):
         #    rand_b = np.random.randint(0,number_of_atoms)
+        
         temp_atom = self.atoms[rand_a].symbol
         self.atoms[rand_a].symbol = self.atoms[rand_b].symbol
         self.atoms[rand_b].symbol = temp_atom
