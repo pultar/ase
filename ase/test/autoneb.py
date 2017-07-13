@@ -35,6 +35,7 @@ def attach_calculators(images):
 autoneb=AutoNEB(attach_calculators,
                 prefix='neb',
                 n_simul=3,
+                optimizer='BFGS',
                 n_max=7,
                 fmax=0.05,
                 k=0.5,
