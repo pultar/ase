@@ -906,6 +906,8 @@ class Octopus(FileIOCalculator, EigenvalOccupationMixin):
     """Octopus calculator.
 
     The label is always assumed to be a directory."""
+    
+    command = 'octopus'
 
     implemented_properties = ['energy', 'forces',
                               'dipole',
@@ -928,7 +930,6 @@ class Octopus(FileIOCalculator, EigenvalOccupationMixin):
                  restart=None,
                  label=None,
                  atoms=None,
-                 command='octopus',
                  ignore_troublesome_keywords=None,
                  check_keywords=True,
                  _autofix_outputformats=False,
@@ -980,7 +981,7 @@ class Octopus(FileIOCalculator, EigenvalOccupationMixin):
                                   ignore_bad_restart_file=False,
                                   label=label,
                                   atoms=atoms,
-                                  command=command, **kwargs)
+                                  **kwargs)
         # The above call triggers set() so we can update self.kwargs.
 
     def set_label(self, label):
