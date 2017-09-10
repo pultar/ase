@@ -119,20 +119,20 @@ class CP2K(Calculator):
         Name of exchange and correlation functional.
         Accepts all functions supported by CP2K itself or libxc.
         Default is ``LDA``.
-	print_level: str
-		PRINT_LEVEL of global output.
-		Possible options are:
-		DEBUG Everything is written out, useful for debugging purposes only 
+    print_level: str
+        PRINT_LEVEL of global output.
+        Possible options are:
+        DEBUG Everything is written out, useful for debugging purposes only 
 
-		HIGH Lots of output 
-		
-		LOW Little output 
-		
-		MEDIUM Quite some output 
-		
-		SILENT Almost no output 
-		
-		Default is 'LOW'
+        HIGH Lots of output 
+        
+        LOW Little output 
+        
+        MEDIUM Quite some output 
+        
+        SILENT Almost no output 
+        
+        Default is 'LOW'
 
     """
 
