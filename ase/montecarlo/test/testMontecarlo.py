@@ -17,7 +17,7 @@ class MonteCarloTest( unittest.TestCase ):
             mc = Montecarlo( atoms, 200.0 )
 
             # Run 10 steps to verify the code runs without throwing exceptions
-            mc.runMC( steps=10 )
+            mc.runMC( steps=10, verbose=False )
         except Exception as exc:
             self.fail( str(exc) )
 

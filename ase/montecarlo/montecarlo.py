@@ -17,7 +17,7 @@ class Montecarlo:
         """ Initiliaze Monte Carlo simulations object
 
         Arguments:
-        atoms : ASE atoms object 
+        atoms : ASE atoms object
         temp  : Temperature of Monte Carlo simulation in Kelvin
         indeves; List of atoms involved Monte Carlo swaps. default is all atoms.
 
@@ -30,8 +30,8 @@ class Montecarlo:
             self.indeces = indeces
 
 
-        
-    def runMC(self,steps = 10):
+
+    def runMC(self,steps = 10, verbose = False ):
         """ Run Monte Carlo simulation
 
         Arguments:
@@ -46,18 +46,19 @@ class Montecarlo:
         totalenergies = []
         totalenergies.append(self.current_energy)
         for step in range(steps):
-            en, accept = self._mc_step()
-            print(accept)
+            en, accept = self._mc_step( verbose=verbose )
+            if ( verbose ):
+                print(accept)
             totalenergies.append(en)
-            
-        return totalenergies
-            
 
-    def _mc_step(self):
+        return totalenergies
+
+
+    def _mc_step(self, verbose = False ):
         """ Make one Monte Carlo step by swithing two atoms """
 
         number_of_atoms = len(self.atoms)
-        
+
         rand_a = self.indeces[np.random.randint(0,len(self.indeces))]
         rand_b = self.indeces[np.random.randint(0,len(self.indeces))]
         # At the moment rand_a and rand_b could be the same atom
@@ -65,12 +66,14 @@ class Montecarlo:
 #        rand_b = np.random.randint(0,number_of_atoms)
         #while (rand_a == rand_b):
         #    rand_b = np.random.randint(0,number_of_atoms)
-        
+
         temp_atom = self.atoms[rand_a].symbol
         self.atoms[rand_a].symbol = self.atoms[rand_b].symbol
         self.atoms[rand_b].symbol = temp_atom
         new_energy = self.atoms.get_potential_energy()
-        print(new_energy,self.current_energy)
+        if ( verbose ):
+            print(new_energy,self.current_energy)
+
         accept = False
         if new_energy < self.current_energy:
             self.current_energy = new_energy
@@ -84,8 +87,6 @@ class Montecarlo:
                 self.current_energy = new_energy
                 accept = True
             else:
-                # Reset the sytem back to original 
+                # Reset the sytem back to original
                 self.atoms[rand_a].symbol,self.atoms[rand_b].symbol = self.atoms[rand_b].symbol,self.atoms[rand_a].symbol
         return self.current_energy,accept
-
-        
