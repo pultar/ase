@@ -1,12 +1,9 @@
 import numpy as np
 import math
 from itertools import combinations, permutations, product
-from ase.visualize import view
-from numpy.linalg import norm
 from ase.db import connect
 from ase.ce.settings import BulkCrystal
-from ase.ce.tools import wrap_and_sort_by_position, index_by_position
-from ase.ce.tools import nCr
+from ase.ce.tools import wrap_and_sort_by_position
 
 def index_of_matching_row(A, x):
     for i in range(A.shape[0]):
@@ -74,7 +71,6 @@ class CorrFunction(object):
                 for i, dec in enumerate(perm):
                     cf['c1_{}'.format(i+1)] = self.get_c1(atoms, dec[0])
                 continue
-            dist_list = self.cluster_dist[n]
             indx_list = self.cluster_indx[n]
             name_list = self.cluster_names[n]
             # first category
