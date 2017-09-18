@@ -2,12 +2,9 @@ import os, string
 from textwrap import dedent
 from ase.db import connect
 from ase.visualize import view
-from ase.calculators.vasp import Vasp
-from ase.io import write, read
-from ase.io.trajectory import Trajectory
+from ase.io import write
 from subprocess import check_output
 from ase.ce import jobscripts
-from ase.ce.settings import BulkCrystal
 
 class cd:
     """Context manager for changing the current working directory"""
