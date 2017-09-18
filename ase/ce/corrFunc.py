@@ -1,6 +1,5 @@
 import numpy as np
-import math
-from itertools import combinations, permutations, product
+from itertools import combinations, product
 from ase.db import connect
 from ase.ce.settings import BulkCrystal
 from ase.ce.tools import wrap_and_sort_by_position
