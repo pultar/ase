@@ -1,7 +1,6 @@
-import os, string
+import os
 from textwrap import dedent
 from ase.db import connect
-from ase.visualize import view
 from ase.io import write
 from subprocess import check_output
 from ase.ce import jobscripts
@@ -85,7 +84,6 @@ class Submit(object):
         db_name = self.db_name
         condition = 'converged=False, started=True'
         names = [row.name for row in self.db.select(condition)]
-        names = [i for i in names if i not in juanma_list]
         queue_list = self.jobs_in_queue
         name = [i for i in names if i not in queue_list][0]
         id = self.db.get(name=name).id
