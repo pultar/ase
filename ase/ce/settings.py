@@ -9,8 +9,8 @@ class BulkCrystal(object):
     """
     Class that stores the necessary information about rocksalt structures.
     """
-    def __init__(self, crystalstructure, alat, cell_dim, num_sites,
-                 site_elements, conc_args, db_name,
+    def __init__(self, crystalstructure, alat, cell_dim, num_sites=None,
+                 site_elements=None, conc_args=None, db_name=None,
                  min_cluster_size=0, max_cluster_size=4,
                  max_cluster_dia=None, reconf_db=False):
         """
@@ -150,6 +150,11 @@ class BulkCrystal(object):
             atoms = bulk('{}{}'.format(self.site_elements[0][0],
                                        self.site_elements[1][0]),
                          'rocksalt', a=self.alat, cubic=False)*self.cell_dim
+        elif self.crystalstructure == 'fcc' or self.crystalstructure == 'bcc'\
+             or self.crystalstructure == 'sc':
+            atoms = bulk('{}'.format(self.site_elements[0][0]), 
+                         '{}'.format(self.crystalstructure),
+                         a=self.alat, cubic=False)*self.cell_dim
         else:
             # Not implemented yet.
             raise ValueError("Not implemented. Sorry~!")
