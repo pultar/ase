@@ -278,17 +278,15 @@ class BulkCrystal(object):
         spin_dict = {}
         for x in range(element_types):
             spin_dict[self.all_elements[x]] = spin_values[x]
-        # spin_dict = {'X': 1, 'F': 2, 'Li': 3, 'O': 4, 'V': 5}
         return spin_dict
 
     def get_basis_functions(self):
         if self.num_elements == 2:
-            d0_0 = 1
+            d0_0 = 1.
         elif self.num_elements == 3:
-            d0_0 = 1
-            c0_1 = 1
-            c1_1 = 1
-
+            d0_0 = np.sqrt(3./2)
+            c0_1 = np.sqrt(2)
+            c1_1 = -3/np.sqrt(2)
         elif self.num_elements == 4:
             d0_0 = np.sqrt(2./5)
             c0_1 = -5./3
