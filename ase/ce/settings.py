@@ -9,16 +9,18 @@ class BulkCrystal(object):
     """
     Class that stores the necessary information about rocksalt structures.
     """
-    def __init__(self, crystalstructure, alat, cell_dim, num_sites=None,
-                 site_elements=None, conc_args=None, db_name=None,
-                 min_cluster_size=0, max_cluster_size=4,
+    def __init__(self, crystalstructure=None, alat=None, cell_dim=None,
+                 num_sites=None, site_elements=None, conc_args=None, 
+                 db_name=None, min_cluster_size=0, max_cluster_size=4,
                  max_cluster_dia=None, reconf_db=False):
         """
-        bulk_type:
+        crystalstructure: name of the crystal structure (e.g., 'fcc', 'sc')
         alat: lattice constant
         cell_dim: size of the supercell (e.g., [2, 2, 2] for 2x2x2 cell)
         num_sites: number of inequivalent sites
-        site_elements: types of elements to reside in each inequivalent sites
+        site_elements: types of elements to reside in each inequivalent sites.
+                (note) even if there is only one site, keep it in the list form
+                       like [['Cu', 'Au']]
         conc_args: dictionary containing ratios of the elements for different
                    concentrations.
         db_name: name of the database file
@@ -30,18 +32,22 @@ class BulkCrystal(object):
         # ----------------------
         # Perform sanity checks
         # ----------------------
-        if len(cell_dim) != 3:
-            raise ValueError("size of the cell needs to be specified for all"
-                             " dimensions.")
-        if len(site_elements) != num_sites:
-            raise ValueError("list of elements is needed for each site")
-
         # check for allowed structure types
         structures = ['sc', 'fcc', 'bcc', 'hcp', 'diamond', 'zincblende',
                       'rocksalt', 'cesiumchloride', 'fluorite', 'wurtzite']
+        if crystalstructure is None:
+            raise ValueError("Please specify 'crystalstructure' (e.g., 'fcc').")
         if crystalstructure not in structures:
-            raise ValueError('Provided crystal structure is not supported.\n'
-                             'The supported types are: {}'.format(structures))
+            raise TypeError('Provided crystal structure is not supported.\n'
+                            'The supported types are: {}'.format(structures))
+
+        if type(alat) is not int and type(alat) is not float:
+            raise TypeError("'alat' must be either int or float type.")
+        if len(cell_dim) != 3:
+            raise ValueError("Size of the cell needs to be specified for all"
+                             " dimensions.")
+        if len(site_elements) != num_sites:
+            raise ValueError("list of elements is needed for each site")
 
         # check for concentration ratios 
         conc_names = ['conc_ratio_min_1', 'conc_ratio_min_2',
@@ -102,7 +108,7 @@ class BulkCrystal(object):
         # Passed tests. Assign parameters
         # -------------------------------
         self.crystalstructure = crystalstructure
-        self.alat = alat
+        self.alat = float(alat)
         self.cell_dim = cell_dim
         self.site_elements = site_elements
         self.all_elements = [item for row in site_elements for item in row]
@@ -119,7 +125,6 @@ class BulkCrystal(object):
         self.max_cluster_size = max_cluster_size
         self.spin_dict = self.get_spin_values()
         self.basis_functions = self.get_basis_functions()
-
         self.atoms = self.create_atoms(max_cluster_dia)
         self.dist_matrix = self.create_distance_matrix()
 
@@ -146,6 +151,9 @@ class BulkCrystal(object):
 
 
     def atoms_with_given_dim(self):
+        """
+        Creates a template atoms object.
+        """
         if self.crystalstructure == 'rocksalt':
             atoms = bulk('{}{}'.format(self.site_elements[0][0],
                                        self.site_elements[1][0]),
@@ -162,11 +170,11 @@ class BulkCrystal(object):
         return atoms
 
     def create_atoms(self, max_cluster_dia):
-        # --------------------------------------------------------------------
-        # Check if the size of the cell can handle the maximum diameter of the
-        # cluster provided. If not, increase the cell size.
-        # --------------------------------------------------------------------
-
+        """
+        Create atoms object that can handle the maximum diameter specified by 
+        the user. If maximum diameter is not specified, the user-specified cell
+        size will be used, and the maximum diameter is set accordingly.
+        """
         # get the cell with the given dimensions 
         atoms = self.atoms_with_given_dim()
 
@@ -191,7 +199,8 @@ class BulkCrystal(object):
         return atoms
 
     def store_data(self):
-        print('Generating cluster data. It may take several minutes...')
+        print('Generating cluster data. It may take several minutes depending on'
+              ' the values of max_cluster_size and max_cluster_dia...')
         self.cluster_names,\
         self.cluster_dist,\
         self.cluster_indx = self.get_cluster_information()
@@ -221,7 +230,6 @@ class BulkCrystal(object):
             indx_set = []; dist_set = []
             # if the min_cluster_size is specified, the size up to the
             # min_cluster_size has None for distance and index.
-            print(n)
             if n < self.min_cluster_size:
                 cluster_dist.append([None])
                 cluster_indx.append([None])
@@ -238,8 +246,8 @@ class BulkCrystal(object):
             if np.version.version > '1.13':
                 dist_types = np.unique(dist_set, axis=0).tolist()
             else:
-                dist_types = np.vstack({tuple(row) for row in dist})
-            dist_types = sorted(dist_types,reverse=True)
+                raise ValueError('Please use numpy version of 1.13 or higher')
+            dist_types = sorted(dist_types, reverse=True)
 
             # categorieze the indices to the distance types it belongs
             indx_types = [[] for _ in range(len(dist_types))]
@@ -273,6 +281,7 @@ class BulkCrystal(object):
             highest = (element_types - 1)/2
         else:
             highest = element_types/2
+        # Assign spin value for each element
         while highest > 0:
             spin_values.append(highest)
             spin_values.append(-highest)
@@ -286,6 +295,9 @@ class BulkCrystal(object):
         return spin_dict
 
     def get_basis_functions(self):
+        """
+        Create basis functions to guarantee the orthonormality.
+        """
         if self.num_elements == 2:
             d0_0 = 1.
         elif self.num_elements == 3:
@@ -425,6 +437,10 @@ class BulkCrystal(object):
         return conc
 
     def create_translation_matrix(self):
+        """
+        Translation matrix to accelerate the computation of the correlation
+        function.
+        """
         num_atoms = len(self.atoms)
         tm = np.zeros((num_atoms, num_atoms), dtype=int)
         tm[0,:] = index_by_position(self.atoms)
