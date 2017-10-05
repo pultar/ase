@@ -189,7 +189,7 @@ class StructureComparator( object ):
             self.s2.set_positions( pos2 )
             pos1 = self.s1.get_positions( wrap=True )
             pos2 = self.s2.get_positions( wrap=True )
-            
+
             # Rotate
             pos1 = matrix.dot(pos1.T).T
 
@@ -459,8 +459,6 @@ class TestStructureComparator( unittest.TestCase ):
     def test_reflection_three_imp(self):
         s1 = read("test_structures/reflection1.xyz")
         s2 = read("test_structures/reflection2.xyz")
-        view(s1)
-        view(s2)
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
 
