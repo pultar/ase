@@ -8,7 +8,7 @@ from ase import Atoms
 import time
 
 class StructureComparator( object ):
-    def __init__( self, angleTolDeg=1, position_tolerance=1E-4 ):
+    def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
         self.s1 = None
         self.s2 = None
         self.angleTolDeg = 1
@@ -161,11 +161,6 @@ class StructureComparator( object ):
         pos1_ref = self.s1.get_positions( wrap=True )
         pos2_ref = self.s2.get_positions( wrap=True )
 
-        exp1 = self.expand(self.s1)
-        exp2 = self.expand(self.s2)
-        view(exp1)
-        view(exp2)
-
         for matrix,com in zip(rotation_reflection_matrices,center_of_mass):
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
@@ -193,7 +188,7 @@ class StructureComparator( object ):
             # Check that all closest distances match
             used_sites = []
             for i in range(pos1.shape[0]):
-                distances = np.sqrt( np.sum( (pos2-pos1[i])**2, axis=1 ) )
+                distances = np.sqrt( np.sum( (pos2-pos1[i,:])**2, axis=1 ) )
                 closest = np.argmin(distances)
                 if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
                     break
@@ -215,8 +210,8 @@ class StructureComparator( object ):
         cell = ref_atoms.get_cell()
         normal_vectors = [np.cross(cell[:,0],cell[:,1]), np.cross(cell[:,0],cell[:,2]), np.cross(cell[:,1],cell[:,2])]
         normal_vectors = [vec/np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
-        positions = self.s1.get_positions(wrap=True)
-        tol = 0.01
+        positions = ref_atoms.get_positions(wrap=True)
+        tol = 0.0001
         num_faces_close = 0
 
         for i in range( len(self.s1) ):
@@ -313,6 +308,10 @@ class StructureComparator( object ):
                 expaned_atoms.extend(newAtom)
             if ( surface_close[1] and surface_close[2] ):
                 newpos = positions[i,:] + cell[:,1] - cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[1] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0] - cell[:,2]
                 newAtom = Atoms( symbol, positions=[newpos] )
                 expaned_atoms.extend(newAtom)
 
