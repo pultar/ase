@@ -3,6 +3,9 @@ import unittest
 import numpy as np
 from ase.build import bulk
 import copy
+from ase.visualize import view
+from ase import Atoms
+import time
 
 class StructureComparator( object ):
     def __init__( self, angleTolDeg=1, position_tolerance=1E-4 ):
@@ -96,9 +99,14 @@ class StructureComparator( object ):
         if ( not self.has_same_angles() ):
             return False
 
-        matrices = self.get_rotation_reflection_matrices()
-        if ( not self.positions_match(matrices) ):
+        matrices, translations = self.get_rotation_reflection_matrices()
+        if ( not self.positions_match(matrices, translations) ):
             return False
+
+        exp1 = self.expand(self.s1)
+        exp2 = self.expand(self.s2)
+        if ( not self.elements_match(exp1,exp2) ):
+            return True
         return True
 
     def get_least_frequent_element( self ):
@@ -145,26 +153,219 @@ class StructureComparator( object ):
                 position2.append( pos2[i,:] )
         return np.array( position1 ), np.array( position2 )
 
-    def positions_match( self, rotation_reflection_matrices ):
+    def positions_match( self, rotation_reflection_matrices, center_of_mass ):
         """
         Check if the position and elements match
         """
-        pos1_ref = self.s1.get_positions()
-        pos2 = self.s2.get_positions()
-        cm_1 = np.mean( pos1_ref, axis=0 )
-        cm_2 = np.mean( pos2, axis=0 )
-        counter = 0
-        positions_match = False
-        for matrix in rotation_reflection_matrices:
+        # Position matching not implemented yet
+        pos1_ref = self.s1.get_positions( wrap=True )
+        pos2_ref = self.s2.get_positions( wrap=True )
+
+        exp1 = self.expand(self.s1)
+        exp2 = self.expand(self.s2)
+        view(exp1)
+        view(exp2)
+
+        for matrix,com in zip(rotation_reflection_matrices,center_of_mass):
             pos1 = copy.deepcopy(pos1_ref)
-            d = cm_2 - matrix.dot(cm_1)
-            pos1 -= d
+            pos2 = copy.deepcopy(pos2_ref)
+
+            # Translate to origin of rotation
+            pos1 -= com[0]
+            pos2 -= com[1]
+
+            # Rotate
             pos1 = matrix.dot(pos1.T).T
-            if ( np.all( np.abs(pos1-pos2) < self.position_tolerance ) ):
-                # Update the positions of s1 such that they match the ones of s2
-                self.s1.set_positions(pos1)
+
+            # Update the atoms positions
+            self.s1.set_positions( pos1 )
+            self.s2.set_positions( pos2 )
+            pos1 = self.s1.get_positions( wrap=True )
+            pos2 = self.s2.get_positions( wrap=True )
+            self.s1.set_positions( pos1 )
+            self.s2.set_positions( pos2 )
+
+            exp1 = self.expand(self.s1)
+            exp2 = self.expand(self.s2)
+            pos1 = exp1.get_positions() # NOTE: No wrapping
+            pos2 = exp2.get_positions() # NOTE: No wrapping
+
+            # Check that all closest distances match
+            used_sites = []
+            for i in range(pos1.shape[0]):
+                distances = np.sqrt( np.sum( (pos2-pos1[i])**2, axis=1 ) )
+                closest = np.argmin(distances)
+                if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
+                    break
+                else:
+                    used_sites.append(closest)
+
+            if ( len(used_sites) == pos1.shape[0] ):
                 return True
         return False
+
+    def expand( self, ref_atoms ):
+        """
+        This functions adds additional atoms to for atoms close to the cell boundaries
+        ensuring that atoms having crossed the cell boundaries due to numerical noise
+        are properly detected
+        """
+        expaned_atoms = copy.deepcopy(ref_atoms)
+
+        cell = ref_atoms.get_cell()
+        normal_vectors = [np.cross(cell[:,0],cell[:,1]), np.cross(cell[:,0],cell[:,2]), np.cross(cell[:,1],cell[:,2])]
+        normal_vectors = [vec/np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
+        positions = self.s1.get_positions(wrap=True)
+        tol = 0.01
+        num_faces_close = 0
+
+        for i in range( len(self.s1) ):
+            surface_close = [False,False,False,False,False,False]
+            # Face 1
+            distance = np.abs( positions[i,:].dot(normal_vectors[0]) )
+            symbol = ref_atoms[i].symbol
+            if ( distance < tol ):
+                newpos = positions[i,:]+cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[0] = True
+
+            # Face 2
+            distance = np.abs( (positions[i,:]-cell[:,2]).dot(normal_vectors[0]) )
+            if ( distance < tol ):
+                newpos = positions[i,:]-cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[1] = True
+
+            # Face 3
+            distance = np.abs( positions[i,:].dot(normal_vectors[1]) )
+            if ( distance < tol ):
+                newpos = positions[i,:] + cell[:,1]
+                newAtom = Atoms( self.s1[i].symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[2] = True
+
+            # Face 4
+            distance = np.abs( (positions[i,:]-cell[:,1]).dot(normal_vectors[1]) )
+            if ( distance < tol ):
+                newpos = positions[i,:] - cell[:,1]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[3] = True
+
+            # Face 5
+            distance = np.abs(positions[i,:].dot(normal_vectors[2]))
+            if ( distance < tol ):
+                newpos = positions[i,:] + cell[:,0]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[4] = True
+
+            # Face 6
+            distance = np.abs( (positions[i,:]-cell[:,0]).dot(normal_vectors[2]) )
+            if ( distance < tol ):
+                newpos = positions[i,:] - cell[:,0]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+                surface_close[5] = True
+
+            # Take edges into account
+            if ( surface_close[0] and surface_close[2] ):
+                newpos = positions[i,:] + cell[:,1] + cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[0] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0] + cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[0] and surface_close[3] ):
+                newpos = positions[i,:] - cell[:,1] + cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[0] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0] + cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[3] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0] - cell[:,1]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[3] and surface_close[1] ):
+                newpos = positions[i,:] - cell[:,1] - cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[3] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,1] - cell[:,0]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[1] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0] - cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[2] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0] + cell[:,1]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[2] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0] + cell[:,1]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            if ( surface_close[1] and surface_close[2] ):
+                newpos = positions[i,:] + cell[:,1] - cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+
+            # Take corners into account
+            if ( surface_close[0] and surface_close[2] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0]+cell[:,1]+cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[0] and surface_close[3] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0]-cell[:,1]+cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[0] and surface_close[2] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0]+cell[:,1]+cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[0] and surface_close[3] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0]-cell[:,1]+cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[1] and surface_close[3] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0]-cell[:,1]-cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[1] and surface_close[3] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0]-cell[:,1]-cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[1] and surface_close[2] and surface_close[4] ):
+                newpos = positions[i,:] + cell[:,0]+cell[:,1]-cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+            elif ( surface_close[1] and surface_close[2] and surface_close[5] ):
+                newpos = positions[i,:] - cell[:,0]+cell[:,1]-cell[:,2]
+                newAtom = Atoms( symbol, positions=[newpos] )
+                expaned_atoms.extend(newAtom)
+
+        return expaned_atoms
+
+    def elements_match( self, s1, s2 ):
+        """
+        Checks that all the elements in the two atoms match
+        """
+
+        used_sites = []
+        for i in range( len(s1) ):
+            distances = np.sum ( (s2.get_positions()-s1.get_positions()[i,:])**2, axis=1 )
+            closest = np.argmin( distances )
+            if ( not s1[i].symbol == s2[closest].symbol or closest in used_sites ):
+                return False
+            else:
+                used_sites.append( closest )
+        return True
 
     def get_rotation_reflection_matrices( self ):
         """
@@ -173,20 +374,23 @@ class StructureComparator( object ):
         s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
         pos1_ref, pos2 = self.extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
+        center_of_mass = []
         for i in range( pos1_ref.shape[0] ):
             new_pos = s1_pos_ref - pos1_ref[i]
             self.s1.set_positions( new_pos )
             pos1, pos2 = self.extract_positions_of_least_frequent_element()
-            pos1 -= np.mean( pos1, axis=0 )
-            pos2 -= np.mean( pos2, axis=0 )
-            #M = pos1.T.dot(pos2)
+            cm1 = np.mean( pos1, axis=0 )
+            cm2 = np.mean( pos2, axis=0 )
+            pos1 -= cm1
+            pos2 -= cm2
             M = pos2.T.dot(pos1)
             U, S, V = np.linalg.svd(M)
-            bestMatrix =U.dot(V)
+            bestMatrix = U.dot(V)
+            center_of_mass.append( (cm1,cm2) )
             rot_reflection_mat.append( bestMatrix )
 
         self.s1.set_positions( s1_pos_ref )
-        return rot_reflection_mat
+        return rot_reflection_mat, center_of_mass
 
 
 # ======================== UNIT TESTS ==========================================
@@ -199,6 +403,14 @@ class TestStructureComparator( unittest.TestCase ):
 
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_fcc_bcc( self ):
+        s1 = bulk( "Al", crystalstructure="fcc" )
+        s2 = bulk( "Al", crystalstructure="bcc", a=4.05 )
+        s1 = s1*(2,2,2)
+        s2 = s2*(2,2,2)
+        comparator = StructureComparator()
+        self.assertFalse( comparator.compare(s1,s2) )
 
     def test_single_impurity( self ):
         s1 = bulk( "Al" )
