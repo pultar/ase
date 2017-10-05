@@ -6,7 +6,7 @@ from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 
 class CorrFunction(object):
     """
-    Class that calculates the .
+    Class that calculates the correlation function.
     """
     def __init__(self, BC):
         if type(BC) is not BulkCrystal:
