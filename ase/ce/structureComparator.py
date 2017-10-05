@@ -5,7 +5,7 @@ from ase.build import bulk
 import copy
 from ase.visualize import view
 from ase import Atoms
-import time
+from ase.io import read
 
 class StructureComparator( object ):
     def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
@@ -155,7 +155,10 @@ class StructureComparator( object ):
 
     def positions_match( self, rotation_reflection_matrices, center_of_mass ):
         """
-        Check if the position and elements match
+        Check if the position and elements match.
+        Note that this function changes self.s1 and self.s2 to the rotation and
+        translation that matches best. Hence, it is crucial that this function
+        is called before the element comparison
         """
         # Position matching not implemented yet
         pos1_ref = self.s1.get_positions( wrap=True )
@@ -371,6 +374,7 @@ class StructureComparator( object ):
         Computes the closest rigid body transformation matrix by solving Procrustes problem
         """
         s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
+        s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
         pos1_ref, pos2 = self.extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
@@ -420,6 +424,24 @@ class TestStructureComparator( unittest.TestCase ):
         s2[3].symbol = "Mg"
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_two_impurities( self ):
+        s1 = read("test_structures/neigh1.xyz")
+        s2 = read("test_structures/neigh2.xyz")
+        comparator = StructureComparator()
+        self.assertTrue( comparator.compare(s1,s2) )
+
+        s2 = read("test_structures/neigh3.xyz")
+        self.assertFalse( comparator.compare(s1,s2) )
+
+    def test_reflection_three_imp(self):
+        s1 = read("test_structures/reflection1.xyz")
+        s2 = read("test_structures/reflection2.xyz")
+        view(s1)
+        view(s2)
+        comparator = StructureComparator()
+        self.assertTrue( comparator.compare(s1,s2) )
+
 
 if __name__ == "__main__":
     unittest.main()
