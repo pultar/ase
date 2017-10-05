@@ -1,18 +1,20 @@
 import numpy as np
-from numpy.linalg import inv
 import os
 import random
 from ase.ce.settings import BulkCrystal
 from ase.ce.corrFunc import CorrFunction
-from ase.ce.evaluate import Evaluate
 from ase.ce.simulatedannealing import SimulatedAnnealing
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 from ase.db import connect
+# dependence on PyMatGen to be removed
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pmg import atoms_to_structure
 
 
 class GenerateStructures(object):
+    """
+    Class that generates atoms object. 
+    """
 
     def __init__(self, BC, gen=None, struct_per_gen=None):
         if type(BC) is not BulkCrystal:
@@ -25,9 +27,9 @@ class GenerateStructures(object):
         self.conc_matrix = BC.conc_matrix
         self.atoms = BC.atoms_with_given_dim()
         self.db_name = BC.db_name
-        self.db = connect(self.db_name)
         if not os.path.exists(self.db_name):
             raise ValueError("DB file {} does not exist".format(self.db_name))
+        self.db = connect(self.db_name)
         if gen is None:
             self.gen = self.determine_gen_number()
         else:
@@ -35,7 +37,7 @@ class GenerateStructures(object):
 
         # If the number of structures to include per generation is not given,
         # use one structure per computable concentration value
-        # Note: May not be the most practical solution
+        # Note: May not be the most practical solution for some cases
         if struct_per_gen is None:
             if self.num_conc_var == 1:
                 self.struct_per_gen = self.conc_matrix.shape[0]
@@ -48,16 +50,17 @@ class GenerateStructures(object):
         # Generate initial pool of structures for generation 0
         if self.gen == 0:
             self.generate_initial_pool()
+       
 
     def determine_gen_number(self):
         try:
-            gens = [row.gen for row in self.db.select()]
+            gens = [row.get('gen') for row in self.db.select()]
             gen = max(gens) + 1
-        except AttributeError:
+        except:
             gen = 0
         return gen
 
-    def generate(self):
+    def generate_probe_structure(self):
         """
         Generate a probe structure according to PRB 80, 165122 (2009)
         """
@@ -71,12 +74,10 @@ class GenerateStructures(object):
                 num_conc1, num_conc2 = self.conc_matrix.shape[:2]
                 conc = [random.choice(range(num_conc1)),
                         random.choice(range(num_conc2))]
-                # to be removed
-                while conc[0] < 15:
-                    conc = [random.choice(range(num_conc1)),
-                            random.choice(range(num_conc2))]
                 atoms = self.random_struct(self.conc_matrix[conc[0]][conc[1]])
 
+            if atoms is None:
+                continue
             atoms = wrap_and_sort_by_position(atoms)
             sa = SimulatedAnnealing(self.BC, atoms, self.struct_per_gen,
                                     init_temp=0.001, final_temp=0.00001, num_temp=5,
@@ -85,58 +86,95 @@ class GenerateStructures(object):
             conc = self.find_concentration(atoms)
             if self.exists_in_db(atoms, conc[0], conc[1]):
                 continue
-            keys = self.get_key_values(atoms, cf, conc[0], conc[1], self.gen)
-            self.db.write(atoms, keys)
-            print(keys)
+            kvp = self.get_kvp(atoms, cf, conc[0], conc[1], self.gen)
+            self.db.write(atoms, kvp)
         return True
 
     def generate_initial_pool(self):
-        if (self.num_conc_var == 1 and
-                self.struct_per_gen == self.conc_matrix.shape[0]):
-            pass
+        """
+        Generates the initial pool 
+        """
+        print("Generating initial pool consisting of "
+              "{} structures".format(self.struct_per_gen))
 
+        # Case 1: 1 conc variable, one struct per conc
+        if (self.num_conc_var == 1 and
+            self.struct_per_gen == self.conc_matrix.shape[0]):
+            for _ in range(self.conc_matrix.shape[0]):
+                conc1 = float(_)/(self.conc_matrix.shape[0] - 1)
+                atoms = self.random_struct(self.conc_matrix[_], conc1)
+                if atoms is None:
+                    continue
+                atoms = wrap_and_sort_by_position(atoms)
+                kvp = CorrFunction(self.BC).get_cf(atoms)
+                kvp = self.get_kvp(atoms, kvp, conc1)
+                self.db.write(atoms, kvp)
+
+        # Case 2: 2 conc variable, one struct per conc
         elif (self.num_conc_var == 2 and
               self.struct_per_gen == self.conc_matrix.shape[0] *
               self.conc_matrix.shape[1]):
             for _1 in range(self.conc_matrix.shape[0]):
-                conc1 = float(_1) / (self.conc_matrix.shape[0] - 1)
+                conc1 = float(_1)/(self.conc_matrix.shape[0] - 1)
                 for _2 in range(self.conc_matrix.shape[1]):
-                    conc2 = float(_2) / (self.conc_matrix.shape[1] - 1)
-                    atoms = self.random_struct(self.conc_matrix[_1][_2])
+                    conc2 = float(_2)/(self.conc_matrix.shape[1] - 1)
+                    atoms = self.random_struct(self.conc_matrix[_1][_2],
+                                               conc1, conc2)
+                    if atoms is None:
+                        continue
                     atoms = wrap_and_sort_by_position(atoms)
-                    keys = CorrFunction(self.BC).get_cf(atoms)
-                    keys = self.get_key_values(atoms, keys, conc1, conc2, gen=0)
-                    self.db.write(atoms, keys)
+                    kvp = CorrFunction(self.BC).get_cf(atoms)
+                    kvp = self.get_kvp(atoms, kvp, conc1, conc2)
+                    self.db.write(atoms, kvp)
 
+        # Case 3: 1 conc variable, user specified number of structures
         elif self.num_conc_var == 1:
-            pass
+            num_conc1 = self.conc_matrix.shape[0]
+            conc1_opt = range(num_conc1)
+            for x in range(self.struct_per_gen):
+                a = random.choice(conc1_opt)
+                conc1 = float(a)/(num_conc1 - 1)
+                atoms = self.random_struct(self.conc_matrix[a], conc1)
+                if atoms is None:
+                    continue
+                atoms = wrap_and_sort_by_position(atoms)
+                kvp = CorrFunction(self.BC).get_cf(atoms)
+                kvp = self.get_kvp(atoms, kvp, conc1)
+                self.db.write(atoms, kvp)
 
+        # Case 4: 2 conc variable, user specified number of structures
         else:
             num_conc1, num_conc2 = self.conc_matrix.shape[:2]
             conc1_opt = range(num_conc1)
             conc2_opt = range(num_conc2)
             for x in range(self.struct_per_gen):
                 a = [random.choice(conc1_opt), random.choice(conc2_opt)]
-                conc1 = float(a[0]) / (num_conc1 - 1)
-                conc2 = float(a[1]) / (num_conc2 - 1)
-                while True:
-                    atoms = self.random_struct(self.conc_matrix[a[0]][a[1]])
-                    atoms = wrap_and_sort_by_position(atoms)
-                    print('{} - check db: {} {}'.format(x, conc1, conc2))
-                    if not self.exists_in_db(atoms, conc1, conc2):
-                        break
-                keys = CorrFunction(self.BC).get_cf(atoms)
-                keys = self.get_key_values(atoms, keys, conc1, conc2, gen=0)
-                self.db.write(atoms, keys)
+                conc1 = float(a[0])/(num_conc1 - 1)
+                conc2 = float(a[1])/(num_conc2 - 1)
+                atoms = self.random_struct(self.conc_matrix[a[0]][a[1]],
+                                           conc1, conc2)
+                if atoms is None:
+                    continue
+                atoms = wrap_and_sort_by_position(atoms)
+                kvp = CorrFunction(self.BC).get_cf(atoms)
+                kvp = self.get_kvp(atoms, kvp, conc1, conc2)
+                self.db.write(atoms, kvp)
         return True
 
     def find_concentration(self, atoms):
+        """
+        Find the concentration value(s) of the passed atoms object.
+        """
         conc_ratio = np.zeros(len(self.all_elements), dtype=int)
         for i, element in enumerate(self.all_elements):
             conc_ratio[i] = len([a for a in atoms if a.symbol == element])
 
         if self.num_conc_var == 1:
-            pass
+            num_conc1 = self.conc_matrix.shape[0]
+            for x in range(num_conc1):
+                if np.array_equal(conc_ratio, self.conc_matrix[x]):
+                    break
+            conc = [round(float(x)/(num_conc1 - 1), 3), None]
         else:
             num_conc1, num_conc2 = self.conc_matrix.shape[:2]
             for x in range(num_conc1):
@@ -146,24 +184,31 @@ class GenerateStructures(object):
                 else:
                     continue
                 break
-            conc1 = float(x) / (num_conc1 - 1)
-            conc2 = float(y) / (num_conc2 - 1)
-            conc = [conc1, conc2]
+            conc = [round(float(x)/(num_conc1 - 1), 3),
+                    round(float(y)/(num_conc2 - 1), 3)]
 
         return conc
 
     def exists_in_db(self, atoms, conc1=None, conc2=None):
+        """
+        Checks to see if the passed atoms already exists in DB. 
+        Return True if so, False otherwise.
+        """ 
         if conc1 is None:
             raise ValueError('conc1 needs to be defined')
         conc1 = round(conc1, 3)
+        cond = [('conc1', '=', conc1)]
         if conc2 is not None:
             conc2 = round(conc2, 3)
+            cond.append(('conc2','=',conc2))
         # find if there is a match
+        count = len([row.id for row in self.db.select(cond)])
         match = False
         m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
                              primitive_cell=True, scale=True)
         s1 = atoms_to_structure(atoms)
-        for row in self.db.select(conc1=conc1, conc2=conc2):
+
+        for row in self.db.select(cond):
             atoms2 = row.toatoms()
             s2 = atoms_to_structure(atoms2)
             match = m.fit(s1, s2)
@@ -171,33 +216,36 @@ class GenerateStructures(object):
                 break
         return match
 
-    def get_key_values(self, atoms, keys, conc1=None, conc2=None, gen=None):
+    def get_kvp(self, atoms, kvp, conc1=None, conc2=None):
+        """
+        Receive atoms object, its correlation function (passed kvp) and 
+        value(s) of the concentration(s). Append key terms (conc, started, etc.)
+        to kvp and returns it.
+        """
         if conc1 is None:
             raise ValueError('conc1 needs to be defined')
-        if gen is None:
-            raise ValueError('gen needs to be defined')
-        # keys = CorrFunction(self.BC).get_cf(atoms)
         conc1 = round(conc1, 3)
-        keys['conc1'] = conc1
+        kvp['conc1'] = conc1
+        kvp['gen'] = self.gen
+        kvp['converged'] = False
+        kvp['started'] = False
+        kvp['queued'] = False
+
+        # Determine name
         if conc2 is None:
-            keys['conc2'] = conc2
+            n = len([row.id for row in self.db.select(conc1=conc1)])
+            kvp['name'] = 'conc_{:.3f}_{}'.format(conc1, n)
         else:
             conc2 = round(conc2, 3)
-            keys['conc2'] = conc2
-        keys['gen'] = gen
-        keys['converged'] = False
-        keys['started'] = False
-        keys['queued'] = False
-        # Determine name
-        n = len([row.id for row in self.db.select(conc1=conc1, conc2=conc2)])
-        if conc2 is None:
-            keys['name'] = 'conc_{:.3f}_{}'.format(conc1, n)
-        else:
-            keys['name'] = 'conc_{:.3f}_{:.3f}_{}'.format(conc1, conc2, n)
-        return keys
+            kvp['conc2'] = conc2
+            n = len([row.id for row in self.db.select(conc1=conc1,conc2=conc2)])
+            kvp['name'] = 'conc_{:.3f}_{:.3f}_{}'.format(conc1, conc2, n)
+        return kvp
 
-    def random_struct(self, conc_ratio):
-        atoms = self.atoms.copy()
+    def random_struct(self, conc_ratio, conc1=None, conc2=None):
+        """
+        Generate a random structure that does not already exist in DB
+        """
         # convert the conc_ratio into the same format as site_elements
         if self.num_sites == 1:
             conc_ratio = [list(conc_ratio)]
@@ -209,16 +257,28 @@ class GenerateStructures(object):
                 conc_ratio.append(temp[:l])
                 del temp[:l]
 
-        for site in range(self.num_sites):
-            indx = [a.index for a in atoms if a.symbol ==
-                    self.site_elements[site][0]]
-            if len(indx) != sum(conc_ratio[site]):
-                raise ValueError("number of atoms to be replaced in the Atoms"
-                                 " object does not match the value in"
-                                 " conc_ratio")
-            for i in range(1, len(conc_ratio[site])):
-                indx = self._replace_rnd(indx, self.site_elements[site][i],
-                                         conc_ratio[site][i], atoms)
+        # 1D np array to easily count how many types of species are present
+        flat_conc_ratio = np.array([x for sub in conc_ratio for x in sub])
+
+        in_DB = True
+        while in_DB:
+            atoms = self.atoms.copy()
+            for site in range(self.num_sites):
+                indx = [a.index for a in atoms if a.symbol ==
+                        self.site_elements[site][0]]
+                if len(indx) != sum(conc_ratio[site]):
+                    raise ValueError("number of atoms to be replaced in the "
+                                     "Atoms object does not match the value "
+                                     "in conc_ratio")
+                for i in range(1, len(conc_ratio[site])):
+                    indx = self._replace_rnd(indx, self.site_elements[site][i],
+                                             conc_ratio[site][i], atoms)
+            in_DB = self.exists_in_db(atoms, conc1=conc1, conc2=conc2)
+            # special case where only one species is present
+            # break out of the loop and return atoms=None 
+            if in_DB and np.count_nonzero(flat_conc_ratio) == 1:
+                atoms = None
+                in_DB = False
         return atoms
 
     def _replace_rnd(self, indices, element, n_replace, atoms):
@@ -233,6 +293,6 @@ class GenerateStructures(object):
         for atom in atoms:
             if atom.index in replace:
                 atom.symbol = element
-        # remove "selected" from "indices"
+
         indices = [x for x in indices if x not in replace]
         return indices
