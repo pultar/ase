@@ -142,15 +142,28 @@ class StructureComparator( object ):
 
         position1 = []
         position2 = []
+        atoms1 = None
+        atoms2 = None
 
         for i in range( len(self.s1) ):
             symbol = self.s1[i].symbol
             if ( symbol == least_freq_element ):
-                position1.append( pos1[i,:] )
+                #position1.append( pos1[i,:] )
+                if ( atoms1 is None ):
+                    atoms1 = Atoms( symbol, positions=[self.s1.get_positions()[i,:]])
+                else:
+                    atoms1.extend( Atoms(symbol, positions=[self.s1.get_positions()[i,:]]) )
 
             symbol = self.s2[i].symbol
             if ( symbol == least_freq_element ):
-                position2.append( pos2[i,:] )
+                #position2.append( pos2[i,:] )
+                if ( atoms2 is None ):
+                    atoms2 = Atoms( symbol, positions=[self.s2.get_positions()[i,:]])
+                else:
+                    atoms2.extend( Atoms(symbol, positions=[self.s2.get_positions()[i,:]]) )
+        atoms1.set_cell( self.s1.get_cell() )
+        atoms2.set_cell( self.s2.get_cell() )
+        return atoms1, atoms2
         return np.array( position1 ), np.array( position2 )
 
     def positions_match( self, rotation_reflection_matrices, center_of_mass ):
@@ -172,6 +185,11 @@ class StructureComparator( object ):
             pos1 -= com[0]
             pos2 -= com[1]
 
+            self.s1.set_positions( pos1 )
+            self.s2.set_positions( pos2 )
+            pos1 = self.s1.get_positions( wrap=True )
+            pos2 = self.s2.get_positions( wrap=True )
+            
             # Rotate
             pos1 = matrix.dot(pos1.T).T
 
@@ -375,15 +393,19 @@ class StructureComparator( object ):
         """
         s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
         s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
-        pos1_ref, pos2 = self.extract_positions_of_least_frequent_element()
+        atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
-        for i in range( pos1_ref.shape[0] ):
-            new_pos = s1_pos_ref - pos1_ref[i]
+        for i in range( len(atoms1_ref) ):
+            # Change which atom is at the origin
+            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]
             self.s1.set_positions( new_pos )
-            pos1, pos2 = self.extract_positions_of_least_frequent_element()
-            cm1 = np.mean( pos1, axis=0 )
-            cm2 = np.mean( pos2, axis=0 )
+            #pos1, pos2 = self.extract_positions_of_least_frequent_element()
+            atoms1, atoms2 = self.extract_positions_of_least_frequent_element()
+            cm1 = np.mean( atoms1.get_positions( wrap=True ), axis=0 )
+            cm2 = np.mean( atoms2.get_positions( wrap=True), axis=0 )
+            pos1 = atoms1.get_positions(wrap=True)
+            pos2 = atoms2.get_positions(wrap=True)
             pos1 -= cm1
             pos2 -= cm2
             M = pos2.T.dot(pos1)
