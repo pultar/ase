@@ -1,47 +1,28 @@
 import numpy as np
-from itertools import combinations, product
+from itertools import product
 from ase.db import connect
 from ase.ce.settings import BulkCrystal
-from ase.ce.tools import wrap_and_sort_by_position
-
-def index_of_matching_row(A, x):
-    for i in range(A.shape[0]):
-        if np.allclose(np.array(A[i]), np.array(x)):
-            return i
-    return None
-
+from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 
 class CorrFunction(object):
     """
-    Class that stores the necessary information about rocksalt structures.
+    Class that calculates the .
     """
     def __init__(self, BC):
         if type(BC) is not BulkCrystal:
             raise TypeError("Passed object should be BulkCrystal type")
-        self._cell_dim = BC.cell_dim
-        self.cluster_names = BC.cluster_names
-        self.spin_dict = BC.spin_dict
+        self.cell_dim = BC.cell_dim
         self.basis_functions = BC.basis_functions
         self.alat = BC.alat
         self.min_cluster_size = BC.min_cluster_size
         self.max_cluster_size = BC.max_cluster_size
-        self.max_cluster_dia = BC.max_cluster_dia
-        self.dist_matrix = BC.dist_matrix
         self.cluster_names = BC.cluster_names
         self.cluster_dist = BC.cluster_dist
         self.cluster_indx = BC.cluster_indx
         self.trans_matrix = BC.trans_matrix
+        if not os.path.exists(self.db_name):
+            raise ValueError("DB file {} does not exist".format(self.db_name))
         self.db = connect(BC.db_name)
-
-
-    def get_min_distance(self, cluster):
-        d = []
-        for t in range(8):
-            row = []
-            for x in combinations(cluster, 2):
-                row.append(self.dist_matrix[x[0], x[1], t])
-            d.append(sorted(row, reverse=True))
-        return np.array(min(d))
 
 
     def get_c1(self, atoms, dec):
@@ -52,8 +33,11 @@ class CorrFunction(object):
         c1 /= float(len(atoms))
         return c1
 
-
     def get_cf(self, atoms):
+        """
+        Compute correlation function for all possible clusters within
+        the size and diameter limits
+        """
         atoms = self.check_and_convert_cell_size(atoms.copy())
         natoms = len(atoms)
         bf_list = list(range(len(self.basis_functions)))
@@ -70,6 +54,7 @@ class CorrFunction(object):
                 for i, dec in enumerate(perm):
                     cf['c1_{}'.format(i+1)] = self.get_c1(atoms, dec[0])
                 continue
+            dist_list = self.cluster_dist[n]
             indx_list = self.cluster_indx[n]
             name_list = self.cluster_names[n]
             # first category
@@ -84,6 +69,7 @@ class CorrFunction(object):
     def get_cf_by_cluster_names(self, atoms, cluster_names):
         atoms = self.check_and_convert_cell_size(atoms.copy())
         natoms = len(atoms)
+        bf_list = list(range(len(self.basis_functions)))
         cf = {}
         # ----------------------------------------------------
         # Compute correlation function up the max_cluster_size
@@ -92,19 +78,23 @@ class CorrFunction(object):
             if name == 'c0':
                 cf[name] = 1.
                 continue
-            elif name == 'c1':
-                cf[name] = self.get_c1(atoms)
+            elif name.startswith('c1'):
+                dec = int(name[-1]) - 1
+                cf[name] = self.get_c1(atoms,dec)
                 continue
+            prefix = name.rpartition('_')[0]
+            dec = int(name.rpartition('_')[-1]) - 1
             # find the location of the name in cluster_names
             for n in range(2, len(self.cluster_names)):
                 try:
-                    ctype = self.cluster_names[n].index(name)
+                    ctype = self.cluster_names[n].index(prefix)
                     num = n
                     break
                 except ValueError:
                     continue
+            perm = list(product(bf_list, repeat=num))
             count = len(self.cluster_indx[num][ctype])*natoms
-            sp = self.spin_product(atoms, self.cluster_indx[num][ctype])
+            sp = self.spin_product(atoms, self.cluster_indx[num][ctype], perm[dec])
             sp /= count
             cf[name] = sp
         return cf
@@ -153,5 +143,5 @@ class CorrFunction(object):
                 atoms = wrap_and_sort_by_position(atoms*int_ratios)
             else:
                 raise TypeError("Cannot make the passed atoms object to the "+
-                                "specified size {}".format(self._cell_dim))
+                                "specified size {}".format(self.cell_dim))
         return atoms
