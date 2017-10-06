@@ -6,6 +6,8 @@ import copy
 from ase.visualize import view
 from ase import Atoms
 from ase.io import read
+import time
+from matplotlib import pyplot as plt
 
 class StructureComparator( object ):
     def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
@@ -77,7 +79,8 @@ class StructureComparator( object ):
             closestIndex = np.argmin( np.abs(np.array(angles2)-angles1[i]) )
             if ( np.abs(angles2[closestIndex]-angles1[i]) < self.angleTolDeg ):
                 # Remove the entry that matched
-                del dot2[closestIndex]
+                #del dot2[closestIndex]
+                del angles2[closestIndex]
             else:
                 return False
         return True
@@ -100,9 +103,11 @@ class StructureComparator( object ):
             return False
 
         matrices, translations = self.get_rotation_reflection_matrices()
+        #print ("test positions")
         if ( not self.positions_match(matrices, translations) ):
             return False
 
+        #print ("test elements")
         exp1 = self.expand(self.s1)
         exp2 = self.expand(self.s2)
         if ( not self.elements_match(exp1,exp2) ):
@@ -135,8 +140,8 @@ class StructureComparator( object ):
         pos1 = self.s1.get_positions(wrap=True)
         pos2 = self.s2.get_positions(wrap=True)
 
-        pos1 -= np.mean(pos1,axis=0)
-        pos2 -= np.mean(pos2,axis=0)
+        #pos1 -= np.mean(pos1,axis=0)
+        #pos2 -= np.mean(pos2,axis=0)
 
         least_freq_element = self.get_least_frequent_element()
 
@@ -150,17 +155,17 @@ class StructureComparator( object ):
             if ( symbol == least_freq_element ):
                 #position1.append( pos1[i,:] )
                 if ( atoms1 is None ):
-                    atoms1 = Atoms( symbol, positions=[self.s1.get_positions()[i,:]])
+                    atoms1 = Atoms( symbol, positions=[self.s1.get_positions(wrap=True)[i,:]])
                 else:
-                    atoms1.extend( Atoms(symbol, positions=[self.s1.get_positions()[i,:]]) )
+                    atoms1.extend( Atoms(symbol, positions=[self.s1.get_positions(wrap=True)[i,:]]) )
 
             symbol = self.s2[i].symbol
             if ( symbol == least_freq_element ):
                 #position2.append( pos2[i,:] )
                 if ( atoms2 is None ):
-                    atoms2 = Atoms( symbol, positions=[self.s2.get_positions()[i,:]])
+                    atoms2 = Atoms( symbol, positions=[self.s2.get_positions(wrap=True)[i,:]])
                 else:
-                    atoms2.extend( Atoms(symbol, positions=[self.s2.get_positions()[i,:]]) )
+                    atoms2.extend( Atoms(symbol, positions=[self.s2.get_positions(wrap=True)[i,:]]) )
         atoms1.set_cell( self.s1.get_cell() )
         atoms2.set_cell( self.s2.get_cell() )
         return atoms1, atoms2
@@ -235,7 +240,7 @@ class StructureComparator( object ):
         tol = 0.0001
         num_faces_close = 0
 
-        for i in range( len(self.s1) ):
+        for i in range( len(ref_atoms) ):
             surface_close = [False,False,False,False,False,False]
             # Face 1
             distance = np.abs( positions[i,:].dot(normal_vectors[0]) )
@@ -396,16 +401,46 @@ class StructureComparator( object ):
         atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
+        cell = self.s1.get_cell()
+
+        delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
+
+        # Put on of the least frequent elements of structure 2 at the origin
+        translation = atoms2_ref.get_positions()[0,:]-delta_vec
+        atoms2_ref.set_positions( atoms2_ref.get_positions() - translation )
+        atoms2_ref.set_positions( atoms2_ref.get_positions(wrap=True) )
+        self.s2.set_positions( self.s2.get_positions()-translation)
+        self.s2.set_positions( self.s2.get_positions(wrap=True) )
+
+        # Also update structure 1 to have on of the least frequent elements at the corner
+        translation = atoms1_ref.get_positions()[0,:]-delta_vec
+        atoms1_ref.set_positions( atoms1_ref.get_positions()-translation)
+        atoms1_ref.set_positions( atoms1_ref.get_positions(wrap=True))
+        self.s1.set_positions( self.s1.get_positions()-translation)
+        s1_pos_ref = self.s1.get_positions(wrap=True)
+        self.s1.set_positions( s1_pos_ref )
+
         for i in range( len(atoms1_ref) ):
             # Change which atom is at the origin
-            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]
+            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]+delta_vec
             self.s1.set_positions( new_pos )
+            new_pos = self.s1.get_positions(wrap=True)
+            self.s1.set_positions(new_pos)
             #pos1, pos2 = self.extract_positions_of_least_frequent_element()
             atoms1, atoms2 = self.extract_positions_of_least_frequent_element()
+            #view(atoms1)
+            #view(atoms2)
+            #time.sleep(1)
+
             cm1 = np.mean( atoms1.get_positions( wrap=True ), axis=0 )
             cm2 = np.mean( atoms2.get_positions( wrap=True), axis=0 )
             pos1 = atoms1.get_positions(wrap=True)
             pos2 = atoms2.get_positions(wrap=True)
+
+            #cm1 = np.mean( atoms1.get_positions(), axis=0 )
+            #cm2 = np.mean( atoms2.get_positions(), axis=0 )
+            #pos1 = atoms1.get_positions()
+            #pos2 = atoms2.get_positions()
             pos1 -= cm1
             pos2 -= cm2
             M = pos2.T.dot(pos1)
@@ -461,6 +496,33 @@ class TestStructureComparator( unittest.TestCase ):
         s2 = read("test_structures/reflection2.xyz")
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_translations( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+
+        xmax = 2.0*np.max(s1.get_cell())
+        N = 3
+        dx = xmax/N
+        pos_ref = s2.get_positions()
+        comparator = StructureComparator()
+        number_of_correctly_identified = 0
+        for i in range(N):
+            for j in range(N):
+                for k in range(N):
+                    displacepement = [ dx*i, dx*j,dx*k ]
+                    new_pos = pos_ref + displacepement
+                    s2.set_positions(new_pos)
+                    s2.set_positions( s2.get_positions(wrap=True) )
+                    if ( comparator.compare(s1,s2) ):
+                        number_of_correctly_identified += 1
+
+        msg = "Identified %d of %d as duplicates. All structures are known to be duplicates."%(number_of_correctly_identified,N**3)
+        self.assertEqual( number_of_correctly_identified, N**3, msg=msg )
+
+
+
+
 
 
 if __name__ == "__main__":
