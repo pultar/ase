@@ -8,6 +8,7 @@ from ase import Atoms
 from ase.io import read
 import time
 from matplotlib import pyplot as plt
+import itertools
 
 class StructureComparator( object ):
     def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
@@ -22,6 +23,7 @@ class StructureComparator( object ):
         """
         asetools.niggli_reduce(self.s1)
         asetools.niggli_reduce(self.s2)
+
 
     def get_element_count( self ):
         """
@@ -104,7 +106,7 @@ class StructureComparator( object ):
 
         matrices, translations = self.get_rotation_reflection_matrices()
         #print ("test positions")
-        if ( not self.positions_match(matrices, translations) ):
+        if ( not self.positions_match(matrices, translations, self.s1, self.s2) ):
             return False
 
         #print ("test elements")
@@ -171,7 +173,7 @@ class StructureComparator( object ):
         return atoms1, atoms2
         return np.array( position1 ), np.array( position2 )
 
-    def positions_match( self, rotation_reflection_matrices, center_of_mass ):
+    def positions_match( self, rotation_reflection_matrices, center_of_mass, atoms1, atoms2 ):
         """
         Check if the position and elements match.
         Note that this function changes self.s1 and self.s2 to the rotation and
@@ -179,10 +181,10 @@ class StructureComparator( object ):
         is called before the element comparison
         """
         # Position matching not implemented yet
-        pos1_ref = self.s1.get_positions( wrap=True )
-        pos2_ref = self.s2.get_positions( wrap=True )
+        pos1_ref = atoms1.get_positions( wrap=True )
+        pos2_ref = atoms2.get_positions( wrap=True )
 
-        cell = self.s1.get_cell()
+        cell = atoms1.get_cell()
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
         for matrix,com in zip(rotation_reflection_matrices,center_of_mass):
             pos1 = copy.deepcopy(pos1_ref)
@@ -192,24 +194,24 @@ class StructureComparator( object ):
             pos1 -= com[0]
             pos2 -= com[1]
 
-            self.s1.set_positions( pos1+delta )
-            self.s2.set_positions( pos2+delta )
-            pos1 = self.s1.get_positions( wrap=True )
-            pos2 = self.s2.get_positions( wrap=True )
+            atoms1.set_positions( pos1+delta )
+            atoms2.set_positions( pos2+delta )
+            pos1 = atoms1.get_positions( wrap=True )
+            pos2 = atoms2.get_positions( wrap=True )
 
             # Rotate
             pos1 = matrix.dot(pos1.T).T
 
             # Update the atoms positions
-            self.s1.set_positions( pos1 )
-            self.s2.set_positions( pos2 )
-            pos1 = self.s1.get_positions( wrap=True )
-            pos2 = self.s2.get_positions( wrap=True )
-            self.s1.set_positions( pos1 )
-            self.s2.set_positions( pos2 )
+            atoms1.set_positions( pos1 )
+            atoms2.set_positions( pos2 )
+            pos1 = atoms1.get_positions( wrap=True )
+            pos2 = atoms2.get_positions( wrap=True )
+            atoms1.set_positions( pos1 )
+            atoms2.set_positions( pos2 )
 
-            exp1 = self.expand(self.s1)
-            exp2 = self.expand(self.s2)
+            exp1 = self.expand(atoms1)
+            exp2 = self.expand(atoms2)
             pos1 = exp1.get_positions() # NOTE: No wrapping
             pos2 = exp2.get_positions() # NOTE: No wrapping
 
@@ -265,7 +267,7 @@ class StructureComparator( object ):
             distance = np.abs( positions[i,:].dot(normal_vectors[1]) )
             if ( distance < tol ):
                 newpos = positions[i,:] + cell[:,1]
-                newAtom = Atoms( self.s1[i].symbol, positions=[newpos] )
+                newAtom = Atoms( symbol, positions=[newpos] )
                 expaned_atoms.extend(newAtom)
                 surface_close[2] = True
 
@@ -430,12 +432,14 @@ class StructureComparator( object ):
             self.s1.set_positions(new_pos)
             #pos1, pos2 = self.extract_positions_of_least_frequent_element()
             atoms1, atoms2 = self.extract_positions_of_least_frequent_element()
+
+            # Take the one with the fewer number of elements and test all combinations
             #view(atoms1)
             #view(atoms2)
-            #time.sleep(1)
+            #time.sleep(10)
 
             cm1 = np.mean( atoms1.get_positions( wrap=True ), axis=0 )
-            cm2 = np.mean( atoms2.get_positions( wrap=True), axis=0 )
+            cm2 = np.mean( atoms2.get_positions( wrap=True ), axis=0 )
             pos1 = atoms1.get_positions(wrap=True)
             pos2 = atoms2.get_positions(wrap=True)
 
@@ -448,9 +452,14 @@ class StructureComparator( object ):
             M = pos2.T.dot(pos1)
             U, S, V = np.linalg.svd(M)
             bestMatrix = U.dot(V)
-            center_of_mass.append( (cm1,cm2) )
-            rot_reflection_mat.append( bestMatrix )
 
+            # If this transformation matrix manages to map the least frequent elements
+            # onto one another, append to the canditade transformations
+            if ( self.positions_match([bestMatrix],[(cm1,cm2)], atoms1, atoms2) ):
+                center_of_mass.append( (cm1,cm2) )
+                rot_reflection_mat.append( bestMatrix )
+
+        print (rot_reflection_mat)
         self.s1.set_positions( s1_pos_ref )
         return rot_reflection_mat, center_of_mass
 
