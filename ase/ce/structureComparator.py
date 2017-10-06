@@ -182,6 +182,8 @@ class StructureComparator( object ):
         pos1_ref = self.s1.get_positions( wrap=True )
         pos2_ref = self.s2.get_positions( wrap=True )
 
+        cell = self.s1.get_cell()
+        delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
         for matrix,com in zip(rotation_reflection_matrices,center_of_mass):
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
@@ -190,8 +192,8 @@ class StructureComparator( object ):
             pos1 -= com[0]
             pos2 -= com[1]
 
-            self.s1.set_positions( pos1 )
-            self.s2.set_positions( pos2 )
+            self.s1.set_positions( pos1+delta )
+            self.s2.set_positions( pos2+delta )
             pos1 = self.s1.get_positions( wrap=True )
             pos2 = self.s2.get_positions( wrap=True )
 
