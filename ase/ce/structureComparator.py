@@ -217,16 +217,28 @@ class StructureComparator( object ):
 
             # Check that all closest distances match
             used_sites = []
-            for i in range(pos1.shape[0]):
-                distances = np.sqrt( np.sum( (pos2-pos1[i,:])**2, axis=1 ) )
-                closest = np.argmin(distances)
-                if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
-                    break
-                else:
-                    used_sites.append(closest)
+            if ( pos1.shape[0] < pos2.shape[0] ):
+                for i in range(pos1.shape[0]):
+                    distances = np.sqrt( np.sum( (pos2-pos1[i,:])**2, axis=1 ) )
+                    closest = np.argmin(distances)
+                    if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
+                        break
+                    else:
+                        used_sites.append(closest)
 
-            if ( len(used_sites) == pos1.shape[0] ):
-                return True
+                if ( len(used_sites) == pos1.shape[0] ):
+                    return True
+            else:
+                for i in range(pos2.shape[0]):
+                    distances = np.sqrt( np.sum( (pos1-pos2[i,:])**2, axis=1 ) )
+                    closest = np.argmin(distances)
+                    if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
+                        break
+                    else:
+                        used_sites.append(closest)
+
+                if ( len(used_sites) == pos2.shape[0] ):
+                    return True
         return False
 
     def expand( self, ref_atoms ):
@@ -436,16 +448,17 @@ class StructureComparator( object ):
         cell = self.s1.get_cell()
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
+        cell_center = 0.5*(cell[:,0]+cell[:,1]+cell[:,2])
 
         # Put on of the least frequent elements of structure 2 at the origin
-        translation = atoms2_ref.get_positions()[0,:]-delta_vec
+        translation = atoms2_ref.get_positions()[0,:]-delta_vec-cell_center
         atoms2_ref.set_positions( atoms2_ref.get_positions() - translation )
         atoms2_ref.set_positions( atoms2_ref.get_positions(wrap=True) )
         self.s2.set_positions( self.s2.get_positions()-translation)
         self.s2.set_positions( self.s2.get_positions(wrap=True) )
 
         # Also update structure 1 to have on of the least frequent elements at the corner
-        translation = atoms1_ref.get_positions()[0,:]-delta_vec
+        translation = atoms1_ref.get_positions()[0,:]-delta_vec-cell_center
         atoms1_ref.set_positions( atoms1_ref.get_positions()-translation)
         atoms1_ref.set_positions( atoms1_ref.get_positions(wrap=True))
         self.s1.set_positions( self.s1.get_positions()-translation)
@@ -454,7 +467,7 @@ class StructureComparator( object ):
 
         for i in range( len(atoms1_ref) ):
             # Change which atom is at the origin
-            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]+delta_vec
+            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]+delta_vec+cell_center
             self.s1.set_positions( new_pos )
             new_pos = self.s1.get_positions(wrap=True)
             self.s1.set_positions(new_pos)
@@ -463,7 +476,7 @@ class StructureComparator( object ):
 
             # Take the one with the fewer number of elements and test all combinations
             #
-            view(atoms2)
+            #view(atoms2)
             #
             exp1, app = self.expand(atoms1)
 
@@ -474,6 +487,7 @@ class StructureComparator( object ):
                 if ( np.sqrt( np.sum(pos**2) ) < 1E-3 ):
                     continue
                 appended.append(entry)
+            appended=app
 
             possible_swaps = self.get_permutations_of_swaps(appended)
             possible_swaps.insert(0,[])
@@ -484,13 +498,13 @@ class StructureComparator( object ):
             orig_pos = atoms1.get_positions()
             expanded_positions = exp1.get_positions()
 
+            # Take into account that some atoms maybe accidentaly crossed the unit cell
+            # border due to numerical noise
             for swap in possible_swaps:
                 new_pos = copy.deepcopy(orig_pos)
                 for single_atom_swap in swap:
                     new_pos[single_atom_swap[0],:] = expanded_positions[single_atom_swap[1],:]
                 atoms1.set_positions(new_pos)
-                #view(atoms1)
-                #time.sleep(3)
 
                 pos1 = atoms1.get_positions()
                 cm1 = np.mean( pos1, axis=0 )
@@ -587,8 +601,8 @@ class TestStructureComparator( unittest.TestCase ):
     def test_reflection_three_imp(self):
         s1 = read("test_structures/reflection1.xyz")
         s2 = read("test_structures/reflection2.xyz")
-        view(s1)
-        view(s2)
+        #view(s1)
+        #view(s2)
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
 
