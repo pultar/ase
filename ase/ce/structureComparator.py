@@ -34,44 +34,41 @@ class StructureComparator( object ):
         """
         asetools.niggli_reduce(self.s1)
         asetools.niggli_reduce(self.s2)
-        #self.cell_to_standard(self.s1)
+        self.get_standard_cell(self.s1)
         #self.cell_to_standard(self.s2)
 
-    def cell_to_standard( self, atoms ):
-        # TODO: This needs to be fixed
-        print ("Check that the cells are equal")
+    def get_standard_cell( self, atoms ):
+        """
+        Rotate the first vector such that it points along the x-axis
+        """
         cell = atoms.get_cell().T
-        print (cell)
-
-        length_a = np.sqrt( np.sum(cell[:,0]**2) )
-
-        # Rotate around y-axis
-        angle = np.pi/2.0-np.arccos( cell[2,0]/length_a )
+        v1 = cell[:,0]
+        l1 = np.sqrt(v1[0]**2+v1[2]**2)
+        angle = np.abs( np.arcsin(v1[2]/l1) )
         ca = np.cos(angle)
         sa = np.sin(angle)
-        matrix = np.array( [[ca,0.0,sa],
-                            [0.0,1.0,0.0],
-                            [-sa,0.0,ca]])
-        cell = matrix.dot(cell)
+        rotmat = np.array( [[ca,0.0,sa],[0.0,1.0,0.0],[-sa,0.0,ca]] )
+        cell = rotmat.dot(cell)
 
-        # Rotate around z-axis
-        angle = np.pi/2.0-np.arccos( cell[1,0]/length_a)
-        ca = np.cos(-angle)
-        sa = np.sin(-angle)
-        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]])
-        cell = matrix.dot(cell)
+        v1 = cell[:,0]
+        l1 = np.sqrt(v1[0]**2+v1[1]**2)
+        angle = np.abs( np.arcsin(v1[1]/l1) )
+        ca = np.cos(angle)
+        sa = np.sin(angle)
+        rotmat = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
+        cell = rotmat.dot(cell)
 
-        # Rotate around x-axis such that b lies in the xy plane
-        length_b = np.sqrt( np.sum(cell[:,1]**2) )
-        angle = np.pi/2.0-np.arccos(cell[1,1]/length_b)
-        ca = np.cos(-angle)
-        sa = np.sin(-angle)
-        matrix = np.array( [[1.0,0.0,0.0],[0.0,ca,sa],[0.0,-sa,ca]])
-        cell = matrix.dot(cell)
-        atoms.set_cell(cell.T)
+        # Rotate around x axis such that the second vector is in the xy plane
+        v2 = cell[:,1]
+        l2 = np.sqrt( v2[1]**2 + v2[2]**2 )
+        angle = np.abs( np.arcsin( v2[2]/l2 ) )
+        ca = np.cos(angle)
+        sa = np.sin(angle)
+        rotmat = np.array( [[1.0,0.0,0.0],[0.0,ca,sa],[0.0,-sa,ca]] )
+        print (rotmat)
         print (cell)
-        print ("=============================================================")
-        return atoms
+        cell = rotmat.dot(cell)
+        return cell
 
     def get_element_count( self ):
         """
@@ -716,6 +713,19 @@ class TestStructureComparator( unittest.TestCase ):
         #s2.set_cell( matrix.dot(s2.get_cell().T).T )
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_rotations_to_standard( self ):
+        s1 = Atoms("Al")
+        comparator = StructureComparator()
+        for i in range(20):
+            cell = np.random.rand(3,3)*4.0-4.0
+            s1.set_cell( cell )
+            new_cell = comparator.get_standard_cell(s1)
+            print (new_cell)
+            self.assertAlmostEqual( new_cell[1,0], 0.0 )
+            self.assertAlmostEqual( new_cell[2,0], 0.0)
+            self.assertAlmostEqual( new_cell[2,1], 0.0 )
+
 
 if __name__ == "__main__":
     unittest.main()
