@@ -497,7 +497,7 @@ class StructureComparator( object ):
         self.s2.set_positions( self.s2.get_positions()-translation)
         self.s2.wrap( pbc=[1,1,1] )
 
-        sc_atom1 = atoms1_ref*(2,2,2)
+        sc_atom1 = atoms1_ref*(3,3,3)
         sc_pos = sc_atom1.get_positions()
         #view(sc_atom1)
         #view(atoms2_ref)
@@ -697,7 +697,6 @@ class TestStructureComparator( unittest.TestCase ):
         s2.set_positions( matrix.dot(s2.get_positions().T).T )
         #s2.set_cell( matrix.dot(s2.get_cell().T).T )
         comparator = StructureComparator()
-
         if ( has_pymat_gen ):
             m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
                              primitive_cell=True, scale=True)
