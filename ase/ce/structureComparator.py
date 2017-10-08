@@ -488,7 +488,6 @@ class StructureComparator( object ):
         angle_tol = 0.25*np.pi/180.0
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
-        cell_center = 0.5*(cell[:,0]+cell[:,1]+cell[:,2])
 
         # Put on of the least frequent elements of structure 2 at the origin
         translation = atoms2_ref.get_positions()[0,:]-delta_vec
@@ -505,6 +504,7 @@ class StructureComparator( object ):
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
         ref_vec_lengths = np.sqrt( np.sum( ref_vec**2, axis=0 ) )
+        cell_diag = cell[:,0]+cell[:,1]+cell[:,2]
 
         canditate_trans_mat = []
 
@@ -704,6 +704,17 @@ class TestStructureComparator( unittest.TestCase ):
             str2 = atoms_to_structure(s2)
             print ("PyMatGen says: %s"%(self.pymat_code[m.fit(str1,str2)]))
 
+        self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_rot_120_deg(self):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        ca = np.cos(2.0*np.pi/3.0)
+        sa = np.sin(2.0*np.pi/3.0)
+        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
+        s2.set_positions( matrix.dot(s2.get_positions().T).T )
+        #s2.set_cell( matrix.dot(s2.get_cell().T).T )
+        comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
 
 if __name__ == "__main__":
