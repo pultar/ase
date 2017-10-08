@@ -5,10 +5,18 @@ from ase.build import bulk
 import copy
 from ase.visualize import view
 from ase import Atoms
-from ase.io import read
+from ase.io import read, write
 import time
 from matplotlib import pyplot as plt
 import itertools
+try:
+    from pymatgen.io.ase import AseAtomsAdaptor
+    atoms_to_structure = AseAtomsAdaptor.get_structure
+    from pymatgen.analysis.structure_matcher import StructureMatcher
+    has_pymat_gen = True
+except:
+    has_pymat_gen = False
+
 
 class StructureComparator( object ):
     def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
@@ -23,7 +31,44 @@ class StructureComparator( object ):
         """
         asetools.niggli_reduce(self.s1)
         asetools.niggli_reduce(self.s2)
+        #self.cell_to_standard(self.s1)
+        #self.cell_to_standard(self.s2)
 
+    def cell_to_standard( self, atoms ):
+        # TODO: This needs to be fixed
+        print ("Check that the cells are equal")
+        cell = atoms.get_cell().T
+        print (cell)
+
+        length_a = np.sqrt( np.sum(cell[:,0]**2) )
+
+        # Rotate around y-axis
+        angle = np.pi/2.0-np.arccos( cell[2,0]/length_a )
+        ca = np.cos(angle)
+        sa = np.sin(angle)
+        matrix = np.array( [[ca,0.0,sa],
+                            [0.0,1.0,0.0],
+                            [-sa,0.0,ca]])
+        cell = matrix.dot(cell)
+
+        # Rotate around z-axis
+        angle = np.pi/2.0-np.arccos( cell[1,0]/length_a)
+        ca = np.cos(-angle)
+        sa = np.sin(-angle)
+        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]])
+        cell = matrix.dot(cell)
+
+        # Rotate around x-axis such that b lies in the xy plane
+        length_b = np.sqrt( np.sum(cell[:,1]**2) )
+        angle = np.pi/2.0-np.arccos(cell[1,1]/length_b)
+        ca = np.cos(-angle)
+        sa = np.sin(-angle)
+        matrix = np.array( [[1.0,0.0,0.0],[0.0,ca,sa],[0.0,-sa,ca]])
+        cell = matrix.dot(cell)
+        atoms.set_cell(cell.T)
+        print (cell)
+        print ("=============================================================")
+        return atoms
 
     def get_element_count( self ):
         """
@@ -59,8 +104,8 @@ class StructureComparator( object ):
         """
         angles1 = []
         angles2 = []
-        cell1 = self.s1.get_cell()
-        cell2 = self.s2.get_cell()
+        cell1 = self.s1.get_cell().T
+        cell2 = self.s2.get_cell().T
 
         # Normalize each vector
         for i in range(3):
@@ -104,16 +149,9 @@ class StructureComparator( object ):
         if ( not self.has_same_angles() ):
             return False
 
-        matrices, translations = self.get_rotation_reflection_matrices()
-        print ("test positions")
-        if ( not self.positions_match(matrices, translations, self.s1, self.s2) ):
+        matrices = self.get_rotation_reflection_matrices()
+        if ( not self.positions_match(matrices, self.s1, self.s2) ):
             return False
-
-        print ("test elements")
-        exp1, app = self.expand(self.s1)
-        exp2, app = self.expand(self.s2)
-        if ( not self.elements_match(exp1,exp2) ):
-            return True
         return True
 
     def get_least_frequent_element( self ):
@@ -171,9 +209,8 @@ class StructureComparator( object ):
         atoms1.set_cell( self.s1.get_cell() )
         atoms2.set_cell( self.s2.get_cell() )
         return atoms1, atoms2
-        return np.array( position1 ), np.array( position2 )
 
-    def positions_match( self, rotation_reflection_matrices, center_of_mass, atoms1, atoms2 ):
+    def positions_match( self, rotation_reflection_matrices, atoms1, atoms2 ):
         """
         Check if the position and elements match.
         Note that this function changes self.s1 and self.s2 to the rotation and
@@ -184,62 +221,40 @@ class StructureComparator( object ):
         pos1_ref = atoms1.get_positions( wrap=True )
         pos2_ref = atoms2.get_positions( wrap=True )
 
-        cell = atoms1.get_cell()
+        cell = atoms1.get_cell().T
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
-        for matrix,com in zip(rotation_reflection_matrices,center_of_mass):
+        orig_cell = atoms1.get_cell()
+        for matrix in rotation_reflection_matrices:
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
 
-            # Translate to origin of rotation
-            pos1 -= com[0]
-            pos2 -= com[1]
+            pos4x4 = np.zeros((pos1.shape[0],4))
+            pos4x4[:,:3] = pos1
+            pos4x4[:,3] = -1
 
-            atoms1.set_positions( pos1+delta )
-            atoms2.set_positions( pos2+delta )
-            pos1 = atoms1.get_positions( wrap=True )
-            pos2 = atoms2.get_positions( wrap=True )
-
-            # Rotate/refect
-            pos1 = matrix.dot(pos1.T).T
+            # Rotate/reflect/translate
+            pos4x4 = matrix.dot(pos4x4.T).T
+            pos1 = pos4x4[:,:3]
 
             # Update the atoms positions
             atoms1.set_positions( pos1 )
-            atoms2.set_positions( pos2 )
-            pos1 = atoms1.get_positions( wrap=True )
-            pos2 = atoms2.get_positions( wrap=True )
-            atoms1.set_positions( pos1 )
-            atoms2.set_positions( pos2 )
+            #new_cell = matrix[:3,:3].dot(orig_cell.T).T
+            #atoms1.set_cell(new_cell)
+            atoms1.wrap( pbc=[1,1,1] )
 
-            exp1, app1 = self.expand(atoms1)
+            # Expand the reference object
             exp2, app2 = self.expand(atoms2)
-            pos1 = exp1.get_positions() # NOTE: No wrapping
-            pos2 = exp2.get_positions() # NOTE: No wrapping
+            #view(atoms1)
+            #view(exp2)
+            #time.sleep(10)
+            #print (np.linalg.det(matrix))
 
-            # Check that all closest distances match
-            used_sites = []
-            if ( pos1.shape[0] < pos2.shape[0] ):
-                for i in range(pos1.shape[0]):
-                    distances = np.sqrt( np.sum( (pos2-pos1[i,:])**2, axis=1 ) )
-                    closest = np.argmin(distances)
-                    if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
-                        break
-                    else:
-                        used_sites.append(closest)
-
-                if ( len(used_sites) == pos1.shape[0] ):
-                    return True
-            else:
-                for i in range(pos2.shape[0]):
-                    distances = np.sqrt( np.sum( (pos1-pos2[i,:])**2, axis=1 ) )
-                    closest = np.argmin(distances)
-                    if ( np.min(distances) > self.position_tolerance or closest in used_sites ):
-                        break
-                    else:
-                        used_sites.append(closest)
-
-                if ( len(used_sites) == pos2.shape[0] ):
-                    return True
+            if ( self.elements_match(atoms1,exp2) ):
+                return True
         return False
+
+
+
 
     def expand( self, ref_atoms ):
         """
@@ -249,7 +264,7 @@ class StructureComparator( object ):
         """
         expaned_atoms = copy.deepcopy(ref_atoms)
 
-        cell = ref_atoms.get_cell()
+        cell = ref_atoms.get_cell().T
         normal_vectors = [np.cross(cell[:,0],cell[:,1]), np.cross(cell[:,0],cell[:,2]), np.cross(cell[:,1],cell[:,2])]
         normal_vectors = [vec/np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
         positions = ref_atoms.get_positions(wrap=True)
@@ -424,17 +439,33 @@ class StructureComparator( object ):
     def elements_match( self, s1, s2 ):
         """
         Checks that all the elements in the two atoms match
-        """
 
-        used_sites = []
-        for i in range( len(s1) ):
-            distances = np.sum ( (s2.get_positions()-s1.get_positions()[i,:])**2, axis=1 )
-            closest = np.argmin( distances )
-            if ( not s1[i].symbol == s2[closest].symbol or closest in used_sites ):
-                return False
-            else:
-                used_sites.append( closest )
-        return True
+        NOTE: The unit cells may be in different quadrants
+        Hence, try all cyclic permutations of x,y and z
+        """
+        permuts = itertools.permutations(range(3),3)
+        #for order in range(3):
+        for order in permuts:
+            all_match = True
+            used_sites = []
+            for i in range( len(s1) ):
+                s1pos = np.zeros(3)
+                #s1pos[0] = s1.get_positions()[i,order]
+                #s1pos[1] = s1.get_positions()[i, (order+1)%3]
+                #s1pos[2] = s1.get_positions()[i, (order+2)%3]
+                s1pos[0] = s1.get_positions()[i, order[0]]
+                s1pos[1] = s1.get_positions()[i, order[1]]
+                s1pos[2] = s1.get_positions()[i, order[2]]
+                distances = np.sum ( (s2.get_positions()-s1pos)**2, axis=1 )
+                closest = np.argmin( distances )
+                if ( not s1[i].symbol == s2[closest].symbol or closest in used_sites ):
+                    all_match = False
+                    break
+                else:
+                    used_sites.append( closest )
+            if ( all_match ):
+                return True
+        return False
 
     def get_rotation_reflection_matrices( self ):
         """
@@ -445,84 +476,93 @@ class StructureComparator( object ):
         atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
-        cell = self.s1.get_cell()
+        cell = self.s1.get_cell().T
+        angle_tol = 0.25*np.pi/180.0
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
         cell_center = 0.5*(cell[:,0]+cell[:,1]+cell[:,2])
 
         # Put on of the least frequent elements of structure 2 at the origin
-        translation = atoms2_ref.get_positions()[0,:]-delta_vec-cell_center
+        translation = atoms2_ref.get_positions()[0,:]-delta_vec
         atoms2_ref.set_positions( atoms2_ref.get_positions() - translation )
-        atoms2_ref.set_positions( atoms2_ref.get_positions(wrap=True) )
+        atoms2_ref.wrap( pbc=[1,1,1] )
         self.s2.set_positions( self.s2.get_positions()-translation)
-        self.s2.set_positions( self.s2.get_positions(wrap=True) )
+        self.s2.wrap( pbc=[1,1,1] )
 
-        # Also update structure 1 to have on of the least frequent elements at the corner
-        translation = atoms1_ref.get_positions()[0,:]-delta_vec-cell_center
-        atoms1_ref.set_positions( atoms1_ref.get_positions()-translation)
-        atoms1_ref.set_positions( atoms1_ref.get_positions(wrap=True))
-        self.s1.set_positions( self.s1.get_positions()-translation)
-        s1_pos_ref = self.s1.get_positions(wrap=True)
-        self.s1.set_positions( s1_pos_ref )
+        sc_atom1 = atoms1_ref*(2,2,2)
+        sc_pos = sc_atom1.get_positions()
+        #view(sc_atom1)
+        #view(atoms2_ref)
 
-        for i in range( len(atoms1_ref) ):
-            # Change which atom is at the origin
-            new_pos = s1_pos_ref - atoms1_ref.get_positions()[i,:]+delta_vec+cell_center
-            self.s1.set_positions( new_pos )
-            new_pos = self.s1.get_positions(wrap=True)
-            self.s1.set_positions(new_pos)
-            #pos1, pos2 = self.extract_positions_of_least_frequent_element()
-            atoms1, atoms2 = self.extract_positions_of_least_frequent_element()
+        # Store three reference vectors
+        ref_vec = atoms2_ref.get_cell().T
+        ref_vec_lengths = np.sqrt( np.sum( ref_vec**2, axis=0 ) )
 
-            # Take the one with the fewer number of elements and test all combinations
-            #
-            #view(atoms2)
-            #
-            exp1, app = self.expand(atoms1)
+        canditate_trans_mat = []
 
-            # We know that the atom at the origin is in place, remove all swaps involving the atom at the origin
-            appended = []
-            for entry in app:
-                pos = exp1.get_positions()[entry[0],:]
-                if ( np.sqrt( np.sum(pos**2) ) < 1E-3 ):
+        # Compute ref vec angles
+        angle12_ref = np.arccos( ref_vec[:,0].dot(ref_vec[:,1])/(ref_vec_lengths[0]*ref_vec_lengths[1]) )
+        if ( angle12_ref > np.pi/2 ):
+            angle12_ref = np.pi-angle12_ref
+        angle13_ref = np.arccos( ref_vec[:,0].dot(ref_vec[:,2])/(ref_vec_lengths[0]*ref_vec_lengths[2]))
+        if ( angle13_ref > np.pi/2 ):
+            angle13_ref = np.pi-angle13_ref
+        angle23_ref = np.arccos( ref_vec[:,1].dot(ref_vec[:,2])/(ref_vec_lengths[1]*ref_vec_lengths[2]) )
+        if ( angle23_ref > np.pi/2.0 ):
+            angle23_ref = np.pi-angle23_ref
+
+        for i in range(len(sc_atom1)):
+            candidate_vecs = [[],[],[]]
+            translation = sc_pos[i,:]-delta_vec
+
+            new_sc_pos = sc_pos-translation
+            lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
+            for l in range( len(lengths) ):
+                if ( l==i ):
                     continue
-                appended.append(entry)
-            appended=app
+                for k in range(3):
+                    if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
+                        candidate_vecs[k].append(new_sc_pos[l,:])
 
-            possible_swaps = self.get_permutations_of_swaps(appended)
-            possible_swaps.insert(0,[])
+            # Check angles
+            refined_candidate_list = [[],[],[]]
+            for v1 in candidate_vecs[0]:
+                for v2 in candidate_vecs[1]:
+                    v1len = np.sqrt( np.sum(v1**2) )
+                    v2len = np.sqrt( np.sum(v2**2) )
+                    angle12 = np.arccos( v1.dot(v2)/(v1len*v2len) )
+                    if ( angle12 > np.pi/2.0 ):
+                        angle12 = np.pi-angle12
+                    for v3 in candidate_vecs[2]:
+                        v3len = np.sqrt( np.sum(v3**2) )
+                        angle13 = np.arccos( v1.dot(v3)/(v1len*v3len) )
+                        if ( angle13 > np.pi/2.0):
+                            angle13 = np.pi-angle13
 
-            pos2 = atoms2.get_positions(wrap=True)
-            cm2 = np.mean( pos2, axis=0 )
-            pos2 -= cm2
-            orig_pos = atoms1.get_positions()
-            expanded_positions = exp1.get_positions()
+                        angle23 = np.arccos( v2.dot(v3)/(v2len*v3len) )
+                        if ( angle23 > np.pi/2.0 ):
+                            angle23 = np.pi-angle23
 
-            # Take into account that some atoms maybe accidentaly crossed the unit cell
-            # border due to numerical noise
-            for swap in possible_swaps:
-                new_pos = copy.deepcopy(orig_pos)
-                for single_atom_swap in swap:
-                    new_pos[single_atom_swap[0],:] = expanded_positions[single_atom_swap[1],:]
-                atoms1.set_positions(new_pos)
+                        if ( np.abs(angle12-angle12_ref) < angle_tol and
+                             np.abs(angle13-angle13_ref) < angle_tol and
+                             np.abs(angle23-angle23_ref) < angle_tol):
+                            refined_candidate_list[0].append(v1)
+                            refined_candidate_list[1].append(v2)
+                            refined_candidate_list[2].append(v3)
 
-                pos1 = atoms1.get_positions()
-                cm1 = np.mean( pos1, axis=0 )
-                pos1 -= cm1
-
-                M = pos2.T.dot(pos1)
-                U, S, V = np.linalg.svd(M)
-                bestMatrix = U.dot(V)
-
-                # If this transformation matrix manages to map the least frequent elements
-                # onto one another, append to the canditade transformations
-                if ( self.positions_match([bestMatrix],[(cm1,cm2)], atoms1, atoms2) ):
-                    center_of_mass.append( (cm1,cm2) )
-                    rot_reflection_mat.append( bestMatrix )
-
-        self.s1.set_positions( s1_pos_ref )
-        print (rot_reflection_mat)
-        return rot_reflection_mat, center_of_mass
+            # Compute rotation/reflection/translation matrices (4x4 matrices)
+            for v1,v2,v3 in zip(refined_candidate_list[0],refined_candidate_list[1],refined_candidate_list[2]):
+                T = np.zeros((3,3))
+                T[:,0] = v1
+                T[:,1] = v2
+                T[:,2] = v3
+                R = ref_vec.dot( np.linalg.inv(T) )
+                full_matrix = np.zeros((4,4))
+                full_matrix[:3,:3] = R
+                full_matrix[3,3] = 1
+                full_matrix[:3,3] = translation
+                canditate_trans_mat.append(full_matrix)
+        return canditate_trans_mat
 
     def get_permutations_of_swaps( self, candidate_swaps ):
         """
@@ -558,10 +598,12 @@ class StructureComparator( object ):
             all_swaps += new_possible_swaps
         return all_swaps
 
-
-
 # ======================== UNIT TESTS ==========================================
 class TestStructureComparator( unittest.TestCase ):
+    pymat_code = {
+        True:"Equal",
+        False:"Different"
+    }
     def test_compare( self ):
         s1 = bulk( "Al" )
         s1 = s1*(2,2,2)
@@ -594,40 +636,64 @@ class TestStructureComparator( unittest.TestCase ):
         s2 = read("test_structures/neigh2.xyz")
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
-
         s2 = read("test_structures/neigh3.xyz")
         self.assertFalse( comparator.compare(s1,s2) )
 
     def test_reflection_three_imp(self):
         s1 = read("test_structures/reflection1.xyz")
         s2 = read("test_structures/reflection2.xyz")
-        #view(s1)
-        #view(s2)
         comparator = StructureComparator()
+
+        if ( has_pymat_gen ):
+            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
+                             primitive_cell=True, scale=True)
+            str1 = atoms_to_structure(s1)
+            str2 = atoms_to_structure(s2)
+            print ("PyMatGen says: %s"%(self.pymat_code[m.fit(str1,str2)]))
+
         self.assertTrue( comparator.compare(s1,s2) )
+
 
     def test_translations( self ):
         s1 = read("test_structures/mixStruct.xyz")
         s2 = read("test_structures/mixStruct.xyz")
 
-        xmax = 2.0*np.max(s1.get_cell())
-        N = 3
+        xmax = 2.0*np.max(s1.get_cell().T)
+        N = 1
         dx = xmax/N
         pos_ref = s2.get_positions()
-        comparator = StructureComparator()
+        comparator = StructureComparator( position_tolerance=0.01 )
         number_of_correctly_identified = 0
         for i in range(N):
             for j in range(N):
                 for k in range(N):
-                    displacepement = [ dx*i, dx*j,dx*k ]
-                    new_pos = pos_ref + displacepement
+                    displacement = np.array( [ dx*i, dx*j,dx*k ] )
+                    new_pos = pos_ref + displacement
                     s2.set_positions(new_pos)
-                    s2.set_positions( s2.get_positions(wrap=True) )
                     if ( comparator.compare(s1,s2) ):
                         number_of_correctly_identified += 1
 
         msg = "Identified %d of %d as duplicates. All structures are known to be duplicates."%(number_of_correctly_identified,N**3)
         self.assertEqual( number_of_correctly_identified, N**3, msg=msg )
+
+    def test_rot_60_deg( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        ca = np.cos(np.pi/3.0)
+        sa = np.sin(np.pi/3.0)
+        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
+        s2.set_positions( matrix.dot(s2.get_positions().T).T )
+        #s2.set_cell( matrix.dot(s2.get_cell().T).T )
+        comparator = StructureComparator()
+
+        if ( has_pymat_gen ):
+            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
+                             primitive_cell=True, scale=True)
+            str1 = atoms_to_structure(s1)
+            str2 = atoms_to_structure(s2)
+            print ("PyMatGen says: %s"%(self.pymat_code[m.fit(str1,str2)]))
+
+        self.assertTrue( comparator.compare(s1,s2) )
 
 if __name__ == "__main__":
     unittest.main()
