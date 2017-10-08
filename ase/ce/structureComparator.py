@@ -10,6 +10,9 @@ import time
 from matplotlib import pyplot as plt
 import itertools
 try:
+    # The code runs perfectly fine without pymatgen
+    # PyMatGen is imported just for debugging to verify
+    # that the two codes returns the same
     from pymatgen.io.ase import AseAtomsAdaptor
     atoms_to_structure = AseAtomsAdaptor.get_structure
     from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -132,6 +135,9 @@ class StructureComparator( object ):
                 return False
         return True
 
+    def has_same_volume( self ):
+        return np.abs( np.linalg.det(self.s1.get_cell())-np.linalg.det(self.s2.get_cell()) < 1E-5 )
+
     def compare( self, s1, s2 ):
         """
         Compare the two structures
@@ -147,6 +153,9 @@ class StructureComparator( object ):
 
         self.niggli_reduce()
         if ( not self.has_same_angles() ):
+            return False
+
+        if ( not self.has_same_volume() ):
             return False
 
         matrices = self.get_rotation_reflection_matrices()
@@ -179,9 +188,6 @@ class StructureComparator( object ):
         elem_pos2 = {}
         pos1 = self.s1.get_positions(wrap=True)
         pos2 = self.s2.get_positions(wrap=True)
-
-        #pos1 -= np.mean(pos1,axis=0)
-        #pos2 -= np.mean(pos2,axis=0)
 
         least_freq_element = self.get_least_frequent_element()
 
@@ -227,7 +233,7 @@ class StructureComparator( object ):
         for matrix in rotation_reflection_matrices:
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
-
+            """
             pos4x4 = np.zeros((pos1.shape[0],4))
             pos4x4[:,:3] = pos1
             pos4x4[:,3] = -1
@@ -235,6 +241,11 @@ class StructureComparator( object ):
             # Rotate/reflect/translate
             pos4x4 = matrix.dot(pos4x4.T).T
             pos1 = pos4x4[:,:3]
+            """
+            # Translate
+            pos1 -= matrix[:3,3]
+            # Rotate
+            pos1 = matrix[:3,:3].dot(pos1.T).T
 
             # Update the atoms positions
             atoms1.set_positions( pos1 )
@@ -247,14 +258,11 @@ class StructureComparator( object ):
             #view(atoms1)
             #view(exp2)
             #time.sleep(10)
-            #print (np.linalg.det(matrix))
+            #print (matrix)
 
             if ( self.elements_match(atoms1,exp2) ):
                 return True
         return False
-
-
-
 
     def expand( self, ref_atoms ):
         """
@@ -557,6 +565,10 @@ class StructureComparator( object ):
                 T[:,1] = v2
                 T[:,2] = v3
                 R = ref_vec.dot( np.linalg.inv(T) )
+
+                # Skip the rotation/reflection matrix if it is not unitary
+                if ( not np.allclose(R.dot(R.T),np.eye(3),atol=0.001) ):
+                    continue
                 full_matrix = np.zeros((4,4))
                 full_matrix[:3,:3] = R
                 full_matrix[3,3] = 1
