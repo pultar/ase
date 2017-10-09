@@ -1,4 +1,5 @@
 from __future__ import print_function
+import sys
 from ase.build import tools as asetools
 import unittest
 import numpy as np
@@ -12,6 +13,7 @@ from matplotlib import pyplot as plt
 import itertools
 from ase.spacegroup import spacegroup
 from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
+
 try:
     # The code runs perfectly fine without pymatgen
     # PyMatGen is imported just for debugging to verify
@@ -254,6 +256,7 @@ class StructureComparator( object ):
         cell = atoms1.get_cell().T
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
         orig_cell = atoms1.get_cell()
+
         for matrix in rotation_reflection_matrices:
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
@@ -532,7 +535,8 @@ class StructureComparator( object ):
         #view(sc_atom1)
         #view(atoms2_ref)
 
-        for i in range(len(sc_atom1)):
+
+        for i in range( len(sc_atom1) ):
             candidate_vecs = [[],[],[]]
             translation = sc_pos[i,:]-delta_vec
 
@@ -719,6 +723,7 @@ class TestStructureComparator( unittest.TestCase ):
     def test_point_inversion( self ):
         s1 = read("test_structures/mixStruct.xyz")
         s2 = read("test_structures/mixStruct.xyz")
+        view(s1)
         s2.set_positions( -s2.get_positions() )
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
@@ -755,44 +760,10 @@ class TestStructureComparator( unittest.TestCase ):
         s2.set_positions(pos)
         self.assertFalse( comparator.compare(s1,s2) )
 
-    def test_all_spacegroups(self):
-        comparator = StructureComparator()
-        if ( has_pymat_gen ):
-            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                             primitive_cell=True, scale=True)
-
-        num_recognized = 0
-        total = 0
-        elements = ["Ti","O","Mg","Al"]
-        a = 4.0 # Just a number, irrelevant here
-        lattices = [cubic.SimpleCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
-                    cubic.FaceCenteredCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
-                    cubic.BodyCenteredCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
-                    tetragonal.SimpleTetragonal(symbol="Al",latticeconstant=(a,2*a),size=(2,2,2)),
-                    tetragonal.CenteredTetragonal(symbol="Al",latticeconstant=(a,2*a),size=(2,2,2)),
-                    orthorhombic.SimpleOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
-                    orthorhombic.BaseCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
-                    orthorhombic.FaceCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
-                    orthorhombic.BodyCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
-                    monoclinic.SimpleMonoclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,76), size=(2,2,2)),
-                    monoclinic.BaseCenteredMonoclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,76),size=(2,2,2)),
-                    triclinic.Triclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,81,72,87),size=(2,2,2)),
-                    hexagonal.Hexagonal(symbol="Al",latticeconstant=(a,0.8*a),size=(2,2,2))]
-
-        for lat in lattices:
-            # Replace atoms by a random element
-            for i in range(len(lat)):
-                lat[i].symbol = elements[np.random.randint(low=0,high=len(elements))]
-
-            # Get the space group
-            sg = spacegroup.get_spacegroup(lat)
-            num_rec = 0
-            for op in sg.get_rotations():
-                duplicate = copy.deepcopy(lat)
-                duplicate.set_positions( op.dot(lat.get_positions().T).T )
-                if ( comparator.compare(lat,duplicate) ):
-                    num_rec += 1
-            self.assertEqual(num_rec,len(sg.get_rotations()))
+class LargeTestHCP(object):
+    def __init__(self):
+        self.structure = read("test_structures/mixStruct.xyz")
 
 if __name__ == "__main__":
+    # Run the unittests
     unittest.main()
