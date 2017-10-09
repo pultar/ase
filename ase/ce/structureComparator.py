@@ -1,3 +1,4 @@
+from __future__ import print_function
 from ase.build import tools as asetools
 import unittest
 import numpy as np
@@ -9,6 +10,8 @@ from ase.io import read, write
 import time
 from matplotlib import pyplot as plt
 import itertools
+from ase.spacegroup import spacegroup
+from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
 try:
     # The code runs perfectly fine without pymatgen
     # PyMatGen is imported just for debugging to verify
@@ -254,15 +257,7 @@ class StructureComparator( object ):
         for matrix in rotation_reflection_matrices:
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
-            """
-            pos4x4 = np.zeros((pos1.shape[0],4))
-            pos4x4[:,:3] = pos1
-            pos4x4[:,3] = -1
 
-            # Rotate/reflect/translate
-            pos4x4 = matrix.dot(pos4x4.T).T
-            pos1 = pos4x4[:,:3]
-            """
             # Translate
             pos1 -= matrix[:3,3]
             # Rotate
@@ -270,16 +265,10 @@ class StructureComparator( object ):
 
             # Update the atoms positions
             atoms1.set_positions( pos1 )
-            #new_cell = matrix[:3,:3].dot(orig_cell.T).T
-            #atoms1.set_cell(new_cell)
             atoms1.wrap( pbc=[1,1,1] )
 
             # Expand the reference object
             exp2, app2 = self.expand(atoms2)
-            #view(atoms1)
-            #view(exp2)
-            #time.sleep(10)
-            #print (matrix)
 
             if ( self.elements_match(atoms1,exp2) ):
                 return True
@@ -472,22 +461,18 @@ class StructureComparator( object ):
         NOTE: The unit cells may be in different quadrants
         Hence, try all cyclic permutations of x,y and z
         """
-        permuts = itertools.permutations(range(3),3)
-        #for order in range(3):
-        for order in permuts:
+
+        for order in range(3):
             all_match = True
             used_sites = []
             for i in range( len(s1) ):
                 s1pos = np.zeros(3)
-                #s1pos[0] = s1.get_positions()[i,order]
-                #s1pos[1] = s1.get_positions()[i, (order+1)%3]
-                #s1pos[2] = s1.get_positions()[i, (order+2)%3]
-                s1pos[0] = s1.get_positions()[i, order[0]]
-                s1pos[1] = s1.get_positions()[i, order[1]]
-                s1pos[2] = s1.get_positions()[i, order[2]]
+                s1pos[0] = s1.get_positions()[i,order]
+                s1pos[1] = s1.get_positions()[i, (order+1)%3]
+                s1pos[2] = s1.get_positions()[i, (order+2)%3]
                 distances = np.sum ( (s2.get_positions()-s1pos)**2, axis=1 )
                 closest = np.argmin( distances )
-                if ( not s1[i].symbol == s2[closest].symbol or closest in used_sites ):
+                if ( (not s1[i].symbol == s2[closest].symbol) or (closest in used_sites) or (distances[closest] > self.position_tolerance) ):
                     all_match = False
                     break
                 else:
@@ -506,7 +491,7 @@ class StructureComparator( object ):
         rot_reflection_mat = []
         center_of_mass = []
         cell = self.s1.get_cell().T
-        angle_tol = 0.25*np.pi/180.0
+        angle_tol = self.angleTolDeg*np.pi/180.0
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
 
@@ -518,9 +503,11 @@ class StructureComparator( object ):
         self.s2.wrap( pbc=[1,1,1] )
 
         sc_atom1 = atoms1_ref*(3,3,3)
+        sc_atom1 = atoms1_ref*(2,2,2)
+        #sc_atom1, app = self.expand(sc_atom1)
         sc_pos = sc_atom1.get_positions()
-        #view(sc_atom1)
-        #view(atoms2_ref)
+        view(sc_atom1)
+        view(atoms2_ref)
 
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
@@ -597,41 +584,12 @@ class StructureComparator( object ):
                 canditate_trans_mat.append(full_matrix)
         return canditate_trans_mat
 
-    def get_permutations_of_swaps( self, candidate_swaps ):
-        """
-        Generates a list with all possible combinations of the swaps
-        """
-        all_swaps = []
-        swap_dict = {}
-        for entry in candidate_swaps:
-            all_swaps.append([entry])
-            if ( entry[0] in swap_dict.keys() ):
-                swap_dict[entry[0]].append(entry[1])
-            else:
-                swap_dict[entry[0]] = [entry[1]]
-
-        max_swap_number = -20
-        max_swap_id = 0
-        for key, value in swap_dict.iteritems():
-            if ( len(value) > max_swap_number ):
-                max_swap_number = len(value)
-            if ( int(key) > max_swap_id ):
-                max_swap_id = int(key)
-
-        for i in range(2,max_swap_number+1):
-            new_swaps =  list( itertools.combinations( candidate_swaps, i ) )
-            # Remove entries that swaps the same atom
-            new_possible_swaps = []
-            for entry in new_swaps:
-                duplicate_count = np.zeros(max_swap_id+1, dtype=np.uint8)
-                for subentry in entry:
-                    duplicate_count[subentry[0]] += 1
-                if ( np.all( duplicate_count <= 1) ):
-                    new_possible_swaps.append(list(entry))
-            all_swaps += new_possible_swaps
-        return all_swaps
-
-# ======================== UNIT TESTS ==========================================
+# ============================================================================ #
+#                                                                              #
+#       BELOW THIS LINE IS ONLY FUNCTIONALITY FOR TESTING THE                  #
+#                       STRUCTURE COMPARATOR                                   #
+#                                                                              #
+# ============================================================================ #
 class TestStructureComparator( unittest.TestCase ):
     pymat_code = {
         True:"Equal",
@@ -734,7 +692,7 @@ class TestStructureComparator( unittest.TestCase ):
         sa = np.sin(2.0*np.pi/3.0)
         matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
         s2.set_positions( matrix.dot(s2.get_positions().T).T )
-        #s2.set_cell( matrix.dot(s2.get_cell().T).T )
+        s2.set_cell( matrix.dot(s2.get_cell().T).T )
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
 
@@ -749,6 +707,83 @@ class TestStructureComparator( unittest.TestCase ):
             self.assertAlmostEqual( new_cell[2,0], 0.0)
             self.assertAlmostEqual( new_cell[2,1], 0.0 )
 
+    def test_point_inversion( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        s2.set_positions( -s2.get_positions() )
+        comparator = StructureComparator()
+        self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_mirror_plane( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        comparator = StructureComparator()
+        mat = np.array( [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,-1.0]])
+        s2.set_positions( mat.dot(s2.get_positions().T).T )
+        self.assertTrue( comparator.compare(s1,s2) )
+
+        mat = np.array( [[-1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])
+        s2.set_positions( mat.dot(s1.get_positions().T).T )
+        self.assertTrue( comparator.compare(s1,s2))
+
+        mat = np.array( [[1.0,0.0,0.0],[0.0,-1.0,0.0],[0.0,0.0,1.0]])
+        s2.set_positions( mat.dot(s1.get_positions().T).T )
+        self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_bcc_translation( self ):
+        s1 = read("test_structures/bcc_mix.xyz")
+        s2 = read("test_structures/bcc_mix.xyz")
+        s2.set_positions( s2.get_positions()+np.array( [6.0,-2.0,1.0] ))
+        comparator = StructureComparator()
+        self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_one_atom_out_of_pos( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        comparator = StructureComparator( angleTolDeg=0.2, position_tolerance=0.01 )
+        pos = s1.get_positions()
+        pos[0,:] += 0.2
+        s2.set_positions(pos)
+        self.assertFalse( comparator.compare(s1,s2) )
+
+    def test_all_spacegroups(self):
+        comparator = StructureComparator()
+        if ( has_pymat_gen ):
+            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
+                             primitive_cell=True, scale=True)
+
+        num_recognized = 0
+        total = 0
+        elements = ["Ti","O","Mg","Al"]
+        a = 4.0 # Just a number, irrelevant here
+        lattices = [cubic.SimpleCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
+                    cubic.FaceCenteredCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
+                    cubic.BodyCenteredCubic(symbol="Al",latticeconstant=a,size=(2,2,2)),
+                    tetragonal.SimpleTetragonal(symbol="Al",latticeconstant=(a,2*a),size=(2,2,2)),
+                    tetragonal.CenteredTetragonal(symbol="Al",latticeconstant=(a,2*a),size=(2,2,2)),
+                    orthorhombic.SimpleOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
+                    orthorhombic.BaseCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
+                    orthorhombic.FaceCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
+                    orthorhombic.BodyCenteredOrthorhombic(symbol="Al",latticeconstant=(a,2*a,0.5*a),size=(2,2,2)),
+                    monoclinic.SimpleMonoclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,76), size=(2,2,2)),
+                    monoclinic.BaseCenteredMonoclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,76),size=(2,2,2)),
+                    triclinic.Triclinic(symbol="Al",latticeconstant=(a,2*a,0.5*a,81,72,87),size=(2,2,2)),
+                    hexagonal.Hexagonal(symbol="Al",latticeconstant=(a,0.8*a),size=(2,2,2))]
+
+        for lat in lattices:
+            # Replace atoms by a random element
+            for i in range(len(lat)):
+                lat[i].symbol = elements[np.random.randint(low=0,high=len(elements))]
+
+            # Get the space group
+            sg = spacegroup.get_spacegroup(lat)
+            num_rec = 0
+            for op in sg.get_rotations():
+                duplicate = copy.deepcopy(lat)
+                duplicate.set_positions( op.dot(lat.get_positions().T).T )
+                if ( comparator.compare(lat,duplicate) ):
+                    num_rec += 1
+            self.assertEqual(num_rec,len(sg.get_rotations()))
 
 if __name__ == "__main__":
     unittest.main()
