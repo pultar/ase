@@ -503,11 +503,11 @@ class StructureComparator( object ):
         self.s2.wrap( pbc=[1,1,1] )
 
         sc_atom1 = atoms1_ref*(3,3,3)
-        sc_atom1 = atoms1_ref*(2,2,2)
+        #sc_atom1 = atoms1_ref*(2,2,2)
         #sc_atom1, app = self.expand(sc_atom1)
         sc_pos = sc_atom1.get_positions()
-        view(sc_atom1)
-        view(atoms2_ref)
+        #view(sc_atom1)
+        #view(atoms2_ref)
 
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
