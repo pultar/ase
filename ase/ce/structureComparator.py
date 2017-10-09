@@ -260,6 +260,7 @@ class StructureComparator( object ):
 
             # Translate
             pos1 -= matrix[:3,3]
+
             # Rotate
             pos1 = matrix[:3,:3].dot(pos1.T).T
 
@@ -502,12 +503,6 @@ class StructureComparator( object ):
         self.s2.set_positions( self.s2.get_positions()-translation)
         self.s2.wrap( pbc=[1,1,1] )
 
-        sc_atom1 = atoms1_ref*(3,3,3)
-        #sc_atom1 = atoms1_ref*(2,2,2)
-        #sc_atom1, app = self.expand(sc_atom1)
-        sc_pos = sc_atom1.get_positions()
-        #view(sc_atom1)
-        #view(atoms2_ref)
 
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
@@ -527,11 +522,21 @@ class StructureComparator( object ):
         if ( angle23_ref > np.pi/2.0 ):
             angle23_ref = np.pi-angle23_ref
 
+        if ( np.any( np.abs(ref_vec_lengths-np.sqrt(np.sum(cell_diag**2))) < 1E-4) ):
+            sc_atom1 = atoms1_ref*(3,3,3)
+        else:
+            sc_atom1 = atoms1_ref*(2,2,2)
+        sc_atom_search = atoms1_ref*(3,3,3)
+        sc_pos = sc_atom1.get_positions()
+        sc_pos_search = sc_atom_search.get_positions()
+        #view(sc_atom1)
+        #view(atoms2_ref)
+
         for i in range(len(sc_atom1)):
             candidate_vecs = [[],[],[]]
             translation = sc_pos[i,:]-delta_vec
 
-            new_sc_pos = sc_pos-translation
+            new_sc_pos = sc_pos_search-translation
             lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
             for l in range( len(lengths) ):
                 if ( l==i ):
@@ -544,12 +549,16 @@ class StructureComparator( object ):
             refined_candidate_list = [[],[],[]]
             for v1 in candidate_vecs[0]:
                 for v2 in candidate_vecs[1]:
+                    if ( np.allclose(v1,v2, atol=1E-3) ):
+                        continue
                     v1len = np.sqrt( np.sum(v1**2) )
                     v2len = np.sqrt( np.sum(v2**2) )
                     angle12 = np.arccos( v1.dot(v2)/(v1len*v2len) )
                     if ( angle12 > np.pi/2.0 ):
                         angle12 = np.pi-angle12
                     for v3 in candidate_vecs[2]:
+                        if ( np.allclose(v1,v3, atol=1E-3) or np.allclose(v2,v3, atol=1E-3) ):
+                            continue
                         v3len = np.sqrt( np.sum(v3**2) )
                         angle13 = np.arccos( v1.dot(v3)/(v1len*v3len) )
                         if ( angle13 > np.pi/2.0):
@@ -733,7 +742,7 @@ class TestStructureComparator( unittest.TestCase ):
     def test_bcc_translation( self ):
         s1 = read("test_structures/bcc_mix.xyz")
         s2 = read("test_structures/bcc_mix.xyz")
-        s2.set_positions( s2.get_positions()+np.array( [6.0,-2.0,1.0] ))
+        s2.set_positions( s2.get_positions()+np.array([6.0,-2.0,1.0]) )
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
 
