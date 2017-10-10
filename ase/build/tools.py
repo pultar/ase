@@ -620,34 +620,20 @@ def niggli_reduce(atoms):
 
 
 def lower_triangular_form(cell):
-
-    """Returns a lower triangular form of the supplied unit cell
-    """
+    """Returns a lower triangular form of the supplied unit cell"""
 
     assert cell.shape == (3, 3)
 
     R, Q = scipy.linalg.rq(cell.T)
-    Q = Q.T
-    L = R.T
+    Q, L = Q.T, R.T
 
-    assert np.sign(np.linalg.det(cell)) == np.sign(np.linalg.det(L))
-    '''scipy.linalg.rq appears to always return a right-handed Q matrix
-    The assertion above is to verify this behaviour.
-    If it changes in the future, code must be added to change Q.
-    '''
-
-    #verify that the result is in lower triangular form
-    assert abs(L[0, 1]) < 1E-12
-    assert abs(L[0, 2]) < 1E-12
-    assert abs(L[1, 2]) < 1E-12
-
-    #verify that we have the correct result
+    # verify that we have the correct result
     assert np.linalg.norm(cell - np.dot(Q, L)) < 1E-12
 
     return L
 
-def rebase_cell(atoms):
 
+def standardize_unit_cell(atoms):
     """Convert the unit cell of the supplied atoms object
     to lower triangular form
     """
