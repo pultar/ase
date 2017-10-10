@@ -529,6 +529,7 @@ class StructureComparator( object ):
             sc_atom1 = atoms1_ref*(3,3,3)
         else:
             sc_atom1 = atoms1_ref*(2,2,2)
+            #sc_atom1 = atoms1_ref*(3,3,3)
         sc_atom_search = atoms1_ref*(3,3,3)
         sc_pos = sc_atom1.get_positions()
         sc_pos_search = sc_atom_search.get_positions()
@@ -588,8 +589,8 @@ class StructureComparator( object ):
                 R = ref_vec.dot( np.linalg.inv(T) )
 
                 # Skip the rotation/reflection matrix if it is not unitary
-                if ( not np.allclose(R.dot(R.T),np.eye(3),atol=0.001) ):
-                    continue
+                #if ( not np.allclose(R.dot(R.T),np.eye(3),atol=0.001) ):
+                #    continue
                 full_matrix = np.zeros((4,4))
                 full_matrix[:3,:3] = R
                 full_matrix[3,3] = 1
@@ -743,6 +744,26 @@ class TestStructureComparator( unittest.TestCase ):
         mat = np.array( [[1.0,0.0,0.0],[0.0,-1.0,0.0],[0.0,0.0,1.0]])
         s2.set_positions( mat.dot(s1.get_positions().T).T )
         self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_hcp_symmetry_ops( self ):
+        s1 = read("test_structures/mixStruct.xyz")
+        s2 = read("test_structures/mixStruct.xyz")
+        comparator = StructureComparator()
+        sg = spacegroup.Spacegroup(194)
+        cell = s2.get_cell().T
+        lengths = np.sqrt( np.sum(cell**2, axis=0) )
+        inv_cell = np.linalg.inv(cell)
+        for op in sg.get_rotations():
+            s1 = read("test_structures/mixStruct.xyz")
+            s2 = read("test_structures/mixStruct.xyz")
+            transformed_op = cell.dot(op).dot(inv_cell)
+            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
+            if ( has_pymat_gen ):
+                m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
+                                 primitive_cell=True, scale=True)
+                str1 = atoms_to_structure(s1)
+                str2 = atoms_to_structure(s2)
+            self.assertTrue( comparator.compare(s1,s2) )
 
     def test_bcc_translation( self ):
         s1 = read("test_structures/bcc_mix.xyz")
