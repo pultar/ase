@@ -1,5 +1,6 @@
 import numpy as np
 from ase.utils import basestring
+import scipy.linalg
 
 
 def cut(atoms, a=(1, 0, 0), b=(0, 1, 0), c=None, clength=None,
@@ -611,6 +612,47 @@ def niggli_reduce(atoms):
     assert all(atoms.pbc), 'Can only reduce 3d periodic unit cells!'
     new_cell, C = niggli_reduce_cell(atoms.cell)
     scpos = np.dot(atoms.get_scaled_positions(), np.linalg.inv(C).T)
+    scpos %= 1.0
+    scpos %= 1.0
+
+    atoms.set_cell(new_cell)
+    atoms.set_scaled_positions(scpos)
+
+
+def lower_triangular_form(cell):
+
+    """Returns a lower triangular form of the supplied unit cell
+    """
+
+    assert cell.shape == (3, 3)
+
+    R, Q = scipy.linalg.rq(cell.T)
+    Q = Q.T
+    L = R.T
+
+    assert np.sign(np.linalg.det(cell)) == np.sign(np.linalg.det(L))
+    #scipy.linalg.rq appears to always return a right-handed Q matrix
+    #The assertion above is to verify this behaviour.
+    #If it changes in the future, code must be added to change Q.
+
+    #verify that the result is in lower triangular form
+    assert abs(L[0, 1]) < 1E-12
+    assert abs(L[0, 2]) < 1E-12
+    assert abs(L[1, 2]) < 1E-12
+
+    #verify that we have the correct result
+    assert np.linalg.norm(cell - np.dot(Q, L)) < 1E-12
+
+    return L
+
+def rebase_cell(atoms):
+
+    """Convert the unit cell of the supplied atoms object
+    to lower triangular form
+    """
+
+    new_cell = lower_triangular_form(atoms.cell)
+    scpos = np.dot(atoms.get_scaled_positions(), new_cell)
     scpos %= 1.0
     scpos %= 1.0
 
