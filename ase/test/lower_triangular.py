@@ -3,7 +3,7 @@ code, which is self-validating
 """
 
 import numpy as np
-from ase.build.tools import lower_triangular
+from ase.build.tools import lower_triangular_form
 
 def test_lower_triangular():
     """check that the cell matrix is correctly reduced."""

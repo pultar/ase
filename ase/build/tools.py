@@ -631,9 +631,10 @@ def lower_triangular_form(cell):
     L = R.T
 
     assert np.sign(np.linalg.det(cell)) == np.sign(np.linalg.det(L))
-    #scipy.linalg.rq appears to always return a right-handed Q matrix
-    #The assertion above is to verify this behaviour.
-    #If it changes in the future, code must be added to change Q.
+    '''scipy.linalg.rq appears to always return a right-handed Q matrix
+    The assertion above is to verify this behaviour.
+    If it changes in the future, code must be added to change Q.
+    '''
 
     #verify that the result is in lower triangular form
     assert abs(L[0, 1]) < 1E-12
