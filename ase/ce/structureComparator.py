@@ -13,6 +13,8 @@ from matplotlib import pyplot as plt
 import itertools
 from ase.spacegroup import spacegroup
 from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
+import time
+from scipy.spatial import KDTree
 
 try:
     # The code runs perfectly fine without pymatgen
@@ -184,9 +186,15 @@ class StructureComparator( object ):
         if ( not self.has_same_volume() ):
             return False
 
+        start = time.time()
         matrices = self.get_rotation_reflection_matrices()
+        end = time.time()
+        print ("Rotmatrix search tood %.2E sec"%(end-start))
+        start = time.time()
         if ( not self.positions_match(matrices, self.s1, self.s2) ):
             return False
+        end = time.time()
+        print ("Comparing took %.2E sec"%(end-start))
         return True
 
     def get_least_frequent_element( self ):
@@ -257,6 +265,12 @@ class StructureComparator( object ):
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
         orig_cell = atoms1.get_cell()
 
+        # Expand the reference object
+        exp2, app2 = self.expand(atoms2)
+
+        # Build a KD tree to enable fast look-up of nearest neighbours
+        tree = KDTree(exp2.get_positions())
+
         for matrix in rotation_reflection_matrices:
             pos1 = copy.deepcopy(pos1_ref)
             pos2 = copy.deepcopy(pos2_ref)
@@ -271,10 +285,7 @@ class StructureComparator( object ):
             atoms1.set_positions( pos1 )
             atoms1.wrap( pbc=[1,1,1] )
 
-            # Expand the reference object
-            exp2, app2 = self.expand(atoms2)
-
-            if ( self.elements_match(atoms1,exp2) ):
+            if ( self.elements_match(atoms1,exp2,tree) ):
                 return True
         return False
 
@@ -458,7 +469,7 @@ class StructureComparator( object ):
 
         return expaned_atoms, appended_atom_pairs
 
-    def elements_match( self, s1, s2 ):
+    def elements_match( self, s1, s2, kdtree ):
         """
         Checks that all the elements in the two atoms match
 
@@ -474,13 +485,10 @@ class StructureComparator( object ):
                 s1pos[0] = s1.get_positions()[i,order]
                 s1pos[1] = s1.get_positions()[i, (order+1)%3]
                 s1pos[2] = s1.get_positions()[i, (order+2)%3]
-                distances = np.sum ( (s2.get_positions()-s1pos)**2, axis=1 )
-                closest = np.argmin( distances )
-                if ( (not s1[i].symbol == s2[closest].symbol) or (closest in used_sites) or (distances[closest] > self.position_tolerance) ):
+                dist, closest = kdtree.query(s1pos)
+                if ( (s1[i].symbol != s2[closest].symbol) or (dist > self.position_tolerance)):
                     all_match = False
                     break
-                else:
-                    used_sites.append( closest )
             if ( all_match ):
                 return True
         return False
