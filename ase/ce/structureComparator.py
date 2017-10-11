@@ -778,6 +778,20 @@ class TestStructureComparator( unittest.TestCase ):
             s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
             self.assertTrue( comparator.compare(s1,s2) )
 
+    def test_bcc_symmetry_ops( self ):
+        s1 = read("test_structures/bcc_mix.xyz")
+        s2 = read("test_structures/bcc_mix.xyz")
+        comparator = StructureComparator()
+        sg = spacegroup.Spacegroup(229)
+        cell = s2.get_cell().T
+        inv_cell = np.linalg.inv(cell)
+        for op in sg.get_rotations():
+            s1 = read("test_structures/bcc_mix.xyz")
+            s2 = read("test_structures/bcc_mix.xyz")
+            transformed_op = cell.dot(op).dot(inv_cell)
+            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
+            self.assertTrue( comparator.compare(s1,s2) )
+
     def test_bcc_translation( self ):
         s1 = read("test_structures/bcc_mix.xyz")
         s2 = read("test_structures/bcc_mix.xyz")
