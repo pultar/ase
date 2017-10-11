@@ -751,7 +751,6 @@ class TestStructureComparator( unittest.TestCase ):
         comparator = StructureComparator()
         sg = spacegroup.Spacegroup(194)
         cell = s2.get_cell().T
-        lengths = np.sqrt( np.sum(cell**2, axis=0) )
         inv_cell = np.linalg.inv(cell)
         for op in sg.get_rotations():
             s1 = read("test_structures/mixStruct.xyz")
@@ -763,6 +762,20 @@ class TestStructureComparator( unittest.TestCase ):
                                  primitive_cell=True, scale=True)
                 str1 = atoms_to_structure(s1)
                 str2 = atoms_to_structure(s2)
+            self.assertTrue( comparator.compare(s1,s2) )
+
+    def test_fcc_symmetry_ops( self ):
+        s1 = read("test_structures/fccMix.xyz")
+        s2 = read("test_structures/fccMix.xyz")
+        comparator = StructureComparator()
+        sg = spacegroup.Spacegroup(225)
+        cell = s2.get_cell().T
+        inv_cell = np.linalg.inv(cell)
+        for op in sg.get_rotations():
+            s1 = read("test_structures/fccMix.xyz")
+            s2 = read("test_structures/fccMix.xyz")
+            transformed_op = cell.dot(op).dot(inv_cell)
+            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
             self.assertTrue( comparator.compare(s1,s2) )
 
     def test_bcc_translation( self ):
