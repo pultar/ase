@@ -14,7 +14,7 @@ import itertools
 from ase.spacegroup import spacegroup
 from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
 import time
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree as KDTree
 
 try:
     # The code runs perfectly fine without pymatgen
