@@ -468,7 +468,7 @@ class StructureComparator( object ):
         """
         Checks that all the elements in the two atoms match
 
-        NOTE: The unit cells may be in different quadrants
+        NOTE: The unit cells may be in different octants
         Hence, try all cyclic permutations of x,y and z
         """
 
@@ -544,7 +544,6 @@ class StructureComparator( object ):
                 for k in range(3):
                     if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
                         candidate_vecs[k].append(new_sc_pos[l,:])
-
 
             # Check angles
             refined_candidate_list = [[],[],[]]
@@ -684,7 +683,7 @@ class TestStructureComparator( unittest.TestCase ):
         sa = np.sin(np.pi/3.0)
         matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
         s2.set_positions( matrix.dot(s2.get_positions().T).T )
-        #s2.set_cell( matrix.dot(s2.get_cell().T).T )
+        s2.set_cell( matrix.dot(s2.get_cell().T).T )
         comparator = StructureComparator()
         if ( has_pymat_gen ):
             m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
@@ -721,7 +720,6 @@ class TestStructureComparator( unittest.TestCase ):
     def test_point_inversion( self ):
         s1 = read("test_structures/mixStruct.xyz")
         s2 = read("test_structures/mixStruct.xyz")
-        view(s1)
         s2.set_positions( -s2.get_positions() )
         comparator = StructureComparator()
         self.assertTrue( comparator.compare(s1,s2) )
@@ -804,10 +802,6 @@ class TestStructureComparator( unittest.TestCase ):
         pos[0,:] += 0.2
         s2.set_positions(pos)
         self.assertFalse( comparator.compare(s1,s2) )
-
-class LargeTestHCP(object):
-    def __init__(self):
-        self.structure = read("test_structures/mixStruct.xyz")
 
 if __name__ == "__main__":
     # Run the unittests
