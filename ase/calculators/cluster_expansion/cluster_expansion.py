@@ -21,7 +21,7 @@ class ClusterExpansion(Calculator):
         
         self.update_energy()
         self.write_output()
-        
+        self.old_atoms = self.atoms
         self.results['energy'] = self.energy
         
         #return self.energy
