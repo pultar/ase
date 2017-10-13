@@ -1,13 +1,9 @@
 #Cluster expansion calculator
 
-from __future__ import print_function
-import functools
 
 from ase.calculators.calculator import Calculator
 import numpy as np
-from gpaw.external import ExternalPotential
-import gpaw.mpi as mpi           
-from ase.parallel import paropen
+
     
 class ClusterExpansion(Calculator):
     implemented_properties = ['energy']
