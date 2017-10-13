@@ -15,6 +15,7 @@ from ase.spacegroup import spacegroup
 from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
 import time
 from scipy.spatial import cKDTree as KDTree
+import pickle
 
 try:
     # The code runs perfectly fine without pymatgen
@@ -186,15 +187,9 @@ class StructureComparator( object ):
         if ( not self.has_same_volume() ):
             return False
 
-        start = time.time()
         matrices = self.get_rotation_reflection_matrices()
-        end = time.time()
-        print ("Rotmatrix search tood %.2E sec"%(end-start))
-        start = time.time()
         if ( not self.positions_match(matrices, self.s1, self.s2) ):
             return False
-        end = time.time()
-        print ("Comparing took %.2E sec"%(end-start))
         return True
 
     def get_least_frequent_element( self ):
@@ -533,19 +528,11 @@ class StructureComparator( object ):
         if ( angle23_ref > np.pi/2.0 ):
             angle23_ref = np.pi-angle23_ref
 
-        if ( np.any( np.abs(ref_vec_lengths-np.sqrt(np.sum(cell_diag**2))) < 1E-4) ):
-            sc_atom1 = atoms1_ref*(3,3,3)
-        else:
-            sc_atom1 = atoms1_ref*(2,2,2)
-            #sc_atom1 = atoms1_ref*(3,3,3)
         sc_atom_search = atoms1_ref*(3,3,3)
-        sc_pos = sc_atom1.get_positions()
+        sc_pos = atoms1_ref.get_positions()+cell[:,0]+cell[:,1]+cell[:,2] # Translate by one cell diagonal
         sc_pos_search = sc_atom_search.get_positions()
-        #view(sc_atom1)
-        #view(atoms2_ref)
 
-
-        for i in range( len(sc_atom1) ):
+        for i in range( len(atoms1_ref) ):
             candidate_vecs = [[],[],[]]
             translation = sc_pos[i,:]-delta_vec
 
@@ -557,6 +544,7 @@ class StructureComparator( object ):
                 for k in range(3):
                     if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
                         candidate_vecs[k].append(new_sc_pos[l,:])
+
 
             # Check angles
             refined_candidate_list = [[],[],[]]
@@ -703,7 +691,8 @@ class TestStructureComparator( unittest.TestCase ):
                              primitive_cell=True, scale=True)
             str1 = atoms_to_structure(s1)
             str2 = atoms_to_structure(s2)
-            print ("PyMatGen says: %s"%(self.pymat_code[m.fit(str1,str2)]))
+            code = m.fit(str1,str2)
+            print ("PyMatGen says: %s"%(self.pymat_code[code]))
 
         self.assertTrue( comparator.compare(s1,s2) )
 
