@@ -187,8 +187,8 @@ class StructureComparator( object ):
         if ( not self.has_same_volume() ):
             return False
 
-        matrices = self.get_rotation_reflection_matrices()
-        if ( not self.positions_match(matrices, self.s1, self.s2) ):
+        matrices, translations = self.get_rotation_reflection_matrices()
+        if ( not self.positions_match(matrices, translations, self.s1, self.s2) ):
             return False
         return True
 
@@ -245,7 +245,7 @@ class StructureComparator( object ):
         atoms2.set_cell( self.s2.get_cell() )
         return atoms1, atoms2
 
-    def positions_match( self, rotation_reflection_matrices, atoms1, atoms2 ):
+    def positions_match( self, rotation_reflection_matrices, translations, atoms1, atoms2 ):
         """
         Check if the position and elements match.
         Note that this function changes self.s1 and self.s2 to the rotation and
@@ -265,23 +265,23 @@ class StructureComparator( object ):
 
         # Build a KD tree to enable fast look-up of nearest neighbours
         tree = KDTree(exp2.get_positions())
+        for i in range(translations.shape[0]):
+            for matrix in rotation_reflection_matrices:
+                pos1 = copy.deepcopy(pos1_ref)
+                pos2 = copy.deepcopy(pos2_ref)
 
-        for matrix in rotation_reflection_matrices:
-            pos1 = copy.deepcopy(pos1_ref)
-            pos2 = copy.deepcopy(pos2_ref)
+                # Translate
+                pos1 -= translations[i,:]
 
-            # Translate
-            pos1 -= matrix[:3,3]
+                # Rotate
+                pos1 = matrix.dot(pos1.T).T
 
-            # Rotate
-            pos1 = matrix[:3,:3].dot(pos1.T).T
+                # Update the atoms positions
+                atoms1.set_positions( pos1 )
+                atoms1.wrap( pbc=[1,1,1] )
 
-            # Update the atoms positions
-            atoms1.set_positions( pos1 )
-            atoms1.wrap( pbc=[1,1,1] )
-
-            if ( self.elements_match(atoms1,exp2,tree) ):
-                return True
+                if ( self.elements_match(atoms1,exp2,tree) ):
+                    return True
         return False
 
     def expand( self, ref_atoms ):
@@ -532,67 +532,55 @@ class StructureComparator( object ):
         sc_pos = atoms1_ref.get_positions()+cell[:,0]+cell[:,1]+cell[:,2] # Translate by one cell diagonal
         sc_pos_search = sc_atom_search.get_positions()
 
-        for i in range( len(atoms1_ref) ):
-            candidate_vecs = [[],[],[]]
-            translation = sc_pos[i,:]-delta_vec
+        candidate_vecs = [[],[],[]]
+        translation = sc_pos[0,:]-delta_vec
 
-            new_sc_pos = sc_pos_search-translation
-            lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
-            for l in range( len(lengths) ):
-                if ( l==i ):
+        new_sc_pos = sc_pos_search-translation
+        lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
+        for l in range( 1,len(lengths) ):
+            for k in range(3):
+                if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
+                    candidate_vecs[k].append(new_sc_pos[l,:])
+
+        # Check angles
+        refined_candidate_list = [[],[],[]]
+        for v1 in candidate_vecs[0]:
+            for v2 in candidate_vecs[1]:
+                if ( np.allclose(v1,v2, atol=1E-3) ):
                     continue
-                for k in range(3):
-                    if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
-                        candidate_vecs[k].append(new_sc_pos[l,:])
-
-
-            # Check angles
-            refined_candidate_list = [[],[],[]]
-            for v1 in candidate_vecs[0]:
-                for v2 in candidate_vecs[1]:
-                    if ( np.allclose(v1,v2, atol=1E-3) ):
+                v1len = np.sqrt( np.sum(v1**2) )
+                v2len = np.sqrt( np.sum(v2**2) )
+                angle12 = np.arccos( v1.dot(v2)/(v1len*v2len) )
+                if ( angle12 > np.pi/2.0 ):
+                    angle12 = np.pi-angle12
+                for v3 in candidate_vecs[2]:
+                    if ( np.allclose(v1,v3, atol=1E-3) or np.allclose(v2,v3, atol=1E-3) ):
                         continue
-                    v1len = np.sqrt( np.sum(v1**2) )
-                    v2len = np.sqrt( np.sum(v2**2) )
-                    angle12 = np.arccos( v1.dot(v2)/(v1len*v2len) )
-                    if ( angle12 > np.pi/2.0 ):
-                        angle12 = np.pi-angle12
-                    for v3 in candidate_vecs[2]:
-                        if ( np.allclose(v1,v3, atol=1E-3) or np.allclose(v2,v3, atol=1E-3) ):
-                            continue
-                        v3len = np.sqrt( np.sum(v3**2) )
-                        angle13 = np.arccos( v1.dot(v3)/(v1len*v3len) )
-                        if ( angle13 > np.pi/2.0):
-                            angle13 = np.pi-angle13
+                    v3len = np.sqrt( np.sum(v3**2) )
+                    angle13 = np.arccos( v1.dot(v3)/(v1len*v3len) )
+                    if ( angle13 > np.pi/2.0):
+                        angle13 = np.pi-angle13
 
-                        angle23 = np.arccos( v2.dot(v3)/(v2len*v3len) )
-                        if ( angle23 > np.pi/2.0 ):
-                            angle23 = np.pi-angle23
+                    angle23 = np.arccos( v2.dot(v3)/(v2len*v3len) )
+                    if ( angle23 > np.pi/2.0 ):
+                        angle23 = np.pi-angle23
 
-                        if ( np.abs(angle12-angle12_ref) < angle_tol and
-                             np.abs(angle13-angle13_ref) < angle_tol and
-                             np.abs(angle23-angle23_ref) < angle_tol):
-                            refined_candidate_list[0].append(v1)
-                            refined_candidate_list[1].append(v2)
-                            refined_candidate_list[2].append(v3)
+                    if ( np.abs(angle12-angle12_ref) < angle_tol and
+                         np.abs(angle13-angle13_ref) < angle_tol and
+                         np.abs(angle23-angle23_ref) < angle_tol):
+                        refined_candidate_list[0].append(v1)
+                        refined_candidate_list[1].append(v2)
+                        refined_candidate_list[2].append(v3)
 
-            # Compute rotation/reflection/translation matrices (4x4 matrices)
-            for v1,v2,v3 in zip(refined_candidate_list[0],refined_candidate_list[1],refined_candidate_list[2]):
-                T = np.zeros((3,3))
-                T[:,0] = v1
-                T[:,1] = v2
-                T[:,2] = v3
-                R = ref_vec.dot( np.linalg.inv(T) )
-
-                # Skip the rotation/reflection matrix if it is not unitary
-                #if ( not np.allclose(R.dot(R.T),np.eye(3),atol=0.001) ):
-                #    continue
-                full_matrix = np.zeros((4,4))
-                full_matrix[:3,:3] = R
-                full_matrix[3,3] = 1
-                full_matrix[:3,3] = translation
-                canditate_trans_mat.append(full_matrix)
-        return canditate_trans_mat
+        # Compute rotation/reflection/translation matrices (4x4 matrices)
+        for v1,v2,v3 in zip(refined_candidate_list[0],refined_candidate_list[1],refined_candidate_list[2]):
+            T = np.zeros((3,3))
+            T[:,0] = v1
+            T[:,1] = v2
+            T[:,2] = v3
+            R = ref_vec.dot( np.linalg.inv(T) )
+            canditate_trans_mat.append(R)
+        return canditate_trans_mat, atoms1_ref.get_positions()
 
 # ============================================================================ #
 #                                                                              #
