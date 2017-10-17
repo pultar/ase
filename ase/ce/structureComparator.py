@@ -188,9 +188,7 @@ class StructureComparator( object ):
             return False
 
         matrices, translations = self.get_rotation_reflection_matrices()
-        if ( not self.positions_match(matrices, translations, self.s1, self.s2) ):
-            return False
-        return True
+        return self.positions_match(matrices, translations, self.s1, self.s2)
 
     def get_least_frequent_element( self ):
         """
