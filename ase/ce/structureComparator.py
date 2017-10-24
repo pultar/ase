@@ -171,8 +171,8 @@ class StructureComparator( object ):
         """
         Compare the two structures
         """
-        self.s1 = s1
-        self.s2 = s2
+        self.s1 = copy.deepcopy( s1 )
+        self.s2 = copy.deepcopy( s2 )
 
         if ( len(s1) != len(s2) ):
             return False
