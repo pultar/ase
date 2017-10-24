@@ -30,10 +30,10 @@ except:
 
 
 class StructureComparator( object ):
-    def __init__( self, angleTolDeg=1, position_tolerance=1E-2 ):
+    def __init__( self, angle_tol=1, position_tolerance=1E-2 ):
         self.s1 = None
         self.s2 = None
-        self.angleTolDeg = 1
+        self.angle_tol = 1
         self.position_tolerance = position_tolerance
 
     def niggli_reduce( self ):
@@ -156,7 +156,7 @@ class StructureComparator( object ):
 
         for i in range(3):
             closestIndex = np.argmin( np.abs(np.array(angles2)-angles1[i]) )
-            if ( np.abs(angles2[closestIndex]-angles1[i]) < self.angleTolDeg ):
+            if ( np.abs(angles2[closestIndex]-angles1[i]) < self.angle_tol ):
                 # Remove the entry that matched
                 #del dot2[closestIndex]
                 del angles2[closestIndex]
@@ -496,7 +496,7 @@ class StructureComparator( object ):
         rot_reflection_mat = []
         center_of_mass = []
         cell = self.s1.get_cell().T
-        angle_tol = self.angleTolDeg*np.pi/180.0
+        angle_tol = self.angle_tol*np.pi/180.0
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
 
@@ -784,7 +784,7 @@ class TestStructureComparator( unittest.TestCase ):
     def test_one_atom_out_of_pos( self ):
         s1 = read("test_structures/mixStruct.xyz")
         s2 = read("test_structures/mixStruct.xyz")
-        comparator = StructureComparator( angleTolDeg=0.2, position_tolerance=0.01 )
+        comparator = StructureComparator( angle_tol=0.2, position_tolerance=0.01 )
         pos = s1.get_positions()
         pos[0,:] += 0.2
         s2.set_positions(pos)
