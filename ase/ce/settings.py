@@ -36,7 +36,7 @@ class BulkCrystal(object):
         structures = ['sc', 'fcc', 'bcc', 'hcp', 'diamond', 'zincblende',
                       'rocksalt', 'cesiumchloride', 'fluorite', 'wurtzite']
         if crystalstructure is None:
-            raise ValueError("Please specify 'crystalstructure' (e.g., 'fcc')")
+            raise ValueError("Please specify 'crystalstructure' (e.g., 'fcc').")
         if crystalstructure not in structures:
             raise TypeError('Provided crystal structure is not supported.\n'
                             'The supported types are: {}'.format(structures))
@@ -199,10 +199,10 @@ class BulkCrystal(object):
         return atoms
 
     def store_data(self):
-        print('Generating cluster data. It may take several minutes depending '
-              'on the values of max_cluster_size and max_cluster_dia...')
-        self.cluster_names,
-        self.cluster_dist,
+        print('Generating cluster data. It may take several minutes depending on'
+              ' the values of max_cluster_size and max_cluster_dia...')
+        self.cluster_names,\
+        self.cluster_dist,\
         self.cluster_indx = self.get_cluster_information()
         self.trans_matrix = self.create_translation_matrix()
         self.conc_matrix = self.create_concentration_matrix()
@@ -212,7 +212,8 @@ class BulkCrystal(object):
                             'cluster_indx': self.cluster_indx,
                             'trans_matrix': self.trans_matrix,
                             'site_elements': self.site_elements,
-                            'conc_matrix': self.conc_matrix})
+                            'conc_matrix': self.conc_matrix}
+                     )
         return True
 
     def get_cluster_information(self):
@@ -226,8 +227,7 @@ class BulkCrystal(object):
         del indices[indices.index(0)]
 
         for n in range(2, self.max_cluster_size+1):
-            indx_set = []
-            dist_set = []
+            indx_set = []; dist_set = []
             # if the min_cluster_size is specified, the size up to the
             # min_cluster_size has None for distance and index.
             if n < self.min_cluster_size:
@@ -255,17 +255,17 @@ class BulkCrystal(object):
                 category = dist_types.index(dist_set[x])
                 indx_types[category].append(indx_set[x])
 
-            dia_set = [row[0] for row in dist_types]
+            dia_set =[row[0] for row in dist_types]
             name_types = []
             counter = 1
             for i in range(len(dia_set)):
                 if i == 0:
-                    name_types.append('c{}_{}_{}'.format(n, dia_set[i], counter))
+                    name_types.append('c{}_{}_{}'.format(n,dia_set[i],counter))
                     counter += 1
                     continue
                 if dia_set[i] != dia_set[i-1]:
                     counter = 1
-                name_types.append('c{}_{}_{}'.format(n, dia_set[i], counter))
+                name_types.append('c{}_{}_{}'.format(n,dia_set[i],counter))
                 counter += 1
             cluster_dist.append(dist_types)
             cluster_indx.append(indx_types)
@@ -373,7 +373,7 @@ class BulkCrystal(object):
         dist = np.zeros((num_atoms, num_atoms, 8), dtype=int)
         indices = [a.index for a in self.atoms]
         vec = self.atoms.get_cell()
-        trans = [[0., 0., 0.],
+        trans = [[0.,0.,0.],
                  vec[0]/2,
                  vec[1]/2,
                  vec[2]/2,
@@ -388,14 +388,10 @@ class BulkCrystal(object):
             for x in range(num_atoms):
                 temp = shifted.get_distances(x, indices)/self.alat*1000
                 temp = np.round(temp)
-                dist[x, :, t] = temp.astype(int)
+                dist[x,:,t] = temp.astype(int)
         return dist
 
     def create_concentration_matrix(self):
-        """
-        Creates and returns a concentration matrix based on the value of
-        conc_args.
-        """
         min_1 = np.array([i for row in self.conc_ratio_min_1 for i in row])
         max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
         if sum(min_1) != sum(max_1):
@@ -422,6 +418,7 @@ class BulkCrystal(object):
             max_2 = np.array([i for row in self.conc_ratio_max_2 for i in row])
             if sum(min_2) != sum(max_2):
                 raise ValueError('conc_ratio values must be on the same scale')
+            natom_ratio = sum(min_2)
             scale = natoms_cell/natoms_ratio
             min_2 *= scale
             max_2 *= scale
@@ -445,13 +442,13 @@ class BulkCrystal(object):
         """
         num_atoms = len(self.atoms)
         tm = np.zeros((num_atoms, num_atoms), dtype=int)
-        tm[0, :] = index_by_position(self.atoms)
-        for x in range(1, num_atoms):
+        tm[0,:] = index_by_position(self.atoms)
+        for x in range(1,num_atoms):
             shifted = self.atoms.copy()
             vec = self.atoms.get_distance(x, 0, vector=True)
             shifted.translate(vec)
             shifted.wrap()
-            tm[x, :] = index_by_position(shifted)
+            tm[x,:] = index_by_position(shifted)
         return tm
 
     def get_min_distance(self, cluster):
