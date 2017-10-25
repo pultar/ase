@@ -10,7 +10,7 @@ class BulkCrystal(object):
     Class that stores the necessary information about rocksalt structures.
     """
     def __init__(self, crystalstructure=None, alat=None, cell_dim=None,
-                 num_sites=None, site_elements=None, conc_args=None, 
+                 num_sites=None, site_elements=None, conc_args=None,
                  db_name=None, min_cluster_size=0, max_cluster_size=4,
                  max_cluster_dia=None, reconf_db=False):
         """
@@ -26,7 +26,7 @@ class BulkCrystal(object):
         db_name: name of the database file
         max_cluster_size: maximum size (number of atoms in a cluster)
         max_cluster_dia: maximum diameter of cluster (in unit of alat)
-        reconf_db: boolean variable to indicate wheter or not to rebuild the 
+        reconf_db: boolean variable to indicate wheter or not to rebuild the
                    information entry of the database
         """
         # ----------------------
@@ -49,7 +49,7 @@ class BulkCrystal(object):
         if len(site_elements) != num_sites:
             raise ValueError("list of elements is needed for each site")
 
-        # check for concentration ratios 
+        # check for concentration ratios
         conc_names = ['conc_ratio_min_1', 'conc_ratio_min_2',
                       'conc_ratio_max_1', 'conc_ratio_max_2']
         conc_ratio_min_1 = None; conc_ratio_min_2 = None
@@ -160,7 +160,7 @@ class BulkCrystal(object):
                          'rocksalt', a=self.alat, cubic=False)*self.cell_dim
         elif self.crystalstructure == 'fcc' or self.crystalstructure == 'bcc'\
              or self.crystalstructure == 'sc':
-            atoms = bulk('{}'.format(self.site_elements[0][0]), 
+            atoms = bulk('{}'.format(self.site_elements[0][0]),
                          '{}'.format(self.crystalstructure),
                          a=self.alat, cubic=False)*self.cell_dim
         else:
@@ -171,11 +171,11 @@ class BulkCrystal(object):
 
     def create_atoms(self, max_cluster_dia):
         """
-        Create atoms object that can handle the maximum diameter specified by 
+        Create atoms object that can handle the maximum diameter specified by
         the user. If maximum diameter is not specified, the user-specified cell
         size will be used, and the maximum diameter is set accordingly.
         """
-        # get the cell with the given dimensions 
+        # get the cell with the given dimensions
         atoms = self.atoms_with_given_dim()
 
         if max_cluster_dia is None:
@@ -367,7 +367,6 @@ class BulkCrystal(object):
             bf_list.append(bf)
 
         return bf_list
-
 
     def create_distance_matrix(self):
         num_atoms = len(self.atoms)
