@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from itertools import product
 from ase.db import connect
@@ -20,7 +21,7 @@ class CorrFunction(object):
         self.cluster_dist = BC.cluster_dist
         self.cluster_indx = BC.cluster_indx
         self.trans_matrix = BC.trans_matrix
-        if not os.path.exists(self.db_name):
+        if not os.path.exists(BC.db_name):
             raise ValueError("DB file {} does not exist".format(self.db_name))
         self.db = connect(BC.db_name)
 
