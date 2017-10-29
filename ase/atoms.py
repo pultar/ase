@@ -1739,12 +1739,16 @@ class Atoms(object):
 
     __hash__ = None
 
-    def get_volume(self):
-        """Get volume of unit cell."""
+    def get_volume(self, voa = False):
+        """Get volume of unit cell.
+        
+        set voa to get volume on atom"""
         if self.number_of_lattice_vectors != 3:
             raise ValueError(
                 'You have {0} lattice vectors: volume not defined'
                 .format(self.number_of_lattice_vectors))
+        if voa:
+            return abs(np.linalg.det(self._cell)) / len(self)
         return abs(np.linalg.det(self._cell))
 
     def _get_positions(self):
