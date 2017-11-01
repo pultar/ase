@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from numpy.linalg import matrix_rank
 
 def index_by_position(atoms):
@@ -10,9 +11,9 @@ def index_by_position(atoms):
     return indices
 
 def sort_by_position(atoms):
-# Return a new Atoms object with sorted atomic order. 
+# Return a new Atoms object with sorted atomic order.
 # The default is to order according to chemical symbols,
-# but if *tags* is not None, it will be used instead. 
+# but if *tags* is not None, it will be used instead.
 # A stable sorting algorithm is used.
     indices = index_by_position(atoms)
     return atoms[indices]
@@ -40,5 +41,3 @@ def reduce_matrix(matrix):
             matrix = temp
             offset = 0
     return matrix
-
-
