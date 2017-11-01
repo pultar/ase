@@ -57,7 +57,7 @@ class Montecarlo:
     def _mc_step(self, verbose = False ):
         """ Make one Monte Carlo step by swithing two atoms """
 
-        number_of_atoms = len(self.atoms)
+        #number_of_atoms = len(self.atoms)
 
         rand_a = self.indeces[np.random.randint(0,len(self.indeces))]
         rand_b = self.indeces[np.random.randint(0,len(self.indeces))]
