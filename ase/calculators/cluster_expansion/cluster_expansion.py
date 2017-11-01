@@ -59,7 +59,7 @@ class ClusterExpansion(Calculator):
         
     def update_ce(self,indices):
          # based on the CE construction, update the local changes in energy
-         
+         energy = 1.
          return energy
         
     
