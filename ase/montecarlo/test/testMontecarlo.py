@@ -1,5 +1,5 @@
 import unittest
-from ase import Atoms
+#from ase import Atoms
 from ase.build import molecule
 from ase.calculators import lj
 
