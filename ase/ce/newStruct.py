@@ -31,7 +31,7 @@ class GenerateStructures(object):
             raise ValueError("DB file {} does not exist".format(self.db_name))
         self.db = connect(self.db_name)
         if gen is None:
-            self.gen = self.determine_gen_number()
+            self.gen = self._determine_gen_number()
         else:
             self.gen = gen
 
@@ -52,7 +52,7 @@ class GenerateStructures(object):
             self.generate_initial_pool()
 
 
-    def determine_gen_number(self):
+    def _determine_gen_number(self):
         try:
             gens = [row.get('gen') for row in self.db.select()]
             gen = max(gens) + 1
@@ -60,12 +60,14 @@ class GenerateStructures(object):
             gen = 0
         return gen
 
-    def generate_probe_structure(self):
+    def generate_probe_structure(self, init_temp=0.001, final_temp=0.00001,
+                                 num_temp=5, num_steps=10000):
         """
         Generate a probe structure according to PRB 80, 165122 (2009)
         """
         print("Generating {} probe structures.".format(self.struct_per_gen))
-        while len([row.id for row in self.db.select(gen=self.gen)]) < self.struct_per_gen:
+        while len([row.id for row in self.db.select(gen=self.gen)]) <\
+              self.struct_per_gen:
             # Pick an initial random structure
             if self.num_conc_var == 1:
                 num_conc = self.conc_matrix.shape[0]
@@ -85,8 +87,8 @@ class GenerateStructures(object):
                 continue
             atoms = wrap_and_sort_by_position(atoms)
             sa = SimulatedAnnealing(self.BC, atoms, self.struct_per_gen,
-                                    init_temp=0.001, final_temp=0.00001, num_temp=5,
-                                    num_steps=1000)
+                                    init_temp=init_temp, final_temp=final_temp,
+                                    num_temp=num_temp, num_steps=num_steps)
             atoms, cf = sa.generate_probe_structure()
             conc = self.find_concentration(atoms)
             if self.exists_in_db(atoms, conc[0], conc[1]):
