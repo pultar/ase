@@ -20,6 +20,8 @@ class SimulatedAnnealing(object):
     def __init__(self, BC, init_atoms, struct_per_gen,
                  cluster_name_eci_tuple=None, init_temp=None, final_temp=None,
                  num_temp=5, num_steps=10000):
+        if type(BC) is not BulkCrystal:
+            raise TypeError("Passed object should be BulkCrystal type")
         self.BC = BC
         self.num_sites = BC.num_sites
         self.site_elements = BC.site_elements
