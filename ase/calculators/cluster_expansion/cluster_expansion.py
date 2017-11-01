@@ -36,7 +36,7 @@ class ClusterExpansion(Calculator):
         # parameters needs to be updated -->
         # check from the previous geometry which places have changed
         
-        if self.old_atoms is None
+        if self.old_atoms is None:
             self.old_atoms == self.atoms
             self.energy = self.atoms.energy
             
