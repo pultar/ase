@@ -29,6 +29,7 @@ class ClusterExpansion(Calculator):
     def read_parameters(self):
         # read parameters from the ce parameter file
         # need to make some modifications to parameters/their handling?
+        return True
         
     def update_energy(self):
         # for GA/MC only a small subset of the 
