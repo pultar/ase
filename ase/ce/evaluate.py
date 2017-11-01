@@ -304,7 +304,7 @@ class Evaluate(object):
         cv_sq = 0.0
         for i in range(cfm.shape[0]):
             cv_sq += (delta_e[i]/(1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
-        cv_sq /= cf.shape[0]
+        cv_sq /= cfm.shape[0]
         return np.sqrt(cv_sq)
 
     def mae(self):
