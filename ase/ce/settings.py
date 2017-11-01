@@ -418,7 +418,6 @@ class BulkCrystal(object):
             max_2 = np.array([i for row in self.conc_ratio_max_2 for i in row])
             if sum(min_2) != sum(max_2):
                 raise ValueError('conc_ratio values must be on the same scale')
-            natom_ratio = sum(min_2)
             scale = natoms_cell/natoms_ratio
             min_2 *= scale
             max_2 *= scale
