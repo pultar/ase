@@ -4,7 +4,7 @@ import random
 from ase.ce.settings import BulkCrystal
 from ase.ce.corrFunc import CorrFunction
 from ase.ce.simulatedannealing import SimulatedAnnealing
-from ase.ce.tools import wrap_and_sort_by_position, index_by_position
+from ase.ce.tools import wrap_and_sort_by_position
 from ase.db import connect
 # dependence on PyMatGen to be removed
 from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -213,7 +213,6 @@ class GenerateStructures(object):
             conc2 = round(conc2, 3)
             cond.append(('conc2','=',conc2))
         # find if there is a match
-        count = len([row.id for row in self.db.select(cond)])
         match = False
         m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
                              primitive_cell=True, scale=True)
