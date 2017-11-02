@@ -32,6 +32,7 @@ class Evaluate(object):
         if type(BC) is not BulkCrystal:
             raise TypeError("Passed object should be BulkCrystal type")
         self.db_name = BC.db_name
+        self.db = BC.db
         self.cluster_names = BC.cluster_names
         self.num_elements = BC.num_elements
 
@@ -58,7 +59,6 @@ class Evaluate(object):
             raise TypeError("The penalty type, {},".format(penalty) +
                             " is not supported")
 
-        self.db = connect(self.db_name)
         if cluster_names is None:
             self.cluster_names = self._get_full_cluster_names()
         else:
