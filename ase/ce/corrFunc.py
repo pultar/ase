@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from itertools import product
-from ase.db import connect
 from ase.ce.settings import BulkCrystal
 from ase.ce.tools import wrap_and_sort_by_position
 
@@ -23,7 +22,7 @@ class CorrFunction(object):
         self.trans_matrix = BC.trans_matrix
         if not os.path.exists(BC.db_name):
             raise ValueError("DB file {} does not exist".format(self.db_name))
-        self.db = connect(BC.db_name)
+        self.db = BC.db
 
 
     def get_c1(self, atoms, dec):
