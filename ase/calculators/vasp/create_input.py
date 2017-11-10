@@ -1445,7 +1445,7 @@ class GenerateVaspInput(object):
 
         self.input_params['pp'] = xc_dict[xc_flag]
 
-    def todict(self):
+    def todict(self, ndarray2list=False):
         """Returns a dictionary of all parameters
         that can be used to construct a new calculator object"""
         dict_list = [
@@ -1465,4 +1465,6 @@ class GenerateVaspInput(object):
         for key, val in list(dct.items()):
             if val is None:
                 del(dct[key])
+            if isinstance(val, np.ndarray) and ndarray2list:
+                dct[key] = val.tolist()
         return dct
