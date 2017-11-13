@@ -3,13 +3,17 @@
 
 Authors:
     Edward Tait, ewt23@cam.ac.uk
+
+Recent updates:
+    Nicholas Hine, n.d.m.hine@warwick.ac.uk
+
     Based on castep.py by:
     Max Hoffmann, max.hoffmann@ch.tum.de
     Jörg Meyer, joerg.meyer@ch.tum.de
 """
 
 from copy import deepcopy
-from os.path import isfile
+from os.path import isfile,join
 from warnings import warn
 
 from numpy import array
@@ -35,11 +39,13 @@ class Onetep(FileIOCalculator):
     # for example the NGWF radius is used in the species block and isn't
     # written elsewhere in the input file
     _dummy_parameters = ['ngwf_radius', 'xc', 'species_ngwf_radius',
-                         'species_ngwf_number', 'species_solver']
+                         'species_ngwf_number', 'species_solver',
+                         'ngwf_radius_cond', 'pseudo_suffix']
 
     default_parameters = {'cutoff_energy': '1000 eV',
                           'kernel_cutoff': '1000 bohr',
-                          'ngwf_radius': 12.0}
+                          'ngwf_radius': 13.0,
+                          'ngwf_radius_cond': 12.0}
 
     name = 'onetep'
 
@@ -130,6 +136,8 @@ class Onetep(FileIOCalculator):
             elif ('Element  Atom         Cartesian components (Eh/a)'
                   in line):
                 self._read_forces(out)
+            elif ('Final Configuration'):
+                self._read_geom_output(out)
             elif 'warn' in line.lower():
                 warnings.append(line)
             line = out.readline()
@@ -158,7 +166,7 @@ class Onetep(FileIOCalculator):
             l = l.strip()
             p = l.split()
             if len(p) != 3:
-                raise ReadError('Malfromed Lattice block line "%s"' % l)
+                raise ReadError('Malformed Lattice block line "%s"' % l)
             try:
                 axes.append([conv_fac * float(comp) for comp in p[0:3]])
             except ValueError:
@@ -195,6 +203,31 @@ class Onetep(FileIOCalculator):
             line = out.readline()
         self.atoms.set_chemical_symbols(symbols)
         self.atoms.set_positions(positions)
+
+    def _read_geom_output(self, out):
+        conv_fac = Bohr
+        # Find start of atom positions
+        while 'x-----' not in out.readline():
+            pass
+        symbols = []
+        position = []
+        # Read atom positions
+        line = out.readline()
+        while 'xxxxxx' not in line:
+            line = line.strip()
+            pos = line.split(None)[3:6]
+            pos = [conv_fac * float(p) for p in pos]
+            atom = line.split(None)[1]
+            positions.append(pos)
+            symbols.append(atom)
+            line = out.readline()
+        if len(positions) != len(self.atoms)
+            raise ReadError('Wrong number of atoms found in output geometry block')
+        if len(symbols) != len(self.atoms)
+            raise ReadError('Wrong number of atoms found in output geometry block')
+        # Update atoms object with new positions (and symbols)
+        self.atoms.set_positions(positions)
+        self.atoms.set_chemical_symbols(symbols)
 
     def _read_species(self, out):
         """ Read in species block from a onetep output file"""
@@ -253,7 +286,7 @@ class Onetep(FileIOCalculator):
             fields = line.split()
         self.results['forces'] = array(forces)
 
-    def _generate_species_block(self):
+    def _generate_species_block(self,cond=False):
         """Create a default onetep species block, use -1 for the NGWF number
         to trigger automatic NGWF number assigment using onetep's internal
         routines."""
@@ -264,9 +297,13 @@ class Onetep(FileIOCalculator):
 
         parameters = self.parameters
 
-        self.species = []
         atoms = self.atoms
-        default_ngwf_radius = self.parameters['ngwf_radius']
+        if (cond==False):
+            self.species = []
+            default_ngwf_radius = self.parameters['ngwf_radius']
+        else:
+            self.species_cond = []
+            default_ngwf_radius = self.parameters['ngwf_radius_cond']
         for sp in set(zip(atoms.get_atomic_numbers(),
                           atoms.get_chemical_symbols())):
             try:
@@ -277,11 +314,14 @@ class Onetep(FileIOCalculator):
                 ngnum = parameters['species_ngwf_number'][sp[1]]
             except KeyError:
                 ngnum = -1
-            self.species.append((sp[1], sp[1], sp[0], ngnum, ngrad))
+            if (cond==False):
+                self.species.append((sp[1], sp[1], sp[0], ngnum, ngrad))
+            else:
+                self.species_cond.append((sp[1], sp[1], sp[0], ngnum, ngrad))
 
     def set_pseudos(self, pots):
         """ Sets the pseudopotential files used in this dat file
-        TODO: add some verification - do the psuedos imply the same
+        TODO: add some verification - do the pseudos imply the same
         functional as we're using?"""
 
         self.pseudos = deepcopy(pots)
@@ -317,6 +357,7 @@ class Onetep(FileIOCalculator):
             self.parameters['read_denskern'] = True
 
         self._generate_species_block()
+        self._generate_species_block(cond=True)
 
         self._write_dat()
 
@@ -373,6 +414,15 @@ class Onetep(FileIOCalculator):
         keyword = 'SPECIES'
 
         sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species]
+
+        fd.write('%%BLOCK %s\n' % keyword)
+        for line in sp_block:
+            fd.write('    %s\n' % line)
+        fd.write('%%ENDBLOCK %s\n\n' % keyword)
+
+        keyword = 'SPECIES_COND'
+
+        sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species_cond]
 
         fd.write('%%BLOCK %s\n' % keyword)
         for line in sp_block:
