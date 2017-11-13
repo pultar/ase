@@ -13,7 +13,7 @@ Recent updates:
 """
 
 from copy import deepcopy
-from os.path import isfile,join
+from os.path import isfile
 from warnings import warn
 
 from numpy import array
@@ -210,7 +210,7 @@ class Onetep(FileIOCalculator):
         while 'x-----' not in out.readline():
             pass
         symbols = []
-        position = []
+        positions = []
         # Read atom positions
         line = out.readline()
         while 'xxxxxx' not in line:
