@@ -221,9 +221,9 @@ class Onetep(FileIOCalculator):
             positions.append(pos)
             symbols.append(atom)
             line = out.readline()
-        if len(positions) != len(self.atoms)
+        if len(positions) != len(self.atoms):
             raise ReadError('Wrong number of atoms found in output geometry block')
-        if len(symbols) != len(self.atoms)
+        if len(symbols) != len(self.atoms):
             raise ReadError('Wrong number of atoms found in output geometry block')
         # Update atoms object with new positions (and symbols)
         self.atoms.set_positions(positions)
