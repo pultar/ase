@@ -136,7 +136,7 @@ class Onetep(FileIOCalculator):
             elif ('Element  Atom         Cartesian components (Eh/a)'
                   in line):
                 self._read_forces(out)
-            elif ('Final Configuration'):
+            elif ('Final Configuration' in line):
                 self._read_geom_output(out)
             elif 'warn' in line.lower():
                 warnings.append(line)
