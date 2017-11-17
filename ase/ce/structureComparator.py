@@ -30,12 +30,21 @@ except:
 
 
 class StructureComparator( object ):
-    def __init__( self, angle_tol=1, position_tolerance=1E-2, scale_volume=False ):
+    def __init__( self, angle_tol=1, ltol=0.05, stol=0.05, scale_volume=False ):
+        """
+        Parameters
+        ------------
+        angle_tol - angle tolerance for the lattice vectors in degrees
+        ltol - relative tolerance for the length of the lattice vectors (per atom)
+        stol - posistion tolerance for the site comparison in units of (V/N)^(1/3) (average length between atoms)
+        scale_volume - if True the volumes of the two structures are scaled to be equal
+        """
         self.s1 = None
         self.s2 = None
-        self.angle_tol = 1
-        self.position_tolerance = position_tolerance
+        self.angle_tol = angle_tol
         self.scale_volume = scale_volume
+        self.stol = stol
+        self.ltol = ltol
 
     def niggli_reduce( self ):
         """
@@ -188,6 +197,9 @@ class StructureComparator( object ):
         """
         self.s1 = s1.copy()
         self.s2 = s2.copy()
+
+        volume = np.linalg.det( self.s1.get_cell() )
+        self.position_tolerance = self.stol*(volume/len(self.s1))**(1.0/3.0)
 
         if ( len(s1) != len(s2) ):
             return False
@@ -568,11 +580,12 @@ class StructureComparator( object ):
         lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
         for l in range( 1,len(lengths) ):
             for k in range(3):
-                if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.position_tolerance ):
+                if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.ltol*lengths[l]/len(self.s1) ):
                     candidate_vecs[k].append(new_sc_pos[l,:])
 
         # Check angles
         refined_candidate_list = [[],[],[]]
+
         for v1 in candidate_vecs[0]:
             for v2 in candidate_vecs[1]:
                 if ( np.allclose(v1,v2, atol=1E-3) ):
@@ -680,7 +693,7 @@ class TestStructureComparator( unittest.TestCase ):
         N = 1
         dx = xmax/N
         pos_ref = s2.get_positions()
-        comparator = StructureComparator( position_tolerance=0.01 )
+        comparator = StructureComparator()
         number_of_correctly_identified = 0
         for i in range(N):
             for j in range(N):
@@ -815,7 +828,7 @@ class TestStructureComparator( unittest.TestCase ):
     def test_one_atom_out_of_pos( self ):
         s1 = read("test_structures/mixStruct.xyz")
         s2 = read("test_structures/mixStruct.xyz")
-        comparator = StructureComparator( angle_tol=0.2, position_tolerance=0.01 )
+        comparator = StructureComparator( angle_tol=0.2, stol=0.01 )
         pos = s1.get_positions()
         pos[0,:] += 0.2
         s2.set_positions(pos)
