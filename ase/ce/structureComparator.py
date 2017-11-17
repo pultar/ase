@@ -30,11 +30,12 @@ except:
 
 
 class StructureComparator( object ):
-    def __init__( self, angle_tol=1, position_tolerance=1E-2 ):
+    def __init__( self, angle_tol=1, position_tolerance=1E-2, scale_volume=False ):
         self.s1 = None
         self.s2 = None
         self.angle_tol = 1
         self.position_tolerance = position_tolerance
+        self.scale_volume = scale_volume
 
     def niggli_reduce( self ):
         """
@@ -164,6 +165,20 @@ class StructureComparator( object ):
                 return False
         return True
 
+    def scale_volumes( self ):
+        """
+        Scales the cell of s1 to have the same volume as s2
+        """
+        v1 = np.linalg.det( self.s1.get_cell() )
+        v2 = np.linalg.det( self.s2.get_cell() )
+
+        # Scale the cells
+        cell1 = self.s1.get_cell()
+        coordinate_scaling = (v2/v1)**(1.0/3.0)
+        cell1 *= coordinate_scaling
+        self.s1.set_cell(cell1, scale_atoms=True)
+
+
     def has_same_volume( self ):
         return np.abs( np.linalg.det(self.s1.get_cell())-np.linalg.det(self.s2.get_cell()) < 1E-5 )
 
@@ -171,8 +186,8 @@ class StructureComparator( object ):
         """
         Compare the two structures
         """
-        self.s1 = copy.deepcopy( s1 )
-        self.s2 = copy.deepcopy( s2 )
+        self.s1 = s1.copy()
+        self.s2 = s2.copy()
 
         if ( len(s1) != len(s2) ):
             return False
@@ -183,6 +198,9 @@ class StructureComparator( object ):
         self.niggli_reduce()
         if ( not self.has_same_angles() ):
             return False
+
+        if ( self.scale_volume ):
+            self.scale_volumes()
 
         if ( not self.has_same_volume() ):
             return False
@@ -263,6 +281,7 @@ class StructureComparator( object ):
 
         # Build a KD tree to enable fast look-up of nearest neighbours
         tree = KDTree(exp2.get_positions())
+        elm_indx = self.build_site_lists()
         for i in range(translations.shape[0]):
             for matrix in rotation_reflection_matrices:
                 pos1 = copy.deepcopy(pos1_ref)
@@ -281,6 +300,18 @@ class StructureComparator( object ):
                 if ( self.elements_match(atoms1,exp2,tree) ):
                     return True
         return False
+
+    def build_site_lists( self ):
+        """
+        Creates a dictionary of indices of the different sites
+        """
+        elements_indx = {}
+        for atom in self.s1:
+            if ( atom.symbol in elements_indx.keys() ):
+                elements_indx[atom.symbol].append(atom.index)
+            else:
+                elements_indx[atom.symbol] = [atom.index]
+        return elements_indx
 
     def expand( self, ref_atoms ):
         """
