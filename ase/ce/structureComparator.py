@@ -28,7 +28,6 @@ try:
 except:
     has_pymat_gen = False
 
-sys.path.append("/home/davidkl/Documents/StructureCompare")
 try:
     import pystructcomp_cpp as pycpp
     has_cpp_version = True
@@ -268,8 +267,7 @@ class StructureComparator( object ):
         exp2, app2 = self.expand(self.s2)
         symb1 = [atom.symbol for atom in self.s1]
         symb_exp = [atom.symbol for atom in exp2]
-        tree = KDTree(exp2.get_positions())
-        return pycpp.compare( self, self.s1, exp2, atoms1_ref, sc_atom_search, symb1, symb_exp, tree )
+        return pycpp.compare( self, self.s1, exp2, atoms1_ref, sc_atom_search, symb1, symb_exp )
 
     def get_least_frequent_element( self ):
         """
