@@ -28,6 +28,13 @@ try:
 except:
     has_pymat_gen = False
 
+sys.path.append("/home/davidkl/Documents/StructureCompare")
+try:
+    import pystructcomp_cpp as pycpp
+    has_cpp_version = True
+except:
+    has_cpp_version = False
+
 
 class StructureComparator( object ):
     def __init__( self, angle_tol=1, ltol=0.05, stol=0.05, scale_volume=False ):
@@ -41,7 +48,7 @@ class StructureComparator( object ):
         """
         self.s1 = None
         self.s2 = None
-        self.angle_tol = angle_tol
+        self.angle_tol = angle_tol*np.pi/180.0 # Convert to radians
         self.scale_volume = scale_volume
         self.stol = stol
         self.ltol = ltol
@@ -199,7 +206,7 @@ class StructureComparator( object ):
         self.s2 = s2.copy()
 
         volume = np.linalg.det( self.s1.get_cell() )
-        self.position_tolerance = self.stol*(volume/len(self.s1))**(1.0/3.0)
+        self.position_tolerance = self.stol*(volume/len(self.s2))**(1.0/3.0)
 
         if ( len(s1) != len(s2) ):
             return False
@@ -217,8 +224,52 @@ class StructureComparator( object ):
         if ( not self.has_same_volume() ):
             return False
 
+        if ( has_cpp_version ):
+            return self.compare_cpp()
+
         matrices, translations = self.get_rotation_reflection_matrices()
-        return self.positions_match(matrices, translations, self.s1, self.s2)
+        return self.positions_match(matrices, translations)
+
+    def compare_cpp( self ):
+        """
+        Compares the two structures using the C++ version
+        """
+        s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
+        s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
+        atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
+        rot_reflection_mat = []
+        center_of_mass = []
+        cell = self.s1.get_cell().T
+        angle_tol = self.angle_tol*np.pi/180.0
+
+        delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
+
+        # Put on of the least frequent elements of structure 2 at the origin
+        translation = atoms2_ref.get_positions()[0,:]-delta_vec
+        atoms2_ref.set_positions( atoms2_ref.get_positions() - translation )
+        atoms2_ref.wrap( pbc=[1,1,1] )
+        self.s2.set_positions( self.s2.get_positions()-translation )
+        self.s2.wrap( pbc=[1,1,1] )
+        translation = atoms1_ref.get_positions()[0,:]-delta_vec
+
+        # Store three reference vectors
+        cell_diag = cell[:,0]+cell[:,1]+cell[:,2]
+
+        sc_atom_search = atoms1_ref*(3,3,3)
+        sc_pos = atoms1_ref.get_positions()+cell[:,0]+cell[:,1]+cell[:,2] # Translate by one cell diagonal
+        sc_pos_search = sc_atom_search.get_positions()
+
+        candidate_vecs = [[],[],[]]
+        translation = sc_pos[0,:]-delta_vec
+
+        new_sc_pos = sc_pos_search-translation
+        sc_atom_search.set_positions( new_sc_pos )
+        sc_atom_search.wrap()
+        exp2, app2 = self.expand(self.s2)
+        symb1 = [atom.symbol for atom in self.s1]
+        symb_exp = [atom.symbol for atom in exp2]
+        tree = KDTree(exp2.get_positions())
+        return pycpp.compare( self, self.s1, exp2, atoms1_ref, sc_atom_search, symb1, symb_exp, tree )
 
     def get_least_frequent_element( self ):
         """
@@ -236,6 +287,21 @@ class StructureComparator( object ):
         if ( least_freq_element == "X" ):
             raise ValueError( "Did not manage to find the least frequent element" )
         return least_freq_element
+
+    def get_most_frequent_element( self ):
+        """
+        Returns the symbol of the most frequent element
+        """
+        elem1, elem2 = self.get_element_count()
+        assert( elem1 == elem2 )
+        max_val = 0
+        most_freq_elm = "X"
+        for key, value in elem1.iteritems():
+            if ( value > max_val ):
+                max_val = value
+                most_freq_elm = key
+        assert( most_freq_elm != "X" )
+        return most_freq_elm
 
     def extract_positions_of_least_frequent_element( self ):
         """
@@ -273,7 +339,7 @@ class StructureComparator( object ):
         atoms2.set_cell( self.s2.get_cell() )
         return atoms1, atoms2
 
-    def positions_match( self, rotation_reflection_matrices, translations, atoms1, atoms2 ):
+    def positions_match( self, rotation_reflection_matrices, translations ):
         """
         Check if the position and elements match.
         Note that this function changes self.s1 and self.s2 to the rotation and
@@ -281,24 +347,21 @@ class StructureComparator( object ):
         is called before the element comparison
         """
         # Position matching not implemented yet
-        pos1_ref = atoms1.get_positions( wrap=True )
-        pos2_ref = atoms2.get_positions( wrap=True )
+        pos1_ref = self.s1.get_positions( wrap=True )
 
-        cell = atoms1.get_cell().T
+        cell = self.s1.get_cell().T
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
-        orig_cell = atoms1.get_cell()
+        orig_cell = self.s1.get_cell()
 
         # Expand the reference object
-        exp2, app2 = self.expand(atoms2)
+        exp2, app2 = self.expand(self.s2)
 
         # Build a KD tree to enable fast look-up of nearest neighbours
         tree = KDTree(exp2.get_positions())
-        elm_indx = self.build_site_lists()
         for i in range(translations.shape[0]):
             for matrix in rotation_reflection_matrices:
                 pos1 = copy.deepcopy(pos1_ref)
-                pos2 = copy.deepcopy(pos2_ref)
-
+                print (pos1)
                 # Translate
                 pos1 -= translations[i,:]
 
@@ -306,24 +369,11 @@ class StructureComparator( object ):
                 pos1 = matrix.dot(pos1.T).T
 
                 # Update the atoms positions
-                atoms1.set_positions( pos1 )
-                atoms1.wrap( pbc=[1,1,1] )
-
-                if ( self.elements_match(atoms1,exp2,tree) ):
+                self.s1.set_positions( pos1 )
+                self.s1.wrap( pbc=[1,1,1] )
+                if ( self.elements_match(self.s1,exp2,tree) ):
                     return True
         return False
-
-    def build_site_lists( self ):
-        """
-        Creates a dictionary of indices of the different sites
-        """
-        elements_indx = {}
-        for atom in self.s1:
-            if ( atom.symbol in elements_indx.keys() ):
-                elements_indx[atom.symbol].append(atom.index)
-            else:
-                elements_indx[atom.symbol] = [atom.index]
-        return elements_indx
 
     def expand( self, ref_atoms ):
         """
@@ -507,20 +557,20 @@ class StructureComparator( object ):
 
     def elements_match( self, s1, s2, kdtree ):
         """
-        Checks that all the elements in the two atoms match
+        Checks that all the elements in s1 match the corresponding position in s2
 
         NOTE: The unit cells may be in different octants
         Hence, try all cyclic permutations of x,y and z
         """
-
+        pos1 = s1.get_positions()
         for order in range(3):
             all_match = True
             used_sites = []
             for i in range( len(s1) ):
                 s1pos = np.zeros(3)
-                s1pos[0] = s1.get_positions()[i,order]
-                s1pos[1] = s1.get_positions()[i, (order+1)%3]
-                s1pos[2] = s1.get_positions()[i, (order+2)%3]
+                s1pos[0] = pos1[i,order]
+                s1pos[1] = pos1[i, (order+1)%3]
+                s1pos[2] = pos1[i, (order+2)%3]
                 dist, closest = kdtree.query(s1pos)
                 if ( (s1[i].symbol != s2[closest].symbol) or (dist > self.position_tolerance)):
                     all_match = False
@@ -531,7 +581,7 @@ class StructureComparator( object ):
 
     def get_rotation_reflection_matrices( self ):
         """
-        Computes the closest rigid body transformation matrix by solving Procrustes problem
+        Computes candidates for the transformation matrix
         """
         s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
         s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
@@ -539,7 +589,7 @@ class StructureComparator( object ):
         rot_reflection_mat = []
         center_of_mass = []
         cell = self.s1.get_cell().T
-        angle_tol = self.angle_tol*np.pi/180.0
+        angle_tol = self.angle_tol
 
         delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
 
@@ -614,7 +664,7 @@ class StructureComparator( object ):
                         refined_candidate_list[1].append(v2)
                         refined_candidate_list[2].append(v3)
 
-        # Compute rotation/reflection/translation matrices (4x4 matrices)
+        # Compute rotation/reflection
         for v1,v2,v3 in zip(refined_candidate_list[0],refined_candidate_list[1],refined_candidate_list[2]):
             T = np.zeros((3,3))
             T[:,0] = v1
@@ -623,6 +673,8 @@ class StructureComparator( object ):
             R = ref_vec.dot( np.linalg.inv(T) )
             canditate_trans_mat.append(R)
         return canditate_trans_mat, atoms1_ref.get_positions()
+
+
 
 # ============================================================================ #
 #                                                                              #
