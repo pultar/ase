@@ -30,6 +30,7 @@ except:
 
 try:
     import pystructcomp_cpp as pycpp
+    # The C++ version is available at: https://github.com/davidkleiven/StructureCompare
     has_cpp_version = True
 except:
     has_cpp_version = False
