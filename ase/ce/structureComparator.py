@@ -192,8 +192,8 @@ class StructureComparator( object ):
         cell1 = self.s1.get_cell()
         coordinate_scaling = (v2/v1)**(1.0/3.0)
         cell1 *= coordinate_scaling
-        self.s1.set_cell(cell1, scale_atoms=True)
-
+        self.s1.set_positions( self.s1.get_positions()*coordinate_scaling )
+        self.s1.set_cell(cell1)
 
     def has_same_volume( self ):
         return np.abs( np.linalg.det(self.s1.get_cell())-np.linalg.det(self.s2.get_cell()) < 1E-5 )
