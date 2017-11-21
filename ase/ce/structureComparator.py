@@ -360,7 +360,6 @@ class StructureComparator( object ):
         for i in range(translations.shape[0]):
             for matrix in rotation_reflection_matrices:
                 pos1 = copy.deepcopy(pos1_ref)
-                print (pos1)
                 # Translate
                 pos1 -= translations[i,:]
 
@@ -562,7 +561,7 @@ class StructureComparator( object ):
         Hence, try all cyclic permutations of x,y and z
         """
         pos1 = s1.get_positions()
-        for order in range(3):
+        for order in range(1):
             all_match = True
             used_sites = []
             for i in range( len(s1) ):
