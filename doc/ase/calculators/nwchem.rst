@@ -58,13 +58,12 @@ An example of creating an NWChem calculator in the python interface is::
                 xc='B3LYP',
                 basis='6-31+G*')
 
-If you need to request more memory, it is typically not sufficient to only do
-so through your queuing system. You need to also let NWChem know about the
-additional available memory, which you can do by inserting NWChem's `memory`
-keyword with ASE's `raw` keyword (which puts raw text lines in the NWChem
-iput file).
-See the official NWChem documentation for the proper use of the `memory`
-keyword.
+If you need to request more memory, it is typically not sufficient to do so
+only through your queuing system. You need to also let NWChem know about the
+additional available memory, with NWChem's `memory` keyword which in turn is 
+added through ASE's `raw` keyword (which puts raw text lines in the NWChem
+input file). An example is below; see the official NWChem documentation for
+the proper use of the `memory` keyword.
 
 .. code-block:: python
    :emphasize-lines: 2
