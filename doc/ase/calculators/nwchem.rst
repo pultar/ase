@@ -76,6 +76,7 @@ Parameters
 ==========
 
 The list of possible parameters and their defaults is shown below.
+See the NWChem documentation for full explanations of these different options.
 
 =============== ======== ======================== ============================
 keyword         type     default value            description
@@ -91,14 +92,15 @@ keyword         type     default value            description
                                                   NWChem centers the
                                                   coordinates by default.
 ``convergence`` ``dict``                          Convergence criteria.
-``basis``       ``str``  ``'3-21G'``              Basic set.
+``basis``       ``str``  ``'3-21G'``              Basis set.
 ``print``       ``str``  ``None``                 Flags within the DFT block
                                                   steering the output details.
 ``basispar``             ``None``
 ``ecp``                  ``None``
 ``so``                   ``None``
-``spinorbit``            ``None``
-``odft``                 ``None``
+``spinorbit``            ``None``                 Use spin-orbit DFT module.
+``odft``                 ``None``                 Use open-shell (spin-polarized)
+                                                  DFT.
 ``raw``                  ``''``                   Raw text outside DFT block
                                                   control string.
 =============== ======== ======================== ============================
