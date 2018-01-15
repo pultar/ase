@@ -65,7 +65,7 @@ def generate_writer_variables(writer, atoms, rotation='', show_unit_cell=False,
     if bbox is None:
         X1 = (R - radii[:, None]).min(0)
         X2 = (R + radii[:, None]).max(0)
-        if show_unit_cell == 2:
+        if show_unit_cell:
             X1 = np.minimum(X1, cell_vertices.min(0))
             X2 = np.maximum(X2, cell_vertices.max(0))
         M = (X1 + X2) / 2
