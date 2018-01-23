@@ -101,7 +101,8 @@ class Summary:
                             block = (title, rows)
                         else:
                             continue
-                    elif block.endswith('.png'):
+                    elif '.' in block:
+                        # Name of a file (typically a .png or .csv)
                         name = op.join(tmpdir, prefix + block)
                         if not op.isfile(name):
                             self.create_figures(row, prefix, tmpdir,
@@ -109,6 +110,8 @@ class Summary:
                         if op.getsize(name) == 0:
                             # Skip empty files:
                             block = None
+                    else:
+                        assert block in ['ATOMS', 'CELL', 'FORCES'], block
 
                     newcolumn.append(block)
                     if block is not None:
