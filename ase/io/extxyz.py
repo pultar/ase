@@ -120,7 +120,7 @@ def key_val_str_to_dict(string, sep=None):
             try:
                 numvalue = []
                 for vpart in re.split(r'[\s,]+',
-                                      value):  # allow commas in arrays
+                                      value.rstrip().lstrip()):  # allow commas in arrays
                     if '.' in vpart:  # possible float
                         numvalue.append(float(vpart))
                     else:
