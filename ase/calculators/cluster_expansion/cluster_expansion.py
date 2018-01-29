@@ -32,8 +32,8 @@ class ClusterExpansion(Calculator):
     name = 'ClusterExpansion'
     implemented_properties = ['energy']
 
-    def __init__(self, settings, init_atoms, cluster_name_eci=None,
-                 init_cf=None, logfile=None):
+    def __init__(self, settings, cluster_name_eci=None, init_cf=None,
+                 logfile=None):
         Calculator.__init__(self)
 
         if not isinstance(settings, BulkCrystal):
@@ -66,9 +66,18 @@ class ClusterExpansion(Calculator):
             self.cf = init_cf
         elif isinstance(init_cf, list):
             if all(isinstance(i, (tuple, list)) for i in init_cf):
-                # cluster_names = [tup[0] for tup in init_cf]
-                # if all()
-                self.cf = np.array([tup[1] for tup in init_cf], dtype=float)
+                cluster_names = [tup[0] for tup in init_cf]
+                # cluster_name_eci and init_cf in the same order
+                if cluster_names == self.cluster_names:
+                    self.cf = np.array([tup[1] for tup in init_cf],
+                                       dtype=float)
+                # not in the same order
+                else:
+                    self.cf = []
+                    for name in self.cluster_names:
+                        indx = cluster_names.index(name)
+                        self.cf.append(init_cf[indx][1])
+                    self.cf = np.array(self.cf, dtype=float)
             else:
                 self.cf = np.array(init_cf, dtype=float)
         elif isinstance(init_cf, dict):
@@ -77,10 +86,10 @@ class ClusterExpansion(Calculator):
         else:
             raise TypeError("'init_cf' needs to be either (1) a list "
                             "of tuples, (2) a dictionary, or (3) numpy array "
-                            "containing correlation function in the same order "
-                            "as the 'cluster_name_eci'.")
+                            "containing correlation function in the same "
+                            "order as the 'cluster_name_eci'.")
 
-        if (self.cf is not None and len(self.eci) != len(self.cf)):
+        if self.cf is not None and len(self.eci) != len(self.cf):
             raise ValueError('length of provided ECIs and correlation '
                              'functions do not match')
 
@@ -92,17 +101,15 @@ class ClusterExpansion(Calculator):
                 logfile = open(logfile, 'a')
         self.logfile = logfile
 
+        self.energy = None
         # reference atoms for calculating the cf and energy for new atoms
         self.ref_atoms = None
         self.ref_cf = None
-        self.ref_energy = None
         # old atoms for the case where one needs to revert to the previous
         # structure (e.g., Monte Carlo Simulation)
         self.old_atoms = None
         self.old_cf = None
-        self.old_energy = None
 
-    # def calculate(self, atoms, accept=True):
     def calculate(self, atoms, properties, system_changes):
         """Calculate the energy of the passed atoms object.
 
@@ -137,7 +144,7 @@ class ClusterExpansion(Calculator):
         self.old_cf = deepcopy(self.ref_cf)
 
     def restore(self):
-        print('restore')
+        """Restore the old atoms and correlation functions to the reference"""
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
 
@@ -162,21 +169,17 @@ class ClusterExpansion(Calculator):
         n_numbers = self.atoms.numbers
         check = (n_numbers == o_numbers)
         changed = np.argwhere(check == 0)[:, 0]
-        print(changed)
         return np.unique(changed)
 
     def _symbol_by_index(self, indx):
         return [self.ref_atoms[indx].symbol, self.atoms[indx].symbol]
 
     def update_cf(self):
+        """Update correlation function based on the reference value"""
         swapped_indices = self.indices_of_changed_atoms
 
-        # if swapped_indices is empty, no changes are made to the atoms
-        if len(swapped_indices) == 0:
-            return deepcopy(self.old_cf)
-
         bf_list = list(range(len(self.settings.basis_functions)))
-        self.cf = deepcopy(self.old_cf)
+        self.cf = deepcopy(self.ref_cf)
 
         for indx in swapped_indices:
             for i, name in enumerate(self.cluster_names):
