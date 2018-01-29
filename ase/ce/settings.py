@@ -6,12 +6,10 @@ from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 
 class BulkCrystal(object):
-    """
-    Class that stores the necessary information about rocksalt structures.
-    """
-    def __init__(self, crystalstructure=None, alat=None, cell_dim=None,
-                 num_sites=None, site_elements=None, conc_args=None,
-                 db_name=None, min_cluster_size=0, max_cluster_size=4,
+    """Class for storing settings for Bulk Crystal Cluster Expansion."""
+    def __init__(self, crystalstructure=None, alat=None, clat=None,
+                 cell_dim=None, num_sites=None, site_elements=None,
+                 conc_args=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, reconf_db=False):
         """
         crystalstructure: name of the crystal structure (e.g., 'fcc', 'sc')
@@ -36,8 +34,8 @@ class BulkCrystal(object):
         structures = ['sc', 'fcc', 'bcc', 'hcp', 'diamond', 'zincblende',
                       'rocksalt', 'cesiumchloride', 'fluorite', 'wurtzite']
         if crystalstructure is None:
-            raise ValueError("Please specify 'crystalstructure' (e.g., 'fcc').")
-        if crystalstructure not in structures:
+            raise ValueError("Specify 'crystalstructure' (e.g., 'fcc').")
+        elif crystalstructure not in structures:
             raise TypeError('Provided crystal structure is not supported.\n'
                             'The supported types are: {}'.format(structures))
 
@@ -121,7 +119,6 @@ class BulkCrystal(object):
             self.conc_ratio_min_2 = conc_ratio_min_2
             self.conc_ratio_max_2 = conc_ratio_max_2
         self.db_name = db_name
-        self.min_cluster_size = min_cluster_size
         self.max_cluster_size = max_cluster_size
         self.spin_dict = self.get_spin_values()
         self.basis_functions = self.get_basis_functions()
@@ -458,3 +455,29 @@ class BulkCrystal(object):
                 row.append(self.dist_matrix[x[0], x[1], t])
             d.append(sorted(row, reverse=True))
         return np.array(min(d))
+
+    def in_conc_matrix(self, atoms):
+        """
+        Checks to see if the passed atoms object has allowed concentration by
+        checking the concentration matrix. Returns boolean.
+        """
+        # determine the concentration of the given atoms
+        conc = np.zeros(self.num_elements, dtype=int)
+        for x in range(self.num_elements):
+            element = self.all_elements[x]
+            num_element = len([a for a in atoms if a.symbol == element])
+            conc[x] = num_element
+
+        # determine the dimensions of the concentration matrix
+        # then, search to see if there is a match
+        conc_shape = self.conc_matrix.shape
+        if len(conc_shape) == 2:
+            for x in range(conc_shape[0]):
+                if np.array_equal(conc, self.conc_matrix[x]):
+                    return True
+        else:
+            for x in range(conc_shape[0]):
+                for y in range(conc_shape[1]):
+                    if np.array_equal(conc, self.conc_matrix[x][y]):
+                        return True
+        return False
