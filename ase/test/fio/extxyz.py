@@ -87,6 +87,7 @@ complex_xyz_string = (
     'floating=1.1 '
     'int_array={1 2 3} '
     'float_array="3.3 4.4" '
+    'float_array_whitespace=" 3.3 4.4 " '
     'a3x3_array="1 4 7 2 5 8 3 6 9" '  # fortran ordering
     'bool_array={T F T F} '
     'not_bool_array=[T F S] '
@@ -116,6 +117,7 @@ expected_dict = {
     'floating': 1.1,
     'int_array': np.array([1, 2, 3]),
     'float_array': np.array([3.3, 4.4]),
+    'float_array_whitespace': np.array([3.3, 4.4]),
     'a3x3_array': np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
     'bool_array': np.array([True, False, True, False]),
     'not_bool_array': 'T F S',
