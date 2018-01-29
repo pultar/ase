@@ -1,4 +1,3 @@
-from ase.db import connect
 from ase.ce.settings import BulkCrystal
 import numpy as np
 from numpy.linalg import matrix_rank, inv
@@ -10,12 +9,11 @@ from sklearn.linear_model import Lasso
 
 
 class Evaluate(object):
-    """
-    Class that evaluates RMSE and CV scores. It also generates a plot that
+    """Class that evaluates RMSE and CV scores. It also generates a plot that
     compares the energies predicted by CE and that are obtained from DFT
     calculations.
     """
-    def __init__(self, BC, cluster_names=None, select_cond = None, lamb=0.0,
+    def __init__(self, BC, cluster_names=None, select_cond=None, lamb=0.0,
                  penalty=None):
         """
         BC: BulkCrystal object
@@ -75,11 +73,11 @@ class Evaluate(object):
         """
         full_names = []
         full_names.append(self.cluster_names[0][0])
-        for k in range(1,len(self.cluster_names)):
-            cases = (self.num_elements-1)**k
+        for k in range(1, len(self.cluster_names)):
+            cases = (self.num_elements - 1)**k
             for name in self.cluster_names[k][:]:
-                for i in range(1,cases+1):
-                    full_names.append('{}_{}'.format(name,i))
+                for i in range(1, cases + 1):
+                    full_names.append('{}_{}'.format(name, i))
         return full_names
 
     def _make_cf_matrix(self):
@@ -100,16 +98,16 @@ class Evaluate(object):
         creating probe structures.
         """
         cfm = []
-        for row in self.db.select([('name','!=','information')]):
+        for row in self.db.select([('name', '!=', 'information')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
-        #cfm = self.reduce_matrix(cfm)
+        # cfm = self.reduce_matrix(cfm)
         return cfm
 
     def _get_dft_energy_per_atom(self):
         e_dft = []
         for row in self.db.select(self.select_cond):
-            e_dft.append(row.energy/row.natoms)
+            e_dft.append(row.energy / row.natoms)
         self.e_dft = np.array(e_dft)
         return True
 
@@ -122,8 +120,9 @@ class Evaluate(object):
 
         if not self.penalty:
             if matrix_rank(self.cf_matrix) < n_col:
-                print("Rank of the design matrix is smaller than the number of "
-                      "its columns. Reducing the matrix to make it invertible.")
+                print("Rank of the design matrix is smaller than the number "
+                      "of its columns. Reducing the matrix to make it "
+                      "invertible.")
                 self._reduce_matrix(self.cf_matrix)
                 print("Linearly independent clusters are:")
                 print("{}".format(self.cluster_names))
@@ -134,7 +133,7 @@ class Evaluate(object):
             identity = np.identity(n_col)
             identity[0][0] = 0.
             a = inv(self.cf_matrix.T.dot(self.cf_matrix) +
-                    self.lamb*identity).dot(self.cf_matrix.T)
+                    self.lamb * identity).dot(self.cf_matrix.T)
             eci = a.dot(self.e_dft)
 
         elif self.penalty == 'l1':
@@ -199,10 +198,10 @@ class Evaluate(object):
         rmin = min(np.append(self.e_dft, self.e_pred)) - 0.1
         rmax = max(np.append(self.e_dft, self.e_pred)) + 0.1
 
-        t = np.arange(rmin-10, rmax+10, 1)
+        t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.set_title('Fit using %d data points' %self.e_dft.shape[0])
+        ax.set_title('Fit using {} data points'.format(self.e_dft.shape[0]))
         ax.plot(self.e_pred, self.e_dft, 'bo', mfc='none')
         ax.plot(t, t, 'r')
         ax.axis([rmin, rmax, rmin, rmax])
@@ -230,9 +229,9 @@ class Evaluate(object):
         offset = 0
         rank = matrix_rank(cfm)
         while cfm.shape[1] > rank:
-            temp = np.delete(cfm,-1-offset,axis=1)
+            temp = np.delete(cfm, -1 - offset, axis=1)
             cname_temp = deepcopy(cname_list)
-            del cname_temp[-1-offset]
+            del cname_temp[-1 - offset]
             if matrix_rank(temp) < rank:
                 offset += 1
             else:
@@ -260,7 +259,7 @@ class Evaluate(object):
         elif self.penalty == 'l2':
             identity = np.identity(n_col)
             identity[0][0] = 0.
-            a = inv(cfm.T.dot(cfm) + self.lamb*identity).dot(cfm.T)
+            a = inv(cfm.T.dot(cfm) + self.lamb * identity).dot(cfm.T)
             eci = a.dot(e_dft)
         elif self.penalty == 'l1':
             lasso = Lasso(alpha=self.lamb, fit_intercept=False, copy_X=True,
@@ -303,13 +302,13 @@ class Evaluate(object):
         prec = inv(cfm.T.dot(cfm))
         cv_sq = 0.0
         for i in range(cfm.shape[0]):
-            cv_sq += (delta_e[i]/(1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
+            cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
         cv_sq /= cfm.shape[0]
         return np.sqrt(cv_sq)
 
     def mae(self):
         delta_e = self.e_dft - self.e_pred
-        return sum(np.absolute(delta_e))/len(delta_e)
+        return sum(np.absolute(delta_e)) / len(delta_e)
 
     def rmse(self):
         delta_e = self.e_dft - self.e_pred
