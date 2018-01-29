@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from itertools import product
+from ase.atoms import Atoms
 from ase.ce.settings import BulkCrystal
 from ase.ce.tools import wrap_and_sort_by_position
 
@@ -14,7 +15,6 @@ class CorrFunction(object):
         self.cell_dim = BC.cell_dim
         self.basis_functions = BC.basis_functions
         self.alat = BC.alat
-        self.min_cluster_size = BC.min_cluster_size
         self.max_cluster_size = BC.max_cluster_size
         self.cluster_names = BC.cluster_names
         self.cluster_dist = BC.cluster_dist
@@ -23,7 +23,6 @@ class CorrFunction(object):
         if not os.path.exists(BC.db_name):
             raise ValueError("DB file {} does not exist".format(self.db_name))
         self.db = BC.db
-
 
     def get_c1(self, atoms, dec):
         c1 = 0
@@ -38,14 +37,17 @@ class CorrFunction(object):
         Compute correlation function for all possible clusters within
         the size and diameter limits
         """
-        atoms = self.check_and_convert_cell_size(atoms.copy())
+        if isinstance(atoms, Atoms):
+            atoms = self.check_and_convert_cell_size(atoms.copy())
+        else:
+            raise TypeError('atoms must be Atoms object')
         natoms = len(atoms)
         bf_list = list(range(len(self.basis_functions)))
         cf = {}
         # ----------------------------------------------------
         # Compute correlation function up the max_cluster_size
         # ----------------------------------------------------
-        for n in range(self.min_cluster_size, self.max_cluster_size+1):
+        for n in range(self.max_cluster_size+1):
             perm = list(product(bf_list, repeat=n))
             if n == 0:
                 cf['c0'] = 1.
@@ -65,21 +67,35 @@ class CorrFunction(object):
                     cf['{}_{}'.format(name_list[cat], i+1)] = cf_temp
         return cf
 
-    def get_cf_by_cluster_names(self, atoms, cluster_names):
-        atoms = self.check_and_convert_cell_size(atoms.copy())
+    def get_cf_by_cluster_names(self, atoms, selected_cluster_names,
+                                return_type='dict'):
+        """
+        Returns correlation functions with the names that are in cluster_names
+        (list of names of clusters) based on the passed atoms (Atoms object).
+        Possible return_type (strings):
+            'dict' (default): returns dictionary (e.g., {'name' : cf })
+            'tuple': returns list of tuples (e.g., [('name', cf)])
+            'array': NumPy array containing "only" correlation function (same
+                     order as the order of 'cluster_names')
+        """
+
+        if isinstance(atoms, Atoms):
+            atoms = self.check_and_convert_cell_size(atoms.copy())
+        else:
+            raise TypeError('atoms must be Atoms object')
         natoms = len(atoms)
         bf_list = list(range(len(self.basis_functions)))
         cf = {}
         # ----------------------------------------------------
         # Compute correlation function up the max_cluster_size
         # ----------------------------------------------------
-        for name in cluster_names:
+        for name in selected_cluster_names:
             if name == 'c0':
                 cf[name] = 1.
                 continue
             elif name.startswith('c1'):
                 dec = int(name[-1]) - 1
-                cf[name] = self.get_c1(atoms,dec)
+                cf[name] = self.get_c1(atoms, dec)
                 continue
             prefix = name.rpartition('_')[0]
             dec = int(name.rpartition('_')[-1]) - 1
@@ -93,9 +109,18 @@ class CorrFunction(object):
                     continue
             perm = list(product(bf_list, repeat=num))
             count = len(self.cluster_indx[num][ctype])*natoms
-            sp = self.spin_product(atoms, self.cluster_indx[num][ctype], perm[dec])
+            sp = self.spin_product(atoms, self.cluster_indx[num][ctype],
+                                   perm[dec])
             sp /= count
             cf[name] = sp
+
+        if return_type == 'dict':
+            pass
+        elif return_type == 'tuple':
+            cf = list(cf.items())
+        elif return_type == 'array':
+            cf = np.array([cf[x] for x in selected_cluster_names], dtype=float)
+
         return cf
 
     def spin_product(self, atoms, indx_list, dec):
@@ -123,15 +148,15 @@ class CorrFunction(object):
         and wrapped. If not, it raises an error.
         """
         cell_lengths = atoms.get_cell_lengths_and_angles()[:3]\
-                       /(2.*self.alat)*1000
+            / (2. * self.alat) * 1000
         try:
             row = self.db.get(name='information')
             template = row.toatoms()
         except:
-            raise IOError("Cannot retrieve the information template from the"+
-                          " database")
+            raise IOError("Cannot retrieve the information template from the "
+                          "database")
         template_lengths = template.get_cell_lengths_and_angles()[:3]\
-                           /(2.*self.alat)*1000
+            / (2. * self.alat) * 1000
 
         if np.allclose(cell_lengths, template_lengths):
             atoms = wrap_and_sort_by_position(atoms)
@@ -141,6 +166,6 @@ class CorrFunction(object):
             if np.allclose(ratios, int_ratios):
                 atoms = wrap_and_sort_by_position(atoms*int_ratios)
             else:
-                raise TypeError("Cannot make the passed atoms object to the "+
-                                "specified size {}".format(self.cell_dim))
+                raise TypeError("Cannot make the passed atoms object to the "
+                                "specified size of {}".format(self.cell_dim))
         return atoms
