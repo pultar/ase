@@ -99,14 +99,13 @@ class CorrFunction(object):
                 continue
             prefix = name.rpartition('_')[0]
             dec = int(name.rpartition('_')[-1]) - 1
-            # find the location of the name in cluster_names
-            for n in range(2, len(self.cluster_names)):
-                try:
-                    ctype = self.cluster_names[n].index(prefix)
-                    num = n
-                    break
-                except ValueError:
-                    continue
+
+            # find c{num} in cluster type
+            num = int(prefix[1])
+            # find the type of cluster based on the index of the original
+            # settings.cluster_names nested list (unflattened)
+            ctype = self.cluster_names[num].index(prefix)
+
             perm = list(product(bf_list, repeat=num))
             count = len(self.cluster_indx[num][ctype])*natoms
             sp = self.spin_product(atoms, self.cluster_indx[num][ctype],
