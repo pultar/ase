@@ -224,14 +224,8 @@ class BulkCrystal(object):
         del indices[indices.index(0)]
 
         for n in range(2, self.max_cluster_size+1):
-            indx_set = []; dist_set = []
-            # if the min_cluster_size is specified, the size up to the
-            # min_cluster_size has None for distance and index.
-            if n < self.min_cluster_size:
-                cluster_dist.append([None])
-                cluster_indx.append([None])
-                cluster_names.append(['c{}'.format(n)])
-                continue
+            indx_set = []
+            dist_set = []
 
             for i in combinations(indices, n-1):
                 d = self.get_min_distance((0,)+i)
