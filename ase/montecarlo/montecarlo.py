@@ -1,92 +1,155 @@
-# -*- coding: utf-8 -*-
-"""Monte Carlo method for ase."""
-from __future__ import division
-
+"""Definition of the Base-class for all Monte Carlo and Simulated Annealing"""
+import sys
 import numpy as np
-import ase.units as units
-#from ase.io.trajectory import Trajectory
+from ase.utils import basestring
+from ase.units import kB
+from ase.montecarlo.swap_atoms import SwapAtoms
+from ase.atoms import Atoms
 
 
+class MonteCarlo(object):
+    """Base-class for all Monte Carlo and Simulated Annealing.
 
-class Montecarlo:
-    """ Class for performing MonteCarlo sampling for atoms
+    Arguments
+    =========
+    atoms: Atoms object to specify the initial structure. A calculator need to
+           attached to *atoms* in order to calculate energy.
 
+    temp: temperature in Kelvin for Monte Carlo simulation
+
+    constraint: types of constraints imposed on swapping two atoms.
+        - None: any two atoms can be swapped
+        - 'nn': any atom selected, swapped only with its nearest neighbor
+        - 'basis': any atom selected, swapped only with another atom in the
+                   same basis
+        - 'nn-basis': any atom selected, swapped only with its nearest neighbor
+                      in the same basis
+
+    logfile: file object, str or None.
+        - None: logging is disabled
+        - string: a file with that name will be opened. If '-', stdout used.
+        - file object: use the file object for logging
     """
 
-    def __init__(self,atoms,temp,indeces = None):
-        """ Initiliaze Monte Carlo simulations object
-
-        Arguments:
-        atoms : ASE atoms object
-        temp  : Temperature of Monte Carlo simulation in Kelvin
-        indeves; List of atoms involved Monte Carlo swaps. default is all atoms.
-
-        """
+    def __init__(self, atoms, temp=None, constraint=None, logfile=None):
+        if not isinstance(atoms, Atoms):
+            raise TypeError('Passed argument should be Atoms object')
         self.atoms = atoms
-        self.T = temp
-        if indeces == None:
-            self.indeces = range(len(self.atoms))
+        self.energy = None
+
+        if isinstance(temp, (int, float)):
+            self.kT = kB * temp
+        elif temp is None:
+            self.kT = None
         else:
-            self.indeces = indeces
+            raise TypeError('temp needs to be int of float type')
 
+        # constraints
+        allowed_constraints = [None, 'nn', 'basis', 'nn-basis']
+        if constraint not in allowed_constraints:
+            raise TypeError('constraint needs to be one of: '
+                            '{}'.format(allowed_constraints))
+        self.constraint = constraint
 
-
-    def runMC(self,steps = 10, verbose = False ):
-        """ Run Monte Carlo simulation
-
-        Arguments:
-        steps : Number of steps in the MC simulation
-
-        """
-
-        # Atoms object should have attached calculator
-        # Add check that this is show
-        self.current_energy = self.atoms.get_potential_energy() # Get starting energy
-
-        totalenergies = []
-        totalenergies.append(self.current_energy)
-        for step in range(steps):
-            en, accept = self._mc_step( verbose=verbose )
-            if ( verbose ):
-                print(accept)
-            totalenergies.append(en)
-
-        return totalenergies
-
-
-    def _mc_step(self, verbose = False ):
-        """ Make one Monte Carlo step by swithing two atoms """
-
-        #number_of_atoms = len(self.atoms)
-
-        rand_a = self.indeces[np.random.randint(0,len(self.indeces))]
-        rand_b = self.indeces[np.random.randint(0,len(self.indeces))]
-        # At the moment rand_a and rand_b could be the same atom
-
-#        rand_b = np.random.randint(0,number_of_atoms)
-        #while (rand_a == rand_b):
-        #    rand_b = np.random.randint(0,number_of_atoms)
-
-        temp_atom = self.atoms[rand_a].symbol
-        self.atoms[rand_a].symbol = self.atoms[rand_b].symbol
-        self.atoms[rand_b].symbol = temp_atom
-        new_energy = self.atoms.get_potential_energy()
-        if ( verbose ):
-            print(new_energy,self.current_energy)
-
-        accept = False
-        if new_energy < self.current_energy:
-            self.current_energy = new_energy
-            accept = True
-        else:
-            kT = self.T*units.kB
-            energy_diff = new_energy-self.current_energy
-            probability = np.exp(-energy_diff/kT)
-            probability = min(1.0,probability)
-            if np.random.rand() <= probability:
-                self.current_energy = new_energy
-                accept = True
+        # logfile
+        if isinstance(logfile, basestring):
+            if logfile == '-':
+                logfile = sys.stdout
             else:
-                # Reset the sytem back to original
-                self.atoms[rand_a].symbol,self.atoms[rand_b].symbol = self.atoms[rand_b].symbol,self.atoms[rand_a].symbol
-        return self.current_energy,accept
+                logfile = open(logfile, 'a')
+        self.logfile = logfile
+
+        # observers
+        # observers will be called every nth step specified by the user
+        self.observers = []
+        self.nsteps = 0
+
+    def run(self, num_steps=100, average=False):
+        """Run Monte Carlo / Simulated Annealing.
+
+        Arguments
+        =========
+        num_steps: Number of steps in Monte Carlo simulation.
+        average: whether or not to return the average values.
+            - True: returns average energy and energy**2 over entire simulation
+            - False: returns the sum of energy and energy**2 over the entire
+                     simulation
+        """
+        # starting energy
+        self.energy = self.atoms.get_potential_energy()
+
+    def _swap(self):
+        """Swap two atoms and evaluate whether or not to accept the new
+        structure. If not accepted, revert back to the orignal structure.
+        Regardless of the acceptance, return the energy of the swapped
+        structure"""
+        if self.constraint is None:
+            swapped_indices = SwapAtoms.swap_any_two_atoms(self.atoms)
+        elif self.constraint == 'nn':
+            swapped_indices = SwapAtoms.swap_nn_atoms(self.atoms)
+        else:
+            raise NotImplementedError('This feature is not implemented')
+
+        energy = self.atoms.get_potential_energy()
+        accept = np.exp((self.energy - energy) / self.kT) > np.random.uniform()
+
+        if accept:
+            self.energy = energy
+        else:
+            # Swap atoms back to the original
+            SwapAtoms.swap_by_indices(self.atoms, swapped_indices[0],
+                                      swapped_indices[1])
+            # CE calculator needs to call a *restore* method
+            if self.atoms.calc.__class__.__name__ == 'ClusterExpansion':
+                self.atoms.calc.restore()
+
+        self.nsteps += 1
+
+        return accept, energy
+
+    def log(self, accept=None, new_energy=None, logtype='MC'):
+        """Writes log to to either a file or stdout.
+
+        If logtype = 'MC', write accept, energy and energy^2 of candidate and
+        selected strucutres.
+
+        Otherwise (i.e., Simulated Annealing), write kT, accept and energy
+        """
+        if self.logfile is None:
+            return True
+
+        if self.nsteps == 0:
+            if logtype == 'MC':
+                self.logfile.write('\t\t\t\tselected structure \t\t\t'
+                                   'candidate structure\n')
+                self.logfile.write('steps \taccept \tEnergy \t\t\tEnergy^2'
+                                   '\t\tEnergy \t\t\tEnergy^2\n')
+                self.logfile.write('{}\t{}\t{}\t{}'.format(self.nsteps,
+                                                           "-----",
+                                                           self.energy,
+                                                           self.energy**2))
+            else:
+                self.logfile.write('steps \tkT \t\t\taccept \tEnergy\n')
+                self.logfile.write('{}\t{}\t\t\t{}\t{}'.format(self.nsteps,
+                                                               '-----',
+                                                               '-----',
+                                                               self.energy))
+
+        else:
+            if logtype == 'MC':
+                self.logfile.write('{}\t{}\t{}'.format(self.nsteps, accept,
+                                                       self.energy))
+                self.logfile.write('\t{}\t{}\t{}'.format(self.energy**2,
+                                                         new_energy,
+                                                         new_energy**2))
+            else:
+                self.logfile.write('{}\t{}\t{}\t{}'.format(self.nsteps,
+                                                           self.kT, accept,
+                                                           self.energy))
+        self.logfile.write('\n')
+        self.logfile.flush()
+
+    def attach(self, observer, interval=1):
+        """Needs to be implemented
+        """
+        return True
