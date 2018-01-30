@@ -10,6 +10,8 @@ from numpy.linalg import inv
 from copy import deepcopy
 from itertools import product
 
+from ase.db import connect
+
 class SimulatedAnnealing(object):
     """
     Class for Simulated Annealing.
@@ -114,6 +116,11 @@ class SimulatedAnnealing(object):
                                                      self.cluster_names)
         cf1 = np.array([cfd1[x] for x in self.cluster_names], dtype=float)
         e1 = cf1.dot(self.eci)
+        print("initial E: {}".format(e1))
+        connect(self.db_name).write(atoms,
+                                    Epred = e1*len(atoms),
+                                    data={'ECI': cfd1}
+                                   )
 
         kTs = kB *np.logspace(math.log10(self.init_temp),
                               math.log10(self.final_temp),
@@ -126,12 +133,19 @@ class SimulatedAnnealing(object):
                 cf2 = np.array([cfd2[x] for x in self.cluster_names],
                                dtype=float)
                 e2 = cf2.dot(self.eci)
-                accept = np.exp((e1 - e2)/kT) > np.random.uniform()
+                print("new E: {}".format(e1))
+                #accept = np.exp((e1 - e2)/kT) > np.random.uniform()
+                connect(self.db_name).write(atoms2,
+                                            Epred = e2*len(atoms2),
+                                            data={'ECI': cfd2}
+                                           )
+                accept = True
                 if accept:
                     atoms = atoms2.copy()
                     cf1 = np.copy(cf2)
                     cfd1 = deepcopy(cfd2)
                     e1 = deepcopy(e2)
+
         #Check to see if the cf is indeed preserved
         cfd_new =self.corrFunc.get_cf_by_cluster_names(atoms,
                                                        self.cluster_names)

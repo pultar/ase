@@ -1,18 +1,9 @@
 """Definition of Metropolis Class for Metropolis Monte Carlo Simulations."""
-import sys
-from copy import deepcopy
-import numpy as np
-from ase.utils import basestring
-from ase.units import kB
-from ase.montecarlo.swap_atoms import SwapAtoms
-from ase.atoms import Atoms
+from ase.montecarlo.montecarlo import MonteCarlo
 
 
-class Metropolis(object):
+class Metropolis(MonteCarlo):
     """Class for performing Metropolis Monte Carlo sampling.
-
-    A calculator object needs to be attached to the Metropolis object in order
-    to calculate energies.
 
     Arguments
     =========
@@ -35,43 +26,16 @@ class Metropolis(object):
     """
 
     def __init__(self, atoms, temp, constraint=None, logfile=None):
-        if not isinstance(atoms, Atoms):
-            raise TypeError('Passed argument should be Atoms object')
-        self.atoms = atoms
-        self.energy = None
-        if not isinstance(temp, (int, float)):
-            raise TypeError('temp must be in int or float type')
-        self.kT = kB * temp
-
-        # constraints
-        allowed_constraints = [None, 'nn', 'basis', 'nn-basis']
-        if constraint not in allowed_constraints:
-            raise TypeError('constraint needs to be one of: '
-                            '{}'.format(allowed_constraints))
-        self.constraint = constraint
-
-        # logfile
-        if isinstance(logfile, basestring):
-            if logfile == '-':
-                logfile = sys.stdout
-            else:
-                logfile = open(logfile, 'a')
-        self.logfile = logfile
-
-        # observers
-        # observers will be called every nth step specified by the user
-        self.observers = []
-        self.nsteps = 0
+        if temp is None:
+            raise TypeError('temp needs to be int or float type')
+        MonteCarlo.__init__(self, atoms=atoms, temp=temp,
+                            constraint=constraint, logfile=logfile)
 
     def run(self, num_steps=10, average=False):
         """Run Monte Carlo simulation.
 
         Perform Metropolis Monte Carlo simulation using the number of steps
         specified by a user. Returns energy and energy**2.
-
-        If average is set to True, returns average energy and energy**2.
-        If average is set to False, returns the sum of energy and energy**2
-        over the total number of steps.
 
         Arguments
         =========
@@ -82,13 +46,13 @@ class Metropolis(object):
                      simulation
         """
         # starting energy
-        self.energy = self.atoms.get_potential_energy()
-        energy_sum = deepcopy(self.energy)
+        MonteCarlo.run(self)
+        energy_sum = self.energy
         energy_sq_sum = self.energy**2
         self.log()
 
         for _ in range(num_steps):
-            accept, energy = self._step()
+            accept, energy = self._swap()
             energy_sum += self.energy
             energy_sq_sum += self.energy**2
             self.log(accept, energy)
@@ -98,59 +62,3 @@ class Metropolis(object):
             energy_sq_sum /= num_steps
 
         return energy_sum, energy_sq_sum
-
-    def _step(self):
-        """Perform one Monte Carlo step."""
-        if self.constraint is None:
-            swapped_indices = SwapAtoms.swap_any_two_atoms(self.atoms)
-        elif self.constraint == 'nn':
-            swapped_indices = SwapAtoms.swap_nn_atoms(self.atoms)
-        else:
-            raise NotImplementedError('This feature is not implemented')
-
-        energy = self.atoms.get_potential_energy()
-        accept = np.exp((self.energy - energy) / self.kT) > np.random.uniform()
-
-        if accept:
-            self.energy = deepcopy(energy)
-        else:
-            # Swap atoms back to the original
-            SwapAtoms.swap_by_indices(self.atoms, swapped_indices[0],
-                                      swapped_indices[1])
-            # CE calculator needs to call a *restore* method
-            if self.atoms.calc.__class__.__name__ == 'ClusterExpansion':
-                self.atoms.calc.restore()
-
-        self.nsteps += 1
-
-        return accept, energy
-
-    def log(self, accept=None, new_energy=None):
-        """Write energy and energy^2 to log file"""
-        if self.logfile is None:
-            return True
-
-        if self.nsteps == 0:
-            self.logfile.write('\t\t\t\tselected structure \t\t\t'
-                               'candidate structure\n')
-            self.logfile.write('steps \taccept \tEnergy \t\t\tEnergy^2'
-                               '\t\tEnergy \t\t\tEnergy^2\n')
-            self.logfile.write('{}\t{}\t{}\t{}'.format(self.nsteps, "-----",
-                                                       self.energy,
-                                                       self.energy**2))
-            self.logfile.write('\n')
-        else:
-            self.logfile.write('{}\t{}\t{}\t{}\t{}\t{}'.format(self.nsteps,
-                                                               accept,
-                                                               self.energy,
-                                                               self.energy**2,
-                                                               new_energy,
-                                                               new_energy**2))
-            self.logfile.write('\n')
-
-        self.logfile.flush()
-
-    def attach(self, observer, interval=1):
-        """Needs to be implemented
-        """
-        return True
