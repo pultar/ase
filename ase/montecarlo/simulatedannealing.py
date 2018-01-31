@@ -103,15 +103,15 @@ class SimulatedAnnealing(MonteCarlo):
         =========
         num_steps: Number of steps in Simulated Annealing.
         """
+        # starting energy
+        MonteCarlo.run(self)
+        self.log(logtype='SA')
 
         if num_steps < self.num_temp:
             raise ValueError('number of Simulated Annealing steps must be '
                              'larger than the number of temperatures')
         steps_per_temp = int(num_steps / self.num_temp)
 
-        # starting energy
-        self.energy = self.atoms.get_potential_energy()
-        self.log(logtype='SA')
         temp_indx = 0
         self.kT = self.kTs[temp_indx]
 
@@ -128,4 +128,3 @@ class SimulatedAnnealing(MonteCarlo):
                 final_energy = energy
 
         return atoms, final_energy
-
