@@ -58,7 +58,7 @@ class Metropolis(MonteCarlo):
             self.log(accept, energy)
 
         if average:
-            energy_sum /= num_steps
-            energy_sq_sum /= num_steps
+            energy_sum /= self.nsteps
+            energy_sq_sum /= self.nsteps
 
         return energy_sum, energy_sq_sum
