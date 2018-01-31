@@ -213,11 +213,12 @@ def ints2string(x, threshold=None):
 class FixBondLengths(FixConstraint):
     maxiter = 500
 
-    def __init__(self, pairs, tolerance=1e-13, iterations=None):
+    def __init__(self, pairs, tolerance=1e-13, bondlengths=None, iterations=None):
         """iterations:
                 Ignored"""
         self.pairs = np.asarray(pairs)
         self.tolerance = tolerance
+        self.bondlengths = bondlengths
 
         self.removed_dof = len(pairs)
 
@@ -225,14 +226,20 @@ class FixBondLengths(FixConstraint):
         old = atoms.positions
         masses = atoms.get_masses()
 
+        if self.bondlengths is None:
+           self.bondlengths = self.initialize_bond_lengths(atoms)
+
         for i in range(self.maxiter):
             converged = True
-            for a, b in self.pairs:
+            for j, ab in enumerate(self.pairs):
+                a = ab[0]
+                b = ab[1]
+                cd = self.bondlengths[j]
                 r0 = old[a] - old[b]
                 d0 = find_mic([r0], atoms.cell, atoms._pbc)[0][0]
                 d1 = new[a] - new[b] - r0 + d0
                 m = 1 / (1 / masses[a] + 1 / masses[b])
-                x = 0.5 * (np.dot(d0, d0) - np.dot(d1, d1)) / np.dot(d0, d1)
+                x = 0.5 * (cd**2 - np.dot(d1, d1)) / np.dot(d0, d1)
                 if abs(x) > self.tolerance:
                     new[a] += x * m / masses[a] * d0
                     new[b] -= x * m / masses[b] * d0
@@ -245,14 +252,21 @@ class FixBondLengths(FixConstraint):
     def adjust_momenta(self, atoms, p):
         old = atoms.positions
         masses = atoms.get_masses()
+
+        if self.bondlengths is None:
+           self.bondlengths = self.initialize_bond_lengths(atoms)
+
         for i in range(self.maxiter):
             converged = True
-            for a, b in self.pairs:
+            for j, ab in enumerate(self.pairs):
+                a = ab[0]
+                b = ab[1]
+                cd = self.bondlengths[j]
                 d = old[a] - old[b]
                 d = find_mic([d], atoms.cell, atoms._pbc)[0][0]
                 dv = p[a] / masses[a] - p[b] / masses[b]
                 m = 1 / (1 / masses[a] + 1 / masses[b])
-                x = -np.dot(dv, d) / np.dot(d, d)
+                x = -np.dot(dv, d) / cd**2
                 if abs(x) > self.tolerance:
                     p[a] += x * m * d
                     p[b] -= x * m * d
@@ -266,6 +280,14 @@ class FixBondLengths(FixConstraint):
         self.constraint_forces = -forces
         self.adjust_momenta(atoms, forces)
         self.constraint_forces += forces
+
+    def initialize_bond_lengths(self, atoms):
+        bondlengths = np.zeros(len(self.pairs))
+
+        for i, ab in enumerate(self.pairs):
+            bondlengths[i] = atoms.get_distance(ab[0], ab[1], mic=True)
+
+        return bondlengths
 
     def get_indices(self):
         return np.unique(self.pairs.ravel())
@@ -897,7 +919,7 @@ class Hookean(FixConstraint):
         elif self._type == 'point':
             p1 = positions[self.index]
             p2 = self.origin
-        displace = p2 - p1
+        displace = find_mic([p2 -p1], atoms.cell, atoms._pbc)[0][0]
         bondlength = np.linalg.norm(displace)
         if bondlength > self.threshold:
             magnitude = self.spring * (bondlength - self.threshold)
@@ -927,7 +949,7 @@ class Hookean(FixConstraint):
         elif self._type == 'point':
             p1 = positions[self.index]
             p2 = self.origin
-        displace = p2 - p1
+        displace = find_mic([p2 -p1], atoms.cell, atoms._pbc)[0][0]
         bondlength = np.linalg.norm(displace)
         if bondlength > self.threshold:
             return 0.5 * self.spring * (bondlength - self.threshold)**2
@@ -1040,8 +1062,8 @@ class Filter:
            visible or not.
 
         If a Trajectory tries to save this object, it will instead
-        save the underlying Atoms object.  To prevent this, delete
-        the atoms_for_saving attribute.
+        save the underlying Atoms object.  To prevent this, override
+        the _images_ method.
         """
 
         self.atoms = atoms
@@ -1061,8 +1083,9 @@ class Filter:
             self.index = np.asarray(indices, int)
             self.n = len(self.index)
 
+    def _images_(self):
         # Present the real atoms object to Trajectory and friends
-        self.atoms_for_saving = self.atoms
+        return self.atoms._images_()
 
     def get_cell(self):
         """Returns the computational cell.
@@ -1200,17 +1223,15 @@ class StrainFilter(Filter):
 
         """
 
-        self.atoms = atoms
         self.strain = np.zeros(6)
 
         if mask is None:
-            self.mask = np.ones(6)
+            mask = np.ones(6)
         else:
-            self.mask = np.array(mask)
+            mask = np.array(mask)
 
-        self.index = np.arange(len(atoms))
-        self.n = self.index.sum()
-
+        Filter.__init__(self, atoms, mask=mask)
+        self.mask = mask
         self.origcell = atoms.get_cell()
 
     def get_positions(self):
@@ -1432,7 +1453,7 @@ class UnitCellFilter(Filter):
 
     def get_forces(self, apply_constraint=False):
         '''
-        returns an array with shape (natoms+2,3) of the atomic forces
+        returns an array with shape (natoms+3,3) of the atomic forces
         and unit cell stresses.
 
         the first natoms rows are the forces on the atoms, the last
@@ -1442,7 +1463,6 @@ class UnitCellFilter(Filter):
 
         atoms_forces = self.atoms.get_forces()
         stress = self.atoms.get_stress()
-        self.stress = voigt_6_to_full_3x3_stress(stress) * self.mask
 
         volume = self.atoms.get_volume()
         virial = -volume * voigt_6_to_full_3x3_stress(stress)
@@ -1466,6 +1486,8 @@ class UnitCellFilter(Filter):
         forces = np.zeros((natoms + 3, 3))
         forces[:natoms] = atoms_forces
         forces[natoms:] = virial / self.cell_factor
+
+        self.stress = -full_3x3_to_voigt_6_stress(virial)/volume
         return forces
 
     def get_stress(self):

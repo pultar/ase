@@ -33,13 +33,13 @@ cmds = """\
 touch ../ase-web-page.lock
 git clean -fdx
 git checkout web-page -q
-git pull -q
+git pull -q &> /dev/null
 pip install .
 cd doc; sphinx-build -b html -d build/doctrees . build/html
 mv doc/build/html ase-web-page
 git clean -fdx doc
 git checkout master -q
-git pull -q
+git pull -q &> /dev/null
 pip install .
 cd doc; sphinx-build -b html -d build/doctrees . build/html
 mv doc/build/html ase-web-page/dev
@@ -47,7 +47,7 @@ python setup.py sdist
 cp dist/ase-*.tar.gz ase-web-page/
 cp dist/ase-*.tar.gz ase-web-page/dev/
 find ase-web-page -name install.html | xargs sed -i s/snapshot.tar.gz/{0}/g
-tar -cf ase-web-page.tar.gz ase-web-page
+tar -czf ase-web-page.tar.gz ase-web-page
 cp ase-web-page.tar.gz {1}/tmp-ase-web-page.tar.gz
 mv {1}/tmp-ase-web-page.tar.gz {1}/ase-web-page.tar.gz"""
 

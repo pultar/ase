@@ -91,25 +91,21 @@ def connect_databases(uris):
 next_con_id = 1
 connections = {}
 
-tmpdir = tempfile.mkdtemp()  # used to cache png-files
-
 if 'ASE_DB_APP_CONFIG' in os.environ:
     app.config.from_envvar('ASE_DB_APP_CONFIG')
     connect_databases(app.config['ASE_DB_NAMES'])
     home = app.config['ASE_DB_HOMEPAGE']
+    tmpdir = app.config['ASE_DB_TMPDIR']
     open_ase_gui = False
-    try:
-        os.unlink('tmpdir')
-    except FileNotFoundError:
-        pass
-    os.symlink(tmpdir, 'tmpdir')
+else:
+    tmpdir = tempfile.mkdtemp()  # used to cache png-files
 
 # Find numbers in formulas so that we can convert H2O to H<sub>2</sub>O:
 SUBSCRIPT = re.compile(r'(\d+)')
 
 
 def database():
-    return databases[request.args.get('project', 'default')]
+    return databases.get(request.args.get('project', 'default'))
 
 
 def prefix():
@@ -148,8 +144,10 @@ def index():
 
     if not projects:
         # First time: initialize list of projects
-        projects[:] = [(proj, d.metadata.get('title', proj))
-                       for proj, d in sorted(databases.items())]
+        for proj, db in sorted(databases.items()):
+            meta = ase.db.web.process_metadata(db)
+            db.meta = meta
+            projects.append((proj, db.meta.get('title', proj)))
 
     con_id = int(request.args.get('x', '0'))
     if con_id in connections:
@@ -172,14 +170,10 @@ def index():
 
     db = databases[project]
 
-    if not hasattr(db, 'meta'):
-        meta = ase.db.web.process_metadata(db)
-        db.meta = meta
-    else:
-        meta = db.meta
+    meta = db.meta
 
     if columns is None:
-        columns = meta.get('default_columns') or list(all_columns)
+        columns = meta.get('default_columns')[:] or list(all_columns)
 
     if 'sort' in request.args:
         column = request.args['sort']
@@ -231,7 +225,7 @@ def index():
     if 'toggle' in request.args:
         column = request.args['toggle']
         if column == 'reset':
-            columns = meta.get('default_columns') or list(all_columns)
+            columns = meta.get('default_columns')[:] or list(all_columns)
         else:
             if column in columns:
                 columns.remove(column)
@@ -325,6 +319,8 @@ def gui(id):
 @app.route('/id/<int:id>')
 def summary(id):
     db = database()
+    if db is None:
+        return ''
     if not hasattr(db, 'meta'):
         db.meta = ase.db.web.process_metadata(db)
     prfx = prefix() + str(id) + '-'
@@ -418,7 +414,8 @@ def sqlite1(id):
 
 @app.route('/robots.txt')
 def robots():
-    return 'User-agent: *\nDisallow: /\n', 200
+    return ('User-agent: *\nDisallow: /\n\n' +
+            'User-agent: Baiduspider\nDisallow: /\n', 200)
 
 
 def pages(page, nrows, limit):
