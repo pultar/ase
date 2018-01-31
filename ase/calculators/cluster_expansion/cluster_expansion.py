@@ -152,7 +152,6 @@ class ClusterExpansion(Calculator):
         """Update correlation function and get new energy."""
         # this is the first run
         if self.ref_atoms is None:
-            print('first time')
             if self.cf is None:
                 self.cf = self.CF.get_cf_by_cluster_names(self.atoms,
                                                           self.cluster_names,
