@@ -115,7 +115,7 @@ class SimulatedAnnealing(MonteCarlo):
         temp_indx = 0
         self.kT = self.kTs[temp_indx]
 
-        for _ in range(num_steps):
+        while self.nsteps < num_steps:
             accept, energy = self._swap()
             self.log(accept, energy, 'SA')
             if self.nsteps % steps_per_temp == 0 and \

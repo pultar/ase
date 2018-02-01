@@ -51,7 +51,7 @@ class Metropolis(MonteCarlo):
         energy_sq_sum = self.energy**2
         self.log()
 
-        for _ in range(num_steps):
+        while self.nsteps < num_steps:
             accept, energy = self._swap()
             energy_sum += self.energy
             energy_sq_sum += self.energy**2
