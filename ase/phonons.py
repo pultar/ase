@@ -274,17 +274,17 @@ class Displacement:
                             # failed using symmetry to derive force. Trigger full computation.
                             force0 = None
                         elif rank == 0:
-                            print "[ASE] Imaging atom #%-3i %-3s    to " % \
+                            print("[ASE] Imaging atom #%-3i %-3s    to " % \
                                 (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, \
-                                " (Angs) using rotation:"
+                                " (Angs) using rotation:")
                             print rot
                             
                     if force0 is None or rot is None: # compute forces
                         # move atom 'a' by 'disp'
                         supercell.positions[offset + a] = pos[a] + disp
                         if rank == 0:
-                            print "[ASE] Moving  atom #%-3i %-3s    to " % \
-                                (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, " (Angs)"
+                            print("[ASE] Moving  atom #%-3i %-3s    to " % \
+                                (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, " (Angs)")
                             
                         # Call derived class implementation of __call__
                         output = self.__call__(supercell)
@@ -297,7 +297,7 @@ class Displacement:
                     
                     # append the forces to the force1 list
                     if output is None:
-                        print "[ASE] Warning: force1 is None !!"
+                        print("[ASE] Warning: force1 is None !!")
     
                     force1.append(output)
                     
@@ -784,7 +784,6 @@ class Phonons(Displacement):
                 i_a = dist_a > r_c  # np.where(dist_a > r_c)
                 # Zero elements
                 D_Navav[n, i, :, i_a, :] = 0.0
-            # print ""
 
     def get_force_constant(self):
         """Return matrix of force constants."""
