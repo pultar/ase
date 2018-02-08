@@ -277,7 +277,7 @@ class Displacement:
                             print("[ASE] Imaging atom #%-3i %-3s    to " % \
                                 (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, \
                                 " (Angs) using rotation:")
-                            print rot
+                            print(rot)
                             
                     if force0 is None or rot is None: # compute forces
                         # move atom 'a' by 'disp'
