@@ -12,10 +12,11 @@ import numpy.linalg as la
 import numpy.fft as fft
 
 import ase.units as units
-from ase.parallel import rank
+from ase.parallel import rank, world
 from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils import opencew, pickleload, basestring
+from ase.spacegroup import Spacegroup, get_spacegroup
 
 
 class Displacement:
@@ -122,73 +123,302 @@ class Displacement:
         R_cN -= N_c // 2
 
         return R_cN
-
-    def run(self):
-        """Run the calculations for the required displacements.
-
-        This will do a calculation for 6 displacements per atom, +-x, +-y, and
-        +-z. Only those calculations that are not already done will be
-        started. Be aware that an interrupted calculation may produce an empty
-        file (ending with .pckl), which must be deleted before restarting the
-        job. Otherwise the calculation for that displacement will not be done.
-
+        
+    def run_eq(self, supercell):
+        """Run the calculation for the equilibrium lattice
+        
+        input:
+        
+          self:      ASE Phonon/Displacement object with Atoms and Calculator
+          supercell: an ASE Atoms object, supercell
+        
+        return:
+          output: forces (ndarray)
         """
-
-        # Atoms in the supercell -- repeated in the lattice vector directions
-        # beginning with the last
-        atoms_N = self.atoms * self.N_c
-
-        # Set calculator if provided
-        assert self.calc is not None, "Provide calculator in __init__ method"
-        atoms_N.set_calculator(self.calc)
-
+        
         # Do calculation on equilibrium structure
         filename = self.name + '.eq.pckl'
-
+    
         fd = opencew(filename)
         if fd is not None:
             # Call derived class implementation of __call__
-            output = self.__call__(atoms_N)
+            output = self.__call__(supercell)
+                        
             # Write output to file
             if rank == 0:
                 pickle.dump(output, fd, protocol=2)
                 sys.stdout.write('Writing %s\n' % filename)
                 fd.close()
+                # check forces
+                try:
+                    fmax = output.max()
+                    fmin = output.min()
+                    sys.stdout.write('[ASE] Equilibrium forces min=%g max=%g\n' % (fmin, fmax))
+                except AttributeError:
+                    sys.stdout.write('[ASE] output has no min/max (list)\n');
+                    pass
             sys.stdout.flush()
+        else:
+            # read previous data
+            output = pickle.load(open(filename))
+            
+        return output
 
+    def run(self, single=True, difference='central'):
+        """Run the calculations for the required displacements.
+        This function uses the Spacegroup in order to speed-up the calculation.
+        Every iteration is checked against symmetry operators. In case other moves 
+        are imaged from a symmetry, the pickle files are written in advance, which 
+        then allows to skip subsequent steps.
+    
+        This will do a calculation for 6 displacements per atom, +-x, +-y, and
+        +-z. Only those calculations that are not already done will be
+        started. Be aware that an interrupted calculation may produce an empty
+        file (ending with .pckl), which must be deleted before restarting the
+        job. Otherwise the calculation for that displacement will not be done.
+        
+        This implementation is the same as legacy ASE, but allows to select the type of
+        force gradient to use (difference). Also, it does make use of the spacegroup 
+        to lower the number of displacements, using the strategy adopted in PHON 
+        (D. Alfe). It is not as good as PhonoPy, but remains much simpler.
+        
+        input:
+        
+          self:   ASE Phonon/Displacement object with Atoms and Calculator
+          single: when True, the forces are computed only for a single step, and then
+                  exit. This allows to split the loop in independent iterations. When
+                  calling again the 'run' method, already computed steps are ignored,
+                  missing steps are completed, until no more are needed. When set to
+                  False, all steps are done in a row.
+          difference: the method to use for the force difference (gradient) computation.
+                  can be 'central','forward','backward'. The central difference is 
+                  more accurate but requires twice as many force calculations.
+        
+        output:
+        
+          True when a calculation step was performed, False otherwise or no more is needed.
+          nb_of_iterations: the number of steps remaining
+    
+        """
+        
+        # prepare to use symmetry operations
+        # check if a spacegroup is defined, else find it
+        if 'spacegroup' not in self.atoms.info or self.atoms.info["spacegroup"] is None:
+            sg    = get_spacegroup(self.atoms)
+    
+        if difference == 'backward':
+            signs = [-1]    # only compute one side, backward difference
+        elif difference == 'forward':
+            signs = [1]     # only compute one side, forward difference
+        else:
+            signs = [-1,1]   # use central difference
+    
+        # Atoms in the supercell -- repeated in the lattice vector directions
+        # beginning with the last
+        supercell = self.atoms * self.N_c
+        
+        # Set calculator if provided
+        assert self.calc is not None, "Provide calculator in Phonon __init__ method"
+        supercell.set_calculator(self.calc)
+        
+        # when not central difference, we check if the equilibrium forces are small
+        # and will use the '0' forces in gradient
+        if len(signs) == 1 and not _isfile_parallel(self.name + '.eq.pckl'): 
+            # Do calculation on equilibrium structure
+            run_eq(self, supercell)
+            if single:
+                return len(signs)*len(self.indices)*3 # and some more iterations may be required
+    
         # Positions of atoms to be displaced in the reference cell
         natoms = len(self.atoms)
         offset = natoms * self.offset
-        pos = atoms_N.positions[offset: offset + natoms].copy()
-
-        # Loop over all displacements
-        for a in self.indices:
-            for i in range(3):
-                for sign in [-1, 1]:
-                    # Filename for atomic displacement
-                    filename = '%s.%d%s%s.pckl' % \
-                               (self.name, a, 'xyz'[i], ' +-'[sign])
-                    # Wait for ranks before checking for file
-                    # barrier()
-                    fd = opencew(filename)
-                    if fd is None:
-                        # Skip if already done
+        pos    = supercell.positions[offset: offset + natoms].copy()
+        pos0   = supercell.positions.copy()
+        
+        L    = supercell.get_cell()     # lattice      cell       = at
+        invL = np.linalg.inv(L)         # no 2*pi multiplier here = inv(at) = bg.T
+        
+        # number of iterations left
+        nb_of_iterations = len(signs)*len(self.indices)*3
+        
+        for sign in signs:  # +-
+            # guess displacements and rotations
+            dxlist, rotlist = _get_displacements(self, sign)
+            
+            for a in self.indices:    # atom index to move in cell
+            
+                # check if this step has been done before (3 files written per step)
+                filename = '%s.%d%s%s.pckl' % \
+                           (self.name, a, 'xyz'[0], ' +-'[sign])
+                if _isfile_parallel(filename):
+                        # Skip if this move ('x') is already done.
+                        nb_of_iterations -= 3
                         continue
-
-                    # Update atomic positions
-                    atoms_N.positions[offset + a, i] = \
-                        pos[a, i] + sign * self.delta
-
-                    # Call derived class implementation of __call__
-                    output = self.__call__(atoms_N)
-                    # Write output to file
-                    if rank == 0:
-                        pickle.dump(output, fd, protocol=2)
-                        sys.stdout.write('Writing %s\n' % filename)
-                        fd.close()
-                    sys.stdout.flush()
-                    # Return to initial positions
-                    atoms_N.positions[offset + a, i] = pos[a, i]
+                        
+                # we determine the Wigner-Seitz cell around atom 'a' (Cartesian)
+                ws = _get_wigner_seitz(supercell, a, 1)
+                
+                # compute the forces for 3 independent moves
+                force0 = None
+                force1 = []
+                for index in range(len(dxlist)):
+                    # we first determine a set of independent displacements, using 
+                    # as much as possible the symmetry operators.
+                    disp = dxlist[index]
+                    rot  = rotlist[index]
+                    
+                    if force0 is not None and rot is not None:  # re-use previous forces
+                        # we will now apply the rotation to the force array
+                        output = _run_force1_rot(force0, ws, invL, rot, symprec=1e-6)
+                        if output is None:
+                            # failed using symmetry to derive force. Trigger full computation.
+                            force0 = None
+                        elif rank == 0:
+                            print "[ASE] Imaging atom #%-3i %-3s    to " % \
+                                (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, \
+                                " (Angs) using rotation:"
+                            print rot
+                            
+                    if force0 is None or rot is None: # compute forces
+                        # move atom 'a' by 'disp'
+                        supercell.positions[offset + a] = pos[a] + disp
+                        if rank == 0:
+                            print "[ASE] Moving  atom #%-3i %-3s    to " % \
+                                (offset + a, supercell.get_chemical_symbols()[a]), pos[a] + disp, " (Angs)"
+                            
+                        # Call derived class implementation of __call__
+                        output = self.__call__(supercell)
+                        
+                        # Return to initial positions
+                        supercell.positions[offset + a] = pos[a]
+                        
+                        # store the forces for subsequent moves using symmetry
+                        force0 = output
+                    
+                    # append the forces to the force1 list
+                    if output is None:
+                        print "[ASE] Warning: force1 is None !!"
+    
+                    force1.append(output)
+                    
+                # when exiting the for 'i' loop, we have 3 independent 'force1' array
+                # derive a Cartesian basis, and write pickle files
+                force2 = _run_force2(self, dxlist, force1, a, sign, symprec=1e-6)
+                
+                nb_of_iterations -= 3
+                
+                # then we derive the Cartesian basis 'force2' array and write files
+                if single:
+                    return nb_of_iterations # and some more iterations may be required
+    
+        return 0  # nothing left to do
+        
+    def _get_displacements(self, sign):
+        """Determine a set of displacements that best make use of crystal symmetries.
+        
+           input:
+               self:   ASE phonon/Displacement containing an Atoms and a Spacegroup.
+               sign:   -1 or +1, to indicate in which direction we move the atoms
+           output:
+               dxlist:  list of independent displacements
+               rotlist: list of corresponding rotations from 'disp'
+        """
+        
+        dxlist = [] # hold list of lists for tentative displacements and rotations
+        rotlist= []
+        L      = self.atoms.get_cell()
+        sg     = self.atoms.info["spacegroup"]    # spacegroup for e.g. spglib
+        
+        # Determine displacement vectors to use (list[3]). 
+        # We look for the equivalent displacements. We only add when symmetry 
+        # operators provide equivalent sites (saves time).
+        
+        # we try with axes [xyz] or lattice axes that have most symmetries
+        for i in range(6):
+            if i < 3: # [xyz] directions
+                disp     = np.asarray([0.0,0,0])
+                disp[i] += sign * self.delta # in Angs, Cartesian
+            else:     # lattice cell axes
+                disp = L[i-3]/np.linalg.norm(L[i-3]) * sign * self.delta
+            # test if symmetries can generate other independent moves
+            this_dx, this_rot = _rotated_displacements(disp, sg)
+            dxlist.append(this_dx)  # append lists
+            rotlist.append(this_rot)
+        
+        # now we sort the lists by length of the sublists, i.e. select the moves 
+        # that generate most equivalent moves by symmetry
+                 
+        # get the index to use for sorting (decreasing order)
+        lenlist = [len(x) for x in dxlist]
+        order   = sorted(range(len(lenlist)), key=lambda k: lenlist[k], reverse=True)
+        # reorder lists by decreasing size
+        dxlist  = [ dxlist[j]  for j in order]
+        rotlist = [ rotlist[j] for j in order]
+        # now catenate all lists
+        dxlist  = [j for i in dxlist  for j in i]
+        rotlist = [j for i in rotlist for j in i]
+        
+        # and finally extract iteratively 3 vectors which are independent
+        dxlist2 = []
+        rotlist2= []
+        for index in range(len(dxlist)):
+            if _move_is_independent(dxlist2, dxlist[index]):
+                dxlist2.append(dxlist[index])
+                rotlist2.append(rotlist[index])
+            if len(dxlist2) == 3:
+                break
+        
+        # return only the first 3 independent entries
+        return dxlist2, rotlist2
+        
+    def _run_force2(self, dxlist, force1, a, sign, symprec=1e-6):  
+        """From a given force set, we derive the forces in Cartesian coordinates
+           
+           code outrageously adapted from PHON/src/set_forces by D. Alfe
+           
+           input:
+              self:   ASE Phonon/Displacement object with Atoms and Calculator
+              dxlist: displacement list, in Cartesian coordinates
+              force1: the forces list (3 moves) determined for dxlist
+              a:      the index of the atom being moved
+              sign:   the [+-] directions to move ([0,1] -> [+,-])
+              symprec:the precision for comparing positions
+              
+           output:
+              The forces for Cartesian displacements along [xyz]
+        
+        """
+    
+        # get the 3 displacement vectors (rows) and normalise
+        dxnorm   = np.asarray([dx/np.linalg.norm(dx) for dx in dxlist])
+        invdx    = np.linalg.inv(dxnorm)
+        identity = np.diag([1,1,1])
+            
+        if np.linalg.norm(invdx + identity) < symprec: # inv(dx) = -I -> I
+            invdx=identity
+        # project the 3 forces into that Cartesian basis
+        force2 = []
+        for i in range(len(dxlist)):
+            force2.append(invdx[i,0] * force1[0] \
+                        + invdx[i,1] * force1[1] \
+                        + invdx[i,2] * force1[2])
+        # write the pickle files assuming we have now [xyz]
+        for i in range(3):      # xyz
+            # skip if the pickle already exists
+            filename = '%s.%d%s%s.pckl' % \
+                   (self.name, a, 'xyz'[i], ' +-'[sign])
+            if _isfile_parallel(filename):
+                # Skip if already done. Also the case for initial 'disp/dx'
+                continue
+            # write the pickle for the current Cartesian axis
+            fd = opencew(filename)
+            if rank == 0:
+                pickle.dump(force2[i], fd, protocol=2)
+                sys.stdout.write('Writing %s\n' % filename)
+                fd.close()
+                sys.stdout.flush()
+        
+        return force2
 
     def clean(self):
         """Delete generated pickle files."""
@@ -347,6 +577,13 @@ class Phonons(Displacement):
         """Read forces from pickle files and calculate force constants.
 
         Extra keyword arguments will be passed to ``read_born_charges``.
+        
+        This implementation is similar to the ASE legacy, but can make use of different
+        gradient estimates, depending on what is available on disk (pickles).
+        Can use:
+          displacement .[xyz]+
+          displacement .[xyz]-
+          equilibrium  .qe
 
         Parameters:
 
@@ -369,72 +606,99 @@ class Phonons(Displacement):
 
         """
 
-        method = method.lower()
-        assert method in ['standard', 'frederiksen']
-        if cutoff is not None:
-            cutoff = float(cutoff)
+        # proceed with pure ASE 'Phonon' object.
+      method = method.lower()
+      assert method in ['standard', 'frederiksen']
+      if cutoff is not None:
+          cutoff = float(cutoff)
+          
+      # Read Born effective charges and optical dielectric tensor
+      if born:
+          self.read_born_charges(**kwargs)
+      
+      # Number of atoms
+      natoms = len(self.indices)
+      # Number of unit cells
+      N = np.prod(self.N_c)
+      # Matrix of force constants as a function of unit cell index in units
+      # of eV / Ang**2
+      C_xNav = np.empty((natoms * 3, N, natoms, 3), dtype=float)
+      
+      # get equilibrium forces (if any)
+      filename = self.name + '.eq.pckl'
+      feq = 0
+      if _isfile_parallel(filename):
+          feq = pickle.load(open(filename))
+          if method == 'frederiksen':
+              for i, a in enumerate(self.indices):
+                  feq[a] -= feq.sum(0)
 
-        # Read Born effective charges and optical dielectric tensor
-        if born:
-            self.read_born_charges(**kwargs)
+      # Loop over all atomic displacements and calculate force constants
+      for i, a in enumerate(self.indices):
+          for j, v in enumerate('xyz'):
+              # Atomic forces for a displacement of atom a in direction v
+              basename = '%s.%d%s' % (self.name, a, v)
+              
+              if _isfile_parallel(basename + '-.pckl'):
+                  fminus_av = pickle.load(open(basename + '-.pckl'))
+              else:
+                  fminus_av = None
+              if _isfile_parallel(basename + '+.pckl'):
+                  fplus_av = pickle.load(open(basename + '+.pckl'))
+              else:
+                  fplus_av = None
+              
+              if method == 'frederiksen': # translational invariance
+                  if fminus_av is not None:
+                      fminus_av[a] -= fminus_av.sum(0)
+                  if fplus_av is not None:
+                      fplus_av[a]  -= fplus_av.sum(0)
+              
+              if fminus_av is not None and fplus_av is not None:
+                  # Finite central difference derivative
+                  C_av = (fminus_av - fplus_av)/2
+              elif fminus_av is not None:
+                  # only the - side is available: forward difference
+                  C_av =  fminus_av - feq
+              elif fplus_av is not None:
+                  # only the + side is available: backward difference
+                  C_av = -(fplus_av - feq)
 
-        # Number of atoms
-        natoms = len(self.indices)
-        # Number of unit cells
-        N = np.prod(self.N_c)
-        # Matrix of force constants as a function of unit cell index in units
-        # of eV / Ang**2
-        C_xNav = np.empty((natoms * 3, N, natoms, 3), dtype=float)
+              C_av /= self.delta  # gradient
 
-        # Loop over all atomic displacements and calculate force constants
-        for i, a in enumerate(self.indices):
-            for j, v in enumerate('xyz'):
-                # Atomic forces for a displacement of atom a in direction v
-                basename = '%s.%d%s' % (self.name, a, v)
-                fminus_av = pickleload(open(basename + '-.pckl', 'rb'))
-                fplus_av = pickleload(open(basename + '+.pckl', 'rb'))
+              # Slice out included atoms
+              C_Nav = C_av.reshape((N, len(self.atoms), 3))[:, self.indices]
+              index = 3*i + j
+              C_xNav[index] = C_Nav
 
-                if method == 'frederiksen':
-                    fminus_av[a] -= fminus_av.sum(0)
-                    fplus_av[a] -= fplus_av.sum(0)
+      # Make unitcell index the first and reshape
+      C_N = C_xNav.swapaxes(0 ,1).reshape((N,) + (3 * natoms, 3 * natoms))
 
-                # Finite difference derivative
-                C_av = fminus_av - fplus_av
-                C_av /= 2 * self.delta
-
-                # Slice out included atoms
-                C_Nav = C_av.reshape((N, len(self.atoms), 3))[:, self.indices]
-                index = 3 * i + j
-                C_xNav[index] = C_Nav
-
-        # Make unitcell index the first and reshape
-        C_N = C_xNav.swapaxes(0, 1).reshape((N,) + (3 * natoms, 3 * natoms))
-
-        # Cut off before symmetry and acoustic sum rule are imposed
-        if cutoff is not None:
-            self.apply_cutoff(C_N, cutoff)
-
-        # Symmetrize force constants
-        if symmetrize:
-            for i in range(symmetrize):
-                # Symmetrize
-                C_N = self.symmetrize(C_N)
-                # Restore acoustic sum-rule
-                if acoustic:
-                    self.acoustic(C_N)
-                else:
-                    break
-
-        # Store force constants and dynamical matrix
-        self.C_N = C_N
-        self.D_N = C_N.copy()
-
-        # Add mass prefactor
-        m_a = self.atoms.get_masses()
-        self.m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
-        M_inv = np.outer(self.m_inv_x, self.m_inv_x)
-        for D in self.D_N:
-            D *= M_inv
+      # Cut off before symmetry and acoustic sum rule are imposed
+      if cutoff is not None:
+          self.apply_cutoff(C_N, cutoff)
+          
+      # Symmetrize force constants
+      if symmetrize:
+          for i in range(symmetrize):
+              # Symmetrize
+              C_N = self.symmetrize(C_N)
+              # Restore acoustic sum-rule
+              if acoustic:
+                  self.acoustic(C_N)
+              else:
+                  break
+           
+      # Store force constants and dynamical matrix
+      self.C_N = C_N
+      self.D_N = C_N.copy()
+      
+      # Add mass prefactor
+      m_a = self.atoms.get_masses()
+      self.m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
+      M_inv = np.outer(self.m_inv_x, self.m_inv_x)
+      for D in self.D_N:
+          D *= M_inv
 
     def symmetrize(self, C_N):
         """Symmetrize force constant matrix."""
@@ -754,3 +1018,198 @@ class Phonons(Displacement):
                 traj.write(atoms)
 
             traj.close()
+            
+# ------------------------------------------------------------------------------
+# internal functions
+# ------------------------------------------------------------------------------
+
+def _phonons_run_force1_rot(force, ws, invL, rot, symprec=1e-6):
+    """From a given force set, we derive a rotated force set 
+       by applying a single corresponding symmetry operator.
+       
+       code outrageously adapted from PHON/src/set_forces by D. Alfe
+       
+       input:
+          force:    an array of Forces, size [natoms, 3]
+          ws:       the Wigner-Seitz positions, supercell (Cartesian), obtained 
+                    from _get_wigner_seitz(supercell)
+          invL:     the inverse of the lattice supercell
+          rot:      the rotation matrix
+          symprec:  the precision for comparing positions
+   
+       output:
+          nforce:   the rotated forces set
+    """
+    
+    # this routine has been validated and behaves as in PHON/set_forces.f
+    # the force is properly rotated when given the 'rot' matrix.
+    
+    # exit if no WS cell defined
+    if ws is None:
+        return None
+        
+    # we will now apply the rotation to the force array
+    nforce = force.copy()
+
+    # scan all atoms to compute the rotated force matrix
+    # F_na ( S*u ) = S * F_{S^-1*na} ( u )
+    for a in range(len(ws)):    # atom index in super cell
+        # compute equivalent atom location from inverse rotation in WS cell 
+        # temp = S^-1 * a
+
+        # inverse rotate, then to fractional (the other way does not work...)
+        # invL * rot * ws[a] == (invL * rot^-1 * L) * (invL * ws[a])
+        temp = np.dot(invL.T, np.dot(np.linalg.inv(rot), ws[a]))
+        
+        # find nb so that b = S^-1 * a: only on the equivalent atoms 'rot'
+        for b in range(len(ws)):
+            found1 = False
+            tmp1  = np.dot(invL.T, ws[b]) # to fractional
+            # check that the fractional part is the same
+            delta = temp - tmp1
+            if np.linalg.norm(delta - np.rint(delta)) < symprec:
+                #          ws[b] = rot^-1 * ws[a] : 'b' is equivalent to 'a' by 'rot'
+                #    rot * ws[b] =          ws[a]
+                #           F[b] = rot^-1 * F[a] 
+                #    rot *  F[b] = F[a] 
+                found1 = True
+                # the rotation matrix rot is applied as is to
+                # the force in PHON/set_forces.    
+                nforce[a] = np.dot(rot, force[b])  # apply rotation
+                break # for b
+    
+        if not found1:
+            nforce = None
+            break # for a
+        # end for a
+    
+    return nforce
+    
+def _get_wigner_seitz(atoms, move=0, wrap=1, symprec=1e-6):
+    """Compute the Wigner-Seitz cell.
+       this routine is rather slow, but it allows to limit the number of moves
+       
+       code outrageously copied from PHON/src/get_wig by D. Alfe
+       
+       This is equivalent to a Voronoi cell, but centered on atom 'move'
+       An alternative is to use scipy.spatial.Voronoi, but it does not properly
+       center the cell. Slow but secure...
+       
+       input:
+          atoms: an ASE Atoms object, supercell
+          move:  the index  of the atom in the cell to be used as center
+          wrap:  the extent of the supercell
+       output:
+          ws:    atom positions in the Wigner-Seitz cell, Cartesian coordinates
+    """
+    
+    # this function is fully equivalent to the PHON/src/get_wig.f
+    
+    # get the cell definition
+    L     = atoms.get_cell()
+    # get fractional coordinates in the cell/supercell
+    xtmp  = atoms.get_scaled_positions().copy()
+    # set the origin on the 'moving' atom
+    xtmp -= xtmp[move]
+
+    # construct the WS cell (defined as the closest vectors to the origin)
+    r = range(-wrap,wrap+1)
+    for na in range(len(xtmp)):
+        # convert from fractional to Cartesian
+        xtmp[na] = np.dot(L.T, xtmp[na].T)
+        temp1 = xtmp[na]
+        for i in r:
+            for j in r:
+                for k in r:
+                    temp = xtmp[na] + i*L[0] + j*L[1] + k*L[2]
+                    if np.all(abs(np.linalg.norm(temp) < np.linalg.norm(temp1))):
+                        temp1 = temp
+        xtmp[na] = temp1
+    
+    return xtmp
+    
+def _move_is_independent(dxlist, dx, symprec=1e-6):
+    """Test if a vector is independent compared to those in a list.
+       The test is for collinearity, and singularity of the formed basis
+       
+       input:
+           dxlist:  a list of vectors
+           dx:      a new vector which is tested
+           symprec: precision for comparing vectors
+       output:
+           True when dx is independent from dxlist, False otherwise.
+    """
+
+    # test if the rotated displacement is collinear to
+    # a stored one (in list 'dxlist'). test is done on normalised vectors.
+    if dx is None:
+        return False
+    
+    dxnorm      = np.asarray([x/np.linalg.norm(x) for x in dxlist])
+    iscollinear = False
+    for index in range(len(dxnorm)):
+        if np.linalg.norm(np.cross(dx/np.linalg.norm(dx), dxnorm[index])) < symprec:
+            iscollinear = True
+            break
+    if iscollinear:
+        return False  # collinear
+            
+    # Test for singular matrix when adding new move
+    dxlist2 = dxlist[:] # copy the list
+    dxlist2.append(dx)
+    dxnorm = np.asarray([x/np.linalg.norm(x) for x in dxlist2])
+    if len(dxlist2) == 3 and np.abs(np.linalg.det(dxnorm)) < symprec:
+        return False # singular
+        
+    return True
+    
+# ------------------------------------------------------------------------------
+def _rotated_displacements(disp, sg):
+    """Check if a displacement can be imaged into other ones using the symmetry
+       operators of the spacegroup.
+       
+       input:
+           disp: an initial displacement (3-vector)
+           sg:   ASE Space group
+       output:
+           dxlist:  list of independent displacements imaged from 'disp'
+           rotlist: list of corresponding rotations from 'disp'
+    """
+
+    # we try all symmetry operations in the spacegroup
+    dxlist = [disp]
+    rotlist= [None]
+    for rot, trans in sg.get_symop():
+    
+        # find the equivalent displacement from initial displacement
+        # and rotation. First 'rot' is identity.
+        dx = np.dot(rot, disp) # in Cartesian: dx = rot * disp
+        
+        # check if that rotated move contributes to an independent basis set
+        if _phonons_move_is_independent(dxlist, dx):
+            # store dx, rot; not work for disp itself that was added before
+            dxlist.append(dx)
+            rotlist.append(rot)
+        
+        # exit when 3 moves have been found from same generator move
+        if len(dxlist) == 3:
+            break
+            
+    return dxlist, rotlist
+    
+# ------------------------------------------------------------------------------
+def _isfile_parallel(filename):
+    """Check if a file is opened, taking into account the MPI environment
+    
+    input:
+        filename
+    output:
+        0 when the file does not exist, 1 if it does
+    """
+
+    if world.rank == 0:
+      isf = os.path.isfile(filename)
+    else:
+      isf = 0
+    # Synchronize:
+    return world.sum(isf)
