@@ -607,98 +607,98 @@ class Phonons(Displacement):
         """
 
         # proceed with pure ASE 'Phonon' object.
-      method = method.lower()
-      assert method in ['standard', 'frederiksen']
-      if cutoff is not None:
-          cutoff = float(cutoff)
-          
-      # Read Born effective charges and optical dielectric tensor
-      if born:
-          self.read_born_charges(**kwargs)
-      
-      # Number of atoms
-      natoms = len(self.indices)
-      # Number of unit cells
-      N = np.prod(self.N_c)
-      # Matrix of force constants as a function of unit cell index in units
-      # of eV / Ang**2
-      C_xNav = np.empty((natoms * 3, N, natoms, 3), dtype=float)
-      
-      # get equilibrium forces (if any)
-      filename = self.name + '.eq.pckl'
-      feq = 0
-      if _isfile_parallel(filename):
-          feq = pickle.load(open(filename))
-          if method == 'frederiksen':
-              for i, a in enumerate(self.indices):
-                  feq[a] -= feq.sum(0)
+        method = method.lower()
+        assert method in ['standard', 'frederiksen']
+        if cutoff is not None:
+            cutoff = float(cutoff)
+            
+        # Read Born effective charges and optical dielectric tensor
+        if born:
+            phonon.read_born_charges(**kwargs)
+        
+        # Number of atoms
+        natoms = len(phonon.indices)
+        # Number of unit cells
+        N = numpy.prod(phonon.N_c)
+        # Matrix of force constants as a function of unit cell index in units
+        # of eV / Ang**2
+        C_xNav = numpy.empty((natoms * 3, N, natoms, 3), dtype=float)
+        
+        # get equilibrium forces (if any)
+        filename = phonon.name + '.eq.pckl'
+        feq = 0
+        if isfile(filename):
+            feq = pickle.load(open(filename))
+            if method == 'frederiksen':
+                for i, a in enumerate(phonon.indices):
+                    feq[a] -= feq.sum(0)
 
-      # Loop over all atomic displacements and calculate force constants
-      for i, a in enumerate(self.indices):
-          for j, v in enumerate('xyz'):
-              # Atomic forces for a displacement of atom a in direction v
-              basename = '%s.%d%s' % (self.name, a, v)
-              
-              if _isfile_parallel(basename + '-.pckl'):
-                  fminus_av = pickle.load(open(basename + '-.pckl'))
-              else:
-                  fminus_av = None
-              if _isfile_parallel(basename + '+.pckl'):
-                  fplus_av = pickle.load(open(basename + '+.pckl'))
-              else:
-                  fplus_av = None
-              
-              if method == 'frederiksen': # translational invariance
-                  if fminus_av is not None:
-                      fminus_av[a] -= fminus_av.sum(0)
-                  if fplus_av is not None:
-                      fplus_av[a]  -= fplus_av.sum(0)
-              
-              if fminus_av is not None and fplus_av is not None:
-                  # Finite central difference derivative
-                  C_av = (fminus_av - fplus_av)/2
-              elif fminus_av is not None:
-                  # only the - side is available: forward difference
-                  C_av =  fminus_av - feq
-              elif fplus_av is not None:
-                  # only the + side is available: backward difference
-                  C_av = -(fplus_av - feq)
+        # Loop over all atomic displacements and calculate force constants
+        for i, a in enumerate(phonon.indices):
+            for j, v in enumerate('xyz'):
+                # Atomic forces for a displacement of atom a in direction v
+                basename = '%s.%d%s' % (phonon.name, a, v)
+                
+                if isfile(basename + '-.pckl'):
+                    fminus_av = pickle.load(open(basename + '-.pckl'))
+                else:
+                    fminus_av = None
+                if isfile(basename + '+.pckl'):
+                    fplus_av = pickle.load(open(basename + '+.pckl'))
+                else:
+                    fplus_av = None
+                
+                if method == 'frederiksen': # translational invariance
+                    if fminus_av is not None:
+                        fminus_av[a] -= fminus_av.sum(0)
+                    if fplus_av is not None:
+                        fplus_av[a]  -= fplus_av.sum(0)
+                
+                if fminus_av is not None and fplus_av is not None:
+                    # Finite central difference derivative
+                    C_av = (fminus_av - fplus_av)/2
+                elif fminus_av is not None:
+                    # only the - side is available: forward difference
+                    C_av =  fminus_av - feq
+                elif fplus_av is not None:
+                    # only the + side is available: backward difference
+                    C_av = -(fplus_av - feq)
 
-              C_av /= self.delta  # gradient
+                C_av /= phonon.delta  # gradient
 
-              # Slice out included atoms
-              C_Nav = C_av.reshape((N, len(self.atoms), 3))[:, self.indices]
-              index = 3*i + j
-              C_xNav[index] = C_Nav
+                # Slice out included atoms
+                C_Nav = C_av.reshape((N, len(phonon.atoms), 3))[:, phonon.indices]
+                index = 3*i + j
+                C_xNav[index] = C_Nav
 
-      # Make unitcell index the first and reshape
-      C_N = C_xNav.swapaxes(0 ,1).reshape((N,) + (3 * natoms, 3 * natoms))
+        # Make unitcell index the first and reshape
+        C_N = C_xNav.swapaxes(0 ,1).reshape((N,) + (3 * natoms, 3 * natoms))
 
-      # Cut off before symmetry and acoustic sum rule are imposed
-      if cutoff is not None:
-          self.apply_cutoff(C_N, cutoff)
-          
-      # Symmetrize force constants
-      if symmetrize:
-          for i in range(symmetrize):
-              # Symmetrize
-              C_N = self.symmetrize(C_N)
-              # Restore acoustic sum-rule
-              if acoustic:
-                  self.acoustic(C_N)
-              else:
-                  break
-           
-      # Store force constants and dynamical matrix
-      self.C_N = C_N
-      self.D_N = C_N.copy()
-      
-      # Add mass prefactor
-      m_a = self.atoms.get_masses()
-      self.m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
-      M_inv = np.outer(self.m_inv_x, self.m_inv_x)
-      for D in self.D_N:
-          D *= M_inv
+        # Cut off before symmetry and acoustic sum rule are imposed
+        if cutoff is not None:
+            phonon.apply_cutoff(C_N, cutoff)
+            
+        # Symmetrize force constants
+        if symmetrize:
+            for i in range(symmetrize):
+                # Symmetrize
+                C_N = phonon.symmetrize(C_N)
+                # Restore acoustic sum-rule
+                if acoustic:
+                    phonon.acoustic(C_N)
+                else:
+                    break
+             
+        # Store force constants and dynamical matrix
+        phonon.C_N = C_N
+        phonon.D_N = C_N.copy()
+        
+        # Add mass prefactor
+        m_a = phonon.atoms.get_masses()
+        phonon.m_inv_x = numpy.repeat(m_a[phonon.indices]**-0.5, 3)
+        M_inv = numpy.outer(phonon.m_inv_x, phonon.m_inv_x)
+        for D in phonon.D_N:
+            D *= M_inv
 
     def symmetrize(self, C_N):
         """Symmetrize force constant matrix."""
@@ -1207,8 +1207,8 @@ def _isfile_parallel(filename):
     """
 
     if world.rank == 0:
-      isf = os.path.isfile(filename)
+        isf = os.path.isfile(filename)
     else:
-      isf = 0
+        isf = 0
     # Synchronize:
     return world.sum(isf)
