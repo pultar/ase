@@ -128,7 +128,7 @@ class XrDebye(object):
                 if self.method == 'Iwasa':
                     f[symbol] = self.get_waasmaier(symbol, s)
                 else:
-                    f[symbol] = atomic_numbers[symbol]
+                    f[symbol] = atomic_numbers[symbol.capitalize()]
             return f[symbol]
 
         I = 0.

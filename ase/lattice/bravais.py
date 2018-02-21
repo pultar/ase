@@ -192,7 +192,7 @@ class Bravais:
         # The types that can be elements: integers and strings
         if self.element_basis is None:
             if isinstance(element, basestring):
-                self.atomicnumber = ase.data.atomic_numbers[element]
+                self.atomicnumber = ase.data.atomic_numbers[element.capitalize()]
             elif isinstance(element, int):
                 self.atomicnumber = element
             else:
@@ -213,7 +213,7 @@ class Bravais:
                         % (max(self.element_basis)+1,))
             for e in element:
                 if isinstance(e, basestring):
-                    atomicnumber.append(ase.data.atomic_numbers[e])
+                    atomicnumber.append(ase.data.atomic_numbers[e.capitalize()])
                 elif isinstance(e, int):
                     atomicnumber.append(e)
                 else:
