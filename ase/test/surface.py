@@ -17,10 +17,12 @@ add_adsorbate(atoms, Atoms('F'), 1, 'hcp')
 # The next test ensures that a simple string of multiple atoms cannot be used,
 # which should fail with a KeyError that reports the name of the molecule due
 # to the string failing to work with Atom().
+# changed from CN to CNN since CN is equivalent to Cn which is an atom
+# this is necessary as Element symbols now get capitalized
 failed = False
 try:
-    add_adsorbate(atoms, 'CN', 1, 'ontop')
+    add_adsorbate(atoms, 'CNN', 1, 'ontop')
 except KeyError as e:
     failed = True
-    assert e.args[0] == 'CN'
+    assert e.args[0] == 'Cnn'
 assert failed
