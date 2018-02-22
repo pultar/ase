@@ -1931,7 +1931,7 @@ def symbols2numbers(symbols):
     numbers = []
     for s in symbols:
         if isinstance(s, basestring):
-            numbers.append(atomic_numbers[s.capitalize()])
+            numbers.append(atomic_numbers[s])
         else:
             numbers.append(s)
     return numbers

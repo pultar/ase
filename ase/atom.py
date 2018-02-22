@@ -89,7 +89,7 @@ class Atom(object):
         if atoms is None:
             # This atom is not part of any Atoms object:
             if isinstance(symbol, basestring):
-                d['number'] = atomic_numbers[symbol.capitalize()]
+                d['number'] = atomic_numbers[symbol]
             else:
                 d['number'] = symbol
             d['position'] = np.array(position, float)
@@ -155,7 +155,7 @@ class Atom(object):
         """Set name attribute to value."""
         if name == 'symbol':
             name = 'number'
-            value = atomic_numbers[value.capitalize()]
+            value = atomic_numbers[value]
 
         if self.atoms is None:
             assert name in names
