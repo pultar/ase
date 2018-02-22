@@ -11,7 +11,7 @@ from ase.gui.i18n import _
 
 import numpy as np
 
-from ase import __version__, Atoms
+from ase import __version__
 import ase.gui.ui as ui
 from ase.gui.calculator import SetCalculator
 from ase.gui.crystal import SetupBulkCrystal
@@ -36,25 +36,16 @@ class GUI(View, Status):
 
     def __init__(self, images=None,
                  rotations='',
-                 show_unit_cell=True,
-                 show_bonds=False):
+                 show_bonds=False, expr=None):
 
-        # Try to change into directory of file you are viewing
-        try:
-            os.chdir(os.path.split(sys.argv[1])[0])
-        # This will fail sometimes (e.g. for starting a new session)
-        except:
-            pass
-
-        if not images:
-            images = Images()
-            images.initialize([Atoms()])
+        if not isinstance(images, Images):
+            images = Images(images)
 
         self.images = images
 
         self.config = read_defaults()
 
-        menu = self.get_menu_data(show_unit_cell, show_bonds)
+        menu = self.get_menu_data(show_bonds)
 
         self.window = ui.ASEGUIWindow(close=self.exit, menu=menu,
                                       config=self.config, scroll=self.scroll,
@@ -75,11 +66,6 @@ class GUI(View, Status):
         self.arrowkey_mode = self.ARROWKEY_SCAN
         self.move_atoms_mask = None
 
-    @property
-    def moving(self):
-        return self.arrowkey_mode != self.ARROWKEY_SCAN
-
-    def run(self, expr=None, test=None):
         self.set_frame(len(self.images) - 1, focus=True)
 
         if len(self.images) > 1:
@@ -91,6 +77,12 @@ class GUI(View, Status):
         if expr is not None and expr != '' and len(self.images) > 1:
             self.plot_graphs(expr=expr)
 
+
+    @property
+    def moving(self):
+        return self.arrowkey_mode != self.ARROWKEY_SCAN
+
+    def run(self, test=None):
         if test:
             self.window.test(test)
         else:
@@ -412,7 +404,7 @@ class GUI(View, Status):
         os.system('(%s %s &); (sleep 60; rm %s) &' %
                   (command, filename, filename))
 
-    def get_menu_data(self, show_unit_cell, show_bonds):
+    def get_menu_data(self, show_bonds):
         M = ui.MenuItem
         return [
             (_('_File'),
@@ -447,7 +439,7 @@ class GUI(View, Status):
 
             (_('_View'),
              [M(_('Show _unit cell'), self.toggle_show_unit_cell, 'Ctrl+U',
-                value=show_unit_cell > 0),
+                value=True),
               M(_('Show _axes'), self.toggle_show_axes, value=True),
               M(_('Show _bonds'), self.toggle_show_bonds, 'Ctrl+B',
                 value=show_bonds),
