@@ -108,6 +108,7 @@ class GaussianReader:
 
     def parse(self, content):
         from ase.data import atomic_numbers
+        chg_mult = charge_multiplicity
         self.data = []
         temp_items = content.split(PARA_START)
         seq_count = 0
@@ -127,19 +128,19 @@ class GaussianReader:
                     #try and detect the charge,multiplicity section
                     if len(i[pos].split(',')) == 2:
                         if all(char.isdigit() for char in i[pos].split(',')):
-                            charge_multiplicity = pos
+                            chg_mult = pos
                             break
                     if names[pos] != "":
                         new_dict[names[pos]] = self.auto_type(i[pos])
 
-                chm = i[charge_multiplicity].split(",")
+                chm = i[chg_mult].split(",")
                 new_dict["Charge"] = int(chm[0])
                 new_dict["Multiplicity"] = int(chm[1])
 
 # Read atoms
                 atoms = []
                 positions = []
-                position = charge_multiplicity + 1
+                position = chg_mult + 1
                 while position < len(i) and i[position] != "":
                     s = i[position].split(",")
                     atoms.append(atomic_numbers[s[0].capitalize()])
