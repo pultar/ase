@@ -21,11 +21,14 @@ positions = water.get_positions()
 
 # Then test the IO routines
 from ase.io import read
+from ase.io.gaussian_read import GaussianReader as GR
 water2 = read('water.log')
 forces2 = water2.get_forces()
 energy2 = water2.get_potential_energy()
 positions2 = water2.get_positions()
+positions3 = GR('water.log', read_images=True).images[-1].get_positions()
 
 assert abs(energy - energy2) < 1e-7
 assert abs(forces - forces2).max() < 1e-9
 assert abs(positions - positions2).max() < 1e-6
+assert abs(positions3 - positions2).max() < 1e-6
