@@ -41,7 +41,7 @@ class GaussianReader:
 
         return data
 
-    def __init__(self, filename, read_images=False):
+    def __init__(self, filename, read_structures=False):
         """filename is NOT optional"""
         if isinstance(filename, basestring):
             fileobj = open(filename, 'r')
@@ -59,18 +59,24 @@ class GaussianReader:
 
         self.parse(content)
 
-        #read images from file
-        if read_images:
-            self.images = self.get_images(content)
+        #read structures from file
+        if read_structures:
+            self.read_structures(content)
 
 
-    def get_images(self, content=None):
-        """Read Images and return them or return them if already read"""
-        if hasattr(self,'images'):
-            return self.images
+    def get_structures(self, content=None):
+        """Get Structures"""
+        if hasattr(self,'structures'):
+            return self.structures
         elif content is None:
             raise RuntimeError('Images not available and no content parsed!')
+        else:
+            self.read_structures(content)
+            return self.structures
 
+
+    def read_structures(self, content=None):
+        """Read Structures from file and wirte them to self.structures"""
         from ase.data import atomic_numbers
         from ase.atoms import Atoms
         from ase.atom import Atom
@@ -96,7 +102,8 @@ class GaussianReader:
                 except ValueError:
                     raise ValueError('Expected a line with three integers and three floats.')
                 images[-1].append(Atom(atN,pos))
-        return images
+        self.structures = images
+        return
 
 
 
@@ -117,6 +124,12 @@ class GaussianReader:
                 new_dict['Sequence number'] = seq_count
                 seq_count += 1
                 for pos in range(len(names)):
+                    #hack, since sometimes this section is too short,
+                    #try and detect the charge,multiplicity section
+                    if len(i[pos].split(',')) == 2:
+                        if all(char.isdigit() for char in i[pos].split(',')):
+                            charge_multiplicity = pos
+                            break
                     if names[pos] != "":
                         new_dict[names[pos]] = self.auto_type(i[pos])
 

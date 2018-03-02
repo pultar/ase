@@ -26,7 +26,7 @@ water2 = read('water.log')
 forces2 = water2.get_forces()
 energy2 = water2.get_potential_energy()
 positions2 = water2.get_positions()
-positions3 = GR('water.log', read_images=True).images[-1].get_positions()
+positions3 = read('water.log', quantity='structures')[-1].get_positions()
 
 assert abs(energy - energy2) < 1e-7
 assert abs(forces - forces2).max() < 1e-9
