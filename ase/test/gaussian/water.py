@@ -21,7 +21,6 @@ positions = water.get_positions()
 
 # Then test the IO routines
 from ase.io import read
-from ase.io.gaussian_read import GaussianReader as GR
 water2 = read('water.log')
 forces2 = water2.get_forces()
 energy2 = water2.get_potential_energy()
