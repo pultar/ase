@@ -124,13 +124,11 @@ class GaussianReader:
                 new_dict['Sequence number'] = seq_count
                 seq_count += 1
                 for pos in range(len(names)):
-                    #hack, since sometimes this section is too short,
-                    #try and detect the charge,multiplicity section
-                    if len(i[pos].split(',')) == 2:
-                        if all(char.isdigit() for char in i[pos].split(',')):
-                            chg_mult = pos
-                            break
                     if names[pos] != "":
+                        #hack, since this section is too short if there is no title
+                        if names[pos] == "Title" and i[pos] == "":
+                            chg_mult -= 1
+                            break
                         new_dict[names[pos]] = self.auto_type(i[pos])
 
                 chm = i[chg_mult].split(",")
