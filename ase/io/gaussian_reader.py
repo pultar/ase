@@ -77,7 +77,6 @@ class GaussianReader:
 
     def read_structures(self, content=None):
         """Read Structures from file and wirte them to self.structures"""
-        from ase.data import atomic_numbers
         from ase.atoms import Atoms
         from ase.atom import Atom
         images = []
