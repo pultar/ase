@@ -11,10 +11,10 @@ def index_by_position(atoms):
     return indices
 
 def sort_by_position(atoms):
-# Return a new Atoms object with sorted atomic order.
-# The default is to order according to chemical symbols,
-# but if *tags* is not None, it will be used instead.
-# A stable sorting algorithm is used.
+    # Return a new Atoms object with sorted atomic order.
+    # The default is to order according to chemical symbols,
+    # but if *tags* is not None, it will be used instead.
+    # A stable sorting algorithm is used.
     indices = index_by_position(atoms)
     return atoms[indices]
 
@@ -23,8 +23,8 @@ def wrap_and_sort_by_position(atoms):
     atoms = sort_by_position(atoms)
     return atoms
 
-def nCr(n,r):
-    #Compute and return combination
+def nCr(n, r):
+    """Compute and return combination"""
     f = math.factorial
     return f(n)/f(r)/f(n-r)
 
@@ -34,7 +34,7 @@ def reduce_matrix(matrix):
     rank = matrix_rank(matrix)
     # print("rank:{}".format(rank))
     while matrix.shape[1] > rank:
-        temp = np.delete(matrix,-1-offset,axis=1)
+        temp = np.delete(matrix, -1 - offset, axis=1)
         if matrix_rank(temp) < rank:
             offset += 1
         else:
