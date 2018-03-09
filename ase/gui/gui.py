@@ -73,6 +73,7 @@ class GUI(View, Status):
         self.module_state = {}  # Used by modules to store their state.
         self.arrowkey_mode = self.ARROWKEY_SCAN
         self.move_atoms_mask = None
+        self.show_name = None
 
     @property
     def moving(self):

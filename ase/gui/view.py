@@ -454,6 +454,9 @@ class View:
         if len(self.images) > 1:
             self.draw_frame_number()
 
+        if self.show_name:
+            self.draw_name()
+
         self.window.update()
 
         if status:
@@ -495,6 +498,12 @@ class View:
         self.window.text(x, y, '{0}/{1}'.format(self.frame + 1,
                                                 len(self.images)),
                          anchor='SE')
+
+    def draw_name(self):
+        x, y = self.window.size
+        self.window.text(x/2, y,
+                         '{}'.format(self.images[self.frame].info['name']),
+                         anchor='s')
 
     def release(self, event):
         if event.button in [4, 5]:
