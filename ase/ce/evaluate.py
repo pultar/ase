@@ -1,8 +1,8 @@
-from ase.ce.settings import BulkCrystal
+from copy import deepcopy
 import numpy as np
 from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
-from copy import deepcopy
+from ase.ce import BulkCrystal, BulkSpacegroup
 
 # dependency on sklearn is to be removed due to some of technical problems
 from sklearn.linear_model import Lasso
@@ -13,10 +13,10 @@ class Evaluate(object):
     compares the energies predicted by CE and that are obtained from DFT
     calculations.
     """
-    def __init__(self, BC, cluster_names=None, select_cond=None, lamb=0.0,
+    def __init__(self, setting, cluster_names=None, select_cond=None, lamb=0.0,
                  penalty=None):
         """
-        BC: BulkCrystal object
+        setting: BulkCrystal object
         cluster_names: names of clusters to include in the evalutation.
                        If None, all of the possible clusters are included.
         select_cond: extra selection condition specified by user. Default only
@@ -27,12 +27,12 @@ class Evaluate(object):
                  'lasso' or 'l1' - L1 regularization
                  'euclidean' or 'l2' - L2 regularization
         """
-        if type(BC) is not BulkCrystal:
-            raise TypeError("Passed object should be BulkCrystal type")
-        self.db_name = BC.db_name
-        self.db = BC.db
-        self.cluster_names = BC.cluster_names
-        self.num_elements = BC.num_elements
+        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
+            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+                            "object")
+        self.setting = setting
+        self.cluster_names = setting.cluster_names
+        self.num_elements = setting.num_elements
 
         # Define the selection conditions
         self.select_cond = [('converged', '=', True)]
@@ -58,7 +58,7 @@ class Evaluate(object):
                             " is not supported")
 
         if cluster_names is None:
-            self.cluster_names = self._get_full_cluster_names()
+            self.cluster_names = self.setting.full_cluster_names
         else:
             self.cluster_names = cluster_names
         self.cf_matrix = self._make_cf_matrix()
@@ -66,27 +66,13 @@ class Evaluate(object):
         self.e_dft = None
         self.e_pred = None
 
-    def _get_full_cluster_names(self):
-        """
-        Returns the all possible cluster names.
-        Used only when the cluster_names is None.
-        """
-        full_names = []
-        full_names.append(self.cluster_names[0][0])
-        for k in range(1, len(self.cluster_names)):
-            cases = (self.num_elements - 1)**k
-            for name in self.cluster_names[k][:]:
-                for i in range(1, cases + 1):
-                    full_names.append('{}_{}'.format(name, i))
-        return full_names
-
     def _make_cf_matrix(self):
         """
         Returns the matrix containing the correlation functions.
         Only selects all of the converged structures by default.
         """
         cf_matrix = []
-        for row in self.db.select(self.select_cond):
+        for row in self.setting.db.select(self.select_cond):
             cf_matrix.append([row[x] for x in self.cluster_names])
         return np.array(cf_matrix, dtype=float)
 
@@ -98,7 +84,7 @@ class Evaluate(object):
         creating probe structures.
         """
         cfm = []
-        for row in self.db.select([('name', '!=', 'information')]):
+        for row in self.setting.db.select([('name', '!=', 'information')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         # cfm = self.reduce_matrix(cfm)
@@ -106,7 +92,7 @@ class Evaluate(object):
 
     def _get_dft_energy_per_atom(self):
         e_dft = []
-        for row in self.db.select(self.select_cond):
+        for row in self.setting.db.select(self.select_cond):
             e_dft.append(row.energy / row.natoms)
         self.e_dft = np.array(e_dft)
         return True
@@ -207,12 +193,18 @@ class Evaluate(object):
         ax.axis([rmin, rmax, rmin, rmax])
         ax.set_ylabel(r'$E_{DFT}$ (eV/atom)')
         ax.set_xlabel(r'$E_{pred}$ (eV/atom)')
-        ax.text(0.95, 0.01, 'CV = %.4f eV/atom \n RMSE = %.4f eV/atom'
-                %(self._cv_loo(), self.rmse()),
+        ax.text(0.95, 0.01, 'CV = %.3f meV/atom \n RMSE = %.3f meV/atom'
+                %(self._cv_loo()*1000, self.rmse()*1000),
                   verticalalignment='bottom',
                   horizontalalignment='right',
                   transform=ax.transAxes,
                   fontsize=12)
+        # ax.text(0.95, 0.01, 'avg. prediction error = %.3f meV/atom '
+        #         %(self._cv_loo()*1000),
+        #           verticalalignment='bottom',
+        #           horizontalalignment='right',
+        #           transform=ax.transAxes,
+        #           fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
         plt.show()
         return True
