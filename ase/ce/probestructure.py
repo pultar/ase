@@ -4,9 +4,7 @@ from itertools import permutations
 from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv
-from ase.ce.settings_bulk import BulkCrystal
-from ase.ce.corrFunc import CorrFunction
-from ase.ce.evaluate import Evaluate
+from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
 from ase.ce.tools import wrap_and_sort_by_position
 
 
