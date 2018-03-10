@@ -1,13 +1,15 @@
-import os
 import random
 import numpy as np
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
-from ase.ce.probestructure import ProbeStructure
-from ase.ce.tools import wrap_and_sort_by_position
 
 # dependence on PyMatGen to be removed
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.io.ase import AseAtomsAdaptor
+
+from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
+from ase.ce.probestructure import ProbeStructure
+from ase.ce.tools import wrap_and_sort_by_position
+
+
 
 
 class GenerateStructures(object):
