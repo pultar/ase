@@ -2,7 +2,7 @@ import os
 from itertools import combinations_with_replacement, permutations
 import numpy as np
 from ase.atoms import Atoms
-from ase.ce.settings_bulk import BulkCrystal
+from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 
 
