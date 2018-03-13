@@ -53,6 +53,22 @@ images[2].set_cell(cell)
 read_images = ase.io.read('multi.xyz@:')
 assert read_images == images
 os.unlink('multi.xyz')
+# also test for vec_cell with whitespaces
+f = open('structure.xyz', 'w')
+f.write("""1
+Coordinates
+C         -7.28250        4.71303       -3.82016
+  VEC1 1.0 0.1 1.1
+1
+
+C         -7.28250        4.71303       -3.82016
+VEC1 1.0 0.1 1.1
+""")
+f.close()
+a = ase.io.read('structure.xyz',index=0)
+b = ase.io.read('structure.xyz',index=1)
+assert a == b
+os.unlink('structure.xyz')
 
 # read xyz containing trailing blank line
 # also test for upper case elements
@@ -63,6 +79,7 @@ MG        -4.25650        3.79180       -2.54123
 C         -1.15405        2.86652       -1.26699
 C         -5.53758        3.70936        0.63504
 C         -7.28250        4.71303       -3.82016
+  VEC1 1.0 0.1 1.1
 
 """)
 f.close()
