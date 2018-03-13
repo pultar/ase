@@ -23,7 +23,7 @@ class ProbeStructure(object):
         self.corrFunc = CorrFunction(setting)
         self.cfm = Evaluate(setting, self.cluster_names).full_cf_matrix
 
-        if self._in_conc_matrix(atoms):
+        if self.setting.in_conc_matrix(atoms):
             self.init = wrap_and_sort_by_position(atoms)
         else:
             raise ValueError("concentration of the elements in the provided"
@@ -107,31 +107,6 @@ class ProbeStructure(object):
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
-    def _in_conc_matrix(self, atoms):
-        """Check to see if the passed atoms object has allowed concentration
-        by checking the concentration matrix. Returns boolean.
-        """
-        # determine the concentration of the given atoms
-        conc = np.zeros(self.setting.num_elements, dtype=int)
-        for x in range(self.setting.num_elements):
-            element = self.setting.all_elements[x]
-            num_element = len([a for a in atoms if a.symbol == element])
-            conc[x] = num_element
-
-        # determine the dimensions of the concentration matrix
-        # then, search to see if there is a match
-        conc_shape = self.setting.conc_matrix.shape
-        if len(conc_shape) == 2:
-            for x in range(conc_shape[0]):
-                if np.array_equal(conc, self.setting.conc_matrix[x]):
-                    return True
-        else:
-            for x in range(conc_shape[0]):
-                for y in range(conc_shape[1]):
-                    if np.array_equal(conc, self.setting.conc_matrix[x][y]):
-                        return True
-        return False
-
     def _swap_two_atoms(self, atoms, cf):
         """
         Swaps two randomly chosen atoms.
@@ -189,7 +164,7 @@ class ProbeStructure(object):
                 new_symbol = choice(self.setting.basis_elements[site])
                 if new_symbol != old_symbol:
                     new[indx].symbol = new_symbol
-                    if self._in_conc_matrix(new):
+                    if self.setting.in_conc_matrix(new):
                         break
                     new[indx].symbol = old_symbol
             else:

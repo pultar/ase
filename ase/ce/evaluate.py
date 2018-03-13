@@ -87,7 +87,6 @@ class Evaluate(object):
         for row in self.setting.db.select([('name', '!=', 'information')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
-        # cfm = self.reduce_matrix(cfm)
         return cfm
 
     def _get_dft_energy_per_atom(self):

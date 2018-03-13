@@ -6,8 +6,7 @@ import numpy as np
 from ase.utils import basestring
 from ase.atoms import Atoms
 from ase.calculators.calculator import Calculator
-from ase.ce.corrFunc import CorrFunction
-from ase.ce.settings import BulkCrystal
+from ase.ce import CorrFunction, BulkCrystal, BulkSpacegroup
 
 
 class ClusterExpansion(Calculator):
@@ -15,7 +14,7 @@ class ClusterExpansion(Calculator):
 
     Arguments
     =========
-    settings: object that contains CE settings (e.g., BulkCrystal)
+    setting: object that contains CE setting (e.g., BulkCrystal)
 
     init_atoms: Atoms object containing the initial structure
 
@@ -32,14 +31,15 @@ class ClusterExpansion(Calculator):
     name = 'ClusterExpansion'
     implemented_properties = ['energy']
 
-    def __init__(self, settings, cluster_name_eci=None, init_cf=None,
+    def __init__(self, setting, cluster_name_eci=None, init_cf=None,
                  logfile=None):
         Calculator.__init__(self)
 
-        if not isinstance(settings, BulkCrystal):
-            raise TypeError("settings should be BulkCrystal object")
-        self.settings = settings
-        self.CF = CorrFunction(settings)
+        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
+            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+                            "object")
+        self.setting = setting
+        self.CF = CorrFunction(setting)
 
         # check cluster_name_eci and separate them out
         if isinstance(cluster_name_eci, list) and \
@@ -177,7 +177,7 @@ class ClusterExpansion(Calculator):
         """Update correlation function based on the reference value"""
         swapped_indices = self.indices_of_changed_atoms
 
-        bf_list = list(range(len(self.settings.basis_functions)))
+        bf_list = list(range(len(self.setting.basis_functions)))
         self.cf = deepcopy(self.ref_cf)
 
         for indx in swapped_indices:
@@ -194,11 +194,11 @@ class ClusterExpansion(Calculator):
                 # find c{num} in cluster type
                 num = int(prefix[1])
                 # find the type of cluster based on the index of the original
-                # settings.cluster_names nested list (unflattened)
-                ctype = self.settings.cluster_names[num].index(prefix)
+                # setting.cluster_names nested list (unflattened)
+                ctype = self.setting.cluster_names[num].index(prefix)
 
                 perm = list(product(bf_list, repeat=num))
-                i_list = self.settings.cluster_indx[num][ctype]
+                i_list = self.setting.cluster_indx[num][ctype]
                 t_list = self._translated_indx(indx, i_list)
 
                 # ----------------------------------
@@ -240,7 +240,7 @@ class ClusterExpansion(Calculator):
         indices of atoms that constitute the cluster (after translation).
         """
         symbol = self._symbol_by_index(ref_indx)
-        b_f = self.settings.basis_functions
+        b_f = self.setting.basis_functions
         delta_cf = 0.
         for cluster_indx in trans_list:
             cf_new = b_f[dec[0]][symbol[1]]
@@ -258,7 +258,7 @@ class ClusterExpansion(Calculator):
                 # ----------------------------------
                 # This only works for a single basis
                 # ----------------------------------
-                tlist[i][j] = self.settings.trans_matrix[ref_indx, indx]
+                tlist[i][j] = self.setting.trans_matrix[ref_indx, indx]
         return tlist
 
     def _check_atoms(self, atoms):
@@ -267,12 +267,12 @@ class ClusterExpansion(Calculator):
         if not isinstance(atoms, Atoms):
             raise TypeError('Passed argument is not Atoms object')
         if self.old_atoms is None:
-            if self.settings.in_conc_matrix(atoms):
+            if self.setting.in_conc_matrix(atoms):
                 self.atoms = self.CF.check_and_convert_cell_size(atoms)
             else:
                 raise ValueError("Provides atoms object does not seem valid "
                                  "based on concentration matrix. Please check "
-                                 "that the passed atoms and settings are "
+                                 "that the passed atoms and setting are "
                                  "consistent.")
         else:
             if len(self.ref_atoms) != len(atoms):

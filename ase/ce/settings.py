@@ -1,5 +1,6 @@
 import os
 from itertools import combinations, combinations_with_replacement
+from copy import deepcopy
 import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
@@ -17,8 +18,9 @@ class ClusterExpansionSetting:
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
         self.all_elements = [item for row in basis_elements for item in row]
-        self.all_elements = list(set(self.all_elements))
         self.num_elements = len(self.all_elements)
+        self.unique_elements = list(set(deepcopy(self.all_elements)))
+        self.num_unique_elements = len(self.unique_elements)
         self.max_cluster_dia, self.supercell_scale_factor = \
             self._get_max_cluster_dia_and_scale_factor(max_cluster_dia)
         if len(self.basis_elements) != self.num_basis:
@@ -535,17 +537,24 @@ class ClusterExpansionSetting:
                             'cluster_indx': self.cluster_indx,
                             'trans_matrix': self.trans_matrix,
                             'conc_matrix': self.conc_matrix,
-                            'full_cluster_names': self.full_cluster_names})
+                            'full_cluster_names': self.full_cluster_names,
+                            'unique_cluster_names': self.unique_cluster_names})
 
     def _read_data(self):
-        row = self.db.get('name=information')
-        self.dist_matrix = row.data.dist_matrix
-        self.cluster_names = row.data.cluster_names
-        self.cluster_dist = row.data.cluster_dist
-        self.cluster_indx = row.data.cluster_indx
-        self.trans_matrix = row.data.trans_matrix
-        self.conc_matrix = row.data.conc_matrix
-        self.full_cluster_names = row.data.full_cluster_names
+        try:
+            row = self.db.get('name=information')
+            self.dist_matrix = row.data.dist_matrix
+            self.cluster_names = row.data.cluster_names
+            self.cluster_dist = row.data.cluster_dist
+            self.cluster_indx = row.data.cluster_indx
+            self.trans_matrix = row.data.trans_matrix
+            self.conc_matrix = row.data.conc_matrix
+            self.full_cluster_names = row.data.full_cluster_names
+            self.unique_cluster_names = row.data.unique_cluster_names
+        except KeyError:
+            self._store_data()
+        except AssertionError:
+            self.reconfigure_settings()
 
     def _get_full_cluster_names(self):
         full_names = []
@@ -560,6 +569,31 @@ class ClusterExpansionSetting:
                     dec_string = ''.join(str(i) for i in dec)
                     full_names.append(prefix + '_' + dec_string)
         return full_names
+
+    def in_conc_matrix(self, atoms):
+        """Check to see if the passed atoms object has allowed concentration
+        by checking the concentration matrix. Returns boolean.
+        """
+        # determine the concentration of the given atoms
+        conc = np.zeros(self.num_elements, dtype=int)
+        for x in range(self.num_elements):
+            element = self.all_elements[x]
+            num_element = len([a for a in atoms if a.symbol == element])
+            conc[x] = num_element
+
+        # determine the dimensions of the concentration matrix
+        # then, search to see if there is a match
+        conc_shape = self.conc_matrix.shape
+        if len(conc_shape) == 2:
+            for x in range(conc_shape[0]):
+                if np.array_equal(conc, self.conc_matrix[x]):
+                    return True
+        else:
+            for x in range(conc_shape[0]):
+                for y in range(conc_shape[1]):
+                    if np.array_equal(conc, self.conc_matrix[x][y]):
+                        return True
+        return False
 
     def _group_index_by_basis_group(self):
         index_by_grouped_basis = []
@@ -619,4 +653,4 @@ class ClusterExpansionSetting:
     def reconfigure_settings(self):
         ids = [row.id for row in self.db.select(name='information')]
         self.db.delete(ids)
-        self.store_data()
+        self._store_data()

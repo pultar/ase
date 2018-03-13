@@ -10,8 +10,6 @@ from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
 
 
-
-
 class GenerateStructures(object):
     """
     Class that generates atoms object.
