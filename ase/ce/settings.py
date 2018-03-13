@@ -171,19 +171,19 @@ class ClusterExpansionSetting:
 
     def _get_basis_functions(self):
         """Create basis functions to guarantee the orthonormality."""
-        if self.num_elements == 2:
+        if self.num_unique_elements == 2:
             d0_0 = 1.
-        elif self.num_elements == 3:
+        elif self.num_unique_elements == 3:
             d0_0 = np.sqrt(3. / 2)
             c0_1 = np.sqrt(2)
             c1_1 = -3 / np.sqrt(2)
-        elif self.num_elements == 4:
+        elif self.num_unique_elements == 4:
             d0_0 = np.sqrt(2. / 5)
             c0_1 = -5. / 3
             c1_1 = 2. / 3
             d0_1 = -17. / (3 * np.sqrt(10))
             d1_1 = np.sqrt(5. / 2) / 3
-        elif self.num_elements == 5:
+        elif self.num_unique_elements == 5:
             d0_0 = 1. / np.sqrt(2)
             c0_1 = -1 * np.sqrt(10. / 7)
             c1_1 = np.sqrt(5. / 14)
@@ -192,7 +192,7 @@ class ClusterExpansionSetting:
             c0_2 = 3 * np.sqrt(2. / 7)
             c1_2 = -155. / (12 * np.sqrt(14))
             c2_2 = 15 * np.sqrt(7. / 2) / 12
-        elif self.num_elements == 6:
+        elif self.num_unique_elements == 6:
             d0_0 = np.sqrt(3. / 14)
             c0_1 = -np.sqrt(2)
             c1_1 = 3. / (7 * np.sqrt(2))
@@ -215,25 +215,25 @@ class ClusterExpansionSetting:
             bf[key] = d0_0 * value
         bf_list.append(bf)
 
-        if self.num_elements > 2:
+        if self.num_unique_elements > 2:
             bf = {}
             for key, value in self.spin_dict.items():
                 bf[key] = c0_1 + (c1_1 * value**2)
             bf_list.append(bf)
 
-        if self.num_elements > 3:
+        if self.num_unique_elements > 3:
             bf = {}
             for key, value in self.spin_dict.items():
                 bf[key] = d0_1 * value + (d1_1 * (value**3))
             bf_list.append(bf)
 
-        if self.num_elements > 4:
+        if self.num_unique_elements > 4:
             bf = {}
             for key, value in self.spin_dict.items():
                 bf[key] = c0_2 + (c1_2 * (value**2)) + (c2_2 * (value**4))
             bf_list.append(bf)
 
-        if self.num_elements > 5:
+        if self.num_unique_elements > 5:
             bf = {}
             for key, value in self.spin_dict.items():
                 bf[key] = d0_2 + (d1_2 * (value**3)) + (d2_2 * (value**5))
@@ -317,6 +317,14 @@ class ClusterExpansionSetting:
             indx_by_equiv.append(equiv_group)
 
         return indx_by_equiv
+
+    def _get_grouped_basis_elements(self):
+        """Create list where the elements in the 'equivalent group' are grouped
+        together to conveniently calculate the concentrations."""
+        grouped_basis_elements = []
+        for group in self.grouped_basis:
+            grouped_basis_elements.append(self.basis_elements[group[0]])
+        return grouped_basis_elements
 
     def _get_cluster_information(self):
         """Create a set of parameters used to describe the structure.

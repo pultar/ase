@@ -101,9 +101,9 @@ class GenerateStructures(object):
         # Case 1: 1 conc variable, one struct per concentration
         if (self.setting.num_conc_var == 1 and
             self.struct_per_gen == self.conc_matrix.shape[0]):
-            for _ in range(self.conc_matrix.shape[0]):
-                conc1 = float(_)/(self.conc_matrix.shape[0] - 1)
-                atoms = self.random_struct(self.conc_matrix[_], conc1)
+            for x in range(self.conc_matrix.shape[0]):
+                conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
+                atoms = self.random_struct(self.conc_matrix[x], conc1)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -115,11 +115,11 @@ class GenerateStructures(object):
         elif (self.setting.num_conc_var == 2 and
               self.struct_per_gen == self.conc_matrix.shape[0] *
               self.conc_matrix.shape[1]):
-            for _1 in range(self.conc_matrix.shape[0]):
-                conc1 = float(_1)/(self.conc_matrix.shape[0] - 1)
-                for _2 in range(self.conc_matrix.shape[1]):
-                    conc2 = float(_2)/(self.conc_matrix.shape[1] - 1)
-                    atoms = self.random_struct(self.conc_matrix[_1][_2],
+            for x in range(self.conc_matrix.shape[0]):
+                conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
+                for y in range(self.conc_matrix.shape[1]):
+                    conc2 = float(y)/(self.conc_matrix.shape[1] - 1)
+                    atoms = self.random_struct(self.conc_matrix[x][y],
                                                conc1, conc2)
                     if atoms is None:
                         continue
@@ -143,7 +143,7 @@ class GenerateStructures(object):
                 kvp = CorrFunction(self.setting).get_cf(atoms)
                 kvp = self.get_kvp(atoms, kvp, conc1)
                 self.setting.db.write(atoms, kvp)
-                x += 0
+                x += 1
 
         # Case 4: 2 conc variable, user specified number of structures
         else:
@@ -163,7 +163,7 @@ class GenerateStructures(object):
                 kvp = CorrFunction(self.setting).get_cf(atoms)
                 kvp = self.get_kvp(atoms, kvp, conc1, conc2)
                 self.setting.db.write(atoms, kvp)
-                x += 0
+                x += 1
         return True
 
     def find_concentration(self, atoms):
@@ -254,12 +254,18 @@ class GenerateStructures(object):
         if self.setting.num_basis == 1:
             conc_ratio = [list(conc_ratio)]
         else:
-            temp = list(conc_ratio)
+            tmp = list(conc_ratio)
             conc_ratio = []
-            for site in range(self.setting.num_basis):
-                l = len(self.setting.basis_elements[site])
-                conc_ratio.append(temp[:l])
-                del temp[:l]
+            if self.setting.grouped_basis is None:
+                num_basis = self.setting.num_basis
+                basis_elements = self.setting.basis_elements
+            else:
+                num_basis = self.setting.num_grouped_basis
+                basis_elements = self.setting.grouped_basis_elements
+            for site in range(num_basis):
+                length = len(basis_elements[site])
+                conc_ratio.append(tmp[:length])
+                del tmp[:length]
 
         # 1D np array to easily count how many types of species are present
         flat_conc_ratio = np.array([x for sub in conc_ratio for x in sub])
@@ -269,16 +275,16 @@ class GenerateStructures(object):
         in_DB = True
         while in_DB:
             atoms = self.atoms.copy()
-            for site in range(self.setting.num_basis):
+            for site in range(num_basis):
                 indx = [a.index for a in atoms if a.symbol ==
-                        self.setting.basis_elements[site][0]]
+                        basis_elements[site][0]]
                 if len(indx) != sum(conc_ratio[site]):
                     raise ValueError("number of atoms to be replaced in the "
                                      "Atoms object does not match the value "
                                      "in conc_ratio")
                 for i in range(1, len(conc_ratio[site])):
                     indx = self._replace_rnd(indx,
-                                             self.setting.basis_elements[site][i],
+                                             basis_elements[site][i],
                                              conc_ratio[site][i], atoms)
             in_DB = self.exists_in_db(atoms, conc1=conc1, conc2=conc2)
             # special case where only one species is present

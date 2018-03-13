@@ -82,6 +82,7 @@ class BulkCrystal(ClusterExpansionSetting):
 
         self.index_by_basis = self._group_index_by_basis()
         if grouped_basis is not None:
+            self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
             self.grouped_basis_elements = self._get_grouped_basis_elements()
 
@@ -206,6 +207,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
 
         self.index_by_basis = self._group_index_by_basis()
         if grouped_basis is not None:
+            self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
             self.grouped_basis_elements = self._get_grouped_basis_elements()
 

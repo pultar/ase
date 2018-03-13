@@ -77,7 +77,11 @@ class CorrFunction(object):
                     # need to perform for each symmetry inequivalent sites
                     for symm in range(self.num_trans_symm):
                         name_list = self.setting.cluster_names[symm][n]
-                        name_indx = name_list.index(unique_name)
+                        try:
+                            name_indx = name_list.index(unique_name)
+                        except ValueError:
+                            continue
+
                         indices = self.setting.cluster_indx[symm][n][name_indx]
 
                         sp_temp, count_temp = \
