@@ -583,11 +583,17 @@ class ClusterExpansionSetting:
         by checking the concentration matrix. Returns boolean.
         """
         # determine the concentration of the given atoms
-        conc = np.zeros(self.num_elements, dtype=int)
-        for x in range(self.num_elements):
-            element = self.all_elements[x]
-            num_element = len([a for a in atoms if a.symbol == element])
-            conc[x] = num_element
+        if self.grouped_basis is None:
+            num_elements = self.num_elements
+            all_elements = self.all_elements
+        else:
+            num_elements = self.num_grouped_elements
+            all_elements = self.all_grouped_elements
+
+        conc = np.zeros(num_elements, dtype=int)
+        for x in range(num_elements):
+            element = all_elements[x]
+            conc[x] = len([a for a in atoms if a.symbol == element])
 
         # determine the dimensions of the concentration matrix
         # then, search to see if there is a match

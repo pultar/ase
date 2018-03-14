@@ -152,7 +152,10 @@ class CorrFunction(object):
             for symm in range(self.num_trans_symm):
                 # find the type of cluster based on the index of the original
                 # settings.cluster_names nested list (unflattened)
-                name_indx = self.setting.cluster_names[symm][n].index(prefix)
+                try:
+                    name_indx = self.setting.cluster_names[symm][n].index(prefix)
+                except ValueError:
+                    continue
                 indices = self.setting.cluster_indx[symm][n][name_indx]
                 sp_temp, count_temp = \
                     self._spin_product(atoms, indices, symm, dec_list)

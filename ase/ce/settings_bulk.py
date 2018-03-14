@@ -85,6 +85,10 @@ class BulkCrystal(ClusterExpansionSetting):
             self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
             self.grouped_basis_elements = self._get_grouped_basis_elements()
+            self.all_grouped_elements = [x for sub in
+                                         self.grouped_basis_elements
+                                         for x in sub]
+            self.num_grouped_elements = len(self.all_grouped_elements)
 
     def _get_unit_cell(self):
         if self.num_basis == 1:
@@ -210,6 +214,10 @@ class BulkSpacegroup(ClusterExpansionSetting):
             self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
             self.grouped_basis_elements = self._get_grouped_basis_elements()
+            self.all_grouped_elements = [x for sub in
+                                         self.grouped_basis_elements
+                                         for x in sub]
+            self.num_grouped_elements = len(self.all_grouped_elements)
 
     def _get_min_lat(self):
         # use cellpar only when cell is not defined

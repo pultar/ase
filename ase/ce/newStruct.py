@@ -168,8 +168,16 @@ class GenerateStructures(object):
 
     def find_concentration(self, atoms):
         """Find the concentration value(s) of the passed atoms object."""
-        conc_ratio = np.zeros(len(self.setting.all_elements), dtype=int)
-        for i, element in enumerate(self.setting.all_elements):
+
+        if self.setting.grouped_basis is None:
+            num_elements = self.setting.num_elements
+            all_elements = self.setting.all_elements
+        else:
+            num_elements = self.setting.num_grouped_elements
+            all_elements = self.setting.all_grouped_elements
+        # determine the concentration of the given atoms
+        conc_ratio = np.zeros(num_elements, dtype=int)
+        for i, element in enumerate(all_elements):
             conc_ratio[i] = len([a for a in atoms if a.symbol == element])
 
         if self.setting.num_conc_var == 1:
@@ -250,7 +258,10 @@ class GenerateStructures(object):
         """
         Generate a random structure that does not already exist in DB
         """
-        # convert the conc_ratio into the same format as basis_elements
+        # convert the conc_ratio into the same format as basis_elements if
+        # setting.num_basis = 1 or setting.group_basis is None
+        # Else, convert the conc_ratio the format of
+        # setting.grouped_basis_elements
         if self.setting.num_basis == 1:
             conc_ratio = [list(conc_ratio)]
         else:

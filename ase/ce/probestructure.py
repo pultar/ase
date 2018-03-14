@@ -5,7 +5,7 @@ from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
 
 
 class ProbeStructure(object):
@@ -96,6 +96,7 @@ class ProbeStructure(object):
             n_cfm = np.vstack((self.cfm, n_cf))
             n_mv = self._get_mean_variance(n_cfm)
             diffs.append(abs(o_mv - n_mv))
+            # print(_)
             # update old
             old = new.copy()
             o_cf = np.copy(n_cf)
@@ -116,20 +117,35 @@ class ProbeStructure(object):
         natoms = len(atoms)
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
+
+        # determine if the basis is grouped
+        if self.setting.grouped_basis is None:
+            basis_elements = self.setting.basis_elements
+            num_basis = self.setting.num_basis
+            index_by_basis = self.setting.index_by_basis
+        else:
+            basis_elements = self.setting.grouped_basis_elements
+            num_basis = self.setting.num_grouped_basis
+            index_by_basis = self.setting.index_by_grouped_basis
+
         # pick fist atom and determine its symbol and type
-        indx[0] = choice(range(natoms))
-        symbol[0] = atoms[indx[0]].symbol
-        for site in range(self.setting.num_basis):
-            if symbol[0] in self.setting.basis_elements[site]:
+        # a basis with only 1 type of element should not be chosen
+        while True:
+            indx[0] = choice(range(natoms))
+            symbol[0] = atoms[indx[0]].symbol
+            for basis in range(num_basis):
+                if symbol[0] in basis_elements[basis]:
+                    break
+            if len(basis_elements[basis]) > 1:
                 break
         # pick second atom that is not the same element, but occupies the
         # same site.
         while True:
-            indx[1] = choice(range(natoms))
+            indx[1] = choice(index_by_basis[basis])
             symbol[1] = atoms[indx[1]].symbol
             if symbol[1] == symbol[0]:
                 continue
-            if symbol[1] in self.setting.basis_elements[site]:
+            if symbol[1] in basis_elements[basis]:
                 break
         # swap two atoms
         atoms, cf = self._change_element_type(atoms, cf, indx[0], symbol[1])
@@ -191,6 +207,7 @@ class ProbeStructure(object):
                 index = i
                 break
 
+        # scan through each cluster name
         for i, name in enumerate(self.cluster_names):
             n = int(name[1])
             if n == 0:
@@ -203,21 +220,33 @@ class ProbeStructure(object):
                 cf[i] = self.corrFunc.get_c1(new_sc, int(dec_str))
                 continue
 
+            # Find which symmetry group the given atom (index) belongs to
+            for symm in range(self.setting.num_trans_symm):
+                if index in self.setting.index_by_trans_symm[symm]:
+                    sg = symm
+
+            # set name_indx and indices that compose a cluster
+            try:
+                name_indx = self.setting.cluster_names[sg][n].index(prefix)
+            # ValueError means that the cluster name (prefix) was not
+            # found in the symmetry group of the index --> this cluster is
+            # not altered.
+            except ValueError:
+                continue
+            indices = self.setting.cluster_indx[sg][n][name_indx]
+
             # Get the total count
             count = 0
             for symm in range(self.setting.num_trans_symm):
-                name_indx = self.setting.cluster_names[symm][n].index(prefix)
-                indices = self.setting.cluster_indx[symm][n][name_indx]
-                clusters_per_atom = len(indices)
+                try:
+                    nindx = self.setting.cluster_names[symm][n].index(prefix)
+                except ValueError:
+                    continue
+
+                clusters_per_atom = len(self.setting.cluster_indx[symm][n][nindx])
                 atoms_per_symm = len(self.setting.index_by_trans_symm[symm])
                 count += clusters_per_atom * atoms_per_symm
-                # Find which symmetry group the given atom (index) belongs to
-                if index in self.setting.index_by_trans_symm[symm]:
-                    symm_group = symm
 
-            # set name_indx and indices that compose a cluster
-            name_indx = self.setting.cluster_names[symm_group][n].index(prefix)
-            indices = self.setting.cluster_indx[symm_group][n][name_indx]
 
             t_indices = self._translate_indx(index, indices)
             cf_tot = cf[i] * count
@@ -235,13 +264,16 @@ class ProbeStructure(object):
                 members = np.unique(t_indices)
 
                 for nindx in members:
+                    sg = None
                     # only count correlation function of the clusters that
                     # contain the changed atom
                     for symm in range(self.setting.num_trans_symm):
                         if nindx in self.setting.index_by_trans_symm[symm]:
-                            symm_group = symm
+                            sg = symm
                             break
-                    indices = self.setting.cluster_indx[symm][n][name_indx]
+
+                    name_indx = self.setting.cluster_names[sg][n].index(prefix)
+                    indices = self.setting.cluster_indx[sg][n][name_indx]
                     # tl = self._translate_indx(nindx, indices)
                     # trans_list = tl[~np.all(tl != indx, axis=1)]
                     t_indices = []
@@ -281,7 +313,13 @@ class ProbeStructure(object):
         return sp
 
     def _get_mean_variance_full(self, cfm):
-        prec = inv(cfm.T.dot(cfm))
+        try:
+            prec = inv(cfm.T.dot(cfm))
+        # if inverting matrix leads to a singular matrix, reduce the matrix
+        except np.linalg.linalg.LinAlgError:
+            cfm = reduce_matrix(cfm)
+            prec = inv(cfm.T.dot(cfm))
+
         mv = 0.
         for x in range(cfm.shape[0]):
             mv += cfm[x].dot(prec).dot(cfm[x].T)
@@ -289,6 +327,13 @@ class ProbeStructure(object):
         return mv
 
     def _get_mean_variance(self, cfm):
+        try:
+            prec = inv(cfm.T.dot(cfm))
+        # if inverting matrix leads to a singular matrix, reduce the matrix
+        except np.linalg.linalg.LinAlgError:
+            cfm = reduce_matrix(cfm)
+            prec = inv(cfm.T.dot(cfm))
+
         prec = inv(cfm.T.dot(cfm))
         sigma = np.cov(cfm.T)
         mu = np.mean(cfm, axis=0)
