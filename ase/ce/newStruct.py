@@ -8,6 +8,9 @@ from pymatgen.io.ase import AseAtomsAdaptor
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
+from ase.calculators.singlepoint import SinglePointCalculator
+from ase.io import read
+from ase.visualize import view
 
 
 class GenerateStructures(object):
@@ -40,8 +43,8 @@ class GenerateStructures(object):
             self.struct_per_gen = struct_per_gen
 
         # Generate initial pool of structures for generation 0
-        if self.gen == 0:
-            self.generate_initial_pool()
+        # if self.gen == 0:
+            # self.generate_initial_pool()
 
     def generate_probe_structure(self, init_temp=None, final_temp=None,
                                  num_temp=5, num_steps=10000):
@@ -82,8 +85,8 @@ class GenerateStructures(object):
                                 init_temp=init_temp, final_temp=final_temp,
                                 num_temp=num_temp, num_steps=num_steps)
             atoms, cf_array = ps.generate()
-            conc = self.find_concentration(atoms)
-            if self.exists_in_db(atoms, conc[0], conc[1]):
+            conc = self._find_concentration(atoms)
+            if self._exists_in_db(atoms, conc[0], conc[1]):
                 continue
             # convert cf array to dictionary
             cf = {}
@@ -166,7 +169,45 @@ class GenerateStructures(object):
                 x += 1
         return True
 
-    def find_concentration(self, atoms):
+    def insert_structure(self, init_struct=None, final_struct=None, name=None):
+        """Insert a user-supplied structure to the database.
+
+        Arguments:
+        =========
+        init_struct: .xyz, .cif or .traj file
+            *Unrelaxed* initial structure.
+        final_struct: .traj file
+            Final structure that contains the energy.
+            Needs to also supply init_struct in order to use the final_struct.
+        name: str
+            Name of the DB entry if non-default name is to be used.
+            If *None*, default naming convention will be used.
+        """
+        if init_struct is None:
+            raise TypeError('init_struct must be provided')
+
+        init = wrap_and_sort_by_position(read(init_struct))
+        conc = self._find_concentration(init)
+        if self._exists_in_db(init, conc[0], conc[1]):
+            raise RuntimeError('supplied structure already exists in DB')
+
+        cf = CorrFunction(self.setting).get_cf(init)
+        kvp = self.get_kvp(init, cf, conc[0], conc[1])
+
+        if name is not None:
+            kvp['name'] = name
+
+        if final_struct is not None:
+            energy = read(final_struct).get_potential_energy()
+            calc= SinglePointCalculator(init, energy=energy)
+            init.set_calculator(calc)
+            kvp['converged'] = True
+            kvp['started'] = ''
+            kvp['queued'] = ''
+
+        self.setting.db.write(init, key_value_pairs=kvp)
+
+    def _find_concentration(self, atoms):
         """Find the concentration value(s) of the passed atoms object."""
 
         if self.setting.grouped_basis is None:
@@ -200,7 +241,7 @@ class GenerateStructures(object):
 
         return conc
 
-    def exists_in_db(self, atoms, conc1=None, conc2=None):
+    def _exists_in_db(self, atoms, conc1=None, conc2=None):
         """Checks to see if the passed atoms already exists in DB.
         Return True if so, False otherwise.
         """
@@ -223,8 +264,8 @@ class GenerateStructures(object):
             match = m.fit(s1, s2)
             if match:
                 break
-            else:
-                print('match = {}'.format(match))
+            # else:
+            #     print('match = {}'.format(match))
         return match
 
     def get_kvp(self, atoms, kvp, conc1=None, conc2=None):
@@ -297,7 +338,7 @@ class GenerateStructures(object):
                     indx = self._replace_rnd(indx,
                                              basis_elements[site][i],
                                              conc_ratio[site][i], atoms)
-            in_DB = self.exists_in_db(atoms, conc1=conc1, conc2=conc2)
+            in_DB = self._exists_in_db(atoms, conc1=conc1, conc2=conc2)
             # special case where only one species is present
             # break out of the loop and return atoms=None
             if in_DB and np.count_nonzero(flat_conc_ratio) == 1:
