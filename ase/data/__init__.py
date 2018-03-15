@@ -36,7 +36,6 @@ chemical_symbols = [
 atomic_numbers = {}
 for Z, symbol in enumerate(chemical_symbols):
     atomic_numbers[symbol] = Z
-atomic_numbers["Gh"] = 0  # Ghost atom symbol in Siesta
 
 # IUPAC version dated 28 November 2016
 atomic_names = [
