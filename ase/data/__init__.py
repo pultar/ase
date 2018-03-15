@@ -36,6 +36,7 @@ chemical_symbols = [
 atomic_numbers = {}
 for Z, symbol in enumerate(chemical_symbols):
     atomic_numbers[symbol] = Z
+atomic_numbers["Gh"] = 0  # Ghost atom symbol in Siesta
 
 # IUPAC version dated 28 November 2016
 atomic_names = [
@@ -82,7 +83,7 @@ atomic_names = [
 # where there the element has no stable isotopes (to avoid NaNs): Tc, Pm,
 # Po, At, Rn, Fr, Ra, Ac, everything after Np
 atomic_masses_iupac2016 = np.array([
-    1.0,  # X
+    1.0,  # X, Gh
     1.008,  # H [1.00784, 1.00811]
     4.002602,  # He
     6.94,  # Li [6.938, 6.997]
@@ -207,7 +208,7 @@ atomic_masses_iupac2016 = np.array([
 atomic_masses = atomic_masses_iupac2016
 
 atomic_masses_legacy = np.array([
-    1.00000,  # X
+    1.00000,  # X, Gh
     1.00794,  # H
     4.00260,  # He
     6.94100,  # Li
@@ -322,7 +323,7 @@ atomic_masses_legacy = np.array([
 #  Dalton Trans., 2008, 2832-2838 DOI:10.1039/B801115J
 missing = 0.2
 covalent_radii = np.array([
-    missing,  # X
+    missing,  # X, Gh
     0.31,  # H
     0.28,  # He
     1.28,  # Li
@@ -445,7 +446,7 @@ covalent_radii = np.array([
 
 # This data is from Ashcroft and Mermin.
 reference_states = [
-    None,  # X
+    None,  # X, Gh
     {'symmetry': 'diatom', 'd': 0.74},  # H
     {'symmetry': 'atom'},  # He
     {'symmetry': 'bcc', 'a': 3.49},  # Li
@@ -568,7 +569,7 @@ reference_states = [
 
 # http://www.webelements.com
 ground_state_magnetic_moments = np.array([
-    0.0,  # X
+    0.0,  # X, Gh
     1.0,  # H
     0.0,  # He
     1.0,  # Li
