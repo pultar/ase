@@ -492,7 +492,7 @@ class Onetep(FileIOCalculator):
             fd.write('    %s\n' % line)
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
-        if 'ngwf_radius_cond' in self.parameters:
+        if (self.parameters['ngwf_radius_cond']>0):
             keyword = 'SPECIES_COND'
 
             sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species_cond]
