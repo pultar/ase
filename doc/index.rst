@@ -9,6 +9,11 @@ license <license info>`.
 
 .. _Python: http://www.python.org
 
+ASE provides interfaces to different codes through :mod:`Calculators
+<ase.calculators>` which are used together with the central
+:mod:`Atoms <ase.atoms>` object and the many available algorithms in
+ASE.
+
 >>> # Example: structure optimization of hydrogen molecule
 >>> from ase import Atoms
 >>> from ase.optimize import BFGS
@@ -30,18 +35,23 @@ BFGS:   3  19:10:51    -31.492848     0.0023
 
 Supported :mod:`Calculators <ase.calculators>`:
 
-|abinit| |Asap| |Atomistica| |CASTEP| |CP2K| |deMon| |dftb|
+|abinit| |Asap| |Atomistica| |CASTEP| |CP2K| |CRYSTAL| |deMon| |dftb|
 |elk| |exciting| |EMT|
 |fhi-aims| |fleur| |gpaw| |gromacs|
 |hotbit| |jacapo| |jdftx| |lammps| |nwchem|
 |octopus| |onetep| |q_espresso| |siesta| |turbomole| |vasp|
 :mod:`~ase.calculators.amber`
 :mod:`DMol³ <ase.calculators.dmol>`
-Gaussian_ 
+Gaussian_
 :mod:`Grimme DFT-D3 <ase.calculators.dftd3>`
 :mod:`~ase.calculators.gulp`
 Mopac_
 :mod:`~ase.calculators.tip3p`
+:mod:`~ase.calculators.qmmm`
+
+
+`Reference publication on ASE <https://doi.org/10.1088/1361-648X/aa680e>`__
+
 
 Please go through this check-list to figure out if you need to convert your
 old ASE trajectory files to the modern file-format:
@@ -165,6 +175,9 @@ Contents
 .. |CP2K| image:: static/cp2k.png
    :target: ase/calculators/cp2k.html
    :align: middle
+.. |CRYSTAL| image:: static/crystal.png
+   :target: ase/calculators/crystal.html
+   :align: middle
 .. |deMon| image:: static/demon.png
    :target: ase/calculators/demon.html
    :align: middle
@@ -211,7 +224,7 @@ Contents
    :target: ase/calculators/octopus.html
    :align: middle
 .. |onetep| image:: static/onetep.png
-   :target: http://www.onetep.org/
+   :target: ase/calculators/onetep.html
    :align: middle
 .. |q_espresso| image:: static/espresso.png
    :target: ase/calculators/espresso.html
