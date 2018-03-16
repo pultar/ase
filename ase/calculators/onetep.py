@@ -32,7 +32,7 @@ class Onetep(FileIOCalculator):
     scaling DFT code. Recomended ASE_ONETEP_COMMAND format
     is "onetep_executable_name PREFIX.dat > PREFIX.out 2> PREFIX.err" """
 
-    implemented_properties = ['energy', 'forces','dipole','magmom']
+    implemented_properties = ['energy', 'forces', 'dipole', 'magmom']
 
     # Used to indicate 'parameters' which shouldn't be written to
     # the onetep input file in the standard <key> : <value> format
@@ -40,26 +40,27 @@ class Onetep(FileIOCalculator):
     # written elsewhere in the input file
     _dummy_parameters = ['ngwf_radius', 'xc', 'species_ngwf_radius',
                          'species_ngwf_number', 'species_solver',
-                         'ngwf_radius_cond', 'pseudo_suffix' ]
+                         'ngwf_radius_cond', 'pseudo_suffix']
 
     # Used to indicate which parameters are a kpoint path and should be
     # written as such
-    _path_parameters = [ 'bsunfld_kpoint_path','bs_kpoint_path' ]
+    _path_parameters = ['bsunfld_kpoint_path', 'bs_kpoint_path']
 
     # Used to indicate which parameters are a block listing atom
     # groupings for a variety of purposes
-    _group_parameters = ['species_bsunfld_groups','species_ldos_groups',
-                         'species_locdipole_groups','species_bsunfld_projatoms',
-                         'species_pdos_groups','species_tddft_ct',
-                         'species_tddft_kernel','nbo_write_species',
+    _group_parameters = ['species_bsunfld_groups', 'species_ldos_groups',
+                         'species_locdipole_groups',
+                         'species_bsunfld_projatoms',
+                         'species_pdos_groups', 'species_tddft_ct',
+                         'species_tddft_kernel', 'nbo_write_species',
                          'species_ngwf_plot']
 
     # Used to indicate which parameters are a block of any other sort
     # other than those above (the contents of the parameter is reproduced
     # verbatim within the block)
     _block_parameters = _path_parameters + _group_parameters + [
-                        'species_constraints','nbo_species_ngwflabel',
-                        'ddec_rmse_vdw','vdw_params','sol_ions','swri']
+                        'species_constraints', 'nbo_species_ngwflabel',
+                        'ddec_rmse_vdw', 'vdw_params', 'sol_ions', 'swri']
 
     default_parameters = {'cutoff_energy': '1000 eV',
                           'kernel_cutoff': '1000 bohr',
@@ -227,8 +228,8 @@ class Onetep(FileIOCalculator):
         self.atoms.set_chemical_symbols(symbols)
         self.atoms.set_positions(positions)
 
-
     def _read_dipole(self, out):
+        """Reads total dipole moment from ONETEP output file"""
 
         # Find start of total dipole moment block
         line = ()
@@ -238,7 +239,7 @@ class Onetep(FileIOCalculator):
 
         # Read total dipole moment
         dipolemoment = []
-        for label, pos in sorted({'dx': 6,'dy': 2,'dz': 2}.items()):
+        for label, pos in sorted({'dx': 6, 'dy': 2, 'dz': 2}.items()):
             assert label in line.split()
             value = float(line.split()[pos])*Bohr
             dipolemoment.append(value)
@@ -247,10 +248,11 @@ class Onetep(FileIOCalculator):
         return array(dipolemoment)
 
     def _read_magmom(self, line):
-       # Read magnetic moment from Integrated Spin line
-       return float(line.split()[4])
+        """Reads magnetic moment from Integrated Spin line"""
+        return float(line.split()[4])
 
     def _read_geom_output(self, out):
+        """Reads geometry optimisation output from ONETEP output file"""
         conv_fac = Bohr
 
         # Find start of atom positions
@@ -269,9 +271,11 @@ class Onetep(FileIOCalculator):
             symbols.append(atom)
             line = out.readline()
         if len(positions) != len(self.atoms):
-            raise ReadError('Wrong number of atoms found in output geometry block')
+            raise ReadError('Wrong number of atoms found in output geometry'
+                            'block')
         if len(symbols) != len(self.atoms):
-            raise ReadError('Wrong number of atoms found in output geometry block')
+            raise ReadError('Wrong number of atoms found in output geometry'
+                            'block')
 
         # Update atoms object with new positions (and symbols)
         self.atoms.set_positions(positions)
@@ -334,7 +338,7 @@ class Onetep(FileIOCalculator):
             fields = line.split()
         self.results['forces'] = array(forces)
 
-    def _generate_species_block(self,cond=False):
+    def _generate_species_block(self, cond=False):
         """Create a default onetep species block, use -1 for the NGWF number
         to trigger automatic NGWF number assigment using onetep's internal
         routines."""
@@ -346,7 +350,7 @@ class Onetep(FileIOCalculator):
         parameters = self.parameters
 
         atoms = self.atoms
-        if (cond==False):
+        if cond is False:
             self.species = []
             default_ngwf_radius = self.parameters['ngwf_radius']
             species_ngwf_rad_var = 'species_ngwf_radius'
@@ -366,7 +370,7 @@ class Onetep(FileIOCalculator):
                 ngnum = parameters[species_ngwf_num_var][sp[1]]
             except KeyError:
                 ngnum = -1
-            if (cond==False):
+            if cond is False:
                 self.species.append((sp[1], sp[1], sp[0], ngnum, ngrad))
             else:
                 self.species_cond.append((sp[1], sp[1], sp[0], ngnum, ngrad))
@@ -374,7 +378,8 @@ class Onetep(FileIOCalculator):
     def _generate_pseudo_block(self):
 
         for sp in self.species:
-            self.pseudos.append((sp[1],sp[1]+self.parameters['pseudo_suffix']))
+            self.pseudos.append((sp[1], sp[1] +
+                                 self.parameters['pseudo_suffix']))
 
     def set_pseudos(self, pots):
         """ Sets the pseudopotential files used in this dat file
@@ -487,7 +492,7 @@ class Onetep(FileIOCalculator):
             fd.write('    %s\n' % line)
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
-        if (self.parameters['ngwf_radius_cond']>0):
+        if 'ngwf_radius_cond' in self.parameters:
             keyword = 'SPECIES_COND'
 
             sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species_cond]
@@ -516,18 +521,21 @@ class Onetep(FileIOCalculator):
 
         if 'bsunfld_calculate' in self.parameters:
             if 'species_bsunfld_groups' not in self.parameters:
-                self.parameters['species_bsunfld_groups'] = str(set(self.atoms.get_chemical_symbols()))
+                self.parameters['species_bsunfld_groups'] = \
+                    str(set(self.atoms.get_chemical_symbols()))
 
-        for p,param in sorted(parameters.items()):
+        # Loop over parameters entries in alphabetal order, outputting
+        # them as keywords or blocks as appropriate
+        for p, param in sorted(parameters.items()):
             if param is not None and \
                     p.lower() not in self._dummy_parameters:
                 if p.lower() in self._block_parameters:
                     keyword = p.upper()
                     fd.write('\n%%BLOCK %s\n' % keyword)
                     if p.lower() in self._path_parameters:
-                        self.write_kpt_path(fd,param)
+                        self.write_kpt_path(fd, param)
                     elif p.lower() in self._group_parameters:
-                        self.write_groups(fd,param)
+                        self.write_groups(fd, param)
                     else:
                         fd.write('%s\n' % str(param))
                     fd.write('%%ENDBLOCK %s\n\n' % keyword)
@@ -538,13 +546,15 @@ class Onetep(FileIOCalculator):
                 fd.write('xc_functional : %s\n' % param)
         fd.close()
 
-    def write_kpt_path(self,fd,path):
+    def write_kpt_path(self, fd, path):
+        """Writes a k-point path to a ONETEP input file"""
         for kpt in array(path):
-            fd.write('    %8.6f %8.6f %8.6f\n' % (kpt[0],kpt[1],kpt[2]))
+            fd.write('    %8.6f %8.6f %8.6f\n' % (kpt[0], kpt[1], kpt[2]))
 
-    def write_groups(self,fd,groups):
+    def write_groups(self, fd, groups):
+        """Writes multiple groups of atom labels to a ONETEP input file"""
         for grp in groups:
-            fd.write(" ".join(map(str,grp)))
+            fd.write(" ".join(map(str, grp)))
             fd.write('\n')
 
     def __repr__(self):
