@@ -38,13 +38,13 @@ def test_binary_system():
     # Write the atoms to the database
     for atoms,kvp in zip(all_atoms,key_value_pairs):
         atoms.set_calculator(calc)
-        _ = atoms.get_potential_energy()
+        atoms.get_potential_energy()
         kvp["converged"] = True
         db.write( atoms, key_value_pairs=kvp )
 
     # Evaluate
     evaluator = Evaluate( bc, penalty="l2", lamb=1E-6 )
-    _ = evaluator.get_cluster_name_eci_dict
+    evaluator.get_cluster_name_eci_dict
     os.remove( db_name )
 
 test_binary_system()
