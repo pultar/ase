@@ -22,7 +22,6 @@ def test_binary_system():
     bc = BulkCrystal( crystalstructure="fcc", a=4.05, \
     basis_elements=[["Au","Cu"]], size=[3,3,3], conc_args=conc_args, \
     db_name=db_name )
-    #bc._get_cluster_information()
 
     struct_generator = GenerateStructures( bc, struct_per_gen=3 )
     struct_generator.generate_initial_pool()
