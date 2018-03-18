@@ -10,7 +10,6 @@ from ase.ce import GenerateStructures
 from ase.ce import Evaluate
 from ase.calculators.emt import EMT # Use this calculator as it is fast
 from ase.db import connect
-import os
 
 
 def test_binary_system():
@@ -39,13 +38,13 @@ def test_binary_system():
     # Write the atoms to the database
     for atoms,kvp in zip(all_atoms,key_value_pairs):
         atoms.set_calculator(calc)
-        energy = atoms.get_potential_energy()
+        _ = atoms.get_potential_energy()
         kvp["converged"] = True
         db.write( atoms, key_value_pairs=kvp )
 
     # Evaluate
     evaluator = Evaluate( bc, penalty="l2", lamb=1E-6 )
-    ecis = evaluator.get_cluster_name_eci_dict
+    _ = evaluator.get_cluster_name_eci_dict
     os.remove( db_name )
 
 test_binary_system()
