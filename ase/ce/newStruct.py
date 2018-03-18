@@ -10,7 +10,6 @@ from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
-from ase.visualize import view
 
 
 class GenerateStructures(object):
