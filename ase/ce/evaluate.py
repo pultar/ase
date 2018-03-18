@@ -4,8 +4,12 @@ from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
 from ase.ce import BulkCrystal, BulkSpacegroup
 
-# dependency on sklearn is to be removed due to some of technical problems
-from sklearn.linear_model import Lasso
+try:
+    # dependency on sklearn is to be removed due to some of technical problems
+    from sklearn.linear_model import Lasso
+    has_sklearn = True
+except:
+    has_sklearn = False
 
 
 class Evaluate(object):
@@ -50,6 +54,10 @@ class Evaluate(object):
         if penalty is None or penalty is False:
             self.penalty = False
         elif penalty.lower() == 'lasso' or penalty.lower() == 'l1':
+            if ( not has_sklearn ):
+                msg = "At the moment the L1 regularization relies on the "
+                msg += "sklearn package, which was not found..."
+                raise ValueError( msg )
             self.penalty = 'l1'
         elif penalty.lower() == 'euclidean' or penalty.lower() == 'l2':
             self.penalty = 'l2'
