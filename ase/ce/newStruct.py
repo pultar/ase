@@ -305,6 +305,8 @@ class GenerateStructures(object):
         # setting.grouped_basis_elements
         if self.setting.num_basis == 1:
             conc_ratio = [list(conc_ratio)]
+            num_basis = self.setting.num_basis
+            basis_elements = self.setting.basis_elements
         else:
             tmp = list(conc_ratio)
             conc_ratio = []
