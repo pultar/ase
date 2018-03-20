@@ -5,17 +5,10 @@ import unittest
 import numpy as np
 from ase.build import bulk
 import copy
-from ase.visualize import view
 from ase import Atoms
 from ase.io import read, write
-import time
-from matplotlib import pyplot as plt
-import itertools
 from ase.spacegroup import spacegroup
-from ase.lattice import cubic,tetragonal,orthorhombic,monoclinic,triclinic,hexagonal
-import time
 from scipy.spatial import cKDTree as KDTree
-import pickle
 
 try:
     # The code runs perfectly fine without pymatgen
