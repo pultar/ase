@@ -166,7 +166,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                         travel_in[id] = (int(fields[5]),
                                          int(fields[6]),
                                          int(fields[7]))
-                elif (style == 'bond' and
+                elif ((style == 'angle' or style == 'bond' or
+                       style == 'molecular') and
                       (len(fields) == 6 or len(fields) == 9)):
                     # id mol-id type x y z [tx ty tz]
                     pos_in[id] = (int(fields[2]), float(fields[3]),
