@@ -1,6 +1,6 @@
 """Calculator for Cluster Expansion."""
 import sys
-from itertools import product, permutations
+from itertools import permutations
 from copy import deepcopy
 import numpy as np
 from ase.utils import basestring
@@ -176,8 +176,6 @@ class ClusterExpansion(Calculator):
     def update_cf(self):
         """Update correlation function based on the reference value"""
         swapped_indices = self.indices_of_changed_atoms
-
-        bf_list = list(range(len(self.setting.basis_functions)))
         self.cf = deepcopy(self.ref_cf)
 
         for indx in swapped_indices:
@@ -230,7 +228,7 @@ class ClusterExpansion(Calculator):
                 # if there is only one symm equiv site, the changes can be just
                 # multiplied by *n*
                 if self.setting.num_trans_symm == 1:
-                    self.cf[i] = cf_tot + (num * cf_change)
+                    self.cf[i] = cf_tot + (n * cf_change)
                 else:
                     self.cf[i] = cf_tot + cf_change
                     members = np.unique(t_indices)
