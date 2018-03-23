@@ -298,10 +298,14 @@ class Evaluate(object):
         return np.sqrt(cv_sq)
 
     def mae(self):
+        if self.e_pred is None:
+            self._get_e_predict()
         delta_e = self.e_dft - self.e_pred
         return sum(np.absolute(delta_e)) / len(delta_e)
 
     def rmse(self):
+        if self.e_pred is None:
+            self._get_e_predict()
         delta_e = self.e_dft - self.e_pred
         rmse_sq = 0.0
         for i in range(len(delta_e)):
