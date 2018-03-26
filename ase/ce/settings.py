@@ -561,7 +561,7 @@ class ClusterExpansionSetting:
             self.unique_cluster_names = row.data.unique_cluster_names
         except KeyError:
             self._store_data()
-        except AssertionError:
+        except (AssertionError, AttributeError):
             self.reconfigure_settings()
 
     def _get_full_cluster_names(self):
