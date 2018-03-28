@@ -1,6 +1,24 @@
 from matplotlib import pyplot
 from ase.units import Ha, Bohr
-from numpy import array
+from numpy import array, sqrt, isfinite
+
+
+def remove_infinities(sequence):
+    for i in range(len(sequence)):
+        if not isfinite(sequence[i]):
+            sequence[i] = 0
+    return sequence
+
+def read_nth_to_last_value(line='\n', n=1):
+    if line == '':
+        return 0
+    i = 0
+    for j in range(n):
+        i -= 1
+        while line.split(' ')[i] == '' or line.split(' ')[i] == '\n':
+            i -= 1
+
+    return line.split(' ')[i].split('\n')[0]
 
 
 class ReadFunction:
@@ -358,4 +376,3 @@ class ReadFunction:
         self.read_from_file(filename)
         self.plot(title, save_to_file)
         self.plot_md(title, save_to_file)
-
