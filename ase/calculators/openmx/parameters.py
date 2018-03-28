@@ -209,10 +209,10 @@ class OpenMXParameters(Parameters):
                     dft_data_dict[symbol][key] = dict_dict[symbol][key]
         if dos_erange:
             dos = DOS(self)
-        if isinstance(read_function, list):
-            read_function = ReadFunction(read_function)
-        if read_function is True:
-            read_function = ReadFunction()
+        # if isinstance(read_function, list):
+        #   read_function = ReadFunction(read_function)
+        # if read_function is True:
+        #   read_function = ReadFunction()
         if (smearing is not None and smearing[0] != 'Fermi-Dirac'):
             print("only Fermi-Dirac smearing is supported")
             if smearing[0] in ['Gaussian', 'Methfessel-Paxton']:
