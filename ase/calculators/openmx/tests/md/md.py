@@ -1,5 +1,4 @@
 from ase.units import Ry, eV
-from ase.io import read
 from ase.calculators.openmx import OpenMX
 from ase.io.trajectory import Trajectory
 from ase.optimize import QuasiNewton
