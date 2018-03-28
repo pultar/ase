@@ -7,10 +7,10 @@ OpenMX
 Introduction
 ============
 
-OpenMX_ (Open source package for Material eXplorer) is a software 
-package for nano-scale material simulations based on density functional 
-theories (DFT), norm-conserving pseudopotentials, and pseudo-atomic 
-localized basis functions. This interface makes it possible to use 
+OpenMX_ (Open source package for Material eXplorer) is a software
+package for nano-scale material simulations based on density functional
+theories (DFT), norm-conserving pseudopotentials, and pseudo-atomic
+localized basis functions. This interface makes it possible to use
 OpenMX_ as a calculator in ASE, and also to use ASE as a post-processor
 for an already performed OpenMX_ calculation.
 
@@ -34,7 +34,7 @@ Environment variables
 
 The environment variable :envvar:`OPENMX_COMMAND` must point to that file.
 
-A directory containing the pseudopotential directories :file:`VPS`, and it 
+A directory containing the pseudopotential directories :file:`VPS`, and it
 is to be put in the environment variable :envvar:`OPENMX_DFT_DATA_PATH`.
 
 Set both environment variables in your shell configuration file:
@@ -44,7 +44,7 @@ Set both environment variables in your shell configuration file:
 ::
 
   $ export OPENMX_DFT_DATA_PATH=/openmx/DFT_DATA13
-  $ export OPENMX_COMMAND='mpirun -np 20 openmx ./%s > ./%s'
+  $ export OPENMX_COMMAND='mpirun'
 
 .. highlight:: python
 
@@ -62,117 +62,117 @@ Below follows a list with a selection of parameters
 +-------------------+-----------+---------+---------------------------------------------+
 | keyword           | type      | default | description                                 |
 +===================+===========+=========+=============================================+
-| ``xc``            | ``dict``  | LDA     | Exchange correlation functional.            | 
-|                   |           |         | Options are:                                | 
-|                   |           |         | 'LDA' -> Local Density Approximation        | 
-|                   |           |         | 'LSDA' or 'CA' -> 'LSDA-CA'                 | 
-|                   |           |         | -> Local Spin Density Approximation,        |   
-|                   |           |         | Ceperley-Alder                              |  
-|                   |           |         | 'PW' -> 'LSDA-PW' -> Local Spin             | 
-|                   |           |         | Density Approximation, Perdew-Wang          |  
-|                   |           |         | 'GGA' or 'PBE' -> 'GGA-PBE' ->              |  
-+-------------------+-----------+---------+---------------------------------------------+             
+| ``xc``            | ``str``   | LDA     | Exchange correlation functional.            |
+|                   |           |         | Options are:                                |
+|                   |           |         | 'LDA' -> Local Density Approximation        |
+|                   |           |         | 'LSDA' or 'CA' -> 'LSDA-CA'                 |
+|                   |           |         | -> Local Spin Density Approximation,        |
+|                   |           |         | Ceperley-Alder                              |
+|                   |           |         | 'PW' -> 'LSDA-PW' -> Local Spin             |
+|                   |           |         | Density Approximation, Perdew-Wang          |
+|                   |           |         | 'GGA' or 'PBE' -> 'GGA-PBE' ->              |
++-------------------+-----------+---------+---------------------------------------------+
 | ``kpts``          | ``int``   | (4,4,4) | GGA proposed by Perdew, Burke, and Ernzerhof|
 |                   |           |         | Integers in a tuple specifying the type of  |
-|                   |           |         | Monkhorst Pack                              |     
-+-------------------+-----------+---------+---------------------------------------------+             
-| ``dft_data_dict`` | ``dict``  | {'H':   | A specification of the atomic orbital       | 
+|                   |           |         | Monkhorst Pack                              |
++-------------------+-----------+---------+---------------------------------------------+
+| ``dft_data_dict`` | ``dict``  |         | A specification of the atomic orbital       |
 |                   |           |         | basis to be used for each atomic species    |
-|                   |           |         | e.g)  dft_data_dict =                       |   
-|                   |           |         | {'C': {'cutoff radius': 8*ase.units.Bohr,   |   
-|                   |           |         | 'orbitals used': [1,1]}}                    | 
-|                   |           |         | means that for carbon species,              | 
-|                   |           |         | the spatial extent of the atomic orbitals   | 
-|                   |           |         | used is limited to 8 Bohr and one level of s|         
+|                   |           |         | e.g)  dft_data_dict =                       |
+|                   |           |         | {'C': {'cutoff radius': 8*ase.units.Bohr,   |
+|                   |           |         | 'orbitals used': [1,1]}}                    |
+|                   |           |         | means that for carbon species,              |
+|                   |           |         | the spatial extent of the atomic orbitals   |
+|                   |           |         | used is limited to 8 Bohr and one level of s|
 |                   |           |         | orbitals are used and one level of p        |
 |                   |           |         | orbitals are used. The default value for    |
 |                   |           |         | this is specified in the default_settings.py|
 |                   |           |         | file, namely, default_dictionary.           |
-+-------------------+-----------+---------+---------------------------------------------+             
-| initial_magnetic_m| ``float`` | None    | An iterable containing the initial guess for|
++-------------------+-----------+---------+---------------------------------------------+
+| initial_magnetic_m| ``list `` | None    | An iterable containing the initial guess for|
 | oments            |           |         | magnetic_moments for each atom. A positive  |
-|                   |           |         | value indicates a net magnetic moment in the|  
+|                   |           |         | value indicates a net magnetic moment in the|
 |                   |           |         | spin up direction. If this argument is      |
-|                   |           |         | specified, OpenMX will indentify the system | 
-|                   |           |         | as spin polarised and will try to find a    | 
+|                   |           |         | specified, OpenMX will indentify the system |
+|                   |           |         | as spin polarised and will try to find a    |
 |                   |           |         | stable collinear spin configuration for     |
 |                   |           |         | the system which is nearest the initial     |
-|                   |           |         | guess specified.  You may then specify      | 
-|                   |           |         | hubbard_u_values and hubbard_occupation.    | 
-+-------------------+-----------+---------+---------------------------------------------+             
+|                   |           |         | guess specified.  You may then specify      |
+|                   |           |         | hubbard_u_values and hubbard_occupation.    |
++-------------------+-----------+---------+---------------------------------------------+
 | hubbard_u_values  | ``dict``  | None    | A dictionary of dictionaries.               |
 |                   |           |         | The first key specifies the species symbol  |
 |                   |           |         | (e.g. 'Fe') and the second key specifies    |
 |                   |           |         | the orbital (e.g. '1d'). The value is in    |
-|                   |           |         | eV. If the value is not provided it assumed | 
-|                   |           |         | to be zero.                                 | 
-|                   |           |         | e.g. hubbard_u_values={'Fe': {'1d': 4.0}}   | 
-|                   |           |         | => Hubbard U values will be 0 eV            | 
+|                   |           |         | eV. If the value is not provided it assumed |
+|                   |           |         | to be zero.                                 |
+|                   |           |         | e.g. hubbard_u_values={'Fe': {'1d': 4.0}}   |
+|                   |           |         | => Hubbard U values will be 0 eV            |
 |                   |           |         | except for 1d orbitals in iron atoms.       |
-+-------------------+-----------+---------+---------------------------------------------+             
++-------------------+-----------+---------+---------------------------------------------+
 | hubbard_occupation| ``str``   |         | A choice of 'dual', 'onsite' or 'full'      |
-+-------------------+-----------+---------+---------------------------------------------+             
-| initial_magnetic  | ``list``  |         | Initial guess for orientation of each atom's| 
-| _moments_euler_   |           |         | Magnetic moment in degrees. If this argument|  
-| angles            |           |         | is specified, OpenMX will allow spins       | 
-|                   |           |         | between atoms to be non-collinear.          |         
-|                   |           |         | e.g. initial_magnetic_moments_euler_angles  | 
-|                   |           |         | =[(45, 0), (90, 45)] => First atom          | 
-|                   |           |         | has magnetic moment aligned in theta=45     |  
-|                   |           |         | degrees and phi=0 degrees direction and the |    
-|                   |           |         | second atom has magneticmoment aligned in   |   
++-------------------+-----------+---------+---------------------------------------------+
+| initial_magnetic  | ``list``  |         | Initial guess for orientation of each atom's|
+| _moments_euler_   |           |         | Magnetic moment in degrees. If this argument|
+| angles            |           |         | is specified, OpenMX will allow spins       |
+|                   |           |         | between atoms to be non-collinear.          |
+|                   |           |         | e.g. initial_magnetic_moments_euler_angles  |
+|                   |           |         | =[(45, 0), (90, 45)] => First atom          |
+|                   |           |         | has magnetic moment aligned in theta=45     |
+|                   |           |         | degrees and phi=0 degrees direction and the |
+|                   |           |         | second atom has magneticmoment aligned in   |
 |                   |           |         | theta=90 degrees and phi=45 degrees         |
 |                   |           |         | direction.                                  |
 +-------------------+-----------+---------+---------------------------------------------+
-| nc_spin_constrai  |	        |         | Same format as initial_magnetic_moments_eule|
-| nt_euler_angle    |	        |         | r_angles. Specify this if you want to constr| 
+| nc_spin_constrai  |	``list``  |         | Same format as initial_magnetic_moments_eule|
+| nt_euler_angle    |	          |         | r_angles. Specify this if you want to constr|
 |                   |           |         | ain the spins to certain axes. You must also|
-|                   |           |         | specify spin_euler_angle and either nc_spin |   
-|                   |           |         | _constraint_penalty or magnetic_field.      |  
+|                   |           |         | specify spin_euler_angle and either nc_spin |
+|                   |           |         | _constraint_penalty or magnetic_field.      |
 +-------------------+-----------+---------+---------------------------------------------+
-| nc_spin_constrai  |	        |         | if nc_spin_constraint_euler_angle is given, |
-| nt_penalty        |           |         | you may specify a prefactor (eV) for the    | 
+| nc_spin_constrai  |	          |         | if nc_spin_constraint_euler_angle is given, |
+| nt_penalty        |           |         | you may specify a prefactor (eV) for the    |
 |                   |           |         | penalty functional to be used.              |
 +-------------------+-----------+---------+---------------------------------------------+
 | magnetic_field    | 	        |         | quote a magnitude of magnetic field strength|
 |                   |           |         | (T) in the direction of orbital_euler_angle.|
-|                   |           |         | This will include the Zeeman term for orbita| 
-|                   |           |         | l magnetic moments in the DFT calculation.  | 
+|                   |           |         | This will include the Zeeman term for orbita|
+|                   |           |         | l magnetic moments in the DFT calculation.  |
 +-------------------+-----------+---------+---------------------------------------------+
-| ``smearing`` 	    |           |         | Specifies the variation of electron occupati|  
+| ``smearing`` 	    |           |         | Specifies the variation of electron occupati|
 |                   |           |         | on with respect to the Fermi level. Default |
 |                   |           |         | is ('Fermi-Dirac': 300*ase.units.kB).       |
 +-------------------+-----------+---------+---------------------------------------------+
-| ``scf_max_iter``  |           |         | the maximum number of iterations the self   |
-|                   |           |         | consistent field calculation will make befor| 
+| ``scf_max_iter``  |  ``int``  |         | the maximum number of iterations the self   |
+|                   |           |         | consistent field calculation will make befor|
 |                   |           |         | e finishing. Default is 40.                 |
 +-------------------+-----------+---------+---------------------------------------------+
-| eigenvalue_solver |           |         | 'DC' (for divide-conquer method), 'Krylov'  |
+| eigenvalue_solver | ``str``   |         | 'DC' (for divide-conquer method), 'Krylov'  |
 |                   |           |         | (for Krylov subspace method), 'ON2' (for a  |
-|                   |           |         | numerically exact low-order scaling method),| 
-|                   |           |         | 'Cluster' or 'Band'. If not specified, this |  
-|                   |           |         | will be taken as 'Cluster'.                 |   
+|                   |           |         | numerically exact low-order scaling method),|
+|                   |           |         | 'Cluster' or 'Band'. If not specified, this |
+|                   |           |         | will be taken as 'Cluster'.                 |
 +-------------------+-----------+---------+---------------------------------------------+
-| ``mixing_type``   |           |         | how the electron density is determined for  |  
-|                   |           |         | the next self consistent field step. Options|  
-|                   |           |         | are 'Simple', 'GR-Pulay' (Guaranteed Reducti|   
-|                   |           |         | on), 'RMM-DIIS', 'Kerker', 'RMM-DIISK',     |  
+| ``mixing_type``   |           |         | how the electron density is determined for  |
+|                   |           |         | the next self consistent field step. Options|
+|                   |           |         | are 'Simple', 'GR-Pulay' (Guaranteed Reducti|
+|                   |           |         | on), 'RMM-DIIS', 'Kerker', 'RMM-DIISK',     |
 |                   |           |         | 'DMM-DIISH'.                                |
 +-------------------+-----------+---------+---------------------------------------------+
-| init_mixing_weigh |           | 0.3     |                                             |    
+| init_mixing_weigh |           | 0.3     |                                             |
 | t                 |           |         |                                             |
 +-------------------+-----------+---------+---------------------------------------------+
-| min_mixing_weight |           | 0.001   |                                             |  
+| min_mixing_weight |           | 0.001   |                                             |
 +-------------------+-----------+---------+---------------------------------------------+
-| max_mixing_weight |           | 0.4     |                                             |   
+| max_mixing_weight |           | 0.4     |                                             |
 +-------------------+-----------+---------+---------------------------------------------+
-| mixing_history    |           | 5       |                                             |   
+| mixing_history    |           | 5       |                                             |
 +-------------------+-----------+---------+---------------------------------------------+
-| mixing_start_pula |           | 6       |                                             | 
+| mixing_start_pula |           | 6       |                                             |
 | y                 |           |         |                                             |
 +-------------------+-----------+---------+---------------------------------------------+
-| ``scf_criterion`` |           | 0.000001| Hartrees                                    |    
-+-------------------+-----------+---------+---------------------------------------------+              
+| ``scf_criterion`` |           | 0.000001| Hartrees                                    |
++-------------------+-----------+---------+---------------------------------------------+
 
 Molecular Dynamics
 ==================
@@ -180,11 +180,11 @@ Molecular Dynamics
 ================= ======== ============== ============================
 keyword           type     default value  description
 ================= ======== ============== ============================
-``md_type``       ``str``                 'Opt', 'NVE', 'NVT_VS' or 'NVT_NH'. If not 
-                                          specified, no molecular dynamics calculations 
+``md_type``       ``str``                 'Opt', 'NVE', 'NVT_VS' or 'NVT_NH'. If not
+                                          specified, no molecular dynamics calculations
                                           will be performed.
-``md_max_iter``	 ``int``   1              1   
-``time_step``    ``float`` 0.5            1         
+``md_max_iter``	 ``int``   1              1
+``time_step``    ``float`` 0.5            1
 ``md_criterion`` ``float`` 0.0001         Hartrees per Bohr
 ================ ========= ============== ============================
 
@@ -194,8 +194,8 @@ Density of States
 =================  ========= ============== ============================
 keyword            type      default value  description
 =================  ========= ============== ============================
-``dos_fileout``    ``str``   False          if True, density of states will be calculated 
-                                            for an energy range given by dos_erange. 
+``dos_fileout``    ``str``   False          if True, density of states will be calculated
+                                            for an energy range given by dos_erange.
 ``dos_erange`` 	   ``tuple`` (-25, 20)      Gives the density of states energy range in eV
 ``dos_kgrid`` 	   ``tuple``                defaults to the value given by kpts.
 =================  ========= ============== ============================
@@ -208,21 +208,21 @@ keyword                 type      default value  description
 ======================= ========= ============== ============================
 ``band_dispersion``     ``str``   False		 If True, the band structure will be calculated
 						 for a path in k-space specified by band_kpath.
-``band_kpath_unitcell`` ``float``  		 If given, this specifies the unit cell 
-						 (in terms of real space) being used to 
-						 calculate the band structure. If not given, 
+``band_kpath_unitcell`` ``float``  		 If given, this specifies the unit cell
+						 (in terms of real space) being used to
+						 calculate the band structure. If not given,
 						 the unit cell given in ASE will be used.
-``band_kpath`` 		``float``		 A list of dictionaries giving the properties 
-						 of each part of the path in k-space. Each 
+``band_kpath`` 		``float``		 A list of dictionaries giving the properties
+						 of each part of the path in k-space. Each
 						 dictionary should give:
-``kpts`` 		``int``			 an integer specifying the number of points 
-						 in kspace to calculate energies between the 
+``kpts`` 		``int``			 an integer specifying the number of points
+						 in kspace to calculate energies between the
 						 start and end point.
 ``start_point``        	``float``  		 i.e. where in k-space relative to the
 						 unit cell the part of the path starts from.
 ``end_point`` 		``float`` 		 i.e. where in k-space relative to the unit
 						 cell the part of the path ends.
-``path_symbols`` 	``str``			 i.e. the symbol denoting the start 
+``path_symbols`` 	``str``			 i.e. the symbol denoting the start
 						 point and the symbol denoting the end point.
 ======================= ========= ============== ============================
 
@@ -232,9 +232,9 @@ File Management
 =========== ======= ============== ============================
 keyword     type    default value  description
 =========== ======= ============== ============================
-``curdir``  ``str`` ./             the current directory of the system. 
-``fileout`` ``int``  1             the level of file output. 
-``stdout``  ``int``  1             the level of standard output. 
+``curdir``  ``str`` ./             the current directory of the system.
+``fileout`` ``int``  1             the level of file output.
+``stdout``  ``int``  1             the level of standard output.
 =========== ======= ============== ============================
 
 Molecular Orbitals
@@ -243,17 +243,17 @@ Molecular Orbitals
 ========================== ======== ============= ============================
 keyword                    type     default value description
 ========================== ======== ============= ============================
-``homos``                                         the number of highest energy occupied 
+``homos``                                         the number of highest energy occupied
                                                   molecular orbitals to calculate.
-``lumos``                                         the number of lowest energy unoccupied 
+``lumos``                                         the number of lowest energy unoccupied
                                                   molecular orbitals to calculate.
 ``mo_kpts``                                       the points in k-space to find HOMOs and LUMOs.
 ``absolute_path_of_vesta``                        the absolute file path of the system's VESTA
-                                                  executable. This is required to produced a 
+                                                  executable. This is required to produced a
                                                   graphical output of HOMOs and LUMOs.
 ========================== ======== ============= ============================
 
-Methods of OpenMX objects 
+Methods of OpenMX objects
 =========================
 
 get_dos(***kwargs):
@@ -262,7 +262,7 @@ key word arguments:
 ====================  =========  ============== ============================
 keyword               type       default value  description
 ====================  =========  ============== ============================
-``energy``         float                        The total energy of the system in eV. 
+``energy``            float                     The total energy of the system in eV.
 ``forces``                                      An array of tuples describing the forces on an each atom in eV / Ang.
                                                 e.g. array([(atom1Fx, atom1Fy, atom1Fz), (atom2Fx, atom2Fy, atom2Fz)]
                                                 'dipole': A tuple describing the total dipole moment in Debeye
@@ -337,7 +337,7 @@ key-word arguments:
 ===============  =========  ============== ============================
 keyword          type       default value  description
 ===============  =========  ============== ============================
-``homos``                                  a list of HOMO numbers to display. e.g. homos=[0, 1, 5] => HOMO, HOMO-1,
+``homos``                                  A list of HOMO numbers to display. e.g. homos=[0, 1, 5] => HOMO, HOMO-1,
                                            HOMO-5 will be displayed. Defaults to displaying all calculated HOMOs.
 ``lumos``                                  same as homos but for LUMOs.
 ``real``                                   If True the real component of the wavefunctions will be displayed.
@@ -349,4 +349,3 @@ keyword          type       default value  description
                                            Defaults to showing both spins for spin-polarised cases, all just combined
                                            spin states otherwise.
 ==============  =========  ==============  ============================
-
