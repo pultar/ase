@@ -1,0 +1,41 @@
+DM.UseSaveDM  True
+System.CurrentDirectory  /group1/schinavro/miniconda3/envs/py/lib/python3.6/site-packages/ase/calculators/openmx/tests/md_2.
+System.Name  ch4
+DATA.PATH  /group1/schinavro/libCalc/openmx3.8/DFT_DATA13
+level.of.stdout  1
+level.of.fileout  1
+Species.Number  2
+<Definition.of.Atomic.Species
+C C6.0-s2p2d1 C_PBE13
+H H6.0-s3p2 H_PBE13
+Definition.of.Atomic.Species>
+
+Atoms.UnitVectors.Unit  Ang
+<Atoms.UnitVectors
+    9.947899669675605     0.000000000000000     0.000000000000000 
+    0.000000000000000     9.947899669675605     0.000000000000000 
+    0.000000000000000     0.000000000000000     10.000000000000000 
+Atoms.UnitVectors>
+
+
+Atoms.Number  5
+Atoms.SpeciesAndCoordinates.Unit  Ang
+<Atoms.SpeciesAndCoordinates
+1 C      0.000013303      0.000013341      0.019794651 2.0 2.0
+2 H      0.630718877      0.630718879      0.651272612 0.5 0.5
+3 H     -0.631026636     -0.631026634      0.651463019 0.5 0.5
+4 H     -0.631980221      0.631854115     -0.611289269 0.5 0.5
+5 H      0.631854130     -0.631980236     -0.611289288 0.5 0.5
+Atoms.SpeciesAndCoordinates>
+
+scf.restart  on
+scf.XcType  GGA-PBE
+scf.energycutoff  300.0
+scf.maxIter  100
+scf.EigenvalueSolver  band
+scf.Kgrid  4 4 4
+scf.Mixing.Type  Rmm-Diis
+scf.fixed.grid  -9.35864299105753 -9.35864299105753 -9.32084960512154
+scf.criterion  1e-06
+scf.stress.tensor  on
+MD.Current.Iter  8
