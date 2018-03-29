@@ -25,7 +25,6 @@ try:
 except RuntimeError:
     print('Failed to load matplot display, do not try to visualise plots!')
 import os
-import subprocess
 from ase.calculators.openmx.import_functions import read_nth_to_last_value
 from ase.calculators.openmx.import_functions import input_command
 
@@ -81,50 +80,77 @@ class DOS:
             key = 'p'
             atom_and_orbital = str(atom_index) + orbital
         key += 'dos'
-        self.dos_dict[key + '_energies_' + atom_and_orbital] = np.ndarray(number_of_lines)
+        self.dos_dict[key + '_energies_' + atom_and_orbital] = np.ndarray(
+              number_of_lines)
         if spin_polarization:
-            self.dos_dict[key + atom_and_orbital + 'up'] = np.ndarray(number_of_lines)
-            self.dos_dict[key + atom_and_orbital + 'down'] = np.ndarray(number_of_lines)
-            self.dos_dict[key + '_cum_' + atom_and_orbital + 'up'] = np.ndarray(number_of_lines)
-            self.dos_dict[key + '_cum_' + atom_and_orbital + 'down'] = np.ndarray(number_of_lines)
+            self.dos_dict[key + atom_and_orbital + 'up'] = \
+                np.ndarray(number_of_lines)
+            self.dos_dict[key + atom_and_orbital + 'down'] = \
+                np.ndarray(number_of_lines)
+            self.dos_dict[key + '_cum_' + atom_and_orbital + 'up'] = \
+                np.ndarray(number_of_lines)
+            self.dos_dict[key + '_cum_' + atom_and_orbital + 'down'] = \
+                np.ndarray(number_of_lines)
         else:
             self.dos_dict[key + atom_and_orbital] = np.ndarray(number_of_lines)
-            self.dos_dict[key + '_cum_' + atom_and_orbital] = np.ndarray(number_of_lines)
+            self.dos_dict[key + '_cum_' + atom_and_orbital] = \
+                np.ndarray(number_of_lines)
         f = open(filename, 'r')
         if spin_polarization:
             for i in range(number_of_lines):
                 line = f.readline()
-                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = read_nth_to_last_value(line, 5)
-                self.dos_dict[key + atom_and_orbital + 'up'][i] = read_nth_to_last_value(line, 4)
-                self.dos_dict[key + atom_and_orbital + 'down'][i] = -float(read_nth_to_last_value(line, 3))
-                self.dos_dict[key + '_cum_' + atom_and_orbital + 'up'][i] = read_nth_to_last_value(line, 2)
-                self.dos_dict[key + '_cum_' + atom_and_orbital + 'down'][i] = read_nth_to_last_value(line)
+                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = \
+                    read_nth_to_last_value(line, 5)
+                self.dos_dict[key + atom_and_orbital + 'up'][i] = \
+                    read_nth_to_last_value(line, 4)
+                self.dos_dict[key + atom_and_orbital + 'down'][i] = \
+                    -float(read_nth_to_last_value(line, 3))
+                self.dos_dict[key + '_cum_' + atom_and_orbital + 'up'][i] = \
+                    read_nth_to_last_value(line, 2)
+                self.dos_dict[key + '_cum_' + atom_and_orbital + 'down'][i] = \
+                    read_nth_to_last_value(line)
         elif add:
             for i in range(number_of_lines):
                 line = f.readline()
-                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = read_nth_to_last_value(line, 5)
-                self.dos_dict[key + atom_and_orbital][i] = float(read_nth_to_last_value(line, 4)) - float(read_nth_to_last_value(line, 3))
-                self.dos_dict[key + '_cum_' + atom_and_orbital][i] = float(read_nth_to_last_value(line, 2)) + float(read_nth_to_last_value(line))
+                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = \
+                    read_nth_to_last_value(line, 5)
+                self.dos_dict[key + atom_and_orbital][i] = \
+                    float(read_nth_to_last_value(line, 4)) - \
+                    float(read_nth_to_last_value(line, 3))
+                self.dos_dict[key + '_cum_' + atom_and_orbital][i] = \
+                    float(read_nth_to_last_value(line, 2)) + \
+                    float(read_nth_to_last_value(line))
         else:
             for i in range(number_of_lines):
                 line = f.readline()
-                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = read_nth_to_last_value(line, 3)
-                self.dos_dict[key + atom_and_orbital][i] = read_nth_to_last_value(line, 2)
-                self.dos_dict[key + '_cum_' + atom_and_orbital][i] = read_nth_to_last_value(line)
+                self.dos_dict[key + '_energies_' + atom_and_orbital][i] = \
+                    read_nth_to_last_value(line, 3)
+                self.dos_dict[key + atom_and_orbital][i] = \
+                    read_nth_to_last_value(line, 2)
+                self.dos_dict[key + '_cum_' + atom_and_orbital][i] = \
+                    read_nth_to_last_value(line)
         f.close()
 
-    def subplot_dos(self, axis, density=True, cum=False, pdos=False, atom_index=1, orbital='', spin='',
+    def subplot_dos(self, axis, density=True, cum=False, pdos=False,
+                    atom_index=1, orbital='', spin='',
                     erange=(-25, 20), fermi_level=True):
         """
-        Plots a graph of (pseudo-)density of states against energy onto a given axis of a subplot.
-        :param axis: matplotlib.pyplot.Axes object. This allows the graph to plotted on any desired axis of a plot.
+        Plots a graph of (pseudo-)density of states against energy onto a given
+        axis of a subplot.
+        :param axis: matplotlib.pyplot.Axes object. This allows the graph to
+                     plotted on any desired axis of a plot.
         :param density: If True, the density of states will be plotted
-        :param cum: If True, the cumulative (or integrated) density of states will be plotted
-        :param pdos: If True, the pseudo-density of states will be plotted for a given atom and orbital
-        :param atom_index: If pdos is True, atom_index specifies which atom's PDOS to plot.
-        :param orbital: If pdos is True, orbital specifies which orbital's PDOS to plot.
-        :param spin: If '', density of states for both spin states will be combined into one plot. If 'up' or 'down', a
-        given spin state's PDOS will be plotted.
+        :param cum: If True, the cumulative (or integrated) density of states
+                    will be plotted
+        :param pdos: If True, the pseudo-density of states will be plotted for
+                     a given atom and orbital
+        :param atom_index: If pdos is True, atom_index specifies which atom's
+                           PDOS to plot.
+        :param orbital: If pdos is True, orbital specifies which orbital's PDOS
+                        to plot.
+        :param spin: If '', density of states for both spin states will be
+                     combined into one plot. If 'up' or 'down', a given spin
+                     state's PDOS will be plotted.
         :return: None
         """
         p = ''
@@ -142,10 +168,12 @@ class DOS:
             cum_color = 'm'
         if density and cum:
             axis_twin = axis.twinx()
-            axis.plot(self.dos_dict[key + '_energies_' + atom_orbital], self.dos_dict[key + atom_orbital_spin],
+            axis.plot(self.dos_dict[key + '_energies_' + atom_orbital],
+                      self.dos_dict[key + atom_orbital_spin],
                       density_color)
             axis_twin.plot(self.dos_dict[key + '_energies_' + atom_orbital],
-                           self.dos_dict[key + '_cum_' + atom_orbital_spin], cum_color)
+                           self.dos_dict[key + '_cum_' + atom_orbital_spin],
+                           cum_color)
             max_density = max(self.dos_dict[key + atom_orbital_spin])
             max_cum = max(self.dos_dict[key + '_cum_' + atom_orbital_spin])
             if not max_density:
@@ -161,7 +189,8 @@ class DOS:
             if spin == 'down':
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
-                if label_index == bottom_index or label_index == len(yticklabels) / 2:
+                if label_index == bottom_index or label_index == \
+                                                  len(yticklabels) / 2:
                     t.set_color(density_color)
                 else:
                     t.set_visible(False)
@@ -171,7 +200,8 @@ class DOS:
             if spin == 'down':
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
-                if label_index == bottom_index or label_index == len(yticklabels) / 2:
+                if label_index == bottom_index or label_index == \
+                                                  len(yticklabels) / 2:
                     t.set_color(cum_color)
                 else:
                     t.set_visible(False)
@@ -185,7 +215,8 @@ class DOS:
                 color = cum_color
                 key += '_cum_'
             key += atom_orbital_spin
-            axis.plot(self.dos_dict[p + 'dos_energies_' + atom_orbital], self.dos_dict[key], color)
+            axis.plot(self.dos_dict[p + 'dos_energies_' + atom_orbital],
+                      self.dos_dict[key], color)
             maximum = max(self.dos_dict[key])
             if not maximum:
                 maximum = 1.
@@ -196,7 +227,8 @@ class DOS:
             if spin == 'down':
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
-                if label_index == bottom_index or label_index == len(yticklabels) / 2:
+                if label_index == bottom_index or label_index == \
+                                                  len(yticklabels) / 2:
                     t.set_color(color)
                 else:
                     t.set_visible(False)
@@ -206,20 +238,27 @@ class DOS:
         if fermi_level:
             axis.axvspan(erange[0], 0., color='y', alpha=0.5)
 
-    def plot_dos(self, density=True, cum=False, pdos=False, atom_index_list=None, orbital_list=None,
-                 spins=('up', 'down'), spin_polarization=False, erange=(-25, 20), method='Tetrahedron',
-                 file_format=None, atoms=None, fermi_level=True):
+    def plot_dos(self, density=True, cum=False, pdos=False, orbital_list=None,
+                 atom_index_list=None, spins=('up', 'down'), fermi_level=True,
+                 spin_polarization=False, erange=(-25, 20), atoms=None,
+                 method='Tetrahedron', file_format=None):
         """
-        Generates a graphical figure containing possibly many subplots of different PDOSs of different atoms, orbitals and
-        spin state combinations.
+        Generates a graphical figure containing possible subplots of different
+        PDOSs of different atoms, orbitals and spin state combinations.
         :param density: If True, density of states will be plotted
-        :param cum: If True, cumulative (or integrated) density of states will be plotted
-        :param pdos: If True, pseudo-density of states will be plotted for given atoms and orbitals
-        :param atom_index_list: If pdos is True, atom_index_list specifies which atoms will have their PDOS plotted.
-        :param orbital_list: If pdos is True, orbital_list specifies which orbitals will have their PDOS plotted.
-        :param spins: If '' in spins, density of states for both spin states will be combined into one graph. If 'up' or
+        :param cum: If True, cumulative density of states will be plotted
+        :param pdos: If True, pseudo-density of states will be plotted for
+                     given atoms and orbitals
+        :param atom_index_list: If pdos is True, atom_index_list specifies
+                                which atoms will have their PDOS plotted.
+        :param orbital_list: If pdos is True, orbital_list specifies which
+                             orbitals will have their PDOS plotted.
+        :param spins: If '' in spins, density of states for both spin states
+                      will be combined into one graph. If 'up' or
         'down' in spins, a given spin state's PDOS graph will be plotted.
-        :param spin_polarization: If spin_polarization is False then spin states will not be separated in different PDOS's.
+        :param spin_polarization: If spin_polarization is False then spin
+                                  states will not be separated in different
+                                  PDOS's.
         :param erange: range of energies to view DOS
         :return: matplotlib.figure.Figure and matplotlib.axes.Axes object
         """
@@ -237,15 +276,18 @@ class DOS:
                 atom_index_list = [i + 1 for i in range(len(atoms))]
             number_of_atoms = len(atom_index_list)
             number_of_orbitals = len(orbital_list)
-        figure, axes = plt.subplots(number_of_orbitals * number_of_spins, number_of_atoms, sharex=True, sharey=False,
+        figure, axes = plt.subplots(number_of_orbitals * number_of_spins,
+                                    number_of_atoms, sharex=True, sharey=False,
                                     squeeze=False)
         for i in range(number_of_orbitals):
             for s in range(number_of_spins):
                 row_index = i * number_of_spins + s
                 for j in range(number_of_atoms):
-                    self.subplot_dos(density=density, cum=cum, axis=axes[row_index][j], pdos=pdos,
-                                     atom_index=atom_index_list[j], orbital=orbital_list[i], erange=erange,
-                                     spin=spins[s], fermi_level=fermi_level)
+                    self.subplot_dos(fermi_level=fermi_level, density=density,
+                                     axis=axes[row_index][j], erange=erange,
+                                     atom_index=atom_index_list[j], pdos=pdos,
+                                     orbital=orbital_list[i], spin=spins[s],
+                                     cum=cum)
                     if j == 0 and pdos:
                         orbital = orbital_list[i]
                         if orbital == '':
@@ -256,23 +298,31 @@ class DOS:
                     if row_index == 0 and pdos:
                         atom_symbol = ''
                         if atoms:
-                            atom_symbol = ' (' + atoms[atom_index_list[j]].symbol + ')'
-                        axes[row_index][j].set_title('Atom ' + str(atom_index_list[j]) + atom_symbol)
+                            atom_symbol = ' (' + \
+                                atoms[atom_index_list[j]].symbol + ')'
+                        axes[row_index][j].set_title(
+                            'Atom ' + str(atom_index_list[j]) + atom_symbol)
                     if row_index == number_of_orbitals * number_of_spins - 1:
-                        axes[row_index][j].set_xlabel('Energy above Fermi Level (eV)')
+                        axes[row_index][j].set_xlabel(
+                            'Energy above Fermi Level (eV)')
         plt.xlim(xmin=erange[0], xmax=erange[1])
         if density and cum:
             figure.suptitle(self.calc.label)
             xdata = (0., 1.)
             ydata = (0., 0.)
-            key_tuple = (Line2D(color='r', xdata=xdata, ydata=ydata), Line2D(color='b', xdata=xdata, ydata=ydata))
+            key_tuple = (Line2D(color='r', xdata=xdata, ydata=ydata),
+                         Line2D(color='b', xdata=xdata, ydata=ydata))
             if spin_polarization:
-                key_tuple = (Line2D(color='r', xdata=xdata, ydata=ydata), Line2D(color='b', xdata=xdata, ydata=ydata),
-                             Line2D(color='c', xdata=xdata, ydata=ydata), Line2D(color='m', xdata=xdata, ydata=ydata))
+                key_tuple = (Line2D(color='r', xdata=xdata, ydata=ydata),
+                             Line2D(color='b', xdata=xdata, ydata=ydata),
+                             Line2D(color='c', xdata=xdata, ydata=ydata),
+                             Line2D(color='m', xdata=xdata, ydata=ydata))
             title_tuple = (p + 'DOS (eV^-1)', 'Number of States per Unit Cell')
             if spin_polarization:
-                title_tuple = (p + 'DOS (eV^-1), spin up', 'Number of States per Unit Cell, spin up',
-                               p + 'DOS (eV^-1), spin down', 'Number of States per Unit Cell, spin down')
+                title_tuple = (p + 'DOS (eV^-1), spin up',
+                               'Number of States per Unit Cell, spin up',
+                               p + 'DOS (eV^-1), spin down',
+                               'Number of States per Unit Cell, spin down')
             figure.legend(key_tuple, title_tuple, 'lower center')
         elif density:
             figure.suptitle(self.calc.prefix + ': ' + p + 'DOS (eV^-1)')
@@ -281,7 +331,8 @@ class DOS:
         extra_margin = 0
         if density and cum and spin_polarization:
             extra_margin = 0.1
-        plt.subplots_adjust(hspace=0., bottom=0.2 + extra_margin, wspace=0.29, left=0.09, right=0.95)
+        plt.subplots_adjust(hspace=0., bottom=0.2 + extra_margin, wspace=0.29,
+                            left=0.09, right=0.95)
         if file_format:
             orbitals = ''
             if pdos:
@@ -292,23 +343,31 @@ class DOS:
                     orbital_list.remove('')
                     orbital_list.insert(all_index, 'all')
                 orbitals = ''.join(orbital_list)
-            plt.savefig(filename=self.calc.label + '.' + p + 'DOS.' + method + '.atoms' + atoms + '.' + orbitals + '.' +
-                                 file_format)
+            plt.savefig(filename=self.calc.label + '.' + p + 'DOS.' +
+                        method + '.atoms' + atoms + '.' + orbitals + '.' +
+                        file_format)
         if not file_format:
             plt.show()
         return figure, axes
 
-    def calc_dos(self, method='Tetrahedron', pdos=False, gaussian_width=0.1, atom_index_list=None):
+    def calc_dos(self, method='Tetrahedron', pdos=False, gaussian_width=0.1,
+                 atom_index_list=None):
         """
-        Python interface for DosMain (OpenMX's density of states calculator). Can automate the density of states
+        Python interface for DosMain (OpenMX's density of states calculator).
+        Can automate the density of states
         calculations used in OpenMX by processing .Dos.val and .Dos.vec files.
-        :param method: method to be used to calculate the density of states from eigenvalues and eigenvectors.
-        ('Tetrahedron' or 'Gaussian')
-        :param pdos: If True, the pseudo-density of states is calculated for a given list of atoms for each orbital. If the
-        system is spin polarized, then each up and down state is also calculated.
-        :param gaussian_width: If the method is 'Gaussian' then gaussian_width is required (eV).
-        :param atom_index_list: If pdos is True, a list of atom indices are required to generate the pdos of each of those
-        specified atoms.
+        :param method: method to be used to calculate the density of states
+                       from eigenvalues and eigenvectors.
+                       ('Tetrahedron' or 'Gaussian')
+        :param pdos: If True, the pseudo-density of states is calculated for a
+                     given list of atoms for each orbital. If the system is
+                     spin polarized, then each up and down state is also
+                     calculated.
+        :param gaussian_width: If the method is 'Gaussian' then gaussian_width
+                               is required (eV).
+        :param atom_index_list: If pdos is True, a list of atom indices are
+                                required to generate the pdos of each of those
+                                specified atoms.
         :return: None
         """
         method_code = '2\n'
@@ -334,30 +393,43 @@ class DOS:
                 f.write(atoms_code)
             f.close()
         executable_name = 'DosMain'
-        input_files = (self.calc.label + '.Dos.val', self.calc.label + '.Dos.vec',
-                       os.path.join(self.calc.directory, 'std_dos.in'))
+        input_files = (self.calc.label + '.Dos.val', self.calc.label +
+                       '.Dos.vec', os.path.join(self.calc.directory,
+                                                'std_dos.in'))
         argument_format = '%s %s < %s'
         input_command(self.calc, executable_name, input_files, argument_format)
 
-    def get_dos(self, atom_index_list=None, method='Tetrahedron', gaussian_width=0.1, pdos=False, orbital_list=None,
-                spin_polarization=None, density=True, cum=False, erange=(-25, 20), file_format=None, atoms=None,
+    def get_dos(self, atom_index_list=None, method='Tetrahedron',
+                gaussian_width=0.1, pdos=False, orbital_list=None,
+                spin_polarization=None, density=True, cum=False,
+                erange=(-25, 20), file_format=None, atoms=None,
                 fermi_level=True):
         """
-        Wraps all the density of states processing functions. Can go from .Dos.val and .Dos.vec files to a graphical figure
-        showing many different PDOS plots against energy in one step.
+        Wraps all the density of states processing functions. Can go from
+        .Dos.val and .Dos.vec files to a graphical figure showing many
+        different PDOS plots against energy in one step.
         :param atom_index_list:
-        :param method: method to be used to calculate the density of states from eigenvalues and eigenvectors.
-        ('Tetrahedron' or 'Gaussian')
-        :param gaussian_width: If the method is 'Gaussian' then gaussian_width is required (eV).
-        :param pdos: If True, the pseudo-density of states is calculated for a given list of atoms for each orbital. If the
-        system is spin polarized, then each up and down state is also calculated.
-        :param orbital_list: If pdos is True, a list of atom indices are required to generate the pdos of each of those
-        specified atoms.
-        :param spin_polarization: If spin_polarization is False then spin states will not be separated in different PDOS's.
+        :param method: method to be used to calculate the density of states
+                       from eigenvalues and eigenvectors.
+                       ('Tetrahedron' or 'Gaussian')
+        :param gaussian_width: If the method is 'Gaussian' then gaussian_width
+                               is required (eV).
+        :param pdos: If True, the pseudo-density of states is calculated for a
+                     given list of atoms for each orbital. If the system is
+                     spin polarized, then each up and down state is also
+                     calculated.
+        :param orbital_list: If pdos is True, a list of atom indices are
+                             required to generate the pdos of each of those
+                             specified atoms.
+        :param spin_polarization: If spin_polarization is False then spin
+                                  states will not be separated in different
+                                  PDOS's.
         :param density: If True, density of states will be plotted
-        :param cum: If True, cumulative (or integrated) density of states will be plotted
+        :param cum: If True, cumulative (or integrated) density of states will
+                    be plotted
         :param erange: range of energies to view the DOS
-        :param file_format: If not None, a file will be saved automatically in that format ('pdf', 'png', 'jpeg' etc.)
+        :param file_format: If not None, a file will be saved automatically in
+                            that format ('pdf', 'png', 'jpeg' etc.)
         :return: matplotlib.figure.Figure object
         """
         if spin_polarization is None:
@@ -368,12 +440,14 @@ class DOS:
         if atom_index_list is None:
             atom_index_list = [1]
         if method == 'Tetrahedron' and self.calc['dos_kgrid'] == (1, 1, 1):
-            print('Not enough k-space grid points.\nUsing Gaussian method instead')
+            print('Not enough k-space grid points.\
+                  \nUsing Gaussian method instead')
             method = 'Gaussian'
             answer = input('Enter Gaussian width (eV): ')
             if answer:
                 gaussian_width = float(answer)
-        self.calc_dos(atom_index_list=atom_index_list, pdos=pdos, method=method, gaussian_width=gaussian_width)
+        self.calc_dos(atom_index_list=atom_index_list, pdos=pdos,
+                      method=method, gaussian_width=gaussian_width)
         if pdos:
             if orbital_list is None:
                 orbital_list = ['']
@@ -409,10 +483,14 @@ class DOS:
 
             for atom_index in atom_index_list:
                 for orbital in orbital_list:
-                    self.read_dos(method=method, atom_index=atom_index, pdos=pdos, orbital=orbital,
+                    self.read_dos(method=method, atom_index=atom_index,
+                                  pdos=pdos, orbital=orbital,
                                   spin_polarization=spin_polarization)
         else:
             self.read_dos(method=method, spin_polarization=spin_polarization)
-        return self.plot_dos(density=density, cum=cum, atom_index_list=atom_index_list, pdos=pdos,
-                             orbital_list=orbital_list, spin_polarization=spin_polarization, erange=erange,
-                             file_format=file_format, method=method, atoms=atoms, fermi_level=fermi_level)
+        return self.plot_dos(density=density, cum=cum, atoms=atoms,
+                             atom_index_list=atom_index_list, pdos=pdos,
+                             orbital_list=orbital_list, erange=erange,
+                             spin_polarization=spin_polarization,
+                             file_format=file_format, method=method,
+                             fermi_level=fermi_level)

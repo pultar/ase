@@ -1,4 +1,5 @@
-from ase.units import Ry, eV
+from __future__ import print_function
+from ase.units import Ry
 from ase.calculators.openmx import OpenMX
 from ase.io.trajectory import Trajectory
 from ase.optimize import QuasiNewton
@@ -21,11 +22,11 @@ calc = OpenMX(
     xc='GGA',
     energy_cutoff=300 * Ry,
     stress='on',
-    pbs={'processes':20}
+    pbs={'processes': 20}
     )
 
 bud.set_calculator(calc)
-traj = Trajectory('example.traj', 'w',bud)
+traj = Trajectory('example.traj', 'w', bud)
 ucf = UnitCellFilter(bud, mask=[True, True, False, False, False, False])
 dyn = QuasiNewton(ucf)
 dyn.attach(traj.write)

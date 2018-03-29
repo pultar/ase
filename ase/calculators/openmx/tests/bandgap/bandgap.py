@@ -1,3 +1,4 @@
+from __future__ import print_function
 from ase.test import NotAvailable
 from ase.build import bulk
 from ase.dft.bandgap import bandgap
@@ -11,8 +12,7 @@ required = {'abinit': dict(ecut=200, toldfe=0.0001, chksymbreak=0),
                                  'k_eigenvalue,' +
                                  str(kpts[0] * kpts[1] * kpts[2])]),
             'elk': dict(tasks=0, rgkmax=5.0),
-            'gpaw': dict(mode='pw'),
-            'openmx': dict()}
+            'gpaw': dict(mode='pw')}
 
 
 def run(name):
@@ -43,7 +43,6 @@ def run(name):
             calc.set(spinpol=True)
     si.set_calculator(calc)
     si.get_potential_energy()
-    #si.calc.read_results()
     print(name, bandgap(si.calc))
 
 
