@@ -17,6 +17,7 @@
     If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import print_function
+from ase.calculators.calculator import ReadError
 import os
 import time
 from subprocess import Popen
@@ -1586,7 +1587,7 @@ class OpenMX(FileIOCalculator):
             try:
                 f = open(self.directory + '/' + self.prefix + '.Band', 'r')
                 f.close()
-            except FileNotFoundError:
+            except ReadError:
                 print('There is no ".BAND" file in ' +
                       self.directory + '/' + self.prefix + '.Band')
                 print('Calculating band structure')
@@ -1846,7 +1847,7 @@ class OpenMX(FileIOCalculator):
                                     string, number_of_bands - k)) * Ha
                         string = f.readline()
                 self.results['eigenvalues'] = eigenvalues
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .Dos.val file found, trying .eigen file instead")
         try:
@@ -1867,7 +1868,7 @@ class OpenMX(FileIOCalculator):
                             float(read_nth_to_last_value(string)) * Ha
                         string = f.readline()
             self.results['eigenvalues'] = np.array(eigenvalues)
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .eigen file found")
         try:
@@ -1912,7 +1913,7 @@ class OpenMX(FileIOCalculator):
                     if nkpts == k or not line:
                         break
             self.results['eigenvalues'] = eig
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .out file found")
 
@@ -1979,7 +1980,7 @@ class OpenMX(FileIOCalculator):
                                      float(read_nth_to_last_value(string, 2)),
                                      float(read_nth_to_last_value(string, 1)))
                     string = f.readline()
-        except FileNotFoundError:
+        except ReadError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
 
@@ -2041,6 +2042,6 @@ class OpenMX(FileIOCalculator):
                                 complex(
                                 float(read_nth_to_last_value(string, 2)),
                                 float(read_nth_to_last_value(string, 1)))
-        except FileNotFoundError:
+        except self.ReadError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
