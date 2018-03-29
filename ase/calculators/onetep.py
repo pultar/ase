@@ -264,9 +264,9 @@ class Onetep(FileIOCalculator):
         line = out.readline()
         while 'xxxxxx' not in line:
             line = line.strip()
-            pos = line.split(None)[3:6]
+            pos = line.split()[3:6]
             pos = [conv_fac * float(p) for p in pos]
-            atom = line.split(None)[1]
+            atom = line.split()[1]
             positions.append(pos)
             symbols.append(atom)
             line = out.readline()
@@ -350,7 +350,7 @@ class Onetep(FileIOCalculator):
         parameters = self.parameters
 
         atoms = self.atoms
-        if cond is False:
+        if not cond:
             self.species = []
             default_ngwf_radius = self.parameters['ngwf_radius']
             species_ngwf_rad_var = 'species_ngwf_radius'
@@ -370,7 +370,7 @@ class Onetep(FileIOCalculator):
                 ngnum = parameters[species_ngwf_num_var][sp[1]]
             except KeyError:
                 ngnum = -1
-            if cond is False:
+            if not cond:
                 self.species.append((sp[1], sp[1], sp[0], ngnum, ngrad))
             else:
                 self.species_cond.append((sp[1], sp[1], sp[0], ngnum, ngrad))
