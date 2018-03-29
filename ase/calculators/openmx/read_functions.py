@@ -1,24 +1,9 @@
+from __future__ import print_function
 from matplotlib import pyplot
 from ase.units import Ha, Bohr
-from numpy import array, sqrt, isfinite
-
-
-def remove_infinities(sequence):
-    for i in range(len(sequence)):
-        if not isfinite(sequence[i]):
-            sequence[i] = 0
-    return sequence
-
-def read_nth_to_last_value(line='\n', n=1):
-    if line == '':
-        return 0
-    i = 0
-    for j in range(n):
-        i -= 1
-        while line.split(' ')[i] == '' or line.split(' ')[i] == '\n':
-            i -= 1
-
-    return line.split(' ')[i].split('\n')[0]
+from numpy import array, sqrt
+from ase.calculators.openmx.import_functions import read_nth_to_last_value
+from ase.calculators.openmx.import_functions import remove_infinities
 
 
 class ReadFunction:
@@ -80,7 +65,8 @@ class ReadFunction:
                             for i in range(len(self.electrons)):
                                 if i >= len(self.md_electrons):
                                     self.md_electrons.append([])
-                                self.md_electrons[i].append(self.electrons[i][-1])
+                                self.md_electrons[i].append(
+                                                    self.electrons[i][-1])
                         self.electrons = []
                     if 'mixing' in self.function_list:
                         self.mixing = []
@@ -89,7 +75,8 @@ class ReadFunction:
 
         if 'forces' in self.function_list:
             if 'Fxyz' in line:
-                atom_index = int(read_nth_to_last_value(line, 9).split(',')[0]) - 1
+                atom_index = int(read_nth_to_last_value(
+                                 line, 9).split(',')[0]) - 1
                 Fx = float(read_nth_to_last_value(line, 3))
                 Fy = float(read_nth_to_last_value(line, 2))
                 Fz = float(read_nth_to_last_value(line, 1))
@@ -100,7 +87,9 @@ class ReadFunction:
 
         if 'force' in self.function_list:
             if '|Maximum force|read_function' in line:
-                self.force.append(float(read_nth_to_last_value(line).split('=')[1]) * Ha / Bohr)
+                self.force.append(float(
+                                  read_nth_to_last_value(
+                                       line).split('=')[1]) * Ha / Bohr)
         if ' MulP ' in line:
             self.atom_mulp_index += 1
             if 'electrons' in self.function_list:
@@ -111,16 +100,20 @@ class ReadFunction:
                     n = 3
                 if self.spin_polarization == 'nc':
                     n = 5
-                self.electrons[self.atom_mulp_index].append(float(read_nth_to_last_value(line, n)))
-            if 'magmoms' in self.function_list and self.spin_polarization != 'off':
+                self.electrons[self.atom_mulp_index].append(
+                               float(read_nth_to_last_value(line, n)))
+            if 'magmoms' in self.function_list and \
+                    self.spin_polarization != 'off':
                 if self.atom_mulp_index >= len(self.magmoms):
                     self.magmoms.append([])
                 if self.spin_polarization == 'on':
-                    self.magmoms[self.atom_mulp_index].append(float(read_nth_to_last_value(line, 1)))
+                    self.magmoms[self.atom_mulp_index].append(
+                                 float(read_nth_to_last_value(line, 1)))
                 if self.spin_polarization == 'nc':
-                    self.magmoms[self.atom_mulp_index].append(map(float, (read_nth_to_last_value(line, 3),
-                                                                          read_nth_to_last_value(line, 2),
-                                                                          read_nth_to_last_value(line, 1))))
+                    self.magmoms[self.atom_mulp_index].append(
+                                 map(float, (read_nth_to_last_value(line, 3),
+                                             read_nth_to_last_value(line, 2),
+                                             read_nth_to_last_value(line, 1))))
         if ' MulP:' in line:
             self.atom_mulp_index = -1
         if 'NormRD' in line:
@@ -132,9 +125,10 @@ class ReadFunction:
                 if self.spin_polarization == 'on':
                     self.magmom.append(float(read_nth_to_last_value(line)))
                 if self.spin_polarization == 'nc':
-                    self.magmom.append(map(float, array(read_nth_to_last_value(line, 3),
-                                                        read_nth_to_last_value(line, 2),
-                                                        read_nth_to_last_value(line, 1))))
+                    self.magmom.append(
+                        map(float, array(read_nth_to_last_value(line, 3),
+                                         read_nth_to_last_value(line, 2),
+                                         read_nth_to_last_value(line, 1))))
         if 'energy' in self.function_list:
             if 'dUele' in line:
                 self.energy.append(float(read_nth_to_last_value(line)) * Ha)
@@ -153,21 +147,25 @@ class ReadFunction:
                 x = float(read_nth_to_last_value(line, 6))
                 y = float(read_nth_to_last_value(line, 5))
                 z = float(read_nth_to_last_value(line, 4))
-                self.wannier_centres[-1].append((x,y,z))
+                self.wannier_centres[-1].append((x, y, z))
             if '---> DISE' in line and '(Angs^2)' not in line:
 
-                self.omega_i.append(float(read_nth_to_last_value(line.replace('|',''), 4)))
-                self.delta_omega_i.append(float(read_nth_to_last_value(line.replace('|',''), 3)))
+                self.omega_i.append(
+                    float(read_nth_to_last_value(line.replace('|', ''), 4)))
+                self.delta_omega_i.append(
+                    float(read_nth_to_last_value(line.replace('|', ''), 3)))
                 if len(self.spreads) > 1:
                     assert len(self.spreads[-1]) == len(self.spreads[-2])
                 return 3
             if 'Total_Omega=' in line:
-                self.total_omega.append(float(read_nth_to_last_value(line).split('=')[1]))
+                self.total_omega.append(
+                    float(read_nth_to_last_value(line).split('=')[1]))
                 if len(self.spreads) > 1:
                     assert len(self.spreads[-1]) == len(self.spreads[-2])
                 return 3
             if '---> CONV' in line and 'Angs^2' not in line and '|' in line:
-                self.delta_total_omega.append(float(read_nth_to_last_value(line.replace('|', ''), 3)))
+                self.delta_total_omega.append(
+                    float(read_nth_to_last_value(line.replace('|', ''), 3)))
                 if len(self.spreads) > 1:
                     assert len(self.spreads[-1]) == len(self.spreads[-2])
                 return 3
@@ -182,9 +180,10 @@ class ReadFunction:
 
     def plot(self, title='', save_to_file=False):
         if 'NormRD' in self.function_list:
-            pyplot.plot(range(2, 1 + len(self.norm_rd)), remove_infinities(self.norm_rd[1:]))
+            pyplot.plot(range(2, 1 + len(self.norm_rd)),
+                        remove_infinities(self.norm_rd[1:]))
             pyplot.xlabel('SCF step')
-            pyplot.ylabel('Norm of Residual Electron Density in reciprocal space')
+            pyplot.ylabel('Norm of Residual Density in reciprocal space')
             pyplot.suptitle(title)
             pyplot.semilogy()
             if save_to_file:
@@ -193,7 +192,8 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
         if 'energy' in self.function_list:
-            pyplot.plot(range(2, 1 + len(self.energy)), remove_infinities(self.energy[1:]))
+            pyplot.plot(range(2, 1 + len(self.energy)),
+                        remove_infinities(self.energy[1:]))
             pyplot.xlabel('SCF step')
             pyplot.ylabel('Energy change from last iteration (eV)')
             pyplot.semilogy()
@@ -204,7 +204,8 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
         if 'magmom' in self.function_list and self.spin_polarization != 'off':
-            pyplot.plot(range(1, 1 + len(self.magmom)), remove_infinities(self.magmom))
+            pyplot.plot(range(1, 1 + len(self.magmom)),
+                        remove_infinities(self.magmom))
             pyplot.xlabel('SCF step')
             pyplot.ylabel('Magnetic moment (Bohr Magneton)')
             pyplot.suptitle(title)
@@ -216,7 +217,8 @@ class ReadFunction:
         if 'magmoms' in self.function_list and self.spin_polarization != 'off':
             for atom_magmom in self.magmoms:
                 if self.spin_polarization == 'on':
-                    pyplot.plot(range(1, 1 + len(atom_magmom)), remove_infinities(atom_magmom))
+                    pyplot.plot(range(1, 1 + len(atom_magmom)),
+                                remove_infinities(atom_magmom))
             pyplot.ylabel('Magnetic Moment for Each Atom (Bohr Magneton)')
             pyplot.xlabel('SCF step')
             pyplot.suptiread_functiontle(title)
@@ -227,7 +229,8 @@ class ReadFunction:
             pyplot.delaxes()
         if 'electrons' in self.function_list:
             for atom_electrons in self.electrons:
-                pyplot.plot(range(1, 1 + len(atom_electrons)), remove_infinities(atom_electrons))
+                pyplot.plot(range(1, 1 + len(atom_electrons)),
+                            remove_infinities(atom_electrons))
             pyplot.ylabel('Mulliken Population for Each Atom')
             pyplot.xlabel('SCF step')
             pyplot.suptitle(title)
@@ -237,7 +240,8 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
         if 'mixing' in self.function_list:
-            pyplot.plot(range(1, 1 + len(self.mixing)), remove_infinities(self.mixing))
+            pyplot.plot(range(1, 1 + len(self.mixing)),
+                        remove_infinities(self.mixing))
             pyplot.ylabel('Mixing Weight')
             pyplot.xlabel('SCF step')
             pyplot.suptitle(title)
@@ -249,7 +253,8 @@ class ReadFunction:
 
     def plot_md(self, title='', save_to_file=False):
         if 'magmom' in self.function_list and self.spin_polarization != 'off':
-            pyplot.plot(range(1, 1 + len(self.md_magmom)), remove_infinities(self.md_magmom))
+            pyplot.plot(range(1, 1 + len(self.md_magmom)),
+                        remove_infinities(self.md_magmom))
             pyplot.xlabel('MD step')
             pyplot.ylabel('Magnetic moment (Bohr Magneton)')
             pyplot.suptitle(title)
@@ -259,7 +264,8 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
         if 'force' in self.function_list:
-            pyplot.plot(range(1, len(self.force)), remove_infinities(self.force))
+            pyplot.plot(range(1, len(self.force)),
+                        remove_infinities(self.force))
             pyplot.xlabel('MD step')
             pyplot.ylabel('Maximum Force (eV / Ang)')
             pyplot.suptitle(title)
@@ -271,7 +277,8 @@ class ReadFunction:
         if 'magmoms' in self.function_list and self.spin_polarization != 'off':
             for atom_magmom in self.md_magmoms:
                 if self.spin_polarization == 'on':
-                    pyplot.plot(range(1, len(atom_magmom)), remove_infinities(atom_magmom))
+                    pyplot.plot(range(1, len(atom_magmom)),
+                                remove_infinities(atom_magmom))
             pyplot.ylabel('Magnetic Moment for Each Atom (Bohr Magneton)')
             pyplot.xlabel('MD step')
             pyplot.suptitle(title)
@@ -282,7 +289,8 @@ class ReadFunction:
             pyplot.delaxes()
         if 'forces' in self.function_list:
             for atom_force in self.forces:
-                pyplot.plot(range(1, len(atom_force)), remove_infinities(atom_force))
+                pyplot.plot(range(1, len(atom_force)),
+                            remove_infinities(atom_force))
             pyplot.ylabel('Force on Each Atom (eV / Ang)')
             pyplot.xlabel('MD step')
             pyplot.suptitle(title)
@@ -292,9 +300,10 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
         if 'electrons' in self.function_list:
-            i=0
+            i = 0
             for atom_electrons in self.md_electrons:
-                pyplot.plot(range(1, len(atom_electrons)), remove_infinities(atom_electrons), label=str(i))
+                pyplot.plot(range(1, len(atom_electrons)),
+                            remove_infinities(atom_electrons), label=str(i))
                 i += 1
             pyplot.ylabel('Mulliken Population for Each Atom')
             pyplot.xlabel('MD step')
@@ -307,7 +316,8 @@ class ReadFunction:
 
     def plot_wannier(self, title='', save_to_file=False):
         if 'wannier' in self.function_list:
-            pyplot.plot(range(1, 1 + len(self.omega_i)), remove_infinities(self.omega_i))
+            pyplot.plot(range(1, 1 + len(self.omega_i)),
+                        remove_infinities(self.omega_i))
             pyplot.xlabel('Iteration step')
             pyplot.ylabel(r'${\Omega}_I / \mathrm{\AA}^2$')
             pyplot.suptitle(title)
@@ -317,7 +327,8 @@ class ReadFunction:
             else:
                 pyplot.show()
             pyplot.delaxes()
-            pyplot.plot(range(1, 1 + len(self.total_omega)), remove_infinities(self.total_omega))
+            pyplot.plot(range(1, 1 + len(self.total_omega)),
+                        remove_infinities(self.total_omega))
             pyplot.xlabel('Iteration Step')
             pyplot.ylabel(r'$\Omega / \mathrm{\AA}^2$')
             pyplot.suptitle(title)
@@ -328,8 +339,10 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
             n = len(self.delta_omega_i)
-            pdelta_omega_i = [d if d>0 else 0 for d in remove_infinities(self.delta_omega_i)]
-            ndelta_omega_i = [-d if d<0 else 0 for d in remove_infinities(self.delta_omega_i)]
+            pdelta_omega_i = [d if d > 0 else 0 for d in
+                              remove_infinities(self.delta_omega_i)]
+            ndelta_omega_i = [-d if d < 0 else 0 for d in
+                              remove_infinities(self.delta_omega_i)]
             pyplot.plot(range(1, 1 + n), pdelta_omega_i, 'b')
             pyplot.plot(range(1, 1 + n), ndelta_omega_i, 'r')
             pyplot.xlabel('Iteration Step')
@@ -342,8 +355,10 @@ class ReadFunction:
                 pyplot.show()
             pyplot.delaxes()
             n = len(self.delta_total_omega)
-            pdelta_omega = [d if d>0 else 0 for d in remove_infinities(self.delta_total_omega)]
-            ndelta_omega = [-d if d<0 else 0 for d in remove_infinities(self.delta_total_omega)]
+            pdelta_omega = [d if d > 0 else 0 for d in
+                            remove_infinities(self.delta_total_omega)]
+            ndelta_omega = [-d if d < 0 else 0 for d in
+                            remove_infinities(self.delta_total_omega)]
             pyplot.plot(range(1, 1 + n), pdelta_omega, 'b')
             pyplot.plot(range(1, 1 + n), ndelta_omega, 'r')
             pyplot.xlabel('Iteration Step')
@@ -359,7 +374,8 @@ class ReadFunction:
             spreads = array(self.spreads).T
             n_wannier = len(spreads)
             for w in range(n_wannier):
-                pyplot.plot(range(n), remove_infinities(spreads[w]), label=str(w))
+                pyplot.plot(range(n), remove_infinities(spreads[w]),
+                            label=str(w))
             pyplot.xlabel('Iteration Step')
             pyplot.ylabel(r'$\Delta{\Omega}_w / \mathrm{\AA}^2$')
             pyplot.suptitle(title)
@@ -370,7 +386,6 @@ class ReadFunction:
             else:
                 pyplot.show()
             pyplot.delaxes()
-
 
     def plot_from_file(self, filename, title='', save_to_file=False):
         self.read_from_file(filename)

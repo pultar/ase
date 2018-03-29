@@ -1,3 +1,4 @@
+from __future__ import print_function
 from ase.test import NotAvailable
 from ase.build import bulk
 from ase.calculators.calculator import get_calculator
@@ -7,10 +8,7 @@ required = {'abinit': dict(ecut=200, toldfe=0.0001, chksymbreak=0),
             'aims': dict(sc_accuracy_rho=5.e-3),
             'elk': dict(tasks=0, rgkmax=5.0),
             'gpaw': dict(mode='pw'),
-            'cp2k': dict(auto_write=True, uks=True, max_scf=1, cutoff=400),
-            'openmx': dict(scf_max_iter=300
-                           ,mpi={'prcesses':20,'threads':1}
-                          )}
+            'cp2k': dict(auto_write=True, uks=True, max_scf=1, cutoff=400)}
 
 
 def run(name):

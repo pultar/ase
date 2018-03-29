@@ -17,12 +17,13 @@ functional theories.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
 import os
 import numpy as np
-from ase.calculators.openmx.under_dev.dos import DOS
+from ase.calculators.openmx.dos import DOS
 from ase.calculators.openmx.band import Band
 from ase.calculators.calculator import Parameters
-#  from ase.calculators.openmx.import_functions import ReadFunction
+from ase.calculators.openmx.read_functions import ReadFunction
 from ase.calculators.openmx.default_settings import default_dictionary
 from ase.calculators.openmx.default_settings import default_kpath
 from ase.dft.kpoints import special_points, special_paths
@@ -209,10 +210,10 @@ class OpenMXParameters(Parameters):
                     dft_data_dict[symbol][key] = dict_dict[symbol][key]
         if dos_erange:
             dos = DOS(self)
-        # if isinstance(read_function, list):
-        #   read_function = ReadFunction(read_function)
-        # if read_function is True:
-        #   read_function = ReadFunction()
+        if isinstance(read_function, list):
+            read_function = ReadFunction(read_function)
+        if read_function is True:
+            read_function = ReadFunction()
         if (smearing is not None and smearing[0] != 'Fermi-Dirac'):
             print("only Fermi-Dirac smearing is supported")
             if smearing[0] in ['Gaussian', 'Methfessel-Paxton']:

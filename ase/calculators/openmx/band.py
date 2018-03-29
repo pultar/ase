@@ -98,6 +98,7 @@ class Band:
     def plot_brillouin_3d(atoms, ax=None, size=0.9, kpath=None, **kw):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
+        Axes3D
         if ax is None:
             fig = plt.figure(figsize=(8, 8))
             ax = fig.add_subplot(111, projection='3d')

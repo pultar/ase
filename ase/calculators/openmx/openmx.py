@@ -32,7 +32,7 @@ from ase.calculators.calculator import kptdensity2monkhorstpack
 from ase.calculators.openmx.parameters import Specie, format_dat
 from ase.calculators.openmx.parameters import OpenMXParameters
 from ase.calculators.openmx.band import Band
-from ase.calculators.openmx.under_dev.dos import DOS
+from ase.calculators.openmx.dos import DOS
 from ase.calculators.openmx.default_settings import default_dictionary
 from ase.geometry import cell_to_cellpar
 from ase.atoms import Atoms
@@ -1298,7 +1298,9 @@ class OpenMX(FileIOCalculator):
                     zx, zy, zz = (fl(rn(nl, 3)), fl(rn(nl, 2)), fl(rn(nl, 1)))
                     break
             try:
-                self.results['stress'] = np.array([xx, yy, zz, yz, xz, xy])
+                self.results['stress'] = np.array([xx, yy, zz, (zy + yz)/2,
+                                                               (zx + xz)/2,
+                                                               (yx + xy)/2])
                 self.results['stress'] *= Ha / Bohr ** 3
                 if(self.debug):
                     print('Finished reading stress%s' % filename)
@@ -1562,16 +1564,16 @@ class OpenMX(FileIOCalculator):
         else:
             if erange is None:
                 erange = self['dos_erange']
-            try:
-                f1 = open(os.path.join(self.directory,
-                                       self.prefix + '.Dos.val'), 'r')
-                f2 = open(os.path.join(self.directory,
-                                       self.prefix + '.Dos.vec'), 'r')
-            except FileNotFoundError:
-                print('Calculating Eigenvalues and Eigenvectors')
-                self.calculate(atoms)
-                print('Calculating DOS')
-                return self.get_dos(atoms=atoms, erange=erange, **kwargs)
+            # try:
+            #    f1 = open(os.path.join(self.directory,
+            #                           self.prefix + '.Dos.val'), 'r')
+            #    f2 = open(os.path.join(self.directory,
+            #                           self.prefix + '.Dos.vec'), 'r')
+            # except FileNotFoundError:
+            #    print('Calculating Eigenvalues and Eigenvectors')
+            #    self.calculate(atoms)
+            #    print('Calculating DOS')
+            #    return self.get_dos(atoms=atoms, erange=erange, **kwargs)
         return self.dos.get_dos(atoms=atoms, erange=erange, **kwargs)
 
     def get_band(self, erange=(-5, 5), plot='pyplot', gnuband=True, atoms=None,
@@ -1955,7 +1957,7 @@ class OpenMX(FileIOCalculator):
                                    self.prefix + '.mmn'), 'r') as f:
                 string = f.readline()
                 string = f.readline()
-                d_num = int(read_nth_to_last_value(string, 2))
+                # d_num = int(read_nth_to_last_value(string, 2))
                 kpt_num = int(read_nth_to_last_value(string, 3))
                 band_num = int(read_nth_to_last_value(string, 4))
                 self['bloch_overlaps'] = [{} for i in range(kpt_num)]
