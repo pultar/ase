@@ -122,7 +122,7 @@ class BulkCrystal(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         num_basis = self.structures[self.crystalstructure]
         if num_basis == 1:
-            indx_by_basis = [[a.index for a in self.atoms]]
+            indx_by_basis = [[a.index for a in self.atoms_with_given_dim]]
             return indx_by_basis
 
         # This condition can be relaxed in the future

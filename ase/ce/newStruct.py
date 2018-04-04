@@ -41,10 +41,6 @@ class GenerateStructures(object):
         else:
             self.struct_per_gen = struct_per_gen
 
-        # Generate initial pool of structures for generation 0
-        # if self.gen == 0:
-            # self.generate_initial_pool()
-
     def generate_probe_structure(self, init_temp=None, final_temp=None,
                                  num_temp=5, num_steps=10000):
         """Generate a probe structure according to PRB 80, 165122 (2009)."""
@@ -61,8 +57,8 @@ class GenerateStructures(object):
                 num_conc = self.conc_matrix.shape[0]
                 conc = random.choice(range(num_conc))
                 conc1 = float(conc) / (self.conc_matrix.shape[0] - 1)
-                print('conc1 = {}'.format(conc1))
-                atoms = self.random_struct(self.conc_matrix[conc], conc1)
+                atoms = self.random_struct(self.conc_matrix[conc], conc1, None,
+                                           False)
             else:
                 num_conc1, num_conc2 = self.conc_matrix.shape[:2]
                 conc = [random.choice(range(num_conc1)),
@@ -70,7 +66,7 @@ class GenerateStructures(object):
                 conc1 = float(conc[0]) / (self.conc_matrix.shape[0] - 1)
                 conc2 = float(conc[1]) / (self.conc_matrix.shape[1] - 1)
                 atoms = self.random_struct(self.conc_matrix[conc[0]][conc[1]],
-                                           conc1, conc2)
+                                           conc1, conc2, False)
 
             # selected one of the "ghost" concentration with negative values
             if atoms is None:
@@ -86,6 +82,8 @@ class GenerateStructures(object):
             atoms, cf_array = ps.generate()
             conc = self._find_concentration(atoms)
             if self._exists_in_db(atoms, conc[0], conc[1]):
+                print('generated structure is already in DB.')
+                print('generating again...')
                 continue
             # convert cf array to dictionary
             cf = {}
@@ -263,8 +261,6 @@ class GenerateStructures(object):
             match = m.fit(s1, s2)
             if match:
                 break
-            # else:
-            #     print('match = {}'.format(match))
         return match
 
     def get_kvp(self, atoms, kvp, conc1=None, conc2=None):
@@ -294,9 +290,9 @@ class GenerateStructures(object):
             kvp['name'] = 'conc_{:.3f}_{:.3f}_{}'.format(conc1, conc2, n)
         return kvp
 
-    def random_struct(self, conc_ratio, conc1=None, conc2=None):
+    def random_struct(self, conc_ratio, conc1=None, conc2=None, unique=True):
         """
-        Generate a random structure that does not already exist in DB
+        Generate a random structure that does not already exist in DB.
         """
         # convert the conc_ratio into the same format as basis_elements if
         # setting.num_basis = 1 or setting.group_basis is None
@@ -337,12 +333,17 @@ class GenerateStructures(object):
                     indx = self._replace_rnd(indx,
                                              basis_elements[site][i],
                                              conc_ratio[site][i], atoms)
+
+            if not unique:
+                break
+
             in_DB = self._exists_in_db(atoms, conc1=conc1, conc2=conc2)
             # special case where only one species is present
             # break out of the loop and return atoms=None
             if in_DB and np.count_nonzero(flat_conc_ratio) == 1:
                 atoms = None
                 in_DB = False
+
         return atoms
 
     def _determine_gen_number(self):

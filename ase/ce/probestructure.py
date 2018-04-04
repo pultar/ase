@@ -61,12 +61,15 @@ class ProbeStructure(object):
                 if bool(getrandbits(1)):
                     new, n_cf = self._change_element_type(old, o_cf)
                 else:
-                    new, n_cf = self._swap_two_atoms(old, o_cf)
+                    if self._is_swappable(old):
+                        new, n_cf = self._swap_two_atoms(old, o_cf)
+                    else:
+                        new, n_cf = self._change_element_type(old, o_cf)
                 n_cfm = np.vstack((self.cfm, n_cf))
                 n_mv = self._get_mean_variance(n_cfm)
                 accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
-                # print(count, accept, o_mv - n_mv, temp)
+                # print(count, accept)
                 if accept:
                     old = new.copy()
                     o_cf = np.copy(n_cf)
@@ -88,15 +91,17 @@ class ProbeStructure(object):
         o_cfm = np.vstack((self.cfm, o_cf))
         o_mv = self._get_mean_variance(o_cfm)
         diffs = []
-        for _ in range(50):
+        for _ in range(100):
             if bool(getrandbits(1)):
                 new, n_cf = self._change_element_type(old, o_cf)
             else:
-                new, n_cf = self._swap_two_atoms(old, o_cf)
+                if self._is_swappable(old):
+                    new, n_cf = self._swap_two_atoms(old, o_cf)
+                else:
+                    new, n_cf = self._change_element_type(old, o_cf)
             n_cfm = np.vstack((self.cfm, n_cf))
             n_mv = self._get_mean_variance(n_cfm)
             diffs.append(abs(o_mv - n_mv))
-            # print(_)
             # update old
             old = new.copy()
             o_cf = np.copy(n_cf)
@@ -104,7 +109,7 @@ class ProbeStructure(object):
 
         avg_diff = sum(diffs) / len(diffs)
         init_temp = 10 * avg_diff
-        final_temp = 0.1 * avg_diff
+        final_temp = 0.01 * avg_diff
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
@@ -151,6 +156,36 @@ class ProbeStructure(object):
         atoms, cf = self._change_element_type(atoms, cf, indx[0], symbol[1])
         atoms, cf = self._change_element_type(atoms, cf, indx[1], symbol[0])
         return atoms, cf
+
+    def _is_swappable(self, atoms):
+         # determine if the basis is grouped
+        if self.setting.grouped_basis is None:
+            basis_elements = self.setting.basis_elements
+            num_basis = self.setting.num_basis
+            index_by_basis = self.setting.index_by_basis
+        else:
+            basis_elements = self.setting.grouped_basis_elements
+            num_basis = self.setting.num_grouped_basis
+            index_by_basis = self.setting.index_by_grouped_basis
+
+        for i in range(num_basis - 1, -1, -1):
+            # delete basis with only one element type
+            if len(basis_elements[i]) < 2:
+                num_basis -= 1
+                continue
+
+            # delete basis if atoms object has only one element type
+            existing_elements = 0
+            for element in basis_elements[i]:
+                num = len([a.index for a in atoms if a.symbol == element])
+                if num > 0:
+                    existing_elements += 1
+            if existing_elements < 2:
+                num_basis -= 1
+
+        if num_basis > 0:
+            return True
+        return False
 
     def _change_element_type(self, atoms, cf, index=None, rplc_element=None):
         """Change the type of element for the atom with a given index.
