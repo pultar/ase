@@ -162,11 +162,9 @@ class ProbeStructure(object):
         if self.setting.grouped_basis is None:
             basis_elements = self.setting.basis_elements
             num_basis = self.setting.num_basis
-            index_by_basis = self.setting.index_by_basis
         else:
             basis_elements = self.setting.grouped_basis_elements
             num_basis = self.setting.num_grouped_basis
-            index_by_basis = self.setting.index_by_grouped_basis
 
         for i in range(num_basis - 1, -1, -1):
             # delete basis with only one element type
