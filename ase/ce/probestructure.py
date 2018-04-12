@@ -1,3 +1,4 @@
+import os
 import math
 from copy import deepcopy
 from itertools import permutations
@@ -7,12 +8,41 @@ from numpy.linalg import inv
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
 from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
 
-
 class ProbeStructure(object):
     """Generate probe structures based on simulated annealing according to the
-    recipe in PRB 80, 165122 (2009)."""
+    recipe in PRB 80, 165122 (2009).
+
+    Arguments:
+    =========
+    setting: BulkCrystal or BulkSapcegroup  object
+    atoms: Atoms object
+        Initial structure to start the simulated annealing.
+    struct_per_gen: int
+        number of structures to be generated per generation
+    init_temp: int or float
+        initial temperature (does not represent *physical* temperature)
+    final_temp: int or float
+        final temperature (does not represent *physical* temperature)
+    num_temp: int
+        number of temperatures to be used in simulated annealing
+    num_steps: int
+        number of steps in simulated annealing
+    approx_mean_var: bool
+        whether or not to use a spherical and isotropical distribution
+        approximation scheme for determining the mean variance.
+        -'True': Assume a spherical and isotropical distribution of
+                 structures in the configurational space.
+                 Corresponds to eq.4 in PRB 80, 165122 (2009)
+        -'False': Use sigma and mu of eq.3 in PRB 80, 165122 (2009)
+                  to characterize the distribution of structures in
+                  population.
+                  Requires pre-sampling of random structures before
+                  generating probe structures.
+                  Reads sigma and mu from 'probe_structure-sigma_mu.npz' file.
+    """
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
-                 final_temp=None, num_temp=5, num_steps=10000):
+                 final_temp=None, num_temp=5, num_steps=10000,
+                 approx_mean_var=False):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
@@ -29,6 +59,16 @@ class ProbeStructure(object):
             raise ValueError("concentration of the elements in the provided"
                              " atoms cannot be found in the conc_matrix")
 
+        self.approx_mean_var = approx_mean_var
+        fname = 'probe_structure-sigma_mu.npz'
+        if not approx_mean_var:
+            if os.path.isfile(fname):
+                data = np.load(fname)
+                self.sigma = data['sigma']
+                self.mu = data['mu']
+            else:
+                raise IOError("'{}' not found.".format(fname))
+
         if init_temp is None or final_temp is None:
             self.init_temp, self.final_temp = self._determine_temps()
         else:
@@ -42,14 +82,16 @@ class ProbeStructure(object):
                              " temperature")
 
     def generate(self):
-        """Generate a probe structure according to PRB 80, 165122 (2009)
-        """
+        """Generate a probe structure according to PRB 80, 165122 (2009)"""
         # Start
         old = self.init.copy()
         o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
                                                      return_type='array')
         o_cfm = np.vstack((self.cfm, o_cf))
-        o_mv = self._get_mean_variance(o_cfm)
+        if self.approx_mean_var:
+            o_mv = mean_variance_approx(o_cfm)
+        else:
+            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
 
         temps = np.logspace(math.log10(self.init_temp),
                             math.log10(self.final_temp),
@@ -66,7 +108,10 @@ class ProbeStructure(object):
                     else:
                         new, n_cf = self._change_element_type(old, o_cf)
                 n_cfm = np.vstack((self.cfm, n_cf))
-                n_mv = self._get_mean_variance(n_cfm)
+                if self.approx_mean_var:
+                    n_mv = mean_variance_approx(n_cfm)
+                else:
+                    n_mv = mean_variance(n_cfm, self.sigma, self.mu)
                 accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
                 # print(count, accept)
@@ -89,7 +134,10 @@ class ProbeStructure(object):
         o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
                                                      return_type='array')
         o_cfm = np.vstack((self.cfm, o_cf))
-        o_mv = self._get_mean_variance(o_cfm)
+        if self.approx_mean_var:
+            o_mv = mean_variance_approx(o_cfm)
+        else:
+            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
         diffs = []
         for _ in range(100):
             if bool(getrandbits(1)):
@@ -100,7 +148,10 @@ class ProbeStructure(object):
                 else:
                     new, n_cf = self._change_element_type(old, o_cf)
             n_cfm = np.vstack((self.cfm, n_cf))
-            n_mv = self._get_mean_variance(n_cfm)
+            if self.approx_mean_var:
+                n_mv = mean_variance_approx(n_cfm)
+            else:
+                n_mv = mean_variance(n_cfm, self.sigma, self.mu)
             diffs.append(abs(o_mv - n_mv))
             # update old
             old = new.copy()
@@ -345,30 +396,27 @@ class ProbeStructure(object):
         sp /= len(perm)
         return sp
 
-    def _get_mean_variance_full(self, cfm):
-        try:
-            prec = inv(cfm.T.dot(cfm))
-        # if inverting matrix leads to a singular matrix, reduce the matrix
-        except np.linalg.linalg.LinAlgError:
-            cfm = reduce_matrix(cfm)
-            prec = inv(cfm.T.dot(cfm))
+def mean_variance_full(cfm):
+    prec = precision_matrix(cfm)
+    mv = 0.
+    for x in range(cfm.shape[0]):
+        mv += cfm[x].dot(prec).dot(cfm[x].T)
+    mv = mv / cfm.shape[0]
+    return mv
 
-        mv = 0.
-        for x in range(cfm.shape[0]):
-            mv += cfm[x].dot(prec).dot(cfm[x].T)
-        mv = mv / cfm.shape[0]
-        return mv
+def mean_variance(cfm, sigma, mu):
+    prec = precision_matrix(cfm)
+    return np.trace(prec.dot(sigma)) + mu.dot(prec).dot(mu.T)
 
-    def _get_mean_variance(self, cfm):
-        try:
-            prec = inv(cfm.T.dot(cfm))
-        # if inverting matrix leads to a singular matrix, reduce the matrix
-        except np.linalg.linalg.LinAlgError:
-            cfm = reduce_matrix(cfm)
-            prec = inv(cfm.T.dot(cfm))
+def mean_variance_approx(cfm):
+    prec = precision_matrix(cfm)
+    return np.trace(prec)
 
+def precision_matrix(cfm):
+    try:
         prec = inv(cfm.T.dot(cfm))
-        sigma = np.cov(cfm.T)
-        mu = np.mean(cfm, axis=0)
-        mv = np.trace(prec.dot(sigma)) + mu.dot(prec).dot(mu.T)
-        return mv
+    # if inverting matrix leads to a singular matrix, reduce the matrix
+    except np.linalg.linalg.LinAlgError:
+        cfm = reduce_matrix(cfm)
+        prec = inv(cfm.T.dot(cfm))
+    return prec

@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 
@@ -22,6 +23,7 @@ class GenerateStructures(object):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
         self.setting = setting
+        self.corrfunc = CorrFunction(self.setting)
         self.conc_matrix = self.setting.conc_matrix
         self.atoms = setting.atoms_with_given_dim
         if generation_number is None:
@@ -42,8 +44,45 @@ class GenerateStructures(object):
             self.struct_per_gen = struct_per_gen
 
     def generate_probe_structure(self, init_temp=None, final_temp=None,
-                                 num_temp=5, num_steps=10000):
-        """Generate a probe structure according to PRB 80, 165122 (2009)."""
+                                 num_temp=5, num_steps=10000,
+                                 approx_mean_var=False, num_samples_var=10000):
+        """Generate a probe structure according to PRB 80, 165122 (2009).
+
+        Arguments:
+        =========
+        init_temp: int or float
+            initial temperature (does not represent *physical* temperature)
+        final_temp: int or float
+            final temperature (does not represent *physical* temperature)
+        num_temp: int
+            number of temperatures to be used in simulated annealing
+        num_steps: int
+            number of steps in simulated annealing
+        approx_mean_var: bool
+            whether or not to use a spherical and isotropical distribution
+            approximation scheme for determining the mean variance.
+            -'True': Assume a spherical and isotropical distribution of
+                     structures in the configurational space.
+                     Corresponds to eq.4 in PRB 80, 165122 (2009)
+            -'False': Use sigma and mu of eq.3 in PRB 80, 165122 (2009)
+                      to characterize the distribution of structures in
+                      population.
+                      Requires pre-sampling of random structures before
+                      generating probe structures.
+                      sigma and mu are generated and stored in
+                      'probe_structure-sigma_mu.npz' file.
+        num_samples_var: int
+            Number of samples to be used in determining signam and mu.
+            Only used when approx_mean_var is True.
+
+        Note: init_temp and final_temp are automatically generated if either
+              one of the two is not specified.
+        """
+        if not approx_mean_var:
+            # check to see if there are files containing mu and sigma values
+            if not os.path.isfile('probe_structure-sigma_mu.npz'):
+                self._generate_sigma_mu(num_samples_var)
+
         print("Generate {} probe structures.".format(self.struct_per_gen))
         while True:
             # Break out of the loop if reached struct_per_gen
@@ -52,22 +91,9 @@ class GenerateStructures(object):
             if num_struct >= self.struct_per_gen:
                 break
 
-            # Pick an initial random structure
-            if self.setting.num_conc_var == 1:
-                num_conc = self.conc_matrix.shape[0]
-                conc = random.choice(range(num_conc))
-                conc1 = float(conc) / (self.conc_matrix.shape[0] - 1)
-                atoms = self.random_struct(self.conc_matrix[conc], conc1, None,
-                                           False)
-            else:
-                num_conc1, num_conc2 = self.conc_matrix.shape[:2]
-                conc = [random.choice(range(num_conc1)),
-                        random.choice(range(num_conc2))]
-                conc1 = float(conc[0]) / (self.conc_matrix.shape[0] - 1)
-                conc2 = float(conc[1]) / (self.conc_matrix.shape[1] - 1)
-                atoms = self.random_struct(self.conc_matrix[conc[0]][conc[1]],
-                                           conc1, conc2, False)
-
+            conc_ratio, conc_index = self._get_random_conc()
+            atoms = self._random_struct_at_conc(conc_ratio, conc_index[0],
+                                                conc_index[1], False)
             # selected one of the "ghost" concentration with negative values
             if atoms is None:
                 continue
@@ -77,8 +103,8 @@ class GenerateStructures(object):
                                                    self.struct_per_gen) +
                   ' structures')
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
-                                init_temp=init_temp, final_temp=final_temp,
-                                num_temp=num_temp, num_steps=num_steps)
+                                init_temp, final_temp, num_temp, num_steps,
+                                approx_mean_var)
             atoms, cf_array = ps.generate()
             conc = self._find_concentration(atoms)
             if self._exists_in_db(atoms, conc[0], conc[1]):
@@ -90,7 +116,7 @@ class GenerateStructures(object):
             for i, name in enumerate(self.setting.full_cluster_names):
                 cf[name] = cf_array[i]
 
-            kvp = self.get_kvp(atoms, cf, conc[0], conc[1])
+            kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
             self.setting.db.write(atoms, kvp)
 
     def generate_initial_pool(self):
@@ -103,12 +129,12 @@ class GenerateStructures(object):
             self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
-                atoms = self.random_struct(self.conc_matrix[x], conc1)
+                atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
-                kvp = CorrFunction(self.setting).get_cf(atoms)
-                kvp = self.get_kvp(atoms, kvp, conc1)
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, conc1)
                 self.setting.db.write(atoms, kvp)
 
         # Case 2: 2 conc variable, one struct per concentration
@@ -119,13 +145,13 @@ class GenerateStructures(object):
                 conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
                 for y in range(self.conc_matrix.shape[1]):
                     conc2 = float(y)/(self.conc_matrix.shape[1] - 1)
-                    atoms = self.random_struct(self.conc_matrix[x][y],
-                                               conc1, conc2)
+                    atoms = self._random_struct_at_conc(self.conc_matrix[x][y],
+                                                        conc1, conc2)
                     if atoms is None:
                         continue
                     atoms = wrap_and_sort_by_position(atoms)
-                    kvp = CorrFunction(self.setting).get_cf(atoms)
-                    kvp = self.get_kvp(atoms, kvp, conc1, conc2)
+                    kvp = self.corrfunc.get_cf(atoms)
+                    kvp = self._get_kvp(atoms, kvp, conc1, conc2)
                     self.setting.db.write(atoms, kvp)
 
         # Case 3: 1 conc variable, user specified number of structures
@@ -140,8 +166,8 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
-                kvp = CorrFunction(self.setting).get_cf(atoms)
-                kvp = self.get_kvp(atoms, kvp, conc1)
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, conc1)
                 self.setting.db.write(atoms, kvp)
                 x += 1
 
@@ -160,8 +186,8 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
-                kvp = CorrFunction(self.setting).get_cf(atoms)
-                kvp = self.get_kvp(atoms, kvp, conc1, conc2)
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, conc1, conc2)
                 self.setting.db.write(atoms, kvp)
                 x += 1
         return True
@@ -188,8 +214,8 @@ class GenerateStructures(object):
         if self._exists_in_db(init, conc[0], conc[1]):
             raise RuntimeError('supplied structure already exists in DB')
 
-        cf = CorrFunction(self.setting).get_cf(init)
-        kvp = self.get_kvp(init, cf, conc[0], conc[1])
+        cf = self.corrfunc.get_cf(init)
+        kvp = self._get_kvp(init, cf, conc[0], conc[1])
 
         if name is not None:
             kvp['name'] = name
@@ -263,7 +289,7 @@ class GenerateStructures(object):
                 break
         return match
 
-    def get_kvp(self, atoms, kvp, conc1=None, conc2=None):
+    def _get_kvp(self, atoms, kvp, conc1=None, conc2=None):
         """
         Receive atoms object, its correlation function (passed kvp) and
         value(s) of the concentration(s). Append key terms (conc, started, etc.)
@@ -290,10 +316,34 @@ class GenerateStructures(object):
             kvp['name'] = 'conc_{:.3f}_{:.3f}_{}'.format(conc1, conc2, n)
         return kvp
 
-    def random_struct(self, conc_ratio, conc1=None, conc2=None, unique=True):
-        """
-        Generate a random structure that does not already exist in DB.
-        """
+    def _get_random_conc(self):
+        # Pick a concentration from a possible
+        while True:
+            if self.setting.num_conc_var == 1:
+                conc_index = [random.choice(range(self.conc_matrix.shape[0])),
+                              None]
+                conc_ratio = self.conc_matrix[conc_index[0]]
+            else:
+                conc_index = [random.choice(range(self.conc_matrix.shape[0])),
+                              random.choice(range(self.conc_matrix.shape[1]))]
+                conc_ratio = self.conc_matrix[conc_index[0]][conc_index[1]]
+
+            # loop until no atom has a negative number count (fictitious number)
+            if min(conc_ratio) >= 0:
+                break
+
+        conc_value = [None, None]
+        for i, index in enumerate(conc_index):
+            if index is None:
+                continue
+            conc_value[i] = float(conc_index[i]) /\
+                            (self.conc_matrix.shape[i] - 1)
+
+        return conc_ratio, conc_value
+
+    def _random_struct_at_conc(self, conc_ratio, conc1=None, conc2=None,
+                               unique=True):
+        """Generate a random structure that does not already exist in DB."""
         # convert the conc_ratio into the same format as basis_elements if
         # setting.num_basis = 1 or setting.group_basis is None
         # Else, convert the conc_ratio the format of
@@ -370,3 +420,24 @@ class GenerateStructures(object):
 
         indices = [x for x in indices if x not in replace]
         return indices
+
+    def _generate_sigma_mu(self, num_samples_var):
+        print('===========================================================\n' +
+              'Determining sigma and mu value for assessing mean variance.\n' +
+              'May take a long time depending on the number of samples \n' +
+              'specified in the *num_samples_var* argument.\n' +
+              '===========================================================')
+        count = 0
+        cfm = np.zeros((num_samples_var, len(self.setting.full_cluster_names)),
+                       dtype=float)
+        while count < num_samples_var:
+            conc_ratio, conc_index = self._get_random_conc()
+            atoms = self._random_struct_at_conc(conc_ratio, conc_index[0],
+                                                conc_index[1], False)
+            cfm[count] = self.corrfunc.get_cf(atoms, 'array')
+            count += 1
+            print('sampling {} ouf of {}'.format(count, num_samples_var))
+
+        sigma = np.cov(cfm.T)
+        mu = np.mean(cfm, axis=0)
+        np.savez('probe_structure-sigma_mu.npz', sigma=sigma, mu=mu)

@@ -42,8 +42,8 @@ class CorrFunction(object):
             -'dict' (default): returns a dictionary (e.g., {'name': cf_value})
             -'tuple': returns a list of tuples (e.g., [('name', cf_value)])
             -'array': NumPy array containing *only* the correlation function
-                      values in the same order as the order provided in the
-                      "cluster_names"
+                      values in the same order as the order in
+                      "setting.full_cluster_names"
         """
         if isinstance(atoms, Atoms):
             atoms = self.check_and_convert_cell_size(atoms.copy())
