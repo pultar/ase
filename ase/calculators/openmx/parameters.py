@@ -34,9 +34,120 @@ class OpenMXParameters(Parameters):
     """Parameters class for the calculator.
     Documented in BaseOpenMX.__init__
     """
+    allowed_xc = [
+        'LDA',
+        'GGA',
+        'PBE',
+        'GGA-PBE'
+        'LSDA',
+        'LSDA-PW'
+        'LSDA-CA'
+        'CA',
+        'PW',
+    ]
+
+    unit_dat_keywords = {
+        'Hubbard.U.Values': 'eV',
+        'scf.Constraint.NC.Spin.v': 'eV',
+        'scf.ElectronicTemperature': 'K',        # not an ase unit!
+        'scf.energycutoff': 'Ry',
+        'scf.criterion': 'Ha',
+        'scf.Electric.Field': 'GV / m',          # not an ase unit!
+        '1DFFT.EnergyCutoff': 'Ry',
+        'orbitalOpt.criterion': '(Ha/Borg)**2',  # not an ase unit!
+        'MD.Opt.criterion': 'Ha/Bohr',
+        'MD.TempControl': 'K',                   # not an ase unit!
+        'NH.Mass.HeatBath': '_amu',
+        'MD.Init.Velocity': 'm/s',
+        'Dos.Erange': 'eV'
+                         }
+    allowed_dat_keywords = [
+        'System.CurrentDir',             # Implemented
+        'System.Name',                   # Implemented
+        'DATA.PATH',                     # Implemented
+        'level.of.stdout',               # Implemented
+        'level.of.fileout',              # Implemented
+        'Species.Number',                # Implemented
+        'Definition.of.Atomic.Species',  # Implemented
+        'Atoms.Number',                  # Implemented
+        'Atoms.SpeciesAndCoordinates',   # Implemented
+        'Atoms.UnitVectors.Unit',        # Implemented
+        'Atoms.UnitVectors',             # Implemented
+        'scf.XcType',                    # Implemented
+        'scf.spinpolarization',          # Implemented
+        'scf.spinorbit.coupling'         # Implemented
+        'scf.partialCoreCorrection'
+        'scf.Hubbard.U',                 # Implemented
+        'scf.Hubbard.Occupation',        # Implemented
+        'scf.Hubbard.U.values',          # Implemented
+        'scf.Constraint.NC.Spin',        # Implemented
+        'scf.Constraint.NC.Spin.v',      # Implemented
+        'scf.ElectronicTemperature',     # Implemented
+        'scf.energycutoff',              # Implemented
+        'scf.Ngrid',
+        'scf.maxIter',                   # Implemented
+        'scf.EigenvalueSolver',          # Implemented
+        'scf.Kgrid',                     # Implemented
+        'scf.ProExpn.VNA',
+        'scf.Mixing.Type',               # Implemented
+        'scf.Init.Mixing.Weight',        # Implemented
+        'scf.Min.MixingWeight',          # Implemented
+        'scf.Kerker.factor',
+        'scf.Mixing.History',            # Implemented
+        'scf.Mixing.StartPulay',         # Implemented
+        'scf.Mixing.EveryPulay',
+        'scf.criterion',                 # Implemented
+        'scf.Electric.Field',
+        'scf.system.charge',
+        '1DFFT.EnergyCutoff',
+        '1DFFT.NumGridK',
+        '1DFFT.NumGridR',
+        'orbitalOpt.Method',
+        'orbitalOpt.scf.maxIter',
+        'orbitalOpt.Opt.maxIter',
+        'orbitalOpt.Opt.Method',
+        'orbitalOpt.StartPulay',
+        'orbitalOpt.HistoryPulay',
+        'orbitalOpt.SD.step',
+        'orbitalOpt.criterion',
+        'CntOrb.fileout',
+        'Num.CntOrb.Atoms',
+        'Atoms.Cont.Orbitals',
+        'orderN.HoppingRanges',
+        'orderN.KrylovH.order',
+        'orderN.KrylovS.order',
+        'orderN.Exact.Inverse.S',
+        'orderN.Recalc.Buffer',
+        'orderN.Expand.Core',
+        'MD.Type',                      # Implemented
+        'MD.Fixed.XYZ',
+        'MD.maxIter',                   # Implemented
+        'MD.TimeStep',                  # Implemented
+        'MD.Opt.criterion',             # Implemented
+        'MD.Opt.DIIS.History',
+        'MD.Opt.StartDIIS',
+        'MD.TempControl',
+        'NH.Mass.HeatBath',
+        'MD.Init.Velocity',
+        'Band.Dispersion',              # Implemented
+        'Band.KPath.UnitCell',          # Implemented
+        'Band.Nkpath',                  # Implemented
+        'Band.kpath',                   # Implemented
+        'MO.fileout',                   # Implemented
+        'num.HOMOs',                    # Implemented
+        'num.LUMOs',                    # Implemented
+        'MO.Nkpoint',                   # Implemented
+        'MO.kpoint',                    # Implemented
+        'Dos.fileout',                  # Implemented
+        'Dos.Erange',                   # Implemented
+        'Dos.Kgrid',                    # Implemented
+        'HS.fileout',
+        'Voronoi.charge',
+        ]
 
     def __init__(
             self,
+            restart=None,
             energy_cutoff=150 * Ry,  			# eV
             kpts=(4, 4, 4),
             xc='LDA',
