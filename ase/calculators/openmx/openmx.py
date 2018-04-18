@@ -4,20 +4,19 @@
     material simulations based on density functional theories.
     Copyright (C) 2017 Charles Thomas Johnson, Jae Hwan Shim and JaeJun Yu
 
-    This program is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation,
-    either version 3 of the License, or (at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2.1 of the License, or
+    (at your option) any later version.
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License
-    along with this program.
-    If not, see <http://www.gnu.org/licenses/>.
+    GNU Lesser General Public License for more details.
+    You should have received a copy of the GNU Lesser General Public License
+    along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 from __future__ import print_function
-from ase.calculators.calculator import ReadError
 import os
 import time
 from subprocess import Popen
@@ -54,124 +53,11 @@ class OpenMX(FileIOCalculator):
         'magmoms',
     )
 
-    allowed_xc = [
-        'LDA',
-        'GGA',
-        'PBE',
-        'GGA-PBE'
-        'LSDA',
-        'LSDA-PW'
-        'LSDA-CA'
-        'CA',
-        'PW',
-    ]
-
-    unit_dat_keywords = {
-        'Hubbard.U.Values': 'eV',
-        'scf.Constraint.NC.Spin.v': 'eV',
-        'scf.ElectronicTemperature': 'K',        # not an ase unit!
-        'scf.energycutoff': 'Ry',
-        'scf.criterion': 'Ha',
-        'scf.Electric.Field': 'GV / m',          # not an ase unit!
-        '1DFFT.EnergyCutoff': 'Ry',
-        'orbitalOpt.criterion': '(Ha/Borg)**2',  # not an ase unit!
-        'MD.Opt.criterion': 'Ha/Bohr',
-        'MD.TempControl': 'K',                   # not an ase unit!
-        'NH.Mass.HeatBath': '_amu',
-        'MD.Init.Velocity': 'm/s',
-        'Dos.Erange': 'eV'
-                         }
-    allowed_dat_keywords = [
-        'System.CurrentDir',             # Implemented
-        'System.Name',                   # Implemented
-        'DATA.PATH',                     # Implemented
-        'level.of.stdout',               # Implemented
-        'level.of.fileout',              # Implemented
-        'Species.Number',                # Implemented
-        'Definition.of.Atomic.Species',  # Implemented
-        'Atoms.Number',                  # Implemented
-        'Atoms.SpeciesAndCoordinates',   # Implemented
-        'Atoms.UnitVectors.Unit',        # Implemented
-        'Atoms.UnitVectors',             # Implemented
-        'scf.XcType',                    # Implemented
-        'scf.spinpolarization',          # Implemented
-        'scf.partialCoreCorrection'
-        'scf.Hubbard.U',                 # Implemented
-        'scf.Hubbard.Occupation',        # Implemented
-        'scf.Hubbard.U.values',          # Implemented
-        'scf.Constraint.NC.Spin',        # Implemented
-        'scf.Constraint.NC.Spin.v',      # Implemented
-        'scf.ElectronicTemperature',     # Implemented
-        'scf.energycutoff',              # Implemented
-        'scf.Ngrid',
-        'scf.maxIter',                   # Implemented
-        'scf.EigenvalueSolver',          # Implemented
-        'scf.Kgrid',                     # Implemented
-        'scf.ProExpn.VNA',
-        'scf.Mixing.Type',               # Implemented
-        'scf.Init.Mixing.Weight',        # Implemented
-        'scf.Min.MixingWeight',          # Implemented
-        'scf.Kerker.factor',
-        'scf.Mixing.History',            # Implemented
-        'scf.Mixing.StartPulay',         # Implemented
-        'scf.Mixing.EveryPulay',
-        'scf.criterion',                 # Implemented
-        'scf.Electric.Field',
-        'scf.system.charge',
-        'scf.SpinOrbit.Coupling',
-        'scf.SpinPolarization',          # Implemented
-        '1DFFT.EnergyCutoff',
-        '1DFFT.NumGridK',
-        '1DFFT.NumGridR',
-        'orbitalOpt.Method',
-        'orbitalOpt.scf.maxIter',
-        'orbitalOpt.Opt.maxIter',
-        'orbitalOpt.Opt.Method',
-        'orbitalOpt.StartPulay',
-        'orbitalOpt.HistoryPulay',
-        'orbitalOpt.SD.step',
-        'orbitalOpt.criterion',
-        'CntOrb.fileout',
-        'Num.CntOrb.Atoms',
-        'Atoms.Cont.Orbitals',
-        'orderN.HoppingRanges',
-        'orderN.KrylovH.order',
-        'orderN.KrylovS.order',
-        'orderN.Exact.Inverse.S',
-        'orderN.Recalc.Buffer',
-        'orderN.Expand.Core',
-        'MD.Type',                      # Implemented
-        'MD.Fixed.XYZ',
-        'MD.maxIter',                   # Implemented
-        'MD.TimeStep',                  # Implemented
-        'MD.Opt.criterion',             # Implemented
-        'MD.Opt.DIIS.History',
-        'MD.Opt.StartDIIS',
-        'MD.TempControl',
-        'NH.Mass.HeatBath',
-        'MD.Init.Velocity',
-        'Band.Dispersion',              # Implemented
-        'Band.KPath.UnitCell',          # Implemented
-        'Band.Nkpath',                  # Implemented
-        'Band.kpath',                   # Implemented
-        'scf.restart',
-        'MO.fileout',                   # Implemented
-        'num.HOMOs',                    # Implemented
-        'num.LUMOs',                    # Implemented
-        'MO.Nkpoint',                   # Implemented
-        'MO.kpoint',                    # Implemented
-        'Dos.fileout',                  # Implemented
-        'Dos.Erange',                   # Implemented
-        'Dos.Kgrid',                    # Implemented
-        'HS.fileout',
-        'Voronoi.charge',
-        ]
+    default_parameters = OpenMXParameters()
 
     non_standard_parameters = {
         'energy_cutoff': Ha,
     }
-
-    default_parameters = OpenMXParameters()
 
     default_pbs = {
         'processes': 1,
@@ -321,7 +207,10 @@ class OpenMX(FileIOCalculator):
         """
         # Check the kwargs inputs are Allowed.
         for key, value in kwargs.items():
-            if key == 'xc' and value not in self.allowed_xc:
+            if key not in self.default_parameters.keys():
+                raise KeyError('Unkown keyword "%s" and value "%s".' %
+                               (key, value))
+            if key == 'xc' and value not in self.default_parameters.allowed_xc:
                 raise KeyError('Given xc "%s" is not allowed' % value)
             if key in ['dat_arguments'] and isinstance(value, dict):
                 # For values that are dictionaries, verify subkeys, too.
@@ -360,9 +249,9 @@ class OpenMX(FileIOCalculator):
                 got '%s'" % ('energy_cutoff', value)
             raise ValueError(mess)
 
-        atoms = kwargs.get('_atoms')
-        if atoms is not None and self.atoms is None:
-            self.atoms = atoms
+        #atoms = kwargs.get('atoms')
+        #if atoms is not None and self.atoms is None:
+        #    self.atoms = atoms
 
     def run(self):
         '''Check Which Running method we r going to use and run it'''
@@ -804,6 +693,7 @@ class OpenMX(FileIOCalculator):
             f.write(format_dat('scf.SpinPolarization', 'On'))
         elif np.any(pag('initial_magnetic_moments_euler_angles') is not None):
             f.write(format_dat('scf.SpinPolarization', 'NC'))
+            f.write(format_dat('scf.SpinOrbit.Coupling', 'On'))
             if pa.get('nc_spin_constraint_penalty'):
                 f.write(format_dat('scf.Constraint.NC.Spin', 'ON'))
                 f.write(format_dat('scf.Constraint.NC.Spin.v',
@@ -973,49 +863,45 @@ class OpenMX(FileIOCalculator):
             - atoms: An atoms object.
         """
         species, specie_numbers = self.species(atoms)
-        if np.any(self['initial_magnetic_moments'] is not None):
-            if type(self['initial_magnetic_moments']) == \
-               float or type(self['initial_magnetic_moments']) == int:
-                self['initial_magnetic_moments'] = [
-                    self['initial_magnetic_moments'] for atom in atoms]
-            elif len(self['initial_magnetic_moments']) == len(atoms):
+        magmoms = 'initial_magnetic_moments'
+        magmoms_angle = 'initial_magnetic_moments_euler_angles'
+        if np.any(self[magmoms] is not None):
+            if type(self[magmoms]) == float or type(self[magmoms]) == int:
+                self[magmoms] = [self[magmoms] for atom in atoms]
+            elif len(self[magmoms]) == len(atoms):
                 pass
             elif len(atoms) != len(species) and \
-                    len(self['initial_magnetic_moments']) == len(species):
+                    len(self[magmoms]) == len(species):
                 new_list = []
                 for atom in atoms:
-                    for i in range(len(self['initial_magnetic_moments'])):
+                    for i in range(len(self[magmoms])):
                         if atom.symbol == species[i]['symbol']:
                             new_list.append(
-                                self['initial_magnetic_moments'][i])
+                                self[magmoms][i])
                 if len(new_list) != len(atoms):
                     raise RuntimeError
-                self['initial_magnetic_moments'] = new_list
+                self[magmoms] = new_list
             else:
                 raise TypeError
-            if np.any(self['initial_magnetic_moments_euler_angles'] is not
+            if np.any(self[magmoms_angle] is not
                       None):
                 try:
-                    length = len(self['initial_magnetic_moments_euler_angles'])
+                    length = len(self[magmoms_angle])
                 except TypeError:
                     raise TypeError(
                         'Please specify at least a tuple of two angles if not \
                          a list of these tuples')
                 one_euler_angle = False
                 if length == 2:
-                    if type(self['initial_magnetic_moments_euler_angles'][0]) \
-                        in [float, int] and \
-                            type(self['initial_magnetic_moments_euler_\
-                                       angles'][1]) in [float, int]:
+                    if type(self[magmoms_angle][0]) in [float, int] and \
+                            type(self[magmoms_angle][1]) in [float, int]:
                         one_euler_angle = True
                 if one_euler_angle:
-                    each_euler_angle = self['initial_magnetic_moments_\
-                                             euler_angles']
-                    self['initial_magnetic_moments_euler_angles'] = [
+                    each_euler_angle = self[magmoms_angle]
+                    self[magmoms_angle] = [
                         each_euler_angle for atom in atoms]
                 else:
-                    for euler_angle in self['initial_magnetic_moments_\
-                                             euler_angles']:
+                    for euler_angle in self[magmoms_angle]:
                         if len(euler_angle) != 2:
                             raise TypeError(
                                 'Need to specify both theta and phi angles')
@@ -1059,11 +945,11 @@ class OpenMX(FileIOCalculator):
                 float(self.read_electron_valency(symbol + '_' +
                       self.pseudo_qualifier() + '13' +
                     self['dft_data_dict'][symbol]['pseudo-potential suffix']))
-            if np.any(self['initial_magnetic_moments'] is not None):
+            if np.any(self[magmoms] is not None):
                 charge_of_spin_up_state_guess += \
-                    self['initial_magnetic_moments'][atomIndex]
+                    self[magmoms][atomIndex]
                 charge_of_spin_down_state_guess -= \
-                    self['initial_magnetic_moments'][atomIndex]
+                    self[magmoms][atomIndex]
             charge_of_spin_up_state_guess /= 2.
             charge_of_spin_down_state_guess /= 2.
             line = str(atomIndex + 1) + ' '
@@ -1073,13 +959,10 @@ class OpenMX(FileIOCalculator):
             line += str.rjust('    %.9f' % xyz[2], 16) + ' '
             line += str(charge_of_spin_up_state_guess) + ' '
             line += str(charge_of_spin_down_state_guess)
-            if np.any(self['initial_magnetic_moments_euler_angles']
+            if np.any(self[magmoms_angle]
                       is not None):
-                line += ' ' + str(float(self['initial_magnetic_moments\
-                                      _euler_angles'][atomIndex][0])) + ' ' + \
-                        str(float(
-                            self['initial_magnetic_moments_euler_angles']
-                                [atomIndex][1]))
+                line += ' ' + str(float(self[magmoms_angle][atomIndex][0])) + \
+                        ' ' + str(float(self[magmoms_angle][atomIndex][1]))
                 if self['nc_spin_constraint_euler_angles']:
                     line += ' ' + str(float(
                          self['nc_spin_constraint_euler_angles']
@@ -1100,7 +983,7 @@ class OpenMX(FileIOCalculator):
                 opea = opea
             elif(type(opea) == int):
                 opea = range(opea)
-            if np.any(self['initial_magnetic_moments'] is not None):
+            if np.any(self[magmoms] is not None):
                 if atomIndex in opea:
                     line += ' on'
                 else:
@@ -1237,11 +1120,15 @@ class OpenMX(FileIOCalculator):
                 required_line = line
         return read_nth_to_last_value(required_line)
 
-    def read_input(self):
-        if(self.debug):
+    def read_input(self, debug=None, nohup=None):
+        if(debug is None):
+            debug = self.debug
+        if(nohup is None):
+            nohup = self.nohup
+        if(debug):
             print('Reading input files')
         filename = self.get_file_name('.dat')
-        if not self.nohup:
+        if not nohup:
             with open(filename, 'r') as f:
                 while True:
                     line = f.readline()
@@ -1387,7 +1274,6 @@ class OpenMX(FileIOCalculator):
                     # need to incorporate NC spin
                     if 'magmom' in properties:
                         self.results['magmom'] = float(rn(ln))
-                        pa['total_magnetic_moments'] = self.results['magmom']
                     if 'magmoms' in properties:
                         ln = f.readline()
                         while ln == '\n':
@@ -1396,29 +1282,30 @@ class OpenMX(FileIOCalculator):
                         self.results['magmoms'] = np.ndarray(
                                                   number_of_atoms, float)
                         for atom_index in range(number_of_atoms):
-                            self.results['magmoms'][atom_index] = rn(ln)
+                            self.results['magmoms'][atom_index] = float(rn(ln))
                             ln = f.readline()
+                    pa['total_magnetic_moments'] = self.results['magmom']
+                    # pa['initial_magnetic_moments'] = self.results['magmoms']
                 if 'chemical_potential' in properties \
                         and 'chemical potential' in ln:
                     self.results['chemical_potential'] = float(rn(ln)) * Ha
-        self.read_atomic_info(filename)
+        self.read_atomic_info()
         self.read_restart_input()
         self.read_log_file()
         self.read_eigenvalue_output()
 
-    def read_atomic_info(self, filename):
-        abs_dir = join(os.getcwd(), self.directory)
-        abs_lab = join(abs_dir, self.prefix)
+    def read_atomic_info(self, filename=None):
         ''' Read the atomic cell size, positions, magnetic moments and force'''
         line = '\n'
         cell = np.ndarray((3, 3), float)
         symbols = []
         forces = []
         magmoms = []
+        magmoms_angle = []
         positions = []
         rn = read_nth_to_last_value
         if filename is None:
-            filename = join(abs_lab, '.out')
+            filename = self.get_file_name('.out')
         with open(filename, 'r') as f:
             while line != '':
                 line = f.readline().lower()
@@ -1450,6 +1337,8 @@ class OpenMX(FileIOCalculator):
                         positions.append(pos[2:5])
                         if(pos[6] is not None):
                             magmoms.append(float(pos[6])-float(pos[5]))
+                        if(pos[7] is not None):
+                            magmoms_angle.append(pos[7:9])
                 if 'utot.' in line:
                     self.results['energy'] = float(rn(line)) * Ha
                     self.results['free_energy'] = self.results['energy']
@@ -1466,6 +1355,8 @@ class OpenMX(FileIOCalculator):
                     self.results['forces'] = forces * Ha / Bohr
                     self.forces_history.append(self.results['forces'])
                     continue
+                self['initial_magnetic_moments'] = magmoms
+                self['initial_magnetic_moments_euler_angles'] = magmoms_angle
                 self.atoms = Atoms(symbols, cell=cell, positions=positions,
                                    pbc=np.array([True, True, True],
                                                 dtype=bool),
@@ -1587,7 +1478,7 @@ class OpenMX(FileIOCalculator):
             try:
                 f = open(self.directory + '/' + self.prefix + '.Band', 'r')
                 f.close()
-            except ReadError:
+            except FileNotFoundError:
                 print('There is no ".BAND" file in ' +
                       self.directory + '/' + self.prefix + '.Band')
                 print('Calculating band structure')
@@ -1634,6 +1525,13 @@ class OpenMX(FileIOCalculator):
             else:
                 print(plot + ' not implemented')
                 NotImplementedError
+
+    def get_band_structure(self, atoms=None, calc=None):
+        """ This is band structure ploting function that is compatible with
+        ase dft module """
+        from ase.dft import band_structure
+        #print('cell of atoms',self.atoms.cell)
+        return band_structure.get_band_structure(self.atoms, self)
 
     def get_mo(self, homos=None, lumos=None, real=True, imaginary=False,
                spins=None, atoms=None):
@@ -1758,9 +1656,53 @@ class OpenMX(FileIOCalculator):
                                         0.5 * float(2 * k - n3 + 1) / n3))
         return np.array(bz_k_points)
 
-    # for now, irreducible Brillouin zone will be the first Brillouin zone
+    def get_kpoints(self, kpts=None, symbols=None, band_kpath=None, eps=1e-5):
+        """Convert band_kpath <-> kpts"""
+        if kpts is None:
+            kx_linspace = np.linspace(band_kpath[0]['start_point'][0],
+                                      band_kpath[0]['end_point'][0],
+                                      band_kpath[0]['kpts'])
+            ky_linspace = np.linspace(band_kpath[0]['start_point'][1],
+                                      band_kpath[0]['end_point'][1],
+                                      band_kpath[0]['kpts'])
+            kz_linspace = np.linspace(band_kpath[0]['start_point'][2],
+                                      band_kpath[0]['end_point'][2],
+                                      band_kpath[0]['kpts'])
+            kpts = np.array([kx_linspace, ky_linspace, kz_linspace]).T
+            for path in band_kpath[1:]:
+                kx_linspace = np.linspace(path['start_point'][0],
+                                          path['end_point'][0],
+                                          path['kpts'])
+                ky_linspace = np.linspace(path['start_point'][1],
+                                          path['end_point'][1],
+                                          path['kpts'])
+                kz_linspace = np.linspace(path['start_point'][2],
+                                          path['end_point'][2],
+                                          path['kpts'])
+                k_lin = np.array([kx_linspace, ky_linspace, kz_linspace]).T
+                kpts = np.append(kpts, k_lin, axis=0)
+            return kpts
+        elif band_kpath is None:
+            band_kpath = []
+            points = np.asarray(kpts)
+            diffs = points[1:] - points[:-1]
+            kinks = abs(diffs[1:] - diffs[:-1]).sum(1) > eps
+            N = len(points)
+            indices = [0]
+            indices.extend(np.arange(1, N - 1)[kinks])
+            indices.append(N - 1)
+            for start, end, s_sym, e_sym in zip(indices[1:], indices[:-1],
+                                                symbols[1:], symbols[:-1]):
+                band_kpath.append({'start_point': start, 'end_point': end,
+                                   'kpts': 20,
+                                   'path_symbols': (s_sym, e_sym)})
+            return band_kpath
+
     def get_ibz_k_points(self):
-        return self.get_bz_k_points()
+        if self['band_kpath'] is None:
+            return self.get_bz_k_points()
+        else:
+            return self.get_kpoints(band_kpath=self['band_kpath'])
 
     def get_lattice_type(self):
         cellpar = cell_to_cellpar(self.atoms.cell)
@@ -1799,7 +1741,9 @@ class OpenMX(FileIOCalculator):
             else:
                 if self['scf_spinpolarization'] == 'on':
                     return 2
-                elif self['scf_spinpolarization'] == 'nc':
+                elif self['scf_spinpolarization'] == 'nc' or \
+                        np.any(self['initial_magnetic_moments_euler_angles']) \
+                        is not None:
                     return 1
         except KeyError:
             return 1
@@ -1812,12 +1756,12 @@ class OpenMX(FileIOCalculator):
         if kpt is None and spin is None:
             return self.results['eigenvalues']
         else:
+            #self.results['eigenvalues'] = self.read_eigenvalue_output()
             return self.results['eigenvalues'][spin, kpt, :]
 
-    def read_eigenvalue_output(self, filename=None):
+    def read_dos_output(self):
         abs_dir = join(os.getcwd(), self.directory)
         abs_lab = join(abs_dir, self.prefix)
-        rn = read_nth_to_last_value
         try:
             with open(os.path.join(abs_lab, '.Dos.val'), 'r') as f:
                 string = ''
@@ -1846,10 +1790,13 @@ class OpenMX(FileIOCalculator):
                                 read_nth_to_last_value(
                                     string, number_of_bands - k)) * Ha
                         string = f.readline()
-                self.results['eigenvalues'] = eigenvalues
-        except ReadError:
+        except FileNotFoundError:
             if(self.debug):
                 print("No .Dos.val file found, trying .eigen file instead")
+            return eigenvalues
+
+    def read_eigen_output(self):
+        """Read the eigenvalues from '.eigen' file format"""
         try:
             with open(os.path.join(self.directory,
                                    self.prefix + '.eigen'), 'r') as f:
@@ -1867,10 +1814,68 @@ class OpenMX(FileIOCalculator):
                         eigenvalues[-1][0, n] = \
                             float(read_nth_to_last_value(string)) * Ha
                         string = f.readline()
-            self.results['eigenvalues'] = np.array(eigenvalues)
-        except ReadError:
+        except FileNotFoundError:
             if(self.debug):
                 print("No .eigen file found")
+        return eigenvalues
+
+    def read_band_output(self, filename=None):
+        npoints = 0
+        band_kpath = []
+        kpts = []
+        rn = read_nth_to_last_value
+        try:
+            if(self.debug):
+                print("Trying to read .Band File")
+            fl = float
+            if filename is None:
+                filename = self.get_file_name('.Band')
+            with open(filename, 'r') as f:
+                li = f.readline()
+                nbands = int(rn(li, 3))
+                self.results['chemical_potential'] = float(rn(li)) * Ha
+                li = f.readline()
+                rec_cell = [[fl(rn(li, 9)), fl(rn(li, 8)), fl(rn(li, 7))],
+                            [fl(rn(li, 6)), fl(rn(li, 5)), fl(rn(li, 4))],
+                            [fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1))]]
+                li = f.readline()
+                number_of_sym_points = int(rn(li))
+                for a in range(number_of_sym_points):
+                    li = f.readline()
+                    npoints += int(rn(li, 9))
+                    start_p = (fl(rn(li, 8)), fl(rn(li, 7)), fl(rn(li, 6)))
+                    end_pts = (fl(rn(li, 5)), fl(rn(li, 4)), fl(rn(li, 3)))
+                    symbols = (str(rn(li, 2)), str(rn(li, 1)))
+                    band_kpath.append({'kpts': int(rn(li, 9)),
+                                       'start_point': start_p,
+                                       'end_point': end_pts,
+                                       'path_symbols': symbols})
+                self['band_kpath'] = band_kpath
+                nspins = self.get_number_of_spins()
+                if(self.debug):
+                    print('Spin, KPTS, bands', nspins, npoints, nbands)
+                eigenvalues = np.zeros((nspins, npoints, nbands))
+                for kpt in range(npoints):
+                    li = f.readline()
+                    kp = (fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1)))
+                    kpts.append(kp)
+                    li = f.readline()
+                    eigenvalues_at_kp = li.split()
+                    eigenvalues[0, kpt] = eigenvalues_at_kp[:]
+                    if nspins == 2:
+                        li = f.readline()
+                        kp = (fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1)))
+                        li = f.readline()
+                        eigenvalues_at_kp = li.split()
+                        eigenvalues[1, kpt] = eigenvalues_at_kp[:]
+
+        except FileNotFoundError:
+            if(self.debug):
+                print("No .Band file found")
+        return eigenvalues[:] * Ha
+
+    def read_out_output(self, filename=None):
+        rn = read_nth_to_last_value
         try:
             if(self.debug):
                 print("Trying to read .out File")
@@ -1912,10 +1917,20 @@ class OpenMX(FileIOCalculator):
                         k += 1
                     if nkpts == k or not line:
                         break
-            self.results['eigenvalues'] = eig
-        except ReadError:
+        except FileNotFoundError:
             if(self.debug):
                 print("No .out file found")
+        return eig
+
+    def read_eigenvalue_output(self, filename=None):
+        if self['dos_erange'] is not None:
+            self.results['eigenvalues'] = self.read_dos_output()
+        elif False:  # proper condtion setting required
+            self.results['eigenvalues'] = self.read_eigen_output()
+        elif self['band_dispersion'] is True or self['band_kpath'] is not None:
+            self.results['eigenvalues'] = self.read_band_output()
+        else:
+            self.results['eigenvalues'] = self.read_out_output()
 
     def get_fermi_level(self):
         try:
@@ -1980,7 +1995,7 @@ class OpenMX(FileIOCalculator):
                                      float(read_nth_to_last_value(string, 2)),
                                      float(read_nth_to_last_value(string, 1)))
                     string = f.readline()
-        except ReadError:
+        except FileNotFoundError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
 
@@ -2042,6 +2057,6 @@ class OpenMX(FileIOCalculator):
                                 complex(
                                 float(read_nth_to_last_value(string, 2)),
                                 float(read_nth_to_last_value(string, 1)))
-        except self.ReadError:
+        except FileNotFoundError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
