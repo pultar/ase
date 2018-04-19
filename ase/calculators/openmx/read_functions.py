@@ -1,3 +1,23 @@
+"""
+The ASE Calculator for OpenMX <http://www.openmx-square.org>: Python interface
+to the software package for nano-scale material simulations based on density
+functional theories.
+    Copyright (C) 2017 Charles Thomas Johnson ,Jae Hwan Shim and JaeJun Yu
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2.1 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with ASE.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from __future__ import print_function
 from matplotlib import pyplot
 from ase.units import Ha, Bohr
