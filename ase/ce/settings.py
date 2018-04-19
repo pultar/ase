@@ -489,11 +489,16 @@ class ClusterExpansionSetting:
         max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
         if sum(min_1) != sum(max_1):
             raise ValueError('conc_ratio values must be on the same scale')
+
         natoms_cell = len(self.atoms_with_given_dim)
         natoms_ratio = sum(min_1)
         scale = int(natoms_cell / natoms_ratio)
         min_1 *= scale
         max_1 *= scale
+        # special case where there is only one concentration
+        if np.array_equal(min_1, max_1):
+            return min_1
+
         diff_1 = [i - j for i, j in zip(max_1, min_1)]
         nsteps_1 = max(diff_1)
         increment_1 = diff_1 / nsteps_1

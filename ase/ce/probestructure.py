@@ -101,7 +101,15 @@ class ProbeStructure(object):
         for temp in temps:
             for _ in range(steps_per_temp):
                 if bool(getrandbits(1)):
-                    new, n_cf = self._change_element_type(old, o_cf)
+                    if self._has_more_than_one_conc():
+                        new, n_cf = self._change_element_type(old, o_cf)
+                    else:
+                        if self._is_swappable(old):
+                            new, n_cf = self._swap_two_atoms(old, o_cf)
+                        else:
+                            raise RuntimeError('Atoms has only one ' +
+                                               'concentration value and ' +
+                                               'not swappable.')
                 else:
                     if self._is_swappable(old):
                         new, n_cf = self._swap_two_atoms(old, o_cf)
@@ -140,9 +148,19 @@ class ProbeStructure(object):
             o_mv = mean_variance(o_cfm, self.sigma, self.mu)
         diffs = []
         for _ in range(100):
+            print(_)
             if bool(getrandbits(1)):
-                new, n_cf = self._change_element_type(old, o_cf)
+                print('change type')
+                if self._has_more_than_one_conc():
+                    new, n_cf = self._change_element_type(old, o_cf)
+                else:
+                    if self._is_swappable(old):
+                        new, n_cf = self._swap_two_atoms(old, o_cf)
+                    else:
+                        raise RuntimeError('Atoms has only one concentration' +
+                                           'value and not swappable.')
             else:
+                print('swap')
                 if self._is_swappable(old):
                     new, n_cf = self._swap_two_atoms(old, o_cf)
                 else:
@@ -207,6 +225,11 @@ class ProbeStructure(object):
         atoms, cf = self._change_element_type(atoms, cf, indx[0], symbol[1])
         atoms, cf = self._change_element_type(atoms, cf, indx[1], symbol[0])
         return atoms, cf
+
+    def _has_more_than_one_conc(self):
+        if len(self.setting.conc_matrix) > 1:
+            return True
+        return False
 
     def _is_swappable(self, atoms):
          # determine if the basis is grouped

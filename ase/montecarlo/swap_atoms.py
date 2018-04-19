@@ -5,7 +5,7 @@ Simulated Annealing.
 """
 from random import choice
 import numpy as np
-from ase.ce.settings import BulkCrystal
+from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.atoms import Atoms
 
 
@@ -14,7 +14,7 @@ class SwapAtoms(object):
     constraints. To be used for Monte Carlo and Simulated Annealing.
     """
     def __init__(self, setting):
-        if not isinstance(setting, BulkCrystal):
+        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("Passed object should be BulkCrystal type")
         self.setting = setting
 

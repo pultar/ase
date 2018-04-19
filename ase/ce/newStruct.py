@@ -128,7 +128,7 @@ class GenerateStructures(object):
         if (self.setting.num_conc_var == 1 and
             self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
-                conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
+                conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
                 if atoms is None:
                     continue
@@ -142,9 +142,9 @@ class GenerateStructures(object):
               self.struct_per_gen == self.conc_matrix.shape[0] *
               self.conc_matrix.shape[1]):
             for x in range(self.conc_matrix.shape[0]):
-                conc1 = float(x)/(self.conc_matrix.shape[0] - 1)
+                conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 for y in range(self.conc_matrix.shape[1]):
-                    conc2 = float(y)/(self.conc_matrix.shape[1] - 1)
+                    conc2 = float(y) / max(self.conc_matrix.shape[1] - 1, 1)
                     atoms = self._random_struct_at_conc(self.conc_matrix[x][y],
                                                         conc1, conc2)
                     if atoms is None:
@@ -161,8 +161,8 @@ class GenerateStructures(object):
             x = 0
             while x < self.struct_per_gen:
                 a = random.choice(conc1_opt)
-                conc1 = float(a)/(num_conc1 - 1)
-                atoms = self.random_struct(self.conc_matrix[a], conc1)
+                conc1 = float(a) / max(num_conc1 - 1, 1)
+                atoms = self._random_struct_at_conc(self.conc_matrix[a], conc1)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -179,10 +179,10 @@ class GenerateStructures(object):
             x = 0
             while x < self.struct_per_gen:
                 a = [random.choice(conc1_opt), random.choice(conc2_opt)]
-                conc1 = float(a[0])/(num_conc1 - 1)
-                conc2 = float(a[1])/(num_conc2 - 1)
-                atoms = self.random_struct(self.conc_matrix[a[0]][a[1]],
-                                           conc1, conc2)
+                conc1 = float(a[0]) / max(num_conc1 - 1, 1)
+                conc2 = float(a[1]) / max(num_conc2 - 1, 1)
+                atoms = self._random_struct_at_conc(self.conc_matrix[a[0]][a[1]],
+                                                    conc1, conc2)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -249,7 +249,7 @@ class GenerateStructures(object):
             for x in range(num_conc1):
                 if np.array_equal(conc_ratio, self.conc_matrix[x]):
                     break
-            conc = [round(float(x)/(num_conc1 - 1), 3), None]
+            conc = [round(float(x) / max(num_conc1 - 1, 1), 3), None]
         else:
             num_conc1, num_conc2 = self.conc_matrix.shape[:2]
             for x in range(num_conc1):
@@ -259,8 +259,8 @@ class GenerateStructures(object):
                 else:
                     continue
                 break
-            conc = [round(float(x)/(num_conc1 - 1), 3),
-                    round(float(y)/(num_conc2 - 1), 3)]
+            conc = [round(float(x) / max(num_conc1 - 1, 1), 3),
+                    round(float(y) / max(num_conc2 - 1, 1), 3)]
 
         return conc
 
@@ -337,7 +337,7 @@ class GenerateStructures(object):
             if index is None:
                 continue
             conc_value[i] = float(conc_index[i]) /\
-                            (self.conc_matrix.shape[i] - 1)
+                            max(self.conc_matrix.shape[i] - 1, 1)
 
         return conc_ratio, conc_value
 
