@@ -5,17 +5,17 @@ functional theories.
     Copyright (C) 2017 Charles Thomas Johnson ,Jae Hwan Shim and JaeJun Yu
 
     This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2.1 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    GNU Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public License
+    along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
 from __future__ import print_function
 import os
@@ -231,9 +231,9 @@ class OpenMXParameters(Parameters):
             try:
                 dft_data_path = os.environ['OPENMX_DFT_DATA_PATH']
             except KeyError:
-                raise KeyError('Please either set OPENMX_DFT_DATA_PATH as an'
-                               'environment variable or specify dft_data_path'
-                               'as a keyword argument.')
+               #raise ValueError('Please either set OPENMX_DFT_DATA_PATH as an'
+               #                 'environment variable or specify'
+               #                 'dft_data_path as a keyword argument.')
 
         if kpts is None:
             kpts = (1, 1, 1)
