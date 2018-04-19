@@ -27,7 +27,7 @@ from ase.calculators.openmx.import_functions import read_nth_to_last_value
 from ase.calculators.openmx.import_functions import cartesian_to_spherical_polar
 from ase.calculators.openmx.import_functions import input_command
 from ase.calculators.calculator import FileIOCalculator, Calculator
-from ase.calculators.calculator import all_changes, equal
+from ase.calculators.calculator import all_changes, equal, ReadError
 from ase.calculators.calculator import kptdensity2monkhorstpack
 from ase.calculators.openmx.parameters import Specie, format_dat
 from ase.calculators.openmx.parameters import OpenMXParameters
@@ -1461,7 +1461,7 @@ class OpenMX(FileIOCalculator):
             #                           self.prefix + '.Dos.val'), 'r')
             #    f2 = open(os.path.join(self.directory,
             #                           self.prefix + '.Dos.vec'), 'r')
-            # except FileNotFoundError:
+            # except ReadError:
             #    print('Calculating Eigenvalues and Eigenvectors')
             #    self.calculate(atoms)
             #    print('Calculating DOS')
@@ -1478,7 +1478,7 @@ class OpenMX(FileIOCalculator):
             try:
                 f = open(self.directory + '/' + self.prefix + '.Band', 'r')
                 f.close()
-            except FileNotFoundError:
+            except ReadError:
                 print('There is no ".BAND" file in ' +
                       self.directory + '/' + self.prefix + '.Band')
                 print('Calculating band structure')
@@ -1790,7 +1790,7 @@ class OpenMX(FileIOCalculator):
                                 read_nth_to_last_value(
                                     string, number_of_bands - k)) * Ha
                         string = f.readline()
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .Dos.val file found, trying .eigen file instead")
             return eigenvalues
@@ -1814,7 +1814,7 @@ class OpenMX(FileIOCalculator):
                         eigenvalues[-1][0, n] = \
                             float(read_nth_to_last_value(string)) * Ha
                         string = f.readline()
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .eigen file found")
         return eigenvalues
@@ -1869,7 +1869,7 @@ class OpenMX(FileIOCalculator):
                         eigenvalues_at_kp = li.split()
                         eigenvalues[1, kpt] = eigenvalues_at_kp[:]
 
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .Band file found")
         return eigenvalues[:] * Ha
@@ -1917,7 +1917,7 @@ class OpenMX(FileIOCalculator):
                         k += 1
                     if nkpts == k or not line:
                         break
-        except FileNotFoundError:
+        except ReadError:
             if(self.debug):
                 print("No .out file found")
         return eig
@@ -1995,7 +1995,7 @@ class OpenMX(FileIOCalculator):
                                      float(read_nth_to_last_value(string, 2)),
                                      float(read_nth_to_last_value(string, 1)))
                     string = f.readline()
-        except FileNotFoundError:
+        except ReadError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
 
@@ -2057,6 +2057,6 @@ class OpenMX(FileIOCalculator):
                                 complex(
                                 float(read_nth_to_last_value(string, 2)),
                                 float(read_nth_to_last_value(string, 1)))
-        except FileNotFoundError:
+        except ReadError:
             raise Exception('Please calculate the overlap matrix elements for '
                             'the bloch states')
