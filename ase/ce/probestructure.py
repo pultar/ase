@@ -148,9 +148,7 @@ class ProbeStructure(object):
             o_mv = mean_variance(o_cfm, self.sigma, self.mu)
         diffs = []
         for _ in range(100):
-            print(_)
             if bool(getrandbits(1)):
-                print('change type')
                 if self._has_more_than_one_conc():
                     new, n_cf = self._change_element_type(old, o_cf)
                 else:
@@ -160,7 +158,6 @@ class ProbeStructure(object):
                         raise RuntimeError('Atoms has only one concentration' +
                                            'value and not swappable.')
             else:
-                print('swap')
                 if self._is_swappable(old):
                     new, n_cf = self._swap_two_atoms(old, o_cf)
                 else:
