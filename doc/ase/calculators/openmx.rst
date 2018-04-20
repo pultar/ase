@@ -59,120 +59,101 @@ The default setting used by the OpenMX interface is
 
 Below follows a list with a selection of parameters
 
-+-------------------+-----------+---------+---------------------------------------------+
-| keyword           | type      | default | description                                 |
-+===================+===========+=========+=============================================+
-| ``xc``            | ``str``   | LDA     | Exchange correlation functional.            |
-|                   |           |         | Options are:                                |
-|                   |           |         | 'LDA' -> Local Density Approximation        |
-|                   |           |         | 'LSDA' or 'CA' -> 'LSDA-CA'                 |
-|                   |           |         | -> Local Spin Density Approximation,        |
-|                   |           |         | Ceperley-Alder                              |
-|                   |           |         | 'PW' -> 'LSDA-PW' -> Local Spin             |
-|                   |           |         | Density Approximation, Perdew-Wang          |
-|                   |           |         | 'GGA' or 'PBE' -> 'GGA-PBE' ->              |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``kpts``          | ``int``   | (4,4,4) | GGA proposed by Perdew, Burke, and Ernzerhof|
-|                   |           |         | Integers in a tuple specifying the type of  |
-|                   |           |         | Monkhorst Pack                              |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``dft_data_dict`` | ``dict``  |         | A specification of the atomic orbital       |
-|                   |           |         | basis to be used for each atomic species    |
-|                   |           |         | e.g)  dft_data_dict =                       |
-|                   |           |         | {'C': {'cutoff radius': 8*ase.units.Bohr,   |
-|                   |           |         | 'orbitals used': [1,1]}}                    |
-|                   |           |         | means that for carbon species,              |
-|                   |           |         | the spatial extent of the atomic orbitals   |
-|                   |           |         | used is limited to 8 Bohr and one level of s|
-|                   |           |         | orbitals are used and one level of p        |
-|                   |           |         | orbitals are used. The default value for    |
-|                   |           |         | this is specified in the default_settings.py|
-|                   |           |         | file, namely, default_dictionary.           |
-+-------------------+-----------+---------+---------------------------------------------+
-| initial_magnetic_m| ``list `` | None    | An iterable containing the initial guess for|
-| oments            |           |         | magnetic_moments for each atom. A positive  |
-|                   |           |         | value indicates a net magnetic moment in the|
-|                   |           |         | spin up direction. If this argument is      |
-|                   |           |         | specified, OpenMX will indentify the system |
-|                   |           |         | as spin polarised and will try to find a    |
-|                   |           |         | stable collinear spin configuration for     |
-|                   |           |         | the system which is nearest the initial     |
-|                   |           |         | guess specified.  You may then specify      |
-|                   |           |         | hubbard_u_values and hubbard_occupation.    |
-+-------------------+-----------+---------+---------------------------------------------+
-| hubbard_u_values  | ``dict``  | None    | A dictionary of dictionaries.               |
-|                   |           |         | The first key specifies the species symbol  |
-|                   |           |         | (e.g. 'Fe') and the second key specifies    |
-|                   |           |         | the orbital (e.g. '1d'). The value is in    |
-|                   |           |         | eV. If the value is not provided it assumed |
-|                   |           |         | to be zero.                                 |
-|                   |           |         | e.g. hubbard_u_values={'Fe': {'1d': 4.0}}   |
-|                   |           |         | => Hubbard U values will be 0 eV            |
-|                   |           |         | except for 1d orbitals in iron atoms.       |
-+-------------------+-----------+---------+---------------------------------------------+
-| hubbard_occupation| ``str``   |         | A choice of 'dual', 'onsite' or 'full'      |
-+-------------------+-----------+---------+---------------------------------------------+
-| initial_magnetic  | ``list``  |         | Initial guess for orientation of each atom's|
-| _moments_euler_   |           |         | Magnetic moment in degrees. If this argument|
-| angles            |           |         | is specified, OpenMX will allow spins       |
-|                   |           |         | between atoms to be non-collinear.          |
-|                   |           |         | e.g. initial_magnetic_moments_euler_angles  |
-|                   |           |         | =[(45, 0), (90, 45)] => First atom          |
-|                   |           |         | has magnetic moment aligned in theta=45     |
-|                   |           |         | degrees and phi=0 degrees direction and the |
-|                   |           |         | second atom has magneticmoment aligned in   |
-|                   |           |         | theta=90 degrees and phi=45 degrees         |
-|                   |           |         | direction.                                  |
-+-------------------+-----------+---------+---------------------------------------------+
-| nc_spin_constrai  |	``list``  |         | Same format as initial_magnetic_moments_eule|
-| nt_euler_angle    |	          |         | r_angles. Specify this if you want to constr|
-|                   |           |         | ain the spins to certain axes. You must also|
-|                   |           |         | specify spin_euler_angle and either nc_spin |
-|                   |           |         | _constraint_penalty or magnetic_field.      |
-+-------------------+-----------+---------+---------------------------------------------+
-| nc_spin_constrai  |	          |         | if nc_spin_constraint_euler_angle is given, |
-| nt_penalty        |           |         | you may specify a prefactor (eV) for the    |
-|                   |           |         | penalty functional to be used.              |
-+-------------------+-----------+---------+---------------------------------------------+
-| magnetic_field    | 	        |         | quote a magnitude of magnetic field strength|
-|                   |           |         | (T) in the direction of orbital_euler_angle.|
-|                   |           |         | This will include the Zeeman term for orbita|
-|                   |           |         | l magnetic moments in the DFT calculation.  |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``smearing`` 	    |           |         | Specifies the variation of electron occupati|
-|                   |           |         | on with respect to the Fermi level. Default |
-|                   |           |         | is ('Fermi-Dirac': 300*ase.units.kB).       |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``scf_max_iter``  |  ``int``  |         | the maximum number of iterations the self   |
-|                   |           |         | consistent field calculation will make befor|
-|                   |           |         | e finishing. Default is 40.                 |
-+-------------------+-----------+---------+---------------------------------------------+
-| eigenvalue_solver | ``str``   |         | 'DC' (for divide-conquer method), 'Krylov'  |
-|                   |           |         | (for Krylov subspace method), 'ON2' (for a  |
-|                   |           |         | numerically exact low-order scaling method),|
-|                   |           |         | 'Cluster' or 'Band'. If not specified, this |
-|                   |           |         | will be taken as 'Cluster'.                 |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``mixing_type``   |           |         | how the electron density is determined for  |
-|                   |           |         | the next self consistent field step. Options|
-|                   |           |         | are 'Simple', 'GR-Pulay' (Guaranteed Reducti|
-|                   |           |         | on), 'RMM-DIIS', 'Kerker', 'RMM-DIISK',     |
-|                   |           |         | 'DMM-DIISH'.                                |
-+-------------------+-----------+---------+---------------------------------------------+
-| init_mixing_weigh |           | 0.3     |                                             |
-| t                 |           |         |                                             |
-+-------------------+-----------+---------+---------------------------------------------+
-| min_mixing_weight |           | 0.001   |                                             |
-+-------------------+-----------+---------+---------------------------------------------+
-| max_mixing_weight |           | 0.4     |                                             |
-+-------------------+-----------+---------+---------------------------------------------+
-| mixing_history    |           | 5       |                                             |
-+-------------------+-----------+---------+---------------------------------------------+
-| mixing_start_pula |           | 6       |                                             |
-| y                 |           |         |                                             |
-+-------------------+-----------+---------+---------------------------------------------+
-| ``scf_criterion`` |           | 0.000001| Hartrees                                    |
-+-------------------+-----------+---------+---------------------------------------------+
+====================  ===========  ========= ============================================
+ keyword              type         default   description
+====================  ===========  ========= ============================================
+ ``xc``               ``str``      LDA       Exchange correlation functional.
+                                             Options are:
+                                             'LDA' -> Local Density Approximation
+                                             'LSDA' or 'CA' -> 'LSDA-CA'
+                                             -> Local Spin Density Approximation,
+                                             Ceperley-Alder
+                                             'PW' -> 'LSDA-PW' -> Local Spin
+                                             Density Approximation, Perdew-Wang
+                                             'GGA' or 'PBE' -> 'GGA-PBE' ->
+ ``kpts``             ``int``      (4,4,4)   GGA proposed by Perdew, Burke, and Ernzerhof
+                                             Integers in a tuple specifying the type of
+                                             Monkhorst Pack
+ ``dft_data_dict``    ``dict``               A specification of the atomic orbital
+                                             basis to be used for each atomic species
+                                             e.g)  dft_data_dict =
+                                             {'C': {'cutoff radius': 8*ase.units.Bohr,
+                                             'orbitals used': [1,1]}}
+                                             means that for carbon species,
+                                             the spatial extent of the atomic orbitals
+                                             used is limited to 8 Bohr and one level of s
+                                             orbitals are used and one level of p
+                                             orbitals are used. The default value for
+                                             this is specified in the default_settings.py
+                                             file, namely, default_dictionary.
+ initial_magnetic_m   ``list ``    None      An iterable containing the initial guess for
+ oments                                      magnetic_moments for each atom. A positive
+                                             value indicates a net magnetic moment in the
+                                             spin up direction. If this argument is
+                                             specified, OpenMX will indentify the system
+                                             as spin polarised and will try to find a
+                                             stable collinear spin configuration for
+                                             the system which is nearest the initial
+                                             guess specified.  You may then specify
+                                             hubbard_u_values and hubbard_occupation.
+ hubbard_u_values     ``dict``     None      A dictionary of dictionaries.
+                                             The first key specifies the species symbol
+                                             (e.g. 'Fe') and the second key specifies
+                                             the orbital (e.g. '1d'). The value is in
+                                             eV. If the value is not provided it assumed
+                                             to be zero.
+                                             e.g. hubbard_u_values={'Fe': {'1d': 4.0}}
+                                             => Hubbard U values will be 0 eV
+                                             except for 1d orbitals in iron atoms.
+ hubbard_occupation   ``str``                A choice of 'dual', 'onsite' or 'full'
+ initial_magnetic     ``list``               Initial guess for orientation of each atom's
+ _moments_euler_                             Magnetic moment in degrees. If this argument
+ angles                                      is specified, OpenMX will allow spins
+                                             between atoms to be non-collinear.
+                                             e.g. initial_magnetic_moments_euler_angles
+                                             =[(45, 0), (90, 45)] => First atom
+                                             has magnetic moment aligned in theta=45
+                                             degrees and phi=0 degrees direction and the
+                                             second atom has magneticmoment aligned in
+                                             theta=90 degrees and phi=45 degrees
+                                             direction.
+ nc_spin_constrai  	  ``list``               Same format as initial_magnetic_moments_eule
+ nt_euler_angle    	                         r_angles. Specify this if you want to constr
+                                             ain the spins to certain axes. You must also
+                                             specify spin_euler_angle and either nc_spin
+                                             _constraint_penalty or magnetic_field.
+ nc_spin_constrai  	                         if nc_spin_constraint_euler_angle is given,
+ nt_penalty                                  you may specify a prefactor (eV) for the
+                                             penalty functional to be used.
+ magnetic_field       	                    q uote a magnitude of magnetic field strength
+                                             (T) in the direction of orbital_euler_angle.
+                                             This will include the Zeeman term for orbita
+                                             l magnetic moments in the DFT calculation.
+ ``smearing`` 	                              Specifies the variation of electron occupati
+                                             on with respect to the Fermi level. Default
+                                             is ('Fermi-Dirac': 300*ase.units.kB).
+ ``scf_max_iter``      ``int``               the maximum number of iterations the self
+                                             consistent field calculation will make befor
+                                             e finishing. Default is 40.
+ eigenvalue_solver    ``str``                'DC' (for divide-conquer method), 'Krylov'
+                                             (for Krylov subspace method), 'ON2' (for a
+                                             numerically exact low-order scaling method),
+                                             'Cluster' or 'Band'. If not specified, this
+                                             will be taken as 'Cluster'.
+ ``mixing_type``                             how the electron density is determined for
+                                             the next self consistent field step. Options
+                                             are 'Simple', 'GR-Pulay' (Guaranteed Reducti
+                                             on), 'RMM-DIIS', 'Kerker', 'RMM-DIISK',
+                                             'DMM-DIISH'.
+ init_mixing_weigh                 0.3
+ t
+ min_mixing_weight                 0.001
+ max_mixing_weight                 0.4
+ mixing_history                    5
+ mixing_start_pula                 6
+ y
+ ``scf_criterion``                 0.000001  Hartrees
+===================== ===========  ========= =============================================
 
 Molecular Dynamics
 ==================
