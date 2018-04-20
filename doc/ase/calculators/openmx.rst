@@ -187,24 +187,24 @@ Band Structure
 ======================= ========= ============== ============================
 keyword                 type      default value  description
 ======================= ========= ============== ============================
-``band_dispersion``     ``str``   False		 If True, the band structure will be calculated
-						 for a path in k-space specified by band_kpath.
-``band_kpath_unitcell`` ``float``  		 If given, this specifies the unit cell
-						 (in terms of real space) being used to
-						 calculate the band structure. If not given,
-						 the unit cell given in ASE will be used.
-``band_kpath`` 		``float``		 A list of dictionaries giving the properties
-						 of each part of the path in k-space. Each
-						 dictionary should give:
-``kpts`` 		``int``			 an integer specifying the number of points
-						 in kspace to calculate energies between the
-						 start and end point.
-``start_point``        	``float``  		 i.e. where in k-space relative to the
-						 unit cell the part of the path starts from.
-``end_point`` 		``float`` 		 i.e. where in k-space relative to the unit
-						 cell the part of the path ends.
-``path_symbols`` 	``str``			 i.e. the symbol denoting the start
-						 point and the symbol denoting the end point.
+``band_dispersion``     ``str``   False		       If True, the band structure will be calculated
+						                                     for a path in k-space specified by band_kpath.
+``band_kpath_unitcell`` ``float``  		           If given, this specifies the unit cell
+						                                     (in terms of real space) being used to
+						                                     calculate the band structure. If not given,
+						                                     the unit cell given in ASE will be used.
+``band_kpath`` 		      ``float``		             A list of dictionaries giving the properties
+						                                     of each part of the path in k-space. Each
+						                                     dictionary should give:
+``kpts`` 		            ``int``			             an integer specifying the number of points
+						                                     in kspace to calculate energies between the
+						                                     start and end point.
+``start_point``        	``float``  		           i.e. where in k-space relative to the
+						                                     unit cell the part of the path starts from.
+``end_point`` 		      ``float`` 		           i.e. where in k-space relative to the unit
+						                                     cell the part of the path ends.
+``path_symbols`` 	      ``str``			             i.e. the symbol denoting the start
+						                                     point and the symbol denoting the end point.
 ======================= ========= ============== ============================
 
 File Management
