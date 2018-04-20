@@ -231,10 +231,9 @@ class OpenMXParameters(Parameters):
             try:
                 dft_data_path = os.environ['OPENMX_DFT_DATA_PATH']
             except KeyError:
-               #raise ValueError('Please either set OPENMX_DFT_DATA_PATH as an'
-               #                 'environment variable or specify'
-               #                 'dft_data_path as a keyword argument.')
-
+                print('Please either set OPENMX_DFT_DATA_PATH as an enviroment'
+                      'variable or specify dft_data_path as a keyword argument'
+                      )
         if kpts is None:
             kpts = (1, 1, 1)
         elif type(kpts) is list:
