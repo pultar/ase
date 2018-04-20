@@ -227,13 +227,7 @@ class OpenMXParameters(Parameters):
             if smearing[0] in ['Gaussian', 'Methfessel-Paxton']:
                 raise NotImplementedError
             raise ValueError
-        if dft_data_path is None:
-            try:
-                dft_data_path = os.environ['OPENMX_DFT_DATA_PATH']
-            except KeyError:
-                print('Please either set OPENMX_DFT_DATA_PATH as an enviroment'
-                      'variable or specify dft_data_path as a keyword argument'
-                      )
+
         if kpts is None:
             kpts = (1, 1, 1)
         elif type(kpts) is list:
@@ -334,9 +328,9 @@ class OpenMXParameters(Parameters):
             try:
                 dft_data_path = os.environ['OPENMX_DFT_DATA_PATH']
             except KeyError:
-                raise KeyError(
-                    'Please either set OPENMX_DFT_DATA_PATH as an environment \
-                    variable or specify dft_data_path as a keyword argument.')
+                print('Please either set OPENMX_DFT_DATA_PATH as an enviroment'
+                      'variable or specify dft_data_path as a keyword argument'
+                      )
         if xc == 'LDA' and np.any(initial_magnetic_moments is not None):
             raise RuntimeError('LDA does not support spin polarised '
                                'calculations.\n' + 'Please either select a'
