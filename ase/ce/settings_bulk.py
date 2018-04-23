@@ -40,17 +40,20 @@ class BulkCrystal(ClusterExpansionSetting):
         name of the database file
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
-    max_cluster_dia: float or int
+    max_cluster_dist: float or int
         maximum diameter of cluster (in angstrom)
     grouped_basis: list
         indices of basis_elements that are considered to be equivalent when
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
+    dist_num_dec: int
+        number of decimal places used to determine the distances between atoms
     """
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
                  cubic=False, size=None, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None):
+                 max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
+                 dist_num_dec=3):
 
         self.basis_elements = basis_elements
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
@@ -74,10 +77,10 @@ class BulkCrystal(ClusterExpansionSetting):
                              "is {}".format(self.num_basis))
         self.unit_cell = self._get_unit_cell()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        self.min_lat = self._get_min_lat()
+        self.dist_num_dec = dist_num_dec
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
-                                         max_cluster_size, max_cluster_dia,
+                                         max_cluster_size, max_cluster_dist,
                                          basis_elements)
 
         self.index_by_basis = self._group_index_by_basis()
@@ -113,11 +116,6 @@ class BulkCrystal(ClusterExpansionSetting):
                          orthorhombic=self.orthorhombic, cubic=self.cubic)
         atoms = wrap_and_sort_by_position(atoms)
         return atoms
-
-    def _get_min_lat(self):
-        """Get the minimum length of the lattice vectors of the unit cell."""
-        atoms = self.unit_cell
-        return min(atoms.get_cell_lengths_and_angles()[:3])
 
     def _group_index_by_basis(self):
         num_basis = self.structures[self.crystalstructure]
@@ -178,17 +176,20 @@ class BulkSpacegroup(ClusterExpansionSetting):
         name of the database file
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
-    max_cluster_dia: float or int
+    max_cluster_dist: float or int
         maximum diameter of cluster (in angstrom)
     grouped_basis: list
         indices of basis_elements that are considered to be equivalent when
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
+    dist_num_dec: int
+        number of decimal places used to determine the distances between atoms
     """
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
                  primitive_cell=False, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None):
+                 max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
+                 dist_num_dec=3):
         # Set parameters for spacegroup crystal
         self.basis = basis
         self.num_basis = len(basis)
@@ -202,11 +203,11 @@ class BulkSpacegroup(ClusterExpansionSetting):
         for x in range(self.num_basis):
             self.symbols.append(basis_elements[x][0])
         self.unit_cell = self._get_unit_cell()
-        self.min_lat = self._get_min_lat()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
+        self.dist_num_dec = dist_num_dec
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
-                                         max_cluster_size, max_cluster_dia,
+                                         max_cluster_size, max_cluster_dist,
                                          basis_elements, grouped_basis)
 
         self.index_by_basis = self._group_index_by_basis()
@@ -218,14 +219,6 @@ class BulkSpacegroup(ClusterExpansionSetting):
                                          self.grouped_basis_elements
                                          for x in sub]
             self.num_grouped_elements = len(self.all_grouped_elements)
-
-    def _get_min_lat(self):
-        # use cellpar only when cell is not defined
-        if self.cell is None:
-            lat = float(min(self.cellpar[:3]))
-        else:
-            lat = float(min(np.sum(self.cell, axis=1)))
-        return lat
 
     def _get_unit_cell(self):
         atoms = crystal(symbols=self.symbols, basis=self.basis,

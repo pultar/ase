@@ -9,7 +9,7 @@ from ase.gui.images import Images
 
 class ClusterExpansionSetting:
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
-                 max_cluster_dia=None, basis_elements=None,
+                 max_cluster_dist=None, basis_elements=None,
                  grouped_basis=None):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
@@ -21,8 +21,8 @@ class ClusterExpansionSetting:
         self.num_elements = len(self.all_elements)
         self.unique_elements = list(set(deepcopy(self.all_elements)))
         self.num_unique_elements = len(self.unique_elements)
-        self.max_cluster_dia, self.supercell_scale_factor = \
-            self._get_max_cluster_dia_and_scale_factor(max_cluster_dia)
+        self.max_cluster_dist, self.supercell_scale_factor = \
+            self._get_max_cluster_dist_and_scale_factor(max_cluster_dist)
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
         if grouped_basis is None:
@@ -88,25 +88,23 @@ class ClusterExpansionSetting:
             self.conc_ratio_max_2 = conc_ratio_max_2
         return True
 
-    def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
+    def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
         atoms = self.atoms_with_given_dim
-        lengths = atoms.get_cell_lengths_and_angles()[:3] /\
-            (2. * self.min_lat) * 1000
+        lengths = atoms.get_cell_lengths_and_angles()[:3]
         min_length = min(lengths)
 
         scale_factor = np.array([1, 1, 1], dtype=int)
-        if max_cluster_dia is None:
-            max_cluster_dia = min_length
+        if max_cluster_dist is None:
+            max_cluster_dist = min_length
         else:
-            max_cluster_dia = max_cluster_dia / self.min_lat * 1000
-            if min_length < max_cluster_dia:
+            if min_length < max_cluster_dist:
                 scale_factor = []
                 for x in range(3):
-                    factor = max_cluster_dia / lengths[x]
+                    factor = max_cluster_dist / lengths[x]
                     factor = max([factor, 1])
                     scale_factor.append(factor)
                 scale_factor = np.ceil(scale_factor).astype(int)
-        return int(max_cluster_dia), scale_factor
+        return round(max_cluster_dist, self.dist_num_dec), scale_factor
 
     def _check_basis_elements(self):
         error = False
@@ -260,7 +258,7 @@ class ClusterExpansionSetting:
         distances between all constituting atoms in self.atoms object.
         """
         natoms = len(self.atoms)
-        dist = np.zeros((natoms, natoms, 8), dtype=int)
+        dist = np.zeros((natoms, natoms, 8), dtype=float)
         indices = [a.index for a in self.atoms]
         vec = self.atoms.get_cell()
         trans = [[0., 0., 0.],
@@ -276,9 +274,8 @@ class ClusterExpansionSetting:
             shifted.translate(trans[t])
             shifted.wrap()
             for x in range(natoms):
-                temp = shifted.get_distances(x, indices) / self.min_lat * 1000
-                temp = np.round(temp)
-                dist[x, :, t] = temp.astype(int)
+                temp = shifted.get_distances(x, indices)
+                dist[x, :, t] = np.round(temp, self.dist_num_dec)
         return dist
 
     def _group_indices_by_trans_symmetry(self):
@@ -333,17 +330,15 @@ class ClusterExpansionSetting:
 
         cluster_names: list
             names of clusters (i.e., c{x}_{y}_{#1}_{#2}, where
-                x  = number of atoms in cluster,
-                y  = maximum diameter of cluster (normalized by the shortest
-                     lattice vector length X 1000)
+                x  = number of atoms in cluster
+                y  = maximum distance of cluster
                 #1 = names are sequenced in a decreasing order when they have
                      the same number of atoms and max. diameter
                 #2 = account for different combination of basis function for
                      the cases where # of constituting elements is 3 or more).
 
         cluster_dist: list
-            distances of the constituting atoms in cluster. Normalized by the
-            shortest lattice vector length X 1000.
+            distances of the constituting atoms in cluster.
 
         cluster_indx: list
             list of indices that constitute the cluster based on the reference
@@ -373,7 +368,7 @@ class ClusterExpansionSetting:
 
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
-                    if max(d) > self.max_cluster_dia:
+                    if max(d) > self.max_cluster_dist:
                         continue
                     dist_set.append(d.tolist())
                     indx_set.append(k)
@@ -382,7 +377,7 @@ class ClusterExpansionSetting:
                     raise ValueError("There is no cluster with size " +
                                      "{}. Reduce ".format(size) +
                                      "max_cluster_size or increase " +
-                                     "max_cluster_dia.")
+                                     "max_cluster_dist.")
 
                 # categorize the distances
                 dist_types = np.unique(dist_set, axis=0).tolist()
@@ -397,7 +392,7 @@ class ClusterExpansionSetting:
                     # indx_types[category].append(indx_set[x])
                 cluster_indx[site].append(indx_types)
 
-        # Cluster names can be incorrectly assigned for cluster size of 3 and
+        # Cluster names can be incorrectly assigned for cluster size of 2 and
         # above. Assign global names for those clusters to avoid wrong name
         # assignments.
         for size in range(2, self.max_cluster_size + 1):
@@ -411,16 +406,18 @@ class ClusterExpansionSetting:
             unique_names = []
             counter = 1
             for k in range(len(unique_dist)):
+                name = 'c{0}_{1:.{prec}f}'.format(size, unique_dist[k][0],
+                                                  prec=self.dist_num_dec)
+                name = name.replace('.', 'p')
                 if k == 0:
-                    unique_names.append('c{}_{}_{}'.format(size,
-                                                           unique_dist[k][0],
-                                                           counter))
+                    name += '_{}'.format(counter)
+                    unique_names.append(name)
                     counter += 1
                     continue
                 if unique_dist[k][0] != unique_dist[k - 1][0]:
                     counter = 1
-                unique_names.append('c{}_{}_{}'.format(size, unique_dist[k][0],
-                                                       counter))
+                name += '_{}'.format(counter)
+                unique_names.append(name)
                 counter += 1
 
             self.unique_cluster_names.extend(unique_names)
@@ -472,14 +469,14 @@ class ClusterExpansionSetting:
 
     def indices_of_nearby_atom(self, ref_indx):
         """Return the indices of the atoms that are at distances smaller than
-        specified by max_cluster_dia from the reference atom index.
+        specified by max_cluster_dist from the reference atom index.
         """
         indices = [a.index for a in self.atoms]
         del indices[indices.index(ref_indx)]
         nearby_indices = []
         for indx in indices:
             for t in range(8):
-                if self.dist_matrix[ref_indx, indx, t] <= self.max_cluster_dia:
+                if self.dist_matrix[ref_indx, indx, t] <= self.max_cluster_dist:
                     nearby_indices.append(indx)
                     break
         return nearby_indices
@@ -535,7 +532,7 @@ class ClusterExpansionSetting:
 
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
-              ' on the values of max_cluster_size and max_cluster_dia...')
+              ' on the values of max_cluster_size and max_cluster_dist...')
         self.dist_matrix = self._create_distance_matrix()
         self.cluster_names, self.cluster_dist, self.cluster_indx = \
             self._get_cluster_information()

@@ -254,16 +254,14 @@ class CorrFunction(object):
         cell with the same size is returned after it is sorted by the position
         and wrapped. If not, it raises an error.
         """
-        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]\
-            / (2. * self.setting.min_lat) * 1000
+        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
         try:
             row = self.setting.db.get(name='information')
             template = row.toatoms()
         except:
             raise IOError("Cannot retrieve the information template from the "
                           "database")
-        template_lengths = template.get_cell_lengths_and_angles()[:3]\
-            / (2. * self.setting.min_lat) * 1000
+        template_lengths = template.get_cell_lengths_and_angles()[:3]
 
         if np.allclose(cell_lengths, template_lengths):
             atoms = wrap_and_sort_by_position(atoms)

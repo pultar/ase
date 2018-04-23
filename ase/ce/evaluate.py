@@ -51,7 +51,7 @@ class Evaluate(object):
             self.penalty = False
         elif penalty.lower() == 'lasso' or penalty.lower() == 'l1':
             self.penalty = 'l1'
-        elif penalty.lower() == 'euclidean' or penalty.lower() == 'l2':
+        elif penalty.lower() == 'ridge' or penalty.lower() == 'l2':
             self.penalty = 'l2'
         else:
             raise TypeError("The penalty type, {},".format(penalty) +
