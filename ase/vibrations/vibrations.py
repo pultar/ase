@@ -101,7 +101,7 @@ class Vibrations:
         self.ir = None
         self.ram = None
 
-    def run(self):
+    def run(self, export=None):
         """Run the vibration calculations.
 
         This will calculate the forces for 6 displacements per atom +/-x,
@@ -115,20 +115,37 @@ class Vibrations:
         simultaneously by several independent processes. This feature relies
         on the existence of files and the subsequent creation of the file in
         case it is not found.
+
+        If export is given, no calculation is executed. The geometries will
+        either be returned as a dict (format='return') or saved to file with
+        'format=export' for external use. The '.pckl' files will still be
+        created and should be filled by the external program used.
         """
 
         filename = self.name + '.eq.pckl'
         fd = opencew(filename)
-        if fd is not None:
+        if (fd is not None) and (export == None):
             self.calculate(filename, fd)
+        elif export == 'return':
+            ret = { filename: self.atoms.copy() }
+        elif export != None:
+            self.atoms.write(filename.replace('.pckl','.'+export),format=export)
 
         p = self.atoms.positions.copy()
         for filename, a, i, disp in self.displacements():
             fd = opencew(filename)
             if fd is not None:
                 self.atoms.positions[a, i] = p[a, i] + disp
-                self.calculate(filename, fd)
+                if export == None:
+                    self.calculate(filename, fd)
+                elif export == 'return':
+                    ret[filename] = self.atoms.copy()
+                else:
+                    self.atoms.write(filename.replace('.pckl','.'+export),format=export)
                 self.atoms.positions[a, i] = p[a, i]
+
+        if export == 'return':
+            return ret
 
     def displacements(self):
         for a in self.indices:
@@ -203,6 +220,7 @@ class Vibrations:
         r = 0
         if direction != 'central':
             feq = load(self.name + '.eq.pckl')
+            print(feq)
         for a in self.indices:
             for i in 'xyz':
                 name = '%s.%d%s' % (self.name, a, i)
