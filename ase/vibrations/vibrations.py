@@ -220,7 +220,6 @@ class Vibrations:
         r = 0
         if direction != 'central':
             feq = load(self.name + '.eq.pckl')
-            print(feq)
         for a in self.indices:
             for i in 'xyz':
                 name = '%s.%d%s' % (self.name, a, i)
