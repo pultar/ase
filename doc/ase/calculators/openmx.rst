@@ -194,7 +194,7 @@ keyword           type      default value  description
 ``md_max_iter``   ``int``   1              1
 ``time_step``     ``float`` 0.5            1
 ``md_criterion``  ``float`` 0.0001         Hartrees per Bohr
-================= ========= ============== ===========================
+================= ========= ============== ============================
 
 Density of States
 =================
