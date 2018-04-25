@@ -122,7 +122,7 @@ hubbard_u_values      ``dict``     None      A dictionary of dictionaries.
 hubbard_occupation    ``str``      None      A choice of 'dual', 'onsite' or
                                              'full'
 initial_magnetic      ``list``     None      Initial guess for orientation of
-_moments_euler                               each atom's Magnetic moment in
+_moments_euler                               each atoms Magnetic moment in
 _angles                                      degrees. If this argument is
                                              specified, OpenMX will allow spins
                                              between atoms to be non-collinear.
