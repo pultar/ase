@@ -295,21 +295,21 @@ keyword               type       description
 ``forces``            float      An array of tuples describing the forces on an
                                  each atom in eV / Ang. e.g. array([(atom1Fx,
                                  atom1Fy, atom1Fz), (atom2Fx, atom2Fy, atom2Fz)]
-                                 'dipole': A tuple describing the total dipole
-                                 moment in Debeye 'chemical_potential':
+                                 `dipole`: A tuple describing the total dipole
+                                 moment in Debeye `chemical_potential`:
                                  The chemical potential of the system in eV
 
-``atoms``             atom       Needs to be specified if system hasn't been
+``atoms``             atom       Needs to be specified if system hasn`t been
                                  calculated with the parameter,
                                  dos_fileout=True.
 ``erange``            tuple      e.g. (min_energy, max_energy) with the energy
                                  quoted in eV. If not specified, this will be
                                  the same as the dos_erange parameter of the
                                  calculator.
-``method``            str        'Tetrahedron' or 'Gaussian'. The method of
+``method``            str        `Tetrahedron` or `Gaussian`. The method of
                                  calculating the density of states from the
                                  eigenvalues and eigenvectors.
-``gaussian_width``    str        If method='Gaussian', then the width of
+``gaussian_width``    str        If method=`Gaussian`, then the width of
                                  broadening needs to be specified in eV. The
                                  default is 0.1eV.
 ``spin_polarization`` bool       If True, each graph plotted will split
@@ -330,7 +330,7 @@ cum                   bool       If True, the cumulative number of states from
 ``file_format``       str        If specified, instead of opening a window to
                                  the view the plot, the plot will be saved in a
                                  specified format. The following formats are
-                                 available: 'pdf', 'png', 'ps', 'eps' or 'svg'.
+                                 available: `pdf`, `png`, `ps`, `eps` or `svg`.
 ``pdos``              bool       If True, the partial density of states will be
                                  calculated and plotted for the atoms specified
                                  in atom_index_list and their orbitals specified
@@ -343,9 +343,9 @@ cum                   bool       If True, the cumulative number of states from
                                  specified, only the first atom will be used.
 ``orbital_list``      list       if pdos=True, a list of all the orbitals to
                                  have their partial density of states plotted.
-                                 If '' is in the list, the combined partial
+                                 If is in the list, the combined partial
                                  density of states for each desired atom will be
-                                 plotted. If 's', 'p', 'd' or 'f' is in the list
+                                 plotted. If `s`, `p`, `d` or `f` is in the list
                                  then all the corresponding orbitals of that
                                  type will be plotted. If the list is not
                                  specified, then only the combined density of
@@ -360,18 +360,18 @@ keyword           description
 ===============   ============================
 ``erange``        e.g. (min_energy, max_energy) with the energy quoted in eV.
                   If not specified, this defaults to (-10, 10).
-``plot``          which kind of plot that will be used. Either 'pyplot'
-                  (matplotlib) or 'gnuplot'. Default is 'pyplot'.
+``plot``          which kind of plot that will be used. Either `pyplot`
+                  (matplotlib) or `gnuplot`. Default is `pyplot`.
 ``atoms``         If the calculator has not produced a .Band file already, an
                   atoms object is required to run the calculation.
-``spin``          if plot='gnuplot' and spin is 'up' or 'down' then just the
+``spin``          if plot=`gnuplot` and spin is `up` or `down` then just the
                   specified spin states will be plotted.
 ``fermi_level``   If True, the region of the graph below the fermi level will be
                   highlighted in yellow. The default is True.
 ``file_format``   If specified, instead of opening a window to the view the
                   plot, the plot will be saved in a specified format. The
-                  following formats are available: 'pdf', 'png', 'ps', 'eps' or
-                  'svg'.
+                  following formats are available: `pdf`, `png`, `ps`, `eps` or
+                  `svg`.
 ===============   ============================
 
 get_mo(***kwargs):
@@ -390,7 +390,7 @@ keyword          description
 ``imaginary``    If True the imaginary component of the wavefunction will be
                  displayed. Defaults to False.
 ``spins``        if system is spin polarised you can choose the spins to display
-                 in a list. If 'up' or 'down' is in the list then those spins
+                 in a list. If `up` or `down` is in the list then those spins
                  will be displayed. Defaults to showing both spins for
                  spin-polarised cases, all just combined spin states otherwise.
 ==============   ============================
