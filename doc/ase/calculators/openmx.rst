@@ -265,7 +265,7 @@ Molecular Orbitals
 ========================== ======== ============= ============================
 keyword                    type     default value description
 ========================== ======== ============= ============================
-``homos``                  ``int``  None          the number of highest energy
+``homos``                  ``int``  None          The number of highest energy
                                                   occupied
                                                   molecular orbitals to
                                                   calculate.
@@ -285,7 +285,7 @@ keyword                    type     default value description
 Methods of OpenMX objects
 =========================
 
-get_dos(***kwargs):
+get_dos(\*\*\*kwargs):
 key word arguments:
 
 ====================  =========  ===============================================
@@ -352,7 +352,7 @@ cum                   bool       If True, the cumulative number of states from
                                  states will be plotted.
 ====================  =========  ===============================================
 
-get_band(***kwargs):
+get_band(\*\*\*kwargs):
 key-word arguments:
 
 ===============   ==============================================================
@@ -374,7 +374,7 @@ keyword           description
                   `svg`.
 ===============   ==============================================================
 
-get_mo(***kwargs):
+get_mo(\*\*\*kwargs):
 key-word arguments:
 
 ===============  ===============================================================
