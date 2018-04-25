@@ -134,14 +134,14 @@ _angles                                      degrees. If this argument is
                                              second atom has magneticmoment
                                              aligned in theta=90 degrees and
                                              phi=45 degrees direction.
-nc_spin_constrai       ``list``    None      Same format as initial_magnetic
+nc_spin_constrai      ``list``     None      Same format as initial_magnetic
 nt_euler_angle                               _moments_euler_angles. Specify this
                                              if you want to constrain the spins
                                              to certain axes. You must also
                                              specify spin_euler_angle and either
                                              nc_spin_constraint_penalty or
                                              magnetic_field.
-nc_spin_constrai       ``list``    None      if nc_spin_constraint_euler_angle
+nc_spin_constrai      ``list``     None      if nc_spin_constraint_euler_angle
 nt_penalty                                   is given, you may specify a
                                              prefactor (eV) for the penalty
                                              functional to be used.
@@ -151,7 +151,7 @@ magnetic_field        ``float``    None      quote a magnitude of magnetic field
                                              include the Zeeman term for orbital
                                              magnetic moments in the DFT
                                              calculation.
-``smearing``           ``float``   None      Specifies the variation of electron
+``smearing``          ``float``    None      Specifies the variation of electron
                                              occupati on with respect to the
                                              Fermi level. Default is
                                              ('Fermi-Dirac': 300\*ase.units.kB).
@@ -178,23 +178,23 @@ max_mixing_weight     ``flaot``    0.4       None
 mixing_history        ``int``      5         None
 mixing_start_pulay    ``int``      6         None
 ``scf_criterion``     ``float``    0.000001  Hartrees
-===================== ===========  ========= ===================================
+====================  ===========  ========= ===================================
 
 Molecular Dynamics
 ==================
 
-================= ======== ============== ============================
-keyword           type     default value  description
-================= ======== ============== ============================
-``md_type``       ``str``                 'Opt', 'NVE', 'NVT_VS' or
-                                          'NVT_NH'. If not
-                                          specified, no molecular
-                                          dynamics calculations
-                                          will be performed.
-``md_max_iter``   ``int``   1             1
-``time_step``    ``float`` 0.5            1
-``md_criterion`` ``float`` 0.0001         Hartrees per Bohr
-================ ========= ============== ============================
+================= ========= ============== ============================
+keyword           type      default value  description
+================= ========= ============== ============================
+``md_type``       ``str``                  'Opt', 'NVE', 'NVT_VS' or
+                                           'NVT_NH'. If not
+                                           specified, no molecular
+                                           dynamics calculations
+                                           will be performed.
+``md_max_iter``   ``int``   1              1
+``time_step``     ``float`` 0.5            1
+``md_criterion``  ``float`` 0.0001         Hartrees per Bohr
+================= ========= ============== ===========================
 
 Density of States
 =================
@@ -206,7 +206,7 @@ keyword           type      default value  description
                                            will be calculated for an
                                            energy range given by
                                            dos_erange.
-``dos_erange``     ``tuple`` (-25, 20)     Gives the density of states
+``dos_erange``    ``tuple`` (-25, 20)      Gives the density of states
                                            energy range in eV
 ``dos_kgrid``     ``tuple`` None           defaults to the value given by kpts.
 ================= ========= ============== ============================
@@ -255,8 +255,8 @@ File Management
 keyword     type    default value  description
 =========== ======= ============== ============================
 ``curdir``  ``str`` ./             the current directory of the system.
-``fileout`` ``int``  1             the level of file output.
-``stdout``  ``int``  1             the level of standard output.
+``fileout`` ``int`` 1              the level of file output.
+``stdout``  ``int`` 1              the level of standard output.
 =========== ======= ============== ============================
 
 Molecular Orbitals
@@ -276,7 +276,7 @@ keyword                    type     default value description
 ``mo_kpts``                ``list`` None          the points in k-space to find
                                                   HOMOs and LUMOs.
 ``absolute_path_of_vesta`` ``no``   None          the absolute file path of the
-                                                  system's VESTA executable.
+                                                  systems VESTA executable.
                                                   This is required to produced a
                                                   graphical output of HOMOs and
                                                   LUMOs.
