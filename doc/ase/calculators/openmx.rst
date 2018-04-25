@@ -93,8 +93,8 @@ Below follows a list with a selection of parameters
                                              this is specified in the
                                              default_settings.py
                                              file, namely, default_dictionary.
-initial_magnetic_mome ``list``     None      An iterable containing the initial
-ents                                         guess for magnetic_moments for
+initial_magnetic_mo   ``list``     None      An iterable containing the initial
+meents                                       guess for magnetic_moments for
                                              each atom. A positive value
                                              indicates a net magnetic moment
                                              in the spin up direction. If this
@@ -159,7 +159,7 @@ magnetic_field        ``float``    None      quote a magnitude of magnetic field
                                              the self consistent field
                                              calculation will make before
                                              finishing. Default is 40.
-``eigenvalue_solver`` ``str``      None      'DC' (for divide-conquer method),
+eigenvalue_solver     ``str``      None      'DC' (for divide-conquer method),
                                              'Krylov' (for Krylov subspace
                                              method), 'ON2' (for a numerically
                                              exact low-order scaling method),
@@ -288,9 +288,9 @@ Methods of OpenMX objects
 get_dos(***kwargs):
 key word arguments:
 
-====================  =========  ============================
+====================  =========  ===============================================
 keyword               type       description
-====================  =========  ============================
+====================  =========  ===============================================
 ``energy``            float      The total energy of the system in eV.
 ``forces``            float      An array of tuples describing the forces on an
                                  each atom in eV / Ang. e.g. array([(atom1Fx,
@@ -312,7 +312,7 @@ keyword               type       description
 ``gaussian_width``    str        If method=`Gaussian`, then the width of
                                  broadening needs to be specified in eV. The
                                  default is 0.1eV.
-``spin_polarization`` bool       If True, each graph plotted will split
+spin_polarization     bool       If True, each graph plotted will split
                                  horizontally with spin up above the x-axis and
                                  spin down below the x-axis. If not specified,
                                  this will be True for spin polarized systems
@@ -350,14 +350,14 @@ cum                   bool       If True, the cumulative number of states from
                                  type will be plotted. If the list is not
                                  specified, then only the combined density of
                                  states will be plotted.
-====================  =========  ============================
+====================  =========  ===============================================
 
 get_band(***kwargs):
 key-word arguments:
 
-===============   ============================
+===============   ==============================================================
 keyword           description
-===============   ============================
+===============   ==============================================================
 ``erange``        e.g. (min_energy, max_energy) with the energy quoted in eV.
                   If not specified, this defaults to (-10, 10).
 ``plot``          which kind of plot that will be used. Either `pyplot`
@@ -372,18 +372,17 @@ keyword           description
                   plot, the plot will be saved in a specified format. The
                   following formats are available: `pdf`, `png`, `ps`, `eps` or
                   `svg`.
-===============   ============================
+===============   ==============================================================
 
 get_mo(***kwargs):
 key-word arguments:
 
-===============  ============================
+===============  ===============================================================
 keyword          description
-===============  ============================
-``homos``        A list of HOMO numbers to display. e.g. homos=[0, 1, 5]
-                 => HOMO, HOMO-1,
-                 HOMO-5 will be displayed. Defaults to displaying all calculated
-                 HOMOs.
+===============  ===============================================================
+``homos``        A list of HOMO numbers to display. e.g. homos=[0, 1, 5] =>
+                 HOMO, HOMO-1, HOMO-5 will be displayed. Defaults to
+                 displaying all calculated HOMOs.
 ``lumos``        same as homos but for LUMOs.
 ``real``         If True the real component of the wavefunctions will be
                  displayed. Defaults to True.
@@ -393,4 +392,4 @@ keyword          description
                  in a list. If `up` or `down` is in the list then those spins
                  will be displayed. Defaults to showing both spins for
                  spin-polarised cases, all just combined spin states otherwise.
-==============   ============================
+===============  ===============================================================
