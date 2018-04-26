@@ -17,9 +17,13 @@ print(vib.get_mode(-1))
 vib.write_mode(n=None, nimages=20)
 vib_energies = vib.get_energies()
 
+for image in vib.iterimage():
+    assert len(image) == 2
+
 thermo = IdealGasThermo(vib_energies=vib_energies, geometry='linear',
                         atoms=n2, symmetrynumber=2, spin=0)
 thermo.get_gibbs_energy(temperature=298.15, pressure=2 * 101325.)
 
 assert vib.clean(empty_files=True) == 0
 assert vib.clean() == 13
+assert len(vib.get_images()) == 13
