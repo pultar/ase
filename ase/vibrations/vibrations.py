@@ -101,7 +101,7 @@ class Vibrations:
         self.ir = None
         self.ram = None
 
-    def run(self, export=None):
+    def run(self):
         """Run the vibration calculations.
 
         This will calculate the forces for 6 displacements per atom +/-x,
@@ -116,52 +116,65 @@ class Vibrations:
         on the existence of files and the subsequent creation of the file in
         case it is not found.
 
-        If export is given, no calculation is executed. The geometries will
-        either be returned as a dict (format='return') or saved to file with
-        'format=export' for external use. The '.pckl' files will still be
-        created and should be filled by the external program used.
+        If the program you want to use does not have a calculator in ASE, use
+        ``named_images`` to get all displaced structures and calculate the forces
+        on your own.
         """
 
         filename = self.name + '.eq.pckl'
         fd = opencew(filename)
-        if (fd is not None) and (export == None):
-            self.calculate(filename, fd)
-        elif export == 'return':
-            ret = { filename: self.atoms.copy() }
-        elif export != None:
-            self.atoms.write(filename.replace('.pckl','.'+export),format=export)
+        if fd is not None:
+            self.calculate(self.atoms, filename, fd)
 
-        p = self.atoms.positions.copy()
-        for filename, a, i, disp in self.displacements():
+        for dispName, atoms in self.named_images():
+            filename = dispName + '.pckl'
             fd = opencew(filename)
             if fd is not None:
-                self.atoms.positions[a, i] = p[a, i] + disp
-                if export == None:
-                    self.calculate(filename, fd)
-                elif export == 'return':
-                    ret[filename] = self.atoms.copy()
-                else:
-                    self.atoms.write(filename.replace('.pckl','.'+export),format=export)
-                self.atoms.positions[a, i] = p[a, i]
+                self.calculate(atoms, filename, fd)
 
-        if export == 'return':
-            return ret
+    def named_images(self):
+        """Yields name and atoms object of each displacement.
+
+        Use this to export the structures for each single-point calculation
+        to an external program instead of using ``run()``. Then save the
+        calculated gradients to <name>.pckl and continue using this instance.
+        """
+        for dispName, a, i, disp in self.displacements():
+            tmpAtoms = self.atoms.copy()
+            tmpAtoms.positions[a, i] += disp
+            #the calculator is not copied
+            tmpAtoms.set_calculator(self.atoms.get_calculator())
+            yield dispName, tmpAtoms
+
+    def get_images(self):
+        """Return all atom objects of single-atom displacements.
+
+        Use ``named_images`` to get each image with the corresponding name.
+        """
+        images = [ self.atoms.copy() ]
+        for name, atoms in self.named_images():
+            images.append(atoms.copy())
+        return images
+
+    def iterimage(self):
+        """Iterate over images of single-atom displacements"""
+        return iter(self.get_images())
 
     def displacements(self):
         for a in self.indices:
             for i in range(3):
                 for sign in [-1, 1]:
                     for ndis in range(1, self.nfree // 2 + 1):
-                        filename = ('%s.%d%s%s.pckl' %
+                        dispName = ('%s.%d%s%s' %
                                     (self.name, a, 'xyz'[i],
                                      ndis * ' +-'[sign]))
                         disp = ndis * sign * self.delta
-                        yield filename, a, i, disp
+                        yield dispName, a, i, disp
 
-    def calculate(self, filename, fd):
-        forces = self.atoms.get_forces()
+    def calculate(self, atoms, filename, fd):
+        forces = atoms.get_forces()
         if self.ir:
-            dipole = self.calc.get_dipole_moment(self.atoms)
+            dipole = self.calc.get_dipole_moment(atoms)
         if self.ram:
             freq, noninPol, pol = self.get_polarizability()
         if rank == 0:
@@ -191,7 +204,8 @@ class Vibrations:
 
         n = 0
         filenames = [self.name + '.eq.pckl']
-        for filename, a, i, disp in self.displacements():
+        for dispName, a, i, disp in self.displacements():
+            filename = dispName + '.pckl'
             filenames.append(filename)
 
         for name in filenames:
