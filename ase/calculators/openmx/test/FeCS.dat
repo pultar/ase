@@ -1,0 +1,203 @@
+#
+#      File Name      
+#
+
+System.CurrrentDirectory         ./    # default=./
+System.Name                       FeCS-gga
+DATA.PATH /group1/hermite/program/openmx3.8/DFT_DATA13
+level.of.stdout                   1    # default=1 (1-3)
+level.of.fileout                  1    # default=1 (1-3)
+
+HS.fileout on
+
+
+#
+# Definition of Atomic Species
+#
+Species.Number       4
+<Definition.of.Atomic.Species
+ Fe   Fe6.0S-s2p2d1       Fe_PBE13S
+ S    S7.0-s3p2d1          S_PBE13
+ C    C6.0-s2p2d1          C_PBE13
+proj  S7.0-s1p1d1    S_PBE13
+Definition.of.Atomic.Species>
+
+<Hubbard.U.values                 #  eV
+ Fe  1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 0.0 
+ S  1s 0.0 2s 0.0 3s 0.0 1p 0.0 2p 0.0 1d 0.0
+ C   1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 0.0
+proj 1s 0.0 1p 0.0 1d 0.0
+Hubbard.U.values>
+
+#
+# Atoms
+#
+
+Atoms.Number        27
+Atoms.SpeciesAndCoordinates.Unit   FRAC  # Ang|AU
+<Atoms.SpeciesAndCoordinates           #Unit=Ang
+1  Fe   0.4999998915482300  0.5000000114904247  0.5000000000000000 8   6  off 
+2  Fe   0.4999998515979132  0.0000000040509606  0.5000000000000000 8   6  off
+3  Fe   0.0000000195842402  0.4999997541277112  0.5000000000000000 8   6  off
+4  S    0.5447134236233090  0.8806764321946546  0.5000000000000000 3   3  off
+5  S    0.4552864997729590  0.1193237497930479  0.5000000000000000 3   3  off
+6  S    0.1192995567611373  0.6640618482664344  0.5000000000000000 3   3  off
+7  S    0.8807002391783836  0.3359377239415014  0.5000000000000000 3   3  off
+8  S    0.3359383600027913  0.4552223492708867  0.5000000000000000 3   3  off
+9  S    0.6640614843789985  0.5447777641582904  0.5000000000000000 3   3  off
+10 S    0.8807093985204222  0.5447745153090954  0.5000000000000000 3   3  off
+11 S    0.1192909068068541  0.4552252991730407  0.5000000000000000 3   3  off
+12 S    0.6640459638888709  0.1192817550924838  0.5000000000000000 3   3  off
+13 S    0.3359537839427401  0.8807181528118744  0.5000000000000000 3   3  off
+14 S    0.4552854139864125  0.3359508178595867  0.5000000000000000 3   3  off
+15 S    0.5447146054257989  0.6640492836052055  0.5000000000000000 3   3  off
+16 C    0.2369581778476623  0.6664203498764425  0.5000000000000000 2   2  off
+17 C    0.7630418897664133  0.3335797055626751  0.5000000000000000 2   2  off
+18 C    0.3335440781239753  0.5705151563673739  0.5000000000000000 2   2  off
+19 C    0.6664561335207629  0.4294851101893361  0.5000000000000000 2   2  off
+20 C    0.4294185472376201  0.7630007974838553  0.5000000000000000 2   2  off
+21 C    0.5705815315673235  0.2369994321662317  0.5000000000000000 2   2  off
+22 C    0.6664607848393695  0.2369798388861138  0.5000000000000000 2   2  off
+23 C    0.3335391397708317  0.7630201199126740  0.5000000000000000 2   2  off
+24 C    0.5705845210306121  0.3335913188576440  0.5000000000000000 2   2  off
+25 C    0.4294155686601040  0.6664087890098791  0.5000000000000000 2   2  off
+26 C    0.7630446331844928  0.4294691245702306  0.5000000000000000 2   2  off
+27 C    0.2369554764317798  0.5705308579723503  0.5000000000000000 2   2  off
+Atoms.SpeciesAndCoordinates>  
+Atoms.UnitVectors.Unit             Ang  #  Ang|AU
+<Atoms.UnitVectors                     # unit=AU
+ 14.8008060917972752    0.0004836069917674    0.0000007185318292 
+ -7.3999841828189865   12.8154079728848576    0.0000019959138783
+ -0.0000053430237417   -0.0000007228545469   14.9680153417995516
+Atoms.UnitVectors>
+
+
+#
+# SCF or Electronic System
+#
+
+scf.XcType                 GGA-PBE     # LDA|LSDA
+scf.Hubbard.U              on          # On|Off , default=off
+scf.Hubbard.Occupation     dual        # onsite|full|dual, default=dual
+scf.SpinPolarization       on          # On|Off
+scf.ElectronicTemperature  300.0       # default=300 (K)
+scf.energycutoff           600.0       # default=150 (Ry)
+scf.maxIter                200         # default=40
+scf.EigenvalueSolver       band        # Recursion|Cluster|Band
+scf.Kgrid                  9 9 1       # means 4x4x4
+scf.Mixing.Type           rmm-diish     # Simple|Rmm-Diis|Gr-Pulay
+scf.Init.Mixing.Weight     0.010       # default=0.30 
+scf.Min.Mixing.Weight      0.010       # default=0.001 
+scf.Max.Mixing.Weight      0.250       # default=0.40 
+scf.Mixing.History         30          # default=5
+scf.Mixing.StartPulay      12          # default=6
+scf.criterion             1.0e-8       # default=1.0e-6 (Hartree) 
+scf.lapack.dste           dstevx       # dstegr|dstedc|dstevx, default=dstegr
+
+
+#
+# Voronoi Charge
+#
+
+Voronoi.Charge              off         # default = Off
+
+
+#
+# MD or Geometry Optimization
+#
+
+#MD.Type                     nomd       # Nomd|Constant_Energy_MD|Opt
+#MD.maxIter                   1         # default=1
+#MD.TimeStep                 0.01       # default=0.5 (fs)
+#MD.Opt.criterion          1.0e-4       # default=1.0e-4 (Hartree/bohr)
+
+
+
+#
+# restarting using a restart file, *.rst
+#
+
+
+
+#
+# MO output
+#
+
+MO.fileout                  on        # on|off
+num.HOMOs                   1         # default=1
+num.LUMOs                   1         # default=1
+MO.Nkpoint                  3         # default=1
+<MO.kpoint
+ 0.000000  0.000000  0.0
+ 0.333333  0.333333  0.0
+ 0.500000  0.500000  0.0
+MO.kpoint>
+
+
+#
+# Band dispersion 
+#
+# if <Band.KPath.UnitCell does not exist,
+#     the reciprical lattice vector is employed. 
+
+Band.dispersion             on        # on|off, default=off
+Band.Nkpath                 3 
+<Band.kpath
+40  0.000000 0.000000 0.0   0.333333 0.333333 0.0   g  K
+40  0.333333 0.333333 0.0   0.0 0.5 0.0    K  M
+40  0.0 0.5 0.0   0.0 0.0 0.0   M  g
+Band.kpath>
+
+
+#
+# DOS and LDOS
+#
+
+Dos.fileout                 on        # on|off , default=off
+Dos.Erange              -7.0  6.0    # default = -20 20
+Dos.Kgrid                 21 21 1       # default = Kgrid1 Kgrid2 Kgrid3
+
+Wannier.Func.Calc        off
+Wannier.Func.Num          4
+Wannier.Outer.Window.Bottom -0.119
+Wannier.Outer.Window.Top     0.73
+Wannier.Inner.Window.Bottom   -0.119
+Wannier.Inner.Window.Top       0.73
+Wannier.Initial.Guess         on
+Wannier.Initial.Projectors.Unit FRAC     # AU, ANG or FRAC 
+
+#proj-sp3 0.25 0.25 0.25 0.0 0.0 -1.0  -1.0 0.0 0.0
+###
+<Wannier.Initial.Projectors
+proj-pz     0.33594  0.45522  0.5   0.0 0.0 1.0   1.0 0.0 0.0
+proj-pz     0.66406  0.54478  0.5   0.0 0.0 1.0   1.0 0.0 0.0
+proj-pz     0.45529  0.33595  0.5   0.0 0.0 1.0   1.0 0.0 0.0
+proj-pz     0.54471  0.66405  0.5   0.0 0.0 1.0   1.0 0.0 0.0
+Wannier.Initial.Projectors>
+###
+#### Si1-s  1.275 1.275 1.275  0.0 0.0 1.0    1.0 0.0 0.0 
+#### Si1-s  -1.275 -1.275 1.275 0.0 0.0 1.0    1.0 0.0 0.0 
+#### Si1-s  -1.275 1.275 -1.275 0.0 0.0 1.0    1.0 0.0 0.0 
+#### Si1-s  1.275 -1.275 -1.275 0.0 0.0 1.0    1.0 0.0 0.0
+
+
+Wannier.Kgrid  6 6 6
+Wannier.MaxShells   12
+#
+Wannier.Interpolated.Bands              on   # on|off, default=off 
+##
+Wannier.Function.Plot                   off   # on|off, default=off
+Wannier.Function.Plot.SuperCells     1 1 1   # default=0 0 0
+##
+Wannier.Dis.Mixing.Para     0.2
+Wannier.Dis.Conv.Criterion    1e-10
+Wannier.Dis.SCF.Max.Steps    400
+##
+Wannier.Minimizing.Max.Steps    800
+Wannier.Minimizing.Scheme     2
+Wannier.Minimizing.StepLength  2.0
+Wannier.Minimizing.Secant.Steps         5
+Wannier.Minimizing.Secant.StepLength    1.0
+Wannier.Minimizing.Conv.Criterion        1e-10
+#
+##

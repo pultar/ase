@@ -1,0 +1,30 @@
+
+Species.Number       2
+<Definition.of.Atomic.Species
+ C   C6.0-s2p2d1   C_CA13
+ C1  C6.0-s1p1     C_CA13
+Definition.of.Atomic.Species>
+
+<Atoms.SpeciesAndCoordinates           # Unit=Ang.
+   1    C    0.333333333   -0.333333333    0.0000000000     2     2     0     0     0     0     0     off
+   2    C   -0.333333333    0.333333333    0.0000000000     2     2     0     0     0     0     0     off
+Atoms.SpeciesAndCoordinates>
+
+
+Band.Projector.Type  eigen     #eigen,custom,  gencustom
+#k1, k2, k3, spin, nth band
+
+Band.Nprojector  3
+<Band.Projector
+0 0 0 0 83 
+0 0 0 0 84 
+0 0 0 0 85 
+Band.Projector>
+
+Band.Nkpath                 3 
+<Band.kpath
+40  0.000000 0.000000 0.0   0.333333 0.333333 0.0   g  K
+40  0.333333 0.333333 0.0   0.0 0.5 0.0    K  M
+40  0.0 0.5 0.0   0.0 0.0 0.0   M  g
+Band.kpath>
+
