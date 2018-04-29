@@ -1,0 +1,16 @@
+set term png
+set style data lines
+set nokey
+set zeroaxis
+set ytics 1
+set mytics 5
+set xra [0.000000:0.149778]
+set yra [-0.8:0.8]
+set ylabel "eV"
+set xtics ("g" 0.000000, "K" 0.149778)
+set output "u3_nosoc_up.png"
+plot "u3_nosoc_up_band" using 1:2,\
+     "u3_nosoc_up_band" using 1:2:($3/200) with circles lc rgb "red",\
+     "u3_nosoc_up_band" using 1:2:($4/200) with circles lc rgb "forest-green",\
+     "u3_nosoc_up_band" using 1:2:($5/200) with circles lc rgb "blue"
+pause -1

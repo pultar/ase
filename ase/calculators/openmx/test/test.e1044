@@ -1,0 +1,6 @@
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: got SIGCONT
+slurmstepd: error: *** JOB 1044 ON i10 CANCELLED AT 2017-12-20T20:46:22 ***
+srun: forcing job termination
+slurmstepd: error: *** STEP 1044.0 ON i10 CANCELLED AT 2017-12-20T20:46:22 ***
+srun: error: i10: task 0: Terminated

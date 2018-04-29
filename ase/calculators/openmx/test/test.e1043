@@ -1,0 +1,6 @@
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: got SIGCONT
+slurmstepd: error: *** JOB 1043 ON i03 CANCELLED AT 2017-12-20T20:31:29 ***
+srun: forcing job termination
+slurmstepd: error: *** STEP 1043.0 ON i03 CANCELLED AT 2017-12-20T20:31:29 ***
+srun: error: i03: task 0: Terminated
