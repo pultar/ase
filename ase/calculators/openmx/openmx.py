@@ -579,14 +579,10 @@ class OpenMX(FileIOCalculator):
                         self['initial_magnetic_moments_euler_angles'][i] = (
                             magnetic_moment[1], magnetic_moment[2])
 
-        # Call base calculator.
-        FileIOCalculator.write_input(
-            self,
-            atoms=atoms,
-            properties=properties,
-            system_changes=system_changes)
         filename = self.get_file_name('.dat')
         curdir = join(os.getcwd()+self.directory)
+        # Call base calculator.
+        FileIOCalculator.write_input(self, atoms, properties, system_changes)
 
         # Start writing the file.
         with open(filename, 'w') as f:
@@ -885,7 +881,11 @@ class OpenMX(FileIOCalculator):
                     raise RuntimeError
                 self[magmoms] = new_list
             else:
-                raise TypeError
+                ml = len(self[magmoms])
+                al = len(atoms)
+                raise TypeError('length of magnetic momemtum (%d) should have '
+                                'same length(%d) with a number of'
+                                'atoms' % (ml, al))
             if np.any(self[magmoms_angle] is not
                       None):
                 try:
@@ -1376,6 +1376,8 @@ class OpenMX(FileIOCalculator):
             self.set_label(label)
             directory = None
             prefix = None
+        elif self.label is None:
+            self.set_label('test')
         if prefix is None:
             prefix = self.prefix
         if directory is None:
