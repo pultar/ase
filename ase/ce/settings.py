@@ -90,21 +90,41 @@ class ClusterExpansionSetting:
 
     def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
         atoms = self.atoms_with_given_dim
-        lengths = atoms.get_cell_lengths_and_angles()[:3]
+        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
         min_length = min(lengths)
 
-        scale_factor = np.array([1, 1, 1], dtype=int)
-        if max_cluster_dist is None:
-            max_cluster_dist = min_length
+        # ------------------------------------- #
+        # Get max_cluster_dist in an array form #
+        # ------------------------------------- #
+        # max_cluster_dist is list or array
+        if isinstance(max_cluster_dist, (list, np.ndarray)):
+            # Length should be either max_cluster_size+1 or max_cluster_size-1
+            if len(max_cluster_dist) == self.max_cluster_size + 1:
+                for i in range(2):
+                    max_cluster_dist[i] = 0.
+                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
+            elif len(max_cluster_dist) == self.max_cluster_size - 1:
+                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
+                max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+            else:
+                raise ValueError("Invalid length for max_cluster_dist.")
+        # max_cluster_dist is int or float
+        elif isinstance(max_cluster_dist, (int, float)):
+            max_cluster_dist *= np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+        # Case for *None* or something else
         else:
-            if min_length < max_cluster_dist:
-                scale_factor = []
-                for x in range(3):
-                    factor = max_cluster_dist / lengths[x]
-                    factor = max([factor, 1])
-                    scale_factor.append(factor)
-                scale_factor = np.ceil(scale_factor).astype(int)
-        return round(max_cluster_dist, self.dist_num_dec), scale_factor
+            max_cluster_dist = np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dist *= min_length
+            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+
+        # --------------------------------- #
+        # Get scale_factor in an array form #
+        # --------------------------------- #
+        scale_factor = max(max_cluster_dist) / lengths
+        scale_factor = np.ceil(scale_factor).astype(int)
+
+        return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
 
     def _check_basis_elements(self):
         error = False
@@ -360,15 +380,15 @@ class ClusterExpansionSetting:
             cluster_names.append([['c0'], ['c1']])
             cluster_dist.append([[None], [None]])
             cluster_indx.append([[None], [None]])
-            indices = self.indices_of_nearby_atom(ref_indx)
 
             for size in range(2, self.max_cluster_size + 1):
+                indices = self.indices_of_nearby_atom(ref_indx, size)
                 indx_set = []
                 dist_set = []
 
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
-                    if max(d) > self.max_cluster_dist:
+                    if max(d) > self.max_cluster_dist[size]:
                         continue
                     dist_set.append(d.tolist())
                     indx_set.append(k)
@@ -467,7 +487,7 @@ class ClusterExpansionSetting:
             d.append(sorted(row, reverse=True))
         return np.array(min(d))
 
-    def indices_of_nearby_atom(self, ref_indx):
+    def indices_of_nearby_atom(self, ref_indx, size):
         """Return the indices of the atoms that are at distances smaller than
         specified by max_cluster_dist from the reference atom index.
         """
@@ -476,7 +496,8 @@ class ClusterExpansionSetting:
         nearby_indices = []
         for indx in indices:
             for t in range(8):
-                if self.dist_matrix[ref_indx, indx, t] <= self.max_cluster_dist:
+                if (self.dist_matrix[ref_indx, indx, t] <=
+                        self.max_cluster_dist[size]):
                     nearby_indices.append(indx)
                     break
         return nearby_indices
