@@ -91,6 +91,7 @@ class Vibrations:
     def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2):
         assert nfree in [2, 4]
         self.atoms = atoms
+        self.calc = atoms.get_calculator()
         if indices is None:
             indices = range(len(atoms))
         self.indices = np.asarray(indices)
@@ -117,48 +118,43 @@ class Vibrations:
         case it is not found.
 
         If the program you want to use does not have a calculator in ASE, use
-        ``named_images`` to get all displaced structures and calculate the forces
+        ``iterdisplaced`` to get all displaced structures and calculate the forces
         on your own.
         """
 
-        filename = self.name + '.eq.pckl'
-        fd = opencew(filename)
-        if fd is not None:
-            self.calculate(self.atoms, filename, fd)
-
-        for dispName, atoms in self.named_images():
+        for dispName, atoms in self.iterdisplaced(inplace=True):
             filename = dispName + '.pckl'
             fd = opencew(filename)
             if fd is not None:
                 self.calculate(atoms, filename, fd)
 
-    def named_images(self):
-        """Yields name and atoms object of each displacement.
+    def iterdisplaced(self, inplace=False):
+        """Yields name and atoms object of each displacement AND finally the initial structure.
 
         Use this to export the structures for each single-point calculation
         to an external program instead of using ``run()``. Then save the
         calculated gradients to <name>.pckl and continue using this instance.
         """
-        for dispName, a, i, disp in self.displacements():
-            tmpAtoms = self.atoms.copy()
-            tmpAtoms.positions[a, i] += disp
-            #the calculator is not copied
-            tmpAtoms.set_calculator(self.atoms.get_calculator())
-            yield dispName, tmpAtoms
+        try:
+            for dispName, a, i, disp in self.displacements():
+                if inplace:
+                    atoms = self.atoms
+                else:
+                    atoms = self.atoms.copy()
+                atoms.positions[a, i] += disp
+                #the calculator is not copied
+                yield dispName, atoms
+                atoms.positions[a, i] -= disp
+        finally:
+            if inplace:
+                yield self.name+'.eq', self.atoms
+            else:
+                yield self.name+'.eq', self.atoms.copy()
 
-    def get_images(self):
-        """Return all atom objects of single-atom displacements.
-
-        Use ``named_images`` to get each image with the corresponding name.
-        """
-        images = [ self.atoms.copy() ]
-        for name, atoms in self.named_images():
-            images.append(atoms.copy())
-        return images
-
-    def iterimage(self):
-        """Iterate over images of single-atom displacements"""
-        return iter(self.get_images())
+    def iterimages(self):
+        """Iterate over images of single-atom displacements AND initial structure (last)"""
+        for name, atoms in self.iterdisplaced():
+            yield atoms
 
     def displacements(self):
         for a in self.indices:
@@ -172,7 +168,7 @@ class Vibrations:
                         yield dispName, a, i, disp
 
     def calculate(self, atoms, filename, fd):
-        forces = atoms.get_forces()
+        forces = self.calc.get_forces(atoms)
         if self.ir:
             dipole = self.calc.get_dipole_moment(atoms)
         if self.ram:
