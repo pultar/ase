@@ -534,7 +534,7 @@ class Aims(FileIOCalculator):
                     (self.targettier, symbol))
             if self.parameters.plus_u is not None:
                 if symbol in self.parameters.plus_u.keys():
-                control.write('plus_u %s \n' %self.parameters.plus_u[symbol])
+                    control.write('plus_u %s \n' %self.parameters.plus_u[symbol])
         control.close()
 
         if self.radmul is not None:
