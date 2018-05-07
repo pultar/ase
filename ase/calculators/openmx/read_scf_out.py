@@ -17,8 +17,9 @@ functional theories.
     You should have received a copy of the GNU Lesser General Public License
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 
-Behave like read_scfout.c of OpenMX module but written in python.
+    Behave like read_scfout.c of OpenMX module but written in python.
 """
+
 
 import struct
 import numpy as np
@@ -83,6 +84,82 @@ def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f):
 
 def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
     from numpy import insert as ins
+    """
+    atomnun: the number of total atoms
+    Catomnun: the number of atoms in the central region
+    Latomnun: the number of atoms in the left lead
+    Ratomnun: the number of atoms in the left lead
+    SpinP_switch:
+                 0: non-spin polarized
+                 1: spin polarized
+    TCpyCell: the total number of periodic cells
+    Solver: method for solving eigenvalue problem
+    ChemP: chemical potential
+    Valence_Electrons: total number of valence electrons
+    Total_SpinS: total value of Spin (2*Total_SpinS = muB)
+    E_Temp: electronic temperature
+    Total_NumOrbs: the number of atomic orbitals in each atom
+    size: Total_NumOrbs[atomnum+1]
+    FNAN: the number of first neighboring atoms of each atom
+    size: FNAN[atomnum+1]
+    natn: global index of neighboring atoms of an atom ct_AN
+    size: natn[atomnum+1][FNAN[ct_AN]+1]
+    ncn: global index for cell of neighboring atoms of an atom ct_AN
+    size: ncn[atomnum+1][FNAN[ct_AN]+1]
+    atv: x,y,and z-components of translation vector of periodically copied cell
+    size: atv[TCpyCell+1][4]:
+    atv_ijk: i,j,and j number of periodically copied cells
+    size: atv_ijk[TCpyCell+1][4]:
+    tv[4][4]: unit cell vectors in Bohr
+    rtv[4][4]: reciprocal unit cell vectors in Bohr^{-1}
+         note:
+         tv_i \dot rtv_j = 2PI * Kronecker's delta_{ij}
+         Gxyz[atomnum+1][60]: atomic coordinates in Bohr
+         Hks: Kohn-Sham matrix elements of basis orbitals
+    size: Hks[SpinP_switch+1]
+             [atomnum+1]
+             [FNAN[ct_AN]+1]
+             [Total_NumOrbs[ct_AN]]
+             [Total_NumOrbs[h_AN]]
+    iHks:
+         imaginary Kohn-Sham matrix elements of basis orbitals
+         for alpha-alpha, beta-beta, and alpha-beta spin matrices
+         of which contributions come from spin-orbit coupling
+         and Hubbard U effective potential.
+    size: iHks[3]
+              [atomnum+1]
+              [FNAN[ct_AN]+1]
+              [Total_NumOrbs[ct_AN]]
+              [Total_NumOrbs[h_AN]]
+    OLP: overlap matrix
+    size: OLP[atomnum+1]
+             [FNAN[ct_AN]+1]
+             [Total_NumOrbs[ct_AN]]
+             [Total_NumOrbs[h_AN]]
+    OLPpox: overlap matrix with position operator x
+    size: OLPpox[atomnum+1]
+                [FNAN[ct_AN]+1]
+                [Total_NumOrbs[ct_AN]]
+                [Total_NumOrbs[h_AN]]
+    OLPpoy: overlap matrix with position operator y
+    size: OLPpoy[atomnum+1]
+                [FNAN[ct_AN]+1]
+                [Total_NumOrbs[ct_AN]]
+                [Total_NumOrbs[h_AN]]
+    OLPpoz: overlap matrix with position operator z
+    size: OLPpoz[atomnum+1]
+                [FNAN[ct_AN]+1]
+                [Total_NumOrbs[ct_AN]]
+                [Total_NumOrbs[h_AN]]
+    DM: overlap matrix
+    size: DM[SpinP_switch+1]
+            [atomnum+1]
+            [FNAN[ct_AN]+1]
+            [Total_NumOrbs[ct_AN]]
+            [Total_NumOrbs[h_AN]]
+    dipole_moment_core[4]:
+    dipole_moment_background[4]:
+    """
     try:
         f = open(fname, mode='rb')
         atomnum, SpinP_switch = inte(f.read(8))
