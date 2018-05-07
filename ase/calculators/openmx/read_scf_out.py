@@ -17,7 +17,7 @@ functional theories.
     You should have received a copy of the GNU Lesser General Public License
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 
-    Behave like read_scfout.c of OpenMX module but written in python.
+
 """
 
 
@@ -84,11 +84,18 @@ def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f):
 
 def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
     from numpy import insert as ins
+    from numpy import cumsum as cum
+    from numpy import split as spl
+    from numpy import sum, zeros
     """
-    atomnun: the number of total atoms
-    Catomnun: the number of atoms in the central region
-    Latomnun: the number of atoms in the left lead
-    Ratomnun: the number of atoms in the left lead
+    Read the Developer output '.scfout' files. It Behaves like read_scfout.c,
+    OpenMX module, but written in python. Note that some array are begin with
+    1, not 0
+
+    atomnum: the number of total atoms
+    Catomnum: the number of atoms in the central region
+    Latomnum: the number of atoms in the left lead
+    Ratomnum: the number of atoms in the left lead
     SpinP_switch:
                  0: non-spin polarized
                  1: spin polarized
@@ -163,20 +170,15 @@ def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
     try:
         f = open(fname, mode='rb')
         atomnum, SpinP_switch = inte(f.read(8))
-        Catomnum = inte(f.read(4))
-        Latomnum = inte(f.read(4))
-        Ratomnum = inte(f.read(4))
-        TCpyCell = inte(f.read(4))
+        Catomnum, Latomnum, Ratomnum, TCpyCell = inte(f.read(16))
         atv = floa(f.read(8*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
         atv_ijk = inte(f.read(4*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
         Total_NumOrbs = np.insert(inte(f.read(4*(atomnum))), 0, 1, axis=0)
         FNAN = np.insert(inte(f.read(4*(atomnum))), 0, 0, axis=0)
-        _natn = inte(f.read(4*np.sum(FNAN[1:] + 1)))
-        natn = np.insert(np.split(_natn, np.cumsum(FNAN[1:] + 1)),
-                         0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
-        _ncn = inte(f.read(4*np.sum(FNAN[1:] + 1)))
-        ncn = np.insert(np.split(_ncn, np.cumsum(FNAN[1:] + 1)),
-                        0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
+        natn = ins(spl(inte(f.read(4*sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+                   0, zeros(FNAN[0] + 1), axis=0)[:-1]
+        ncn = ins(spl(inte(f.read(4*np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+                  0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
         tv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
         rtv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
         Gxyz = ins(floa(f.read(8*(atomnum)*4), shape=(atomnum, 4)), 0,
