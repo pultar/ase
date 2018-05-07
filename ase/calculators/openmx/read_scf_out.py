@@ -64,6 +64,23 @@ def readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f):
         return myOLP
 
 
+def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f):
+    Hks = []
+    for spin in range(SpinP_switch + 1):
+        Hks.append([])
+        Hks[spin].append([np.zeros(FNAN[0] + 1)])
+        for ct_AN in range(1, atomnum + 1):
+            Hks[spin].append([])
+            TNO1 = Total_NumOrbs[ct_AN]
+            for h_AN in range(FNAN[ct_AN] + 1):
+                Hks[spin][ct_AN].append([])
+                Gh_AN = natn[ct_AN][h_AN]
+                TNO2 = Total_NumOrbs[Gh_AN]
+                for i in range(TNO1):
+                    Hks[spin][ct_AN][h_AN].append(floa(f.read(8*TNO2)))
+    return Hks
+
+
 def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
     from numpy import insert as ins
     try:
@@ -85,53 +102,17 @@ def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
                         0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
         tv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
         rtv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
-        Gxyz = ins(floa(f.read(8*(atomnum)*4), shape=(atomnum, 4)),
-                   0, [0., 0., 0., 0.], axis=0)
-        Hks = []
-        for spin in range(SpinP_switch + 1):
-            Hks.append([])
-            Hks[spin].append([np.zeros(FNAN[0] + 1)])
-            for ct_AN in range(1, atomnum + 1):
-                Hks[spin].append([])
-                TNO1 = Total_NumOrbs[ct_AN]
-                for h_AN in range(FNAN[ct_AN] + 1):
-                    Hks[spin][ct_AN].append([])
-                    Gh_AN = natn[ct_AN][h_AN]
-                    TNO2 = Total_NumOrbs[Gh_AN]
-                    for i in range(TNO1):
-                        Hks[spin][ct_AN][h_AN].append(floa(f.read(8*TNO2)))
+        Gxyz = ins(floa(f.read(8*(atomnum)*4), shape=(atomnum, 4)), 0,
+                   [0., 0., 0., 0.], axis=0)
+        Hks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
         iHks = []
         if SpinP_switch == 3:
-            for spin in range(SpinP_switch + 1):
-                iHks.append([])
-                iHks[spin].append([np.zeros(FNAN[0] + 1)])
-                for ct_AN in range(1, atomnum + 1):
-                    iHks[spin].append([])
-                    TNO1 = Total_NumOrbs[ct_AN]
-                    for h_AN in range(FNAN[ct_AN] + 1):
-                        iHks[spin][ct_AN].append([])
-                        Gh_AN = natn[ct_AN][h_AN]
-                        TNO2 = Total_NumOrbs[Gh_AN]
-                        for i in range(TNO1):
-                            dat = floa(f.read(8*TNO2))
-                            iHks[spin][ct_AN][h_AN].append(dat)
+            iHks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
         OLP = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
         OLPpox = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
         OLPpoy = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
         OLPpoz = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
-        DM = []
-        for spin in range(SpinP_switch + 1):
-            DM.append([])
-            DM[spin].append([])
-            for ct_AN in range(1, atomnum + 1):
-                DM[spin].append([])
-                TNO1 = Total_NumOrbs[ct_AN]
-                for h_AN in range(FNAN[ct_AN] + 1):
-                    DM[spin][ct_AN].append([])
-                    Gh_AN = natn[ct_AN][h_AN]
-                    TNO2 = Total_NumOrbs[Gh_AN]
-                    for i in range(TNO1):
-                        DM[spin][ct_AN][h_AN].append(floa(f.read(8*TNO2)))
+        DM = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
         Solver = inte(f.read(4))
         ChemP, E_Temp = floa(f.read(8*2))
         dipole_moment_core = floa(f.read(8*3))
@@ -151,6 +132,6 @@ def read_scf_out(fname='./ase/calculators/openmx/test/FeCS-gga.scfout'):
                'dipole_moment_core': dipole_moment_core, 'iHks': iHks,
                'dipole_moment_background': dipole_moment_background,
                'Valence_Electrons': Valence_Electrons, 'atv_ijk': atv_ijk,
-               'Total_SpinS': Total_SpinS
+               'Total_SpinS': Total_SpinS, 'DM': DM
                }
     return scf_out
