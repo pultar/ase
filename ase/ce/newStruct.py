@@ -124,6 +124,21 @@ class GenerateStructures(object):
         print("Generating initial pool consisting of "
               "{} structures".format(self.struct_per_gen))
 
+        try:
+            self.conc_matrix.shape[1]
+        # Case where there is only 1 concentration value
+        except IndexError:
+            conc1 = 1.0
+            x = 0
+            while x < self.struct_per_gen:
+                atoms = self._random_struct_at_conc(self.conc_matrix, conc1)
+                atoms = wrap_and_sort_by_position(atoms)
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, conc1)
+                self.setting.db.write(atoms, kvp)
+                x += 1
+            return True
+
         # Case 1: 1 conc variable, one struct per concentration
         if (self.setting.num_conc_var == 1 and
             self.struct_per_gen == self.conc_matrix.shape[0]):
@@ -345,24 +360,21 @@ class GenerateStructures(object):
                                unique=True):
         """Generate a random structure that does not already exist in DB."""
         # convert the conc_ratio into the same format as basis_elements if
-        # setting.num_basis = 1 or setting.group_basis is None
+        # setting.group_basis is None
         # Else, convert the conc_ratio the format of
         # setting.grouped_basis_elements
-        if self.setting.num_basis == 1:
-            conc_ratio = [list(conc_ratio)]
+        tmp = list(conc_ratio)
+        conc_ratio = []
+        if self.setting.grouped_basis is None:
+            num_basis = self.setting.num_basis
+            basis_elements = self.setting.basis_elements
         else:
-            tmp = list(conc_ratio)
-            conc_ratio = []
-            if self.setting.grouped_basis is None:
-                num_basis = self.setting.num_basis
-                basis_elements = self.setting.basis_elements
-            else:
-                num_basis = self.setting.num_grouped_basis
-                basis_elements = self.setting.grouped_basis_elements
-            for site in range(num_basis):
-                length = len(basis_elements[site])
-                conc_ratio.append(tmp[:length])
-                del tmp[:length]
+            num_basis = self.setting.num_grouped_basis
+            basis_elements = self.setting.grouped_basis_elements
+        for site in range(num_basis):
+            length = len(basis_elements[site])
+            conc_ratio.append(tmp[:length])
+            del tmp[:length]
 
         # 1D np array to easily count how many types of species are present
         flat_conc_ratio = np.array([x for sub in conc_ratio for x in sub])

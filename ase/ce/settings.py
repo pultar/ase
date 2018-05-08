@@ -10,7 +10,7 @@ from ase.gui.images import Images
 class ClusterExpansionSetting:
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
                  max_cluster_dist=None, basis_elements=None,
-                 grouped_basis=None):
+                 grouped_basis=None, ignore_background_atoms=False):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.db = connect(db_name)
@@ -18,6 +18,11 @@ class ClusterExpansionSetting:
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
         self.all_elements = [item for row in basis_elements for item in row]
+        self.ignore_background_atoms = ignore_background_atoms
+        if ignore_background_atoms:
+            self.background_basis, self.background_symbol = \
+                self._remove_background_basis()
+
         self.num_elements = len(self.all_elements)
         self.unique_elements = list(set(deepcopy(self.all_elements)))
         self.num_unique_elements = len(self.unique_elements)
@@ -38,6 +43,11 @@ class ClusterExpansionSetting:
         self.unique_cluster_names = None
 
         self.atoms = self._create_template_atoms()
+        self.background_atom_indices = []
+        if ignore_background_atoms:
+            self.background_atom_indices = [a.index for a in self.atoms if
+                                            a.symbol in self.background_symbol]
+
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
@@ -126,6 +136,48 @@ class ClusterExpansionSetting:
 
         return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
 
+    def _remove_background_basis(self):
+        # check if any basis consists of only one element type
+        basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
+        if not basis:
+            return None
+
+        symbol = [b[0] for b in self.basis_elements if len(b) == 1]
+        self.num_basis -= len(basis)
+
+        # remap indices if the basis are grouped, then change grouped_basis
+        # and conc_ratio_min/max accordingly
+        if self.grouped_basis is not None:
+            remapped = []
+            for i, group in enumerate(self.grouped_basis):
+                if group[0] in basis:
+                    remapped.append(i)
+            for i in sorted(remapped, reverse=True):
+                del self.grouped_basis[i]
+                del self.conc_ratio_min_1[i]
+                del self.conc_ratio_max_1[i]
+                if self.num_conc_var == 2:
+                    del self.conc_ratio_min_2[i]
+                    del self.conc_ratio_max_2[i]
+
+        # change basis_elements
+        for i in sorted(basis, reverse=True):
+            del self.basis_elements[i]
+            if self.grouped_basis is None:
+                del self.conc_ratio_min_1[i]
+                del self.conc_ratio_max_1[i]
+                if self.num_conc_var == 2:
+                    del self.conc_ratio_min_2[i]
+                    del self.conc_ratio_max_2[i]
+
+        # change all_elements
+        for i in basis:
+            count = 0
+            for x in range(i):
+                count += len(self.basis_elements[x])
+            del self.all_elements[count]
+        return basis, symbol
+
     def _check_basis_elements(self):
         error = False
         # check dimensions of the element list and concentration ratio lists
@@ -169,21 +221,20 @@ class ClusterExpansionSetting:
     def _get_spin_dict(self):
         # Find odd/even
         spin_values = []
-        element_types = len(self.all_elements)
-        if element_types % 2 == 1:
-            highest = (element_types - 1) / 2
+        if self.num_unique_elements % 2 == 1:
+            highest = (self.num_unique_elements - 1) / 2
         else:
-            highest = element_types / 2
+            highest = self.num_unique_elements / 2
         # Assign spin value for each element
         while highest > 0:
             spin_values.append(highest)
             spin_values.append(-highest)
             highest -= 1
-        if element_types % 2 == 1:
+        if self.num_unique_elements % 2 == 1:
             spin_values.append(0)
 
         spin_dict = {}
-        for x in range(element_types):
+        for x in range(self.num_unique_elements):
             spin_dict[self.all_elements[x]] = spin_values[x]
         return spin_dict
 
@@ -321,6 +372,8 @@ class ClusterExpansionSetting:
         indx_by_equiv = []
         temp = [[indices[0]]]
         for indx in indices[1:]:
+            if indx in self.background_atom_indices:
+                continue
             for equiv_group in range(len(temp)):
                 if (an[indx] == an[temp[equiv_group][0]]).all() and \
                         np.allclose(pos[indx], pos[temp[equiv_group][0]]):
@@ -383,6 +436,9 @@ class ClusterExpansionSetting:
 
             for size in range(2, self.max_cluster_size + 1):
                 indices = self.indices_of_nearby_atom(ref_indx, size)
+                if self.ignore_background_atoms:
+                    indices = [i for i in indices if
+                               i not in self.background_atom_indices]
                 indx_set = []
                 dist_set = []
 
@@ -509,6 +565,10 @@ class ClusterExpansionSetting:
             raise ValueError('conc_ratio values must be on the same scale')
 
         natoms_cell = len(self.atoms_with_given_dim)
+        if self.ignore_background_atoms:
+            num_background = len([a.index for a in self.atoms_with_given_dim
+                                  if a.symbol in self.background_symbol])
+            natoms_cell -= num_background
         natoms_ratio = sum(min_1)
         scale = int(natoms_cell / natoms_ratio)
         min_1 *= scale
@@ -691,3 +751,18 @@ class ClusterExpansionSetting:
         ids = [row.id for row in self.db.select(name='information')]
         self.db.delete(ids)
         self._store_data()
+
+    def _check_first_elements(self):
+        if self.grouped_basis:
+            basis_elements = self.grouped_basis_elements
+            num_basis = self.num_grouped_basis
+        else:
+            basis_elements = self.basis_elements
+            num_basis = self.num_basis
+        # This condition can be relaxed in the future
+        first_elements = []
+        for elements in basis_elements:
+            first_elements.append(elements[0])
+        if len(set(first_elements)) != num_basis:
+            raise ValueError("First element of different basis should not be "
+                             "the same.")

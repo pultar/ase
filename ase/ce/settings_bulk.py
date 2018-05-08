@@ -48,12 +48,15 @@ class BulkCrystal(ClusterExpansionSetting):
         the same set of elements and no distinctions are made between them)
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
+    ignore_background_atoms: bool
+        if *True*, a basis consisting of only one element type will be ignored
+        when creating clusters.
     """
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
                  cubic=False, size=None, conc_args=None, db_name=None,
                  max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
-                 dist_num_dec=3):
+                 dist_num_dec=3, ignore_background_atoms=False):
 
         self.basis_elements = basis_elements
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
@@ -81,7 +84,8 @@ class BulkCrystal(ClusterExpansionSetting):
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
                                          max_cluster_size, max_cluster_dist,
-                                         basis_elements)
+                                         basis_elements, grouped_basis,
+                                         ignore_background_atoms)
 
         self.index_by_basis = self._group_index_by_basis()
         if grouped_basis is not None:
@@ -92,6 +96,7 @@ class BulkCrystal(ClusterExpansionSetting):
                                          self.grouped_basis_elements
                                          for x in sub]
             self.num_grouped_elements = len(self.all_grouped_elements)
+        self._check_first_elements()
 
     def _get_unit_cell(self):
         if self.num_basis == 1:
@@ -122,14 +127,6 @@ class BulkCrystal(ClusterExpansionSetting):
         if num_basis == 1:
             indx_by_basis = [[a.index for a in self.atoms_with_given_dim]]
             return indx_by_basis
-
-        # This condition can be relaxed in the future
-        first_elements = []
-        for elements in self.basis_elements:
-            first_elements.append(elements[0])
-        if len(set(first_elements)) != num_basis:
-            raise ValueError("First element of different basis should not be "
-                             "the same.")
 
         indx_by_basis = []
         for basis in self.basis_elements:
@@ -184,12 +181,15 @@ class BulkSpacegroup(ClusterExpansionSetting):
         the same set of elements and no distinctions are made between them)
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
+    ignore_background_atoms: bool
+        if *True*, a basis consisting of only one element type will be ignored
+        when creating clusters.
     """
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
                  primitive_cell=False, conc_args=None, db_name=None,
                  max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
-                 dist_num_dec=3):
+                 dist_num_dec=3, ignore_background_atoms=False):
         # Set parameters for spacegroup crystal
         self.basis = basis
         self.num_basis = len(basis)
@@ -208,9 +208,11 @@ class BulkSpacegroup(ClusterExpansionSetting):
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
                                          max_cluster_size, max_cluster_dist,
-                                         basis_elements, grouped_basis)
+                                         basis_elements, grouped_basis,
+                                         ignore_background_atoms)
 
         self.index_by_basis = self._group_index_by_basis()
+
         if grouped_basis is not None:
             self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
@@ -219,6 +221,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
                                          self.grouped_basis_elements
                                          for x in sub]
             self.num_grouped_elements = len(self.all_grouped_elements)
+        self._check_first_elements()
 
     def _get_unit_cell(self):
         atoms = crystal(symbols=self.symbols, basis=self.basis,
@@ -232,7 +235,6 @@ class BulkSpacegroup(ClusterExpansionSetting):
         indx_by_basis = [[] for _ in range(self.num_basis)]
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
-
         scale_factor = np.multiply(self.supercell_scale_factor, self.size)
 
         # account for the case where a supercell is needed
@@ -264,6 +266,8 @@ class BulkSpacegroup(ClusterExpansionSetting):
                 if np.allclose(site, pos, atol=1.e-5):
                     indx = j
                     break
+            if kinds[i] in self.background_basis:
+                continue
             indx_by_basis[kinds[i]].append(indx)
 
         for basis in indx_by_basis:
