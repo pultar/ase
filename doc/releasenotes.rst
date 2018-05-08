@@ -10,6 +10,34 @@ Git master branch
 
 :git:`master <>`.
 
+* Test suite now runs in parallel.
+
+* The :meth:`ase.db.core.Database.write` method now takes a ``id`` that
+  allows you to overwrite an existing row.
+
+* The :meth:`ase.db.core.Database.update` can now update the Atoms and the data
+  parts of a row.
+
+* The :meth:`ase.db.core.Database.update` will no longer accept a list of
+  row ID's as the first argument.  Replace this::
+
+      db.update(ids, ...)
+
+  with::
+
+      with db:
+          for id in ids:
+              db.update(id, ...)
+
+
+Version 3.16.0
+==============
+
+21 March 2018: :git:`3.16.0 <../3.16.0>`
+
+* New linear-scaling neighbor list
+  available as a function :meth:`~ase.neighborlist.neighbor_list`.
+
 * Castep calculator: option for automatic detection of pseudopotential files from a given directory (castep_pp_path); support for GBRV pseudopotential library; updated outfile parsing to comply with CASTEP 18.1.
 
 * New LAMMPS calculator LAMMPSlib utilizing the Python bindings provided by LAMMPS instead of file I/O. Very basic calculator but can serve as base class for more sophisticated ones.
@@ -33,10 +61,19 @@ Git master branch
 * Improved "quick info" dialog in the GUI.  The dialog now lists results
   cached by the calculator.
 
-* The "add atoms" function now accepts identifiers for molecules in the G2 dataset.
+* The "add atoms" dialog now offers a load file dialog as was the case before the tkinter port.  It also provides a chooser for the G2 dataset.
 
 * Interface for the :mod:`CRYSTAL <ase.calculators.crystal` code has been
   added.
+
+* The :func:`ase.dft.bandgap.bandgap` function used with ``direct=True``
+  will now also consider spin-flip transitions.  To get the spin-preserving
+  direct gap (the old behavior), use::
+
+      min(bandgap(..., spin=s, direct=True) for s in [0, 1])
+
+* Bug fixed in the :meth:`ase.phonons.Phonons.symmetrize` method when using an
+  even number of repeats.
 
 
 Version 3.15.0
