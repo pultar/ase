@@ -91,9 +91,14 @@ class GenerateStructures(object):
             if num_struct >= self.struct_per_gen:
                 break
 
-            conc_ratio, conc_index = self._get_random_conc()
-            atoms = self._random_struct_at_conc(conc_ratio, conc_index[0],
-                                                conc_index[1], False)
+            # special case where there is only 1 concentration value
+            if self.conc_matrix.ndim == 1:
+                conc_ratio = np.copy(self.conc_matrix)
+                conc_value = [1.0, None]
+            else:
+                conc_ratio, conc_value = self._get_random_conc()
+            atoms = self._random_struct_at_conc(conc_ratio, conc_value[0],
+                                                conc_value[1], False)
             # selected one of the "ghost" concentration with negative values
             if atoms is None:
                 continue
@@ -124,10 +129,8 @@ class GenerateStructures(object):
         print("Generating initial pool consisting of "
               "{} structures".format(self.struct_per_gen))
 
-        try:
-            self.conc_matrix.shape[1]
         # Case where there is only 1 concentration value
-        except IndexError:
+        if self.conc_matrix.ndim == 1:
             conc1 = 1.0
             x = 0
             while x < self.struct_per_gen:
@@ -443,9 +446,14 @@ class GenerateStructures(object):
         cfm = np.zeros((num_samples_var, len(self.setting.full_cluster_names)),
                        dtype=float)
         while count < num_samples_var:
-            conc_ratio, conc_index = self._get_random_conc()
-            atoms = self._random_struct_at_conc(conc_ratio, conc_index[0],
-                                                conc_index[1], False)
+            # special case where there is only 1 concentration value
+            if self.conc_matrix.ndim == 1:
+                conc_ratio = np.copy(self.conc_matrix)
+                conc_value = [1.0, None]
+            else:
+                conc_ratio, conc_value = self._get_random_conc()
+            atoms = self._random_struct_at_conc(conc_ratio, conc_value[0],
+                                                conc_value[1], False)
             cfm[count] = self.corrfunc.get_cf(atoms, 'array')
             count += 1
             print('sampling {} ouf of {}'.format(count, num_samples_var))

@@ -149,6 +149,7 @@ class ProbeStructure(object):
         diffs = []
         for _ in range(100):
             if bool(getrandbits(1)):
+                # Change element Type
                 if self._has_more_than_one_conc():
                     new, n_cf = self._change_element_type(old, o_cf)
                 else:
@@ -158,6 +159,7 @@ class ProbeStructure(object):
                         raise RuntimeError('Atoms has only one concentration' +
                                            'value and not swappable.')
             else:
+                # Swap two atoms
                 if self._is_swappable(old):
                     new, n_cf = self._swap_two_atoms(old, o_cf)
                 else:
@@ -185,7 +187,6 @@ class ProbeStructure(object):
         """
         atoms = atoms.copy()
         cf = deepcopy(cf)
-        natoms = len(atoms)
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
 
@@ -200,15 +201,14 @@ class ProbeStructure(object):
             index_by_basis = self.setting.index_by_grouped_basis
 
         # pick fist atom and determine its symbol and type
-        # a basis with only 1 type of element should not be chosen
         while True:
-            indx[0] = choice(range(natoms))
+            basis = choice(range(num_basis))
+            # a basis with only 1 type of element should not be chosen
+            if len(basis_elements[basis]) < 2:
+                continue
+            indx[0] = choice(index_by_basis[basis])
             symbol[0] = atoms[indx[0]].symbol
-            for basis in range(num_basis):
-                if symbol[0] in basis_elements[basis]:
-                    break
-            if len(basis_elements[basis]) > 1:
-                break
+            break
         # pick second atom that is not the same element, but occupies the
         # same site.
         while True:
@@ -224,12 +224,13 @@ class ProbeStructure(object):
         return atoms, cf
 
     def _has_more_than_one_conc(self):
-        if len(self.setting.conc_matrix) > 1:
+        if len(self.setting.conc_matrix) > 1 and \
+           self.setting.conc_matrix.ndim > 1:
             return True
         return False
 
     def _is_swappable(self, atoms):
-         # determine if the basis is grouped
+        # determine if the basis is grouped
         if self.setting.grouped_basis is None:
             basis_elements = self.setting.basis_elements
             num_basis = self.setting.num_basis

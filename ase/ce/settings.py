@@ -681,7 +681,10 @@ class ClusterExpansionSetting:
         # determine the dimensions of the concentration matrix
         # then, search to see if there is a match
         conc_shape = self.conc_matrix.shape
-        if len(conc_shape) == 2:
+        if self.conc_matrix.ndim == 1:
+            if np.array_equal(conc, self.conc_matrix):
+                return True
+        elif self.conc_matrix.ndim == 2:
             for x in range(conc_shape[0]):
                 if np.array_equal(conc, self.conc_matrix[x]):
                     return True
@@ -743,9 +746,9 @@ class ClusterExpansionSetting:
 
         images = Images()
         images.initialize(cluster_atoms)
-        gui = GUI(images)
+        gui = GUI(images, expr='')
         gui.show_name = True
-        gui.run(expr='')
+        gui.run()
 
     def reconfigure_settings(self):
         ids = [row.id for row in self.db.select(name='information')]
