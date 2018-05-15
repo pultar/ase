@@ -25,8 +25,8 @@ try:
 except RuntimeError:
     print('Failed to load matplot display, do not try to visualise plots!')
 import os
-from ase.calculators.openmx.import_functions import read_nth_to_last_value
-from ase.calculators.openmx.import_functions import input_command
+from ase.calculators.openmx.reader import rn as read_nth_to_last_value
+from ase.calculators.openmx.reader import input_command
 
 
 class DOS:
