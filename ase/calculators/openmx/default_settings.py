@@ -27,172 +27,172 @@ from ase.units import Bohr
 
 default_dictionary = {
     'H': {
-           'cutoff radius': 6*Bohr,
+           'cutoff radius': 6,
            'orbitals used': [3, 2],
            'pseudo-potential suffix': ''
           },
     'He': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'Li': {
-        'cutoff radius': 10*Bohr,
+        'cutoff radius': 10,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Be': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 2],
         'pseudo-potential suffix': ''
     },
     'B': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'C': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'N': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [3, 3, 2, 1],
         'pseudo-potential suffix': ''
     },
     'O': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'F': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'Ne': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 2, 2],
         'pseudo-potential suffix': ''
     },
     'Na': {
-        'cutoff radius': 11*Bohr,
+        'cutoff radius': 11,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Mg': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Al': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [4, 4, 2],
         'pseudo-potential suffix': ''
     },
     'Si': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'P': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [4, 3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'S': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [4, 3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Cl': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'Ar': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 2, 2, 1],
         'pseudo-potential suffix': ''
     },
     'K': {
-        'cutoff radius': 12*Bohr,
+        'cutoff radius': 12,
         'orbitals used': [4, 3, 3, 1],
         'pseudo-potential suffix': ''
     },
     'Ca': {
-        'cutoff radius': 11*Bohr,
+        'cutoff radius': 11,
         'orbitals used': [4, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Sc': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [4, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Ti': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 3, 3, 1],
         'pseudo-potential suffix': ''
     },
     'V': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 3, 3, 1],
         'pseudo-potential suffix': ''
     },
     'Cr': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'Mn': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 3, 3, 1],
         'pseudo-potential suffix': ''
     },
     'Fe': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 3, 2],
         'pseudo-potential suffix': 'S'
     },
     'Co': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [3, 4, 3, 2],
         'pseudo-potential suffix': 'S'
     },
     'Ni': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [4, 4, 3, 2],
         'pseudo-potential suffix': 'S'
     },
     'Cu': {
-        'cutoff radius': 8*Bohr,
+        'cutoff radius': 8,
         'orbitals used': [2, 2, 2],
         'pseudo-potential suffix': 'S'
     },
     'Zn': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [3, 2],
         'pseudo-potential suffix': ''
     },
     'Ga': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [3, 2],
         'pseudo-potential suffix': ''
     },
     'Ge': {
-        'cutoff radius': 6*Bohr,
+        'cutoff radius': 6,
         'orbitals used': [3, 2],
         'pseudo-potential suffix': ''
     },
     'As': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 3, 3, 2],
         'pseudo-potential suffix': ''
     },
     'I': {
-        'cutoff radius': 9*Bohr,
+        'cutoff radius': 9,
         'orbitals used': [3, 3, 2, 1],
         'pseudo-potential suffix': ''
     }
