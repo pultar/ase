@@ -57,9 +57,8 @@ class ClusterExpansion(Calculator):
         else:
             raise TypeError("'cluster_name_eci' needs to be either (1) a list "
                             "of tuples or (2) a dictionary. They can be "
-                            "retrieved by 'get_cluster_name_eci_tuple' or "
-                            "'get_cluster_name_eci_dict' methods in Evaluate "
-                            "class")
+                            "retrieved by 'get_cluster_name_eci' method in "
+                            "Evaluate class")
 
         # calculate init_cf or convert init_cf to array
         if init_cf is None:
@@ -158,6 +157,7 @@ class ClusterExpansion(Calculator):
                                                           return_type='array')
         else:
             self.update_cf()
+
         self.energy = self.eci.dot(self.cf) * len(self.atoms)
         return self.energy
 
@@ -174,7 +174,7 @@ class ClusterExpansion(Calculator):
         return [self.ref_atoms[indx].symbol, self.atoms[indx].symbol]
 
     def update_cf(self):
-        """Update correlation function based on the reference value"""
+        """Update correlation function based on the reference value."""
         swapped_indices = self.indices_of_changed_atoms
         self.cf = deepcopy(self.ref_cf)
 
@@ -251,7 +251,7 @@ class ClusterExpansion(Calculator):
 
                         cf_change = self._cf_change_by_indx(nindx, t_indices, dec)
                         self.cf[i] += cf_change
-                    self.cf[i] = self.cf[i] / count
+                self.cf[i] = self.cf[i] / count
         return True
 
     def _cf_change_by_indx(self, ref_indx, trans_list, deco):

@@ -14,9 +14,9 @@ class ProbeStructure(object):
 
     Arguments:
     =========
-    setting: BulkCrystal or BulkSapcegroup  object
+    setting: BulkCrystal or BulkSapcegroup object
     atoms: Atoms object
-        Initial structure to start the simulated annealing.
+        initial structure to start the simulated annealing
     struct_per_gen: int
         number of structures to be generated per generation
     init_temp: int or float
@@ -182,9 +182,7 @@ class ProbeStructure(object):
         return init_temp, final_temp
 
     def _swap_two_atoms(self, atoms, cf):
-        """
-        Swaps two randomly chosen atoms.
-        """
+        """Swaps two randomly chosen atoms."""
         atoms = atoms.copy()
         cf = deepcopy(cf)
         indx = np.zeros(2, dtype=int)

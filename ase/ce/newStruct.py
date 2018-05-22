@@ -9,6 +9,7 @@ from pymatgen.io.ase import AseAtomsAdaptor
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
+from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
 
@@ -227,7 +228,11 @@ class GenerateStructures(object):
         if init_struct is None:
             raise TypeError('init_struct must be provided')
 
-        init = wrap_and_sort_by_position(read(init_struct))
+        if isinstance(init_struct, Atoms):
+            init = wrap_and_sort_by_position(init_struct)
+        else:
+            init = wrap_and_sort_by_position(read(init_struct))
+
         conc = self._find_concentration(init)
         if self._exists_in_db(init, conc[0], conc[1]):
             raise RuntimeError('supplied structure already exists in DB')
@@ -239,8 +244,11 @@ class GenerateStructures(object):
             kvp['name'] = name
 
         if final_struct is not None:
-            energy = read(final_struct).get_potential_energy()
-            calc= SinglePointCalculator(init, energy=energy)
+            if isinstance(final_struct, Atoms):
+                energy = final_struct.get_potential_energy()
+            else:
+                energy = read(final_struct).get_potential_energy()
+            calc = SinglePointCalculator(init, energy=energy)
             init.set_calculator(calc)
             kvp['converged'] = True
             kvp['started'] = ''

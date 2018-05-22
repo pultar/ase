@@ -1,10 +1,11 @@
-"""Definition of the Base-class for all Monte Carlo and Simulated Annealing"""
+"""Definition of the Base-class for all Monte Carlo and Simulated Annealing."""
 import sys
 import numpy as np
 from ase.utils import basestring
 from ase.units import kB
 from ase.montecarlo.swap_atoms import SwapAtoms
 from ase.atoms import Atoms
+from ase.ce import BulkCrystal, BulkSpacegroup
 
 
 class MonteCarlo(object):
@@ -15,9 +16,12 @@ class MonteCarlo(object):
     atoms: Atoms object to specify the initial structure. A calculator need to
            attached to *atoms* in order to calculate energy.
 
+    setting: None or Setting object for Cluster Expansion.
+
     temp: temperature in Kelvin for Monte Carlo simulation
 
-    constraint: types of constraints imposed on swapping two atoms.
+    constraint: str
+        type of constraints imposed on swapping two atoms.
         - None: any two atoms can be swapped
         - 'nn': any atom selected, swapped only with its nearest neighbor
         - 'basis': any atom selected, swapped only with another atom in the
@@ -31,10 +35,17 @@ class MonteCarlo(object):
         - file object: use the file object for logging
     """
 
-    def __init__(self, atoms, temp=None, constraint=None, logfile=None):
+    def __init__(self, atoms, setting, temp=None, constraint=None,
+                 logfile=None):
         if not isinstance(atoms, Atoms):
             raise TypeError('Passed argument should be Atoms object')
         self.atoms = atoms
+
+        if not isinstance(setting, (BulkCrystal, BulkSpacegroup, None)):
+            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+                            "object for Cluster Expansion. Set as *None* "
+                            "otherwise.")
+        self.setting = setting
         self.energy = None
 
         if isinstance(temp, (int, float)):
@@ -59,7 +70,6 @@ class MonteCarlo(object):
                 logfile = open(logfile, 'a')
         self.logfile = logfile
 
-        # observers
         # observers will be called every nth step specified by the user
         self.observers = []
         self.nsteps = 0
@@ -79,14 +89,21 @@ class MonteCarlo(object):
         self.energy = self.atoms.get_potential_energy()
 
     def _swap(self):
-        """Swap two atoms and evaluate whether or not to accept the new
-        structure. If not accepted, revert back to the orignal structure.
-        Regardless of the acceptance, return the energy of the swapped
-        structure"""
+        """Swap two atoms.
+
+        Evaluate whether or not to accept the new structure. If not accepted,
+        revert back to the orignal structure. Regardless of the acceptance,
+        return the energy of the swapped structure
+        """
+        swap = SwapAtoms(self.setting)
         if self.constraint is None:
-            swapped_indices = SwapAtoms.swap_any_two_atoms(self.atoms)
+            swapped_indices = swap.swap_any_two_atoms(self.atoms)
         elif self.constraint == 'nn':
-            swapped_indices = SwapAtoms.swap_nn_atoms(self.atoms)
+            swapped_indices = swap.swap_nn_atoms(self.atoms)
+        elif self.constraint == 'basis':
+            swapped_indices = swap.swap_any_two_in_same_basis(self.atoms)
+        elif self.constraint == 'nn-basis':
+            swapped_indices = swap.swap_nn_in_same_basis(self.atoms)
         else:
             raise NotImplementedError('This feature is not implemented')
 
@@ -97,8 +114,8 @@ class MonteCarlo(object):
             self.energy = energy
         else:
             # Swap atoms back to the original
-            SwapAtoms.swap_by_indices(self.atoms, swapped_indices[0],
-                                      swapped_indices[1])
+            swap.swap_by_indices(self.atoms, swapped_indices[0],
+                                 swapped_indices[1])
             # CE calculator needs to call a *restore* method
             if self.atoms.calc.__class__.__name__ == 'ClusterExpansion':
                 self.atoms.calc.restore()
@@ -150,6 +167,5 @@ class MonteCarlo(object):
         self.logfile.flush()
 
     def attach(self, observer, interval=1):
-        """Needs to be implemented
-        """
+        """Needs to be implemented."""
         return True
