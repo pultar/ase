@@ -12,7 +12,7 @@ class Metropolis(MonteCarlo):
            attached to *atoms* in order to calculate energy.
 
     setting: None or Setting object for Cluster Expansion.
-    
+
     temp: temperature in Kelvin for Monte Carlo simulation
 
     constraint: types of constraints imposed on swapping two atoms.
@@ -28,7 +28,8 @@ class Metropolis(MonteCarlo):
         Use '-' for stdout.
     """
 
-    def __init__(self, atoms, setting=None, temp, constraint=None, logfile=None):
+    def __init__(self, atoms, setting=None, temp=293, constraint=None,
+                 logfile=None):
         if temp is None:
             raise TypeError('temp needs to be int or float type')
         MonteCarlo.__init__(self, atoms=atoms, setting=setting, temp=temp,
