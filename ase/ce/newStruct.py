@@ -12,6 +12,7 @@ from ase.ce.tools import wrap_and_sort_by_position
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
+from ase.db import connect
 
 
 class GenerateStructures(object):
@@ -24,6 +25,7 @@ class GenerateStructures(object):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
         self.setting = setting
+        self.db = connect(setting.db_name)
         self.corrfunc = CorrFunction(self.setting)
         self.conc_matrix = self.setting.conc_matrix
         self.atoms = setting.atoms_with_given_dim
@@ -88,7 +90,7 @@ class GenerateStructures(object):
         while True:
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
-                              self.setting.db.select(gen=self.gen)])
+                              self.db.select(gen=self.gen)])
             if num_struct >= self.struct_per_gen:
                 break
 
@@ -123,7 +125,7 @@ class GenerateStructures(object):
                 cf[name] = cf_array[i]
 
             kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
-            self.setting.db.write(atoms, kvp)
+            self.db.write(atoms, kvp)
 
     def generate_initial_pool(self):
         """Generates the initial pool"""
@@ -139,7 +141,7 @@ class GenerateStructures(object):
                 atoms = wrap_and_sort_by_position(atoms)
                 kvp = self.corrfunc.get_cf(atoms)
                 kvp = self._get_kvp(atoms, kvp, conc1)
-                self.setting.db.write(atoms, kvp)
+                self.db.write(atoms, kvp)
                 x += 1
             return True
 
@@ -154,7 +156,7 @@ class GenerateStructures(object):
                 atoms = wrap_and_sort_by_position(atoms)
                 kvp = self.corrfunc.get_cf(atoms)
                 kvp = self._get_kvp(atoms, kvp, conc1)
-                self.setting.db.write(atoms, kvp)
+                self.db.write(atoms, kvp)
 
         # Case 2: 2 conc variable, one struct per concentration
         elif (self.setting.num_conc_var == 2 and
@@ -171,7 +173,7 @@ class GenerateStructures(object):
                     atoms = wrap_and_sort_by_position(atoms)
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, conc1, conc2)
-                    self.setting.db.write(atoms, kvp)
+                    self.db.write(atoms, kvp)
 
         # Case 3: 1 conc variable, user specified number of structures
         elif self.setting.num_conc_var == 1:
@@ -187,7 +189,7 @@ class GenerateStructures(object):
                 atoms = wrap_and_sort_by_position(atoms)
                 kvp = self.corrfunc.get_cf(atoms)
                 kvp = self._get_kvp(atoms, kvp, conc1)
-                self.setting.db.write(atoms, kvp)
+                self.db.write(atoms, kvp)
                 x += 1
 
         # Case 4: 2 conc variable, user specified number of structures
@@ -207,7 +209,7 @@ class GenerateStructures(object):
                 atoms = wrap_and_sort_by_position(atoms)
                 kvp = self.corrfunc.get_cf(atoms)
                 kvp = self._get_kvp(atoms, kvp, conc1, conc2)
-                self.setting.db.write(atoms, kvp)
+                self.db.write(atoms, kvp)
                 x += 1
         return True
 
@@ -254,7 +256,7 @@ class GenerateStructures(object):
             kvp['started'] = ''
             kvp['queued'] = ''
 
-        self.setting.db.write(init, key_value_pairs=kvp)
+        self.db.write(init, key_value_pairs=kvp)
 
     def _find_concentration(self, atoms):
         """Find the concentration value(s) of the passed atoms object."""
@@ -307,7 +309,7 @@ class GenerateStructures(object):
                              primitive_cell=True, scale=True)
         s1 = AseAtomsAdaptor.get_structure(atoms)
 
-        for row in self.setting.db.select(cond):
+        for row in self.db.select(cond):
             atoms2 = row.toatoms()
             s2 = AseAtomsAdaptor.get_structure(atoms2)
             match = m.fit(s1, s2)
@@ -332,13 +334,13 @@ class GenerateStructures(object):
 
         # Determine name
         if conc2 is None:
-            n = len([row.id for row in self.setting.db.select(conc1=conc1)])
+            n = len([row.id for row in self.db.select(conc1=conc1)])
             kvp['name'] = 'conc_{:.3f}_{}'.format(conc1, n)
         else:
             conc2 = round(conc2, 3)
             kvp['conc2'] = conc2
-            n = len([row.id for row in self.setting.db.select(conc1=conc1,
-                                                              conc2=conc2)])
+            n = len([row.id for row in self.db.select(conc1=conc1,
+                                                      conc2=conc2)])
             kvp['name'] = 'conc_{:.3f}_{:.3f}_{}'.format(conc1, conc2, n)
         return kvp
 
@@ -421,7 +423,7 @@ class GenerateStructures(object):
 
     def _determine_gen_number(self):
         try:
-            gens = [row.get('gen') for row in self.setting.db.select()]
+            gens = [row.get('gen') for row in self.db.select()]
             gens = [i for i in gens if i is not None]
             gen = max(gens) + 1
         except ValueError:

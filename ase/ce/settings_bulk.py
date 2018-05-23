@@ -3,7 +3,7 @@ from ase.build import bulk
 from ase.spacegroup import crystal, Spacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.ce.settings import ClusterExpansionSetting
-
+from copy import deepcopy
 
 class BulkCrystal(ClusterExpansionSetting):
     """Store settings for Cluster Expansion on bulk materials defined based on
@@ -58,6 +58,27 @@ class BulkCrystal(ClusterExpansionSetting):
                  max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
 
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs = {'basis_elements': deepcopy(basis_elements),
+                       'crystalstructure': crystalstructure,
+                       'a': a,
+                       'c': c,
+                       'covera': covera,
+                       'u': u,
+                       'orthorhombic': orthorhombic,
+                       'cubic': cubic,
+                       'size': size,
+                       'conc_args': deepcopy(conc_args),
+                       'db_name': db_name,
+                       'max_cluster_size': max_cluster_size,
+                       'max_cluster_dist': deepcopy(max_cluster_dist),
+                       'grouped_basis': deepcopy(grouped_basis),
+                       'dist_num_dec': dist_num_dec,
+                       'ignore_background_atoms': ignore_background_atoms}
+
+        # Initialization
         self.basis_elements = basis_elements
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
                            'zincblende': 2, 'rocksalt': 2, 'cesiumchloride': 2,
@@ -137,6 +158,24 @@ class BulkCrystal(ClusterExpansionSetting):
             basis.sort()
         return indx_by_basis
 
+    @staticmethod
+    def load(filename):
+        """Load settings from a file in JSON format.
+
+        Arguments:
+        =========
+        filename: str
+            Name of the file that has the settings.
+        """
+        import json
+        with open(filename, 'r') as infile:
+            kwargs = json.load(infile)
+        classtype = kwargs.pop("classtype")
+        if classtype != 'BulkCrystal':
+            raise TypeError('Loaded setting file is not for BulkCrystal class')
+        return BulkCrystal(**kwargs)
+
+
 
 class BulkSpacegroup(ClusterExpansionSetting):
     """"Store settings for Cluster Expansion on bulk materials defined based on
@@ -190,7 +229,26 @@ class BulkSpacegroup(ClusterExpansionSetting):
                  primitive_cell=False, conc_args=None, db_name=None,
                  max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
-        # Set parameters for spacegroup crystal
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs = {'basis_elements': deepcopy(basis_elements),
+                       'basis': deepcopy(basis),
+                       'spacegroup': spacegroup,
+                       'cell': cell,
+                       'cellpar': cellpar,
+                       'ab_normal': ab_normal,
+                       'size': size,
+                       'primitive_cell': primitive_cell,
+                       'conc_args': deepcopy(conc_args),
+                       'db_name': db_name,
+                       'max_cluster_size': max_cluster_size,
+                       'max_cluster_dist': deepcopy(max_cluster_dist),
+                       'grouped_basis': deepcopy(grouped_basis),
+                       'dist_num_dec': dist_num_dec,
+                       'ignore_background_atoms': ignore_background_atoms}
+
+        # Initialization
         self.basis = basis
         self.num_basis = len(basis)
         self.spacegroup = spacegroup
@@ -274,3 +332,20 @@ class BulkSpacegroup(ClusterExpansionSetting):
             basis.sort()
 
         return indx_by_basis
+
+    @staticmethod
+    def load(filename):
+        """Load settings from a file in JSON format.
+
+        Arguments:
+        =========
+        filename: str
+            Name of the file that has the settings.
+        """
+        import json
+        with open(filename, 'r') as infile:
+            kwargs = json.load(infile)
+        classtype = kwargs.pop("classtype")
+        if classtype != 'BulkSpacegroup':
+            raise TypeError('Loaded setting file is not for BulkCrystal class')
+        return BulkCrystal(**kwargs)

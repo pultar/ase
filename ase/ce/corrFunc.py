@@ -3,6 +3,7 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
+from ase.db import connect
 
 class CorrFunction(object):
     """Calculate the correlation function.
@@ -188,7 +189,7 @@ class CorrFunction(object):
                     pairs, but overwrites the ones that exists in the current
                     setting.
         """
-        db = self.setting.db
+        db = connect(self.setting.db_name)
         select = [('name', '!=', 'information')]
         if select_cond is not None:
             for cond in select_cond:
@@ -256,7 +257,7 @@ class CorrFunction(object):
         """
         cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
         try:
-            row = self.setting.db.get(name='information')
+            row = connect(self.setting.db_name).get(name='information')
             template = row.toatoms()
         except:
             raise IOError("Cannot retrieve the information template from the "

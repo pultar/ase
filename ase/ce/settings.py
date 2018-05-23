@@ -13,7 +13,6 @@ class ClusterExpansionSetting:
                  grouped_basis=None, ignore_background_atoms=False):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
-        self.db = connect(db_name)
         self.max_cluster_size = max_cluster_size
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
@@ -531,7 +530,8 @@ class ClusterExpansionSetting:
         return tm
 
     def get_min_distance(self, cluster):
-        """
+        """Get minimum distances.
+
         Get the minimum distances between the atoms in a cluster according to
         dist_matrix and return the sorted distances (reverse order)
         """
@@ -544,7 +544,9 @@ class ClusterExpansionSetting:
         return np.array(min(d))
 
     def indices_of_nearby_atom(self, ref_indx, size):
-        """Return the indices of the atoms that are at distances smaller than
+        """Return the indices of the atoms nearby.
+
+        Indices of the atoms are only included if distances smaller than
         specified by max_cluster_dist from the reference atom index.
         """
         indices = [a.index for a in self.atoms]
@@ -620,20 +622,22 @@ class ClusterExpansionSetting:
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
         self.full_cluster_names = self._get_full_cluster_names()
-        self.db.write(self.atoms,
-                      name='information',
-                      data={'dist_matrix': self.dist_matrix,
-                            'cluster_names': self.cluster_names,
-                            'cluster_dist': self.cluster_dist,
-                            'cluster_indx': self.cluster_indx,
-                            'trans_matrix': self.trans_matrix,
-                            'conc_matrix': self.conc_matrix,
-                            'full_cluster_names': self.full_cluster_names,
-                            'unique_cluster_names': self.unique_cluster_names})
+        db = connect(self.db_name)
+        db.write(self.atoms,
+                 name='information',
+                 data={'dist_matrix': self.dist_matrix,
+                       'cluster_names': self.cluster_names,
+                       'cluster_dist': self.cluster_dist,
+                       'cluster_indx': self.cluster_indx,
+                       'trans_matrix': self.trans_matrix,
+                       'conc_matrix': self.conc_matrix,
+                       'full_cluster_names': self.full_cluster_names,
+                       'unique_cluster_names': self.unique_cluster_names})
 
     def _read_data(self):
+        db = connect(self.db_name)
         try:
-            row = self.db.get('name=information')
+            row = db.get('name=information')
             self.dist_matrix = row.data.dist_matrix
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
@@ -662,8 +666,9 @@ class ClusterExpansionSetting:
         return full_names
 
     def in_conc_matrix(self, atoms):
-        """Check to see if the passed atoms object has allowed concentration
-        by checking the concentration matrix. Returns boolean.
+        """Check to see if the passed atoms object has allowed concentration.
+
+        Return True if it has allowed concentration, return False otherwise.
         """
         # determine the concentration of the given atoms
         if self.grouped_basis is None:
@@ -751,8 +756,9 @@ class ClusterExpansionSetting:
         gui.run()
 
     def reconfigure_settings(self):
-        ids = [row.id for row in self.db.select(name='information')]
-        self.db.delete(ids)
+        db = connect(self.db_name)
+        ids = [row.id for row in db.select(name='information')]
+        db.delete(ids)
         self._store_data()
 
     def _check_first_elements(self):
@@ -769,3 +775,26 @@ class ClusterExpansionSetting:
         if len(set(first_elements)) != num_basis:
             raise ValueError("First element of different basis should not be "
                              "the same.")
+
+    def save(self, filename):
+        """Write Setting object to a file in JSON format.
+
+        Arguments:
+        =========
+        filename: str
+            Name of the file to store the necessary settings to initialize
+            the Cluster Expansion calculations.
+        """
+        class_types = ['BulkCrystal', 'BulkSpacegroup']
+        if type(self).__name__ not in class_types:
+            raise NotImplementedError('Class {}'.format(type(self).__name__) +
+                                      'is not supported.')
+
+        import json
+        if type(self).__name__ == 'BulkCrystal':
+            self.kwargs['classtype'] = 'BulkCrystal'
+        else:
+            self.kwargs['classtype'] = 'BulkSpacegroup'
+        # Write keyword arguments necessary for initializing the class
+        with open(filename, 'w') as outfile:
+            json.dump(self.kwargs, outfile, indent=2)
