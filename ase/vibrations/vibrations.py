@@ -133,7 +133,7 @@ class Vibrations:
 
         for dispName, atoms in self.iterdisplace(inplace=True):
             if self._adjust_label:
-                new_label = self._original_label + '__' dispName
+                new_label = self._original_label + '__' + dispName
                 self.calc.set_label(new_label)
             filename = dispName + '.pckl'
             fd = opencew(filename)
