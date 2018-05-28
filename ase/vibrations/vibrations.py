@@ -43,6 +43,12 @@ class Vibrations:
         Number of displacements per atom and cartesian coordinate, 2 and 4 are
         supported. Default is 2 which will displace each atom +delta and
         -delta for each cartesian coordinate.
+    adjust_label : bool, optional (default=False)
+        Adjust the calculator label for each calculation. This is useful when
+        using e.g.  FHI aims or VASP that are based on a "one folder per
+        calculation" paradigm. If `<adjust_label> = True`, the label of
+        attached to the calculator will be appended an identifyer (`dispName`)
+        for each calculation.
 
     Example:
 
@@ -88,7 +94,7 @@ class Vibrations:
 
     """
 
-    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2):
+    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2, create_subfolders=False):
         assert nfree in [2, 4]
         self.atoms = atoms
         self.calc = atoms.get_calculator()
@@ -101,6 +107,9 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
+        self._create_subfolders = True
+        self._original_label = self.calc.label
+
 
     def run(self):
         """Run the vibration calculations.
@@ -123,6 +132,9 @@ class Vibrations:
         """
 
         for dispName, atoms in self.iterdisplace(inplace=True):
+            if self._adjust_label:
+                new_label = self._original_label + '__' dispName
+                self.calc.set_label(new_label)
             filename = dispName + '.pckl'
             fd = opencew(filename)
             if fd is not None:
