@@ -94,7 +94,7 @@ class Vibrations:
 
     """
 
-    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2, create_subfolders=False):
+    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2, adjust_labels=False):
         assert nfree in [2, 4]
         self.atoms = atoms
         self.calc = atoms.get_calculator()
@@ -107,7 +107,7 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
-        self._create_subfolders = True
+        self._adjust_labels = True
         self._original_label = self.calc.label
 
 
