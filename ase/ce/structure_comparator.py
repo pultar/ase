@@ -11,17 +11,6 @@ from ase.spacegroup import spacegroup
 from scipy.spatial import cKDTree as KDTree
 
 try:
-    # The code runs perfectly fine without pymatgen
-    # PyMatGen is imported just for debugging to verify
-    # that the two codes returns the same
-    from pymatgen.io.ase import AseAtomsAdaptor
-    atoms_to_structure = AseAtomsAdaptor.get_structure
-    from pymatgen.analysis.structure_matcher import StructureMatcher
-    has_pymat_gen = True
-except:
-    has_pymat_gen = False
-
-try:
     import pystructcomp_cpp as pycpp
     # The C++ version is available at: https://github.com/davidkleiven/StructureCompare
     has_cpp_version = True
@@ -45,6 +34,7 @@ class StructureComparator( object ):
         self.scale_volume = scale_volume
         self.stol = stol
         self.ltol = ltol
+        self.use_cpp_version = has_cpp_version
 
     def niggli_reduce( self ):
         """
@@ -217,7 +207,7 @@ class StructureComparator( object ):
         if ( not self.has_same_volume() ):
             return False
 
-        if ( has_cpp_version ):
+        if ( self.use_cpp_version ):
             return self.compare_cpp()
 
         matrices, translations = self.get_rotation_reflection_matrices()
@@ -664,219 +654,3 @@ class StructureComparator( object ):
             R = ref_vec.dot( np.linalg.inv(T) )
             canditate_trans_mat.append(R)
         return canditate_trans_mat, atoms1_ref.get_positions()
-
-
-
-# ============================================================================ #
-#                                                                              #
-#       BELOW THIS LINE IS ONLY FUNCTIONALITY FOR TESTING THE                  #
-#                       STRUCTURE COMPARATOR                                   #
-#                                                                              #
-# ============================================================================ #
-class TestStructureComparator( unittest.TestCase ):
-    pymat_code = {
-        True:"Equal",
-        False:"Different"
-    }
-    def test_compare( self ):
-        s1 = bulk( "Al" )
-        s1 = s1*(2,2,2)
-        s2 = bulk( "Al" )
-        s2 = s2*(2,2,2)
-
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_fcc_bcc( self ):
-        s1 = bulk( "Al", crystalstructure="fcc" )
-        s2 = bulk( "Al", crystalstructure="bcc", a=4.05 )
-        s1 = s1*(2,2,2)
-        s2 = s2*(2,2,2)
-        comparator = StructureComparator()
-        self.assertFalse( comparator.compare(s1,s2) )
-
-    def test_single_impurity( self ):
-        s1 = bulk( "Al" )
-        s1 = s1*(2,2,2)
-        s1[0].symbol = "Mg"
-        s2 = bulk( "Al" )
-        s2 = s2*(2,2,2)
-        s2[3].symbol = "Mg"
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_two_impurities( self ):
-        s1 = read("test_structures/neigh1.xyz")
-        s2 = read("test_structures/neigh2.xyz")
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-        s2 = read("test_structures/neigh3.xyz")
-        self.assertFalse( comparator.compare(s1,s2) )
-
-    def test_reflection_three_imp(self):
-        s1 = read("test_structures/reflection1.xyz")
-        s2 = read("test_structures/reflection2.xyz")
-        comparator = StructureComparator()
-
-        if ( has_pymat_gen ):
-            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                             primitive_cell=True, scale=True)
-            str1 = atoms_to_structure(s1)
-            str2 = atoms_to_structure(s2)
-            print ("PyMatGen says: %s"%(self.pymat_code[m.fit(str1,str2)]))
-
-        self.assertTrue( comparator.compare(s1,s2) )
-
-
-    def test_translations( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-
-        xmax = 2.0*np.max(s1.get_cell().T)
-        N = 1
-        dx = xmax/N
-        pos_ref = s2.get_positions()
-        comparator = StructureComparator()
-        number_of_correctly_identified = 0
-        for i in range(N):
-            for j in range(N):
-                for k in range(N):
-                    displacement = np.array( [ dx*i, dx*j,dx*k ] )
-                    new_pos = pos_ref + displacement
-                    s2.set_positions(new_pos)
-                    if ( comparator.compare(s1,s2) ):
-                        number_of_correctly_identified += 1
-
-        msg = "Identified %d of %d as duplicates. All structures are known to be duplicates."%(number_of_correctly_identified,N**3)
-        self.assertEqual( number_of_correctly_identified, N**3, msg=msg )
-
-    def test_rot_60_deg( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        ca = np.cos(np.pi/3.0)
-        sa = np.sin(np.pi/3.0)
-        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
-        s2.set_positions( matrix.dot(s2.get_positions().T).T )
-        s2.set_cell( matrix.dot(s2.get_cell().T).T )
-        comparator = StructureComparator()
-        if ( has_pymat_gen ):
-            m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                             primitive_cell=True, scale=True)
-            str1 = atoms_to_structure(s1)
-            str2 = atoms_to_structure(s2)
-            code = m.fit(str1,str2)
-            print ("PyMatGen says: %s"%(self.pymat_code[code]))
-
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_rot_120_deg(self):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        ca = np.cos(2.0*np.pi/3.0)
-        sa = np.sin(2.0*np.pi/3.0)
-        matrix = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
-        s2.set_positions( matrix.dot(s2.get_positions().T).T )
-        s2.set_cell( matrix.dot(s2.get_cell().T).T )
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_rotations_to_standard( self ):
-        s1 = Atoms("Al")
-        comparator = StructureComparator()
-        for i in range(20):
-            cell = np.random.rand(3,3)*4.0-4.0
-            s1.set_cell( cell )
-            new_cell = comparator.standarize_cell(s1).get_cell().T
-            self.assertAlmostEqual( new_cell[1,0], 0.0 )
-            self.assertAlmostEqual( new_cell[2,0], 0.0)
-            self.assertAlmostEqual( new_cell[2,1], 0.0 )
-
-    def test_point_inversion( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        s2.set_positions( -s2.get_positions() )
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_mirror_plane( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        comparator = StructureComparator()
-        mat = np.array( [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,-1.0]])
-        s2.set_positions( mat.dot(s2.get_positions().T).T )
-        self.assertTrue( comparator.compare(s1,s2) )
-
-        mat = np.array( [[-1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]])
-        s2.set_positions( mat.dot(s1.get_positions().T).T )
-        self.assertTrue( comparator.compare(s1,s2))
-
-        mat = np.array( [[1.0,0.0,0.0],[0.0,-1.0,0.0],[0.0,0.0,1.0]])
-        s2.set_positions( mat.dot(s1.get_positions().T).T )
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_hcp_symmetry_ops( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        comparator = StructureComparator()
-        sg = spacegroup.Spacegroup(194)
-        cell = s2.get_cell().T
-        inv_cell = np.linalg.inv(cell)
-        for op in sg.get_rotations():
-            s1 = read("test_structures/mixStruct.xyz")
-            s2 = read("test_structures/mixStruct.xyz")
-            transformed_op = cell.dot(op).dot(inv_cell)
-            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
-            if ( has_pymat_gen ):
-                m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                                 primitive_cell=True, scale=True)
-                str1 = atoms_to_structure(s1)
-                str2 = atoms_to_structure(s2)
-            self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_fcc_symmetry_ops( self ):
-        s1 = read("test_structures/fccMix.xyz")
-        s2 = read("test_structures/fccMix.xyz")
-        comparator = StructureComparator()
-        sg = spacegroup.Spacegroup(225)
-        cell = s2.get_cell().T
-        inv_cell = np.linalg.inv(cell)
-        for op in sg.get_rotations():
-            s1 = read("test_structures/fccMix.xyz")
-            s2 = read("test_structures/fccMix.xyz")
-            transformed_op = cell.dot(op).dot(inv_cell)
-            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
-            self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_bcc_symmetry_ops( self ):
-        s1 = read("test_structures/bcc_mix.xyz")
-        s2 = read("test_structures/bcc_mix.xyz")
-        comparator = StructureComparator()
-        sg = spacegroup.Spacegroup(229)
-        cell = s2.get_cell().T
-        inv_cell = np.linalg.inv(cell)
-        for op in sg.get_rotations():
-            s1 = read("test_structures/bcc_mix.xyz")
-            s2 = read("test_structures/bcc_mix.xyz")
-            transformed_op = cell.dot(op).dot(inv_cell)
-            s2.set_positions( transformed_op.dot(s1.get_positions().T).T )
-            self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_bcc_translation( self ):
-        s1 = read("test_structures/bcc_mix.xyz")
-        s2 = read("test_structures/bcc_mix.xyz")
-        s2.set_positions( s2.get_positions()+np.array([6.0,-2.0,1.0]) )
-        comparator = StructureComparator()
-        self.assertTrue( comparator.compare(s1,s2) )
-
-    def test_one_atom_out_of_pos( self ):
-        s1 = read("test_structures/mixStruct.xyz")
-        s2 = read("test_structures/mixStruct.xyz")
-        comparator = StructureComparator( angle_tol=0.2, stol=0.01 )
-        pos = s1.get_positions()
-        pos[0,:] += 0.2
-        s2.set_positions(pos)
-        self.assertFalse( comparator.compare(s1,s2) )
-
-if __name__ == "__main__":
-    # Run the unittests
-    unittest.main()
