@@ -1,3 +1,4 @@
+import os
 import math
 from copy import deepcopy
 from itertools import permutations
@@ -7,12 +8,41 @@ from numpy.linalg import inv
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
 from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
 
-
 class ProbeStructure(object):
     """Generate probe structures based on simulated annealing according to the
-    recipe in PRB 80, 165122 (2009)."""
+    recipe in PRB 80, 165122 (2009).
+
+    Arguments:
+    =========
+    setting: BulkCrystal or BulkSapcegroup object
+    atoms: Atoms object
+        initial structure to start the simulated annealing
+    struct_per_gen: int
+        number of structures to be generated per generation
+    init_temp: int or float
+        initial temperature (does not represent *physical* temperature)
+    final_temp: int or float
+        final temperature (does not represent *physical* temperature)
+    num_temp: int
+        number of temperatures to be used in simulated annealing
+    num_steps: int
+        number of steps in simulated annealing
+    approx_mean_var: bool
+        whether or not to use a spherical and isotropical distribution
+        approximation scheme for determining the mean variance.
+        -'True': Assume a spherical and isotropical distribution of
+                 structures in the configurational space.
+                 Corresponds to eq.4 in PRB 80, 165122 (2009)
+        -'False': Use sigma and mu of eq.3 in PRB 80, 165122 (2009)
+                  to characterize the distribution of structures in
+                  population.
+                  Requires pre-sampling of random structures before
+                  generating probe structures.
+                  Reads sigma and mu from 'probe_structure-sigma_mu.npz' file.
+    """
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
-                 final_temp=None, num_temp=5, num_steps=10000):
+                 final_temp=None, num_temp=5, num_steps=10000,
+                 approx_mean_var=False):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
@@ -29,6 +59,16 @@ class ProbeStructure(object):
             raise ValueError("concentration of the elements in the provided"
                              " atoms cannot be found in the conc_matrix")
 
+        self.approx_mean_var = approx_mean_var
+        fname = 'probe_structure-sigma_mu.npz'
+        if not approx_mean_var:
+            if os.path.isfile(fname):
+                data = np.load(fname)
+                self.sigma = data['sigma']
+                self.mu = data['mu']
+            else:
+                raise IOError("'{}' not found.".format(fname))
+
         if init_temp is None or final_temp is None:
             self.init_temp, self.final_temp = self._determine_temps()
         else:
@@ -42,14 +82,16 @@ class ProbeStructure(object):
                              " temperature")
 
     def generate(self):
-        """Generate a probe structure according to PRB 80, 165122 (2009)
-        """
+        """Generate a probe structure according to PRB 80, 165122 (2009)"""
         # Start
         old = self.init.copy()
         o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
                                                      return_type='array')
         o_cfm = np.vstack((self.cfm, o_cf))
-        o_mv = self._get_mean_variance(o_cfm)
+        if self.approx_mean_var:
+            o_mv = mean_variance_approx(o_cfm)
+        else:
+            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
 
         temps = np.logspace(math.log10(self.init_temp),
                             math.log10(self.final_temp),
@@ -59,14 +101,28 @@ class ProbeStructure(object):
         for temp in temps:
             for _ in range(steps_per_temp):
                 if bool(getrandbits(1)):
-                    new, n_cf = self._change_element_type(old, o_cf)
+                    if self._has_more_than_one_conc():
+                        new, n_cf = self._change_element_type(old, o_cf)
+                    else:
+                        if self._is_swappable(old):
+                            new, n_cf = self._swap_two_atoms(old, o_cf)
+                        else:
+                            raise RuntimeError('Atoms has only one ' +
+                                               'concentration value and ' +
+                                               'not swappable.')
                 else:
-                    new, n_cf = self._swap_two_atoms(old, o_cf)
+                    if self._is_swappable(old):
+                        new, n_cf = self._swap_two_atoms(old, o_cf)
+                    else:
+                        new, n_cf = self._change_element_type(old, o_cf)
                 n_cfm = np.vstack((self.cfm, n_cf))
-                n_mv = self._get_mean_variance(n_cfm)
+                if self.approx_mean_var:
+                    n_mv = mean_variance_approx(n_cfm)
+                else:
+                    n_mv = mean_variance(n_cfm, self.sigma, self.mu)
                 accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
-                # print(count, accept, o_mv - n_mv, temp)
+                # print(count, accept)
                 if accept:
                     old = new.copy()
                     o_cf = np.copy(n_cf)
@@ -86,17 +142,34 @@ class ProbeStructure(object):
         o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
                                                      return_type='array')
         o_cfm = np.vstack((self.cfm, o_cf))
-        o_mv = self._get_mean_variance(o_cfm)
+        if self.approx_mean_var:
+            o_mv = mean_variance_approx(o_cfm)
+        else:
+            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
         diffs = []
-        for _ in range(50):
+        for _ in range(100):
             if bool(getrandbits(1)):
-                new, n_cf = self._change_element_type(old, o_cf)
+                # Change element Type
+                if self._has_more_than_one_conc():
+                    new, n_cf = self._change_element_type(old, o_cf)
+                else:
+                    if self._is_swappable(old):
+                        new, n_cf = self._swap_two_atoms(old, o_cf)
+                    else:
+                        raise RuntimeError('Atoms has only one concentration' +
+                                           'value and not swappable.')
             else:
-                new, n_cf = self._swap_two_atoms(old, o_cf)
+                # Swap two atoms
+                if self._is_swappable(old):
+                    new, n_cf = self._swap_two_atoms(old, o_cf)
+                else:
+                    new, n_cf = self._change_element_type(old, o_cf)
             n_cfm = np.vstack((self.cfm, n_cf))
-            n_mv = self._get_mean_variance(n_cfm)
+            if self.approx_mean_var:
+                n_mv = mean_variance_approx(n_cfm)
+            else:
+                n_mv = mean_variance(n_cfm, self.sigma, self.mu)
             diffs.append(abs(o_mv - n_mv))
-            # print(_)
             # update old
             old = new.copy()
             o_cf = np.copy(n_cf)
@@ -104,17 +177,14 @@ class ProbeStructure(object):
 
         avg_diff = sum(diffs) / len(diffs)
         init_temp = 10 * avg_diff
-        final_temp = 0.1 * avg_diff
+        final_temp = 0.01 * avg_diff
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
     def _swap_two_atoms(self, atoms, cf):
-        """
-        Swaps two randomly chosen atoms.
-        """
+        """Swaps two randomly chosen atoms."""
         atoms = atoms.copy()
         cf = deepcopy(cf)
-        natoms = len(atoms)
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
 
@@ -129,15 +199,14 @@ class ProbeStructure(object):
             index_by_basis = self.setting.index_by_grouped_basis
 
         # pick fist atom and determine its symbol and type
-        # a basis with only 1 type of element should not be chosen
         while True:
-            indx[0] = choice(range(natoms))
+            basis = choice(range(num_basis))
+            # a basis with only 1 type of element should not be chosen
+            if len(basis_elements[basis]) < 2:
+                continue
+            indx[0] = choice(index_by_basis[basis])
             symbol[0] = atoms[indx[0]].symbol
-            for basis in range(num_basis):
-                if symbol[0] in basis_elements[basis]:
-                    break
-            if len(basis_elements[basis]) > 1:
-                break
+            break
         # pick second atom that is not the same element, but occupies the
         # same site.
         while True:
@@ -151,6 +220,40 @@ class ProbeStructure(object):
         atoms, cf = self._change_element_type(atoms, cf, indx[0], symbol[1])
         atoms, cf = self._change_element_type(atoms, cf, indx[1], symbol[0])
         return atoms, cf
+
+    def _has_more_than_one_conc(self):
+        if len(self.setting.conc_matrix) > 1 and \
+           self.setting.conc_matrix.ndim > 1:
+            return True
+        return False
+
+    def _is_swappable(self, atoms):
+        # determine if the basis is grouped
+        if self.setting.grouped_basis is None:
+            basis_elements = self.setting.basis_elements
+            num_basis = self.setting.num_basis
+        else:
+            basis_elements = self.setting.grouped_basis_elements
+            num_basis = self.setting.num_grouped_basis
+
+        for i in range(num_basis - 1, -1, -1):
+            # delete basis with only one element type
+            if len(basis_elements[i]) < 2:
+                num_basis -= 1
+                continue
+
+            # delete basis if atoms object has only one element type
+            existing_elements = 0
+            for element in basis_elements[i]:
+                num = len([a.index for a in atoms if a.symbol == element])
+                if num > 0:
+                    existing_elements += 1
+            if existing_elements < 2:
+                num_basis -= 1
+
+        if num_basis > 0:
+            return True
+        return False
 
     def _change_element_type(self, atoms, cf, index=None, rplc_element=None):
         """Change the type of element for the atom with a given index.
@@ -312,30 +415,27 @@ class ProbeStructure(object):
         sp /= len(perm)
         return sp
 
-    def _get_mean_variance_full(self, cfm):
-        try:
-            prec = inv(cfm.T.dot(cfm))
-        # if inverting matrix leads to a singular matrix, reduce the matrix
-        except np.linalg.linalg.LinAlgError:
-            cfm = reduce_matrix(cfm)
-            prec = inv(cfm.T.dot(cfm))
+def mean_variance_full(cfm):
+    prec = precision_matrix(cfm)
+    mv = 0.
+    for x in range(cfm.shape[0]):
+        mv += cfm[x].dot(prec).dot(cfm[x].T)
+    mv = mv / cfm.shape[0]
+    return mv
 
-        mv = 0.
-        for x in range(cfm.shape[0]):
-            mv += cfm[x].dot(prec).dot(cfm[x].T)
-        mv = mv / cfm.shape[0]
-        return mv
+def mean_variance(cfm, sigma, mu):
+    prec = precision_matrix(cfm)
+    return np.trace(prec.dot(sigma)) + mu.dot(prec).dot(mu.T)
 
-    def _get_mean_variance(self, cfm):
-        try:
-            prec = inv(cfm.T.dot(cfm))
-        # if inverting matrix leads to a singular matrix, reduce the matrix
-        except np.linalg.linalg.LinAlgError:
-            cfm = reduce_matrix(cfm)
-            prec = inv(cfm.T.dot(cfm))
+def mean_variance_approx(cfm):
+    prec = precision_matrix(cfm)
+    return np.trace(prec)
 
+def precision_matrix(cfm):
+    try:
         prec = inv(cfm.T.dot(cfm))
-        sigma = np.cov(cfm.T)
-        mu = np.mean(cfm, axis=0)
-        mv = np.trace(prec.dot(sigma)) + mu.dot(prec).dot(mu.T)
-        return mv
+    # if inverting matrix leads to a singular matrix, reduce the matrix
+    except np.linalg.linalg.LinAlgError:
+        cfm = reduce_matrix(cfm)
+        prec = inv(cfm.T.dot(cfm))
+    return prec

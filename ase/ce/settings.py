@@ -9,20 +9,24 @@ from ase.gui.images import Images
 
 class ClusterExpansionSetting:
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
-                 max_cluster_dia=None, basis_elements=None,
-                 grouped_basis=None):
+                 max_cluster_dist=None, basis_elements=None,
+                 grouped_basis=None, ignore_background_atoms=False):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
-        self.db = connect(db_name)
         self.max_cluster_size = max_cluster_size
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
         self.all_elements = [item for row in basis_elements for item in row]
+        self.ignore_background_atoms = ignore_background_atoms
+        if ignore_background_atoms:
+            self.background_basis, self.background_symbol = \
+                self._remove_background_basis()
+
         self.num_elements = len(self.all_elements)
         self.unique_elements = list(set(deepcopy(self.all_elements)))
         self.num_unique_elements = len(self.unique_elements)
-        self.max_cluster_dia, self.supercell_scale_factor = \
-            self._get_max_cluster_dia_and_scale_factor(max_cluster_dia)
+        self.max_cluster_dist, self.supercell_scale_factor = \
+            self._get_max_cluster_dist_and_scale_factor(max_cluster_dist)
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
         if grouped_basis is None:
@@ -38,6 +42,11 @@ class ClusterExpansionSetting:
         self.unique_cluster_names = None
 
         self.atoms = self._create_template_atoms()
+        self.background_atom_indices = []
+        if ignore_background_atoms:
+            self.background_atom_indices = [a.index for a in self.atoms if
+                                            a.symbol in self.background_symbol]
+
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
@@ -88,25 +97,85 @@ class ClusterExpansionSetting:
             self.conc_ratio_max_2 = conc_ratio_max_2
         return True
 
-    def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
+    def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
         atoms = self.atoms_with_given_dim
-        lengths = atoms.get_cell_lengths_and_angles()[:3] /\
-            (2. * self.min_lat) * 1000
+        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
         min_length = min(lengths)
 
-        scale_factor = np.array([1, 1, 1], dtype=int)
-        if max_cluster_dia is None:
-            max_cluster_dia = min_length
+        # ------------------------------------- #
+        # Get max_cluster_dist in an array form #
+        # ------------------------------------- #
+        # max_cluster_dist is list or array
+        if isinstance(max_cluster_dist, (list, np.ndarray)):
+            # Length should be either max_cluster_size+1 or max_cluster_size-1
+            if len(max_cluster_dist) == self.max_cluster_size + 1:
+                for i in range(2):
+                    max_cluster_dist[i] = 0.
+                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
+            elif len(max_cluster_dist) == self.max_cluster_size - 1:
+                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
+                max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+            else:
+                raise ValueError("Invalid length for max_cluster_dist.")
+        # max_cluster_dist is int or float
+        elif isinstance(max_cluster_dist, (int, float)):
+            max_cluster_dist *= np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+        # Case for *None* or something else
         else:
-            max_cluster_dia = max_cluster_dia / self.min_lat * 1000
-            if min_length < max_cluster_dia:
-                scale_factor = []
-                for x in range(3):
-                    factor = max_cluster_dia / lengths[x]
-                    factor = max([factor, 1])
-                    scale_factor.append(factor)
-                scale_factor = np.ceil(scale_factor).astype(int)
-        return int(max_cluster_dia), scale_factor
+            max_cluster_dist = np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dist *= min_length
+            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+
+        # --------------------------------- #
+        # Get scale_factor in an array form #
+        # --------------------------------- #
+        scale_factor = max(max_cluster_dist) / lengths
+        scale_factor = np.ceil(scale_factor).astype(int)
+
+        return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
+
+    def _remove_background_basis(self):
+        # check if any basis consists of only one element type
+        basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
+        if not basis:
+            return None
+
+        symbol = [b[0] for b in self.basis_elements if len(b) == 1]
+        self.num_basis -= len(basis)
+
+        # remap indices if the basis are grouped, then change grouped_basis
+        # and conc_ratio_min/max accordingly
+        if self.grouped_basis is not None:
+            remapped = []
+            for i, group in enumerate(self.grouped_basis):
+                if group[0] in basis:
+                    remapped.append(i)
+            for i in sorted(remapped, reverse=True):
+                del self.grouped_basis[i]
+                del self.conc_ratio_min_1[i]
+                del self.conc_ratio_max_1[i]
+                if self.num_conc_var == 2:
+                    del self.conc_ratio_min_2[i]
+                    del self.conc_ratio_max_2[i]
+
+        # change basis_elements
+        for i in sorted(basis, reverse=True):
+            del self.basis_elements[i]
+            if self.grouped_basis is None:
+                del self.conc_ratio_min_1[i]
+                del self.conc_ratio_max_1[i]
+                if self.num_conc_var == 2:
+                    del self.conc_ratio_min_2[i]
+                    del self.conc_ratio_max_2[i]
+
+        # change all_elements
+        for i in basis:
+            count = 0
+            for x in range(i):
+                count += len(self.basis_elements[x])
+            del self.all_elements[count]
+        return basis, symbol
 
     def _check_basis_elements(self):
         error = False
@@ -151,21 +220,20 @@ class ClusterExpansionSetting:
     def _get_spin_dict(self):
         # Find odd/even
         spin_values = []
-        element_types = len(self.all_elements)
-        if element_types % 2 == 1:
-            highest = (element_types - 1) / 2
+        if self.num_unique_elements % 2 == 1:
+            highest = (self.num_unique_elements - 1) / 2
         else:
-            highest = element_types / 2
+            highest = self.num_unique_elements / 2
         # Assign spin value for each element
         while highest > 0:
             spin_values.append(highest)
             spin_values.append(-highest)
             highest -= 1
-        if element_types % 2 == 1:
+        if self.num_unique_elements % 2 == 1:
             spin_values.append(0)
 
         spin_dict = {}
-        for x in range(element_types):
+        for x in range(self.num_unique_elements):
             spin_dict[self.all_elements[x]] = spin_values[x]
         return spin_dict
 
@@ -260,7 +328,7 @@ class ClusterExpansionSetting:
         distances between all constituting atoms in self.atoms object.
         """
         natoms = len(self.atoms)
-        dist = np.zeros((natoms, natoms, 8), dtype=int)
+        dist = np.zeros((natoms, natoms, 8), dtype=float)
         indices = [a.index for a in self.atoms]
         vec = self.atoms.get_cell()
         trans = [[0., 0., 0.],
@@ -276,9 +344,8 @@ class ClusterExpansionSetting:
             shifted.translate(trans[t])
             shifted.wrap()
             for x in range(natoms):
-                temp = shifted.get_distances(x, indices) / self.min_lat * 1000
-                temp = np.round(temp)
-                dist[x, :, t] = temp.astype(int)
+                temp = shifted.get_distances(x, indices)
+                dist[x, :, t] = np.round(temp, self.dist_num_dec)
         return dist
 
     def _group_indices_by_trans_symmetry(self):
@@ -304,6 +371,8 @@ class ClusterExpansionSetting:
         indx_by_equiv = []
         temp = [[indices[0]]]
         for indx in indices[1:]:
+            if indx in self.background_atom_indices:
+                continue
             for equiv_group in range(len(temp)):
                 if (an[indx] == an[temp[equiv_group][0]]).all() and \
                         np.allclose(pos[indx], pos[temp[equiv_group][0]]):
@@ -333,17 +402,15 @@ class ClusterExpansionSetting:
 
         cluster_names: list
             names of clusters (i.e., c{x}_{y}_{#1}_{#2}, where
-                x  = number of atoms in cluster,
-                y  = maximum diameter of cluster (normalized by the shortest
-                     lattice vector length X 1000)
+                x  = number of atoms in cluster
+                y  = maximum distance of cluster
                 #1 = names are sequenced in a decreasing order when they have
                      the same number of atoms and max. diameter
                 #2 = account for different combination of basis function for
                      the cases where # of constituting elements is 3 or more).
 
         cluster_dist: list
-            distances of the constituting atoms in cluster. Normalized by the
-            shortest lattice vector length X 1000.
+            distances of the constituting atoms in cluster.
 
         cluster_indx: list
             list of indices that constitute the cluster based on the reference
@@ -365,15 +432,18 @@ class ClusterExpansionSetting:
             cluster_names.append([['c0'], ['c1']])
             cluster_dist.append([[None], [None]])
             cluster_indx.append([[None], [None]])
-            indices = self.indices_of_nearby_atom(ref_indx)
 
             for size in range(2, self.max_cluster_size + 1):
+                indices = self.indices_of_nearby_atom(ref_indx, size)
+                if self.ignore_background_atoms:
+                    indices = [i for i in indices if
+                               i not in self.background_atom_indices]
                 indx_set = []
                 dist_set = []
 
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
-                    if max(d) > self.max_cluster_dia:
+                    if max(d) > self.max_cluster_dist[size]:
                         continue
                     dist_set.append(d.tolist())
                     indx_set.append(k)
@@ -382,7 +452,7 @@ class ClusterExpansionSetting:
                     raise ValueError("There is no cluster with size " +
                                      "{}. Reduce ".format(size) +
                                      "max_cluster_size or increase " +
-                                     "max_cluster_dia.")
+                                     "max_cluster_dist.")
 
                 # categorize the distances
                 dist_types = np.unique(dist_set, axis=0).tolist()
@@ -397,7 +467,7 @@ class ClusterExpansionSetting:
                     # indx_types[category].append(indx_set[x])
                 cluster_indx[site].append(indx_types)
 
-        # Cluster names can be incorrectly assigned for cluster size of 3 and
+        # Cluster names can be incorrectly assigned for cluster size of 2 and
         # above. Assign global names for those clusters to avoid wrong name
         # assignments.
         for size in range(2, self.max_cluster_size + 1):
@@ -411,16 +481,18 @@ class ClusterExpansionSetting:
             unique_names = []
             counter = 1
             for k in range(len(unique_dist)):
+                name = 'c{0}_{1:.{prec}f}'.format(size, unique_dist[k][0],
+                                                  prec=self.dist_num_dec)
+                name = name.replace('.', 'p')
                 if k == 0:
-                    unique_names.append('c{}_{}_{}'.format(size,
-                                                           unique_dist[k][0],
-                                                           counter))
+                    name += '_{}'.format(counter)
+                    unique_names.append(name)
                     counter += 1
                     continue
                 if unique_dist[k][0] != unique_dist[k - 1][0]:
                     counter = 1
-                unique_names.append('c{}_{}_{}'.format(size, unique_dist[k][0],
-                                                       counter))
+                name += '_{}'.format(counter)
+                unique_names.append(name)
                 counter += 1
 
             self.unique_cluster_names.extend(unique_names)
@@ -458,7 +530,8 @@ class ClusterExpansionSetting:
         return tm
 
     def get_min_distance(self, cluster):
-        """
+        """Get minimum distances.
+
         Get the minimum distances between the atoms in a cluster according to
         dist_matrix and return the sorted distances (reverse order)
         """
@@ -470,16 +543,19 @@ class ClusterExpansionSetting:
             d.append(sorted(row, reverse=True))
         return np.array(min(d))
 
-    def indices_of_nearby_atom(self, ref_indx):
-        """Return the indices of the atoms that are at distances smaller than
-        specified by max_cluster_dia from the reference atom index.
+    def indices_of_nearby_atom(self, ref_indx, size):
+        """Return the indices of the atoms nearby.
+
+        Indices of the atoms are only included if distances smaller than
+        specified by max_cluster_dist from the reference atom index.
         """
         indices = [a.index for a in self.atoms]
         del indices[indices.index(ref_indx)]
         nearby_indices = []
         for indx in indices:
             for t in range(8):
-                if self.dist_matrix[ref_indx, indx, t] <= self.max_cluster_dia:
+                if (self.dist_matrix[ref_indx, indx, t] <=
+                        self.max_cluster_dist[size]):
                     nearby_indices.append(indx)
                     break
         return nearby_indices
@@ -489,11 +565,20 @@ class ClusterExpansionSetting:
         max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
         if sum(min_1) != sum(max_1):
             raise ValueError('conc_ratio values must be on the same scale')
+
         natoms_cell = len(self.atoms_with_given_dim)
+        if self.ignore_background_atoms:
+            num_background = len([a.index for a in self.atoms_with_given_dim
+                                  if a.symbol in self.background_symbol])
+            natoms_cell -= num_background
         natoms_ratio = sum(min_1)
         scale = int(natoms_cell / natoms_ratio)
         min_1 *= scale
         max_1 *= scale
+        # special case where there is only one concentration
+        if np.array_equal(min_1, max_1):
+            return min_1
+
         diff_1 = [i - j for i, j in zip(max_1, min_1)]
         nsteps_1 = max(diff_1)
         increment_1 = diff_1 / nsteps_1
@@ -530,27 +615,29 @@ class ClusterExpansionSetting:
 
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
-              ' on the values of max_cluster_size and max_cluster_dia...')
+              ' on the values of max_cluster_size and max_cluster_dist...')
         self.dist_matrix = self._create_distance_matrix()
         self.cluster_names, self.cluster_dist, self.cluster_indx = \
             self._get_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
         self.full_cluster_names = self._get_full_cluster_names()
-        self.db.write(self.atoms,
-                      name='information',
-                      data={'dist_matrix': self.dist_matrix,
-                            'cluster_names': self.cluster_names,
-                            'cluster_dist': self.cluster_dist,
-                            'cluster_indx': self.cluster_indx,
-                            'trans_matrix': self.trans_matrix,
-                            'conc_matrix': self.conc_matrix,
-                            'full_cluster_names': self.full_cluster_names,
-                            'unique_cluster_names': self.unique_cluster_names})
+        db = connect(self.db_name)
+        db.write(self.atoms,
+                 name='information',
+                 data={'dist_matrix': self.dist_matrix,
+                       'cluster_names': self.cluster_names,
+                       'cluster_dist': self.cluster_dist,
+                       'cluster_indx': self.cluster_indx,
+                       'trans_matrix': self.trans_matrix,
+                       'conc_matrix': self.conc_matrix,
+                       'full_cluster_names': self.full_cluster_names,
+                       'unique_cluster_names': self.unique_cluster_names})
 
     def _read_data(self):
+        db = connect(self.db_name)
         try:
-            row = self.db.get('name=information')
+            row = db.get('name=information')
             self.dist_matrix = row.data.dist_matrix
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
@@ -561,7 +648,7 @@ class ClusterExpansionSetting:
             self.unique_cluster_names = row.data.unique_cluster_names
         except KeyError:
             self._store_data()
-        except AssertionError:
+        except (AssertionError, AttributeError):
             self.reconfigure_settings()
 
     def _get_full_cluster_names(self):
@@ -579,8 +666,9 @@ class ClusterExpansionSetting:
         return full_names
 
     def in_conc_matrix(self, atoms):
-        """Check to see if the passed atoms object has allowed concentration
-        by checking the concentration matrix. Returns boolean.
+        """Check to see if the passed atoms object has allowed concentration.
+
+        Return True if it has allowed concentration, return False otherwise.
         """
         # determine the concentration of the given atoms
         if self.grouped_basis is None:
@@ -598,7 +686,10 @@ class ClusterExpansionSetting:
         # determine the dimensions of the concentration matrix
         # then, search to see if there is a match
         conc_shape = self.conc_matrix.shape
-        if len(conc_shape) == 2:
+        if self.conc_matrix.ndim == 1:
+            if np.array_equal(conc, self.conc_matrix):
+                return True
+        elif self.conc_matrix.ndim == 2:
             for x in range(conc_shape[0]):
                 if np.array_equal(conc, self.conc_matrix[x]):
                     return True
@@ -660,11 +751,50 @@ class ClusterExpansionSetting:
 
         images = Images()
         images.initialize(cluster_atoms)
-        gui = GUI(images)
+        gui = GUI(images, expr='')
         gui.show_name = True
-        gui.run(expr='')
+        gui.run()
 
     def reconfigure_settings(self):
-        ids = [row.id for row in self.db.select(name='information')]
-        self.db.delete(ids)
+        db = connect(self.db_name)
+        ids = [row.id for row in db.select(name='information')]
+        db.delete(ids)
         self._store_data()
+
+    def _check_first_elements(self):
+        if self.grouped_basis:
+            basis_elements = self.grouped_basis_elements
+            num_basis = self.num_grouped_basis
+        else:
+            basis_elements = self.basis_elements
+            num_basis = self.num_basis
+        # This condition can be relaxed in the future
+        first_elements = []
+        for elements in basis_elements:
+            first_elements.append(elements[0])
+        if len(set(first_elements)) != num_basis:
+            raise ValueError("First element of different basis should not be "
+                             "the same.")
+
+    def save(self, filename):
+        """Write Setting object to a file in JSON format.
+
+        Arguments:
+        =========
+        filename: str
+            Name of the file to store the necessary settings to initialize
+            the Cluster Expansion calculations.
+        """
+        class_types = ['BulkCrystal', 'BulkSpacegroup']
+        if type(self).__name__ not in class_types:
+            raise NotImplementedError('Class {}'.format(type(self).__name__) +
+                                      'is not supported.')
+
+        import json
+        if type(self).__name__ == 'BulkCrystal':
+            self.kwargs['classtype'] = 'BulkCrystal'
+        else:
+            self.kwargs['classtype'] = 'BulkSpacegroup'
+        # Write keyword arguments necessary for initializing the class
+        with open(filename, 'w') as outfile:
+            json.dump(self.kwargs, outfile, indent=2)

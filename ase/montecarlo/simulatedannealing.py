@@ -1,6 +1,6 @@
 """Definition of SimulatedAnnealing Class."""
-import numpy as np
 import math
+import numpy as np
 from ase.units import kB
 from ase.montecarlo.montecarlo import MonteCarlo
 
@@ -43,10 +43,10 @@ class SimulatedAnnealing(MonteCarlo):
         - file object: use the file object for logging
     """
 
-    def __init__(self, atoms, init_temp=None, final_temp=None,
+    def __init__(self, atoms, setting=None, init_temp=None, final_temp=None,
                  num_temp=None, interpolation='linear', temp_list=None,
                  constraint=None, logfile=None):
-        MonteCarlo.__init__(self, atoms=atoms, temp=None,
+        MonteCarlo.__init__(self, atoms=atoms, setting=setting, temp=None,
                             constraint=constraint, logfile=logfile)
 
         if isinstance(temp_list, (list, np.ndarray)):
@@ -96,8 +96,9 @@ class SimulatedAnnealing(MonteCarlo):
             self.num_temp = num_temp
 
     def run(self, num_steps=100):
-        """Run Simulated Annealing and return the minimum energy structure
-        (Atoms object) and its energy.
+        """Run Simulated Annealing.
+
+        Returns the minimum energy structure (Atoms object) and its energy.
 
         Arguments
         =========

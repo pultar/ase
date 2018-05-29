@@ -1,5 +1,6 @@
 """Definition of Metropolis Class for Metropolis Monte Carlo Simulations."""
 from ase.montecarlo.montecarlo import MonteCarlo
+from ase.ce import BulkCrystal, BulkSpacegroup
 
 
 class Metropolis(MonteCarlo):
@@ -9,6 +10,8 @@ class Metropolis(MonteCarlo):
     =========
     atoms: Atoms object to specify the initial structure. A calculator need to
            attached to *atoms* in order to calculate energy.
+
+    setting: None or Setting object for Cluster Expansion.
 
     temp: temperature in Kelvin for Monte Carlo simulation
 
@@ -25,10 +28,11 @@ class Metropolis(MonteCarlo):
         Use '-' for stdout.
     """
 
-    def __init__(self, atoms, temp, constraint=None, logfile=None):
+    def __init__(self, atoms, setting=None, temp=293, constraint=None,
+                 logfile=None):
         if temp is None:
             raise TypeError('temp needs to be int or float type')
-        MonteCarlo.__init__(self, atoms=atoms, temp=temp,
+        MonteCarlo.__init__(self, atoms=atoms, setting=setting, temp=temp,
                             constraint=constraint, logfile=logfile)
 
     def run(self, num_steps=10, average=False):
