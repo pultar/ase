@@ -9,6 +9,12 @@ should be symmetrically equivalent so the comparator should return True
 when comparing these two atoms
 
 When comparing atoms-objects from different subfolders they should return False
+
+If this test is run as a standalond script run
+
+export CI_PROJECT_DIR=/path/to/ase/
+
+first
 """
 
 test_fname_ref = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion/structure_match_data/equiv331_"
