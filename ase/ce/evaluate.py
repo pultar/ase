@@ -59,7 +59,7 @@ class Evaluate(object):
                 msg += "sklearn package, which was not found..."
                 raise ValueError( msg )
             self.penalty = 'l1'
-        elif penalty.lower() == 'euclidean' or penalty.lower() == 'l2':
+        elif penalty.lower() == 'ridge' or penalty.lower() == 'l2':
             self.penalty = 'l2'
         else:
             raise TypeError("The penalty type, {},".format(penalty) +
@@ -306,10 +306,14 @@ class Evaluate(object):
         return np.sqrt(cv_sq)
 
     def mae(self):
+        if self.e_pred is None:
+            self._get_e_predict()
         delta_e = self.e_dft - self.e_pred
         return sum(np.absolute(delta_e)) / len(delta_e)
 
     def rmse(self):
+        if self.e_pred is None:
+            self._get_e_predict()
         delta_e = self.e_dft - self.e_pred
         rmse_sq = 0.0
         for i in range(len(delta_e)):

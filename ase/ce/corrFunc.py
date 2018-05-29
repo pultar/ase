@@ -3,7 +3,7 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
-
+from ase.db import connect
 
 class CorrFunction(object):
     """Calculate the correlation function.
@@ -42,8 +42,8 @@ class CorrFunction(object):
             -'dict' (default): returns a dictionary (e.g., {'name': cf_value})
             -'tuple': returns a list of tuples (e.g., [('name', cf_value)])
             -'array': NumPy array containing *only* the correlation function
-                      values in the same order as the order provided in the
-                      "cluster_names"
+                      values in the same order as the order in
+                      "setting.full_cluster_names"
         """
         if isinstance(atoms, Atoms):
             atoms = self.check_and_convert_cell_size(atoms.copy())
@@ -172,24 +172,24 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in cluster_names], dtype=float)
         return cf
 
-    def reconfig_db_entries(self, select_cond=None):
+    def reconfig_db_entries(self, select_cond=None, reset=True):
         """
         Reconfigure the correlation function values of the existing entries in
         database.
-
-        Procedure
-        =========
-        1. Find the existing CF names in the key-value pairs and removes it
-        2. Determine the values of CFs that need to be included based on
-           settings.
 
         Arguments
         =========
         select_cond: list
             -None (default): select every item in DB except for 'information'
             -else: select based on additional condictions provided
+        reset: bool
+            -True: removes all the key-value pairs that describe correlation
+                   functions.
+            -False: leaves the existing correlation functions in the key-Value
+                    pairs, but overwrites the ones that exists in the current
+                    setting.
         """
-        db = self.setting.db
+        db = connect(self.setting.db_name)
         select = [('name', '!=', 'information')]
         if select_cond is not None:
             for cond in select_cond:
@@ -206,12 +206,13 @@ class CorrFunction(object):
             kvp = row.key_value_pairs
 
             # delete existing CF values
-            keys = []
-            for key, value in kvp.items():
-                if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6',
-                                   'c7', 'c8', 'c9')):
-                    keys.append(key)
-            db.update(row_id, delete_keys=keys)
+            if reset:
+                keys = []
+                for key, value in kvp.items():
+                    if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
+                                       'c6', 'c7', 'c8', 'c9')):
+                        keys.append(key)
+                db.update(row_id, delete_keys=keys)
 
             # get new CF based on setting
             atoms = wrap_and_sort_by_position(row.toatoms())
@@ -254,16 +255,14 @@ class CorrFunction(object):
         cell with the same size is returned after it is sorted by the position
         and wrapped. If not, it raises an error.
         """
-        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]\
-            / (2. * self.setting.min_lat) * 1000
+        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
         try:
-            row = self.setting.db.get(name='information')
+            row = connect(self.setting.db_name).get(name='information')
             template = row.toatoms()
         except:
             raise IOError("Cannot retrieve the information template from the "
                           "database")
-        template_lengths = template.get_cell_lengths_and_angles()[:3]\
-            / (2. * self.setting.min_lat) * 1000
+        template_lengths = template.get_cell_lengths_and_angles()[:3]
 
         if np.allclose(cell_lengths, template_lengths):
             atoms = wrap_and_sort_by_position(atoms)

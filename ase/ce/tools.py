@@ -32,7 +32,6 @@ def reduce_matrix(matrix):
     matrix = matrix[:, ~np.all(matrix == 0., axis=0)]
     offset = 0
     rank = matrix_rank(matrix)
-    # print("rank:{}".format(rank))
     while matrix.shape[1] > rank:
         temp = np.delete(matrix, -1 - offset, axis=1)
         if matrix_rank(temp) < rank:
