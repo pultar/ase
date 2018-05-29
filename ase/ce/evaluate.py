@@ -3,9 +3,14 @@ import numpy as np
 from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
 from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.db import connect
 
-# dependency on sklearn is to be removed due to some of technical problems
-from sklearn.linear_model import Lasso
+try:
+    # dependency on sklearn is to be removed due to some of technical problems
+    from sklearn.linear_model import Lasso
+    has_sklearn = True
+except:
+    has_sklearn = False
 
 
 class Evaluate(object):
@@ -50,6 +55,10 @@ class Evaluate(object):
         if penalty is None or penalty is False:
             self.penalty = False
         elif penalty.lower() == 'lasso' or penalty.lower() == 'l1':
+            if ( not has_sklearn ):
+                msg = "At the moment the L1 regularization relies on the "
+                msg += "sklearn package, which was not found..."
+                raise ValueError( msg )
             self.penalty = 'l1'
         elif penalty.lower() == 'ridge' or penalty.lower() == 'l2':
             self.penalty = 'l2'
@@ -72,7 +81,8 @@ class Evaluate(object):
         Only selects all of the converged structures by default.
         """
         cf_matrix = []
-        for row in self.setting.db.select(self.select_cond):
+        db = connect(self.setting.db_name)
+        for row in db.select(self.select_cond):
             cf_matrix.append([row[x] for x in self.cluster_names])
         return np.array(cf_matrix, dtype=float)
 
@@ -84,14 +94,16 @@ class Evaluate(object):
         creating probe structures.
         """
         cfm = []
-        for row in self.setting.db.select([('name', '!=', 'information')]):
+        db = connect(self.setting.db_name)
+        for row in db.select([('name', '!=', 'information')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         return cfm
 
     def _get_dft_energy_per_atom(self):
         e_dft = []
-        for row in self.setting.db.select(self.select_cond):
+        db = connect(self.setting.db_name)
+        for row in db.select(self.select_cond):
             e_dft.append(row.energy / row.natoms)
         self.e_dft = np.array(e_dft)
         return True
