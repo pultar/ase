@@ -18,119 +18,127 @@ except:
     has_cpp_version = False
 
 
-class StructureComparator( object ):
-    def __init__( self, angle_tol=1, ltol=0.05, stol=0.05, scale_volume=False ):
-        """
-        Parameters
-        ------------
-        angle_tol - angle tolerance for the lattice vectors in degrees
-        ltol - relative tolerance for the length of the lattice vectors (per atom)
-        stol - posistion tolerance for the site comparison in units of (V/N)^(1/3) (average length between atoms)
-        scale_volume - if True the volumes of the two structures are scaled to be equal
-        """
+class StructureComparator(object):
+    """Compare two structures to determine if they are equivalent.
+
+    Attributes:
+    ==========
+    angle_tol: float
+        angle tolerance for the lattice vectors in degrees
+
+    ltol: float
+        relative tolerance for the length of the lattice vectors (per atom)
+
+    stol: float
+        position tolerance for the site comparison in units of
+        (V/N)^(1/3) (average length between atoms)
+
+    scale_volume: bool
+        if True the volumes of the two structures are scaled to be equal
+    """
+    def __init__(self, angle_tol=1.0, ltol=0.05, stol=0.05,
+                 scale_volume=False):
         self.s1 = None
         self.s2 = None
-        self.angle_tol = angle_tol*np.pi/180.0 # Convert to radians
+        # Convert angle tolderance to radians
+        self.angle_tol = angle_tol * np.pi / 180.0
         self.scale_volume = scale_volume
         self.stol = stol
         self.ltol = ltol
         self.use_cpp_version = has_cpp_version
 
-    def niggli_reduce( self ):
-        """
-        Reduce the two cells to the
+    def _niggli_reduce(self):
+        """Reduce to niggli cells.
+
+        Reduce the two atoms to niggli cells, then rotates the niggli cells to
+        the so called "standard" orientation with one lattice vector along the
+        x-axis.
         """
         asetools.niggli_reduce(self.s1)
         asetools.niggli_reduce(self.s2)
-        self.standarize_cell(self.s1)
-        self.standarize_cell(self.s2)
+        self._standarize_cell(self.s1)
+        self._standarize_cell(self.s2)
 
-    def standarize_cell( self, atoms ):
-        """
-        Rotate the first vector such that it points along the x-axis
-        """
+    def _standarize_cell(self, atoms):
+        """Rotate the first vector such that it points along the x-axis."""
         cell = atoms.get_cell().T
         total_rot_mat = np.eye(3)
-        v1 = cell[:,0]
-        l1 = np.sqrt(v1[0]**2+v1[2]**2)
-        angle = np.abs( np.arcsin(v1[2]/l1) )
-        if ( v1[0] < 0.0 and v1[2] > 0.0 ):
-            angle = np.pi-angle
-        elif ( v1[0] < 0.0  and v1[2] < 0.0 ):
-            angle = np.pi+angle
-        elif ( v1[0]>0.0 and v1[2] < 0.0 ):
+        v1 = cell[:, 0]
+        l1 = np.sqrt(v1[0]**2 + v1[2]**2)
+        angle = np.abs(np.arcsin(v1[2] / l1))
+        if (v1[0] < 0.0 and v1[2] > 0.0):
+            angle = np.pi - angle
+        elif (v1[0] < 0.0 and v1[2] < 0.0):
+            angle = np.pi + angle
+        elif (v1[0] > 0.0 and v1[2] < 0.0):
             angle = -angle
         ca = np.cos(angle)
         sa = np.sin(angle)
-        rotmat = np.array( [[ca,0.0,sa],[0.0,1.0,0.0],[-sa,0.0,ca]] )
+        rotmat = np.array([[ca, 0.0, sa], [0.0, 1.0, 0.0], [-sa, 0.0, ca]])
         total_rot_mat = rotmat.dot(total_rot_mat)
         cell = rotmat.dot(cell)
 
-        v1 = cell[:,0]
-        l1 = np.sqrt(v1[0]**2+v1[1]**2)
-        angle = np.abs( np.abs( np.arcsin(v1[1]/l1) ) )
-        if ( v1[0] < 0.0 and v1[1] > 0.0 ):
-            angle = np.pi-angle
-        elif ( v1[0] < 0.0 and v1[1] < 0.0 ):
-            angle = np.pi+angle
-        elif ( v1[0] > 0.0 and v1[1] < 0.0 ):
+        v1 = cell[:, 0]
+        l1 = np.sqrt(v1[0]**2 + v1[1]**2)
+        angle = np.abs(np.arcsin(v1[1] / l1))
+        if (v1[0] < 0.0 and v1[1] > 0.0):
+            angle = np.pi - angle
+        elif (v1[0] < 0.0 and v1[1] < 0.0):
+            angle = np.pi + angle
+        elif (v1[0] > 0.0 and v1[1] < 0.0):
             angle = -angle
         ca = np.cos(angle)
         sa = np.sin(angle)
-        rotmat = np.array( [[ca,sa,0.0],[-sa,ca,0.0],[0.0,0.0,1.0]] )
+        rotmat = np.array([[ca, sa, 0.0], [-sa, ca, 0.0], [0.0, 0.0, 1.0]])
         total_rot_mat = rotmat.dot(total_rot_mat)
         cell = rotmat.dot(cell)
 
         # Rotate around x axis such that the second vector is in the xy plane
-        v2 = cell[:,1]
-        l2 = np.sqrt( v2[1]**2 + v2[2]**2 )
-        angle = np.abs( np.arcsin( v2[2]/l2 ) )
-        if ( v2[1] < 0.0 and v2[2] > 0.0 ):
-            angle = np.pi-angle
-        elif ( v2[1] < 0.0 and v2[2] < 0.0 ):
-            angle = np.pi+angle
-        elif ( v2[1] > 0.0 and v2[2] < 0.0 ):
+        v2 = cell[:, 1]
+        l2 = np.sqrt(v2[1]**2 + v2[2]**2)
+        angle = np.abs(np.arcsin(v2[2] / l2))
+        if (v2[1] < 0.0 and v2[2] > 0.0):
+            angle = np.pi - angle
+        elif (v2[1] < 0.0 and v2[2] < 0.0):
+            angle = np.pi + angle
+        elif (v2[1] > 0.0 and v2[2] < 0.0):
             angle = -angle
         ca = np.cos(angle)
         sa = np.sin(angle)
-        rotmat = np.array( [[1.0,0.0,0.0],[0.0,ca,sa],[0.0,-sa,ca]] )
+        rotmat = np.array([[1.0, 0.0, 0.0], [0.0, ca, sa], [0.0, -sa, ca]])
         total_rot_mat = rotmat.dot(total_rot_mat)
         cell = rotmat.dot(cell)
 
-        atoms.set_cell( cell.T )
-        atoms.set_positions( total_rot_mat.dot(atoms.get_positions().T).T )
-        atoms.wrap( pbc=[1,1,1] )
+        atoms.set_cell(cell.T)
+        atoms.set_positions(total_rot_mat.dot(atoms.get_positions().T).T)
+        atoms.wrap(pbc=[1, 1, 1])
         return atoms
 
-    def get_element_count( self ):
-        """
-        Counts the number of elements in each of the structures
-        """
+    def _get_element_count(self):
+        """Counts the number of elements in each of the structures."""
         elem1 = {}
         elem2 = {}
 
         for atom in self.s1:
-            if ( atom.symbol in elem1.keys() ):
+            if atom.symbol in elem1.keys():
                 elem1[atom.symbol] += 1
             else:
                 elem1[atom.symbol] = 1
 
         for atom in self.s2:
-            if ( atom.symbol in elem2.keys() ):
+            if atom.symbol in elem2.keys():
                 elem2[atom.symbol] += 1
             else:
                 elem2[atom.symbol] = 1
         return elem1, elem2
 
+    def _has_same_elements(self):
+        """Check that the element types and the number of each constituent are
+        the same"""
+        elem1, elem2 = self._get_element_count()
+        return elem1 == elem2
 
-    def has_same_elements( self ):
-        """
-        Check that the element types and the number of each constituent are the same
-        """
-        elem1, elem2 = self.get_element_count()
-        return (elem1 == elem2)
-
-    def has_same_angles( self ):
+    def _has_same_angles(self):
         """
         Check that the Niggli unit vectors has the same internal angles
         """
@@ -141,41 +149,39 @@ class StructureComparator( object ):
 
         # Normalize each vector
         for i in range(3):
-            cell1[:,i] /= np.sqrt( np.sum(cell1[:,i]**2) )
-            cell2[:,i] /= np.sqrt( np.sum(cell2[:,i]**2) )
+            cell1[:, i] /= np.sqrt(np.sum(cell1[:, i]**2))
+            cell2[:, i] /= np.sqrt(np.sum(cell2[:, i]**2))
         dot1 = cell1.T.dot(cell1)
         dot2 = cell2.T.dot(cell2)
 
         # Extract only the relevant dot products
-        dot1 = [ dot1[0,1],dot1[0,2],dot1[1,2] ]
-        dot2 = [ dot2[0,1],dot2[0,2],dot2[1,2] ]
+        dot1 = [dot1[0, 1], dot1[0, 2], dot1[1, 2]]
+        dot2 = [dot2[0, 1], dot2[0, 2], dot2[1, 2]]
 
         # Convert to angles
-        angles1 = [ np.arccos(scalar_prod)*180.0/np.pi for scalar_prod in dot1]
-        angles2 = [ np.arccos(scalar_prod)*180.0/np.pi for scalar_prod in dot2]
+        ang1 = [np.arccos(scalar_prod) * 180.0 / np.pi for scalar_prod in dot1]
+        ang2 = [np.arccos(scalar_prod) * 180.0 / np.pi for scalar_prod in dot2]
 
         for i in range(3):
-            closestIndex = np.argmin( np.abs(np.array(angles2)-angles1[i]) )
-            if ( np.abs(angles2[closestIndex]-angles1[i]) < self.angle_tol ):
+            closestIndex = np.argmin(np.abs(np.array(ang2) - ang1[i]))
+            if np.abs(angles2[closestIndex] - angles1[i]) < self.angle_tol:
                 # Remove the entry that matched
-                #del dot2[closestIndex]
-                del angles2[closestIndex]
+                # del dot2[closestIndex]
+                del ang2[closestIndex]
             else:
                 return False
         return True
 
-    def scale_volumes( self ):
-        """
-        Scales the cell of s1 to have the same volume as s2
-        """
-        v1 = np.linalg.det( self.s1.get_cell() )
-        v2 = np.linalg.det( self.s2.get_cell() )
+    def _scale_volumes(self):
+        """Scale the cell of s1 to have the same volume as s2"""
+        v1 = np.linalg.det(self.s1.get_cell())
+        v2 = np.linalg.det(self.s2.get_cell())
 
         # Scale the cells
         cell1 = self.s1.get_cell()
-        coordinate_scaling = (v2/v1)**(1.0/3.0)
+        coordinate_scaling = (v2 / v1)**(1.0 / 3.0)
         cell1 *= coordinate_scaling
-        self.s1.set_positions( self.s1.get_positions()*coordinate_scaling )
+        self.s1.set_positions(self.s1.get_positions() * coordinate_scaling)
         self.s1.set_cell(cell1)
 
     def has_same_volume( self ):
@@ -194,15 +200,15 @@ class StructureComparator( object ):
         if ( len(s1) != len(s2) ):
             return False
 
-        if ( not self.has_same_elements() ):
+        if (not self._has_same_elements()):
             return False
 
         self.niggli_reduce()
-        if ( not self.has_same_angles() ):
+        if not self._has_same_angles():
             return False
 
-        if ( self.scale_volume ):
-            self.scale_volumes()
+        if self.scale_volume:
+            self._scale_volumes()
 
         if ( not self.has_same_volume() ):
             return False
@@ -257,7 +263,7 @@ class StructureComparator( object ):
         """
         Returns the symbol of the least frequent element
         """
-        elem1, elem2 = self.get_element_count()
+        elem1, elem2 = self._get_element_count()
         assert( elem1 == elem2 )
         minimum_value = 2*len(self.s1) # Set the value to a large value
         least_freq_element = "X"
@@ -274,7 +280,7 @@ class StructureComparator( object ):
         """
         Returns the symbol of the most frequent element
         """
-        elem1, elem2 = self.get_element_count()
+        elem1, elem2 = self._get_element_count()
         assert( elem1 == elem2 )
         max_val = 0
         most_freq_elm = "X"
