@@ -45,6 +45,7 @@ class StructureComparator(object):
         self.scale_volume = scale_volume
         self.stol = stol
         self.ltol = ltol
+        self.position_tolerance = 0.0
         self.use_cpp_version = has_cpp_version
 
     def _niggli_reduce(self):
@@ -184,39 +185,41 @@ class StructureComparator(object):
         self.s1.set_positions(self.s1.get_positions() * coordinate_scaling)
         self.s1.set_cell(cell1)
 
-    def has_same_volume( self ):
-        return np.abs( np.linalg.det(self.s1.get_cell())-np.linalg.det(self.s2.get_cell()) < 1E-5 )
+    def _has_same_volume(self):
+        vol1 = self.s1.get_volume()
+        vol2 = self.s2.get_volume()
+        return np.abs(vol1 - vol2) < 1E-5
 
-    def compare( self, s1, s2 ):
+    def compare(self, s1, s2):
         """
         Compare the two structures
         """
         self.s1 = s1.copy()
         self.s2 = s2.copy()
 
-        volume = np.linalg.det( self.s1.get_cell() )
-        self.position_tolerance = self.stol*(volume/len(self.s2))**(1.0/3.0)
+        vol = self.s1.get_volume()
+        self.position_tolerance = self.stol * (vol / len(self.s2))**(1.0 / 3.0)
 
-        if ( len(s1) != len(s2) ):
+        if len(s1) != len(s2):
             return False
 
-        if (not self._has_same_elements()):
+        if not self._has_same_elements():
             return False
 
-        self.niggli_reduce()
+        self._niggli_reduce()
         if not self._has_same_angles():
             return False
 
         if self.scale_volume:
             self._scale_volumes()
 
-        if ( not self.has_same_volume() ):
+        if not self._has_same_volume():
             return False
 
-        if ( self.use_cpp_version ):
+        if self.use_cpp_version:
             return self.compare_cpp()
 
-        matrices, translations = self.get_rotation_reflection_matrices()
+        matrices, translations = self._get_rotation_reflection_matrices()
         return self.positions_match(matrices, translations)
 
     def compare_cpp( self ):
@@ -225,7 +228,8 @@ class StructureComparator(object):
         """
         s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
         s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
-        atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
+        atoms1_ref, atoms2_ref = \
+            self._extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
         cell = self.s1.get_cell().T
@@ -291,15 +295,10 @@ class StructureComparator(object):
         assert( most_freq_elm != "X" )
         return most_freq_elm
 
-    def extract_positions_of_least_frequent_element( self ):
+    def _extract_positions_of_least_frequent_element(self):
         """
         Extracts a dictionary of positions of each element
         """
-        elem_pos1 = {}
-        elem_pos2 = {}
-        pos1 = self.s1.get_positions(wrap=True)
-        pos2 = self.s2.get_positions(wrap=True)
-
         least_freq_element = self.get_least_frequent_element()
 
         position1 = []
@@ -371,7 +370,9 @@ class StructureComparator(object):
         expaned_atoms = copy.deepcopy(ref_atoms)
 
         cell = ref_atoms.get_cell().T
-        normal_vectors = [np.cross(cell[:,0],cell[:,1]), np.cross(cell[:,0],cell[:,2]), np.cross(cell[:,1],cell[:,2])]
+        normal_vectors = [np.cross(cell[:, 0], cell[:, 1]),
+                          np.cross(cell[:, 0], cell[:, 2]),
+                          np.cross(cell[:, 1], cell[:, 2])]
         normal_vectors = [vec/np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
         positions = ref_atoms.get_positions(wrap=True)
         tol = 0.0001
@@ -379,12 +380,12 @@ class StructureComparator(object):
 
         appended_atom_pairs = []
 
-        for i in range( len(ref_atoms) ):
-            surface_close = [False,False,False,False,False,False]
+        for i in range(len(ref_atoms)):
+            surface_close = [False, False, False, False, False, False]
             # Face 1
-            distance = np.abs( positions[i,:].dot(normal_vectors[0]) )
+            distance = np.abs( positions[i, :].dot(normal_vectors[0]))
             symbol = ref_atoms[i].symbol
-            if ( distance < tol ):
+            if distance < tol:
                 newpos = positions[i,:]+cell[:,2]
                 newAtom = Atoms( symbol, positions=[newpos] )
                 appended_atom_pairs.append( (i,len(expaned_atoms)) )
@@ -437,45 +438,45 @@ class StructureComparator(object):
                 surface_close[5] = True
 
             # Take edges into account
-            if ( surface_close[0] and surface_close[2] ):
-                newpos = positions[i,:] + cell[:,1] + cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[0] and surface_close[2]):
+                newpos = positions[i, :] + cell[:, 1] + cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[0] and surface_close[4] ):
-                newpos = positions[i,:] + cell[:,0] + cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[0] and surface_close[4]):
+                newpos = positions[i, :] + cell[:, 0] + cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[0] and surface_close[3] ):
-                newpos = positions[i,:] - cell[:,1] + cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[0] and surface_close[3]):
+                newpos = positions[i, :] - cell[:, 1] + cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[0] and surface_close[5] ):
-                newpos = positions[i,:] - cell[:,0] + cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[0] and surface_close[5]):
+                newpos = positions[i, :] - cell[:, 0] + cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[3] and surface_close[4] ):
-                newpos = positions[i,:] + cell[:,0] - cell[:,1]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[3] and surface_close[4]):
+                newpos = positions[i, :] + cell[:, 0] - cell[:, 1]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[3] and surface_close[1] ):
-                newpos = positions[i,:] - cell[:,1] - cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[3] and surface_close[1]):
+                newpos = positions[i, :] - cell[:, 1] - cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[3] and surface_close[5] ):
-                newpos = positions[i,:] - cell[:,1] - cell[:,0]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[3] and surface_close[5]):
+                newpos = positions[i, :] - cell[:, 1] - cell[:, 0]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
-            if ( surface_close[1] and surface_close[5] ):
-                newpos = positions[i,:] - cell[:,0] - cell[:,2]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            if (surface_close[1] and surface_close[5]):
+                newpos = positions[i, :] - cell[:, 0] - cell[:, 2]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
             if ( surface_close[2] and surface_close[5] ):
                 newpos = positions[i,:] - cell[:,0] + cell[:,1]
@@ -566,27 +567,25 @@ class StructureComparator(object):
                 return True
         return False
 
-    def get_rotation_reflection_matrices( self ):
-        """
-        Computes candidates for the transformation matrix
-        """
-        s1_pos_ref = copy.deepcopy( self.s1.get_positions() )
-        s2_pos_ref = copy.deepcopy( self.s2.get_positions() )
-        atoms1_ref, atoms2_ref = self.extract_positions_of_least_frequent_element()
+    def _get_rotation_reflection_matrices(self):
+        """Computes candidates for the transformation matrix."""
+        atoms1_ref, atoms2_ref = \
+            self._extract_positions_of_least_frequent_element()
         rot_reflection_mat = []
         center_of_mass = []
         cell = self.s1.get_cell().T
         angle_tol = self.angle_tol
 
-        delta_vec = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2]) # Additional vector that is added to make sure that there always is an atom at the origin
+        # Additional vector that is added to make sure that
+        # there always is an atom at the origin
+        delta_vec = 1E-6 * (cell[:, 0] + cell[:, 1] + cell[:, 2])
 
         # Put on of the least frequent elements of structure 2 at the origin
-        translation = atoms2_ref.get_positions()[0,:]-delta_vec
-        atoms2_ref.set_positions( atoms2_ref.get_positions() - translation )
+        translation = atoms2_ref.get_positions()[0, :] - delta_vec
+        atoms2_ref.set_positions(atoms2_ref.get_positions() - translation)
         atoms2_ref.wrap( pbc=[1,1,1] )
         self.s2.set_positions( self.s2.get_positions()-translation)
         self.s2.wrap( pbc=[1,1,1] )
-
 
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
