@@ -1,6 +1,7 @@
 from ase.ce import StructureComparator
 import glob
 from ase.io import read
+import os
 
 """
 Inside the folder structure_match_data all structures inside the same subfolder
@@ -10,12 +11,12 @@ when comparing these two atoms
 When comparing atoms-objects from different subfolders they should return False
 """
 
-test_fname_ref = "structure_match_data/equiv331_"
+test_fname_ref = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion/structure_match_data/equiv331_"
 n_sets = 218
 cpp_stepsize = 1
 python_stepsize = 20
 false_structure_stepsize = 10
-verbose = True
+verbose = False
 
 def test_equal(comparator,step):
     # All structure in each folder are similar
