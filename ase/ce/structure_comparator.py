@@ -264,31 +264,32 @@ class StructureComparator(object):
         Returns the symbol of the least frequent element
         """
         elem1, elem2 = self._get_element_count()
-        assert( elem1 == elem2 )
-        minimum_value = 2*len(self.s1) # Set the value to a large value
+        assert(elem1 == elem2)
+        minimum_value = 2 * len(self.s1)  # Set the value to a large value
         least_freq_element = "X"
         for key, value in elem1.iteritems():
-            if ( value < minimum_value ):
+            if value < minimum_value:
                 least_freq_element = key
                 minimum_value = value
 
-        if ( least_freq_element == "X" ):
-            raise ValueError( "Did not manage to find the least frequent element" )
+        if least_freq_element == "X":
+            msg = "Did not manage to find the least frequent element"
+            raise ValueError(msg)
         return least_freq_element
 
-    def get_most_frequent_element( self ):
+    def get_most_frequent_element(self):
         """
         Returns the symbol of the most frequent element
         """
         elem1, elem2 = self._get_element_count()
-        assert( elem1 == elem2 )
+        assert(elem1 == elem2)
         max_val = 0
         most_freq_elm = "X"
         for key, value in elem1.iteritems():
-            if ( value > max_val ):
+            if value > max_val:
                 max_val = value
                 most_freq_elm = key
-        assert( most_freq_elm != "X" )
+        assert(most_freq_elm != "X")
         return most_freq_elm
 
     def _extract_positions_of_least_frequent_element(self):
@@ -297,32 +298,30 @@ class StructureComparator(object):
         """
         least_freq_element = self.get_least_frequent_element()
 
-        position1 = []
-        position2 = []
         atoms1 = None
         atoms2 = None
 
-        for i in range( len(self.s1) ):
+        for i in range(len(self.s1)):
             symbol = self.s1[i].symbol
-            if ( symbol == least_freq_element ):
-                #position1.append( pos1[i,:] )
-                if ( atoms1 is None ):
-                    atoms1 = Atoms( symbol, positions=[self.s1.get_positions(wrap=True)[i,:]])
+            if symbol == least_freq_element:
+                pos = self.s1.get_positions(wrap=True)[i, :]
+                if atoms1 is None:
+                    atoms1 = Atoms(symbol, positions=[pos])
                 else:
-                    atoms1.extend( Atoms(symbol, positions=[self.s1.get_positions(wrap=True)[i,:]]) )
+                    atoms1.extend(Atoms(symbol, positions=[pos]))
 
             symbol = self.s2[i].symbol
-            if ( symbol == least_freq_element ):
-                #position2.append( pos2[i,:] )
-                if ( atoms2 is None ):
-                    atoms2 = Atoms( symbol, positions=[self.s2.get_positions(wrap=True)[i,:]])
+            if symbol == least_freq_element:
+                pos = self.s2.get_positions(wrap=True)[i, :]
+                if atoms2 is None:
+                    atoms2 = Atoms(symbol, positions=[pos])
                 else:
-                    atoms2.extend( Atoms(symbol, positions=[self.s2.get_positions(wrap=True)[i,:]]) )
-        atoms1.set_cell( self.s1.get_cell() )
-        atoms2.set_cell( self.s2.get_cell() )
+                    atoms2.extend(Atoms(symbol, positions=[pos]))
+        atoms1.set_cell(self.s1.get_cell())
+        atoms2.set_cell(self.s2.get_cell())
         return atoms1, atoms2
 
-    def positions_match( self, rotation_reflection_matrices, translations ):
+    def positions_match(self, rotation_reflection_matrices, translations):
         """
         Check if the position and elements match.
         Note that this function changes self.s1 and self.s2 to the rotation and
@@ -330,7 +329,7 @@ class StructureComparator(object):
         is called before the element comparison
         """
         # Position matching not implemented yet
-        pos1_ref = self.s1.get_positions( wrap=True )
+        pos1_ref = self.s1.get_positions(wrap=True)
 
         cell = self.s1.get_cell().T
         delta = 1E-6*(cell[:,0]+cell[:,1]+cell[:,2])
@@ -369,10 +368,9 @@ class StructureComparator(object):
         normal_vectors = [np.cross(cell[:, 0], cell[:, 1]),
                           np.cross(cell[:, 0], cell[:, 2]),
                           np.cross(cell[:, 1], cell[:, 2])]
-        normal_vectors = [vec/np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
+        normal_vectors = [vec / np.sqrt(np.sum(vec**2)) for vec in normal_vectors]
         positions = ref_atoms.get_positions(wrap=True)
         tol = 0.0001
-        num_faces_close = 0
 
         appended_atom_pairs = []
 
@@ -425,11 +423,11 @@ class StructureComparator(object):
                 surface_close[4] = True
 
             # Face 6
-            distance = np.abs( (positions[i,:]-cell[:,0]).dot(normal_vectors[2]) )
-            if ( distance < tol ):
-                newpos = positions[i,:] - cell[:,0]
-                newAtom = Atoms( symbol, positions=[newpos] )
-                appended_atom_pairs.append( (i,len(expaned_atoms)) )
+            distance = np.abs((positions[i, :] - cell[:, 0]).dot(normal_vectors[2]))
+            if distance < tol:
+                newpos = positions[i, :] - cell[:, 0]
+                newAtom = Atoms(symbol, positions=[newpos])
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
                 surface_close[5] = True
 
@@ -504,7 +502,7 @@ class StructureComparator(object):
             elif (surface_close[0] and surface_close[3] and surface_close[4]):
                 newpos = positions[i, :] + cell[:, 0] - cell[:, 1] + cell[:, 2]
                 newAtom = Atoms(symbol, positions=[newpos])
-                appended_atom_pairs.append((i,len(expaned_atoms)))
+                appended_atom_pairs.append((i, len(expaned_atoms)))
                 expaned_atoms.extend(newAtom)
             elif (surface_close[0] and surface_close[2] and surface_close[5]):
                 newpos = positions[i, :] - cell[:, 0] + cell[:, 1] + cell[:, 2]
@@ -539,7 +537,7 @@ class StructureComparator(object):
 
         return expaned_atoms, appended_atom_pairs
 
-    def elements_match( self, s1, s2, kdtree ):
+    def elements_match(self, s1, s2, kdtree):
         """
         Checks that all the elements in s1 match the corresponding position in s2
 
@@ -549,17 +547,16 @@ class StructureComparator(object):
         pos1 = s1.get_positions()
         for order in range(1):
             all_match = True
-            used_sites = []
-            for i in range( len(s1) ):
+            for i in range(len(s1)):
                 s1pos = np.zeros(3)
-                s1pos[0] = pos1[i,order]
-                s1pos[1] = pos1[i, (order+1)%3]
-                s1pos[2] = pos1[i, (order+2)%3]
+                s1pos[0] = pos1[i, order]
+                s1pos[1] = pos1[i, (order + 1)%3]
+                s1pos[2] = pos1[i, (order + 2)%3]
                 dist, closest = kdtree.query(s1pos)
-                if ( (s1[i].symbol != s2[closest].symbol) or (dist > self.position_tolerance)):
+                if ((s1[i].symbol != s2[closest].symbol) or (dist > self.position_tolerance)):
                     all_match = False
                     break
-            if ( all_match ):
+            if all_match:
                 return True
         return False
 
@@ -567,8 +564,6 @@ class StructureComparator(object):
         """Computes candidates for the transformation matrix."""
         atoms1_ref, atoms2_ref = \
             self._extract_positions_of_least_frequent_element()
-        rot_reflection_mat = []
-        center_of_mass = []
         cell = self.s1.get_cell().T
         angle_tol = self.angle_tol
 
@@ -579,79 +574,82 @@ class StructureComparator(object):
         # Put on of the least frequent elements of structure 2 at the origin
         translation = atoms2_ref.get_positions()[0, :] - delta_vec
         atoms2_ref.set_positions(atoms2_ref.get_positions() - translation)
-        atoms2_ref.wrap( pbc=[1,1,1] )
-        self.s2.set_positions( self.s2.get_positions()-translation)
-        self.s2.wrap( pbc=[1,1,1] )
+        atoms2_ref.wrap(pbc=[1, 1, 1])
+        self.s2.set_positions(self.s2.get_positions() - translation)
+        self.s2.wrap(pbc=[1, 1, 1])
 
         # Store three reference vectors
         ref_vec = atoms2_ref.get_cell().T
-        ref_vec_lengths = np.sqrt( np.sum( ref_vec**2, axis=0 ) )
-        cell_diag = cell[:,0]+cell[:,1]+cell[:,2]
+        ref_vec_lengths = np.sqrt(np.sum(ref_vec**2, axis=0))
+        cell_diag = cell[:, 0] + cell[:, 1] + cell[:, 2]
 
         canditate_trans_mat = []
 
         # Compute ref vec angles
-        angle12_ref = np.arccos( ref_vec[:,0].dot(ref_vec[:,1])/(ref_vec_lengths[0]*ref_vec_lengths[1]) )
-        if ( angle12_ref > np.pi/2 ):
+        angle12_ref = np.arccos(ref_vec[:, 0].dot(ref_vec[:, 1]) / (ref_vec_lengths[0] * ref_vec_lengths[1]))
+        if angle12_ref > np.pi/2.0:
             angle12_ref = np.pi-angle12_ref
         angle13_ref = np.arccos( ref_vec[:,0].dot(ref_vec[:,2])/(ref_vec_lengths[0]*ref_vec_lengths[2]))
-        if ( angle13_ref > np.pi/2 ):
+        if angle13_ref > np.pi/2.0:
             angle13_ref = np.pi-angle13_ref
         angle23_ref = np.arccos( ref_vec[:,1].dot(ref_vec[:,2])/(ref_vec_lengths[1]*ref_vec_lengths[2]) )
-        if ( angle23_ref > np.pi/2.0 ):
+        if angle23_ref > np.pi/2.0:
             angle23_ref = np.pi-angle23_ref
 
         sc_atom_search = atoms1_ref*(3,3,3)
-        sc_pos = atoms1_ref.get_positions()+cell[:,0]+cell[:,1]+cell[:,2] # Translate by one cell diagonal
+        sc_pos = atoms1_ref.get_positions() + cell[:, 0] + cell[:, 1] + cell[:, 2] # Translate by one cell diagonal
         sc_pos_search = sc_atom_search.get_positions()
 
         candidate_vecs = [[],[],[]]
-        translation = sc_pos[0,:]-delta_vec
+        translation = sc_pos[0,:] - delta_vec
 
         new_sc_pos = sc_pos_search-translation
-        lengths = np.sqrt( np.sum( new_sc_pos**2, axis=1 ) )
-        for l in range( 1,len(lengths) ):
+        lengths = np.sqrt(np.sum(new_sc_pos**2, axis=1))
+        for l in range(1, len(lengths)):
             for k in range(3):
-                if ( np.abs(lengths[l]-ref_vec_lengths[k]) < self.ltol*lengths[l]/len(self.s1) ):
-                    candidate_vecs[k].append(new_sc_pos[l,:])
+                if (np.abs(lengths[l] - ref_vec_lengths[k]) < self.ltol*lengths[l]/len(self.s1)):
+                    candidate_vecs[k].append(new_sc_pos[l, :])
 
         # Check angles
-        refined_candidate_list = [[],[],[]]
+        refined_candidate_list = [[], [], []]
 
         for v1 in candidate_vecs[0]:
             for v2 in candidate_vecs[1]:
-                if ( np.allclose(v1,v2, atol=1E-3) ):
+                if np.allclose(v1, v2, atol=1E-3):
                     continue
-                v1len = np.sqrt( np.sum(v1**2) )
-                v2len = np.sqrt( np.sum(v2**2) )
-                angle12 = np.arccos( v1.dot(v2)/(v1len*v2len) )
-                if ( angle12 > np.pi/2.0 ):
+                v1len = np.sqrt(np.sum(v1**2))
+                v2len = np.sqrt(np.sum(v2**2))
+                angle12 = np.arccos(v1.dot(v2) / (v1len * v2len))
+                if angle12 > np.pi/2.0:
                     angle12 = np.pi-angle12
                 for v3 in candidate_vecs[2]:
-                    if ( np.allclose(v1,v3, atol=1E-3) or np.allclose(v2,v3, atol=1E-3) ):
+                    if (np.allclose(v1, v3, atol=1E-3) or
+                        np.allclose(v2, v3, atol=1E-3)):
                         continue
-                    v3len = np.sqrt( np.sum(v3**2) )
-                    angle13 = np.arccos( v1.dot(v3)/(v1len*v3len) )
-                    if ( angle13 > np.pi/2.0):
+                    v3len = np.sqrt(np.sum(v3**2))
+                    angle13 = np.arccos(v1.dot(v3) / (v1len * v3len))
+                    if angle13 > np.pi/2.0:
                         angle13 = np.pi-angle13
 
-                    angle23 = np.arccos( v2.dot(v3)/(v2len*v3len) )
-                    if ( angle23 > np.pi/2.0 ):
+                    angle23 = np.arccos(v2.dot(v3) / (v2len * v3len))
+                    if angle23 > np.pi/2.0:
                         angle23 = np.pi-angle23
 
-                    if ( np.abs(angle12-angle12_ref) < angle_tol and
-                         np.abs(angle13-angle13_ref) < angle_tol and
-                         np.abs(angle23-angle23_ref) < angle_tol):
+                    if (np.abs(angle12-angle12_ref) < angle_tol and
+                        np.abs(angle13-angle13_ref) < angle_tol and
+                        np.abs(angle23-angle23_ref) < angle_tol):
                         refined_candidate_list[0].append(v1)
                         refined_candidate_list[1].append(v2)
                         refined_candidate_list[2].append(v3)
 
         # Compute rotation/reflection
-        for v1,v2,v3 in zip(refined_candidate_list[0],refined_candidate_list[1],refined_candidate_list[2]):
-            T = np.zeros((3,3))
-            T[:,0] = v1
-            T[:,1] = v2
-            T[:,2] = v3
-            R = ref_vec.dot( np.linalg.inv(T) )
+        for v1, v2, v3 in zip(refined_candidate_list[0],
+                              refined_candidate_list[1],
+                              refined_candidate_list[2]):
+            T = np.zeros((3, 3))
+            T[:, 0] = v1
+            T[:, 1] = v2
+            T[:, 2] = v3
+            R = ref_vec.dot(np.linalg.inv(T))
             canditate_trans_mat.append(R)
         return canditate_trans_mat, atoms1_ref.get_positions()
