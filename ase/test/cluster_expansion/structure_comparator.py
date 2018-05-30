@@ -24,9 +24,9 @@ if not os.path.exists(folder):
     raise NotAvailable("Cannot locate the datafiles for the test structures")
 
 test_fname_ref = folder + "/equiv331_"
-n_sets = 218
+n_sets = 5
 cpp_stepsize = 1
-python_stepsize = 20
+python_stepsize = 1
 false_structure_stepsize = 10
 verbose = False
 
@@ -43,7 +43,6 @@ def test_equal(comparator, step):
 
 def test_not_equal(comparator, step):
     # Test only a selection of possible combinations
-    comparator = StructureComparator()
     for i in range(0, n_sets, step):
         ref_file = test_fname_ref + "{}/equiv331_{}_0.xyz".format(i, i)
         atoms1 = read(ref_file)
