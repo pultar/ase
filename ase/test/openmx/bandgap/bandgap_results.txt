@@ -1,0 +1,2 @@
+{'processes': 20}
+ xc:(LDA ->PBE)
