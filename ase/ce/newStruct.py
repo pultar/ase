@@ -2,13 +2,14 @@ import os
 import random
 import numpy as np
 
-# dependence on PyMatGen to be removed
-from pymatgen.analysis.structure_matcher import StructureMatcher
-from pymatgen.io.ase import AseAtomsAdaptor
+# # dependence on PyMatGen to be removed
+# from pymatgen.analysis.structure_matcher import StructureMatcher
+# from pymatgen.io.ase import AseAtomsAdaptor
 
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
+from ase.ce.structure_comparator import StructureComparator
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -147,7 +148,7 @@ class GenerateStructures(object):
 
         # Case 1: 1 conc variable, one struct per concentration
         if (self.setting.num_conc_var == 1 and
-            self.struct_per_gen == self.conc_matrix.shape[0]):
+                self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
@@ -260,7 +261,6 @@ class GenerateStructures(object):
 
     def _find_concentration(self, atoms):
         """Find the concentration value(s) of the passed atoms object."""
-
         if self.setting.grouped_basis is None:
             num_elements = self.setting.num_elements
             all_elements = self.setting.all_elements
