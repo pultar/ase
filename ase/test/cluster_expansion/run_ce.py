@@ -10,7 +10,7 @@ import os
 from ase.ce import BulkCrystal
 from ase.ce import GenerateStructures
 from ase.ce import Evaluate
-from ase.calculators.emt import EMT # Use this calculator as it is fast
+from ase.calculators.emt import EMT  # Use this calculator as it is fast
 from ase.db import connect
 
 
@@ -21,12 +21,12 @@ def test_binary_system():
     """
     db_name = "aucu_binary_test.db"
     conc_args = {
-        "conc_ratio_min_1":[[1, 0]],
-        "conc_ratio_max_1":[[0, 1]]
+        "conc_ratio_min_1": [[1, 0]],
+        "conc_ratio_max_1": [[0, 1]]
     }
-    bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05, \
-    basis_elements=[["Au", "Cu"]], size=[3, 3, 3], conc_args=conc_args, \
-    db_name=db_name)
+    bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
+                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3], conc_args=conc_args,
+                             db_name=db_name)
 
     struct_generator = GenerateStructures(bc_setting, struct_per_gen=3)
     struct_generator.generate_initial_pool()
@@ -52,5 +52,6 @@ def test_binary_system():
     evaluator = Evaluate(bc_setting, penalty="l2", lamb=1E-6)
     evaluator.get_cluster_name_eci_dict
     os.remove(db_name)
+
 
 test_binary_system()
