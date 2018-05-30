@@ -23,7 +23,7 @@ python_3_tests:
   image: python:3
   script:
     # manually install extra deps
-    - pip install netCDF4 pyflakes
+    - pip install netCDF4 pyflakes pymatgen
     # 'pip install' pulls in all required packages
     - pip install .
     # Run tests
@@ -57,4 +57,3 @@ docs_test:
     - which sphinx-build
     - cd $CI_PROJECT_DIR/doc
     - sphinx-build -W . build
-
