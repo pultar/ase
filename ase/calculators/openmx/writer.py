@@ -59,11 +59,12 @@ def write_openmx(label=None, atoms=None, parameters=None, properties=None,
 
 
 def parameters_to_keywords(label=None, atoms=None, parameters=None,
-                           properties=[], system_changes=None):
+                           properties=None, system_changes=None):
     """
     Before writing `label.dat` file, set up the ASE variables to OpenMX
-    variables. First, It initializes with openmx parameters and reconstruct
-    dictionary using standard parameters.
+    keywords. First, It initializes with given openmx keywords and reconstruct
+    dictionary using standard parameters. If standard parameters and openmx
+    keywords are contradict to each other, ignores openmx keyword.
      It includes,
 
     For asthetical purpose, sequnece of writing input file is specified.
@@ -100,8 +101,14 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     keywords['atoms_number'] = len(atoms)
     keywords['atoms_unitvectors_unit'] = 'Ang'
     keywords['atoms_speciesandcoordinates_unit'] = 'Ang'
-    keywords['scf_restart'] = parameters.get('restart') is not None
-    keywords['scf_stress_tensor'] = 'stress' in properties
+    keywords['scf_restart'] = (parameters.get('restart') is not None or
+                               parameters.get('scf_restart') is not None)
+    # Having generouse restart policy. It is dangerouse if one caluclate
+    # totally different with previous calculator.
+    keywords['scf_stress_tensor'] = \
+        ('stress' in properties or 'forces' in properties)
+    # keywords['scf_stress_tensor'] = 'stress' in properties
+    # This is not working due to the UnitCellFilter method.
 
     # Set up standard parameters to openmx keyword
     keywords['scf_maxiter'] = parameters.get('maxiter')
@@ -113,7 +120,7 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
                                         scf_kgrid=parameters.get('scf_kgrid'),
                                         atoms=atoms)
     keywords['scf_eigenvaluesolver'] = parameters.get('eigensolver')
-    keywords['scf_spinpolarization'] = parameters.get('spinpol') is not None
+    keywords['scf_spinpolarization'] = parameters.get('spinpol')
     keywords['scf_external_fields'] = parameters.get('external')
     keywords['scf_mixing_type'] = parameters.get('mixer')
     keywords['scf_electronic_temperature'] = parameters.get('smearing')
@@ -306,19 +313,19 @@ def get_spin_direction(magmoms):
 
 def get_orbital_direction():
     orbital_direction = []
-    print("Not Implemented Yet")
+    # print("Not Implemented Yet")
     return orbital_direction
 
 
 def get_noncollinear_switches():
     noncolinear_switches = []
-    print("Not Implemented Yet")
+    # print("Not Implemented Yet")
     return noncolinear_switches
 
 
 def get_lda_u_switches():
     lda_u_switches = []
-    print("Not Implemented Yet")
+    # print("Not Implemented Yet")
     return lda_u_switches
 
 
@@ -504,15 +511,15 @@ def write_bool(f, key, value):
 
 
 def write_list_int(f, key, value):
-    print("Not Implemented Yet")
+    f.write("".join(key) + "     ".join(map(str, value)))
 
 
 def write_list_bool(f, key, value):
-    print("Not Implemented Yet")
+    f.write("".join(key) + "     ".join(map(str, value)))
 
 
 def write_list_float(f, key, value):
-    print("Not Implemented Yet")
+    f.write("".join(key) + "     ".join(map(str, value)))
 
 
 def write_matrix(f, key, value):
@@ -522,22 +529,7 @@ def write_matrix(f, key, value):
         f.write("    "+"  ".join(map(str, line)))
         f.write("\n")
     f.write(key + '>')
-    f.write("\n")
-
-
-def pseudo_qualifier(self):
-    """Get the extra string used in the middle of the pseudopotential.
-    The retrieved pseudopotential for a specific element will be
-    'Hxxx.vps' for the element 'H' with qualifier 'xxx'. If qualifier
-    is set to None then the qualifier is set to "[functional author]".
-    """
-    if self['pseudo_qualifier'] is None:
-        if self['xc'] == 'LDA':
-            return 'CA'
-        else:
-            return 'PBE'
-    else:
-        return self['pseudo_qualifier']
+    f.write("\n\n")
 
 
 def get_file_name(extension='.dat', filename=None):
@@ -575,100 +567,3 @@ def get_openmx_key(key):
         for openmx_keyword in openmx_key:
             if key == get_standard_key(openmx_keyword):
                 return openmx_keyword
-
-
-def format_dat(key, value):
-    """
-    Write an dat key-word value pair.
-
-    Parameters:
-        - key   : The dat-key
-        - value : The dat value.
-    """
-    if isinstance(value, (list, tuple)) and len(value) == 0:
-        return ''
-
-    key = format_key(key)
-    new_value = format_value(value)
-
-    if isinstance(value, list):
-        string = '<' + key + '\n' +\
-            new_value + '\n' + \
-            key + '>' + '\n'
-    else:
-        string = '%s  %s\n' % (key, new_value)
-
-    return string
-
-
-def format_value(value):
-    """
-    Format python values to dat-format.
-
-    Parameters:
-        - value : The value to format.
-    """
-    if isinstance(value, tuple):
-        sub_values = map(format_value, value)
-        value = ' '.join(sub_values)
-    elif isinstance(value, list):
-        sub_values = map(format_value, value)
-        value = '\n'.join(sub_values)
-    elif isinstance(value, dict):
-        key_list = value.keys()
-        key_list.sort()
-        value_list = [value[key] for key in key_list]
-        sub_values = map(format_value, value_list)
-        value = '\t'.join(sub_values)
-    else:
-        value = str(value)
-
-    return value
-
-
-def format_key(key):
-    """ Fix the dat-key replacing '_' with '.' and '__' with '_' """
-    key = key.replace('__', '#')
-    key = key.replace('_', '.')
-    key = key.replace('#', '_')
-
-    return key
-
-
-def find_cutoff_radii_for_atom(self, symbol):
-    pao_path = os.path.join(self['dft_data_path'], 'PAO')
-    filenames = [a for a in os.walk(pao_path)][0][2]
-    cutoff_radii = []
-    for filename in filenames:
-        if filename[:len(symbol)] == symbol and filename[len(symbol)] not \
-            in ['a', 'b', 'c', 'd', 'e', 'f', 'g',
-                'h', 'i', 'j', 'k', 'l', 'm', 'n',
-                'o', 'p', 'q', 'r', 's', 't', 'u',
-                     'v', 'w', 'x', 'y', 'z'] and 'Si' not in filename[1:]:
-            parts = filename.split('.')
-            parts.remove(parts[-1])
-            filename = '.'.join(parts).split(symbol)[1]
-            number_string_list = []
-            i = 0
-            while filename[i] in ['0', '1', '2', '3', '4',
-                                  '5', '6', '7', '8', '9', '.']:
-                number_string_list.append(filename[i])
-                i += 1
-                if i == len(filename):
-                    break
-            cutoff_radii.append(float(''.join(number_string_list)) * Bohr)
-    return cutoff_radii
-
-
-def find_closest_cutoff(self, symbol, cutoff):
-    available_cutoffs = self.find_cutoff_radii_for_atom(symbol)
-    if cutoff in available_cutoffs:
-        return cutoff
-    else:
-        difference_squared = map(lambda a: (
-            a - cutoff) * (a - cutoff), available_cutoffs)
-        available_cutoff = available_cutoffs[difference_squared.index[min(
-            difference_squared)]]
-        print('%d Ang cutoff radius for PAO of %s not available. Using %d '
-              'Ang instead.' % (cutoff, symbol, available_cutoff))
-        return available_cutoff
