@@ -19,14 +19,23 @@ functional theories.
 """
 from __future__ import print_function
 import numpy as np
-try:
-    import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
-except RuntimeError:
-    print('Failed to load matplot display, do not try to visualise plots!')
 import os
+import subprocess
 from ase.calculators.openmx.reader import rn as read_nth_to_last_value
-from ase.calculators.openmx.reader import input_command
+
+
+def input_command(calc, executable_name, input_files, argument_format='%s'):
+    input_files = tuple(input_files)
+    command = executable_name + ' ' + argument_format % input_files
+    olddir = os.getcwd()
+    try:
+        os.chdir(calc.directory)
+        error_code = subprocess.call(command, shell=True)
+    finally:
+        os.chdir(olddir)
+    if error_code:
+        raise RuntimeError('%s returned an error: %d' %
+                           (executable_name, error_code))
 
 
 class DOS:
@@ -262,6 +271,8 @@ class DOS:
         :param erange: range of energies to view DOS
         :return: matplotlib.figure.Figure and matplotlib.axes.Axes object
         """
+        import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
         if not spin_polarization:
             spins = ['']
         number_of_spins = len(spins)
