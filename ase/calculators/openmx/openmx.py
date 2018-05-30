@@ -56,7 +56,8 @@ class OpenMX(FileIOCalculator):
     default_pbs = {
         'processes': 1,
         'walltime': "10:00:00",
-        'threads': 1
+        'threads': 1,
+        'nodes': 1
     }
 
     default_mpi = {
@@ -134,7 +135,6 @@ class OpenMX(FileIOCalculator):
             # Put dictionary into python variable
             self.mpi.update(mpi)
             self.__dict__.update(self.mpi)
-            print(self.processes)
         else:
             self.mpi = None
 
@@ -190,6 +190,9 @@ class OpenMX(FileIOCalculator):
         Basically, it does qsub. and wait until qstat signal shows c
         Super computer user
         """
+        nodes = self.nodes
+        processes = self.processes
+
         prefix = self.prefix
         olddir = os.getcwd()
         try:
@@ -232,8 +235,8 @@ class OpenMX(FileIOCalculator):
             'mpirun -hostfile $PBS_NODEFILE openmx %s > %s' % (
                 inputfile, outputfile)
         echoArgs = ["echo", "$' %s'" % cmd]
-        qsubArgs = ["qsub", "-N", jobName, "-l", "nodes=1:ppn=" +
-                    str(self.processes), "-l", "walltime=" + self.walltime]
+        qsubArgs = ["qsub", "-N", jobName, "-l", "nodes=%d:ppn=%d" %
+                    (nodes, processes), "-l", "walltime=" + self.walltime]
         wholeCmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
         if(self.debug):
             print(wholeCmd)
@@ -370,7 +373,9 @@ class OpenMX(FileIOCalculator):
             properties = self.implemented_properties
         try:
             Calculator.calculate(self, atoms, properties, system_changes)
-            self.write_input(self.atoms, properties, system_changes)
+            self.write_input(atoms=self.atoms, parameters=self.parameters,
+                             properties=properties,
+                             system_changes=system_changes)
             self.print_input(debug=self.debug, nohup=self.nohup)
             self.run()
             #  self.read_results()
@@ -397,7 +402,8 @@ class OpenMX(FileIOCalculator):
         system_changes = FileIOCalculator.check_state(self, atoms, tol)
         return system_changes
 
-    def write_input(self, atoms=None, properties=None, system_changes=None):
+    def write_input(self, atoms=None, parameters=None,
+                    properties=None, system_changes=None):
         """Write input (dat)-file.
         See calculator.py for further details.
 
@@ -408,8 +414,8 @@ class OpenMX(FileIOCalculator):
         """
         # Call base calculator.
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
-        write_openmx(self.label, atoms, self.parameters, properties,
-                     system_changes)
+        write_openmx(label=self.label, atoms=atoms, parameters=self.parameters,
+                     properties=properties, system_changes=system_changes)
 
     def print_input(self, debug=None, nohup=None):
         """
@@ -501,6 +507,10 @@ class OpenMX(FileIOCalculator):
         if atoms is not None and self.atoms is None:
             self.atoms = atoms
 
+    def set_atoms(self, atoms):
+        # Needed when we use atoms.set_calculator(calc)
+        self.atoms = atoms.copy()
+
     def set_results(self, results):
         # Not Implemented fully
         self.results.update(results)
@@ -575,7 +585,8 @@ class OpenMX(FileIOCalculator):
         return self.dos.get_dos(atoms=atoms, erange=erange, **kwargs)
 
     def get_band_structure(self, atoms=None, calc=None):
-        """ This is band structure ploting function that is compatible with
+        """
+        This is band structure function. It is compatible to
         ase dft module """
         from ase.dft import band_structure
         return band_structure.get_band_structure(self.atoms, self)
@@ -691,7 +702,7 @@ class OpenMX(FileIOCalculator):
             return 1
 
     def get_eigenvalues(self, kpt=None, spin=None):
-        if 'eigenvalues' not in self.results:
+        if self.results.get('eigenvalues') is None:
             # print('Turning DOS file output on')
             # self['dos_erange']=(-5., 5.)
             self.calculate(self.atoms)
