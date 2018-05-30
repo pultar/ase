@@ -31,7 +31,7 @@ tuple_integer_keys = [
     'Dos.Kgrid',
 ]
 tuple_float_keys = [
-    'scf.Electric.Field'
+    'scf.Electric.Field',
     'scf.fixed.grid'
 ]
 tuple_bool_keys = [
@@ -116,7 +116,7 @@ bool_keys = [
     'Dos.fileout',
     'HS.fileout',
     'Voronoi.charge',
-    'scf.NC.Zeeman.Spin'
+    'scf.NC.Zeeman.Spin',
     'scf.stress.tensor'
 ]
 list_int_keys = []
@@ -159,9 +159,19 @@ unit_dat_keywords = {
 
 class OpenMXParameters(Parameters):
     """
-    Parameters class for the OpenMX calculator. It specify default parameters.
-    First, Using standard parmeters, set up the OpenMX parameters. After set up
-    parameters, overwrites the OpenMX parameters by the arguments given by user
+    Parameters class for the OpenMX calculator. OpenMX parameters are defined
+    here. If values seems unreasonable, for example, energy_cutoff=0.01, it
+    gives warning. Changing standard parameters to openmx kewords is not a job
+    for this class. We translate the variable right before we right it. Hence,
+    translation processes are written in `writers.py`. Here we only deals with
+    default parameters and the reasonable boundary for that value.
+
+    (1, 1, 1) < scf_kgrid < (16, 16, 16)
+    1 < scf_maxiter < 10000
+    1e-10 < scf_criterion < 1e-1
+    100 < scf_energycutoff < 600
+    100 * Ha < convergence < 600 * Ha
+
     """
 
     allowed_xc = [
@@ -228,7 +238,6 @@ class OpenMXParameters(Parameters):
         system_name=None,
         data_path=None,
         atoms_speciesandcoordinates_unit=None,
-        atoms_speciesandcoordinate_unit=None,
         atoms_unitvectors_unit=None,
         scf_xctype=None,
         scf_hubbard_occupation=None,
@@ -288,15 +297,13 @@ class OpenMXParameters(Parameters):
         dft_data_dict=None,
     ):
 
-        if type(kpts) is list:
-            raise NotImplementedError
-        elif type(kpts) == tuple and len(kpts) != 3:
-            raise NotImplementedError
         if kpts == (1, 1, 1):
             print("When only the gamma point is considered, the eigenvalue \
                   solver is changed to 'Cluster' with the periodic boundary \
                   condition.")
-            eigenvalue_solver = 'Cluster'
+            eigensolver = 'Cluster'
+            mpi = None
+            pbs = None
 
         if data_path is None:
             try:
