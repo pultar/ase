@@ -85,7 +85,7 @@ def read_file(filename, debug=False):
       'Fractional coordinates of': ('scaled_positions', read_scaled_positions),
       'Utot.': ('energy', read_energy),
       'Chemical Potential': ('chemical_potential', read_chemical_potential),
-      'coordinates.forces': ('forces', read_forces),
+      '<coordinates.forces': ('forces', read_forces),
       'Eigenvalues': ('eigenvalues', read_eigenvalues)}
     special_patterns = {
       'Total spin moment': (('magmoms', 'total_magmom'),
@@ -487,7 +487,7 @@ def read_forces(line, f):
     while 'coordinates.forces>' not in line:
         forces.append(read_tuple_float(line))
         line = f.readline()
-    return forces
+    return np.array(forces) * Ha / Bohr
 
 
 def read_dipole(line, f):
@@ -514,226 +514,6 @@ def read_chemical_potential(line, f):
     return read_float(line)
 
 
-def read_dos_file(filename=None):
-    if os.path.isfile(filename) is not True:
-        return {}
-    dos_data = {}
-    with open(filename, 'r') as f:
-        line = ''
-        while 'irange' not in line:
-            line = f.readline()
-        number_of_bands = read_integer(line)
-        while 'Kgrid' not in line:
-            line = f.readline()
-            number_of_k_points = int(rn(string, 1)) * int(rn(string, 2)) * int(rn(string, 3))
-        while 'Eigenvalues' not in line:
-            line = f.readline()
-        line = f.readline()
-        number_of_spins = get_number_of_spins()
-        eigenvalues = \
-            np.ndarray((number_of_k_points, number_of_spins, number_of_bands), float)
-        for i in range(number_of_k_points):
-            for j in range(number_of_spins):
-                for k in range(number_of_bands):
-                    eigenvalues[i, j, k] = float(rn(line, number_of_bands - k)) * Ha
-                line = f.readline()
-        dos_data['number_of_bands'] = number_of_bands
-    return dos_data
-
-
-def read_eigen_file(filename=None, debug=False):
-    """Read the eigenvalues from '.eigen' file format"""
-    try:
-        with open(os.path.join(directory, prefix + '.eigen'), 'r') as f:
-            string = f.readline()
-            results['chemical_potential'] = float(rn(string, 1)) * Ha
-            string = f.readline()
-            nbands = int(rn(string, 1))
-            nspin = 1  # still need to implement spin polarization method
-            eigenvalues = []
-            string = f.readline()
-            while 'WF' not in string:
-                eigenvalues.append(np.ndarray((nspin, nbands), float))
-                for n in range(nbands):
-                    eigenvalues[-1][0, n] = \
-                        float(rn(string)) * Ha
-                    string = f.readline()
-    except ReadError:
-        if(debug):
-            print("No .eigen file found")
-    return eigenvalues
-
-
-def read_band_file(self, filename=None):
-    npoints = 0
-    band_kpath = []
-    kpts = []
-    try:
-        fl = float
-        if filename is None:
-            filename = self.get_file_name('.Band')
-        with open(filename, 'r') as f:
-            li = f.readline()
-            nbands = int(rn(li, 3))
-            self.results['chemical_potential'] = float(rn(li)) * Ha
-            li = f.readline()
-            rec_cell = [[fl(rn(li, 9)), fl(rn(li, 8)), fl(rn(li, 7))],
-                        [fl(rn(li, 6)), fl(rn(li, 5)), fl(rn(li, 4))],
-                        [fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1))]]
-            li = f.readline()
-            number_of_sym_points = int(rn(li))
-            for a in range(number_of_sym_points):
-                li = f.readline()
-                npoints += int(rn(li, 9))
-                start_p = (fl(rn(li, 8)), fl(rn(li, 7)), fl(rn(li, 6)))
-                end_pts = (fl(rn(li, 5)), fl(rn(li, 4)), fl(rn(li, 3)))
-                symbols = (str(rn(li, 2)), str(rn(li, 1)))
-                band_kpath.append({'kpts': int(rn(li, 9)),
-                                   'start_point': start_p,
-                                   'end_point': end_pts,
-                                   'path_symbols': symbols})
-            self['band_kpath'] = band_kpath
-            nspins = self.get_number_of_spins()
-            if(self.debug):
-                print('Spin, KPTS, bands', nspins, npoints, nbands)
-            eigenvalues = np.zeros((nspins, npoints, nbands))
-            for kpt in range(npoints):
-                li = f.readline()
-                kp = (fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1)))
-                kpts.append(kp)
-                li = f.readline()
-                eigenvalues_at_kp = li.split()
-                eigenvalues[0, kpt] = eigenvalues_at_kp[:]
-                if nspins == 2:
-                    li = f.readline()
-                    kp = (fl(rn(li, 3)), fl(rn(li, 2)), fl(rn(li, 1)))
-                    li = f.readline()
-                    eigenvalues_at_kp = li.split()
-                    eigenvalues[1, kpt] = eigenvalues_at_kp[:]
-
-    except ReadError:
-        if(self.debug):
-            print("No .Band file found")
-    return eigenvalues[:] * Ha
-
-
-def read_out_output(filename=None, debug=False):
-    try:
-        if debug:
-            print("Trying to read .out File")
-        fl = float
-        eig = []  # eigenvalues
-        nkpts = len(get_ibz_k_points())
-        nbands = get_number_of_bands()
-        nspins = get_number_of_spins()
-        eig = np.zeros((nspins, nkpts, nbands))
-        if(debug):
-            print('Spin, KPTS, bands', nspins, nkpts, nbands)
-        k = 0
-        if filename is None:
-            filename = get_file_name('.out')
-        with open(filename, 'r') as f:
-            while True:
-                line = f.readline()
-                if 'kloop' in line:
-                    line = f.readline()
-                    line = f.readline()
-                    line = f.readline()
-                    i = 0
-                    try:
-                        for b in range(nbands):
-                            # print(line)
-                            eig[0, k, b] = fl(rn(line, 1)) * Ha
-                            eig[0, nkpts-1-k, b] = fl(rn(line, 1)) * Ha
-                            if(nspins == 2):
-                                eig[1, k, b] = fl(rn(line, 2)) * Ha
-                                eig[1, nkpts-1-k, b] = fl(rn(line, 2)) * Ha
-                            line = f.readline()
-                            i += 1
-                    except IndexError:
-                        nbands = i
-                        if debug:
-                            print('nbands != orbital number %d' % i)
-                        k += 1
-                        continue
-                    k += 1
-                if nkpts == k or not line:
-                    break
-    except ReadError:
-        if debug:
-            print("No .out file found")
-    return eig
-
-
-def read_eigenvalue_output(filename=None):
-    if self['dos_erange'] is not None:
-        self.results['eigenvalues'] = self.read_dos_output()
-    elif False:  # proper condtion setting required
-        self.results['eigenvalues'] = self.read_eigen_output()
-    elif self['band_dispersion'] is True or self['band_kpath'] is not None:
-        self.results['eigenvalues'] = self.read_band_output()
-    else:
-        self.results['eigenvalues'] = self.read_out_output()
-
-
-def read_mmn_file(filename=None):
-    mmn = {}
-    try:
-        with open(filename, 'r') as f:
-            string = f.readline()
-            string = f.readline()
-            # d_num = int(read_nth_to_last_value(string, 2))
-            kpt_num = int(rn(string, 3))
-            band_num = int(rn(string, 4))
-            self['bloch_overlaps'] = [{} for i in range(kpt_num)]
-            string = f.readline()
-            while string != '':
-                kpoint = int(read_nth_to_last_value(string, 5)) - 1
-                nextkpoint = int(read_nth_to_last_value(string, 4)) - 1
-                bzone = (int(read_nth_to_last_value(string, 3)),
-                         int(read_nth_to_last_value(string, 2)),
-                         int(read_nth_to_last_value(string, 1)))
-                dirG = self.dirG(nextkpoint - kpoint, bzone)
-                self['bloch_overlaps'][kpoint][dirG] = np.matrix(
-                    np.zeros((band_num, band_num), complex))
-                for m in range(band_num):
-                    for n in range(band_num):
-                        string = f.readline()
-                        self['bloch_overlaps'][kpoint][dirG][m, n] = \
-                            complex(
-                                 float(read_nth_to_last_value(string, 2)),
-                                 float(read_nth_to_last_value(string, 1)))
-                string = f.readline()
-    except ReadError:
-        raise Exception('Please calculate the overlap matrix elements for '
-                        'the bloch states')
-    return mmn
-
-
-def read_initial_wannier_projections():
-    try:
-        with open(os.path.join(self.directory,
-                               self.prefix + '.amn'), 'r') as f:
-            string = f.readline()
-            string = f.readline()
-            nbands = int(rn(string, 4))
-            kpt_num = int(rn(string, 3))
-            nwannier = int(rn(string, 2))
-            self['initial_wannier_projections'] = [np.ndarray(
-                (nbands, nwannier), complex) for i in range(kpt_num)]
-            for k in range(kpt_num):
-                for n in range(nwannier):
-                    for m in range(nbands):
-                        string = f.readline()
-                        self['initial_wannier_projections'][k][m, n] = \
-                            complex(
-                            float(rn(string, 2)),
-                            float(rn(string, 1)))
-    except ReadError:
-        raise Exception('Please calculate the overlap matrix elements for '
-                        'the bloch states')
-
-
 def get_parameters(out_data=None, log_data=None, restart_data=None,
                    scfout_data=None, dat_data=None):
     """
@@ -741,7 +521,7 @@ def get_parameters(out_data=None, log_data=None, restart_data=None,
     is in the paramerters, it will save it.
     """
     from ase.calculators.openmx import parameters as param
-    scaned_data = [out_data, log_data, restart_data, scfout_data, dat_data]
+    scaned_data = [dat_data, out_data, log_data, restart_data, scfout_data]
     openmx_keywords = [param.tuple_integer_keys, param.tuple_float_keys,
                        param.tuple_bool_keys, param.integer_keys,
                        param.float_keys, param.string_keys, param.bool_keys,
@@ -802,6 +582,7 @@ def get_standard_parameters(parameters):
                 standard_key = translated_parameters[openmx_key]
                 unit = standard_units.get(units.get(openmx_key), 1)
                 standard_parameters[standard_key] = parameters[key] * unit
+    standard_parameters['spinpol'] = parameters.get('scf_spinpolarization')
     return standard_parameters
 
 
