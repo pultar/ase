@@ -2,10 +2,6 @@ import os
 import random
 import numpy as np
 
-# # dependence on PyMatGen to be removed
-# from pymatgen.analysis.structure_matcher import StructureMatcher
-# from pymatgen.io.ase import AseAtomsAdaptor
-
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
@@ -305,23 +301,21 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
-        m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                             primitive_cell=True, scale=True)
-        s1 = AseAtomsAdaptor.get_structure(atoms)
-
+        sc = StructureComparator(angle_tol=1.0, ltol=0.05, stol=0.05,
+                                 scale_volume=True)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
-            s2 = AseAtomsAdaptor.get_structure(atoms2)
-            match = m.fit(s1, s2)
+            match = sc.compare(atoms, atoms2)
             if match:
                 break
         return match
 
     def _get_kvp(self, atoms, kvp, conc1=None, conc2=None):
-        """
-        Receive atoms object, its correlation function (passed kvp) and
-        value(s) of the concentration(s). Append key terms (conc, started, etc.)
-        to kvp and returns it.
+        """Return key-value pairs.
+
+        Receive Atoms object, its correlation function (passed kvp) and
+        value(s) of the concentration(s).
+        Append key terms (conc, started, etc.) to kvp and returns it.
         """
         if conc1 is None:
             raise ValueError('conc1 needs to be defined')
@@ -356,7 +350,7 @@ class GenerateStructures(object):
                               random.choice(range(self.conc_matrix.shape[1]))]
                 conc_ratio = self.conc_matrix[conc_index[0]][conc_index[1]]
 
-            # loop until no atom has a negative number count (fictitious number)
+            # loop until no atom has a negative number count
             if min(conc_ratio) >= 0:
                 break
 
@@ -365,7 +359,7 @@ class GenerateStructures(object):
             if index is None:
                 continue
             conc_value[i] = float(conc_index[i]) /\
-                            max(self.conc_matrix.shape[i] - 1, 1)
+                max(self.conc_matrix.shape[i] - 1, 1)
 
         return conc_ratio, conc_value
 
