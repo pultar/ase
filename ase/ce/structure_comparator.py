@@ -14,7 +14,7 @@ except:
     has_cpp_version = False
 
 
-class StructureComparator(object):
+class SymmetryEquivalenceCheck(object):
     """Compare two structures to determine if they are equivalent.
 
     Attributes:

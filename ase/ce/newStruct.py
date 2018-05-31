@@ -5,7 +5,7 @@ import numpy as np
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
-from ase.ce.structure_comparator import StructureComparator
+from ase.ce.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -343,11 +343,11 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
-        sc = StructureComparator(angle_tol=1.0, ltol=0.05, stol=0.05,
-                                 scale_volume=True)
+        symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
+                                             stol=0.05, scale_volume=True)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
-            match = sc.compare(atoms, atoms2)
+            match = symmcheck.compare(atoms, atoms2)
             if match:
                 break
         return match
