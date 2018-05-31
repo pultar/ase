@@ -316,7 +316,7 @@ class GenerateStructures(object):
     def _exists_in_db(self, atoms, conc1=None, conc2=None):
         """Check to see if the passed atoms already exists in DB.
 
-        To reduce the number of assessments for symmetry-equivalence,
+        To reduce the number of assessments for symmetry equivalence,
         check is only performed with the entries with the same concentration
         value.
 
