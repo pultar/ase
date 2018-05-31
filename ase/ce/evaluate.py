@@ -81,7 +81,7 @@ class Evaluate(object):
     @property
     def full_cf_matrix(self):
         """Get correlation function of every entry.
-        
+
         This method is used for evaluating the variance when creating probe
         structures.
         """
@@ -225,7 +225,6 @@ class Evaluate(object):
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
         plt.show()
-        return True
 
     def _reduce_matrix(self, cfm):
         """
@@ -249,7 +248,6 @@ class Evaluate(object):
                 offset = 0
         self.cf_matrix = cfm
         self.cluster_names = cname_list
-        return True
 
     def _get_eci_loo(self, i, alpha):
         """
