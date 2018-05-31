@@ -21,12 +21,15 @@ class Evaluate(object):
     Arguments:
     =========
     setting: BulkCrystal or BulkSapcegroup object
+
     cluster_names: list
         Names of clusters to include in the evalutation.
         If None, all of the possible clusters are included.
+
     select_cond: tuple or list of tuples
         Extra selection condition specified by user.
         Default only includes "converged=True".
+
     penalty: str
         Type of regularization to be used.
         -*None*: no regularization
@@ -78,6 +81,7 @@ class Evaluate(object):
     @property
     def full_cf_matrix(self):
         """Get correlation function of every entry.
+        
         This method is used for evaluating the variance when creating probe
         structures.
         """
