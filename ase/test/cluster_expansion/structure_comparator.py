@@ -13,6 +13,8 @@ when comparing these two atoms
 When comparing atoms-objects from different subfolders they should return False
 """
 
+raise NotAvailable("This test is moved elsewhere and is therefore skipped!")
+
 if ( "CI_PROJECT_DIR" in os.environ.keys() ):
     # This is the path to the test data on the ASE test server
     folder = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion/structure_match_data"
