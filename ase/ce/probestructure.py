@@ -15,18 +15,25 @@ class ProbeStructure(object):
     Arguments:
     =========
     setting: BulkCrystal or BulkSapcegroup object
+
     atoms: Atoms object
         initial structure to start the simulated annealing
+
     struct_per_gen: int
         number of structures to be generated per generation
+
     init_temp: int or float
         initial temperature (does not represent *physical* temperature)
+
     final_temp: int or float
         final temperature (does not represent *physical* temperature)
+
     num_temp: int
         number of temperatures to be used in simulated annealing
+
     num_steps: int
         number of steps in simulated annealing
+        
     approx_mean_var: bool
         whether or not to use a spherical and isotropical distribution
         approximation scheme for determining the mean variance.
