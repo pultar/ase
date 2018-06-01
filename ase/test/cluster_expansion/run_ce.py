@@ -1,5 +1,5 @@
-"""
-Test:
+"""Test the followings cases.
+
 1. Initialize the CE
 2. Add a few structures
 3. Compute the energy
@@ -25,7 +25,8 @@ def test_binary_system():
         "conc_ratio_max_1": [[0, 1]]
     }
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
-                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3], conc_args=conc_args,
+                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
+                             conc_args=conc_args,
                              db_name=db_name)
 
     struct_generator = GenerateStructures(bc_setting, struct_per_gen=3)
