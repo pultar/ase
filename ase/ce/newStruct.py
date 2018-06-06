@@ -2,13 +2,10 @@ import os
 import random
 import numpy as np
 
-# dependence on PyMatGen to be removed
-from pymatgen.analysis.structure_matcher import StructureMatcher
-from pymatgen.io.ase import AseAtomsAdaptor
-
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
+from ase.ce.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -16,8 +13,17 @@ from ase.db import connect
 
 
 class GenerateStructures(object):
-    """
-    Class that generates atoms object.
+    """Generate new structure in Atoms object format.
+
+    Arguments:
+    =========
+    setting: BulkCrystal or BulkSapcegroup object
+
+    generation_number: int
+        a generation number to be assigned to the newly generated structure.
+
+    struct_per_gen: int
+        number of structures to generate per generation.
     """
 
     def __init__(self, setting, generation_number=None, struct_per_gen=None):
@@ -55,12 +61,16 @@ class GenerateStructures(object):
         =========
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
+
         final_temp: int or float
             final temperature (does not represent *physical* temperature)
+
         num_temp: int
             number of temperatures to be used in simulated annealing
+
         num_steps: int
             number of steps in simulated annealing
+
         approx_mean_var: bool
             whether or not to use a spherical and isotropical distribution
             approximation scheme for determining the mean variance.
@@ -74,6 +84,7 @@ class GenerateStructures(object):
                       generating probe structures.
                       sigma and mu are generated and stored in
                       'probe_structure-sigma_mu.npz' file.
+
         num_samples_var: int
             Number of samples to be used in determining signam and mu.
             Only used when approx_mean_var is True.
@@ -128,11 +139,19 @@ class GenerateStructures(object):
             self.db.write(atoms, kvp)
 
     def generate_initial_pool(self):
-        """Generates the initial pool"""
+        """Generate initial pool of random structures.
+
+        If struct_per_gen is not specified, one structure is generated for each
+        concentration value realizable by the given cell size.
+
+        If structure_per_gen is not the same as the number of possible
+        concentration values, a random structure is generated at a random
+        concentration value in each iteration step.
+        """
         print("Generating initial pool consisting of "
               "{} structures".format(self.struct_per_gen))
 
-        # Case where there is only 1 concentration value
+        # Special case where there is only 1 concentration value
         if self.conc_matrix.ndim == 1:
             conc1 = 1.0
             x = 0
@@ -147,7 +166,7 @@ class GenerateStructures(object):
 
         # Case 1: 1 conc variable, one struct per concentration
         if (self.setting.num_conc_var == 1 and
-            self.struct_per_gen == self.conc_matrix.shape[0]):
+                self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
@@ -187,10 +206,11 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
-                kvp = self.corrfunc.get_cf(atoms)
-                kvp = self._get_kvp(atoms, kvp, conc1)
-                self.db.write(atoms, kvp)
-                x += 1
+                if not self._exists_in_db(atoms, conc1):
+                    kvp = self.corrfunc.get_cf(atoms)
+                    kvp = self._get_kvp(atoms, kvp, conc1)
+                    self.db.write(atoms, kvp)
+                    x += 1
 
         # Case 4: 2 conc variable, user specified number of structures
         else:
@@ -207,11 +227,11 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
-                kvp = self.corrfunc.get_cf(atoms)
-                kvp = self._get_kvp(atoms, kvp, conc1, conc2)
-                self.db.write(atoms, kvp)
-                x += 1
-        return True
+                if not self._exists_in_db(atoms, conc1, conc2):
+                    kvp = self.corrfunc.get_cf(atoms)
+                    kvp = self._get_kvp(atoms, kvp, conc1, conc2)
+                    self.db.write(atoms, kvp)
+                    x += 1
 
     def insert_structure(self, init_struct=None, final_struct=None, name=None):
         """Insert a user-supplied structure to the database.
@@ -220,9 +240,11 @@ class GenerateStructures(object):
         =========
         init_struct: .xyz, .cif or .traj file
             *Unrelaxed* initial structure.
+
         final_struct: .traj file
             Final structure that contains the energy.
             Needs to also supply init_struct in order to use the final_struct.
+
         name: str
             Name of the DB entry if non-default name is to be used.
             If *None*, default naming convention will be used.
@@ -260,7 +282,6 @@ class GenerateStructures(object):
 
     def _find_concentration(self, atoms):
         """Find the concentration value(s) of the passed atoms object."""
-
         if self.setting.grouped_basis is None:
             num_elements = self.setting.num_elements
             all_elements = self.setting.all_elements
@@ -293,8 +314,25 @@ class GenerateStructures(object):
         return conc
 
     def _exists_in_db(self, atoms, conc1=None, conc2=None):
-        """Checks to see if the passed atoms already exists in DB.
-        Return True if so, False otherwise.
+        """Check to see if the passed atoms already exists in DB.
+
+        To reduce the number of assessments for symmetry equivalence,
+        check is only performed with the entries with the same concentration
+        value.
+
+        Return *True* if there is a symmetry-equivalent structure in DB,
+        return *False* otherwise.
+
+        Arguments:
+        =========
+        atoms: Atoms object
+
+        conc1: float
+            concentration value
+
+        conc2: float
+            secondary concentration value if more than one concentration
+            variables are needed.
         """
         if conc1 is None:
             raise ValueError('conc1 needs to be defined')
@@ -305,23 +343,34 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
-        m = StructureMatcher(ltol=0.3, stol=0.4, angle_tol=5,
-                             primitive_cell=True, scale=True)
-        s1 = AseAtomsAdaptor.get_structure(atoms)
-
+        symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
+                                             stol=0.05, scale_volume=True)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
-            s2 = AseAtomsAdaptor.get_structure(atoms2)
-            match = m.fit(s1, s2)
+            match = symmcheck.compare(atoms, atoms2)
             if match:
                 break
         return match
 
     def _get_kvp(self, atoms, kvp, conc1=None, conc2=None):
-        """
-        Receive atoms object, its correlation function (passed kvp) and
-        value(s) of the concentration(s). Append key terms (conc, started, etc.)
-        to kvp and returns it.
+        """Get key-value pairs of the passed Atoms object.
+
+        Append terms (started, gen, converged, started, queued, name, conc)
+        to key-value pairs and return it.
+
+        Arguments:
+        =========
+        atoms: Atoms object
+
+        kvp: dict
+            key-value pairs (correlation functions of the passed atoms)
+
+        conc1: float
+            concentration value
+
+        conc2: float
+            secondary concentration value if more than one concentration
+            variables are needed.
         """
         if conc1 is None:
             raise ValueError('conc1 needs to be defined')
@@ -345,7 +394,7 @@ class GenerateStructures(object):
         return kvp
 
     def _get_random_conc(self):
-        # Pick a concentration from a possible
+        """Pick a random concentration value."""
         while True:
             if self.setting.num_conc_var == 1:
                 conc_index = [random.choice(range(self.conc_matrix.shape[0])),
@@ -356,7 +405,7 @@ class GenerateStructures(object):
                               random.choice(range(self.conc_matrix.shape[1]))]
                 conc_ratio = self.conc_matrix[conc_index[0]][conc_index[1]]
 
-            # loop until no atom has a negative number count (fictitious number)
+            # loop until no atom has a negative number count
             if min(conc_ratio) >= 0:
                 break
 
@@ -365,7 +414,7 @@ class GenerateStructures(object):
             if index is None:
                 continue
             conc_value[i] = float(conc_index[i]) /\
-                            max(self.conc_matrix.shape[i] - 1, 1)
+                max(self.conc_matrix.shape[i] - 1, 1)
 
         return conc_ratio, conc_value
 
@@ -422,6 +471,7 @@ class GenerateStructures(object):
         return atoms
 
     def _determine_gen_number(self):
+        """Determine generation number based on the values in DB."""
         try:
             gens = [row.get('gen') for row in self.db.select()]
             gens = [i for i in gens if i is not None]
