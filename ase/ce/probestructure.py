@@ -5,12 +5,15 @@ from itertools import permutations
 from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv
+from ase.db import connect
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
 from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
 
 class ProbeStructure(object):
-    """Generate probe structures based on simulated annealing according to the
-    recipe in PRB 80, 165122 (2009).
+    """Generate probe structures.
+
+    Based on simulated annealing according to the recipe in
+    PRB 80, 165122 (2009).
 
     Arguments:
     =========
@@ -33,7 +36,7 @@ class ProbeStructure(object):
 
     num_steps: int
         number of steps in simulated annealing
-        
+
     approx_mean_var: bool
         whether or not to use a spherical and isotropical distribution
         approximation scheme for determining the mean variance.
@@ -58,7 +61,7 @@ class ProbeStructure(object):
 
         self.cluster_names = self.setting.full_cluster_names
         self.corrFunc = CorrFunction(setting)
-        self.cfm = Evaluate(setting, self.cluster_names).full_cf_matrix
+        self.cfm = self._get_full_cf_matrix()
 
         if self.setting.in_conc_matrix(atoms):
             self.init = wrap_and_sort_by_position(atoms)
@@ -89,7 +92,7 @@ class ProbeStructure(object):
                              " temperature")
 
     def generate(self):
-        """Generate a probe structure according to PRB 80, 165122 (2009)"""
+        """Generate a probe structure according to PRB 80, 165122 (2009)."""
         # Start
         old = self.init.copy()
         o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
@@ -114,9 +117,9 @@ class ProbeStructure(object):
                         if self._is_swappable(old):
                             new, n_cf = self._swap_two_atoms(old, o_cf)
                         else:
-                            raise RuntimeError('Atoms has only one ' +
-                                               'concentration value and ' +
-                                               'not swappable.')
+                            msg = 'Atoms has only one concentration value '
+                            msg += 'and not swappable.'
+                            raise RuntimeError(msg)
                 else:
                     if self._is_swappable(old):
                         new, n_cf = self._swap_two_atoms(old, o_cf)
@@ -138,8 +141,8 @@ class ProbeStructure(object):
         # Check to see if the cf is indeed preserved
         final_cf = self.corrFunc.get_cf(old, return_type='array')
         if not np.allclose(final_cf, o_cf):
-            raise ValueError("The correlation function changed after simulated"
-                             " annealing")
+            msg = 'The correlation function changed after simulated annealing'
+            raise ValueError(msg)
         return old, o_cf
 
     def _determine_temps(self):
@@ -189,7 +192,7 @@ class ProbeStructure(object):
         return init_temp, final_temp
 
     def _swap_two_atoms(self, atoms, cf):
-        """Swaps two randomly chosen atoms."""
+        """Swap two randomly chosen atoms."""
         atoms = atoms.copy()
         cf = deepcopy(cf)
         indx = np.zeros(2, dtype=int)
@@ -421,6 +424,15 @@ class ProbeStructure(object):
                 sp += sp_temp
         sp /= len(perm)
         return sp
+
+    def _get_full_cf_matrix(self):
+        """Get correlation function of every entry in DB."""
+        cfm = []
+        db = connect(self.setting.db_name)
+        for row in db.select([('name', '!=', 'information')]):
+            cfm.append([row[x] for x in self.cluster_names])
+        cfm = np.array(cfm, dtype=float)
+        return cfm
 
 def mean_variance_full(cfm):
     prec = precision_matrix(cfm)

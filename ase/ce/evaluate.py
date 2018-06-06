@@ -78,19 +78,6 @@ class Evaluate(object):
         self.alpha = None
         self.e_pred_loo = None
 
-    @property
-    def full_cf_matrix(self):
-        """Get correlation function of every entry.
-
-        This method is used for evaluating the variance when creating probe
-        structures.
-        """
-        cfm = []
-        for row in self.setting.db.select([('name', '!=', 'information')]):
-            cfm.append([row[x] for x in self.cluster_names])
-        cfm = np.array(cfm, dtype=float)
-        return cfm
-
     def _make_cf_matrix(self):
         """
         Returns the matrix containing the correlation functions.
@@ -101,20 +88,6 @@ class Evaluate(object):
         for row in db.select(self.select_cond):
             cf_matrix.append([row[x] for x in self.cluster_names])
         return np.array(cf_matrix, dtype=float)
-
-    @property
-    def full_cf_matrix(self):
-        """
-        Get correlation function of every entry (other than the one to store
-        information). This method is used for evaluating the variance when
-        creating probe structures.
-        """
-        cfm = []
-        db = connect(self.setting.db_name)
-        for row in db.select([('name', '!=', 'information')]):
-            cfm.append([row[x] for x in self.cluster_names])
-        cfm = np.array(cfm, dtype=float)
-        return cfm
 
     def _get_dft_energy_per_atom(self):
         e_dft = []

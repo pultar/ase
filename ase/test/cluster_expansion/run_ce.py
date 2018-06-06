@@ -49,9 +49,9 @@ def test_binary_system():
     eval_l2.get_cluster_name_eci(alpha=1E-6, return_type='tuple')
     eval_l2.get_cluster_name_eci(alpha=1E-6, return_type='dict')
 
-    eval_l1 = Evaluate(bc_setting, penalty="l1")
-    eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='tuple')
-    eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='dict')
+    # eval_l1 = Evaluate(bc_setting, penalty="l1")
+    # eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='tuple')
+    # eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='dict')
 
     os.remove(db_name)
 
