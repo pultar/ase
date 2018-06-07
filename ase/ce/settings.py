@@ -4,8 +4,6 @@ from copy import deepcopy
 import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
-from ase.gui.gui import GUI
-from ase.gui.images import Images
 
 class ClusterExpansionSetting:
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
@@ -714,6 +712,8 @@ class ClusterExpansionSetting:
 
     def view_clusters(self):
         """Display all clusters along with their names"""
+        from ase.gui.gui import GUI
+        from ase.gui.images import Images
         location = []
         for unique_name in self.unique_cluster_names:
             cluster_size = int(unique_name[1])
