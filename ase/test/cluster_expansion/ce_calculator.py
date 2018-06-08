@@ -6,6 +6,7 @@ from ase.ce import BulkCrystal, CorrFunction
 from ase.build import bulk
 from ase.ce.tools import wrap_and_sort_by_position
 
+
 def generate_ex_eci(bc):
     cf = CorrFunction(bc)
     cf = cf.get_cf(bc.atoms)
@@ -30,7 +31,7 @@ def get_binary():
                              conc_args=conc_args, db_name=db_name)
 
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)
-    atoms = atoms*(3, 3, 3)
+    atoms = atoms * (3, 3, 3)
     for i in range(int(len(atoms) / 2)):
         atoms[i].symbol = "Au"
         atoms[-i - 1].symbol = "Cu"
@@ -49,7 +50,7 @@ def get_ternary():
                              db_name=db_name)
 
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)
-    atoms = atoms*(3, 3, 3)
+    atoms = atoms * (3, 3, 3)
     for i in range(2):
         atoms[3 * i].symbol = "Au"
         atoms[3 * i + 1].symbol = "Cu"
@@ -91,5 +92,8 @@ test_update_correlation_functions(binary_setting, bin_atoms, n_trial_configs=5)
 os.remove(db_name)
 
 ternary_setting, tern_atoms = get_ternary()
-test_update_correlation_functions(ternary_setting, tern_atoms, n_trial_configs=5)
+test_update_correlation_functions(
+    ternary_setting,
+    tern_atoms,
+    n_trial_configs=5)
 os.remove(db_name)
