@@ -1,9 +1,9 @@
-from ase.calculators.cluster_expansion import ClusterExpansion
-from ase.ce import BulkCrystal
-from ase.ce import CorrFunction
+import os
 from random import shuffle, randint
 import numpy as np
-
+from ase.calculators.cluster_expansion import ClusterExpansion
+from ase.ce import BulkCrystal, CorrFunction
+from ase.visualize import view
 
 def generate_ex_eci(bc):
     cf = CorrFunction(bc)
@@ -13,7 +13,7 @@ def generate_ex_eci(bc):
 
 
 def all_cf_match(cf_dict, calc):
-    tol = 1E-4
+    tol = 1E-6
     print(cf_dict)
     print(calc.cf)
     for i in range(len(calc.cf)):
@@ -21,34 +21,31 @@ def all_cf_match(cf_dict, calc):
 
 
 def get_binary():
-    """Returns a simple binary test structure"""
-    db_name = "aucu_binary_test.db"
-    conc_args = {
-        "conc_ratio_min_1": [[1, 0]],
-        "conc_ratio_max_1": [[0, 1]]
-    }
+    """Return a simple binary test structure."""
+    conc_args = {"conc_ratio_min_1": [[1, 0]],
+                 "conc_ratio_max_1": [[0, 1]]}
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
-                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3], conc_args=conc_args,
-                             db_name=db_name)
+                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
+                             conc_args=conc_args, db_name=db_name)
+    view(bc_setting.atoms)
 
     atoms = bc_setting.atoms
     for i in range(int(len(atoms) / 2)):
         atoms[i].symbol = "Au"
         atoms[-i - 1].symbol = "Cu"
+    view(bc_setting.atoms)
     return bc_setting
 
 
 def get_ternary():
-    """Returns a ternary test structure"""
-    db_name = "aucuzn_ternary_test.db"
-    conc_args = {
-        "conc_ratio_min_1": [[1, 0, 0]],
-        "conc_ratio_max_1": [[0, 1, 0]],
-        "conc_ratio_min_2": [[0, 0, 1]],
-        "conc_ratio_max_2": [[1, 0, 0]]
-    }
+    """Return a ternary test structure."""
+    conc_args = {"conc_ratio_min_1": [[1, 0, 0]],
+                 "conc_ratio_max_1": [[0, 1, 0]],
+                 "conc_ratio_min_2": [[0, 0, 1]],
+                 "conc_ratio_max_2": [[1, 0, 0]]}
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
-                             basis_elements=[["Au", "Cu", "Zn"]], size=[3, 3, 3], conc_args=conc_args,
+                             basis_elements=[["Au", "Cu", "Zn"]],
+                             size=[3, 3, 3], conc_args=conc_args,
                              db_name=db_name)
 
     atoms = bc_setting.atoms
@@ -69,6 +66,11 @@ def test_update_correlation_functions(bc_setting, n_trial_configs=20):
     for i in range(int(len(atoms) / 2)):
         atoms[i].symbol = "Au"
         atoms[-i - 1].symbol = "Cu"
+
+    # ---------------------------------
+    # init_cf, indices, symbols assigned but never used?
+    # shuffle imported but never used.
+    # ---------------------------------
     init_cf = cf.get_cf(atoms)
 
     calc = ClusterExpansion(bc_setting, cluster_name_eci=eci)
@@ -96,7 +98,11 @@ def test_update_correlation_functions(bc_setting, n_trial_configs=20):
         assert np.allclose(brute_force_cf, calc.cf)
 
 
+db_name = 'test.db'
 binary_setting = get_binary()
 test_update_correlation_functions(binary_setting, n_trial_configs=5)
+os.remove(db_name)
+
 ternary_setting = get_ternary()
 test_update_correlation_functions(ternary_setting, n_trial_configs=5)
+os.remove(db_name)
