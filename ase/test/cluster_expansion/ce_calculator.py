@@ -4,6 +4,7 @@ import numpy as np
 from ase.calculators.cluster_expansion import ClusterExpansion
 from ase.ce import BulkCrystal, CorrFunction
 from ase.build import bulk
+from ase.ce.tools import wrap_and_sort_by_position
 
 def generate_ex_eci(bc):
     cf = CorrFunction(bc)
@@ -33,15 +34,15 @@ def get_binary():
     for i in range(int(len(atoms) / 2)):
         atoms[i].symbol = "Au"
         atoms[-i - 1].symbol = "Cu"
-    return bc_setting, atoms
+    return bc_setting, wrap_and_sort_by_position(atoms)
 
 
 def get_ternary():
     """Return a ternary test structure."""
     conc_args = {"conc_ratio_min_1": [[1, 0, 0]],
                  "conc_ratio_max_1": [[0, 1, 0]],
-                 "conc_ratio_min_2": [[0, 0, 1]],
-                 "conc_ratio_max_2": [[1, 0, 0]]}
+                 "conc_ratio_min_2": [[2, 0, 0]],
+                 "conc_ratio_max_2": [[0, 1, 1]]}
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
                              basis_elements=[["Au", "Cu", "Zn"]],
                              size=[3, 3, 3], conc_args=conc_args,
@@ -53,7 +54,7 @@ def get_ternary():
         atoms[3 * i].symbol = "Au"
         atoms[3 * i + 1].symbol = "Cu"
         atoms[3 * i + 2].symbol = "Zn"
-    return bc_setting, atoms
+    return bc_setting, wrap_and_sort_by_position(atoms)
 
 
 def test_update_correlation_functions(bc_setting, atoms, n_trial_configs=20):
