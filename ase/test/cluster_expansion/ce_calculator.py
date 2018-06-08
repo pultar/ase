@@ -1,9 +1,9 @@
 import os
-from random import shuffle, randint
+from random import randint
 import numpy as np
 from ase.calculators.cluster_expansion import ClusterExpansion
 from ase.ce import BulkCrystal, CorrFunction
-from ase.visualize import view
+from ase.build import bulk
 
 def generate_ex_eci(bc):
     cf = CorrFunction(bc)
@@ -27,14 +27,13 @@ def get_binary():
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
                              basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
                              conc_args=conc_args, db_name=db_name)
-    view(bc_setting.atoms)
 
-    atoms = bc_setting.atoms
+    atoms = bulk("Au", crystalstructure="fcc", a=4.05)
+    atoms = atoms*(3, 3, 3)
     for i in range(int(len(atoms) / 2)):
         atoms[i].symbol = "Au"
         atoms[-i - 1].symbol = "Cu"
-    view(bc_setting.atoms)
-    return bc_setting
+    return bc_setting, atoms
 
 
 def get_ternary():
@@ -48,37 +47,23 @@ def get_ternary():
                              size=[3, 3, 3], conc_args=conc_args,
                              db_name=db_name)
 
-    atoms = bc_setting.atoms
+    atoms = bulk("Au", crystalstructure="fcc", a=4.05)
+    atoms = atoms*(3, 3, 3)
     for i in range(2):
         atoms[3 * i].symbol = "Au"
         atoms[3 * i + 1].symbol = "Cu"
         atoms[3 * i + 2].symbol = "Zn"
-    return bc_setting
+    return bc_setting, atoms
 
 
-def test_update_correlation_functions(bc_setting, n_trial_configs=20):
+def test_update_correlation_functions(bc_setting, atoms, n_trial_configs=20):
     cf = CorrFunction(bc_setting)
-    atoms = bc_setting.atoms
 
     eci = generate_ex_eci(bc_setting)
 
-    # Insert some Au and Cu elements
-    for i in range(int(len(atoms) / 2)):
-        atoms[i].symbol = "Au"
-        atoms[-i - 1].symbol = "Cu"
-
-    # ---------------------------------
-    # init_cf, indices, symbols assigned but never used?
-    # shuffle imported but never used.
-    # ---------------------------------
-    init_cf = cf.get_cf(atoms)
-
     calc = ClusterExpansion(bc_setting, cluster_name_eci=eci)
     atoms.set_calculator(calc)
-    #calc.atoms = atoms
 
-    indices = range(len(atoms))
-    symbols = [atom.symbol for atom in atoms]
     for _ in range(n_trial_configs):
         indx1 = randint(0, len(atoms) - 1)
         symb1 = atoms[indx1].symbol
@@ -89,20 +74,21 @@ def test_update_correlation_functions(bc_setting, n_trial_configs=20):
 
         atoms[indx1].symbol = symb2
         atoms[indx2].symbol = symb1
+
         # The calculator should update its correlation functions
         # when the energy is computed
         energy = atoms.get_potential_energy()
-        # print(calc.atoms.set_calculator(calc))
+
         brute_force_cf = cf.get_cf_by_cluster_names(
             atoms, calc.cluster_names, return_type="array")
         assert np.allclose(brute_force_cf, calc.cf)
 
 
 db_name = 'test.db'
-binary_setting = get_binary()
-test_update_correlation_functions(binary_setting, n_trial_configs=5)
+binary_setting, bin_atoms = get_binary()
+test_update_correlation_functions(binary_setting, bin_atoms, n_trial_configs=5)
 os.remove(db_name)
 
-ternary_setting = get_ternary()
-test_update_correlation_functions(ternary_setting, n_trial_configs=5)
+ternary_setting, tern_atoms = get_ternary()
+test_update_correlation_functions(ternary_setting, tern_atoms, n_trial_configs=5)
 os.remove(db_name)
