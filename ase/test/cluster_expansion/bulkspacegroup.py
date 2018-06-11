@@ -1,10 +1,12 @@
-"""Test to initiate all possible cases of a BulkSpacegroup.
+"""Test to initiatialize CE using a BulkSpacegroup.
 
-It should not be nessecary to call GenerateStructures, Evaluate etc.
-with BulkSpacegroup as this is tested in run_ce.py for BulkCrystal.
+1. Initialize the CE
+2. Add a few structures
+3. Compute the energy
+4. Run the evaluation routine
 """
 import os
-from ase.ce import BulkSpacegroup
+from ase.ce import BulkSpacegroup, GenerateStructures
 
 
 def test_spgroup_217():
@@ -63,20 +65,28 @@ def test_grouped_basis_with_large_dist():
                                 (0.2244, 0.3821, 0.)],
                          spacegroup=55,
                          cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
-                         size=[2, 2, 3],
+                         # size=[2, 2, 3],
+                         size=[1, 1, 2],
                          conc_args={"conc_ratio_min_1": [[5, 0], [2]],
                                     "conc_ratio_max_1": [[4, 1], [2]]},
                          db_name=db_name,
                          max_cluster_size=3,
-                         max_cluster_dist=5.0,
+                         # max_cluster_dist=5.0,
+                         max_cluster_dist=None,
                          grouped_basis=[[0, 1, 2], [3]])
+    gs = GenerateStructures(setting=bsg, generation_number=0,
+                            struct_per_gen=5)
+    gs.generate_initial_pool()
+    # gs.generate_probe_structure(num_steps=1000,
+    #                             approx_mean_var=True,
+    #                             num_samples_var=10)
     os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
                                          ['O', 'F']],
-                         basis=[(0.000000, 0.000000, 0.000000),
-                                (0.333333, 0.666667, 0.000000),
-                                (0.333333, 0.000000, 0.250000)],
+                         basis=[(0.00, 0.00, 0.00),
+                                (1./3, 2./3, 0.00),
+                                (1./3, 0.00, 0.25)],
                          spacegroup=167,
                          cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
                          size=[1, 1, 1],

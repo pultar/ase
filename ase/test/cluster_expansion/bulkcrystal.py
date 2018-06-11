@@ -1,4 +1,4 @@
-"""Test the followings cases.
+"""Test to initiatialize CE using a BulkCrystal.
 
 1. Initialize the CE
 2. Add a few structures
@@ -8,7 +8,7 @@
 
 import os
 from ase.ce import BulkCrystal, GenerateStructures, Evaluate
-from ase.calculators.emt import EMT  # Use this calculator as it is fast
+from ase.calculators.emt import EMT
 from ase.db import connect
 
 
@@ -17,7 +17,7 @@ def test_binary_system():
     Verifies that one can run a CE for the binary Au-Cu system.
     The EMT calculator is used for energy calculations
     """
-    db_name = "aucu_binary_test.db"
+    db_name = "test.db"
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
