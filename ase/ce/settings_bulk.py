@@ -294,7 +294,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
         scale_factor = np.multiply(self.supercell_scale_factor, self.size)
-
+        print(scale_factor)
         # account for the case where a supercell is needed
         if not np.array_equal(scale_factor, np.array([1, 1, 1])):
             sites = np.divide(sites, scale_factor)
@@ -318,18 +318,25 @@ class BulkSpacegroup(ClusterExpansionSetting):
                 sites = np.append(sites, shift, axis=0)
 
         positions = self.atoms.get_scaled_positions()
+        print(positions)
+        print(len(positions))
+        print(len(self.atoms))
         for i, site in enumerate(sites):
             for j, pos in enumerate(positions):
                 indx = None
                 if np.allclose(site, pos, atol=1.e-5):
                     indx = j
                     break
+                if indx is None and j == len(positions) - 1:
+                    print(i, site)
+                    print(j, pos)
 
             if self.ignore_background_atoms:
                 if kinds[i] in self.background_basis:
                     continue
             indx_by_basis[kinds[i]].append(indx)
 
+        print(indx_by_basis)
         for basis in indx_by_basis:
             basis.sort()
 
