@@ -1,3 +1,8 @@
+"""Definition of ClusterExpansionSetting Class.
+
+This module defines the base-class for storing the settings for performing
+Cluster Expansion in different conditions.
+"""
 import os
 from itertools import combinations, combinations_with_replacement
 from copy import deepcopy
@@ -5,7 +10,10 @@ import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 
+
 class ClusterExpansionSetting:
+    """Base-class for all Cluster Expansion settings."""
+
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
                  max_cluster_dist=None, basis_elements=None,
                  grouped_basis=None, ignore_background_atoms=False):
@@ -179,8 +187,8 @@ class ClusterExpansionSetting:
         error = False
         # check dimensions of the element list and concentration ratio lists
         if self.num_basis == 1:
-            if not(self.num_basis == len(self.conc_ratio_min_1) ==
-                   len(self.conc_ratio_max_1)):
+            if not(self.num_basis == len(self.conc_ratio_min_1)
+                   == len(self.conc_ratio_max_1)):
                 error = True
 
             if self.num_conc_var == 2:
@@ -315,6 +323,7 @@ class ClusterExpansionSetting:
 
     def _create_template_atoms(self):
         """Return atoms that can handle the specified maximum diameter.
+
         If maximum diameter is not specified, the user-specified cell
         size will be used.
         """
@@ -322,8 +331,10 @@ class ClusterExpansionSetting:
         return wrap_and_sort_by_position(atoms)
 
     def _create_distance_matrix(self):
-        """Make NxNx8 matrix (N is the number of atoms) that stores the
-        distances between all constituting atoms in self.atoms object.
+        """Make matrix that stores the distances between all consituting atoms.
+
+        The matrix has a size of NxNx8 (N is the number of atoms in self.atoms
+        object).
         """
         natoms = len(self.atoms)
         dist = np.zeros((natoms, natoms, 8), dtype=float)
@@ -386,8 +397,7 @@ class ClusterExpansionSetting:
         return indx_by_equiv
 
     def _get_grouped_basis_elements(self):
-        """Create list where the elements in the 'equivalent group' are grouped
-        together to conveniently calculate the concentrations."""
+        """Group elements in the 'equivalent group' together in a list."""
         grouped_basis_elements = []
         for group in self.grouped_basis:
             grouped_basis_elements.append(self.basis_elements[group[0]])
@@ -447,10 +457,10 @@ class ClusterExpansionSetting:
                     indx_set.append(k)
 
                 if not dist_set:
-                    raise ValueError("There is no cluster with size " +
-                                     "{}. Reduce ".format(size) +
-                                     "max_cluster_size or increase " +
-                                     "max_cluster_dist.")
+                    msg = "There is no cluster with size {}.\n".format(size)
+                    msg += "Reduce max_cluster_size or "
+                    msg += "increase max_cluster_dist."
+                    raise ValueError(msg)
 
                 # categorize the distances
                 dist_types = np.unique(dist_set, axis=0).tolist()
@@ -552,8 +562,8 @@ class ClusterExpansionSetting:
         nearby_indices = []
         for indx in indices:
             for t in range(8):
-                if (self.dist_matrix[ref_indx, indx, t] <=
-                        self.max_cluster_dist[size]):
+                if (self.dist_matrix[ref_indx, indx, t]
+                        <= self.max_cluster_dist[size]):
                     nearby_indices.append(indx)
                     break
         return nearby_indices
@@ -711,7 +721,7 @@ class ClusterExpansionSetting:
         return index_by_grouped_basis
 
     def view_clusters(self):
-        """Display all clusters along with their names"""
+        """Display all clusters along with their names."""
         from ase.gui.gui import GUI
         from ase.gui.images import Images
         location = []
@@ -756,6 +766,7 @@ class ClusterExpansionSetting:
         gui.run()
 
     def reconfigure_settings(self):
+        """Reconfigure settings stored in DB file."""
         db = connect(self.db_name)
         ids = [row.id for row in db.select(name='information')]
         db.delete(ids)
@@ -787,8 +798,8 @@ class ClusterExpansionSetting:
         """
         class_types = ['BulkCrystal', 'BulkSpacegroup']
         if type(self).__name__ not in class_types:
-            raise NotImplementedError('Class {}'.format(type(self).__name__) +
-                                      'is not supported.')
+            raise NotImplementedError('Class {}'.format(type(self).__name__)
+                                      + 'is not supported.')
 
         import json
         if type(self).__name__ == 'BulkCrystal':
