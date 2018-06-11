@@ -70,7 +70,7 @@ def test_grouped_basis_with_large_dist():
                          conc_args={"conc_ratio_min_1": [[5, 0], [2]],
                                     "conc_ratio_max_1": [[4, 1], [2]]},
                          db_name=db_name,
-                         max_cluster_size=3,
+                         max_cluster_size=2,
                          # max_cluster_dist=5.0,
                          max_cluster_dist=None,
                          grouped_basis=[[0, 1, 2], [3]])
