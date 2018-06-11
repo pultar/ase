@@ -28,8 +28,8 @@ class GenerateStructures(object):
 
     def __init__(self, setting, generation_number=None, struct_per_gen=None):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
-                            "object")
+            msg = "setting must be BulkCrystal or BulkSpacegroup object"
+            raise TypeError(msg)
         self.setting = setting
         self.db = connect(setting.db_name)
         self.corrfunc = CorrFunction(self.setting)
@@ -118,9 +118,8 @@ class GenerateStructures(object):
                 continue
 
             atoms = wrap_and_sort_by_position(atoms)
-            print('Generating {} out of {}'.format(num_struct + 1,
-                                                   self.struct_per_gen) +
-                  ' structures')
+            print('Generating {} out of {} structures.'
+                  .format(num_struct + 1, self.struct_per_gen))
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
                                 init_temp, final_temp, num_temp, num_steps,
                                 approx_mean_var)
@@ -165,8 +164,8 @@ class GenerateStructures(object):
             return True
 
         # Case 1: 1 conc variable, one struct per concentration
-        if (self.setting.num_conc_var == 1 and
-                self.struct_per_gen == self.conc_matrix.shape[0]):
+        if (self.setting.num_conc_var == 1
+                and self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
@@ -178,9 +177,9 @@ class GenerateStructures(object):
                 self.db.write(atoms, kvp)
 
         # Case 2: 2 conc variable, one struct per concentration
-        elif (self.setting.num_conc_var == 2 and
-              self.struct_per_gen == self.conc_matrix.shape[0] *
-              self.conc_matrix.shape[1]):
+        elif (self.setting.num_conc_var == 2
+              and self.struct_per_gen == self.conc_matrix.shape[0]
+              * self.conc_matrix.shape[1]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 for y in range(self.conc_matrix.shape[1]):

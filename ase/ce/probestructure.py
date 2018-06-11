@@ -6,8 +6,9 @@ from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv
 from ase.db import connect
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction, Evaluate
+from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
+
 
 class ProbeStructure(object):
     """Generate probe structures.
@@ -50,6 +51,7 @@ class ProbeStructure(object):
                   generating probe structures.
                   Reads sigma and mu from 'probe_structure-sigma_mu.npz' file.
     """
+
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
                  final_temp=None, num_temp=5, num_steps=10000,
                  approx_mean_var=False):
@@ -166,8 +168,8 @@ class ProbeStructure(object):
                     if self._is_swappable(old):
                         new, n_cf = self._swap_two_atoms(old, o_cf)
                     else:
-                        raise RuntimeError('Atoms has only one concentration' +
-                                           'value and not swappable.')
+                        raise RuntimeError('Atoms has only one concentration '
+                                           + 'value and not swappable.')
             else:
                 # Swap two atoms
                 if self._is_swappable(old):
@@ -267,6 +269,7 @@ class ProbeStructure(object):
 
     def _change_element_type(self, atoms, cf, index=None, rplc_element=None):
         """Change the type of element for the atom with a given index.
+
         If index and replacing element types are not specified, they are
         randomly generated.
         """
@@ -304,7 +307,7 @@ class ProbeStructure(object):
         return self._track_cf(old, new, cf, indx)
 
     def _track_cf(self, old, new, cf, index):
-        """Track the changes of correlation function"""
+        """Track the changes of correlation function."""
         # change size of the cell if needed (e.g., max_cluster_dia > min(lat))
         # also, get the size ratios (multiplicaion factor for making supercell)
         old_sc = self.corrFunc.check_and_convert_cell_size(old.copy())
@@ -360,7 +363,6 @@ class ProbeStructure(object):
                 atoms_per_symm = len(self.setting.index_by_trans_symm[symm])
                 count += clusters_per_atom * atoms_per_symm
 
-
             t_indices = self._translate_indx(index, indices)
             cf_tot = cf[i] * count
             cf_old = self._cf_by_indx(old_sc, index, t_indices, dec)
@@ -409,9 +411,7 @@ class ProbeStructure(object):
         return tlist
 
     def _cf_by_indx(self, atoms, ref_indx, trans_indices, deco):
-        """Calculate the spin product of the cluster that starts with the
-        ref_indx.
-        """
+        """Calculate spin product of the cluster that starts with ref_indx."""
         bf = self.setting.basis_functions
         sp = 0.
         perm = list(permutations(deco, len(deco)))

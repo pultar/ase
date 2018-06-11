@@ -6,8 +6,7 @@ from ase.ce.settings import ClusterExpansionSetting
 from copy import deepcopy
 
 class BulkCrystal(ClusterExpansionSetting):
-    """Store settings for Cluster Expansion on bulk materials defined based on
-    crystal structures.
+    """Store CE settings on bulk materials defined based on crystal structures.
 
     Arguments:
     =========
@@ -52,6 +51,7 @@ class BulkCrystal(ClusterExpansionSetting):
         if *True*, a basis consisting of only one element type will be ignored
         when creating clusters.
     """
+
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
                  cubic=False, size=None, conc_args=None, db_name=None,
@@ -176,10 +176,8 @@ class BulkCrystal(ClusterExpansionSetting):
         return BulkCrystal(**kwargs)
 
 
-
 class BulkSpacegroup(ClusterExpansionSetting):
-    """"Store settings for Cluster Expansion on bulk materials defined based on
-    space group.
+    """Store CE settings on bulk materials defined based on space group.
 
     Arguments:
     =========
@@ -224,6 +222,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
         if *True*, a basis consisting of only one element type will be ignored
         when creating clusters.
     """
+
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
                  primitive_cell=False, conc_args=None, db_name=None,
