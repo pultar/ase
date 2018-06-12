@@ -364,9 +364,6 @@ class BulkSpacegroup(ClusterExpansionSetting):
                     indx = j
                     break
 
-            if self.ignore_background_atoms:
-                if kinds[i] in self.background_basis:
-                    continue
             indx_by_basis[kinds[i]].append(indx)
 
         for basis in indx_by_basis:

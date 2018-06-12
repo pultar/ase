@@ -26,8 +26,7 @@ class ClusterExpansionSetting:
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
         if ignore_background_atoms:
-            self.background_basis, self.background_symbol = \
-                self._remove_background_basis()
+            self.background_symbol = self._remove_background_basis()
 
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
@@ -52,6 +51,9 @@ class ClusterExpansionSetting:
         if ignore_background_atoms:
             self.background_atom_indices = [a.index for a in self.atoms if
                                             a.symbol in self.background_symbol]
+            # change spin_dict if background_symbol only exists in the ignored
+            # basis
+            # self._remove_background_symbol_from_spin_dict()
 
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
@@ -60,8 +62,10 @@ class ClusterExpansionSetting:
         print('num_unique_elements: {}'.format(self.num_unique_elements))
         print('unique_elements: {}'.format(self.unique_elements))
         print('all_elements: {}'.format(self.all_elements))
+        print('basis_elements: {}'.format(self.basis_elements))
         print('spin_dict: {}'.format(self.spin_dict))
         print('basis_functions: {}'.format(self.basis_functions))
+        # print('background_symbol: {}'.format(self.background_symbol))
 
         if not os.path.exists(db_name):
             self._store_data()
@@ -156,6 +160,7 @@ class ClusterExpansionSetting:
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
 
+        print(self.grouped_basis)
         # remap indices if the basis are grouped, then change grouped_basis
         # and conc_ratio_min/max accordingly
         if self.grouped_basis is not None:
@@ -173,6 +178,7 @@ class ClusterExpansionSetting:
 
         # change basis_elements
         for i in sorted(basis, reverse=True):
+            del self.basis[i]
             del self.basis_elements[i]
             if self.grouped_basis is None:
                 del self.conc_ratio_min_1[i]
@@ -182,12 +188,17 @@ class ClusterExpansionSetting:
                     del self.conc_ratio_max_2[i]
 
         # change all_elements
-        for i in basis:
-            count = 0
-            for x in range(i):
-                count += len(self.basis_elements[x])
-            del self.all_elements[count]
-        return basis, symbol
+        for s in symbol:
+            self.all_elements.remove(s)
+
+        # # reassign grouped_basis
+        for ref in sorted(basis, reverse=True):
+            for i, group in enumerate(self.grouped_basis):
+                for j, element in enumerate(group):
+                    if element > ref:
+                        self.grouped_basis[i][j] -= 1
+
+        return symbol
 
     def _check_basis_elements(self):
         error = False
@@ -222,6 +233,8 @@ class ClusterExpansionSetting:
         if num_basis != self.num_basis:
             raise ValueError('grouped_basis do not contain all the basis')
 
+        print(self.basis_elements)
+        print(self.grouped_basis)
         # check if grouped basis have same elements
         for group in self.grouped_basis:
             ref_elements = self.basis_elements[group[0]]
@@ -401,6 +414,10 @@ class ClusterExpansionSetting:
             indx_by_equiv.append(equiv_group)
 
         return indx_by_equiv
+
+    def _remove_background_symbol_from_spin_dict(self):
+        num_background = len([a.index for a in self.atoms_with_given_dim
+                              if a.symbol in self.background_symbol])
 
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""

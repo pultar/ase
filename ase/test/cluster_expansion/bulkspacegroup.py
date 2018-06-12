@@ -72,6 +72,9 @@ def test_grouped_basis_with_large_dist():
                          max_cluster_size=2,
                          max_cluster_dist=5.0,
                          grouped_basis=[[0, 1, 2], [3]])
+    assert bsg.num_unique_elements == 3
+    assert len(bsg.spin_dict) == 3
+    assert len(bsg.basis_functions) == 2
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
     # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
@@ -80,24 +83,27 @@ def test_grouped_basis_with_large_dist():
 
     os.remove(db_name)
 
-    bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
-                                         ['O', 'X'], ['Ta']],
+    bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
+                                         ['O', 'X']],
                          basis=[(0., 0., 0.),
+                                (0.2244, 0.3821, 0.),
                                 (0.3894, 0.1405, 0.),
-                                (0.201,  0.3461, 0.5),
-                                (0.2244, 0.3821, 0.)],
+                                (0.201,  0.3461, 0.5)],
                          spacegroup=55,
                          cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
                          size=[2, 2, 3],
-                         conc_args={"conc_ratio_min_1": [[5, 0], [2]],
-                                    "conc_ratio_max_1": [[4, 1], [2]]},
+                         conc_args={"conc_ratio_min_1": [[2], [5, 0]],
+                                    "conc_ratio_max_1": [[2], [4, 1]]},
                          db_name=db_name,
                          max_cluster_size=2,
                          max_cluster_dist=5.0,
-                         grouped_basis=[[0, 1, 2], [3]],
+                         grouped_basis=[[1], [0, 2, 3]],
                          ignore_background_atoms=True)
-    gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-    gs.generate_initial_pool()
+    assert bsg.num_unique_elements == 2
+    assert len(bsg.spin_dict) == 2
+    assert len(bsg.basis_functions) == 1
+    # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
+    # gs.generate_initial_pool()
     # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
     #                             num_steps=10, approx_mean_var=True)
