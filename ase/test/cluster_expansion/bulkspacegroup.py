@@ -55,8 +55,30 @@ def test_spgroup_217():
 
 
 def test_grouped_basis_with_large_dist():
-    # Test with grouped basis
+    # Test with grouped basis with a supercell
     db_name = "test.db"
+    bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
+                                         ['O', 'X'], ['Ta']],
+                         basis=[(0., 0., 0.),
+                                (0.3894, 0.1405, 0.),
+                                (0.201,  0.3461, 0.5),
+                                (0.2244, 0.3821, 0.)],
+                         spacegroup=55,
+                         cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
+                         size=[1, 1, 2],
+                         conc_args={"conc_ratio_min_1": [[5, 0], [2]],
+                                    "conc_ratio_max_1": [[4, 1], [2]]},
+                         db_name=db_name,
+                         max_cluster_size=2,
+                         max_cluster_dist=5.0,
+                         grouped_basis=[[0, 1, 2], [3]])
+    gs = GenerateStructures(setting=bsg, struct_per_gen=3)
+    gs.generate_initial_pool()
+    # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
+    # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
+    #                             num_steps=10, approx_mean_var=True)
+
+    os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
                                          ['O', 'X'], ['Ta']],
@@ -66,21 +88,20 @@ def test_grouped_basis_with_large_dist():
                                 (0.2244, 0.3821, 0.)],
                          spacegroup=55,
                          cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
-                         # size=[2, 2, 3],
-                         size=[1, 1, 2],
+                         size=[2, 2, 3],
                          conc_args={"conc_ratio_min_1": [[5, 0], [2]],
                                     "conc_ratio_max_1": [[4, 1], [2]]},
                          db_name=db_name,
                          max_cluster_size=2,
-                         # max_cluster_dist=5.0,
-                         max_cluster_dist=None,
-                         grouped_basis=[[0, 1, 2], [3]])
-    gs = GenerateStructures(setting=bsg, generation_number=0,
-                            struct_per_gen=5)
+                         max_cluster_dist=5.0,
+                         grouped_basis=[[0, 1, 2], [3]],
+                         ignore_background_atoms=True)
+    gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
-    # gs.generate_probe_structure(num_steps=1000,
-    #                             approx_mean_var=True,
-    #                             num_samples_var=10)
+    # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
+    # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
+    #                             num_steps=10, approx_mean_var=True)
+
     os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],

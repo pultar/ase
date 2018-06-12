@@ -22,14 +22,15 @@ class ClusterExpansionSetting:
         self.max_cluster_size = max_cluster_size
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
-        self.all_elements = [item for row in basis_elements for item in row]
+        self.all_elements = sorted([item for row in basis_elements for
+                                    item in row])
         self.ignore_background_atoms = ignore_background_atoms
         if ignore_background_atoms:
             self.background_basis, self.background_symbol = \
                 self._remove_background_basis()
 
         self.num_elements = len(self.all_elements)
-        self.unique_elements = list(set(deepcopy(self.all_elements)))
+        self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
         self.max_cluster_dist, self.supercell_scale_factor = \
             self._get_max_cluster_dist_and_scale_factor(max_cluster_dist)
@@ -46,7 +47,6 @@ class ClusterExpansionSetting:
         self.spin_dict = self._get_spin_dict()
         self.basis_functions = self._get_basis_functions()
         self.unique_cluster_names = None
-
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
         if ignore_background_atoms:
@@ -56,6 +56,12 @@ class ClusterExpansionSetting:
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
+
+        print('num_unique_elements: {}'.format(self.num_unique_elements))
+        print('unique_elements: {}'.format(self.unique_elements))
+        print('all_elements: {}'.format(self.all_elements))
+        print('spin_dict: {}'.format(self.spin_dict))
+        print('basis_functions: {}'.format(self.basis_functions))
 
         if not os.path.exists(db_name):
             self._store_data()
@@ -240,7 +246,7 @@ class ClusterExpansionSetting:
 
         spin_dict = {}
         for x in range(self.num_unique_elements):
-            spin_dict[self.all_elements[x]] = spin_values[x]
+            spin_dict[self.unique_elements[x]] = spin_values[x]
         return spin_dict
 
     def _get_basis_functions(self):

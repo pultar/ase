@@ -1,3 +1,4 @@
+"""Module for generating new structures for training."""
 import os
 import random
 import numpy as np
@@ -446,8 +447,8 @@ class GenerateStructures(object):
         while in_DB:
             atoms = self.atoms.copy()
             for site in range(num_basis):
-                indx = [a.index for a in atoms if a.symbol ==
-                        basis_elements[site][0]]
+                indx = [a.index for a in atoms
+                        if a.symbol == basis_elements[site][0]]
                 if len(indx) != sum(conc_ratio[site]):
                     raise ValueError("number of atoms to be replaced in the "
                                      "Atoms object does not match the value "
@@ -496,10 +497,10 @@ class GenerateStructures(object):
         return indices
 
     def _generate_sigma_mu(self, num_samples_var):
-        print('===========================================================\n' +
-              'Determining sigma and mu value for assessing mean variance.\n' +
-              'May take a long time depending on the number of samples \n' +
-              'specified in the *num_samples_var* argument.\n' +
+        print('===========================================================\n'
+              'Determining sigma and mu value for assessing mean variance.\n'
+              'May take a long time depending on the number of samples \n'
+              'specified in the *num_samples_var* argument.\n'
               '===========================================================')
         count = 0
         cfm = np.zeros((num_samples_var, len(self.setting.full_cluster_names)),

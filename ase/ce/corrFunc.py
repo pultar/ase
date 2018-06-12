@@ -1,9 +1,11 @@
+"""Module for calculating correlation functions."""
 from itertools import combinations_with_replacement, permutations
 import numpy as np
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.db import connect
+
 
 class CorrFunction(object):
     """Calculate the correlation function.
@@ -12,6 +14,7 @@ class CorrFunction(object):
     =========
     setting: settings object
     """
+
     def __init__(self, setting):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
@@ -23,6 +26,7 @@ class CorrFunction(object):
         self.ref_index_trans_symm = setting.ref_index_trans_symm
 
     def get_c1(self, atoms, dec):
+        """Get correlation function for single-body clusters."""
         c1 = 0
         for element, spin in self.setting.basis_functions[dec].items():
             num_element = len([a for a in atoms if a.symbol == element])
@@ -31,10 +35,9 @@ class CorrFunction(object):
         return c1
 
     def get_cf(self, atoms, return_type='dict'):
-        """Calculate correlation function for all possible clusters within
-        the size and diameter limits.
+        """Calculate correlation function for all possible clusters.
 
-        Arguments
+        Arguments:
         =========
         atoms: Atoms object
 
@@ -105,8 +108,7 @@ class CorrFunction(object):
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
                                 return_type='dict'):
-        """Calculate correlation functions for the clusters with the names
-        provided.
+        """Calculate correlation functions of the specified clusters.
 
         Arguments
         =========
@@ -123,7 +125,6 @@ class CorrFunction(object):
                       values in the same order as the order provided in the
                       "cluster_names"
         """
-
         if isinstance(atoms, Atoms):
             atoms = self.check_and_convert_cell_size(atoms.copy())
         else:
@@ -173,15 +174,14 @@ class CorrFunction(object):
         return cf
 
     def reconfig_db_entries(self, select_cond=None, reset=True):
-        """
-        Reconfigure the correlation function values of the existing entries in
-        database.
+        """Reconfigure the correlation function values of the entries in DB.
 
         Arguments
         =========
         select_cond: list
             -None (default): select every item in DB except for 'information'
             -else: select based on additional condictions provided
+
         reset: bool
             -True: removes all the key-value pairs that describe correlation
                    functions.
@@ -249,7 +249,9 @@ class CorrFunction(object):
         return sp, count
 
     def check_and_convert_cell_size(self, atoms, return_ratio=False):
-        """Check if the size of the provided cell is the same as the size of the
+        """Check the size of provided cell and convert in necessary.
+
+        If the size of the provided cell is the same as the size of the
         template stored in the database. If it either (1) has the same size or
         (2) can make the same size by simple multiplication (supercell), the
         cell with the same size is returned after it is sorted by the position

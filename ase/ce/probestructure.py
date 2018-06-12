@@ -1,3 +1,4 @@
+"""Module for generating probe structures."""
 import os
 import math
 from copy import deepcopy
@@ -434,6 +435,7 @@ class ProbeStructure(object):
         cfm = np.array(cfm, dtype=float)
         return cfm
 
+
 def mean_variance_full(cfm):
     prec = precision_matrix(cfm)
     mv = 0.
@@ -442,13 +444,16 @@ def mean_variance_full(cfm):
     mv = mv / cfm.shape[0]
     return mv
 
+
 def mean_variance(cfm, sigma, mu):
     prec = precision_matrix(cfm)
     return np.trace(prec.dot(sigma)) + mu.dot(prec).dot(mu.T)
 
+
 def mean_variance_approx(cfm):
     prec = precision_matrix(cfm)
     return np.trace(prec)
+
 
 def precision_matrix(cfm):
     try:
