@@ -10,7 +10,7 @@ from ase.ce import BulkSpacegroup, GenerateStructures
 
 
 def test_spgroup_217():
-    """Initiate a BulkSpacegroup to describe gamma phase."""
+    """Test the initialization of spacegroup 217."""
     a = 10.553
     b = 10.553
     c = 10.553
@@ -52,6 +52,7 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          max_cluster_dist=5.0)
     os.remove(db_name)
+
 
 def test_grouped_basis_with_large_dist():
     # Test with grouped basis

@@ -1,9 +1,15 @@
+"""Definitions of Cluster Expansion settings for bulk.
+
+Cluster Expansion can be peformed on bulk material using either BulkCrystal
+or BulkSpacegroup class.
+"""
 import numpy as np
 from ase.build import bulk
 from ase.spacegroup import crystal, Spacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.ce.settings import ClusterExpansionSetting
 from copy import deepcopy
+
 
 class BulkCrystal(ClusterExpansionSetting):
     """Store CE settings on bulk materials defined based on crystal structures.
@@ -15,40 +21,55 @@ class BulkCrystal(ClusterExpansionSetting):
         Even for the cases where there is only one basis (e.g., fcc, bcc, sc),
         a list of symbols should be grouped by basis as in [['Cu', 'Au']]
         (note the nested list form).
+
     crystalstructure: str
         Must be one of sc, fcc, bcc, hcp, diamond, zincblende, rocksalt,
         cesiumchloride, fluorite or wurtzite.
+
     a: float
         Lattice constant.
+
     c: float
         Lattice constant.
+
     covera: float
         c/a ratio used for hcp.  Default is ideal ratio: sqrt(8/3).
+
     u: float
         Internal coordinate for Wurtzite structure.
+
     orthorhombic: bool
         Construct orthorhombic unit cell instead of primitive cell
         which is the default.
+
     cubic: bool
         Construct cubic unit cell if possible.
+
     size: list
         size of the supercell (e.g., [2, 2, 2] for 2x2x2 cell)
+
     conc_args: dict
         ratios of the elements for different concentrations.
+
     db_name: str
         name of the database file
+
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
+
     max_cluster_dist: float or int
         maximum diameter of cluster (in angstrom)
+
     grouped_basis: list
         indices of basis_elements that are considered to be equivalent when
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
+
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
+
     ignore_background_atoms: bool
-        if *True*, a basis consisting of only one element type will be ignored
+        if `True`, a basis consisting of only one element type will be ignored
         when creating clusters.
     """
 
@@ -94,11 +115,12 @@ class BulkCrystal(ClusterExpansionSetting):
 
         self.num_basis = len(basis_elements)
         if self.num_basis != self.structures[self.crystalstructure]:
-            raise ValueError("{} has ".format(self.crystalstructure) +
-                             "{} basis."
-                             .format(self.structures[self.crystalstructure]) +
-                             "The number of basis specified by basis_elements "
-                             "is {}".format(self.num_basis))
+            msg = "{} has {} basis.".format(
+                self.crystalstructure, self.structures[self.crystalstructure])
+            msg += "The number of basis specified by basis_elements is "
+            msg += "{}".format(self.num_basis)
+            raise ValueError(msg)
+
         self.unit_cell = self._get_unit_cell()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
         self.dist_num_dec = dist_num_dec
@@ -183,43 +205,57 @@ class BulkSpacegroup(ClusterExpansionSetting):
     =========
     basis_elements: list
         List of chemical symbols of elements to occupy each basis.
-    basis : list of scaled coordinates
+
+    basis: list of scaled coordinates
         Positions of the unique sites corresponding to symbols given
         either as scaled positions or through an atoms instance.
-    spacegroup : int | string | Spacegroup instance
+
+    spacegroup: int | string | Spacegroup instance
         Space group given either as its number in International Tables
         or as its Hermann-Mauguin symbol.
-    cell : 3x3 matrix
+
+    cell: 3x3 matrix
         Unit cell vectors.
-    cellpar : [a, b, c, alpha, beta, gamma]
+
+    cellpar: [a, b, c, alpha, beta, gamma]
         Cell parameters with angles in degree. Is not used when `cell`
         is given.
-    ab_normal : vector
+
+    ab_normal: vector
         Is used to define the orientation of the unit cell relative
         to the Cartesian system when `cell` is not given. It is the
         normal vector of the plane spanned by a and b.
-    primitive_cell : bool
+
+    primitive_cell: bool
         Wheter to return the primitive instead of the conventional
         unit cell.
+
     size: list of 3 positive integers
         How many times the conventional unit cell should be repeated
         in each direction.
+
     conc_args: dict
         ratios of the elements for different concentrations.
+
     db_name: str
         name of the database file
+
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
+
     max_cluster_dist: float or int
         maximum diameter of cluster (in angstrom)
+
     grouped_basis: list
         indices of basis_elements that are considered to be equivalent when
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
+
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
+
     ignore_background_atoms: bool
-        if *True*, a basis consisting of only one element type will be ignored
+        if `True`, a basis consisting of only one element type will be ignored
         when creating clusters.
     """
 
