@@ -7,19 +7,11 @@ from ase.build import bulk
 from ase.ce.tools import wrap_and_sort_by_position
 
 
-def generate_ex_eci(bc):
-    cf = CorrFunction(bc)
-    cf = cf.get_cf(bc.atoms)
+def generate_ex_eci(setting):
+    cf = CorrFunction(setting)
+    cf = cf.get_cf(setting.atoms)
     eci = {key: -0.001 for key in cf}
     return eci
-
-
-def all_cf_match(cf_dict, calc):
-    tol = 1E-6
-    print(cf_dict)
-    print(calc.cf)
-    for i in range(len(calc.cf)):
-        assert abs(cf_dict[i] - calc.cf[i]) < tol
 
 
 def get_binary():
@@ -58,12 +50,12 @@ def get_ternary():
     return bc_setting, wrap_and_sort_by_position(atoms)
 
 
-def test_update_correlation_functions(bc_setting, atoms, n_trial_configs=20):
-    cf = CorrFunction(bc_setting)
+def test_update_correlation_functions(setting, atoms, n_trial_configs=20):
+    cf = CorrFunction(setting)
 
-    eci = generate_ex_eci(bc_setting)
+    eci = generate_ex_eci(setting)
 
-    calc = ClusterExpansion(bc_setting, cluster_name_eci=eci)
+    calc = ClusterExpansion(setting, cluster_name_eci=eci)
     atoms.set_calculator(calc)
 
     for _ in range(n_trial_configs):
@@ -81,8 +73,8 @@ def test_update_correlation_functions(bc_setting, atoms, n_trial_configs=20):
         # when the energy is computed
         energy = atoms.get_potential_energy()
 
-        brute_force_cf = cf.get_cf_by_cluster_names(
-            atoms, calc.cluster_names, return_type="array")
+        brute_force_cf = cf.get_cf_by_cluster_names(atoms, calc.cluster_names,
+                                                    return_type="array")
         assert np.allclose(brute_force_cf, calc.cf)
 
 
@@ -92,8 +84,6 @@ test_update_correlation_functions(binary_setting, bin_atoms, n_trial_configs=5)
 os.remove(db_name)
 
 ternary_setting, tern_atoms = get_ternary()
-test_update_correlation_functions(
-    ternary_setting,
-    tern_atoms,
-    n_trial_configs=5)
+test_update_correlation_functions(ternary_setting, tern_atoms,
+                                  n_trial_configs=5)
 os.remove(db_name)
