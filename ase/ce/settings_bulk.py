@@ -169,12 +169,12 @@ class BulkCrystal(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         num_basis = self.structures[self.crystalstructure]
         if num_basis == 1:
-            indx_by_basis = [[a.index for a in self.atoms]]
+            indx_by_basis = [[a.index for a in self.atoms_with_given_dim]]
             return indx_by_basis
 
         indx_by_basis = []
         for basis in self.basis_elements:
-            indx_by_basis.append([a.index for a in self.atoms if
+            indx_by_basis.append([a.index for a in self.atoms_with_given_dim if
                                   a.symbol == basis[0]])
 
         for basis in indx_by_basis:
@@ -183,7 +183,8 @@ class BulkCrystal(ClusterExpansionSetting):
 
     def _group_index_by_basis_group(self):
         if self.num_grouped_basis == 1:
-            index_by_grouped_basis = [[a.index for a in self.atoms]]
+            index_by_grouped_basis = [[a.index for a in
+                                       self.atoms_with_given_dim]]
 
         # only possibility that indices are grouped and has more than one
         # basis is fluorite
@@ -191,7 +192,8 @@ class BulkCrystal(ClusterExpansionSetting):
             index_by_grouped_basis = []
             for group in self.grouped_basis:
                 symbol = self.basis_elements[group[0]][0]
-                index_by_grouped_basis.append([a.index for a in self.atoms if
+                index_by_grouped_basis.append([a.index for a in
+                                               self.atoms_with_given_dim if
                                                a.symbol == symbol])
 
         for basis in index_by_grouped_basis:
@@ -346,7 +348,8 @@ class BulkSpacegroup(ClusterExpansionSetting):
         indx_by_basis = [[] for _ in range(self.num_basis)]
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
-        scale_factor = np.multiply(self.supercell_scale_factor, self.size)
+        # scale_factor = np.multiply(self.supercell_scale_factor, self.size)
+        scale_factor = self.size
 
         # account for the case where a supercell is needed
         if not np.array_equal(scale_factor, np.array([1, 1, 1])):

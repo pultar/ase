@@ -323,7 +323,7 @@ class ProbeStructure(object):
             if np.allclose(pos, atom.position):
                 index = i
                 break
-
+        print(index, )
         # scan through each cluster name
         for i, name in enumerate(self.cluster_names):
             n = int(name[1])
@@ -339,6 +339,7 @@ class ProbeStructure(object):
 
             # Find which symmetry group the given atom (index) belongs to
             for symm in range(self.setting.num_trans_symm):
+                # print(index, self.setting.index_by_trans_symm)
                 if index in self.setting.index_by_trans_symm[symm]:
                     sg = symm
 

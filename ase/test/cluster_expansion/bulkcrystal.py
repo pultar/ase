@@ -7,7 +7,7 @@
 """
 
 import os
-from ase.ce import BulkCrystal, GenerateStructures, Evaluate
+from ase.ce import BulkCrystal, GenerateStructures, Evaluate, CorrFunction
 from ase.calculators.emt import EMT
 from ase.db import connect
 
@@ -60,57 +60,88 @@ def test_grouped_basis_supercell():
     """Test a case where a grouped_basis is used with supercell."""
     db_name = "test.db"
 
-    # 1 grouped basis
-    setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
-                          crystalstructure="rocksalt",
-                          a=4.0,
-                          size=[2, 2, 1],
-                          conc_args={"conc_ratio_min_1": [[1, 0]],
-                                     "conc_ratio_max_1": [[0, 1]]},
-                          db_name=db_name,
-                          max_cluster_size=2,
-                          max_cluster_dist=4.,
-                          grouped_basis=[[0, 1]])
-
-    assert setting.num_grouped_basis == 1
-    assert len(setting.index_by_grouped_basis) == 1
-    assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
-    assert setting.num_grouped_elements == 2
-    assert len(setting.basis_functions) == 1
-    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    assert len(flat) == len(setting.atoms)
-    gs = GenerateStructures(setting=setting, struct_per_gen=3)
-    gs.generate_initial_pool()
-    os.remove(db_name)
-
-    # 2 grouped_basis
-    setting = BulkCrystal(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
-                          crystalstructure="fluorite",
-                          a=4.0,
-                          size=[3, 2, 2],
-                          conc_args={"conc_ratio_min_1": [[1, 0], [2]],
-                                     "conc_ratio_max_1": [[0, 1], [2]]},
-                          db_name=db_name,
-                          max_cluster_size=2,
-                          max_cluster_dist=4.,
-                          grouped_basis=[[0], [1, 2]])
-
-    assert setting.num_grouped_basis == 2
-    assert len(setting.index_by_grouped_basis) == 2
-    assert setting.spin_dict == {'Ce': 1.0, 'O': -1.0, 'Zr': 0}
-    assert setting.num_grouped_elements == 3
-    assert len(setting.basis_functions) == 2
-    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    assert len(flat) == len(setting.atoms)
-    gs = GenerateStructures(setting=setting, struct_per_gen=3)
-    gs.generate_initial_pool()
-    os.remove(db_name)
+    # # ------------------------------- #
+    # # 1 grouped basis                 #
+    # # ------------------------------- #
+    # # initial_pool + probe_structures #
+    # # ------------------------------- #
+    # setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
+    #                       crystalstructure="rocksalt",
+    #                       a=4.0,
+    #                       size=[2, 2, 1],
+    #                       conc_args={"conc_ratio_min_1": [[1, 0]],
+    #                                  "conc_ratio_max_1": [[0, 1]]},
+    #                       db_name=db_name,
+    #                       max_cluster_size=3,
+    #                       max_cluster_dist=4.,
+    #                       grouped_basis=[[0, 1]])
+    #
+    # assert setting.num_grouped_basis == 1
+    # assert len(setting.index_by_grouped_basis) == 1
+    # assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
+    # assert setting.num_grouped_elements == 2
+    # assert len(setting.basis_functions) == 1
+    # flat = [i for sub in setting.index_by_grouped_basis for i in sub]
+    # assert len(flat) == len(setting.atoms_with_given_dim)
+    #
+    # gs = GenerateStructures(setting=setting, struct_per_gen=3)
+    # gs.generate_initial_pool()
+    # gs = GenerateStructures(setting=setting, struct_per_gen=2)
+    # gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
+    #                             num_steps=10, approx_mean_var=True)
+    # corrfunc = CorrFunction(setting=setting)
+    # db = connect(db_name)
+    # for row in db.select('id>4'):
+    #     atoms = row.toatoms(add_additional_information=True)
+    #     kvp = atoms.info['key_value_pairs']
+    #     cf = corrfunc.get_cf(atoms, return_type='dict')
+    #     for key, value in cf.items():
+    #         assert kvp[key] - value < 1E-6
+    #
+    # os.remove(db_name)
+    #
+    #
+    # # 2 grouped_basis
+    # setting = BulkCrystal(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
+    #                       crystalstructure="fluorite",
+    #                       a=4.0,
+    #                       size=[3, 2, 2],
+    #                       conc_args={"conc_ratio_min_1": [[1, 0], [2]],
+    #                                  "conc_ratio_max_1": [[0, 1], [2]]},
+    #                       db_name=db_name,
+    #                       max_cluster_size=2,
+    #                       max_cluster_dist=4.,
+    #                       grouped_basis=[[0], [1, 2]])
+    #
+    # assert setting.num_grouped_basis == 2
+    # assert len(setting.index_by_grouped_basis) == 2
+    # assert setting.spin_dict == {'Ce': 1.0, 'O': -1.0, 'Zr': 0}
+    # assert setting.num_grouped_elements == 3
+    # assert len(setting.basis_functions) == 2
+    # flat = [i for sub in setting.index_by_grouped_basis for i in sub]
+    # assert len(flat) == len(setting.atoms_with_given_dim)
+    #
+    # gs = GenerateStructures(setting=setting, struct_per_gen=3)
+    # gs.generate_initial_pool()
+    # gs = GenerateStructures(setting=setting, struct_per_gen=2)
+    # gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
+    #                             num_steps=10, approx_mean_var=True)
+    # corrfunc = CorrFunction(setting=setting)
+    # db = connect(db_name)
+    # for row in db.select('id>4'):
+    #     atoms = row.toatoms(add_additional_information=True)
+    #     kvp = atoms.info['key_value_pairs']
+    #     cf = corrfunc.get_cf(atoms, return_type='dict')
+    #     for key, value in cf.items():
+    #         assert kvp[key] - value < 1E-6
+    #
+    # os.remove(db_name)
 
     # 2 grouped_basis + background atoms
     setting = BulkCrystal(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
                           crystalstructure="fluorite",
                           a=4.0,
-                          size=[1, 1, 1],
+                          size=[2, 2, 1],
                           conc_args={"conc_ratio_min_1": [[1], [2, 0]],
                                      "conc_ratio_max_1": [[1], [0, 2]]},
                           db_name=db_name,
@@ -124,11 +155,24 @@ def test_grouped_basis_supercell():
     assert setting.num_grouped_elements == 2
     assert len(setting.basis_functions) == 1
     flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    assert len(flat) == len(setting.atoms)
+    assert len(flat) == len(setting.atoms_with_given_dim)
+
     gs = GenerateStructures(setting=setting, struct_per_gen=3)
     gs.generate_initial_pool()
+    gs = GenerateStructures(setting=setting, struct_per_gen=2)
+    gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
+                                num_steps=10, approx_mean_var=True)
+    corrfunc = CorrFunction(setting=setting)
+    db = connect(db_name)
+    for row in db.select('id>4'):
+        atoms = row.toatoms(add_additional_information=True)
+        kvp = atoms.info['key_value_pairs']
+        cf = corrfunc.get_cf(atoms, return_type='dict')
+        for key, value in cf.items():
+            assert kvp[key] - value < 1E-6
+
     os.remove(db_name)
 
 
-test_binary_system()
+# test_binary_system()
 test_grouped_basis_supercell()
