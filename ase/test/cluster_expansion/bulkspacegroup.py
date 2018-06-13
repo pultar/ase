@@ -72,15 +72,15 @@ def test_grouped_basis_with_large_dist():
                          max_cluster_size=2,
                          max_cluster_dist=5.0,
                          grouped_basis=[[0, 1, 2], [3]])
-    assert bsg.num_unique_elements == 3
-    assert len(bsg.spin_dict) == 3
+    assert bsg.unique_elements == ['O', 'Ta', 'X']
+    assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
     assert len(bsg.basis_functions) == 2
+
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
     # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
     #                             num_steps=10, approx_mean_var=True)
-
     os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
@@ -99,15 +99,10 @@ def test_grouped_basis_with_large_dist():
                          max_cluster_dist=5.0,
                          grouped_basis=[[1], [0, 2, 3]],
                          ignore_background_atoms=True)
-    assert bsg.num_unique_elements == 2
-    assert len(bsg.spin_dict) == 2
+    assert bsg.unique_elements == ['O', 'X']
+    assert bsg.spin_dict == {'O': 1.0, 'X': -1.0}
+    assert bsg.basis_elements == [['O', 'X'], ['O', 'X'], ['O', 'X']]
     assert len(bsg.basis_functions) == 1
-    # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-    # gs.generate_initial_pool()
-    # gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-    # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
-    #                             num_steps=10, approx_mean_var=True)
-
     os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
@@ -124,8 +119,11 @@ def test_grouped_basis_with_large_dist():
                          grouped_basis=[[0, 1], [2]],
                          max_cluster_size=2,
                          max_cluster_dist=5.0)
+    assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
+    assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
+    assert len(bsg.basis_functions) == 4
     os.remove(db_name)
 
 
-# test_spgroup_217()
+test_spgroup_217()
 test_grouped_basis_with_large_dist()

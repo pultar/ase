@@ -130,8 +130,9 @@ class BulkCrystal(ClusterExpansionSetting):
                                          basis_elements, grouped_basis,
                                          ignore_background_atoms)
 
-        self.index_by_basis = self._group_index_by_basis()
-        if grouped_basis is not None:
+        if grouped_basis is None:
+            self.index_by_basis = self._group_index_by_basis()
+        else:
             self.num_grouped_basis = len(grouped_basis)
             self.index_by_grouped_basis = self._group_index_by_basis_group()
             self.grouped_basis_elements = self._get_grouped_basis_elements()
@@ -168,17 +169,34 @@ class BulkCrystal(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         num_basis = self.structures[self.crystalstructure]
         if num_basis == 1:
-            indx_by_basis = [[a.index for a in self.atoms_with_given_dim]]
+            indx_by_basis = [[a.index for a in self.atoms]]
             return indx_by_basis
 
         indx_by_basis = []
         for basis in self.basis_elements:
-            indx_by_basis.append([a.index for a in self.atoms_with_given_dim if
+            indx_by_basis.append([a.index for a in self.atoms if
                                   a.symbol == basis[0]])
 
         for basis in indx_by_basis:
             basis.sort()
         return indx_by_basis
+
+    def _group_index_by_basis_group(self):
+        if self.num_grouped_basis == 1:
+            index_by_grouped_basis = [[a.index for a in self.atoms]]
+
+        # only possibility that indices are grouped and has more than one
+        # basis is fluorite
+        else:
+            index_by_grouped_basis = []
+            for group in self.grouped_basis:
+                symbol = self.basis_elements[group[0]][0]
+                index_by_grouped_basis.append([a.index for a in self.atoms if
+                                               a.symbol == symbol])
+
+        for basis in index_by_grouped_basis:
+            basis.sort()
+        return index_by_grouped_basis
 
     @staticmethod
     def load(filename):
