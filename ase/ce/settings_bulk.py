@@ -169,7 +169,8 @@ class BulkCrystal(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         num_basis = self.structures[self.crystalstructure]
         if num_basis == 1:
-            indx_by_basis = [[a.index for a in self.atoms_with_given_dim]]
+            indx_by_basis = [[a.index for a in self.atoms_with_given_dim if
+                              a.symbol not in self.background_symbol]]
             return indx_by_basis
 
         indx_by_basis = []
@@ -184,7 +185,8 @@ class BulkCrystal(ClusterExpansionSetting):
     def _group_index_by_basis_group(self):
         if self.num_grouped_basis == 1:
             index_by_grouped_basis = [[a.index for a in
-                                       self.atoms_with_given_dim]]
+                                       self.atoms_with_given_dim if
+                                       a.symbol not in self.background_symbol]]
 
         # only possibility that indices are grouped and has more than one
         # basis is fluorite

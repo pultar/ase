@@ -25,8 +25,9 @@ class ClusterExpansionSetting:
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
+        self.background_symbol = []
         if ignore_background_atoms:
-            self.background_symbol = self._remove_background_basis()
+            self.background_symbol = self._get_background_symbol()
 
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
@@ -148,11 +149,17 @@ class ClusterExpansionSetting:
 
         return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
 
-    def _remove_background_basis(self):
+    def _get_background_symbol(self):
+        """Get symbol of the background atoms.
+
+        This method also modifies grouped_basis, conc_args, num_basis, basis,
+        and all_elements attributes to reflect the changes from ignoring the
+        background atoms.
+        """
         # check if any basis consists of only one element type
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
         if not basis:
-            return None
+            return []
 
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
@@ -188,14 +195,16 @@ class ClusterExpansionSetting:
         for s in symbol:
             self.all_elements.remove(s)
 
-        # reassign grouped_basis
+        if self.grouped_basis is None:
+            return list(set(symbol))
+
+        # reassign grouped_basis if they are grouped
         for ref in sorted(basis, reverse=True):
             for i, group in enumerate(self.grouped_basis):
                 for j, element in enumerate(group):
                     if element > ref:
                         self.grouped_basis[i][j] -= 1
-
-        return symbol
+        return list(set(symbol))
 
     def _check_basis_elements(self):
         error = False
@@ -414,9 +423,9 @@ class ClusterExpansionSetting:
 
         return indx_by_equiv
 
-    def _remove_background_symbol_from_spin_dict(self):
-        num_background = len([a.index for a in self.atoms_with_given_dim
-                              if a.symbol in self.background_symbol])
+    # def _remove_background_symbol_from_spin_dict(self):
+    #     num_background = len([a.index for a in self.atoms_with_given_dim
+    #                           if a.symbol in self.background_symbol])
 
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""

@@ -323,7 +323,7 @@ class ProbeStructure(object):
             if np.allclose(pos, atom.position):
                 index = i
                 break
-        print(index, )
+
         # scan through each cluster name
         for i, name in enumerate(self.cluster_names):
             n = int(name[1])
