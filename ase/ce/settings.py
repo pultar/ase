@@ -423,10 +423,6 @@ class ClusterExpansionSetting:
 
         return indx_by_equiv
 
-    # def _remove_background_symbol_from_spin_dict(self):
-    #     num_background = len([a.index for a in self.atoms_with_given_dim
-    #                           if a.symbol in self.background_symbol])
-
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""
         grouped_basis_elements = []

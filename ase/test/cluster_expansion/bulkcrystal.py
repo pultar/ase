@@ -102,8 +102,11 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
-
-    # 2 grouped_basis
+    # ------------------------------- #
+    # 2 grouped basis                 #
+    # ------------------------------- #
+    # initial_pool + probe_structures #
+    # ------------------------------- #
     setting = BulkCrystal(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
                           crystalstructure="fluorite",
                           a=4.0,
@@ -141,11 +144,15 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
-    # 2 grouped_basis + background atoms
+    # ---------------------------------- #
+    # 2 grouped_basis + background atoms #
+    # ---------------------------------- #
+    # initial_pool + probe_structures    #
+    # ---------------------------------- #
     setting = BulkCrystal(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
                           crystalstructure="fluorite",
                           a=4.0,
-                          size=[2, 2, 1],
+                          size=[2, 2, 2],
                           conc_args={"conc_ratio_min_1": [[1], [2, 0]],
                                      "conc_ratio_max_1": [[1], [0, 2]]},
                           db_name=db_name,
@@ -179,5 +186,6 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
-# test_binary_system()
+
+test_binary_system()
 test_grouped_basis_supercell()

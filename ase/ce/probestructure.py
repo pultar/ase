@@ -339,7 +339,6 @@ class ProbeStructure(object):
 
             # Find which symmetry group the given atom (index) belongs to
             for symm in range(self.setting.num_trans_symm):
-                # print(index, self.setting.index_by_trans_symm)
                 if index in self.setting.index_by_trans_symm[symm]:
                     sg = symm
 
