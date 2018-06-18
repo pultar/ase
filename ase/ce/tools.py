@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from numpy.linalg import matrix_rank
+from copy import deepcopy
 
 def index_by_position(atoms):
     # add zero to avoid negative zeros
@@ -40,3 +41,25 @@ def reduce_matrix(matrix):
             matrix = temp
             offset = 0
     return matrix
+
+def sort_by_internal_distances(atoms, indices, num_decimals=3):
+    """Sort the indices according to the distance to the other elements"""
+    if len(indices) <= 2:
+        return sorted(indices)
+    mic_dists = []
+    for indx in indices:
+        all_indx = deepcopy(list(indices))
+        all_indx.remove(indx)
+        mic_distances = atoms.get_distances(indx, all_indx)
+        mic_distances *= 10**num_decimals
+        mic_distances = mic_distances.astype(np.int32).tolist()
+        mic_distances = sorted(mic_distances)
+        mic_dists.append(mic_distances)
+
+    sort_order = [indx for _,indx in sorted(zip(mic_dists,range(len(indices))))]
+    equivalent_sites = []
+    for i in range(len(sort_order)):
+        for j in range(i+1,len(sort_order)):
+            if mic_dists[i] == mic_dists[j]:
+                equivalent_sites.append((i,j))
+    return sort_order, equivalent_sites

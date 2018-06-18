@@ -9,6 +9,7 @@ from copy import deepcopy
 import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
+from ase.ce.tools import sort_by_internal_distances
 
 
 class ClusterExpansionSetting:
@@ -450,6 +451,8 @@ class ClusterExpansionSetting:
         cluster_names = []
         cluster_dist = []
         cluster_indx = []
+        cluster_order = []
+        cluster_eq_sites = []
         self.unique_cluster_names = ['c0', 'c1']
         # Need newer version
         if np.version.version <= '1.13':
@@ -462,6 +465,8 @@ class ClusterExpansionSetting:
             cluster_names.append([['c0'], ['c1']])
             cluster_dist.append([[None], [None]])
             cluster_indx.append([[None], [None]])
+            cluster_order.append([[None], [None]])
+            cluster_eq_sites.append([[None], [None]])
 
             for size in range(2, self.max_cluster_size + 1):
                 indices = self.indices_of_nearby_atom(ref_indx, size)
@@ -470,6 +475,8 @@ class ClusterExpansionSetting:
                                i not in self.background_atom_indices]
                 indx_set = []
                 dist_set = []
+                order_set = []
+                equiv_sites_set = []
 
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
@@ -477,6 +484,9 @@ class ClusterExpansionSetting:
                         continue
                     dist_set.append(d.tolist())
                     indx_set.append(k)
+                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k)
+                    order_set.append(order)
+                    equiv_sites_set.append(eq_sites)
 
                 if not dist_set:
                     msg = "There is no cluster with size {}.\n".format(size)
@@ -491,11 +501,17 @@ class ClusterExpansionSetting:
 
                 # categorieze the indices to the distance types it belongs
                 indx_types = [[] for _ in range(len(dist_types))]
+                ordered_indx = [[] for _ in range(len(dist_types))]
+                equiv_sites = [[] for _ in range(len(dist_types))]
                 for x in range(len(indx_set)):
                     category = dist_types.index(dist_set[x])
                     indx_types[category].append(list(indx_set[x]))
+                    ordered_indx[category].append(order_set[x])
+                    equiv_sites[category].append(equiv_sites_set[x])
                     # indx_types[category].append(indx_set[x])
                 cluster_indx[site].append(indx_types)
+                cluster_order[site].append(ordered_indx)
+                cluster_eq_sites[site].append(equiv_sites)
 
         # Cluster names can be incorrectly assigned for cluster size of 2 and
         # above. Assign global names for those clusters to avoid wrong name
@@ -534,7 +550,7 @@ class ClusterExpansionSetting:
                     names.append(unique_names[indx])
                 cluster_names[basis].append(names)
 
-        return cluster_names, cluster_dist, cluster_indx
+        return cluster_names, cluster_dist, cluster_indx, cluster_order, cluster_eq_sites
 
     def _create_translation_matrix(self):
         """Create and return translation matrix.
@@ -647,7 +663,8 @@ class ClusterExpansionSetting:
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
         self.dist_matrix = self._create_distance_matrix()
-        self.cluster_names, self.cluster_dist, self.cluster_indx = \
+        self.cluster_names, self.cluster_dist, self.cluster_indx, \
+        self.cluster_order, self.cluster_eq_sites = \
             self._get_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
@@ -659,6 +676,8 @@ class ClusterExpansionSetting:
                        'cluster_names': self.cluster_names,
                        'cluster_dist': self.cluster_dist,
                        'cluster_indx': self.cluster_indx,
+                       'cluster_order':self.cluster_order,
+                       'cluster_eq_sites':self.cluster_eq_sites,
                        'trans_matrix': self.trans_matrix,
                        'conc_matrix': self.conc_matrix,
                        'full_cluster_names': self.full_cluster_names,
@@ -672,6 +691,8 @@ class ClusterExpansionSetting:
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
             self.cluster_indx = row.data.cluster_indx
+            self.cluster_order = row.data.cluster_order
+            self.cluster_eq_sites = row.data.cluster_eq_sites
             self.trans_matrix = row.data.trans_matrix
             self.conc_matrix = row.data.conc_matrix
             self.full_cluster_names = row.data.full_cluster_names
