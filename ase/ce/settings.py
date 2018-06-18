@@ -502,12 +502,13 @@ class ClusterExpansionSetting:
                 # categorieze the indices to the distance types it belongs
                 indx_types = [[] for _ in range(len(dist_types))]
                 ordered_indx = [[] for _ in range(len(dist_types))]
-                equiv_sites = [[] for _ in range(len(dist_types))]
+                equiv_sites = [None for _ in range(len(dist_types))]
                 for x in range(len(indx_set)):
                     category = dist_types.index(dist_set[x])
                     indx_types[category].append(list(indx_set[x]))
                     ordered_indx[category].append(order_set[x])
-                    equiv_sites[category].append(equiv_sites_set[x])
+                    if equiv_sites[category] is None:
+                        equiv_sites[category] = equiv_sites_set[x]
                     # indx_types[category].append(indx_set[x])
                 cluster_indx[site].append(indx_types)
                 cluster_order[site].append(ordered_indx)

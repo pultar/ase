@@ -1,10 +1,11 @@
 """Module for calculating correlation functions."""
-from itertools import combinations_with_replacement, permutations
+from itertools import combinations_with_replacement, permutations, product
 import numpy as np
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.db import connect
+import copy
 
 
 class CorrFunction(object):
@@ -60,7 +61,8 @@ class CorrFunction(object):
         # ----------------------------------------------------
         # loop though all cluster sizes
         for n in range(self.setting.max_cluster_size + 1):
-            comb = list(combinations_with_replacement(bf_list, r=n))
+            #comb = list(combinations_with_replacement(bf_list, r=n))
+            comb = list(product(bf_list, repeat=n))
             if n == 0:
                 cf['c0'] = 1.
                 continue
@@ -86,15 +88,18 @@ class CorrFunction(object):
                             continue
 
                         indices = self.setting.cluster_indx[symm][n][name_indx]
+                        indx_order = self.setting.cluster_order[symm][n][name_indx]
+                        eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
 
                         sp_temp, count_temp = \
-                            self._spin_product(atoms, indices, symm, dec)
+                            self._spin_product(atoms, indices, indx_order, eq_sites, symm, dec)
                         sp += sp_temp
                         count += count_temp
 
                     cf_temp = sp / count
                     # make decoration number into string
                     dec_string = ''.join(str(i) for i in dec)
+                    dec_name = '{}_{}'.format(unique_name, dec_string)
                     cf['{}_{}'.format(unique_name, dec_string)] = cf_temp
 
         if return_type == 'dict':
@@ -105,6 +110,15 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in self.setting.full_cluster_names],
                           dtype=float)
         return cf
+
+    def _get_dec_string(self, perm, eq_sites):
+        """
+        Creates a decoration based on the equivalent sites
+        """
+        eq_dec = dec[eq_sites]
+        dec[eq_sites] = sorted(eq_dec)
+        dec_string = ''.join(str(i) for i in dec)
+        return dec_string
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
                                 return_type='dict'):
@@ -158,8 +172,11 @@ class CorrFunction(object):
                 except ValueError:
                     continue
                 indices = self.setting.cluster_indx[symm][n][name_indx]
+                indx_order = self.setting.cluster_order[symm][n][name_indx]
+                eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
+
                 sp_temp, count_temp = \
-                    self._spin_product(atoms, indices, symm, dec_list)
+                    self._spin_product(atoms, indices, indx, order, eq_sites, symm, dec_list)
                 sp += sp_temp
                 count += count_temp
             cf_temp = sp / count
@@ -221,31 +238,40 @@ class CorrFunction(object):
             count += 1
             print('updated {} of {} entries'.format(count, num_reconf))
 
-    def _spin_product(self, atoms, indx_list, symm_group, deco):
+    def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
         bf = self.setting.basis_functions
         sp = 0.
         count = 0
         # spin product of each atom in the symmetry equivalent group
         indices_of_symm_group = self.index_by_trans_symm[symm_group]
 
-        perm = list(permutations(deco, len(deco)))
-        perm = np.unique(perm, axis=0)
+        #perm = list(permutations(deco, len(deco)))
+        #perm = np.unique(perm, axis=0)
 
         # loop through each permutation of decoration numbers
-        for dec in perm:
-            # loop through each symmetry equivalent atom
-            for ref_indx in indices_of_symm_group:
-                ref_spin = bf[dec[0]][atoms[ref_indx].symbol]
-                # loop through each cluster
-                for cluster_indices in indx_list:
-                    sp_temp = ref_spin
+        # loop through each symmetry equivalent atom
+        orig_deco = copy.deepcopy(list(deco))
+        swaps = [(0,0)]+list(eq_sites)
+        for ref_indx in indices_of_symm_group:
+            #ref_spin = bf[dec[0]][atoms[ref_indx].symbol]
+            # loop through each cluster
+            for cluster_indices, order in zip(indx_list, indx_order):
+                indices = [ref_indx]+cluster_indices
+                srt_indices = [indices[indx] for indx in order]
+                # Add a dummy swap to ensure that does swap 0 with itself
+                # to ensure the loop gets executed at least once
+                for swap in swaps:
+                    dec = copy.deepcopy(orig_deco)
+                    temp_dec = dec[swap[0]]
+                    dec[swap[0]] = dec[swap[1]]
+                    dec[swap[1]] = temp_dec
+                    sp_temp = 1.0
                     # loop through indices of atoms in each cluster
-                    for i, indx in enumerate(cluster_indices):
+                    for i, indx in enumerate(srt_indices):
                         trans_indx = self.setting.trans_matrix[ref_indx, indx]
-                        sp_temp *= bf[dec[i + 1]][atoms[trans_indx].symbol]
+                        sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
                     sp += sp_temp
                     count += 1
-
         return sp, count
 
     def check_and_convert_cell_size(self, atoms, return_ratio=False):
