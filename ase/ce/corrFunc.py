@@ -56,6 +56,7 @@ class CorrFunction(object):
 
         bf_list = list(range(len(self.setting.basis_functions)))
         cf = {}
+        num_excluded_symmetry = 0
         # ----------------------------------------------------
         # Compute correlation function up the max_cluster_size
         # ----------------------------------------------------
@@ -90,18 +91,28 @@ class CorrFunction(object):
                         indices = self.setting.cluster_indx[symm][n][name_indx]
                         indx_order = self.setting.cluster_order[symm][n][name_indx]
                         eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
+                        dec_str = dec_string(dec, eq_sites)
+                        #dec_name = '{}_{}'.format(unique_name, dec_string)
+                        cf_name = '{}_{}'.format(unique_name, dec_str)
+                        if cf_name in cf.keys():
+                            # Skip this because it has already been taken into account
+                            num_excluded_symmetry += 1
+                            continue
 
                         sp_temp, count_temp = \
                             self._spin_product(atoms, indices, indx_order, eq_sites, symm, dec)
                         sp += sp_temp
                         count += count_temp
 
-                    cf_temp = sp / count
-                    # make decoration number into string
-                    dec_string = ''.join(str(i) for i in dec)
-                    dec_name = '{}_{}'.format(unique_name, dec_string)
-                    cf['{}_{}'.format(unique_name, dec_string)] = cf_temp
+                    if count > 0:
+                        cf_temp = sp / count
+                        # make decoration number into string
+                        #dec_string = ''.join(str(i) for i in dec)
+                        #dec_name = '{}_{}'.format(unique_name, dec_string)
+                        #cf['{}_{}'.format(unique_name, dec_string)] = cf_temp
+                        cf[cf_name] = cf_temp
 
+        print ("Number of CFs skipped because of symmetry: {}".format(num_excluded_symmetry))
         if return_type == 'dict':
             pass
         elif return_type == 'tuple':
@@ -111,14 +122,6 @@ class CorrFunction(object):
                           dtype=float)
         return cf
 
-    def _get_dec_string(self, perm, eq_sites):
-        """
-        Creates a decoration based on the equivalent sites
-        """
-        eq_dec = dec[eq_sites]
-        dec[eq_sites] = sorted(eq_dec)
-        dec_string = ''.join(str(i) for i in dec)
-        return dec_string
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
                                 return_type='dict'):
@@ -306,3 +309,15 @@ class CorrFunction(object):
         if return_ratio:
             return atoms, int_ratios
         return atoms
+
+
+def dec_string(dec, equiv_sites):
+    """Create the decoration string based on equiv sites"""
+    dec = list(dec)
+    if equiv_sites:
+        for pair in sorted(equiv_sites):
+            dec_of_equiv_sites = [dec[indx] for indx in pair]
+            dec_of_equiv_sites.sort()
+            for i, indx in enumerate(pair):
+                dec[indx] = dec_of_equiv_sites[i]
+    return ''.join(str(i) for i in dec)
