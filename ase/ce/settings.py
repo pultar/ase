@@ -792,8 +792,15 @@ class ClusterExpansionSetting:
             else:
                 keep_indx = [ref_indx]
                 keep_indx.extend(self.cluster_indx[loc[0]][loc[1]][loc[2]][0])
+            equiv = self.cluster_eq_sites[loc[0]][loc[1]][loc[2]]
 
             atoms = self.atoms.copy()
+            for tag, indx in enumerate(keep_indx):
+                atoms[indx].tag = tag
+            if equiv:
+                for pair in equiv:
+                    atoms[keep_indx[pair[1]]].tag = atoms[keep_indx[pair[0]]].tag
+
             ref_pos = atoms[ref_indx].position
 
             del atoms[[a.index for a in atoms if a.index not in keep_indx]]

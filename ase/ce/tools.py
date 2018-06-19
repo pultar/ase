@@ -44,8 +44,11 @@ def reduce_matrix(matrix):
 
 def sort_by_internal_distances(atoms, indices, num_decimals=3):
     """Sort the indices according to the distance to the other elements"""
-    if len(indices) <= 2:
+    if len(indices) <= 1:
         return range(len(indices)), []
+    elif len(indices) == 2:
+        return range(len(indices)), [(0,1)]
+    
     mic_dists = []
     for indx in indices:
         all_indx = deepcopy(list(indices))
