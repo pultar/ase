@@ -91,8 +91,9 @@ class CorrFunction(object):
                         indices = self.setting.cluster_indx[symm][n][name_indx]
                         indx_order = self.setting.cluster_order[symm][n][name_indx]
                         eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
+
+                        # Get decoration number as a string
                         dec_str = dec_string(dec, eq_sites)
-                        #dec_name = '{}_{}'.format(unique_name, dec_string)
                         cf_name = '{}_{}'.format(unique_name, dec_str)
                         if cf_name in cf.keys():
                             # Skip this because it has already been taken into account
@@ -106,10 +107,6 @@ class CorrFunction(object):
 
                     if count > 0:
                         cf_temp = sp / count
-                        # make decoration number into string
-                        #dec_string = ''.join(str(i) for i in dec)
-                        #dec_name = '{}_{}'.format(unique_name, dec_string)
-                        #cf['{}_{}'.format(unique_name, dec_string)] = cf_temp
                         cf[cf_name] = cf_temp
 
         print ("Number of CFs skipped because of symmetry: {}".format(num_excluded_symmetry))
@@ -256,13 +253,12 @@ class CorrFunction(object):
         orig_deco = copy.deepcopy(list(deco))
         swaps = [(0,0)]+list(eq_sites)
         for ref_indx in indices_of_symm_group:
-            #ref_spin = bf[dec[0]][atoms[ref_indx].symbol]
             # loop through each cluster
             for cluster_indices, order in zip(indx_list, indx_order):
                 indices = [ref_indx]+cluster_indices
                 srt_indices = [indices[indx] for indx in order]
-                # Add a dummy swap to ensure that does swap 0 with itself
-                # to ensure the loop gets executed at least once
+                
+                # Average over decoration numbers of equivalent sites
                 for swap in swaps:
                     dec = copy.deepcopy(orig_deco)
                     temp_dec = dec[swap[0]]
