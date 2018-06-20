@@ -294,13 +294,13 @@ class CorrFunction(object):
         count = 0
         sp = 0.0
         for cluster_indices, order in zip(indx_list, indx_order):
-            temp_sp, temp_cnt = self._spin_product_one_cluster(ref_indx, \
-            cluster_indices, order, eq_sites, decp)
+            temp_sp, temp_cnt = self._spin_product_one_cluster(ref_indx, atoms, \
+            cluster_indices, order, eq_sites, deco)
             sp += temp_sp
             count += temp_cnt
         return sp, count
 
-    def _spin_product_one_cluster(self, ref_indx, cluster_indices, order, \
+    def _spin_product_one_cluster(self, ref_indx, atoms, cluster_indices, order, \
         eq_sites, deco):
         """Compute the spin product for one cluster category"""
         bf = self.setting.basis_functions
