@@ -10,6 +10,7 @@ import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 from ase.ce.tools import sort_by_internal_distances, create_cluster, hashable
+from ase.ce.tools import sorted_internal_angles
 
 
 class ClusterExpansionSetting:
@@ -483,6 +484,7 @@ class ClusterExpansionSetting:
             cluster_eq_sites.append([[None], [None]])
 
             for size in range(2, self.max_cluster_size + 1):
+                print("Generating clusters with size {}".format(size))
                 indices = self.indices_of_nearby_atom(ref_indx, size)
                 if self.ignore_background_atoms:
                     indices = [i for i in indices if
@@ -498,6 +500,8 @@ class ClusterExpansionSetting:
                     if max(d) > self.max_cluster_dist[size]:
                         continue
                     d_list = sorted(d.tolist(), reverse=True)
+                    internal_angles = sorted_internal_angles(create_cluster(self.atoms, (ref_indx,) + k))
+                    d_list += internal_angles
                     dist_set.append(d_list)
                     key = hashable(d_list)
                     if key not in template_clusters.keys():

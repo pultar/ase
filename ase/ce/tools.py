@@ -6,6 +6,7 @@ from itertools import permutations, combinations, combinations_with_replacement
 from ase.visualize import view
 from ase.build.rotate import rotation_matrix_from_points
 from ase import Atoms
+from collections import deque
 
 def index_by_position(atoms):
     # add zero to avoid negative zeros
@@ -74,6 +75,38 @@ def create_cluster(atoms, indices):
             minimal_cluster = cluster_cpy.copy()
     return minimal_cluster
 
+def shift(array):
+    ref = array[-1]
+    array[1:] = array[:-1]
+    array[0] = ref
+    return array
+
+def sorted_internal_angles(atoms, mic=False):
+    """Get sorted internal angles of a
+    """
+    if len(atoms) <= 2:
+        return [0]
+
+    angles = []
+    indx_comb = list(combinations(range(len(atoms)), r=3))
+
+    # Have to include all cyclic permutations in addition
+    n = len(indx_comb)
+    for i in range(n):
+        new_list = list(indx_comb[i])
+        for _ in range(2):
+            new_list = shift(new_list)
+            indx_comb.append(tuple(new_list))
+
+    angles = atoms.get_angles(indx_comb, mic=mic).round(decimals=0)+0
+    angles = angles.tolist()
+    for i,angle in enumerate(angles):
+        if math.isnan(angle):
+            angles[i] = 0
+        elif angle == 180.0:
+            angles[i] = 0
+    angles.sort(reverse=True)
+    return angles
 
 def distance_center_to_faces(atoms):
     cell = atoms.get_cell()
