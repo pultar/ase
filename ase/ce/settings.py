@@ -9,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
-from ase.ce.tools import sort_by_internal_distances
+from ase.ce.tools import sort_by_internal_distances, create_cluster, hashable
 
 
 class ClusterExpansionSetting:
@@ -111,10 +111,24 @@ class ClusterExpansionSetting:
             self.conc_ratio_max_2 = conc_ratio_max_2
         return True
 
+    def _get_diag_lengths(self):
+        """Return the length of all diagonals"""
+        cell = self.atoms_with_given_dim.get_cell()
+        a1 = cell[0,:]
+        a2 = cell[1,:]
+        a3 = cell[2,:]
+        diags = [a1+a2, a1+a3, a2+a3, a1+a2+a3]
+        lengths = []
+        for diag in diags:
+            length = np.sqrt(np.sum(diag**2))
+            lengths.append(length)
+        return np.array(lengths)
+
     def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
         atoms = self.atoms_with_given_dim
         lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
-        min_length = min(lengths)
+        diag_lengths = self._get_diag_lengths()/2.0
+        min_length = min([min(lengths), min(diag_lengths)])
 
         # ------------------------------------- #
         # Get max_cluster_dist in an array form #
@@ -477,14 +491,20 @@ class ClusterExpansionSetting:
                 dist_set = []
                 order_set = []
                 equiv_sites_set = []
-
+                template_clusters = {}
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
+                    d = self.get_min_max_distance((ref_indx,) + k)
                     if max(d) > self.max_cluster_dist[size]:
                         continue
-                    dist_set.append(d.tolist())
+                    d_list = sorted(d.tolist(), reverse=True)
+                    dist_set.append(d_list)
+                    key = hashable(d_list)
+                    if key not in template_clusters.keys():
+                        template_clusters[key] = create_cluster(self.atoms, (ref_indx,)+k)
+
+                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k, template_clusters[key])
                     indx_set.append(k)
-                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
 
@@ -507,8 +527,11 @@ class ClusterExpansionSetting:
                     category = dist_types.index(dist_set[x])
                     indx_types[category].append(list(indx_set[x]))
                     ordered_indx[category].append(order_set[x])
+
                     if equiv_sites[category] is None:
                         equiv_sites[category] = equiv_sites_set[x]
+                    else:
+                        assert equiv_sites[category] == equiv_sites_set[x]
                     # indx_types[category].append(indx_set[x])
                 cluster_indx[site].append(indx_types)
                 cluster_order[site].append(ordered_indx)
@@ -589,6 +612,25 @@ class ClusterExpansionSetting:
                 row.append(self.dist_matrix[x[0], x[1], t])
             d.append(sorted(row, reverse=True))
         return np.array(min(d))
+
+    def get_min_max_distance(self, cluster):
+        """Get minimum maximum distance of cluster"""
+        d = []
+        for t in range(8):
+            row = []
+            for x in combinations(cluster, 2):
+                row.append(self.dist_matrix[x[0], x[1], t])
+            d.append(row)
+
+        # Find the row with the minimum maximum distance
+        min_max_dist = 1E10
+        min_row = 0
+        for row in d:
+            if max(row) < min_max_dist:
+                min_row = row
+                min_max_dist = max(row)
+        return np.array(min_row)
+        #return np.array(min(d))
 
     def indices_of_nearby_atom(self, ref_indx, size):
         """Return the indices of the atoms nearby.
@@ -803,10 +845,12 @@ class ClusterExpansionSetting:
 
             ref_pos = atoms[ref_indx].position
 
-            del atoms[[a.index for a in atoms if a.index not in keep_indx]]
-            atoms.translate(center - ref_pos)
-            atoms.wrap()
-            atoms.center()
+            #del atoms[[a.index for a in atoms if a.index not in keep_indx]]
+            #atoms.translate(center - ref_pos)
+            #atoms.wrap()
+            #atoms.center()
+            if len(keep_indx) >= 2:
+                atoms = create_cluster(atoms, keep_indx)
             atoms.info = {'name': name}
             cluster_atoms.append(atoms)
 
