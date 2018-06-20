@@ -839,8 +839,14 @@ class ClusterExpansionSetting:
                 keep_indx = [ref_indx]
                 keep_indx.extend(self.cluster_indx[loc[0]][loc[1]][loc[2]][0])
             equiv = self.cluster_eq_sites[loc[0]][loc[1]][loc[2]]
-
+            try:
+                order = self.cluster_order[loc[0]][loc[1]][loc[2]][0]
+            except:
+                order = None
             atoms = self.atoms.copy()
+            if order is not None:
+                print(keep_indx, order)
+                keep_indx = [keep_indx[indx] for indx in order]
             for tag, indx in enumerate(keep_indx):
                 atoms[indx].tag = tag
             if equiv:
