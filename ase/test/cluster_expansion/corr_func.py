@@ -65,3 +65,4 @@ def test_order_indep_ref_indx():
 
 test_trans_matrix()
 test_order_indep_ref_indx()
+os.remove(db_name)

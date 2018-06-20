@@ -176,7 +176,7 @@ class CorrFunction(object):
                 eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
 
                 sp_temp, count_temp = \
-                    self._spin_product(atoms, indices, indx, order, eq_sites, symm, dec_list)
+                    self._spin_product(atoms, indices, indx_order, eq_sites, symm, dec_list)
                 sp += sp_temp
                 count += count_temp
             cf_temp = sp / count
@@ -257,7 +257,7 @@ class CorrFunction(object):
             for cluster_indices, order in zip(indx_list, indx_order):
                 indices = [ref_indx]+cluster_indices
                 srt_indices = [indices[indx] for indx in order]
-                
+
                 # Average over decoration numbers of equivalent sites
                 for swap in swaps:
                     dec = copy.deepcopy(orig_deco)
