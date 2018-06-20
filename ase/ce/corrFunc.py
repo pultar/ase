@@ -238,6 +238,7 @@ class CorrFunction(object):
             count += 1
             print('updated {} of {} entries'.format(count, num_reconf))
 
+    """
     def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
         bf = self.setting.basis_functions
         sp = 0.
@@ -271,6 +272,57 @@ class CorrFunction(object):
                         sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
                     sp += sp_temp
                     count += 1
+        return sp, count
+    """
+
+    def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
+        sp = 0.
+        count = 0
+
+        # spin product of each atom in the symmetry equivalent group
+        indices_of_symm_group = self.index_by_trans_symm[symm_group]
+        for ref_indx in indices_of_symm_group:
+            sp_temp, count_temp = self._spin_product_one_ref_indx(ref_indx, \
+            atoms, indx_list, indx_order, eq_sites, deco)
+            sp += sp_temp
+            count += count_temp
+        return sp, count
+
+    def _spin_product_one_ref_indx(self, ref_indx, atoms, indx_list, indx_order, \
+        eq_sites, deco):
+        """Compute the contribution from one reference index"""
+        count = 0
+        sp = 0.0
+        for cluster_indices, order in zip(indx_list, indx_order):
+            temp_sp, temp_cnt = self._spin_product_one_cluster(ref_indx, \
+            cluster_indices, order, eq_sites, decp)
+            sp += temp_sp
+            count += temp_cnt
+        return sp, count
+
+    def _spin_product_one_cluster(self, ref_indx, cluster_indices, order, \
+        eq_sites, deco):
+        """Compute the spin product for one cluster category"""
+        bf = self.setting.basis_functions
+        orig_deco = copy.deepcopy(list(deco))
+        swaps = [(0,0)]+list(eq_sites)
+        count = 0
+        sp = 0.0
+        indices = [ref_indx]+cluster_indices
+        srt_indices = [indices[indx] for indx in order]
+        # Average over decoration numbers of equivalent sites
+        for swap in swaps:
+            dec = copy.deepcopy(orig_deco)
+            temp_dec = dec[swap[0]]
+            dec[swap[0]] = dec[swap[1]]
+            dec[swap[1]] = temp_dec
+            sp_temp = 1.0
+            # loop through indices of atoms in each cluster
+            for i, indx in enumerate(srt_indices):
+                trans_indx = self.setting.trans_matrix[ref_indx, indx]
+                sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
+            sp += sp_temp
+            count += 1
         return sp, count
 
     def check_and_convert_cell_size(self, atoms, return_ratio=False):
