@@ -2,7 +2,6 @@
 import os
 from ase.ce import BulkCrystal, CorrFunction
 from ase.ce.corrFunc import equivalent_deco
-from ase.visualize import view
 
 db_name = "test.db"
 conc_args = {"conc_ratio_min_1": [[1, 0]],
