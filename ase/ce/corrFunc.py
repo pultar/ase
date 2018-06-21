@@ -270,7 +270,7 @@ class CorrFunction(object):
         bf = self.setting.basis_functions
         count = 0
         sp = 0.0
-        indices = [ref_indx] + cluster_indices
+        indices = [0] + cluster_indices
         srt_indices = [indices[indx] for indx in order]
         # Average over decoration numbers of equivalent sites
         equiv_deco = equivalent_deco(deco, eq_sites)

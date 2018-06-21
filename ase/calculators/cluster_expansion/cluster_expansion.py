@@ -7,6 +7,7 @@ from ase.utils import basestring
 from ase.atoms import Atoms
 from ase.calculators.calculator import Calculator
 from ase.ce import CorrFunction, BulkCrystal, BulkSpacegroup
+from ase.ce.corrFunc import equivalent_deco
 
 
 class ClusterExpansion(Calculator):
@@ -177,8 +178,14 @@ class ClusterExpansion(Calculator):
         """Update correlation function based on the reference value."""
         swapped_indices = self.indices_of_changed_atoms
         self.cf = deepcopy(self.ref_cf)
-
+        new_symbs = {}
+        # Reset the atoms object
         for indx in swapped_indices:
+            new_symbs[indx] = self.atoms[indx].symbol
+            self.atoms[indx].symbol = self.ref_atoms[indx].symbol
+        for indx in swapped_indices:
+            # Swap one index at the time
+            self.atoms[indx].symbol = new_symbs[indx]
             for i, name in enumerate(self.cluster_names):
                 # find c{num} in cluster type
                 n = int(name[1])
@@ -208,6 +215,8 @@ class ClusterExpansion(Calculator):
                 except ValueError:
                     continue
                 indices = self.setting.cluster_indx[sg][n][name_indx]
+                order = self.setting.cluster_order[sg][n][name_indx]
+                equiv_sites = self.setting.cluster_eq_sites[sg][n][name_indx]
 
                 # Get the total count
                 count = 0
@@ -223,7 +232,7 @@ class ClusterExpansion(Calculator):
 
                 t_indices = self._translate_indx(indx, indices)
                 cf_tot = self.cf[i] * count
-                cf_change = self._cf_change_by_indx(indx, t_indices, dec)
+                cf_change = self._cf_change_by_indx(indx, t_indices, order, equiv_sites, dec)
 
                 # if there is only one symm equiv site, the changes can be just
                 # multiplied by *n*
@@ -244,17 +253,20 @@ class ClusterExpansion(Calculator):
 
                         name_indx = self.setting.cluster_names[sg][n].index(prefix)
                         indices = self.setting.cluster_indx[sg][n][name_indx]
+                        order = self.setting.cluster_order[sg][n][name_indx]
+                        equiv_sites = self.setting.cluster_eq_sites[sg][n][name_indx]
                         t_indices = []
                         for item in self._translate_indx(nindx, indices):
                             if indx in item:
                                 t_indices.append(item)
 
-                        cf_change = self._cf_change_by_indx(nindx, t_indices, dec)
+                        cf_change = self._cf_change_by_indx(nindx, t_indices, order, equiv_sites, dec)
                         self.cf[i] += cf_change
                 self.cf[i] = self.cf[i] / count
+            #self.ref_atoms[indx].symbol = new_symbs[indx]
         return True
 
-    def _cf_change_by_indx(self, ref_indx, trans_list, deco):
+    def _cf_change_by_indx(self, ref_indx, trans_list, indx_order, eq_sites, deco):
         """
         Calculates the change in correlation function due to change in element
         type for atom with index = ref_indx. Passed trans_list refers to the
@@ -263,16 +275,24 @@ class ClusterExpansion(Calculator):
         symbol = self._symbol_by_index(ref_indx)
         b_f = self.setting.basis_functions
         delta_cf = 0.
-        perm = list(permutations(deco, len(deco)))
-        perm = np.unique(perm, axis=0)
-        for dec in perm:
-            for cluster_indx in trans_list:
-                cf_new = b_f[dec[0]][symbol[1]]
-                cf_ref = b_f[dec[0]][symbol[0]]
-                for j, indx in enumerate(cluster_indx):
-                    cf_new *= b_f[dec[j + 1]][self.atoms[indx].symbol]
-                    cf_ref *= b_f[dec[j + 1]][self.ref_atoms[indx].symbol]
-                delta_cf += (cf_new - cf_ref)/len(perm)
+        #perm = list(permutations(deco, len(deco)))
+        #perm = np.unique(perm, axis=0)
+        equiv_deco = equivalent_deco(deco, eq_sites)
+        for dec in equiv_deco:
+            for cluster_indx, order in zip(trans_list, indx_order):
+                # NOTE: Here cluster_indx is already translated!
+                indices = [ref_indx]+cluster_indx
+                indices = [indices[indx] for indx in order]
+                cf_new = 1.0 #b_f[dec[0]][symbol[1]]
+                cf_ref = 1.0 #b_f[dec[0]][symbol[0]]
+                for j, indx in enumerate(indices):
+                    if indx == ref_indx:
+                        cf_new *= b_f[dec[j]][symbol[1]]
+                        cf_ref *= b_f[dec[j]][symbol[0]]
+                    else:
+                        cf_new *= b_f[dec[j]][self.atoms[indx].symbol]
+                        cf_ref *= b_f[dec[j]][self.atoms[indx].symbol]
+                delta_cf += (cf_new - cf_ref)/len(equiv_deco)
         return delta_cf
 
     def _translate_indx(self, ref_indx, indx_list):
