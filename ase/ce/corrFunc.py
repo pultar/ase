@@ -341,7 +341,7 @@ def equivalent_deco(deco, equiv_sites):
         for item in comb:
             order += list(item)
 
-        orig_order = range(len(deco))
+        orig_order = list(range(len(deco)))
         for i, srt_indx in enumerate(sorted(order)):
             orig_order[srt_indx] = order[i]
         equiv_deco.append([deco[indx] for indx in orig_order])
