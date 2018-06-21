@@ -119,9 +119,9 @@ def sorted_internal_angles(atoms, mic=False):
 def sort_by_internal_distances(atoms, indices):
     """Sort the indices according to the distance to the other elements"""
     if len(indices) <= 1:
-        return range(len(indices)), []
+        return list(range(len(indices))), []
     elif len(indices) == 2:
-        return range(len(indices)), [(0, 1)]
+        return list(range(len(indices))), [(0, 1)]
 
     mic_dists = []
     for indx in indices:
