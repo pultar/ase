@@ -126,7 +126,7 @@ def test_grouped_basis_supercell():
     flat = [i for sub in setting.index_by_grouped_basis for i in sub]
     assert len(flat) == len(setting.atoms)
     gs = GenerateStructures(setting=setting, struct_per_gen=3)
-    gs.generate_initial_pool()
+    #gs.generate_initial_pool()
     os.remove(db_name)
 
 
