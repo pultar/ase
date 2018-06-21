@@ -842,13 +842,14 @@ class ClusterExpansionSetting:
                 order = None
             atoms = self.atoms.copy()
             if order is not None:
-                print(keep_indx, order)
                 keep_indx = [keep_indx[indx] for indx in order]
+
             for tag, indx in enumerate(keep_indx):
                 atoms[indx].tag = tag
             if equiv:
-                for pair in equiv:
-                    atoms[keep_indx[pair[1]]].tag = atoms[keep_indx[pair[0]]].tag
+                for group in equiv:
+                    for i in range(1, len(group)):
+                        atoms[keep_indx[group[i]]].tag   = atoms[keep_indx[group[0]]].tag
 
             ref_pos = atoms[ref_indx].position
 
@@ -858,6 +859,9 @@ class ClusterExpansionSetting:
             #atoms.center()
             if len(keep_indx) >= 2:
                 atoms = create_cluster(atoms, keep_indx)
+            else:
+                atoms = atoms[keep_indx]
+                atoms.center()
             atoms.info = {'name': name}
             cluster_atoms.append(atoms)
 
