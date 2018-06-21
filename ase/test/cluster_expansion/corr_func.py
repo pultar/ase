@@ -1,6 +1,7 @@
 
 import os
 from ase.ce import BulkCrystal, CorrFunction
+from ase.ce.corrFunc import equivalent_deco
 from ase.visualize import view
 
 db_name = "test.db"
@@ -63,7 +64,7 @@ def test_order_indep_ref_indx():
                         assert init_cluster == new_cluster
                 assert found_cluster
 
-def test_interaction_contribution():
+def test_interaction_contribution_symmetric_clusters():
     """Test that when one atom is surrounded by equal atoms,
     the contribution from all clusters within one category is
     the same"""
@@ -87,21 +88,29 @@ def test_interaction_contribution():
             cluster = bc_setting.cluster_indx[0][size][cat]
             orders = bc_setting.cluster_order[0][size][cat]
             equiv_sites = bc_setting.cluster_eq_sites[0][size][cat]
-            print(bc_setting.cluster_names[0][size][cat])
-            # Calculate reference contribution for this cluster category
-            indices = [0]+cluster[0]
-            indices = [indices[indx] for indx in orders[0]]
-            ref_sp = 1.0
-            for dec, indx in zip(deco[size], indices):
-                ref_sp *= bf[dec][atoms[indx].symbol]
 
-            # Calculate the spin product for this category
-            sp, count = cf._spin_product_one_ref_indx(0, atoms, cluster, orders, \
-            equiv_sites, deco[size])
-            sp /= count
-            assert abs(sp-ref_sp) < 1E-4
+            equiv_deco = equivalent_deco(deco[size], equiv_sites)
+            if len(equiv_deco) == size:
+                # Calculate reference contribution for this cluster category
+                indices = [0]+cluster[0]
+                indices = [indices[indx] for indx in orders[0]]
+                ref_sp = 0.0
+                counter = 0
+                for dec in equiv_deco:
+                    ref_sp_temp = 1.0
+                    for dec_num, indx in zip(dec, indices):
+                        ref_sp_temp *= bf[dec_num][atoms[indx].symbol]
+                    counter += 1
+                    ref_sp += ref_sp_temp
+                ref_sp /= counter
+
+                # Calculate the spin product for this category
+                sp, count = cf._spin_product_one_ref_indx(0, atoms, cluster, orders, \
+                equiv_sites, deco[size])
+                sp /= count
+                assert abs(sp-ref_sp) < 1E-4
 
 test_trans_matrix()
 test_order_indep_ref_indx()
-test_interaction_contribution()
+test_interaction_contribution_symmetric_clusters()
 os.remove(db_name)

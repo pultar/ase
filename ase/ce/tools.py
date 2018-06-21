@@ -185,11 +185,20 @@ def sort_by_internal_distances(atoms, indices, template, num_decimals=3):
 
     sort_order = [indx for _,indx in sorted(zip(mic_dists,range(len(indices))))]
     mic_dists.sort()
-    equivalent_sites = []
+    equivalent_sites = [[i] for i in range(len(indices))]
+    site_types = [i for i in range(len(indices))]
     for i in range(len(sort_order)):
         for j in range(i+1,len(sort_order)):
             if mic_dists[i] == mic_dists[j]:
-                equivalent_sites.append((i,j))
+                if  site_types[j] > i:
+                    # This site has not been assigned to another category yet
+                    site_types[j] = i
+                st = site_types[j]
+                if j not in equivalent_sites[st]:
+                    equivalent_sites[st].append(j)
+
+    # Remove empty lists from equivalent_sites
+    equivalent_sites = [entry for entry in equivalent_sites if len(entry) > 1]
     return sort_order, equivalent_sites
 
 def is_rotation_reflection_matrix(matrix):

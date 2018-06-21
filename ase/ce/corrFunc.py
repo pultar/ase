@@ -305,17 +305,13 @@ class CorrFunction(object):
         """Compute the spin product for one cluster category"""
         bf = self.setting.basis_functions
         orig_deco = copy.deepcopy(list(deco))
-        swaps = [(0,0)]+list(eq_sites)
         count = 0
         sp = 0.0
         indices = [ref_indx]+cluster_indices
         srt_indices = [indices[indx] for indx in order]
         # Average over decoration numbers of equivalent sites
-        for swap in swaps:
-            dec = copy.deepcopy(orig_deco)
-            temp_dec = dec[swap[0]]
-            dec[swap[0]] = dec[swap[1]]
-            dec[swap[1]] = temp_dec
+        equiv_deco = equivalent_deco(deco, eq_sites)
+        for dec in equiv_deco:
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
             for i, indx in enumerate(srt_indices):
@@ -361,11 +357,35 @@ class CorrFunction(object):
 
 def dec_string(dec, equiv_sites):
     """Create the decoration string based on equiv sites"""
-    dec = list(dec)
-    if equiv_sites:
-        for pair in sorted(equiv_sites):
-            dec_of_equiv_sites = [dec[indx] for indx in pair]
-            dec_of_equiv_sites.sort()
-            for i, indx in enumerate(pair):
-                dec[indx] = dec_of_equiv_sites[i]
-    return ''.join(str(i) for i in dec)
+    equiv_dec = equivalent_deco(deco, equiv_sites)
+    equiv_dec.sort()
+    return ''.join(str(i) for i in equiv_dec[0])
+
+
+def equivalent_deco(deco, equiv_sites):
+    """Generates equivalent decoration numbers based on the
+    equivalent sites"""
+
+    if not equiv_sites:
+        return [deco]
+
+    perm = []
+    for equiv in equiv_sites:
+        perm.append(list(permutations(equiv)))
+
+    equiv_deco = []
+    for comb in product(*perm):
+        order = []
+        for item in comb:
+            order += list(item)
+
+        orig_order = range(len(deco))
+        for i,srt_indx in enumerate(sorted(order)):
+            orig_order[srt_indx] = order[i]
+        equiv_deco.append([deco[indx] for indx in orig_order])
+
+    unique_deco = []
+    for eq_dec in equiv_deco:
+        if eq_dec not in unique_deco:
+            unique_deco.append(eq_dec)
+    return unique_deco

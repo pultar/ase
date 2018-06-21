@@ -716,6 +716,7 @@ class ClusterExpansionSetting:
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
         self.full_cluster_names = self._get_full_cluster_names()
+        self._check_equiv_sites()
         db = connect(self.db_name)
         db.write(self.atoms,
                  name='information',
@@ -914,3 +915,29 @@ class ClusterExpansionSetting:
         # Write keyword arguments necessary for initializing the class
         with open(filename, 'w') as outfile:
             json.dump(self.kwargs, outfile, indent=2)
+
+    def _check_equiv_sites(self):
+        """Check that the equivalent sites array is valid"""
+        for cluster_same_symm in self.cluster_eq_sites:
+            for cluster_same_size in cluster_same_symm:
+                for cluster_cat in cluster_same_size:
+                    if cluster_cat is None:
+                        continue
+
+                    if not cluster_cat:
+                        continue
+
+                    # Flatten the list of categories
+                    flattened = []
+                    for equiv in cluster_cat:
+                        flattened += equiv
+                    flattened.sort()
+                    flattened_unique = list(set(flattened))
+                    flattened_unique.sort()
+
+                    if flattened != flattened_unique:
+                        msg = "The same site has been put in the multiple\n"
+                        msg += "buckets. This is a bug and should never happen\n"
+                        msg += "Equiv. sites list {}\n".format(flattened)
+                        msg += "Equiv. sites list unique {}".format(flattened_unique)
+                        raise ValueError(msg)
