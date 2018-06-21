@@ -10,15 +10,17 @@ conc_args = {"conc_ratio_min_1": [[1, 0]],
 bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
                          basis_elements=[["Au", "Cu", "Si"]], size=[4, 4, 4],
                          conc_args=conc_args, db_name=db_name)
-#bc_setting.view_clusters()
+
+
 def test_trans_matrix():
     """Check that the MIC distance between atoms are correct"""
     atoms = bc_setting.atoms
     tm = bc_setting.trans_matrix
     ref_dist = atoms.get_distance(0, 1, mic=True)
     for indx in range(len(atoms)):
-        dist = atoms.get_distance(indx, tm[indx,1], mic=True)
-        assert abs(dist-ref_dist) < 1E-5
+        dist = atoms.get_distance(indx, tm[indx, 1], mic=True)
+        assert abs(dist - ref_dist) < 1E-5
+
 
 def get_mic_dists(atoms, cluster):
     dists = []
@@ -34,7 +36,7 @@ def test_order_indep_ref_indx():
     sites"""
 
     for size in range(3, len(bc_setting.cluster_indx[0])):
-        for i in range(0,len(bc_setting.cluster_indx[0][size])):
+        for i in range(0, len(bc_setting.cluster_indx[0][size])):
             if bc_setting.cluster_eq_sites[0][size][i]:
                 # The cluster contains symmetrically equivalent sites
                 # and then this test does not apply
@@ -42,8 +44,7 @@ def test_order_indep_ref_indx():
             cluster = bc_setting.cluster_indx[0][size][i]
             cluster_order = bc_setting.cluster_order[0][size][i]
 
-
-            init_cluster = [0]+cluster[0]
+            init_cluster = [0] + cluster[0]
             init_cluster = [init_cluster[indx] for indx in cluster_order[0]]
             atoms = bc_setting.atoms
 
@@ -64,6 +65,7 @@ def test_order_indep_ref_indx():
                         assert init_cluster == new_cluster
                 assert found_cluster
 
+
 def test_interaction_contribution_symmetric_clusters():
     """Test that when one atom is surrounded by equal atoms,
     the contribution from all clusters within one category is
@@ -73,14 +75,14 @@ def test_interaction_contribution_symmetric_clusters():
 
     # Create an atoms object that fits with BulkCrystal
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)
-    atoms = atoms*(6,6,6)
+    atoms = atoms * (6, 6, 6)
     atoms = wrap_and_sort_by_position(atoms)
 
     # Put an Si atom at the origin
     atoms[0].symbol = "Si"
 
     # Define decoration numbers and make sure they are different
-    deco = [[], [], [0,1], [0,1,1], [0,1,1,1]]
+    deco = [[], [], [0, 1], [0, 1, 1], [0, 1, 1, 1]]
     cf = CorrFunction(bc_setting)
     bf = bc_setting.basis_functions
     for size in range(2, len(bc_setting.cluster_indx[0])):
@@ -92,7 +94,7 @@ def test_interaction_contribution_symmetric_clusters():
             equiv_deco = equivalent_deco(deco[size], equiv_sites)
             if len(equiv_deco) == size:
                 # Calculate reference contribution for this cluster category
-                indices = [0]+cluster[0]
+                indices = [0] + cluster[0]
                 indices = [indices[indx] for indx in orders[0]]
                 ref_sp = 0.0
                 counter = 0
@@ -105,10 +107,11 @@ def test_interaction_contribution_symmetric_clusters():
                 ref_sp /= counter
 
                 # Calculate the spin product for this category
-                sp, count = cf._spin_product_one_ref_indx(0, atoms, cluster, orders, \
-                equiv_sites, deco[size])
+                sp, count = cf._spin_product_one_ref_indx(
+                    0, atoms, cluster, orders, equiv_sites, deco[size])
                 sp /= count
-                assert abs(sp-ref_sp) < 1E-4
+                assert abs(sp - ref_sp) < 1E-4
+
 
 test_trans_matrix()
 test_order_indep_ref_indx()
