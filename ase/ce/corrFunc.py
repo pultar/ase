@@ -264,14 +264,8 @@ class CorrFunction(object):
             count += temp_cnt
         return sp, count
 
-    def _spin_product_one_cluster(
-            self,
-            ref_indx,
-            atoms,
-            cluster_indices,
-            order,
-            eq_sites,
-            deco):
+    def _spin_product_one_cluster(self, ref_indx, atoms, cluster_indices, order, \
+            eq_sites, deco):
         """Compute the spin product for one cluster category"""
         bf = self.setting.basis_functions
         count = 0
