@@ -1,11 +1,10 @@
 """Module for calculating correlation functions."""
-from itertools import combinations_with_replacement, permutations, product
+from itertools import permutations, product
 import numpy as np
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.db import connect
-import copy
 
 
 class CorrFunction(object):
@@ -96,12 +95,13 @@ class CorrFunction(object):
                         dec_str = dec_string(dec, eq_sites)
                         cf_name = '{}_{}'.format(unique_name, dec_str)
                         if cf_name in cf.keys():
-                            # Skip this because it has already been taken into account
+                            # Skip this because it has already been taken into
+                            # account
                             num_excluded_symmetry += 1
                             continue
 
-                        sp_temp, count_temp = \
-                            self._spin_product(atoms, indices, indx_order, eq_sites, symm, dec)
+                        sp_temp, count_temp = self._spin_product(
+                            atoms, indices, indx_order, eq_sites, symm, dec)
                         sp += sp_temp
                         count += count_temp
 
@@ -109,7 +109,8 @@ class CorrFunction(object):
                         cf_temp = sp / count
                         cf[cf_name] = cf_temp
 
-        print ("Number of CFs skipped because of symmetry: {}".format(num_excluded_symmetry))
+        print("Number of CFs skipped because of symmetry: {}".format(
+            num_excluded_symmetry))
         if return_type == 'dict':
             pass
         elif return_type == 'tuple':
@@ -118,7 +119,6 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in self.setting.full_cluster_names],
                           dtype=float)
         return cf
-
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
                                 return_type='dict'):
@@ -168,15 +168,16 @@ class CorrFunction(object):
                 # find the type of cluster based on the index of the original
                 # settings.cluster_names nested list (unflattened)
                 try:
-                    name_indx = self.setting.cluster_names[symm][n].index(prefix)
+                    name_indx = self.setting.cluster_names[symm][n].index(
+                        prefix)
                 except ValueError:
                     continue
                 indices = self.setting.cluster_indx[symm][n][name_indx]
                 indx_order = self.setting.cluster_order[symm][n][name_indx]
                 eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
 
-                sp_temp, count_temp = \
-                    self._spin_product(atoms, indices, indx_order, eq_sites, symm, dec_list)
+                sp_temp, count_temp = self._spin_product(
+                    atoms, indices, indx_order, eq_sites, symm, dec_list)
                 sp += sp_temp
                 count += count_temp
             cf_temp = sp / count
@@ -225,7 +226,7 @@ class CorrFunction(object):
             # delete existing CF values
             if reset:
                 keys = []
-                for key, value in kvp.items():
+                for key in kvp.keys():
                     if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
                                        'c6', 'c7', 'c8', 'c9')):
                         keys.append(key)
@@ -238,43 +239,6 @@ class CorrFunction(object):
             count += 1
             print('updated {} of {} entries'.format(count, num_reconf))
 
-    """
-    def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
-        bf = self.setting.basis_functions
-        sp = 0.
-        count = 0
-        # spin product of each atom in the symmetry equivalent group
-        indices_of_symm_group = self.index_by_trans_symm[symm_group]
-
-        #perm = list(permutations(deco, len(deco)))
-        #perm = np.unique(perm, axis=0)
-
-        # loop through each permutation of decoration numbers
-        # loop through each symmetry equivalent atom
-        orig_deco = copy.deepcopy(list(deco))
-        swaps = [(0,0)]+list(eq_sites)
-        for ref_indx in indices_of_symm_group:
-            # loop through each cluster
-            for cluster_indices, order in zip(indx_list, indx_order):
-                indices = [ref_indx]+cluster_indices
-                srt_indices = [indices[indx] for indx in order]
-
-                # Average over decoration numbers of equivalent sites
-                for swap in swaps:
-                    dec = copy.deepcopy(orig_deco)
-                    temp_dec = dec[swap[0]]
-                    dec[swap[0]] = dec[swap[1]]
-                    dec[swap[1]] = temp_dec
-                    sp_temp = 1.0
-                    # loop through indices of atoms in each cluster
-                    for i, indx in enumerate(srt_indices):
-                        trans_indx = self.setting.trans_matrix[ref_indx, indx]
-                        sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
-                    sp += sp_temp
-                    count += 1
-        return sp, count
-    """
-
     def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
         sp = 0.
         count = 0
@@ -282,32 +246,37 @@ class CorrFunction(object):
         # spin product of each atom in the symmetry equivalent group
         indices_of_symm_group = self.index_by_trans_symm[symm_group]
         for ref_indx in indices_of_symm_group:
-            sp_temp, count_temp = self._spin_product_one_ref_indx(ref_indx, \
-            atoms, indx_list, indx_order, eq_sites, deco)
+            sp_temp, count_temp = self._spin_product_one_ref_indx(
+                ref_indx, atoms, indx_list, indx_order, eq_sites, deco)
             sp += sp_temp
             count += count_temp
         return sp, count
 
     def _spin_product_one_ref_indx(self, ref_indx, atoms, indx_list, indx_order, \
-        eq_sites, deco):
+            eq_sites, deco):
         """Compute the contribution from one reference index"""
         count = 0
         sp = 0.0
         for cluster_indices, order in zip(indx_list, indx_order):
-            temp_sp, temp_cnt = self._spin_product_one_cluster(ref_indx, atoms, \
-            cluster_indices, order, eq_sites, deco)
+            temp_sp, temp_cnt = self._spin_product_one_cluster(
+                ref_indx, atoms, cluster_indices, order, eq_sites, deco)
             sp += temp_sp
             count += temp_cnt
         return sp, count
 
-    def _spin_product_one_cluster(self, ref_indx, atoms, cluster_indices, order, \
-        eq_sites, deco):
+    def _spin_product_one_cluster(
+            self,
+            ref_indx,
+            atoms,
+            cluster_indices,
+            order,
+            eq_sites,
+            deco):
         """Compute the spin product for one cluster category"""
         bf = self.setting.basis_functions
-        orig_deco = copy.deepcopy(list(deco))
         count = 0
         sp = 0.0
-        indices = [ref_indx]+cluster_indices
+        indices = [ref_indx] + cluster_indices
         srt_indices = [indices[indx] for indx in order]
         # Average over decoration numbers of equivalent sites
         equiv_deco = equivalent_deco(deco, eq_sites)
@@ -334,7 +303,7 @@ class CorrFunction(object):
         try:
             row = connect(self.setting.db_name).get(name='information')
             template = row.toatoms()
-        except:
+        except BaseException:
             raise IOError("Cannot retrieve the information template from the "
                           "database")
         template_lengths = template.get_cell_lengths_and_angles()[:3]
@@ -355,10 +324,9 @@ class CorrFunction(object):
         return atoms
 
 
-def dec_string(dec, equiv_sites):
+def dec_string(deco, equiv_sites):
     """Create the decoration string based on equiv sites"""
-    equiv_dec = equivalent_deco(deco, equiv_sites)
-    equiv_dec.sort()
+    equiv_dec = sorted(equivalent_deco(deco, equiv_sites))
     return ''.join(str(i) for i in equiv_dec[0])
 
 
@@ -380,7 +348,7 @@ def equivalent_deco(deco, equiv_sites):
             order += list(item)
 
         orig_order = range(len(deco))
-        for i,srt_indx in enumerate(sorted(order)):
+        for i, srt_indx in enumerate(sorted(order)):
             orig_order[srt_indx] = order[i]
         equiv_deco.append([deco[indx] for indx in orig_order])
 
