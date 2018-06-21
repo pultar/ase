@@ -115,4 +115,4 @@ def test_interaction_contribution_symmetric_clusters():
 test_trans_matrix()
 test_order_indep_ref_indx()
 test_interaction_contribution_symmetric_clusters()
-os.remove(db_name)
+#os.remove(db_name)

@@ -116,39 +116,12 @@ def sorted_internal_angles(atoms, mic=False):
     return angles
 
 
-def sort_by_internal_distances(atoms, indices, template):
+def sort_by_internal_distances(atoms, indices):
     """Sort the indices according to the distance to the other elements"""
     if len(indices) <= 1:
         return range(len(indices)), []
     elif len(indices) == 2:
         return range(len(indices)), [(0, 1)]
-
-    cluster = create_cluster(atoms, indices)
-    pos_templ = template.get_positions().T
-    pos_cluster = cluster.get_positions().T
-
-    # Set the centroid to the origin
-    com_templ = np.sum(pos_templ, axis=1) / len(indices)
-    com_cluster = np.sum(pos_cluster, axis=1) / len(indices)
-    for i in range(pos_templ.shape[1]):
-        pos_templ[:, i] -= com_templ
-        pos_cluster[:, i] -= com_cluster
-
-    # Check all permutations of the three atoms to find one that match
-    perm = permutations(range(len(indices)))
-    sort_order = None
-    pos_difference = []
-    for p in perm:
-        pos = np.zeros_like(pos_cluster)
-        for i, indx in enumerate(p):
-            pos[:, i] = pos_cluster[:, indx]
-
-        R = rotation_matrix_from_points(pos, pos_templ)
-        new_pos = R.dot(pos)
-        pos_difference.append(new_pos - pos_templ)
-        if np.allclose(new_pos, pos_templ):
-            sort_order = p
-            break
 
     mic_dists = []
     for indx in indices:
@@ -175,3 +148,15 @@ def sort_by_internal_distances(atoms, indices, template):
     # Remove empty lists from equivalent_sites
     equivalent_sites = [entry for entry in equivalent_sites if len(entry) > 1]
     return sort_order, equivalent_sites
+
+
+def ndarray2list(data):
+    """Converts nested lists of a combination of lists and numpy arrays
+    to list of lists"""
+    if not isinstance(data, list) and not isinstance(data, np.ndarray):
+        return data
+
+    data = list(data)
+    for i in range(len(data)):
+        data[i] = ndarray2list(data[i])
+    return list(data)

@@ -9,8 +9,8 @@ from copy import deepcopy
 import numpy as np
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
-from ase.ce.tools import sort_by_internal_distances, create_cluster, hashable
-from ase.ce.tools import sorted_internal_angles
+from ase.ce.tools import sort_by_internal_distances, create_cluster
+from ase.ce.tools import sorted_internal_angles, ndarray2list
 
 
 class ClusterExpansionSetting:
@@ -493,7 +493,6 @@ class ClusterExpansionSetting:
                 dist_set = []
                 order_set = []
                 equiv_sites_set = []
-                template_clusters = {}
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
                     d = self.get_min_max_distance((ref_indx,) + k)
@@ -503,11 +502,8 @@ class ClusterExpansionSetting:
                     internal_angles = sorted_internal_angles(create_cluster(self.atoms, (ref_indx,) + k))
                     d_list += internal_angles
                     dist_set.append(d_list)
-                    key = hashable(d_list)
-                    if key not in template_clusters.keys():
-                        template_clusters[key] = create_cluster(self.atoms, (ref_indx,)+k)
 
-                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k, template_clusters[key])
+                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k)
                     indx_set.append(k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
@@ -738,9 +734,9 @@ class ClusterExpansionSetting:
             self.dist_matrix = row.data.dist_matrix
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
-            self.cluster_indx = row.data.cluster_indx
-            self.cluster_order = row.data.cluster_order
-            self.cluster_eq_sites = row.data.cluster_eq_sites
+            self.cluster_indx = ndarray2list(row.data.cluster_indx)
+            self.cluster_order = ndarray2list(row.data.cluster_order)
+            self.cluster_eq_sites = ndarray2list(row.data.cluster_eq_sites)
             self.trans_matrix = row.data.trans_matrix
             self.conc_matrix = row.data.conc_matrix
             self.full_cluster_names = row.data.full_cluster_names
