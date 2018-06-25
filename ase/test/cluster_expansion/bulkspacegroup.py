@@ -36,11 +36,13 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
+    assert bsg.num_trans_symm == 29
     os.remove(db_name)
 
     conc_args = {"conc_ratio_min_1": [[1, 0], [1, 0], [1, 0], [1, 0]],
                  "conc_ratio_max_1": [[0, 1], [0, 1], [0, 1], [0, 1]]}
     basis_elements = [["Al", "Mg"], ["Si", "Mg"], ["Cu", "Mg"], ["Zn", "Mg"]]
+
     # Test without grouped basis
     bsg = BulkSpacegroup(basis_elements=basis_elements,
                          basis=basis,
@@ -51,6 +53,7 @@ def test_spgroup_217():
                          db_name=db_name,
                          size=[1, 1, 1],
                          max_cluster_dist=5.0)
+    assert bsg.num_trans_symm == 29
     os.remove(db_name)
 
 
