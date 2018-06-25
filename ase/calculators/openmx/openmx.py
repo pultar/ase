@@ -153,33 +153,35 @@ class OpenMX(FileIOCalculator):
         outfile = get_file_name('.log', self.label)
         olddir = os.getcwd()
         abs_dir = os.path.join(olddir, self.directory)
-        os.chdir(abs_dir)
-        if(self.command is None):
-            self.command = 'openmx %s > %s'
-        command = self.command
-        command = command % (runfile, outfile)
-        if(self.debug):
-            print(command)
-        p = subprocess.Popen(command, shell=True)
-        while p.poll() is None:  # Process strill alive
-            if os.path.isfile(outfile):
-                with open(outfile, 'r') as f:
-                    last_position = 0
-                    prev_position = 0
-                    f.seek(last_position)
-                    new_data = f.read()
-                    prev_position = f.tell()
-                    # print('pos', prev_position != last_position)
-                    if(prev_position != last_position):
-                        if(not self.nohup):
-                            print(new_data)
-                        last_position = prev_position
-                    time.sleep(1)
-            else:
-                if(self.debug):
-                    print('Waiting %s file ' % outfile)
-                time.sleep(5)
-        os.chdir(olddir)
+        try:
+            os.chdir(abs_dir)
+            if(self.command is None):
+                self.command = 'openmx %s > %s'
+            command = self.command
+            command = command % (runfile, outfile)
+            if(self.debug):
+                print(command)
+            p = subprocess.Popen(command, shell=True)
+            while p.poll() is None:  # Process strill alive
+                if os.path.isfile(outfile):
+                    with open(outfile, 'r') as f:
+                        last_position = 0
+                        prev_position = 0
+                        f.seek(last_position)
+                        new_data = f.read()
+                        prev_position = f.tell()
+                        # print('pos', prev_position != last_position)
+                        if(prev_position != last_position):
+                            if(not self.nohup):
+                                print(new_data)
+                            last_position = prev_position
+                        time.sleep(1)
+                else:
+                    if(self.debug):
+                        print('Waiting %s file ' % outfile)
+                    time.sleep(5)
+        finally:
+            os.chdir(olddir)
         if(self.debug):
             print("calculation Finished")
 
@@ -403,7 +405,7 @@ class OpenMX(FileIOCalculator):
         return system_changes
 
     def write_input(self, atoms=None, parameters=None,
-                    properties=None, system_changes=None):
+                    properties=[], system_changes=[]):
         """Write input (dat)-file.
         See calculator.py for further details.
 
@@ -413,6 +415,8 @@ class OpenMX(FileIOCalculator):
             - system_changes : List of properties changed since last run.
         """
         # Call base calculator.
+        if atoms is None:
+            atoms = self.atoms
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
         write_openmx(label=self.label, atoms=atoms, parameters=self.parameters,
                      properties=properties, system_changes=system_changes)
@@ -589,7 +593,9 @@ class OpenMX(FileIOCalculator):
         This is band structure function. It is compatible to
         ase dft module """
         from ase.dft import band_structure
-        return band_structure.get_band_structure(self.atoms, self)
+        if type(self['kpts']) is tuple:
+            self['kpts'] = self.get_kpoints(band_kpath=self['band_kpath'])
+            return band_structure.get_band_structure(self.atoms, self, )
 
     def get_bz_k_points(self):
         kgrid = self['kpts']
@@ -618,29 +624,22 @@ class OpenMX(FileIOCalculator):
     def get_kpoints(self, kpts=None, symbols=None, band_kpath=None, eps=1e-5):
         """Convert band_kpath <-> kpts"""
         if kpts is None:
-            kx_linspace = np.linspace(band_kpath[0]['start_point'][0],
-                                      band_kpath[0]['end_point'][0],
-                                      band_kpath[0]['kpts'])
-            ky_linspace = np.linspace(band_kpath[0]['start_point'][1],
-                                      band_kpath[0]['end_point'][1],
-                                      band_kpath[0]['kpts'])
-            kz_linspace = np.linspace(band_kpath[0]['start_point'][2],
-                                      band_kpath[0]['end_point'][2],
-                                      band_kpath[0]['kpts'])
-            kpts = np.array([kx_linspace, ky_linspace, kz_linspace]).T
-            for path in band_kpath[1:]:
-                kx_linspace = np.linspace(path['start_point'][0],
-                                          path['end_point'][0],
-                                          path['kpts'])
-                ky_linspace = np.linspace(path['start_point'][1],
-                                          path['end_point'][1],
-                                          path['kpts'])
-                kz_linspace = np.linspace(path['start_point'][2],
-                                          path['end_point'][2],
-                                          path['kpts'])
-                k_lin = np.array([kx_linspace, ky_linspace, kz_linspace]).T
-                kpts = np.append(kpts, k_lin, axis=0)
-            return kpts
+            kpts = []
+            band_kpath = np.array(band_kpath)
+            band_nkpath = len(band_kpath)
+            for i, kpath in enumerate(band_kpath):
+                end = False
+                nband = int(kpath[0])
+                if(band_nkpath == i):
+                    end = True
+                    nband += 1
+                ini = np.array(kpath[1:4], dtype=float)
+                fin = np.array(kpath[4:7], dtype=float)
+                x = np.linspace(ini[0], fin[0], nband, endpoint=end)
+                y = np.linspace(ini[1], fin[1], nband, endpoint=end)
+                z = np.linspace(ini[2], fin[2], nband, endpoint=end)
+                kpts.extend(np.array([x, y, z]).T)
+            return np.array(kpts, dtype=float)
         elif band_kpath is None:
             band_kpath = []
             points = np.asarray(kpts)
@@ -703,8 +702,6 @@ class OpenMX(FileIOCalculator):
 
     def get_eigenvalues(self, kpt=None, spin=None):
         if self.results.get('eigenvalues') is None:
-            # print('Turning DOS file output on')
-            # self['dos_erange']=(-5., 5.)
             self.calculate(self.atoms)
         if kpt is None and spin is None:
             return self.results['eigenvalues']
