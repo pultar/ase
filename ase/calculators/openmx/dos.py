@@ -453,12 +453,7 @@ class DOS:
         if atom_index_list is None:
             atom_index_list = [1]
         if method == 'Tetrahedron' and self.calc['dos_kgrid'] == (1, 1, 1):
-            print('Not enough k-space grid points.\
-                  \nUsing Gaussian method instead')
-            method = 'Gaussian'
-            answer = input('Enter Gaussian width (eV): ')
-            if answer:
-                gaussian_width = float(answer)
+            raise ValueError('Not enough k-space grid points.')
         self.calc_dos(atom_index_list=atom_index_list, pdos=pdos,
                       method=method, gaussian_width=gaussian_width)
         if pdos:
