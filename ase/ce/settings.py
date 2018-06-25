@@ -561,7 +561,7 @@ class ClusterExpansionSetting:
                 shifted.translate(vec)
                 shifted.wrap()
                 #tm[indx, :] = index_by_position(shifted)
-                indices = index_by_position(self.atoms)
+                indices = index_by_position(shifted)
                 tm[indx] = {col:indices[col] for col in unique_indices}
         return tm
 
