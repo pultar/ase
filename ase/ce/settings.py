@@ -545,9 +545,14 @@ class ClusterExpansionSetting:
         function of the structure.
         """
         natoms = len(self.atoms)
+        unique_indices = [0] + self._unique_cluster_indx()
+        print(unique_indices)
         tm = np.zeros((natoms, natoms), dtype=int)
+        tm = [{} for _ in range(natoms)]
         for i, ref_indx in enumerate(self.ref_index_trans_symm):
-            tm[ref_indx, :] = index_by_position(self.atoms)
+            #tm[ref_indx, :] = index_by_position(self.atoms)
+            indices = index_by_position(self.atoms)
+            tm[ref_indx] = {col:indices[col] for col in unique_indices}
             for indx in self.index_by_trans_symm[i]:
                 if indx == ref_indx:
                     continue
@@ -555,9 +560,24 @@ class ClusterExpansionSetting:
                 vec = self.atoms.get_distance(indx, ref_indx, vector=True)
                 shifted.translate(vec)
                 shifted.wrap()
-                tm[indx, :] = index_by_position(shifted)
-
+                #tm[indx, :] = index_by_position(shifted)
+                indices = index_by_position(self.atoms)
+                tm[indx] = {col:indices[col] for col in unique_indices}
         return tm
+
+    def _unique_cluster_indx(self):
+        """Extract a unique list of cluster indices"""
+        unique_indices = []
+        for symm_group in self.cluster_indx:
+            for sizes in symm_group:
+                for cluster in sizes:
+                    if cluster is None:
+                        continue
+                    for subcluster in cluster:
+                        for indx in subcluster:
+                            if indx not in unique_indices:
+                                unique_indices.append(indx)
+        return unique_indices
 
     def get_min_distance(self, cluster):
         """Get minimum distances.
