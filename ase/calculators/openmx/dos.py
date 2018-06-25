@@ -21,6 +21,8 @@ from __future__ import print_function
 import numpy as np
 import os
 import subprocess
+import warnings
+
 from ase.calculators.openmx.reader import rn as read_nth_to_last_value
 
 
@@ -446,7 +448,7 @@ class DOS:
         if spin_polarization is None:
             spin_polarization = bool(self.calc['initial_magnetic_moments'])
         if spin_polarization and not self.calc['initial_magnetic_moments']:
-            print('No spin polarization calculations provided')
+            warnings.warn('No spin polarization calculations provided')
             spin_polarization = False
         if atom_index_list is None:
             atom_index_list = [1]
