@@ -75,12 +75,6 @@ class OpenMX(FileIOCalculator):
     def __init__(self, restart=None, ignore_bad_restart_file=False, label=None,
                  atoms=None, command=None, mpi=None, pbs=None, **kwargs):
 
-        # Please use Trajectory instead
-        self.atoms_history = []
-        self.energy_history = []
-        self.forces_history = []
-        self.dipole_history = []
-
         # Initialize and put the default parameters.
         self.initialize_pbs(pbs)
         self.initialize_mpi(mpi)
@@ -328,10 +322,6 @@ class OpenMX(FileIOCalculator):
             except RuntimeError as e:
                 raise e
 
-    def check_state(self, atoms, tol=1e-15):
-        system_changes = FileIOCalculator.check_state(self, atoms, tol)
-        return system_changes
-
     def write_input(self, atoms=None, parameters=None,
                     properties=[], system_changes=[]):
         """Write input (dat)-file.
@@ -353,18 +343,18 @@ class OpenMX(FileIOCalculator):
         """
         For a debugging purpose, print the .dat file
         """
-        if(debug is None):
+        if debug is None:
             debug = self.debug
-        if(nohup is None):
+        if nohup is None:
             nohup = self.nohup
-        if(debug):
+        if debug:
             print('Reading input files')
         filename = get_file_name('.dat', self.label)
         if not nohup:
             with open(filename, 'r') as f:
                 while True:
                     line = f.readline()
-                    print('%s' % line.strip())
+                    print(line.strip())
                     if not line:
                         break
 
@@ -381,7 +371,6 @@ class OpenMX(FileIOCalculator):
         self.parameters['label'] = label
 
     def update_atoms(self, atoms):
-        self.atoms_history.append(atoms.copy())
         self.atoms = atoms.copy()
 
     def set(self, **kwargs):
