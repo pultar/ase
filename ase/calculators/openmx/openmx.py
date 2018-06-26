@@ -290,7 +290,6 @@ class OpenMX(FileIOCalculator):
                 os.remove(f)
             except OSError:
                 self.prind("There is no such file named " + f)
-                pass
 
     def calculate(self, atoms=None, properties=None,
                   system_changes=all_changes):
