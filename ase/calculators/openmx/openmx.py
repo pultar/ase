@@ -157,19 +157,13 @@ class OpenMX(FileIOCalculator):
         abs_dir = os.path.join(olddir, self.directory)
         try:
             os.chdir(abs_dir)
-            if(self.command is None):
+            if self.command is None:
                 self.command = 'openmx %s > %s'
             command = self.command
             command = command % (runfile, outfile)
-            if(self.debug):
-                print(command)
+            self.prind(command)
             p = subprocess.Popen(command, shell=True)
-            while p.poll() is None:  # Process strill alive
-                if os.path.isfile(outfile):
-                    self.print_file(outfile)
-                else:
-                    self.prind('Waiting %s file ' % outfile)
-                    time.sleep(5)
+            self.print_file(file=outfile, process=p)
         finally:
             os.chdir(olddir)
         self.prind("Calculation Finished")
@@ -203,73 +197,46 @@ class OpenMX(FileIOCalculator):
                 else:
                     break
 
-        def hasRQJob(jobNum, status='Q'):
+        def isRunning(jobNum=None, status='Q', qstat='qstat'):
             """
             Check submitted job is still Running
             """
             jobs = runCmd('qstat')
-            # print('jobs',jobs)
+            self.prind('jobs', jobs)
             for line in jobs:
-                # print('line=',line)
-                # print('jobNum=%s'%jobNum,type(jobNum))
                 if jobNum in line:
                     columns = line.split()
-                    # print(columns)
             return columns[-2] == status
 
         inputfile = self.label + '.dat'
-        outputfile = self.label + '.log'
+        outfile = self.label + '.log'
 
         bashArgs = "#!/bin/bash \n cd $PBS_O_WORKDIR\n"
         jobName = prefix
         cmd = bashArgs + \
             'mpirun -hostfile $PBS_NODEFILE openmx %s > %s' % (
-                inputfile, outputfile)
+                inputfile, outfile)
         echoArgs = ["echo", "$' %s'" % cmd]
         qsubArgs = ["qsub", "-N", jobName, "-l", "nodes=%d:ppn=%d" %
                     (nodes, processes), "-l", "walltime=" + self.walltime]
         wholeCmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
-        if self.debug:
-            print(wholeCmd)
+        self.prind(wholeCmd)
         out = subprocess.Popen(wholeCmd, shell=True,
                                stdout=subprocess.PIPE, universal_newlines=True)
         out = out.communicate()[0]
         jobNum = int(re.match(r'(\d+)', out.split()[0]).group(1))
-        if self.debug:
-            print('Queue number is ' + jobNum)
-            print('Waiting for the Queue to start')
-        while hasRQJob(jobNum, status='Q'):
+
+        self.prind('Queue number is ' + jobNum +
+                   '\nWaiting for the Queue to start')
+        while isRunning(jobNum, status='Q'):
             time.sleep(5)
-            if self.debug:
-                print('.', end='', flush=True)
-        if self.debug:
-            print('Start Calculating')
-        while hasRQJob(jobNum, status='R'):
-            if os.path.isfile(outputfile):
-                last_position = 0
-                prev_position = 0
-                with open(outputfile, "r") as f:
-                    while True:
-                        f.seek(last_position)
-                        new_data = f.read()
-                        prev_position = f.tell()
-                        if(prev_position != last_position):
-                            if not self.nohup:
-                                print(new_data)
-                            last_position = prev_position
-                        if not hasRQJob(jobNum, status='R'):
-                            if self.debug:
-                                print('Calculation Finished')
-                            break
-                        time.sleep(1)
-            else:
-                if(self.debug):
-                    print('Waiting for the log file come out')
-                time.sleep(5)
-                # raise ValueError("%s isn't a file!" % outputfile)
+            self.prind('.', end='', flush=True)
+        self.prind('Start Calculating')
+        self.print_file(file=outfile, running=isRunning,
+                        jobNum=jobNum, status='R', qstat='qstat')
+
         os.chdir(olddir)
-        if(self.debug):
-            print('Calculation Finished!')
+        self.prind('Calculation Finished!')
         return jobNum
 
     def run_mpi(self):
@@ -277,6 +244,9 @@ class OpenMX(FileIOCalculator):
         Run openmx using MPI method. If keyword `mpi` is declared, it will
         run.
         """
+        def isRunning(process=None):
+            ''' Check mpi is running'''
+            return process.poll() is None
         processes = self.processes
         threads = self.threads
         runfile = get_file_name('.dat', self.label)
@@ -288,12 +258,7 @@ class OpenMX(FileIOCalculator):
             self.command = self.get_command(processes, threads, runfile, outfile)
             self.prind(self.command)
             p = subprocess.Popen(self.command, shell=True, universal_newlines=True)
-            while p.poll() is None:  # Process still alive
-                if os.path.isfile(outfile):
-                    self.print_file(outfile)
-                else:
-                    self.prind('Waiting %s file ' % outfile)
-                    time.sleep(5)
+            self.print_file(file=outfile, running=isRunning, process=p)
         finally:
             os.chdir(olddir)
         self.prind("Calculation Finished")
@@ -700,17 +665,32 @@ class OpenMX(FileIOCalculator):
         if debug:
             print(line)
 
-    def print_file(self, outfile):
-        ''' Print the file while the file refreshed itself over time.'''
-        with open(outfile, 'r') as f:
-            last_position = 0
-            prev_position = 0
-            f.seek(last_position)
-            new_data = f.read()
-            prev_position = f.tell()
-            # print('pos', prev_position != last_position)
-            if(prev_position != last_position):
-                if not self.nohup:
-                    print(new_data)
-                last_position = prev_position
-            time.sleep(1)
+    def print_file(self, file=None, running=None, **args):
+        ''' Print the file while calculation is running'''
+        prev_position = 0
+        last_position = 0
+        while not os.path.isfile(file):
+            self.prind('Waiting for %s to come out' % file)
+            time.sleep(5)
+        with open(file, 'r') as f:
+            while running(args):
+                f.seek(last_position)
+                new_data = f.read()
+                prev_position = f.tell()
+                # self.prind('pos', prev_position != last_position)
+                if prev_position != last_position:
+                    if not self.nohup:
+                        print(new_data)
+                    last_position = prev_position
+                time.sleep(1)
+
+        with open(file, "r") as f:
+            while hasRQJob(jobNum, status='R'):
+                f.seek(last_position)
+                new_data = f.read()
+                prev_position = f.tell()
+                if(prev_position != last_position):
+                    if not self.nohup:
+                        print(new_data)
+                    last_position = prev_position
+                time.sleep(1)
