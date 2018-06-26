@@ -428,10 +428,6 @@ class OpenMX(FileIOCalculator):
         if atoms is not None and self.atoms is None:
             self.atoms = atoms
 
-    def set_atoms(self, atoms):
-        # Needed when we use atoms.set_calculator(calc)
-        self.atoms = atoms.copy()
-
     def set_results(self, results):
         # Not Implemented fully
         self.results.update(results)
