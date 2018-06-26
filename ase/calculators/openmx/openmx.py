@@ -23,6 +23,8 @@ from __future__ import print_function
 import os
 import time
 import subprocess
+import re
+import warnings
 import numpy as np
 from ase.geometry import cell_to_cellpar
 from ase.calculators.calculator import (FileIOCalculator, Calculator, equal,
@@ -240,28 +242,20 @@ class OpenMX(FileIOCalculator):
         qsubArgs = ["qsub", "-N", jobName, "-l", "nodes=%d:ppn=%d" %
                     (nodes, processes), "-l", "walltime=" + self.walltime]
         wholeCmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
-        if(self.debug):
+        if self.debug:
             print(wholeCmd)
         out = subprocess.Popen(wholeCmd, shell=True,
                                stdout=subprocess.PIPE, universal_newlines=True)
         out = out.communicate()[0]
-        jobId = out.split()[0]
-        digit = 0
-        for c in jobId:
-            if c.isdigit():
-                digit += 1
-            else:
-                break
-        jobNum = jobId[:digit]
+        jobNum = int(re.match(r'(\d+)', out.split()[0]).group(1))
         if self.debug:
             print('Queue number is ' + jobNum)
-        if(self.debug):
             print('Waiting for the Queue to start')
         while hasRQJob(jobNum, status='Q'):
             time.sleep(5)
-            if(self.debug):
+            if self.debug:
                 print('.', end='', flush=True)
-        if(self.debug):
+        if self.debug:
             print('Start Calculating')
         while hasRQJob(jobNum, status='R'):
             if os.path.isfile(outputfile):
@@ -277,7 +271,7 @@ class OpenMX(FileIOCalculator):
                                 print(new_data)
                             last_position = prev_position
                         if not hasRQJob(jobNum, status='R'):
-                            if(self.debug):
+                            if self.debug:
                                 print('Calculation Finished')
                             break
                         time.sleep(1)
@@ -302,31 +296,32 @@ class OpenMX(FileIOCalculator):
         outfile = get_file_name('.log', self.label)
         olddir = os.getcwd()
         abs_dir = os.path.join(olddir, self.directory)
-        os.chdir(abs_dir)
-        import subprocess
-        self.command = self.get_command(processes, threads, runfile, outfile)
-        if(self.debug):
-            print(self.command)
-        p = subprocess.Popen(self.command, shell=True, universal_newlines=True)
-        while p.poll() is None:  # Process strill alive
-            if os.path.isfile(outfile):
-                with open(outfile, 'r') as f:
-                    last_position = 0
-                    prev_position = 0
-                    f.seek(last_position)
-                    new_data = f.read()
-                    prev_position = f.tell()
-                    # print('pos', prev_position != last_position)
-                    if(prev_position != last_position):
-                        if(not self.nohup):
-                            print(new_data)
-                        last_position = prev_position
-                    time.sleep(1)
-            else:
-                if(self.debug):
-                    print('Waiting %s file ' % outfile)
-                time.sleep(5)
-        os.chdir(olddir)
+        try:
+            os.chdir(abs_dir)
+            self.command = self.get_command(processes, threads, runfile, outfile)
+            if(self.debug):
+                print(self.command)
+            p = subprocess.Popen(self.command, shell=True, universal_newlines=True)
+            while p.poll() is None:  # Process strill alive
+                if os.path.isfile(outfile):
+                    with open(outfile, 'r') as f:
+                        last_position = 0
+                        prev_position = 0
+                        f.seek(last_position)
+                        new_data = f.read()
+                        prev_position = f.tell()
+                        # print('pos', prev_position != last_position)
+                        if(prev_position != last_position):
+                            if(not self.nohup):
+                                print(new_data)
+                            last_position = prev_position
+                        time.sleep(1)
+                else:
+                    if(self.debug):
+                        print('Waiting %s file ' % outfile)
+                    time.sleep(5)
+        finally:
+            os.chdir(olddir)
         if(self.debug):
             print("calculation Finished")
 
@@ -527,7 +522,7 @@ class OpenMX(FileIOCalculator):
         if processes is None:
             command += os.environ.get('OPENMX_COMMAND')
             if command is None:
-                print('Either specify OPENMX_COMMAND as an environment\
+                warnings.warn('Either specify OPENMX_COMMAND as an environment\
                 variable or specify processes as a keyword argument')
         else:  # run with a specified number of processes
             threads_string = ' -nt ' + str(threads)
@@ -550,43 +545,6 @@ class OpenMX(FileIOCalculator):
                 "Example : 'mpirun -np 4 openmx ./%s -nt 2 > ./%s'.\n" +
                 "Got '%s'" % command)
         return command
-
-    def get_dos(self, atoms=None, erange=None, **kwargs):
-        if atoms is None:
-            atoms = self.atoms
-        if not self['dos_erange']:
-            print('Turning DOS file output on')
-            if erange:
-                self['dos_erange'] = erange
-            else:
-                self['dos_erange'] = \
-                     (float(input('Please specify a lower energy bound in eV, '
-                                  'with respect to the Fermi level, for the '
-                                  'DOS calculation: ')),
-                      float(input('And an upper energy bound please: ')))
-            self.dos = DOS(self)
-            if atoms:
-                print('Calculating Eigenvalues and Eigenvectors')
-                self.calculate(atoms)
-                print('Calculating DOS')
-                return self.get_dos(atoms=atoms, erange=erange, **kwargs)
-            else:
-                print('Please supply an atoms argument')
-                return 0
-        else:
-            if erange is None:
-                erange = self['dos_erange']
-            # try:
-            #    f1 = open(os.path.join(self.directory,
-            #                           self.prefix + '.Dos.val'), 'r')
-            #    f2 = open(os.path.join(self.directory,
-            #                           self.prefix + '.Dos.vec'), 'r')
-            # except ReadError:
-            #    print('Calculating Eigenvalues and Eigenvectors')
-            #    self.calculate(atoms)
-            #    print('Calculating DOS')
-            #    return self.get_dos(atoms=atoms, erange=erange, **kwargs)
-        return self.dos.get_dos(atoms=atoms, erange=erange, **kwargs)
 
     def get_band_structure(self, atoms=None, calc=None):
         """
