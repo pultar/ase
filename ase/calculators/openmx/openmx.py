@@ -166,26 +166,13 @@ class OpenMX(FileIOCalculator):
             p = subprocess.Popen(command, shell=True)
             while p.poll() is None:  # Process strill alive
                 if os.path.isfile(outfile):
-                    with open(outfile, 'r') as f:
-                        last_position = 0
-                        prev_position = 0
-                        f.seek(last_position)
-                        new_data = f.read()
-                        prev_position = f.tell()
-                        # print('pos', prev_position != last_position)
-                        if(prev_position != last_position):
-                            if(not self.nohup):
-                                print(new_data)
-                            last_position = prev_position
-                        time.sleep(1)
+                    self.print_file(outfile)
                 else:
-                    if(self.debug):
-                        print('Waiting %s file ' % outfile)
+                    self.prind('Waiting %s file ' % outfile)
                     time.sleep(5)
         finally:
             os.chdir(olddir)
-        if(self.debug):
-            print("calculation Finished")
+        self.prind("Calculation Finished")
 
     def run_pbs(self, prefix='test'):
         """
@@ -267,7 +254,7 @@ class OpenMX(FileIOCalculator):
                         new_data = f.read()
                         prev_position = f.tell()
                         if(prev_position != last_position):
-                            if(not self.nohup):
+                            if not self.nohup:
                                 print(new_data)
                             last_position = prev_position
                         if not hasRQJob(jobNum, status='R'):
@@ -299,31 +286,17 @@ class OpenMX(FileIOCalculator):
         try:
             os.chdir(abs_dir)
             self.command = self.get_command(processes, threads, runfile, outfile)
-            if(self.debug):
-                print(self.command)
+            self.prind(self.command)
             p = subprocess.Popen(self.command, shell=True, universal_newlines=True)
-            while p.poll() is None:  # Process strill alive
+            while p.poll() is None:  # Process still alive
                 if os.path.isfile(outfile):
-                    with open(outfile, 'r') as f:
-                        last_position = 0
-                        prev_position = 0
-                        f.seek(last_position)
-                        new_data = f.read()
-                        prev_position = f.tell()
-                        # print('pos', prev_position != last_position)
-                        if(prev_position != last_position):
-                            if(not self.nohup):
-                                print(new_data)
-                            last_position = prev_position
-                        time.sleep(1)
+                    self.print_file(outfile)
                 else:
-                    if(self.debug):
-                        print('Waiting %s file ' % outfile)
+                    self.prind('Waiting %s file ' % outfile)
                     time.sleep(5)
         finally:
             os.chdir(olddir)
-        if(self.debug):
-            print("calculation Finished")
+        self.prind("Calculation Finished")
 
     def clean(self, prefix='test', queue_num=None):
         """Method which cleans up after a calculation.
@@ -332,8 +305,7 @@ class OpenMX(FileIOCalculator):
         method is called.
 
         """
-        if(self.debug):
-            print("Cleaning Data")
+        self.prind("Cleaning Data")
         fileName = get_file_name('', self.label)
         pbs_Name = get_file_name('', self.label)
         files = [
@@ -349,12 +321,10 @@ class OpenMX(FileIOCalculator):
         ]
         for f in files:
             try:
-                if(self.debug):
-                    print("Removing" + f)
+                self.prind("Removing" + f)
                 os.remove(f)
             except OSError:
-                if(self.debug):
-                    print("There is no such file named " + f)
+                self.prind("There is no such file named " + f)
                 pass
 
     def calculate(self, atoms=None, properties=None,
@@ -364,8 +334,7 @@ class OpenMX(FileIOCalculator):
         and  add a little debug information from the OpenMX output.
         See base FileIOCalculator for documentation.
         """
-        if(self.debug):
-            print("Start Calculation")
+        self.prind("Start Calculation")
         if properties is None:
             properties = self.implemented_properties
         try:
@@ -722,3 +691,26 @@ class OpenMX(FileIOCalculator):
         if dirG not in self['bloch_overlaps'][kpoint].keys():
             return np.zeros((nbands, nbands), complex)
         return self['bloch_overlaps'][kpoint][dirG][:nbands, :nbands]
+
+    def prind(self, line, debug=None):
+        ''' Print the value if debugging mode is on.
+            Otherwise, it just ignored'''
+        if debug is None:
+            debug = self.debug
+        if debug:
+            print(line)
+
+    def print_file(self, outfile):
+        ''' Print the file while the file refreshed itself over time.'''
+        with open(outfile, 'r') as f:
+            last_position = 0
+            prev_position = 0
+            f.seek(last_position)
+            new_data = f.read()
+            prev_position = f.tell()
+            # print('pos', prev_position != last_position)
+            if(prev_position != last_position):
+                if not self.nohup:
+                    print(new_data)
+                last_position = prev_position
+            time.sleep(1)
