@@ -160,7 +160,7 @@ class Evaluate(object):
                 continue
             pairs.append((cname, self.eci[i]))
 
-        if type == 'dict':
+        if return_type == 'dict':
             return dict(pairs)
         return pairs
 
