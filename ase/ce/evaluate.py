@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from ase.utils import basestring
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.db import connect
+import multiprocessing as mp
 
 try:
     # dependency on sklearn is to be removed due to some of technical problems
@@ -265,14 +266,22 @@ class Evaluate(object):
                     alphas = np.delete(alphas, index)
 
         # get CV scores
-        cv = np.ones(len(alphas))
-        for i, alpha in enumerate(alphas):
-            cv[i] = self.cv_loo(alpha)
-            if logfile:
-                num_eci = len(np.nonzero(self.get_eci(alpha))[0])
-                log.write('{:.10f}\t {}\t {:.10f}\n'.format(alpha, num_eci,
-                                                            cv[i]))
-                log.flush()
+        try:
+            workers = mp.Pool(mp.cpu_count())
+            args = [(self, alpha) for alpha in alphas]
+            cv = workers.map(cv_loo_mp, args)
+            cv = np.array(cv)
+        except NotImplementedError:
+            # NotImplementedError can be raised by mp.cpu_count()
+            # In that case execute on one CPU
+            cv = np.ones(len(alphas))
+            for i, alpha in enumerate(alphas):
+                cv[i] = self.cv_loo(alpha)
+                if logfile:
+                    num_eci = len(np.nonzero(self.get_eci(alpha))[0])
+                    log.write('{:.10f}\t {}\t {:.10f}\n'.format(alpha, num_eci,
+                                                                cv[i]))
+                    log.flush()
 
         # --------------- #
         # Generate a plot #
@@ -469,3 +478,13 @@ class Evaluate(object):
             cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
         cv_sq /= cfm.shape[0]
         return np.sqrt(cv_sq)
+
+
+def cv_loo_mp(args):
+    """Need to wrap this function in order to use it with multiprocessing
+    :param args: Tuple where the first entry is an instance of Evaluate
+        and the second is the penalization value
+    """
+    evaluator = args[0]
+    alpha = args[1]
+    return evaluator.cv_loo(alpha)
