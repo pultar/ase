@@ -482,7 +482,10 @@ class Evaluate(object):
 
 def cv_loo_mp(args):
     """Need to wrap this function in order to use it with multiprocessing
-    :param args: Tuple where the first entry is an instance of Evaluate
+
+    Arguments
+    =========
+    args: Tuple where the first entry is an instance of Evaluate
         and the second is the penalization value
     """
     evaluator = args[0]
