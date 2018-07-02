@@ -80,7 +80,7 @@ def test_grouped_basis_with_large_dist():
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "X"
     atoms[72].symbol = "X"
-    assert abs(sum_cf(corr.get_cf(atoms)) - 1.4765625) < 1E-7
+    assert abs(sum_cf(corr.get_cf(atoms)) - 18.1083049448) < 1E-7
 
 
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
