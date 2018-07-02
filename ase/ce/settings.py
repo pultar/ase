@@ -4,12 +4,12 @@ This module defines the base-class for storing the settings for performing
 Cluster Expansion in different conditions.
 """
 import os
-from itertools import combinations, combinations_with_replacement
+from itertools import combinations, combinations_with_replacement, product
 from copy import deepcopy
 import numpy as np
 from scipy.spatial import cKDTree as KDTree
 from ase.db import connect
-from ase.ce.tools import wrap_and_sort_by_position, index_by_position
+from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
 
 
 class ClusterExpansionSetting:
@@ -570,7 +570,10 @@ class ClusterExpansionSetting:
         function of the structure.
         """
         natoms = len(self.atoms)
-        unique_indices = [0] + self._unique_cluster_indx()
+        unique_indices = list(set(flatten(deepcopy(self.cluster_indx))))
+        unique_indices.remove(None)
+        unique_indices = [0] + unique_indices
+
         #tm = np.zeros((natoms, natoms), dtype=int)
         tm = [{} for _ in range(natoms)]
 
@@ -582,7 +585,7 @@ class ClusterExpansionSetting:
             #tm[ref_indx, :] = index_by_position(self.atoms)
 
             indices = index_by_position(self.atoms)
-            tm[ref_indx] = {col:indices[col] for col in unique_indices}
+            tm[ref_indx] = {col: indices[col] for col in unique_indices}
 
             for indx in self.index_by_trans_symm[i]:
                 if indx == ref_indx:
@@ -593,22 +596,9 @@ class ClusterExpansionSetting:
                 shifted.wrap()
                 #tm[indx, :] = index_by_position(shifted)
                 indices = index_by_position(shifted)
-                tm[indx] = {col:indices[col] for col in unique_indices}
+                tm[indx] = {col: indices[col] for col in unique_indices}
         return tm
-
-    def _unique_cluster_indx(self):
-        """Extract a unique list of cluster indices"""
-        unique_indices = []
-        for symm_group in self.cluster_indx:
-            for sizes in symm_group:
-                for cluster in sizes:
-                    if cluster is None:
-                        continue
-                    for subcluster in cluster:
-                        for indx in subcluster:
-                            if indx not in unique_indices:
-                                unique_indices.append(indx)
-        return unique_indices
+        
 
     def get_min_distance(self, cluster):
         """Get minimum distances.
@@ -617,20 +607,19 @@ class ClusterExpansionSetting:
         dist_matrix and return the sorted distances (reverse order)
         """
         d = []
-        for t,tree in enumerate(self.kd_trees):
+        for t, tree in enumerate(self.kd_trees):
             row = []
             for x in combinations(cluster, 2):
                 #row.append(self.dist_matrix[x[0], x[1], t])
-                x0 = tree.data[x[0],:]
-                x1 = tree.data[x[1],:]
-                #print(self.dist_matrix[x[0], x[1], t], self._get_distance(x0,x1))
+                x0 = tree.data[x[0], :]
+                x1 = tree.data[x[1], :]
                 row.append(self._get_distance(x0, x1))
             d.append(sorted(row, reverse=True))
         return np.array(min(d))
 
     def _get_distance(self, x0, x1):
-        """Computes the Euclidean distance between two points"""
-        diff = x1-x0
+        """Compute the Euclidean distance between two points."""
+        diff = x1 - x0
         length = np.sqrt(np.sum(diff**2))
         return np.round(length, self.dist_num_dec)
 
@@ -655,7 +644,7 @@ class ClusterExpansionSetting:
         #x0 = self.atoms[ref_indx].position
         nearby_indices = []
         for tree in self.kd_trees:
-            x0 = tree.data[ref_indx,:]
+            x0 = tree.data[ref_indx, :]
             result = tree.query_ball_point(x0, self.max_cluster_dist[size])
             nearby_indices += list(result)
 

@@ -36,6 +36,7 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
+    print (bsg.cluster_indx)
     assert bsg.num_trans_symm == 29
     os.remove(db_name)
 

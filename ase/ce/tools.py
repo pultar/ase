@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from numpy.linalg import matrix_rank
+import collections
 
 def index_by_position(atoms):
     # add zero to avoid negative zeros
@@ -40,3 +41,9 @@ def reduce_matrix(matrix):
             matrix = temp
             offset = 0
     return matrix
+
+def flatten(x):
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
