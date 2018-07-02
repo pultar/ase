@@ -394,22 +394,6 @@ class ClusterExpansionSetting:
     def _group_indices_by_trans_symmetry(self):
         """Group indices by translational symmetry."""
         natoms = len(self.atoms)
-        """
-        an = np.zeros((natoms, natoms), dtype=int)
-        pos = np.zeros((natoms, natoms, 3), dtype=float)
-        indices = [a.index for a in self.atoms]
-
-        ref_indx = indices[0]
-        an[ref_indx, :] = self.atoms.get_atomic_numbers()
-        pos[ref_indx, :, :] = self.atoms.get_positions()
-        for indx in indices[1:]:
-            vec = self.atoms.get_distance(indx, ref_indx, vector=True)
-            shifted = self.atoms.copy()
-            shifted.translate(vec)
-            shifted = wrap_and_sort_by_position(shifted)
-            an[indx, :] = shifted.get_atomic_numbers()
-            pos[indx, :] = shifted.get_positions()
-        """
 
         indices = [a.index for a in self.atoms]
         ref_indx = indices[0]
@@ -430,7 +414,6 @@ class ClusterExpansionSetting:
         temp = [[indices[i]]]
         equiv_group_an = [an]
         equiv_group_pos = [pos]
-        #return [indices]
         for indx in indices[i + 1:]:
             if indx in self.background_atom_indices:
                 continue
@@ -451,20 +434,9 @@ class ClusterExpansionSetting:
                         temp.append([indx])
                         equiv_group_an.append(an)
                         equiv_group_pos.append(pos)
-            """
-            for equiv_group in range(len(temp)):
-                if (an[indx] == an[temp[equiv_group][0]]).all() and \
-                        np.allclose(pos[indx], pos[temp[equiv_group][0]]):
-                    temp[equiv_group].append(indx)
-                    break
-                else:
-                    if equiv_group == len(temp) - 1:
-                        temp.append([indx])
-            """
 
         for equiv_group in temp:
             indx_by_equiv.append(equiv_group)
-
         return indx_by_equiv
 
     def _remove_background_symbol_from_spin_dict(self):
