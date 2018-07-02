@@ -687,7 +687,6 @@ class ClusterExpansionSetting:
             result = tree.query_ball_point(x0, self.max_cluster_dist[size])
             nearby_indices += list(result)
 
-        #return nearby_indices
         nearby_indices = list(set(nearby_indices))
         nearby_indices.remove(ref_indx)
         return nearby_indices
