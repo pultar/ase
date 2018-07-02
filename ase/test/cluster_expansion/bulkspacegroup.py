@@ -6,7 +6,7 @@
 4. Run the evaluation routine
 """
 import os
-from ase.ce import BulkSpacegroup, GenerateStructures
+from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
 
 
 def test_spgroup_217():
@@ -36,8 +36,21 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
-    print (bsg.cluster_indx)
-    assert bsg.num_trans_symm == 29
+    os.remove(db_name)
+
+    conc_args = {"conc_ratio_min_1": [[1, 0], [1, 0], [1, 0], [1, 0]],
+                 "conc_ratio_max_1": [[0, 1], [0, 1], [0, 1], [0, 1]]}
+    basis_elements = [["Al", "Mg"], ["Si", "Mg"], ["Cu", "Mg"], ["Zn", "Mg"]]
+    # Test without grouped basis
+    bsg = BulkSpacegroup(basis_elements=basis_elements,
+                         basis=basis,
+                         spacegroup=217,
+                         cellpar=cellpar,
+                         conc_args=conc_args,
+                         max_cluster_size=4,
+                         db_name=db_name,
+                         size=[1, 1, 1],
+                         max_cluster_dist=5.0)
     os.remove(db_name)
 
 
@@ -62,6 +75,13 @@ def test_grouped_basis_with_large_dist():
     assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
     assert len(bsg.basis_functions) == 2
+
+    corr = CorrFunction(bsg)
+    atoms = bsg.atoms.copy()
+    atoms[0].symbol = "X"
+    atoms[72].symbol = "X"
+    assert abs(sum_cf(corr.get_cf(atoms)) - 1.4765625) < 1E-7
+
 
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
@@ -111,6 +131,11 @@ def test_grouped_basis_with_large_dist():
     assert len(bsg.basis_functions) == 4
     os.remove(db_name)
 
+def sum_cf(cf):
+    sum = 0.0
+    for key, value in cf.items():
+        sum += value
+    return value
 
-test_spgroup_217()
+#test_spgroup_217()
 test_grouped_basis_with_large_dist()
