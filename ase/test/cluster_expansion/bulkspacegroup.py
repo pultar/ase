@@ -36,21 +36,7 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
-    os.remove(db_name)
-
-    conc_args = {"conc_ratio_min_1": [[1, 0], [1, 0], [1, 0], [1, 0]],
-                 "conc_ratio_max_1": [[0, 1], [0, 1], [0, 1], [0, 1]]}
-    basis_elements = [["Al", "Mg"], ["Si", "Mg"], ["Cu", "Mg"], ["Zn", "Mg"]]
-    # Test without grouped basis
-    bsg = BulkSpacegroup(basis_elements=basis_elements,
-                         basis=basis,
-                         spacegroup=217,
-                         cellpar=cellpar,
-                         conc_args=conc_args,
-                         max_cluster_size=4,
-                         db_name=db_name,
-                         size=[1, 1, 1],
-                         max_cluster_dist=5.0)
+    assert bsg.num_trans_symm_group == 29
     os.remove(db_name)
 
 
@@ -81,7 +67,6 @@ def test_grouped_basis_with_large_dist():
     atoms[0].symbol = "X"
     atoms[72].symbol = "X"
     assert abs(sum_cf(corr.get_cf(atoms)) - 18.1083049448) < 1E-7
-
 
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
@@ -131,11 +116,13 @@ def test_grouped_basis_with_large_dist():
     assert len(bsg.basis_functions) == 4
     os.remove(db_name)
 
+
 def sum_cf(cf):
     sum = 0.0
     for key, value in cf.items():
         sum += value
     return sum
 
-#test_spgroup_217()
+
+test_spgroup_217()
 test_grouped_basis_with_large_dist()
