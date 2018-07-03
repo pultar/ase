@@ -4,7 +4,7 @@ This module defines the base-class for storing the settings for performing
 Cluster Expansion in different conditions.
 """
 import os
-from itertools import combinations, combinations_with_replacement, product
+from itertools import combinations, combinations_with_replacement
 from copy import deepcopy
 import numpy as np
 from scipy.spatial import cKDTree as KDTree
@@ -393,8 +393,6 @@ class ClusterExpansionSetting:
 
     def _group_indices_by_trans_symmetry(self):
         """Group indices by translational symmetry."""
-        natoms = len(self.atoms)
-
         indices = [a.index for a in self.atoms]
         ref_indx = indices[0]
         # Group all the indices together if its atomic number and position
@@ -438,10 +436,6 @@ class ClusterExpansionSetting:
         for equiv_group in temp:
             indx_by_equiv.append(equiv_group)
         return indx_by_equiv
-
-    def _remove_background_symbol_from_spin_dict(self):
-        num_background = len([a.index for a in self.atoms_with_given_dim
-                              if a.symbol in self.background_symbol])
 
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""
@@ -574,7 +568,6 @@ class ClusterExpansionSetting:
         unique_indices.remove(None)
         unique_indices = [0] + unique_indices
 
-        #tm = np.zeros((natoms, natoms), dtype=int)
         tm = [{} for _ in range(natoms)]
 
         # Add the index in the main atoms object to the tag
@@ -582,8 +575,6 @@ class ClusterExpansionSetting:
             atom.tag = indx
 
         for i, ref_indx in enumerate(self.ref_index_trans_symm):
-            #tm[ref_indx, :] = index_by_position(self.atoms)
-
             indices = index_by_position(self.atoms)
             tm[ref_indx] = {col: indices[col] for col in unique_indices}
 
@@ -594,11 +585,10 @@ class ClusterExpansionSetting:
                 vec = self.atoms.get_distance(indx, ref_indx, vector=True)
                 shifted.translate(vec)
                 shifted.wrap()
-                #tm[indx, :] = index_by_position(shifted)
+
                 indices = index_by_position(shifted)
                 tm[indx] = {col: indices[col] for col in unique_indices}
         return tm
-        
 
     def get_min_distance(self, cluster):
         """Get minimum distances.
@@ -610,7 +600,6 @@ class ClusterExpansionSetting:
         for t, tree in enumerate(self.kd_trees):
             row = []
             for x in combinations(cluster, 2):
-                #row.append(self.dist_matrix[x[0], x[1], t])
                 x0 = tree.data[x[0], :]
                 x1 = tree.data[x[1], :]
                 row.append(self._get_distance(x0, x1))
@@ -708,22 +697,19 @@ class ClusterExpansionSetting:
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
-        #self.dist_matrix = self._create_distance_matrix()
-        #self.kd_trees = []
         self.cluster_names, self.cluster_dist, self.cluster_indx = \
             self._get_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
         self.full_cluster_names = self._get_full_cluster_names()
         db = connect(self.db_name)
-        data = {#'dist_matrix': self.dist_matrix,
-              'cluster_names': self.cluster_names,
-              'cluster_dist': self.cluster_dist,
-              'cluster_indx': self.cluster_indx,
-              'trans_matrix': self.trans_matrix,
-              'conc_matrix': self.conc_matrix,
-              'full_cluster_names': self.full_cluster_names,
-              'unique_cluster_names': self.unique_cluster_names}
+        data = {'cluster_names': self.cluster_names,
+                'cluster_dist': self.cluster_dist,
+                'cluster_indx': self.cluster_indx,
+                'trans_matrix': self.trans_matrix,
+                'conc_matrix': self.conc_matrix,
+                'full_cluster_names': self.full_cluster_names,
+                'unique_cluster_names': self.unique_cluster_names}
 
         db.write(self.atoms,
                  name='information',
@@ -733,7 +719,6 @@ class ClusterExpansionSetting:
         db = connect(self.db_name)
         try:
             row = db.get('name=information')
-            #self.dist_matrix = row.data.dist_matrix
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
             self.cluster_indx = row.data.cluster_indx
