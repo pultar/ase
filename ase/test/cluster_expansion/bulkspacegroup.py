@@ -54,7 +54,7 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
-    assert bsg.num_trans_symm_group == 29
+    assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "Mg"
     atoms[10].symbol = "Mg"
