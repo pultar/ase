@@ -8,6 +8,8 @@
 import os
 import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
+import ase
+ase_path = ase.__file__.rpartition("/")[0]
 
 # If this is True, the JSON file containing the correlation functions
 # Used to check consistency of the reference functions is updated
@@ -16,10 +18,7 @@ update_reference_file = False
 all_cf = {}
 
 if not update_reference_file:
-    if "CI_PROJECT_DIR" in os.environ.keys():
-        path = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion"
-    else:
-        path = "."
+    path = ase_path + "/test/cluster_expansion"
 
     # Read reference data from file
     fname = path + "/reference_corr_funcs.json"
