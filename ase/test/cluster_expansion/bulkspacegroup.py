@@ -135,7 +135,7 @@ def sum_cf(cf):
     sum = 0.0
     for key, value in cf.items():
         sum += value
-    return value
+    return sum
 
 #test_spgroup_217()
 test_grouped_basis_with_large_dist()
