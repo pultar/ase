@@ -6,7 +6,25 @@
 4. Run the evaluation routine
 """
 import os
+import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
+
+# If this is True, the JSON file containing the correlation functions
+# Used to check consistency of the reference functions is updated
+# This should normally be False
+update_reference_file = False
+all_cf = {}
+
+if not update_reference_file:
+    if "CI_PROJECT_DIR" in os.environ.keys():
+        path = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion"
+    else:
+        path = "."
+
+    # Read reference data from file
+    fname = path + "/reference_corr_funcs.json"
+    with open(fname, 'r') as infile:
+        all_cf = json.load(infile)
 
 
 def test_spgroup_217():
@@ -37,6 +55,17 @@ def test_spgroup_217():
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
     assert bsg.num_trans_symm_group == 29
+    atoms = bsg.atoms.copy()
+    atoms[0].symbol = "Mg"
+    atoms[10].symbol = "Mg"
+    atoms[20].symbol = "Mg"
+    atoms[30].symbol = "Mg"
+    corr = CorrFunction(bsg)
+    cf = corr.get_cf(atoms)
+
+    if update_reference_file:
+        all_cf["sp_217_grouped"] = cf
+    assert all_cf["sp_217_grouped"] == cf
     os.remove(db_name)
 
 
@@ -62,11 +91,15 @@ def test_grouped_basis_with_large_dist():
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
     assert len(bsg.basis_functions) == 2
 
-    corr = CorrFunction(bsg)
     atoms = bsg.atoms.copy()
-    atoms[0].symbol = "X"
-    atoms[72].symbol = "X"
-    assert abs(sum_cf(corr.get_cf(atoms)) - 18.1083049448) < 1E-7
+    indx_to_X = [0, 4, 8, 12, 16]
+    for indx in indx_to_X:
+        atoms[indx].symbol = "X"
+    corr = CorrFunction(bsg)
+    cf = corr.get_cf(atoms)
+    if update_reference_file:
+        all_cf["Ta_O_X_grouped"] = cf
+    assert all_cf["Ta_O_X_grouped"] == cf
 
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
@@ -95,6 +128,17 @@ def test_grouped_basis_with_large_dist():
     assert bsg.spin_dict == {'O': 1.0, 'X': -1.0}
     assert bsg.basis_elements == [['O', 'X'], ['O', 'X'], ['O', 'X']]
     assert len(bsg.basis_functions) == 1
+
+    atoms = bsg.atoms.copy()
+    indx_to_X = [0, 4, 8, 12, 16]
+    for indx in indx_to_X:
+        atoms[indx].symbol = "X"
+    corr = CorrFunction(bsg)
+    cf = corr.get_cf(atoms)
+    if update_reference_file:
+        all_cf["Ta_O_X_ungrouped"] = cf
+    assert all_cf["Ta_O_X_ungrouped"] == cf
+
     os.remove(db_name)
 
     bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
@@ -114,6 +158,17 @@ def test_grouped_basis_with_large_dist():
     assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
     assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
     assert len(bsg.basis_functions) == 4
+
+    atoms = bsg.atoms.copy()
+    indx_to_X = [6, 33, 8, 35]
+    for indx in indx_to_X:
+        atoms[indx].symbol = "X"
+    corr = CorrFunction(bsg)
+    cf = corr.get_cf(atoms)
+    if update_reference_file:
+        all_cf["Li_X_V_O_F"] = cf
+    assert all_cf["Li_X_V_O_F"] == cf
+
     os.remove(db_name)
 
 
@@ -126,3 +181,9 @@ def sum_cf(cf):
 
 test_spgroup_217()
 test_grouped_basis_with_large_dist()
+
+if update_reference_file:
+    print ("Updating the reference correlation function file")
+    print ("This should normally not be done.")
+    with open("reference_corr_funcs.json", 'w') as outfile:
+        json.dump(all_cf, outfile, indent=2, separators=(',', ':'))
