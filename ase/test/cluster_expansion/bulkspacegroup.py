@@ -8,22 +8,12 @@
 import os
 import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
-import ase
-ase_path = ase.__file__.rpartition("/")[0]
+from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 
 # If this is True, the JSON file containing the correlation functions
 # Used to check consistency of the reference functions is updated
 # This should normally be False
 update_reference_file = False
-all_cf = {}
-
-if not update_reference_file:
-    path = ase_path + "/test/cluster_expansion"
-
-    # Read reference data from file
-    fname = path + "/reference_corr_funcs.json"
-    with open(fname, 'r') as infile:
-        all_cf = json.load(infile)
 
 
 def test_spgroup_217():
@@ -184,5 +174,5 @@ test_grouped_basis_with_large_dist()
 if update_reference_file:
     print ("Updating the reference correlation function file")
     print ("This should normally not be done.")
-    with open("reference_corr_funcs.json", 'w') as outfile:
-        json.dump(all_cf, outfile, indent=2, separators=(',', ':'))
+    with open("reference_corr_funcs.py", 'w') as outfile:
+        json.dump(all_cf, outfile, indent=2, separators=(',', ': '))
