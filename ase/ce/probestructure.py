@@ -408,7 +408,7 @@ class ProbeStructure(object):
         tlist = deepcopy(indx_list)
         for i in range(len(indx_list)):
             for j in range(len(indx_list[i])):
-                tlist[i][j] = self.trans_matrix[ref_indx, indx_list[i][j]]
+                tlist[i][j] = self.trans_matrix[ref_indx][indx_list[i][j]]
         return tlist
 
     def _cf_by_indx(self, atoms, ref_indx, trans_indices, deco):

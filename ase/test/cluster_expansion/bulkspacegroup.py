@@ -8,23 +8,12 @@
 import os
 import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
+from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 
 # If this is True, the JSON file containing the correlation functions
 # Used to check consistency of the reference functions is updated
 # This should normally be False
 update_reference_file = False
-all_cf = {}
-
-if not update_reference_file:
-    if "CI_PROJECT_DIR" in os.environ.keys():
-        path = os.environ["CI_PROJECT_DIR"]+"/ase/test/cluster_expansion"
-    else:
-        path = "."
-
-    # Read reference data from file
-    fname = path + "/reference_corr_funcs.json"
-    with open(fname, 'r') as infile:
-        all_cf = json.load(infile)
 
 
 def test_spgroup_217():
@@ -54,6 +43,7 @@ def test_spgroup_217():
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
                          max_cluster_dist=5.0)
+    assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "Mg"
     atoms[10].symbol = "Mg"
@@ -171,11 +161,18 @@ def test_grouped_basis_with_large_dist():
     os.remove(db_name)
 
 
+def sum_cf(cf):
+    sum = 0.0
+    for key, value in cf.items():
+        sum += value
+    return sum
+
+
 test_spgroup_217()
 test_grouped_basis_with_large_dist()
 
 if update_reference_file:
     print ("Updating the reference correlation function file")
     print ("This should normally not be done.")
-    with open("reference_corr_funcs.json", 'w') as outfile:
-        json.dump(all_cf, outfile, indent=2, separators=(',', ':'))
+    with open("reference_corr_funcs.py", 'w') as outfile:
+        json.dump(all_cf, outfile, indent=2, separators=(',', ': '))
