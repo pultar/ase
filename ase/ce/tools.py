@@ -1,9 +1,7 @@
 import math
-from itertools import permutations, combinations
-
+from itertools import combinations
 import numpy as np
 from numpy.linalg import matrix_rank
-from ase.build.rotate import rotation_matrix_from_points
 
 
 def index_by_position(atoms):
@@ -52,7 +50,6 @@ def reduce_matrix(matrix):
 
 def create_cluster(atoms, indices):
     """Create a cluster centered in the unitcell"""
-    #at_cpy = atoms.copy()
     cluster = atoms[list(indices)]
     cell = cluster.get_cell()
     center = 0.5 * (cell[0, :] + cell[1, :] + cell[2, :])
