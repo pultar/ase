@@ -227,7 +227,7 @@ class OpenMX(FileIOCalculator):
                    '\nWaiting for the Queue to start')
         while isRunning(jobNum, status='Q'):
             time.sleep(5)
-            self.prind('.', end='', flush=True)
+            self.prind('.')
         self.prind('Start Calculating')
         self.print_file(file=outfile, running=isRunning,
                         jobNum=jobNum, status='R', qstat='qstat')
