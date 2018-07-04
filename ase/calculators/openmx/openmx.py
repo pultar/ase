@@ -220,7 +220,7 @@ class OpenMX(FileIOCalculator):
         out = out.communicate()[0]
         jobNum = int(re.match(r'(\d+)', out.split()[0]).group(1))
 
-        self.prind('Queue number is ' + jobNum +
+        self.prind('Queue number is ' + str(jobNum) +
                    '\nWaiting for the Queue to start')
         while isRunning(jobNum, status='Q'):
             time.sleep(5)
