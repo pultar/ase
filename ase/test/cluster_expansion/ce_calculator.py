@@ -2,7 +2,7 @@ import os
 from random import randint
 import numpy as np
 from ase.calculators.cluster_expansion import ClusterExpansion
-from ase.ce import BulkCrystal, CorrFunction
+from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.build import bulk
 from ase.visualize import view
 
@@ -58,12 +58,12 @@ def get_rocksalt():
                                           ['O']],
                           crystalstructure='rocksalt',
                           a=4.05,
-                          size=[3, 3, 1],
+                          size=[3, 3, 3],
                           conc_args={"conc_ratio_min_1": [[2, 0, 1], [3]],
                                      "conc_ratio_max_1": [[2, 1, 0], [3]]},
                           db_name=db_name,
                           max_cluster_size=2,
-                          max_cluster_dist=4.0,
+                          # max_cluster_dist=4.0,
                           ignore_background_atoms=True)
 
     atoms = bulk("LiO", crystalstructure="rocksalt", a=4.05)
@@ -80,7 +80,7 @@ def get_rocksalt():
 def get_spacegroup():
     """Test rocksalt where passed atoms."""
     setting = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
-                                         ['O', 'X'], ['Ta']],
+                                             ['O', 'X'], ['Ta']],
                              basis=[(0., 0., 0.),
                                     (0.3894, 0.1405, 0.),
                                     (0.201,  0.3461, 0.5),
