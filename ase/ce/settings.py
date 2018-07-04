@@ -203,12 +203,13 @@ class ClusterExpansionSetting:
         for s in symbol:
             self.all_elements.remove(s)
 
-        # reassign grouped_basis
-        for ref in sorted(basis, reverse=True):
-            for i, group in enumerate(self.grouped_basis):
-                for j, element in enumerate(group):
-                    if element > ref:
-                        self.grouped_basis[i][j] -= 1
+        if self.grouped_basis is not None:
+            # reassign grouped_basis
+            for ref in sorted(basis, reverse=True):
+                for i, group in enumerate(self.grouped_basis):
+                    for j, element in enumerate(group):
+                        if element > ref:
+                            self.grouped_basis[i][j] -= 1
 
         return symbol
 
