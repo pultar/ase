@@ -4,13 +4,15 @@ This module defines the base-class for storing the settings for performing
 Cluster Expansion in different conditions.
 """
 import os
-from itertools import combinations, combinations_with_replacement
+from itertools import combinations, combinations_with_replacement, product
 from copy import deepcopy
 import numpy as np
+from scipy.spatial import cKDTree as KDTree
 from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 from ase.ce.tools import sort_by_internal_distances, create_cluster
 from ase.ce.tools import sorted_internal_angles, ndarray2list
+from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
 
 
 class ClusterExpansionSetting:
@@ -57,6 +59,7 @@ class ClusterExpansionSetting:
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
+        self.ref_centered_kdtree = self._create_kdtree_with_ref_atom_centered()
 
         # print('num_unique_elements: {}'.format(self.num_unique_elements))
         # print('unique_elements: {}'.format(self.unique_elements))
@@ -126,10 +129,7 @@ class ClusterExpansionSetting:
         return np.array(lengths)
 
     def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
-        atoms = self.atoms_with_given_dim
-        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
-        diag_lengths = self._get_diag_lengths()/2.0
-        min_length = min([min(lengths), min(diag_lengths)])
+        min_length = self._get_max_cluster_dist()
 
         # ------------------------------------- #
         # Get max_cluster_dist in an array form #
@@ -159,10 +159,22 @@ class ClusterExpansionSetting:
         # --------------------------------- #
         # Get scale_factor in an array form #
         # --------------------------------- #
+        atoms = self.atoms_with_given_dim
+        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
         scale_factor = max(max_cluster_dist) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
 
         return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
+
+    def _get_max_cluster_dist(self):
+        cell = self.atoms_with_given_dim.get_cell()
+        lengths = []
+        for w in product([-1, 0, 1], repeat=3):
+            vec = cell.T.dot(w)
+            if w == (0, 0, 0):
+                continue
+            lengths.append(np.sqrt(vec.dot(vec)))
+        return min(lengths) / 2
 
     def _remove_background_basis(self):
         # check if any basis consists of only one element type
@@ -348,8 +360,7 @@ class ClusterExpansionSetting:
     def _get_atoms_with_given_dim(self):
         """Create atoms with a user-specified size."""
         atoms = self.unit_cell.copy() * self.size
-        atoms = wrap_and_sort_by_position(atoms)
-        return atoms
+        return wrap_and_sort_by_position(atoms)
 
     def _create_template_atoms(self):
         """Return atoms that can handle the specified maximum diameter.
@@ -360,79 +371,62 @@ class ClusterExpansionSetting:
         atoms = self.atoms_with_given_dim * self.supercell_scale_factor
         return wrap_and_sort_by_position(atoms)
 
-    def _create_distance_matrix(self):
-        """Make matrix that stores the distances between all consituting atoms.
-
-        The matrix has a size of NxNx8 (N is the number of atoms in self.atoms
-        object).
-        """
-        natoms = len(self.atoms)
-        dist = np.zeros((natoms, natoms, 8), dtype=float)
-        indices = [a.index for a in self.atoms]
-        vec = self.atoms.get_cell()
-        trans = [[0., 0., 0.],
-                 vec[0] / 2,
-                 vec[1] / 2,
-                 vec[2] / 2,
-                 (vec[0] + vec[1]) / 2,
-                 (vec[0] + vec[2]) / 2,
-                 (vec[1] + vec[2]) / 2,
-                 (vec[0] + vec[1] + vec[2]) / 2]
-        for t in range(8):
-            shifted = self.atoms.copy()
-            shifted.translate(trans[t])
-            shifted.wrap()
-            for x in range(natoms):
-                temp = shifted.get_distances(x, indices)
-                dist[x, :, t] = np.round(temp, self.dist_num_dec)
-        return dist
+    def _create_kdtree_with_ref_atom_centered(self):
+        ref_dists = []
+        cell = self.atoms.get_cell()
+        center = 0.5 * (cell[0, :] + cell[1, :] + cell[2, :])
+        for ref_index in self.ref_index_trans_symm:
+            atoms = self.atoms.copy()
+            atoms.translate(center - atoms[ref_index].position)
+            atoms.wrap()
+            ref_dists.append(KDTree(atoms.get_positions()))
+        return ref_dists
 
     def _group_indices_by_trans_symmetry(self):
         """Group indices by translational symmetry."""
-        natoms = len(self.atoms)
-        an = np.zeros((natoms, natoms), dtype=int)
-        pos = np.zeros((natoms, natoms, 3), dtype=float)
         indices = [a.index for a in self.atoms]
-
         ref_indx = indices[0]
-        an[ref_indx, :] = self.atoms.get_atomic_numbers()
-        pos[ref_indx, :, :] = self.atoms.get_positions()
-        for indx in indices[1:]:
-            vec = self.atoms.get_distance(indx, ref_indx, vector=True)
-            shifted = self.atoms.copy()
-            shifted.translate(vec)
-            shifted = wrap_and_sort_by_position(shifted)
-            an[indx, :] = shifted.get_atomic_numbers()
-            pos[indx, :] = shifted.get_positions()
-
         # Group all the indices together if its atomic number and position
         # sequences are same
         indx_by_equiv = []
         for i, indx in enumerate(indices):
             if indx not in self.background_atom_indices:
                 break
-        temp = [[indices[i]]]
 
+        vec = self.atoms.get_distance(indices[i], ref_indx, vector=True)
+        shifted = self.atoms.copy()
+        shifted.translate(vec)
+        shifted = wrap_and_sort_by_position(shifted)
+        an = shifted.get_atomic_numbers()
+        pos = shifted.get_positions()
+
+        temp = [[indices[i]]]
+        equiv_group_an = [an]
+        equiv_group_pos = [pos]
         for indx in indices[i + 1:]:
             if indx in self.background_atom_indices:
                 continue
+            vec = self.atoms.get_distance(indx, ref_indx, vector=True)
+            shifted = self.atoms.copy()
+            shifted.translate(vec)
+            shifted = wrap_and_sort_by_position(shifted)
+            an = shifted.get_atomic_numbers()
+            pos = shifted.get_positions()
+
             for equiv_group in range(len(temp)):
-                if (an[indx] == an[temp[equiv_group][0]]).all() and \
-                        np.allclose(pos[indx], pos[temp[equiv_group][0]]):
+                if (an == equiv_group_an[equiv_group]).all() and \
+                        np.allclose(pos, equiv_group_pos[equiv_group]):
                     temp[equiv_group].append(indx)
                     break
                 else:
                     if equiv_group == len(temp) - 1:
                         temp.append([indx])
+                        equiv_group_an.append(an)
+                        equiv_group_pos.append(pos)
 
         for equiv_group in temp:
             indx_by_equiv.append(equiv_group)
-
         return indx_by_equiv
-
-    def _remove_background_symbol_from_spin_dict(self):
-        num_background = len([a.index for a in self.atoms_with_given_dim
-                              if a.symbol in self.background_symbol])
 
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""
@@ -484,8 +478,8 @@ class ClusterExpansionSetting:
             cluster_eq_sites.append([[None], [None]])
 
             for size in range(2, self.max_cluster_size + 1):
-                print("Generating clusters with size {}".format(size))
-                indices = self.indices_of_nearby_atom(ref_indx, size)
+                tree = self.ref_centered_kdtree[site]
+                indices = self.indices_of_nearby_atom(ref_indx, size, tree)
                 if self.ignore_background_atoms:
                     indices = [i for i in indices if
                                i not in self.background_atom_indices]
@@ -494,8 +488,7 @@ class ClusterExpansionSetting:
                 order_set = []
                 equiv_sites_set = []
                 for k in combinations(indices, size - 1):
-                    d = self.get_min_distance((ref_indx,) + k)
-                    d = self.get_min_max_distance((ref_indx,) + k)
+                    d = self.get_min_distance((ref_indx,) + k, tree)
                     if max(d) > self.max_cluster_dist[size]:
                         continue
                     d_list = sorted(d.tolist(), reverse=True)
@@ -585,9 +578,20 @@ class ClusterExpansionSetting:
         function of the structure.
         """
         natoms = len(self.atoms)
-        tm = np.zeros((natoms, natoms), dtype=int)
+        unique_indices = list(set(flatten(deepcopy(self.cluster_indx))))
+        unique_indices.remove(None)
+        unique_indices = [0] + unique_indices
+
+        tm = [{} for _ in range(natoms)]
+
+        # Add the index in the main atoms object to the tag
+        for indx, atom in enumerate(self.atoms):
+            atom.tag = indx
+
         for i, ref_indx in enumerate(self.ref_index_trans_symm):
-            tm[ref_indx, :] = index_by_position(self.atoms)
+            indices = index_by_position(self.atoms)
+            tm[ref_indx] = {col: indices[col] for col in unique_indices}
+
             for indx in self.index_by_trans_symm[i]:
                 if indx == ref_indx:
                     continue
@@ -595,58 +599,40 @@ class ClusterExpansionSetting:
                 vec = self.atoms.get_distance(indx, ref_indx, vector=True)
                 shifted.translate(vec)
                 shifted.wrap()
-                tm[indx, :] = index_by_position(shifted)
 
+                indices = index_by_position(shifted)
+                tm[indx] = {col: indices[col] for col in unique_indices}
         return tm
 
-    def get_min_distance(self, cluster):
+    def get_min_distance(self, cluster, tree):
         """Get minimum distances.
 
         Get the minimum distances between the atoms in a cluster according to
         dist_matrix and return the sorted distances (reverse order)
         """
         d = []
-        for t in range(8):
-            row = []
-            for x in combinations(cluster, 2):
-                row.append(self.dist_matrix[x[0], x[1], t])
-            d.append(sorted(row, reverse=True))
-        return np.array(min(d))
+        for x in combinations(cluster, 2):
+            x0 = tree.data[x[0], :]
+            x1 = tree.data[x[1], :]
+            d.append(self._get_distance(x0, x1))
+        return np.array(sorted(d, reverse=True))
 
-    def get_min_max_distance(self, cluster):
-        """Get minimum maximum distance of cluster"""
-        d = []
-        for t in range(8):
-            row = []
-            for x in combinations(cluster, 2):
-                row.append(self.dist_matrix[x[0], x[1], t])
-            d.append(row)
+    def _get_distance(self, x0, x1):
+        """Compute the Euclidean distance between two points."""
+        diff = x1 - x0
+        length = np.sqrt(np.sum(diff**2))
+        return np.round(length, self.dist_num_dec)
 
-        # Find the row with the minimum maximum distance
-        min_max_dist = 1E10
-        min_row = 0
-        for row in d:
-            if max(row) < min_max_dist:
-                min_row = row
-                min_max_dist = max(row)
-        return np.array(min_row)
-        #return np.array(min(d))
-
-    def indices_of_nearby_atom(self, ref_indx, size):
+    def indices_of_nearby_atom(self, ref_indx, size, tree):
         """Return the indices of the atoms nearby.
 
         Indices of the atoms are only included if distances smaller than
         specified by max_cluster_dist from the reference atom index.
         """
-        indices = [a.index for a in self.atoms]
-        del indices[indices.index(ref_indx)]
         nearby_indices = []
-        for indx in indices:
-            for t in range(8):
-                if (self.dist_matrix[ref_indx, indx, t]
-                        <= self.max_cluster_dist[size]):
-                    nearby_indices.append(indx)
-                    break
+        x0 = tree.data[ref_indx, :]
+        nearby_indices = tree.query_ball_point(x0, self.max_cluster_dist[size])
+        nearby_indices.remove(ref_indx)
         return nearby_indices
 
     def _create_concentration_matrix(self):
@@ -705,7 +691,7 @@ class ClusterExpansionSetting:
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
-        self.dist_matrix = self._create_distance_matrix()
+
         self.cluster_names, self.cluster_dist, self.cluster_indx, \
         self.cluster_order, self.cluster_eq_sites = \
             self._get_cluster_information()
@@ -714,24 +700,24 @@ class ClusterExpansionSetting:
         self.full_cluster_names = self._get_full_cluster_names()
         self._check_equiv_sites()
         db = connect(self.db_name)
+        data = {'cluster_names': self.cluster_names,
+                'cluster_dist': self.cluster_dist,
+                'cluster_indx': self.cluster_indx,
+                'cluster_order': self.cluster_order,
+                'cluster_eq_sites': self.cluster_eq_sites,
+                'trans_matrix': self.trans_matrix,
+                'conc_matrix': self.conc_matrix,
+                'full_cluster_names': self.full_cluster_names,
+                'unique_cluster_names': self.unique_cluster_names}
+
         db.write(self.atoms,
                  name='information',
-                 data={'dist_matrix': self.dist_matrix,
-                       'cluster_names': self.cluster_names,
-                       'cluster_dist': self.cluster_dist,
-                       'cluster_indx': self.cluster_indx,
-                       'cluster_order':self.cluster_order,
-                       'cluster_eq_sites':self.cluster_eq_sites,
-                       'trans_matrix': self.trans_matrix,
-                       'conc_matrix': self.conc_matrix,
-                       'full_cluster_names': self.full_cluster_names,
-                       'unique_cluster_names': self.unique_cluster_names})
+                 data=data)
 
     def _read_data(self):
         db = connect(self.db_name)
         try:
             row = db.get('name=information')
-            self.dist_matrix = row.data.dist_matrix
             self.cluster_names = row.data.cluster_names
             self.cluster_dist = row.data.cluster_dist
             self.cluster_indx = ndarray2list(row.data.cluster_indx)
@@ -823,7 +809,6 @@ class ClusterExpansionSetting:
                     continue
 
         cluster_atoms = []
-        center = np.sum(self.atoms.cell, axis=0) / 2
         for i, loc in enumerate(location):
             ref_indx = self.ref_index_trans_symm[loc[0]]
             name = self.unique_cluster_names[i]

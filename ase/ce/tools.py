@@ -2,6 +2,7 @@ import math
 from itertools import combinations
 import numpy as np
 from numpy.linalg import matrix_rank
+import collections
 
 
 def index_by_position(atoms):
@@ -46,7 +47,6 @@ def reduce_matrix(matrix):
             matrix = temp
             offset = 0
     return matrix
-
 
 def create_cluster(atoms, indices):
     """Create a cluster centered in the unitcell"""
@@ -157,3 +157,10 @@ def ndarray2list(data):
     for i in range(len(data)):
         data[i] = ndarray2list(data[i])
     return list(data)
+
+
+def flatten(x):
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
