@@ -17,7 +17,7 @@ def test_trans_matrix():
     tm = bc_setting.trans_matrix
     ref_dist = atoms.get_distance(0, 1, mic=True)
     for indx in range(len(atoms)):
-        dist = atoms.get_distance(indx, tm[indx, 1], mic=True)
+        dist = atoms.get_distance(indx, tm[indx][1], mic=True)
         assert abs(dist - ref_dist) < 1E-5
 
 
@@ -54,7 +54,7 @@ def test_order_indep_ref_indx():
                 for subcluster, order in zip(cluster, cluster_order):
                     new_cluster = [ref_indx]
                     for indx in subcluster:
-                        trans_indx = bc_setting.trans_matrix[ref_indx, indx]
+                        trans_indx = bc_setting.trans_matrix[ref_indx][indx]
                         new_cluster.append(trans_indx)
 
                     # Check if all elements are the same
