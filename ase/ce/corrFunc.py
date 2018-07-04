@@ -278,7 +278,7 @@ class CorrFunction(object):
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
             for i, indx in enumerate(srt_indices):
-                trans_indx = self.setting.trans_matrix[ref_indx, indx]
+                trans_indx = self.setting.trans_matrix[ref_indx][indx]
                 sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
             sp += sp_temp
             count += 1
