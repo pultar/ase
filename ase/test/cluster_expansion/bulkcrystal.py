@@ -17,7 +17,7 @@ def test_binary_system():
     Verifies that one can run a CE for the binary Au-Cu system.
     The EMT calculator is used for energy calculations
     """
-    db_name = "test.db"
+    db_name = "test_crystal.db"
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
     bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
@@ -58,7 +58,7 @@ def test_binary_system():
 
 def test_grouped_basis_supercell():
     """Test a case where a grouped_basis is used with supercell."""
-    db_name = "test.db"
+    db_name = "test_crystal.db"
 
     # 1 grouped basis
     setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],

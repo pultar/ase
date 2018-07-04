@@ -29,7 +29,7 @@ def test_spgroup_217():
              (0.3582, 0.3582, 0.0393), (0.0954, 0.0954, 0.2725)]
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
-    db_name = "test.db"
+    db_name = "test_spacegroup.db"
     basis_elements = [["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"]]
 
     # Test with grouped basis
@@ -60,7 +60,7 @@ def test_spgroup_217():
 
 def test_grouped_basis_with_large_dist():
     # Test with grouped basis with a supercell
-    db_name = "test.db"
+    db_name = "test_spacegroup.db"
     tol = 1E-9
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
                                          ['O', 'X'], ['Ta']],

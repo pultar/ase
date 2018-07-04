@@ -78,7 +78,7 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20):
         assert np.allclose(brute_force_cf, calc.cf)
 
 
-db_name = 'test.db'
+db_name = 'test_calc.db'
 binary_setting, bin_atoms = get_binary()
 test_update_correlation_functions(binary_setting, bin_atoms, n_trial_configs=5)
 os.remove(db_name)
