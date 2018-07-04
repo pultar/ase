@@ -174,7 +174,10 @@ class ClusterExpansionSetting:
             if w == (0, 0, 0):
                 continue
             lengths.append(np.sqrt(vec.dot(vec)))
-        return min(lengths) / 2
+        # Introduce tolerance to make max distance strictly
+        # smaller than half of the shortest cell dimension
+        tol = 1E-4
+        return min(lengths) / 2 - tol
 
     def _remove_background_basis(self):
         # check if any basis consists of only one element type
