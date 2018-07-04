@@ -59,7 +59,7 @@ class ClusterExpansionSetting:
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
-        self.ref_centered_kdtree = self._create_kdtree_with_ref_atom_centered()
+        self.kd_trees = self._create_kdtrees()
 
         # print('num_unique_elements: {}'.format(self.num_unique_elements))
         # print('unique_elements: {}'.format(self.unique_elements))
@@ -374,16 +374,23 @@ class ClusterExpansionSetting:
         atoms = self.atoms_with_given_dim * self.supercell_scale_factor
         return wrap_and_sort_by_position(atoms)
 
-    def _create_kdtree_with_ref_atom_centered(self):
-        ref_dists = []
-        cell = self.atoms.get_cell()
-        center = 0.5 * (cell[0, :] + cell[1, :] + cell[2, :])
-        for ref_index in self.ref_index_trans_symm:
-            atoms = self.atoms.copy()
-            atoms.translate(center - atoms[ref_index].position)
-            atoms.wrap()
-            ref_dists.append(KDTree(atoms.get_positions()))
-        return ref_dists
+    def _create_kdtrees(self):
+        vec = self.atoms.get_cell()
+        trans = [[0., 0., 0.],
+                 vec[0] / 2,
+                 vec[1] / 2,
+                 vec[2] / 2,
+                 (vec[0] + vec[1]) / 2,
+                 (vec[0] + vec[2]) / 2,
+                 (vec[1] + vec[2]) / 2,
+                 (vec[0] + vec[1] + vec[2]) / 2]
+        kd_trees = []
+        for t in range(8):
+            shifted = self.atoms.copy()
+            shifted.translate(trans[t])
+            shifted.wrap()
+            kd_trees.append(KDTree(shifted.get_positions()))
+        return kd_trees
 
     def _group_indices_by_trans_symmetry(self):
         """Group indices by translational symmetry."""
@@ -481,8 +488,7 @@ class ClusterExpansionSetting:
             cluster_eq_sites.append([[None], [None]])
 
             for size in range(2, self.max_cluster_size + 1):
-                tree = self.ref_centered_kdtree[site]
-                indices = self.indices_of_nearby_atom(ref_indx, size, tree)
+                indices = self.indices_of_nearby_atom(ref_indx, size)
                 if self.ignore_background_atoms:
                     indices = [i for i in indices if
                                i not in self.background_atom_indices]
@@ -491,7 +497,7 @@ class ClusterExpansionSetting:
                 order_set = []
                 equiv_sites_set = []
                 for k in combinations(indices, size - 1):
-                    d = self.get_min_distance((ref_indx,) + k, tree)
+                    d = self.get_min_distance((ref_indx,) + k)
                     if max(d) > self.max_cluster_dist[size]:
                         continue
                     d_list = sorted(d.tolist(), reverse=True)
@@ -607,34 +613,41 @@ class ClusterExpansionSetting:
                 tm[indx] = {col: indices[col] for col in unique_indices}
         return tm
 
-    def get_min_distance(self, cluster, tree):
+    def get_min_distance(self, cluster):
         """Get minimum distances.
 
         Get the minimum distances between the atoms in a cluster according to
         dist_matrix and return the sorted distances (reverse order)
         """
         d = []
-        for x in combinations(cluster, 2):
-            x0 = tree.data[x[0], :]
-            x1 = tree.data[x[1], :]
-            d.append(self._get_distance(x0, x1))
-        return np.array(sorted(d, reverse=True))
+        for t, tree in enumerate(self.kd_trees):
+            row = []
+            for x in combinations(cluster, 2):
+                x0 = tree.data[x[0], :]
+                x1 = tree.data[x[1], :]
+                row.append(self._get_distance(x0, x1))
+            d.append(sorted(row, reverse=True))
+        return np.array(min(d))
 
     def _get_distance(self, x0, x1):
         """Compute the Euclidean distance between two points."""
         diff = x1 - x0
-        length = np.sqrt(np.sum(diff**2))
+        length = np.sqrt(diff.dot(diff))
         return np.round(length, self.dist_num_dec)
 
-    def indices_of_nearby_atom(self, ref_indx, size, tree):
+    def indices_of_nearby_atom(self, ref_indx, size):
         """Return the indices of the atoms nearby.
 
         Indices of the atoms are only included if distances smaller than
         specified by max_cluster_dist from the reference atom index.
         """
         nearby_indices = []
-        x0 = tree.data[ref_indx, :]
-        nearby_indices = tree.query_ball_point(x0, self.max_cluster_dist[size])
+        for tree in self.kd_trees:
+            x0 = tree.data[ref_indx, :]
+            result = tree.query_ball_point(x0, self.max_cluster_dist[size])
+            nearby_indices += list(result)
+
+        nearby_indices = list(set(nearby_indices))
         nearby_indices.remove(ref_indx)
         return nearby_indices
 
