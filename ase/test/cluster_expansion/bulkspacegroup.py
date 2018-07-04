@@ -61,6 +61,7 @@ def test_spgroup_217():
 def test_grouped_basis_with_large_dist():
     # Test with grouped basis with a supercell
     db_name = "test.db"
+    tol = 1E-9
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
                                          ['O', 'X'], ['Ta']],
                          basis=[(0., 0., 0.),
@@ -88,7 +89,8 @@ def test_grouped_basis_with_large_dist():
     cf = corr.get_cf(atoms)
     if update_reference_file:
         all_cf["Ta_O_X_grouped"] = cf
-    assert all_cf["Ta_O_X_grouped"] == cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["Ta_O_X_grouped"][key]) < tol
 
     gs = GenerateStructures(setting=bsg, struct_per_gen=3)
     gs.generate_initial_pool()
@@ -96,6 +98,7 @@ def test_grouped_basis_with_large_dist():
     # gs.generate_probe_structure(init_temp=10., final_temp=1., num_temp=2,
     #                             num_steps=10, approx_mean_var=True)
     os.remove(db_name)
+
 
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
                                          ['O', 'X']],
@@ -126,7 +129,8 @@ def test_grouped_basis_with_large_dist():
     cf = corr.get_cf(atoms)
     if update_reference_file:
         all_cf["Ta_O_X_ungrouped"] = cf
-    assert all_cf["Ta_O_X_ungrouped"] == cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["Ta_O_X_ungrouped"][key]) < tol
 
     os.remove(db_name)
 
@@ -156,7 +160,8 @@ def test_grouped_basis_with_large_dist():
     cf = corr.get_cf(atoms)
     if update_reference_file:
         all_cf["Li_X_V_O_F"] = cf
-    assert all_cf["Li_X_V_O_F"] == cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["Li_X_V_O_F"][key]) < tol
 
     os.remove(db_name)
 
