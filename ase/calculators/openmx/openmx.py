@@ -197,10 +197,13 @@ class OpenMX(FileIOCalculator):
             """
             jobs = runCmd('qstat')
             self.prind('jobs', jobs)
-            for line in jobs:
-                if jobNum in line:
-                    columns = line.split()
-            return columns[-2] == status
+            if jobs is not None:
+                for line in jobs:
+                    if str(jobNum) in line:
+                        columns = line.split()
+                return columns[-2] == status
+            else:
+                return 'R' != status
 
         inputfile = self.label + '.dat'
         outfile = self.label + '.log'
