@@ -215,16 +215,18 @@ class ClusterExpansionSetting:
                     del self.conc_ratio_min_2[i]
                     del self.conc_ratio_max_2[i]
 
+
         # change all_elements
         for s in symbol:
             self.all_elements.remove(s)
 
-        # reassign grouped_basis
-        for ref in sorted(basis, reverse=True):
-            for i, group in enumerate(self.grouped_basis):
-                for j, element in enumerate(group):
-                    if element > ref:
-                        self.grouped_basis[i][j] -= 1
+        if self.grouped_basis is not None:
+            # reassign grouped_basis
+            for ref in sorted(basis, reverse=True):
+                for i, group in enumerate(self.grouped_basis):
+                    for j, element in enumerate(group):
+                        if element > ref:
+                            self.grouped_basis[i][j] -= 1
 
         return symbol
 
@@ -466,6 +468,12 @@ class ClusterExpansionSetting:
             list of indices that constitute the cluster based on the reference
             atom (atom with lowest index for each translational symmetry
             inequivalent site).
+
+        cluster_order: list
+            list with for tracking the order of the cluster indices
+
+        cluster_eq_sites: list
+            list tracking symmetrically equivalent sites in each cluster
         """
         cluster_names = []
         cluster_dist = []
