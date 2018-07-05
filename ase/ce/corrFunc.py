@@ -349,6 +349,7 @@ class CorrFunction(object):
             Decoration number that specifies which basis function should be
             used for getting the spin variable of each atom.
         """
+        print(self.setting.atoms[ref_indx].symbol)
         bf = self.setting.basis_functions
         count = 0
         sp = 0.0

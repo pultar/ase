@@ -509,7 +509,6 @@ class ClusterExpansionSetting:
                 equiv_sites_set = []
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
-                    d = self.get_min_max_distance((ref_indx,) + k)
                     if max(d) > self.max_cluster_dist[size]:
                         continue
                     d_list = sorted(d.tolist(), reverse=True)
