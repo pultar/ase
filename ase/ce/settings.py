@@ -12,7 +12,7 @@ from ase.db import connect
 
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
 from ase.ce.tools import sort_by_internal_distances, create_cluster
-from ase.ce.tools import sorted_internal_angles, ndarray2list
+from ase.ce.tools import sorted_internal_angles, ndarray2list, dec_string
 
 
 
@@ -115,20 +115,6 @@ class ClusterExpansionSetting:
         if num_conc_var == 2:
             self.conc_ratio_min_2 = conc_ratio_min_2
             self.conc_ratio_max_2 = conc_ratio_max_2
-        return True
-
-    def _get_diag_lengths(self):
-        """Return the length of all diagonals"""
-        cell = self.atoms_with_given_dim.get_cell()
-        a1 = cell[0,:]
-        a2 = cell[1,:]
-        a3 = cell[2,:]
-        diags = [a1+a2, a1+a3, a2+a3, a1+a2+a3]
-        lengths = []
-        for diag in diags:
-            length = np.sqrt(np.sum(diag**2))
-            lengths.append(length)
-        return np.array(lengths)
 
     def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
         min_length = self._get_max_cluster_dist()
@@ -222,7 +208,6 @@ class ClusterExpansionSetting:
                 if self.num_conc_var == 2:
                     del self.conc_ratio_min_2[i]
                     del self.conc_ratio_max_2[i]
-
 
         # change all_elements
         for s in symbol:
@@ -774,11 +759,23 @@ class ClusterExpansionSetting:
             if n == 0:
                 full_names.append(prefix)
             else:
-                comb = list(combinations_with_replacement(bf_list, r=n))
+                comb = list(product(bf_list, repeat=n))
+                symm, n_indx = self._get_name_indx(prefix)
+                eq_sites = self.cluster_eq_sites[symm][n][n_indx]
                 for dec in comb:
-                    dec_string = ''.join(str(i) for i in dec)
-                    full_names.append(prefix + '_' + dec_string)
-        return full_names
+                    dec_str = dec_string(dec, eq_sites)
+                    full_names.append(prefix + '_' + dec_str)
+        return list(set(full_names))
+
+    def _get_name_indx(self, unique_name):
+        size = int(unique_name[1])
+        for symm in range(self.num_trans_symm):
+            name_list = self.cluster_names[symm][size]
+            try:
+                n_indx = name_list.index(unique_name)
+                return symm, n_indx
+            except ValueError:
+                continue
 
     def in_conc_matrix(self, atoms):
         """Check to see if the passed atoms object has allowed concentration.
@@ -794,10 +791,10 @@ class ClusterExpansionSetting:
             all_elements = self.all_grouped_elements
 
         conc = np.zeros(num_elements, dtype=int)
+
         for x in range(num_elements):
             element = all_elements[x]
             conc[x] = len([a for a in atoms if a.symbol == element])
-
         # determine the dimensions of the concentration matrix
         # then, search to see if there is a match
         conc_shape = self.conc_matrix.shape

@@ -1,9 +1,9 @@
 """Module for calculating correlation functions."""
-from itertools import permutations, product
 import numpy as np
+from itertools import product
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.ce.tools import wrap_and_sort_by_position, dec_string, equivalent_deco
 from ase.db import connect
 
 
@@ -74,10 +74,13 @@ class CorrFunction(object):
                                 if int(i[1]) == n]
             # loop though all names of cluster with size n
             for unique_name in unique_name_list:
+
+
                 # loop through all possible decoration numbers
                 for dec in comb:
                     sp = 0.
                     count = 0
+
                     # need to perform for each symmetry inequivalent sites
                     for symm in range(self.num_trans_symm):
                         name_list = self.setting.cluster_names[symm][n]
@@ -411,36 +414,3 @@ class CorrFunction(object):
         if return_ratio:
             return atoms, int_ratios
         return atoms
-
-
-def dec_string(deco, equiv_sites):
-    """Create the decoration string based on equiv sites."""
-    equiv_dec = sorted(equivalent_deco(deco, equiv_sites))
-    return ''.join(str(i) for i in equiv_dec[0])
-
-
-def equivalent_deco(deco, equiv_sites):
-    """Generate equivalent decoration numbers based on equivalent sites."""
-    if not equiv_sites:
-        return [deco]
-
-    perm = []
-    for equiv in equiv_sites:
-        perm.append(list(permutations(equiv)))
-
-    equiv_deco = []
-    for comb in product(*perm):
-        order = []
-        for item in comb:
-            order += list(item)
-
-        orig_order = list(range(len(deco)))
-        for i, srt_indx in enumerate(sorted(order)):
-            orig_order[srt_indx] = order[i]
-        equiv_deco.append([deco[indx] for indx in orig_order])
-
-    unique_deco = []
-    for eq_dec in equiv_deco:
-        if eq_dec not in unique_deco:
-            unique_deco.append(eq_dec)
-    return unique_deco

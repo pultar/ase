@@ -130,7 +130,7 @@ class GenerateStructures(object):
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
                                 init_temp, final_temp, num_temp, num_steps,
                                 approx_mean_var)
-            atoms, cf_array = ps.generate()
+            atoms, cf = ps.generate()
             conc = self._find_concentration(atoms)
             if self._exists_in_db(atoms, conc[0], conc[1]):
                 print('generated structure is already in DB.')
@@ -139,11 +139,6 @@ class GenerateStructures(object):
                 continue
             else:
                 num_attempt = 0
-
-            # convert cf array to dictionary
-            cf = {}
-            for i, name in enumerate(self.setting.full_cluster_names):
-                cf[name] = cf_array[i]
 
             kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
             self.db.write(atoms, kvp)

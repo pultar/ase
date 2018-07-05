@@ -1,5 +1,5 @@
 import math
-from itertools import permutations, combinations
+from itertools import permutations, combinations, product
 import numpy as np
 from numpy.linalg import matrix_rank
 import collections
@@ -156,6 +156,39 @@ def ndarray2list(data):
     for i in range(len(data)):
         data[i] = ndarray2list(data[i])
     return list(data)
+
+
+def dec_string(deco, equiv_sites):
+    """Create the decoration string based on equiv sites."""
+    equiv_dec = sorted(equivalent_deco(deco, equiv_sites))
+    return ''.join(str(i) for i in equiv_dec[0])
+
+
+def equivalent_deco(deco, equiv_sites):
+    """Generate equivalent decoration numbers based on equivalent sites."""
+    if not equiv_sites:
+        return [deco]
+
+    perm = []
+    for equiv in equiv_sites:
+        perm.append(list(permutations(equiv)))
+
+    equiv_deco = []
+    for comb in product(*perm):
+        order = []
+        for item in comb:
+            order += list(item)
+
+        orig_order = list(range(len(deco)))
+        for i, srt_indx in enumerate(sorted(order)):
+            orig_order[srt_indx] = order[i]
+        equiv_deco.append([deco[indx] for indx in orig_order])
+
+    unique_deco = []
+    for eq_dec in equiv_deco:
+        if eq_dec not in unique_deco:
+            unique_deco.append(eq_dec)
+    return unique_deco
 
 
 def flatten(x):

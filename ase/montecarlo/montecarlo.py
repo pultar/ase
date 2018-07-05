@@ -69,9 +69,6 @@ class MonteCarlo(object):
             else:
                 logfile = open(logfile, 'a')
         self.logfile = logfile
-
-        # observers will be called every nth step specified by the user
-        self.observers = []
         self.nsteps = 0
 
     def run(self, num_steps=100, average=False):
@@ -165,7 +162,3 @@ class MonteCarlo(object):
                                                            self.energy))
         self.logfile.write('\n')
         self.logfile.flush()
-
-    def attach(self, observer, interval=1):
-        """Needs to be implemented."""
-        return True

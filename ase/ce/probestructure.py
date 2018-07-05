@@ -1,8 +1,6 @@
 """Module for generating probe structures."""
 import os
 import math
-from copy import deepcopy
-from itertools import permutations
 from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv
@@ -59,6 +57,7 @@ class ProbeStructure(object):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
+        from ase.calculators.cluster_expansion import ClusterExpansion
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
 
@@ -67,10 +66,17 @@ class ProbeStructure(object):
         self.cfm = self._get_full_cf_matrix()
 
         if self.setting.in_conc_matrix(atoms):
-            self.init = wrap_and_sort_by_position(atoms)
+            if len(atoms) != len(setting.atoms_with_given_dim):
+                raise ValueError("Passed Atoms has a wrong size.")
+            self.supercell, self.periodic_indices = \
+                self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
         else:
             raise ValueError("concentration of the elements in the provided"
                              " atoms cannot be found in the conc_matrix")
+
+        eci = {name: 1. for name in self.setting.full_cluster_names}
+        self.calc = ClusterExpansion(self.setting, cluster_name_eci=eci)
+        self.supercell.set_calculator(self.calc)
 
         self.approx_mean_var = approx_mean_var
         fname = 'probe_structure-sigma_mu.npz'
@@ -94,12 +100,34 @@ class ProbeStructure(object):
             raise ValueError("Initial temperature must be higher than final"
                              " temperature")
 
+    def _build_supercell(self, atoms):
+        for atom in atoms:
+            atom.tag = atom.index
+
+        natoms = len(atoms)
+        from ase.visualize import view
+        view(atoms)
+        atoms *= self.setting.supercell_scale_factor
+        atoms = wrap_and_sort_by_position(atoms)
+
+        periodic_indices = []
+        for tag in range(natoms):
+            periodic_indices.append([a.index for a in atoms if a.tag == tag])
+        view(atoms)
+        return atoms, periodic_indices
+
+    def _supercell2unitcell(self):
+        atoms = self.setting.atoms_with_given_dim.copy()
+        for a in atoms:
+            a.symbol = self.supercell[self.periodic_indices[a.index][0]].symbol
+        return atoms
+
     def generate(self):
         """Generate a probe structure according to PRB 80, 165122 (2009)."""
         # Start
-        old = self.init.copy()
-        o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
-                                                     return_type='array')
+        o_cf = self.calc.cf
+        print(o_cf.shape)
+        print(self.cfm.shape)
         o_cfm = np.vstack((self.cfm, o_cf))
         if self.approx_mean_var:
             o_mv = mean_variance_approx(o_cfm)
@@ -112,73 +140,67 @@ class ProbeStructure(object):
         steps_per_temp = int(self.num_steps / self.num_temp)
         count = 0
         for temp in temps:
-            for _ in range(steps_per_temp):
+            while count < steps_per_temp:
                 if bool(getrandbits(1)):
+                    # Change element Type
                     if self._has_more_than_one_conc():
-                        new, n_cf = self._change_element_type(old, o_cf)
+                        self._change_element_type(self.supercell)
                     else:
-                        if self._is_swappable(old):
-                            new, n_cf = self._swap_two_atoms(old, o_cf)
-                        else:
-                            msg = 'Atoms has only one concentration value '
-                            msg += 'and not swappable.'
-                            raise RuntimeError(msg)
+                        continue
                 else:
-                    if self._is_swappable(old):
-                        new, n_cf = self._swap_two_atoms(old, o_cf)
-                    else:
-                        new, n_cf = self._change_element_type(old, o_cf)
+                    indx = self._swap_two_atoms(self.supercell)
+                    if self.supercell[indx[0]].symbol == \
+                            self.supercell[indx[1]].symbol:
+                        continue
+                self.supercell.get_potential_energy()
+                n_cf = self.calc.cf
                 n_cfm = np.vstack((self.cfm, n_cf))
                 if self.approx_mean_var:
                     n_mv = mean_variance_approx(n_cfm)
                 else:
                     n_mv = mean_variance(n_cfm, self.sigma, self.mu)
+
                 if o_mv > n_mv:
                     accept = True
                 else:
                     accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
                 if accept:
-                    old = new.copy()
-                    o_cf = np.copy(n_cf)
                     o_mv = n_mv
+                else:
+                    self.calc.restore(self.supercell)
 
-        # Check to see if the cf is indeed preserved
-        final_cf = self.corrFunc.get_cf(old, return_type='array')
-        if not np.allclose(final_cf, o_cf):
-            msg = 'The correlation function changed after simulated annealing'
-            raise ValueError(msg)
-        return old, o_cf
+        self._check_consistency()
+        return self._supercell2unitcell(), self.calc.get_cf_dict()
 
     def _determine_temps(self):
         print("Temperature range not given. "
               "Determining the range automatically.")
-        old = self.init.copy()
-        o_cf = self.corrFunc.get_cf_by_cluster_names(old, self.cluster_names,
-                                                     return_type='array')
+        o_cf = self.calc.cf
         o_cfm = np.vstack((self.cfm, o_cf))
         if self.approx_mean_var:
             o_mv = mean_variance_approx(o_cfm)
         else:
             o_mv = mean_variance(o_cfm, self.sigma, self.mu)
         diffs = []
-        for _ in range(100):
+        count = 0
+        max_count = 100
+        while count < max_count:
             if bool(getrandbits(1)):
                 # Change element Type
                 if self._has_more_than_one_conc():
-                    new, n_cf = self._change_element_type(old, o_cf)
+                    self._change_element_type(self.supercell)
+                    count += 1
                 else:
-                    if self._is_swappable(old):
-                        new, n_cf = self._swap_two_atoms(old, o_cf)
-                    else:
-                        raise RuntimeError('Atoms has only one concentration '
-                                           + 'value and not swappable.')
+                    continue
             else:
-                # Swap two atoms
-                if self._is_swappable(old):
-                    new, n_cf = self._swap_two_atoms(old, o_cf)
-                else:
-                    new, n_cf = self._change_element_type(old, o_cf)
+                indx = self._swap_two_atoms(self.supercell)
+                if self.supercell[indx[0]].symbol == \
+                        self.supercell[indx[1]].symbol:
+                    continue
+                count += 1
+            self.supercell.get_potential_energy()
+            n_cf = self.calc.cf
             n_cfm = np.vstack((self.cfm, n_cf))
             if self.approx_mean_var:
                 n_mv = mean_variance_approx(n_cfm)
@@ -186,8 +208,6 @@ class ProbeStructure(object):
                 n_mv = mean_variance(n_cfm, self.sigma, self.mu)
             diffs.append(abs(o_mv - n_mv))
             # update old
-            old = new.copy()
-            o_cf = np.copy(n_cf)
             o_mv = n_mv
 
         avg_diff = sum(diffs) / len(diffs)
@@ -196,10 +216,8 @@ class ProbeStructure(object):
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
-    def _swap_two_atoms(self, atoms, cf):
+    def _swap_two_atoms(self, atoms):
         """Swap two randomly chosen atoms."""
-        atoms = atoms.copy()
-        cf = deepcopy(cf)
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
 
@@ -227,14 +245,16 @@ class ProbeStructure(object):
         while True:
             indx[1] = choice(index_by_basis[basis])
             symbol[1] = atoms[indx[1]].symbol
-            if symbol[1] == symbol[0]:
-                continue
             if symbol[1] in basis_elements[basis]:
                 break
         # swap two atoms
-        atoms, cf = self._change_element_type(atoms, cf, indx[0], symbol[1])
-        atoms, cf = self._change_element_type(atoms, cf, indx[1], symbol[0])
-        return atoms, cf
+
+        # find which index it should be in unit cell
+        for i in indx:
+            unit_cell_indx = atoms[i].tag
+            for grp_index in self.periodic_indices[unit_cell_indx]:
+                atoms[grp_index].symbol = atoms[i].symbol
+        return indx
 
     def _has_more_than_one_conc(self):
         if len(self.setting.conc_matrix) > 1 and \
@@ -242,43 +262,13 @@ class ProbeStructure(object):
             return True
         return False
 
-    def _is_swappable(self, atoms):
-        # determine if the basis is grouped
-        if self.setting.grouped_basis is None:
-            basis_elements = self.setting.basis_elements
-            num_basis = self.setting.num_basis
-        else:
-            basis_elements = self.setting.grouped_basis_elements
-            num_basis = self.setting.num_grouped_basis
-
-        for i in range(num_basis - 1, -1, -1):
-            # delete basis with only one element type
-            if len(basis_elements[i]) < 2:
-                num_basis -= 1
-                continue
-
-            # delete basis if atoms object has only one element type
-            existing_elements = 0
-            for element in basis_elements[i]:
-                num = len([a.index for a in atoms if a.symbol == element])
-                if num > 0:
-                    existing_elements += 1
-            if existing_elements < 2:
-                num_basis -= 1
-
-        if num_basis > 0:
-            return True
-        return False
-
-    def _change_element_type(self, atoms, cf, index=None, rplc_element=None):
+    def _change_element_type(self, atoms, index=None, rplc_element=None):
         """Change the type of element for the atom with a given index.
 
         If index and replacing element types are not specified, they are
         randomly generated.
         """
-        old = atoms.copy()
-        new = atoms.copy()
-        natoms = len(new)
+        natoms = len(atoms)
         # ------------------------------------------------------
         # Change the type of element for a given index if given.
         # If index not given, pick a random index
@@ -289,7 +279,7 @@ class ProbeStructure(object):
                 indx = choice(range(natoms))
             else:
                 indx = index
-            old_symbol = new[indx].symbol
+            old_symbol = atoms[indx].symbol
             # determine its basis
             for site in range(self.setting.num_basis):
                 if old_symbol in self.setting.basis_elements[site]:
@@ -298,135 +288,35 @@ class ProbeStructure(object):
             if rplc_element is None:
                 new_symbol = choice(self.setting.basis_elements[site])
                 if new_symbol != old_symbol:
-                    new[indx].symbol = new_symbol
-                    if self.setting.in_conc_matrix(new):
+                    atoms[indx].symbol = new_symbol
+                    if self.setting.in_conc_matrix(self._supercell2unitcell()):
                         break
-                    new[indx].symbol = old_symbol
+                    atoms[indx].symbol = old_symbol
             else:
                 new_symbol = rplc_element
-                new[indx].symbol = rplc_element
+                atoms[indx].symbol = rplc_element
                 break
 
-        return self._track_cf(old, new, cf, indx)
+        # find which index it should be in unit cell
+        unit_cell_indx = atoms[indx].tag
+        for grp_index in self.periodic_indices[unit_cell_indx]:
+            atoms[grp_index].symbol = atoms[indx].symbol
 
-    def _track_cf(self, old, new, cf, index):
-        """Track the changes of correlation function."""
-        # change size of the cell if needed (e.g., max_cluster_dia > min(lat))
-        # also, get the size ratios (multiplicaion factor for making supercell)
-        old_sc = self.corrFunc.check_and_convert_cell_size(old.copy())
-        new_sc, ratios = \
-            self.corrFunc.check_and_convert_cell_size(new.copy(), True)
-        scale = np.prod(ratios)
-        cf = np.copy(cf)
+    def _check_consistency(self):
+        # Check to see if the cf is indeed preserved
+        final_cf = self.corrFunc.get_cf_by_cluster_names(self.supercell, self.calc.cluster_names, return_type='array')
+        #for i, name in enumerate(self.calc.cluster_names):
+        #    print(abs(self.calc.cf[i]-final_cf[name]))
+        #print(final_cf)
+        #print(self.calc.cf)
+        if not np.allclose(final_cf, self.calc.cf):
+            msg = 'The correlation function changed after simulated annealing'
+            raise ValueError(msg)
 
-        # need to find the corresponding index in the supercell
-        pos = new[index].position
-        for i, atom in enumerate(new_sc):
-            if np.allclose(pos, atom.position):
-                index = i
-                break
-
-        # scan through each cluster name
-        for i, name in enumerate(self.cluster_names):
-            n = int(name[1])
-            if n == 0:
-                continue
-            # Find the type of cluster and its decoration numbers
-            prefix = name.rpartition('_')[0]
-            dec_str = name.rpartition('_')[-1]
-            dec = [int(x) for x in dec_str]
-            if n == 1:
-                cf[i] = self.corrFunc.get_c1(new_sc, int(dec_str))
-                continue
-
-            # Find which symmetry group the given atom (index) belongs to
-            for symm in range(self.setting.num_trans_symm):
-                if index in self.setting.index_by_trans_symm[symm]:
-                    sg = symm
-
-            # set name_indx and indices that compose a cluster
-            try:
-                name_indx = self.setting.cluster_names[sg][n].index(prefix)
-            # ValueError means that the cluster name (prefix) was not
-            # found in the symmetry group of the index --> this cluster is
-            # not altered.
-            except ValueError:
-                continue
-            indices = self.setting.cluster_indx[sg][n][name_indx]
-
-            # Get the total count
-            count = 0
-            for symm in range(self.setting.num_trans_symm):
-                try:
-                    nindx = self.setting.cluster_names[symm][n].index(prefix)
-                except ValueError:
-                    continue
-
-                clusters_per_atom = len(self.setting.cluster_indx[symm][n][nindx])
-                atoms_per_symm = len(self.setting.index_by_trans_symm[symm])
-                count += clusters_per_atom * atoms_per_symm
-
-            t_indices = self._translate_indx(index, indices)
-            cf_tot = cf[i] * count
-            cf_old = self._cf_by_indx(old_sc, index, t_indices, dec)
-            cf_new = self._cf_by_indx(new_sc, index, t_indices, dec)
-
-            # if there is only one symm equiv site, the changes can be just
-            # multiplied by *n*
-            if self.setting.num_trans_symm == 1:
-                sp = cf_tot + scale * n * (cf_new - cf_old)
-                cf[i] = sp / count
-            else:
-                sp = cf_tot + scale * (cf_new - cf_old)
-                # find the members of cluster
-                members = np.unique(t_indices)
-
-                for nindx in members:
-                    sg = None
-                    # only count correlation function of the clusters that
-                    # contain the changed atom
-                    for symm in range(self.setting.num_trans_symm):
-                        if nindx in self.setting.index_by_trans_symm[symm]:
-                            sg = symm
-                            break
-
-                    name_indx = self.setting.cluster_names[sg][n].index(prefix)
-                    indices = self.setting.cluster_indx[sg][n][name_indx]
-                    # tl = self._translate_indx(nindx, indices)
-                    # trans_list = tl[~np.all(tl != indx, axis=1)]
-                    t_indices = []
-                    for item in self._translate_indx(nindx, indices):
-                        if index in item:
-                            t_indices.append(item)
-
-                    cf_old = self._cf_by_indx(old_sc, nindx, t_indices, dec)
-                    cf_new = self._cf_by_indx(new_sc, nindx, t_indices, dec)
-                    sp += scale * (cf_new - cf_old)
-                cf[i] = sp / count
-
-        return new, cf
-
-    def _translate_indx(self, ref_indx, indx_list):
-        tlist = deepcopy(indx_list)
-        for i in range(len(indx_list)):
-            for j in range(len(indx_list[i])):
-                tlist[i][j] = self.trans_matrix[ref_indx][indx_list[i][j]]
-        return tlist
-
-    def _cf_by_indx(self, atoms, ref_indx, trans_indices, deco):
-        """Calculate spin product of the cluster that starts with ref_indx."""
-        bf = self.setting.basis_functions
-        sp = 0.
-        perm = list(permutations(deco, len(deco)))
-        perm = np.unique(perm, axis=0)
-        for dec in perm:
-            for indices in trans_indices:
-                sp_temp = bf[dec[0]][atoms[ref_indx].symbol]
-                for i, indx in enumerate(indices):
-                    sp_temp *= bf[dec[i + 1]][atoms[indx].symbol]
-                sp += sp_temp
-        sp /= len(perm)
-        return sp
+        for grp in self.periodic_indices:
+            ref_symbol = self.supercell[grp[0]].symbol
+            for indx in grp[1:]:
+                assert self.supercell[indx].symbol == ref_symbol
 
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""

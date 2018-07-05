@@ -160,12 +160,12 @@ class ClusterExpansion(Calculator):
         self.old_atoms = self.ref_atoms.copy()
         self.old_cf = deepcopy(self.ref_cf)
 
-    def restore(self):
+    def restore(self, atoms):
         """Restore the old atoms and correlation functions to the reference."""
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
-        self.atoms = self.old_atoms.copy()
         self.cf = deepcopy(self.old_cf)
+        atoms.numbers = self.old_atoms.numbers
 
     def update_energy(self):
         """Update correlation function and get new energy."""
@@ -188,6 +188,14 @@ class ClusterExpansion(Calculator):
 
         return np.unique(changed)
 
+    def get_cf_dict(self):
+        """Return the correlation functions as a dict"""
+        return dict(self.get_cf_list_tup())
+
+    def get_cf_list_tup(self):
+        """Return the correlation function as a list of tuples"""
+        return zip(self.cluster_names, self.cf)
+
     def _symbol_by_index(self, indx):
         return [self.ref_atoms[indx].symbol, self.atoms[indx].symbol]
 
@@ -201,6 +209,7 @@ class ClusterExpansion(Calculator):
         for indx in swapped_indices:
             new_symbs[indx] = self.atoms[indx].symbol
             self.atoms[indx].symbol = self.ref_atoms[indx].symbol
+            
         for indx in swapped_indices:
             # Swap one index at the time
             self.atoms[indx].symbol = new_symbs[indx]
@@ -255,7 +264,7 @@ class ClusterExpansion(Calculator):
                 cf_tot = self.cf[i] * count
                 cf_change = self._cf_change_by_indx(indx, t_indices, order,
                                                     equiv_sites, dec)
-                self.cf[i] = cf_tot + (n * cf_change)
+                self.cf[i] = (cf_tot + (n * cf_change)) / count
 
 
 
