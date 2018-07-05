@@ -281,11 +281,6 @@ class CorrFunction(object):
             count += count_temp
         return sp, count
 
-<<<<<<< HEAD
-    def _spin_product_one_ref_indx(self, ref_indx, atoms, indx_list, indx_order, \
-            eq_sites, deco):
-        """Compute the contribution from one reference index"""
-=======
     def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indx_list,
                                          indx_order, eq_sites, deco):
         """Compute sp of cluster with same shape and deco for given ref atom.
@@ -316,7 +311,6 @@ class CorrFunction(object):
             Decoration number that specifies which basis function should be
             used for getting the spin variable of each atom.
         """
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         count = 0
         sp = 0.0
         for cluster_indices, order in zip(indx_list, indx_order):
@@ -326,11 +320,6 @@ class CorrFunction(object):
             count += temp_cnt
         return sp, count
 
-<<<<<<< HEAD
-    def _spin_product_one_cluster(self, ref_indx, atoms, cluster_indices,
-                                  order, eq_sites, deco):
-        """Compute the spin product for one cluster category."""
-=======
     def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
                                   order, eq_sites, deco):
         """Compute spin product for one cluster (same shape, deco, ref_indx).
@@ -361,7 +350,6 @@ class CorrFunction(object):
             used for getting the spin variable of each atom.
         """
         print(self.setting.atoms[ref_indx].symbol)
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         bf = self.setting.basis_functions
         count = 0
         sp = 0.0
@@ -372,11 +360,7 @@ class CorrFunction(object):
         for dec in equiv_deco:
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
-<<<<<<< HEAD
-            for i, indx in enumerate(srt_indices):
-=======
             for i, indx in enumerate(sorted_indices):
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
                 trans_indx = self.setting.trans_matrix[ref_indx][indx]
                 sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
             sp += sp_temp

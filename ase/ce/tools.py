@@ -1,9 +1,5 @@
 import math
-<<<<<<< HEAD
-from itertools import combinations
-=======
 from itertools import permutations, combinations
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 import numpy as np
 from numpy.linalg import matrix_rank
 import collections
@@ -53,11 +49,7 @@ def reduce_matrix(matrix):
     return matrix
 
 def create_cluster(atoms, indices):
-<<<<<<< HEAD
-    """Create a cluster centered in the unitcell"""
-=======
     """Create a cluster centered in the unit cell."""
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
     cluster = atoms[list(indices)]
     cell = cluster.get_cell()
     center = 0.5 * (cell[0, :] + cell[1, :] + cell[2, :])

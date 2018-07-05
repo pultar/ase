@@ -9,18 +9,11 @@ from copy import deepcopy
 import numpy as np
 from scipy.spatial import cKDTree as KDTree
 from ase.db import connect
-<<<<<<< HEAD
-from ase.ce.tools import wrap_and_sort_by_position, index_by_position
-from ase.ce.tools import sort_by_internal_distances, create_cluster
-from ase.ce.tools import sorted_internal_angles, ndarray2list
-from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
-=======
 
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
 from ase.ce.tools import sort_by_internal_distances, create_cluster
 from ase.ce.tools import sorted_internal_angles, ndarray2list
 
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
 
 class ClusterExpansionSetting:
@@ -235,17 +228,6 @@ class ClusterExpansionSetting:
         for s in symbol:
             self.all_elements.remove(s)
 
-<<<<<<< HEAD
-        if self.grouped_basis is not None:
-            # reassign grouped_basis
-            for ref in sorted(basis, reverse=True):
-                for i, group in enumerate(self.grouped_basis):
-                    for j, element in enumerate(group):
-                        if element > ref:
-                            self.grouped_basis[i][j] -= 1
-
-        return symbol
-=======
         if self.grouped_basis is None:
             return list(set(symbol))
 
@@ -256,7 +238,6 @@ class ClusterExpansionSetting:
                     if element > ref:
                         self.grouped_basis[i][j] -= 1
         return list(set(symbol))
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
     def _check_basis_elements(self):
         error = False
@@ -747,10 +728,6 @@ class ClusterExpansionSetting:
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
-<<<<<<< HEAD
-
-=======
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         self.cluster_names, self.cluster_dist, self.cluster_indx, \
         self.cluster_order, self.cluster_eq_sites = \
             self._get_cluster_information()
@@ -769,13 +746,7 @@ class ClusterExpansionSetting:
                 'full_cluster_names': self.full_cluster_names,
                 'unique_cluster_names': self.unique_cluster_names}
 
-<<<<<<< HEAD
-        db.write(self.atoms,
-                 name='information',
-                 data=data)
-=======
         db.write(self.atoms, name='information', data=data)
->>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
     def _read_data(self):
         db = connect(self.db_name)
