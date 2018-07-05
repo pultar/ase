@@ -109,7 +109,7 @@ def test_interaction_contribution_symmetric_clusters():
                 sp, count = cf._spin_product_one_ref_indx(
                     0, atoms, cluster, orders, equiv_sites, deco[size])
                 sp /= count
-                assert abs(sp - ref_sp) < 1E-4
+                assert abs(sp - ref_sp) < 1E-8
 
 
 test_trans_matrix()
