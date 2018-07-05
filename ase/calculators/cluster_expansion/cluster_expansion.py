@@ -7,6 +7,12 @@ from ase.utils import basestring
 from ase.atoms import Atoms
 from ase.calculators.calculator import Calculator
 from ase.ce import CorrFunction, BulkCrystal, BulkSpacegroup
+from ase.ce.tools import wrap_and_sort_by_position
+
+
+class MovedIgnoredAtomError(Exception):
+    """Raised when ignored atoms is moved."""
+    pass
 
 
 class ClusterExpansion(Calculator):
@@ -14,9 +20,7 @@ class ClusterExpansion(Calculator):
 
     Arguments
     =========
-    setting: object that contains CE setting (e.g., BulkCrystal)
-
-    init_atoms: Atoms object containing the initial structure
+    setting: BulkCrystal or BulkSapcegroup object
 
     cluster_name_eci: dictionary of list of tuples containing
                       cluster names and ECI
@@ -36,15 +40,15 @@ class ClusterExpansion(Calculator):
         Calculator.__init__(self)
 
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
-                            "object")
+            msg = "setting must be BulkCrystal or BulkSpacegroup object."
+            raise TypeError(msg)
         self.setting = setting
         self.CF = CorrFunction(setting)
 
         # check cluster_name_eci and separate them out
         if isinstance(cluster_name_eci, list) and \
-           (all(isinstance(i, tuple) for i in cluster_name_eci) or
-            all(isinstance(i, list) for i in cluster_name_eci)):
+           (all(isinstance(i, tuple) for i in cluster_name_eci)
+                or all(isinstance(i, list) for i in cluster_name_eci)):
             self.cluster_names = [tup[0] for tup in cluster_name_eci]
             self.eci = np.array([tup[1] for tup in cluster_name_eci])
         elif isinstance(cluster_name_eci, dict):
@@ -55,10 +59,10 @@ class ClusterExpansion(Calculator):
                 self.eci.append(eci)
             self.eci = np.array(self.eci)
         else:
-            raise TypeError("'cluster_name_eci' needs to be either (1) a list "
-                            "of tuples or (2) a dictionary. They can be "
-                            "retrieved by 'get_cluster_name_eci' method in "
-                            "Evaluate class")
+            msg = "'cluster_name_eci' needs to be either (1) a list of tuples "
+            msg += "or (2) a dictionary.\n They can be etrieved by "
+            msg += "'get_cluster_name_eci' method in Evaluate class."
+            raise TypeError(msg)
 
         # calculate init_cf or convert init_cf to array
         if init_cf is None:
@@ -109,6 +113,25 @@ class ClusterExpansion(Calculator):
         self.old_atoms = None
         self.old_cf = None
 
+    def set_atoms(self, atoms):
+        self.atoms = atoms.copy()
+        if self.cf is None:
+            self.cf = self.CF.get_cf_by_cluster_names(self.atoms,
+                                                      self.cluster_names,
+                                                      return_type='array')
+        self._copy_current_to_ref()
+        self._copy_current_to_old()
+
+        if len(self.setting.atoms) != len(atoms):
+            msg = "Passed Atoms object and setting.atoms should have "
+            msg += "same number of atoms."
+            raise ValueError(msg)
+        if not np.allclose(atoms.positions, self.setting.atoms.positions):
+            msg = "atomic positions of all atoms in the passed Atoms "
+            msg += "object and setting.atoms should be the same. "
+            raise ValueError(msg)
+
+
     def calculate(self, atoms, properties, system_changes):
         """Calculate the energy of the passed atoms object.
 
@@ -116,16 +139,12 @@ class ClusterExpansion(Calculator):
         reference structure to calculate the energy of the passed atoms.
         Returns energy.
         """
-        self._check_atoms(atoms)
+        atoms = self._check_atoms(atoms)
         Calculator.calculate(self, atoms)
         self.update_energy()
         self.results['energy'] = self.energy
         self.log()
-        if self.old_atoms is None:
-            # first calculation
-            self._copy_current_to_old()
-        else:
-            self._copy_ref_to_old()
+        self._copy_ref_to_old()
         self._copy_current_to_ref()
 
         return self.energy
@@ -143,31 +162,31 @@ class ClusterExpansion(Calculator):
         self.old_cf = deepcopy(self.ref_cf)
 
     def restore(self):
-        """Restore the old atoms and correlation functions to the reference"""
+        """Restore the old atoms and correlation functions to the reference."""
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
+        self.atoms = self.old_atoms.copy()
+        self.cf = deepcopy(self.old_cf)
 
     def update_energy(self):
         """Update correlation function and get new energy."""
-        # this is the first run
-        if self.ref_atoms is None:
-            if self.cf is None:
-                self.cf = self.CF.get_cf_by_cluster_names(self.atoms,
-                                                          self.cluster_names,
-                                                          return_type='array')
-        else:
-            self.update_cf()
-
+        self.update_cf()
         self.energy = self.eci.dot(self.cf) * len(self.atoms)
         return self.energy
 
     @property
     def indices_of_changed_atoms(self):
-        """Returns the indices of atoms that have been changed."""
+        """Return the indices of atoms that have been changed."""
         o_numbers = self.ref_atoms.numbers
         n_numbers = self.atoms.numbers
         check = (n_numbers == o_numbers)
         changed = np.argwhere(check == 0)[:, 0]
+        changed = np.unique(changed)
+        for index in changed:
+            if self.atoms[index].symbol in self.setting.background_symbol:
+                raise MovedIgnoredAtomError("Atom with index {} ".format(index)
+                                            + "is a background atom.")
+
         return np.unique(changed)
 
     def _symbol_by_index(self, indx):
@@ -176,6 +195,7 @@ class ClusterExpansion(Calculator):
     def update_cf(self):
         """Update correlation function based on the reference value."""
         swapped_indices = self.indices_of_changed_atoms
+        print("swapped: {}".format(swapped_indices))
         self.cf = deepcopy(self.ref_cf)
 
         for indx in swapped_indices:
@@ -249,16 +269,19 @@ class ClusterExpansion(Calculator):
                             if indx in item:
                                 t_indices.append(item)
 
-                        cf_change = self._cf_change_by_indx(nindx, t_indices, dec)
+                        cf_change = self._cf_change_by_indx(nindx, t_indices,
+                                                            dec)
                         self.cf[i] += cf_change
                 self.cf[i] = self.cf[i] / count
         return True
 
     def _cf_change_by_indx(self, ref_indx, trans_list, deco):
-        """
-        Calculates the change in correlation function due to change in element
-        type for atom with index = ref_indx. Passed trans_list refers to the
-        indices of atoms that constitute the cluster (after translation).
+        """Calculate the change in correlation function based on atomic index.
+
+        This method tracks changes in correaltion function due to change in
+        element type for atom with index = ref_indx. Passed trans_list refers
+        to the indices of atoms that constitute the cluster
+        (after translation).
         """
         symbol = self._symbol_by_index(ref_indx)
         b_f = self.setting.basis_functions
@@ -279,32 +302,35 @@ class ClusterExpansion(Calculator):
         tlist = deepcopy(indx_list)
         for i in range(len(indx_list)):
             for j in range(len(indx_list[i])):
+<<<<<<< HEAD
                 tlist[i][j] = self.setting.trans_matrix[ref_indx][indx_list[i][j]]
+=======
+                tlist[i][j] = self.setting.trans_matrix[ref_indx,
+                                                        indx_list[i][j]]
+>>>>>>> CE_calc
         return tlist
 
     def _check_atoms(self, atoms):
-        """Check to see if the passed atoms argument is Atoms object with
-        the same number of atoms and positions as the previous one."""
+        """Check to see if the passed atoms argument valid.
+
+        This method checks that:
+            - atoms argument is Atoms object,
+            - atoms has the same size and atomic positions as
+                (1) setting.atoms,
+                (2) reference Atoms object.
+        """
         if not isinstance(atoms, Atoms):
             raise TypeError('Passed argument is not Atoms object')
-        if self.old_atoms is None:
-            if self.setting.in_conc_matrix(atoms):
-                self.atoms = self.CF.check_and_convert_cell_size(atoms)
-            else:
-                raise ValueError("Provides atoms object does not seem valid "
-                                 "based on concentration matrix. Please check "
-                                 "that the passed atoms and setting are "
-                                 "consistent.")
-        else:
-            if len(self.ref_atoms) != len(atoms):
-                raise ValueError('Passed atoms does not have the same size '
-                                 'as previous atoms')
-            elif not np.allclose(self.ref_atoms.positions, atoms.positions):
-                raise ValueError('Atomic postions of the passed atoms are '
-                                 'different from init_atoms')
+        if len(self.ref_atoms) != len(atoms):
+            raise ValueError('Passed atoms does not have the same size '
+                             'as previous atoms')
+        if not np.allclose(self.ref_atoms.positions, atoms.positions):
+            raise ValueError('Atomic postions of the passed atoms are '
+                             'different from init_atoms')
+        return atoms
 
     def log(self):
-        """Write energy to log file"""
+        """Write energy to log file."""
         if self.logfile is None:
             return True
         self.logfile.write('{}\n'.format(self.energy))

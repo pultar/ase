@@ -26,8 +26,9 @@ class ClusterExpansionSetting:
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
+        self.background_symbol = []
         if ignore_background_atoms:
-            self.background_symbol = self._remove_background_basis()
+            self.background_symbol = self._get_background_symbol()
 
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
@@ -163,11 +164,18 @@ class ClusterExpansionSetting:
         tol = 1E-4
         return min(lengths) / 2 - tol
 
-    def _remove_background_basis(self):
+
+    def _get_background_symbol(self):
+        """Get symbol of the background atoms.
+
+        This method also modifies grouped_basis, conc_args, num_basis, basis,
+        and all_elements attributes to reflect the changes from ignoring the
+        background atoms.
+        """
         # check if any basis consists of only one element type
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
         if not basis:
-            return None
+            return []
 
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
@@ -203,15 +211,16 @@ class ClusterExpansionSetting:
         for s in symbol:
             self.all_elements.remove(s)
 
-        if self.grouped_basis is not None:
-            # reassign grouped_basis
-            for ref in sorted(basis, reverse=True):
-                for i, group in enumerate(self.grouped_basis):
-                    for j, element in enumerate(group):
-                        if element > ref:
-                            self.grouped_basis[i][j] -= 1
+        if self.grouped_basis is None:
+            return list(set(symbol))
 
-        return symbol
+        # reassign grouped_basis if they are grouped
+        for ref in sorted(basis, reverse=True):
+            for i, group in enumerate(self.grouped_basis):
+                for j, element in enumerate(group):
+                    if element > ref:
+                        self.grouped_basis[i][j] -= 1
+        return list(set(symbol))
 
     def _check_basis_elements(self):
         error = False
