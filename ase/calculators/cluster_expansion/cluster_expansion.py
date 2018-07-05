@@ -302,12 +302,7 @@ class ClusterExpansion(Calculator):
         tlist = deepcopy(indx_list)
         for i in range(len(indx_list)):
             for j in range(len(indx_list[i])):
-<<<<<<< HEAD
                 tlist[i][j] = self.setting.trans_matrix[ref_indx][indx_list[i][j]]
-=======
-                tlist[i][j] = self.setting.trans_matrix[ref_indx,
-                                                        indx_list[i][j]]
->>>>>>> CE_calc
         return tlist
 
     def _check_atoms(self, atoms):
