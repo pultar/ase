@@ -61,7 +61,6 @@ class CorrFunction(object):
         # ----------------------------------------------------
         # loop though all cluster sizes
         for n in range(self.setting.max_cluster_size + 1):
-            #comb = list(combinations_with_replacement(bf_list, r=n))
             comb = list(product(bf_list, repeat=n))
             if n == 0:
                 cf['c0'] = 1.
@@ -83,13 +82,13 @@ class CorrFunction(object):
                     for symm in range(self.num_trans_symm):
                         name_list = self.setting.cluster_names[symm][n]
                         try:
-                            name_indx = name_list.index(unique_name)
+                            n_indx = name_list.index(unique_name)
                         except ValueError:
                             continue
 
-                        indices = self.setting.cluster_indx[symm][n][name_indx]
-                        indx_order = self.setting.cluster_order[symm][n][name_indx]
-                        eq_sites = self.setting.cluster_eq_sites[symm][n][name_indx]
+                        indices = self.setting.cluster_indx[symm][n][n_indx]
+                        indx_order = self.setting.cluster_order[symm][n][n_indx]
+                        eq_sites = self.setting.cluster_eq_sites[symm][n][n_indx]
 
                         # Get decoration number as a string
                         dec_str = dec_string(dec, eq_sites)
@@ -143,8 +142,6 @@ class CorrFunction(object):
             atoms = self.check_and_convert_cell_size(atoms.copy())
         else:
             raise TypeError('atoms must be Atoms object')
-        # natoms = len(atoms)
-        # bf_list = list(range(len(self.setting.basis_functions)))
         cf = {}
 
         for name in cluster_names:
@@ -239,45 +236,147 @@ class CorrFunction(object):
             count += 1
             print('updated {} of {} entries'.format(count, num_reconf))
 
-    def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group, deco):
+    def _spin_product(self, atoms, indx_list, indx_order, eq_sites, symm_group,
+                      deco):
+        """Get spin product of a given cluster.
+
+        Arguments
+        =========
+        atoms: Atoms object
+
+        indx_list: list
+            A nested list where indices of the atoms that consistute a cluster
+            are grouped together.
+
+        indx_order: list
+            A nested list of how the indices in "indx_list" should be ordered.
+            The indices of atoms are sorted in a decrease order of internal
+            distances to other members of the cluster.
+
+        eq_sites: list
+            A nested list that groups the equivalent atoms in a cluster. Atoms
+            are classified as equivalent when they are inditinguishable based
+            on the geometry of the cluster
+            (e.g., equilateral triangles have 3 indistinguishable points.)
+
+        symm_group: int
+            The number that indicates which translational symmetry group that
+            the reference atom in the cluster belongs to.
+
+        deco: tuple
+            Decoration number that specifies which basis function should be
+            used for getting the spin variable of each atom.
+        """
         sp = 0.
         count = 0
 
         # spin product of each atom in the symmetry equivalent group
         indices_of_symm_group = self.index_by_trans_symm[symm_group]
         for ref_indx in indices_of_symm_group:
-            sp_temp, count_temp = self._spin_product_one_ref_indx(
-                ref_indx, atoms, indx_list, indx_order, eq_sites, deco)
+            sp_temp, count_temp = \
+                self._sp_same_shape_deco_for_ref_indx(atoms, ref_indx,
+                                                      indx_list, indx_order,
+                                                      eq_sites, deco)
             sp += sp_temp
             count += count_temp
         return sp, count
 
+<<<<<<< HEAD
     def _spin_product_one_ref_indx(self, ref_indx, atoms, indx_list, indx_order, \
             eq_sites, deco):
         """Compute the contribution from one reference index"""
+=======
+    def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indx_list,
+                                         indx_order, eq_sites, deco):
+        """Compute sp of cluster with same shape and deco for given ref atom.
+
+        Arguments
+        =========
+        atoms: Atoms object
+
+        ref_indx: int
+            Index of the atom used as a reference to get clusters.
+
+        indx_list: list
+            A nested list where indices of the atoms that consistute a cluster
+            are grouped together.
+
+        indx_order: list
+            A nested list of how the indices in "indx_list" should be ordered.
+            The indices of atoms are sorted in a decrease order of internal
+            distances to other members of the cluster.
+
+        eq_sites: list
+            A nested list that groups the equivalent atoms in a cluster. Atoms
+            are classified as equivalent when they are inditinguishable based
+            on the geometry of the cluster
+            (e.g., equilateral triangles have 3 indistinguishable points.)
+
+        deco: tuple
+            Decoration number that specifies which basis function should be
+            used for getting the spin variable of each atom.
+        """
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         count = 0
         sp = 0.0
         for cluster_indices, order in zip(indx_list, indx_order):
             temp_sp, temp_cnt = self._spin_product_one_cluster(
-                ref_indx, atoms, cluster_indices, order, eq_sites, deco)
+                atoms, ref_indx, cluster_indices, order, eq_sites, deco)
             sp += temp_sp
             count += temp_cnt
         return sp, count
 
+<<<<<<< HEAD
     def _spin_product_one_cluster(self, ref_indx, atoms, cluster_indices,
                                   order, eq_sites, deco):
         """Compute the spin product for one cluster category."""
+=======
+    def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
+                                  order, eq_sites, deco):
+        """Compute spin product for one cluster (same shape, deco, ref_indx).
+
+        Arguments
+        =========
+        atoms: Atoms object
+
+        ref_indx: int
+            Index of the atom used as a reference to get clusters.
+
+        cluster_indices: list
+            A list where indices of the atoms that consistute a cluster.
+
+        order: list
+            A list of how the indices in "cluster_indices" should be ordered.
+            The indices of atoms are sorted in a decrease order of internal
+            distances to other members of the cluster.
+
+        eq_sites: list
+            A list that groups the equivalent atoms in a cluster. Atoms are
+            classified as equivalent when they are inditinguishable based on
+            the geometry of the cluster.
+            (e.g., equilateral triangles have 3 indistinguishable points.)
+
+        deco: tuple
+            Decoration number that specifies which basis function should be
+            used for getting the spin variable of each atom.
+        """
+        print(self.setting.atoms[ref_indx].symbol)
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         bf = self.setting.basis_functions
         count = 0
         sp = 0.0
-        indices = [0] + cluster_indices
-        srt_indices = [indices[indx] for indx in order]
+        indices = [0] + cluster_indices  # prepend [0] to include ref_indx
+        sorted_indices = [indices[indx] for indx in order]
         # Average over decoration numbers of equivalent sites
         equiv_deco = equivalent_deco(deco, eq_sites)
         for dec in equiv_deco:
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
+<<<<<<< HEAD
             for i, indx in enumerate(srt_indices):
+=======
+            for i, indx in enumerate(sorted_indices):
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
                 trans_indx = self.setting.trans_matrix[ref_indx][indx]
                 sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
             sp += sp_temp
@@ -319,15 +418,13 @@ class CorrFunction(object):
 
 
 def dec_string(deco, equiv_sites):
-    """Create the decoration string based on equiv sites"""
+    """Create the decoration string based on equiv sites."""
     equiv_dec = sorted(equivalent_deco(deco, equiv_sites))
     return ''.join(str(i) for i in equiv_dec[0])
 
 
 def equivalent_deco(deco, equiv_sites):
-    """Generates equivalent decoration numbers based on the
-    equivalent sites"""
-
+    """Generate equivalent decoration numbers based on equivalent sites."""
     if not equiv_sites:
         return [deco]
 

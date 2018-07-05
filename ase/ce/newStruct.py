@@ -12,6 +12,11 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
 from ase.db import connect
 
+class MaxAttemptReachedError(Exception):
+    """Raised when number of try reaches 10."""
+    pass
+
+max_attempt = 10
 
 class GenerateStructures(object):
     """Generate new structure in Atoms object format.
@@ -99,6 +104,7 @@ class GenerateStructures(object):
                 self._generate_sigma_mu(num_samples_var)
 
         print("Generate {} probe structures.".format(self.struct_per_gen))
+        num_attempt = 0
         while True:
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
@@ -129,7 +135,11 @@ class GenerateStructures(object):
             if self._exists_in_db(atoms, conc[0], conc[1]):
                 print('generated structure is already in DB.')
                 print('generating again...')
+                num_attempt += 1
                 continue
+            else:
+                num_attempt = 0
+
             # convert cf array to dictionary
             cf = {}
             for i, name in enumerate(self.setting.full_cluster_names):
@@ -137,6 +147,10 @@ class GenerateStructures(object):
 
             kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
             self.db.write(atoms, kvp)
+
+            if num_attempt >= max_attempt:
+                msg = "Could not generate probe structure in 10 attempts."
+                raise MaxAttemptReachedError(msg)
 
     def generate_initial_pool(self):
         """Generate initial pool of random structures.
@@ -199,6 +213,7 @@ class GenerateStructures(object):
             num_conc1 = self.conc_matrix.shape[0]
             conc1_opt = range(num_conc1)
             x = 0
+            num_attempt = 0
             while x < self.struct_per_gen:
                 a = random.choice(conc1_opt)
                 conc1 = float(a) / max(num_conc1 - 1, 1)
@@ -206,11 +221,17 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
+                num_attempt += 1
                 if not self._exists_in_db(atoms, conc1):
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, conc1)
                     self.db.write(atoms, kvp)
                     x += 1
+                    num_attempt = 0
+                if num_attempt >= max_attempt:
+                    msg = "Could not find initial structure in 10 attempts."
+                    raise MaxAttemptReachedError(msg)
+
 
         # Case 4: 2 conc variable, user specified number of structures
         else:
@@ -218,6 +239,7 @@ class GenerateStructures(object):
             conc1_opt = range(num_conc1)
             conc2_opt = range(num_conc2)
             x = 0
+            num_attempt = 0
             while x < self.struct_per_gen:
                 a = [random.choice(conc1_opt), random.choice(conc2_opt)]
                 conc1 = float(a[0]) / max(num_conc1 - 1, 1)
@@ -227,11 +249,16 @@ class GenerateStructures(object):
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
+                num_attempt += 1
                 if not self._exists_in_db(atoms, conc1, conc2):
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, conc1, conc2)
                     self.db.write(atoms, kvp)
                     x += 1
+                    num_attempt = 0
+                if num_attempt >= max_attempt:
+                    msg = "Could not find initial structure in 10 attempts."
+                    raise MaxAttemptReachedError(msg)
 
     def insert_structure(self, init_struct=None, final_struct=None, name=None):
         """Insert a user-supplied structure to the database.
@@ -395,6 +422,7 @@ class GenerateStructures(object):
 
     def _get_random_conc(self):
         """Pick a random concentration value."""
+        num_attempt = 0
         while True:
             if self.setting.num_conc_var == 1:
                 conc_index = [random.choice(range(self.conc_matrix.shape[0])),
@@ -408,6 +436,11 @@ class GenerateStructures(object):
             # loop until no atom has a negative number count
             if min(conc_ratio) >= 0:
                 break
+            num_attempt += 1
+            if num_attempt >= max_attempt:
+                msg = "Could not find random concentration."
+                raise MaxAttemptReachedError(msg)
+
 
         conc_value = [None, None]
         for i, index in enumerate(conc_index):
@@ -444,6 +477,7 @@ class GenerateStructures(object):
             return None
 
         in_DB = True
+        num_attempt = 0
         while in_DB:
             atoms = self.atoms.copy()
             for site in range(num_basis):
@@ -467,6 +501,11 @@ class GenerateStructures(object):
             if in_DB and np.count_nonzero(flat_conc_ratio) == 1:
                 atoms = None
                 in_DB = False
+
+            num_attempt += 1
+            if num_attempt >= max_attempt:
+                msg = "Could not find random structure at given concentration."
+                raise MaxAttemptReachedError(msg)
 
         return atoms
 

@@ -1,7 +1,7 @@
 from ase.ce.settings_bulk import BulkCrystal, BulkSpacegroup
 from ase.ce.evaluate import Evaluate
 from ase.ce.corrFunc import CorrFunction
-from ase.ce.newStruct import GenerateStructures
+from ase.ce.newStruct import GenerateStructures, MaxAttemptReachedError
 from ase.ce.structure_comparator import SymmetryEquivalenceCheck
 
 

@@ -9,10 +9,18 @@ from copy import deepcopy
 import numpy as np
 from scipy.spatial import cKDTree as KDTree
 from ase.db import connect
+<<<<<<< HEAD
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position
 from ase.ce.tools import sort_by_internal_distances, create_cluster
 from ase.ce.tools import sorted_internal_angles, ndarray2list
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
+=======
+
+from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
+from ase.ce.tools import sort_by_internal_distances, create_cluster
+from ase.ce.tools import sorted_internal_angles, ndarray2list
+
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
 
 class ClusterExpansionSetting:
@@ -29,8 +37,9 @@ class ClusterExpansionSetting:
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
+        self.background_symbol = []
         if ignore_background_atoms:
-            self.background_symbol = self._remove_background_basis()
+            self.background_symbol = self._get_background_symbol()
 
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
@@ -179,11 +188,17 @@ class ClusterExpansionSetting:
         tol = 1E-4
         return min(lengths) / 2 - tol
 
-    def _remove_background_basis(self):
+    def _get_background_symbol(self):
+        """Get symbol of the background atoms.
+
+        This method also modifies grouped_basis, conc_args, num_basis, basis,
+        and all_elements attributes to reflect the changes from ignoring the
+        background atoms.
+        """
         # check if any basis consists of only one element type
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
         if not basis:
-            return None
+            return []
 
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
@@ -220,6 +235,7 @@ class ClusterExpansionSetting:
         for s in symbol:
             self.all_elements.remove(s)
 
+<<<<<<< HEAD
         if self.grouped_basis is not None:
             # reassign grouped_basis
             for ref in sorted(basis, reverse=True):
@@ -229,6 +245,18 @@ class ClusterExpansionSetting:
                             self.grouped_basis[i][j] -= 1
 
         return symbol
+=======
+        if self.grouped_basis is None:
+            return list(set(symbol))
+
+        # reassign grouped_basis if they are grouped
+        for ref in sorted(basis, reverse=True):
+            for i, group in enumerate(self.grouped_basis):
+                for j, element in enumerate(group):
+                    if element > ref:
+                        self.grouped_basis[i][j] -= 1
+        return list(set(symbol))
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
     def _check_basis_elements(self):
         error = False
@@ -509,11 +537,14 @@ class ClusterExpansionSetting:
                     if max(d) > self.max_cluster_dist[size]:
                         continue
                     d_list = sorted(d.tolist(), reverse=True)
-                    internal_angles = sorted_internal_angles(create_cluster(self.atoms, (ref_indx,) + k))
+                    internal_angles = \
+                        sorted_internal_angles(create_cluster(self.atoms,
+                                                              (ref_indx,) + k))
                     d_list += internal_angles
                     dist_set.append(d_list)
 
-                    order, eq_sites = sort_by_internal_distances(self.atoms, (ref_indx,) + k)
+                    order, eq_sites = \
+                        sort_by_internal_distances(self.atoms, (ref_indx,) + k)
                     indx_set.append(k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
@@ -584,7 +615,8 @@ class ClusterExpansionSetting:
                     names.append(unique_names[indx])
                 cluster_names[basis].append(names)
 
-        return cluster_names, cluster_dist, cluster_indx, cluster_order, cluster_eq_sites
+        return cluster_names, cluster_dist, cluster_indx, cluster_order, \
+            cluster_eq_sites
 
     def _create_translation_matrix(self):
         """Create and return translation matrix.
@@ -715,7 +747,10 @@ class ClusterExpansionSetting:
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
         self.cluster_names, self.cluster_dist, self.cluster_indx, \
         self.cluster_order, self.cluster_eq_sites = \
             self._get_cluster_information()
@@ -734,9 +769,13 @@ class ClusterExpansionSetting:
                 'full_cluster_names': self.full_cluster_names,
                 'unique_cluster_names': self.unique_cluster_names}
 
+<<<<<<< HEAD
         db.write(self.atoms,
                  name='information',
                  data=data)
+=======
+        db.write(self.atoms, name='information', data=data)
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 
     def _read_data(self):
         db = connect(self.db_name)
@@ -858,14 +897,11 @@ class ClusterExpansionSetting:
             if equiv:
                 for group in equiv:
                     for i in range(1, len(group)):
-                        atoms[keep_indx[group[i]]].tag   = atoms[keep_indx[group[0]]].tag
+                        atoms[keep_indx[group[i]]].tag = \
+                            atoms[keep_indx[group[0]]].tag
 
             ref_pos = atoms[ref_indx].position
 
-            #del atoms[[a.index for a in atoms if a.index not in keep_indx]]
-            #atoms.translate(center - ref_pos)
-            #atoms.wrap()
-            #atoms.center()
             if len(keep_indx) >= 2:
                 atoms = create_cluster(atoms, keep_indx)
             else:
@@ -927,6 +963,7 @@ class ClusterExpansionSetting:
 
     def _check_equiv_sites(self):
         """Check that the equivalent sites array is valid"""
+
         for cluster_same_symm in self.cluster_eq_sites:
             for cluster_same_size in cluster_same_symm:
                 for cluster_cat in cluster_same_size:
@@ -937,16 +974,16 @@ class ClusterExpansionSetting:
                         continue
 
                     # Flatten the list of categories
-                    flattened = []
+                    flat = []
                     for equiv in cluster_cat:
-                        flattened += equiv
-                    flattened.sort()
-                    flattened_unique = list(set(flattened))
-                    flattened_unique.sort()
+                        flat += equiv
+                    flat.sort()
+                    flat_unique = list(set(flat))
+                    flat_unique.sort()
 
-                    if flattened != flattened_unique:
-                        msg = "The same site has been put in the multiple\n"
-                        msg += "buckets. This is a bug and should never happen\n"
-                        msg += "Equiv. sites list {}\n".format(flattened)
-                        msg += "Equiv. sites list unique {}".format(flattened_unique)
+                    if flat != flat_unique:
+                        msg = "Same site are in multiple equivalent groups.\n"
+                        msg += "This is should never happen.\n"
+                        msg += "Equiv sites list {}\n".format(flat)
+                        msg += "Equiv sites list unique {}".format(flat_unique)
                         raise ValueError(msg)

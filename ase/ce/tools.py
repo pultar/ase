@@ -1,5 +1,9 @@
 import math
+<<<<<<< HEAD
 from itertools import combinations
+=======
+from itertools import permutations, combinations
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
 import numpy as np
 from numpy.linalg import matrix_rank
 import collections
@@ -30,7 +34,7 @@ def wrap_and_sort_by_position(atoms):
 
 
 def nCr(n, r):
-    """Compute and return combination"""
+    """Compute and return combination."""
     f = math.factorial
     return f(n) / f(r) / f(n - r)
 
@@ -49,7 +53,11 @@ def reduce_matrix(matrix):
     return matrix
 
 def create_cluster(atoms, indices):
+<<<<<<< HEAD
     """Create a cluster centered in the unitcell"""
+=======
+    """Create a cluster centered in the unit cell."""
+>>>>>>> 1c9683420b0c756b616aeef868e307c585429e2e
     cluster = atoms[list(indices)]
     cell = cluster.get_cell()
     center = 0.5 * (cell[0, :] + cell[1, :] + cell[2, :])
@@ -86,8 +94,7 @@ def shift(array):
 
 
 def sorted_internal_angles(atoms, mic=False):
-    """Get sorted internal angles of a
-    """
+    """Get sorted internal angles of a"""
     if len(atoms) <= 2:
         return [0]
 
@@ -114,7 +121,7 @@ def sorted_internal_angles(atoms, mic=False):
 
 
 def sort_by_internal_distances(atoms, indices):
-    """Sort the indices according to the distance to the other elements"""
+    """Sort the indices according to the distance to the other elements."""
     if len(indices) <= 1:
         return list(range(len(indices))), []
     elif len(indices) == 2:
