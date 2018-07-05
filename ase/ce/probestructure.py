@@ -133,9 +133,11 @@ class ProbeStructure(object):
                     n_mv = mean_variance_approx(n_cfm)
                 else:
                     n_mv = mean_variance(n_cfm, self.sigma, self.mu)
-                accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
+                if o_mv > n_mv:
+                    accept = True
+                else:
+                    accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
-                # print(count, accept)
                 if accept:
                     old = new.copy()
                     o_cf = np.copy(n_cf)
