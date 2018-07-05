@@ -133,9 +133,11 @@ class ProbeStructure(object):
                     n_mv = mean_variance_approx(n_cfm)
                 else:
                     n_mv = mean_variance(n_cfm, self.sigma, self.mu)
-                accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
+                if o_mv > n_mv:
+                    accept = True
+                else:
+                    accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
                 count += 1
-                # print(count, accept)
                 if accept:
                     old = new.copy()
                     o_cf = np.copy(n_cf)
@@ -408,7 +410,7 @@ class ProbeStructure(object):
         tlist = deepcopy(indx_list)
         for i in range(len(indx_list)):
             for j in range(len(indx_list[i])):
-                tlist[i][j] = self.trans_matrix[ref_indx, indx_list[i][j]]
+                tlist[i][j] = self.trans_matrix[ref_indx][indx_list[i][j]]
         return tlist
 
     def _cf_by_indx(self, atoms, ref_indx, trans_indices, deco):

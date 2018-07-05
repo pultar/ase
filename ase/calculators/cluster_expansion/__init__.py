@@ -1,3 +1,3 @@
-from .cluster_expansion import ClusterExpansion
+from .cluster_expansion import ClusterExpansion, MovedIgnoredAtomError
 
-__all__ = ['ClusterExpansion']
+__all__ = ['ClusterExpansion', 'MovedIgnoredAtomError']
