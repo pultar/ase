@@ -138,7 +138,7 @@ class ClusterExpansion(Calculator):
         reference structure to calculate the energy of the passed atoms.
         Returns energy.
         """
-        atoms = self._check_atoms(atoms)
+        self._check_atoms(atoms)
         Calculator.calculate(self, atoms)
         self.update_energy()
         self.results['energy'] = self.energy
@@ -194,7 +194,7 @@ class ClusterExpansion(Calculator):
     def update_cf(self):
         """Update correlation function based on the reference value."""
         swapped_indices = self.indices_of_changed_atoms
-        print("swapped: {}".format(swapped_indices))
+        # print("swapped: {}".format(swapped_indices))
         self.cf = deepcopy(self.ref_cf)
         new_symbs = {}
         # Reset the atoms object
@@ -240,7 +240,8 @@ class ClusterExpansion(Calculator):
                 count = 0
                 for symm in range(self.setting.num_trans_symm):
                     try:
-                        nindx = self.setting.cluster_names[symm][n].index(prefix)
+                        nindx = \
+                            self.setting.cluster_names[symm][n].index(prefix)
                     except ValueError:
                         continue
 
@@ -288,7 +289,7 @@ class ClusterExpansion(Calculator):
                                                             dec)
                         self.cf[i] += cf_change
                 self.cf[i] = self.cf[i] / count
-        return True
+            # self.ref_atoms[indx].symbol = new_symbs[indx]
 
 
     def _cf_change_by_indx(self, ref_indx, trans_list, indx_order, eq_sites,
@@ -346,7 +347,6 @@ class ClusterExpansion(Calculator):
         if not np.allclose(self.ref_atoms.positions, atoms.positions):
             raise ValueError('Atomic postions of the passed atoms are '
                              'different from init_atoms')
-        return atoms
 
     def log(self):
         """Write energy to log file."""
