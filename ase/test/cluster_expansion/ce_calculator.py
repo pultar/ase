@@ -140,6 +140,7 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
 
 
 db_name = 'CE_calc_test.db'
+
 print('binary')
 bin_setting, bin_atoms = get_binary()
 test_update_correlation_functions(bin_setting, bin_atoms, n_trial_configs=5)

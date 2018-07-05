@@ -258,7 +258,8 @@ class ClusterExpansion(Calculator):
 
                 # if there is only one symm equiv site, the changes can be just
                 # multiplied by *n*
-                if self.setting.num_trans_symm == 1:
+                #if self.setting.num_trans_symm == 1:
+                if True:
                     self.cf[i] = cf_tot + (n * cf_change)
                 else:
                     self.cf[i] = cf_tot + cf_change
