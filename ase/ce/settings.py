@@ -164,7 +164,6 @@ class ClusterExpansionSetting:
         tol = 1E-4
         return min(lengths) / 2 - tol
 
-
     def _get_background_symbol(self):
         """Get symbol of the background atoms.
 
