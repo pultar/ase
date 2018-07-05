@@ -10,6 +10,11 @@ from ase.ce import CorrFunction, BulkCrystal, BulkSpacegroup
 from ase.ce.tools import wrap_and_sort_by_position
 
 
+class MovedIgnoredAtomError(Exception):
+    """Raised when ignored atoms is moved."""
+    pass
+
+
 class ClusterExpansion(Calculator):
     """Class for calculating energy using Cluster Expansion.
 
@@ -108,6 +113,25 @@ class ClusterExpansion(Calculator):
         self.old_atoms = None
         self.old_cf = None
 
+    def set_atoms(self, atoms):
+        self.atoms = atoms.copy()
+        if self.cf is None:
+            self.cf = self.CF.get_cf_by_cluster_names(self.atoms,
+                                                      self.cluster_names,
+                                                      return_type='array')
+        self._copy_current_to_ref()
+        self._copy_current_to_old()
+
+        if len(self.setting.atoms) != len(atoms):
+            msg = "Passed Atoms object and setting.atoms should have "
+            msg += "same number of atoms."
+            raise ValueError(msg)
+        if not np.allclose(atoms.positions, self.setting.atoms.positions):
+            msg = "atomic positions of all atoms in the passed Atoms "
+            msg += "object and setting.atoms should be the same. "
+            raise ValueError(msg)
+
+
     def calculate(self, atoms, properties, system_changes):
         """Calculate the energy of the passed atoms object.
 
@@ -120,11 +144,7 @@ class ClusterExpansion(Calculator):
         self.update_energy()
         self.results['energy'] = self.energy
         self.log()
-        if self.old_atoms is None:
-            # first calculation
-            self._copy_current_to_old()
-        else:
-            self._copy_ref_to_old()
+        self._copy_ref_to_old()
         self._copy_current_to_ref()
 
         return self.energy
@@ -145,18 +165,12 @@ class ClusterExpansion(Calculator):
         """Restore the old atoms and correlation functions to the reference."""
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
+        self.atoms = self.old_atoms.copy()
+        self.cf = deepcopy(self.old_cf)
 
     def update_energy(self):
         """Update correlation function and get new energy."""
-        # this is the first run
-        if self.ref_atoms is None:
-            if self.cf is None:
-                self.cf = self.CF.get_cf_by_cluster_names(self.atoms,
-                                                          self.cluster_names,
-                                                          return_type='array')
-        else:
-            self.update_cf()
-
+        self.update_cf()
         self.energy = self.eci.dot(self.cf) * len(self.atoms)
         return self.energy
 
@@ -167,6 +181,12 @@ class ClusterExpansion(Calculator):
         n_numbers = self.atoms.numbers
         check = (n_numbers == o_numbers)
         changed = np.argwhere(check == 0)[:, 0]
+        changed = np.unique(changed)
+        for index in changed:
+            if self.atoms[index].symbol in self.setting.background_symbol:
+                raise MovedIgnoredAtomError("Atom with index {} ".format(index)
+                                            + "is a background atom.")
+
         return np.unique(changed)
 
     def _symbol_by_index(self, indx):
@@ -297,23 +317,12 @@ class ClusterExpansion(Calculator):
         """
         if not isinstance(atoms, Atoms):
             raise TypeError('Passed argument is not Atoms object')
-        atoms = wrap_and_sort_by_position(atoms)
-        if self.old_atoms is None:
-            if len(self.setting.atoms) != len(atoms):
-                msg = "Passed Atoms object and setting.atoms should have "
-                msg += "same number of atoms."
-                raise ValueError(msg)
-            if not np.allclose(atoms.positions, self.setting.atoms.positions):
-                msg = "atomic positions of all atoms in the passed Atoms "
-                msg += "object and setting.atoms should be the same. "
-                raise ValueError(msg)
-        else:
-            if len(self.ref_atoms) != len(atoms):
-                raise ValueError('Passed atoms does not have the same size '
-                                 'as previous atoms')
-            if not np.allclose(self.ref_atoms.positions, atoms.positions):
-                raise ValueError('Atomic postions of the passed atoms are '
-                                 'different from init_atoms')
+        if len(self.ref_atoms) != len(atoms):
+            raise ValueError('Passed atoms does not have the same size '
+                             'as previous atoms')
+        if not np.allclose(self.ref_atoms.positions, atoms.positions):
+            raise ValueError('Atomic postions of the passed atoms are '
+                             'different from init_atoms')
         return atoms
 
     def log(self):
