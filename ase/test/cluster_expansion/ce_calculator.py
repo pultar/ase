@@ -117,7 +117,6 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
     atoms.set_calculator(calc)
 
     for _ in range(n_trial_configs):
-        print('hello {}'.format(_))
         indx1 = randint(0, len(atoms) - 1)
         symb1 = atoms[indx1].symbol
         while symb1 in fixed:
@@ -133,7 +132,7 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
 
         # The calculator should update its correlation functions
         # when the energy is computed
-        energy = atoms.get_potential_energy()
+        atoms.get_potential_energy()
         brute_force_cf = cf.get_cf_by_cluster_names(atoms, calc.cluster_names,
                                                     return_type="array")
         assert np.allclose(brute_force_cf, calc.cf)

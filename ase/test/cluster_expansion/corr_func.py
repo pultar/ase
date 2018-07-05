@@ -3,7 +3,7 @@ import os
 from ase.ce import BulkCrystal, CorrFunction
 from ase.ce.corrFunc import equivalent_deco
 
-db_name = "test.db"
+db_name = "test_corrfunc.db"
 conc_args = {"conc_ratio_min_1": [[1, 0]],
              "conc_ratio_max_1": [[0, 1]]}
 bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
@@ -47,7 +47,7 @@ def test_order_indep_ref_indx():
             init_cluster = [init_cluster[indx] for indx in cluster_order[0]]
             atoms = bc_setting.atoms
 
-            # Make sure that when the other indices in init_cluster are reference
+            # Make sure that when the other indices in init_cluster are ref
             # indices, the order is the same
             for ref_indx in cluster[0]:
                 found_cluster = False
@@ -106,8 +106,10 @@ def test_interaction_contribution_symmetric_clusters():
                 ref_sp /= counter
 
                 # Calculate the spin product for this category
-                sp, count = cf._spin_product_one_ref_indx(
-                    0, atoms, cluster, orders, equiv_sites, deco[size])
+                sp, count = \
+                    cf._sp_same_shape_deco_for_ref_indx(atoms, 0, cluster,
+                                                        orders, equiv_sites,
+                                                        0, deco[size])
                 sp /= count
                 assert abs(sp - ref_sp) < 1E-8
 

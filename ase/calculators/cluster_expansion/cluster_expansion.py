@@ -255,42 +255,8 @@ class ClusterExpansion(Calculator):
                 cf_tot = self.cf[i] * count
                 cf_change = self._cf_change_by_indx(indx, t_indices, order,
                                                     equiv_sites, dec)
+                self.cf[i] = cf_tot + (n * cf_change)
 
-                # if there is only one symm equiv site, the changes can be just
-                # multiplied by *n*
-                #if self.setting.num_trans_symm == 1:
-                if True:
-                    self.cf[i] = cf_tot + (n * cf_change)
-                else:
-                    self.cf[i] = cf_tot + cf_change
-                    members = np.unique(t_indices)
-
-                    for nindx in members:
-                        sg = None
-                        # only count correlation function of the clusters that
-                        # contain the changed atom
-                        for symm in range(self.setting.num_trans_symm):
-                            if nindx in self.setting.index_by_trans_symm[symm]:
-                                sg = symm
-                                break
-
-                        name_indx = \
-                            self.setting.cluster_names[sg][n].index(prefix)
-                        indices = self.setting.cluster_indx[sg][n][name_indx]
-                        order = self.setting.cluster_order[sg][n][name_indx]
-                        equiv_sites = \
-                            self.setting.cluster_eq_sites[sg][n][name_indx]
-                        t_indices = []
-                        for item in self._translate_indx(nindx, indices):
-                            if indx in item:
-                                t_indices.append(item)
-
-                        cf_change = self._cf_change_by_indx(nindx, t_indices,
-                                                            order, equiv_sites,
-                                                            dec)
-                        self.cf[i] += cf_change
-                self.cf[i] = self.cf[i] / count
-            # self.ref_atoms[indx].symbol = new_symbs[indx]
 
 
     def _cf_change_by_indx(self, ref_indx, trans_list, indx_order, eq_sites,
