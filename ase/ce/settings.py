@@ -148,10 +148,14 @@ class ClusterExpansionSetting:
         # Get scale_factor in an array form #
         # --------------------------------- #
         atoms = self.atoms_with_given_dim
-        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2
+
+        # TODO: Do we need to do something here?
+        # It is not the cell vectors that needs to be twice as long as the
+        # maximum cluster distance, but the smallest length of the vector formed
+        # by any linearl combination of the cell vectors
+        lengths = atoms.get_cell_lengths_and_angles()[:3] / 2.0
         scale_factor = max(max_cluster_dist) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
-
         return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
 
     def _get_max_cluster_dist(self):
