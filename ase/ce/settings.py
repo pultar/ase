@@ -595,7 +595,7 @@ class ClusterExpansionSetting:
         natoms = len(self.atoms)
         unique_indices = list(set(flatten(deepcopy(self.cluster_indx))))
         unique_indices.remove(None)
-        unique_indices = [0] + unique_indices
+        unique_indices = self.ref_index_trans_symm + unique_indices
 
         tm = [{} for _ in range(natoms)]
 
