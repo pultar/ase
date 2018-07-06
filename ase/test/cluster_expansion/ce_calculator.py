@@ -6,7 +6,6 @@ from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.build import bulk
 from ase.spacegroup import crystal
 from ase.ce.tools import wrap_and_sort_by_position
-from ase.visualize import view
 
 
 def generate_ex_eci(setting):
