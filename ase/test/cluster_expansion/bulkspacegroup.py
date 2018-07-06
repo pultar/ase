@@ -60,51 +60,51 @@ def test_spgroup_217():
 
 
 def test_grouped_basis_with_large_dist():
-    # Test with grouped basis with a supercell
+    #  Test with grouped basis with a supercell
     db_name = "test_spacegroup.db"
     tol = 1E-9
 
-    # # ---------------------------------- #
-    # # 2 grouped_basis                    #
-    # # ---------------------------------- #
-    # bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
-    #                                      ['O', 'F']],
-    #                      basis=[(0.00, 0.00, 0.00),
-    #                             (1./3, 2./3, 0.00),
-    #                             (1./3, 0.00, 0.25)],
-    #                      spacegroup=167,
-    #                      cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
-    #                      size=[1, 1, 1],
-    #                      conc_args={"conc_ratio_min_1": [[0, 2, 1], [2, 1]],
-    #                                 "conc_ratio_max_1": [[2, 0, 1], [2, 1]]},
-    #                      db_name=db_name,
-    #                      grouped_basis=[[0, 1], [2]],
-    #                      max_cluster_size=3,
-    #                      max_cluster_dist=2.5)
-    # assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
-    # assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
-    # assert len(bsg.basis_functions) == 4
-    # assert bsg.num_grouped_basis == 2
-    # assert len(bsg.index_by_grouped_basis) == 2
-    # assert bsg.num_grouped_elements == 5
-    # assert len(bsg.basis_functions) == 4
-    # flat = [i for sub in bsg.index_by_grouped_basis for i in sub]
-    # background = [a.index for a in bsg.atoms_with_given_dim if
-    #               a.symbol in bsg.background_symbol]
-    # assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
-    #
-    # atoms = bsg.atoms.copy()
-    # indx_to_X = [6, 33, 8, 35]
-    # for indx in indx_to_X:
-    #     atoms[indx].symbol = "X"
-    # corr = CorrFunction(bsg)
-    # cf = corr.get_cf(atoms)
-    # if update_reference_file:
-    #     all_cf["Li_X_V_O_F"] = cf
-    # # for key in cf.keys():
-    # #     assert abs(cf[key] - all_cf["Li_X_V_O_F"][key]) < tol
-    #
-    # os.remove(db_name)
+    # ---------------------------------- #
+    # 2 grouped_basis                    #
+    # ---------------------------------- #
+    bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
+                                         ['O', 'F']],
+                         basis=[(0.00, 0.00, 0.00),
+                                (1./3, 2./3, 0.00),
+                                (1./3, 0.00, 0.25)],
+                         spacegroup=167,
+                         cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
+                         size=[1, 1, 1],
+                         conc_args={"conc_ratio_min_1": [[0, 2, 1], [2, 1]],
+                                    "conc_ratio_max_1": [[2, 0, 1], [2, 1]]},
+                         db_name=db_name,
+                         grouped_basis=[[0, 1], [2]],
+                         max_cluster_size=3,
+                         max_cluster_dist=2.5)
+    assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
+    assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
+    assert len(bsg.basis_functions) == 4
+    assert bsg.num_grouped_basis == 2
+    assert len(bsg.index_by_grouped_basis) == 2
+    assert bsg.num_grouped_elements == 5
+    assert len(bsg.basis_functions) == 4
+    flat = [i for sub in bsg.index_by_grouped_basis for i in sub]
+    background = [a.index for a in bsg.atoms_with_given_dim if
+                  a.symbol in bsg.background_symbol]
+    assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
+
+    atoms = bsg.atoms.copy()
+    indx_to_X = [6, 33, 8, 35]
+    for indx in indx_to_X:
+        atoms[indx].symbol = "X"
+    corr = CorrFunction(bsg)
+    cf = corr.get_cf(atoms)
+    if update_reference_file:
+        all_cf["Li_X_V_O_F"] = cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["Li_X_V_O_F"][key]) < tol
+
+    os.remove(db_name)
 
     # ---------------------------------- #
     # 2 grouped_basis                    #
@@ -146,8 +146,8 @@ def test_grouped_basis_with_large_dist():
     cf = corr.get_cf(atoms)
     if update_reference_file:
         all_cf["Ta_O_X_grouped"] = cf
-    # for key in cf.keys():
-    #     assert abs(cf[key] - all_cf["Ta_O_X_grouped"][key]) < tol
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["Ta_O_X_grouped"][key]) < tol
 
     try:
         gs = GenerateStructures(setting=bsg, struct_per_gen=3)
@@ -175,7 +175,6 @@ def test_grouped_basis_with_large_dist():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-
     bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
                                          ['O', 'X']],
                          basis=[(0., 0., 0.),
@@ -220,8 +219,8 @@ def test_grouped_basis_with_large_dist():
         if update_reference_file:
             all_cf["Ta_O_X_ungrouped"] = cf
 
-        # for key in cf.keys():
-        #     assert abs(cf[key] - all_cf["Ta_O_X_ungrouped"][key]) < tol
+        for key in cf.keys():
+            assert abs(cf[key] - all_cf["Ta_O_X_ungrouped"][key]) < tol
 
         db = connect(db_name)
         for row in db.select('id>4'):
@@ -244,7 +243,7 @@ def sum_cf(cf):
     return sum
 
 
-# test_spgroup_217()
+test_spgroup_217()
 test_grouped_basis_with_large_dist()
 
 if update_reference_file:

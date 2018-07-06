@@ -111,8 +111,8 @@ class CorrFunction(object):
                         cf_temp = sp / count
                         cf[cf_name] = cf_temp
 
-        print("Number of CFs skipped because of symmetry: {}".format(
-            num_excluded_symmetry))
+        # print("Number of CFs skipped because of symmetry: {}".format(
+        #     num_excluded_symmetry))
         if return_type == 'dict':
             pass
         elif return_type == 'tuple':

@@ -68,7 +68,7 @@ class ProbeStructure(object):
         if self.setting.in_conc_matrix(atoms):
             if len(atoms) != len(setting.atoms_with_given_dim):
                 raise ValueError("Passed Atoms has a wrong size.")
-            self.supercell, self.periodic_indices = \
+            self.supercell, self.periodic_indices, self.index_by_basis = \
                 self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
         else:
             raise ValueError("concentration of the elements in the provided"
@@ -105,16 +105,27 @@ class ProbeStructure(object):
             atom.tag = atom.index
 
         natoms = len(atoms)
-        from ase.visualize import view
-        view(atoms)
         atoms *= self.setting.supercell_scale_factor
         atoms = wrap_and_sort_by_position(atoms)
 
         periodic_indices = []
         for tag in range(natoms):
             periodic_indices.append([a.index for a in atoms if a.tag == tag])
-        view(atoms)
-        return atoms, periodic_indices
+
+        if self.setting.grouped_basis is None:
+            tag_by_basis = self.setting.index_by_basis
+        else:
+            tag_by_basis = self.setting.index_by_grouped_basis
+
+        index_by_basis = []
+        for basis in tag_by_basis:
+            basis_elements = []
+            for atom in atoms:
+                if atom.tag in basis:
+                    basis_elements.append(atom.index)
+            index_by_basis.append(basis_elements)
+
+        return atoms, periodic_indices, index_by_basis
 
     def _supercell2unitcell(self):
         atoms = self.setting.atoms_with_given_dim.copy()
@@ -126,8 +137,6 @@ class ProbeStructure(object):
         """Generate a probe structure according to PRB 80, 165122 (2009)."""
         # Start
         o_cf = self.calc.cf
-        print(o_cf.shape)
-        print(self.cfm.shape)
         o_cfm = np.vstack((self.cfm, o_cf))
         if self.approx_mean_var:
             o_mv = mean_variance_approx(o_cfm)
@@ -144,11 +153,11 @@ class ProbeStructure(object):
                 if bool(getrandbits(1)):
                     # Change element Type
                     if self._has_more_than_one_conc():
-                        self._change_element_type(self.supercell)
+                        self._change_element_type()
                     else:
                         continue
                 else:
-                    indx = self._swap_two_atoms(self.supercell)
+                    indx = self._swap_two_atoms()
                     if self.supercell[indx[0]].symbol == \
                             self.supercell[indx[1]].symbol:
                         continue
@@ -189,12 +198,12 @@ class ProbeStructure(object):
             if bool(getrandbits(1)):
                 # Change element Type
                 if self._has_more_than_one_conc():
-                    self._change_element_type(self.supercell)
+                    self._change_element_type()
                     count += 1
                 else:
                     continue
             else:
-                indx = self._swap_two_atoms(self.supercell)
+                indx = self._swap_two_atoms()
                 if self.supercell[indx[0]].symbol == \
                         self.supercell[indx[1]].symbol:
                     continue
@@ -216,7 +225,7 @@ class ProbeStructure(object):
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
-    def _swap_two_atoms(self, atoms):
+    def _swap_two_atoms(self):
         """Swap two randomly chosen atoms."""
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
@@ -225,11 +234,9 @@ class ProbeStructure(object):
         if self.setting.grouped_basis is None:
             basis_elements = self.setting.basis_elements
             num_basis = self.setting.num_basis
-            index_by_basis = self.setting.index_by_basis
         else:
             basis_elements = self.setting.grouped_basis_elements
             num_basis = self.setting.num_grouped_basis
-            index_by_basis = self.setting.index_by_grouped_basis
 
         # pick fist atom and determine its symbol and type
         while True:
@@ -237,23 +244,22 @@ class ProbeStructure(object):
             # a basis with only 1 type of element should not be chosen
             if len(basis_elements[basis]) < 2:
                 continue
-            indx[0] = choice(index_by_basis[basis])
-            symbol[0] = atoms[indx[0]].symbol
+            indx[0] = choice(self.index_by_basis[basis])
+            symbol[0] = self.supercell[indx[0]].symbol
             break
         # pick second atom that is not the same element, but occupies the
         # same site.
         while True:
-            indx[1] = choice(index_by_basis[basis])
-            symbol[1] = atoms[indx[1]].symbol
+            indx[1] = choice(self.index_by_basis[basis])
+            symbol[1] = self.supercell[indx[1]].symbol
             if symbol[1] in basis_elements[basis]:
                 break
-        # swap two atoms
 
         # find which index it should be in unit cell
         for i in indx:
-            unit_cell_indx = atoms[i].tag
+            unit_cell_indx = self.supercell[i].tag
             for grp_index in self.periodic_indices[unit_cell_indx]:
-                atoms[grp_index].symbol = atoms[i].symbol
+                self.supercell[grp_index].symbol = self.supercell[i].symbol
         return indx
 
     def _has_more_than_one_conc(self):
@@ -262,53 +268,50 @@ class ProbeStructure(object):
             return True
         return False
 
-    def _change_element_type(self, atoms, index=None, rplc_element=None):
+    def _change_element_type(self):
         """Change the type of element for the atom with a given index.
 
         If index and replacing element types are not specified, they are
         randomly generated.
         """
-        natoms = len(atoms)
+        if self.setting.grouped_basis is None:
+            basis_elements = self.setting.basis_elements
+            num_basis = self.setting.num_basis
+        else:
+            basis_elements = self.setting.grouped_basis_elements
+            num_basis = self.setting.num_grouped_basis
         # ------------------------------------------------------
         # Change the type of element for a given index if given.
         # If index not given, pick a random index
         # ------------------------------------------------------
         while True:
-            # pick an atom and determine its symbol
-            if index is None:
-                indx = choice(range(natoms))
-            else:
-                indx = index
-            old_symbol = atoms[indx].symbol
-            # determine its basis
-            for site in range(self.setting.num_basis):
-                if old_symbol in self.setting.basis_elements[site]:
-                    break
+            basis = choice(range(num_basis))
+            # a basis with only 1 type of element should not be chosen
+            if len(basis_elements[basis]) < 2:
+                continue
+            indx = choice(self.index_by_basis[basis])
+            old_symbol = self.supercell[indx].symbol
+
             # change element type
-            if rplc_element is None:
-                new_symbol = choice(self.setting.basis_elements[site])
-                if new_symbol != old_symbol:
-                    atoms[indx].symbol = new_symbol
-                    if self.setting.in_conc_matrix(self._supercell2unitcell()):
-                        break
-                    atoms[indx].symbol = old_symbol
-            else:
-                new_symbol = rplc_element
-                atoms[indx].symbol = rplc_element
-                break
+            new_symbol = choice(basis_elements[basis])
+            if new_symbol != old_symbol:
+                self.supercell[indx].symbol = new_symbol
+                if self.setting.in_conc_matrix(self._supercell2unitcell()):
+                    break
+                self.supercell[indx].symbol = old_symbol
 
         # find which index it should be in unit cell
-        unit_cell_indx = atoms[indx].tag
+        unit_cell_indx = self.supercell[indx].tag
         for grp_index in self.periodic_indices[unit_cell_indx]:
-            atoms[grp_index].symbol = atoms[indx].symbol
+            self.supercell[grp_index].symbol = self.supercell[indx].symbol
 
     def _check_consistency(self):
         # Check to see if the cf is indeed preserved
-        final_cf = self.corrFunc.get_cf_by_cluster_names(self.supercell, self.calc.cluster_names, return_type='array')
-        #for i, name in enumerate(self.calc.cluster_names):
-        #    print(abs(self.calc.cf[i]-final_cf[name]))
-        #print(final_cf)
-        #print(self.calc.cf)
+        final_cf = \
+            self.corrFunc.get_cf_by_cluster_names(self.supercell,
+                                                  self.calc.cluster_names,
+                                                  return_type='array')
+
         if not np.allclose(final_cf, self.calc.cf):
             msg = 'The correlation function changed after simulated annealing'
             raise ValueError(msg)
