@@ -15,6 +15,18 @@ from ase.db import connect
 from ase.visualize import view
 
 
+def get_members_of_family(setting, cname):
+    """Return the members of a given cluster family"""
+    members = []
+    for sym_grp_indx, sym_grp_name in zip(setting.cluster_indx,
+                                          setting.cluster_names):
+        size = int(cname[1])
+        for fam_indx, fam_name in zip(sym_grp_indx[size], sym_grp_name[size]):
+            if cname == fam_name:
+                members.append(fam_indx)
+    return members
+
+
 def test_binary_system():
     """
     Verifies that one can run a CE for the binary Au-Cu system.
@@ -67,45 +79,45 @@ def test_grouped_basis_supercell():
     db_name = "test_crystal.db"
     tol = 1E-9
 
-    # # ------------------------------- #
-    # # 1 grouped basis                 #
-    # # ------------------------------- #
-    # # initial_pool + probe_structures #
-    # # ------------------------------- #
-    # setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
-    #                       crystalstructure="rocksalt",
-    #                       a=4.0,
-    #                       size=[2, 2, 3],
-    #                       conc_args={"conc_ratio_min_1": [[1, 0]],
-    #                                  "conc_ratio_max_1": [[0, 1]]},
-    #                       db_name=db_name,
-    #                       max_cluster_size=3,
-    #                       max_cluster_dist=4.,
-    #                       grouped_basis=[[0, 1]])
-    # print(setting.supercell_scale_factor)
-    # assert setting.num_grouped_basis == 1
-    # assert len(setting.index_by_grouped_basis) == 1
-    # assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
-    # assert setting.num_grouped_elements == 2
-    # assert len(setting.basis_functions) == 1
-    # flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    # background = [a.index for a in setting.atoms_with_given_dim if
-    #               a.symbol in setting.background_symbol]
-    # assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
-    # # setting.view_clusters()
-    # print(setting.max_cluster_dist)
-    # try:
-    #     gs = GenerateStructures(setting=setting, struct_per_gen=3)
-    #     gs.generate_initial_pool()
-    #     gs = GenerateStructures(setting=setting, struct_per_gen=2)
-    #     gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-    #                                 num_temp=5, num_steps=1000,
-    #                                 approx_mean_var=True)
-    #
-    # except MaxAttemptReachedError as exc:
-    #     print(str(exc))
-    #
-    # os.remove(db_name)
+    # ------------------------------- #
+    # 1 grouped basis                 #
+    # ------------------------------- #
+    # initial_pool + probe_structures #
+    # ------------------------------- #
+    setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
+                          crystalstructure="rocksalt",
+                          a=4.0,
+                          size=[2, 2, 3],
+                          conc_args={"conc_ratio_min_1": [[1, 0]],
+                                     "conc_ratio_max_1": [[0, 1]]},
+                          db_name=db_name,
+                          max_cluster_size=3,
+                          max_cluster_dist=4.,
+                          grouped_basis=[[0, 1]])
+    print(setting.supercell_scale_factor)
+    assert setting.num_grouped_basis == 1
+    assert len(setting.index_by_grouped_basis) == 1
+    assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
+    assert setting.num_grouped_elements == 2
+    assert len(setting.basis_functions) == 1
+    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
+    background = [a.index for a in setting.atoms_with_given_dim if
+                  a.symbol in setting.background_symbol]
+    assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
+    # setting.view_clusters()
+    print(setting.max_cluster_dist)
+    try:
+        gs = GenerateStructures(setting=setting, struct_per_gen=3)
+        gs.generate_initial_pool()
+        gs = GenerateStructures(setting=setting, struct_per_gen=2)
+        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps=1000,
+                                    approx_mean_var=True)
+
+    except MaxAttemptReachedError as exc:
+        print(str(exc))
+
+    os.remove(db_name)
 
     # ------------------------------- #
     # 2 grouped basis                 #
@@ -122,7 +134,10 @@ def test_grouped_basis_supercell():
                           max_cluster_size=2,
                           max_cluster_dist=4.,
                           grouped_basis=[[0], [1, 2]])
-    # print(setting.supercell_scale_factor)
+    fam_members = get_members_of_family(setting, "c2_4p000_1")
+    assert len(fam_members[0]) == 6  # TODO: For some reason this is sometimes 5
+    assert len(fam_members[1]) == 6
+    assert len(fam_members[2]) == 6
     assert setting.num_grouped_basis == 2
     assert len(setting.index_by_grouped_basis) == 2
     assert setting.spin_dict == {'Ce': 1.0, 'O': -1.0, 'Zr': 0}
@@ -151,40 +166,40 @@ def test_grouped_basis_supercell():
     # # ---------------------------------- #
     # # initial_pool + probe_structures    #
     # # ---------------------------------- #
-    # setting = BulkCrystal(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
-    #                       crystalstructure="fluorite",
-    #                       a=4.0,
-    #                       size=[2, 2, 2],
-    #                       conc_args={"conc_ratio_min_1": [[1], [2, 0]],
-    #                                  "conc_ratio_max_1": [[1], [0, 2]]},
-    #                       db_name=db_name,
-    #                       max_cluster_size=3,
-    #                       max_cluster_dist=4.,
-    #                       grouped_basis=[[0], [1, 2]],
-    #                       ignore_background_atoms=True)
-    # # print(setting.supercell_scale_factor)
-    # assert setting.num_grouped_basis == 1
-    # assert len(setting.index_by_grouped_basis) == 1
-    # assert setting.spin_dict == {'F': 1.0, 'O': -1.0}
-    # assert setting.num_grouped_elements == 2
-    # assert len(setting.basis_functions) == 1
-    # flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    # background = [a.index for a in setting.atoms_with_given_dim if
-    #               a.symbol in setting.background_symbol]
-    # assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
-    #
-    # try:
-    #     gs = GenerateStructures(setting=setting, struct_per_gen=3)
-    #     gs.generate_initial_pool()
-    #     gs = GenerateStructures(setting=setting, struct_per_gen=2)
-    #     gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-    #                                 num_temp=5, num_steps=100,
-    #                                 approx_mean_var=True)
-    #
-    # except MaxAttemptReachedError as exc:
-    #     print(str(exc))
-    #
-    # os.remove(db_name)
+    setting = BulkCrystal(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
+                          crystalstructure="fluorite",
+                          a=4.0,
+                          size=[2, 2, 2],
+                          conc_args={"conc_ratio_min_1": [[1], [2, 0]],
+                                     "conc_ratio_max_1": [[1], [0, 2]]},
+                          db_name=db_name,
+                          max_cluster_size=3,
+                          max_cluster_dist=4.,
+                          grouped_basis=[[0], [1, 2]],
+                          ignore_background_atoms=True)
+    # print(setting.supercell_scale_factor)
+    assert setting.num_grouped_basis == 1
+    assert len(setting.index_by_grouped_basis) == 1
+    assert setting.spin_dict == {'F': 1.0, 'O': -1.0}
+    assert setting.num_grouped_elements == 2
+    assert len(setting.basis_functions) == 1
+    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
+    background = [a.index for a in setting.atoms_with_given_dim if
+                  a.symbol in setting.background_symbol]
+    assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
+
+    try:
+        gs = GenerateStructures(setting=setting, struct_per_gen=3)
+        gs.generate_initial_pool()
+        gs = GenerateStructures(setting=setting, struct_per_gen=2)
+        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps=100,
+                                    approx_mean_var=True)
+
+    except MaxAttemptReachedError as exc:
+        print(str(exc))
+
+    os.remove(db_name)
 
 
 # test_binary_system()
