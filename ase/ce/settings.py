@@ -375,30 +375,23 @@ class ClusterExpansionSetting:
         return wrap_and_sort_by_position(atoms)
 
     def _create_kdtrees(self):
-        vec = self.atoms.get_cell()
-        trans = [[0., 0., 0.],
-                 vec[0] / 2,
-                 vec[1] / 2,
-                 vec[2] / 2,
-                 (vec[0] + vec[1]) / 2,
-                 (vec[0] + vec[2]) / 2,
-                 (vec[1] + vec[2]) / 2,
-                 (vec[0] + vec[1] + vec[2]) / 2]
         kd_trees = []
+        trans = []
 
-        # Add more translations to reduce to chance of missing a cluster
-        # because of wrapping. Add different intervals from +-
-        # 50% of the shortest distance inside the unit cell
-        # this reduce the change of missing a cluster, but it does
-        # not guarantee
-        min_dist = self._get_shortest_distance_in_unitcell()
-        eps = [-0.5, -0.25, -0.1, -0.05, 0.0, 0.05, 0.1, 0.25, 0.5]
-        for t in range(8):
-            for plus_minus in eps:
-                shifted = self.atoms.copy()
-                shifted.translate(np.array(trans[t]) + plus_minus * min_dist)
-                shifted.wrap()
-                kd_trees.append(KDTree(shifted.get_positions()))
+        # Compute all translations. Include all cell vectors and diagonals
+        # The weights 0.9 and 1.1 are included to make sure that clusters are
+        # not detected because of round off errors when wrapping
+        cell = self.atoms.get_cell().T
+        weights = [0, 1, 0.9, 1.1]
+        for comb in product(weights, repeat=3):
+            vec = cell.dot(comb) / 2.0
+            trans.append(vec)
+
+        for t in trans:
+            shifted = self.atoms.copy()
+            shifted.translate(t)
+            shifted.wrap()
+            kd_trees.append(KDTree(shifted.get_positions()))
         return kd_trees
 
     def _group_indices_by_trans_symmetry(self):
