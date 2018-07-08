@@ -48,6 +48,7 @@ def reduce_matrix(matrix):
             offset = 0
     return matrix
 
+
 def create_cluster(atoms, indices):
     """Create a cluster centered in the unit cell."""
     cluster = atoms[list(indices)]
