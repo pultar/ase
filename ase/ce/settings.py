@@ -982,5 +982,5 @@ class ClusterExpansionSetting:
             indices = list(range(len(self.unit_cell)))
             indices.remove(ref_atom)
             dists += list(self.unit_cell.get_distances(ref_atom, indices,
-                                                       mic=True))self.fail('message')
+                                                       mic=True))
         return min(dists)
