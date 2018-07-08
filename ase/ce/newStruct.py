@@ -174,8 +174,8 @@ class GenerateStructures(object):
             return True
 
         # Case 1: 1 conc variable, one struct per concentration
-        if (self.setting.num_conc_var == 1
-                and self.struct_per_gen == self.conc_matrix.shape[0]):
+        if (self.setting.num_conc_var == 1 and
+            self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
@@ -227,7 +227,6 @@ class GenerateStructures(object):
                     msg = "Could not find initial structure in 10 attempts."
                     raise MaxAttemptReachedError(msg)
 
-
         # Case 4: 2 conc variable, user specified number of structures
         else:
             num_conc1, num_conc2 = self.conc_matrix.shape[:2]
@@ -239,8 +238,9 @@ class GenerateStructures(object):
                 a = [random.choice(conc1_opt), random.choice(conc2_opt)]
                 conc1 = float(a[0]) / max(num_conc1 - 1, 1)
                 conc2 = float(a[1]) / max(num_conc2 - 1, 1)
-                atoms = self._random_struct_at_conc(self.conc_matrix[a[0]][a[1]],
-                                                    conc1, conc2)
+                atoms = \
+                    self._random_struct_at_conc(self.conc_matrix[a[0]][a[1]],
+                                                conc1, conc2)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -435,7 +435,6 @@ class GenerateStructures(object):
             if num_attempt >= max_attempt:
                 msg = "Could not find random concentration."
                 raise MaxAttemptReachedError(msg)
-
 
         conc_value = [None, None]
         for i, index in enumerate(conc_index):
