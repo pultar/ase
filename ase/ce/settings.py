@@ -385,9 +385,9 @@ class ClusterExpansionSetting:
                  (vec[1] + vec[2]) / 2,
                  (vec[0] + vec[1] + vec[2]) / 2]
         kd_trees = []
-        eps = 0.1
+        eps = [-0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2]
         for t in range(8):
-            for plus_minus in [-eps, eps]:
+            for plus_minus in eps:
                 shifted = self.atoms.copy()
                 shifted.translate(np.array(trans[t]) + plus_minus)
                 shifted.wrap()
