@@ -12,9 +12,6 @@ from ase.ce import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 
-from ase.visualize import view
-
-
 def get_members_of_family(setting, cname):
     """Return the members of a given cluster family"""
     members = []
@@ -77,7 +74,6 @@ def test_grouped_basis_supercell():
     # ----------------------------------------------------------##
     """Test a case where a grouped_basis is used with supercell."""
     db_name = "test_crystal.db"
-    tol = 1E-9
 
     # ------------------------------- #
     # 1 grouped basis                 #
@@ -132,7 +128,7 @@ def test_grouped_basis_supercell():
                           max_cluster_dist=4.,
                           grouped_basis=[[0], [1, 2]])
     fam_members = get_members_of_family(setting, "c2_4p000_1")
-    assert len(fam_members[0]) == 6  # TODO: For some reason this is sometimes 5
+    assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
     assert len(fam_members[1]) == 6
     assert len(fam_members[2]) == 6
     assert setting.num_grouped_basis == 2

@@ -53,6 +53,7 @@ def get_ternary():
         atoms[3 * i + 2].symbol = "Zn"
     return bc_setting, wrap_and_sort_by_position(atoms)
 
+
 def get_rocksalt():
     """Test rocksalt where passed atoms with background_atoms."""
     setting = BulkCrystal(basis_elements=[['Li', 'X', 'V'],
@@ -76,11 +77,12 @@ def get_rocksalt():
             atoms[Li_indx[i]].symbol = 'X'
     return setting, wrap_and_sort_by_position(atoms)
 
+
 def get_spacegroup():
     """Test rocksalt where passed atoms."""
     basis = [(0., 0., 0.),
              (0.3894, 0.1405, 0.),
-             (0.201,  0.3461, 0.5),
+             (0.201, 0.3461, 0.5),
              (0.2244, 0.3821, 0.)]
     spacegroup = 55
     cellpar = [6.25, 7.4, 3.83, 90, 90, 90]
