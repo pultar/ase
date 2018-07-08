@@ -94,7 +94,6 @@ def test_grouped_basis_supercell():
                           max_cluster_size=3,
                           max_cluster_dist=4.,
                           grouped_basis=[[0, 1]])
-    print(setting.supercell_scale_factor)
     assert setting.num_grouped_basis == 1
     assert len(setting.index_by_grouped_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
@@ -104,8 +103,6 @@ def test_grouped_basis_supercell():
     background = [a.index for a in setting.atoms_with_given_dim if
                   a.symbol in setting.background_symbol]
     assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
-    # setting.view_clusters()
-    print(setting.max_cluster_dist)
     try:
         gs = GenerateStructures(setting=setting, struct_per_gen=3)
         gs.generate_initial_pool()
