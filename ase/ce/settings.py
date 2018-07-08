@@ -385,11 +385,18 @@ class ClusterExpansionSetting:
                  (vec[1] + vec[2]) / 2,
                  (vec[0] + vec[1] + vec[2]) / 2]
         kd_trees = []
-        eps = [-0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2]
+
+        # Add more translations to reduce to chance of missing a cluster
+        # because of wrapping. Add different intervals from +-
+        # 50% of the shortest distance inside the unit cell
+        # this reduce the change of missing a cluster, but it does
+        # not guarantee
+        min_dist = self._get_shortest_distance_in_unitcell()
+        eps = [-0.5, -0.25, -0.1, -0.05, 0.0, 0.05, 0.1, 0.25, 0.5]
         for t in range(8):
             for plus_minus in eps:
                 shifted = self.atoms.copy()
-                shifted.translate(np.array(trans[t]) + plus_minus)
+                shifted.translate(np.array(trans[t]) + plus_minus * min_dist)
                 shifted.wrap()
                 kd_trees.append(KDTree(shifted.get_positions()))
         return kd_trees
@@ -961,3 +968,19 @@ class ClusterExpansionSetting:
                         msg += "Equiv sites list {}\n".format(flat)
                         msg += "Equiv sites list unique {}".format(flat_unique)
                         raise ValueError(msg)
+
+    def _get_shortest_distance_in_unitcell(self):
+        """Find the shortest distance between the atoms in
+        the unit cell
+        """
+        if len(self.unit_cell) == 1:
+            lengths = self.unit_cell.get_cell_lengths_and_angles()[:3]
+            return min(lengths)
+
+        dists = []
+        for ref_atom in range(len(self.unit_cell)):
+            indices = list(range(len(self.unit_cell)))
+            indices.remove(ref_atom)
+            dists += list(self.unit_cell.get_distances(ref_atom, indices,
+                                                       mic=True))self.fail('message')
+        return min(dists)
