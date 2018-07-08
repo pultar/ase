@@ -385,11 +385,13 @@ class ClusterExpansionSetting:
                  (vec[1] + vec[2]) / 2,
                  (vec[0] + vec[1] + vec[2]) / 2]
         kd_trees = []
+        eps = 0.1
         for t in range(8):
-            shifted = self.atoms.copy()
-            shifted.translate(trans[t])
-            shifted.wrap()
-            kd_trees.append(KDTree(shifted.get_positions()))
+            for plus_minus in [-eps, eps]:
+                shifted = self.atoms.copy()
+                shifted.translate(np.array(trans[t]) + plus_minus)
+                shifted.wrap()
+                kd_trees.append(KDTree(shifted.get_positions()))
         return kd_trees
 
     def _group_indices_by_trans_symmetry(self):
