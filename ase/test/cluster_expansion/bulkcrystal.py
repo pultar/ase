@@ -87,7 +87,7 @@ def test_grouped_basis_supercell():
     setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
                           crystalstructure="rocksalt",
                           a=4.0,
-                          size=[2, 2, 3],
+                          size=[2, 2, 1],
                           conc_args={"conc_ratio_min_1": [[1, 0]],
                                      "conc_ratio_max_1": [[0, 1]]},
                           db_name=db_name,
