@@ -164,6 +164,7 @@ class ClusterExpansion(Calculator):
         """Restore the old atoms and correlation functions to the reference."""
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
+        self.atoms = self.old_atoms.copy()
         self.cf = deepcopy(self.old_cf)
         atoms.numbers = self.old_atoms.numbers
 
@@ -209,7 +210,7 @@ class ClusterExpansion(Calculator):
         for indx in swapped_indices:
             new_symbs[indx] = self.atoms[indx].symbol
             self.atoms[indx].symbol = self.ref_atoms[indx].symbol
-            
+
         for indx in swapped_indices:
             # Swap one index at the time
             self.atoms[indx].symbol = new_symbs[indx]
