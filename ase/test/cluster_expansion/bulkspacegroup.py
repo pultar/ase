@@ -154,7 +154,7 @@ def test_grouped_basis_with_large_dist():
         gs.generate_initial_pool()
         gs = GenerateStructures(setting=bsg, struct_per_gen=2)
         gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
-                                    num_steps=10, approx_mean_var=True)
+                                    num_steps=1000, approx_mean_var=True)
 
         db = connect(db_name)
         for row in db.select('id>4'):
@@ -209,7 +209,7 @@ def test_grouped_basis_with_large_dist():
         gs.generate_initial_pool()
         gs = GenerateStructures(setting=bsg, struct_per_gen=2)
         gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
-                                    num_steps=10, approx_mean_var=True)
+                                    num_steps=1000, approx_mean_var=True)
         atoms = bsg.atoms.copy()
         indx_to_X = [0, 4, 8, 12, 16]
         for indx in indx_to_X:

@@ -12,6 +12,7 @@ from ase.ce import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 
+
 def get_members_of_family(setting, cname):
     """Return the members of a given cluster family"""
     members = []
@@ -186,7 +187,7 @@ def test_grouped_basis_supercell():
         gs.generate_initial_pool()
         gs = GenerateStructures(setting=setting, struct_per_gen=2)
         gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=100,
+                                    num_temp=5, num_steps=1000,
                                     approx_mean_var=True)
 
     except MaxAttemptReachedError as exc:
