@@ -17,6 +17,16 @@ from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 # This should normally be False
 update_reference_file = False
 
+def get_members_of_family(setting, cname):
+    """Return the members of a given cluster family."""
+    members = []
+    for sym_grp_indx, sym_grp_name in zip(setting.cluster_indx,
+                                          setting.cluster_names):
+        size = int(cname[1])
+        for fam_indx, fam_name in zip(sym_grp_indx[size], sym_grp_name[size]):
+            if cname == fam_name:
+                members.append(fam_indx)
+    return members
 
 def test_spgroup_217():
     """Test the initialization of spacegroup 217."""
@@ -237,8 +247,42 @@ def test_grouped_basis_with_large_dist():
 
     os.remove(db_name)
 
+
+def test_narrow_angle_crystal():
+    """Test that Probestructure works for crystals with narrow angles.
+
+    This test a crystal with internal angles 50, 20, 15 degree.
+    """
+    db_name = "test_spacegroup.db"
+
+    bsg = BulkSpacegroup(basis_elements=[['Mg', 'Si']],
+                         basis=[(0.0, 0.0, 0.0)],
+                         spacegroup=225,
+                         cellpar=[4.0, 4.0, 4.0, 50.0, 40.0, 15.0],
+                         conc_args={"conc_ratio_min_1": [[1, 0]],
+                                    "conc_ratio_max_1": [[0, 1]]},
+                         db_name=db_name,
+                         size=[2, 2, 3],
+                         max_cluster_size=3
+                         )
+
+    assert len(bsg.index_by_trans_symm) == 1
+
+    try:
+        gs = GenerateStructures(setting=bsg, struct_per_gen=3)
+        gs.generate_initial_pool()
+        gs = GenerateStructures(setting=bsg, struct_per_gen=2)
+        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps=1000,
+                                    approx_mean_var=True)
+    except MaxAttemptReachedError as exc:
+        print(str(exc))
+    os.remove(db_name)
+
+
 test_spgroup_217()
 test_grouped_basis_with_large_dist()
+test_narrow_angle_crystal()
 
 if update_reference_file:
     print("Updating the reference correlation function file")
