@@ -1,3 +1,4 @@
+"""Unit tests for the ClusterExpansion calculator."""
 import os
 from random import randint
 import numpy as np
@@ -9,6 +10,7 @@ from ase.ce.tools import wrap_and_sort_by_position
 
 
 def generate_ex_eci(setting):
+    """Return dummy ECIs. All are set to -0.001."""
     cf = CorrFunction(setting)
     cf = cf.get_cf(setting.atoms)
     eci = {key: -0.001 for key in cf}
@@ -110,6 +112,11 @@ def get_spacegroup():
 
 def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
                                       fixed=[]):
+    """Perform swaps and check that the correlation functions match.
+
+    The comparison is done by check that each CF in the ClusterExpansion
+    calculator is the same as the ones obtained by direct calculation.
+    """
     cf = CorrFunction(setting)
 
     eci = generate_ex_eci(setting)
