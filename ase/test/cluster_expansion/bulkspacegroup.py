@@ -17,6 +17,7 @@ from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 # This should normally be False
 update_reference_file = False
 
+
 def test_spgroup_217():
     """Test the initialization of spacegroup 217."""
     a = 10.553
@@ -70,8 +71,8 @@ def test_grouped_basis_with_large_dist():
     bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
                                          ['O', 'F']],
                          basis=[(0.00, 0.00, 0.00),
-                                (1./3, 2./3, 0.00),
-                                (1./3, 0.00, 0.25)],
+                                (1. / 3, 2. / 3, 0.00),
+                                (1. / 3, 0.00, 0.25)],
                          spacegroup=167,
                          cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
                          size=[1, 1, 1],
@@ -115,7 +116,7 @@ def test_grouped_basis_with_large_dist():
                                          ['O', 'X'], ['Ta']],
                          basis=[(0., 0., 0.),
                                 (0.3894, 0.1405, 0.),
-                                (0.201,  0.3461, 0.5),
+                                (0.201, 0.3461, 0.5),
                                 (0.2244, 0.3821, 0.)],
                          spacegroup=55,
                          cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
@@ -153,8 +154,9 @@ def test_grouped_basis_with_large_dist():
         gs = GenerateStructures(setting=bsg, struct_per_gen=3)
         gs.generate_initial_pool()
         gs = GenerateStructures(setting=bsg, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
-                                    num_steps=1000, approx_mean_var=True)
+        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps=1000,
+                                    approx_mean_var=True)
 
         db = connect(db_name)
         for row in db.select('id>4'):
@@ -166,7 +168,6 @@ def test_grouped_basis_with_large_dist():
 
     except MaxAttemptReachedError as exc:
         print(str(exc))
-
 
     os.remove(db_name)
 
@@ -180,7 +181,7 @@ def test_grouped_basis_with_large_dist():
                          basis=[(0., 0., 0.),
                                 (0.2244, 0.3821, 0.),
                                 (0.3894, 0.1405, 0.),
-                                (0.201,  0.3461, 0.5)],
+                                (0.201, 0.3461, 0.5)],
                          spacegroup=55,
                          cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
                          size=[2, 2, 3],
@@ -208,8 +209,9 @@ def test_grouped_basis_with_large_dist():
         gs = GenerateStructures(setting=bsg, struct_per_gen=3)
         gs.generate_initial_pool()
         gs = GenerateStructures(setting=bsg, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001, num_temp=5,
-                                    num_steps=1000, approx_mean_var=True)
+        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps=1000,
+                                    approx_mean_var=True)
         atoms = bsg.atoms.copy()
         indx_to_X = [0, 4, 8, 12, 16]
         for indx in indx_to_X:
@@ -234,14 +236,6 @@ def test_grouped_basis_with_large_dist():
         print(str(exc))
 
     os.remove(db_name)
-
-
-def sum_cf(cf):
-    sum = 0.0
-    for key, value in cf.items():
-        sum += value
-    return sum
-
 
 test_spgroup_217()
 test_grouped_basis_with_large_dist()
