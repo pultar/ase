@@ -14,7 +14,7 @@ from ase.db import connect
 
 
 def get_members_of_family(setting, cname):
-    """Return the members of a given cluster family"""
+    """Return the members of a given cluster family."""
     members = []
     for sym_grp_indx, sym_grp_name in zip(setting.cluster_indx,
                                           setting.cluster_names):
@@ -26,8 +26,8 @@ def get_members_of_family(setting, cname):
 
 
 def test_binary_system():
-    """
-    Verifies that one can run a CE for the binary Au-Cu system.
+    """Verifies that one can run a CE for the binary Au-Cu system.
+
     The EMT calculator is used for energy calculations
     """
     db_name = "test_crystal.db"
@@ -195,6 +195,5 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
-
-# test_binary_system()
+test_binary_system()
 test_grouped_basis_supercell()
