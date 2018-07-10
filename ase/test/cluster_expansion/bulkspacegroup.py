@@ -262,8 +262,9 @@ def test_narrow_angle_crystal():
                          conc_args={"conc_ratio_min_1": [[1, 0]],
                                     "conc_ratio_max_1": [[0, 1]]},
                          db_name=db_name,
-                         size=[2, 2, 3],
-                         max_cluster_size=3
+                         size=[2, 2, 1],
+                         max_cluster_size=3,
+                         max_cluster_dist=1.05
                          )
 
     assert len(bsg.index_by_trans_symm) == 1
