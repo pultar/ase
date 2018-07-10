@@ -117,7 +117,8 @@ class ClusterExpansionSetting:
             self.conc_ratio_max_2 = conc_ratio_max_2
 
     def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
-        min_length = self._get_max_cluster_dist()
+        cell = self.atoms_with_given_dim.get_cell().T
+        min_length = self._get_max_cluster_dist(cell)
 
         # ------------------------------------- #
         # Get max_cluster_dist in an array form #
@@ -152,24 +153,69 @@ class ClusterExpansionSetting:
         # TODO: Do we need to do something here?
         # It is not the cell vectors that needs to be twice as long as the
         # maximum cluster distance, but the smallest length of the vector formed
-        # by any linearl combination of the cell vectors
+        # by any linear combination of the cell vectors
         lengths = atoms.get_cell_lengths_and_angles()[:3] / 2.0
         scale_factor = max(max_cluster_dist) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
+        scale_factor = self._get_scale_factor(cell, max(max_cluster_dist))
         return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
 
-    def _get_max_cluster_dist(self):
-        cell = self.atoms_with_given_dim.get_cell()
+    def _get_max_cluster_dist(self, cell, ret_weights=False):
         lengths = []
+        weights = []
         for w in product([-1, 0, 1], repeat=3):
-            vec = cell.T.dot(w)
+            vec = cell.dot(w)
             if w == (0, 0, 0):
                 continue
             lengths.append(np.sqrt(vec.dot(vec)))
+            weights.append(w)
+
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
-        tol = 1E-4
-        return min(lengths) / 2 - tol
+        tol = 2 * 10**(-self.dist_num_dec)
+        min_length = min(lengths) / 2
+        min_length = np.round(min_length, self.dist_num_dec) - tol
+
+        if ret_weights:
+            min_indx = np.argmin(lengths)
+            return min_length, weights[min_indx]
+        return min_length
+
+    def _get_scale_factor(self, cell, max_cluster_dist):
+        """Compute the scale factor nessecary to resolve max_cluster_dist."""
+        cell_to_small = True
+        scale_factor = [1, 1, 1]
+        orig_cell = cell.copy()
+        while cell_to_small:
+
+            # Check what the maximum cluster distance is for the current
+            # cell
+            max_size, w = self._get_max_cluster_dist(cell, ret_weights=True)
+            if max_size < max_cluster_dist:
+                # Find which vectors formed the shortest diagonal
+                indices_in_w = [i for i, weight in enumerate(w) if weight != 0]
+                shortest_vec = -1
+                shortest_length = 1E10
+
+                # Find the shortest vector of the ones that formed the
+                # shortest diagonal
+                for indx in indices_in_w:
+                    vec = cell[:, indx]
+                    length = np.sqrt(vec.dot(vec))
+                    if length < shortest_length:
+                        shortest_vec = indx
+                        shortest_length = length
+
+                # Increase the scale factor in the direction of the shortest
+                # vector in the diagonal by 1
+                scale_factor[shortest_vec] += 1
+
+                # Update the cell to the new scale factor
+                for i in range(3):
+                    cell[:, i] = orig_cell[:, i] * scale_factor[i]
+            else:
+                cell_to_small = False
+        return scale_factor
 
     def _get_background_symbol(self):
         """Get symbol of the background atoms.
@@ -382,10 +428,12 @@ class ClusterExpansionSetting:
         # The weights 0.9 and 1.1 are included to make sure that clusters are
         # not detected because of round off errors when wrapping
         cell = self.atoms.get_cell().T
-        weights = [0, 1, 0.9, 1.1]
+        weights = [0, 1]
         for comb in product(weights, repeat=3):
             vec = cell.dot(comb) / 2.0
             trans.append(vec)
+
+        trans += [atom.position for atom in self.atoms]
 
         for t in trans:
             shifted = self.atoms.copy()
@@ -860,11 +908,11 @@ class ClusterExpansionSetting:
             equiv = self.cluster_eq_sites[loc[0]][loc[1]][loc[2]]
             try:
                 order = self.cluster_order[loc[0]][loc[1]][loc[2]][0]
-            except:
+            except Exception:
                 order = None
             atoms = self.atoms.copy()
             if order is not None:
-                keep_indx = [keep_indx[indx] for indx in order]
+                keep_indx = [keep_indx[n] for n in order]
 
             for tag, indx in enumerate(keep_indx):
                 atoms[indx].tag = tag
@@ -873,8 +921,6 @@ class ClusterExpansionSetting:
                     for i in range(1, len(group)):
                         atoms[keep_indx[group[i]]].tag = \
                             atoms[keep_indx[group[0]]].tag
-
-            ref_pos = atoms[ref_indx].position
 
             if len(keep_indx) >= 2:
                 atoms = create_cluster(atoms, keep_indx)
@@ -937,7 +983,6 @@ class ClusterExpansionSetting:
 
     def _check_equiv_sites(self):
         """Check that the equivalent sites array is valid"""
-
         for cluster_same_symm in self.cluster_eq_sites:
             for cluster_same_size in cluster_same_symm:
                 for cluster_cat in cluster_same_size:
@@ -963,9 +1008,7 @@ class ClusterExpansionSetting:
                         raise ValueError(msg)
 
     def _get_shortest_distance_in_unitcell(self):
-        """Find the shortest distance between the atoms in
-        the unit cell
-        """
+        """Find the shortest distance between the atoms in the unit cell."""
         if len(self.unit_cell) == 1:
             lengths = self.unit_cell.get_cell_lengths_and_angles()[:3]
             return min(lengths)
