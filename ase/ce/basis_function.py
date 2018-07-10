@@ -3,8 +3,9 @@ import numpy as np
 
 class BasisFunction(object):
     """Base-class for all Basis Functions."""
-    def __init__(self, num_unique_elements):
-        self.num_unique_elements = num_unique_elements
+    def __init__(self, unique_elements):
+        self.unique_elements = unique_elements
+        self.num_unique_elements = len(unique_elements)
         self.spin_dict = self.get_spin_dict()
         self.basis_function = self.get_basis_function()
 
