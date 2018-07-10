@@ -117,4 +117,9 @@ class VandeWalle(BasisFunction):
             BasisFunction.__init__()
 
         def get_spin_dict(self):
-            return range(self.num_unique_elements)
+            spin_values = range(self.num_unique_elements)
+
+            spin_dict = {}
+            for x in range(self.num_unique_elements):
+                spin_dict[self.unique_elements[x]] = spin_values[x]
+            return spin_dict
