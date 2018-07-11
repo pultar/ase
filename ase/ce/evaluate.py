@@ -248,7 +248,8 @@ class Evaluate(object):
                 log = open(logfile, 'a')
                 # create a log file and make a header line if the file does not
                 # exist.
-                if not os.path.isfile(logfile):
+                # if not os.path.isfile(logfile):
+                if os.stat(logfile).st_size == 0:
                     log.write("alpha \t\t # ECI \t CV\n")
                 # if the file exists, read the alpha values that are already
                 # evaluated.
