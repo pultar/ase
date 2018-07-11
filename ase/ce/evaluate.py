@@ -1,3 +1,4 @@
+"""Module that fits ECIs to energy data."""
 import os
 import sys
 from copy import deepcopy
@@ -21,6 +22,7 @@ except Exception:
 # Initialize a module wide logger
 logger = lg.getLogger(__name__)
 logger.setLevel(lg.INFO)
+
 
 class Evaluate(object):
     """Evaluate RMSE/MAE of the fit and CV scores.
@@ -46,6 +48,7 @@ class Evaluate(object):
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  penalty=None):
+        """Initialize the Evaluate class."""
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             msg = "setting must be BulkCrystal or BulkSpacegroup object"
             raise TypeError(msg)
@@ -131,8 +134,7 @@ class Evaluate(object):
                           normalize=True, max_iter=1e6)
             lasso.fit(self.cf_matrix, self.e_dft)
             eci = lasso.coef_
-            # print('Number of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
-
+            print('Number of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
         else:
             raise ValueError("Unknown penalty type.")
 
@@ -250,9 +252,8 @@ class Evaluate(object):
             if logfile == '-':
                 handler = lg.StreamHandler(sys.stdout)
                 handler.setLevel(lg.INFO)
-                logger.addHandler(ch)
+                logger.addHandler(handler)
             else:
-                #self.logger = open(logfile, 'a')
                 handler = MultiprocessHandler(logfile)
                 handler.setLevel(lg.INFO)
                 logger.addHandler(handler)
@@ -278,7 +279,7 @@ class Evaluate(object):
 
         # get CV scores
         try:
-            workers = mp.Pool(mp.cpu_count()/2)
+            workers = mp.Pool(mp.cpu_count() / 2)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
