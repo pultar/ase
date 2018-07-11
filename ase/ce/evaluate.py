@@ -279,7 +279,10 @@ class Evaluate(object):
 
         # get CV scores
         try:
-            workers = mp.Pool(mp.cpu_count() / 2)
+            nproc = int(mp.cpu_count() / 2)
+            if nproc < 1:
+                nproc = 1
+            workers = mp.Pool(nproc)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
