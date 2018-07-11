@@ -8,14 +8,19 @@ from ase.utils import basestring
 from ase.ce import BulkCrystal, BulkSpacegroup
 from ase.db import connect
 import multiprocessing as mp
+import logging as lg
+from ase.ce import MultiprocessHandler
 
 try:
     # dependency on sklearn is to be removed due to some of technical problems
     from sklearn.linear_model import Lasso
     has_sklearn = True
-except:
+except Exception:
     has_sklearn = False
 
+# Initialize a module wide logger
+logger = lg.getLogger(__name__)
+logger.setLevel(lg.INFO)
 
 class Evaluate(object):
     """Evaluate RMSE/MAE of the fit and CV scores.
@@ -38,6 +43,7 @@ class Evaluate(object):
         -'lasso' or 'l1': L1 regularization
         -'euclidean' or 'l2': L2 regularization
     """
+
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  penalty=None):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
@@ -93,7 +99,6 @@ class Evaluate(object):
         alpha: int or float
             regularization parameter.
         """
-
         # Check the regression coefficient alpha
         if not isinstance(alpha, (int, float)):
 
@@ -243,14 +248,19 @@ class Evaluate(object):
         # logfile setup
         if isinstance(logfile, basestring):
             if logfile == '-':
-                log = sys.stdout
+                handler = lg.StreamHandler(sys.stdout)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(ch)
             else:
-                log = open(logfile, 'a')
+                #self.logger = open(logfile, 'a')
+                handler = MultiprocessHandler(logfile)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(handler)
                 # create a log file and make a header line if the file does not
                 # exist.
                 # if not os.path.isfile(logfile):
                 if os.stat(logfile).st_size == 0:
-                    log.write("alpha \t\t # ECI \t CV\n")
+                    logger.info("alpha \t\t # ECI \t CV")
                 # if the file exists, read the alpha values that are already
                 # evaluated.
                 else:
@@ -268,7 +278,7 @@ class Evaluate(object):
 
         # get CV scores
         try:
-            workers = mp.Pool(mp.cpu_count())
+            workers = mp.Pool(mp.cpu_count()/2)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
@@ -278,11 +288,9 @@ class Evaluate(object):
             cv = np.ones(len(alphas))
             for i, alpha in enumerate(alphas):
                 cv[i] = self.cv_loo(alpha)
-                if logfile:
-                    num_eci = len(np.nonzero(self.get_eci(alpha))[0])
-                    log.write('{:.10f}\t {}\t {:.10f}\n'.format(alpha, num_eci,
-                                                                cv[i]))
-                    log.flush()
+                num_eci = len(np.nonzero(self.get_eci(alpha))[0])
+                logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci,
+                                                            cv[i]))
 
         # --------------- #
         # Generate a plot #
@@ -482,7 +490,7 @@ class Evaluate(object):
 
 
 def cv_loo_mp(args):
-    """Need to wrap this function in order to use it with multiprocessing
+    """Need to wrap this function in order to use it with multiprocessing.
 
     Arguments
     =========
@@ -491,4 +499,7 @@ def cv_loo_mp(args):
     """
     evaluator = args[0]
     alpha = args[1]
-    return evaluator.cv_loo(alpha)
+    cv = evaluator.cv_loo(alpha)
+    num_eci = len(np.nonzero(evaluator.get_eci(alpha))[0])
+    logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
+    return cv
