@@ -134,7 +134,7 @@ class Evaluate(object):
                           normalize=True, max_iter=1e6)
             lasso.fit(self.cf_matrix, self.e_dft)
             eci = lasso.coef_
-            print('Number of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
+            # print('# of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
         else:
             raise ValueError("Unknown penalty type.")
 
@@ -279,9 +279,7 @@ class Evaluate(object):
 
         # get CV scores
         try:
-            nproc = int(mp.cpu_count() / 2)
-            if nproc < 1:
-                nproc = 1
+            nproc = int(max(mp.cpu_count() / 2, 1))
             workers = mp.Pool(nproc)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
