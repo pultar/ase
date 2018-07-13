@@ -3,6 +3,11 @@ import multiprocessing as mp
 from ase.ce import MultiprocessHandler
 import logging as lg
 import os
+from ase.test import NotAvailable
+
+if __name__ != "__main__":
+    msg = "Pickle error when file is not top level module"
+    raise NotAvailable(msg)
 
 log_file = "mp_logger_test.txt"
 logger = lg.getLogger(__name__)
