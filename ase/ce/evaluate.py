@@ -77,8 +77,8 @@ class Evaluate(object):
         elif penalty.lower() == 'ridge' or penalty.lower() == 'l2':
             self.penalty = 'l2'
         else:
-            raise TypeError("The penalty type, {},".format(penalty) +
-                            " is not supported")
+            msg = "The penalty type, {},  is not supported".format(penalty)
+            raise TypeError(msg)
 
         if cluster_names is None:
             self.cluster_names = self.setting.full_cluster_names
@@ -104,9 +104,7 @@ class Evaluate(object):
         """
         # Check the regression coefficient alpha
         if not isinstance(alpha, (int, float)):
-
-            raise TypeError("The penalty coefficient 'lamb' must be either"
-                            " int or float type.")
+            raise TypeError("alpha must be either int or float type.")
         self.alpha = float(alpha)
 
         n_col = self.cf_matrix.shape[1]
@@ -125,8 +123,8 @@ class Evaluate(object):
         elif self.penalty == 'l2':
             identity = np.identity(n_col)
             identity[0][0] = 0.
-            a = inv(self.cf_matrix.T.dot(self.cf_matrix) +
-                    alpha * identity).dot(self.cf_matrix.T)
+            a = inv(self.cf_matrix.T.dot(self.cf_matrix)
+                    + alpha * identity).dot(self.cf_matrix.T)
             eci = a.dot(self.e_dft)
 
         elif self.penalty == 'l1':

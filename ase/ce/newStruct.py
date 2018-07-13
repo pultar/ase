@@ -12,11 +12,14 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
 from ase.db import connect
 
+max_attempt = 10
+
+
 class MaxAttemptReachedError(Exception):
     """Raised when number of try reaches 10."""
+
     pass
 
-max_attempt = 10
 
 class GenerateStructures(object):
     """Generate new structure in Atoms object format.
@@ -174,8 +177,8 @@ class GenerateStructures(object):
             return True
 
         # Case 1: 1 conc variable, one struct per concentration
-        if (self.setting.num_conc_var == 1 and
-            self.struct_per_gen == self.conc_matrix.shape[0]):
+        if (self.setting.num_conc_var == 1
+                and self.struct_per_gen == self.conc_matrix.shape[0]):
             for x in range(self.conc_matrix.shape[0]):
                 conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
                 atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)

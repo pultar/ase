@@ -4,7 +4,7 @@ This module defines the base-class for storing the settings for performing
 Cluster Expansion in different conditions.
 """
 import os
-from itertools import combinations, combinations_with_replacement, product
+from itertools import combinations, product
 from copy import deepcopy
 import numpy as np
 from scipy.spatial import cKDTree as KDTree
@@ -13,7 +13,6 @@ from ase.db import connect
 from ase.ce.tools import wrap_and_sort_by_position, index_by_position, flatten
 from ase.ce.tools import sort_by_internal_distances, create_cluster
 from ase.ce.tools import sorted_internal_angles, ndarray2list, dec_string
-
 
 
 class ClusterExpansionSetting:
@@ -152,8 +151,8 @@ class ClusterExpansionSetting:
 
         # TODO: Do we need to do something here?
         # It is not the cell vectors that needs to be twice as long as the
-        # maximum cluster distance, but the smallest length of the vector formed
-        # by any linear combination of the cell vectors
+        # maximum cluster distance, but the smallest length of the vector
+        # formed by any linear combination of the cell vectors
         lengths = atoms.get_cell_lengths_and_angles()[:3] / 2.0
         scale_factor = max(max_cluster_dist) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
@@ -768,7 +767,7 @@ class ClusterExpansionSetting:
         print('Generating cluster data. It may take several minutes depending'
               ' on the values of max_cluster_size and max_cluster_dist...')
         self.cluster_names, self.cluster_dist, self.cluster_indx, \
-        self.cluster_order, self.cluster_eq_sites = \
+            self.cluster_order, self.cluster_eq_sites = \
             self._get_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
@@ -982,7 +981,7 @@ class ClusterExpansionSetting:
             json.dump(self.kwargs, outfile, indent=2)
 
     def _check_equiv_sites(self):
-        """Check that the equivalent sites array is valid"""
+        """Check that the equivalent sites array is valid."""
         for cluster_same_symm in self.cluster_eq_sites:
             for cluster_same_size in cluster_same_symm:
                 for cluster_cat in cluster_same_size:

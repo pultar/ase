@@ -1,8 +1,10 @@
+"""Module for setting up pseudospins and basis functions."""
 import numpy as np
 
 
 class BasisFunction(object):
     """Base-class for all Basis Functions."""
+
     def __init__(self, unique_elements):
         self.unique_elements = unique_elements
         self.num_unique_elements = len(unique_elements)
@@ -10,17 +12,27 @@ class BasisFunction(object):
         self.basis_function = self.get_basis_function()
 
     def get_spin_dict(self):
+        """Get spin dictionary."""
         pass
 
     def get_basis_function(self):
+        """Get basis function."""
         pass
 
 
 class Sanchez(BasisFunction):
+    """Pseudospin and basis function from Sanchez et al.
+
+    Sanchez, J. M., Ducastelle, F., & Gratias, D. (1984).
+    Generalized cluster description of multicomponent systems.
+    Physica A: Statistical Mechanics and Its Applications, 128(1–2), 334–350.
+    """
+
     def __init__(self):
         BasisFunction.__init__()
 
     def get_spin_dict(self):
+        """Define pseudospins for all consistuting elements."""
         # Find odd/even
         spin_values = []
         if self.num_unique_elements % 2 == 1:
@@ -114,13 +126,22 @@ class Sanchez(BasisFunction):
 
 
 class VandeWalle(BasisFunction):
-        def __init__(self):
-            BasisFunction.__init__()
+    """Pseudospin and basis function from van de Walle.
 
-        def get_spin_dict(self):
-            spin_values = range(self.num_unique_elements)
+    van de Walle, A. (2009).
+    Multicomponent multisublattice alloys, nonconfigurational entropy and other
+    additions to the Alloy Theoretic Automated Toolkit. Calphad, 33(2),
+    266–278.
+    """
 
-            spin_dict = {}
-            for x in range(self.num_unique_elements):
-                spin_dict[self.unique_elements[x]] = spin_values[x]
-            return spin_dict
+    def __init__(self):
+        BasisFunction.__init__()
+
+    def get_spin_dict(self):
+        """Define pseudospins for all consistuting elements."""
+        spin_values = range(self.num_unique_elements)
+
+        spin_dict = {}
+        for x in range(self.num_unique_elements):
+            spin_dict[self.unique_elements[x]] = spin_values[x]
+        return spin_dict
