@@ -231,20 +231,9 @@ class ClusterExpansionSetting:
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
 
-        # remap indices if the basis are grouped, then change grouped_basis
-        # and conc_ratio_min/max accordingly
+        # change grouped_basis and conc_ratio_min/max if basis are grouped
         if self.grouped_basis is not None:
-            remapped = []
-            for i, group in enumerate(self.grouped_basis):
-                if group[0] in basis:
-                    remapped.append(i)
-            for i in sorted(remapped, reverse=True):
-                del self.grouped_basis[i]
-                del self.conc_ratio_min_1[i]
-                del self.conc_ratio_max_1[i]
-                if self.num_conc_var == 2:
-                    del self.conc_ratio_min_2[i]
-                    del self.conc_ratio_max_2[i]
+            self._modify_group_basis_and_conc(basis)
 
         # change basis_elements
         for i in sorted(basis, reverse=True):
@@ -272,6 +261,20 @@ class ClusterExpansionSetting:
                     if element > ref:
                         self.grouped_basis[i][j] -= 1
         return list(set(symbol))
+
+    def _modify_group_basis_and_conc(self, basis):
+        """Remove indices of background atoms in group_basis and conc_args."""
+        remapped = []
+        for i, group in enumerate(self.grouped_basis):
+            if group[0] in basis:
+                remapped.append(i)
+        for i in sorted(remapped, reverse=True):
+            del self.grouped_basis[i]
+            del self.conc_ratio_min_1[i]
+            del self.conc_ratio_max_1[i]
+            if self.num_conc_var == 2:
+                del self.conc_ratio_min_2[i]
+                del self.conc_ratio_max_2[i]
 
     def _check_basis_elements(self):
         error = False
