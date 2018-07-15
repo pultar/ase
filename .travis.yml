@@ -128,6 +128,8 @@ install:
       bash -c "cd ${TRAVIS_BUILD_DIR}&&
       virtualenv --python=python${PYTHON} VENV_TEST&&
       . VENV_TEST/bin/activate&&
+      pip install flake8
+      flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
       python setup.py install";
     fi
   - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
