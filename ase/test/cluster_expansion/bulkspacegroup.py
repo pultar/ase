@@ -17,6 +17,10 @@ from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 # This should normally be False
 update_reference_file = False
 
+db_name = "test_spacegroup.db"
+tol = 1E-9
+
+
 def get_members_of_family(setting, cname):
     """Return the members of a given cluster family."""
     members = []
@@ -27,6 +31,7 @@ def get_members_of_family(setting, cname):
             if cname == fam_name:
                 members.append(fam_indx)
     return members
+
 
 def test_spgroup_217():
     """Test the initialization of spacegroup 217."""
@@ -41,7 +46,6 @@ def test_spgroup_217():
              (0.3582, 0.3582, 0.0393), (0.0954, 0.0954, 0.2725)]
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
-    db_name = "test_spacegroup.db"
     basis_elements = [["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"]]
 
     # Test with grouped basis
@@ -70,10 +74,7 @@ def test_spgroup_217():
     os.remove(db_name)
 
 
-def test_grouped_basis_with_large_dist():
-    #  Test with grouped basis with a supercell
-    db_name = "test_spacegroup.db"
-    tol = 1E-9
+def test_two_grouped_basis():
 
     # ---------------------------------- #
     # 2 grouped_basis                    #
@@ -103,6 +104,11 @@ def test_grouped_basis_with_large_dist():
     background = [a.index for a in bsg.atoms_with_given_dim if
                   a.symbol in bsg.background_symbol]
     assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
+    print(bsg.basis_functions)
+    # [{'F': 1.414213562373095, 'Li': -1.414213562373095, 'O': 0.7071067811865475, 'V': -0.7071067811865475, 'X': 0.0},
+    #  {'F': 1.1952286093343936, 'Li': 1.1952286093343936, 'O': -0.5976143046671968, 'V': -0.5976143046671968, 'X': -1.1952286093343936},
+    #  {'F': 0.707106781186547, 'Li': -0.707106781186547, 'O': -1.414213562373095, 'V': 1.414213562373095, 'X': 0.0},
+    #  {'F': 25.211643820405364, 'Li': 25.211643820405364, 'O': 0.48997894350611104, 'V': 0.48997894350611104, 'X': 1.6035674514745464}]
 
     atoms = bsg.atoms.copy()
     indx_to_X = [6, 33, 8, 35]
@@ -117,6 +123,8 @@ def test_grouped_basis_with_large_dist():
 
     os.remove(db_name)
 
+
+def test_two_grouped_basis_probe_structure():
     # ---------------------------------- #
     # 2 grouped_basis                    #
     # ---------------------------------- #
@@ -181,6 +189,8 @@ def test_grouped_basis_with_large_dist():
 
     os.remove(db_name)
 
+
+def test_two_grouped_basis_background_atoms_probe_structure():
     # ---------------------------------- #
     # 2 grouped_basis + background atoms #
     # ---------------------------------- #
@@ -282,7 +292,9 @@ def test_narrow_angle_crystal():
 
 
 test_spgroup_217()
-test_grouped_basis_with_large_dist()
+test_two_grouped_basis()
+test_two_grouped_basis_probe_structure()
+test_two_grouped_basis_background_atoms_probe_structure()
 test_narrow_angle_crystal()
 
 if update_reference_file:
