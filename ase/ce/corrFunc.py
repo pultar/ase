@@ -74,8 +74,6 @@ class CorrFunction(object):
                                 if int(i[1]) == n]
             # loop though all names of cluster with size n
             for unique_name in unique_name_list:
-
-
                 # loop through all possible decoration numbers
                 for dec in comb:
                     sp = 0.
