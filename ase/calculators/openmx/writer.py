@@ -76,7 +76,8 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
                 'species_number', 'definition_of_atomic_species',
                 'atoms_number', 'atoms_speciesandcoordinates_unit',
                 'atoms_speciesandcoordinates', 'atoms_unitvectors_unit',
-                'atoms_unitvectors']
+                'atoms_unitvectors', 'band_dispersion', 'band_nkpath',
+                'band_kpath']
 
     for key in sequence:
         keywords[key] = None
@@ -101,12 +102,15 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     keywords['atoms_number'] = len(atoms)
     keywords['atoms_unitvectors_unit'] = 'Ang'
     keywords['atoms_speciesandcoordinates_unit'] = 'Ang'
-    keywords['scf_restart'] = (parameters.get('restart') is not None or
-                               parameters.get('scf_restart') is not None)
+    keywords['scf_restart'] = parameters.get('scf_restart')
+    if parameters.get('restart') is not None:
+        keywords['scf_restart'] = True
     # Having generouse restart policy. It is dangerouse if one caluclate
     # totally different with previous calculator.
-    keywords['scf_stress_tensor'] = \
-        ('stress' in properties or 'forces' in properties)
+
+    if 'stress' in properties:
+        keywords['scf_stress_tensor'] = True
+
     # keywords['scf_stress_tensor'] = 'stress' in properties
     # This is not working due to the UnitCellFilter method.
 
@@ -125,6 +129,11 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     keywords['scf_mixing_type'] = parameters.get('mixer')
     keywords['scf_electronic_temperature'] = parameters.get('smearing')
     keywords['scf_system_charge'] = parameters.get('charge')
+    if parameters.get('band_kpath') is not None:
+        keywords['band_dispersion'] = True
+    keywords['band_nkpath'] = parameters.get('band_kpath')
+    if keywords['band_nkpath'] is not None:
+        keywords['band_nkpath'] = len(keywords['band_nkpath'])
 
     # Set up Wannier Environment
     if parameters.get('wannier_func_calc') is not None:
@@ -194,6 +203,8 @@ def get_definition_of_atomic_species(atoms, parameters):
         proj1    Si5.5-s1p1d1f1  Si_CA13
       Definition.of.Atomic.Species>
     """
+    if parameters.get('definition_of_atomic_species') is not None:
+        return parameters['definition_of_atomic_species']
     definition_of_atomic_species = []
     xc = parameters.get('scf_xctype')
     xc = parameters.get('xc')
@@ -500,7 +511,7 @@ def write_integer(f, key, value):
 
 
 def write_float(f, key, value):
-    f.write("        ".join([key, "%f" % value]))
+    f.write("        ".join([key, "%.8g" % value]))
     f.write("\n")
 
 

@@ -22,6 +22,7 @@ import os
 import struct
 import numpy as np
 from ase.units import Ha, Bohr, Debye
+from ase.utils import basestring
 from ase.calculators.calculator import ReadError
 
 
@@ -45,7 +46,8 @@ def read_openmx(filename=None, debug=False):
     dat_data = read_file(get_file_name('.dat', filename))
     out_data = read_file(get_file_name('.out', filename))
     scfout_data = read_scfout_file(get_file_name('.scfout', filename))
-    dos_data = read_dos_file(get_file_name('.Dos.val', filename))
+    band_data = read_band_file(get_file_name('.Band', filename))
+    # dos_data = read_dos_file(get_file_name('.Dos.val', filename))
     """
     First, we get every data we could get from the all results files. And then,
     reform the data to fit to data structure of Atom object. While doing this,
@@ -53,14 +55,14 @@ def read_openmx(filename=None, debug=False):
     """
     parameters = get_parameters(out_data=out_data, log_data=log_data,
                                 restart_data=restart_data, dat_data=dat_data,
-                                scfout_data=scfout_data)
+                                scfout_data=scfout_data, band_data=band_data)
     atomic_formula = get_atomic_formula(out_data=out_data, log_data=log_data,
                                         restart_data=restart_data,
                                         scfout_data=scfout_data,
                                         dat_data=dat_data)
     results = get_results(out_data=out_data, log_data=log_data,
                           restart_data=restart_data, scfout_data=scfout_data,
-                          dat_data=dat_data)
+                          dat_data=dat_data, band_data=band_data)
 
     atoms = Atoms(**atomic_formula)
     atoms.set_calculator(OpenMX(**parameters))
@@ -77,7 +79,7 @@ def read_file(filename, debug=False):
             example will be written later
     """
     from ase.calculators.openmx import parameters as param
-    if os.path.isfile(filename) is not True:
+    if not os.path.isfile(filename):
         return {}
     patterns = {
       'Stress tensor': ('stress', read_stress_tensor),
@@ -218,7 +220,7 @@ def read_scfout_file(filename=None):
     from numpy import cumsum as cum
     from numpy import split as spl
     from numpy import sum, zeros
-    if os.path.isfile(filename) is not True:
+    if not os.path.isfile(filename):
         return {}
 
     def easyReader(byte, data_type, shape):
@@ -273,39 +275,36 @@ def read_scfout_file(filename=None):
                         Hks[spin][ct_AN][h_AN].append(floa(f.read(8*TNO2)))
         return Hks
 
-    try:
-        f = open(filename, mode='rb')
-        atomnum, SpinP_switch = inte(f.read(8))
-        Catomnum, Latomnum, Ratomnum, TCpyCell = inte(f.read(16))
-        atv = floa(f.read(8*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
-        atv_ijk = inte(f.read(4*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
-        Total_NumOrbs = np.insert(inte(f.read(4*(atomnum))), 0, 1, axis=0)
-        FNAN = np.insert(inte(f.read(4*(atomnum))), 0, 0, axis=0)
-        natn = ins(spl(inte(f.read(4*sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
-                   0, zeros(FNAN[0] + 1), axis=0)[:-1]
-        ncn = ins(spl(inte(f.read(4*np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
-                  0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
-        tv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
-        rtv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
-        Gxyz = ins(floa(f.read(8*(atomnum)*4), shape=(atomnum, 4)), 0,
-                   [0., 0., 0., 0.], axis=0)
-        Hks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
-        iHks = []
-        if SpinP_switch == 3:
-            iHks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
-        OLP = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
-        OLPpox = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
-        OLPpoy = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
-        OLPpoz = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
-        DM = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
-        Solver = inte(f.read(4))
-        ChemP, E_Temp = floa(f.read(8*2))
-        dipole_moment_core = floa(f.read(8*3))
-        dipole_moment_background = floa(f.read(8*3))
-        Valence_Electrons, Total_SpinS = floa(f.read(8*2))
+    f = open(filename, mode='rb')
+    atomnum, SpinP_switch = inte(f.read(8))
+    Catomnum, Latomnum, Ratomnum, TCpyCell = inte(f.read(16))
+    atv = floa(f.read(8*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
+    atv_ijk = inte(f.read(4*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
+    Total_NumOrbs = np.insert(inte(f.read(4*(atomnum))), 0, 1, axis=0)
+    FNAN = np.insert(inte(f.read(4*(atomnum))), 0, 0, axis=0)
+    natn = ins(spl(inte(f.read(4*sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+               0, zeros(FNAN[0] + 1), axis=0)[:-1]
+    ncn = ins(spl(inte(f.read(4*np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+              0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
+    tv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
+    rtv = ins(floa(f.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
+    Gxyz = ins(floa(f.read(8*(atomnum)*4), shape=(atomnum, 4)), 0,
+               [0., 0., 0., 0.], axis=0)
+    Hks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
+    iHks = []
+    if SpinP_switch == 3:
+        iHks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
+    OLP = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
+    OLPpox = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
+    OLPpoy = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
+    OLPpoz = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, f)
+    DM = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, f)
+    Solver = inte(f.read(4))
+    ChemP, E_Temp = floa(f.read(8*2))
+    dipole_moment_core = floa(f.read(8*3))
+    dipole_moment_background = floa(f.read(8*3))
+    Valence_Electrons, Total_SpinS = floa(f.read(8*2))
 
-    except IOError:
-        raise(IOError('Can not find %s' % filename))
     f.close()
     scf_out = {'atomnum': atomnum, 'SpinP_switch': SpinP_switch,
                'Catomnum': Catomnum, 'Latomnum': Latomnum, 'Hks': Hks,
@@ -320,6 +319,42 @@ def read_scfout_file(filename=None):
                'Total_SpinS': Total_SpinS, 'DM': DM
                }
     return scf_out
+
+
+def read_band_file(filename=None):
+    band_data = {}
+    if not os.path.isfile(filename):
+        return {}
+    band_kpath = []
+    eigen_bands = []
+    with open(filename, 'r') as f:
+        line = f.readline().split()
+        nkpts = 0
+        nband = int(line[0])
+        nspin = int(line[1]) + 1
+        band_data['nband'] = nband
+        band_data['nspin'] = nspin
+        line = f.readline().split()
+        band_data['band_kpath_unitcell'] = [line[:3], line[3:6], line[6:9]]
+        line = f.readline().split()
+        band_data['band_nkpath'] = int(line[0])
+        for i in range(band_data['band_nkpath']):
+            line = f.readline().split()
+            band_kpath.append(line)
+            nkpts += int(line[0])
+        band_data['nkpts'] = nkpts
+        band_data['band_kpath'] = band_kpath
+        kpts = np.zeros((nkpts, 3))
+        eigen_bands = np.zeros((nspin, nkpts, nband))
+        for i in range(nspin):
+            for j in range(nkpts):
+                line = f.readline()
+                kpts[j] = np.array(line.split(), dtype=float)[1:]
+                line = f.readline()
+                eigen_bands[i, j] = np.array(line.split(), dtype=float)[:]
+        band_data['eigenvalues'] = eigen_bands
+        band_data['band_kpts'] = kpts
+    return band_data
 
 
 def read_electron_valency(filename='H_CA13'):
@@ -350,26 +385,15 @@ def rn(line='\n', n=1):
         >>> int(rn(line, 3))
         4
     """
-    if line == '':
-        return 0
-    i = 0
-    for j in range(n):
-        i -= 1
-        while line.split(' ')[i] == '' or line.split(' ')[i] == '\n':
-            i -= 1
-    return line.split(' ')[i].split('\n')[0]
-
-
-def read_tuple(line):
-    return (float(rn(line, 3)), float(rn(line, 2)), float(rn(line, 1)))
+    return line.split()[-n]
 
 
 def read_tuple_integer(line):
-    return (int(rn(line, 3)), int(rn(line, 2)), int(rn(line, 1)))
+    return tuple([int(x) for x in line.split()[-3:]])
 
 
 def read_tuple_float(line):
-    return (float(rn(line, 3)), float(rn(line, 2)), float(rn(line, 1)))
+    return tuple([float(x) for x in line.split()[-3:]])
 
 
 def read_integer(line):
@@ -391,20 +415,20 @@ def read_bool(line):
     elif bool == 'off':
         return False
     else:
-        print('Waning! boolean is %s. Return string' % bool)
+        print('Warning! boolean is %s. Return string' % bool)
         return bool
 
 
 def read_list_int(line):
-    print('read_list_int Not Implemented Yet')
+    return [int(x) for x in line.split()[1:]]
 
 
 def read_list_float(line):
-    return float(rn(line))
+    return [float(x) for x in line.split()[1:]]
 
 
 def read_list_bool(line):
-    print('read_list_bool Not Implemented Yet')
+    return [read_bool(x) for x in line.split()[1:]]
 
 
 def read_matrix(line, key, f):
@@ -442,8 +466,8 @@ def read_magmoms_and_total_magmom(line, f):
 
 
 def read_energy(line, f):
-    from ase.units import Ha
-    return read_float(line) * Ha
+    # It has Hartree unit yet
+    return read_float(line)
 
 
 def read_eigenvalues(line, f, debug=False):
@@ -456,7 +480,6 @@ def read_eigenvalues(line, f, debug=False):
     """
     if 'Hartree' in line:
         return None
-    from ase.units import Ha
     if(debug):
         print("Read eigenvalue output")
     eigenvalues = []
@@ -477,17 +500,18 @@ def read_eigenvalues(line, f, debug=False):
                 eigenvalues[1][i].append(float(rn(line, 1)))
                 line = f.readline()
             i += 1
-    return np.asarray(eigenvalues) * Ha
+    return np.asarray(eigenvalues)
 
 
 def read_forces(line, f):
+    # It has Hartree per Bohr unit yet
     forces = []
     f.readline()  # Skip Empty line
     line = f.readline()
     while 'coordinates.forces>' not in line:
         forces.append(read_tuple_float(line))
         line = f.readline()
-    return np.array(forces) * Ha / Bohr
+    return np.array(forces)
 
 
 def read_dipole(line, f):
@@ -515,13 +539,14 @@ def read_chemical_potential(line, f):
 
 
 def get_parameters(out_data=None, log_data=None, restart_data=None,
-                   scfout_data=None, dat_data=None):
+                   scfout_data=None, dat_data=None, band_data=None):
     """
     From the given data sets, construct the dictionary 'parameters'. If data
     is in the paramerters, it will save it.
     """
     from ase.calculators.openmx import parameters as param
-    scaned_data = [dat_data, out_data, log_data, restart_data, scfout_data]
+    scaned_data = [dat_data, out_data, log_data, restart_data, scfout_data,
+                   band_data]
     openmx_keywords = [param.tuple_integer_keys, param.tuple_float_keys,
                        param.tuple_bool_keys, param.integer_keys,
                        param.float_keys, param.string_keys, param.bool_keys,
@@ -626,7 +651,7 @@ def get_atomic_formula(out_data=None, log_data=None, restart_data=None,
 
 
 def get_results(out_data=None, log_data=None, restart_data=None,
-                scfout_data=None, dat_data=None):
+                scfout_data=None, dat_data=None, band_data=None):
     """
     From the gien data sets, construct the dictionary 'results' and return it'
     OpenMX version 3.8 can yeild following properties
@@ -645,7 +670,7 @@ def get_results(out_data=None, log_data=None, restart_data=None,
                               'forces': Ha/Bohr, 'stress': Ha/Bohr**3,
                               'dipole': Debye, 'chemical_potential': Ha,
                               'magmom': 1, 'magmoms': 1, 'eigenvalues': Ha}
-    data = [out_data, log_data, restart_data, scfout_data, dat_data]
+    data = [out_data, log_data, restart_data, scfout_data, dat_data, band_data]
     for datum in data:
         for key in datum.keys():
             for property in implemented_properties.keys():
@@ -656,9 +681,7 @@ def get_results(out_data=None, log_data=None, restart_data=None,
 
 def get_file_name(extension='.out', filename=None):
     directory, prefix = os.path.split(filename)
-    abs_dir = os.path.join(os.getcwd(), directory)
-    abs_lab = os.path.join(abs_dir, prefix)
-    return abs_lab + extension
+    return os.path.abspath(directory + extension)
 
 
 def get_standard_key(key):
@@ -669,7 +692,9 @@ def get_standard_key(key):
     For example:
         'scf.XcType' -> 'scf_xctype'
     """
-    if type(key) is str:
+    if isinstance(key, basestring):
         return key.lower().replace('.', '_')
     elif type(key) is list:
+        return [k.lower().replace('.', '_') for k in key]
+    else:
         return [k.lower().replace('.', '_') for k in key]

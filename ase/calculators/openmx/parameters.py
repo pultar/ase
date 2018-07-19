@@ -19,6 +19,7 @@ functional theories.
 """
 from __future__ import print_function
 import os
+import warnings
 from ase.calculators.calculator import Parameters
 from ase.calculators.openmx.default_settings import default_dictionary
 from ase.units import Ha, Ry
@@ -91,6 +92,7 @@ string_keys = [
     'Atoms.SpeciesAndCoordinates.Unit',
     'Atoms.UnitVectors.Unit',
     'scf.XcType',
+    'scf.SpinPolarization',
     'scf.Hubbard.Occupation',
     'scf.EigenvalueSolver',
     'scf.Mixing.Type',
@@ -100,7 +102,6 @@ string_keys = [
     'Wannier.Initial.Projectors.Unit'
 ]
 bool_keys = [
-    'scf.SpinPolarization',
     'scf.partialCoreCorrection',
     'scf.Hubbard.U',
     'scf.Constraint.NC.Spin',
@@ -162,7 +163,7 @@ class OpenMXParameters(Parameters):
     Parameters class for the OpenMX calculator. OpenMX parameters are defined
     here. If values seems unreasonable, for example, energy_cutoff=0.01, it
     gives warning. Changing standard parameters to openmx kewords is not a job
-    for this class. We translate the variable right before we right it. Hence,
+    for this class. We translate the variable right before we write. Hence,
     translation processes are written in `writers.py`. Here we only deals with
     default parameters and the reasonable boundary for that value.
 
@@ -240,6 +241,7 @@ class OpenMXParameters(Parameters):
         atoms_speciesandcoordinates_unit=None,
         atoms_unitvectors_unit=None,
         scf_xctype=None,
+        scf_spinpolarization=None,
         scf_hubbard_occupation=None,
         scf_eigenvaluesolver=None,
         scf_mixing_type=None,
@@ -247,7 +249,6 @@ class OpenMXParameters(Parameters):
         orbitalopt_startpulay=None,
         md_type=None,
         wannier_initial_projectors_unit=None,
-        scf_spinpolarization=None,
         scf_partialcorecorrection=None,
         scf_hubbard_u=None,
         scf_constraint_nc_spin=None,
@@ -282,6 +283,7 @@ class OpenMXParameters(Parameters):
         maxiter=200,
         energy_cutoff=150*Ry,
         kpts=(4, 4, 4),
+        band_kpts=[],  # To sperate monkhorst and band kpts
         eigensolver='Band',
         spinpol=None,
         convergence=1e-6 * Ha,
@@ -309,9 +311,9 @@ class OpenMXParameters(Parameters):
             try:
                 dft_data_path = os.environ['OPENMX_DFT_DATA_PATH']
             except KeyError:
-                print('Please either set OPENMX_DFT_DATA_PATH as an enviroment'
-                      'variable or specify dft_data_path as a keyword argument'
-                      )
+                warnings.warn('Please either set OPENMX_DFT_DATA_PATH as an'
+                              'enviroment variable or specify dft_data_path as'
+                              'a keyword argument')
         if dft_data_dict is None:
             dft_data_dict = default_dictionary
         else:
