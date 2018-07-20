@@ -693,7 +693,7 @@ def get_standard_key(key):
     """
     if isinstance(key, basestring):
         return key.lower().replace('.', '_')
-    elif type(key) is list:
+    elif isinstance(key is list):
         return [k.lower().replace('.', '_') for k in key]
     else:
         return [k.lower().replace('.', '_') for k in key]

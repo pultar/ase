@@ -20,8 +20,9 @@ functional theories.
 import os
 import numpy as np
 from ase.units import Bohr, Ha, Ry
+from ase.utils import basestring
 from ase.calculators.calculator import kpts2sizeandoffsets
-from ase.calculators.openmx.reader import read_electron_valency
+from ase.calculators.openmx.reader import read_electron_valency, get_file_name
 
 
 def write_openmx(label=None, atoms=None, parameters=None, properties=None,
@@ -313,12 +314,14 @@ def get_up_down_spin(magmom, element, xc):
 
 
 def get_spin_direction(magmoms):
-    if type(magmoms[0]) is float or type(magmoms[0]) is np.float64:
+    '''
+    From atoms.magmom, returns the spin direction of phi and theta
+    '''
+    if np.array(magmoms).dtype == float or \
+       np.array(magmoms).dtype is np.float64:
         return []
     else:
-        print(magmoms)
         magmoms = np.array(magmoms)
-        print(magmoms)
         return magmoms/np.linalg.norm(magmoms, axis=1)
 
 
@@ -347,20 +350,6 @@ def get_atoms_unitvectors(atoms, parameters):
 
 
 def get_hubbard_u_values(atoms, parameters):
-    """
-    Hubbard.U.values
-    An effective U-value on each orbital of species is defined by the following
-    keyword:
-    For example,
-    hubbard_u_values =
-        [['Ni',  1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 4.0 2d 0.0],
-         ['O',  1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 0.0]
-    goes to,
-        <Hubbard.U.values
-         Ni  1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 4.0 2d 0.0
-         O   1s 0.0 2s 0.0 1p 0.0 2p 0.0 1d 0.0
-        Hubbard.U.values>
-    """
     return parameters.get('hubbard_u_values', [])
 
 
@@ -386,9 +375,10 @@ def get_band_kpath_unitcell(atoms, parameters):
 
 def get_band_kpath(atoms, parameters):
     kpts = parameters.get('kpts')
-    if type(kpts) == list and len(kpts) > 3:
-        parameters['band_kpath'] = get_kpath(kpts=kpts)
-    return parameters.get('band_kpath', [])
+    if isinstance(kpts, list) and len(kpts) > 3:
+        return get_kpath(kpts=kpts)
+    else:
+        return parameters.get('band_kpath', [])
 
 
 def get_mo_kpoint(atoms, parameters):
@@ -526,7 +516,8 @@ def write_list_int(f, key, value):
 
 
 def write_list_bool(f, key, value):
-    f.write("".join(key) + "     ".join(map(str, value)))
+    omx_bl = {True: 'On', False: 'Off'}
+    f.write("".join(key) + "     ".join([omx_bl[bl] for bl in value]))
 
 
 def write_list_float(f, key, value):
@@ -543,13 +534,6 @@ def write_matrix(f, key, value):
     f.write("\n\n")
 
 
-def get_file_name(extension='.dat', filename=None):
-    directory, prefix = os.path.split(filename)
-    abs_dir = os.path.join(os.getcwd(), directory)
-    abs_lab = os.path.join(abs_dir, prefix)
-    return abs_lab + extension
-
-
 def get_standard_key(key):
     """
     Standard ASE parameter format is to USE unerbar(_) instead of dot(.). Also,
@@ -558,11 +542,12 @@ def get_standard_key(key):
     For example:
         'scf.XcType' -> 'scf_xctype'
     """
-    if type(key) is str:
+    if isinstance(key, basestring):
         return key.lower().replace('.', '_')
-    elif type(key) is list:
+    elif isinstance(key is list):
         return [k.lower().replace('.', '_') for k in key]
-
+    else:
+        return [k.lower().replace('.', '_') for k in key]
 
 def get_openmx_key(key):
     """
