@@ -149,7 +149,8 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
 
 def get_species(symbols):
     species = []
-    return [species.append(s) for s in symbols if s not in species]
+    [species.append(s) for s in symbols if s not in species]
+    return species
 
 
 def get_xc(xc):
@@ -166,14 +167,14 @@ def get_xc(xc):
 
 
 def get_scf_kgrid(kpts=None, scf_kgrid=None, atoms=None):
-    if isinstance(type(kpts), tuple) or isinstance(type(kpts), list):
-        if len(kpts) is 3 and type(kpts[0]) is int:
+    if isinstance(kpts, tuple) or isinstance(kpts, list):
+        if len(kpts) == 3 and isinstance(kpts[0], int):
             return kpts
         elif scf_kgrid is not None:
             return scf_kgrid
         else:
             return (4, 4, 4)
-    elif type(kpts) is float or type(kpts) is int:
+    elif isinstance(kpts, float) or isinstance(kpts, int):
         return tuple(kpts2sizeandoffsets(atoms=atoms, density=kpts)[0])
     else:
         return (4, 4, 4)
@@ -209,8 +210,7 @@ def get_definition_of_atomic_species(atoms, parameters):
     xc = parameters.get('scf_xctype')
     xc = parameters.get('xc')
     chem = atoms.get_chemical_symbols()
-    species = []
-    [species.append(symbol) for symbol in chem if symbol not in species]
+    species = get_species(chem)
     for element in species:
         rad_orb = get_cutoff_radius_and_orbital(element=element)
         potential = get_pseudo_potential_suffix(element=element, xc=xc)
