@@ -563,6 +563,21 @@ def get_parameters(out_data=None, log_data=None, restart_data=None,
     parameters.update(translated_parameters)
     return {k: v for k, v in parameters.items() if v is not None}
 
+def get_standard_key(key):
+    """
+    Standard ASE parameter format is to USE unerbar(_) instead of dot(.). Also,
+    It is recommended to use lower case alphabet letter. Not Upper. Thus, we
+    change the key to standard key
+    For example:
+        'scf.XcType' -> 'scf_xctype'
+    """
+    if isinstance(key, basestring):
+        return key.lower().replace('.', '_')
+    elif isinstance(key, list):
+        return [k.lower().replace('.', '_') for k in key]
+    else:
+        return [k.lower().replace('.', '_') for k in key]
+
 
 def get_standard_parameters(parameters):
     """
@@ -681,19 +696,3 @@ def get_results(out_data=None, log_data=None, restart_data=None,
 def get_file_name(extension='.out', filename=None):
     directory, prefix = os.path.split(filename)
     return os.path.abspath(directory + '/' + prefix + extension)
-
-
-def get_standard_key(key):
-    """
-    Standard ASE parameter format is to USE unerbar(_) instead of dot(.). Also,
-    It is recommended to use lower case alphabet letter. Not Upper. Thus, we
-    change the key to standard key
-    For example:
-        'scf.XcType' -> 'scf_xctype'
-    """
-    if isinstance(key, basestring):
-        return key.lower().replace('.', '_')
-    elif isinstance(key is list):
-        return [k.lower().replace('.', '_') for k in key]
-    else:
-        return [k.lower().replace('.', '_') for k in key]

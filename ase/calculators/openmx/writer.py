@@ -22,7 +22,14 @@ import numpy as np
 from ase.units import Bohr, Ha, Ry
 from ase.utils import basestring
 from ase.calculators.calculator import kpts2sizeandoffsets
-from ase.calculators.openmx.reader import read_electron_valency, get_file_name
+from ase.calculators.openmx.reader import (read_electron_valency, get_file_name
+                                           , get_standard_key)
+from ase.calculators.openmx import parameters as param
+
+keys = [param.tuple_integer_keys, param.tuple_float_keys,
+        param.tuple_bool_keys, param.integer_keys, param.float_keys,
+        param.string_keys, param.bool_keys, param.list_int_keys,
+        param.list_bool_keys, param.list_float_keys, param.matrix_keys]
 
 
 def write_openmx(label=None, atoms=None, parameters=None, properties=None,
@@ -534,31 +541,11 @@ def write_matrix(f, key, value):
     f.write("\n\n")
 
 
-def get_standard_key(key):
-    """
-    Standard ASE parameter format is to USE unerbar(_) instead of dot(.). Also,
-    It is recommended to use lower case alphabet letter. Not Upper. Thus, we
-    change the key to standard key
-    For example:
-        'scf.XcType' -> 'scf_xctype'
-    """
-    if isinstance(key, basestring):
-        return key.lower().replace('.', '_')
-    elif isinstance(key is list):
-        return [k.lower().replace('.', '_') for k in key]
-    else:
-        return [k.lower().replace('.', '_') for k in key]
-
 def get_openmx_key(key):
     """
     For the writting purpose, we need to know Original OpenMX keyword format.
     By comparing keys in the parameters.py, restore the original key
     """
-    from ase.calculators.openmx import parameters as param
-    keys = [param.tuple_integer_keys, param.tuple_float_keys,
-            param.tuple_bool_keys, param.integer_keys, param.float_keys,
-            param.string_keys, param.bool_keys, param.list_int_keys,
-            param.list_bool_keys, param.list_float_keys, param.matrix_keys]
     for openmx_key in keys:
         for openmx_keyword in openmx_key:
             if key == get_standard_key(openmx_keyword):
