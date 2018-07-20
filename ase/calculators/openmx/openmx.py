@@ -145,6 +145,9 @@ class OpenMX(FileIOCalculator):
         run()
 
     def run_openmx(self):
+        def isRunning(process=None):
+            ''' Check mpi is running'''
+            return process.poll() is None
         runfile = get_file_name('.dat', self.label)
         outfile = get_file_name('.log', self.label)
         olddir = os.getcwd()
@@ -156,8 +159,32 @@ class OpenMX(FileIOCalculator):
             command = self.command
             command = command % (runfile, outfile)
             self.prind(command)
-            p = subprocess.Popen(command, shell=True)
-            self.print_file(file=outfile, process=p)
+            p = subprocess.Popen(command, shell=True, universal_newlines=True)
+            self.print_file(file=outfile, running=isRunning, process=p)
+        finally:
+            os.chdir(olddir)
+        self.prind("Calculation Finished")
+
+    def run_mpi(self):
+        """
+        Run openmx using MPI method. If keyword `mpi` is declared, it will
+        run.
+        """
+        def isRunning(process=None):
+            ''' Check mpi is running'''
+            return process.poll() is None
+        processes = self.processes
+        threads = self.threads
+        runfile = get_file_name('.dat', self.label)
+        outfile = get_file_name('.log', self.label)
+        olddir = os.getcwd()
+        abs_dir = os.path.join(olddir, self.directory)
+        try:
+            os.chdir(abs_dir)
+            command = self.get_command(processes, threads, runfile, outfile)
+            self.prind(command)
+            p = subprocess.Popen(command, shell=True, universal_newlines=True)
+            self.print_file(file=outfile, running=isRunning, process=p)
         finally:
             os.chdir(olddir)
         self.prind("Calculation Finished")
@@ -179,31 +206,31 @@ class OpenMX(FileIOCalculator):
         except AttributeError:
             os.chdir(self.directory)
 
-        def runCmd(exe):
-            p = subprocess.Popen(exe, stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
-            while True:
-                line = p.stdout.readline()
-                if line != '':
-                    # the real code does filtering here
-                    yield line.rstrip()
-                else:
-                    break
-
         def isRunning(jobNum=None, status='Q', qstat='qstat'):
             """
             Check submitted job is still Running
             """
+            def runCmd(exe):
+                p = subprocess.Popen(exe, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+                while True:
+                    line = p.stdout.readline()
+                    if line != '':
+                        # the real code does filtering here
+                        yield line.rstrip()
+                    else:
+                        break
             jobs = runCmd('qstat')
-            self.prind('jobs', jobs)
-            if jobs is not None:
-                for line in jobs:
-                    if str(jobNum) in line:
-                        columns = line.split()
+            columns = None
+            for line in jobs:
+                if str(jobNum) in line:
+                    columns = line.split()
+                    self.prind(line)
+            if columns is not None:
                 return columns[-2] == status
             else:
-                return 'R' != status
+                return False
 
         inputfile = self.label + '.dat'
         outfile = self.label + '.log'
@@ -235,30 +262,6 @@ class OpenMX(FileIOCalculator):
         os.chdir(olddir)
         self.prind('Calculation Finished!')
         return jobNum
-
-    def run_mpi(self):
-        """
-        Run openmx using MPI method. If keyword `mpi` is declared, it will
-        run.
-        """
-        def isRunning(process=None):
-            ''' Check mpi is running'''
-            return process.poll() is None
-        processes = self.processes
-        threads = self.threads
-        runfile = get_file_name('.dat', self.label)
-        outfile = get_file_name('.log', self.label)
-        olddir = os.getcwd()
-        abs_dir = os.path.join(olddir, self.directory)
-        try:
-            os.chdir(abs_dir)
-            self.command = self.get_command(processes, threads, runfile, outfile)
-            self.prind(self.command)
-            p = subprocess.Popen(self.command, shell=True, universal_newlines=True)
-            self.print_file(file=outfile, running=isRunning, process=p)
-        finally:
-            os.chdir(olddir)
-        self.prind("Calculation Finished")
 
     def clean(self, prefix='test', queue_num=None):
         """Method which cleans up after a calculation.
@@ -350,8 +353,7 @@ class OpenMX(FileIOCalculator):
             debug = self.debug
         if nohup is None:
             nohup = self.nohup
-        if debug:
-            print('Reading input files')
+        self.prind('Reading input file'+self.label)
         filename = get_file_name('.dat', self.label)
         if not nohup:
             with open(filename, 'r') as f:
@@ -407,8 +409,6 @@ class OpenMX(FileIOCalculator):
             if key not in self.parameters or not equal(value, oldvalue):
                 changed_parameters[key] = value
                 self.parameters[key] = value
-        if(self.debug):
-            print(' Changed', changed_parameters)
 
         # Set the parameters
         for key, value in kwargs.items():
@@ -660,23 +660,12 @@ class OpenMX(FileIOCalculator):
             self.prind('Waiting for %s to come out' % file)
             time.sleep(5)
         with open(file, 'r') as f:
-            while running(args):
+            while running(**args):
                 f.seek(last_position)
                 new_data = f.read()
                 prev_position = f.tell()
                 # self.prind('pos', prev_position != last_position)
                 if prev_position != last_position:
-                    if not self.nohup:
-                        print(new_data)
-                    last_position = prev_position
-                time.sleep(1)
-
-        with open(file, "r") as f:
-            while hasRQJob(jobNum, status='R'):
-                f.seek(last_position)
-                new_data = f.read()
-                prev_position = f.tell()
-                if(prev_position != last_position):
                     if not self.nohup:
                         print(new_data)
                     last_position = prev_position
