@@ -614,8 +614,7 @@ def get_standard_parameters(parameters):
 def get_atomic_formula(out_data=None, log_data=None, restart_data=None,
                        scfout_data=None, dat_data=None,
                        scaled_positions=False):
-    """
-    From the given data sets, construct the dictionary 'atomic_formula'.
+    """_formula'.
     OpenMX results gives following information. Since, we should pick one
     between position/scaled_position, scaled_positions are suppressed by
     default. We use input value of position. Not the position after
@@ -681,7 +680,7 @@ def get_results(out_data=None, log_data=None, restart_data=None,
 
 def get_file_name(extension='.out', filename=None):
     directory, prefix = os.path.split(filename)
-    return os.path.abspath(directory + extension)
+    return os.path.abspath(directory + '/' + prefix + extension)
 
 
 def get_standard_key(key):

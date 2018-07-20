@@ -166,7 +166,7 @@ def get_xc(xc):
 
 
 def get_scf_kgrid(kpts=None, scf_kgrid=None, atoms=None):
-    if (type(kpts) is tuple or type(kpts) is list):
+    if isinstance(type(kpts), tuple) or isinstance(type(kpts), list):
         if len(kpts) is 3 and type(kpts[0]) is int:
             return kpts
         elif scf_kgrid is not None:
