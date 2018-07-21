@@ -18,7 +18,7 @@ from kimlammpslib import kimLAMMPSlib
 from kimlammpsrun import kimLAMMPSrun
 from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
                   OpenKIMcalculator
-from kimmodel import KIMModelCalculator
+from kimmodel import KIMModelCalculator, get_kim_model_supported_species
 from exceptions import KIMCalculatorError
 
 __version__ = '1.4.0'
@@ -67,7 +67,7 @@ def _get_params_for_LAMMPS_calculator(model_defn):
         c = model_defn[i]
         if c.lower().startswith('pair_style'):
             if found_pair_style:
-                raise KIMCalculatorError('ERROR: More than one pair_style in metadata file of Simulator Model "%s".' % extended_kim_id)
+                raise KIMCalculatorError('ERROR: More than one pair_style in metadata file.')
             found_pair_style = True
             parameters['pair_style'] = c.split(" ",1)[1]
         elif c.lower().startswith('pair_coeff'):
@@ -76,9 +76,9 @@ def _get_params_for_LAMMPS_calculator(model_defn):
         else:
             parameters['model_post'].append(c)
     if not found_pair_style:
-        raise KIMCalculatorError('ERROR: pair_style not found in metadata file of Simulator Model "%s".' % extended_kim_id)
+        raise KIMCalculatorError('ERROR: pair_style not found in metadata file.')
     if not found_pair_coeff:
-        raise KIMCalculatorError('ERROR: pair_coeff not found in metadata file of Simulator Model "%s".' % extended_kim_id)
+        raise KIMCalculatorError('ERROR: pair_coeff not found in metadata file.')
     return parameters
 
 ###############################################################################
@@ -302,9 +302,9 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
 
         if kim_mo_simulator == 'kimpy':
 
-#           calc = KIMModelCalculator(extended_kim_id)
-#           speclist = list(calc.get_kim_model_supported_species())
-            speclist = list(get_model_species_list(extended_kim_id))
+#           speclist = list(get_model_species_list(extended_kim_id))
+            calc = KIMModelCalculator(extended_kim_id)
+            speclist = list(calc.get_kim_model_supported_species())
 
         elif kim_mo_simulator == 'asap':
 
