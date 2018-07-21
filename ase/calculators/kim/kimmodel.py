@@ -38,7 +38,7 @@ class KIMModelCalculator(Calculator):
 
 
   def __init__(self, modelname, neigh_skin_ratio=0.2, debug=False, *args, **kwargs):
-    super(KIMCalculator, self).__init__(*args, **kwargs)
+    super(KIMModelCalculator, self).__init__(*args, **kwargs)
 
     self.modelname = modelname
     self.debug = debug
@@ -528,12 +528,12 @@ def assemble_padding_forces(forces, num_contributing, padding_image_of):
     num_padding = pad_forces.shape[0]
 
     if num_contributing < num_padding:
-      for i in xrange(num_contributing):
+      for i in range(num_contributing):
         # indices: the indices of padding atoms that are images of contributing atom i
         indices = np.where(padding_image_of == i)
         total_forces[i] += np.sum(pad_forces[indices], axis=0)
     else:
-      for i in xrange(num_padding):
+      for i in range(num_padding):
         total_forces[padding_image_of[i]] += pad_forces[i]
 
   return total_forces
