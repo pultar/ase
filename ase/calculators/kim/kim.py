@@ -30,11 +30,7 @@ def _get_kim_model_id_and_type(extended_kim_id):
     or KIM Simulator Model and extract the short KIM ID
     '''
     # Determine whether this is a KIM Model or SM
-    try:
-        is_sm = kimsm.is_simulator_model(extended_kim_id)
-    except:
-        raise # re-raise same exception
-    if is_sm:
+    if kimsm.is_simulator_model(extended_kim_id):
         this_is_a_KIM_MO = False
         pref = 'SM'
     else:
@@ -152,10 +148,7 @@ def KIMCalculator(extended_kim_id, debug=False,
     ### If we get to here, the model is a KIM Simulator Model ###
 
     # Initialize KIM SM object
-    try:
-        ksm = kimsm.ksm_object(extended_kim_id=extended_kim_id)
-    except:
-        raise  # re-raise the same exception
+    ksm = kimsm.ksm_object(extended_kim_id=extended_kim_id)
     param_filenames = ksm.get_model_param_filenames()
 
 
@@ -224,22 +217,16 @@ def KIMCalculator(extended_kim_id, debug=False,
 
         # Process KIM templates (parameter file names, atom types, and queries)
         for i in range(0,len(model_defn)):
-            try:
-                model_defn[i] = kimsm.template_substitution( \
-                                    model_defn[i], param_filenames, ksm.sm_dirname)
-            except:
-                raise # re-raise same exception
+            model_defn[i] = kimsm.template_substitution( \
+                                model_defn[i], param_filenames, ksm.sm_dirname)
 
         # Get model init lines
         model_init = ksm.get_model_init_lines()
 
         #  Process KIM templates (parameter file names, atom types, and queries)
         for i in range(0,len(model_init)):
-            try:
-                model_init[i] = kimsm.template_substitution( \
-                                    model_init[i], param_filenames, ksm.sm_dirname)
-            except:
-                raise # re-raise same exception
+            model_init[i] = kimsm.template_substitution( \
+                                model_init[i], param_filenames, ksm.sm_dirname)
 
         # Get model supported units
         supported_units = ksm.get_model_units().lower().strip()
@@ -330,10 +317,7 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
     else:
 
         # Initialize KIM SM object
-        try:
-            ksm = kimsm.ksm_object(extended_kim_id=extended_kim_id)
-        except:
-            raise # re-raise same exception
+        ksm = kimsm.ksm_object(extended_kim_id=extended_kim_id)
         speclist = ksm.get_model_supported_species()
 
     # Return list of supported species
