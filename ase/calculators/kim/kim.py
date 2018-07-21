@@ -16,7 +16,8 @@ import os
 import kimsm
 from kimlammpslib import kimLAMMPSlib
 from kimlammpsrun import kimLAMMPSrun
-from asap3 import *
+from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
+                  OpenKIMcalculator
 from kimmodel import KIMModelCalculator
 from exceptions import KIMCalculatorError
 
