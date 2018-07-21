@@ -10,7 +10,6 @@ import numpy as np
 from ase.calculators.calculator import Calculator
 import kimpy
 import neighlist as nl
-from species_name_map import species_name_map
 from exceptions import KIMCalculatorError
 
 
@@ -279,7 +278,8 @@ class KIMModelCalculator(Calculator):
     species_map = dict()
     for s in unique_species:
       species_support, code, error = self.kim_model.get_species_support_and_code(
-         species_name_map[s])
+         kimpy.species_name.SpeciesName(s))
+
       check_error(error or not species_support, 'kim_model.get_species_support_and_code')
       species_map[s] = code
       if self.debug:
@@ -460,11 +460,16 @@ class KIMModelCalculator(Calculator):
       a list of species
     """
     species = []
-    for key, value in species_name_map.iteritems():
-      species_support, code, error = self.kim_model.get_species_support_and_code(value)
+    num_kim_species = kimpy.species_name.get_number_of_species_names()
+
+    for i in range(num_kim_species):
+      species_name, error = kimpy.species_name.get_species_name(i)
+      check_error(error, 'kimpy.species_name.get_species_name')
+      species_support,code,error = self.kim_model.get_species_support_and_code(species_name)
       check_error(error, 'kim_model.get_species_support_and_code')
       if species_support:
-        species.append(key)
+        species.append(str(species_name))
+
     return species
 
 
