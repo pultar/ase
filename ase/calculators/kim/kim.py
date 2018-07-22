@@ -18,7 +18,7 @@ from kimlammpslib import kimLAMMPSlib
 from kimlammpsrun import kimLAMMPSrun
 from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
                   OpenKIMcalculator
-from kimmodel import KIMModelCalculator, get_kim_model_supported_species
+from kimmodel import KIMModelCalculator
 from exceptions import KIMCalculatorError
 
 __version__ = '1.4.0'
