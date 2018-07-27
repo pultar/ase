@@ -134,7 +134,7 @@ def sort_by_internal_distances(atoms, indices):
     site_types = [i for i in range(len(indices))]
     for i in range(len(sort_order)):
         for j in range(i + 1, len(sort_order)):
-            if mic_dists[i] == mic_dists[j]:
+            if np.allclose(mic_dists[i], mic_dists[j], atol=0.002):
                 if site_types[j] > i:
                     # This site has not been assigned to another category yet
                     site_types[j] = i
