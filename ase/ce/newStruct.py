@@ -369,7 +369,8 @@ class GenerateStructures(object):
         # find if there is a match
         match = False
         symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
-                                             stol=0.05, scale_volume=True)
+                                             stol=0.05, scale_volume=True,
+                                             to_primitive=True)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
             match = symmcheck.compare(atoms, atoms2)

@@ -289,6 +289,10 @@ class ProbeStructure(object):
             # a basis with only 1 type of element should not be chosen
             if len(basis_elements[basis]) < 2:
                 continue
+            # TODO:
+            # basis consisting of only 1 concentration should not be selected
+            # if
+
             indx = choice(self.index_by_basis[basis])
             old_symbol = self.supercell[indx].symbol
 
@@ -311,8 +315,8 @@ class ProbeStructure(object):
             self.corrFunc.get_cf_by_cluster_names(self.supercell,
                                                   self.calc.cluster_names,
                                                   return_type='array')
-        for i in range(len(self.calc.cluster_names)):
-            print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
+        # for i in range(len(self.calc.cluster_names)):
+        #     print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
         if not np.allclose(final_cf, self.calc.cf):
             msg = 'The correlation function changed after simulated annealing'
             raise ValueError(msg)
