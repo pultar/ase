@@ -314,10 +314,6 @@ class KIMModelCalculator(Calculator):
       self.particle_contributing = np.ones(num_contributing, dtype=np.intc)
       need_neigh = self.particle_contributing
 
-    if self.debug:
-      # write configuratons with paddings
-      write_extxyz(cell, self.species_code, self.coords, fname='config.xyz')
-
     # create neighborlist
     error = nl.build(self.neigh, self.cutoff, self.coords, need_neigh)
     check_error(error, 'nl.build')
@@ -518,7 +514,7 @@ def assemble_padding_forces(forces, num_contributing, padding_image_of):
     Total forces on contributing atoms.
   """
 
-  total_forces = forces[:num_contributing]
+  total_forces = np.array(forces[:num_contributing])
 
   has_padding = True if padding_image_of.size != 0 else False
 
@@ -537,50 +533,6 @@ def assemble_padding_forces(forces, num_contributing, padding_image_of):
         total_forces[padding_image_of[i]] += pad_forces[i]
 
   return total_forces
-
-
-
-def write_extxyz(cell, species, coords, fname='config.xyz'):
-  """Output configurations as xyz file.
-
-  Parameters
-  ----------
-
-  cell: 3x3 array
-    Supercell lattice vectors.
-
-  species: list of str
-    atom species
-
-  coords: 2D array
-    atomic coordinates
-  """
-  with open (fname, 'w') as fout:
-    # first line (num of atoms)
-    natoms = len(species)
-    fout.write('{}\n'.format(natoms))
-
-    # second line
-    # lattice
-    fout.write('Lattice="')
-    for line in cell:
-      for item in line:
-        fout.write('{} '.format(item))
-    fout.write('" ')
-    # properties
-    fout.write('Properties=species:S:1:pos:R:3\n')
-
-    # species, coords
-    if natoms != len(coords):
-      msg = 'Number of atoms is inconsistent from species and coords.\n'
-      msg += 'len(specis) = {}\n'.format(natoms)
-      msg += 'len(coords) = {}'.format(len(coords))
-      report_error(msg)
-    for i in range(natoms):
-      fout.write('{:<d} '.format(species[i]))
-      fout.write('{:12.5e} '.format(coords[i][0]))
-      fout.write('{:12.5e} '.format(coords[i][1]))
-      fout.write('{:12.5e}\n'.format(coords[i][2]))
 
 
 def check_error(error, msg):
