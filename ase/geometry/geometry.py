@@ -210,13 +210,13 @@ def get_angles(v1, v2, cell=None, pbc=None):
             raise ValueError("cell or pbc must be both set or both be None")
 
         v1 = find_mic(v1, cell, pbc)[0]
-        v2= find_mic(v2, cell, pbc)[0]
+        v2 = find_mic(v2, cell, pbc)[0]
 
 
     v1 /= np.linalg.norm(v1, axis=1)[:, np.newaxis]
     v2 /= np.linalg.norm(v2, axis=1)[:, np.newaxis]
 
-    angles = np.arccos(np.einsum('ij,ij->i', v1, v2))
+    angles = np.arccos(np.clip(np.einsum('ij,ij->i', v1, v2), -1.0, 1.0))
 
     return angles * f
 
@@ -238,7 +238,7 @@ def get_distances(p1, p2=None, cell=None, pbc=None):
     D = np.zeros((len(p1), len(p2), 3))
 
     for offset, pos1 in enumerate(p1):
-        D[offset, :, :] = p2 - pos1 
+        D[offset, :, :] = p2 - pos1
 
     # Collapse to linear indexing
     D.shape = (-1, 3)

@@ -104,11 +104,6 @@ def sorted_internal_angles(atoms, mic=False):
 
     angles = atoms.get_angles(indx_comb, mic=mic).round(decimals=0) + 0
     angles = angles.tolist()
-    for i, angle in enumerate(angles):
-        if math.isnan(angle):
-            angles[i] = 0
-        elif angle == 180.0:
-            angles[i] = 0
     angles.sort(reverse=True)
     return angles
 
