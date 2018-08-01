@@ -499,11 +499,11 @@ class ClusterExpansionSetting:
             {
              "name": Unique name describing the cluster.
                      Example:
-                        "c3_3p725_s1_1"
+                        "c3_3p725_1"
                      means it is a 3-body cluster (c3) with a cluster diameter
-                     3.725 angstroms (3p275) found in a first symmetry groups
-                     (s1). The last number distinguishes different cluster
-                     families that fall in the same categorization.
+                     3.725 angstroms (3p275). The last number is a unique
+                     family identification number assigned to all cluster
+                     families.
 
              "descriptor": A string that contains a description of the cluster
                            including all of the internal distances and angles.
@@ -569,6 +569,29 @@ class ClusterExpansionSetting:
         # (based on translation symmetry)
         for site, ref_indx in enumerate(self.ref_index_trans_symm):
             cluster_info_symm = {}
+            cluster_info_symm['c0'] = {
+                "indices": [],
+                "equiv_sites": [],
+                "order": [],
+                "ref_indx": ref_indx,
+                "symm_group": site,
+                "descriptor": "empty",
+                "name": "c0",
+                "max_cluster_dia": 0.0,
+                "size": 0
+            }
+
+            cluster_info_symm['c1'] = {
+                "indices": [],
+                "equiv_sites": [],
+                "order": [0],
+                "ref_indx": ref_indx,
+                "symm_group": site,
+                "descriptor": "point_cluster",
+                "name": 'c1',
+                "max_cluster_dia": 0.0,
+                "size": 1
+            }
 
             for size in range(2, self.max_cluster_size + 1):
                 indices = self.indices_of_nearby_atom(ref_indx, size)
@@ -654,6 +677,24 @@ class ClusterExpansionSetting:
             for name, info in item.items():
                     all_indices += flatten(info["indices"])
         return list(set(all_indices))
+
+    @property
+    def multiplicity_factor(self):
+        """Return the multiplicity factor of each cluster."""
+        names = self.cluster_families
+        mult_factor = {name: 0 for name in names}
+        for name in names:
+            for item in self.cluster_info:
+                if name not in item.keys():
+                    continue
+                cluster = item[name]
+                num_in_group = \
+                    len(self.index_by_trans_symm[cluster["symm_group"]])
+                mult_factor[name] += len(cluster["indices"]) * num_in_group
+
+        for name in mult_factor.keys():
+            mult_factor[name] = int(mult_factor[name] / len(self.atoms))
+        return mult_factor
 
     def _create_translation_matrix(self):
         """Create and return translation matrix.
@@ -834,10 +875,12 @@ class ClusterExpansionSetting:
     @property
     def cluster_names(self):
         """Return the cluster names including decoration numbers."""
-        names = []
+        names = ["c0"]
         bf_list = list(range(len(self.basis_functions)))
         for item in self.cluster_info:
             for name, info in item.items():
+                if info["size"] == 0:
+                    continue
                 eq_sites = list(info["equiv_sites"])
                 for dec in product(bf_list, repeat=info["size"]):
                     dec_str = dec_string(dec, eq_sites)
@@ -916,14 +959,17 @@ class ClusterExpansionSetting:
                 if unique_name in entry:
                     cluster = entry[unique_name]
                     break
+            if cluster["size"] <= 1:
+                continue
             ref_indx = self.ref_index_trans_symm[symm]
             name = cluster["name"]
+
+            atoms = self.atoms.copy()
 
             keep_indx = [ref_indx] + list(cluster["indices"][0])
             equiv = list(cluster["equiv_sites"])
             order = list(cluster["order"][0])
 
-            atoms = self.atoms.copy()
             if order is not None:
                 keep_indx = [keep_indx[n] for n in order]
 

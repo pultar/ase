@@ -5,12 +5,14 @@ from copy import deepcopy
 import numpy as np
 from numpy.linalg import matrix_rank, inv
 import matplotlib.pyplot as plt
-from ase.utils import basestring
-from ase.ce import BulkCrystal, BulkSpacegroup
-from ase.db import connect
 import multiprocessing as mp
 import logging as lg
-from ase.ce import MultiprocessHandler
+import json
+from ase.utils import basestring
+from ase.ce import BulkCrystal, BulkSpacegroup, MultiprocessHandler
+from ase.db import connect
+
+
 
 try:
     # dependency on sklearn is to be removed due to some of technical problems
@@ -81,11 +83,12 @@ class Evaluate(object):
             raise TypeError(msg)
 
         if cluster_names is None:
-            self.cluster_names = self.setting.full_cluster_names
+            self.cluster_names = self.setting.cluster_names
         else:
             self.cluster_names = cluster_names
         self.cf_matrix = self._make_cf_matrix()
         self.e_dft = self._get_dft_energy_per_atom()
+        self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
         self.e_pred_loo = None
@@ -169,6 +172,30 @@ class Evaluate(object):
         if return_type == 'dict':
             return dict(pairs)
         return pairs
+
+    def save_cluster_name_eci(self, alpha, filename='cluster_eci.json'):
+        """Determine cluster names and their corresponding ECI value.
+
+        Arguments:
+        =========
+        alpha: int or float
+            regularization parameter.
+
+        return_type: str
+            the file name should end with either .json or .txt.
+        """
+        eci_dict = self.get_cluster_name_eci(alpha, return_type='dict')
+
+        extension = filename.split(".")[-1]
+
+        if extension == 'json':
+            with open(filename, 'w') as outfile:
+                json.dump(eci_dict, outfile, indent=2, separators=(",", ": "))
+        elif extension == 'txt':
+            with open(filename, 'r') as outfile:
+                outfile.write(eci_dict)
+        else:
+            raise TypeError('extension {} is not supported'.format(extension))
 
     def plot_fit(self, alpha):
         """Plot calculated (DFT) and predicted energies for a given alpha.
