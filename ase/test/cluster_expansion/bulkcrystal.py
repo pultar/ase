@@ -16,12 +16,9 @@ from ase.db import connect
 def get_members_of_family(setting, cname):
     """Return the members of a given cluster family."""
     members = []
-    for sym_grp_indx, sym_grp_name in zip(setting.cluster_indx,
-                                          setting.cluster_names):
-        size = int(cname[1])
-        for fam_indx, fam_name in zip(sym_grp_indx[size], sym_grp_name[size]):
-            if cname == fam_name:
-                members.append(fam_indx)
+    info = setting.cluster_info_by_name(cname)
+    for entry in info:
+        members.append(entry["indices"])
     return members
 
 
@@ -128,7 +125,7 @@ def test_grouped_basis_supercell():
                           max_cluster_size=2,
                           max_cluster_dist=4.,
                           grouped_basis=[[0], [1, 2]])
-    fam_members = get_members_of_family(setting, "c2_4p000_1")
+    fam_members = get_members_of_family(setting, "c2_4p000_7")
     assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
     assert len(fam_members[1]) == 6
     assert len(fam_members[2]) == 6

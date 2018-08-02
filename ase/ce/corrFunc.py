@@ -1,10 +1,15 @@
 """Module for calculating correlation functions."""
 import numpy as np
-from itertools import product
 from ase.atoms import Atoms
 from ase.ce import BulkCrystal, BulkSpacegroup
-from ase.ce.tools import wrap_and_sort_by_position, dec_string, equivalent_deco
+from ase.ce.tools import wrap_and_sort_by_position, equivalent_deco
 from ase.db import connect
+import multiprocessing as mp
+
+# workers can not be a member of CorrFunction since CorrFunctions is passed
+# as argument to the map function. Hence, we leave it as a global variable,
+# but it is initialized wheh the CorrFunction object is initialized.
+workers = None
 
 
 class CorrFunction(object):
@@ -13,9 +18,17 @@ class CorrFunction(object):
     Arguments
     =========
     setting: settings object
+
+    parallel: bool
+        specify whether or not to use the parallel processing for ``get_cf''
+        method.
+
+    num_core: int or "all"
+        specify the number of cores to use for parallelization.
+
     """
 
-    def __init__(self, setting):
+    def __init__(self, setting, parallel=False, num_core="all"):
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
                             "object")
@@ -24,6 +37,16 @@ class CorrFunction(object):
         self.index_by_trans_symm = setting.index_by_trans_symm
         self.num_trans_symm = setting.num_trans_symm
         self.ref_index_trans_symm = setting.ref_index_trans_symm
+        self.parallel = parallel
+        self.num_core = num_core
+        if parallel:
+            global workers
+            if self.num_core == "all":
+                num_proc = int(mp.cpu_count()/2)
+            else:
+                num_proc = int(self.num_core)
+            if workers is None:
+                workers = mp.Pool(num_proc)
 
     def get_c1(self, atoms, dec):
         """Get correlation function for single-body clusters."""
@@ -55,7 +78,6 @@ class CorrFunction(object):
 
         bf_list = list(range(len(self.setting.basis_functions)))
         cf = {}
-        num_excluded_symmetry = 0
         # ----------------------------------------------------
         # Compute correlation function up the max_cluster_size
         # ----------------------------------------------------
@@ -66,54 +88,19 @@ class CorrFunction(object):
         for dec in bf_list:
             cf['c1_{}'.format(dec)] = self.get_c1(atoms, dec)
 
-        unique_names = self.setting.cluster_families
-        full_names = self.setting.cluster_names
-        mult_factor = self.setting.multiplicity_factor
-        for name in unique_names:
-            n = int(name[1])
-            if n <= 1:
-                continue
-            comb = list(product(bf_list, repeat=n))
-            for dec in comb:
-                sp = 0.
-                count = 0
-
-                # need to perform for each symmetry inequivalent sites
-                for cluster_set in self.setting.cluster_info:
-                    if name not in cluster_set.keys():
-                        continue
-                    cluster = cluster_set[name]
-
-                    # Get decoration number as a string
-                    dec_str = dec_string(dec, list(cluster["equiv_sites"]))
-                    cf_name = name + "_" + dec_str
-                    assert cf_name in full_names
-
-                    if cf_name in cf.keys():
-                        # Skip this because it has already been taken into
-                        # account
-                        num_excluded_symmetry += 1
-                        continue
-
-                    sp_temp, count_temp = self._spin_product(
-                        atoms, cluster, dec)
-                    sp += sp_temp
-                    count += count_temp
-                    num_in_group = \
-                        len(self.index_by_trans_symm[cluster["symm_group"]])
-
-                if count > 0:
-                    assert abs(count - mult_factor[name] * len(atoms)) < 1E-7
-                    cf_temp = sp / count
-                    cf[cf_name] = cf_temp
-
-        if return_type == 'dict':
-            pass
-        elif return_type == 'tuple':
-            cf = list(cf.items())
-        elif return_type == 'array':
-            cf = np.array([cf[x] for x in full_names], dtype=float)
-        return cf
+        cnames = self.setting.cluster_names
+        if self.parallel:
+            args = [(self, atoms, name) for name in cnames]
+            res = workers.map(get_cf_parallel, args)
+            cf = {}
+            for r in res:
+                cf[r[0][0]] = r[0][1]
+            if return_type == 'tuple':
+                return list(cf.items())
+            elif return_type == 'array':
+                cf = np.array([cf[x] for x in cnames], dtype=float)
+            return cf
+        return self.get_cf_by_cluster_names(atoms, cnames, return_type)
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
                                 return_type='dict'):
@@ -247,11 +234,10 @@ class CorrFunction(object):
         # spin product of each atom in the symmetry equivalent group
         indices_of_symm_group = self.index_by_trans_symm[cluster["symm_group"]]
         ref_indx_grp = indices_of_symm_group[0]
+
         for ref_indx in indices_of_symm_group:
-            sp_temp, count_temp = \
-                self._sp_same_shape_deco_for_ref_indx(atoms, ref_indx,
-                                                      cluster, ref_indx_grp,
-                                                      deco)
+            sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
+                atoms, ref_indx, cluster, ref_indx_grp, deco)
             sp += sp_temp
             count += count_temp
         return sp, count
@@ -385,3 +371,10 @@ class CorrFunction(object):
         if return_ratio:
             return atoms, int_ratios
         return atoms
+
+
+def get_cf_parallel(args):
+    cf = args[0]
+    atoms = args[1]
+    name = args[2]
+    return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple")

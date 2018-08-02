@@ -13,7 +13,6 @@ from ase.ce import BulkCrystal, BulkSpacegroup, MultiprocessHandler
 from ase.db import connect
 
 
-
 try:
     # dependency on sklearn is to be removed due to some of technical problems
     from sklearn.linear_model import Lasso
@@ -21,7 +20,7 @@ try:
 except Exception:
     has_sklearn = False
 
-# Initialize a module wide logger
+# Initialize a module-wide logger
 logger = lg.getLogger(__name__)
 logger.setLevel(lg.INFO)
 
@@ -49,7 +48,7 @@ class Evaluate(object):
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
-                 penalty=None):
+                 penalty=None, parallel=False, num_core="all"):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             msg = "setting must be BulkCrystal or BulkSpacegroup object"
@@ -92,6 +91,13 @@ class Evaluate(object):
         self.eci = None
         self.alpha = None
         self.e_pred_loo = None
+        self.parallel = parallel
+        self.num_core = num_core
+        if parallel:
+            if self.num_core == "all":
+                num_proc = int(mp.cpu_count()/2)
+            else:
+                num_proc = int(self.num_core)
 
     def get_eci(self, alpha):
         """Determine and return ECIs for a given alpha.
@@ -303,15 +309,16 @@ class Evaluate(object):
                     alphas = np.delete(alphas, index)
 
         # get CV scores
-        try:
-            nproc = int(max(mp.cpu_count() / 2, 1))
-            workers = mp.Pool(nproc)
+        if self.parallel:
+            if self.num_core == "all":
+                num_proc = int(mp.cpu_count()/2)
+            else:
+                num_proc = int(self.num_core)
+            workers = mp.Pool(num_proc)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
-        except NotImplementedError:
-            # NotImplementedError can be raised by mp.cpu_count()
-            # In that case execute on one CPU
+        else:
             cv = np.ones(len(alphas))
             for i, alpha in enumerate(alphas):
                 cv[i] = self.cv_loo(alpha)

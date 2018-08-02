@@ -60,8 +60,7 @@ class ProbeStructure(object):
         from ase.calculators.cluster_expansion import ClusterExpansion
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
-
-        self.cluster_names = self.setting.full_cluster_names
+        self.cluster_names = self.setting.cluster_names
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
 
@@ -74,7 +73,7 @@ class ProbeStructure(object):
             raise ValueError("concentration of the elements in the provided"
                              " atoms cannot be found in the conc_matrix")
 
-        eci = {name: 1. for name in self.setting.full_cluster_names}
+        eci = {name: 1. for name in self.cluster_names}
         self.calc = ClusterExpansion(self.setting, cluster_name_eci=eci)
         self.supercell.set_calculator(self.calc)
 

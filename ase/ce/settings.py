@@ -30,6 +30,7 @@ class ClusterExpansionSetting:
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
+        self.cluster_info = []
         self.ignore_background_atoms = ignore_background_atoms
         self.background_symbol = []
         if ignore_background_atoms:
@@ -488,7 +489,25 @@ class ClusterExpansionSetting:
             grouped_basis_elements.append(self.basis_elements[group[0]])
         return grouped_basis_elements
 
-    def _get_cluster_information(self):
+    def _assign_correct_family_identifier(self):
+        """Make the familily IDs increase size."""
+        new_names = {}
+        for i, name in enumerate(self.cluster_family_names_by_size):
+            if name == "c0" or name == "c1":
+                new_names[name] = name
+            else:
+                new_name = name.rpartition("_")[0] + "_{}".format(i)
+                new_names[name] = new_name
+
+        new_cluster_info = []
+        for item in self.cluster_info:
+            new_dict = {}
+            for name, info in item.items():
+                new_dict[new_names[name]] = info
+            new_cluster_info.append(new_dict)
+        self.cluster_info = new_cluster_info
+
+    def _create_cluster_information(self):
         """Create a set of parameters describing the structure.
 
         Return cluster_info.
@@ -666,8 +685,8 @@ class ClusterExpansionSetting:
                         descriptor_str[x]
 
             cluster_info.append(cluster_info_symm)
-
-        return cluster_info
+        self.cluster_info = cluster_info
+        self._assign_correct_family_identifier()
 
     @property
     def unique_indices(self):
@@ -681,20 +700,35 @@ class ClusterExpansionSetting:
     @property
     def multiplicity_factor(self):
         """Return the multiplicity factor of each cluster."""
-        names = self.cluster_families
-        mult_factor = {name: 0 for name in names}
+        names = self.cluster_family_names
+        mult_factor = {name: 0. for name in names}
+        name_found = {name: False for name in names}
+        normalization = {name: 0 for name in names}
         for name in names:
             for item in self.cluster_info:
                 if name not in item.keys():
                     continue
+                name_found[name] = True
                 cluster = item[name]
                 num_in_group = \
                     len(self.index_by_trans_symm[cluster["symm_group"]])
                 mult_factor[name] += len(cluster["indices"]) * num_in_group
+                normalization[name] += num_in_group
 
         for name in mult_factor.keys():
-            mult_factor[name] = int(mult_factor[name] / len(self.atoms))
+            mult_factor[name] = mult_factor[name] / normalization[name]
+        for key, found in name_found.items():
+            assert found
         return mult_factor
+
+    def cluster_info_by_name(self, name):
+        """Get info entries of all clusters with name."""
+        name = str(name)
+        info = []
+        for item in self.cluster_info:
+            if name in item.keys():
+                info.append(item[name])
+        return info
 
     def _create_translation_matrix(self):
         """Create and return translation matrix.
@@ -820,25 +854,8 @@ class ClusterExpansionSetting:
                     conc[i][j] = conc[i][j - 1] + increment_2
         return conc
 
-    def _store_data(self):
-        print('Generating cluster data. It may take several minutes depending'
-              ' on the values of max_cluster_size and max_cluster_dist...')
-        # self.cluster_names, self.cluster_dist, self.cluster_indx, \
-        #     self.cluster_order, self.cluster_eq_sites = \
-        #     self._get_cluster_information()
-        self.cluster_info = self._get_cluster_information()
-        self.trans_matrix = self._create_translation_matrix()
-        self.conc_matrix = self._create_concentration_matrix()
-        # self._check_equiv_sites()
-        db = connect(self.db_name)
-        data = {'cluster_info': self.cluster_info,
-                'trans_matrix': self.trans_matrix,
-                'conc_matrix': self.conc_matrix}
-
-        db.write(self.atoms, name='information', data=data)
-
     @property
-    def cluster_families(self):
+    def cluster_family_names(self):
         """Return a list of all cluster names."""
         families = []
         for item in self.cluster_info:
@@ -846,7 +863,7 @@ class ClusterExpansionSetting:
         return list(set(families))
 
     @property
-    def cluster_families_by_size(self):
+    def cluster_family_names_by_size(self):
         """Return a list of cluster familes sorted by size."""
         sort_list = []
         for item in self.cluster_info:
@@ -859,18 +876,6 @@ class ClusterExpansionSetting:
             if item[2] not in sorted_names:
                 sorted_names.append(item[2])
         return sorted_names
-
-    def _read_data(self):
-        db = connect(self.db_name)
-        try:
-            row = db.get('name=information')
-            self.cluster_info = row.data.cluster_info
-            self.trans_matrix = row.data.trans_matrix
-            self.conc_matrix = row.data.conc_matrix
-        except KeyError:
-            self._store_data()
-        except (AssertionError, AttributeError):
-            self.reconfigure_settings()
 
     @property
     def cluster_names(self):
@@ -886,6 +891,43 @@ class ClusterExpansionSetting:
                     dec_str = dec_string(dec, eq_sites)
                     names.append(name + '_' + dec_str)
         return list(set(names))
+
+    def cluster_info_given_size(self, size):
+        """Get the cluster info of all clusters with a given size."""
+        clusters = []
+        for item in self.cluster_info:
+            info_dict = {}
+            for key, info in item.items():
+                if info["size"] == size:
+                    info_dict[key] = info
+            clusters.append(info_dict)
+        return clusters
+
+    def _store_data(self):
+        print('Generating cluster data. It may take several minutes depending'
+              ' on the values of max_cluster_size and max_cluster_dist...')
+        self._create_cluster_information()
+        self.trans_matrix = self._create_translation_matrix()
+        self.conc_matrix = self._create_concentration_matrix()
+        # self._check_equiv_sites()
+        db = connect(self.db_name)
+        data = {'cluster_info': self.cluster_info,
+                'trans_matrix': self.trans_matrix,
+                'conc_matrix': self.conc_matrix}
+
+        db.write(self.atoms, name='information', data=data)
+
+    def _read_data(self):
+        db = connect(self.db_name)
+        try:
+            row = db.get('name=information')
+            self.cluster_info = row.data.cluster_info
+            self.trans_matrix = row.data.trans_matrix
+            self.conc_matrix = row.data.conc_matrix
+        except KeyError:
+            self._store_data()
+        except (AssertionError, AttributeError):
+            self.reconfigure_settings()
 
     def _get_name_indx(self, unique_name):
         size = int(unique_name[1])
@@ -951,7 +993,7 @@ class ClusterExpansionSetting:
 
         already_included_names = []
         cluster_atoms = []
-        for unique_name in self.cluster_families_by_size:
+        for unique_name in self.cluster_family_names_by_size:
             if unique_name in already_included_names:
                 continue
             already_included_names.append(unique_name)
