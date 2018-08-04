@@ -926,7 +926,7 @@ class ClusterExpansionSetting:
             self.conc_matrix = row.data.conc_matrix
         except KeyError:
             self._store_data()
-        except (AssertionError, AttributeError):
+        except (AssertionError, AttributeError, RuntimeError):
             self.reconfigure_settings()
 
     def _get_name_indx(self, unique_name):
