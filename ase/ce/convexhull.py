@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from operator import itemgetter
 from copy import deepcopy
+from ase.ce.interactive_plot import InteractivePlot
 
 class ConvexHull(object):
     """
@@ -37,12 +38,8 @@ class ConvexHull(object):
             conc.append(row.get(self.conc_var_name)*self.conc_scale)
         self.max_conc = max(conc)
         self.min_conc = min(conc)
-        # print(self.max_conc)
-        # print(self.min_conc)
         self.max_conc_energies = self._get_conc_energies(self.max_conc)
-        # print(self.max_conc, self.max_conc_energies)
         self.min_conc_energies = self._get_conc_energies(self.min_conc)
-        # print(self.min_conc, self.min_conc_energies)
         self.Emin_max_conc = min(self.max_conc_energies)
         self.Emin_min_conc = min(self.min_conc_energies)
 
@@ -73,6 +70,7 @@ class ConvexHull(object):
                 select_cond.append(conditions[x])
             rows = self.db.select(select_cond)
 
+        names = []
         for row in rows:
             c = row.get(self.conc_var_name) * self.conc_scale
             conc_range = self.max_conc - self.min_conc
@@ -83,19 +81,19 @@ class ConvexHull(object):
                  (((c - self.min_conc) / conc_range) * self.Emin_max_conc) - \
                  (((self.max_conc - c) / conc_range) * self.Emin_min_conc)
             tuples.append((c, dE))
-        return tuples
+            names.append(row.name)
+        return tuples, names
 
 
     def plot(self, ocv=False, ref=None, ref_energy=None):
-        conc_rel_energy = self._get_concentration_rel_energy_pairs()
+        conc_rel_energy, names = self._get_concentration_rel_energy_pairs()
         convex_hull_data = list(zip(*conc_rel_energy))
-
 
         # get all the unique concentration values
         # print(conc_rel_energy)
         # print(convex_hull_data)
         conc_values = list(set(convex_hull_data[0]))
-        print(conc_values)
+        # print(conc_values)
         # ----------------------------------------------------
         # find the minimum energy for each concentration value
         # ----------------------------------------------------
@@ -121,7 +119,6 @@ class ConvexHull(object):
         # -------------------------------------
         min_points = [min(conc_Emin_pairs, key=itemgetter(1))]
 
-        print(min_points)
         # scan left
         left = [point for point in conc_Emin_pairs if point[0] < min_points[0][0]]
         while min_points[0] != conc_Emin_pairs[0]:
@@ -145,7 +142,7 @@ class ConvexHull(object):
             right = right[min_index+1:]
 
 
-        conc_rel_energy = self._get_concentration_rel_energy_pairs()
+        # conc_rel_energy, names = self._get_concentration_rel_energy_pairs()
         x_min = self.min_conc - 0.1
         x_max = self.max_conc + 0.1
         y_min = min(conc_rel_energy, key=itemgetter(1))[1] - 0.1
@@ -176,7 +173,8 @@ class ConvexHull(object):
         # ----
         if not ocv:
             f, ax = plt.subplots()
-            ax.scatter(*convex_hull_data, color='k')
+            # sc = ax.scatter(*convex_hull_data, color='k')
+            sc = ax.plot(*convex_hull_data, color='k', ls="", marker="o")[0]
 
             ax.plot((x_min,x_max), (0,0), 'r--')
             ax.plot(*zip(*min_points), color='k')
@@ -184,11 +182,12 @@ class ConvexHull(object):
             ax.axis([x_min, x_max, y_min, y_max])
             ax.set_ylabel(r'$E_{rel}$ (eV/f.u.)')
             ax.set_xlabel(r'$x$ in $Li_{2x}CrO_2F$')
+            inter_active = InteractivePlot(f, ax, [sc], [names])
 
         else:
             f, ax = plt.subplots(2, sharex=True)
             ax[0].set_title('Convex-Hull & Open-circuit Voltage')
-            ax[0].scatter(*convex_hull_data, color='k')
+            sc = ax[0].plot(*convex_hull_data, color='k', ls="", marker="o")[0]
             ax[0].plot((x_min,x_max), (0,0), 'r--')
             ax[0].plot(*zip(*min_points), color='k')
             ax[0].axis([x_min, x_max, y_min, y_max])
@@ -199,4 +198,5 @@ class ConvexHull(object):
             ax[1].set_ylabel(r'OCV w.r.t. %s (V)' %ref)
             f.subplots_adjust(hspace=0)
 
+            inter_active = InteractivePlot(f, ax[0], [sc], [names])
         plt.show()
