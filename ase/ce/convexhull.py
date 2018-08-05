@@ -37,11 +37,12 @@ class ConvexHull(object):
             conc.append(row.get(self.conc_var_name)*self.conc_scale)
         self.max_conc = max(conc)
         self.min_conc = min(conc)
-        print(self.max_conc)
+        # print(self.max_conc)
+        # print(self.min_conc)
         self.max_conc_energies = self._get_conc_energies(self.max_conc)
-        print(self.max_conc, self.max_conc_energies)
+        # print(self.max_conc, self.max_conc_energies)
         self.min_conc_energies = self._get_conc_energies(self.min_conc)
-        print(self.min_conc, self.min_conc_energies)
+        # print(self.min_conc, self.min_conc_energies)
         self.Emin_max_conc = min(self.max_conc_energies)
         self.Emin_min_conc = min(self.min_conc_energies)
 
@@ -56,18 +57,11 @@ class ConvexHull(object):
         rows = self.db.select(select_cond)
 
         for row in rows:
-            print(row.energy)
-            energies.append(row.energy*self.atoms_per_fu/row.natoms)
+            energies.append(row.energy * self.atoms_per_fu / row.natoms)
 
-
-        energies = np.asanyarray(energies)
-        return energies
+        return np.array(energies)
 
     def _get_concentration_rel_energy_pairs(self, conditions=None):
-        # e_max_conc = min(self.max_conc_energies)
-        # e_min_conc = min(self.min_conc_energies)
-
-
         tuples = []
         if conditions is None:
             rows = self.db.select(self.select_cond)
@@ -80,23 +74,28 @@ class ConvexHull(object):
             rows = self.db.select(select_cond)
 
         for row in rows:
-            c = row.get(self.conc_var_name)*self.conc_scale
-            dE = (row.energy*self.atoms_per_fu/row.natoms) - \
-                 ((c/self.max_conc)*self.Emin_max_conc) - \
-                 ((self.max_conc - c)/self.max_conc*self.Emin_min_conc)
+            c = row.get(self.conc_var_name) * self.conc_scale
+            conc_range = self.max_conc - self.min_conc
+            # dE = (row.energy * self.atoms_per_fu / row.natoms) - \
+            #      ((c / self.max_conc) * self.Emin_max_conc) - \
+            #      ((self.max_conc - c) / self.max_conc * self.Emin_min_conc)
+            dE = (row.energy * self.atoms_per_fu / row.natoms) - \
+                 (((c - self.min_conc) / conc_range) * self.Emin_max_conc) - \
+                 (((self.max_conc - c) / conc_range) * self.Emin_min_conc)
             tuples.append((c, dE))
-        # tuples.append((self.min_conc, 0.))
         return tuples
 
 
     def plot(self, ocv=False, ref=None, ref_energy=None):
         conc_rel_energy = self._get_concentration_rel_energy_pairs()
-        convex_hull_data = zip(*conc_rel_energy)
+        convex_hull_data = list(zip(*conc_rel_energy))
 
 
         # get all the unique concentration values
-        print(convex_hull_data)
+        # print(conc_rel_energy)
+        # print(convex_hull_data)
         conc_values = list(set(convex_hull_data[0]))
+        print(conc_values)
         # ----------------------------------------------------
         # find the minimum energy for each concentration value
         # ----------------------------------------------------
@@ -122,6 +121,7 @@ class ConvexHull(object):
         # -------------------------------------
         min_points = [min(conc_Emin_pairs, key=itemgetter(1))]
 
+        print(min_points)
         # scan left
         left = [point for point in conc_Emin_pairs if point[0] < min_points[0][0]]
         while min_points[0] != conc_Emin_pairs[0]:
@@ -159,8 +159,9 @@ class ConvexHull(object):
             # Get the potential profile
             conc_range = self.max_conc - self.min_conc
             e_ref = ref_energy
-            equib_pot = (self.Emin_max_conc - (self.Emin_min_conc + conc_range*e_ref))/\
-                        (-1*conc_range)
+            equib_pot = (self.Emin_max_conc -
+                        (self.Emin_min_conc + conc_range*e_ref)) /\
+                        (-1 * conc_range)
             conc_pot_pairs = []
             for x in range(1,len(min_points)):
                 pot = ((min_points[x][1] - min_points[x-1][1]) / \
@@ -169,11 +170,6 @@ class ConvexHull(object):
                 conc_pot_pairs.append((min_points[x-1][0], pot))
                 conc_pot_pairs.append((min_points[x][0], pot))
 
-
-
-
-        # for pair in conc_pot_pairs:
-        #     print pair[0], pair[1]
 
         # ----
         # Plot
