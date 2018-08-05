@@ -11,6 +11,7 @@ import json
 from ase.utils import basestring
 from ase.ce import BulkCrystal, BulkSpacegroup, MultiprocessHandler
 from ase.db import connect
+from ase.ce.interactive_plot import InteractivePlot
 
 
 try:
@@ -366,7 +367,7 @@ class Evaluate(object):
 
         return min_alpha
 
-    def plot_ECI(self, ignore_sizes=[0]):
+    def plot_ECI(self, ignore_sizes=[0], interactive=True):
         """Plot the all the ECI.
 
         Argument
@@ -384,14 +385,17 @@ class Evaluate(object):
         for name, d, eci in zip(self.cluster_names, distances, self.eci):
             size = int(name[1])
             if size not in eci_by_size.keys():
-                eci_by_size[size] = {"d": [], "eci": []}
+                eci_by_size[size] = {"d": [], "eci": [], "name": []}
             eci_by_size[size]["d"].append(d)
             eci_by_size[size]["eci"].append(eci)
+            eci_by_size[size]["name"].append(name)
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         ax.axhline(0.0, ls="--", color="grey")
         markers = ["o", "v", "x", "D", "^", "h", "s", "p"]
+        annotations = []
+        lines = []
         for size, data in eci_by_size.items():
             if size in ignore_sizes:
                 continue
@@ -400,12 +404,17 @@ class Evaluate(object):
             sort_index = np.argsort(data["d"])
             data["d"] = data["d"][sort_index]
             data["eci"] = data["eci"][sort_index]
+            annotations.append([data["name"][indx] for indx in sort_index])
             mrk = markers[size%len(markers)]
-            ax.plot(data["d"], data["eci"], label="{}-body".format(size),
-                    marker=mrk, mfc="none", ls="", markersize=8)
+            line = ax.plot(data["d"], data["eci"], label="{}-body".format(size),
+                           marker=mrk, mfc="none", ls="", markersize=8)
+            lines.append(line[0])
         ax.set_xlabel("Cluster diameter")
         ax.set_ylabel("ECI (eV/atom)")
         ax.legend()
+        if interactive:
+            # Note: Internally this calls plt.show()
+            inter_active = InteractivePlot(fig, ax, lines, annotations)
         return fig
 
     def _distance_from_names(self):
