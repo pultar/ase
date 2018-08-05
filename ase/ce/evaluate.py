@@ -395,6 +395,7 @@ class Evaluate(object):
         ax.axhline(0.0, ls="--", color="grey")
         markers = ["o", "v", "x", "D", "^", "h", "s", "p"]
         annotations = []
+        lines = []
         for size, data in eci_by_size.items():
             if size in ignore_sizes:
                 continue
@@ -405,14 +406,15 @@ class Evaluate(object):
             data["eci"] = data["eci"][sort_index]
             annotations.append([data["name"][indx] for indx in sort_index])
             mrk = markers[size%len(markers)]
-            ax.plot(data["d"], data["eci"], label="{}-body".format(size),
-                    marker=mrk, mfc="none", ls="", markersize=8)
+            line = ax.plot(data["d"], data["eci"], label="{}-body".format(size),
+                           marker=mrk, mfc="none", ls="", markersize=8)
+            lines.append(line[0])
         ax.set_xlabel("Cluster diameter")
         ax.set_ylabel("ECI (eV/atom)")
         ax.legend()
         if interactive:
             # Note: Internally this calls plt.show()
-            inter_active = InteractivePlot(fig, ax, annotations)
+            inter_active = InteractivePlot(fig, ax, lines, annotations)
         return fig
 
     def _distance_from_names(self):

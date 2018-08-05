@@ -9,14 +9,15 @@ class InteractivePlot(object):
         Instance of the figure object visualizing the data
     ax: Axes instance
         Instance of the axes object containing the lines
+    lines: Array of Line objects that annotations apply to
     annotations: Nested list with annotations
         Each list contains one annotation for each (x, y) pair on that
         line
     """
-    def __init__(self, fig, ax, annotations):
+    def __init__(self, fig, ax, lines, annotations):
         self.fig = fig
         self.ax = ax
-        self.lines = self.ax.get_lines()[1:]
+        self.lines = lines
         self.annotations = annotations
         self.active_annot = ax.annotate(
             "", xy=(0,0), xytext=(-20,20),textcoords="offset points",
@@ -52,6 +53,7 @@ class InteractivePlot(object):
         """React on a hover event."""
         vis = self.active_annot.get_visible()
         if event.inaxes == self.ax:
+            cont = False
             for i, line in enumerate(self.lines):
                 cont, ind = line.contains(event)
                 if cont:
