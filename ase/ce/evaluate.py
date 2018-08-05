@@ -366,6 +366,60 @@ class Evaluate(object):
 
         return min_alpha
 
+    def plot_ECI(self, ignore_sizes=[0]):
+        """Plot the all the ECI.
+
+        Argument
+        =========
+        ignore_sizes: list of ints
+            Sizes listed in this list will not be plotted.
+            Default is to ignore the emptry cluster.
+        """
+        if self.eci is None:
+            raise ValueError("ECI is None. You have to call get_eci first!")
+        distances = self._distance_from_names()
+
+        # Structure the ECIs in terms by size
+        eci_by_size = {}
+        for name, d, eci in zip(self.cluster_names, distances, self.eci):
+            size = int(name[1])
+            if size not in eci_by_size.keys():
+                eci_by_size[size] = {"d": [], "eci": []}
+            eci_by_size[size]["d"].append(d)
+            eci_by_size[size]["eci"].append(eci)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.axhline(0.0, ls="--", color="grey")
+        markers = ["o", "v", "x", "D", "^", "h", "s", "p"]
+        for size, data in eci_by_size.items():
+            if size in ignore_sizes:
+                continue
+            data["d"] = np.array(data["d"])
+            data["eci"] = np.array(data["eci"])
+            sort_index = np.argsort(data["d"])
+            data["d"] = data["d"][sort_index]
+            data["eci"] = data["eci"][sort_index]
+            mrk = markers[size%len(markers)]
+            ax.plot(data["d"], data["eci"], label="{}-body".format(size),
+                    marker=mrk, mfc="none", ls="", markersize=8)
+        ax.set_xlabel("Cluster diameter")
+        ax.set_ylabel("ECI (eV/atom)")
+        ax.legend()
+        return fig
+
+    def _distance_from_names(self):
+        """Get a list with all the distances for each name."""
+        dists = []
+        for name in self.cluster_names:
+            if name == "c0" or name.startswith("c1"):
+                dists.append(0.0)
+                continue
+            dist_str = name.split("_")[1]
+            dist_str = dist_str.replace("p", ".")
+            dists.append(float(dist_str))
+        return dists
+
     def mae(self, alpha):
         """Calculate mean absolute error (MAE) of the fit.
 
