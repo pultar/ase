@@ -402,7 +402,7 @@ class Evaluate(object):
             data["eci"] = data["eci"][sort_index]
             mrk = markers[size%len(markers)]
             ax.plot(data["d"], data["eci"], label="{}-body".format(size),
-                    marker=mrk, mfc="none")
+                    marker=mrk, mfc="none", ls="", markersize=8)
         ax.set_xlabel("Cluster diameter")
         ax.set_ylabel("ECI (eV/atom)")
         ax.legend()
