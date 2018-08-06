@@ -4,7 +4,7 @@ To test that the calculator can produce correct energy and forces.
 
 import numpy as np
 import pytest
-from kimcalculator import KIMCalculator
+from ase.calculators.kim.kim import KIMCalculator
 from ase.lattice.cubic import SimpleCubic, FaceCenteredCubic
 
 

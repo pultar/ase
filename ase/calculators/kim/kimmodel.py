@@ -10,7 +10,7 @@ import numpy as np
 from ase.calculators.calculator import Calculator
 import kimpy
 import neighlist as nl
-from exceptions import KIMCalculatorError
+from .exceptions import KIMCalculatorError
 
 
 __version__ = '0.1.0'
