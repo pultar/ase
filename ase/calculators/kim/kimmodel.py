@@ -13,11 +13,11 @@ import neighlist as nl
 from exceptions import KIMCalculatorError
 
 
-__version__ = '2.0.0'
+__version__ = '0.1.0'
 __author__ = 'Mingjian Wen'
 
 
-class KIMModelCalculator(Calculator):
+class KIMModelCalculator(Calculator, object):
   """ An ASE calculator to work with KIM interatomic models.
 
   Parameter
