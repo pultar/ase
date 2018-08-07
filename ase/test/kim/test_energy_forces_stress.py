@@ -15,6 +15,21 @@ forces_ref = np.array(
    [  0.18090261,  -13.98691618,   13.9896848 ],
    [ -0.02970657,   13.98652409,   13.98652409]]
 )
+stress_ref = np.array(
+  [-5.97100395e+01,
+   -4.19643133e+01,
+   -4.19643133e+01,
+    5.88133113e-04,
+   -2.26794064e-01,
+   -2.26794064e-01]
+)
+
+def assert_1d_array(A, B, tol=1e-6):
+  A = np.array(A)
+  B = np.array(B)
+  assert A.shape[0] == B.shape[0]
+  for a,b in zip(A,B):
+    assert a == pytest.approx(b, tol)
 
 
 def assert_2d_array(A, B, tol=1e-6):
@@ -27,7 +42,7 @@ def assert_2d_array(A, B, tol=1e-6):
       assert x == pytest.approx(y, tol)
 
 
-def test_forces():
+def test_main():
 
   # create calculator
   modelname = 'ex_model_Ar_P_Morse_07C'
@@ -46,11 +61,13 @@ def test_forces():
   # get energy and forces
   energy = argon.get_potential_energy()
   forces = argon.get_forces()
+  stress = argon.get_stress()
 
   tol = 1e-6
   assert energy == pytest.approx(energy_ref, tol)
   assert_2d_array(forces, forces_ref, tol)
+  assert_1d_array(stress, stress_ref, tol)
 
 
 if __name__ == '__main__':
-  test_forces()
+  test_main()
