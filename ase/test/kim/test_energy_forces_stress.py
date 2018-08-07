@@ -3,7 +3,7 @@ To test that the calculator can produce correct energy and forces.
 """
 
 import numpy as np
-from ase.calculators.kim.kim import KIMCalculator
+from ase.calculators.kim import KIM
 from ase.lattice.cubic import FaceCenteredCubic
 
 
@@ -20,7 +20,7 @@ stress_ref = np.array([-5.97100395e+01, -4.19643133e+01, -4.19643133e+01,
 def test_main():
     # create calculator
     modelname = 'ex_model_Ar_P_Morse_07C'
-    calc = KIMCalculator(modelname)
+    calc = KIM(modelname)
 
     # create an FCC crystal
     argon = FaceCenteredCubic(directions=[[1, 0, 0], [0, 1, 0], [0, 0, 1]], size=(1, 1, 1),
