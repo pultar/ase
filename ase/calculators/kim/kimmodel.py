@@ -7,10 +7,13 @@ University of Minnesota
 """
 from __future__ import absolute_import, division, print_function
 import numpy as np
-from ase.calculators.calculator import Calculator
-import kimpy
-from ase.neighborlist import neighbor_list
 from .exceptions import KIMCalculatorError
+from ase.calculators.calculator import Calculator
+from ase.neighborlist import neighbor_list
+try:
+    import kimpy
+except ModuleNotFoundError:
+    print('kimpy not found; KIM calculator will not work')
 
 
 __version__ = '0.1.0'
