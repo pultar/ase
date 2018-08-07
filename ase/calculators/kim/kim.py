@@ -103,9 +103,8 @@ def _add_init_lines_to_parameters(parameters, model_init):
 ###############################################################################
 
 
-def KIMCalculator(extended_kim_id, debug=False,
-                  kim_mo_simulator='kimpy',
-                  lammps_calculator='kimlammpslib'):
+def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
+        lammps_calculator='kimlammpslib'):
     '''
     Wrapper routine that selects KIMCalculator for KIM Models or an appropriate
     ASE Calculator for KIM Simulator Models.

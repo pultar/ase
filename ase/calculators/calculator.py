@@ -69,6 +69,7 @@ class PropertyNotPresent(CalculatorError):
     Maybe it was never calculated, or for some reason was not extracted
     with the rest of the results, without being a fatal ReadError."""
 
+
 def compare_atoms(atoms1, atoms2, tol=1e-15):
     """Check for system changes since last calculation."""
     if atoms1 is None:
@@ -105,7 +106,7 @@ all_changes = ['positions', 'numbers', 'cell', 'pbc',
 names = ['abinit', 'aims', 'amber', 'asap', 'castep', 'cp2k', 'crystal',
          'demon', 'dftb', 'dmol', 'eam', 'elk', 'emt', 'espresso',
          'exciting', 'fleur', 'gaussian', 'gpaw', 'gromacs', 'gulp',
-         'hotbit', 'jacapo', 'lammpsrun',
+         'hotbit', 'jacapo', 'kim', 'lammpsrun',
          'lammpslib', 'lj', 'mopac', 'morse', 'nwchem', 'octopus', 'onetep',
          'siesta', 'tip3p', 'turbomole', 'vasp']
 
@@ -118,6 +119,7 @@ special = {'cp2k': 'CP2K',
            'crystal': 'CRYSTAL',
            'fleur': 'FLEUR',
            'gulp': 'GULP',
+           'kim': 'KIM',
            'lammpsrun': 'LAMMPS',
            'lammpslib': 'LAMMPSlib',
            'lj': 'LennardJones',
