@@ -129,10 +129,7 @@ def KIMCalculator(extended_kim_id, debug=False,
         kim_mo_simulator = kim_mo_simulator.lower().strip()
 
         if kim_mo_simulator == 'kimpy':
-            if debug:
-                return(KIMModelCalculator(extended_kim_id, debug=True))  # kimpy
-            else:
-                return(KIMModelCalculator(extended_kim_id))  # kimpy
+            return KIMModelCalculator(extended_kim_id, debug=debug)
 
         elif kim_mo_simulator == 'asap':
             if debug:
