@@ -369,7 +369,6 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
-        to_primitive = True
         try:
             symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
                                                  stol=0.05, scale_volume=True,
