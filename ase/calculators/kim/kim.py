@@ -10,13 +10,15 @@ This calculator selects an appropriate calculator for a KIM model depending on
 whether it supports the KIM application programming interface (API) or is a
 KIM Simulator Model.  For more information on KIM, visit https://openkim.org.
 """
+from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
 import re
 import os
 try:
     import kimsm
     kimsm_loaded = True
-except ModuleNotFoundError:
+except ImportError:
     kimsm_loaded = False
 from ase.calculators.lammpslib import LAMMPSlib
 # from kimlammpsrun import kimLAMMPSrun

@@ -580,20 +580,21 @@ def report_error(msg):
 
 
 def get_neigh(data, cutoffs, neighbor_list_index, particle_number):
-    error = 0
+    try:
+        # we only support one neighbor list
+        rcut = data['cutoff']
+        if len(cutoffs) != 1 or cutoffs[0] > rcut:
+            return(np.array([]), 1)
+        if neighbor_list_index != 0:
+            return(np.array([]), 1)
 
-    # we only support one neighbor list
-    rcut = data['cutoff']
-    if len(cutoffs) != 1 or cutoffs[0] > rcut:
-        error = 1
-    if neighbor_list_index != 0:
-        error = 1
+        # invalid id
+        number_of_particles = data['num_particles']
+        if particle_number >= number_of_particles or particle_number < 0:
+            return(np.array([]), 1)
 
-    # invalid id
-    number_of_particles = data['num_particles']
-    if particle_number >= number_of_particles or particle_number < 0:
-        error = 1
-    check_error(error, 'get_neigh')
+        neighbors = data['neighbors'][neighbor_list_index][particle_number]
+        return (neighbors, 0)
 
-    neighbors = data['neighbors'][neighbor_list_index][particle_number]
-    return (neighbors, error)
+    except:
+        return(np.array([]), 1)
