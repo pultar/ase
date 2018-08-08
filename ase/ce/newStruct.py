@@ -7,6 +7,7 @@ from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.ce.structure_comparator import SymmetryEquivalenceCheck
+from ase.ce.structure_comparator import SpgLibNotFoundError
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -368,9 +369,18 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
+        to_prim = True
+        try:
+            import spglib
+        except ImportError:
+            msg = "Warning! Setting to_primitive=False because spglib "
+            msg += "is missing!"
+            print(msg)
+            to_prim = False
+
         symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
                                              stol=0.05, scale_volume=True,
-                                             to_primitive=True)
+                                             to_primitive=to_prim)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
             match = symmcheck.compare(atoms, atoms2)
