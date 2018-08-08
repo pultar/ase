@@ -27,13 +27,14 @@ from ase.utils import basestring
 #    lammpsrun.py
 
 
-# this one may be moved to some more generial place
-def is_upper_triangular(arr, atol=1e-8):
+# this one may be moved to some more generic place
+def is_valid_lammps_cell(arr, atol=1e-8):
     """test for upper triangular matrix based on numpy"""
     # must be (n x n) matrix
     assert len(arr.shape)==2
     assert arr.shape[0] == arr.shape[1]
-    return np.allclose(np.tril(arr, k=-1), 0., atol=atol)
+    return np.allclose(np.tril(arr, k=-1), 0., atol=atol) and \
+           np.all(np.diag(arr) >= 0.0)
 
 
 def convert_cell(ase_cell):
@@ -44,7 +45,7 @@ def convert_cell(ase_cell):
     """
     cell = np.matrix.transpose(ase_cell)
 
-    if not is_upper_triangular(cell):
+    if not is_valid_lammps_cell(cell):
         # rotate bases into triangular matrix
         tri_mat = np.zeros((3, 3))
         A = cell[:, 0]
@@ -127,8 +128,12 @@ Keyword                               Description
 
 ``atom_types``     dictionary of ``atomic_symbol :lammps_atom_type`` pairs,
                    e.g. ``{'Cu':1}`` to bind copper to lammps atom type 1.
-                   Default method assigns lammps atom types in order that they
-                   appear in the atoms model. Autocreated if <None>.
+                   If <None>, autocreated by assigning lammps atom types in
+                   order that they appear in the first used atoms object.
+
+``atom_type_masses`` dictionary of ``atomic_symbol :mass`` pairs,
+                   e.g. ``{'Cu':63.546}`` to optionally assign masses that
+                   override default ase.data.atomic_masses
 
 ``log_file``       string
                    path to the desired LAMMPS log file
@@ -260,6 +265,7 @@ by invoking the get_potential_energy() method::
 
     default_parameters = dict(
         atom_types=None,
+        atom_type_masses=None,
         log_file=None,
         lammps_name='',
         keep_alive=False,
@@ -292,7 +298,7 @@ by invoking the get_potential_energy() method::
         if change:
             cell_cmd = ('change_box all     '
                         'x final 0 {} y final 0 {} z final 0 {}      '
-                        'xy final {} xz final {} yz final {}'
+                        'xy final {} xz final {} yz final {} units box'
                         ''.format(xhi, yhi, zhi, xy, xz, yz))
         else:
             # just in case we'll want to run with a funny shape box,
@@ -326,6 +332,7 @@ by invoking the get_potential_energy() method::
         self.lmp.scatter_atoms('x', 1, 3, lmp_c_positions)
 
     def calculate(self, atoms, properties, system_changes):
+        ##NB Calculator.calculate(self, atoms, properties, system_changes) # update system_changes
         self.propagate(atoms, properties, system_changes, 0)
 
     def propagate(self, atoms, properties, system_changes, n_steps, dt=None,
@@ -364,6 +371,13 @@ by invoking the get_potential_energy() method::
 
         if self.parameters.atom_types is None:
             raise NameError("atom_types are mandatory.")
+
+        # Deal with boundary condition change
+        if 'pbc' in system_changes:
+            change_box_str = 'change_box all boundary {}'
+            change_box_cmd = change_box_str.format(self.lammpsbc(atoms))
+            self.lmp.command(change_box_cmd)
+
 
         do_rebuild = (not np.array_equal(atoms.numbers, self.previous_atoms_numbers)
                       or ("numbers" in system_changes))
@@ -479,16 +493,33 @@ by invoking the get_potential_energy() method::
             self.results['forces'] = f.copy()
 
         # otherwise check_state will always trigger a new calculation
+        ##NB
         self.atoms = atoms.copy()
 
         if not self.parameters.keep_alive:
             self.lmp.close()
 
-    def lammpsbc(self, pbc):
-        if pbc:
-            return 'p'
+    # Handle nonperiodic cases where the cell size
+    #     in some directions is small (for example for a dimer).
+    def lammpsbc(self,atoms):
+        retval = ''
+        pbc = atoms.get_pbc()
+        if np.all(pbc):
+            retval = 'p p p'
         else:
-            return 's'
+            pos = atoms.get_positions()
+            posmin = np.amin(pos,axis=0)
+            posmax = np.amax(pos,axis=0)
+            for i in range(0,3):
+                if pbc[i]:
+                    retval += 'p '
+                else:
+                    # decide if to return "s" or "m"
+                    if abs(posmax[i]-posmin[i])<0.1:
+                        retval += 'm '  # spacing along this direction is small
+                    else:               # so use minimum size set by cell
+                        retval += 's '
+        return retval.strip()
 
     def rebuild(self, atoms):
         try:
@@ -563,7 +594,7 @@ by invoking the get_potential_energy() method::
             self.lmp = lammps(self.parameters.lammps_name, self.cmd_args,
                               comm=self.parameters.comm)
 
-        # Use metal units: Angstrom, ps, and eV
+        # Run header commands to set up lammps (units, etc.)
         for cmd in self.parameters.lammps_header:
             self.lmp.command(cmd)
 
@@ -583,19 +614,17 @@ by invoking the get_potential_energy() method::
         if self.parameters.boundary:
             # if the boundary command is in the supplied commands use that
             # otherwise use atoms pbc
-            pbc = atoms.get_pbc()
             for cmd in self.parameters.lmpcmds:
                 if 'boundary' in cmd:
                     break
             else:
-                self.lmp.command('boundary ' +
-                                 ' '.join([self.lammpsbc(bc) for bc in pbc]))
+                self.lmp.command('boundary ' + self.lammpsbc(atoms))
 
         # Initialize cell
         self.set_cell(atoms, change=not self.parameters.create_box)
 
         if self.parameters.atom_types is None:
-            # if None is given, create von atoms object in order of appearance
+            # if None is given, create from atoms object in order of appearance
             s = atoms.get_chemical_symbols()
             _, idx = np.unique(s, return_index=True)
             s_red = np.array(s)[np.sort(idx)].tolist()
@@ -627,15 +656,24 @@ by invoking the get_potential_energy() method::
 
         # Set masses after user commands,
         # to override EAM provided masses, e.g.
-        masses = atoms.get_masses()
+        ##NB  WILL THERE BE PUSHBACK ON BREAKING CURRENT FUNCTIONALITY?
         for sym in self.parameters.atom_types:
-            for i in range(len(atoms)):
-                if symbols[i] == sym:
-                    # convert from amu (ASE) to lammps mass unit)
-                    self.lmp.command('mass %d %.30f' % (
-                        self.parameters.atom_types[sym],
-                        masses[i] / unit_convert("mass", self.units)))
-                    break
+            if self.parameters.atom_type_masses is None:
+                mass = ase.data.atomic_masses[ase.data.atomic_numbers[sym]]
+            else:
+                mass = self.parameters.atom_type_masses[sym]
+            self.lmp.command('mass %d %.30f' % (
+                self.parameters.atom_types[sym],
+                mass / unit_convert("mass", self.units)))
+##NB        masses = atoms.get_masses()
+##NB        for sym in self.parameters.atom_types:
+##NB            for i in range(len(atoms)):
+##NB                if symbols[i] == sym:
+##NB                    # convert from amu (ASE) to lammps mass unit)
+##NB                    self.lmp.command('mass %d %.30f' % (
+##NB                        self.parameters.atom_types[sym],
+##NB                        masses[i] / unit_convert("mass", self.units)))
+##NB                    break
 
         # Define force & energy variables for extraction
         self.lmp.command('variable pxx equal pxx')
@@ -648,7 +686,7 @@ by invoking the get_potential_energy() method::
         # I am not sure why we need this next line but LAMMPS will
         # raise an error if it is not there. Perhaps it is needed to
         # ensure the cell stresses are calculated
-        self.lmp.command('thermo_style custom pe pxx')
+        self.lmp.command('thermo_style custom pe pxx emol ecoul')
 
         self.lmp.command('variable fx atom fx')
         self.lmp.command('variable fy atom fy')

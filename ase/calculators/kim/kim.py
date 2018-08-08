@@ -13,13 +13,14 @@ KIM Simulator Model.  For more information on KIM, visit https://openkim.org.
 from __future__ import print_function
 import re
 import os
-# import kimsm
-# from kimlammpslib import kimLAMMPSlib
+import kimsm
+from ase.calculators.lammpslib import LAMMPSlib
 # from kimlammpsrun import kimLAMMPSrun
 # from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
 #                   OpenKIMcalculator
 from .kimmodel import KIMModelCalculator
 from .exceptions import KIMCalculatorError
+from ase.data import atomic_numbers
 
 __version__ = '1.4.0'
 __author__ = 'Ellad Tadmor'
@@ -33,12 +34,12 @@ def _get_kim_model_id_and_type(extended_kim_id):
     or KIM Simulator Model and extract the short KIM ID
     '''
     # Determine whether this is a KIM Model or SM
-    # if kimsm.is_simulator_model(extended_kim_id):
-    #     this_is_a_KIM_MO = False
-    #     pref = 'SM'
-    # else:
-    this_is_a_KIM_MO = True
-    pref = 'MO'
+    if kimsm.is_simulator_model(extended_kim_id):
+        this_is_a_KIM_MO = False
+        pref = 'SM'
+    else:
+        this_is_a_KIM_MO = True
+        pref = 'MO'
     # Try to parse model name assuming it has an extended KIM ID format
     # to obtain short KIM_ID. This is used to name the directory
     # containing the SM files.
@@ -47,7 +48,7 @@ def _get_kim_model_id_and_type(extended_kim_id):
         kim_id = re.search(extended_kim_id_regex, extended_kim_id).group(0)
     except AttributeError:
         kim_id = extended_kim_id  # Model name does not contain a short KIM ID,
-        # so use full model name for the file directory.
+                                  # so use full model name for the file directory.
 
     return kim_id, this_is_a_KIM_MO
 
@@ -104,7 +105,7 @@ def _add_init_lines_to_parameters(parameters, model_init):
 
 
 def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
-        lammps_calculator='kimlammpslib'):
+                  lammps_calculator='lammpslib', lammps_lib_suffix=None):
     '''
     Wrapper routine that selects KIMCalculator for KIM Models or an appropriate
     ASE Calculator for KIM Simulator Models.
@@ -218,10 +219,10 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             raise KIMCalculatorError(
                 'ERROR: Unknown model "%s" for simulator ASAP.' % model_defn[0])
         else:
-            calc.set_subtractE0(False)  # Use undocumented feature for the EMT
-            # calculators to take the energy of an
-            # isolated atoms as zero. (Otherwise it
-            # is taken to be that of perfect FCC.)
+            calc.set_subtractE0(False) # Use undocumented feature for the EMT
+                                       # calculators to take the energy of an
+                                       # isolated atoms as zero. (Otherwise it
+                                       # is taken to be that of perfect FCC.)
             return calc
 
     ############################################################
@@ -229,11 +230,19 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
     ############################################################
 
     elif simulator_name == "lammps":
+        if lammps_calculator == 'lammpslib':
+            supported_species = ksm.get_model_supported_species()
+            atom_type_sym_list_string = ' '.join(supported_species)
+            atom_type_num_list_string = ' '.join([str(atomic_numbers[s]) for s in supported_species])
+        else:
+            atom_type_sym_list_string = ''
+            atom_type_num_list_string = ''
 
         # Process KIM templates (parameter file names, atom types, and queries)
         for i in range(0, len(model_defn)):
             model_defn[i] = kimsm.template_substitution(
-                model_defn[i], param_filenames, ksm.sm_dirname)
+                model_defn[i], param_filenames, ksm.sm_dirname,
+                atom_type_sym_list_string, atom_type_num_list_string)
 
         # Get model init lines
         model_init = ksm.get_model_init_lines()
@@ -241,7 +250,8 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
         #  Process KIM templates (parameter file names, atom types, and queries)
         for i in range(0, len(model_init)):
             model_init[i] = kimsm.template_substitution(
-                model_init[i], param_filenames, ksm.sm_dirname)
+                model_init[i], param_filenames, ksm.sm_dirname,
+                atom_type_sym_list_string, atom_type_num_list_string)
 
         # Get model supported units
         supported_units = ksm.get_model_units().lower().strip()
@@ -258,7 +268,6 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             parameters["units"] = supported_units
 
             # add cross-platform line separation to model definition lines
-            # add cross-platform line separation
             model_init = [s + os.linesep for s in model_init]
 
             # Add init lines to parameter list
@@ -271,19 +280,24 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             else:
                 return kimLAMMPSrun(parameters=parameters, files=param_filenames)
 
-        elif (lammps_calculator == 'kimlammpslib'):
+        elif (lammps_calculator == 'lammpslib'):
 
             # Setup LAMMPS header commands
             # lookup table
             model_init.insert(0, 'atom_modify map array sort 0 0')
-            if not any("atom_style" in s.lower() for s in model_init):  # atom style (if needed)
+            if not any("atom_style" in s.lower() for s in model_init): # atom style (if needed)
                 model_init.insert(0, 'atom_style atomic')
             model_init.insert(
                 0, 'units ' + supported_units.strip())     # units
 
-            # Return kimLAMMPSlib calculator
-            return kimLAMMPSlib(lammps_header=model_init,
+            atom_types = {}
+            for i_s, s in enumerate(supported_species):
+                atom_types[s] = i_s+1
+            # Return LAMMPSlib calculator
+            return LAMMPSlib(lammps_header=model_init,
+                                lammps_name=lammps_lib_suffix,
                                 lmpcmds=model_defn,
+                                atom_types = atom_types,
                                 log_file='lammps.log',
                                 keep_alive=True)
 
@@ -323,7 +337,6 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
 
         if kim_mo_simulator == 'kimpy':
 
-            #           speclist = list(get_model_species_list(extended_kim_id))
             calc = KIMModelCalculator(extended_kim_id)
             speclist = list(calc.get_kim_model_supported_species())
 
