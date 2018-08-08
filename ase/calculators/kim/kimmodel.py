@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from .exceptions import KIMCalculatorError
 from ase.calculators.calculator import Calculator
+from ase import Atom
 from ase.neighborlist import neighbor_list
 try:
     import kimpy
@@ -149,7 +150,7 @@ class KIMModelCalculator(Calculator, object):
             # virial is computed within the calculator
             if support_status == kimpy.support_status.required:
                 if (name != kimpy.compute_argument_name.partialEnergy and
-                    name != kimpy.compute_argument_name.partialForces
+                        name != kimpy.compute_argument_name.partialForces
                     ):
                     report_error(
                         'Unsupported required ComputeArgument {}'.format(name))
@@ -273,39 +274,52 @@ class KIMModelCalculator(Calculator, object):
         contributing_species_code = np.array(
             [species_map[s] for s in contributing_species], dtype=np.intc)
 
-        i, j, D = neighbor_list('ijD', atoms, self.cutoff)
+        i, j, D, S = neighbor_list('ijDS', atoms, self.cutoff)
 
-        # Save the number of atoms and all their neighbors
-        num_padding = len(i)
+        # Get coordinates for all neighbors (this has overlapping positions)
+        A = contributing_coords[i] + D
+
+        # Make the neighbor list ready for KIM
+        ac = atoms.copy()
+        neighbor_species_code = []
+        neighbor_image_of = []
+        used = dict()
+        neb_dict = dict((k, []) for k in range(num_contributing))
+        for k in range(len(i)):
+            shift_tuple = tuple(S[k])
+            if shift_tuple == (0, 0, 0):
+                # In unit cell
+                neb_dict[i[k]].append(j[k])
+            else:
+                # Not in unit cell
+                t = (j[k], ) + shift_tuple
+                if t not in used:
+                    # Add the neighbor as a padding atom
+                    used[t] = len(ac)
+                    neb_sym = contributing_species[j[k]]
+                    pc = contributing_species_code[j[k]]
+                    neighbor_species_code.append(pc)
+                    ac.append(Atom(neb_sym, position=A[k]))
+                    neighbor_image_of.append(j[k])
+                neb_dict[i[k]].append(used[t])
+        neb_list = [np.array(neb_dict[k], dtype=np.intc)
+                    for k in range(num_contributing)]
+        self.neighbor_image_of = np.array(neighbor_image_of, dtype=np.intc)
+
+        tmp = np.concatenate(
+            (contributing_species_code, neighbor_species_code))
+        self.species_code = np.asarray(tmp, dtype=np.intc)
+
+        # Save the number of atoms and all their neighbors and positions
+        num_padding = len(used)
         self.num_particles = np.array([num_contributing + num_padding],
                                       dtype=np.intc)
-
-        # Get the coordinates of all the neighbors (there will be overlap
-        # but that does not matter for KIM)
-        neighbor_coords = contributing_coords[i] + D
-        tmp = np.concatenate((contributing_coords, neighbor_coords))
-        self.coords = np.asarray(tmp, dtype=np.double)
+        self.coords = ac.get_positions()
 
         # Save which coordinates are from original atoms and which are from
         # neighbors using a mask
         indices_mask = [1] * num_contributing + [0] * num_padding
         self.contributing_mask = np.array(indices_mask, dtype=np.intc)
-
-        # Create the neighbor list and species code
-        s = num_contributing
-        neighbor_species_code = []
-        neb_list = []
-        for b in np.bincount(i):
-            nebs = []
-            for k in range(b):
-                nebs.append(k + s)
-                pc = contributing_species_code[j[k + s - num_contributing]]
-                neighbor_species_code.append(pc)
-            neb_list.append(np.array(nebs, dtype=np.intc))
-            s += b
-        tmp = np.concatenate(
-            (contributing_species_code, neighbor_species_code))
-        self.species_code = np.asarray(tmp, dtype=np.intc)
 
         # neb_list now only contains neighbor information for the original
         # atoms. A neighbor is represented as an index in the list of all
@@ -313,8 +327,6 @@ class KIMModelCalculator(Calculator, object):
         self.neigh['neighbors'] = np.array(neb_list)
         self.neigh['cutoff'] = self.cutoff
         self.neigh['num_particles'] = num_contributing
-
-        self.neighbor_image_of = j
 
         # Does not support padding needing neighbors at the moment
         # Check the output of padding_need_neigh
