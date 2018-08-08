@@ -188,9 +188,7 @@ class KIMModelCalculator(Calculator, object):
 
         # TODO support multiple cutoffs
         model_cutoffs, padding_hints, half_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
-
-        if(model_cutoffs.size != 1):
-            report_error('too many cutoffs')
+        self.cutoffs = model_cutoffs
 
         if padding_hints[0] == 0:
             self.padding_need_neigh = True
@@ -274,7 +272,8 @@ class KIMModelCalculator(Calculator, object):
         contributing_species_code = np.array(
             [species_map[s] for s in contributing_species], dtype=np.intc)
 
-        i, j, D, S = neighbor_list('ijDS', atoms, self.cutoff)
+        # Change cutoff to influence distance
+        i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.cutoff)
 
         # Get coordinates for all neighbors (this has overlapping positions)
         A = contributing_coords[i] + D
@@ -285,11 +284,13 @@ class KIMModelCalculator(Calculator, object):
         neighbor_image_of = []
         used = dict()
         neb_dict = dict((k, []) for k in range(num_contributing))
+        neb_dists = dict((k, []) for k in range(num_contributing))
         for k in range(len(i)):
             shift_tuple = tuple(S[k])
             if shift_tuple == (0, 0, 0):
                 # In unit cell
                 neb_dict[i[k]].append(j[k])
+                neb_dists[i[k]].append(dists[k])
             else:
                 # Not in unit cell
                 t = (j[k], ) + shift_tuple
@@ -302,8 +303,14 @@ class KIMModelCalculator(Calculator, object):
                     ac.append(Atom(neb_sym, position=A[k]))
                     neighbor_image_of.append(j[k])
                 neb_dict[i[k]].append(used[t])
-        neb_list = [np.array(neb_dict[k], dtype=np.intc)
-                    for k in range(num_contributing)]
+                neb_dists[i[k]].append(dists[k])
+        neb_lists = []
+        for cut in self.cutoffs:
+            neb_list = [np.array(neb_dict[k],
+                                 dtype=np.intc)[neb_dists[k] <= cut]
+                        for k in range(num_contributing)]
+            neb_lists.append(neb_list)
+
         self.neighbor_image_of = np.array(neighbor_image_of, dtype=np.intc)
 
         tmp = np.concatenate(
@@ -324,7 +331,7 @@ class KIMModelCalculator(Calculator, object):
         # neb_list now only contains neighbor information for the original
         # atoms. A neighbor is represented as an index in the list of all
         # coordinates in self.coords
-        self.neigh['neighbors'] = np.array(neb_list)
+        self.neigh['neighbors'] = neb_lists
         self.neigh['cutoff'] = self.cutoff
         self.neigh['num_particles'] = num_contributing
 
@@ -588,5 +595,5 @@ def get_neigh(data, cutoffs, neighbor_list_index, particle_number):
         error = 1
     check_error(error, 'get_neigh')
 
-    neighbors = data['neighbors'][particle_number]
+    neighbors = data['neighbors'][neighbor_list_index][particle_number]
     return (neighbors, error)
