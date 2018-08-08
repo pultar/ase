@@ -13,7 +13,11 @@ KIM Simulator Model.  For more information on KIM, visit https://openkim.org.
 from __future__ import print_function
 import re
 import os
-import kimsm
+try:
+    import kimsm
+    kimsm_loaded = True
+except ModuleNotFoundError:
+    kimsm_loaded = False
 from ase.calculators.lammpslib import LAMMPSlib
 # from kimlammpsrun import kimLAMMPSrun
 # from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
@@ -34,7 +38,7 @@ def _get_kim_model_id_and_type(extended_kim_id):
     or KIM Simulator Model and extract the short KIM ID
     '''
     # Determine whether this is a KIM Model or SM
-    if kimsm.is_simulator_model(extended_kim_id):
+    if kimsm_loaded and kimsm.is_simulator_model(extended_kim_id):
         this_is_a_KIM_MO = False
         pref = 'SM'
     else:
@@ -48,7 +52,7 @@ def _get_kim_model_id_and_type(extended_kim_id):
         kim_id = re.search(extended_kim_id_regex, extended_kim_id).group(0)
     except AttributeError:
         kim_id = extended_kim_id  # Model name does not contain a short KIM ID,
-                                  # so use full model name for the file directory.
+        # so use full model name for the file directory.
 
     return kim_id, this_is_a_KIM_MO
 
@@ -105,7 +109,7 @@ def _add_init_lines_to_parameters(parameters, model_init):
 
 
 def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
-                  lammps_calculator='lammpslib', lammps_lib_suffix=None):
+        lammps_calculator='lammpslib', lammps_lib_suffix=None):
     '''
     Wrapper routine that selects KIMCalculator for KIM Models or an appropriate
     ASE Calculator for KIM Simulator Models.
@@ -219,10 +223,10 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             raise KIMCalculatorError(
                 'ERROR: Unknown model "%s" for simulator ASAP.' % model_defn[0])
         else:
-            calc.set_subtractE0(False) # Use undocumented feature for the EMT
-                                       # calculators to take the energy of an
-                                       # isolated atoms as zero. (Otherwise it
-                                       # is taken to be that of perfect FCC.)
+            calc.set_subtractE0(False)  # Use undocumented feature for the EMT
+            # calculators to take the energy of an
+            # isolated atoms as zero. (Otherwise it
+            # is taken to be that of perfect FCC.)
             return calc
 
     ############################################################
@@ -233,7 +237,8 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
         if lammps_calculator == 'lammpslib':
             supported_species = ksm.get_model_supported_species()
             atom_type_sym_list_string = ' '.join(supported_species)
-            atom_type_num_list_string = ' '.join([str(atomic_numbers[s]) for s in supported_species])
+            atom_type_num_list_string = ' '.join(
+                [str(atomic_numbers[s]) for s in supported_species])
         else:
             atom_type_sym_list_string = ''
             atom_type_num_list_string = ''
@@ -285,21 +290,21 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             # Setup LAMMPS header commands
             # lookup table
             model_init.insert(0, 'atom_modify map array sort 0 0')
-            if not any("atom_style" in s.lower() for s in model_init): # atom style (if needed)
+            if not any("atom_style" in s.lower() for s in model_init):  # atom style (if needed)
                 model_init.insert(0, 'atom_style atomic')
             model_init.insert(
                 0, 'units ' + supported_units.strip())     # units
 
             atom_types = {}
             for i_s, s in enumerate(supported_species):
-                atom_types[s] = i_s+1
+                atom_types[s] = i_s + 1
             # Return LAMMPSlib calculator
             return LAMMPSlib(lammps_header=model_init,
-                                lammps_name=lammps_lib_suffix,
-                                lmpcmds=model_defn,
-                                atom_types = atom_types,
-                                log_file='lammps.log',
-                                keep_alive=True)
+                             lammps_name=lammps_lib_suffix,
+                             lmpcmds=model_defn,
+                             atom_types=atom_types,
+                             log_file='lammps.log',
+                             keep_alive=True)
 
         else:
             raise KIMCalculatorError(
