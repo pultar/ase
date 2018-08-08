@@ -14,7 +14,7 @@ from ase.ce.floating_point_classification import FloatingPointClassifier
 from ase.ce.tools import (wrap_and_sort_by_position, index_by_position,
                           flatten, sort_by_internal_distances, create_cluster,
                           ndarray2list, dec_string, get_cluster_descriptor,
-                          get_unique_name)
+                          get_unique_name, doubly_nested_array2nested_list)
 
 
 class ClusterExpansionSetting:
@@ -922,12 +922,26 @@ class ClusterExpansionSetting:
         try:
             row = db.get('name=information')
             self.cluster_info = row.data.cluster_info
+            self._info_entries_to_list()
             self.trans_matrix = row.data.trans_matrix
             self.conc_matrix = row.data.conc_matrix
         except KeyError:
             self._store_data()
         except (AssertionError, AttributeError, RuntimeError):
             self.reconfigure_settings()
+
+    def _info_entries_to_list(self):
+        """Convert entries in cluster info to list."""
+        for info in self.cluster_info:
+            for name, cluster in info.items():
+                cluster["indices"] = \
+                    doubly_nested_array2nested_list(cluster["indices"])
+
+                cluster["equiv_sites"] = \
+                    doubly_nested_array2nested_list(cluster["equiv_sites"])
+
+                cluster["order"] = \
+                    doubly_nested_array2nested_list(cluster["order"])
 
     def _get_name_indx(self, unique_name):
         size = int(unique_name[1])

@@ -220,3 +220,20 @@ def flatten(x):
 def get_unique_name(size, max_dia, fam_id):
     name = "c{}_{}_{}".format(size, max_dia, fam_id)
     return name
+
+
+def doubly_nested_array2nested_list(array):
+    """Convert a doubly nested array/tuple etc. to a nested list."""
+    if isinstance(array, np.ndarray):
+        array = array.tolist()
+    else:
+        array = list(array)
+    try:
+        for i in range(len(array)):
+            if isinstance(array[i], np.ndarray):
+                array[i] = array[i].tolist()
+            else:
+                array[i] = list(array[i])
+    except TypeError:
+        pass
+    return array
