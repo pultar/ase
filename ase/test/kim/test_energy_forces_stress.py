@@ -42,6 +42,10 @@ def test_main():
     assert np.allclose(forces, forces_ref, tol)
     assert np.allclose(stress, stress_ref, tol)
 
+    # This has been known to segfault
+    argon.set_pbc(True)
+    argon.get_potential_energy()
+
 
 if __name__ == '__main__':
     test_main()

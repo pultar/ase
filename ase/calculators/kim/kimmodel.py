@@ -301,7 +301,7 @@ class KIMModelCalculator(Calculator, object):
                 nebs.append(k + s)
                 pc = contributing_species_code[j[k + s - num_contributing]]
                 neighbor_species_code.append(pc)
-            neb_list.append(nebs)
+            neb_list.append(np.array(nebs, dtype=np.intc))
             s += b
         tmp = np.concatenate(
             (contributing_species_code, neighbor_species_code))
@@ -310,7 +310,7 @@ class KIMModelCalculator(Calculator, object):
         # neb_list now only contains neighbor information for the original
         # atoms. A neighbor is represented as an index in the list of all
         # coordinates in self.coords
-        self.neigh['neighbors'] = neb_list
+        self.neigh['neighbors'] = np.array(neb_list)
         self.neigh['cutoff'] = self.cutoff
         self.neigh['num_particles'] = num_contributing
 
