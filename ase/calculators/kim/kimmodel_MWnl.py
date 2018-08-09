@@ -80,6 +80,9 @@ class KIMModelCalculator(Calculator, object):
         # initialize KIM
         self.init_kim()
 
+        # initialize neigh
+        self.init_neigh()
+
     def init_kim(self):
         """Initialize KIM.
         """
@@ -214,23 +217,7 @@ class KIMModelCalculator(Calculator, object):
 
         self.kim_initialized = True
 
-    def set_atoms(self, atoms):
-        """Initialize KIM and neighbor list.
-        This is called by set_calculator() of Atoms instance.
-
-        Note that set_calculator() may be called multiple times by different Atoms instance.
-
-        Parameter
-        ---------
-
-        atoms: ASE Atoms instance
-        """
-        # TODO since this can be attached to different atoms object,
-        self.init_neigh(atoms)
-        # think about use different compute_arguments for each
-        # may not be good
-
-    def init_neigh(self, atoms):
+    def init_neigh(self):
         """Initialize neighbor list.
 
         Parameter
