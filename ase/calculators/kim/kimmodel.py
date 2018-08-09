@@ -581,13 +581,6 @@ def report_error(msg):
 
 def get_neigh(data, cutoffs, neighbor_list_index, particle_number):
     try:
-        # we only support one neighbor list
-        rcut = data['cutoff']
-        if len(cutoffs) != 1 or cutoffs[0] > rcut:
-            return(np.array([]), 1)
-        if neighbor_list_index != 0:
-            return(np.array([]), 1)
-
         # invalid id
         number_of_particles = data['num_particles']
         if particle_number >= number_of_particles or particle_number < 0:

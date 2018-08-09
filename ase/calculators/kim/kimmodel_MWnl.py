@@ -195,10 +195,11 @@ class KIMModelCalculator(Calculator, object):
         if(model_cutoffs.size != 1):
             report_error('too many cutoffs')
 
-        if padding_hints[0] == 0:
-            self.padding_need_neigh = True
-        else:
-            self.padding_need_neigh = False
+        self.padding_need_neigh = True
+        # if padding_hints[0] == 0:
+        #     self.padding_need_neigh = True
+        # else:
+        #     self.padding_need_neigh = False
 
         if self.debug:
             print()
