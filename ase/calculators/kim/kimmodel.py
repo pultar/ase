@@ -191,9 +191,8 @@ class KIMModelCalculator(Calculator, object):
         self.skin = self.neigh_skin_ratio * model_influence_dist
         self.cutoff = (1 + self.neigh_skin_ratio) * model_influence_dist
 
-        # TODO support multiple cutoffs
         model_cutoffs, padding_hints, half_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
-        self.cutoffs = model_cutoffs
+        self.cutoffs = [cut + self.skin for cut in model_cutoffs]
 
         if padding_hints[0] == 0:
             self.padding_need_neigh = True
@@ -212,7 +211,6 @@ class KIMModelCalculator(Calculator, object):
             print()
 
         self.kim_initialized = True
-
 
     def init_neigh(self):
         """Initialize neighbor list.
