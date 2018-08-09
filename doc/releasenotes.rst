@@ -44,6 +44,9 @@ Git master branch
 * Added callback method :meth:`ase.gui.gui.GUI.repeat_poll` to the GUI.
   Useful for programmatically updating the GUI.
 
+* Added a new calculator: :mod:`~ase.calculators.kim` that allows users to do
+  calculations with all potentials in OpenKIM.
+
 Version 3.16.2
 ==============
 
