@@ -6,6 +6,7 @@ Mingjian Wen
 University of Minnesota
 """
 from __future__ import absolute_import, division, print_function
+from collections import defaultdict
 import numpy as np
 from .exceptions import KIMCalculatorError
 from ase.calculators.calculator import Calculator
@@ -13,7 +14,7 @@ from ase import Atom
 from ase.neighborlist import neighbor_list
 try:
     import kimpy
-except ModuleNotFoundError:
+except ImportError:
     print('kimpy not found; KIM calculator will not work')
 
 
@@ -150,8 +151,8 @@ class KIMModelCalculator(Calculator, object):
             # virial is computed within the calculator
             if support_status == kimpy.support_status.required:
                 if (name != kimpy.compute_argument_name.partialEnergy and
-                        name != kimpy.compute_argument_name.partialForces
-                    ):
+                            name != kimpy.compute_argument_name.partialForces
+                        ):
                     report_error(
                         'Unsupported required ComputeArgument {}'.format(name))
 
@@ -241,23 +242,135 @@ class KIMModelCalculator(Calculator, object):
 
         self.neigh_initialized = True
 
+    def build_neighbor_list(self, atoms):
+        """Build the neighbor list and return an Atoms object with all
+        the neighbors added.
+
+        First a neighbor list is created from ase.neighbor_list, having
+        only information about first neighbors of the original atoms
+        if second neighbors are required they are calculated using information
+        from the first neighbor list
+        """
+        syms = atoms.get_chemical_symbols()
+        n = len(atoms)
+        # TODO: Change cutoff to influence distance
+        i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.cutoff)
+
+        # Get coordinates for all neighbors (this has overlapping positions)
+        A = atoms.get_positions()[i] + D
+
+        # Make the neighbor list ready for KIM
+        ac = atoms.copy()
+        used = dict()
+
+        # Variables below only include information for the neighbors (padding)
+        neighbor_image_of = []
+        neighbor_shifts = []
+
+        # These variables include both original atoms and their neighbors
+        neb_dict = defaultdict(list)
+        neb_dists = defaultdict(list)
+
+        # Loop over all neighbor pairs
+        for k in range(len(i)):
+            shift_tuple = tuple(S[k])
+            t = (j[k], ) + shift_tuple
+            if shift_tuple == (0, 0, 0):
+                # In unit cell
+                neb_dict[i[k]].append(j[k])
+                neb_dists[i[k]].append(dists[k])
+                if t not in used:
+                    used[t] = j[k]
+            else:
+                # Not in unit cell
+                if t not in used:
+                    # Add the neighbor as a padding atom
+                    used[t] = len(ac)
+                    ac.append(Atom(syms[j[k]], position=A[k]))
+                    neighbor_image_of.append(j[k])
+                    neighbor_shifts.append(S[k])
+                neb_dict[i[k]].append(used[t])
+                neb_dists[i[k]].append(dists[k])
+        neighbor_list_size = n
+
+        # Add 2. neighbors if the potential requires them, i.e. information
+        # of the padding atoms' neighbors
+        if self.padding_need_neigh:
+            neighbor_list_size = len(ac)
+            inv_used = dict((v, k) for k, v in used.items())
+            # Loop over all the neighbors (k)
+            # and the image of that neighbor in the cell (neb)
+            for k, neb in enumerate(neighbor_image_of[:]):
+                # Shift from original atom in cell to neighbor
+                shift = neighbor_shifts[k]
+                for org_neb, org_dist in zip(neb_dict[neb], neb_dists[neb]):
+                    # Get the shift of the neighbor of the original atom
+                    org_shift = inv_used[org_neb][1:]
+
+                    # Apply sum of original shift and current shift
+                    # to neighbors of original atom
+                    tot_shift = org_shift + shift
+
+                    # Get the image in the cell of the original neighbor
+                    if org_neb <= n - 1:
+                        org_neb_image = org_neb
+                    else:
+                        org_neb_image = neighbor_image_of[org_neb - n]
+
+                    # If the original image with the total shift has been
+                    # used before then it is also a neighbor of this atom
+                    tt = (org_neb_image, ) + tuple(tot_shift)
+                    if tt in used:
+                        neb_dict[k + n].append(used[tt])
+                        neb_dists[k + n].append(org_dist)
+
+        neb_lists = []
+        for cut in self.cutoffs:
+            neb_list = [np.array(neb_dict[k],
+                                 dtype=np.intc)[neb_dists[k] <= cut]
+                        for k in range(neighbor_list_size)]
+            neb_lists.append(neb_list)
+
+        self.neighbor_image_of = np.array(neighbor_image_of, dtype=np.intc)
+
+        # neb_list now only contains neighbor information for the original
+        # atoms. A neighbor is represented as an index in the list of all
+        # coordinates in self.coords
+        self.neigh['neighbors'] = neb_lists
+        self.neigh['num_particles'] = neighbor_list_size
+
+        return ac
+
     def update_neigh(self, atoms):
         """Create the neighbor list along with the other required parameters.
+        The required parameters are:
+        - num_particles
+        - coords
+        - contributing_mask
+        - species_code
 
         KIM requires a neighbor list that has indices corresponding to
         positions.
-        We first build a neighbor list and get the distance vectors from
-        original positions to neighbors, these positions are concatenated to
-        the original positions.
         """
         # Information of original atoms
-        contributing_coords = atoms.get_positions()
-        num_contributing = len(atoms)
-        self.num_contributing_atoms = num_contributing
+        self.num_contributing_atoms = len(atoms)
+
+        ac = self.build_neighbor_list(atoms)
+
+        # Save the number of atoms and all their neighbors and positions
+        N = len(ac)
+        num_padding = N - self.num_contributing_atoms
+        self.num_particles = np.array([N], dtype=np.intc)
+        self.coords = ac.get_positions()
+
+        # Save which coordinates are from original atoms and which are from
+        # neighbors using a mask
+        indices_mask = [1] * self.num_contributing_atoms + [0] * num_padding
+        self.contributing_mask = np.array(indices_mask, dtype=np.intc)
 
         # species support and code
-        contributing_species = atoms.get_chemical_symbols()
-        unique_species = list(set(contributing_species))
+        all_species = ac.get_chemical_symbols()
+        unique_species = list(set(all_species))
         species_map = dict()
         for s in unique_species:
             support, code, error = self.kim_model.get_species_support_and_code(
@@ -269,77 +382,8 @@ class KIMModelCalculator(Calculator, object):
             if self.debug:
                 msg = 'Species {} is supported and its code is: {}'
                 print(msg.format(s, code))
-        contributing_species_code = np.array(
-            [species_map[s] for s in contributing_species], dtype=np.intc)
-
-        # Change cutoff to influence distance
-        i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.cutoff)
-
-        # Get coordinates for all neighbors (this has overlapping positions)
-        A = contributing_coords[i] + D
-
-        # Make the neighbor list ready for KIM
-        ac = atoms.copy()
-        neighbor_species_code = []
-        neighbor_image_of = []
-        used = dict()
-        neb_dict = dict((k, []) for k in range(num_contributing))
-        neb_dists = dict((k, []) for k in range(num_contributing))
-        for k in range(len(i)):
-            shift_tuple = tuple(S[k])
-            if shift_tuple == (0, 0, 0):
-                # In unit cell
-                neb_dict[i[k]].append(j[k])
-                neb_dists[i[k]].append(dists[k])
-            else:
-                # Not in unit cell
-                t = (j[k], ) + shift_tuple
-                if t not in used:
-                    # Add the neighbor as a padding atom
-                    used[t] = len(ac)
-                    neb_sym = contributing_species[j[k]]
-                    pc = contributing_species_code[j[k]]
-                    neighbor_species_code.append(pc)
-                    ac.append(Atom(neb_sym, position=A[k]))
-                    neighbor_image_of.append(j[k])
-                neb_dict[i[k]].append(used[t])
-                neb_dists[i[k]].append(dists[k])
-        neb_lists = []
-        for cut in self.cutoffs:
-            neb_list = [np.array(neb_dict[k],
-                                 dtype=np.intc)[neb_dists[k] <= cut]
-                        for k in range(num_contributing)]
-            neb_lists.append(neb_list)
-
-        self.neighbor_image_of = np.array(neighbor_image_of, dtype=np.intc)
-
-        tmp = np.concatenate(
-            (contributing_species_code, neighbor_species_code))
-        self.species_code = np.asarray(tmp, dtype=np.intc)
-
-        # Save the number of atoms and all their neighbors and positions
-        num_padding = len(used)
-        self.num_particles = np.array([num_contributing + num_padding],
-                                      dtype=np.intc)
-        self.coords = ac.get_positions()
-
-        # Save which coordinates are from original atoms and which are from
-        # neighbors using a mask
-        indices_mask = [1] * num_contributing + [0] * num_padding
-        self.contributing_mask = np.array(indices_mask, dtype=np.intc)
-
-        # neb_list now only contains neighbor information for the original
-        # atoms. A neighbor is represented as an index in the list of all
-        # coordinates in self.coords
-        self.neigh['neighbors'] = neb_lists
-        self.neigh['cutoff'] = self.cutoff
-        self.neigh['num_particles'] = num_contributing
-
-        # Does not support padding needing neighbors at the moment
-        # Check the output of padding_need_neigh
-        # need_neigh = np.array(indices_mask, dtype=np.intc)
-        # if not self.padding_need_neigh:
-        #     need_neigh[num_contributing:] = 0
+        self.species_code = np.array([species_map[s] for s in all_species],
+                                     dtype=np.intc)
 
         if self.debug:
             print('Debug: called update_neigh')
@@ -509,7 +553,7 @@ class KIMModelCalculator(Calculator, object):
             kimpy.model.destroy(self.kim_model)
 
 
-def assemble_padding_forces(forces, num_contributing, neighbor_image_of):
+def assemble_padding_forces(forces, n, neighbor_image_of):
     """
     Assemble forces on padding atoms back to contributing atoms.
 
@@ -519,7 +563,7 @@ def assemble_padding_forces(forces, num_contributing, neighbor_image_of):
     forces: 2D array
       forces on both contributing and padding atoms
 
-    num_contributing: int
+    n: int
       number of contributing atoms
 
     neighbor_image_of: 1D int array
@@ -530,13 +574,13 @@ def assemble_padding_forces(forces, num_contributing, neighbor_image_of):
     -------
       Total forces on contributing atoms.
     """
-    total_forces = np.array(forces[:num_contributing])
+    total_forces = np.array(forces[:n])
 
     has_padding = True if neighbor_image_of.size != 0 else False
 
     if has_padding:
 
-        pad_forces = forces[num_contributing:]
+        pad_forces = forces[n:]
         for f, org_index in zip(pad_forces, neighbor_image_of):
             total_forces[org_index] += f
 
@@ -581,7 +625,7 @@ def report_error(msg):
 
 def get_neigh(data, cutoffs, neighbor_list_index, particle_number):
     try:
-        # invalid id
+        # We can only return neighbors of particles that were stored
         number_of_particles = data['num_particles']
         if particle_number >= number_of_particles or particle_number < 0:
             return(np.array([]), 1)
