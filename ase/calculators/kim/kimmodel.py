@@ -10,6 +10,7 @@ from collections import defaultdict
 import numpy as np
 from .exceptions import KIMCalculatorError
 from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import equal
 from ase import Atom
 from ase.neighborlist import neighbor_list
 try:
@@ -554,13 +555,13 @@ def compare_atoms(atoms1, atoms2):
         return ['positions', 'numbers', 'cell', 'pbc']
     else:
         system_changes = []
-        if not np.allclose(atoms1.positions, atoms2.positions):
+        if not equal(atoms1.positions, atoms2.positions):
             system_changes.append('positions')
-        if not np.all(atoms1.numbers == atoms2.numbers):
+        if not equal(atoms1.numbers, atoms2.numbers):
             system_changes.append('numbers')
-        if not np.allclose(atoms1.cell, atoms2.cell):
+        if not equal(atoms1.cell, atoms2.cell):
             system_changes.append('cell')
-        if not np.all(atoms1.pbc == atoms2.pbc):
+        if not equal(atoms1.pbc, atoms2.pbc):
             system_changes.append('pbc')
 
     return system_changes
