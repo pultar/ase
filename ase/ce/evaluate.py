@@ -46,10 +46,15 @@ class Evaluate(object):
         -*None*: no regularization
         -'lasso' or 'l1': L1 regularization
         -'euclidean' or 'l2': L2 regularization
+
+    max_size: int
+        Maximum number of atoms in the cluster to include in the fit.
+        If this is None then all clusters in the DB are included.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
-                 penalty=None, parallel=False, num_core="all"):
+                 penalty=None, parallel=False, num_core="all",
+                 max_size=None):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             msg = "setting must be BulkCrystal or BulkSpacegroup object"
@@ -58,6 +63,7 @@ class Evaluate(object):
         self.setting = setting
         self.cluster_names = setting.cluster_names
         self.num_elements = setting.num_elements
+        self.max_size = max_size
 
         # Define the selection conditions
         self.select_cond = [('converged', '=', True)]
@@ -86,6 +92,11 @@ class Evaluate(object):
             self.cluster_names = self.setting.cluster_names
         else:
             self.cluster_names = cluster_names
+
+        # If max_size given, remove the names corresponding to larger
+        # clusters
+        self._filter_cluster_name_on_size()
+        
         self.cf_matrix = self._make_cf_matrix()
         self.e_dft = self._get_dft_energy_per_atom()
         self.multiplicity_factor = self.setting.multiplicity_factor
@@ -515,6 +526,17 @@ class Evaluate(object):
         else:
             raise TypeError("Unknown penalty type.")
         return eci
+
+    def _filter_cluster_name_on_size(self):
+        """Filter the cluster names based on size."""
+        if self.max_size is None:
+            return
+        filtered_cnames = []
+        for name in self.cluster_names:
+            size = int(name[1])
+            if size <= self.max_size:
+                filtered_cnames.append(name)
+        self.cluster_names = filtered_cnames
 
     def _make_cf_matrix(self):
         """Return a matrix containing the correlation functions.
