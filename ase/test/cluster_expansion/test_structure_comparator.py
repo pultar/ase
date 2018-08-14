@@ -1,9 +1,7 @@
-from ase.ce import SymmetryEquivalenceCheck
-import os
-from ase.test import NotAvailable
+from ase.ce.structure_comparator import SymmetryEquivalenceCheck
 from ase.build import bulk
 from ase import Atoms
-from ase.spacegroup import spacegroup, get_spacegroup
+from ase.spacegroup import spacegroup
 from random import randint
 import numpy as np
 

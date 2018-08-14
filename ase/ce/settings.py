@@ -13,8 +13,7 @@ from ase.db import connect
 from ase.ce.floating_point_classification import FloatingPointClassifier
 from ase.ce.tools import (wrap_and_sort_by_position, index_by_position,
                           flatten, sort_by_internal_distances, create_cluster,
-                          ndarray2list, dec_string, get_cluster_descriptor,
-                          get_unique_name)
+                          dec_string,  get_unique_name)
 
 
 class ClusterExpansionSetting:

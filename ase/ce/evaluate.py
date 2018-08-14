@@ -8,7 +8,8 @@ import multiprocessing as mp
 import logging as lg
 import json
 from ase.utils import basestring
-from ase.ce import BulkCrystal, BulkSpacegroup, MultiprocessHandler
+from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.ce.mp_logger import MultiprocessHandler
 from ase.db import connect
 
 
@@ -91,12 +92,11 @@ class Evaluate(object):
         self.alpha = None
         self.e_pred_loo = None
         self.parallel = parallel
-        self.num_core = num_core
         if parallel:
-            if self.num_core == "all":
-                num_proc = int(mp.cpu_count()/2)
+            if num_core == "all":
+                self.num_core = int(mp.cpu_count()/2)
             else:
-                num_proc = int(self.num_core)
+                self.num_core = int(num_core)
 
     def get_eci(self, alpha):
         """Determine and return ECIs for a given alpha.
@@ -313,11 +313,7 @@ class Evaluate(object):
 
         # get CV scores
         if self.parallel:
-            if self.num_core == "all":
-                num_proc = int(mp.cpu_count()/2)
-            else:
-                num_proc = int(self.num_core)
-            workers = mp.Pool(num_proc)
+            workers = mp.Pool(self.num_core)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
@@ -366,7 +362,6 @@ class Evaluate(object):
                 verticalalignment='bottom', horizontalalignment='left',
                 transform=ax.transAxes, fontsize=10)
         plt.show()
-
         return min_alpha
 
     def plot_ECI(self, ignore_sizes=[0], interactive=True):
@@ -410,17 +405,17 @@ class Evaluate(object):
             data["d"] = data["d"][sort_index]
             data["eci"] = data["eci"][sort_index]
             annotations.append([data["name"][indx] for indx in sort_index])
-            mrk = markers[size%len(markers)]
-            line = ax.plot(data["d"], data["eci"], label="{}-body".format(size),
-                           marker=mrk, mfc="none", ls="", markersize=8)
+            mrk = markers[size % len(markers)]
+            line = ax.plot(data["d"], data["eci"],
+                           label="{}-body".format(size), marker=mrk,
+                           mfc="none", ls="", markersize=8)
             lines.append(line[0])
         ax.set_xlabel("Cluster diameter")
         ax.set_ylabel("ECI (eV/atom)")
         ax.legend()
         if interactive:
             # Note: Internally this calls plt.show()
-            inter_active = InteractivePlot(fig, ax, lines, annotations)
-        return fig
+            InteractivePlot(fig, ax, lines, annotations)
 
     def _distance_from_names(self):
         """Get a list with all the distances for each name."""

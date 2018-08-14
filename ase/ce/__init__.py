@@ -1,10 +1,9 @@
 from ase.ce.settings_bulk import BulkCrystal, BulkSpacegroup
-from ase.ce.mp_logger import MultiprocessHandler
 from ase.ce.evaluate import Evaluate
 from ase.ce.corrFunc import CorrFunction
-from ase.ce.newStruct import GenerateStructures, MaxAttemptReachedError
-from ase.ce.structure_comparator import SymmetryEquivalenceCheck
+from ase.ce.newStruct import GenerateStructures
+from ase.ce.convexhull import ConvexHull
 
 
 __all__ = ['BulkCrystal', 'BulkSpacegroup', 'CorrFunction',
-           'GenerateStructures', 'Evaluate']
+           'GenerateStructures', 'Evaluate', 'ConvexHull']

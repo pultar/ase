@@ -1,6 +1,6 @@
 """Test case for the multiprocessing logger."""
 import multiprocessing as mp
-from ase.ce import MultiprocessHandler
+from ase.ce.mp_logger import MultiprocessHandler
 import logging as lg
 import os
 from ase.test import NotAvailable

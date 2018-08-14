@@ -7,7 +7,6 @@ from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
 from ase.ce.probestructure import ProbeStructure
 from ase.ce.tools import wrap_and_sort_by_position
 from ase.ce.structure_comparator import SymmetryEquivalenceCheck
-from ase.ce.structure_comparator import SpgLibNotFoundError
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -371,8 +370,8 @@ class GenerateStructures(object):
         match = False
         to_prim = True
         try:
-            import spglib
-        except ImportError:
+            __import__('spglib')
+        except (ImportError, ModuleNotFoundError):
             msg = "Warning! Setting to_primitive=False because spglib "
             msg += "is missing!"
             print(msg)
