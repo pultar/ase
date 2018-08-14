@@ -4,14 +4,12 @@ import sys
 from copy import deepcopy
 import numpy as np
 from numpy.linalg import matrix_rank, inv
-import matplotlib.pyplot as plt
 import multiprocessing as mp
 import logging as lg
 import json
 from ase.utils import basestring
 from ase.ce import BulkCrystal, BulkSpacegroup, MultiprocessHandler
 from ase.db import connect
-from ase.ce.interactive_plot import InteractivePlot
 
 
 try:
@@ -212,6 +210,8 @@ class Evaluate(object):
         alpha: int or float
             regularization parameter.
         """
+        import matplotlib.pyplot as plt
+
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
         e_pred = self.cf_matrix.dot(self.eci)
@@ -271,6 +271,8 @@ class Evaluate(object):
               the alpha values that are absent. The newly evaluated CVs are
               appended to the existing file.
         """
+        import matplotlib.pyplot as plt
+
         # set up alpha values
         if scale == 'log':
             alphas = np.logspace(np.log10(alpha_min), np.log10(alpha_max),
@@ -376,6 +378,9 @@ class Evaluate(object):
             Sizes listed in this list will not be plotted.
             Default is to ignore the emptry cluster.
         """
+        import matplotlib.pyplot as plt
+        from ase.ce.interactive_plot import InteractivePlot
+
         if self.eci is None:
             raise ValueError("ECI is None. You have to call get_eci first!")
         distances = self._distance_from_names()

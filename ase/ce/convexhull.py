@@ -1,10 +1,9 @@
 import numpy as np
 import ase.db
 import os
-import matplotlib.pyplot as plt
 from operator import itemgetter
 from copy import deepcopy
-from ase.ce.interactive_plot import InteractivePlot
+
 
 class ConvexHull(object):
     """
@@ -86,6 +85,9 @@ class ConvexHull(object):
 
 
     def plot(self, ocv=False, ref=None, ref_energy=None):
+        import matplotlib.pyplot as plt
+        from ase.ce.interactive_plot import InteractivePlot
+
         conc_rel_energy, names = self._get_concentration_rel_energy_pairs()
         convex_hull_data = list(zip(*conc_rel_energy))
 
