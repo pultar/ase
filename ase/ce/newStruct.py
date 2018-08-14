@@ -371,7 +371,7 @@ class GenerateStructures(object):
         to_prim = True
         try:
             __import__('spglib')
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             msg = "Warning! Setting to_primitive=False because spglib "
             msg += "is missing!"
             print(msg)
