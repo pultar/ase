@@ -37,7 +37,6 @@ class ConvexHull(object):
 
         conc = []
         for row in rows:
-            print(row.get(self.conc_var_name), row.name)
             conc.append(row.get(self.conc_var_name)*self.conc_scale)
         self.max_conc = max(conc)
         self.min_conc = min(conc)
