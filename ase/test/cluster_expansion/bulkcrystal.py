@@ -8,7 +8,7 @@
 
 import os
 from ase.ce import BulkCrystal, GenerateStructures, Evaluate
-from ase.ce import MaxAttemptReachedError
+from ase.ce.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 

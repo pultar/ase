@@ -1,6 +1,5 @@
 """Definition of Metropolis Class for Metropolis Monte Carlo Simulations."""
 from ase.montecarlo.montecarlo import MonteCarlo
-from ase.ce import BulkCrystal, BulkSpacegroup
 
 
 class Metropolis(MonteCarlo):

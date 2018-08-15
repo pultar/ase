@@ -8,7 +8,7 @@
 import os
 import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
-from ase.ce import MaxAttemptReachedError
+from ase.ce.newStruct import MaxAttemptReachedError
 from ase.db import connect
 from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 
