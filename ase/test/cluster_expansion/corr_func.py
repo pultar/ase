@@ -8,7 +8,8 @@ conc_args = {"conc_ratio_min_1": [[1, 0]],
              "conc_ratio_max_1": [[0, 1]]}
 bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
                          basis_elements=[["Au", "Cu", "Si"]], size=[4, 4, 4],
-                         conc_args=conc_args, db_name=db_name)
+                         conc_args=conc_args, db_name=db_name,
+                         max_cluster_size=3)
 
 
 def test_trans_matrix():
@@ -36,34 +37,33 @@ def test_order_indep_ref_indx():
     This does only apply for clusters with only inequivalent
     sites
     """
-    for size in range(3, len(bc_setting.cluster_indx[0])):
-        for i in range(0, len(bc_setting.cluster_indx[0][size])):
-            if bc_setting.cluster_eq_sites[0][size][i]:
-                # The cluster contains symmetrically equivalent sites
-                # and then this test does not apply
-                continue
-            cluster = bc_setting.cluster_indx[0][size][i]
-            cluster_order = bc_setting.cluster_order[0][size][i]
+    for name, clst in bc_setting.cluster_info_given_size(3)[0].items():
+        if clst["equiv_sites"]:
+            # The cluster contains symmetrically equivalent sites
+            # and then this test does not apply
+            continue
+        cluster = clst["indices"]
+        cluster_order = clst["order"]
 
-            init_cluster = [0] + cluster[0]
-            init_cluster = [init_cluster[indx] for indx in cluster_order[0]]
+        init_cluster = [0] + list(cluster[0])
+        init_cluster = [init_cluster[indx] for indx in cluster_order[0]]
 
-            # Make sure that when the other indices in init_cluster are ref
-            # indices, the order is the same
-            for ref_indx in cluster[0]:
-                found_cluster = False
-                for subcluster, order in zip(cluster, cluster_order):
-                    new_cluster = [ref_indx]
-                    for indx in subcluster:
-                        trans_indx = bc_setting.trans_matrix[ref_indx][indx]
-                        new_cluster.append(trans_indx)
+        # Make sure that when the other indices in init_cluster are ref
+        # indices, the order is the same
+        for ref_indx in cluster[0]:
+            found_cluster = False
+            for subcluster, order in zip(cluster, cluster_order):
+                new_cluster = [ref_indx]
+                for indx in subcluster:
+                    trans_indx = bc_setting.trans_matrix[ref_indx][indx]
+                    new_cluster.append(trans_indx)
 
-                    # Check if all elements are the same
-                    if sorted(new_cluster) == sorted(init_cluster):
-                        new_cluster = [new_cluster[indx] for indx in order]
-                        found_cluster = True
-                        assert init_cluster == new_cluster
-                assert found_cluster
+                # Check if all elements are the same
+                if sorted(new_cluster) == sorted(init_cluster):
+                    new_cluster = [new_cluster[indx] for indx in order]
+                    found_cluster = True
+                    assert init_cluster == new_cluster
+            assert found_cluster
 
 
 def test_interaction_contribution_symmetric_clusters():
@@ -88,16 +88,17 @@ def test_interaction_contribution_symmetric_clusters():
     deco = [[], [], [0, 1], [0, 1, 1], [0, 1, 1, 1]]
     cf = CorrFunction(bc_setting)
     bf = bc_setting.basis_functions
-    for size in range(2, len(bc_setting.cluster_indx[0])):
-        for cat in range(len(bc_setting.cluster_indx[0][size])):
-            cluster = bc_setting.cluster_indx[0][size][cat]
-            orders = bc_setting.cluster_order[0][size][cat]
-            equiv_sites = bc_setting.cluster_eq_sites[0][size][cat]
+    for size in range(2, 4):
+        clusters = bc_setting.cluster_info_given_size(size)[0]
+        for _, clst in clusters.items():
+            cluster = clst["indices"]
+            orders = clst["order"]
+            equiv_sites = clst["equiv_sites"]
 
             equiv_deco = equivalent_deco(deco[size], equiv_sites)
             if len(equiv_deco) == size:
                 # Calculate reference contribution for this cluster category
-                indices = [0] + cluster[0]
+                indices = [0] + list(cluster[0])
                 indices = [indices[indx] for indx in orders[0]]
                 ref_sp = 0.0
                 counter = 0
@@ -111,8 +112,7 @@ def test_interaction_contribution_symmetric_clusters():
 
                 # Calculate the spin product for this category
                 sp, count = \
-                    cf._sp_same_shape_deco_for_ref_indx(atoms, 0, cluster,
-                                                        orders, equiv_sites,
+                    cf._sp_same_shape_deco_for_ref_indx(atoms, 0, clst,
                                                         0, deco[size])
                 sp /= count
                 assert abs(sp - ref_sp) < 1E-8

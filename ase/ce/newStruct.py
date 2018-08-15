@@ -368,8 +368,18 @@ class GenerateStructures(object):
             cond.append(('conc2', '=', conc2))
         # find if there is a match
         match = False
+        to_prim = True
+        try:
+            __import__('spglib')
+        except Exception:
+            msg = "Warning! Setting to_primitive=False because spglib "
+            msg += "is missing!"
+            print(msg)
+            to_prim = False
+
         symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
-                                             stol=0.05, scale_volume=True)
+                                             stol=0.05, scale_volume=True,
+                                             to_primitive=to_prim)
         for row in self.db.select(cond):
             atoms2 = row.toatoms()
             match = symmcheck.compare(atoms, atoms2)

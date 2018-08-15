@@ -4,13 +4,14 @@ import sys
 from copy import deepcopy
 import numpy as np
 from numpy.linalg import matrix_rank, inv
-import matplotlib.pyplot as plt
-from ase.utils import basestring
-from ase.ce import BulkCrystal, BulkSpacegroup
-from ase.db import connect
 import multiprocessing as mp
 import logging as lg
-from ase.ce import MultiprocessHandler
+import json
+from ase.utils import basestring
+from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.ce.mp_logger import MultiprocessHandler
+from ase.db import connect
+
 
 try:
     # dependency on sklearn is to be removed due to some of technical problems
@@ -19,7 +20,7 @@ try:
 except Exception:
     has_sklearn = False
 
-# Initialize a module wide logger
+# Initialize a module-wide logger
 logger = lg.getLogger(__name__)
 logger.setLevel(lg.INFO)
 
@@ -44,10 +45,15 @@ class Evaluate(object):
         -*None*: no regularization
         -'lasso' or 'l1': L1 regularization
         -'euclidean' or 'l2': L2 regularization
+
+    max_size: int
+        Maximum number of atoms in the cluster to include in the fit.
+        If this is None then all clusters in the DB are included.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
-                 penalty=None):
+                 penalty=None, parallel=False, num_core="all",
+                 max_cluster_size=None, max_cluster_dia=None):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             msg = "setting must be BulkCrystal or BulkSpacegroup object"
@@ -56,6 +62,14 @@ class Evaluate(object):
         self.setting = setting
         self.cluster_names = setting.cluster_names
         self.num_elements = setting.num_elements
+        if max_cluster_size is None:
+            self.max_cluster_size = self.setting.max_cluster_size
+        else:
+            self.max_cluster_size = max_cluster_size
+        if max_cluster_dia is None:
+            self.max_cluster_dia = self.setting.max_cluster_dia
+        else:
+            self.max_cluster_dia = self._get_max_cluster_dia(max_cluster_dia)
 
         # Define the selection conditions
         self.select_cond = [('converged', '=', True)]
@@ -81,14 +95,46 @@ class Evaluate(object):
             raise TypeError(msg)
 
         if cluster_names is None:
-            self.cluster_names = self.setting.full_cluster_names
+            self.cluster_names = self.setting.cluster_names
         else:
             self.cluster_names = cluster_names
+
+        # Remove the cluster names that correspond to clusters larger than the
+        # specified size and diameter.
+        self._filter_cluster_name()
+
         self.cf_matrix = self._make_cf_matrix()
         self.e_dft = self._get_dft_energy_per_atom()
+        self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
         self.e_pred_loo = None
+        self.parallel = parallel
+        if parallel:
+            if num_core == "all":
+                self.num_core = int(mp.cpu_count()/2)
+            else:
+                self.num_core = int(num_core)
+
+    def _get_max_cluster_dia(self, max_cluster_dia):
+        """Make max_cluster_dia in a numpy array form."""
+        if isinstance(max_cluster_dia, (list, np.ndarray)):
+            if len(max_cluster_dia) == self.max_cluster_size + 1:
+                for i in range(2):
+                    max_cluster_dia[i] = 0.
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+            elif len(max_cluster_dia) == self.max_cluster_size - 1:
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+                max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
+            else:
+                raise ValueError("Invalid length for max_cluster_dia.")
+        # max_cluster_dia is int or float
+        elif isinstance(max_cluster_dia, (int, float)):
+            max_cluster_dia *= np.ones(self.max_cluster_size - 1,
+                                       dtype=float)
+            max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
+
+        return max_cluster_dia
 
     def get_eci(self, alpha):
         """Determine and return ECIs for a given alpha.
@@ -170,6 +216,30 @@ class Evaluate(object):
             return dict(pairs)
         return pairs
 
+    def save_cluster_name_eci(self, alpha, filename='cluster_eci.json'):
+        """Determine cluster names and their corresponding ECI value.
+
+        Arguments:
+        =========
+        alpha: int or float
+            regularization parameter.
+
+        return_type: str
+            the file name should end with either .json or .txt.
+        """
+        eci_dict = self.get_cluster_name_eci(alpha, return_type='dict')
+
+        extension = filename.split(".")[-1]
+
+        if extension == 'json':
+            with open(filename, 'w') as outfile:
+                json.dump(eci_dict, outfile, indent=2, separators=(",", ": "))
+        elif extension == 'txt':
+            with open(filename, 'r') as outfile:
+                outfile.write(eci_dict)
+        else:
+            raise TypeError('extension {} is not supported'.format(extension))
+
     def plot_fit(self, alpha):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
@@ -178,6 +248,8 @@ class Evaluate(object):
         alpha: int or float
             regularization parameter.
         """
+        import matplotlib.pyplot as plt
+
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
         e_pred = self.cf_matrix.dot(self.eci)
@@ -237,6 +309,8 @@ class Evaluate(object):
               the alpha values that are absent. The newly evaluated CVs are
               appended to the existing file.
         """
+        import matplotlib.pyplot as plt
+
         # set up alpha values
         if scale == 'log':
             alphas = np.logspace(np.log10(alpha_min), np.log10(alpha_max),
@@ -276,15 +350,12 @@ class Evaluate(object):
                     alphas = np.delete(alphas, index)
 
         # get CV scores
-        try:
-            nproc = int(max(mp.cpu_count() / 2, 1))
-            workers = mp.Pool(nproc)
+        if self.parallel:
+            workers = mp.Pool(self.num_core)
             args = [(self, alpha) for alpha in alphas]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
-        except NotImplementedError:
-            # NotImplementedError can be raised by mp.cpu_count()
-            # In that case execute on one CPU
+        else:
             cv = np.ones(len(alphas))
             for i, alpha in enumerate(alphas):
                 cv[i] = self.cv_loo(alpha)
@@ -329,8 +400,72 @@ class Evaluate(object):
                 verticalalignment='bottom', horizontalalignment='left',
                 transform=ax.transAxes, fontsize=10)
         plt.show()
-
         return min_alpha
+
+    def plot_ECI(self, ignore_sizes=[0], interactive=True):
+        """Plot the all the ECI.
+
+        Argument
+        =========
+        ignore_sizes: list of ints
+            Sizes listed in this list will not be plotted.
+            Default is to ignore the emptry cluster.
+        """
+        import matplotlib.pyplot as plt
+        from ase.ce.interactive_plot import InteractivePlot
+
+        if self.eci is None:
+            raise ValueError("ECI is None. You have to call get_eci first!")
+        distances = self._distance_from_names()
+
+        # Structure the ECIs in terms by size
+        eci_by_size = {}
+        for name, d, eci in zip(self.cluster_names, distances, self.eci):
+            size = int(name[1])
+            if size not in eci_by_size.keys():
+                eci_by_size[size] = {"d": [], "eci": [], "name": []}
+            eci_by_size[size]["d"].append(d)
+            eci_by_size[size]["eci"].append(eci)
+            eci_by_size[size]["name"].append(name)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.axhline(0.0, ls="--", color="grey")
+        markers = ["o", "v", "x", "D", "^", "h", "s", "p"]
+        annotations = []
+        lines = []
+        for size, data in eci_by_size.items():
+            if size in ignore_sizes:
+                continue
+            data["d"] = np.array(data["d"])
+            data["eci"] = np.array(data["eci"])
+            sort_index = np.argsort(data["d"])
+            data["d"] = data["d"][sort_index]
+            data["eci"] = data["eci"][sort_index]
+            annotations.append([data["name"][indx] for indx in sort_index])
+            mrk = markers[size % len(markers)]
+            line = ax.plot(data["d"], data["eci"],
+                           label="{}-body".format(size), marker=mrk,
+                           mfc="none", ls="", markersize=8)
+            lines.append(line[0])
+        ax.set_xlabel("Cluster diameter")
+        ax.set_ylabel("ECI (eV/atom)")
+        ax.legend()
+        if interactive:
+            # Note: Internally this calls plt.show()
+            InteractivePlot(fig, ax, lines, annotations)
+
+    def _distance_from_names(self):
+        """Get a list with all the distances for each name."""
+        dists = []
+        for name in self.cluster_names:
+            if name == "c0" or name.startswith("c1"):
+                dists.append(0.0)
+                continue
+            dist_str = name.split("_")[1]
+            dist_str = dist_str.replace("p", ".")
+            dists.append(float(dist_str))
+        return dists
 
     def mae(self, alpha):
         """Calculate mean absolute error (MAE) of the fit.
@@ -418,6 +553,23 @@ class Evaluate(object):
         else:
             raise TypeError("Unknown penalty type.")
         return eci
+
+    def _filter_cluster_name(self):
+        """Filter the cluster names based on size and diameter."""
+        if self.max_cluster_size is None and self.max_cluster_dia is None:
+            return
+
+        filtered_cnames = []
+        for name in self.cluster_names:
+            size = int(name[1])
+            if size < 2:
+                dia = -1
+            else:
+                dia = float(name.split('_')[1].replace('p', '.'))
+            if (size <= self.max_cluster_size and
+                    dia < self.max_cluster_dia[size]):
+                filtered_cnames.append(name)
+        self.cluster_names = filtered_cnames
 
     def _make_cf_matrix(self):
         """Return a matrix containing the correlation functions.

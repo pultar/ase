@@ -8,7 +8,7 @@
 import os
 import json
 from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
-from ase.ce import MaxAttemptReachedError
+from ase.ce.newStruct import MaxAttemptReachedError
 from ase.db import connect
 from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 
@@ -58,7 +58,7 @@ def test_spgroup_217():
                          db_name=db_name,
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
-                         max_cluster_dist=3.5)
+                         max_cluster_dia=3.5)
     assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "Mg"
@@ -92,7 +92,7 @@ def test_two_grouped_basis():
                          db_name=db_name,
                          grouped_basis=[[0, 1], [2]],
                          max_cluster_size=3,
-                         max_cluster_dist=2.5)
+                         max_cluster_dia=2.5)
     assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
     assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
     assert len(bsg.basis_functions) == 4
@@ -104,11 +104,6 @@ def test_two_grouped_basis():
     background = [a.index for a in bsg.atoms_with_given_dim if
                   a.symbol in bsg.background_symbol]
     assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
-    print(bsg.basis_functions)
-    # [{'F': 1.414213562373095, 'Li': -1.414213562373095, 'O': 0.7071067811865475, 'V': -0.7071067811865475, 'X': 0.0},
-    #  {'F': 1.1952286093343936, 'Li': 1.1952286093343936, 'O': -0.5976143046671968, 'V': -0.5976143046671968, 'X': -1.1952286093343936},
-    #  {'F': 0.707106781186547, 'Li': -0.707106781186547, 'O': -1.414213562373095, 'V': 1.414213562373095, 'X': 0.0},
-    #  {'F': 25.211643820405364, 'Li': 25.211643820405364, 'O': 0.48997894350611104, 'V': 0.48997894350611104, 'X': 1.6035674514745464}]
 
     atoms = bsg.atoms.copy()
     indx_to_X = [6, 33, 8, 35]
@@ -143,7 +138,7 @@ def test_two_grouped_basis_probe_structure():
                                     "conc_ratio_max_1": [[4, 1], [2]]},
                          db_name=db_name,
                          max_cluster_size=3,
-                         max_cluster_dist=3.0,
+                         max_cluster_dia=3.0,
                          grouped_basis=[[0, 1, 2], [3]])
     assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
@@ -209,7 +204,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
                                     "conc_ratio_max_1": [[2], [4, 1]]},
                          db_name=db_name,
                          max_cluster_size=3,
-                         max_cluster_dist=3.0,
+                         max_cluster_dia=3.0,
                          grouped_basis=[[1], [0, 2, 3]],
                          ignore_background_atoms=True)
     assert bsg.unique_elements == ['O', 'X']
@@ -274,7 +269,7 @@ def test_narrow_angle_crystal():
                          db_name=db_name,
                          size=[2, 2, 1],
                          max_cluster_size=3,
-                         max_cluster_dist=1.05
+                         max_cluster_dia=1.05
                          )
 
     assert len(bsg.index_by_trans_symm) == 1

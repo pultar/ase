@@ -57,7 +57,7 @@ class BulkCrystal(ClusterExpansionSetting):
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
 
-    max_cluster_dist: float or int
+    max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
     grouped_basis: list
@@ -76,7 +76,7 @@ class BulkCrystal(ClusterExpansionSetting):
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
                  cubic=False, size=None, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
+                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
 
         # Save raw input arguments for save/load. The arguments gets altered
@@ -94,7 +94,7 @@ class BulkCrystal(ClusterExpansionSetting):
                        'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
                        'max_cluster_size': max_cluster_size,
-                       'max_cluster_dist': deepcopy(max_cluster_dist),
+                       'max_cluster_dia': deepcopy(max_cluster_dia),
                        'grouped_basis': deepcopy(grouped_basis),
                        'dist_num_dec': dist_num_dec,
                        'ignore_background_atoms': ignore_background_atoms}
@@ -126,7 +126,7 @@ class BulkCrystal(ClusterExpansionSetting):
         self.dist_num_dec = dist_num_dec
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
-                                         max_cluster_size, max_cluster_dist,
+                                         max_cluster_size, max_cluster_dia,
                                          basis_elements, grouped_basis,
                                          ignore_background_atoms)
 
@@ -265,7 +265,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
     max_cluster_size: int
         maximum size (number of atoms in a cluster)
 
-    max_cluster_dist: float or int
+    max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
     grouped_basis: list
@@ -284,7 +284,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
                  primitive_cell=False, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dist=None, grouped_basis=None,
+                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
@@ -300,7 +300,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
                        'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
                        'max_cluster_size': max_cluster_size,
-                       'max_cluster_dist': deepcopy(max_cluster_dist),
+                       'max_cluster_dia': deepcopy(max_cluster_dia),
                        'grouped_basis': deepcopy(grouped_basis),
                        'dist_num_dec': dist_num_dec,
                        'ignore_background_atoms': ignore_background_atoms}
@@ -322,7 +322,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
         self.dist_num_dec = dist_num_dec
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
-                                         max_cluster_size, max_cluster_dist,
+                                         max_cluster_size, max_cluster_dia,
                                          basis_elements, grouped_basis,
                                          ignore_background_atoms)
 

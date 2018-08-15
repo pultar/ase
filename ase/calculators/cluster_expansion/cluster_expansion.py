@@ -43,6 +43,7 @@ class ClusterExpansion(Calculator):
             raise TypeError(msg)
         self.setting = setting
         self.CF = CorrFunction(setting)
+        self.norm_factor = self._generate_normalization_factor()
 
         # check cluster_name_eci and separate them out
         if isinstance(cluster_name_eci, list) and \
@@ -200,10 +201,21 @@ class ClusterExpansion(Calculator):
     def _symbol_by_index(self, indx):
         return [self.ref_atoms[indx].symbol, self.atoms[indx].symbol]
 
+    def _generate_normalization_factor(self):
+        """Return a dictionary with all the normalization factors."""
+        norm_fact = {}
+        for symm, item in enumerate(self.setting.cluster_info):
+            num_atoms = len(self.setting.index_by_trans_symm[symm])
+            for name, info in item.items():
+                if name not in norm_fact.keys():
+                    norm_fact[name] = len(info["indices"]) * num_atoms
+                else:
+                    norm_fact[name] += len(info["indices"]) * num_atoms
+        return norm_fact
+
     def update_cf(self):
         """Update correlation function based on the reference value."""
         swapped_indices = self.indices_of_changed_atoms
-        # print("swapped: {}".format(swapped_indices))
         self.cf = deepcopy(self.ref_cf)
         new_symbs = {}
         # Reset the atoms object
@@ -228,49 +240,26 @@ class ClusterExpansion(Calculator):
                     self.cf[i] = self.CF.get_c1(self.atoms, int(dec_str))
                     continue
 
-                # Find which symmetry group the given atom (index) belongs to
-                for symm in range(self.setting.num_trans_symm):
+                symm_group_found = False
+                for symm in range(len(self.setting.cluster_info)):
                     if indx in self.setting.index_by_trans_symm[symm]:
-                        sg = symm
+                        symm_group_found = True
                         break
+                assert symm_group_found
 
-                # set name_indx and indices that compose a cluster
-                try:
-                    name_indx = self.setting.cluster_names[sg][n].index(prefix)
-                # ValueError means that the cluster name (prefix) was not
-                # found in the symmetry group of the index --> this cluster is
-                # not altered.
-                except ValueError:
+                if prefix not in self.setting.cluster_info[symm].keys():
                     continue
-                indices = self.setting.cluster_indx[sg][n][name_indx]
-                order = self.setting.cluster_order[sg][n][name_indx]
-                equiv_sites = self.setting.cluster_eq_sites[sg][n][name_indx]
-
-                # Get the total count
-                count = 0
-                for symm in range(self.setting.num_trans_symm):
-                    try:
-                        nindx = \
-                            self.setting.cluster_names[symm][n].index(prefix)
-                    except ValueError:
-                        continue
-
-                    clusters_per_atom = \
-                        len(self.setting.cluster_indx[symm][n][nindx])
-                    atoms_per_symm = \
-                        len(self.setting.index_by_trans_symm[symm])
-                    count += clusters_per_atom * atoms_per_symm
-
-                t_indices = self._translate_indx(indx, indices)
+                cluster = self.setting.cluster_info[symm][prefix]
+                count = self.norm_factor[prefix]
+                t_indices = self._translate_indx(indx, cluster["indices"])
                 cf_tot = self.cf[i] * count
-                cf_change = self._cf_change_by_indx(indx, t_indices, order,
-                                                    equiv_sites, dec)
+                cf_change = \
+                    self._cf_change_by_indx(indx, t_indices, cluster, dec)
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
 
 
 
-    def _cf_change_by_indx(self, ref_indx, trans_list, indx_order, eq_sites,
-                           deco):
+    def _cf_change_by_indx(self, ref_indx, trans_list, cluster, deco):
         """Calculate the change in correlation function based on atomic index.
 
         This method tracks changes in correaltion function due to change in
@@ -281,6 +270,10 @@ class ClusterExpansion(Calculator):
         symbol = self._symbol_by_index(ref_indx)
         b_f = self.setting.basis_functions
         delta_cf = 0.
+
+        eq_sites = cluster["equiv_sites"]
+        indx_order = cluster["order"]
+
         equiv_deco = equivalent_deco(deco, eq_sites)
         for dec in equiv_deco:
             for cluster_indx, order in zip(trans_list, indx_order):
@@ -300,11 +293,11 @@ class ClusterExpansion(Calculator):
         return delta_cf
 
     def _translate_indx(self, ref_indx, indx_list):
-        tlist = deepcopy(indx_list)
+        tlist = [[] for _ in range(len(indx_list))]
         for i in range(len(indx_list)):
             for j in range(len(indx_list[i])):
-                tlist[i][j] = \
-                    self.setting.trans_matrix[ref_indx][indx_list[i][j]]
+                tlist[i].append(
+                    self.setting.trans_matrix[ref_indx][indx_list[i][j]])
         return tlist
 
     def _check_atoms(self, atoms):

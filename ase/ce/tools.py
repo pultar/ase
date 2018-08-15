@@ -86,55 +86,65 @@ def shift(array):
     return array
 
 
-def sorted_internal_angles(atoms, mic=False):
+def distances_and_angles(atoms, ref_indx, float_obj_dist, float_obj_angle):
     """Get sorted internal angles of a"""
-    if len(atoms) <= 2:
-        return [0]
+    indices = [a.index for a in atoms if a.index != ref_indx]
+    if len(atoms) < 2:
+        raise ValueError("distances and angles cannot be called for"
+                         "{} body clusters".format(len(atoms)))
+    if len(atoms) == 2:
+        dist = atoms.get_distance(ref_indx, indices[0])
+        classifier = float_obj_dist.get(dist)
+        return [classifier]
 
     angles = []
-    indx_comb = list(combinations(range(len(atoms)), r=3))
+    dists = []
 
-    # Have to include all cyclic permutations in addition
-    n = len(indx_comb)
-    for i in range(n):
-        new_list = list(indx_comb[i])
-        for _ in range(2):
-            new_list = shift(new_list)
-            indx_comb.append(tuple(new_list))
+    for comb in combinations(indices, r=2):
+        angle = atoms.get_angle(comb[0], ref_indx, comb[1])
+        ang_classifier = float_obj_angle.get(angle)
+        angles.append(ang_classifier)
 
-    angles = atoms.get_angles(indx_comb, mic=mic).round(decimals=0) + 0
-    angles = angles.tolist()
-    for i, angle in enumerate(angles):
-        if math.isnan(angle):
-            angles[i] = 0
-        elif angle == 180.0:
-            angles[i] = 0
-    angles.sort(reverse=True)
-    return angles
+    dists = atoms.get_distances(ref_indx, indices, mic=True)
+    dists = sorted(dists.tolist(), reverse=True)
+    dists = [float_obj_dist.get(dist) for dist in dists]
+
+    return dists + sorted(angles, reverse=True)
 
 
-def sort_by_internal_distances(atoms, indices):
+def get_cluster_descriptor(cluster, float_obj_dist, float_obj_angle):
+    """Create a unique descriptor for each cluster."""
+    dist_ang_tuples = []
+    for ref_indx in range(len(cluster)):
+        dist_ang_list = distances_and_angles(cluster, ref_indx,
+                                             float_obj_dist, float_obj_angle)
+        dist_ang_tuples.append(dist_ang_list)
+    return dist_ang_tuples
+
+
+def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
     """Sort the indices according to the distance to the other elements."""
     if len(indices) <= 1:
-        return list(range(len(indices))), []
-    elif len(indices) == 2:
-        return list(range(len(indices))), [(0, 1)]
+        return list(range(len(indices))), "point"
 
-    mic_dists = []
-    for indx in indices:
-        mic_distances = atoms.get_distances(
-            indx, list(indices), mic=True).round(decimals=3) + 0
-        mic_distances = sorted(mic_distances.tolist())
-        mic_dists.append(mic_distances)
+    cluster = create_cluster(atoms, indices)
+    if len(indices) == 2:
+        dist_ang = get_cluster_descriptor(cluster, float_obj_dist,
+                                          float_obj_ang)
+        order = list(range(len(indices)))
+        eq_sites = [(0, 1)]
+        descr = "{}_0".format(dist_ang[0][0])
+        return order, eq_sites, descr
 
-    sort_order = [indx for _, indx in sorted(
-        zip(mic_dists, range(len(indices))))]
-    mic_dists.sort()
+    dist_ang = get_cluster_descriptor(cluster, float_obj_dist, float_obj_ang)
+    sort_order = [ind for _, ind in sorted(zip(dist_ang, range(len(indices))))]
+    dist_ang.sort()
     equivalent_sites = [[i] for i in range(len(indices))]
     site_types = [i for i in range(len(indices))]
     for i in range(len(sort_order)):
         for j in range(i + 1, len(sort_order)):
-            if mic_dists[i] == mic_dists[j]:
+            # if np.allclose(dist_ang[i], dist_ang[j], atol=0.002):
+            if dist_ang[i] == dist_ang[j]:
                 if site_types[j] > i:
                     # This site has not been assigned to another category yet
                     site_types[j] = i
@@ -144,7 +154,14 @@ def sort_by_internal_distances(atoms, indices):
 
     # Remove empty lists from equivalent_sites
     equivalent_sites = [entry for entry in equivalent_sites if len(entry) > 1]
-    return sort_order, equivalent_sites
+
+    # Create a string descriptor of the clusters
+    dist_ang_strings = []
+    for item in dist_ang:
+        strings = [str(x) for x in item]
+        dist_ang_strings.append("_".join(strings))
+    string_description = "-".join(dist_ang_strings)
+    return sort_order, equivalent_sites, string_description
 
 
 def ndarray2list(data):
@@ -197,3 +214,25 @@ def flatten(x):
         return [a for i in x for a in flatten(i)]
     else:
         return [x]
+
+
+def get_unique_name(size, max_dia, fam_id):
+    name = "c{}_{}_{}".format(size, max_dia, fam_id)
+    return name
+
+
+def nested_array2list(array):
+    """Convert a nested array/tuple to a nested list."""
+    if isinstance(array, np.ndarray):
+        array = array.tolist()
+    else:
+        array = list(array)
+    try:
+        for i in range(len(array)):
+            if isinstance(array[i], np.ndarray):
+                array[i] = array[i].tolist()
+            else:
+                array[i] = list(array[i])
+    except TypeError:
+        pass
+    return array

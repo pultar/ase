@@ -149,7 +149,6 @@ class Submit(object):
         self.db.update(id, queued=True, converged=False, started=False)
         return True
 
-
     def remove_X(self, atoms):
         """
         Vacancies are specified with the ghost atom 'X', which must be removed
@@ -158,18 +157,17 @@ class Submit(object):
         del atoms[[atom.index for atom in atoms if atom.symbol=='X']]
         return True
 
-
     @property
     def jobs_in_queue(self):
         """
         Returns a list of job names that are in the SLURM batch system.
         """
         job_names = []
-        jobs_string = check_output(['qstat -f | grep -C 1 $USER' ], shell=True).splitlines()
+        jobs_string = check_output(['qstat -f | grep -C 1 $USER'],
+                                   shell=True).splitlines()
         for line in jobs_string:
             if 'Job_Name' not in line:
                 continue
             line = line.split()
             job_names.append(line[-1])
         return job_names
-

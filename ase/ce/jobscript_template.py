@@ -119,6 +119,7 @@ def vasp_new(param, name, db_name):
     """
     return script_text
 
+
 def slurm_script_8(job_name):
     script_text="""\
     #!/bin/bash
