@@ -42,12 +42,12 @@ def _get_kim_api_simulator_model_utility():
     the executable including full path.
     '''
     try:
-        libexec_path = subprocess.check_output(["kim-api-v2-build-config", "--libexec-path"],
+        libexec_path = subprocess.check_output(["pkg-config", "--variable=libexecdir", "libkim-api-v2"],
                                                universal_newlines=True).strip()
     except:
         raise KIMCalculatorError(
             'ERROR: Unable to obtain libexec-path from KIM API utility.')
-    return libexec_path + "/kim-api-v2-simulator-model"
+    return libexec_path + "kim-api-v2/kim-api-v2-simulator-model"
 
 
 def _is_simulator_model(model):
@@ -451,4 +451,3 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
 # do nothing if called directly
 if __name__ == '__main__':
     pass
-
