@@ -129,17 +129,15 @@ def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
 
     cluster = create_cluster(atoms, indices)
     if len(indices) == 2:
-        dist_ang = get_cluster_descriptor(cluster, float_obj_dist, float_obj_ang)
+        dist_ang = get_cluster_descriptor(cluster, float_obj_dist,
+                                          float_obj_ang)
         order = list(range(len(indices)))
         eq_sites = [(0, 1)]
-        descr =  "{}_0".format(dist_ang[0][0])
-        # return list(range(len(indices))), [(0, 1)], "{}_0".format(dist_ang[0][0])
+        descr = "{}_0".format(dist_ang[0][0])
         return order, eq_sites, descr
 
     dist_ang = get_cluster_descriptor(cluster, float_obj_dist, float_obj_ang)
-
     sort_order = [ind for _, ind in sorted(zip(dist_ang, range(len(indices))))]
-    # mic_dists.sort()
     dist_ang.sort()
     equivalent_sites = [[i] for i in range(len(indices))]
     site_types = [i for i in range(len(indices))]
@@ -164,6 +162,7 @@ def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
         dist_ang_strings.append("_".join(strings))
     string_description = "-".join(dist_ang_strings)
     return sort_order, equivalent_sites, string_description
+
 
 def ndarray2list(data):
     """Converts nested lists of a combination of lists and numpy arrays
@@ -222,8 +221,8 @@ def get_unique_name(size, max_dia, fam_id):
     return name
 
 
-def doubly_nested_array2nested_list(array):
-    """Convert a doubly nested array/tuple etc. to a nested list."""
+def nested_array2list(array):
+    """Convert a doubly nested array/tuple to a nested list."""
     if isinstance(array, np.ndarray):
         array = array.tolist()
     else:

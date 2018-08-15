@@ -13,8 +13,7 @@ from ase.db import connect
 from ase.ce.floating_point_classification import FloatingPointClassifier
 from ase.ce.tools import (wrap_and_sort_by_position, index_by_position,
                           flatten, sort_by_internal_distances, create_cluster,
-                          dec_string, get_unique_name,
-                          doubly_nested_array2nested_list)
+                          dec_string, get_unique_name, nested_array2list)
 
 
 class ClusterExpansionSetting:
@@ -63,7 +62,6 @@ class ClusterExpansionSetting:
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
         self.kd_trees = self._create_kdtrees()
-
 
         if not os.path.exists(db_name):
             self._store_data()
@@ -934,14 +932,10 @@ class ClusterExpansionSetting:
         """Convert entries in cluster info to list."""
         for info in self.cluster_info:
             for name, cluster in info.items():
-                cluster["indices"] = \
-                    doubly_nested_array2nested_list(cluster["indices"])
-
+                cluster["indices"] = nested_array2list(cluster["indices"])
                 cluster["equiv_sites"] = \
-                    doubly_nested_array2nested_list(cluster["equiv_sites"])
-
-                cluster["order"] = \
-                    doubly_nested_array2nested_list(cluster["order"])
+                    nested_array2list(cluster["equiv_sites"])
+                cluster["order"] = nested_array2list(cluster["order"])
 
     def _get_name_indx(self, unique_name):
         size = int(unique_name[1])
