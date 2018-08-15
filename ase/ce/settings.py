@@ -20,7 +20,7 @@ class ClusterExpansionSetting:
     """Base-class for all Cluster Expansion settings."""
 
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
-                 max_cluster_dist=None, basis_elements=None,
+                 max_cluster_dia=None, basis_elements=None,
                  grouped_basis=None, ignore_background_atoms=False):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
@@ -38,8 +38,8 @@ class ClusterExpansionSetting:
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
-        self.max_cluster_dist, self.supercell_scale_factor = \
-            self._get_max_cluster_dist_and_scale_factor(max_cluster_dist)
+        self.max_cluster_dia, self.supercell_scale_factor = \
+            self._get_max_cluster_dia_and_scale_factor(max_cluster_dia)
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
         if grouped_basis is None:
@@ -108,34 +108,34 @@ class ClusterExpansionSetting:
             self.conc_ratio_min_2 = conc_ratio_min_2
             self.conc_ratio_max_2 = conc_ratio_max_2
 
-    def _get_max_cluster_dist_and_scale_factor(self, max_cluster_dist):
+    def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
         cell = self.atoms_with_given_dim.get_cell().T
-        min_length = self._get_max_cluster_dist(cell)
+        min_length = self._get_max_cluster_dia(cell)
 
         # ------------------------------------- #
-        # Get max_cluster_dist in an array form #
+        # Get max_cluster_dia in an array form #
         # ------------------------------------- #
-        # max_cluster_dist is list or array
-        if isinstance(max_cluster_dist, (list, np.ndarray)):
+        # max_cluster_dia is list or array
+        if isinstance(max_cluster_dia, (list, np.ndarray)):
             # Length should be either max_cluster_size+1 or max_cluster_size-1
-            if len(max_cluster_dist) == self.max_cluster_size + 1:
+            if len(max_cluster_dia) == self.max_cluster_size + 1:
                 for i in range(2):
-                    max_cluster_dist[i] = 0.
-                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
-            elif len(max_cluster_dist) == self.max_cluster_size - 1:
-                max_cluster_dist = np.array(max_cluster_dist, dtype=float)
-                max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+                    max_cluster_dia[i] = 0.
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+            elif len(max_cluster_dia) == self.max_cluster_size - 1:
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+                max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
             else:
-                raise ValueError("Invalid length for max_cluster_dist.")
-        # max_cluster_dist is int or float
-        elif isinstance(max_cluster_dist, (int, float)):
-            max_cluster_dist *= np.ones(self.max_cluster_size - 1, dtype=float)
-            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+                raise ValueError("Invalid length for max_cluster_dia.")
+        # max_cluster_dia is int or float
+        elif isinstance(max_cluster_dia, (int, float)):
+            max_cluster_dia *= np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
         # Case for *None* or something else
         else:
-            max_cluster_dist = np.ones(self.max_cluster_size - 1, dtype=float)
-            max_cluster_dist *= min_length
-            max_cluster_dist = np.insert(max_cluster_dist, 0, [0., 0.])
+            max_cluster_dia = np.ones(self.max_cluster_size - 1, dtype=float)
+            max_cluster_dia *= min_length
+            max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
 
         # --------------------------------- #
         # Get scale_factor in an array form #
@@ -147,12 +147,12 @@ class ClusterExpansionSetting:
         # maximum cluster distance, but the smallest length of the vector
         # formed by any linear combination of the cell vectors
         lengths = atoms.get_cell_lengths_and_angles()[:3] / 2.0
-        scale_factor = max(max_cluster_dist) / lengths
+        scale_factor = max(max_cluster_dia) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
-        scale_factor = self._get_scale_factor(cell, max(max_cluster_dist))
-        return np.around(max_cluster_dist, self.dist_num_dec), scale_factor
+        scale_factor = self._get_scale_factor(cell, max(max_cluster_dia))
+        return np.around(max_cluster_dia, self.dist_num_dec), scale_factor
 
-    def _get_max_cluster_dist(self, cell, ret_weights=False):
+    def _get_max_cluster_dia(self, cell, ret_weights=False):
         lengths = []
         weights = []
         for w in product([-1, 0, 1], repeat=3):
@@ -173,8 +173,8 @@ class ClusterExpansionSetting:
             return min_length, weights[min_indx]
         return min_length
 
-    def _get_scale_factor(self, cell, max_cluster_dist):
-        """Compute the scale factor nessecary to resolve max_cluster_dist."""
+    def _get_scale_factor(self, cell, max_cluster_dia):
+        """Compute the scale factor nessecary to resolve max_cluster_dia."""
         cell_to_small = True
         scale_factor = [1, 1, 1]
         orig_cell = cell.copy()
@@ -182,8 +182,8 @@ class ClusterExpansionSetting:
 
             # Check what the maximum cluster distance is for the current
             # cell
-            max_size, w = self._get_max_cluster_dist(cell, ret_weights=True)
-            if max_size < max_cluster_dist:
+            max_size, w = self._get_max_cluster_dia(cell, ret_weights=True)
+            if max_size < max_cluster_dia:
                 # Find which vectors formed the shortest diagonal
                 indices_in_w = [i for i, weight in enumerate(w) if weight != 0]
                 shortest_vec = -1
@@ -622,7 +622,7 @@ class ClusterExpansionSetting:
                 max_cluster_diameter = []
                 for k in combinations(indices, size - 1):
                     d = self.get_min_distance((ref_indx,) + k)
-                    if max(d) > self.max_cluster_dist[size]:
+                    if max(d) > self.max_cluster_dia[size]:
                         continue
                     order, eq_sites, string_description = \
                         sort_by_internal_distances(self.atoms, (ref_indx,) + k,
@@ -637,7 +637,7 @@ class ClusterExpansionSetting:
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
                     msg += "Reduce max_cluster_size or "
-                    msg += "increase max_cluster_dist."
+                    msg += "increase max_cluster_dia."
                     raise ValueError(msg)
 
                 # categorize the distances
@@ -787,12 +787,12 @@ class ClusterExpansionSetting:
         """Return the indices of the atoms nearby.
 
         Indices of the atoms are only included if distances smaller than
-        specified by max_cluster_dist from the reference atom index.
+        specified by max_cluster_dia from the reference atom index.
         """
         nearby_indices = []
         for tree in self.kd_trees:
             x0 = tree.data[ref_indx, :]
-            result = tree.query_ball_point(x0, self.max_cluster_dist[size])
+            result = tree.query_ball_point(x0, self.max_cluster_dia[size])
             nearby_indices += list(result)
 
         nearby_indices = list(set(nearby_indices))
@@ -903,7 +903,7 @@ class ClusterExpansionSetting:
 
     def _store_data(self):
         print('Generating cluster data. It may take several minutes depending'
-              ' on the values of max_cluster_size and max_cluster_dist...')
+              ' on the values of max_cluster_size and max_cluster_dia...')
         self._create_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
         self.conc_matrix = self._create_concentration_matrix()
