@@ -278,11 +278,13 @@ class CorrFunction(object):
         """
         count = 0
         sp = 0.0
-        for cluster_indices, order in zip(cluster["indices"], cluster["order"]):
+        for cluster_indices, order in zip(cluster["indices"],
+                                          cluster["order"]):
             temp_sp, temp_cnt = \
-                self._spin_product_one_cluster(
-                    atoms, ref_indx, cluster_indices, order,
-                    cluster["equiv_sites"], ref_indx_grp, deco)
+                self._spin_product_one_cluster(atoms, ref_indx,
+                                               cluster_indices, order,
+                                               cluster["equiv_sites"],
+                                               ref_indx_grp, deco)
             sp += temp_sp
             count += temp_cnt
         return sp, count

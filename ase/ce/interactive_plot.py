@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 
+
 class InteractivePlot(object):
     """Class for creating an interactive plot with annotations
 
@@ -19,10 +20,10 @@ class InteractivePlot(object):
         self.ax = ax
         self.lines = lines
         self.annotations = annotations
-        self.active_annot = ax.annotate(
-            "", xy=(0,0), xytext=(-20,20),textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="w"),
-            arrowprops=dict(arrowstyle="->"))
+        self.active_annot = ax.annotate("", xy=(0, 0), xytext=(-20, 20),
+                                        textcoords="offset points",
+                                        bbox=dict(boxstyle="round", fc="w"),
+                                        arrowprops=dict(arrowstyle="->"))
         self.active_annot.set_visible(False)
         self.active_line_index = 0
 
