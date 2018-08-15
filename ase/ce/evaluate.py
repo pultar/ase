@@ -53,7 +53,7 @@ class Evaluate(object):
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  penalty=None, parallel=False, num_core="all",
-                 max_size=None):
+                 max_cluster_size=None, max_cluster_dia=None):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
             msg = "setting must be BulkCrystal or BulkSpacegroup object"
@@ -62,7 +62,14 @@ class Evaluate(object):
         self.setting = setting
         self.cluster_names = setting.cluster_names
         self.num_elements = setting.num_elements
-        self.max_size = max_size
+        if max_cluster_size is None:
+            self.max_cluster_size = self.setting.max_cluster_size
+        else:
+            self.max_cluster_size = max_cluster_size
+        if max_cluster_dia is None:
+            self.max_cluster_dia = self.setting.max_cluster_dia
+        else:
+            self.max_cluster_dia = self._get_max_cluster_dia(max_cluster_dia)
 
         # Define the selection conditions
         self.select_cond = [('converged', '=', True)]
@@ -92,10 +99,10 @@ class Evaluate(object):
         else:
             self.cluster_names = cluster_names
 
-        # If max_size given, remove the names corresponding to larger
-        # clusters
-        self._filter_cluster_name_on_size()
-        
+        # Remove the cluster names that correspond to clusters larger than the
+        # specified size and diameter.
+        self._filter_cluster_name()
+
         self.cf_matrix = self._make_cf_matrix()
         self.e_dft = self._get_dft_energy_per_atom()
         self.multiplicity_factor = self.setting.multiplicity_factor
@@ -108,6 +115,26 @@ class Evaluate(object):
                 self.num_core = int(mp.cpu_count()/2)
             else:
                 self.num_core = int(num_core)
+
+    def _get_max_cluster_dia(self, max_cluster_dia):
+        """Make max_cluster_dia in a numpy array form."""
+        if isinstance(max_cluster_dia, (list, np.ndarray)):
+            if len(max_cluster_dia) == self.max_cluster_size + 1:
+                for i in range(2):
+                    max_cluster_dia[i] = 0.
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+            elif len(max_cluster_dia) == self.max_cluster_size - 1:
+                max_cluster_dia = np.array(max_cluster_dia, dtype=float)
+                max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
+            else:
+                raise ValueError("Invalid length for max_cluster_dia.")
+        # max_cluster_dia is int or float
+        elif isinstance(max_cluster_dia, (int, float)):
+            max_cluster_dia *= np.ones(self.max_cluster_size - 1,
+                                       dtype=float)
+            max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
+
+        return max_cluster_dia
 
     def get_eci(self, alpha):
         """Determine and return ECIs for a given alpha.
@@ -527,14 +554,20 @@ class Evaluate(object):
             raise TypeError("Unknown penalty type.")
         return eci
 
-    def _filter_cluster_name_on_size(self):
-        """Filter the cluster names based on size."""
-        if self.max_size is None:
+    def _filter_cluster_name(self):
+        """Filter the cluster names based on size and diameter."""
+        if self.max_cluster_size is None and self.max_cluster_dia is None:
             return
+
         filtered_cnames = []
         for name in self.cluster_names:
             size = int(name[1])
-            if size <= self.max_size:
+            if size < 2:
+                dia = -1
+            else:
+                dia = float(name.split('_')[1].replace('p', '.'))
+            if (size <= self.max_cluster_size and
+                    dia < self.max_cluster_dia[size]):
                 filtered_cnames.append(name)
         self.cluster_names = filtered_cnames
 
