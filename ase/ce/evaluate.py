@@ -46,9 +46,17 @@ class Evaluate(object):
         -'lasso' or 'l1': L1 regularization
         -'euclidean' or 'l2': L2 regularization
 
-    max_size: int
+    max_cluster_size: int
         Maximum number of atoms in the cluster to include in the fit.
         If this is None then all clusters in the DB are included.
+
+    max_cluster_size: int
+        maximum number of atoms in the cluster to include in the fit.
+        If *None*, no restriction on the number of atoms will be imposed.
+
+    max_cluster_dia: float or int
+        maximum diameter of the cluster (in angstrom) to include in the fit.
+        If *None*, no restriction on the diameter will be imposed.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
@@ -178,7 +186,7 @@ class Evaluate(object):
                           normalize=True, max_iter=1e6)
             lasso.fit(self.cf_matrix, self.e_dft)
             eci = lasso.coef_
-            # print('# of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
+
         else:
             raise ValueError("Unknown penalty type.")
 
