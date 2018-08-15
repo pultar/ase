@@ -222,7 +222,7 @@ def get_unique_name(size, max_dia, fam_id):
 
 
 def nested_array2list(array):
-    """Convert a doubly nested array/tuple to a nested list."""
+    """Convert a nested array/tuple to a nested list."""
     if isinstance(array, np.ndarray):
         array = array.tolist()
     else:
