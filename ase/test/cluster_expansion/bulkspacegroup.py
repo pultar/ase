@@ -58,7 +58,7 @@ def test_spgroup_217():
                          db_name=db_name,
                          size=[1, 1, 1],
                          grouped_basis=[[0, 1, 2, 3]],
-                         max_cluster_dist=3.5)
+                         max_cluster_dia=3.5)
     assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "Mg"
@@ -92,7 +92,7 @@ def test_two_grouped_basis():
                          db_name=db_name,
                          grouped_basis=[[0, 1], [2]],
                          max_cluster_size=3,
-                         max_cluster_dist=2.5)
+                         max_cluster_dia=2.5)
     assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
     assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
     assert len(bsg.basis_functions) == 4
@@ -138,7 +138,7 @@ def test_two_grouped_basis_probe_structure():
                                     "conc_ratio_max_1": [[4, 1], [2]]},
                          db_name=db_name,
                          max_cluster_size=3,
-                         max_cluster_dist=3.0,
+                         max_cluster_dia=3.0,
                          grouped_basis=[[0, 1, 2], [3]])
     assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
@@ -204,7 +204,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
                                     "conc_ratio_max_1": [[2], [4, 1]]},
                          db_name=db_name,
                          max_cluster_size=3,
-                         max_cluster_dist=3.0,
+                         max_cluster_dia=3.0,
                          grouped_basis=[[1], [0, 2, 3]],
                          ignore_background_atoms=True)
     assert bsg.unique_elements == ['O', 'X']
@@ -269,7 +269,7 @@ def test_narrow_angle_crystal():
                          db_name=db_name,
                          size=[2, 2, 1],
                          max_cluster_size=3,
-                         max_cluster_dist=1.05
+                         max_cluster_dia=1.05
                          )
 
     assert len(bsg.index_by_trans_symm) == 1

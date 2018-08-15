@@ -86,7 +86,7 @@ def test_grouped_basis_supercell():
                                      "conc_ratio_max_1": [[0, 1]]},
                           db_name=db_name,
                           max_cluster_size=3,
-                          max_cluster_dist=4.,
+                          max_cluster_dia=4.,
                           grouped_basis=[[0, 1]])
     assert setting.num_grouped_basis == 1
     assert len(setting.index_by_grouped_basis) == 1
@@ -123,7 +123,7 @@ def test_grouped_basis_supercell():
                                      "conc_ratio_max_1": [[0, 1], [2]]},
                           db_name=db_name,
                           max_cluster_size=2,
-                          max_cluster_dist=4.,
+                          max_cluster_dia=4.,
                           grouped_basis=[[0], [1, 2]])
     fam_members = get_members_of_family(setting, "c2_4p000_7")
     assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
@@ -165,7 +165,7 @@ def test_grouped_basis_supercell():
                                      "conc_ratio_max_1": [[1], [0, 2]]},
                           db_name=db_name,
                           max_cluster_size=3,
-                          max_cluster_dist=4.,
+                          max_cluster_dia=4.,
                           grouped_basis=[[0], [1, 2]],
                           ignore_background_atoms=True)
     # print(setting.supercell_scale_factor)
