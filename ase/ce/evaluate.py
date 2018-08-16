@@ -112,7 +112,7 @@ class Evaluate(object):
         self._filter_cluster_name()
 
         self.cf_matrix = self._make_cf_matrix()
-        self.e_dft = self._get_dft_energy_per_atom()
+        self.e_dft, self.ids = self._get_dft_energy_per_atom()
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
@@ -120,7 +120,7 @@ class Evaluate(object):
         self.parallel = parallel
         if parallel:
             if num_core == "all":
-                self.num_core = int(mp.cpu_count()/2)
+                self.num_core = int(mp.cpu_count() / 2)
             else:
                 self.num_core = int(num_core)
 
@@ -248,7 +248,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, alpha):
+    def plot_fit(self, alpha, show_id=False):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -281,6 +281,10 @@ class Evaluate(object):
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
+
+        if show_id:
+            for i in range(len(e_pred)):
+                ax.annotate(str(self.ids[i]), xy=(e_pred[i], self.e_dft[i]))
         plt.show()
 
     def plot_CV(self, alpha_min, alpha_max, num_alpha=10, scale='log',
@@ -595,10 +599,12 @@ class Evaluate(object):
     def _get_dft_energy_per_atom(self):
         """Retrieve DFT energy and convert it to eV/atom unit."""
         e_dft = []
+        ids = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
             e_dft.append(row.energy / row.natoms)
-        return np.array(e_dft)
+            ids.append(row.id)
+        return np.array(e_dft), ids
 
     def _reduce_matrix(self):
         """Reduce the correlation function matrix.
