@@ -248,7 +248,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, alpha, show_id=False):
+    def plot_fit(self, alpha, interactive=False):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -257,6 +257,7 @@ class Evaluate(object):
             regularization parameter.
         """
         import matplotlib.pyplot as plt
+        from ase.ce.interactive_plot import InteractivePlot
 
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
@@ -281,11 +282,13 @@ class Evaluate(object):
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
-
-        if show_id:
-            for i in range(len(e_pred)):
-                ax.annotate(str(self.ids[i]), xy=(e_pred[i], self.e_dft[i]))
-        plt.show()
+        if interactive:
+            lines = ax.get_lines()
+            data_points = [lines[0], lines[2]]
+            annotations = [self.ids, self.ids]
+            InteractivePlot(fig, ax, data_points, annotations)
+        else:
+            plt.show()
 
     def plot_CV(self, alpha_min, alpha_max, num_alpha=10, scale='log',
                 logfile=None):
