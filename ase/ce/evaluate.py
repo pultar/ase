@@ -248,7 +248,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, alpha, interactive=False):
+    def plot_fit(self, alpha, interactive=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
