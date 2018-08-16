@@ -112,7 +112,7 @@ class Evaluate(object):
         self._filter_cluster_name()
 
         self.cf_matrix = self._make_cf_matrix()
-        self.e_dft, self.ids = self._get_dft_energy_per_atom()
+        self.e_dft, self.names = self._get_dft_energy_per_atom()
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
@@ -285,7 +285,7 @@ class Evaluate(object):
         if interactive:
             lines = ax.get_lines()
             data_points = [lines[0], lines[2]]
-            annotations = [self.ids, self.ids]
+            annotations = [self.names, self.names]
             InteractivePlot(fig, ax, data_points, annotations)
         else:
             plt.show()
@@ -602,12 +602,12 @@ class Evaluate(object):
     def _get_dft_energy_per_atom(self):
         """Retrieve DFT energy and convert it to eV/atom unit."""
         e_dft = []
-        ids = []
+        names = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
             e_dft.append(row.energy / row.natoms)
-            ids.append(row.id)
-        return np.array(e_dft), ids
+            names.append(row.name)
+        return np.array(e_dft), names
 
     def _reduce_matrix(self):
         """Reduce the correlation function matrix.
