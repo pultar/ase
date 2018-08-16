@@ -545,7 +545,7 @@ class KIMModelCalculator(Calculator, object):
             kimpy.model.destroy(self.kim_model)
 
 
-def compare_atoms(atoms1, atoms2):
+def compare_atoms(atoms1, atoms2, tol=1e-15):
     """Check for system changes since last calculation.
     Since each calculate call will compute all properties, we will just
     return the first difference to trigger a calculation.
@@ -555,11 +555,11 @@ def compare_atoms(atoms1, atoms2):
         return ['positions', 'numbers', 'cell', 'pbc']
     else:
         system_changes = []
-        if not equal(atoms1.positions, atoms2.positions):
+        if not equal(atoms1.positions, atoms2.positions, tol):
             system_changes.append('positions')
         if not equal(atoms1.numbers, atoms2.numbers):
             system_changes.append('numbers')
-        if not equal(atoms1.cell, atoms2.cell):
+        if not equal(atoms1.cell, atoms2.cell, tol):
             system_changes.append('cell')
         if not equal(atoms1.pbc, atoms2.pbc):
             system_changes.append('pbc')
