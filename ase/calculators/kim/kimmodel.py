@@ -192,7 +192,7 @@ class KIMModelCalculator(Calculator, object):
         self.skin = self.neigh_skin_ratio * model_influence_dist
         self.cutoff = (1 + self.neigh_skin_ratio) * model_influence_dist
 
-        model_cutoffs, padding_hints, half_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
+        model_cutoffs, padding_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
         self.cutoffs = [cut + self.skin for cut in model_cutoffs]
 
         if padding_hints[0] == 0:
@@ -206,7 +206,6 @@ class KIMModelCalculator(Calculator, object):
             print('Number of cutoffs:', model_cutoffs.size)
             print('Model cutoffs:', model_cutoffs)
             print('Model padding neighbors hints:', padding_hints)
-            print('Model half list hints:', half_hints)
             print('Calculator cutoff (include skin):', self.cutoff)
             print('Calculator cutoff skin:', self.skin)
             print()
