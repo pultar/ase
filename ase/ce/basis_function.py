@@ -24,25 +24,23 @@ class BasisFunction(object):
         pass
 
     def check_orthogonal(self):
+        bfs = self.basis_functions
         print('checking ones')
-        for i in self.basis_functions:
+        for bf in bfs:
             sum = 0
             for key, value in self.spin_dict.items():
-                sum += i[key] * i[key]
+                sum += bf[key] * bf[key]
             sum /= self.num_unique_elements
             print(sum)
 
         print('checking zeros')
         alpha = list(range(len(self.basis_functions)))
-        # print(list(itertools.permutations(alpha, 2)))
         comb = list(itertools.combinations(alpha, 2))
-        # num_alpha = len(self.basis_functions)
-        for i in comb:
+        for c in comb:
             sum = 0
             for key, value in self.spin_dict.items():
-                sum += self.basis_functions[i[0]][key] * self.basis_functions[i[1]][key]
-            # sum += 1
-        #     sum /= self.num_unique_elements
+                sum += bfs[c[0]][key] * bfs[c[1]][key]
+            sum /= self.num_unique_elements
             print(sum)
 
 
@@ -51,7 +49,7 @@ class Sanchez(BasisFunction):
 
     Sanchez, J. M., Ducastelle, F., & Gratias, D. (1984).
     Generalized cluster description of multicomponent systems.
-    Physica A: Statistical Mechanics and Its Applications, 128(1–2), 334–350.
+    Physica A: Statistical Mechanics and Its Applications, 128(1-2), 334-350.
     """
 
     def __init__(self, unique_elements):
@@ -150,7 +148,7 @@ class VandeWalle(BasisFunction):
     van de Walle, A. (2009).
     Multicomponent multisublattice alloys, nonconfigurational entropy and other
     additions to the Alloy Theoretic Automated Toolkit. Calphad, 33(2),
-    266–278.
+    266-278.
     """
 
     def __init__(self, unique_elements):
