@@ -1,6 +1,7 @@
 """Module for setting up pseudospins and basis functions."""
 import numpy as np
 import math
+import itertools
 
 
 class BasisFunction(object):
@@ -21,6 +22,28 @@ class BasisFunction(object):
     def get_basis_functions(self):
         """Get basis function."""
         pass
+
+    def check_orthogonal(self):
+        print('checking ones')
+        for i in self.basis_functions:
+            sum = 0
+            for key, value in self.spin_dict.items():
+                sum += i[key] * i[key]
+            sum /= self.num_unique_elements
+            print(sum)
+
+        print('checking zeros')
+        alpha = list(range(len(self.basis_functions)))
+        # print(list(itertools.permutations(alpha, 2)))
+        comb = list(itertools.combinations(alpha, 2))
+        # num_alpha = len(self.basis_functions)
+        for i in comb:
+            sum = 0
+            for key, value in self.spin_dict.items():
+                sum += self.basis_functions[i[0]][key] * self.basis_functions[i[1]][key]
+            # sum += 1
+        #     sum /= self.num_unique_elements
+            print(sum)
 
 
 class Sanchez(BasisFunction):
@@ -69,16 +92,16 @@ class Sanchez(BasisFunction):
             [0.0, 0.0, 0.0, 3 * np.sqrt(2. / 7), 9 * np.sqrt(1.5) / 5],
             [0.0, 0.0, 0.0, -155 / (12 * np.sqrt(14)),
              -101 / (28 * np.sqrt(6))],
-            [0.0, 0.0, 0.0, 15 * np.sqrt(7. / 2) / 12, 7 / (20 * np.sqrt(6))]])
+            [0.0, 0.0, 0.0, 5 * np.sqrt(7. / 2) / 12, 7 / (20 * np.sqrt(6))]])
 
         # coeff_d = [d_0^0, d_0^1, d_1^1, d_0^2, d_1^2, d_2^2]^T
         coeff_d = np.array([
             [1.0, np.sqrt(3. / 2), np.sqrt(2. / 5), 1. / np.sqrt(2),
-             np.sqrt(3. / 14)],
+             -np.sqrt(3. / 14)],
             [0.0, 0.0,  -17 / (3 * np.sqrt(10)), -17 / (6 * np.sqrt(2)),
              -7. / 6],
             [0.0, 0.0, np.sqrt(2.5) / 3, 5 / (6 * np.sqrt(2)), 1. / 6],
-            [0.0, 0.0, 0.0, 0.0, 131. / (15 * np.sqrt(4))],
+            [0.0, 0.0, 0.0, 0.0, 131. / (15 * np.sqrt(14))],
             [0.0, 0.0, 0.0, 0.0, -7 * np.sqrt(7. / 2) / 12],
             [0.0, 0.0, 0.0, 0.0, np.sqrt(7. / 2) / 20]])
 
@@ -113,7 +136,8 @@ class Sanchez(BasisFunction):
         if self.num_unique_elements > 5:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = coeff_d[3][col] + (coeff_d[4][col] * (value**3))
+                bf[key] = coeff_d[3][col] * value
+                bf[key] += coeff_d[4][col] * (value**3)
                 bf[key] += coeff_d[5][col] * (value**5)
             bf_list.append(bf)
 
@@ -141,13 +165,23 @@ class VandeWalle(BasisFunction):
         return spin_dict
 
     def get_basis_functions(self):
+        alpha = list(range(1, self.num_unique_elements))
+        bf_list = []
 
-        if alpha == 0:
-            return 1
-        elif alpha % 2 == 1:
-            return -np.cos(2 * mp.pi * math.ceil(alpha/2.) * sigma / M)
-        else:
-            return -np.sin(2 * mp.pi * math.ceil(alpha/2.) * sigma / M)     
+        for a in alpha:
+            bf = {}
+            for key, value in self.spin_dict.items():
+                var = 2 * np.pi * math.ceil(a/2.) * value
+                var /= self.num_unique_elements
+                if a % 2 == 1:
+                    bf[key] = -np.cos(var) + 0.
+                else:
+                    bf[key] = -np.sin(var) + 0.
+            bf_list.append(bf)
+
+        return bf_list
+
+
 
 
 
