@@ -46,9 +46,17 @@ class Evaluate(object):
         -'lasso' or 'l1': L1 regularization
         -'euclidean' or 'l2': L2 regularization
 
-    max_size: int
+    max_cluster_size: int
         Maximum number of atoms in the cluster to include in the fit.
         If this is None then all clusters in the DB are included.
+
+    max_cluster_size: int
+        maximum number of atoms in the cluster to include in the fit.
+        If *None*, no restriction on the number of atoms will be imposed.
+
+    max_cluster_dia: float or int
+        maximum diameter of the cluster (in angstrom) to include in the fit.
+        If *None*, no restriction on the diameter will be imposed.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
@@ -104,7 +112,7 @@ class Evaluate(object):
         self._filter_cluster_name()
 
         self.cf_matrix = self._make_cf_matrix()
-        self.e_dft = self._get_dft_energy_per_atom()
+        self.e_dft, self.names = self._get_dft_energy_per_atom()
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
@@ -112,7 +120,7 @@ class Evaluate(object):
         self.parallel = parallel
         if parallel:
             if num_core == "all":
-                self.num_core = int(mp.cpu_count()/2)
+                self.num_core = int(mp.cpu_count() / 2)
             else:
                 self.num_core = int(num_core)
 
@@ -178,7 +186,7 @@ class Evaluate(object):
                           normalize=True, max_iter=1e6)
             lasso.fit(self.cf_matrix, self.e_dft)
             eci = lasso.coef_
-            # print('# of nonzero ECIs: {}'.format(len(np.nonzero(eci)[0])))
+
         else:
             raise ValueError("Unknown penalty type.")
 
@@ -240,7 +248,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, alpha):
+    def plot_fit(self, alpha, interactive=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -249,6 +257,7 @@ class Evaluate(object):
             regularization parameter.
         """
         import matplotlib.pyplot as plt
+        from ase.ce.interactive_plot import InteractivePlot
 
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
@@ -273,7 +282,13 @@ class Evaluate(object):
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
-        plt.show()
+        if interactive:
+            lines = ax.get_lines()
+            data_points = [lines[0], lines[2]]
+            annotations = [self.names, self.names]
+            InteractivePlot(fig, ax, data_points, annotations)
+        else:
+            plt.show()
 
     def plot_CV(self, alpha_min, alpha_max, num_alpha=10, scale='log',
                 logfile=None):
@@ -587,10 +602,12 @@ class Evaluate(object):
     def _get_dft_energy_per_atom(self):
         """Retrieve DFT energy and convert it to eV/atom unit."""
         e_dft = []
+        names = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
             e_dft.append(row.energy / row.natoms)
-        return np.array(e_dft)
+            names.append(row.name)
+        return np.array(e_dft), names
 
     def _reduce_matrix(self):
         """Reduce the correlation function matrix.
