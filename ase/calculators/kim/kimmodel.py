@@ -54,7 +54,8 @@ class KIMModelCalculator(Calculator, object):
         self.neigh_skin_ratio = neigh_skin_ratio
         self.neigh = None
         self.skin = None
-        self.cutoff = None
+        self.influence_dist = None
+        self.cutoffs = None
         self.last_update_positions = None
 
         # padding atoms related
@@ -190,23 +191,26 @@ class KIMModelCalculator(Calculator, object):
         # set cutoff
         model_influence_dist = kim_model.get_influence_distance()
         self.skin = self.neigh_skin_ratio * model_influence_dist
-        self.cutoff = (1 + self.neigh_skin_ratio) * model_influence_dist
+        self.influence_dist = model_influence_dist + self.skin
 
-        model_cutoffs, padding_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
+        model_cutoffs, padding_not_require_neigh = kim_model.get_neighbor_list_cutoffs_and_hints()
         self.cutoffs = [cut + self.skin for cut in model_cutoffs]
 
-        if padding_hints[0] == 0:
-            self.padding_need_neigh = True
-        else:
+        if padding_not_require_neigh.all():
             self.padding_need_neigh = False
+        else:
+            self.padding_need_neigh = True
 
         if self.debug:
             print()
             print('Model influence distance:', model_influence_dist)
+            print('Calculator influence distance (include skin):',
+                  self.influence_dist)
             print('Number of cutoffs:', model_cutoffs.size)
             print('Model cutoffs:', model_cutoffs)
-            print('Model padding neighbors hints:', padding_hints)
-            print('Calculator cutoff (include skin):', self.cutoff)
+            print('Model padding not require neighbors:',
+                  padding_not_require_neigh)
+            print('Calculator cutoffs (include skin):', self.cutoffs)
             print('Calculator cutoff skin:', self.skin)
             print()
 
@@ -244,7 +248,7 @@ class KIMModelCalculator(Calculator, object):
         syms = atoms.get_chemical_symbols()
         n = len(atoms)
         # TODO: Change cutoff to influence distance
-        i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.cutoff)
+        i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.influence_dist)
 
         # Get coordinates for all neighbors (this has overlapping positions)
         A = atoms.get_positions()[i] + D
