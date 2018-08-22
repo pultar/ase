@@ -25,6 +25,7 @@ class BasisFunction(object):
 
     def check_orthogonal(self):
         bfs = self.basis_functions
+        tol = 1E-9
         print('checking ones')
         for bf in bfs:
             sum = 0
@@ -33,7 +34,7 @@ class BasisFunction(object):
             sum /= self.num_unique_elements
             print(sum)
 
-        print('checking zeros')
+        # Check zeros
         alpha = list(range(len(self.basis_functions)))
         comb = list(itertools.combinations(alpha, 2))
         for c in comb:
@@ -41,7 +42,7 @@ class BasisFunction(object):
             for key, value in self.spin_dict.items():
                 sum += bfs[c[0]][key] * bfs[c[1]][key]
             sum /= self.num_unique_elements
-            print(sum)
+            assert abs(sum) < tol
 
 
 class Sanchez(BasisFunction):
