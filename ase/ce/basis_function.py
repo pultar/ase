@@ -3,19 +3,21 @@ import numpy as np
 
 
 class BasisFunction(object):
-    """Base-class for all Basis Functions."""
+    """Base class for all Basis Functions."""
 
     def __init__(self, unique_elements):
         self.unique_elements = unique_elements
         self.num_unique_elements = len(unique_elements)
+        if self.num_unique_elements < 2:
+            raise ValueError("Systems must have more than 1 type of element.")
         self.spin_dict = self.get_spin_dict()
-        self.basis_function = self.get_basis_function()
+        self.basis_functions = self.get_basis_functions()
 
     def get_spin_dict(self):
         """Get spin dictionary."""
         pass
 
-    def get_basis_function(self):
+    def get_basis_functions(self):
         """Get basis function."""
         pass
 
@@ -28,8 +30,12 @@ class Sanchez(BasisFunction):
     Physica A: Statistical Mechanics and Its Applications, 128(1–2), 334–350.
     """
 
-    def __init__(self):
-        BasisFunction.__init__()
+    def __init__(self, unique_elements):
+        BasisFunction.__init__(self, unique_elements)
+        if self.num_unique_elements > 6:
+            raise ValueError("Only systems consisting up to 6 types of "
+                             "elements are currently supported for the scheme "
+                             "by Sanchez et al.")
 
     def get_spin_dict(self):
         """Define pseudospins for all consistuting elements."""
@@ -52,82 +58,62 @@ class Sanchez(BasisFunction):
             spin_dict[self.unique_elements[x]] = spin_values[x]
         return spin_dict
 
-    def _get_basis_functions(self):
+    def get_basis_functions(self):
         """Create basis functions to guarantee the orthonormality."""
-        # d0_0 = np.array([1.0, np.sqrt(3. / 2), np.sqrt(2. / 5),
-        #                  1. / np.sqrt(2), np.sqrt(3. / 14)])
-        # d0_1 = np.array([0.0, 0.0,  -17. / (3 * np.sqrt(10)),
-        #                  -17. / (6 * np.sqrt(2)), -7. / 6])
-        # d1_1 = np.array([0.0, 0.0, np.sqrt(5. / 2) / 3,
-        #                  5. / (6 * np.sqrt(2)), 1. / 6])
-        # d0_2 = np.array([0.0, 0.0, 0.0, 0.0, 131. / (15 * np.sqrt(4))])
-        # d1_2 = np.array([0.0, 0.0, 0.0, 0.0, -7 * np.sqrt(7. / 2) / 12])
-        # d2_2 = np.array([0.0, 0.0, 0.0, 0.0, np.sqrt(7. / 2) / 20])
-
-        coeff_d = np.array([
-            [1.0, np.sqrt(3. / 2), np.sqrt(2. / 5), 1. / np.sqrt(2),
-             np.sqrt(3. / 14)],
-            [0.0, 0.0,  -17. / (3 * np.sqrt(10)), -17. / (6 * np.sqrt(2)),
-             -7. / 6],
-            [0.0, 0.0, np.sqrt(5. / 2) / 3, 5. / (6 * np.sqrt(2)), 1. / 6],
-            [0.0, 0.0, 0.0, 0.0, 131. / (15 * np.sqrt(4))],
-            [0.0, 0.0, 0.0, 0.0, -7 * np.sqrt(7. / 2) / 12],
-            [0.0, 0.0, 0.0, 0.0, np.sqrt(7. / 2) / 20]])
-
-        # c0_1 = np.array([0.0, np.sqrt(2), -5. / 3,
-        #                  -1 * np.sqrt(10. / 7), -np.sqrt(2)])
-        # c1_1 = np.array([0.0,  -3 / np.sqrt(2), 2. / 3,
-        #                  np.sqrt(5. / 14), 3. / (7 * np.sqrt(2))])
-        # c0_2 = np.array([0.0, 0.0, 0.0,
-        #                  3 * np.sqrt(2. / 7), 9 * np.sqrt(3. / 2) / 5])
-        # c1_2 = np.array([0.0, 0.0, 0.0,
-        #                  -155. / (12 * np.sqrt(14)), -101. / (28 * np.sqrt(6))])
-        # c2_2 = np.array([0.0, 0.0, 0.0,
-        #                  15 * np.sqrt(7. / 2) / 12, 7. / (20 * np.sqrt(6))])
-
+        # coeff_c = [c_0^1, c_1^1, c_0^2, c_1^2, c_2^2]^T
         coeff_c = np.array([
             [0.0, np.sqrt(2), -5. / 3, -1 * np.sqrt(10. / 7), -np.sqrt(2)],
             [0.0,  -3 / np.sqrt(2), 2. / 3, np.sqrt(5. / 14),
              3. / (7 * np.sqrt(2))],
-            [0.0, 0.0, 0.0, 3 * np.sqrt(2. / 7), 9 * np.sqrt(3. / 2) / 5],
-            [0.0, 0.0, 0.0, -155. / (12 * np.sqrt(14)),
-             -101. / (28 * np.sqrt(6))],
-            [0.0, 0.0, 0.0, 5 * np.sqrt(7. / 2) / 12, 7. / (20 * np.sqrt(6))]])
+            [0.0, 0.0, 0.0, 3 * np.sqrt(2. / 7), 9 * np.sqrt(1.5) / 5],
+            [0.0, 0.0, 0.0, -155 / (12 * np.sqrt(14)),
+             -101 / (28 * np.sqrt(6))],
+            [0.0, 0.0, 0.0, 15 * np.sqrt(7. / 2) / 12, 7 / (20 * np.sqrt(6))]])
 
-        num_elements = self.num_unique_elements
-        if num_elements > 6:
-            raise ValueError("only compounds consisting of 2 to 6 types of"
-                             " elements are supported")
+        # coeff_d = [d_0^0, d_0^1, d_1^1, d_0^2, d_1^2, d_2^2]^T
+        coeff_d = np.array([
+            [1.0, np.sqrt(3. / 2), np.sqrt(2. / 5), 1. / np.sqrt(2),
+             np.sqrt(3. / 14)],
+            [0.0, 0.0,  -17 / (3 * np.sqrt(10)), -17 / (6 * np.sqrt(2)),
+             -7. / 6],
+            [0.0, 0.0, np.sqrt(2.5) / 3, 5 / (6 * np.sqrt(2)), 1. / 6],
+            [0.0, 0.0, 0.0, 0.0, 131. / (15 * np.sqrt(4))],
+            [0.0, 0.0, 0.0, 0.0, -7 * np.sqrt(7. / 2) / 12],
+            [0.0, 0.0, 0.0, 0.0, np.sqrt(7. / 2) / 20]])
 
+        col = self.num_unique_elements - 2
         bf_list = []
 
         bf = {}
         for key, value in self.spin_dict.items():
-            bf[key] = d0_0 * value
+            bf[key] = coeff_d[0][col] * value
         bf_list.append(bf)
 
         if self.num_unique_elements > 2:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = c0_1 + (c1_1 * value**2)
+                bf[key] = (coeff_c[0][col] + (coeff_c[1][col] * value**2))
             bf_list.append(bf)
 
         if self.num_unique_elements > 3:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = d0_1 * value + (d1_1 * (value**3))
+                bf[key] = coeff_d[1][col] * value
+                bf[key] += coeff_d[2][col] * (value**3)
             bf_list.append(bf)
 
         if self.num_unique_elements > 4:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = c0_2 + (c1_2 * (value**2)) + (c2_2 * (value**4))
+                bf[key] = coeff_c[2][col] + (coeff_c[3][col] * (value**2))
+                bf[key] += coeff_c[4][col] * (value**4)
             bf_list.append(bf)
 
         if self.num_unique_elements > 5:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = d0_2 + (d1_2 * (value**3)) + (d2_2 * (value**5))
+                bf[key] = coeff_d[3][col] + (coeff_d[4][col] * (value**3))
+                bf[key] += coeff_d[5][col] * (value**5)
             bf_list.append(bf)
 
         return bf_list
@@ -154,7 +140,7 @@ class VandeWalle(BasisFunction):
             spin_dict[self.unique_elements[x]] = spin_values[x]
         return spin_dict
 
-    def get_basis_function(self):
+    def get_basis_functions(self):
         if alpha == 0:
             return 1
 
