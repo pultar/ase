@@ -348,7 +348,7 @@ class ClusterExpansionSetting:
             d1_1 = 5. / (6 * np.sqrt(2))
             c0_2 = 3 * np.sqrt(2. / 7)
             c1_2 = -155. / (12 * np.sqrt(14))
-            c2_2 = 15 * np.sqrt(7. / 2) / 12
+            c2_2 = 5 * np.sqrt(7. / 2) / 12
         elif self.num_unique_elements == 6:
             d0_0 = np.sqrt(3. / 14)
             c0_1 = -np.sqrt(2)
@@ -393,7 +393,8 @@ class ClusterExpansionSetting:
         if self.num_unique_elements > 5:
             bf = {}
             for key, value in self.spin_dict.items():
-                bf[key] = d0_2 + (d1_2 * (value**3)) + (d2_2 * (value**5))
+                bf[key] = (d0_2 * value) + (d1_2 * (value**3))
+                bf[key] += (d2_2 * (value**5))
             bf_list.append(bf)
 
         return bf_list
