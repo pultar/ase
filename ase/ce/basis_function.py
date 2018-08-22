@@ -1,5 +1,6 @@
 """Module for setting up pseudospins and basis functions."""
 import numpy as np
+import math
 
 
 class BasisFunction(object):
@@ -128,21 +129,25 @@ class VandeWalle(BasisFunction):
     266–278.
     """
 
-    def __init__(self):
-        BasisFunction.__init__()
+    def __init__(self, unique_elements):
+        BasisFunction.__init__(self, unique_elements)
 
     def get_spin_dict(self):
         """Define pseudospins for all consistuting elements."""
-        spin_values = range(self.num_unique_elements)
-
+        spin_values = list(range(self.num_unique_elements))
         spin_dict = {}
         for x in range(self.num_unique_elements):
             spin_dict[self.unique_elements[x]] = spin_values[x]
         return spin_dict
 
     def get_basis_functions(self):
+
         if alpha == 0:
             return 1
+        elif alpha % 2 == 1:
+            return -np.cos(2 * mp.pi * math.ceil(alpha/2.) * sigma / M)
+        else:
+            return -np.sin(2 * mp.pi * math.ceil(alpha/2.) * sigma / M)     
 
 
 
