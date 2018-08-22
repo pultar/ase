@@ -15,11 +15,12 @@ from ase import Atom
 from ase.neighborlist import neighbor_list
 try:
     import kimpy
+    from kimpy import neighlist as nl
 except ImportError:
     raise RuntimeError('kimpy not found; KIM calculator will not work')
 
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 __author__ = 'Mingjian Wen'
 
 
@@ -32,8 +33,15 @@ class KIMModelCalculator(Calculator, object):
     modelname: str
       KIM model name
 
+    ase_neigh: bool
+      False: use the neighbor list library in kimpy
+      True: use ase neighbor list (usually slower than the kimpy neighbor list library)
+
     neigh_skin_ratio: double
       The neighbor list is build using r_neigh = (1+neigh_skin_ratio)*rcut.
+
+    release_GIL: bool
+      Whether to release python GIL s.t. a KIM model can run with multiple threads
 
     debug: bool
       Flag to indicate whether to enable debug mode to print extra information.
@@ -41,11 +49,13 @@ class KIMModelCalculator(Calculator, object):
 
     implemented_properties = ['energy', 'forces', 'stress']
 
-    def __init__(self, modelname, neigh_skin_ratio=0.2, release_GIL=False,
-                 debug=False, *args, **kwargs):
+    def __init__(self, modelname, ase_neigh=False, neigh_skin_ratio=0.2,
+                 release_GIL=False, debug=False, *args, **kwargs):
         super(KIMModelCalculator, self).__init__(*args, **kwargs)
 
         self.modelname = modelname
+        self.ase_neigh = ase_neigh
+        self.release_GIL = release_GIL
         self.debug = debug
 
         # neigh attributes
@@ -57,22 +67,25 @@ class KIMModelCalculator(Calculator, object):
         self.influence_dist = None
         self.cutoffs = None
         self.last_update_positions = None
+        if self.ase_neigh:
+            self.update_neigh = self.update_ase_neigh
+        else:
+            self.update_neigh = self.update_kimpy_neigh
 
         # padding atoms related
         self.padding_need_neigh = None
-        self.num_contributing_atoms = None
+        self.num_contributing_particles = None
         self.num_padding_particles = None
-        self.neighbor_image_of = None
+        self.padding_image_of = None
 
         # model and compute arguments objects
         self.kim_model = None
         self.compute_args = None
-        self.release_GIL = release_GIL
 
         # model input
         self.num_particles = None
         self.species_code = None
-        self.contributing_mask = None
+        self.particle_contributing = None
         self.coords = None
 
         # model output
@@ -83,10 +96,9 @@ class KIMModelCalculator(Calculator, object):
         self.kim_initialized = False
         self.neigh_initialized = False
 
-        # initialize KIM
-        self.init_kim()
+        self.species_map = None
 
-        # initialize neigh
+        self.init_kim()
         self.init_neigh()
 
     def init_kim(self):
@@ -194,12 +206,15 @@ class KIMModelCalculator(Calculator, object):
         self.influence_dist = model_influence_dist + self.skin
 
         model_cutoffs, padding_not_require_neigh = kim_model.get_neighbor_list_cutoffs_and_hints()
-        self.cutoffs = [cut + self.skin for cut in model_cutoffs]
+        self.cutoffs = np.array(
+            [cut + self.skin for cut in model_cutoffs], dtype=np.double)
 
         if padding_not_require_neigh.all():
             self.padding_need_neigh = False
         else:
             self.padding_need_neigh = True
+
+        self.species_map = self.create_species_map()
 
         if self.debug:
             print()
@@ -225,14 +240,23 @@ class KIMModelCalculator(Calculator, object):
         atoms: ASE Atoms instance
         """
         # register get neigh callback
-        neigh = {}
-        self.neigh = neigh
-        error = self.compute_args.set_callback(
-            kimpy.compute_callback_name.GetNeighborList,
-            get_neigh,
-            neigh)
+        if self.ase_neigh:
+            neigh = {}
+            self.neigh = neigh
+            error = self.compute_args.set_callback(
+                kimpy.compute_callback_name.GetNeighborList,
+                get_neigh,
+                neigh)
+            check_error(error, 'compute_args.set_callback')
+        else:
+            neigh = nl.initialize()
+            self.neigh = neigh
+            error = self.compute_args.set_callback_pointer(
+                kimpy.compute_callback_name.GetNeighborList,
+                nl.get_neigh_kim(),
+                neigh)
 
-        check_error(error, 'compute_args.set_callback_pointer')
+            check_error(error, 'compute_arguments.set_callback_pointer')
 
         self.neigh_initialized = True
 
@@ -247,7 +271,6 @@ class KIMModelCalculator(Calculator, object):
         """
         syms = atoms.get_chemical_symbols()
         n = len(atoms)
-        # TODO: Change cutoff to influence distance
         i, j, D, S, dists = neighbor_list('ijDSd', atoms, self.influence_dist)
 
         # Get coordinates for all neighbors (this has overlapping positions)
@@ -258,7 +281,7 @@ class KIMModelCalculator(Calculator, object):
         used = dict()
 
         # Variables below only include information for the neighbors (padding)
-        neighbor_image_of = []
+        padding_image_of = []
         neighbor_shifts = []
 
         # These variables include both original atoms and their neighbors
@@ -281,7 +304,7 @@ class KIMModelCalculator(Calculator, object):
                     # Add the neighbor as a padding atom
                     used[t] = len(ac)
                     ac.append(Atom(syms[j[k]], position=A[k]))
-                    neighbor_image_of.append(j[k])
+                    padding_image_of.append(j[k])
                     neighbor_shifts.append(S[k])
                 neb_dict[i[k]].append(used[t])
                 neb_dists[i[k]].append(dists[k])
@@ -294,7 +317,7 @@ class KIMModelCalculator(Calculator, object):
             inv_used = dict((v, k) for k, v in used.items())
             # Loop over all the neighbors (k)
             # and the image of that neighbor in the cell (neb)
-            for k, neb in enumerate(neighbor_image_of[:]):
+            for k, neb in enumerate(padding_image_of[:]):
                 # Shift from original atom in cell to neighbor
                 shift = neighbor_shifts[k]
                 for org_neb, org_dist in zip(neb_dict[neb], neb_dists[neb]):
@@ -309,7 +332,7 @@ class KIMModelCalculator(Calculator, object):
                     if org_neb <= n - 1:
                         org_neb_image = org_neb
                     else:
-                        org_neb_image = neighbor_image_of[org_neb - n]
+                        org_neb_image = padding_image_of[org_neb - n]
 
                     # If the original image with the total shift has been
                     # used before then it is also a neighbor of this atom
@@ -325,7 +348,7 @@ class KIMModelCalculator(Calculator, object):
                         for k in range(neighbor_list_size)]
             neb_lists.append(neb_list)
 
-        self.neighbor_image_of = np.array(neighbor_image_of, dtype=np.intc)
+        self.padding_image_of = np.array(padding_image_of, dtype=np.intc)
 
         # neb_list now only contains neighbor information for the original
         # atoms. A neighbor is represented as an index in the list of all
@@ -335,58 +358,117 @@ class KIMModelCalculator(Calculator, object):
 
         return ac
 
-    def update_neigh(self, atoms):
+    def update_ase_neigh(self, atoms):
         """Create the neighbor list along with the other required parameters.
         The required parameters are:
         - num_particles
         - coords
-        - contributing_mask
+        - particle_contributing
         - species_code
 
         KIM requires a neighbor list that has indices corresponding to
         positions.
         """
         # Information of original atoms
-        self.num_contributing_atoms = len(atoms)
+        self.num_contributing_particles = len(atoms)
 
         ac = self.build_neighbor_list(atoms)
 
         # Save the number of atoms and all their neighbors and positions
         N = len(ac)
-        num_padding = N - self.num_contributing_atoms
+        num_padding = N - self.num_contributing_particles
         self.num_particles = np.array([N], dtype=np.intc)
         self.coords = ac.get_positions()
 
         # Save which coordinates are from original atoms and which are from
         # neighbors using a mask
-        indices_mask = [1] * self.num_contributing_atoms + [0] * num_padding
-        self.contributing_mask = np.array(indices_mask, dtype=np.intc)
+        indices_mask = [1] * \
+            self.num_contributing_particles + [0] * num_padding
+        self.particle_contributing = np.array(indices_mask, dtype=np.intc)
 
         # species support and code
         all_species = ac.get_chemical_symbols()
-        unique_species = list(set(all_species))
-        species_map = dict()
-        for s in unique_species:
-            support, code, error = self.kim_model.get_species_support_and_code(
-                kimpy.species_name.SpeciesName(s))
-
-            check_error(error or not support,
-                        'kim_model.get_species_support_and_code')
-            species_map[s] = code
-            if self.debug:
-                msg = 'Species {} is supported and its code is: {}'
-                print(msg.format(s, code))
-        self.species_code = np.array([species_map[s] for s in all_species],
-                                     dtype=np.intc)
+        try:
+            self.species_code = np.array([self.species_map[s] for s in all_species],
+                                         dtype=np.intc)
+        except KeyError as e:
+            report_error('Species not support by KIM model; {}'.format(e))
 
         if self.debug:
-            print('Debug: called update_neigh')
+            print('Debug: called update_ase_neigh')
+            print()
+
+    def update_kimpy_neigh(self, atoms):
+        """Create neighbor list and model input.
+        Parameter
+        ---------
+
+        atoms: ASE Atoms instance
+        """
+
+        # get info from Atoms object
+        cell = np.asarray(atoms.get_cell(), dtype=np.double)
+        pbc = np.asarray(atoms.get_pbc(), dtype=np.intc)
+        contributing_coords = np.asarray(
+            atoms.get_positions(), dtype=np.double)
+        contributing_species = atoms.get_chemical_symbols()
+        num_contributing = atoms.get_number_of_atoms()
+        self.num_contributing_particles = num_contributing
+
+        # species support and code
+        try:
+            contributing_species_code = np.array(
+                [self.species_map[s] for s in contributing_species], dtype=np.intc)
+        except KeyError as e:
+            report_error('Species not support by KIM model; {}'.format(e))
+
+        if pbc.any():  # need padding atoms
+            # create padding atoms
+            out = nl.create_paddings(self.influence_dist,
+                                     cell,
+                                     pbc,
+                                     contributing_coords,
+                                     contributing_species_code)
+            padding_coords, padding_species_code, self.padding_image_of, error = out
+            check_error(error, 'nl.create_paddings')
+            num_padding = padding_species_code.size
+
+            self.num_particles = np.array(
+                [num_contributing + num_padding], dtype=np.intc)
+            tmp = np.concatenate((contributing_coords, padding_coords))
+            self.coords = np.asarray(tmp, dtype=np.double)
+            tmp = np.concatenate(
+                (contributing_species_code, padding_species_code))
+            self.species_code = np.asarray(tmp, dtype=np.intc)
+            self.particle_contributing = np.ones(
+                self.num_particles[0], dtype=np.intc)
+            self.particle_contributing[num_contributing:] = 0
+            need_neigh = np.ones(self.num_particles[0], dtype=np.intc)
+            if not self.padding_need_neigh:
+                need_neigh[num_contributing:] = 0
+
+        else:  # do not need padding atoms
+            self.padding_image_of = np.array([])
+            self.num_particles = np.array([num_contributing], dtype=np.intc)
+            self.coords = np.array(contributing_coords, dtype=np.double)
+            self.species_code = np.array(
+                contributing_species_code, dtype=np.intc)
+            self.particle_contributing = np.ones(
+                num_contributing, dtype=np.intc)
+            need_neigh = self.particle_contributing
+
+        # create neighborlist
+        error = nl.build(self.neigh, self.coords,
+                         self.influence_dist, self.cutoffs, need_neigh)
+        check_error(error, 'nl.build')
+
+        if self.debug:
+            print('Debug: called update_kimpy_neigh')
             print()
 
     def update_kim(self):
         """ Register model input and output data pointers.
         """
-
         # model output
         self.energy = np.array([0.], dtype=np.double)
         self.forces = np.zeros([self.num_particles[0], 3], dtype=np.double)
@@ -401,7 +483,7 @@ class KIMModelCalculator(Calculator, object):
         check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
         error = self.compute_args.set_argument_pointer(
-            kimpy.compute_argument_name.particleContributing, self.contributing_mask)
+            kimpy.compute_argument_name.particleContributing, self.particle_contributing)
         check_error(error, 'kimpy.compute_argument_name.set_argument_pointer')
 
         error = self.compute_args.set_argument_pointer(
@@ -428,11 +510,11 @@ class KIMModelCalculator(Calculator, object):
 
         atoms: ASE Atoms instance
         """
-        if self.neighbor_image_of.size != 0:
+        if self.padding_image_of.size != 0:
             # displacement of contributing atoms
             disp_contrib = atoms.positions - self.last_update_positions
             # displacement of padding atoms
-            disp_pad = disp_contrib[self.neighbor_image_of]
+            disp_pad = disp_contrib[self.padding_image_of]
             # displacement of all atoms
             disp = np.concatenate((disp_contrib, disp_pad))
             # update coords in KIM
@@ -475,7 +557,7 @@ class KIMModelCalculator(Calculator, object):
                 b = atoms.positions
                 if a.shape == b.shape:
                     delta = np.linalg.norm(a - b, axis=1)
-                    # indices of the two largest element
+                    # indices of the two largest elements
                     ind = np.argpartition(delta, -2)[-2:]
                     if sum(delta[ind]) <= self.skin:
                         need_update_neigh = False
@@ -489,14 +571,13 @@ class KIMModelCalculator(Calculator, object):
             else:
                 self.update_kim_coords(atoms)
 
-            error = self.kim_model.compute(self.compute_args,
-                                           self.release_GIL)
+            error = self.kim_model.compute(self.compute_args, self.release_GIL)
             check_error(error, 'kim_model.compute')
 
         energy = self.energy[0]
         forces = assemble_padding_forces(self.forces,
-                                         self.num_contributing_atoms,
-                                         self.neighbor_image_of)
+                                         self.num_contributing_particles,
+                                         self.padding_image_of)
         stress = compute_virial_stress(self.forces, self.coords)
 
         # return values
@@ -505,10 +586,13 @@ class KIMModelCalculator(Calculator, object):
         self.results['stress'] = stress
 
     def get_kim_model_supported_species(self):
-        """Get all the supported species by a model.
+        """Get all the supported species by the KIM model.
 
-        Return: list of str
-          a list of species
+        Returns
+        -------
+
+        species: list of str
+            a list of chemical symbols (e.g. ["Mo", "S"])
         """
         species = []
         num_kim_species = kimpy.species_name.get_number_of_species_names()
@@ -524,27 +608,50 @@ class KIMModelCalculator(Calculator, object):
 
         return species
 
+    def create_species_map(self):
+        """Get all the supported species of the KIM model and the corresponding codes.
+
+        Returns
+        -------
+
+        species_map: dict
+            key: str
+                chemical symbols (e.g. "Ar")
+            value: int
+                species integer code (e.g. 1)
+        """
+        supported_species = self.get_kim_model_supported_species()
+        species_map = dict()
+        for s in supported_species:
+            species_support, code, error = self.kim_model.get_species_support_and_code(
+                kimpy.species_name.SpeciesName(s))
+            check_error(error or not species_support,
+                        'kim_model.get_species_support_and_code')
+            species_map[s] = code
+            if self.debug:
+                print('Species {} is supported and its code is: {}'.format(s, code))
+        return species_map
+
     def check_state(self, atoms, tol=1e-15):
         return compare_atoms(self.atoms, atoms)
 
     def __expr__(self):
-        """Print this object shows the following message."""
         return 'KIMModelCalculator(modelname = {})'.format(self.modelname)
 
     def __del__(self):
         """Garbage collection for the KIM model object and neighbor list object."""
 
-        # free neighbor list
         if self.neigh_initialized:
-            self.neigh = {}
+            if self.ase_neigh:
+                self.neigh = {}
+            else:
+                nl.clean(self.neigh)
 
-        # free compute arguments
         if self.kim_initialized:
             error = self.kim_model.compute_arguments_destroy(
                 self.compute_args)
             check_error(error, 'kim_model.compute_arguments_destroy')
 
-            # free kim model
             kimpy.model.destroy(self.kim_model)
 
 
@@ -570,7 +677,7 @@ def compare_atoms(atoms1, atoms2, tol=1e-15):
     return system_changes
 
 
-def assemble_padding_forces(forces, n, neighbor_image_of):
+def assemble_padding_forces(forces, n, padding_image_of):
     """
     Assemble forces on padding atoms back to contributing atoms.
 
@@ -583,7 +690,7 @@ def assemble_padding_forces(forces, n, neighbor_image_of):
     n: int
       number of contributing atoms
 
-    neighbor_image_of: 1D int array
+    padding_image_of: 1D int array
       atom number, of which the padding atom is an image
 
 
@@ -593,11 +700,11 @@ def assemble_padding_forces(forces, n, neighbor_image_of):
     """
     total_forces = np.array(forces[:n])
 
-    has_padding = True if neighbor_image_of.size != 0 else False
+    has_padding = True if padding_image_of.size != 0 else False
 
     if has_padding:
         pad_forces = forces[n:]
-        for f, org_index in zip(pad_forces, neighbor_image_of):
+        for f, org_index in zip(pad_forces, padding_image_of):
             total_forces[org_index] += f
 
     return total_forces
