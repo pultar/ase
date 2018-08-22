@@ -9,7 +9,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 from ase.calculators.calculator import Calculator
 import kimpy
-import neighlist as nl
+from kimpy import neighlist as nl
 from .exceptions import KIMCalculatorError
 
 
@@ -153,10 +153,10 @@ class KIMModelCalculator(Calculator, object):
             # TODO add support for particleEenrgy and Virial
             if support_status == kimpy.support_status.required:
                 if (name != kimpy.compute_argument_name.partialEnergy and
-                    name != kimpy.compute_argument_name.partialForces  # and
-                    # name != kimpy.compute_argument_name.partialParticleEnergy and
-                            #name != kimpy.compute_argument_name.partialVirial
-                    ):
+                        name != kimpy.compute_argument_name.partialForces  # and
+                        # name != kimpy.compute_argument_name.partialParticleEnergy and
+                        #name != kimpy.compute_argument_name.partialVirial
+                        ):
                     report_error(
                         'Unsupported required ComputeArgument {}'.format(name))
 
@@ -193,7 +193,7 @@ class KIMModelCalculator(Calculator, object):
         self.cutoff = (1 + self.neigh_skin_ratio) * model_influence_dist
 
         # TODO we need to make changes to support multiple cutoffs
-        model_cutoffs, padding_hints, half_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
+        model_cutoffs, padding_hints = kim_model.get_neighbor_list_cutoffs_and_hints()
 
         if(model_cutoffs.size != 1):
             report_error('too many cutoffs')
@@ -251,9 +251,10 @@ class KIMModelCalculator(Calculator, object):
         """
 
         # get info from Atoms object
-        cell = atoms.get_cell()
-        pbc = atoms.get_pbc()
-        contributing_coords = atoms.get_positions()
+        cell = np.asarray(atoms.get_cell(), dtype=np.double)
+        pbc = np.asarray(atoms.get_pbc(), dtype=np.intc)
+        contributing_coords = np.asarray(
+            atoms.get_positions(), dtype=np.double)
         contributing_species = atoms.get_chemical_symbols()
         num_contributing = atoms.get_number_of_atoms()
         self.num_contributing_particles = num_contributing
@@ -305,7 +306,8 @@ class KIMModelCalculator(Calculator, object):
             need_neigh = self.particle_contributing
 
         # create neighborlist
-        error = nl.build(self.neigh, self.cutoff, self.coords, need_neigh)
+        error = nl.build(self.neigh, self.coords, self.cutoff,
+                         np.array([self.cutoff], dtype=np.double), need_neigh)
         check_error(error, 'nl.build')
 
         if self.debug:
