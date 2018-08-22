@@ -42,12 +42,13 @@ def _get_kim_api_simulator_model_utility():
     the executable including full path.
     '''
     try:
-        libexec_path = subprocess.check_output(["pkg-config", "--variable=libexecdir", "libkim-api-v2"],
-                                               universal_newlines=True).strip()
+        libexec_path = subprocess.check_output(
+            ["pkg-config", "--variable=libexecdir", "libkim-api-v2"],
+            universal_newlines=True).strip().rstrip("/")
     except:
         raise KIMCalculatorError(
             'ERROR: Unable to obtain libexec-path from KIM API utility.')
-    return libexec_path + "kim-api-v2/kim-api-v2-simulator-model"
+    return os.path.join(libexec_path, "kim-api-v2", "kim-api-v2-simulator-model")
 
 
 def _is_simulator_model(model):
@@ -140,7 +141,8 @@ def _get_params_for_LAMMPS_calculator(model_defn, supported_species):
     parameters['mass'] = []
     for i, species in enumerate(supported_species):
         if species not in atomic_numbers:
-            raise KIMCalculatorError('Unknown element species {0}.'.format(species))
+            raise KIMCalculatorError(
+                'Unknown element species {0}.'.format(species))
         massstr = str(atomic_masses[atomic_numbers[species]])
         parameters['mass'].append(str(i+1) + " " + massstr)
 
@@ -198,14 +200,17 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             supported_species = KIM_get_supported_species_list(extended_kim_id)
             param_filenames = []  # no parameter files to pass
             parameters = {}
-            parameters['pair_style'] = 'kim ' + extended_kim_id.strip() + os.linesep
-            parameters['pair_coeff'] = ['* * ' + ' '.join(supported_species) + os.linesep]
+            parameters['pair_style'] = 'kim ' + \
+                extended_kim_id.strip() + os.linesep
+            parameters['pair_coeff'] = [
+                '* * ' + ' '.join(supported_species) + os.linesep]
             parameters['model_init'] = []
             parameters['model_post'] = []
             parameters['mass'] = []
             for i, species in enumerate(supported_species):
                 if species not in atomic_numbers:
-                    raise KIMCalculatorError('Unknown element species {0}.'.format(species))
+                    raise KIMCalculatorError(
+                        'Unknown element species {0}.'.format(species))
                 massstr = str(atomic_masses[atomic_numbers[species]])
                 parameters['mass'].append(str(i+1) + " " + massstr)
 
@@ -315,7 +320,7 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             [str(atomic_numbers[s]) for s in supported_species])
 
         # Process KIM templates in model_defn lines
-        for i in range(0,len(model_defn)):
+        for i in range(0, len(model_defn)):
             model_defn[i] = kimsm.template_substitution(
                 model_defn[i], param_filenames_for_lammps, ksm.sm_dirname,
                 atom_type_sym_list_string, atom_type_num_list_string)
@@ -353,7 +358,7 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             # Determine whether this model has charges
             has_charges = False
             for ii, mline in enumerate(model_init):
-                ml = re.sub(' +',' ',mline).strip().lower()
+                ml = re.sub(' +', ' ', mline).strip().lower()
                 if ml.startswith('atom_style charge'):
                     has_charges = True
 
