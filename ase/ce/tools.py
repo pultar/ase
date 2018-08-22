@@ -1,3 +1,4 @@
+"""A collection of miscellaneous functions used for Cluster Expansion."""
 import math
 from itertools import permutations, combinations, product
 import numpy as np
@@ -6,6 +7,7 @@ import collections
 
 
 def index_by_position(atoms):
+    """Set atomic indices by its position."""
     # add zero to avoid negative zeros
     tags = atoms.get_positions().round(decimals=6) + 0
     tags = tags.tolist()
@@ -15,6 +17,7 @@ def index_by_position(atoms):
 
 
 def sort_by_position(atoms):
+    """Sort atoms by its position."""
     # Return a new Atoms object with sorted atomic order.
     # The default is to order according to chemical symbols,
     # but if *tags* is not None, it will be used instead.
@@ -24,6 +27,7 @@ def sort_by_position(atoms):
 
 
 def wrap_and_sort_by_position(atoms):
+    """Wrap and sort atoms by their positions."""
     atoms.wrap()
     atoms = sort_by_position(atoms)
     return atoms
@@ -36,6 +40,7 @@ def nCr(n, r):
 
 
 def reduce_matrix(matrix):
+    """Remove columns of the matrix to match its rank."""
     matrix = matrix[:, ~np.all(matrix == 0., axis=0)]
     offset = 0
     rank = matrix_rank(matrix)
@@ -87,7 +92,7 @@ def shift(array):
 
 
 def distances_and_angles(atoms, ref_indx, float_obj_dist, float_obj_angle):
-    """Get sorted internal angles of a"""
+    """Get sorted internal angles of a."""
     indices = [a.index for a in atoms if a.index != ref_indx]
     if len(atoms) < 2:
         raise ValueError("distances and angles cannot be called for"
@@ -165,8 +170,10 @@ def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
 
 
 def ndarray2list(data):
-    """Converts nested lists of a combination of lists and numpy arrays
-    to list of lists"""
+    """
+    Convert nested lists of a combination of lists and numpy arrays
+    to list of lists
+    """
     if not isinstance(data, list) and not isinstance(data, np.ndarray):
         return data
 
@@ -210,6 +217,7 @@ def equivalent_deco(deco, equiv_sites):
 
 
 def flatten(x):
+    """Flatten list."""
     if isinstance(x, collections.Iterable):
         return [a for i in x for a in flatten(i)]
     else:
@@ -217,6 +225,7 @@ def flatten(x):
 
 
 def get_unique_name(size, max_dia, fam_id):
+    """Get unique cluster names."""
     name = "c{}_{}_{}".format(size, max_dia, fam_id)
     return name
 
