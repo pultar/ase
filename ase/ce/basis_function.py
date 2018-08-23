@@ -1,7 +1,6 @@
 """Module for setting up pseudospins and basis functions."""
 import numpy as np
 import math
-import itertools
 
 
 class BasisFunction(object):
