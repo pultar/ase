@@ -70,7 +70,9 @@ def test_spgroup_217():
 
     if update_reference_file:
         all_cf["sp_217_grouped"] = cf
-    assert all_cf["sp_217_grouped"] == cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["sp_217_grouped"][key]) < tol
+
     os.remove(db_name)
 
 

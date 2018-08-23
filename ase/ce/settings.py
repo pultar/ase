@@ -17,11 +17,12 @@ from ase.ce.tools import (wrap_and_sort_by_position, index_by_position,
 
 
 class ClusterExpansionSetting:
-    """Base-class for all Cluster Expansion settings."""
+    """Base class for all Cluster Expansion settings."""
 
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
-                 max_cluster_dia=None, basis_elements=None,
-                 grouped_basis=None, ignore_background_atoms=False):
+                 max_cluster_dia=None, basis_function='sanchez',
+                 basis_elements=None, grouped_basis=None,
+                 ignore_background_atoms=False):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
@@ -50,8 +51,19 @@ class ClusterExpansionSetting:
             self.num_groups = len(self.grouped_basis)
             self._check_grouped_basis_elements()
 
-        self.spin_dict = self._get_spin_dict()
-        self.basis_functions = self._get_basis_functions()
+        if basis_function.lower() == 'sanchez':
+            from ase.ce.basis_function import Sanchez
+            bf_scheme = Sanchez(self.unique_elements)
+        elif basis_function.lower() == 'vandewalle':
+            from ase.ce.basis_function import VandeWalle
+            bf_scheme = VandeWalle(self.unique_elements)
+        else:
+            msg = "basis function scheme {} ".format(basis_function)
+            msg += "is not supported."
+            raise ValueError(msg)
+        self.spin_dict = bf_scheme.spin_dict
+        self.basis_functions = bf_scheme.basis_functions
+
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
         if ignore_background_atoms:
@@ -224,20 +236,9 @@ class ClusterExpansionSetting:
         symbol = [b[0] for b in self.basis_elements if len(b) == 1]
         self.num_basis -= len(basis)
 
-        # remap indices if the basis are grouped, then change grouped_basis
-        # and conc_ratio_min/max accordingly
+        # change grouped_basis and conc_ratio_min/max if basis are grouped
         if self.grouped_basis is not None:
-            remapped = []
-            for i, group in enumerate(self.grouped_basis):
-                if group[0] in basis:
-                    remapped.append(i)
-            for i in sorted(remapped, reverse=True):
-                del self.grouped_basis[i]
-                del self.conc_ratio_min_1[i]
-                del self.conc_ratio_max_1[i]
-                if self.num_conc_var == 2:
-                    del self.conc_ratio_min_2[i]
-                    del self.conc_ratio_max_2[i]
+            self._modify_group_basis_and_conc(basis)
 
         # change basis_elements
         for i in sorted(basis, reverse=True):
@@ -265,6 +266,20 @@ class ClusterExpansionSetting:
                     if element > ref:
                         self.grouped_basis[i][j] -= 1
         return list(set(symbol))
+
+    def _modify_group_basis_and_conc(self, basis):
+        """Remove indices of background atoms in group_basis and conc_args."""
+        remapped = []
+        for i, group in enumerate(self.grouped_basis):
+            if group[0] in basis:
+                remapped.append(i)
+        for i in sorted(remapped, reverse=True):
+            del self.grouped_basis[i]
+            del self.conc_ratio_min_1[i]
+            del self.conc_ratio_max_1[i]
+            if self.num_conc_var == 2:
+                del self.conc_ratio_min_2[i]
+                del self.conc_ratio_max_2[i]
 
     def _check_basis_elements(self):
         error = False
@@ -305,99 +320,6 @@ class ClusterExpansionSetting:
             for indx in group[1:]:
                 if self.basis_elements[indx] != ref_elements:
                     raise ValueError('elements in the same group must be same')
-
-    def _get_spin_dict(self):
-        # Find odd/even
-        spin_values = []
-        if self.num_unique_elements % 2 == 1:
-            highest = (self.num_unique_elements - 1) / 2
-        else:
-            highest = self.num_unique_elements / 2
-        # Assign spin value for each element
-        while highest > 0:
-            spin_values.append(highest)
-            spin_values.append(-highest)
-            highest -= 1
-        if self.num_unique_elements % 2 == 1:
-            spin_values.append(0)
-
-        spin_dict = {}
-        for x in range(self.num_unique_elements):
-            spin_dict[self.unique_elements[x]] = spin_values[x]
-        return spin_dict
-
-    def _get_basis_functions(self):
-        """Create basis functions to guarantee the orthonormality."""
-        if self.num_unique_elements == 2:
-            d0_0 = 1.
-        elif self.num_unique_elements == 3:
-            d0_0 = np.sqrt(3. / 2)
-            c0_1 = np.sqrt(2)
-            c1_1 = -3 / np.sqrt(2)
-        elif self.num_unique_elements == 4:
-            d0_0 = np.sqrt(2. / 5)
-            c0_1 = -5. / 3
-            c1_1 = 2. / 3
-            d0_1 = -17. / (3 * np.sqrt(10))
-            d1_1 = np.sqrt(5. / 2) / 3
-        elif self.num_unique_elements == 5:
-            d0_0 = 1. / np.sqrt(2)
-            c0_1 = -1 * np.sqrt(10. / 7)
-            c1_1 = np.sqrt(5. / 14)
-            d0_1 = -17. / (6 * np.sqrt(2))
-            d1_1 = 5. / (6 * np.sqrt(2))
-            c0_2 = 3 * np.sqrt(2. / 7)
-            c1_2 = -155. / (12 * np.sqrt(14))
-            c2_2 = 5 * np.sqrt(7. / 2) / 12
-        elif self.num_unique_elements == 6:
-            d0_0 = np.sqrt(3. / 14)
-            c0_1 = -np.sqrt(2)
-            c1_1 = 3. / (7 * np.sqrt(2))
-            d0_1 = -7. / 6
-            d1_1 = 1. / 6
-            c0_2 = 9 * np.sqrt(3. / 2) / 5
-            c1_2 = -101. / (28 * np.sqrt(6))
-            c2_2 = 7. / (20 * np.sqrt(6))
-            d0_2 = 131. / (15 * np.sqrt(4))
-            d1_2 = -7 * np.sqrt(7. / 2) / 12
-            d2_2 = np.sqrt(7. / 2) / 20
-        else:
-            raise ValueError("only compounds consisting of 2 to 6 types of"
-                             " elements are supported")
-
-        bf_list = []
-
-        bf = {}
-        for key, value in self.spin_dict.items():
-            bf[key] = d0_0 * value
-        bf_list.append(bf)
-
-        if self.num_unique_elements > 2:
-            bf = {}
-            for key, value in self.spin_dict.items():
-                bf[key] = c0_1 + (c1_1 * value**2)
-            bf_list.append(bf)
-
-        if self.num_unique_elements > 3:
-            bf = {}
-            for key, value in self.spin_dict.items():
-                bf[key] = d0_1 * value + (d1_1 * (value**3))
-            bf_list.append(bf)
-
-        if self.num_unique_elements > 4:
-            bf = {}
-            for key, value in self.spin_dict.items():
-                bf[key] = c0_2 + (c1_2 * (value**2)) + (c2_2 * (value**4))
-            bf_list.append(bf)
-
-        if self.num_unique_elements > 5:
-            bf = {}
-            for key, value in self.spin_dict.items():
-                bf[key] = (d0_2 * value) + (d1_2 * (value**3))
-                bf[key] += (d2_2 * (value**5))
-            bf_list.append(bf)
-
-        return bf_list
 
     def _get_atoms_with_given_dim(self):
         """Create atoms with a user-specified size."""

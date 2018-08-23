@@ -3,10 +3,10 @@ import os
 import math
 from random import choice, getrandbits
 import numpy as np
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from ase.db import connect
 from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
-from ase.ce.tools import wrap_and_sort_by_position, reduce_matrix
+from ase.ce.tools import wrap_and_sort_by_position
 
 
 class ProbeStructure(object):
@@ -262,8 +262,8 @@ class ProbeStructure(object):
         return indx
 
     def _has_more_than_one_conc(self):
-        if len(self.setting.conc_matrix) > 1 and \
-           self.setting.conc_matrix.ndim > 1:
+        if len(self.setting.conc_matrix) > 1 \
+                and self.setting.conc_matrix.ndim > 1:
             return True
         return False
 
@@ -288,9 +288,6 @@ class ProbeStructure(object):
             # a basis with only 1 type of element should not be chosen
             if len(basis_elements[basis]) < 2:
                 continue
-            # TODO:
-            # basis consisting of only 1 concentration should not be selected
-            # if
 
             indx = choice(self.index_by_basis[basis])
             old_symbol = self.supercell[indx].symbol
@@ -299,14 +296,21 @@ class ProbeStructure(object):
             new_symbol = choice(basis_elements[basis])
             if new_symbol != old_symbol:
                 self.supercell[indx].symbol = new_symbol
+
+                # Update all periodic images
+                unit_cell_indx = self.supercell[indx].tag
+                for grp_index in self.periodic_indices[unit_cell_indx]:
+                    self.supercell[grp_index].symbol \
+                        = self.supercell[indx].symbol
+
                 if self.setting.in_conc_matrix(self._supercell2unitcell()):
                     break
                 self.supercell[indx].symbol = old_symbol
 
-        # find which index it should be in unit cell
-        unit_cell_indx = self.supercell[indx].tag
-        for grp_index in self.periodic_indices[unit_cell_indx]:
-            self.supercell[grp_index].symbol = self.supercell[indx].symbol
+                # Revert all periodic images
+                for grp_index in self.periodic_indices[unit_cell_indx]:
+                    self.supercell[grp_index].symbol \
+                        = self.supercell[indx].symbol
 
     def _check_consistency(self):
         # Check to see if the cf is indeed preserved
@@ -359,6 +363,5 @@ def precision_matrix(cfm):
         prec = inv(cfm.T.dot(cfm))
     # if inverting matrix leads to a singular matrix, reduce the matrix
     except np.linalg.linalg.LinAlgError:
-        cfm = reduce_matrix(cfm)
-        prec = inv(cfm.T.dot(cfm))
+        prec = pinv(cfm.T.dot(cfm))
     return prec

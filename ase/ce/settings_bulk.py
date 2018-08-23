@@ -76,7 +76,8 @@ class BulkCrystal(ClusterExpansionSetting):
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
                  cubic=False, size=None, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None,
+                 max_cluster_size=4, max_cluster_dia=None,
+                 basis_function='sanchez', grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
 
         # Save raw input arguments for save/load. The arguments gets altered
@@ -127,7 +128,8 @@ class BulkCrystal(ClusterExpansionSetting):
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_elements, grouped_basis,
+                                         basis_function, basis_elements,
+                                         grouped_basis,
                                          ignore_background_atoms)
 
         if grouped_basis is None:
@@ -284,7 +286,8 @@ class BulkSpacegroup(ClusterExpansionSetting):
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
                  primitive_cell=False, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None, grouped_basis=None,
+                 max_cluster_size=4, max_cluster_dia=None,
+                 basis_function='sanchez', grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
@@ -323,7 +326,8 @@ class BulkSpacegroup(ClusterExpansionSetting):
 
         ClusterExpansionSetting.__init__(self, conc_args, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_elements, grouped_basis,
+                                         basis_function, basis_elements,
+                                         grouped_basis,
                                          ignore_background_atoms)
 
         self.index_by_basis = self._group_index_by_basis()
