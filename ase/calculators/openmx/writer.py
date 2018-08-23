@@ -20,7 +20,6 @@ functional theories.
 import os
 import numpy as np
 from ase.units import Bohr, Ha, Ry
-from ase.utils import basestring
 from ase.calculators.calculator import kpts2sizeandoffsets
 from ase.calculators.openmx.reader import (read_electron_valency, get_file_name
                                            , get_standard_key)
@@ -131,7 +130,7 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
                                         kpts=parameters.get('kpts'),
                                         scf_kgrid=parameters.get('scf_kgrid'),
                                         atoms=atoms)
-    keywords['scf_eigenvaluesolver'] = parameters.get('eigensolver')
+    keywords['scf_eigenvaluesolver'] = get_eigensolver(atoms, parameters)
     keywords['scf_spinpolarization'] = parameters.get('spinpol')
     keywords['scf_external_fields'] = parameters.get('external')
     keywords['scf_mixing_type'] = parameters.get('mixer')
@@ -173,6 +172,13 @@ def get_xc(xc):
     else:
         return 'LDA'
 
+
+def get_eigensolver(atoms, parameters):
+    if get_atoms_unitvectors(atoms, parameters) is None:
+        return 'Cluster'
+    else:
+        eigensolver = parameters.get('scf_eigenvaluesolver', 'Band')
+        return parameters.get('eigensolver', eigensolver)
 
 def get_scf_kgrid(kpts=None, scf_kgrid=None, atoms=None):
     if isinstance(kpts, tuple) or isinstance(kpts, list):
@@ -351,7 +357,10 @@ def get_lda_u_switches():
 
 
 def get_atoms_unitvectors(atoms, parameters):
-    atoms_unitvectors = []
+    zero_vec = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]]) 
+    if np.all(atoms.get_cell() == zero_vec) == True:
+        default_cell = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        return parameters.get('atoms_unitvectors', default_cell)
     atoms_unitvectors = atoms.get_cell().T
     return atoms_unitvectors
 

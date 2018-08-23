@@ -72,7 +72,7 @@ class OpenMX(FileIOCalculator):
         'debug': False
     }
 
-    def __init__(self, restart=None, ignore_bad_restart_file=False, label=None,
+    def __init__(self, restart=None, ignore_bad_restart_file=False, label='./openmx',
                  atoms=None, command=None, mpi=None, pbs=None, **kwargs):
 
         # Initialize and put the default parameters.
