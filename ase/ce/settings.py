@@ -63,9 +63,6 @@ class ClusterExpansionSetting:
             raise ValueError(msg)
         self.spin_dict = bf_scheme.spin_dict
         self.basis_functions = bf_scheme.basis_functions
-        # print(self.spin_dict)
-        # print(self.basis_functions)
-        bf_scheme.check_orthogonal()
 
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []

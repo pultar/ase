@@ -23,27 +23,6 @@ class BasisFunction(object):
         """Get basis function."""
         pass
 
-    def check_orthogonal(self):
-        bfs = self.basis_functions
-        tol = 1E-9
-        print('checking ones')
-        for bf in bfs:
-            sum = 0
-            for key, value in self.spin_dict.items():
-                sum += bf[key] * bf[key]
-            sum /= self.num_unique_elements
-            print(sum)
-
-        # Check zeros
-        alpha = list(range(len(self.basis_functions)))
-        comb = list(itertools.combinations(alpha, 2))
-        for c in comb:
-            sum = 0
-            for key, value in self.spin_dict.items():
-                sum += bfs[c[0]][key] * bfs[c[1]][key]
-            sum /= self.num_unique_elements
-            assert abs(sum) < tol
-
 
 class Sanchez(BasisFunction):
     """Pseudospin and basis function from Sanchez et al.
@@ -164,6 +143,7 @@ class VandeWalle(BasisFunction):
         return spin_dict
 
     def get_basis_functions(self):
+        """Create basis functions to guarantee the orthonormality."""
         alpha = list(range(1, self.num_unique_elements))
         bf_list = []
 
@@ -176,12 +156,19 @@ class VandeWalle(BasisFunction):
                     bf[key] = -np.cos(var) + 0.
                 else:
                     bf[key] = -np.sin(var) + 0.
+
+            # normalize the basis function
+            sum = 0
+            for key, value in self.spin_dict.items():
+                sum += bf[key] * bf[key]
+            normalization_factor = np.sqrt(self.num_unique_elements / sum)
+
+            for key, value in bf.items():
+                bf[key] = value * normalization_factor
+
             bf_list.append(bf)
 
         return bf_list
-
-
-
 
 
 
