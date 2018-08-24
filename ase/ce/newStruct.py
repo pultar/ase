@@ -549,7 +549,7 @@ class GenerateStructures(object):
               'specified in the *num_samples_var* argument.\n'
               '===========================================================')
         count = 0
-        cfm = np.zeros((num_samples_var, len(self.setting.full_cluster_names)),
+        cfm = np.zeros((num_samples_var, len(self.setting.cluster_names)),
                        dtype=float)
         while count < num_samples_var:
             # special case where there is only 1 concentration value
