@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Knowledgebase of Interatomic Models (KIM) Calculator for ASE written by:
 
@@ -10,6 +8,7 @@ This calculator selects an appropriate calculator for a KIM model depending on
 whether it supports the KIM application programming interface (API) or is a
 KIM Simulator Model.  For more information on KIM, visit https://openkim.org.
 """
+
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -32,8 +31,6 @@ from ase.data import atomic_numbers
 
 __version__ = '1.4.0'
 __author__ = 'Ellad Tadmor'
-
-###############################################################################
 
 
 def _get_kim_api_simulator_model_utility():
@@ -82,7 +79,8 @@ def _get_kim_model_id_and_type(extended_kim_id):
     if _is_simulator_model(extended_kim_id):
         if not kimsm_loaded:
             raise KIMCalculatorError(
-                'ERROR: Model %s is a Simulator Model, but `kimsm` is not loaded.' % extended_kim_id)
+                'ERROR: Model %s is a Simulator Model, but fails to load '
+                '"kimpy.simulator_models".' % extended_kim_id)
         this_is_a_KIM_MO = False
         pref = 'SM'
     else:
@@ -99,8 +97,6 @@ def _get_kim_model_id_and_type(extended_kim_id):
         # so use full model name for the file directory.
 
     return kim_id, this_is_a_KIM_MO
-
-###############################################################################
 
 
 def _get_params_for_LAMMPS_calculator(model_defn, supported_species):
@@ -148,8 +144,6 @@ def _get_params_for_LAMMPS_calculator(model_defn, supported_species):
 
     return parameters
 
-###############################################################################
-
 
 def _add_init_lines_to_parameters(parameters, model_init):
     '''
@@ -159,8 +153,6 @@ def _add_init_lines_to_parameters(parameters, model_init):
     parameters['model_init'] = []
     for i in range(0, len(model_init)):
         parameters['model_init'].append(model_init[i])
-
-###############################################################################
 
 
 def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
@@ -224,7 +216,8 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
 
         else:
             raise KIMCalculatorError(
-                'ERROR: Unsupported simulator "%s" requested to run KIM API compliant KIM Models.' % kim_mo_simulator)
+                'ERROR: Unsupported simulator "%s" requested to run KIM API '
+                'compliant KIM Models.' % kim_mo_simulator)
 
     ### If we get to here, the model is a KIM Simulator Model ###
 
@@ -236,8 +229,9 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
     # matches the expected value. (If not, the KIM SM is corrupted.)
     SM_extended_kim_id = ksm.get_model_extended_kim_id()
     if extended_kim_id != SM_extended_kim_id:
-        raise KIMCalculatorError('ERROR: SM extended KIM ID ("%s") does not match expected value ("%s").' % (
-            SM_extended_kim_id, extended_kim_id))
+        raise KIMCalculatorError(
+            'ERROR: SM extended KIM ID ("%s") does not match expected value '
+            ' ("%s").' % (SM_extended_kim_id, extended_kim_id))
 
     # Get simulator name
     simulator_name = ksm.get_model_simulator_name().lower()
@@ -246,14 +240,12 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
     model_defn = ksm.get_model_defn_lines()
     if len(model_defn) == 0:
         raise KIMCalculatorError(
-            'ERROR: model-defn is an empty list in metadata file of Simulator Model "%s".' % extended_kim_id)
+            'ERROR: model-defn is an empty list in metadata file of '
+            'Simulator Model "%s".' % extended_kim_id)
     if "" in model_defn:
         raise KIMCalculatorError(
-            'ERROR: model-defn contains one or more empty strings in metadata file of Simulator Model "%s".' % extended_kim_id)
-
-    ############################################################
-    #  ASAP
-    ############################################################
+            'ERROR: model-defn contains one or more empty strings in metadata '
+            'file of Simulator Model "%s".' % extended_kim_id)
 
     if simulator_name == "asap":
 
@@ -261,12 +253,14 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
         supported_units = ksm.get_model_units().lower().strip()
         if supported_units != "ase":
             raise KIMCalculatorError(
-                'ERROR: KIM Simulator Model units are "%s", but expected to be "ase" for ASAP.' % supported_units)
+                'ERROR: KIM Simulator Model units are "%s", but expected to '
+                'be "ase" for ASAP.' % supported_units)
 
         # There should be only one model_defn line
         if len(model_defn) != 1:
             raise KIMCalculatorError(
-                'ERROR: model-defn contains %d lines, but should only contain one line for an ASAP model.' % len(model_defn))
+                'ERROR: model-defn contains %d lines, but should only contain '
+                'one line for an ASAP model.' % len(model_defn))
 
         # Return calculator
         unknown_potential = False
@@ -294,10 +288,6 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
             # isolated atoms as zero. (Otherwise it
             # is taken to be that of perfect FCC.)
             return calc
-
-    ############################################################
-    #  LAMMPS
-    ############################################################
 
     elif simulator_name == "lammps":
 
@@ -376,7 +366,7 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
 
             # Setup LAMMPS header commands lookup table
             model_init.insert(0, 'atom_modify map array sort 0 0')
-            if not any("atom_style" in s.lower() for s in model_init):  # atom style (if needed)
+            if not any("atom_style" in s.lower() for s in model_init):
                 model_init.insert(0, 'atom_style atomic')
             model_init.insert(
                 0, 'units ' + supported_units.strip())     # units
@@ -396,17 +386,11 @@ def KIM(extended_kim_id, debug=False, kim_mo_simulator='kimpy',
 
         else:
             raise KIMCalculatorError(
-                'ERROR: Unknown LAMMPS calculator: "%s"' % lammps_calculator)
-
-    ############################################################
-    #  UNSUPPORTED
-    ############################################################
+                'ERROR: Unknown LAMMPS calculator: "%s".' % lammps_calculator)
 
     else:
         raise KIMCalculatorError(
-            'ERROR: Unsupported simulator; simulator_name = "%s".' % simulator_name)
-
-###############################################################################
+            'ERROR: Unsupported simulator: "%s".' % simulator_name)
 
 
 def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
@@ -440,7 +424,8 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
 
         else:
             raise KIMCalculatorError(
-                'ERROR: Unsupported simulator "%s" requested to obtain KIM Model species list.' % kim_mo_simulator)
+                'ERROR: Unsupported simulator "%s" requested to obtain KIM '
+                'Model species list.' % kim_mo_simulator)
 
     # Otherwise this is an SM and we'll get the supported species list from metadata
     else:
@@ -451,8 +436,3 @@ def KIM_get_supported_species_list(extended_kim_id, kim_mo_simulator='kimpy'):
 
     # Return list of supported species
     return speclist
-
-
-# do nothing if called directly
-if __name__ == '__main__':
-    pass
