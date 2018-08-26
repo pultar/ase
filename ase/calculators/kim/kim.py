@@ -18,9 +18,9 @@ import os
 import subprocess
 from ase.data import atomic_masses, atomic_numbers
 try:
-    import kimsm
+    from kimpy import simulator_models as kimsm
     kimsm_loaded = True
-except ImportError:
+except:
     kimsm_loaded = False
 from ase.calculators.lammpslib import LAMMPSlib
 from ase.calculators.lammpsrun import LAMMPS
