@@ -69,3 +69,49 @@ class InteractivePlot(object):
                 if vis:
                     self.active_annot.set_visible(False)
                     self.fig.canvas.draw_idle()
+
+
+class ShowStructureOnClick(InteractivePlot):
+    def __init__(self, fig, ax, lines, names, db_name):
+        from ase.gui.gui import GUI
+        from ase.gui.images import Images
+        self.db_name = db_name
+        self.active_images = Images()
+        self.gui = GUI(self.active_images)
+        # self.gui.run()
+        fig.canvas.mpl_connect("button_press_event", self.on_click)
+        InteractivePlot.__init__(self, fig, ax, lines, names)
+
+    def on_click(self, event):
+        from ase.db import connect
+        from ase.gui.gui import GUI
+        try:
+            from tkinter import TclError
+        except ImportError:
+            # Python 2
+            from Tkinter import TclError
+
+        if event.inaxes != self.ax:
+            return
+
+        if event.dblclick:
+            try:
+                self.gui.exit()
+            except TclError:
+                pass
+            db = connect(self.db_name)
+            atoms = []
+
+            # Find the index of the point
+            for i, line in enumerate(self.lines):
+                cont, ind = line.contains(event)
+                if cont:
+                    self.active_line_index = i
+                    break
+
+            name = self.annotations[self.active_line_index][ind["ind"][0]]
+            for row in db.select(name=name):
+                atoms.append(row.toatoms())
+            self.active_images.initialize(atoms)
+            self.gui = GUI(self.active_images)
+            self.gui.run()
