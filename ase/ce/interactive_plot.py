@@ -94,7 +94,7 @@ class ShowStructureOnClick(InteractivePlot):
         if event.inaxes != self.ax:
             return
 
-        if event.dblclick:
+        if event.button == 1:
             try:
                 self.gui.exit()
             except TclError:
