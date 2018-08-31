@@ -343,12 +343,18 @@ class ClusterExpansionSetting:
         # The weights 0.9 and 1.1 are included to make sure that clusters are
         # not detected because of round off errors when wrapping
         cell = self.atoms.get_cell().T
-        weights = [0, 1]
+        weights = [-1, 0, 1]
         for comb in product(weights, repeat=3):
             vec = cell.dot(comb) / 2.0
             trans.append(vec)
 
-        trans += [atom.position for atom in self.atoms]
+        # NOTE: If the error message
+        # 'The correlation function changed after simulated annealing'
+        # appears when probestructures are generated, uncommenting
+        # the next line, might be a quick fix. However, this introduce
+        # a lot of overhead. For big systems one might easily run out of
+        # memory.
+        # trans += [atom.position for atom in self.atoms]
 
         for t in trans:
             shifted = self.atoms.copy()
