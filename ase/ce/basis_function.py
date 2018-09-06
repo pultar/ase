@@ -209,7 +209,7 @@ class Sluiter(BasisFunction):
         """Create orthonormal basis functions."""
         bf_list = []
         num_bf = self.num_unique_elements
-        for bf_num in range(num_bf):
+        for bf_num in range(1, num_bf):
             new_bf = {symb: kronecker(i, bf_num)
                       for i, symb in enumerate(self.unique_elements)}
             bf_list.append(new_bf)
