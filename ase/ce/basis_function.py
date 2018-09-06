@@ -16,11 +16,20 @@ class BasisFunction(object):
 
     def get_spin_dict(self):
         """Get spin dictionary."""
-        pass
+        raise NotImplementedError("get_spin_dict has to be implemented in "
+                                  "derived classes!")
 
     def get_basis_functions(self):
         """Get basis function."""
-        pass
+        raise NotImplementedError("get_basis_functions has to be implemented "
+                                  "in derived classes!")
+
+    def translate_full_cluster_name(self, full_cluster_name):
+        """Function to translate the full cluster names.
+
+        Default is to do nothing
+        """
+        return full_cluster_name
 
 
 class Sanchez(BasisFunction):
@@ -170,12 +179,52 @@ class VandeWalle(BasisFunction):
         return bf_list
 
 
+def kronecker(i, j):
+    if i == j:
+        return 1
+    return 0
 
 
-# def kronecker(i, j):
-#     if i == j:
-#         return 1
-#     return 0
+class Sluiter(BasisFunction):
+    """Pseudo spin and basis function from
+
+    Zhang, Xi, and Marcel HF Sluiter.
+    "Cluster expansions for thermodynamics and kinetics of
+    multicomponent alloys."
+    Journal of Phase Equilibria and Diffusion 37.1 (2016): 44-52.
+    """
+
+    def __init__(self, unique_elements):
+        BasisFunction.__init__(self, unique_elements)
+
+    def get_spin_dict(self):
+        """Define pseudospins for all consistuting elements."""
+        spin_values = list(range(self.num_unique_elements))
+        spin_dict = {}
+        for x in range(self.num_unique_elements):
+            spin_dict[self.unique_elements[x]] = spin_values[x]
+        return spin_dict
+
+    def get_basis_functions(self):
+        """Create orthonormal basis functions."""
+        bf_list = []
+        num_bf = self.num_unique_elements
+        for bf_num in range(num_bf):
+            new_bf = {symb: kronecker(i, bf_num)
+                      for i, symb in enumerate(self.unique_elements)}
+            bf_list.append(new_bf)
+        return bf_list
+
+    def translate_full_cluster_name(self, full_cluster_name):
+        """Translate the decoration number to element names."""
+        dec = full_cluster_name.rpartition("_")[1]
+        name = full_cluster_name.rpartition("_")[0]
+        new_dec = ""
+        for decnum in dec:
+            new_dec += "{}".format(self.unique_elements[int(decnum)])
+        return name + "_" + new_dec
+
+#
 #
 # spin_dict = {"Cu":0, "Au":1, "Zn":2}
 #
