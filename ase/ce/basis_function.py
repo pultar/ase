@@ -206,7 +206,13 @@ class Sluiter(BasisFunction):
         return spin_dict
 
     def get_basis_functions(self):
-        """Create orthonormal basis functions."""
+        """Create orthonormal basis functions.
+        
+        Due to the constraint that any site is occupied by exactly one element,
+        we only need to track N-1 species if there are N species.
+        Hence, the first element specified is redundant, and will not
+        have a basis function.
+        """
         bf_list = []
         num_bf = self.num_unique_elements
         for bf_num in range(1, num_bf):
