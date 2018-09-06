@@ -53,14 +53,17 @@ class ClusterExpansionSetting:
 
         from ase.ce.basis_function import BasisFunction
         if isinstance(basis_function, BasisFunction):
-            bf_scheme = basis_function
+            self.bf_scheme = basis_function
         elif isinstance(basis_function, str):
             if basis_function.lower() == 'sanchez':
                 from ase.ce.basis_function import Sanchez
-                bf_scheme = Sanchez(self.unique_elements)
+                self.bf_scheme = Sanchez(self.unique_elements)
             elif basis_function.lower() == 'vandewalle':
                 from ase.ce.basis_function import VandeWalle
-                bf_scheme = VandeWalle(self.unique_elements)
+                self.bf_scheme = VandeWalle(self.unique_elements)
+            elif basis_function.lower() == "sluiter":
+                from ase.ce.basis_function import Sluiter
+                self.bf_scheme = Sluiter(self.unique_elements)
             else:
                 msg = "basis function scheme {} ".format(basis_function)
                 msg += "is not supported."
@@ -68,9 +71,9 @@ class ClusterExpansionSetting:
         else:
             raise ValueError("basis_function has to be instance of "
                              "BasisFunction or a string")
-                             
-        self.spin_dict = bf_scheme.spin_dict
-        self.basis_functions = bf_scheme.basis_functions
+
+        self.spin_dict = self.bf_scheme.spin_dict
+        self.basis_functions = self.bf_scheme.basis_functions
 
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
