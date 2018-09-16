@@ -20,10 +20,6 @@ except ImportError:
     raise RuntimeError('kimpy not found; KIM calculator will not work')
 
 
-__version__ = '0.2.0'
-__author__ = 'Mingjian Wen'
-
-
 class KIMModelCalculator(Calculator, object):
     """ An ASE calculator to work with KIM interatomic models.
 
