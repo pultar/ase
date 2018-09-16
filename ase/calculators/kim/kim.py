@@ -148,6 +148,12 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
 
     # Get simulator name
     simulator_name = ksm.get_model_simulator_name().lower()
+    # determine simulator
+    if simulator is None:
+        if simulator_name == 'asap':
+            simulator = 'asap'
+        elif simulator_name == 'lammps':
+            simulator = 'lammpslib'
 
     #  Get model definition from SM metadata
     model_defn = ksm.get_model_defn_lines()
@@ -301,7 +307,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
 
             # Return LAMMPSlib calculator
             return LAMMPSlib(lammps_header=model_init,
-                             lammps_name=lammps_lib_suffix,
+                             lammps_name=None,
                              lmpcmds=model_defn,
                              atom_types=atom_types,
                              log_file='lammps.log',
