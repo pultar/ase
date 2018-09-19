@@ -510,8 +510,8 @@ def read_eigenvalues(line, f, debug=False):
     for i in range(half_kpts):
         eigen_values[0, i] = eigen_half[0, i, :]
         eigen_values[1, i] = eigen_half[1, i, :]
-        eigen_values[0, half_kpts - i] = eigen_half[0, i, :]
-        eigen_values[1, half_kpts - i] = eigen_half[1, i, :]
+        eigen_values[0, 2*half_kpts-1-i] = eigen_half[0, i, :]
+        eigen_values[1, 2*half_kpts-1-i] = eigen_half[1, i, :]
     return eigen_values
 
 
