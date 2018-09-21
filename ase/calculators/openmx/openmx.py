@@ -315,7 +315,7 @@ class OpenMX(FileIOCalculator):
             self.print_input(debug=self.debug, nohup=self.nohup)
             self.run()
             #  self.read_results()
-            atoms = read_openmx(filename=self.label)
+            atoms = read_openmx(filename=self.label, debug=self.debug)
             self.parameters.update(atoms.calc.parameters)
             self.results = atoms.calc.results
             # self.clean()
@@ -374,7 +374,7 @@ class OpenMX(FileIOCalculator):
         self.set_label(label)
         if label[-5:] in ['.dat', '.out', '.log']:
             label = label[:-4]
-        atoms = read_openmx(filename=label)
+        atoms = read_openmx(filename=label, debug=self.debug)
         self.update_atoms(atoms)
         self.parameters.update(atoms.calc.parameters)
         self.results = atoms.calc.results
