@@ -490,7 +490,7 @@ def read_eigenvalues(line, f, debug=False):
     prind("Read eigenvalue output")
     current_line = f.tell()
     f.seek(0)  # Seek for the kgrid information
-    while True:
+    while line != '':
         line = f.readline().lower()
         if 'scf.kgrid' in line:
             break
