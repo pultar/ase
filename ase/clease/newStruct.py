@@ -6,7 +6,7 @@ import numpy as np
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.probestructure import ProbeStructure
 from ase.clease.tools import wrap_and_sort_by_position
-from ase.clease.structure_comparator import SymmetryEquivalenceCheck
+from ase.utils.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -380,12 +380,10 @@ class GenerateStructures(object):
         symmcheck = SymmetryEquivalenceCheck(angle_tol=1.0, ltol=0.05,
                                              stol=0.05, scale_volume=True,
                                              to_primitive=to_prim)
+        atoms_in_db = []
         for row in self.db.select(cond):
-            atoms2 = row.toatoms()
-            match = symmcheck.compare(atoms, atoms2)
-            if match:
-                break
-        return match
+            atoms_in_db.append(row.toatoms())
+        return symmcheck.compare(atoms, atoms_in_db)
 
     def _get_kvp(self, atoms, kvp, conc1=None, conc2=None):
         """Get key-value pairs of the passed Atoms object.
