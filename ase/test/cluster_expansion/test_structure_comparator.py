@@ -1,4 +1,4 @@
-from ase.ce.structure_comparator import SymmetryEquivalenceCheck
+from ase.clease.structure_comparator import SymmetryEquivalenceCheck
 from ase.build import bulk
 from ase import Atoms
 from ase.spacegroup import spacegroup

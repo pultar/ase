@@ -6,8 +6,8 @@ or CECrystal class.
 import numpy as np
 from ase.build import bulk
 from ase.spacegroup import crystal, Spacegroup
-from ase.ce.tools import wrap_and_sort_by_position
-from ase.ce.settings import ClusterExpansionSetting
+from ase.clease.tools import wrap_and_sort_by_position
+from ase.clease.settings import ClusterExpansionSetting
 from copy import deepcopy
 
 

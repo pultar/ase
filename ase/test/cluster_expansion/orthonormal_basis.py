@@ -1,7 +1,7 @@
 """Test to ensure the orthnormality of the basis functions."""
 import os
 import itertools
-from ase.ce import CEBulk
+from ase.clease import CEBulk
 
 
 db_name = 'orthonormal_basis.db'

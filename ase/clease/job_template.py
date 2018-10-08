@@ -3,7 +3,7 @@ from textwrap import dedent
 from ase.db import connect
 from ase.io import write
 from subprocess import check_output
-from ase.ce import jobscripts
+from ase.clease import jobscripts
 
 class cd:
     """Context manager for changing the current working directory"""

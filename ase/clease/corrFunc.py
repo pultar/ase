@@ -1,8 +1,8 @@
 """Module for calculating correlation functions."""
 import numpy as np
 from ase.atoms import Atoms
-from ase.ce import CEBulk, CECrystal
-from ase.ce.tools import wrap_and_sort_by_position, equivalent_deco
+from ase.clease import CEBulk, CECrystal
+from ase.clease.tools import wrap_and_sort_by_position, equivalent_deco
 from ase.db import connect
 import multiprocessing as mp
 

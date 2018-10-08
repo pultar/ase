@@ -8,8 +8,8 @@ import multiprocessing as mp
 import logging as lg
 import json
 from ase.utils import basestring
-from ase.ce import CEBulk, CECrystal
-from ase.ce.mp_logger import MultiprocessHandler
+from ase.clease import CEBulk, CECrystal
+from ase.clease.mp_logger import MultiprocessHandler
 from ase.db import connect
 
 
@@ -257,7 +257,7 @@ class Evaluate(object):
             regularization parameter.
         """
         import matplotlib.pyplot as plt
-        from ase.ce.interactive_plot import ShowStructureOnClick
+        from ase.clease.interactive_plot import ShowStructureOnClick
 
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
@@ -428,7 +428,7 @@ class Evaluate(object):
             Default is to ignore the emptry cluster.
         """
         import matplotlib.pyplot as plt
-        from ase.ce.interactive_plot import InteractivePlot
+        from ase.clease.interactive_plot import InteractivePlot
 
         if self.eci is None:
             raise ValueError("ECI is None. You have to call get_eci first!")

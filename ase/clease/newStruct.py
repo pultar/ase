@@ -3,10 +3,10 @@ import os
 import random
 import numpy as np
 
-from ase.ce import CEBulk, CECrystal, CorrFunction
-from ase.ce.probestructure import ProbeStructure
-from ase.ce.tools import wrap_and_sort_by_position
-from ase.ce.structure_comparator import SymmetryEquivalenceCheck
+from ase.clease import CEBulk, CECrystal, CorrFunction
+from ase.clease.probestructure import ProbeStructure
+from ase.clease.tools import wrap_and_sort_by_position
+from ase.clease.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read

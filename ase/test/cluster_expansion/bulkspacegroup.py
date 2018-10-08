@@ -7,8 +7,8 @@
 """
 import os
 import json
-from ase.ce import CECrystal, GenerateStructures, CorrFunction
-from ase.ce.newStruct import MaxAttemptReachedError
+from ase.clease import CECrystal, GenerateStructures, CorrFunction
+from ase.clease.newStruct import MaxAttemptReachedError
 from ase.db import connect
 from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 

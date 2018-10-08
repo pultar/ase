@@ -1,7 +1,7 @@
 """Unit tests for the corr function class."""
 import os
-from ase.ce import CEBulk, CorrFunction
-from ase.ce.corrFunc import equivalent_deco
+from ase.clease import CEBulk, CorrFunction
+from ase.clease.corrFunc import equivalent_deco
 
 db_name = "test_corrfunc.db"
 conc_args = {"conc_ratio_min_1": [[1, 0]],
@@ -74,7 +74,7 @@ def test_interaction_contribution_symmetric_clusters():
     the same.
     """
     from ase.build import bulk
-    from ase.ce.tools import wrap_and_sort_by_position
+    from ase.clease.tools import wrap_and_sort_by_position
 
     # Create an atoms object that fits with CEBulk
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)

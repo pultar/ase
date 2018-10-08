@@ -5,8 +5,8 @@ from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv, pinv
 from ase.db import connect
-from ase.ce import CEBulk, CECrystal, CorrFunction
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.clease import CEBulk, CECrystal, CorrFunction
+from ase.clease.tools import wrap_and_sort_by_position
 
 
 class ProbeStructure(object):

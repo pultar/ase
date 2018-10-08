@@ -7,8 +7,8 @@
 """
 
 import os
-from ase.ce import CEBulk, GenerateStructures, Evaluate
-from ase.ce.newStruct import MaxAttemptReachedError
+from ase.clease import CEBulk, GenerateStructures, Evaluate
+from ase.clease.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 

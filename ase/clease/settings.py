@@ -10,8 +10,8 @@ import numpy as np
 from scipy.spatial import cKDTree as KDTree
 from ase.db import connect
 
-from ase.ce.floating_point_classification import FloatingPointClassifier
-from ase.ce.tools import (wrap_and_sort_by_position, index_by_position,
+from ase.clease.floating_point_classification import FloatingPointClassifier
+from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                           flatten, sort_by_internal_distances, create_cluster,
                           dec_string, get_unique_name, nested_array2list)
 
@@ -51,7 +51,7 @@ class ClusterExpansionSetting:
             self.num_groups = len(self.grouped_basis)
             self._check_grouped_basis_elements()
 
-        from ase.ce.basis_function import BasisFunction
+        from ase.clease.basis_function import BasisFunction
         if isinstance(basis_function, BasisFunction):
             if basis_function.unique_elements != self.unique_elements:
                 raise ValueError("Unique elements in BasiFunction instance "
@@ -59,13 +59,13 @@ class ClusterExpansionSetting:
             self.bf_scheme = basis_function
         elif isinstance(basis_function, str):
             if basis_function.lower() == 'sanchez':
-                from ase.ce.basis_function import Sanchez
+                from ase.clease.basis_function import Sanchez
                 self.bf_scheme = Sanchez(self.unique_elements)
             elif basis_function.lower() == 'vandewalle':
-                from ase.ce.basis_function import VandeWalle
+                from ase.clease.basis_function import VandeWalle
                 self.bf_scheme = VandeWalle(self.unique_elements)
             elif basis_function.lower() == "sluiter":
-                from ase.ce.basis_function import Sluiter
+                from ase.clease.basis_function import Sluiter
                 self.bf_scheme = Sluiter(self.unique_elements)
             else:
                 msg = "basis function scheme {} ".format(basis_function)

@@ -3,10 +3,10 @@ import os
 from random import randint
 import numpy as np
 from ase.calculators.cluster_expansion import ClusterExpansion
-from ase.ce import CEBulk, CECrystal, CorrFunction
+from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.build import bulk
 from ase.spacegroup import crystal
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.clease.tools import wrap_and_sort_by_position
 
 
 def generate_ex_eci(setting):

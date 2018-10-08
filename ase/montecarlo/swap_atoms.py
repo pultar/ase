@@ -6,7 +6,7 @@ Simulated Annealing.
 from random import choice
 from copy import copy
 import numpy as np
-from ase.ce import CEBulk, CECrystal
+from ase.clease import CEBulk, CECrystal
 from ase.atoms import Atoms
 
 
