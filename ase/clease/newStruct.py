@@ -383,7 +383,7 @@ class GenerateStructures(object):
         atoms_in_db = []
         for row in self.db.select(cond):
             atoms_in_db.append(row.toatoms())
-        return symmcheck.compare(atoms, atoms_in_db)
+        return symmcheck.compare(atoms.copy(), atoms_in_db)
 
     def _get_kvp(self, atoms, kvp, conc1=None, conc2=None):
         """Get key-value pairs of the passed Atoms object.
