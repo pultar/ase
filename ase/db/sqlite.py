@@ -19,14 +19,13 @@ import numbers
 import os
 import sqlite3
 import sys
-import functools
 
 import numpy as np
 
+import ase.io.jsonio
 from ase.data import atomic_numbers
 from ase.db.row import AtomsRow
 from ase.db.core import Database, ops, now, lock, invop, parse_selection
-from ase.io.jsonio import encode, numpyfy, mydecode
 from ase.parallel import parallel_function
 from ase.utils import basestring
 
@@ -130,6 +129,41 @@ class SQLite3Database(Database, object):
     columnnames = [line.split()[0].lstrip()
                    for line in init_statements[0].splitlines()[1:]]
 
+    def encode(self, obj):
+        return ase.io.jsonio.encode(obj)
+
+    def decode(self, txt):
+        return ase.io.jsonio.decode(txt)
+
+    def blob(self, array):
+        """Convert array to blob/buffer object."""
+
+        if array is None:
+            return None
+        if len(array) == 0:
+            array = np.zeros(0)
+        if array.dtype == np.int64:
+            array = array.astype(np.int32)
+        if not np.little_endian:
+            array = array.byteswap()
+        return buffer(np.ascontiguousarray(array))
+
+    def deblob(self, buf, dtype=float, shape=None):
+        """Convert blob/buffer object to ndarray of correct dtype and shape.
+
+        (without creating an extra view)."""
+        if buf is None:
+            return None
+        if len(buf) == 0:
+            array = np.zeros(0, dtype)
+        else:
+            array = np.frombuffer(buf, dtype)
+            if not np.little_endian:
+                array = array.byteswap()
+        if shape is not None:
+            array.shape = shape
+        return array
+
     def _connect(self):
         return sqlite3.connect(self.filename, timeout=600)
 
@@ -196,10 +230,7 @@ class SQLite3Database(Database, object):
 
     def _write(self, atoms, key_value_pairs, data, id):
         Database._write(self, atoms, key_value_pairs, data)
-        if self.type == 'postgresql':
-            encode = functools.partial(_encode, pg=True)
-        else:
-            encode = _encode
+        encode = self.encode
 
         con = self.connection or self._connect()
         self._initialize(con)
@@ -207,10 +238,7 @@ class SQLite3Database(Database, object):
 
         mtime = now()
 
-        if self.type == 'postgresql':
-            blob = functools.partial(_blob, pg=True)
-        else:
-            blob = _blob
+        blob = self.blob
 
         text_key_values = []
         number_key_values = []
@@ -342,12 +370,8 @@ class SQLite3Database(Database, object):
         return self._convert_tuple_to_row(values)
 
     def _convert_tuple_to_row(self, values):
-        if self.type == 'postgresql':
-            deblob = functools.partial(_deblob, pg=True)
-            decode = functools.partial(_decode, pg=True)
-        else:
-            deblob = _deblob
-            decode = _decode
+        deblob = self.deblob
+        decode = self.decode
 
         values = self._old2new(values)
         dct = {'id': values[0],
@@ -409,7 +433,7 @@ class SQLite3Database(Database, object):
         if self.version < 6:
             m = values[23]
             if m is not None and not isinstance(m, float):
-                magmom = float(_deblob(m, shape=()))
+                magmom = float(self.deblob(m, shape=()))
                 values = values[:23] + (magmom,) + values[24:]
         return values
 
@@ -419,8 +443,7 @@ class SQLite3Database(Database, object):
         tables = ['systems']
         where = []
         args = []
-
-        for n, key in enumerate(keys):
+        for key in keys:
             if key == 'forces':
                 where.append('systems.fmax IS NOT NULL')
             elif key == 'strain':
@@ -430,12 +453,10 @@ class SQLite3Database(Database, object):
                 where.append('systems.{} IS NOT NULL'.format(key))
             else:
                 if '-' not in key:
-                    tables.append('keys AS keys{}'.format(n))
-                    q = 'systems.id=keys{0}.id AND keys{0}.key=?'.format(n)
+                    q = 'systems.id in (select id from keys where key=?)'
                 else:
                     key = key.replace('-', '')
-                    q = 'systems.id=keys.id AND keys.key=?'
-                    q = 'NOT EXISTS (SELECT id FROM keys WHERE {})'.format(q)
+                    q = 'systems.id not in (select id from keys where key=?)'
                 where.append(q)
                 args.append(key)
 
@@ -445,10 +466,6 @@ class SQLite3Database(Database, object):
             if isinstance(key, int):
                 bad[key] = bad.get(key, True) and ops[op](0, value)
 
-        found_sort_table = False
-        nspecies = 0
-        ntext = 0
-        nnumber = 0
         for key, op, value in cmps:
             if key in ['id', 'energy', 'magmom', 'ctime', 'user',
                        'calculator', 'natoms', 'pbc', 'unique_id',
@@ -471,55 +488,42 @@ class SQLite3Database(Database, object):
                 else:
                     if bad[key]:
                         where.append(
-                            'NOT EXISTS (SELECT id FROM species WHERE\n' +
-                            '  species.id=systems.id AND species.Z=? AND ' +
-                            'species.n{}?)'.format(invop[op]))
+                            'systems.id not in (select id from species ' +
+                            'where Z=? and n{}?)'.format(invop[op]))
                         args += [key, value]
                     else:
-                        tables.append('species AS specie{}'.format(nspecies))
-                        where.append(('systems.id=specie{0}.id AND ' +
-                                      'specie{0}.Z=? AND ' +
-                                      'specie{0}.n{1}?').format(nspecies, op))
+                        where.append('systems.id in (select id from species ' +
+                                     'where Z=? and n{}?)'.format(op))
                         args += [key, value]
-                        nspecies += 1
 
             elif self.type == 'postgresql':
                 jsonop = '->'
                 if isinstance(value, basestring):
                     jsonop = '->>'
+                elif isinstance(value, bool):
+                    jsonop = '->>'
+                    value = str(value).lower()
                 where.append("systems.key_value_pairs {} '{}'{}?"
                              .format(jsonop, key, op))
                 args.append(str(value))
 
             elif isinstance(value, basestring):
-                tables.append('text_key_values AS text{0}'.format(ntext))
-                where.append(('systems.id=text{0}.id AND ' +
-                              'text{0}.key=? AND ' +
-                              'text{0}.value{1}?').format(ntext, op))
+                where.append('systems.id in (select id from text_key_values ' +
+                             'where key=? and value{}?)'.format(op))
                 args += [key, value]
-                if sort_table == 'text_key_values' and sort == key:
-                    sort_table = 'text{0}'.format(ntext)
-                    found_sort_table = True
-                ntext += 1
             else:
-                tables.append('number_key_values AS number{}'.format(nnumber))
-                where.append(('systems.id=number{0}.id AND ' +
-                              'number{0}.key=? AND ' +
-                              'number{0}.value{1}?').format(nnumber, op))
+                where.append(
+                    'systems.id in (select id from number_key_values ' +
+                    'where key=? and value{}?)'.format(op))
                 args += [key, float(value)]
-                if sort_table == 'number_key_values' and sort == key:
-                    sort_table = 'number{}'.format(nnumber)
-                    found_sort_table = True
-                nnumber += 1
 
         if sort:
             if sort_table != 'systems':
-                if not found_sort_table:
-                    tables.append('{} AS sort_table'.format(sort_table))
-                    where.append('systems.id=sort_table.id AND '
-                                 'sort_table.key=?')
-                    args.append(sort)
-                    sort_table = 'sort_table'
+                tables.append('{} AS sort_table'.format(sort_table))
+                where.append('systems.id=sort_table.id AND '
+                             'sort_table.key=?')
+                args.append(sort)
+                sort_table = 'sort_table'
                 sort = 'value'
 
         sql = 'SELECT {} FROM\n  '.format(what) + ', '.join(tables)
@@ -561,7 +565,7 @@ class SQLite3Database(Database, object):
                         'fmax', 'smax', 'volume', 'mass', 'charge', 'natoms']:
                 sort_table = 'systems'
             else:
-                for dct in self._select(keys + [sort], cmps, limit=1,
+                for dct in self._select(keys + [sort], cmps=[], limit=1,
                                         include_data=False,
                                         columns=['key_value_pairs']):
                     if isinstance(dct['key_value_pairs'][sort], basestring):
@@ -614,7 +618,6 @@ class SQLite3Database(Database, object):
                     if n == limit:
                         return
                     limit -= n
-
                 for row in self._select(keys + ['-' + sort], cmps,
                                         limit=limit, offset=offset,
                                         include_data=include_data,
@@ -675,58 +678,6 @@ class SQLite3Database(Database, object):
             cur.execute('INSERT INTO information VALUES (?, ?)',
                         ('metadata', md))
         con.commit()
-
-
-def _blob(array, pg=False):
-    """Convert array to blob/buffer object."""
-
-    if array is None:
-        return None
-    if len(array) == 0:
-        array = np.zeros(0)
-    if array.dtype == np.int64:
-        array = array.astype(np.int32)
-    if pg:
-        return array.tolist()
-    if not np.little_endian:
-        array = array.byteswap()
-    return buffer(np.ascontiguousarray(array))
-
-
-def _deblob(buf, dtype=float, shape=None, pg=False):
-    """Convert blob/buffer object to ndarray of correct dtype and shape.
-
-    (without creating an extra view)."""
-    if buf is None:
-        return None
-    if pg:
-        return np.array(buf, dtype=dtype)
-    if len(buf) == 0:
-        array = np.zeros(0, dtype)
-    else:
-        if len(buf) % 2 == 1:
-            # old psycopg2:
-            array = np.fromstring(str(buf)[1:].decode('hex'), dtype)
-        else:
-            array = np.frombuffer(buf, dtype)
-        if not np.little_endian:
-            array = array.byteswap()
-    if shape is not None:
-        array.shape = shape
-    return array
-
-
-def _encode(obj, pg=False):
-    if pg:
-        return encode(obj).replace('NaN', '"NaN"').replace('Infinity', '"Infinity"')
-    else:
-        return encode(obj)
-
-
-def _decode(txt, pg=False):
-    if pg:
-        txt = encode(txt).replace('"NaN"', 'NaN').replace('"Infinity"', 'Infinity')
-    return numpyfy(mydecode(txt))
 
 
 if __name__ == '__main__':
