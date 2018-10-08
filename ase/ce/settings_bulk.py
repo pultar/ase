@@ -123,6 +123,7 @@ class BulkCrystal(ClusterExpansionSetting):
             raise ValueError(msg)
 
         self.unit_cell = self._get_unit_cell()
+        self._tag_unit_cell()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
         self.dist_num_dec = dist_num_dec
 
@@ -321,6 +322,7 @@ class BulkSpacegroup(ClusterExpansionSetting):
         for x in range(self.num_basis):
             self.symbols.append(basis_elements[x][0])
         self.unit_cell = self._get_unit_cell()
+        self._tag_unit_cell()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
         self.dist_num_dec = dist_num_dec
 

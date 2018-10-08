@@ -51,18 +51,32 @@ class ClusterExpansionSetting:
             self.num_groups = len(self.grouped_basis)
             self._check_grouped_basis_elements()
 
-        if basis_function.lower() == 'sanchez':
-            from ase.ce.basis_function import Sanchez
-            bf_scheme = Sanchez(self.unique_elements)
-        elif basis_function.lower() == 'vandewalle':
-            from ase.ce.basis_function import VandeWalle
-            bf_scheme = VandeWalle(self.unique_elements)
+        from ase.ce.basis_function import BasisFunction
+        if isinstance(basis_function, BasisFunction):
+            if basis_function.unique_elements != self.unique_elements:
+                raise ValueError("Unique elements in BasiFunction instance "
+                                 "is different from the one in settings")
+            self.bf_scheme = basis_function
+        elif isinstance(basis_function, str):
+            if basis_function.lower() == 'sanchez':
+                from ase.ce.basis_function import Sanchez
+                self.bf_scheme = Sanchez(self.unique_elements)
+            elif basis_function.lower() == 'vandewalle':
+                from ase.ce.basis_function import VandeWalle
+                self.bf_scheme = VandeWalle(self.unique_elements)
+            elif basis_function.lower() == "sluiter":
+                from ase.ce.basis_function import Sluiter
+                self.bf_scheme = Sluiter(self.unique_elements)
+            else:
+                msg = "basis function scheme {} ".format(basis_function)
+                msg += "is not supported."
+                raise ValueError(msg)
         else:
-            msg = "basis function scheme {} ".format(basis_function)
-            msg += "is not supported."
-            raise ValueError(msg)
-        self.spin_dict = bf_scheme.spin_dict
-        self.basis_functions = bf_scheme.basis_functions
+            raise ValueError("basis_function has to be instance of "
+                             "BasisFunction or a string")
+
+        self.spin_dict = self.bf_scheme.spin_dict
+        self.basis_functions = self.bf_scheme.basis_functions
 
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
@@ -119,6 +133,11 @@ class ClusterExpansionSetting:
         if num_conc_var == 2:
             self.conc_ratio_min_2 = conc_ratio_min_2
             self.conc_ratio_max_2 = conc_ratio_max_2
+
+    def _tag_unit_cell(self):
+        """Add a tag to all the atoms in the unit cell to track the index."""
+        for atom in self.unit_cell:
+            atom.tag = atom.index
 
     def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
         cell = self.atoms_with_given_dim.get_cell().T
@@ -365,17 +384,23 @@ class ClusterExpansionSetting:
 
     def _group_indices_by_trans_symmetry(self):
         """Group indices by translational symmetry."""
-        indices = [a.index for a in self.atoms]
+        indices = [a.index for a in self.unit_cell]
         ref_indx = indices[0]
         # Group all the indices together if its atomic number and position
         # sequences are same
         indx_by_equiv = []
+        bkg_indx_unit_cell = []
+
+        if self.ignore_background_atoms:
+            bkg_indx_unit_cell = [a.index for a in self.unit_cell
+                                  if a.symbol in self.background_symbol]
+
         for i, indx in enumerate(indices):
-            if indx not in self.background_atom_indices:
+            if indx not in bkg_indx_unit_cell:
                 break
 
-        vec = self.atoms.get_distance(indices[i], ref_indx, vector=True)
-        shifted = self.atoms.copy()
+        vec = self.unit_cell.get_distance(indices[i], ref_indx, vector=True)
+        shifted = self.unit_cell.copy()
         shifted.translate(vec)
         shifted = wrap_and_sort_by_position(shifted)
         an = shifted.get_atomic_numbers()
@@ -385,10 +410,10 @@ class ClusterExpansionSetting:
         equiv_group_an = [an]
         equiv_group_pos = [pos]
         for indx in indices[i + 1:]:
-            if indx in self.background_atom_indices:
+            if indx in bkg_indx_unit_cell:
                 continue
-            vec = self.atoms.get_distance(indx, ref_indx, vector=True)
-            shifted = self.atoms.copy()
+            vec = self.unit_cell.get_distance(indx, ref_indx, vector=True)
+            shifted = self.unit_cell.copy()
             shifted.translate(vec)
             shifted = wrap_and_sort_by_position(shifted)
             an = shifted.get_atomic_numbers()
@@ -407,7 +432,22 @@ class ClusterExpansionSetting:
 
         for equiv_group in temp:
             indx_by_equiv.append(equiv_group)
-        return indx_by_equiv
+
+        # Now we have found the translational symmetry group of all the atoms
+        # in the unit cell, now put all the indices of self.atoms into the
+        # matrix based on the tag
+        indx_by_equiv_all_atoms = [[] for _ in range(len(indx_by_equiv))]
+        symm_group_of_tag = [-1 for _ in range(len(self.unit_cell))]
+        for gr_id, group in enumerate(indx_by_equiv):
+            for item in group:
+                symm_group_of_tag[item] = gr_id
+
+        for atom in self.atoms:
+            if atom.index in self.background_atom_indices:
+                continue
+            symm_gr = symm_group_of_tag[atom.tag]
+            indx_by_equiv_all_atoms[symm_gr].append(atom.index)
+        return indx_by_equiv_all_atoms
 
     def _get_grouped_basis_elements(self):
         """Group elements in the 'equivalent group' together in a list."""

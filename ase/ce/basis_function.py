@@ -7,7 +7,7 @@ class BasisFunction(object):
     """Base class for all Basis Functions."""
 
     def __init__(self, unique_elements):
-        self.unique_elements = unique_elements
+        self.unique_elements = sorted(unique_elements)
         self.num_unique_elements = len(unique_elements)
         if self.num_unique_elements < 2:
             raise ValueError("Systems must have more than 1 type of element.")
@@ -16,11 +16,20 @@ class BasisFunction(object):
 
     def get_spin_dict(self):
         """Get spin dictionary."""
-        pass
+        raise NotImplementedError("get_spin_dict has to be implemented in "
+                                  "derived classes!")
 
     def get_basis_functions(self):
         """Get basis function."""
-        pass
+        raise NotImplementedError("get_basis_functions has to be implemented "
+                                  "in derived classes!")
+
+    def customize_full_cluster_name(self, full_cluster_name):
+        """Function to customize the full cluster names.
+
+        Default is to do nothing
+        """
+        return full_cluster_name
 
 
 class Sanchez(BasisFunction):
@@ -170,25 +179,68 @@ class VandeWalle(BasisFunction):
         return bf_list
 
 
+def kronecker(i, j):
+    if i == j:
+        return 1
+    return 0
 
 
-# def kronecker(i, j):
-#     if i == j:
-#         return 1
-#     return 0
-#
-# spin_dict = {"Cu":0, "Au":1, "Zn":2}
-#
-# bf1 = kronecker(sigma, 0)
-# bf2 = kronecker(sigma, 1)
-# bf3 = kronecker(sigma, 2)
-#
-# def get_basis_function():
-#     basis_function = []
-#     basis_function.append(bf1)
-#
-#     for i in range(num_elemtns):
-#         for key, value in spin_dict:
-#
-#
-#     [{"Cu":1, "Au":0, "Zn":0}, {"Cu":0, "Au":1, "Zn":0}, {"Cu":0, "Au":0, "Zn":1}]
+class Sluiter(BasisFunction):
+    """Pseudo spin and basis function from
+
+    Zhang, Xi, and Marcel HF Sluiter.
+    Cluster expansions for thermodynamics and kinetics of multicomponent
+    alloys.
+    Journal of Phase Equilibria and Diffusion 37.1 (2016): 44-52.
+    """
+
+    def __init__(self, unique_elements, reduntant_element="auto"):
+        BasisFunction.__init__(self, unique_elements)
+        if reduntant_element == "auto":
+            self.reduntant_element = self.unique_elements[0]
+        else:
+            self.redundant_element = reduntant_element
+
+    def get_spin_dict(self):
+        """Define pseudospins for all consistuting elements."""
+        spin_values = list(range(self.num_unique_elements))
+        spin_dict = {}
+        for x in range(self.num_unique_elements):
+            spin_dict[self.unique_elements[x]] = spin_values[x]
+        return spin_dict
+
+    def get_basis_functions(self):
+        """Create orthonormal basis functions.
+
+        Due to the constraint that any site is occupied by exactly one element,
+        we only need to track N-1 species if there are N species.
+        Hence, the first element specified is redundant, and will not
+        have a basis function.
+        """
+        bf_list = []
+        num_bf = self.num_unique_elements
+        for bf_num in range(num_bf):
+            if self.unique_elements[bf_num] == self.redundant_element:
+                continue
+            new_bf = {symb: kronecker(i, bf_num)
+                      for i, symb in enumerate(self.unique_elements)}
+            bf_list.append(new_bf)
+        return bf_list
+
+    def _decoration2element(self, dec_num):
+        """Returns the element for which basis function is 1."""
+        bf = self.bf_list[dec_num]
+        for k, v in bf.items():
+            if v == 1:
+                return k
+        raise ValueError("Did not find any element where the value is 1.")
+
+    def customize_full_cluster_name(self, full_cluster_name):
+        """Translate the decoration number to element names."""
+        dec = full_cluster_name.rpartition("_")[1]
+        name = full_cluster_name.rpartition("_")[0]
+        new_dec = ""
+        for decnum in dec:
+            element = self._decoration2element(int(decnum))
+            new_dec += "{}".format(element)
+        return name + "_" + new_dec
