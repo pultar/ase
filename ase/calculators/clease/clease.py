@@ -14,7 +14,7 @@ class MovedIgnoredAtomError(Exception):
     pass
 
 
-class CLEASE(Calculator):
+class Clease(Calculator):
     """Class for calculating energy using CLEASE.
 
     Arguments
