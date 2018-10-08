@@ -11,69 +11,69 @@ tol = 1E-9
 def test_2(basis_function):
     """Test for 2 element case."""
     setting = CEBulk(crystalstructure="fcc",
-                          a=4.05,
-                          basis_elements=[['Au', 'Cu']],
-                          size=[3, 3, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0]],
-                                     "conc_ratio_max_1": [[0, 1]]},
-                          max_cluster_size=2,
-                          db_name=db_name,
-                          basis_function=basis_function)
+                     a=4.05,
+                     basis_elements=[['Au', 'Cu']],
+                     size=[3, 3, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0]],
+                                "conc_ratio_max_1": [[0, 1]]},
+                     max_cluster_size=2,
+                     db_name=db_name,
+                     basis_function=basis_function)
     check_orthonormal(setting)
 
 
 def test_3(basis_function):
     """Test for 3 element case."""
     setting = CEBulk(crystalstructure="fcc",
-                          a=4.05,
-                          basis_elements=[['Au', 'Cu', 'Ag']],
-                          size=[3, 3, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0, 0]],
-                                     "conc_ratio_max_1": [[0, 1, 0]]},
-                          max_cluster_size=2,
-                          db_name=db_name,
-                          basis_function=basis_function)
+                     a=4.05,
+                     basis_elements=[['Au', 'Cu', 'Ag']],
+                     size=[3, 3, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0, 0]],
+                                "conc_ratio_max_1": [[0, 1, 0]]},
+                     max_cluster_size=2,
+                     db_name=db_name,
+                     basis_function=basis_function)
     check_orthonormal(setting)
 
 
 def test_4(basis_function):
     """Test for 4 element case."""
     setting = CEBulk(crystalstructure="fcc",
-                          a=4.05,
-                          basis_elements=[['Au', 'Cu', 'Ag', 'Ni']],
-                          size=[3, 3, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0, 0, 0]],
-                                     "conc_ratio_max_1": [[0, 1, 0, 0]]},
-                          max_cluster_size=2,
-                          db_name=db_name,
-                          basis_function=basis_function)
+                     a=4.05,
+                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni']],
+                     size=[3, 3, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0]],
+                                "conc_ratio_max_1": [[0, 1, 0, 0]]},
+                     max_cluster_size=2,
+                     db_name=db_name,
+                     basis_function=basis_function)
     check_orthonormal(setting)
 
 
 def test_5(basis_function):
     """Test for 5 element case."""
     setting = CEBulk(crystalstructure="fcc",
-                          a=4.05,
-                          basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe']],
-                          size=[3, 3, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0]],
-                                     "conc_ratio_max_1": [[0, 1, 0, 0, 0]]},
-                          max_cluster_size=2,
-                          db_name=db_name,
-                          basis_function=basis_function)
+                     a=4.05,
+                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe']],
+                     size=[3, 3, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0]],
+                                "conc_ratio_max_1": [[0, 1, 0, 0, 0]]},
+                     max_cluster_size=2,
+                     db_name=db_name,
+                     basis_function=basis_function)
     check_orthonormal(setting)
 
 def test_6(basis_function):
     """Test for 6 element case."""
     setting = CEBulk(crystalstructure="fcc",
-                          a=4.05,
-                          basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe', 'H']],
-                          size=[3, 3, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0, 0]],
-                                     "conc_ratio_max_1": [[0, 1, 0, 0, 0, 0]]},
-                          max_cluster_size=2,
-                          db_name=db_name,
-                          basis_function=basis_function)
+                     a=4.05,
+                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe', 'H']],
+                     size=[3, 3, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0, 0]],
+                                "conc_ratio_max_1": [[0, 1, 0, 0, 0, 0]]},
+                     max_cluster_size=2,
+                     db_name=db_name,
+                     basis_function=basis_function)
     check_orthonormal(setting)
 
 

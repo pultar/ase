@@ -7,9 +7,9 @@ db_name = "test_corrfunc.db"
 conc_args = {"conc_ratio_min_1": [[1, 0]],
              "conc_ratio_max_1": [[0, 1]]}
 bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
-                         basis_elements=[["Au", "Cu", "Si"]], size=[4, 4, 4],
-                         conc_args=conc_args, db_name=db_name,
-                         max_cluster_size=3)
+                    basis_elements=[["Au", "Cu", "Si"]], size=[4, 4, 4],
+                    conc_args=conc_args, db_name=db_name,
+                    max_cluster_size=3)
 
 
 def test_trans_matrix():
