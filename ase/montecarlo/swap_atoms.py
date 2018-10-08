@@ -6,7 +6,7 @@ Simulated Annealing.
 from random import choice
 from copy import copy
 import numpy as np
-from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.ce import CEBulk, CECrystal
 from ase.atoms import Atoms
 
 
@@ -18,8 +18,8 @@ class SwapAtoms(object):
     """
 
     def __init__(self, setting):
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup, None)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+        if not isinstance(setting, (CEBulk, CECrystal, None)):
+            raise TypeError("setting must be CEBulk or CECrystal "
                             "object for Cluster Expansion. Set as *None* "
                             "otherwise.")
         self.setting = setting

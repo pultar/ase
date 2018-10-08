@@ -1,7 +1,7 @@
 """Test to ensure the orthnormality of the basis functions."""
 import os
 import itertools
-from ase.ce import BulkCrystal
+from ase.ce import CEBulk
 
 
 db_name = 'orthonormal_basis.db'
@@ -10,7 +10,7 @@ tol = 1E-9
 
 def test_2(basis_function):
     """Test for 2 element case."""
-    setting = BulkCrystal(crystalstructure="fcc",
+    setting = CEBulk(crystalstructure="fcc",
                           a=4.05,
                           basis_elements=[['Au', 'Cu']],
                           size=[3, 3, 3],
@@ -24,7 +24,7 @@ def test_2(basis_function):
 
 def test_3(basis_function):
     """Test for 3 element case."""
-    setting = BulkCrystal(crystalstructure="fcc",
+    setting = CEBulk(crystalstructure="fcc",
                           a=4.05,
                           basis_elements=[['Au', 'Cu', 'Ag']],
                           size=[3, 3, 3],
@@ -38,7 +38,7 @@ def test_3(basis_function):
 
 def test_4(basis_function):
     """Test for 4 element case."""
-    setting = BulkCrystal(crystalstructure="fcc",
+    setting = CEBulk(crystalstructure="fcc",
                           a=4.05,
                           basis_elements=[['Au', 'Cu', 'Ag', 'Ni']],
                           size=[3, 3, 3],
@@ -52,7 +52,7 @@ def test_4(basis_function):
 
 def test_5(basis_function):
     """Test for 5 element case."""
-    setting = BulkCrystal(crystalstructure="fcc",
+    setting = CEBulk(crystalstructure="fcc",
                           a=4.05,
                           basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe']],
                           size=[3, 3, 3],
@@ -65,7 +65,7 @@ def test_5(basis_function):
 
 def test_6(basis_function):
     """Test for 6 element case."""
-    setting = BulkCrystal(crystalstructure="fcc",
+    setting = CEBulk(crystalstructure="fcc",
                           a=4.05,
                           basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe', 'H']],
                           size=[3, 3, 3],

@@ -1037,16 +1037,16 @@ class ClusterExpansionSetting:
             Name of the file to store the necessary settings to initialize
             the Cluster Expansion calculations.
         """
-        class_types = ['BulkCrystal', 'BulkSpacegroup']
+        class_types = ['CEBulk', 'CECrystal']
         if type(self).__name__ not in class_types:
             raise NotImplementedError('Class {}'.format(type(self).__name__)
                                       + 'is not supported.')
 
         import json
-        if type(self).__name__ == 'BulkCrystal':
-            self.kwargs['classtype'] = 'BulkCrystal'
+        if type(self).__name__ == 'CEBulk':
+            self.kwargs['classtype'] = 'CEBulk'
         else:
-            self.kwargs['classtype'] = 'BulkSpacegroup'
+            self.kwargs['classtype'] = 'CECrystal'
         # Write keyword arguments necessary for initializing the class
         with open(filename, 'w') as outfile:
             json.dump(self.kwargs, outfile, indent=2)

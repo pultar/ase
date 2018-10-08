@@ -8,7 +8,7 @@ import multiprocessing as mp
 import logging as lg
 import json
 from ase.utils import basestring
-from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.ce import CEBulk, CECrystal
 from ase.ce.mp_logger import MultiprocessHandler
 from ase.db import connect
 
@@ -30,7 +30,7 @@ class Evaluate(object):
 
     Arguments:
     =========
-    setting: BulkCrystal or BulkSapcegroup object
+    setting: CEBulk or BulkSapcegroup object
 
     cluster_names: list
         Names of clusters to include in the evalutation.
@@ -63,8 +63,8 @@ class Evaluate(object):
                  penalty=None, parallel=False, num_core="all",
                  max_cluster_size=None, max_cluster_dia=None):
         """Initialize the Evaluate class."""
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            msg = "setting must be BulkCrystal or BulkSpacegroup object"
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            msg = "setting must be CEBulk or CECrystal object"
             raise TypeError(msg)
 
         self.setting = setting

@@ -5,7 +5,7 @@ from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv, pinv
 from ase.db import connect
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
+from ase.ce import CEBulk, CECrystal, CorrFunction
 from ase.ce.tools import wrap_and_sort_by_position
 
 
@@ -17,7 +17,7 @@ class ProbeStructure(object):
 
     Arguments:
     =========
-    setting: BulkCrystal or BulkSapcegroup object
+    setting: CEBulk or BulkSapcegroup object
 
     atoms: Atoms object
         initial structure to start the simulated annealing
@@ -54,8 +54,8 @@ class ProbeStructure(object):
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
                  final_temp=None, num_temp=5, num_steps=10000,
                  approx_mean_var=False):
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
         from ase.calculators.cluster_expansion import ClusterExpansion
         self.setting = setting

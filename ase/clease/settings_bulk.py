@@ -1,7 +1,7 @@
 """Definitions of Cluster Expansion settings for bulk.
 
-Cluster Expansion can be peformed on bulk material using either BulkCrystal
-or BulkSpacegroup class.
+Cluster Expansion can be peformed on bulk material using either CEBulk
+or CECrystal class.
 """
 import numpy as np
 from ase.build import bulk
@@ -11,7 +11,7 @@ from ase.ce.settings import ClusterExpansionSetting
 from copy import deepcopy
 
 
-class BulkCrystal(ClusterExpansionSetting):
+class CEBulk(ClusterExpansionSetting):
     """Store CE settings on bulk materials defined based on crystal structures.
 
     Arguments:
@@ -218,12 +218,12 @@ class BulkCrystal(ClusterExpansionSetting):
         with open(filename, 'r') as infile:
             kwargs = json.load(infile)
         classtype = kwargs.pop("classtype")
-        if classtype != 'BulkCrystal':
-            raise TypeError('Loaded setting file is not for BulkCrystal class')
-        return BulkCrystal(**kwargs)
+        if classtype != 'CEBulk':
+            raise TypeError('Loaded setting file is not for CEBulk class')
+        return CEBulk(**kwargs)
 
 
-class BulkSpacegroup(ClusterExpansionSetting):
+class CECrystal(ClusterExpansionSetting):
     """Store CE settings on bulk materials defined based on space group.
 
     Arguments:
@@ -413,6 +413,6 @@ class BulkSpacegroup(ClusterExpansionSetting):
         with open(filename, 'r') as infile:
             kwargs = json.load(infile)
         classtype = kwargs.pop("classtype")
-        if classtype != 'BulkSpacegroup':
-            raise TypeError('Loaded setting file is not for BulkCrystal class')
-        return BulkCrystal(**kwargs)
+        if classtype != 'CECrystal':
+            raise TypeError('Loaded setting file is not for CEBulk class')
+        return CEBulk(**kwargs)
