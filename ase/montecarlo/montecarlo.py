@@ -5,7 +5,7 @@ from ase.utils import basestring
 from ase.units import kB
 from ase.montecarlo.swap_atoms import SwapAtoms
 from ase.atoms import Atoms
-from ase.ce import BulkCrystal, BulkSpacegroup
+from ase.clease import CEBulk, CECrystal
 
 
 class MonteCarlo(object):
@@ -41,8 +41,8 @@ class MonteCarlo(object):
             raise TypeError('Passed argument should be Atoms object')
         self.atoms = atoms
 
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup, None)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+        if not isinstance(setting, (CEBulk, CECrystal, None)):
+            raise TypeError("setting must be CEBulk or CECrystal "
                             "object for Cluster Expansion. Set as *None* "
                             "otherwise.")
         self.setting = setting
@@ -114,7 +114,7 @@ class MonteCarlo(object):
             swap.swap_by_indices(self.atoms, swapped_indices[0],
                                  swapped_indices[1])
             # CE calculator needs to call a *restore* method
-            if self.atoms.calc.__class__.__name__ == 'ClusterExpansion':
+            if self.atoms.calc.__class__.__name__ == 'Clease':
                 self.atoms.calc.restore()
 
         self.nsteps += 1

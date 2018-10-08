@@ -1,4 +1,4 @@
-"""Test to initiatialize CE using a BulkCrystal.
+"""Test to initiatialize CE using a CEBulk.
 
 1. Initialize the CE
 2. Add a few structures
@@ -7,8 +7,8 @@
 """
 
 import os
-from ase.ce import BulkCrystal, GenerateStructures, Evaluate
-from ase.ce.newStruct import MaxAttemptReachedError
+from ase.clease import CEBulk, GenerateStructures, Evaluate
+from ase.clease.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 
@@ -30,7 +30,7 @@ def test_binary_system():
     db_name = "test_crystal.db"
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
-    bc_setting = BulkCrystal(crystalstructure="fcc", a=4.05,
+    bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
                              basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
                              conc_args=conc_args, db_name=db_name)
 
@@ -78,7 +78,7 @@ def test_grouped_basis_supercell():
     # ------------------------------- #
     # initial_pool + probe_structures #
     # ------------------------------- #
-    setting = BulkCrystal(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
+    setting = CEBulk(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
                           crystalstructure="rocksalt",
                           a=4.0,
                           size=[2, 2, 1],
@@ -115,7 +115,7 @@ def test_grouped_basis_supercell():
     # ------------------------------- #
     # initial_pool + probe_structures #
     # ------------------------------- #
-    setting = BulkCrystal(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
+    setting = CEBulk(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
                           crystalstructure="fluorite",
                           a=4.0,
                           size=[2, 2, 3],
@@ -157,7 +157,7 @@ def test_grouped_basis_supercell():
     # # ---------------------------------- #
     # # initial_pool + probe_structures    #
     # # ---------------------------------- #
-    setting = BulkCrystal(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
+    setting = CEBulk(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
                           crystalstructure="fluorite",
                           a=4.0,
                           size=[2, 2, 2],

@@ -3,10 +3,10 @@ import os
 import random
 import numpy as np
 
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
-from ase.ce.probestructure import ProbeStructure
-from ase.ce.tools import wrap_and_sort_by_position
-from ase.ce.structure_comparator import SymmetryEquivalenceCheck
+from ase.clease import CEBulk, CECrystal, CorrFunction
+from ase.clease.probestructure import ProbeStructure
+from ase.clease.tools import wrap_and_sort_by_position
+from ase.clease.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
@@ -26,7 +26,7 @@ class GenerateStructures(object):
 
     Arguments:
     =========
-    setting: BulkCrystal or BulkSapcegroup object
+    setting: CEBulk or BulkSapcegroup object
 
     generation_number: int
         a generation number to be assigned to the newly generated structure.
@@ -36,8 +36,8 @@ class GenerateStructures(object):
     """
 
     def __init__(self, setting, generation_number=None, struct_per_gen=None):
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            msg = "setting must be BulkCrystal or BulkSpacegroup object"
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            msg = "setting must be CEBulk or CECrystal object"
             raise TypeError(msg)
         self.setting = setting
         self.db = connect(setting.db_name)

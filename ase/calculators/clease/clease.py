@@ -5,8 +5,8 @@ import numpy as np
 from ase.utils import basestring
 from ase.atoms import Atoms
 from ase.calculators.calculator import Calculator
-from ase.ce import CorrFunction, BulkCrystal, BulkSpacegroup
-from ase.ce.corrFunc import equivalent_deco
+from ase.clease import CorrFunction, CEBulk, CECrystal
+from ase.clease.corrFunc import equivalent_deco
 
 
 class MovedIgnoredAtomError(Exception):
@@ -14,12 +14,12 @@ class MovedIgnoredAtomError(Exception):
     pass
 
 
-class ClusterExpansion(Calculator):
-    """Class for calculating energy using Cluster Expansion.
+class Clease(Calculator):
+    """Class for calculating energy using CLEASE.
 
     Arguments
     =========
-    setting: BulkCrystal or BulkSapcegroup object
+    setting: CEBulk or BulkSapcegroup object
 
     cluster_name_eci: dictionary of list of tuples containing
                       cluster names and ECI
@@ -38,8 +38,8 @@ class ClusterExpansion(Calculator):
                  logfile=None):
         Calculator.__init__(self)
 
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            msg = "setting must be BulkCrystal or BulkSpacegroup object."
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            msg = "setting must be CEBulk or CECrystal object."
             raise TypeError(msg)
         self.setting = setting
         self.CF = CorrFunction(setting)

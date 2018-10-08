@@ -1,12 +1,12 @@
-"""Unit tests for the ClusterExpansion calculator."""
+"""Unit tests for the Clease calculator."""
 import os
 from random import randint
 import numpy as np
-from ase.calculators.cluster_expansion import ClusterExpansion
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
+from ase.calculators.clease import Clease
+from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.build import bulk
 from ase.spacegroup import crystal
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.clease.tools import wrap_and_sort_by_position
 
 
 def generate_ex_eci(setting):
@@ -19,7 +19,7 @@ def generate_ex_eci(setting):
 
 def get_binary():
     """Return a simple binary test structure."""
-    bc_setting = BulkCrystal(crystalstructure="fcc",
+    bc_setting = CEBulk(crystalstructure="fcc",
                              a=4.05,
                              basis_elements=[["Au", "Cu"]],
                              size=[3, 3, 3],
@@ -37,7 +37,7 @@ def get_binary():
 
 def get_ternary():
     """Return a ternary test structure."""
-    bc_setting = BulkCrystal(crystalstructure="fcc",
+    bc_setting = CEBulk(crystalstructure="fcc",
                              a=4.05,
                              basis_elements=[["Au", "Cu", "Zn"]],
                              size=[3, 3, 3],
@@ -58,7 +58,7 @@ def get_ternary():
 
 def get_rocksalt():
     """Test rocksalt where passed atoms with background_atoms."""
-    setting = BulkCrystal(basis_elements=[['Li', 'X', 'V'],
+    setting = CEBulk(basis_elements=[['Li', 'X', 'V'],
                                           ['O']],
                           crystalstructure='rocksalt',
                           a=4.05,
@@ -90,7 +90,7 @@ def get_spacegroup():
     cellpar = [6.25, 7.4, 3.83, 90, 90, 90]
     size = [2, 2, 2]
 
-    setting = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
+    setting = CECrystal(basis_elements=[['O', 'X'], ['O', 'X'],
                                              ['O', 'X'], ['Ta']],
                              basis=basis,
                              spacegroup=spacegroup,
@@ -114,14 +114,14 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
                                       fixed=[]):
     """Perform swaps and check that the correlation functions match.
 
-    The comparison is done by check that each CF in the ClusterExpansion
+    The comparison is done by check that each CF in the Clease
     calculator is the same as the ones obtained by direct calculation.
     """
     cf = CorrFunction(setting)
 
     eci = generate_ex_eci(setting)
 
-    calc = ClusterExpansion(setting, cluster_name_eci=eci)
+    calc = Clease(setting, cluster_name_eci=eci)
     atoms.set_calculator(calc)
 
     for _ in range(n_trial_configs):

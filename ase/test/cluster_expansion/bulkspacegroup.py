@@ -1,4 +1,4 @@
-"""Test to initiatialize CE using a BulkSpacegroup.
+"""Test to initiatialize CE using a CECrystal.
 
 1. Initialize the CE
 2. Add a few structures
@@ -7,8 +7,8 @@
 """
 import os
 import json
-from ase.ce import BulkSpacegroup, GenerateStructures, CorrFunction
-from ase.ce.newStruct import MaxAttemptReachedError
+from ase.clease import CECrystal, GenerateStructures, CorrFunction
+from ase.clease.newStruct import MaxAttemptReachedError
 from ase.db import connect
 from ase.test.cluster_expansion.reference_corr_funcs import all_cf
 
@@ -49,7 +49,7 @@ def test_spgroup_217():
     basis_elements = [["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"]]
 
     # Test with grouped basis
-    bsg = BulkSpacegroup(basis_elements=basis_elements,
+    bsg = CECrystal(basis_elements=basis_elements,
                          basis=basis,
                          spacegroup=217,
                          cellpar=cellpar,
@@ -81,7 +81,7 @@ def test_two_grouped_basis():
     # ---------------------------------- #
     # 2 grouped_basis                    #
     # ---------------------------------- #
-    bsg = BulkSpacegroup(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
+    bsg = CECrystal(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
                                          ['O', 'F']],
                          basis=[(0.00, 0.00, 0.00),
                                 (1. / 3, 2. / 3, 0.00),
@@ -127,7 +127,7 @@ def test_two_grouped_basis_probe_structure():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['O', 'X'],
+    bsg = CECrystal(basis_elements=[['O', 'X'], ['O', 'X'],
                                          ['O', 'X'], ['Ta']],
                          basis=[(0., 0., 0.),
                                 (0.3894, 0.1405, 0.),
@@ -193,7 +193,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    bsg = BulkSpacegroup(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
+    bsg = CECrystal(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
                                          ['O', 'X']],
                          basis=[(0., 0., 0.),
                                 (0.2244, 0.3821, 0.),
@@ -262,7 +262,7 @@ def test_narrow_angle_crystal():
     """
     db_name = "test_spacegroup.db"
 
-    bsg = BulkSpacegroup(basis_elements=[['Mg', 'Si']],
+    bsg = CECrystal(basis_elements=[['Mg', 'Si']],
                          basis=[(0.0, 0.0, 0.0)],
                          spacegroup=225,
                          cellpar=[4.0, 4.0, 4.0, 50.0, 40.0, 15.0],

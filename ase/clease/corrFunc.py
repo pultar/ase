@@ -1,8 +1,8 @@
 """Module for calculating correlation functions."""
 import numpy as np
 from ase.atoms import Atoms
-from ase.ce import BulkCrystal, BulkSpacegroup
-from ase.ce.tools import wrap_and_sort_by_position, equivalent_deco
+from ase.clease import CEBulk, CECrystal
+from ase.clease.tools import wrap_and_sort_by_position, equivalent_deco
 from ase.db import connect
 import multiprocessing as mp
 
@@ -29,8 +29,8 @@ class CorrFunction(object):
     """
 
     def __init__(self, setting, parallel=False, num_core="all"):
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
         self.setting = setting
 

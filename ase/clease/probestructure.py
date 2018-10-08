@@ -5,8 +5,8 @@ from random import choice, getrandbits
 import numpy as np
 from numpy.linalg import inv, pinv
 from ase.db import connect
-from ase.ce import BulkCrystal, BulkSpacegroup, CorrFunction
-from ase.ce.tools import wrap_and_sort_by_position
+from ase.clease import CEBulk, CECrystal, CorrFunction
+from ase.clease.tools import wrap_and_sort_by_position
 
 
 class ProbeStructure(object):
@@ -17,7 +17,7 @@ class ProbeStructure(object):
 
     Arguments:
     =========
-    setting: BulkCrystal or BulkSapcegroup object
+    setting: CEBulk or BulkSapcegroup object
 
     atoms: Atoms object
         initial structure to start the simulated annealing
@@ -54,10 +54,10 @@ class ProbeStructure(object):
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
                  final_temp=None, num_temp=5, num_steps=10000,
                  approx_mean_var=False):
-        if not isinstance(setting, (BulkCrystal, BulkSpacegroup)):
-            raise TypeError("setting must be BulkCrystal or BulkSpacegroup "
+        if not isinstance(setting, (CEBulk, CECrystal)):
+            raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
-        from ase.calculators.cluster_expansion import ClusterExpansion
+        from ase.calculators.clease import Clease
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
@@ -74,7 +74,7 @@ class ProbeStructure(object):
                              " atoms cannot be found in the conc_matrix")
 
         eci = {name: 1. for name in self.cluster_names}
-        self.calc = ClusterExpansion(self.setting, cluster_name_eci=eci)
+        self.calc = Clease(self.setting, cluster_name_eci=eci)
         self.supercell.set_calculator(self.calc)
 
         self.approx_mean_var = approx_mean_var
