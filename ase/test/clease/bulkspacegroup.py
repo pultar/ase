@@ -50,15 +50,15 @@ def test_spgroup_217():
 
     # Test with grouped basis
     bsg = CECrystal(basis_elements=basis_elements,
-                         basis=basis,
-                         spacegroup=217,
-                         cellpar=cellpar,
-                         conc_args=conc_args,
-                         max_cluster_size=3,
-                         db_name=db_name,
-                         size=[1, 1, 1],
-                         grouped_basis=[[0, 1, 2, 3]],
-                         max_cluster_dia=3.5)
+                    basis=basis,
+                    spacegroup=217,
+                    cellpar=cellpar,
+                    conc_args=conc_args,
+                    max_cluster_size=3,
+                    db_name=db_name,
+                    size=[1, 1, 1],
+                    grouped_basis=[[0, 1, 2, 3]],
+                    max_cluster_dia=3.5)
     assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
     atoms[0].symbol = "Mg"
@@ -82,19 +82,19 @@ def test_two_grouped_basis():
     # 2 grouped_basis                    #
     # ---------------------------------- #
     bsg = CECrystal(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
-                                         ['O', 'F']],
-                         basis=[(0.00, 0.00, 0.00),
-                                (1. / 3, 2. / 3, 0.00),
-                                (1. / 3, 0.00, 0.25)],
-                         spacegroup=167,
-                         cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
-                         size=[1, 1, 1],
-                         conc_args={"conc_ratio_min_1": [[0, 2, 1], [2, 1]],
-                                    "conc_ratio_max_1": [[2, 0, 1], [2, 1]]},
-                         db_name=db_name,
-                         grouped_basis=[[0, 1], [2]],
-                         max_cluster_size=3,
-                         max_cluster_dia=2.5)
+                                    ['O', 'F']],
+                    basis=[(0.00, 0.00, 0.00),
+                           (1. / 3, 2. / 3, 0.00),
+                           (1. / 3, 0.00, 0.25)],
+                    spacegroup=167,
+                    cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
+                    size=[1, 1, 1],
+                    conc_args={"conc_ratio_min_1": [[0, 2, 1], [2, 1]],
+                               "conc_ratio_max_1": [[2, 0, 1], [2, 1]]},
+                    db_name=db_name,
+                    grouped_basis=[[0, 1], [2]],
+                    max_cluster_size=3,
+                    max_cluster_dia=2.5)
     assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
     assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
     assert len(bsg.basis_functions) == 4
@@ -128,20 +128,20 @@ def test_two_grouped_basis_probe_structure():
     # initial_pool + probe_structures    #
     # ---------------------------------- #
     bsg = CECrystal(basis_elements=[['O', 'X'], ['O', 'X'],
-                                         ['O', 'X'], ['Ta']],
-                         basis=[(0., 0., 0.),
-                                (0.3894, 0.1405, 0.),
-                                (0.201, 0.3461, 0.5),
-                                (0.2244, 0.3821, 0.)],
-                         spacegroup=55,
-                         cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
-                         size=[1, 2, 2],
-                         conc_args={"conc_ratio_min_1": [[5, 0], [2]],
-                                    "conc_ratio_max_1": [[4, 1], [2]]},
-                         db_name=db_name,
-                         max_cluster_size=3,
-                         max_cluster_dia=3.0,
-                         grouped_basis=[[0, 1, 2], [3]])
+                                    ['O', 'X'], ['Ta']],
+                    basis=[(0., 0., 0.),
+                           (0.3894, 0.1405, 0.),
+                           (0.201, 0.3461, 0.5),
+                           (0.2244, 0.3821, 0.)],
+                    spacegroup=55,
+                    cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
+                    size=[1, 2, 2],
+                    conc_args={"conc_ratio_min_1": [[5, 0], [2]],
+                               "conc_ratio_max_1": [[4, 1], [2]]},
+                    db_name=db_name,
+                    max_cluster_size=3,
+                    max_cluster_dia=3.0,
+                    grouped_basis=[[0, 1, 2], [3]])
     assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
     assert len(bsg.basis_functions) == 2
@@ -194,21 +194,21 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     # initial_pool + probe_structures    #
     # ---------------------------------- #
     bsg = CECrystal(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
-                                         ['O', 'X']],
-                         basis=[(0., 0., 0.),
-                                (0.2244, 0.3821, 0.),
-                                (0.3894, 0.1405, 0.),
-                                (0.201, 0.3461, 0.5)],
-                         spacegroup=55,
-                         cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
-                         size=[2, 2, 3],
-                         conc_args={"conc_ratio_min_1": [[2], [5, 0]],
-                                    "conc_ratio_max_1": [[2], [4, 1]]},
-                         db_name=db_name,
-                         max_cluster_size=3,
-                         max_cluster_dia=3.0,
-                         grouped_basis=[[1], [0, 2, 3]],
-                         ignore_background_atoms=True)
+                                    ['O', 'X']],
+                    basis=[(0., 0., 0.),
+                           (0.2244, 0.3821, 0.),
+                           (0.3894, 0.1405, 0.),
+                           (0.201, 0.3461, 0.5)],
+                    spacegroup=55,
+                    cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
+                    size=[2, 2, 3],
+                    conc_args={"conc_ratio_min_1": [[2], [5, 0]],
+                               "conc_ratio_max_1": [[2], [4, 1]]},
+                    db_name=db_name,
+                    max_cluster_size=3,
+                    max_cluster_dia=3.0,
+                    grouped_basis=[[1], [0, 2, 3]],
+                    ignore_background_atoms=True)
     assert bsg.unique_elements == ['O', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'X': -1.0}
     assert bsg.basis_elements == [['O', 'X'], ['O', 'X'], ['O', 'X']]
@@ -263,16 +263,15 @@ def test_narrow_angle_crystal():
     db_name = "test_spacegroup.db"
 
     bsg = CECrystal(basis_elements=[['Mg', 'Si']],
-                         basis=[(0.0, 0.0, 0.0)],
-                         spacegroup=225,
-                         cellpar=[4.0, 4.0, 4.0, 50.0, 40.0, 15.0],
-                         conc_args={"conc_ratio_min_1": [[1, 0]],
-                                    "conc_ratio_max_1": [[0, 1]]},
-                         db_name=db_name,
-                         size=[2, 2, 1],
-                         max_cluster_size=3,
-                         max_cluster_dia=1.05
-                         )
+                    basis=[(0.0, 0.0, 0.0)],
+                    spacegroup=225,
+                    cellpar=[4.0, 4.0, 4.0, 50.0, 40.0, 15.0],
+                    conc_args={"conc_ratio_min_1": [[1, 0]],
+                               "conc_ratio_max_1": [[0, 1]]},
+                    db_name=db_name,
+                    size=[2, 2, 1],
+                    max_cluster_size=3,
+                    max_cluster_dia=1.05)
 
     assert len(bsg.index_by_trans_symm) == 1
 

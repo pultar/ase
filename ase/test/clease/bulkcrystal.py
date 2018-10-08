@@ -31,8 +31,8 @@ def test_binary_system():
     conc_args = {"conc_ratio_min_1": [[1, 0]],
                  "conc_ratio_max_1": [[0, 1]]}
     bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
-                             basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
-                             conc_args=conc_args, db_name=db_name)
+                        basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
+                        conc_args=conc_args, db_name=db_name)
 
     struct_generator = GenerateStructures(bc_setting, struct_per_gen=3)
     struct_generator.generate_initial_pool()
@@ -79,15 +79,15 @@ def test_grouped_basis_supercell():
     # initial_pool + probe_structures #
     # ------------------------------- #
     setting = CEBulk(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
-                          crystalstructure="rocksalt",
-                          a=4.0,
-                          size=[2, 2, 1],
-                          conc_args={"conc_ratio_min_1": [[1, 0]],
-                                     "conc_ratio_max_1": [[0, 1]]},
-                          db_name=db_name,
-                          max_cluster_size=3,
-                          max_cluster_dia=4.,
-                          grouped_basis=[[0, 1]])
+                     crystalstructure="rocksalt",
+                     a=4.0,
+                     size=[2, 2, 1],
+                     conc_args={"conc_ratio_min_1": [[1, 0]],
+                                "conc_ratio_max_1": [[0, 1]]},
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.,
+                     grouped_basis=[[0, 1]])
     assert setting.num_grouped_basis == 1
     assert len(setting.index_by_grouped_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
@@ -116,15 +116,15 @@ def test_grouped_basis_supercell():
     # initial_pool + probe_structures #
     # ------------------------------- #
     setting = CEBulk(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
-                          crystalstructure="fluorite",
-                          a=4.0,
-                          size=[2, 2, 3],
-                          conc_args={"conc_ratio_min_1": [[1, 0], [2]],
-                                     "conc_ratio_max_1": [[0, 1], [2]]},
-                          db_name=db_name,
-                          max_cluster_size=2,
-                          max_cluster_dia=4.,
-                          grouped_basis=[[0], [1, 2]])
+                     crystalstructure="fluorite",
+                     a=4.0,
+                     size=[2, 2, 3],
+                     conc_args={"conc_ratio_min_1": [[1, 0], [2]],
+                                "conc_ratio_max_1": [[0, 1], [2]]},
+                     db_name=db_name,
+                     max_cluster_size=2,
+                     max_cluster_dia=4.,
+                     grouped_basis=[[0], [1, 2]])
     fam_members = get_members_of_family(setting, "c2_4p000_7")
     assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
     assert len(fam_members[1]) == 6
@@ -158,16 +158,16 @@ def test_grouped_basis_supercell():
     # # initial_pool + probe_structures    #
     # # ---------------------------------- #
     setting = CEBulk(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
-                          crystalstructure="fluorite",
-                          a=4.0,
-                          size=[2, 2, 2],
-                          conc_args={"conc_ratio_min_1": [[1], [2, 0]],
-                                     "conc_ratio_max_1": [[1], [0, 2]]},
-                          db_name=db_name,
-                          max_cluster_size=3,
-                          max_cluster_dia=4.,
-                          grouped_basis=[[0], [1, 2]],
-                          ignore_background_atoms=True)
+                     crystalstructure="fluorite",
+                     a=4.0,
+                     size=[2, 2, 2],
+                     conc_args={"conc_ratio_min_1": [[1], [2, 0]],
+                                "conc_ratio_max_1": [[1], [0, 2]]},
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.,
+                     grouped_basis=[[0], [1, 2]],
+                     ignore_background_atoms=True)
     # print(setting.supercell_scale_factor)
     assert setting.num_grouped_basis == 1
     assert len(setting.index_by_grouped_basis) == 1
@@ -191,6 +191,7 @@ def test_grouped_basis_supercell():
         print(str(exc))
 
     os.remove(db_name)
+
 
 test_binary_system()
 test_grouped_basis_supercell()

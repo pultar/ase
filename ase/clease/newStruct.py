@@ -366,8 +366,7 @@ class GenerateStructures(object):
         if conc2 is not None:
             conc2 = round(conc2, 3)
             cond.append(('conc2', '=', conc2))
-        # find if there is a match
-        match = False
+
         to_prim = True
         try:
             __import__('spglib')
