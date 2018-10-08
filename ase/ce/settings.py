@@ -53,6 +53,9 @@ class ClusterExpansionSetting:
 
         from ase.ce.basis_function import BasisFunction
         if isinstance(basis_function, BasisFunction):
+            if basis_function.unique_elements != self.unique_elements:
+                raise ValueError("Unique elements in BasiFunction instance "
+                                 "is different from the one in settings")
             self.bf_scheme = basis_function
         elif isinstance(basis_function, str):
             if basis_function.lower() == 'sanchez':

@@ -7,7 +7,7 @@ class BasisFunction(object):
     """Base class for all Basis Functions."""
 
     def __init__(self, unique_elements):
-        self.unique_elements = unique_elements
+        self.unique_elements = sorted(unique_elements)
         self.num_unique_elements = len(unique_elements)
         if self.num_unique_elements < 2:
             raise ValueError("Systems must have more than 1 type of element.")
@@ -24,8 +24,8 @@ class BasisFunction(object):
         raise NotImplementedError("get_basis_functions has to be implemented "
                                   "in derived classes!")
 
-    def translate_full_cluster_name(self, full_cluster_name):
-        """Function to translate the full cluster names.
+    def customize_full_cluster_name(self, full_cluster_name):
+        """Function to customize the full cluster names.
 
         Default is to do nothing
         """
@@ -189,13 +189,17 @@ class Sluiter(BasisFunction):
     """Pseudo spin and basis function from
 
     Zhang, Xi, and Marcel HF Sluiter.
-    "Cluster expansions for thermodynamics and kinetics of
-    multicomponent alloys."
+    Cluster expansions for thermodynamics and kinetics of multicomponent
+    alloys.
     Journal of Phase Equilibria and Diffusion 37.1 (2016): 44-52.
     """
 
-    def __init__(self, unique_elements):
+    def __init__(self, unique_elements, reduntant_element="auto"):
         BasisFunction.__init__(self, unique_elements)
+        if reduntant_element == "auto":
+            self.reduntant_element = self.unique_elements[0]
+        else:
+            self.redundant_element = reduntant_element
 
     def get_spin_dict(self):
         """Define pseudospins for all consistuting elements."""
@@ -207,7 +211,7 @@ class Sluiter(BasisFunction):
 
     def get_basis_functions(self):
         """Create orthonormal basis functions.
-        
+
         Due to the constraint that any site is occupied by exactly one element,
         we only need to track N-1 species if there are N species.
         Hence, the first element specified is redundant, and will not
@@ -215,35 +219,28 @@ class Sluiter(BasisFunction):
         """
         bf_list = []
         num_bf = self.num_unique_elements
-        for bf_num in range(1, num_bf):
+        for bf_num in range(num_bf):
+            if self.unique_elements[bf_num] == self.redundant_element:
+                continue
             new_bf = {symb: kronecker(i, bf_num)
                       for i, symb in enumerate(self.unique_elements)}
             bf_list.append(new_bf)
         return bf_list
 
-    def translate_full_cluster_name(self, full_cluster_name):
+    def _decoration2element(self, dec_num):
+        """Returns the element for which basis function is 1."""
+        bf = self.bf_list[dec_num]
+        for k, v in bf.items():
+            if v == 1:
+                return k
+        raise ValueError("Did not find any element where the value is 1.")
+
+    def customize_full_cluster_name(self, full_cluster_name):
         """Translate the decoration number to element names."""
         dec = full_cluster_name.rpartition("_")[1]
         name = full_cluster_name.rpartition("_")[0]
         new_dec = ""
         for decnum in dec:
-            new_dec += "{}".format(self.unique_elements[int(decnum)])
+            element = self._decoration2element(int(decnum))
+            new_dec += "{}".format(element)
         return name + "_" + new_dec
-
-#
-#
-# spin_dict = {"Cu":0, "Au":1, "Zn":2}
-#
-# bf1 = kronecker(sigma, 0)
-# bf2 = kronecker(sigma, 1)
-# bf3 = kronecker(sigma, 2)
-#
-# def get_basis_function():
-#     basis_function = []
-#     basis_function.append(bf1)
-#
-#     for i in range(num_elemtns):
-#         for key, value in spin_dict:
-#
-#
-#     [{"Cu":1, "Au":0, "Zn":0}, {"Cu":0, "Au":1, "Zn":0}, {"Cu":0, "Au":0, "Zn":1}]
