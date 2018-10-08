@@ -114,7 +114,7 @@ class MonteCarlo(object):
             swap.swap_by_indices(self.atoms, swapped_indices[0],
                                  swapped_indices[1])
             # CE calculator needs to call a *restore* method
-            if self.atoms.calc.__class__.__name__ == 'ClusterExpansion':
+            if self.atoms.calc.__class__.__name__ == 'Clease':
                 self.atoms.calc.restore()
 
         self.nsteps += 1

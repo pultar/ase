@@ -57,7 +57,7 @@ class ProbeStructure(object):
         if not isinstance(setting, (CEBulk, CECrystal)):
             raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
-        from ase.calculators.cluster_expansion import ClusterExpansion
+        from ase.calculators.cluster_expansion import Clease
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
@@ -74,7 +74,7 @@ class ProbeStructure(object):
                              " atoms cannot be found in the conc_matrix")
 
         eci = {name: 1. for name in self.cluster_names}
-        self.calc = ClusterExpansion(self.setting, cluster_name_eci=eci)
+        self.calc = Clease(self.setting, cluster_name_eci=eci)
         self.supercell.set_calculator(self.calc)
 
         self.approx_mean_var = approx_mean_var

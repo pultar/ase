@@ -1,8 +1,8 @@
-"""Unit tests for the ClusterExpansion calculator."""
+"""Unit tests for the Clease calculator."""
 import os
 from random import randint
 import numpy as np
-from ase.calculators.cluster_expansion import ClusterExpansion
+from ase.calculators.cluster_expansion import Clease
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.build import bulk
 from ase.spacegroup import crystal
@@ -114,14 +114,14 @@ def test_update_correlation_functions(setting, atoms, n_trial_configs=20,
                                       fixed=[]):
     """Perform swaps and check that the correlation functions match.
 
-    The comparison is done by check that each CF in the ClusterExpansion
+    The comparison is done by check that each CF in the Clease
     calculator is the same as the ones obtained by direct calculation.
     """
     cf = CorrFunction(setting)
 
     eci = generate_ex_eci(setting)
 
-    calc = ClusterExpansion(setting, cluster_name_eci=eci)
+    calc = Clease(setting, cluster_name_eci=eci)
     atoms.set_calculator(calc)
 
     for _ in range(n_trial_configs):

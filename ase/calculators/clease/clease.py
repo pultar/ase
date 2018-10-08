@@ -14,8 +14,8 @@ class MovedIgnoredAtomError(Exception):
     pass
 
 
-class ClusterExpansion(Calculator):
-    """Class for calculating energy using Cluster Expansion.
+class CLEASE(Calculator):
+    """Class for calculating energy using CLEASE.
 
     Arguments
     =========
