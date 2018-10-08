@@ -2,7 +2,7 @@
 import os
 from random import randint
 import numpy as np
-from ase.calculators.cluster_expansion import Clease
+from ase.calculators.clease import Clease
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.build import bulk
 from ase.spacegroup import crystal

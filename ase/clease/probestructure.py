@@ -57,7 +57,7 @@ class ProbeStructure(object):
         if not isinstance(setting, (CEBulk, CECrystal)):
             raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
-        from ase.calculators.cluster_expansion import Clease
+        from ase.calculators.clease import Clease
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
