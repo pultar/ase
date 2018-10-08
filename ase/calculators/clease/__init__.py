@@ -1,3 +1,3 @@
-from .clease import CLEASE, MovedIgnoredAtomError
+from .clease import Clease, MovedIgnoredAtomError
 
-__all__ = ['CLEASE', 'MovedIgnoredAtomError']
+__all__ = ['Clease', 'MovedIgnoredAtomError']
