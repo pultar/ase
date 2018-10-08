@@ -257,7 +257,7 @@ class Evaluate(object):
             regularization parameter.
         """
         import matplotlib.pyplot as plt
-        from ase.ce.interactive_plot import InteractivePlot
+        from ase.ce.interactive_plot import ShowStructureOnClick
 
         if float(alpha) != self.alpha:
             self.get_eci(alpha)
@@ -286,7 +286,8 @@ class Evaluate(object):
             lines = ax.get_lines()
             data_points = [lines[0], lines[2]]
             annotations = [self.names, self.names]
-            InteractivePlot(fig, ax, data_points, annotations)
+            db_name = self.setting.db_name
+            ShowStructureOnClick(fig, ax, data_points, annotations, db_name)
         else:
             plt.show()
 
