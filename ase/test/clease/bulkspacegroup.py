@@ -10,7 +10,7 @@ import json
 from ase.clease import CECrystal, GenerateStructures, CorrFunction
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.db import connect
-from ase.test.cluster_expansion.reference_corr_funcs import all_cf
+from ase.test.clease.reference_corr_funcs import all_cf
 
 # If this is True, the JSON file containing the correlation functions
 # Used to check consistency of the reference functions is updated
