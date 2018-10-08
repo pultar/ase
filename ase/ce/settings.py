@@ -51,18 +51,32 @@ class ClusterExpansionSetting:
             self.num_groups = len(self.grouped_basis)
             self._check_grouped_basis_elements()
 
-        if basis_function.lower() == 'sanchez':
-            from ase.ce.basis_function import Sanchez
-            bf_scheme = Sanchez(self.unique_elements)
-        elif basis_function.lower() == 'vandewalle':
-            from ase.ce.basis_function import VandeWalle
-            bf_scheme = VandeWalle(self.unique_elements)
+        from ase.ce.basis_function import BasisFunction
+        if isinstance(basis_function, BasisFunction):
+            if basis_function.unique_elements != self.unique_elements:
+                raise ValueError("Unique elements in BasiFunction instance "
+                                 "is different from the one in settings")
+            self.bf_scheme = basis_function
+        elif isinstance(basis_function, str):
+            if basis_function.lower() == 'sanchez':
+                from ase.ce.basis_function import Sanchez
+                self.bf_scheme = Sanchez(self.unique_elements)
+            elif basis_function.lower() == 'vandewalle':
+                from ase.ce.basis_function import VandeWalle
+                self.bf_scheme = VandeWalle(self.unique_elements)
+            elif basis_function.lower() == "sluiter":
+                from ase.ce.basis_function import Sluiter
+                self.bf_scheme = Sluiter(self.unique_elements)
+            else:
+                msg = "basis function scheme {} ".format(basis_function)
+                msg += "is not supported."
+                raise ValueError(msg)
         else:
-            msg = "basis function scheme {} ".format(basis_function)
-            msg += "is not supported."
-            raise ValueError(msg)
-        self.spin_dict = bf_scheme.spin_dict
-        self.basis_functions = bf_scheme.basis_functions
+            raise ValueError("basis_function has to be instance of "
+                             "BasisFunction or a string")
+
+        self.spin_dict = self.bf_scheme.spin_dict
+        self.basis_functions = self.bf_scheme.basis_functions
 
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
