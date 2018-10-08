@@ -28,7 +28,7 @@ class LinearRegression(object):
         return False
 
     def get_scalar_parameter(self):
-        raise ValueError("Fitting scheme is not described by a scalar ""
+        raise ValueError("Fitting scheme is not described by a scalar "
                          "parameter!")
 
 
@@ -98,6 +98,7 @@ class Tikhonov(LinearRegression):
         if self.is_scalar():
             return self.alpha
         LinearRegression.get_scalar_parameter(self)
+
 
 class Lasso(LinearRegression):
     """LASSO regularization.
