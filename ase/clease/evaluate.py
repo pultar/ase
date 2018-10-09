@@ -1,9 +1,8 @@
 """Module that fits ECIs to energy data."""
 import os
 import sys
-from copy import deepcopy
 import numpy as np
-from numpy.linalg import matrix_rank, inv
+from numpy.linalg import inv
 import multiprocessing as mp
 import logging as lg
 import json
@@ -124,6 +123,12 @@ class Evaluate(object):
                              "or an LinearRegression instance."
                              "".format(allowed_fitting_schemes))
 
+        # If the fitting scheme is changed, the ECIs computed are no
+        # longer consistent with the scheme
+        # By setting it to None, a new calculation is performed
+        # when the ECIs are requested
+        self.eci = None
+
     def _get_max_cluster_dia(self, max_cluster_dia):
         """Make max_cluster_dia in a numpy array form."""
         if isinstance(max_cluster_dia, (list, np.ndarray)):
@@ -150,11 +155,6 @@ class Evaluate(object):
         This method also saves the last value of alpha used (self.alpha) and
         the corresponding ECIs (self.eci) such that ECIs are not calculated
         repeated if alpha value is unchanged.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
         """
         self.eci = self.scheme.fit(self.cf_matrix, self.e_dft)
         return self.eci
@@ -164,9 +164,6 @@ class Evaluate(object):
 
         Arguments:
         =========
-        alpha: int or float
-            regularization parameter.
-
         return_type: str
             'tuple': return an array of cluster_name-ECI tuples.
                      e.g., [(name_1, ECI_1), (name_2, ECI_2)]
@@ -245,8 +242,8 @@ class Evaluate(object):
         ax.set_xlabel(r'$E_{pred}$ (eV/atom)')
         ax.text(0.95, 0.01,
                 "CV = {0:.3f} meV/atom \n"
-                "RMSE = {1:.3f} meV/atom".format(self.cv_loo(alpha) * 1000,
-                                                 self.rmse(alpha) * 1000),
+                "RMSE = {1:.3f} meV/atom".format(self.cv_loo() * 1000,
+                                                 self.rmse() * 1000),
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
@@ -288,6 +285,8 @@ class Evaluate(object):
             - str: a file with that name will be opened. If '-', stdout used.
             - file object: use the file object for logging
 
+        fitting_schemes: None or array of instance of LinearRegression
+
         Note: If the file with the same name exists, it first checks if the
               alpha value already exists in the logfile and evalutes the CV of
               the alpha values that are absent. The newly evaluated CVs are
@@ -312,6 +311,9 @@ class Evaluate(object):
             if not isinstance(scheme, LinearRegression):
                 raise TypeError("Each entry in fitting_schemes should be an "
                                 "instance of LinearRegression")
+            elif not scheme.is_scalar():
+                raise TypeError("plot_CV only supports the fitting schemes "
+                                "with a scalar paramater.")
 
         # logfile setup
         if isinstance(logfile, basestring):
@@ -325,9 +327,8 @@ class Evaluate(object):
                 logger.addHandler(handler)
                 # create a log file and make a header line if the file does not
                 # exist.
-                # if not os.path.isfile(logfile):
                 if os.stat(logfile).st_size == 0:
-                    logger.info("ID \t\t alpha \t\t # ECI \t CV")
+                    logger.info("alpha \t\t # ECI \t CV")
                 # if the file exists, read the alpha values that are already
                 # evaluated.
                 else:
@@ -335,25 +336,31 @@ class Evaluate(object):
                     with open(logfile) as f:
                         next(f)
                         for line in f:
-                            existing_alpha.append(float(line.split()[1]))
-                    index = []
-                    for i, alpha in enumerate(alphas):
-                        if np.isclose(existing_alpha, alpha, atol=1e-9).any():
-                            index.append(i)
-                    # remove redundant alpha values
-                    alphas = np.delete(alphas, index)
+                            existing_alpha.append(float(line.split()[0]))
+                    schemes = []
+                    for scheme in fitting_schemes:
+                        exists = np.isclose(existing_alpha,
+                                            scheme.get_scalar_parameter(),
+                                            atol=1E-9).any()
+                        if not exists:
+                            schemes.append(schemes)
+                    fitting_schemes = schemes
 
         # get CV scores
+        alphas = []
         if self.parallel:
             workers = mp.Pool(self.num_core)
-            args = [(self, alpha) for alpha in alphas]
+            args = [(self, scheme) for scheme in fitting_schemes]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
         else:
-            cv = np.ones(len(alphas))
-            for i, alpha in enumerate(alphas):
-                cv[i] = self.cv_loo(alpha)
-                num_eci = len(np.nonzero(self.get_eci(alpha))[0])
+            cv = np.ones(len(fitting_schemes))
+            for i, scheme in enumerate(fitting_schemes):
+                self.set_fitting_scheme(fitting_scheme=scheme)
+                cv[i] = self.cv_loo()
+                num_eci = len(np.nonzero(self.get_eci())[0])
+                alpha = scheme.get_scalar_parameter()
+                alphas.append(alpha)
                 logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci,
                                                             cv[i]))
 
@@ -461,30 +468,18 @@ class Evaluate(object):
             dists.append(float(dist_str))
         return dists
 
-    def mae(self, alpha):
-        """Calculate mean absolute error (MAE) of the fit.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+    def mae(self):
+        """Calculate mean absolute error (MAE) of the fit."""
+        if self.eci is None:
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         return sum(np.absolute(delta_e)) / len(delta_e)
 
-    def rmse(self, alpha):
-        """Calculate root-mean-square error (RMSE) of the fit.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+    def rmse(self):
+        """Calculate root-mean-square error (RMSE) of the fit."""
+        if self.eci is None:
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         num_entries = len(delta_e)
@@ -494,18 +489,12 @@ class Evaluate(object):
         rmse_sq /= num_entries
         return np.sqrt(rmse_sq)
 
-    def cv_loo(self, alpha):
-        """Determine the CV score for the Leave-One-Out case.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
+    def cv_loo(self):
+        """Determine the CV score for the Leave-One-Out case."""
         cv_sq = 0.
         e_pred_loo = []
         for i in range(self.cf_matrix.shape[0]):
-            eci = self._get_eci_loo(i, alpha)
+            eci = self._get_eci_loo(i)
             e_pred = self.cf_matrix[i][:].dot(eci)
             delta_e = self.e_dft[i] - e_pred
             cv_sq += (delta_e)**2
@@ -514,7 +503,7 @@ class Evaluate(object):
         self.e_pred_loo = e_pred_loo
         return np.sqrt(cv_sq)
 
-    def _get_eci_loo(self, i, alpha):
+    def _get_eci_loo(self, i):
         """Determine ECI values for the Leave-One-Out case.
 
         Eliminate the ith row of the cf_matrix when determining the ECIs.
@@ -524,28 +513,10 @@ class Evaluate(object):
         =========
         i: int
             iterator passed from the self._cv_loo method.
-
-        alpha: int or float
-            regularization parameter.
         """
-        n_col = self.cf_matrix.shape[1]
         cfm = np.delete(self.cf_matrix, i, 0)
         e_dft = np.delete(self.e_dft, i, 0)
-        if not self.penalty:
-            a = inv(cfm.T.dot(cfm)).dot(cfm.T)
-            eci = a.dot(e_dft)
-        elif self.penalty == 'l2':
-            identity = np.identity(n_col)
-            identity[0][0] = 0.
-            a = inv(cfm.T.dot(cfm) + alpha * identity).dot(cfm.T)
-            eci = a.dot(e_dft)
-        elif self.penalty == 'l1':
-            lasso = Lasso(alpha=alpha, fit_intercept=False, copy_X=True,
-                          normalize=True, max_iter=1e5)
-            lasso.fit(cfm, e_dft)
-            eci = lasso.coef_
-        else:
-            raise TypeError("Unknown penalty type.")
+        eci = self.scheme.fit(cfm, e_dft)
         return eci
 
     def _filter_cluster_name(self):
@@ -588,33 +559,6 @@ class Evaluate(object):
             names.append(row.name)
         return np.array(e_dft), names
 
-    def __cv_loo_fast(self, alpha):
-        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
-
-        This method has a computational complexity of order n^1.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        # For each structure i, predict energy based on the ECIs determined
-        # using (N-1) structures and the parameters corresponding to the
-        # structure i.
-        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
-        e_pred = self.cf_matrix.dot(self.eci)
-        delta_e = self.e_dft - e_pred
-        cfm = self.cf_matrix
-        # precision matrix
-        prec = inv(cfm.T.dot(cfm))
-        cv_sq = 0.0
-        for i in range(cfm.shape[0]):
-            cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
-        cv_sq /= cfm.shape[0]
-        return np.sqrt(cv_sq)
-
 
 def cv_loo_mp(args):
     """Need to wrap this function in order to use it with multiprocessing.
@@ -625,8 +569,10 @@ def cv_loo_mp(args):
         and the second is the penalization value
     """
     evaluator = args[0]
-    alpha = args[1]
-    cv = evaluator.cv_loo(alpha)
-    num_eci = len(np.nonzero(evaluator.get_eci(alpha))[0])
+    scheme = args[1]
+    evaluator.set_fitting_scheme(fitting_scheme=scheme)
+    alpha = scheme.get_scalar_parameter()
+    cv = evaluator.cv_loo()
+    num_eci = len(np.nonzero(evaluator.get_eci())[0])
     logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
     return cv
