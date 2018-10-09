@@ -559,6 +559,33 @@ class Evaluate(object):
             names.append(row.name)
         return np.array(e_dft), names
 
+    def __cv_loo_fast(self, alpha):
+        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
+
+        This method has a computational complexity of order n^1.
+
+        Argument:
+        ========
+        alpha: int or float
+            regularization parameter.
+        """
+        # For each structure i, predict energy based on the ECIs determined
+        # using (N-1) structures and the parameters corresponding to the
+        # structure i.
+        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
+        if float(alpha) != self.alpha:
+            self.get_eci(alpha)
+        e_pred = self.cf_matrix.dot(self.eci)
+        delta_e = self.e_dft - e_pred
+        cfm = self.cf_matrix
+        # precision matrix
+        prec = inv(cfm.T.dot(cfm))
+        cv_sq = 0.0
+        for i in range(cfm.shape[0]):
+            cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
+        cv_sq /= cfm.shape[0]
+        return np.sqrt(cv_sq)
+
 
 def cv_loo_mp(args):
     """Need to wrap this function in order to use it with multiprocessing.
