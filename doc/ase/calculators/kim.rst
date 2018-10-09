@@ -8,25 +8,25 @@ openkim.org_ for making molecular simulations reliable, reproducible, and
 portable. Computer implementations of interatomic models are archived on
 openkim.org_, verified for coding integrity (using ``Verification Checks``),
 and tested (using ``KIM Tests``) for their predictions for a variety of
-material properties. Models from openkim.org_ can be used seemlessly with major
+material properties. Models from openkim.org_ can be used seamlessly with major
 simluation codes that support the KIM application programming interface (API)
 standard.
 
 The KIM Calculator makes it possible to use any interatomic model archived in
 openkim.org_ from within ASE. Each model is identified by a unique ``KIM ID``,
-which is passed to the KIM Calculator when it is initialized.
+which is passed as an argument to the KIM Calculator.
 
 Instructions
 ------------
 
 The KIM calculator requires the following packages:
 
-- The KIM API package, which enables a KIM model to communicate with a
-  simulation code that uses it. The KIM API is a C++ package that must be
-  installed on your machine in order to be able to use models archived in
-  openkim.org_. In addition, any models to be used must be downloaded and
-  installed.  Instructions on how to do this are given on the `KIM API page
-  <https://openkim.org/kim-api/>`_.
+- The ``KIM API`` C++ library. This library enables a KIM model to communicate
+  with a simulation code that uses it. The KIM API library must be installed
+  on your machine in order to be able to use models archived in openkim.org_.
+  In addition, any models to be used must be downloaded and installed.
+  Instructions on how to do this are given on the
+  `KIM API page <https://openkim.org/kim-api/>`_.
 
 
 - The ``kimpy`` Python package. This package provides a wrapper to the KIM API
@@ -36,6 +36,8 @@ The KIM calculator requires the following packages:
   .. code-block:: bash
 
     $ pip install kimpy
+
+The calling format for the KIM calculator follows.
 
 Example
 -------
