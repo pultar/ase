@@ -350,6 +350,7 @@ class Evaluate(object):
         if self.parallel:
             workers = mp.Pool(self.num_core)
             args = [(self, scheme) for scheme in fitting_schemes]
+            alphas = [s.get_scalar_parameter() for s in fitting_schemes]
             cv = workers.map(cv_loo_mp, args)
             cv = np.array(cv)
         else:
