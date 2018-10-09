@@ -2,7 +2,6 @@
 import os
 import sys
 import numpy as np
-from numpy.linalg import inv
 import multiprocessing as mp
 import logging as lg
 import json
