@@ -41,7 +41,7 @@ class LinearRegression(object):
                          "parameter!")
 
     @property
-    def support_fast_loocv():
+    def support_fast_loocv(self):
         return True
 
 
@@ -160,5 +160,5 @@ class Lasso(LinearRegression):
                                   "implemented.")
 
     @property
-    def support_fast_loocv():
+    def support_fast_loocv(self):
         return False
