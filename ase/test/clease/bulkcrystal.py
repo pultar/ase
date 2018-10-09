@@ -55,13 +55,9 @@ def test_binary_system():
         database.write(atoms, key_value_pairs=kvp)
 
     # Evaluate
-    eval_l2 = Evaluate(bc_setting, penalty="l2")
-    eval_l2.get_cluster_name_eci(alpha=1E-6, return_type='tuple')
-    eval_l2.get_cluster_name_eci(alpha=1E-6, return_type='dict')
-
-    # eval_l1 = Evaluate(bc_setting, penalty="l1")
-    # eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='tuple')
-    # eval_l1.get_cluster_name_eci(alpha=1E-3, return_type='dict')
+    eval_l2 = Evaluate(bc_setting, fitting_scheme="l2", alpha=1E-6)
+    eval_l2.get_cluster_name_eci(return_type='tuple')
+    eval_l2.get_cluster_name_eci(return_type='dict')
 
     os.remove(db_name)
 
