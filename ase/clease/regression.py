@@ -45,7 +45,6 @@ class LinearRegression(object):
         return True
 
 
-
 class Tikhonov(LinearRegression):
     """Ridge regularization.
 

@@ -323,36 +323,10 @@ class Evaluate(object):
                 raise TypeError("plot_CV only supports the fitting schemes "
                                 "with a scalar paramater.")
 
-        # logfile setup
-        if isinstance(logfile, basestring):
-            if logfile == '-':
-                handler = lg.StreamHandler(sys.stdout)
-                handler.setLevel(lg.INFO)
-                logger.addHandler(handler)
-            else:
-                handler = MultiprocessHandler(logfile)
-                handler.setLevel(lg.INFO)
-                logger.addHandler(handler)
-                # create a log file and make a header line if the file does not
-                # exist.
-                if os.stat(logfile).st_size == 0:
-                    logger.info("alpha \t\t # ECI \t CV")
-                # if the file exists, read the alpha values that are already
-                # evaluated.
-                else:
-                    existing_alpha = []
-                    with open(logfile) as f:
-                        next(f)
-                        for line in f:
-                            existing_alpha.append(float(line.split()[0]))
-                    schemes = []
-                    for scheme in fitting_schemes:
-                        exists = np.isclose(existing_alpha,
-                                            scheme.get_scalar_parameter(),
-                                            atol=1E-9).any()
-                        if not exists:
-                            schemes.append(schemes)
-                    fitting_schemes = schemes
+        # if the file exists, read the alpha values that are already evaluated.
+        self._initialize_logfile(logfile)
+        fitting_schemes = self._remove_existing_alphas(logfile,
+                                                       fitting_schemes)
 
         # get CV scores
         alphas = []
@@ -381,19 +355,7 @@ class Evaluate(object):
         # --------------- #
         # if logfile is present, read all entries from the file
         if logfile:
-            alphas = []
-            cv = []
-            with open(logfile) as log:
-                next(log)
-                for line in log:
-                    alphas.append(float(line.split()[0]))
-                    cv.append(float(line.split()[-1]))
-                alphas = np.array(alphas)
-                cv = np.array(cv)
-                # sort alphas and cv based on the values of alphas
-                ind = alphas.argsort()
-                alphas = alphas[ind]
-                cv = cv[ind]
+            alphas, cv = self._get_alphas_cv_from_file(logfile)
 
         # get the minimum CV score and the corresponding alpha value
         ind = cv.argmin()
@@ -414,6 +376,57 @@ class Evaluate(object):
                 transform=ax.transAxes, fontsize=10)
         plt.show()
         return min_alpha
+
+    def _get_alphas_cv_from_file(self, logfile):
+        alphas = []
+        cv = []
+        with open(logfile) as log:
+            next(log)
+            for line in log:
+                alphas.append(float(line.split()[0]))
+                cv.append(float(line.split()[-1]))
+            alphas = np.array(alphas)
+            cv = np.array(cv)
+            # sort alphas and cv based on the values of alphas
+            ind = alphas.argsort()
+            alphas = alphas[ind]
+            cv = cv[ind]
+        return alphas, cv
+
+    def _remove_existing_alphas(self, logfile, fitting_schemes):
+        if not isinstance(logfile, str):
+            return fitting_schemes
+        elif logfile == "-":
+            return fitting_schemes
+
+        existing_alpha = []
+        with open(logfile) as f:
+            next(f)
+            for line in f:
+                existing_alpha.append(float(line.split()[0]))
+        schemes = []
+        for scheme in fitting_schemes:
+            exists = np.isclose(existing_alpha, scheme.get_scalar_parameter(),
+                                atol=1E-9).any()
+            if not exists:
+                schemes.append(schemes)
+        return schemes
+
+    def _initialize_logfile(self, logfile):
+        # logfile setup
+        if isinstance(logfile, basestring):
+            if logfile == '-':
+                handler = lg.StreamHandler(sys.stdout)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(handler)
+            else:
+                handler = MultiprocessHandler(logfile)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(handler)
+                # create a log file and make a header line if the file does not
+                # exist.
+                if os.stat(logfile).st_size == 0:
+                    logger.info("alpha \t\t # ECI \t CV")
 
     def plot_ECI(self, ignore_sizes=[0], interactive=True):
         """Plot the all the ECI.
