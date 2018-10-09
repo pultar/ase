@@ -409,7 +409,7 @@ class Evaluate(object):
             exists = np.isclose(existing_alpha, scheme.get_scalar_parameter(),
                                 atol=1E-9).any()
             if not exists:
-                schemes.append(schemes)
+                schemes.append(scheme)
         return schemes
 
     def _initialize_logfile(self, logfile):
