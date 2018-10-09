@@ -360,16 +360,16 @@ class Evaluate(object):
             workers = mp.Pool(self.num_core)
             args = [(self, scheme) for scheme in fitting_schemes]
             alphas = [s.get_scalar_parameter() for s in fitting_schemes]
-            cv = workers.map(cv_loo_mp, args)
+            cv = workers.map(loocv_mp, args)
             cv = np.array(cv)
         else:
             cv = np.ones(len(fitting_schemes))
             for i, scheme in enumerate(fitting_schemes):
                 self.set_fitting_scheme(fitting_scheme=scheme)
                 if self.scoring_scheme == "loocv":
-                    cv[i] = self.cv_loo()
+                    cv[i] = self.loocv()
                 elif self.scoring_scheme == "loocv_fast":
-                    cv[i] = self.cv_loo_fast()
+                    cv[i] = self.loocv_fast()
                 num_eci = len(np.nonzero(self.get_eci())[0])
                 alpha = scheme.get_scalar_parameter()
                 alphas.append(alpha)
@@ -501,6 +501,25 @@ class Evaluate(object):
         rmse_sq /= num_entries
         return np.sqrt(rmse_sq)
 
+    def loocv_fast(self):
+        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
+
+        This method has a computational complexity of order n^1.
+        """
+        # For each structure i, predict energy based on the ECIs determined
+        # using (N-1) structures and the parameters corresponding to the
+        # structure i.
+        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
+        if self.eci is None:
+            self.get_eci()
+        e_pred = self.cf_matrix.dot(self.eci)
+        delta_e = self.e_dft - e_pred
+        cfm = self.cf_matrix
+        # precision matrix
+        prec = np.linalg.pinv(cfm.T.dot(cfm))
+        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
+        return np.sqrt(cv_sq)
+
     def loocv(self):
         """Determine the CV score for the Leave-One-Out case."""
         cv_sq = 0.
@@ -524,7 +543,7 @@ class Evaluate(object):
         Arguments:
         =========
         i: int
-            iterator passed from the self._cv_loo method.
+            iterator passed from the self.loocv method.
         """
         cfm = np.delete(self.cf_matrix, i, 0)
         e_dft = np.delete(self.e_dft, i, 0)
@@ -571,27 +590,8 @@ class Evaluate(object):
             names.append(row.name)
         return np.array(e_dft), names
 
-    def loocv_fast(self):
-        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
 
-        This method has a computational complexity of order n^1.
-        """
-        # For each structure i, predict energy based on the ECIs determined
-        # using (N-1) structures and the parameters corresponding to the
-        # structure i.
-        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
-        if self.eci is None:
-            self.get_eci()
-        e_pred = self.cf_matrix.dot(self.eci)
-        delta_e = self.e_dft - e_pred
-        cfm = self.cf_matrix
-        # precision matrix
-        prec = np.linalg.inv(cfm.T.dot(cfm))
-        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
-        return np.sqrt(cv_sq)
-
-
-def cv_loo_mp(args):
+def loocv_mp(args):
     """Need to wrap this function in order to use it with multiprocessing.
 
     Arguments
@@ -605,9 +605,9 @@ def cv_loo_mp(args):
     alpha = scheme.get_scalar_parameter()
 
     if evaluator.scoring_scheme == "loocv":
-        cv = evaluator.cv_loo()
+        cv = evaluator.loocv()
     elif evaluator.scoring_scheme == "loocv_fast":
-        cv = evaluator.cv_loo_fast()
+        cv = evaluator.loocv_fast()
     num_eci = len(np.nonzero(evaluator.get_eci())[0])
     logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
     return cv
