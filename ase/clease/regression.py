@@ -84,8 +84,8 @@ class Tikhonov(LinearRegression):
     @staticmethod
     def get_instance_array(alpha_min, alpha_max, num_alpha=10, scale='log'):
         if scale == 'log':
-            alpha = np.logspace(alpha_min, alpha_max, int(num_alpha),
-                                endpoint=True)
+            alpha = np.logspace(np.log10(alpha_min), np.log10(alpha_max),
+                                int(num_alpha), endpoint=True)
         else:
             alpha = np.linspace(alpha_min, alpha_max, int(num_alpha),
                                 endpoint=True)
@@ -123,7 +123,7 @@ class Lasso(LinearRegression):
     @staticmethod
     def get_instance_array(alpha_min, alpha_max, num_alpha=10, scale='log'):
         if scale == 'log':
-            alpha = np.logspace(alpha_min, alpha_max, int(num_alpha),
+            alpha = np.logspace(np.log10(alpha_min), np.log10(alpha_max), int(num_alpha),
                                 endpoint=True)
         else:
             alpha = np.linspace(alpha_min, alpha_max, int(num_alpha),
