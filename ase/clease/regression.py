@@ -1,6 +1,7 @@
 """Collection of classess to perform regression."""
 import numpy as np
-from numpy.linalg import inv, pinv
+import sys
+from numpy.linalg import inv, pinv, cond
 
 
 class LinearRegression(object):
@@ -16,9 +17,17 @@ class LinearRegression(object):
         X: Design matrix (NxM)
         y: Datapints (vector of length N)
         """
-        precision = pinv(X.T.dot(X))
+        precision = self.precision_matrix(X)
         coeff = precision.dot(X.T.dot(y))
         return coeff
+
+    def precision_matrix(self, X):
+        a = X.T.dot(X)
+        if cond(a) < 1. / sys.float_info.epsilon:
+            precision = inv(a)
+        else:
+            precision = pinv(a)
+        return precision
 
     @staticmethod
     def get_instance_array():
@@ -30,6 +39,11 @@ class LinearRegression(object):
     def get_scalar_parameter(self):
         raise ValueError("Fitting scheme is not described by a scalar "
                          "parameter!")
+
+    @property
+    def support_fast_loocv():
+        return True
+
 
 
 class Tikhonov(LinearRegression):
@@ -70,16 +84,21 @@ class Tikhonov(LinearRegression):
 
     def fit(self, X, y):
         """Fit coefficients based on Ridge regularizeation."""
+        precision = self.precision_matrix(X)
+        coeff = precision.dot(X.T.dot(y))
+        return coeff
+
+    def precision_matrix(self, X):
+        """Calculate the presicion matrix."""
         num_features = X.shape[1]
         tikhonov = self._get_tikhonov_matrix(num_features)
 
-        # Make sure that the tikhonov matrix has the correct dimention
         if tikhonov.shape != (num_features, num_features):
             raise ValueError("The dimensions of Tikhonov matrix do not match "
                              "the number of clusters!")
+
         precision = inv(X.T.dot(X) + tikhonov.T.dot(tikhonov))
-        coeff = precision.dot(X.T.dot(y))
-        return coeff
+        return precision
 
     @staticmethod
     def get_instance_array(alpha_min, alpha_max, num_alpha=10, scale='log'):
@@ -123,8 +142,8 @@ class Lasso(LinearRegression):
     @staticmethod
     def get_instance_array(alpha_min, alpha_max, num_alpha=10, scale='log'):
         if scale == 'log':
-            alpha = np.logspace(np.log10(alpha_min), np.log10(alpha_max), int(num_alpha),
-                                endpoint=True)
+            alpha = np.logspace(np.log10(alpha_min), np.log10(alpha_max),
+                                int(num_alpha), endpoint=True)
         else:
             alpha = np.linspace(alpha_min, alpha_max, int(num_alpha),
                                 endpoint=True)
@@ -135,3 +154,11 @@ class Lasso(LinearRegression):
 
     def get_scalar_parameter(self):
         return self.alpha
+
+    def precision_matrix(self, X):
+        raise NotImplementedError("Precision matrix for LASSO is not "
+                                  "implemented.")
+
+    @property
+    def support_fast_loocv():
+        return False

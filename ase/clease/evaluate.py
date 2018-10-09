@@ -510,13 +510,16 @@ class Evaluate(object):
         # using (N-1) structures and the parameters corresponding to the
         # structure i.
         # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
+        if not self.scheme.support_fast_loocv:
+            return self.loocv()
+
         if self.eci is None:
             self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         cfm = self.cf_matrix
         # precision matrix
-        prec = np.linalg.pinv(cfm.T.dot(cfm))
+        prec = self.scheme.precision_matrix(cfm)
         cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
         return np.sqrt(cv_sq)
 
