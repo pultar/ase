@@ -603,7 +603,11 @@ def cv_loo_mp(args):
     scheme = args[1]
     evaluator.set_fitting_scheme(fitting_scheme=scheme)
     alpha = scheme.get_scalar_parameter()
-    cv = evaluator.cv_loo()
+
+    if evaluator.scoring_scheme == "loocv":
+        cv = evaluator.cv_loo()
+    elif evaluator.scoring_scheme == "loocv_fast":
+        cv = evaluator.cv_loo_fast()
     num_eci = len(np.nonzero(evaluator.get_eci())[0])
     logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
     return cv
