@@ -1,7 +1,7 @@
 """
 Knowledgebase of Interatomic Models (KIM) Calculator for ASE written by:
 
-Ellad B. Tadmor and Mingjian Wen
+Ellad B. Tadmor
 University of Minnesota
 
 This calculator selects an appropriate calculator for a KIM model depending on
@@ -62,7 +62,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
     kimpy_not_allowed_options = ['modelname', 'debug']
     lammpsrun_not_allowed_options = ['parameters', 'files', 'specorder',
                                      'keep_tmp_files', 'has_charges']
-    lammpslib_not_allowed_options = ['lammps_header', 'lammps_name', 'lmpcmds',
+    lammpslib_not_allowed_options = ['lammps_header', 'lmpcmds',
                                      'atom_types', 'log_file', 'keep_alive']
     asap_kimmo_not_allowed_options = ['name', 'verbose']
     asap_simmo_not_allowed_options = ['Params']
@@ -97,7 +97,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
             else:
                 return(OpenKIMcalculator(name=extended_kim_id, verbose=debug))
 
-        elif simulator == 'lammps_run':
+        elif simulator == 'lammpsrun':
             # check options
             msg = _check_conflict_options(
                 options, lammpsrun_not_allowed_options, simulator)
@@ -126,7 +126,9 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
                           specorder=supported_species, keep_tmp_files=debug)
 
         # TODO add lammps_lib
-
+        elif simulator == 'lammpslib':
+            raise KIMCalculatorError(
+                'lammpslib does not support KIM model. try "lammpsrun".')
         else:
             raise KIMCalculatorError(
                 'ERROR: Unsupported simulator "%s" requested to run KIM API '
@@ -220,8 +222,8 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
             # Remove path from parameter file names since lammpsrun copies all
             # files into a tmp directory, so path should not appear on
             # in LAMMPS commands
-            param_filenames_for_lammps = map(os.path.basename,
-                                             param_filenames_for_lammps)
+            param_filenames_for_lammps = [os.path.basename(i)
+                                          for i in param_filenames_for_lammps]
 
         # Build atom species and type lists based on all supported species.
         # This means that the LAMMPS simulation will be defined to have
@@ -330,9 +332,8 @@ def _get_kim_model_id_and_type(extended_kim_id):
     # Determine whether this is a KIM Model or SM
     if kimsm.is_simulator_model(extended_kim_id):
         if not kimsm_loaded:
-            raise KIMCalculatorError(
-                'ERROR: Model %s is a Simulator Model, but fails to load '
-                '"kimpy.simulator_models".' % extended_kim_id)
+            raise KIMCalculatorError('ERROR: Model % s is a Simulator Model, '
+                                     'but "kimpy.simulator_models" is not loaded.' % extended_kim_id)
         this_is_a_KIM_MO = False
         pref = 'SM'
     else:
