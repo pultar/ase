@@ -42,11 +42,15 @@ class Evaluate(object):
     max_cluster_dia: float or int
         maximum diameter of the cluster (in angstrom) to include in the fit.
         If *None*, no restriction on the diameter.
+
+    scoring_scheme: str
+        should be one of 'loocv' or 'loocv_fast'
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  parallel=False, num_core="all", fitting_scheme="ridge",
-                 alpha=1E-5, max_cluster_size=None, max_cluster_dia=None):
+                 alpha=1E-5, max_cluster_size=None, max_cluster_dia=None,
+                 scoring_scheme='loocv'):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
@@ -55,6 +59,7 @@ class Evaluate(object):
         self.setting = setting
         self.cluster_names = setting.cluster_names
         self.num_elements = setting.num_elements
+        self.scoring_scheme = scoring_scheme
         if max_cluster_size is None:
             self.max_cluster_size = self.setting.max_cluster_size
         else:
@@ -230,6 +235,11 @@ class Evaluate(object):
         rmin = min(np.append(self.e_dft, e_pred)) - 0.1
         rmax = max(np.append(self.e_dft, e_pred)) + 0.1
 
+        cv = None
+        if self.scoring_scheme == "loocv":
+            cv = self.loocv()*1000
+        elif self.scoring_scheme == "loocv_fast":
+            cv = self.loocv_fast()*1000
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -241,8 +251,7 @@ class Evaluate(object):
         ax.set_xlabel(r'$E_{pred}$ (eV/atom)')
         ax.text(0.95, 0.01,
                 "CV = {0:.3f} meV/atom \n"
-                "RMSE = {1:.3f} meV/atom".format(self.cv_loo() * 1000,
-                                                 self.rmse() * 1000),
+                "RMSE = {1:.3f} meV/atom".format(cv, self.rmse() * 1000),
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
@@ -357,7 +366,10 @@ class Evaluate(object):
             cv = np.ones(len(fitting_schemes))
             for i, scheme in enumerate(fitting_schemes):
                 self.set_fitting_scheme(fitting_scheme=scheme)
-                cv[i] = self.cv_loo()
+                if self.scoring_scheme == "loocv":
+                    cv[i] = self.cv_loo()
+                elif self.scoring_scheme == "loocv_fast":
+                    cv[i] = self.cv_loo_fast()
                 num_eci = len(np.nonzero(self.get_eci())[0])
                 alpha = scheme.get_scalar_parameter()
                 alphas.append(alpha)
@@ -489,7 +501,7 @@ class Evaluate(object):
         rmse_sq /= num_entries
         return np.sqrt(rmse_sq)
 
-    def cv_loo(self):
+    def loocv(self):
         """Determine the CV score for the Leave-One-Out case."""
         cv_sq = 0.
         e_pred_loo = []
@@ -559,31 +571,23 @@ class Evaluate(object):
             names.append(row.name)
         return np.array(e_dft), names
 
-    def __cv_loo_fast(self, alpha):
+    def loocv_fast(self):
         """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
 
         This method has a computational complexity of order n^1.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
         """
         # For each structure i, predict energy based on the ECIs determined
         # using (N-1) structures and the parameters corresponding to the
         # structure i.
         # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+        if self.eci is None:
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         cfm = self.cf_matrix
         # precision matrix
-        prec = inv(cfm.T.dot(cfm))
-        cv_sq = 0.0
-        for i in range(cfm.shape[0]):
-            cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
-        cv_sq /= cfm.shape[0]
+        prec = np.linalg.inv(cfm.T.dot(cfm))
+        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
         return np.sqrt(cv_sq)
 
 
