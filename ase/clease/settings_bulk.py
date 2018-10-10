@@ -75,8 +75,8 @@ class CEBulk(ClusterExpansionSetting):
 
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
-                 cubic=False, size=None, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None,
+                 cubic=False, size=None, supercell_factor=None, conc_args=None,
+                 db_name=None, max_cluster_size=4, max_cluster_dia=None,
                  basis_function='sanchez', grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
 
@@ -112,7 +112,15 @@ class CEBulk(ClusterExpansionSetting):
         self.u = u
         self.orthorhombic = orthorhombic
         self.cubic = cubic
-        self.size = size
+        # supercell_factor is ignored if size is defined
+        if isinstance(size, (np.ndarray, list)):
+            self.size = np.array(size)
+        else:
+            if not isinstance(supercell_factor, int):
+                raise TypeError("Either size or supercell_factor needs to be "
+                                "specified.\n size: list or numpy array.\n "
+                                "supercell_factor: int")
+            # call some class to genereate template atoms
 
         self.num_basis = len(basis_elements)
         if self.num_basis != self.structures[self.crystalstructure]:
@@ -286,8 +294,8 @@ class CECrystal(ClusterExpansionSetting):
 
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
-                 primitive_cell=False, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None,
+                 supercell_factor=None, primitive_cell=False, conc_args=None,
+                 db_name=None, max_cluster_size=4, max_cluster_dia=None,
                  basis_function='sanchez', grouped_basis=None,
                  dist_num_dec=3, ignore_background_atoms=False):
         # Save raw input arguments for save/load. The arguments gets altered
@@ -316,7 +324,16 @@ class CECrystal(ClusterExpansionSetting):
         self.cell = cell
         self.cellpar = cellpar
         self.ab_normal = ab_normal
-        self.size = np.array(size)
+        # supercell_factor is ignored if size is defined
+        if isinstance(size, (np.ndarray, list)):
+            self.size = np.array(size)
+        else:
+            if not isinstance(supercell_factor, int):
+                raise TypeError("Either size or supercell_factor needs to be "
+                                "specified.\n size: list or numpy array.\n "
+                                "supercell_factor: int")
+            # call some class to genereate template atoms
+
         self.primitive_cell = primitive_cell
         self.symbols = []
         for x in range(self.num_basis):
