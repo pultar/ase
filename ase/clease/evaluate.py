@@ -217,7 +217,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, fitting_scheme="ridge", alpha=1E-5, interactive=True):
+    def plot_fit(self, interactive=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -229,7 +229,7 @@ class Evaluate(object):
         from ase.clease.interactive_plot import ShowStructureOnClick
 
         if self.eci is None:
-            self.get_eci(fitting_scheme=fitting_scheme, alpha=alpha)
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
 
         rmin = min(np.append(self.e_dft, e_pred)) - 0.1
