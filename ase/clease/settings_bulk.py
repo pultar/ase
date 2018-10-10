@@ -92,6 +92,7 @@ class CEBulk(ClusterExpansionSetting):
                        'orthorhombic': orthorhombic,
                        'cubic': cubic,
                        'size': size,
+                       'supercell_factor': supercell_factor,
                        'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
                        'max_cluster_size': max_cluster_size,
@@ -112,16 +113,6 @@ class CEBulk(ClusterExpansionSetting):
         self.u = u
         self.orthorhombic = orthorhombic
         self.cubic = cubic
-        # supercell_factor is ignored if size is defined
-        if isinstance(size, (np.ndarray, list)):
-            self.size = np.array(size)
-        else:
-            if not isinstance(supercell_factor, int):
-                raise TypeError("Either size or supercell_factor needs to be "
-                                "specified.\n size: list or numpy array.\n "
-                                "supercell_factor: int")
-            # call some class to genereate template atoms
-
         self.num_basis = len(basis_elements)
         if self.num_basis != self.structures[self.crystalstructure]:
             msg = "{} has {} basis.".format(
@@ -130,12 +121,8 @@ class CEBulk(ClusterExpansionSetting):
             msg += "{}".format(self.num_basis)
             raise ValueError(msg)
 
-        self.unit_cell = self._get_unit_cell()
-        self._tag_unit_cell()
-        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        self.dist_num_dec = dist_num_dec
-
-        ClusterExpansionSetting.__init__(self, conc_args, db_name,
+        ClusterExpansionSetting.__init__(self, size, supercell_factor,
+                                         dist_num_dec, conc_args, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function, basis_elements,
                                          grouped_basis,
@@ -308,6 +295,7 @@ class CECrystal(ClusterExpansionSetting):
                        'cellpar': cellpar,
                        'ab_normal': ab_normal,
                        'size': size,
+                       'supercell_factor': supercell_factor,
                        'primitive_cell': primitive_cell,
                        'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
@@ -324,26 +312,13 @@ class CECrystal(ClusterExpansionSetting):
         self.cell = cell
         self.cellpar = cellpar
         self.ab_normal = ab_normal
-        # supercell_factor is ignored if size is defined
-        if isinstance(size, (np.ndarray, list)):
-            self.size = np.array(size)
-        else:
-            if not isinstance(supercell_factor, int):
-                raise TypeError("Either size or supercell_factor needs to be "
-                                "specified.\n size: list or numpy array.\n "
-                                "supercell_factor: int")
-            # call some class to genereate template atoms
-
         self.primitive_cell = primitive_cell
         self.symbols = []
         for x in range(self.num_basis):
             self.symbols.append(basis_elements[x][0])
-        self.unit_cell = self._get_unit_cell()
-        self._tag_unit_cell()
-        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        self.dist_num_dec = dist_num_dec
 
-        ClusterExpansionSetting.__init__(self, conc_args, db_name,
+        ClusterExpansionSetting.__init__(self, size, supercell_factor,
+                                         dist_num_dec, conc_args, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function, basis_elements,
                                          grouped_basis,

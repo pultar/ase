@@ -17,13 +17,28 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               nested_array2list)
 
 
-class ClusterExpansionSetting:
+class ClusterExpansionSetting(object):
     """Base class for all Cluster Expansion settings."""
 
-    def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
+    def __init__(self, size=None, supercell_factor=None, dist_num_dec=3,
+                 conc_args=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, basis_function='sanchez',
                  basis_elements=None, grouped_basis=None,
                  ignore_background_atoms=False):
+        # # supercell_factor is ignored if size is defined
+        # if isinstance(size, (np.ndarray, list)):
+        #     self.size = np.array(size)
+        # else:
+        #     if not isinstance(supercell_factor, int):
+        #         raise TypeError("Either size or supercell_factor needs to be "
+        #                         "specified.\n size: list or numpy array.\n "
+        #                         "supercell_factor: int")
+        #     # call some class to genereate template atoms
+
+        self.unit_cell = self._get_unit_cell()
+        self._tag_unit_cell()
+        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
+        self.dist_num_dec = dist_num_dec
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
@@ -139,6 +154,10 @@ class ClusterExpansionSetting:
         """Add a tag to all the atoms in the unit cell to track the index."""
         for atom in self.unit_cell:
             atom.tag = atom.index
+
+    def _get_unit_cell(self):
+        raise NotImplementedError("This function has to be implemented in "
+                                  "in derived classes.")
 
     def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
         cell = self.atoms_with_given_dim.get_cell().T
