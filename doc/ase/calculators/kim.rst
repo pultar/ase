@@ -6,11 +6,13 @@
 The Open Knowledgebase of Interatomic Models (KIM) is an online framework at
 openkim.org_ for making molecular simulations reliable, reproducible, and
 portable. Computer implementations of interatomic models are archived on
-openkim.org_, verified for coding integrity (using ``Verification Checks``),
-and tested (using ``KIM Tests``) for their predictions for a variety of
-material properties. Models from openkim.org_ can be used seamlessly with major
-simluation codes that support the KIM application programming interface (API)
-standard.
+openkim.org_, verified for coding integrity (using
+`Verification Checks <https://openkim.org/about-verification-checks/>`_),
+and tested for their predictions for a variety of material properties
+(using `KIM Tests <https://openkim.org/getting-started/kim-tests/>`_). Models from
+openkim.org_ can be used seamlessly with
+`major simluation codes <https://openkim.org/projects-using-kim/>`_ that support
+the KIM application programming interface (API) standard.
 
 The KIM Calculator makes it possible to use any interatomic model archived in
 openkim.org_ from within ASE. Each model is identified by a unique ``KIM ID``,

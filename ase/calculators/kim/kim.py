@@ -33,30 +33,35 @@ from ase.data import atomic_numbers
 
 def KIM(extended_kim_id, simulator=None, options=None, debug=False):
     """
-    Wrapper function that enables the selection of Calculators for KIM Models.
+    Calculator function for interatomic models archived in the Open Knowledgebase
+    of Interatomic Models (OpenKIM) at https://openkim.org
 
     Parameters
     ----------
 
     extended_kim_id: string
-      Extended ID of the KIM model.
+      Extended KIM ID of the KIM interatomic model (for details see:
+      https://openkim.org/about-kim-ids/)
 
     simulator: string
-      Name of the simulator (calculator) to be used.
+      Name of the simulator to be used. This is the name of the ASE calculator
+      that will be used to run the KIM interatomic model.
 
-      If ``None``, the simulator is determined automatically within this function.
-      Supported simulators are: ``kimpy``, ``lammpsrun``, and ``lammpslib``.
+      If ``None``, the simulator is determined automatically by the function.
+      Supported simulators are: ``kimmodel``, ``lammpsrun``, and ``lammpslib``.
+      (Note that since LAMMPS is compatible with the KIM API, LAMMPS calculators
+      can also be used to run KIM models.)
 
     options: dictionary
       Additional options passed to the initializer of the selected simulator.
 
-      If simulator is ``kimpy``, the options can be
+      If the simulator is ``kimmodel``, possible options are:
 
       options = {'neigh_skin_ratio': 0.2, 'release_GIL': False}
 
       where ``neigh_skin_ratio`` provides the skin (in percentage of cutoff) used to
       determine the neighbor list, and ``release_GIL`` determines whether to
-      release the python GIL s.t. a KIM model can run with multiple threads.
+      release the python GIL, which allows a KIM model to be run with multiple threads.
 
       See the LAMMPS calculators doc page
       https://wiki.fysik.dtu.dk/ase/ase/calculators/lammps.html
@@ -66,13 +71,13 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
       If ``True``, turn on the debug mode to output extra information.
 
 
-    This function returns a calculator based on the argument valuess of
+    This function returns a calculator based on the argument values of
     ``extended_kim_id`` and ``simulator``.
 
     """
 
     # options set internally in this calculator
-    kimpy_not_allowed_options = ['modelname', 'debug']
+    kimmodel_not_allowed_options = ['modelname', 'debug']
     lammpsrun_not_allowed_options = ['parameters', 'files', 'specorder',
                                      'keep_tmp_files', 'has_charges']
     lammpslib_not_allowed_options = ['lammps_header', 'lmpcmds',
@@ -90,13 +95,13 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
     if this_is_a_KIM_MO:
 
         if simulator is None:   # Default
-            simulator = 'kimpy'
+            simulator = 'kimmodel'
         else:
             simulator = simulator.lower().strip()
 
-        if simulator == 'kimpy':
+        if simulator == 'kimmodel':
             msg = _check_conflict_options(
-                options, kimpy_not_allowed_options, simulator)
+                options, kimmodel_not_allowed_options, simulator)
             if msg is not None:
                 raise KIMCalculatorError(msg)
             else:
@@ -438,7 +443,7 @@ def _check_conflict_options(options, not_allowed_options, simulator):
     return msg
 
 
-def KIM_get_supported_species_list(extended_kim_id, simulator='kimpy'):
+def KIM_get_supported_species_list(extended_kim_id, simulator='kimmodel'):
     '''
     Returns a list of the atomic species (element names) supported by the
     specified KIM Model or KIM Supported Model.
@@ -448,7 +453,7 @@ def KIM_get_supported_species_list(extended_kim_id, simulator='kimpy'):
 
     simulator: string
        Name of simulator to be used for obtaining the list of model species
-       Available options: kimpy (default), asap
+       Available options: kimmodel (default), asap
     '''
     # Determine whether this is a standard KIM Model or
     # a KIM Simulator Model
@@ -457,7 +462,7 @@ def KIM_get_supported_species_list(extended_kim_id, simulator='kimpy'):
     # If this is a KIM Model, get supported species list
     if this_is_a_KIM_MO:
 
-        if simulator == 'kimpy':
+        if simulator == 'kimmodel':
 
             calc = KIMModelCalculator(extended_kim_id)
             speclist = list(calc.get_kim_model_supported_species())
