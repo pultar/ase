@@ -1,9 +1,7 @@
 """Module that fits ECIs to energy data."""
 import os
 import sys
-from copy import deepcopy
 import numpy as np
-from numpy.linalg import matrix_rank, inv
 import multiprocessing as mp
 import logging as lg
 import json
@@ -12,13 +10,6 @@ from ase.clease import CEBulk, CECrystal
 from ase.clease.mp_logger import MultiprocessHandler
 from ase.db import connect
 
-
-try:
-    # dependency on sklearn is to be removed due to some of technical problems
-    from sklearn.linear_model import Lasso
-    has_sklearn = True
-except Exception:
-    has_sklearn = False
 
 # Initialize a module-wide logger
 logger = lg.getLogger(__name__)
@@ -40,12 +31,6 @@ class Evaluate(object):
         Extra selection condition specified by user.
         Default only includes "converged=True".
 
-    penalty: str
-        Type of regularization to be used.
-        -*None*: no regularization
-        -'lasso' or 'l1': L1 regularization
-        -'euclidean' or 'l2': L2 regularization
-
     max_cluster_size: int
         Maximum number of atoms in the cluster to include in the fit.
         If this is None then all clusters in the DB are included.
@@ -56,12 +41,16 @@ class Evaluate(object):
 
     max_cluster_dia: float or int
         maximum diameter of the cluster (in angstrom) to include in the fit.
-        If *None*, no restriction on the diameter will be imposed.
+        If *None*, no restriction on the diameter.
+
+    scoring_scheme: str
+        should be one of 'loocv' or 'loocv_fast'
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
-                 penalty=None, parallel=False, num_core="all",
-                 max_cluster_size=None, max_cluster_dia=None):
+                 parallel=False, num_core="all", fitting_scheme="ridge",
+                 alpha=1E-5, max_cluster_size=None, max_cluster_dia=None,
+                 scoring_scheme='loocv'):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
@@ -70,6 +59,7 @@ class Evaluate(object):
         self.setting = setting
         self.cluster_names = setting.cluster_names
         self.num_elements = setting.num_elements
+        self.scoring_scheme = scoring_scheme
         if max_cluster_size is None:
             self.max_cluster_size = self.setting.max_cluster_size
         else:
@@ -79,6 +69,9 @@ class Evaluate(object):
         else:
             self.max_cluster_dia = self._get_max_cluster_dia(max_cluster_dia)
 
+        self.scheme = None
+        self.scheme_string = None
+        self.set_fitting_scheme(fitting_scheme, alpha)
         # Define the selection conditions
         self.select_cond = [('converged', '=', True)]
         if select_cond is not None:
@@ -86,21 +79,6 @@ class Evaluate(object):
                 self.select_cond += select_cond
             else:
                 self.select_cond.append(select_cond)
-
-        # Determine the type of penalty for compressed sensing
-        if penalty is None or penalty is False:
-            self.penalty = False
-        elif penalty.lower() == 'lasso' or penalty.lower() == 'l1':
-            if not has_sklearn:
-                msg = "L1 regularization relies on scikit-learn package, "
-                msg += "which was not found..."
-                raise ValueError(msg)
-            self.penalty = 'l1'
-        elif penalty.lower() == 'ridge' or penalty.lower() == 'l2':
-            self.penalty = 'l2'
-        else:
-            msg = "The penalty type, {},  is not supported".format(penalty)
-            raise TypeError(msg)
 
         if cluster_names is None:
             self.cluster_names = self.setting.cluster_names
@@ -124,6 +102,37 @@ class Evaluate(object):
             else:
                 self.num_core = int(num_core)
 
+    def set_fitting_scheme(self, fitting_scheme="ridge", alpha=1E-9):
+        from ase.clease.regression import LinearRegression
+        allowed_fitting_schemes = ["ridge", "tikhonov", "lasso", "l1", "l2"]
+        if isinstance(fitting_scheme, LinearRegression):
+            self.scheme = fitting_scheme
+        elif isinstance(fitting_scheme, str):
+            fitting_scheme = fitting_scheme.lower()
+            self.scheme_string = fitting_scheme
+            if fitting_scheme not in allowed_fitting_schemes:
+                raise ValueError("Fitting scheme has to be one of "
+                                 "{}".format(allowed_fitting_schemes))
+            if fitting_scheme in ["ridge", "tikhonov", "l2"]:
+                from ase.clease.regression import Tikhonov
+                self.scheme = Tikhonov(alpha=alpha)
+            elif fitting_scheme in ["lasso", "l1"]:
+                from ase.clease.regression import Lasso
+                self.scheme = Lasso(alpha=alpha)
+            else:
+                # Perform ordinary least squares
+                self.scheme = LinearRegression()
+        else:
+            raise ValueError("Fitting scheme has to be one of {} "
+                             "or an LinearRegression instance."
+                             "".format(allowed_fitting_schemes))
+
+        # If the fitting scheme is changed, the ECIs computed are no
+        # longer consistent with the scheme
+        # By setting it to None, a new calculation is performed
+        # when the ECIs are requested
+        self.eci = None
+
     def _get_max_cluster_dia(self, max_cluster_dia):
         """Make max_cluster_dia in a numpy array form."""
         if isinstance(max_cluster_dia, (list, np.ndarray)):
@@ -144,71 +153,29 @@ class Evaluate(object):
 
         return max_cluster_dia
 
-    def get_eci(self, alpha):
+    def get_eci(self):
         """Determine and return ECIs for a given alpha.
 
         This method also saves the last value of alpha used (self.alpha) and
         the corresponding ECIs (self.eci) such that ECIs are not calculated
         repeated if alpha value is unchanged.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
         """
-        # Check the regression coefficient alpha
-        if not isinstance(alpha, (int, float)):
-            raise TypeError("alpha must be either int or float type.")
-        self.alpha = float(alpha)
+        self.eci = self.scheme.fit(self.cf_matrix, self.e_dft)
+        return self.eci
 
-        n_col = self.cf_matrix.shape[1]
-
-        if not self.penalty:
-            if matrix_rank(self.cf_matrix) < n_col:
-                print("Rank of the design matrix is smaller than the number "
-                      "of its columns. Reducing the matrix to make it "
-                      "invertible.")
-                self._reduce_matrix()
-                print("Linearly independent clusters are:")
-                print("{}".format(self.cluster_names))
-            a = inv(self.cf_matrix.T.dot(self.cf_matrix)).dot(self.cf_matrix.T)
-            eci = a.dot(self.e_dft)
-
-        elif self.penalty == 'l2':
-            identity = np.identity(n_col)
-            identity[0][0] = 0.
-            a = inv(self.cf_matrix.T.dot(self.cf_matrix)
-                    + alpha * identity).dot(self.cf_matrix.T)
-            eci = a.dot(self.e_dft)
-
-        elif self.penalty == 'l1':
-            lasso = Lasso(alpha=alpha, fit_intercept=False, copy_X=True,
-                          normalize=True, max_iter=1e6)
-            lasso.fit(self.cf_matrix, self.e_dft)
-            eci = lasso.coef_
-
-        else:
-            raise ValueError("Unknown penalty type.")
-
-        self.eci = eci
-        return eci
-
-    def get_cluster_name_eci(self, alpha, return_type='tuple'):
+    def get_cluster_name_eci(self, return_type='tuple'):
         """Determine cluster names and their corresponding ECI value.
 
         Arguments:
         =========
-        alpha: int or float
-            regularization parameter.
-
         return_type: str
             'tuple': return an array of cluster_name-ECI tuples.
                      e.g., [(name_1, ECI_1), (name_2, ECI_2)]
             'dict': return a dictionary.
                     e.g., {name_1: ECI_1, name_2: ECI_2}
         """
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+        self.get_eci()
+
         # sanity check
         if len(self.cluster_names) != len(self.eci):
             raise ValueError('lengths of cluster_names and ECIs are not same')
@@ -224,7 +191,8 @@ class Evaluate(object):
             return dict(pairs)
         return pairs
 
-    def save_cluster_name_eci(self, alpha, filename='cluster_eci.json'):
+    def save_cluster_name_eci(self, fitting_scheme="ridge", alpha=1E-5,
+                              filename='cluster_eci.json'):
         """Determine cluster names and their corresponding ECI value.
 
         Arguments:
@@ -235,7 +203,8 @@ class Evaluate(object):
         return_type: str
             the file name should end with either .json or .txt.
         """
-        eci_dict = self.get_cluster_name_eci(alpha, return_type='dict')
+        eci_dict = self.get_cluster_name_eci(
+            fitting_scheme=fitting_scheme, alpha=alpha, return_type='dict')
 
         extension = filename.split(".")[-1]
 
@@ -248,7 +217,7 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, alpha, interactive=True):
+    def plot_fit(self, fitting_scheme="ridge", alpha=1E-5, interactive=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -259,13 +228,18 @@ class Evaluate(object):
         import matplotlib.pyplot as plt
         from ase.clease.interactive_plot import ShowStructureOnClick
 
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+        if self.eci is None:
+            self.get_eci(fitting_scheme=fitting_scheme, alpha=alpha)
         e_pred = self.cf_matrix.dot(self.eci)
 
         rmin = min(np.append(self.e_dft, e_pred)) - 0.1
         rmax = max(np.append(self.e_dft, e_pred)) + 0.1
 
+        cv = None
+        if self.scoring_scheme == "loocv":
+            cv = self.loocv()*1000
+        elif self.scoring_scheme == "loocv_fast":
+            cv = self.loocv_fast()*1000
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -277,8 +251,7 @@ class Evaluate(object):
         ax.set_xlabel(r'$E_{pred}$ (eV/atom)')
         ax.text(0.95, 0.01,
                 "CV = {0:.3f} meV/atom \n"
-                "RMSE = {1:.3f} meV/atom".format(self.cv_loo(alpha) * 1000,
-                                                 self.rmse(alpha) * 1000),
+                "RMSE = {1:.3f} meV/atom".format(cv, self.rmse() * 1000),
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
@@ -291,8 +264,8 @@ class Evaluate(object):
         else:
             plt.show()
 
-    def plot_CV(self, alpha_min, alpha_max, num_alpha=10, scale='log',
-                logfile=None):
+    def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
+                logfile=None, fitting_schemes=None):
         """Plot CV for a given range of alpha.
 
         In addition to plotting CV with respect to alpha, logfile can be used
@@ -320,62 +293,60 @@ class Evaluate(object):
             - str: a file with that name will be opened. If '-', stdout used.
             - file object: use the file object for logging
 
+        fitting_schemes: None or array of instance of LinearRegression
+
         Note: If the file with the same name exists, it first checks if the
               alpha value already exists in the logfile and evalutes the CV of
               the alpha values that are absent. The newly evaluated CVs are
               appended to the existing file.
         """
         import matplotlib.pyplot as plt
+        from ase.clease.regression import LinearRegression
 
-        # set up alpha values
-        if scale == 'log':
-            alphas = np.logspace(np.log10(alpha_min), np.log10(alpha_max),
-                                 int(num_alpha), endpoint=True)
-        elif scale == 'linear':
-            alphas = np.linspace(alpha_min, alpha_max, int(num_alpha),
-                                 endpoint=True)
+        if fitting_schemes is None:
+            if self.scheme_string is None:
+                raise ValueError("No fitting scheme supplied!")
+            if self.scheme_string in ["lasso", "l1"]:
+                from ase.clease.regression import Lasso
+                fitting_schemes = Lasso.get_instance_array(
+                    alpha_min, alpha_max, num_alpha=num_alpha, scale=scale)
+            elif self.scheme_string in ["ridge", "l2", "tikhonov"]:
+                from ase.clease.regression import Tikhonov
+                fitting_schemes = Tikhonov.get_instance_array(
+                    alpha_min, alpha_max, num_alpha=num_alpha, scale=scale)
 
-        # logfile setup
-        if isinstance(logfile, basestring):
-            if logfile == '-':
-                handler = lg.StreamHandler(sys.stdout)
-                handler.setLevel(lg.INFO)
-                logger.addHandler(handler)
-            else:
-                handler = MultiprocessHandler(logfile)
-                handler.setLevel(lg.INFO)
-                logger.addHandler(handler)
-                # create a log file and make a header line if the file does not
-                # exist.
-                # if not os.path.isfile(logfile):
-                if os.stat(logfile).st_size == 0:
-                    logger.info("alpha \t\t # ECI \t CV")
-                # if the file exists, read the alpha values that are already
-                # evaluated.
-                else:
-                    existing_alpha = []
-                    with open(logfile) as f:
-                        next(f)
-                        for line in f:
-                            existing_alpha.append(float(line.split()[0]))
-                    index = []
-                    for i, alpha in enumerate(alphas):
-                        if np.isclose(existing_alpha, alpha, atol=1e-9).any():
-                            index.append(i)
-                    # remove redundant alpha values
-                    alphas = np.delete(alphas, index)
+        for scheme in fitting_schemes:
+            if not isinstance(scheme, LinearRegression):
+                raise TypeError("Each entry in fitting_schemes should be an "
+                                "instance of LinearRegression")
+            elif not scheme.is_scalar():
+                raise TypeError("plot_CV only supports the fitting schemes "
+                                "with a scalar paramater.")
+
+        # if the file exists, read the alpha values that are already evaluated.
+        self._initialize_logfile(logfile)
+        fitting_schemes = self._remove_existing_alphas(logfile,
+                                                       fitting_schemes)
 
         # get CV scores
+        alphas = []
         if self.parallel:
             workers = mp.Pool(self.num_core)
-            args = [(self, alpha) for alpha in alphas]
-            cv = workers.map(cv_loo_mp, args)
+            args = [(self, scheme) for scheme in fitting_schemes]
+            alphas = [s.get_scalar_parameter() for s in fitting_schemes]
+            cv = workers.map(loocv_mp, args)
             cv = np.array(cv)
         else:
-            cv = np.ones(len(alphas))
-            for i, alpha in enumerate(alphas):
-                cv[i] = self.cv_loo(alpha)
-                num_eci = len(np.nonzero(self.get_eci(alpha))[0])
+            cv = np.ones(len(fitting_schemes))
+            for i, scheme in enumerate(fitting_schemes):
+                self.set_fitting_scheme(fitting_scheme=scheme)
+                if self.scoring_scheme == "loocv":
+                    cv[i] = self.loocv()
+                elif self.scoring_scheme == "loocv_fast":
+                    cv[i] = self.loocv_fast()
+                num_eci = len(np.nonzero(self.get_eci())[0])
+                alpha = scheme.get_scalar_parameter()
+                alphas.append(alpha)
                 logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci,
                                                             cv[i]))
 
@@ -384,19 +355,7 @@ class Evaluate(object):
         # --------------- #
         # if logfile is present, read all entries from the file
         if logfile:
-            alphas = []
-            cv = []
-            with open(logfile) as log:
-                next(log)
-                for line in log:
-                    alphas.append(float(line.split()[0]))
-                    cv.append(float(line.split()[-1]))
-                alphas = np.array(alphas)
-                cv = np.array(cv)
-                # sort alphas and cv based on the values of alphas
-                ind = alphas.argsort()
-                alphas = alphas[ind]
-                cv = cv[ind]
+            alphas, cv = self._get_alphas_cv_from_file(logfile)
 
         # get the minimum CV score and the corresponding alpha value
         ind = cv.argmin()
@@ -417,6 +376,57 @@ class Evaluate(object):
                 transform=ax.transAxes, fontsize=10)
         plt.show()
         return min_alpha
+
+    def _get_alphas_cv_from_file(self, logfile):
+        alphas = []
+        cv = []
+        with open(logfile) as log:
+            next(log)
+            for line in log:
+                alphas.append(float(line.split()[0]))
+                cv.append(float(line.split()[-1]))
+            alphas = np.array(alphas)
+            cv = np.array(cv)
+            # sort alphas and cv based on the values of alphas
+            ind = alphas.argsort()
+            alphas = alphas[ind]
+            cv = cv[ind]
+        return alphas, cv
+
+    def _remove_existing_alphas(self, logfile, fitting_schemes):
+        if not isinstance(logfile, str):
+            return fitting_schemes
+        elif logfile == "-":
+            return fitting_schemes
+
+        existing_alpha = []
+        with open(logfile) as f:
+            next(f)
+            for line in f:
+                existing_alpha.append(float(line.split()[0]))
+        schemes = []
+        for scheme in fitting_schemes:
+            exists = np.isclose(existing_alpha, scheme.get_scalar_parameter(),
+                                atol=1E-9).any()
+            if not exists:
+                schemes.append(scheme)
+        return schemes
+
+    def _initialize_logfile(self, logfile):
+        # logfile setup
+        if isinstance(logfile, basestring):
+            if logfile == '-':
+                handler = lg.StreamHandler(sys.stdout)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(handler)
+            else:
+                handler = MultiprocessHandler(logfile)
+                handler.setLevel(lg.INFO)
+                logger.addHandler(handler)
+                # create a log file and make a header line if the file does not
+                # exist.
+                if os.stat(logfile).st_size == 0:
+                    logger.info("alpha \t\t # ECI \t CV")
 
     def plot_ECI(self, ignore_sizes=[0], interactive=True):
         """Plot the all the ECI.
@@ -483,30 +493,18 @@ class Evaluate(object):
             dists.append(float(dist_str))
         return dists
 
-    def mae(self, alpha):
-        """Calculate mean absolute error (MAE) of the fit.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+    def mae(self):
+        """Calculate mean absolute error (MAE) of the fit."""
+        if self.eci is None:
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         return sum(np.absolute(delta_e)) / len(delta_e)
 
-    def rmse(self, alpha):
-        """Calculate root-mean-square error (RMSE) of the fit.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
+    def rmse(self):
+        """Calculate root-mean-square error (RMSE) of the fit."""
+        if self.eci is None:
+            self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
         num_entries = len(delta_e)
@@ -516,18 +514,34 @@ class Evaluate(object):
         rmse_sq /= num_entries
         return np.sqrt(rmse_sq)
 
-    def cv_loo(self, alpha):
-        """Determine the CV score for the Leave-One-Out case.
+    def loocv_fast(self):
+        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
 
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
+        This method has a computational complexity of order n^1.
         """
+        # For each structure i, predict energy based on the ECIs determined
+        # using (N-1) structures and the parameters corresponding to the
+        # structure i.
+        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
+        if not self.scheme.support_fast_loocv:
+            return self.loocv()
+
+        if self.eci is None:
+            self.get_eci()
+        e_pred = self.cf_matrix.dot(self.eci)
+        delta_e = self.e_dft - e_pred
+        cfm = self.cf_matrix
+        # precision matrix
+        prec = self.scheme.precision_matrix(cfm)
+        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
+        return np.sqrt(cv_sq)
+
+    def loocv(self):
+        """Determine the CV score for the Leave-One-Out case."""
         cv_sq = 0.
         e_pred_loo = []
         for i in range(self.cf_matrix.shape[0]):
-            eci = self._get_eci_loo(i, alpha)
+            eci = self._get_eci_loo(i)
             e_pred = self.cf_matrix[i][:].dot(eci)
             delta_e = self.e_dft[i] - e_pred
             cv_sq += (delta_e)**2
@@ -536,7 +550,7 @@ class Evaluate(object):
         self.e_pred_loo = e_pred_loo
         return np.sqrt(cv_sq)
 
-    def _get_eci_loo(self, i, alpha):
+    def _get_eci_loo(self, i):
         """Determine ECI values for the Leave-One-Out case.
 
         Eliminate the ith row of the cf_matrix when determining the ECIs.
@@ -545,29 +559,11 @@ class Evaluate(object):
         Arguments:
         =========
         i: int
-            iterator passed from the self._cv_loo method.
-
-        alpha: int or float
-            regularization parameter.
+            iterator passed from the self.loocv method.
         """
-        n_col = self.cf_matrix.shape[1]
         cfm = np.delete(self.cf_matrix, i, 0)
         e_dft = np.delete(self.e_dft, i, 0)
-        if not self.penalty:
-            a = inv(cfm.T.dot(cfm)).dot(cfm.T)
-            eci = a.dot(e_dft)
-        elif self.penalty == 'l2':
-            identity = np.identity(n_col)
-            identity[0][0] = 0.
-            a = inv(cfm.T.dot(cfm) + alpha * identity).dot(cfm.T)
-            eci = a.dot(e_dft)
-        elif self.penalty == 'l1':
-            lasso = Lasso(alpha=alpha, fit_intercept=False, copy_X=True,
-                          normalize=True, max_iter=1e5)
-            lasso.fit(cfm, e_dft)
-            eci = lasso.coef_
-        else:
-            raise TypeError("Unknown penalty type.")
+        eci = self.scheme.fit(cfm, e_dft)
         return eci
 
     def _filter_cluster_name(self):
@@ -610,56 +606,8 @@ class Evaluate(object):
             names.append(row.name)
         return np.array(e_dft), names
 
-    def _reduce_matrix(self):
-        """Reduce the correlation function matrix.
 
-        Eliminate the columns that are not linearly independent in order to
-        match the rank of the matrix. Only used when no regularzation is
-        selected (Ordinary Least Squares) where the matrix is not necessarily
-        invertible.
-        """
-        offset = 0
-        rank = matrix_rank(self.cf_matrix)
-        while self.cf_matrix.shape[1] > rank:
-            temp = np.delete(self.cf_matrix, -1 - offset, axis=1)
-            cname_temp = deepcopy(self.cluster_names)
-            del cname_temp[-1 - offset]
-            if matrix_rank(temp) < rank:
-                offset += 1
-            else:
-                self.cf_matrix = temp
-                self.cluster_names = deepcopy(cname_temp)
-                offset = 0
-
-    def __cv_loo_fast(self, alpha):
-        """CV score based on the method in J. Phase Equilib. 23, 348 (2002).
-
-        This method has a computational complexity of order n^1.
-
-        Argument:
-        ========
-        alpha: int or float
-            regularization parameter.
-        """
-        # For each structure i, predict energy based on the ECIs determined
-        # using (N-1) structures and the parameters corresponding to the
-        # structure i.
-        # CV^2 = N^{-1} * Sum((E_DFT-E_pred) / (1 - X_i (X^T X)^{-1} X_u^T))^2
-        if float(alpha) != self.alpha:
-            self.get_eci(alpha)
-        e_pred = self.cf_matrix.dot(self.eci)
-        delta_e = self.e_dft - e_pred
-        cfm = self.cf_matrix
-        # precision matrix
-        prec = inv(cfm.T.dot(cfm))
-        cv_sq = 0.0
-        for i in range(cfm.shape[0]):
-            cv_sq += (delta_e[i] / (1 - cfm[i].dot(prec).dot(cfm[i].T)))**2
-        cv_sq /= cfm.shape[0]
-        return np.sqrt(cv_sq)
-
-
-def cv_loo_mp(args):
+def loocv_mp(args):
     """Need to wrap this function in order to use it with multiprocessing.
 
     Arguments
@@ -668,8 +616,14 @@ def cv_loo_mp(args):
         and the second is the penalization value
     """
     evaluator = args[0]
-    alpha = args[1]
-    cv = evaluator.cv_loo(alpha)
-    num_eci = len(np.nonzero(evaluator.get_eci(alpha))[0])
+    scheme = args[1]
+    evaluator.set_fitting_scheme(fitting_scheme=scheme)
+    alpha = scheme.get_scalar_parameter()
+
+    if evaluator.scoring_scheme == "loocv":
+        cv = evaluator.loocv()
+    elif evaluator.scoring_scheme == "loocv_fast":
+        cv = evaluator.loocv_fast()
+    num_eci = len(np.nonzero(evaluator.get_eci())[0])
     logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
     return cv
