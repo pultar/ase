@@ -2,11 +2,12 @@
 Knowledgebase of Interatomic Models (KIM) Calculator for ASE written by:
 
 Ellad B. Tadmor
+Mingjian Wen
 University of Minnesota
 
 This calculator selects an appropriate calculator for a KIM model depending on
 whether it supports the KIM application programming interface (API) or is a
-KIM Simulator Model.  For more information on KIM, visit https://openkim.org.
+KIM Simulator Model. For more information on KIM, visit https://openkim.org.
 """
 
 from __future__ import absolute_import
@@ -32,29 +33,41 @@ from ase.data import atomic_numbers
 
 def KIM(extended_kim_id, simulator=None, options=None, debug=False):
     """
-    Wrapper routine that selects KIMCalculator for KIM Models or an appropriate
-    ASE Calculator for KIM Simulator Models.
+    Wrapper function that enables the selection of Calculators for KIM Models.
 
     Parameters
     ----------
 
     extended_kim_id: string
-      Extended KIM ID of the model to be calculated
+      Extended ID of the KIM model.
 
     simulator: string
-      Name of the simulator(calculator) to be used. If None, the simulator is
-      determined internally by this calculator.
-      Supported simulators include: kimpy, lammpsrun, lammpslib, and asap.
+      Name of the simulator (calculator) to be used.
+
+      If ``None``, the simulator is determined automatically within this function.
+      Supported simulators are: ``kimpy``, ``lammpsrun``, and ``lammpslib``.
 
     options: dictionary
-      Additional optionals passed to the initializer of the simulator.
+      Additional options passed to the initializer of the selected simulator.
 
-    debug: boolean
-      If True, temporary files are kept
+      If simulator is ``kimpy``, the options can be
 
-    Return
-    ------
-      A Calculator based on the argument `extended_kim_id` and `simulator`.
+      options = {'neigh_skin_ratio': 0.2, 'release_GIL': False}
+
+      where ``neigh_skin_ratio`` provides the skin (in percentage of cutoff) used to
+      determine the neighbor list, and ``release_GIL`` determines whether to
+      release the python GIL s.t. a KIM model can run with multiple threads.
+
+      See the LAMMPS calculators doc page
+      https://wiki.fysik.dtu.dk/ase/ase/calculators/lammps.html
+      for available options for ``lammpsrun`` and ``lammpslib``.
+
+    debug: bool
+      If ``True``, turn on the debug mode to output extra information.
+
+
+    This function returns a calculator based on the argument valuess of
+    ``extended_kim_id`` and ``simulator``.
 
     """
 
@@ -414,10 +427,12 @@ def _check_conflict_options(options, not_allowed_options, simulator):
     s2 = set(not_allowed_options)
     common = s1.intersection(s2)
     if common:
-        msg1 = 'Simulator "{}" does not support arguments: '.format(simulator)
+        msg1 = 'Simulator "{}" does not support argument(s): '.format(
+            simulator)
         msg2 = ', '.join(['"{}"'.format(s) for s in common])
-        msg3 = ' provided in "options".'
-        return msg1 + msg2 + msg3
+        msg3 = ' provided in "options", because it is (they are) determined '
+        msg4 = 'internally within the KIM calculator.'
+        return msg1 + msg2 + msg3 + msg4
     else:
         msg = None
     return msg

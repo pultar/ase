@@ -37,7 +37,10 @@ The KIM calculator requires the following packages:
 
     $ pip install kimpy
 
-The calling format for the KIM calculator follows.
+The interface of the KIM calculator is as follows.
+
+.. autofunction:: ase.calculators.kim.KIM
+
 
 Example
 -------
