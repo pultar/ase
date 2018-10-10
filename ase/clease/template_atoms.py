@@ -2,6 +2,7 @@
 import numpy as np
 from itertools import product
 from numpy.linalg import inv, det
+from random import choice
 
 class TemplateAtoms(object):
     def __init__(self, supercell_factor=None, size=None, unit_cells=None):
@@ -67,3 +68,20 @@ class TemplateAtoms(object):
                 filtered["atoms"].append(atom)
                 filtered["dim"].append(templates["dim"][i])
         return filtered
+
+    def random_template(self, max_supercell_factor=1000):
+        """Return a random template atoms
+
+        Arguments:
+        =========
+            max_supercell_factor: int
+                Maximum supercell factor the returned object can have
+        """
+        found = False
+        num = 0
+        while not found:
+            num = choice(range(len(self.templates["atoms"])))
+            factor = np.prod(self.templates["dim"][num])
+            if factor <= max_supercell_factor:
+                found = True
+        return self.templates["atoms"][num]
