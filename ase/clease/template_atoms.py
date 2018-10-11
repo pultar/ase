@@ -1,6 +1,6 @@
 """Class containing a manager for creating template atoms."""
 import numpy as np
-from itertools import product
+from itertools import product, permutations
 from numpy.linalg import inv, det
 from random import choice
 
@@ -19,6 +19,16 @@ class TemplateAtoms(object):
         self.skew_threshold = skew_threshold
         templates = self._generate_template_atoms()
         self.templates = self._filter_equivalent_templates(templates)
+
+    def __str__(self):
+        """Print a summary of the class."""
+        msg = "=== TemplateAtoms ===\n"
+        msg += "Supercell factor: {}\n".format(self.supercell_factor)
+        msg += "Skewed threshold: {}\n".format(self.skew_threshold)
+        msg += "Template sizes:\n"
+        for dim in self.templates["dim"]:
+            msg += "{}\n".format(dim)
+        return msg
 
     def _generate_template_atoms(self):
         """Generate all template atoms up to a certain multiplicity factor."""
@@ -40,19 +50,29 @@ class TemplateAtoms(object):
             if np.prod(size) > self.supercell_factor:
                 continue
 
-            for atoms in self.unit_cell:
+            for atoms in self.unit_cells:
                 templates["atoms"].append(atoms * size)
                 templates["dim"].append(size)
         return templates
+
+    def _is_unitary(self, matrix):
+        return np.allclose(matrix.T.dot(matrix), np.identity(matrix.shape[0]))
 
     def _are_equivalent(self, cell1, cell2):
         """Compare two cells to check if they are equivalent.
 
         It is assumed that the cell vectors are columns of each matrix.
         """
-        R = inv(cell1).dot(cell2)
-        determinant = det(R)
-        return abs(abs(determinant) - 1.0) < 1E-4
+        inv_cell1 = inv(cell1)
+        for perm in permutations(range(3)):
+            permute_cell = cell2[:, perm]
+            R = permute_cell.dot(inv_cell1)
+            if self._is_unitary(R):
+                return True
+        return False
+
+    def get_dims(self):
+        return self.templates["dim"]
 
     def _filter_equivalent_templates(self, templates):
         """Remove symmetrically equivalent clusters."""
@@ -62,7 +82,7 @@ class TemplateAtoms(object):
             current = atom.get_cell().T
             duplicate = False
             for j in range(0, len(filtered["atoms"])):
-                ref = filtered[j].get_cell().T
+                ref = filtered["atoms"][j].get_cell().T
                 if self._are_equivalent(current, ref):
                     duplicate = True
                     break
@@ -117,15 +137,14 @@ class TemplateAtoms(object):
         return max_length/min_length
 
     def weighted_random_template(self, return_dim=False):
-        """Select a random template atoms with a bias towards cells that are
-        small and has similar values for x-, y- and z-dimension sizes.
+        """Select a random template atoms with a bias towards cells that have
+        similar values for x-, y- and z-dimension sizes.
         """
         p_select = []
-        for dim in self.templates["dim"]:
-            mean = np.mean(dim)
-            prod = np.prod(dim)
-            p = np.exp(-np.sum(((np.array(dim)-mean)/mean)**2))
-            p_select.append(p/prod)
+        for atoms in self.templates["atoms"]:
+            ratio = self._get_max_min_diag_ratio(atoms)
+            p = np.exp(-4.0*(ratio-1.0)/self.skew_threshold)
+            p_select.append(p)
         p_select = np.array(p_select)
         p_select /= np.sum(p_select)
 
@@ -133,5 +152,5 @@ class TemplateAtoms(object):
         rand_num = np.random.rand()
         indx = np.argmax(cum_prob > rand_num)
         if return_dim:
-            return self.templates["atoms"][num], self.templates["dim"][num]
-        return self.templates["atoms"][num]
+            return self.templates["atoms"][indx], self.templates["dim"][indx]
+        return self.templates["atoms"][indx]

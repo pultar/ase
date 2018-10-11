@@ -131,7 +131,6 @@ class Clease(Calculator):
             msg += "object and setting.atoms should be the same. "
             raise ValueError(msg)
 
-
     def calculate(self, atoms, properties, system_changes):
         """Calculate the energy of the passed atoms object.
 

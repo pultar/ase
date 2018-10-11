@@ -34,7 +34,7 @@ class ClusterExpansionSetting(object):
         #                         "specified.\n size: list or numpy array.\n "
         #                         "supercell_factor: int")
         #     # call some class to genereate template atoms
-
+        self.size = size
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
         self.atoms_with_given_dim = self._get_atoms_with_given_dim()
