@@ -42,8 +42,6 @@ class GenerateStructures(object):
         self.setting = setting
         self.db = connect(setting.db_name)
         self.corrfunc = CorrFunction(self.setting)
-        self.conc_matrix = self.setting.conc_matrix
-        self.atoms = setting.atoms_with_given_dim
         if generation_number is None:
             self.gen = self._determine_gen_number()
         else:
@@ -54,10 +52,10 @@ class GenerateStructures(object):
         # Note: May not be the most practical solution for some cases
         if struct_per_gen is None:
             if self.setting.num_conc_var == 1:
-                self.struct_per_gen = self.conc_matrix.shape[0]
+                self.struct_per_gen = self.setting.conc_matrix.shape[0]
             else:
-                self.struct_per_gen = self.conc_matrix.shape[0] *\
-                    self.conc_matrix.shape[1]
+                self.struct_per_gen = self.setting.conc_matrix.shape[0] *\
+                    self.setting.conc_matrix.shape[1]
         else:
             self.struct_per_gen = struct_per_gen
 
@@ -109,6 +107,7 @@ class GenerateStructures(object):
         print("Generate {} probe structures.".format(self.struct_per_gen))
         num_attempt = 0
         while True:
+            self.setting.set_new_template()
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
                               self.db.select(gen=self.gen)])
@@ -116,8 +115,8 @@ class GenerateStructures(object):
                 break
 
             # special case where there is only 1 concentration value
-            if self.conc_matrix.ndim == 1:
-                conc_ratio = np.copy(self.conc_matrix)
+            if self.setting.conc_matrix.ndim == 1:
+                conc_ratio = np.copy(self.setting.conc_matrix)
                 conc_value = [1.0, None]
             else:
                 conc_ratio, conc_value = self._get_random_conc()
@@ -128,6 +127,10 @@ class GenerateStructures(object):
                 continue
 
             atoms = wrap_and_sort_by_position(atoms)
+            if self._exists_in_db(atoms, conc[0], conc[1]):
+                num_attempt += 1
+                continue
+
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
@@ -164,11 +167,11 @@ class GenerateStructures(object):
               "{} structures".format(self.struct_per_gen))
 
         # Special case where there is only 1 concentration value
-        if self.conc_matrix.ndim == 1:
+        if self.setting.conc_matrix.ndim == 1:
             conc1 = 1.0
             x = 0
             while x < self.struct_per_gen:
-                atoms = self._random_struct_at_conc(self.conc_matrix, conc1)
+                atoms = self._random_struct_at_conc(self.setting.conc_matrix, conc1)
                 atoms = wrap_and_sort_by_position(atoms)
                 kvp = self.corrfunc.get_cf(atoms)
                 kvp = self._get_kvp(atoms, kvp, conc1)
@@ -178,10 +181,10 @@ class GenerateStructures(object):
 
         # Case 1: 1 conc variable, one struct per concentration
         if (self.setting.num_conc_var == 1
-                and self.struct_per_gen == self.conc_matrix.shape[0]):
-            for x in range(self.conc_matrix.shape[0]):
-                conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
-                atoms = self._random_struct_at_conc(self.conc_matrix[x], conc1)
+                and self.struct_per_gen == self.setting.conc_matrix.shape[0]):
+            for x in range(self.setting.conc_matrix.shape[0]):
+                conc1 = float(x) / max(self.setting.conc_matrix.shape[0] - 1, 1)
+                atoms = self._random_struct_at_conc(self.setting.conc_matrix[x], conc1)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -191,13 +194,13 @@ class GenerateStructures(object):
 
         # Case 2: 2 conc variable, one struct per concentration
         elif (self.setting.num_conc_var == 2
-              and self.struct_per_gen == self.conc_matrix.shape[0]
-              * self.conc_matrix.shape[1]):
-            for x in range(self.conc_matrix.shape[0]):
-                conc1 = float(x) / max(self.conc_matrix.shape[0] - 1, 1)
-                for y in range(self.conc_matrix.shape[1]):
-                    conc2 = float(y) / max(self.conc_matrix.shape[1] - 1, 1)
-                    atoms = self._random_struct_at_conc(self.conc_matrix[x][y],
+              and self.struct_per_gen == self.setting.conc_matrix.shape[0]
+              * self.setting.conc_matrix.shape[1]):
+            for x in range(self.setting.conc_matrix.shape[0]):
+                conc1 = float(x) / max(self.setting.conc_matrix.shape[0] - 1, 1)
+                for y in range(self.setting.conc_matrix.shape[1]):
+                    conc2 = float(y) / max(self.setting.conc_matrix.shape[1] - 1, 1)
+                    atoms = self._random_struct_at_conc(self.setting.conc_matrix[x][y],
                                                         conc1, conc2)
                     if atoms is None:
                         continue
@@ -208,14 +211,14 @@ class GenerateStructures(object):
 
         # Case 3: 1 conc variable, user specified number of structures
         elif self.setting.num_conc_var == 1:
-            num_conc1 = self.conc_matrix.shape[0]
+            num_conc1 = self.setting.conc_matrix.shape[0]
             conc1_opt = range(num_conc1)
             x = 0
             num_attempt = 0
             while x < self.struct_per_gen:
                 a = random.choice(conc1_opt)
                 conc1 = float(a) / max(num_conc1 - 1, 1)
-                atoms = self._random_struct_at_conc(self.conc_matrix[a], conc1)
+                atoms = self._random_struct_at_conc(self.setting.conc_matrix[a], conc1)
                 if atoms is None:
                     continue
                 atoms = wrap_and_sort_by_position(atoms)
@@ -232,7 +235,7 @@ class GenerateStructures(object):
 
         # Case 4: 2 conc variable, user specified number of structures
         else:
-            num_conc1, num_conc2 = self.conc_matrix.shape[:2]
+            num_conc1, num_conc2 = self.setting.conc_matrix.shape[:2]
             conc1_opt = range(num_conc1)
             conc2_opt = range(num_conc2)
             x = 0
@@ -242,7 +245,7 @@ class GenerateStructures(object):
                 conc1 = float(a[0]) / max(num_conc1 - 1, 1)
                 conc2 = float(a[1]) / max(num_conc2 - 1, 1)
                 atoms = \
-                    self._random_struct_at_conc(self.conc_matrix[a[0]][a[1]],
+                    self._random_struct_at_conc(self.setting.conc_matrix[a[0]][a[1]],
                                                 conc1, conc2)
                 if atoms is None:
                     continue
@@ -319,16 +322,16 @@ class GenerateStructures(object):
             conc_ratio[i] = len([a for a in atoms if a.symbol == element])
 
         if self.setting.num_conc_var == 1:
-            num_conc1 = self.conc_matrix.shape[0]
+            num_conc1 = self.setting.conc_matrix.shape[0]
             for x in range(num_conc1):
-                if np.array_equal(conc_ratio, self.conc_matrix[x]):
+                if np.array_equal(conc_ratio, self.setting.conc_matrix[x]):
                     break
             conc = [round(float(x) / max(num_conc1 - 1, 1), 3), None]
         else:
-            num_conc1, num_conc2 = self.conc_matrix.shape[:2]
+            num_conc1, num_conc2 = self.setting.conc_matrix.shape[:2]
             for x in range(num_conc1):
                 for y in range(num_conc2):
-                    if np.array_equal(conc_ratio, self.conc_matrix[x][y]):
+                    if np.array_equal(conc_ratio, self.setting.conc_matrix[x][y]):
                         break
                 else:
                     continue
@@ -430,13 +433,13 @@ class GenerateStructures(object):
         num_attempt = 0
         while True:
             if self.setting.num_conc_var == 1:
-                conc_index = [random.choice(range(self.conc_matrix.shape[0])),
+                conc_index = [random.choice(range(self.setting.conc_matrix.shape[0])),
                               None]
-                conc_ratio = self.conc_matrix[conc_index[0]]
+                conc_ratio = self.setting.conc_matrix[conc_index[0]]
             else:
-                conc_index = [random.choice(range(self.conc_matrix.shape[0])),
-                              random.choice(range(self.conc_matrix.shape[1]))]
-                conc_ratio = self.conc_matrix[conc_index[0]][conc_index[1]]
+                conc_index = [random.choice(range(self.setting.conc_matrix.shape[0])),
+                              random.choice(range(self.setting.conc_matrix.shape[1]))]
+                conc_ratio = self.setting.conc_matrix[conc_index[0]][conc_index[1]]
 
             # loop until no atom has a negative number count
             if min(conc_ratio) >= 0:
@@ -451,7 +454,7 @@ class GenerateStructures(object):
             if index is None:
                 continue
             conc_value[i] = float(conc_index[i]) /\
-                max(self.conc_matrix.shape[i] - 1, 1)
+                max(self.setting.conc_matrix.shape[i] - 1, 1)
 
         return conc_ratio, conc_value
 
@@ -483,7 +486,7 @@ class GenerateStructures(object):
         in_DB = True
         num_attempt = 0
         while in_DB:
-            atoms = self.atoms.copy()
+            atoms = self.setting.atoms_with_given_dim.copy()
             for site in range(num_basis):
                 indx = [a.index for a in atoms
                         if a.symbol == basis_elements[site][0]]
@@ -550,8 +553,8 @@ class GenerateStructures(object):
                        dtype=float)
         while count < num_samples_var:
             # special case where there is only 1 concentration value
-            if self.conc_matrix.ndim == 1:
-                conc_ratio = np.copy(self.conc_matrix)
+            if self.setting.conc_matrix.ndim == 1:
+                conc_ratio = np.copy(self.setting.conc_matrix)
                 conc_value = [1.0, None]
             else:
                 conc_ratio, conc_value = self._get_random_conc()

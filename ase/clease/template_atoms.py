@@ -13,12 +13,18 @@ class TemplateAtoms(object):
                             "supercell_factor: int")
 
         self.size = size
-        if size is None:
-            self.supercell_factor = int(supercell_factor)
         self.unit_cells = unit_cells
         self.skew_threshold = skew_threshold
-        templates = self._generate_template_atoms()
-        self.templates = self._filter_equivalent_templates(templates)
+        self.supercell_factor = supercell_factor
+        if size is None:
+            self.supercell_factor = int(supercell_factor)
+            templates = self._generate_template_atoms()
+            self.templates = self._filter_equivalent_templates(templates)
+            if not self.templates["atoms"]:
+                raise RuntimeError("No template atoms matching criteria!")
+        else:
+            self.templates = {"atoms": [self.unit_cells[0]*size],
+                              "dims": [size]}
 
     def __str__(self):
         """Print a summary of the class."""
@@ -26,13 +32,13 @@ class TemplateAtoms(object):
         msg += "Supercell factor: {}\n".format(self.supercell_factor)
         msg += "Skewed threshold: {}\n".format(self.skew_threshold)
         msg += "Template sizes:\n"
-        for dim in self.templates["dim"]:
-            msg += "{}\n".format(dim)
+        for dims in self.templates["dims"]:
+            msg += "{}\n".format(dims)
         return msg
 
     def _generate_template_atoms(self):
         """Generate all template atoms up to a certain multiplicity factor."""
-        templates = {"atoms": [], "dim": []}
+        templates = {"atoms": [], "dims": []}
         # case 1: size of the cell is given
         if self.size is not None:
             if len(self.unit_cells) != 1:
@@ -41,7 +47,7 @@ class TemplateAtoms(object):
                                  "is specified.")
             for atom in self.unit_cells:
                 templates["atoms"].append(atom * self.size)
-                templates["dim"].append(self.size)
+                templates["dims"].append(self.size)
             return templates
 
         for size in product(range(1, self.supercell_factor+1), repeat=3):
@@ -52,8 +58,15 @@ class TemplateAtoms(object):
 
             for atoms in self.unit_cells:
                 templates["atoms"].append(atoms * size)
-                templates["dim"].append(size)
+                templates["dims"].append(size)
         return templates
+
+    def get_atoms(self, uid, return_dims=False):
+        """Return atoms at position."""
+        if return_dims:
+            return self.templates["atoms"][uid], self.templates["dims"][uid]
+
+        return self.templates["atoms"][uid]
 
     def _is_unitary(self, matrix):
         return np.allclose(matrix.T.dot(matrix), np.identity(matrix.shape[0]))
@@ -72,12 +85,12 @@ class TemplateAtoms(object):
         return False
 
     def get_dims(self):
-        return self.templates["dim"]
+        return self.templates["dims"]
 
     def _filter_equivalent_templates(self, templates):
         """Remove symmetrically equivalent clusters."""
         templates = self._filter_very_skewed_templates(templates)
-        filtered = {"atoms": [], "dim": []}
+        filtered = {"atoms": [], "dims": []}
         for i, atom in enumerate(templates["atoms"]):
             current = atom.get_cell().T
             duplicate = False
@@ -89,21 +102,21 @@ class TemplateAtoms(object):
 
             if not duplicate:
                 filtered["atoms"].append(atom)
-                filtered["dim"].append(templates["dim"][i])
+                filtered["dims"].append(templates["dims"][i])
         return filtered
 
     def _filter_very_skewed_templates(self, templates):
         """Remove templates that have a very skewed unit cell
         """
-        filtered = {"atoms": [], "dim": []}
+        filtered = {"atoms": [], "dims": []}
         for i, atoms in enumerate(templates["atoms"]):
             ratio = self._get_max_min_diag_ratio(atoms)
             if ratio < self.skew_threshold:
                 filtered["atoms"].append(atoms)
-                filtered["dim"].append(templates["dim"][i])
+                filtered["dims"].append(templates["dims"][i])
         return filtered
 
-    def random_template(self, max_supercell_factor=1000, return_dim=False):
+    def random_template(self, max_supercell_factor=1000, return_dims=False):
         """Select a random template atoms.
 
         Arguments:
@@ -115,12 +128,13 @@ class TemplateAtoms(object):
         num = 0
         while not found:
             num = choice(range(len(self.templates["atoms"])))
-            factor = np.prod(self.templates["dim"][num])
+            factor = np.prod(self.templates["dims"][num])
             if factor <= max_supercell_factor:
                 found = True
-        if return_dim:
-            return self.templates["atoms"][num], self.templates["dim"][num]
-        return self.templates["atoms"][num]
+        return num
+        # if return_dims:
+        #     return self.templates["atoms"][num], self.templates["dims"][num]
+        # return self.templates["atoms"][num]
 
     def _get_max_min_diag_ratio(self, atoms):
         """Return the ratio between the maximum and the minimum diagonal."""
@@ -136,7 +150,7 @@ class TemplateAtoms(object):
         min_length = np.min(diag_lengths)
         return max_length/min_length
 
-    def weighted_random_template(self, return_dim=False):
+    def weighted_random_template(self, return_dims=False):
         """Select a random template atoms with a bias towards cells that have
         similar values for x-, y- and z-dimension sizes.
         """
@@ -151,6 +165,7 @@ class TemplateAtoms(object):
         cum_prob = np.cumsum(p_select)
         rand_num = np.random.rand()
         indx = np.argmax(cum_prob > rand_num)
-        if return_dim:
-            return self.templates["atoms"][indx], self.templates["dim"][indx]
-        return self.templates["atoms"][indx]
+        return indx
+        # if return_dims:
+        #     return self.templates["atoms"][indx], self.templates["dims"][indx]
+        # return self.templates["atoms"][indx]

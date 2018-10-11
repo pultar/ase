@@ -341,7 +341,7 @@ class CorrFunction(object):
         num_equiv = float(len(equiv_deco))
         return sp/num_equiv, count/num_equiv
 
-    def check_and_convert_cell_size(self, atoms, return_ratio=False):
+    def check_and_convert_cell_size(self, atoms):
         """Check the size of provided cell and convert in necessary.
 
         If the size of the provided cell is the same as the size of the
@@ -351,27 +351,27 @@ class CorrFunction(object):
         and wrapped. If not, it raises an error.
         """
         cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
-        try:
-            row = connect(self.setting.db_name).get(name='information')
+        db = connect(self.setting.db_name)
+        found_matching_template = False
+        for row in db.select(name='template'):
             template = row.toatoms()
-        except BaseException:
-            raise IOError("Cannot retrieve the information template from the "
-                          "database")
-        template_lengths = template.get_cell_lengths_and_angles()[:3]
+            template_lengths = template.get_cell_lengths_and_angles()[:3]
 
-        if np.allclose(cell_lengths, template_lengths):
-            atoms = wrap_and_sort_by_position(atoms)
-            int_ratios = np.array([1, 1, 1])
-        else:
+            if np.allclose(cell_lengths, template_lengths):
+                atoms = wrap_and_sort_by_position(atoms)
+                found_matching_template = True
+                break
+            #
             ratios = template_lengths / cell_lengths
             int_ratios = ratios.round(decimals=0).astype(int)
             if np.allclose(ratios, int_ratios):
                 atoms = wrap_and_sort_by_position(atoms * int_ratios)
-            else:
-                raise TypeError("Cannot make the passed atoms to the specified"
-                                " size of {}".format(self.setting.size))
-        if return_ratio:
-            return atoms, int_ratios
+                found_matching_template = True
+                break
+
+        if not found_matching_template:
+            raise TypeError("Cannot find the template atoms that matches the "
+                            "size of the passed atoms")
         return atoms
 
 

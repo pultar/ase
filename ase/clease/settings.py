@@ -15,6 +15,8 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
                               create_cluster, dec_string, get_unique_name,
                               nested_array2list)
+from ase.clease.basis_function import BasisFunction
+from ase.clease.template_atoms import TemplateAtoms
 
 
 class ClusterExpansionSetting(object):
@@ -25,49 +27,39 @@ class ClusterExpansionSetting(object):
                  max_cluster_dia=None, basis_function='sanchez',
                  basis_elements=None, grouped_basis=None,
                  ignore_background_atoms=False):
-        # # supercell_factor is ignored if size is defined
-        # if isinstance(size, (np.ndarray, list)):
-        #     self.size = np.array(size)
-        # else:
-        #     if not isinstance(supercell_factor, int):
-        #         raise TypeError("Either size or supercell_factor needs to be "
-        #                         "specified.\n size: list or numpy array.\n "
-        #                         "supercell_factor: int")
-        #     # call some class to genereate template atoms
         self.size = size
+        self.unit_cell_type = 0
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
-        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
+        self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
+                                            size=size, skew_threshold=4,
+                                            unit_cells=[self.unit_cell])
+
         self.dist_num_dec = dist_num_dec
-        self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
+        self.max_cluster_dia = max_cluster_dia
         self.basis_elements = basis_elements
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
-        self.cluster_info = []
         self.ignore_background_atoms = ignore_background_atoms
         self.background_symbol = []
         if ignore_background_atoms:
             self.background_symbol = self._get_background_symbol()
-
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
-        self.max_cluster_dia, self.supercell_scale_factor = \
-            self._get_max_cluster_dia_and_scale_factor(max_cluster_dia)
-        if len(self.basis_elements) != self.num_basis:
-            raise ValueError("list of elements is needed for each basis")
-        if grouped_basis is None:
-            self._check_basis_elements()
-        else:
-            if not isinstance(grouped_basis, list):
-                raise TypeError('grouped_basis should be a list')
-            self.num_groups = len(self.grouped_basis)
-            self._check_grouped_basis_elements()
+        # if len(self.basis_elements) != self.num_basis:
+        #     raise ValueError("list of elements is needed for each basis")
+        # if grouped_basis is None:
+        #     self._check_basis_elements()
+        # else:
+        #     if not isinstance(grouped_basis, list):
+        #         raise TypeError('grouped_basis should be a list')
+        #     self.num_groups = len(self.grouped_basis)
+        #     self._check_grouped_basis_elements()
 
-        from ase.clease.basis_function import BasisFunction
         if isinstance(basis_function, BasisFunction):
             if basis_function.unique_elements != self.unique_elements:
                 raise ValueError("Unique elements in BasiFunction instance "
@@ -93,10 +85,70 @@ class ClusterExpansionSetting(object):
 
         self.spin_dict = self.bf_scheme.spin_dict
         self.basis_functions = self.bf_scheme.basis_functions
+        self.cluster_info = []
+        self.background_atom_indices = []
+        self.index_by_trans_symm = []
+        self.ref_index_trans_symm = []
+        self.kd_trees = None
+        self.conc_args = conc_args
+        self.conc_ratio_min_1 = None
+        self.conc_ratio_max_1 = None
+        self.conc_ratio_min_2 = None
+        self.conc_ratio_max_2 = None
+        self.set_template_atoms(0)
+
+        if len(self.basis_elements) != self.num_basis:
+            raise ValueError("list of elements is needed for each basis")
+        if grouped_basis is None:
+            self._check_basis_elements()
+        else:
+            if not isinstance(grouped_basis, list):
+                raise TypeError('grouped_basis should be a list')
+            self.num_groups = len(self.grouped_basis)
+            self._check_grouped_basis_elements()
+
+
+        # self.atoms_with_given_dim = self._get_atoms_with_given_dim()
+        # self._check_conc_ratios(conc_args)
+        # self.cluster_info = []
+        #
+        # self.max_cluster_dia, self.supercell_scale_factor = \
+        #     self._get_max_cluster_dia_and_scale_factor(self.max_cluster_dia)
+        #
+        # self.atoms = self._create_template_atoms()
+        # self.background_atom_indices = []
+        # if ignore_background_atoms:
+        #     self.background_atom_indices = [a.index for a in self.atoms if
+        #                                     a.symbol in self.background_symbol]
+        #
+        # self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
+        # self.num_trans_symm = len(self.index_by_trans_symm)
+        # self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
+        # self.kd_trees = self._create_kdtrees()
+
+        if not os.path.exists(db_name):
+            self._store_data()
+        else:
+            self._read_data()
+
+    def _size2string(self):
+        """Converts the current size into a string."""
+        return "x".join((str(item) for item in self.size))
+
+    def set_template_atoms(self, uid):
+        """Sets a fixed template atoms object as the active."""
+        self.atoms_with_given_dim, self.size = \
+            self.template_atoms.get_atoms(uid, return_dims=True)
+
+        self._check_conc_ratios(self.conc_args)
+        self.cluster_info = []
+
+        self.max_cluster_dia, self.supercell_scale_factor = \
+            self._get_max_cluster_dia_and_scale_factor(self.max_cluster_dia)
 
         self.atoms = self._create_template_atoms()
         self.background_atom_indices = []
-        if ignore_background_atoms:
+        if self.ignore_background_atoms:
             self.background_atom_indices = [a.index for a in self.atoms if
                                             a.symbol in self.background_symbol]
 
@@ -105,10 +157,15 @@ class ClusterExpansionSetting(object):
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
         self.kd_trees = self._create_kdtrees()
 
-        if not os.path.exists(db_name):
-            self._store_data()
-        else:
-            self._read_data()
+        # Read information from database
+        # Note that if the data is not found, it will generate
+        # the nessecary data structures and store them in the database
+        self._read_data()
+
+    def set_new_template(self):
+        """Set a new template atoms object."""
+        uid = self.template_atoms.weighted_random_template()
+        self.set_template_atoms(uid)
 
     def _check_conc_ratios(self, conc_args):
         # check for concentration ratios
@@ -899,12 +956,16 @@ class ClusterExpansionSetting(object):
                 'trans_matrix': self.trans_matrix,
                 'conc_matrix': self.conc_matrix}
 
-        db.write(self.atoms, name='information', data=data)
+        db.write(self.atoms, name='template', data=data,
+                 dims=self._size2string(), unit_cell_type=self.unit_cell_type)
 
     def _read_data(self):
         db = connect(self.db_name)
         try:
-            row = db.get('name=information')
+            select_cond = [('name', '=', 'template'),
+                           ('dims', '=', self._size2string()),
+                           ('unit_cell_type', '=', self.unit_cell_type)]
+            row = db.get(select_cond)
             self.cluster_info = row.data.cluster_info
             self._info_entries_to_list()
             self.trans_matrix = row.data.trans_matrix
@@ -918,10 +979,10 @@ class ClusterExpansionSetting(object):
         """Convert entries in cluster info to list."""
         for info in self.cluster_info:
             for name, cluster in info.items():
-                cluster["indices"] = nested_array2list(cluster["indices"])
-                cluster["equiv_sites"] = \
-                    nested_array2list(cluster["equiv_sites"])
-                cluster["order"] = nested_array2list(cluster["order"])
+                cluster['indices'] = nested_array2list(cluster['indices'])
+                cluster['equiv_sites'] = \
+                    nested_array2list(cluster['equiv_sites'])
+                cluster['order'] = nested_array2list(cluster['order'])
 
     def _get_name_indx(self, unique_name):
         size = int(unique_name[1])
