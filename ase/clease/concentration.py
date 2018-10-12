@@ -56,6 +56,27 @@ class Concentration(object):
         self.A_lb = np.vstack((self.A_lb, A_lb))
         self.b_lb = np.append(self.b_lb, b_lb)
 
+    def set_conc_ranges(self, ranges):
+        """Set the concentration based on lower and upper bound
+
+        Arguments:
+        ==========
+            ranges - nested list of tuples with the same shape as
+                     basis_elements.
+                     If basis_elements is [["Li", "Ru", "X"], ["O", "X"]],
+                     ranges coulde be
+                     [[(0, 1), (0.2, 0.5), (0, 1)], [(0, 0.8), (0, 0.2)]]
+        """
+        flatten_rng = [item for sublist in ranges for item in sublist]
+        A_lb = np.zeros((2*self.num_concs, self.num_concs))
+        b_lb = np.zeros(2*self.num_concs)
+        for i, item in enumerate(flatten_rng):
+            A_lb[2*i, i] = 1
+            A_lb[2*i+1, i] = -1
+            b_lb[2*i] = item[0]
+            b_lb[2*i+1] = -item[1]
+        self.add_usr_defined_ineq_constraints(A_lb, b_lb)
+
     def _get_constraints(self):
         constraints = []
         for i in range(self.A_eq.shape[0]):
