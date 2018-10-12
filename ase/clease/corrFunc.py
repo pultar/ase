@@ -25,7 +25,6 @@ class CorrFunction(object):
 
     num_core: int or "all"
         specify the number of cores to use for parallelization.
-
     """
 
     def __init__(self, setting, parallel=False, num_core="all"):

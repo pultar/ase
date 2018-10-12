@@ -1,29 +1,30 @@
 """Class containing a manager for setting up concentrations of species."""
 import numpy as np
-from scipy.optimize import linprog
-from scipy.linalg import null_space
+from scipy.optimize import minimize
 
 
 class Concentration(object):
-    def __init__(self, basis_elements=None, A_ub=None, b_up=None, A_eq=None,
+    def __init__(self, basis_elements=None, A_lb=None, b_lb=None, A_eq=None,
                  b_eq=None):
+        self.basis_elements = basis_elements
         num_implicit_eq = len(basis_elements)
         self.num_concs = len([x for sub in basis_elements for x in sub])
+        self.fixed_element_constraint_added = False
 
-        num_usr_ub = 0
-        if A_ub is not None:
-            num_usr_ub = A_ub.shape[0]
-        num_ub = self.num_concs + num_usr_ub
-        self.A_ub = np.zeros((num_ub, self.num_concs), dtype=int)
-        self.b_ub = np.zeros(num_ub, dtype=int)
+        num_usr_lb = 0
+        if A_lb is not None:
+            A_lb = np.array(A_lb)
+            num_usr_lb = A_lb.shape[0]
+        self.A_lb = np.zeros((self.num_concs, self.num_concs), dtype=int)
+        self.b_lb = np.zeros(self.num_concs, dtype=int)
 
         num_usr_eq = 0
         if A_eq is not None:
+            A_eq = np.array(A_eq)
             num_usr_eq = A_eq.shape[0]
 
-        num_eq = num_implicit_eq + num_usr_eq
-        self.A_eq = np.zeros((num_eq, self.num_concs), dtype=int)
-        self.b_eq = np.zeros(num_eq, dtype=int)
+        self.A_eq = np.zeros((num_implicit_eq, self.num_concs), dtype=int)
+        self.b_eq = np.zeros(num_implicit_eq, dtype=int)
 
         # Ensure concentration in each basis sum to 1
         start_col = 0
@@ -37,16 +38,180 @@ class Concentration(object):
 
         # Ensure that we have only positive concentrations
         for i in range(self.num_concs):
-            self.A_ub[i, i] = -1
+            self.A_lb[i, i] = 1
+
+        if num_usr_eq > 0:
+            self.add_usr_defined_eq_constraints(A_eq, b_eq)
+
+        if num_usr_lb > 0:
+            self.add_usr_defined_ineq_constraints(A_lb, b_lb)
+
+    def add_usr_defined_eq_constraints(self, A_eq, b_eq):
+        """Add user defined constraints."""
+        self.A_eq = np.vstack((self.A_eq, A_eq))
+        self.b_eq = np.append(self.b_eq, b_eq)
+
+    def add_usr_defined_ineq_constraints(self, A_lb, b_lb):
+        """Add the user defined constraints."""
+        self.A_lb = np.vstack((self.A_lb, A_lb))
+        self.b_lb = np.append(self.b_lb, b_lb)
+
+    def _get_constraints(self):
+        constraints = []
+        for i in range(self.A_eq.shape[0]):
+            new_constraint = {"type": "eq",
+                              "fun": equality_constraint,
+                              "args": (self.A_eq[i, :], self.b_eq[i])}
+            constraints.append(new_constraint)
+
+        for i in range(self.A_lb.shape[0]):
+            new_constraint = {"type": "ineq",
+                              "fun": inequality_constraint,
+                              "args": (self.A_lb[i, :], self.b_lb[i])}
+            constraints.append(new_constraint)
+        return constraints
+
+    def _add_fixed_element_in_each_basis(self):
+        """Add constraints corresponding to the fixing elements in basis."""
+        if self.fixed_element_constraint_added:
+            return
+        from random import choice
+        indices = []
+        start = 0
+        ranges = self.get_individual_comp_range()
+        min_range = 0.01
+        maxiter = 1000
+        for basis in self.basis_elements:
+            iteration = 0
+            rng = 0.5*min_range
+            while rng < min_range and iteration < maxiter:
+                iteration += 1
+                indx = choice(range(start, start+len(basis)))
+                rng = ranges[indx][1] - ranges[indx][0]
+            if iteration >= maxiter:
+                self.fixed_element_constraint_added = False
+                return
+            indices.append(indx)
+            start += len(basis)
+
+        A = np.zeros((len(indices), self.num_concs))
+        b = np.zeros(self.num_concs)
+        for i, indx in enumerate(indices):
+            A[i, indx] = 1
+            rng = ranges[indx][1] - ranges[indx][0]
+            b[i] = np.random.rand()*rng + ranges[indx][0]
+
+        # Add constraints
+        self.A_eq = np.vstack((self.A_eq, A))
+        self.b_eq = np.append(self.b_eq, b)
+        self.fixed_element_constraint_added = True
+
+    def _remove_fixed_element_in_each_basis_constraint(self):
+        """Remove the last rows."""
+        if not self.fixed_element_constraint_added:
+            return
+        num_basis = len(self.basis_elements)
+        self.A_eq = self.A_eq[:-num_basis, :]
+        self.b_eq = self.b_eq[:-num_basis]
+        self.fixed_element_constraint_added = False
+
+    def get_individual_comp_range(self):
+        """Return the concentration range of each component."""
+        ranges = []
+        for i in range(self.num_concs):
+            xmin = self.get_conc_min_component(i)
+            xmax = self.get_conc_max_component(i)
+            ranges.append((xmin[i], xmax[i]))
+        return ranges
 
     def get_random_concentration(self):
         """Generate a valid random concentration."""
-        satisfied = False
-        while not satisfied:
-            x = np.random.rand()
+        self._add_fixed_element_in_each_basis()
+        # Setup the constraints
+        constraints = self._get_constraints()
+        # ranges = self.get_individual_comp_range()
+        x0 = 2.0*np.random.rand(self.num_concs)
 
-        c = 2*np.random.rand(self.num_concs)-1
-        print(c)
-        opt_res = linprog(c, A_ub=self.A_ub, b_ub=self.b_ub, A_eq=self.A_eq,
-                          b_eq=self.b_eq)
+        # Find the closest vector to x0 that satisfies all constraints
+        opt_res = minimize(objective_random, x0, args=(x0,),
+                           method="SLSQP", jac=obj_jac_random,
+                           constraints=constraints)
+        self._remove_fixed_element_in_each_basis_constraint()
         return opt_res["x"]
+
+    def get_conc_min_component(self, comp):
+        """Generate all end points of the composition domain."""
+        constraints = self._get_constraints()
+
+        x0 = np.random.rand(self.num_concs)
+
+        # Find the closest vector to x0 that satisfies all constraints
+        opt_res = minimize(objective_component_min, x0, args=(comp,),
+                           method="SLSQP", jac=obj_jac_component_min,
+                           constraints=constraints)
+        return opt_res["x"]
+
+    def get_conc_max_component(self, comp):
+        """Generate all end points of the composition domain."""
+        constraints = self._get_constraints()
+
+        x0 = np.random.rand(self.num_concs)
+
+        # Find the closest vector to x0 that satisfies all constraints
+        opt_res = minimize(objective_component_max, x0, args=(comp,),
+                           method="SLSQP", jac=obj_jac_component_max,
+                           constraints=constraints)
+        return opt_res["x"]
+
+
+# Helper function used by the minimization algorithm
+def objective_component_min(x, indx):
+    return x[indx]
+
+
+def obj_jac_component_min(x, indx):
+    jac = np.zeros(len(x))
+    jac[indx] = np.sign(x[indx])
+    return jac
+
+
+def objective_component_max(x, indx):
+    return -x[indx]
+
+
+def obj_jac_component_max(x, indx):
+    jac = np.zeros(len(x))
+    jac[indx] = -np.sign(x[indx])
+    return jac
+
+
+def objective_random(x, x0):
+    """Return the difference between x and x0."""
+    diff = x - x0
+    return diff.dot(diff)
+
+
+def obj_jac_random(x, x0):
+    """The jacobian of the objective function."""
+    return 2.0*(x-x0)
+
+
+def equality_constraint(x, vec, rhs):
+    """Equality constraint. Return 0 if constraints are satisfied."""
+    return vec.dot(x) - rhs
+
+
+def eq_jac(x, vec, rhs):
+    """Jacobian of the equalitu constraint equation."""
+    return vec
+
+
+def inequality_constraint(x, vec, rhs):
+    """Inequality constraints. Return a non-negative number if constraints
+       are satisfied."""
+    return vec.dot(x) - rhs
+
+
+def ineq_jac(x, vec, rhs):
+    """Jacobian of the inequality constraint equations."""
+    return vec
