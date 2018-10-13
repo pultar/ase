@@ -153,6 +153,21 @@ class Evaluate(object):
 
         return max_cluster_dia
 
+    def subtract_bias_and_singlets(self):
+        """Remove linear and bias contributions prior to fitting."""
+        from numpy.linalg import inv
+        indices = []
+        names = []
+        for i, name in enumerate(self.cluster_names):
+            if name == "c0" or name.startswith("c1"):
+                indices.append(i)
+                names.append(name)
+        cfm = self.cf_matrix[:, indices]
+        prec = inv(cfm.T.dot(cfm))
+        coeff = prec.dot(cfm.T.dot(self.e_dft))
+        self.e_dft -= cfm.dot(coeff)
+        return dict(zip(name, coeff))
+
     def get_eci(self):
         """Determine and return ECIs for a given alpha.
 
