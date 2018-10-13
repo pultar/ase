@@ -57,7 +57,7 @@ class Concentration(object):
         self.b_lb = np.append(self.b_lb, b_lb)
 
     def set_conc_ranges(self, ranges):
-        """Set the concentration based on lower and upper bound
+        """Set concentration based on lower and upper bound
 
         Arguments:
         ==========
@@ -76,6 +76,49 @@ class Concentration(object):
             b_lb[2*i] = item[0]
             b_lb[2*i+1] = -item[1]
         self.add_usr_defined_ineq_constraints(A_lb, b_lb)
+
+    def set_conc_formula_unit(self, formulas=None, variable_range=None):
+        """Set concentration based on formula unit strings.
+
+        Arguments:
+        =========
+        formulas: list of strings
+            formula string should be provided per basis.
+            e.g., ["Li<x>Ru<1>X<2-x>", "O<3-y>X<y>"]
+        variable range: dict
+            range of each variable used in formulas.
+            key is a string, and the value should be int or float
+            e.g., {"x": (0, 2), "y": (0, 0.7)}
+        """
+        element_variable = self._parse_formula_unit_string(formulas)
+        # 0 <= x_Li <= 2
+        # 0 <= X <= 0.7
+        # Calculate number of elements in formula unit
+        # x + 1 + 2 - x = tot_1
+        # 3 - y + y = tot_2
+        # tot_1*x_Ru = 1
+
+    def _parse_formula_unit_string(self, formulas):
+        element_variable = []
+        for basis_num, formula in enumerate(formulas):
+            split1 = formula.split("<")
+            elements = []
+            math = []
+            for i, substr in enumerate(split1):
+                if i == 0:
+                    elements.append(substr)
+                elif i == len(split1)-1:
+                    split2 = substr.split(">")
+                    math.append(split2[0])
+                else:
+                    split2 = substr.split(">")
+                    elements.append(split2[1])
+                    math.append(split2[0])
+            if elements != self.basis_elements[basis_num]:
+                raise ValueError("elements in 'formulas' and 'basis_elements' "
+                                 "should match.")
+            element_variable.append(dict(zip(elements, math)))
+        return element_variable
 
     def _get_constraints(self):
         constraints = []

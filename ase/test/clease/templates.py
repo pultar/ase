@@ -12,6 +12,7 @@ def test_fcc():
            (2, 2, 5), (2, 3, 3), (2, 3, 4), (3, 3, 3)]
     assert dims == ref
 
+
 def test_hcp():
     unit_cell = bulk("Mg")
     template_atoms = TemplateAtoms(unit_cells=[unit_cell], skew_threshold=5,
