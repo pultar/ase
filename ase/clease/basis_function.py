@@ -195,11 +195,11 @@ class Sluiter(BasisFunction):
     """
 
     def __init__(self, unique_elements, reduntant_element="auto"):
-        BasisFunction.__init__(self, unique_elements)
         if reduntant_element == "auto":
-            self.reduntant_element = self.unique_elements[0]
+            self.redundant_element = sorted(unique_elements)[0]
         else:
             self.redundant_element = reduntant_element
+        BasisFunction.__init__(self, unique_elements)
 
     def get_spin_dict(self):
         """Define pseudospins for all consistuting elements."""
