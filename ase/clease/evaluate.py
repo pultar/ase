@@ -254,13 +254,34 @@ class Evaluate(object):
                 "RMSE = {1:.3f} meV/atom".format(cv, self.rmse() * 1000),
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
-        ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
+        if self.e_pred_loo is not None:
+            ax.plot(self.e_pred_loo, self.e_dft, 'ro', mfc='none')
+
         if interactive:
             lines = ax.get_lines()
-            data_points = [lines[0], lines[2]]
+            if self.e_pred_loo is None:
+                data_points = [lines[0]]
+            else:
+                data_points = [lines[0], lines[2]]
             annotations = [self.names, self.names]
             db_name = self.setting.db_name
             ShowStructureOnClick(fig, ax, data_points, annotations, db_name)
+        else:
+            plt.show()
+
+         # Create a plot with the residuals
+        fig_residual = plt.figure()
+        ax_residual = fig_residual.add_subplot(111)
+        ax_residual.set_title("Residuals")
+        ax_residual.plot((self.e_dft - e_pred)*1000.0, "x")
+        ax_residual.axhline(0, ls="--")
+        ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
+
+        if interactive:
+            lines = ax_residual.get_lines()
+            data_points = [lines[0]]
+            annotations = [self.names]
+            ShowStructureOnClick(fig_residual, ax_residual, data_points, annotations, db_name)
         else:
             plt.show()
 
