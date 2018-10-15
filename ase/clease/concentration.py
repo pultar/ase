@@ -1,6 +1,7 @@
 """Class containing a manager for setting up concentrations of species."""
 import numpy as np
 from scipy.optimize import minimize
+from collections import OrderedDict
 
 
 class Concentration(object):
@@ -46,15 +47,30 @@ class Concentration(object):
         if num_usr_lb > 0:
             self.add_usr_defined_ineq_constraints(A_lb, b_lb)
 
+    def _remove_redundant_entries(self, A, b):
+        for row_num in range(A.shape[0]-1, -1, -1):
+            for prev_row in range(row_num-1):
+                cond1 = np.allclose(A[row_num, :], A[prev_row, :])
+                cond2 = abs(b[row_num] - b[prev_row]) < 1E-9
+                if cond1 and cond2:
+                    A = np.delete(A, row_num, axis=0)
+                    b = np.delete(b, row_num)
+                    break
+        return A, b
+
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
         """Add user defined constraints."""
         self.A_eq = np.vstack((self.A_eq, A_eq))
         self.b_eq = np.append(self.b_eq, b_eq)
+        self.A_eq, self.b_eq = self._remove_redundant_entries(self.A_eq,
+                                                              self.b_eq)
 
     def add_usr_defined_ineq_constraints(self, A_lb, b_lb):
         """Add the user defined constraints."""
         self.A_lb = np.vstack((self.A_lb, A_lb))
         self.b_lb = np.append(self.b_lb, b_lb)
+        self.A_lb, self.b_lb = self._remove_redundant_entries(self.A_lb,
+                                                              self.b_lb)
 
     def set_conc_ranges(self, ranges):
         """Set concentration based on lower and upper bound
@@ -77,26 +93,203 @@ class Concentration(object):
             b_lb[2*i+1] = -item[1]
         self.add_usr_defined_ineq_constraints(A_lb, b_lb)
 
+    def _get_integers(self, string, variable_range=None):
+        """Extract all the integers from a string."""
+        if variable_range is None:
+            variable_symbols = []
+        else:
+            variable_symbols = list(variable_range.keys())
+        signs = {"+": 1, "-": -1}
+        integers = []
+        current_indx = 0
+        sum_of_variable_coeff = {k: 0 for k in variable_symbols}
+        active_sign = 1
+        while current_indx < len(string):
+            connected_to_symbol = False
+            if string[current_indx] in signs.keys():
+                active_sign = signs[string[current_indx]]
+            elif string[current_indx] == "<":
+                active_sign = 1
+
+            if string[current_indx].isdigit():
+                substr = string[current_indx]
+                # find how many consecutive digits are there
+                indx = current_indx+1
+                while indx < len(string):
+                    # end of integer found
+                    if not string[indx].isdigit():
+                        # case where integer followed by a variable symbol
+                        # (e.g., 4x)
+                        if string[indx] in variable_symbols:
+                            connected_to_symbol = True
+                        break
+                    substr += string[indx]
+                    indx += 1
+
+                # got an integer number
+                if not connected_to_symbol:
+                    integers.append(int(substr))
+                    current_indx = indx
+                else:
+                    symbol = string[indx]
+                    sum_of_variable_coeff[symbol] += active_sign*int(substr)
+                    current_indx = indx + 1
+
+            # case where variable symbol is defined without integer
+            elif string[current_indx] in variable_symbols:
+                symbol = string[current_indx]
+                sum_of_variable_coeff[symbol] += active_sign
+                current_indx += 1
+            else:
+                current_indx += 1
+
+        # Ensure valid chemical formula
+        for k, v in sum_of_variable_coeff.items():
+            if v != 0:
+                raise ValueError("Invalid formula! {} {}"
+                                 "".format(string, sum_of_variable_coeff))
+        return integers
+
     def set_conc_formula_unit(self, formulas=None, variable_range=None):
         """Set concentration based on formula unit strings.
 
         Arguments:
         =========
         formulas: list of strings
-            formula string should be provided per basis.
-            e.g., ["Li<x>Ru<1>X<2-x>", "O<3-y>X<y>"]
+            format of formula strings:
+                1. formula string should be provided per basis.
+                2. formula string can only have integer numbers.
+                3. only one variable is allowed per basis.
+                4. each variable should have at least one instance of 'clean'
+                   representation (e.g., <x>, <y>)
+            e.g., ["Li<x>Ru<1>X<2-x>", "O<3-y>X<y>"], ['Al<4-4x>Mg<3x>Si<x>'']
         variable range: dict
             range of each variable used in formulas.
             key is a string, and the value should be int or float
-            e.g., {"x": (0, 2), "y": (0, 0.7)}
+            e.g., {"x": (0, 2), "y": (0, 0.7)}, {'x': (0., 1.)}
         """
-        element_variable = self._parse_formula_unit_string(formulas)
+        element_conc = self._parse_formula_unit_string(formulas)
+        num_atoms_in_basis = []
+        for formula in formulas:
+            num_atoms_in_basis.append(
+                np.sum(self._get_integers(formula, variable_range)))
+        print('\n\n')
+        print('element_conc = {}'.format(element_conc))
+        print('variable_range = {}'.format(variable_range))
+        print('num_atoms_in_basis = {}'.format(num_atoms_in_basis))
+
+        A_eq = []
+        b_eq = []
+        col = 0
+
+        # Al<4-4x>Mg<3x>Si<x>
+        # Al<2-x>Mg<x>Si<x>
+        # Al<3-x-2y>Mg<y>Si<y>X<x> {'x': (0, 1), 'y': (0, 1)}
+
+        # Set equality matrix and vector due to one or more elements has one
+        # fixed concentration value.
+        # Note: element_conc is an OrderedDict so k, v pairs come in the
+        # same order they were added
+        for basis, basis_elem in enumerate(element_conc):
+            for k, v in basis_elem.items():
+                if v.isdigit():
+                    row = np.zeros(self.num_concs)
+                    row[col] = num_atoms_in_basis[basis]
+                    A_eq.append(row)
+                    b_eq.append(int(v))
+                col += 1
+
+        # Extract relations between elements (e.g., <x> and <2x>)
+        num_elements_with_symbol = {k: 0 for k in variable_range.keys()}
+        for sym in variable_range.keys():
+            for basis_elem in element_conc:
+                for element_symbol, conc in basis_elem.items():
+                    if conc.find(sym) != -1:
+                        num_elements_with_symbol[sym] += 1
+
+        print('num_elements_with_symbol = {}'.format(num_elements_with_symbol))
+        reference_elements = {}
+
+        for sym in variable_range.keys():
+            num_additional_constraints = num_elements_with_symbol[sym] - 2
+            if num_additional_constraints == 0:
+                continue
+
+            # Find the reference element (element containing <x>)
+            ref_element = None
+            ref_col = None
+            col = 0
+            for basis_elem in element_conc:
+                for k, v in basis_elem.items():
+                    if v == sym:
+                        ref_element = k
+                        reference_elements[sym] = k
+                        ref_col = col
+                        break
+                    col += 1
+            print('ref_element = {}'.format(ref_element))
+            print('ref_col = {}'.format(ref_col))
+
+            if ref_element is None:
+                raise RuntimeError("Did not find reference element for symbol "
+                                   "".format(sym))
+
+            # Extract the coefficients of other elements with their
+            # concenctrations defined as multiples of the symbol
+            # (e.g., <2x>, <3x>)
+            ignore_conditions = ["+", "-"]
+            col = 0
+            for basis_elem in element_conc:
+                for k, v in basis_elem.items():
+                    if k == ref_element or sym not in v:
+                        col += 1
+                        continue
+
+                    if any(char in v for char in ignore_conditions):
+                        col += 1
+                        continue
+                    coeff = self._get_coeff(v)
+                    row = np.zeros(self.num_concs)
+                    row[ref_col] = -coeff
+                    row[col] = 1
+                    A_eq.append(row)
+                    b_eq.append(0)
+                    col += 1
+
+        if A_eq:
+            A_eq = np.array(A_eq)
+            self.add_usr_defined_eq_constraints(A_eq, b_eq)
+
+        print(self.A_eq)
+        print(self.b_eq)
+
+        # [0, 3, 0, 0, 0] = [1]
+        # []
         # 0 <= x_Li <= 2
         # 0 <= X <= 0.7
         # Calculate number of elements in formula unit
         # x + 1 + 2 - x = tot_1
         # 3 - y + y = tot_2
         # tot_1*x_Ru = 1
+
+    def _get_coeff(self, string):
+        """Get the coefficient in front of the symbol.
+
+        Arugments:
+        ==========
+        string: str
+            string of the following form 3x, 10y, 3z etc.
+        """
+        if not string[0].isdigit():
+            return 1
+
+        number = ""
+        for character in string:
+            if not character.isdigit():
+                break
+            number += character
+        return int(number)
+
 
     def _parse_formula_unit_string(self, formulas):
         element_variable = []
@@ -117,7 +310,7 @@ class Concentration(object):
             if elements != self.basis_elements[basis_num]:
                 raise ValueError("elements in 'formulas' and 'basis_elements' "
                                  "should match.")
-            element_variable.append(dict(zip(elements, math)))
+            element_variable.append(OrderedDict(zip(elements, math)))
         return element_variable
 
     def _get_constraints(self):
@@ -159,7 +352,7 @@ class Concentration(object):
             start += len(basis)
 
         A = np.zeros((len(indices), self.num_concs))
-        b = np.zeros(self.num_concs)
+        b = np.zeros(len(indices))
         for i, indx in enumerate(indices):
             A[i, indx] = 1
             rng = ranges[indx][1] - ranges[indx][0]
@@ -190,10 +383,11 @@ class Concentration(object):
 
     def get_random_concentration(self):
         """Generate a valid random concentration."""
+        assert self.A_eq.shape[0] == len(self.b_eq)
+
         self._add_fixed_element_in_each_basis()
         # Setup the constraints
         constraints = self._get_constraints()
-        # ranges = self.get_individual_comp_range()
         x0 = 2.0*np.random.rand(self.num_concs)
 
         # Find the closest vector to x0 that satisfies all constraints
