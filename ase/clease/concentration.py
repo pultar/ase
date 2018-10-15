@@ -4,6 +4,13 @@ from scipy.optimize import minimize
 from collections import OrderedDict
 
 
+class IntConversionNotConsistentError(Exception):
+    """Exception that is raised if equality constraints are not satisfied
+       when converting to integers.
+    """
+    pass
+
+
 class Concentration(object):
     def __init__(self, basis_elements=None, A_lb=None, b_lb=None, A_eq=None,
                  b_eq=None):
@@ -150,6 +157,13 @@ class Concentration(object):
                                  "".format(string, sum_of_variable_coeff))
         return integers
 
+    def _num_atoms_in_basis(self, formulas, variable_range):
+        num_atoms_in_basis = []
+        for formula in formulas:
+            num_atoms_in_basis.append(
+                np.sum(self._get_integers(formula, variable_range)))
+        return num_atoms_in_basis
+
     def set_conc_formula_unit(self, formulas=None, variable_range=None):
         """Set concentration based on formula unit strings.
 
@@ -169,22 +183,14 @@ class Concentration(object):
             e.g., {"x": (0, 2), "y": (0, 0.7)}, {'x': (0., 1.)}
         """
         element_conc = self._parse_formula_unit_string(formulas)
-        num_atoms_in_basis = []
-        for formula in formulas:
-            num_atoms_in_basis.append(
-                np.sum(self._get_integers(formula, variable_range)))
-        print('\n\n')
-        print('element_conc = {}'.format(element_conc))
-        print('variable_range = {}'.format(variable_range))
-        print('num_atoms_in_basis = {}'.format(num_atoms_in_basis))
+        num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
 
         A_eq = []
         b_eq = []
         col = 0
 
-        # Al<4-4x>Mg<3x>Si<x>
-        # Al<2-x>Mg<x>Si<x>
-        # Al<3-x-2y>Mg<y>Si<y>X<x> {'x': (0, 1), 'y': (0, 1)}
+        num_elements_with_var = self._num_elements_with_var(variable_range,
+                                                            element_conc)
 
         # Set equality matrix and vector due to one or more elements has one
         # fixed concentration value.
@@ -199,40 +205,22 @@ class Concentration(object):
                     b_eq.append(int(v))
                 col += 1
 
-        # Extract relations between elements (e.g., <x> and <2x>)
-        num_elements_with_symbol = {k: 0 for k in variable_range.keys()}
-        for sym in variable_range.keys():
-            for basis_elem in element_conc:
-                for element_symbol, conc in basis_elem.items():
-                    if conc.find(sym) != -1:
-                        num_elements_with_symbol[sym] += 1
+        variables = list(variable_range.keys())
+        # get reference_elements: elements with its concentration specified
+        # with a clean representation (e.g., <x> or <y>)
+        reference_elements = self._reference_elements(element_conc, variables)
 
-        print('num_elements_with_symbol = {}'.format(num_elements_with_symbol))
-        reference_elements = {}
-
-        for sym in variable_range.keys():
-            num_additional_constraints = num_elements_with_symbol[sym] - 2
+        for variable in variable_range.keys():
+            num_additional_constraints = num_elements_with_var[variable] - 2
             if num_additional_constraints == 0:
                 continue
 
-            # Find the reference element (element containing <x>)
-            ref_element = None
-            ref_col = None
-            col = 0
-            for basis_elem in element_conc:
-                for k, v in basis_elem.items():
-                    if v == sym:
-                        ref_element = k
-                        reference_elements[sym] = k
-                        ref_col = col
-                        break
-                    col += 1
-            print('ref_element = {}'.format(ref_element))
-            print('ref_col = {}'.format(ref_col))
+            ref_element = reference_elements[variable]["symbol"]
+            ref_col = reference_elements[variable]["col"]
 
             if ref_element is None:
                 raise RuntimeError("Did not find reference element for symbol "
-                                   "".format(sym))
+                                   "".format(variable))
 
             # Extract the coefficients of other elements with their
             # concenctrations defined as multiples of the symbol
@@ -241,7 +229,7 @@ class Concentration(object):
             col = 0
             for basis_elem in element_conc:
                 for k, v in basis_elem.items():
-                    if k == ref_element or sym not in v:
+                    if k == ref_element or variable not in v:
                         col += 1
                         continue
 
@@ -260,17 +248,84 @@ class Concentration(object):
             A_eq = np.array(A_eq)
             self.add_usr_defined_eq_constraints(A_eq, b_eq)
 
-        print(self.A_eq)
-        print(self.b_eq)
+        self._f_u_neq(variable_range, reference_elements, formulas)
 
-        # [0, 3, 0, 0, 0] = [1]
-        # []
-        # 0 <= x_Li <= 2
-        # 0 <= X <= 0.7
-        # Calculate number of elements in formula unit
-        # x + 1 + 2 - x = tot_1
-        # 3 - y + y = tot_2
-        # tot_1*x_Ru = 1
+    def _num_elements_with_var(self, variable_range, element_conc):
+        # count how many elements have their concentration specified with
+        # the passed variable.
+        num_elements_with_variable = {k: 0 for k in variable_range.keys()}
+        for var in variable_range.keys():
+            for basis_elem in element_conc:
+                for element_symbol, conc in basis_elem.items():
+                    if var in conc:
+                        num_elements_with_variable[var] += 1
+        return num_elements_with_variable
+
+    def _f_u_neq(self, variable_range, reference_elements, formulas):
+        A_lb = []
+        b_lb = []
+        num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
+        # For each element in basis
+        # figure out if this is reference
+        for variable, rng in variable_range.items():
+            ref_element = reference_elements[variable]["symbol"]
+            basis = self._get_basis_containg_variable(formulas, variable)
+            col = self._get_col_of_element_in_basis(basis, ref_element)
+
+            # Add lower bound
+            row = np.zeros(self.num_concs)
+            row[col] = num_atoms_in_basis[basis]
+            A_lb.append(row)
+            b_lb.append(rng[0])
+
+            # Add upper bound
+            row = np.zeros(self.num_concs)
+            row[col] = -num_atoms_in_basis[basis]
+            A_lb.append(row)
+            b_lb.append(-rng[1])
+
+        if A_lb:
+            A_lb = np.array(A_lb)
+            b_lb = np.array(b_lb)
+            self.add_usr_defined_ineq_constraints(A_lb, b_lb)
+
+    def _reference_elements(self, element_conc, variables):
+        """Return the reference element for each variable."""
+        # reference element is the one that has its concentration specified
+        # with a clean representation (e.g., <x> or <y>)
+        ref_elem = {}
+        for variable in variables:
+            col = 0
+            for basis_elem in element_conc:
+                for k, v in basis_elem.items():
+                    if v == variable and v not in ref_elem.keys():
+                        ref_elem[variable] = {"symbol": k, "col": col}
+                    col += 1
+        return ref_elem
+
+    def _get_basis_containg_variable(self, formulas, variable_symbol):
+        """Return index of the basis containing the passed varyable symbol."""
+        for basis, formula in enumerate(formulas):
+            if variable_symbol in formula:
+                return basis
+
+        raise ValueError("Did not find any basis containing "
+                         "{}".format(variable_symbol))
+
+    def _get_col_of_element_in_basis(self, basis, element):
+        """Return column number in the matrix corresponding to element."""
+        col = 0
+        for i in range(basis):
+            col += len(self.basis_elements[i])
+
+        for elem in self.basis_elements[basis]:
+            if elem == element:
+                return col
+            col += 1
+
+        raise RuntimeError("Did not find any column corresponding to "
+                           "{} in basis {}. Current basis_elements are {}"
+                           "".format(element, basis, self.basis_elements))
 
     def _get_coeff(self, string):
         """Get the coefficient in front of the symbol.
@@ -289,7 +344,6 @@ class Concentration(object):
                 break
             number += character
         return int(number)
-
 
     def _parse_formula_unit_string(self, formulas):
         element_variable = []
@@ -420,6 +474,46 @@ class Concentration(object):
                            method="SLSQP", jac=obj_jac_component_max,
                            constraints=constraints)
         return opt_res["x"]
+
+    def conc_in_int(self, num_atoms_in_basis, conc):
+        """Converts concentration value to an integer that corresponds to the
+        number of corresponding elements.
+
+        Arugments:
+        =========
+        num_atoms_in_basis: list of int
+            Number of sites in each basis (e.g., [27, 27], [64]).
+        conc: array of float
+            Concentration per basis normalized to 1.
+            (e.g., arrays returned by self.get_random_concentration,
+                   self.get_conc_max_component etc.)
+        """
+
+        if len(num_atoms_in_basis) != len(self.basis_elements):
+            raise ValueError("Number of atoms has to be specified for each "
+                             "basis")
+
+        int_array = np.zeros(self.num_concs, dtype=int)
+        start = 0
+        b_eq = self.b_eq.copy()
+        for i, num in enumerate(num_atoms_in_basis):
+            n = len(self.basis_elements[i])
+            end = start + n
+            if end >= len(int_array):
+                int_array[start:] = int(np.round(conc[start:]*num))
+                b_eq[start:] *= num
+            else:
+                int_array[start: end] = int(np.round(conc[start: end]*num))
+                b_eq[start: end] *= num
+            start += n
+
+        # Make sure that equality constraints are satisfied
+        dot_prod = self.A_eq.dot(int_array)
+        if not np.allclose(dot_prod, self.b_eq):
+            msg = "The conversion from floating point concentration to int "
+            msg += "is not consistent. Expected: {}, ".format(b_eq)
+            msg += "got: {}".format(dot_prod)
+            raise IntConversionNotConsistentError(msg)
 
 
 # Helper function used by the minimization algorithm
