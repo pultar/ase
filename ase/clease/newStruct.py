@@ -3,6 +3,8 @@ import os
 import random
 import numpy as np
 
+from fractions import gcd
+from functools import reduce
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.probestructure import ProbeStructure
 from ase.clease.tools import wrap_and_sort_by_position
@@ -11,6 +13,7 @@ from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.io import read
 from ase.db import connect
+
 
 max_attempt = 10
 
@@ -35,7 +38,7 @@ class GenerateStructures(object):
         number of structures to generate per generation.
     """
 
-    def __init__(self, setting, generation_number=None, struct_per_gen=None):
+    def __init__(self, setting, generation_number=None, struct_per_gen=5):
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
             raise TypeError(msg)
@@ -47,17 +50,7 @@ class GenerateStructures(object):
         else:
             self.gen = generation_number
 
-        # If the number of structures to include per generation is not given,
-        # use one structure per computable concentration value
-        # Note: May not be the most practical solution for some cases
-        if struct_per_gen is None:
-            if self.setting.num_conc_var == 1:
-                self.struct_per_gen = self.setting.conc_matrix.shape[0]
-            else:
-                self.struct_per_gen = self.setting.conc_matrix.shape[0] *\
-                    self.setting.conc_matrix.shape[1]
-        else:
-            self.struct_per_gen = struct_per_gen
+        self.struct_per_gen = struct_per_gen
 
     def generate_probe_structure(self, init_temp=None, final_temp=None,
                                  num_temp=5, num_steps=10000,
@@ -458,6 +451,39 @@ class GenerateStructures(object):
 
         return conc_ratio, conc_value
 
+    # name = 0.1-0.3-0.6_0.4-0.6_1
+    #          0.1-0.3-0.6_0.4-0.6_2
+    #          Li4V2O4F2_0 <- indepdendent of cell size
+    #          Li<??>Ru<??>X<??>O<??>X<??>
+
+    def _get_name(self, atoms):
+        """Generates a unique name for the structure."""
+        atom_count = []
+        all_nums = []
+        for group in self.setting.index_by_basis:
+            new_count = {}
+            for indx in group:
+                symbol = atoms[indx].symbol
+                if symbol not in new_count.keys():
+                    new_count[symbol] = 1
+                else:
+                    new_count[symbol] += 1
+            atom_count.append(new_count)
+            all_nums += [v for k, v in new_count.items()]
+        print(atom_count)
+        gcdp = reduce(lambda x, y: gcd(x, y), all_nums)
+        print(all_nums)
+        print("GCD: {}".format(gcdp))
+        name = ""
+        for i, count in enumerate(atom_count):
+            for k, v in count.items():
+                name += "{}{}".format(k, int(v/gcdp))
+            if i < len(atom_count)-1:
+                name += "_"
+        return name
+
+
+
     def _random_struct_at_conc(self, conc_ratio, conc1=None, conc2=None,
                                unique=True):
         """Generate a random structure that does not already exist in DB."""
@@ -465,6 +491,7 @@ class GenerateStructures(object):
         # setting.group_basis is None
         # Else, convert the conc_ratio the format of
         # setting.grouped_basis_elements
+
         tmp = list(conc_ratio)
         conc_ratio = []
         if self.setting.grouped_basis is None:

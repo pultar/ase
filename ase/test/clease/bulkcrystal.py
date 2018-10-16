@@ -11,6 +11,8 @@ from ase.clease import CEBulk, GenerateStructures, Evaluate
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
+from ase.clease.concentration import Concentration
+from ase.build import bulk
 
 
 def get_members_of_family(setting, cname):
@@ -28,13 +30,25 @@ def test_binary_system():
     The EMT calculator is used for energy calculations
     """
     db_name = "test_crystal.db"
-    conc_args = {"conc_ratio_min_1": [[1, 0]],
-                 "conc_ratio_max_1": [[0, 1]]}
+    # conc_args = {"conc_ratio_min_1": [[1, 0]],
+    #              "conc_ratio_max_1": [[0, 1]]}
+    basis_elements = [["Au", "Cu"]]
+    concentration = Concentration(basis_elements=basis_elements)
     bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
-                        basis_elements=[["Au", "Cu"]], size=[3, 3, 3],
-                        conc_args=conc_args, db_name=db_name)
+                        basis_elements=basis_elements, size=[3, 3, 3],
+                        concentration=concentration, db_name=db_name)
 
     struct_generator = GenerateStructures(bc_setting, struct_per_gen=3)
+
+    # Name
+    print(struct_generator._get_name(bc_setting.atoms))
+    atoms = bulk('Au', a=4.05)*(3, 1, 1)
+    atoms[1].symbol = "Cu"
+    atoms = atoms*(1, 3, 3)
+    print(atoms.get_chemical_formula())
+    print(struct_generator._get_name(atoms))
+
+    quit()
     struct_generator.generate_initial_pool()
 
     # Compute the energy of the structures
@@ -58,6 +72,7 @@ def test_binary_system():
     eval_l2 = Evaluate(bc_setting, fitting_scheme="l2", alpha=1E-6)
     eval_l2.get_cluster_name_eci(return_type='tuple')
     eval_l2.get_cluster_name_eci(return_type='dict')
+
 
     os.remove(db_name)
 
@@ -148,11 +163,12 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
-    # # ---------------------------------- #
-    # # 2 grouped_basis + background atoms #
-    # # ---------------------------------- #
-    # # initial_pool + probe_structures    #
-    # # ---------------------------------- #
+    # ---------------------------------- #
+    # 2 grouped_basis + background atoms #
+    # ---------------------------------- #
+    # initial_pool + probe_structures    #
+    # ---------------------------------- #
+    # [["Ca"], ["O", "F"]]
     setting = CEBulk(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
                      crystalstructure="fluorite",
                      a=4.0,

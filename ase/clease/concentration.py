@@ -12,9 +12,12 @@ class IntConversionNotConsistentError(Exception):
 
 
 class Concentration(object):
-    def __init__(self, basis_elements=None, A_lb=None, b_lb=None, A_eq=None,
-                 b_eq=None):
-        self.basis_elements = basis_elements
+    def __init__(self, basis_elements=None, grouped_basis=None,
+                 A_lb=None, b_lb=None, A_eq=None, b_eq=None):
+        self.orig_basis_elements = basis_elements
+        self.grouped_basis = grouped_basis
+        self.basis_elements = self._get_grouped_basis_elements()
+
         num_implicit_eq = len(basis_elements)
         self.num_concs = len([x for sub in basis_elements for x in sub])
         self.fixed_element_constraint_added = False
@@ -64,6 +67,40 @@ class Concentration(object):
                     b = np.delete(b, row_num)
                     break
         return A, b
+
+    def _get_grouped_basis_elements(self):
+        if self.grouped_basis is None:
+            return self.orig_basis_elements
+
+        gr_basis_elements = []
+        for group in self.grouped_basis:
+            gr_basis_elements.append(self.orig_basis_elements[group[0]])
+        return gr_basis_elements
+
+
+    def to_dict(self):
+        """Return neescary information to store as JSON."""
+        data = {
+            "A_eq": self.A_eq.tolist(),
+            "b_eq": self.b_eq.tolist(),
+            "A_lb": self.A_lb.tolist(),
+            "b_lb": self.b_lb.tolist(),
+            "basis_elements": self.orig_basis_elements,
+        }
+        if self.grouped_basis is not None:
+            data["grouped_basis"] = self.grouped_basis
+        return data
+
+    @staticmethod
+    def from_dict(data):
+        """Initialize data from dictionary."""
+        return Concentration(**data)
+
+    def is_valid(self, conc):
+        """Check if the concentration is valid."""
+        eq_valid = np.allclose(self.A_eq.dot(conc), self.b_eq)
+        ineq_valid = np.all(self.A_lb.dot(conc) >= self.b_lb)
+        return eq_valid and ineq_valid
 
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
         """Add user defined constraints."""

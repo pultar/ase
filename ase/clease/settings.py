@@ -17,13 +17,14 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               nested_array2list)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
+from ase.clease.concentration import Concentration
 
 
 class ClusterExpansionSetting(object):
     """Base class for all Cluster Expansion settings."""
 
     def __init__(self, size=None, supercell_factor=None, dist_num_dec=3,
-                 conc_args=None, db_name=None, max_cluster_size=4,
+                 concentration=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, basis_function='sanchez',
                  basis_elements=None, grouped_basis=None,
                  ignore_background_atoms=False):
@@ -35,11 +36,24 @@ class ClusterExpansionSetting(object):
                                             size=size, skew_threshold=4,
                                             unit_cells=[self.unit_cell])
 
+        if isinstance(concentration, Concentration):
+            self.concentration = concentration
+        elif isinstance(concentration, dict):
+            self.concentration = Concentration.from_dict(concentration)
+        else:
+            raise TypeError("concentration has to be either dict or "
+                            "instance of Concentration")
+        self.kwargs["concentration"] = self.concentration.to_dict()
+
         self.dist_num_dec = dist_num_dec
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
         self.max_cluster_dia = max_cluster_dia
         self.basis_elements = basis_elements
+
+        if self.basis_elements != self.concentration.basis_elements:
+            raise ValueError("basis_elements given to ClusterExpansionSetting "
+                             "and Concentration classes have to match!")
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
@@ -90,18 +104,12 @@ class ClusterExpansionSetting(object):
         self.index_by_trans_symm = []
         self.ref_index_trans_symm = []
         self.kd_trees = None
-        self.conc_args = conc_args
-        self.conc_ratio_min_1 = None
-        self.conc_ratio_max_1 = None
-        self.conc_ratio_min_2 = None
-        self.conc_ratio_max_2 = None
         self.set_template_atoms(0)
 
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
-        if grouped_basis is None:
-            self._check_basis_elements()
-        else:
+
+        if grouped_basis is not None:
             if not isinstance(grouped_basis, list):
                 raise TypeError('grouped_basis should be a list')
             self.num_groups = len(self.grouped_basis)
@@ -140,7 +148,7 @@ class ClusterExpansionSetting(object):
         self.atoms_with_given_dim, self.size = \
             self.template_atoms.get_atoms(uid, return_dims=True)
 
-        self._check_conc_ratios(self.conc_args)
+        # self._check_conc_ratios(self.conc_args)
         self.cluster_info = []
 
         self.max_cluster_dia, self.supercell_scale_factor = \
@@ -377,32 +385,32 @@ class ClusterExpansionSetting(object):
                 del self.conc_ratio_min_2[i]
                 del self.conc_ratio_max_2[i]
 
-    def _check_basis_elements(self):
-        error = False
-        # check dimensions of the element list and concentration ratio lists
-        if self.num_basis == 1:
-            if not(self.num_basis == len(self.conc_ratio_min_1)
-                   == len(self.conc_ratio_max_1)):
-                error = True
-
-            if self.num_conc_var == 2:
-                if not(self.num_basis == len(self.conc_ratio_min_2)
-                       == len(self.conc_ratio_max_2)):
-                    error = True
-        else:
-            element_size = [len(row) for row in self.basis_elements]
-            min_1_size = [len(row) for row in self.conc_ratio_min_1]
-            max_1_size = [len(row) for row in self.conc_ratio_max_1]
-            if not element_size == min_1_size == max_1_size:
-                error = True
-            if self.num_conc_var == 2:
-                min_2_size = [len(row) for row in self.conc_ratio_min_2]
-                max_2_size = [len(row) for row in self.conc_ratio_max_2]
-                if not element_size == min_2_size == max_2_size:
-                    error = True
-        if error:
-            raise ValueError('lengths of the basis_elements and conc_ratio'
-                             ' lists are not the same')
+    # def _check_basis_elements(self):
+    #     error = False
+    #     # check dimensions of the element list and concentration ratio lists
+    #     if self.num_basis == 1:
+    #         if not(self.num_basis == len(self.conc_ratio_min_1)
+    #                == len(self.conc_ratio_max_1)):
+    #             error = True
+    #
+    #         if self.num_conc_var == 2:
+    #             if not(self.num_basis == len(self.conc_ratio_min_2)
+    #                    == len(self.conc_ratio_max_2)):
+    #                 error = True
+    #     else:
+    #         element_size = [len(row) for row in self.basis_elements]
+    #         min_1_size = [len(row) for row in self.conc_ratio_min_1]
+    #         max_1_size = [len(row) for row in self.conc_ratio_max_1]
+    #         if not element_size == min_1_size == max_1_size:
+    #             error = True
+    #         if self.num_conc_var == 2:
+    #             min_2_size = [len(row) for row in self.conc_ratio_min_2]
+    #             max_2_size = [len(row) for row in self.conc_ratio_max_2]
+    #             if not element_size == min_2_size == max_2_size:
+    #                 error = True
+    #     if error:
+    #         raise ValueError('lengths of the basis_elements and conc_ratio'
+    #                          ' lists are not the same')
 
     def _check_grouped_basis_elements(self):
         # check number of basis
@@ -523,12 +531,12 @@ class ClusterExpansionSetting(object):
             indx_by_equiv_all_atoms[symm_gr].append(atom.index)
         return indx_by_equiv_all_atoms
 
-    def _get_grouped_basis_elements(self):
-        """Group elements in the 'equivalent group' together in a list."""
-        grouped_basis_elements = []
-        for group in self.grouped_basis:
-            grouped_basis_elements.append(self.basis_elements[group[0]])
-        return grouped_basis_elements
+    # def _get_grouped_basis_elements(self):
+    #     """Group elements in the 'equivalent group' together in a list."""
+    #     grouped_basis_elements = []
+    #     for group in self.grouped_basis:
+    #         grouped_basis_elements.append(self.basis_elements[group[0]])
+    #     return grouped_basis_elements
 
     def _assign_correct_family_identifier(self):
         """Make the familily IDs increase size."""
@@ -842,58 +850,58 @@ class ClusterExpansionSetting(object):
         nearby_indices.remove(ref_indx)
         return nearby_indices
 
-    def _create_concentration_matrix(self):
-        min_1 = np.array([i for row in self.conc_ratio_min_1 for i in row])
-        max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
-        if sum(min_1) != sum(max_1):
-            raise ValueError('conc_ratio values must be on the same scale')
-
-        natoms_cell = len(self.atoms_with_given_dim)
-        if self.ignore_background_atoms:
-            num_background = len([a.index for a in self.atoms_with_given_dim
-                                  if a.symbol in self.background_symbol])
-            natoms_cell -= num_background
-        natoms_ratio = sum(min_1)
-        scale = int(natoms_cell / natoms_ratio)
-        min_1 *= scale
-        max_1 *= scale
-        # special case where there is only one concentration
-        if np.array_equal(min_1, max_1):
-            return min_1
-
-        diff_1 = [i - j for i, j in zip(max_1, min_1)]
-        nsteps_1 = max(diff_1)
-        increment_1 = diff_1 / nsteps_1
-
-        if self.num_conc_var == 1:
-            conc = np.zeros((nsteps_1 + 1, len(min_1)), dtype=int)
-            for n in range(nsteps_1 + 1):
-                if n == 0:
-                    conc[0] = min_1
-                    continue
-                conc[n] = conc[n - 1] + increment_1
-
-        if self.num_conc_var == 2:
-            min_2 = np.array([i for row in self.conc_ratio_min_2 for i in row])
-            max_2 = np.array([i for row in self.conc_ratio_max_2 for i in row])
-            if sum(min_2) != sum(max_2):
-                raise ValueError('conc_ratio values must be on the same scale')
-            scale = int(natoms_cell / natoms_ratio)
-            min_2 *= scale
-            max_2 *= scale
-            diff_2 = [i - j for i, j in zip(max_2, min_2)]
-            nsteps_2 = max(diff_2)
-            increment_2 = diff_2 / nsteps_2
-            conc = np.zeros((nsteps_1 + 1, nsteps_2 + 1, len(min_1)),
-                            dtype=int)
-            for i in range(nsteps_1 + 1):
-                if i == 0:
-                    conc[i][0] = min_1
-                else:
-                    conc[i][0] = conc[i - 1][0] + increment_1
-                for j in range(1, nsteps_2 + 1):
-                    conc[i][j] = conc[i][j - 1] + increment_2
-        return conc
+    # def _create_concentration_matrix(self):
+    #     min_1 = np.array([i for row in self.conc_ratio_min_1 for i in row])
+    #     max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
+    #     if sum(min_1) != sum(max_1):
+    #         raise ValueError('conc_ratio values must be on the same scale')
+    #
+    #     natoms_cell = len(self.atoms_with_given_dim)
+    #     if self.ignore_background_atoms:
+    #         num_background = len([a.index for a in self.atoms_with_given_dim
+    #                               if a.symbol in self.background_symbol])
+    #         natoms_cell -= num_background
+    #     natoms_ratio = sum(min_1)
+    #     scale = int(natoms_cell / natoms_ratio)
+    #     min_1 *= scale
+    #     max_1 *= scale
+    #     # special case where there is only one concentration
+    #     if np.array_equal(min_1, max_1):
+    #         return min_1
+    #
+    #     diff_1 = [i - j for i, j in zip(max_1, min_1)]
+    #     nsteps_1 = max(diff_1)
+    #     increment_1 = diff_1 / nsteps_1
+    #
+    #     if self.num_conc_var == 1:
+    #         conc = np.zeros((nsteps_1 + 1, len(min_1)), dtype=int)
+    #         for n in range(nsteps_1 + 1):
+    #             if n == 0:
+    #                 conc[0] = min_1
+    #                 continue
+    #             conc[n] = conc[n - 1] + increment_1
+    #
+    #     if self.num_conc_var == 2:
+    #         min_2 = np.array([i for row in self.conc_ratio_min_2 for i in row])
+    #         max_2 = np.array([i for row in self.conc_ratio_max_2 for i in row])
+    #         if sum(min_2) != sum(max_2):
+    #             raise ValueError('conc_ratio values must be on the same scale')
+    #         scale = int(natoms_cell / natoms_ratio)
+    #         min_2 *= scale
+    #         max_2 *= scale
+    #         diff_2 = [i - j for i, j in zip(max_2, min_2)]
+    #         nsteps_2 = max(diff_2)
+    #         increment_2 = diff_2 / nsteps_2
+    #         conc = np.zeros((nsteps_1 + 1, nsteps_2 + 1, len(min_1)),
+    #                         dtype=int)
+    #         for i in range(nsteps_1 + 1):
+    #             if i == 0:
+    #                 conc[i][0] = min_1
+    #             else:
+    #                 conc[i][0] = conc[i - 1][0] + increment_1
+    #             for j in range(1, nsteps_2 + 1):
+    #                 conc[i][j] = conc[i][j - 1] + increment_2
+    #     return conc
 
     @property
     def cluster_family_names(self):
@@ -949,12 +957,10 @@ class ClusterExpansionSetting(object):
               ' on the values of max_cluster_size and max_cluster_dia...')
         self._create_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
-        self.conc_matrix = self._create_concentration_matrix()
         # self._check_equiv_sites()
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
-                'trans_matrix': self.trans_matrix,
-                'conc_matrix': self.conc_matrix}
+                'trans_matrix': self.trans_matrix}
 
         db.write(self.atoms, name='template', data=data,
                  dims=self._size2string(), unit_cell_type=self.unit_cell_type)
@@ -969,7 +975,6 @@ class ClusterExpansionSetting(object):
             self.cluster_info = row.data.cluster_info
             self._info_entries_to_list()
             self.trans_matrix = row.data.trans_matrix
-            self.conc_matrix = row.data.conc_matrix
         except KeyError:
             self._store_data()
         except (AssertionError, AttributeError, RuntimeError):
@@ -994,40 +999,40 @@ class ClusterExpansionSetting(object):
             except ValueError:
                 continue
 
-    def in_conc_matrix(self, atoms):
-        """Check to see if the passed atoms object has allowed concentration.
-
-        Return True if it has allowed concentration, return False otherwise.
-        """
-        # determine the concentration of the given atoms
-        if self.grouped_basis is None:
-            num_elements = self.num_elements
-            all_elements = self.all_elements
-        else:
-            num_elements = self.num_grouped_elements
-            all_elements = self.all_grouped_elements
-
-        conc = np.zeros(num_elements, dtype=int)
-
-        for x in range(num_elements):
-            element = all_elements[x]
-            conc[x] = len([a for a in atoms if a.symbol == element])
-        # determine the dimensions of the concentration matrix
-        # then, search to see if there is a match
-        conc_shape = self.conc_matrix.shape
-        if self.conc_matrix.ndim == 1:
-            if np.array_equal(conc, self.conc_matrix):
-                return True
-        elif self.conc_matrix.ndim == 2:
-            for x in range(conc_shape[0]):
-                if np.array_equal(conc, self.conc_matrix[x]):
-                    return True
-        else:
-            for x in range(conc_shape[0]):
-                for y in range(conc_shape[1]):
-                    if np.array_equal(conc, self.conc_matrix[x][y]):
-                        return True
-        return False
+    # def in_conc_matrix(self, atoms):
+    #     """Check to see if the passed atoms object has allowed concentration.
+    #
+    #     Return True if it has allowed concentration, return False otherwise.
+    #     """
+    #     # determine the concentration of the given atoms
+    #     if self.grouped_basis is None:
+    #         num_elements = self.num_elements
+    #         all_elements = self.all_elements
+    #     else:
+    #         num_elements = self.num_grouped_elements
+    #         all_elements = self.all_grouped_elements
+    #
+    #     conc = np.zeros(num_elements, dtype=int)
+    #
+    #     for x in range(num_elements):
+    #         element = all_elements[x]
+    #         conc[x] = len([a for a in atoms if a.symbol == element])
+    #     # determine the dimensions of the concentration matrix
+    #     # then, search to see if there is a match
+    #     conc_shape = self.conc_matrix.shape
+    #     if self.conc_matrix.ndim == 1:
+    #         if np.array_equal(conc, self.conc_matrix):
+    #             return True
+    #     elif self.conc_matrix.ndim == 2:
+    #         for x in range(conc_shape[0]):
+    #             if np.array_equal(conc, self.conc_matrix[x]):
+    #                 return True
+    #     else:
+    #         for x in range(conc_shape[0]):
+    #             for y in range(conc_shape[1]):
+    #                 if np.array_equal(conc, self.conc_matrix[x][y]):
+    #                     return True
+    #     return False
 
     def _group_index_by_basis_group(self):
         index_by_grouped_basis = []

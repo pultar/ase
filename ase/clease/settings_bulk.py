@@ -75,10 +75,11 @@ class CEBulk(ClusterExpansionSetting):
 
     def __init__(self, basis_elements=None, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
-                 cubic=False, size=None, supercell_factor=None, conc_args=None,
-                 db_name=None, max_cluster_size=4, max_cluster_dia=None,
-                 basis_function='sanchez', grouped_basis=None,
-                 dist_num_dec=3, ignore_background_atoms=False):
+                 cubic=False, size=None, supercell_factor=None,
+                 concentration=None, db_name=None, max_cluster_size=4,
+                 max_cluster_dia=None, basis_function='sanchez',
+                 grouped_basis=None, dist_num_dec=3,
+                 ignore_background_atoms=False):
 
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
@@ -93,7 +94,6 @@ class CEBulk(ClusterExpansionSetting):
                        'cubic': cubic,
                        'size': size,
                        'supercell_factor': supercell_factor,
-                       'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
                        'max_cluster_size': max_cluster_size,
                        'max_cluster_dia': deepcopy(max_cluster_dia),
@@ -122,7 +122,7 @@ class CEBulk(ClusterExpansionSetting):
             raise ValueError(msg)
 
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
-                                         dist_num_dec, conc_args, db_name,
+                                         dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function, basis_elements,
                                          grouped_basis,
@@ -281,10 +281,11 @@ class CECrystal(ClusterExpansionSetting):
 
     def __init__(self, basis_elements=None, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
-                 supercell_factor=None, primitive_cell=False, conc_args=None,
-                 db_name=None, max_cluster_size=4, max_cluster_dia=None,
-                 basis_function='sanchez', grouped_basis=None,
-                 dist_num_dec=3, ignore_background_atoms=False):
+                 supercell_factor=None, primitive_cell=False,
+                 concentration=None, db_name=None, max_cluster_size=4,
+                 max_cluster_dia=None, basis_function='sanchez',
+                 grouped_basis=None, dist_num_dec=3,
+                 ignore_background_atoms=False):
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
         # case
@@ -297,7 +298,6 @@ class CECrystal(ClusterExpansionSetting):
                        'size': size,
                        'supercell_factor': supercell_factor,
                        'primitive_cell': primitive_cell,
-                       'conc_args': deepcopy(conc_args),
                        'db_name': db_name,
                        'max_cluster_size': max_cluster_size,
                        'max_cluster_dia': deepcopy(max_cluster_dia),
@@ -318,7 +318,7 @@ class CECrystal(ClusterExpansionSetting):
             self.symbols.append(basis_elements[x][0])
 
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
-                                         dist_num_dec, conc_args, db_name,
+                                         dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function, basis_elements,
                                          grouped_basis,
