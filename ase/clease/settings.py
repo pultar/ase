@@ -17,7 +17,7 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               nested_array2list)
 
 
-class ClusterExpansionSetting:
+class ClusterExpansionSetting(object):
     """Base class for all Cluster Expansion settings."""
 
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
