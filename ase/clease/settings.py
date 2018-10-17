@@ -27,7 +27,7 @@ class ClusterExpansionSetting(object):
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
-        self.basis_elements = basis_elements
+        self.basis_elements = deepcopy(basis_elements)
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
