@@ -8,4 +8,4 @@ from ase.clease.regression import LinearRegression, Tikhonov, Lasso
 
 __all__ = ['CEBulk', 'CECrystal', 'CorrFunction',
            'GenerateStructures', 'Evaluate', 'ConvexHull',
-           'LinearRegression']
+           'LinearRegression', 'Tikhonov', 'Lasso']
