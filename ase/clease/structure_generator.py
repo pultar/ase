@@ -2,14 +2,19 @@
 import os
 import math
 from random import choice, getrandbits
+from copy import deepcopy
 import numpy as np
 from numpy.linalg import inv, pinv
 from ase.db import connect
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.tools import wrap_and_sort_by_position
+from ase.calculators.clease import Clease
+from ase.units import kB
+import time
 
 
-class ProbeStructure(object):
+# class ProbeStructure(object):
+class StructureGenerator(object):
     """Generate probe structures.
 
     Based on simulated annealing according to the recipe in
@@ -52,12 +57,11 @@ class ProbeStructure(object):
     """
 
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
-                 final_temp=None, num_temp=5, num_steps=10000,
-                 approx_mean_var=False):
+                 final_temp=None, num_temp=5, num_steps_per_temp=10000):
         if not isinstance(setting, (CEBulk, CECrystal)):
             raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
-        from ase.calculators.clease import Clease
+        
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
@@ -73,31 +77,18 @@ class ProbeStructure(object):
             raise ValueError("concentration of the elements in the provided"
                              " atoms cannot be found in the conc_matrix")
 
+        # eci set to 1 to ensure that all correlation functions are included 
+        # but the energy produced from this should never be used 
         eci = {name: 1. for name in self.cluster_names}
         self.calc = Clease(self.setting, cluster_name_eci=eci)
         self.supercell.set_calculator(self.calc)
-
-        self.approx_mean_var = approx_mean_var
-        fname = 'probe_structure-sigma_mu.npz'
-        if not approx_mean_var:
-            if os.path.isfile(fname):
-                data = np.load(fname)
-                self.sigma = data['sigma']
-                self.mu = data['mu']
-            else:
-                raise IOError("'{}' not found.".format(fname))
-
-        if init_temp is None or final_temp is None:
-            self.init_temp, self.final_temp = self._determine_temps()
-        else:
-            self.init_temp = init_temp
-            self.final_temp = final_temp
+        self.output_every = 30
+        self.init_temp = init_temp
+        self.final_temp = final_temp
+        self.temp = self.init_temp
         self.num_temp = num_temp
-        self.num_steps = num_steps
-
-        if self.init_temp <= self.final_temp:
-            raise ValueError("Initial temperature must be higher than final"
-                             " temperature")
+        self.num_steps_per_temp = num_steps_per_temp
+        self.alter_composition = True
 
     def _build_supercell(self, atoms):
         for atom in atoms:
@@ -132,24 +123,39 @@ class ProbeStructure(object):
             a.symbol = self.supercell[self.periodic_indices[a.index][0]].symbol
         return atoms
 
+    def _reset(self):
+        pass
+
     def generate(self):
         """Generate a probe structure according to PRB 80, 165122 (2009)."""
         # Start
-        o_cf = self.calc.cf
-        o_cfm = np.vstack((self.cfm, o_cf))
-        if self.approx_mean_var:
-            o_mv = mean_variance_approx(o_cfm)
-        else:
-            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
+        self._reset()
+        if self.init_temp is None or self.final_temp is None:
+            self.init_temp, self.final_temp = self._determine_temps()
+        
+        if self.init_temp <= self.final_temp:
+            raise ValueError("Initial temperature must be higher than final"
+                             " temperature")
+        self._reset()
 
         temps = np.logspace(math.log10(self.init_temp),
                             math.log10(self.final_temp),
                             self.num_temp)
-        steps_per_temp = int(self.num_steps / self.num_temp)
-        count = 0
+        now = time.time()
         for temp in temps:
-            while count < steps_per_temp:
-                if bool(getrandbits(1)):
+            self.temp = temp
+            num_accepted = 0
+            count = 0
+            while count < self.num_steps_per_temp:
+                count += 1
+                if time.time() - now > self.output_every:
+                    acc_rate = float(num_accepted)/count
+                    print("Temp: {}. {} of {}. Acc. rate: {}"
+                          "".format(temp, count, self.num_steps_per_temp,
+                                     acc_rate))
+                    now = time.time()
+
+                if bool(getrandbits(1)) and self.alter_composition:
                     # Change element Type
                     if self._has_more_than_one_conc():
                         self._change_element_type()
@@ -161,40 +167,44 @@ class ProbeStructure(object):
                             self.supercell[indx[1]].symbol:
                         continue
                 self.supercell.get_potential_energy()
-                n_cf = self.calc.cf
-                n_cfm = np.vstack((self.cfm, n_cf))
-                if self.approx_mean_var:
-                    n_mv = mean_variance_approx(n_cfm)
-                else:
-                    n_mv = mean_variance(n_cfm, self.sigma, self.mu)
 
-                if o_mv > n_mv:
-                    accept = True
-                else:
-                    accept = np.exp((o_mv - n_mv) / temp) > np.random.uniform()
-                count += 1
-                if accept:
-                    o_mv = n_mv
+                if self._accept():
+                    num_accepted += 1
                 else:
                     self.calc.restore(self.supercell)
 
         self._check_consistency()
-        return self._supercell2unitcell(), self.calc.get_cf_dict()
+        return self._optimal_structure()
+        #return self._supercell2unitcell(), self.calc.get_cf_dict()
+
+    def _accept(self):
+        raise NotImplementedError('This should be implemented in the inherited '
+                                  'class.')
+    
+    def _estimate_temp_range(self):
+        raise NotImplementedError('This should be implemented in the inherited '
+                                  'class.')
+    
+    def _optimal_structure(self):
+        raise NotImplementedError("This shoud be implemented in the inherited "
+                                  "class.")
 
     def _determine_temps(self):
         print("Temperature range not given. "
               "Determining the range automatically.")
-        o_cf = self.calc.cf
-        o_cfm = np.vstack((self.cfm, o_cf))
-        if self.approx_mean_var:
-            o_mv = mean_variance_approx(o_cfm)
-        else:
-            o_mv = mean_variance(o_cfm, self.sigma, self.mu)
-        diffs = []
+        self._reset()
         count = 0
         max_count = 100
+        now = time.time()
+        # To avoid errors, just set the temperature to 
+        # an arbitrary file
+        self.temp = 10000000.0
         while count < max_count:
-            if bool(getrandbits(1)):
+            if time.time() - now > self.output_every:
+                print("Progress ({}%)".format(100*count/max_count))
+                now = time.time()
+
+            if bool(getrandbits(1)) and self.alter_composition:
                 # Change element Type
                 if self._has_more_than_one_conc():
                     self._change_element_type()
@@ -208,19 +218,13 @@ class ProbeStructure(object):
                     continue
                 count += 1
             self.supercell.get_potential_energy()
-            n_cf = self.calc.cf
-            n_cfm = np.vstack((self.cfm, n_cf))
-            if self.approx_mean_var:
-                n_mv = mean_variance_approx(n_cfm)
-            else:
-                n_mv = mean_variance(n_cfm, self.sigma, self.mu)
-            diffs.append(abs(o_mv - n_mv))
-            # update old
-            o_mv = n_mv
+            
 
-        avg_diff = sum(diffs) / len(diffs)
-        init_temp = 10 * avg_diff
-        final_temp = 0.01 * avg_diff
+            # By calling accept statistics on the correlation
+            # function and variance will be collected
+            self._accept()
+        init_temp, final_temp = self._estimate_temp_range()
+        self.temp = init_temp
         print('init_temp= {}, final_temp= {}'.format(init_temp, final_temp))
         return init_temp, final_temp
 
@@ -341,6 +345,135 @@ class ProbeStructure(object):
         cfm = np.array(cfm, dtype=float)
         return cfm
 
+
+class ProbeStructure(StructureGenerator):
+    def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
+                 final_temp=None, num_temp=5, num_steps_per_temp=1000,
+                 approx_mean_var=False):
+
+        StructureGenerator.__init__(self, setting, atoms, struct_per_gen, 
+                    init_temp, final_temp, num_temp, num_steps_per_temp)
+        self.o_cf = self.calc.cf
+        self.o_cfm = np.vstack((self.cfm, self.o_cf))
+        self.approx_mean_var = approx_mean_var
+        fname = 'probe_structure-sigma_mu.npz'
+        if not approx_mean_var:
+            if os.path.isfile(fname):
+                data = np.load(fname)
+                self.sigma = data['sigma']
+                self.mu = data['mu']
+                self.o_mv = mean_variance(self.o_cfm, self.sigma, self.mu)
+            else:
+                raise IOError("'{}' not found.".format(fname))
+        else:
+            self.o_mv = mean_variance_approx(self.o_cfm)
+        self.avg_mv = 0.0
+        self.num_steps = 0
+        self.avg_diff = 0.0
+
+        self.min_mv = None
+        self.min_mv_atoms = None
+        self.min_mv_cf = None
+
+    def _accept(self):
+        """Accept the last change."""
+        cfm = np.vstack((self.cfm, self.calc.cf))
+        if self.approx_mean_var:
+            n_mv = mean_variance_approx(cfm)
+        else:
+            n_mv = mean_variance(cfm, self.sigma, self.mu)
+
+        # Always accept the first move
+        if self.min_mv_atoms is None:
+            self.min_mv_atoms = self._supercell2unitcell()
+            self.min_mv = n_mv
+            self.min_mv_cf = deepcopy(self.calc.cf)
+            return True
+
+        if n_mv < self.o_mv:
+            self.min_mv_atoms = self._supercell2unitcell()
+            self.min_mv = n_mv
+            self.min_mv_cf = deepcopy(self.calc.cf)
+
+        if self.o_mv > n_mv:
+            accept_move = True
+        else:
+            accept_move = np.exp((self.o_mv-n_mv)/self.temp) > np.random.uniform()
+        
+        self.avg_diff += abs(n_mv - self.o_mv)
+        if accept_move:
+            self.o_mv = n_mv
+
+        self.avg_mv += self.o_mv
+        self.num_steps += 1
+        return accept_move
+
+    def _estimate_temp_range(self):
+        if self.num_steps == 0:
+            return 100000.0, 1.0
+        avg_diff = self.avg_diff/self.num_steps
+        init_temp = 10 * avg_diff
+        final_temp = 0.01 * avg_diff
+        return init_temp, final_temp
+
+    def _optimal_structure(self):
+        return self.min_mv_atoms, self.min_mv_cf
+
+    @property
+    def avg_mean_variance(self):
+        if self.num_steps == 0:
+            return 0.0
+        return self.avg_mv/self.num_steps
+
+    def _reset(self):
+        self.avg_mv = 0.0
+        self.avg_diff = 0.0
+        self.num_steps = 0
+        
+
+class EminStructure(StructureGenerator):
+    def __init__(self, setting, atoms, struct_per_gen, init_temp=2000,
+                 final_temp=10, num_temp=10, num_steps_per_temp=10000, 
+                 cluster_name_eci=None):
+        StructureGenerator.__init__(self, setting, atoms, struct_per_gen,
+                                    init_temp, final_temp, num_temp, 
+                                    num_steps_per_temp)
+        self.alter_composition = False
+        self.calc = Clease(self.setting, cluster_name_eci=cluster_name_eci)
+        self.old_energy = None
+        self.min_energy = None
+        self.min_energy_atoms = None
+        self.min_energy_cf = None
+
+    def _accept(self):
+        """Accept the last change."""
+        new_energy = self.calc.energy
+        if self.old_energy is None:
+            self.old_energy = new_energy
+            self.min_energy = new_energy
+            self.min_energy_atoms = self._supercell2unitcell()
+            self.min_energy_cf = deepcopy(self.calc.cf)
+            return True
+    
+        if new_energy < self.min_energy:
+            self.min_energy = new_energy
+            self.min_energy_atoms = self._supercell2unitcell()
+            self.min_energy_cf = deepcopy(self.calc.cf)
+
+        if new_energy < self.old_energy:
+            self.old_energy = new_energy
+            return True
+        
+        diff = new_energy - self.old_energy
+        kT = kB*self.temp
+        accept_move = np.random.uniform() < np.exp(-diff/kT)
+
+        if accept_move:
+            self.old_energy = new_energy
+        return accept_move
+
+    def _optimal_structure(self):
+        return self.min_energy_atoms, self.min_energy_cf
 
 def mean_variance_full(cfm):
     prec = precision_matrix(cfm)
