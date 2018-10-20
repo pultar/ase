@@ -246,13 +246,16 @@ class ProbeStructure(object):
             indx[0] = choice(self.index_by_basis[basis])
             symbol[0] = self.supercell[indx[0]].symbol
             break
-        # pick second atom that is not the same element, but occupies the
-        # same site.
+        # pick second atom that occupies the same basis.
         while True:
             indx[1] = choice(self.index_by_basis[basis])
             symbol[1] = self.supercell[indx[1]].symbol
             if symbol[1] in basis_elements[basis]:
                 break
+
+        # Swap two elements
+        self.supercell[indx[0]].symbol = symbol[1]
+        self.supercell[indx[1]].symbol = symbol[0]
 
         # find which index it should be in unit cell
         for i in indx:
