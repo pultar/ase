@@ -1,4 +1,4 @@
-"""Module for generating probe structures."""
+"""Module for generating new structures."""
 import os
 import math
 from random import choice, getrandbits
@@ -15,46 +15,7 @@ import time
 
 # class ProbeStructure(object):
 class StructureGenerator(object):
-    """Generate probe structures.
-
-    Based on simulated annealing according to the recipe in
-    PRB 80, 165122 (2009).
-
-    Arguments:
-    =========
-    setting: CEBulk or BulkSapcegroup object
-
-    atoms: Atoms object
-        initial structure to start the simulated annealing
-
-    struct_per_gen: int
-        number of structures to be generated per generation
-
-    init_temp: int or float
-        initial temperature (does not represent *physical* temperature)
-
-    final_temp: int or float
-        final temperature (does not represent *physical* temperature)
-
-    num_temp: int
-        number of temperatures to be used in simulated annealing
-
-    num_steps: int
-        number of steps in simulated annealing
-
-    approx_mean_var: bool
-        whether or not to use a spherical and isotropical distribution
-        approximation scheme for determining the mean variance.
-        -'True': Assume a spherical and isotropical distribution of
-                 structures in the configurational space.
-                 Corresponds to eq.4 in PRB 80, 165122 (2009)
-        -'False': Use sigma and mu of eq.3 in PRB 80, 165122 (2009)
-                  to characterize the distribution of structures in
-                  population.
-                  Requires pre-sampling of random structures before
-                  generating probe structures.
-                  Reads sigma and mu from 'probe_structure-sigma_mu.npz' file.
-    """
+    """Base class for generating new strctures."""
 
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
                  final_temp=None, num_temp=5, num_steps_per_temp=10000):
@@ -127,7 +88,7 @@ class StructureGenerator(object):
         pass
 
     def generate(self):
-        """Generate a probe structure according to PRB 80, 165122 (2009)."""
+        """Generate new structures."""
         # Start
         self._reset()
         if self.init_temp is None or self.final_temp is None:
@@ -175,7 +136,6 @@ class StructureGenerator(object):
 
         self._check_consistency()
         return self._optimal_structure()
-        #return self._supercell2unitcell(), self.calc.get_cf_dict()
 
     def _accept(self):
         raise NotImplementedError('This should be implemented in the inherited '
@@ -219,7 +179,6 @@ class StructureGenerator(object):
                 count += 1
             self.supercell.get_potential_energy()
             
-
             # By calling accept statistics on the correlation
             # function and variance will be collected
             self._accept()
@@ -347,6 +306,47 @@ class StructureGenerator(object):
 
 
 class ProbeStructure(StructureGenerator):
+    """Generate probe structures.
+
+    Based on simulated annealing according to the recipe in
+    PRB 80, 165122 (2009).
+
+    Arguments:
+    =========
+    setting: CEBulk or BulkSapcegroup object
+
+    atoms: Atoms object
+        initial structure to start the simulated annealing
+
+    struct_per_gen: int
+        number of structures to be generated per generation
+
+    init_temp: int or float
+        initial temperature (does not represent *physical* temperature)
+
+    final_temp: int or float
+        final temperature (does not represent *physical* temperature)
+
+    num_temp: int
+        number of temperatures to be used in simulated annealing
+
+    num_steps_per_temp: int
+        number of steps per temperature in simulated annealing
+
+    approx_mean_var: bool
+        whether or not to use a spherical and isotropical distribution
+        approximation scheme for determining the mean variance.
+        -'True': Assume a spherical and isotropical distribution of
+                 structures in the configurational space.
+                 Corresponds to eq.4 in PRB 80, 165122 (2009)
+        -'False': Use sigma and mu of eq.3 in PRB 80, 165122 (2009)
+                  to characterize the distribution of structures in
+                  population.
+                  Requires pre-sampling of random structures before
+                  generating probe structures.
+                  Reads sigma and mu from 'probe_structure-sigma_mu.npz' file.
+    """
+
     def __init__(self, setting, atoms, struct_per_gen, init_temp=None,
                  final_temp=None, num_temp=5, num_steps_per_temp=1000,
                  approx_mean_var=False):
@@ -387,13 +387,13 @@ class ProbeStructure(StructureGenerator):
         if self.min_mv_atoms is None:
             self.min_mv_atoms = self._supercell2unitcell()
             self.min_mv = n_mv
-            self.min_mv_cf = deepcopy(self.calc.cf)
+            self.min_mv_cf = deepcopy(self.calc.get_cf_dict())
             return True
 
         if n_mv < self.o_mv:
             self.min_mv_atoms = self._supercell2unitcell()
             self.min_mv = n_mv
-            self.min_mv_cf = deepcopy(self.calc.cf)
+            self.min_mv_cf = deepcopy(self.calc.get_cf_dict())
 
         if self.o_mv > n_mv:
             accept_move = True
@@ -432,6 +432,33 @@ class ProbeStructure(StructureGenerator):
         
 
 class EminStructure(StructureGenerator):
+    """Generate minimum energy structure.
+
+    Arguments:
+    =========
+    setting: CEBulk or BulkSapcegroup object
+
+    atoms: Atoms object
+        initial structure to start the simulated annealing
+
+    struct_per_gen: int
+        number of structures to be generated per generation
+
+    init_temp: int or float
+        initial temperature (does not represent *physical* temperature)
+
+    final_temp: int or float
+        final temperature (does not represent *physical* temperature)
+
+    num_temp: int
+        number of temperatures to be used in simulated annealing
+
+    num_steps_per_temp: int
+        number of steps per temperature in simulated annealing
+
+    cluster_name_eci: dict of list of tuples containing
+                      cluster names and ECI
+    """
     def __init__(self, setting, atoms, struct_per_gen, init_temp=2000,
                  final_temp=10, num_temp=10, num_steps_per_temp=10000, 
                  cluster_name_eci=None):
@@ -447,18 +474,18 @@ class EminStructure(StructureGenerator):
 
     def _accept(self):
         """Accept the last change."""
-        new_energy = self.calc.energy
+        new_energy = self.supercell.get_potential_energy()
         if self.old_energy is None:
             self.old_energy = new_energy
             self.min_energy = new_energy
             self.min_energy_atoms = self._supercell2unitcell()
-            self.min_energy_cf = deepcopy(self.calc.cf)
+            self.min_energy_cf = deepcopy(self.calc.get_cf_dict())
             return True
     
         if new_energy < self.min_energy:
             self.min_energy = new_energy
             self.min_energy_atoms = self._supercell2unitcell()
-            self.min_energy_cf = deepcopy(self.calc.cf)
+            self.min_energy_cf = deepcopy(self.calc.get_cf_dict())
 
         if new_energy < self.old_energy:
             self.old_energy = new_energy
