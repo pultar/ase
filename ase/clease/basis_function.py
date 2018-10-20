@@ -222,7 +222,7 @@ class Sluiter(BasisFunction):
         for bf_num in range(num_bf):
             if self.unique_elements[bf_num] == self.redundant_element:
                 continue
-            new_bf = {symb: kronecker(i, bf_num)
+            new_bf = {symb: float(kronecker(i, bf_num))
                       for i, symb in enumerate(self.unique_elements)}
             bf_list.append(new_bf)
         return bf_list

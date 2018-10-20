@@ -17,7 +17,7 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               nested_array2list)
 
 
-class ClusterExpansionSetting:
+class ClusterExpansionSetting(object):
     """Base class for all Cluster Expansion settings."""
 
     def __init__(self, conc_args=None, db_name=None, max_cluster_size=4,
@@ -27,7 +27,7 @@ class ClusterExpansionSetting:
         self._check_conc_ratios(conc_args)
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
-        self.basis_elements = basis_elements
+        self.basis_elements = deepcopy(basis_elements)
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
