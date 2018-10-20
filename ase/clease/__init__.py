@@ -6,6 +6,6 @@ from ase.clease.convexhull import ConvexHull
 from ase.clease.regression import LinearRegression, Tikhonov, Lasso
 
 
-__all__ = ['CEBulk', 'CECrystal', 'CorrFunction',
+__all__ = ['CEBulk', 'CECrystal', 'CorrFunction', 'NewStructures',
            'GenerateStructures', 'Evaluate', 'ConvexHull',
            'LinearRegression', 'Tikhonov', 'Lasso']
