@@ -467,6 +467,7 @@ class EminStructure(StructureGenerator):
                                     num_steps_per_temp)
         self.alter_composition = False
         self.calc = Clease(self.setting, cluster_name_eci=cluster_name_eci)
+        self.supercell.set_calculator(self.calc)
         self.old_energy = None
         self.min_energy = None
         self.min_energy_atoms = None
