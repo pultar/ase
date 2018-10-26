@@ -300,12 +300,13 @@ class StructureGenerator(object):
         final_cf = \
             self.corrFunc.get_cf_by_cluster_names(self.generated_structure,
                                                   self.calc.cluster_names,
-                                                  return_type='array')
+                                                  return_type='dict')
         # for i in range(len(self.calc.cluster_names)):
         #     print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
-        if not np.allclose(final_cf, self.calc.cf):
-            msg = 'The correlation function changed after simulated annealing'
-            raise ValueError(msg)
+        for k in final_cf:
+            if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
+                msg = 'The correlation function changed after simulated annealing'
+                raise ValueError(msg)
 
         for grp in self.periodic_indices:
             ref_symbol = self.generated_structure[grp[0]].symbol
