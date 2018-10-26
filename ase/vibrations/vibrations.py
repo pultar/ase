@@ -46,7 +46,7 @@ class Vibrations:
     adjust_labels : bool, optional (default=False)
         Adjust the calculator label for each calculation. This is useful when
         using e.g.  FHI aims or VASP that are based on a "one folder per
-        calculation" paradigm. If `<adjust_label> = True`, the label of
+        calculation" paradigm. If `<adjust_labels> = True`, the label of
         attached to the calculator will be appended an identifyer (`dispName`)
         for each calculation.
 
@@ -107,7 +107,7 @@ class Vibrations:
         self.H = None
         self.ir = None
         self.ram = None
-        self._adjust_labels = True
+        self._adjust_labels = adjust_labels
         self._original_label = self.calc.label
 
 
