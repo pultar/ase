@@ -294,6 +294,15 @@ class NWChem(FileIOCalculator, EigenvalOccupationMixin):
         for line in lines:
             if line.find(estring) >= 0:
                 energy = float(line.split()[-1])
+
+        # Excited state energy replaces ground state, if present
+        if (self.parameters.tddft):
+            lines = text.split('\n')
+            estring = 'Excited state energy'
+            for line in lines:
+                if line.find(estring) >= 0:
+                    energy = float(line.split()[-1])
+
         self.results['energy'] = energy * Hartree
 
         # All lines have been 'eaten' while iterating; loop from scratch.
