@@ -108,7 +108,6 @@ class Vibrations:
         self.ir = None
         self.ram = None
         self._adjust_labels = adjust_labels
-        self._original_label = self.calc.label
 
 
     def run(self):
@@ -130,11 +129,10 @@ class Vibrations:
         ``iterdisplace`` to get all displaced structures and calculate the forces
         on your own.
         """
-
+        original_label = self.calc.label
         for dispName, atoms in self.iterdisplace(inplace=True):
             if self._adjust_labels:
-                new_label = self._original_label + '__' + dispName
-                self.calc.set_label(new_label)
+                self.calc.set_label(original_label + '__' + dispName)
             filename = dispName + '.pckl'
             fd = opencew(filename)
             if fd is not None:
