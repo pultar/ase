@@ -51,6 +51,11 @@ class StructureGenerator(object):
         self.num_steps_per_temp = num_steps_per_temp
         self.alter_composition = True
 
+        # Structures and correlation function associated with 
+        # the generated structure so far
+        self.generated_structure = None
+        self.cf_generated_structure = None
+
     def _build_supercell(self, atoms):
         for atom in atoms:
             atom.tag = atom.index
@@ -78,10 +83,20 @@ class StructureGenerator(object):
 
         return atoms, periodic_indices, index_by_basis
 
-    def _supercell2unitcell(self):
+    def _supercell2unitcell(self, sc_atoms=None):
+        """Convert supercell to unitcell
+
+        Arguments
+        =========
+        sc_atoms: Atoms
+            supercell to convert. If None self.supercell is used.
+        """
         atoms = self.setting.atoms_with_given_dim.copy()
+        if sc_atoms is None:
+            sc_atoms = self.supercell
+
         for a in atoms:
-            a.symbol = self.supercell[self.periodic_indices[a.index][0]].symbol
+            a.symbol = sc_atoms[self.periodic_indices[a.index][0]].symbol
         return atoms
 
     def _reset(self):
@@ -135,7 +150,9 @@ class StructureGenerator(object):
                     self.calc.restore(self.supercell)
 
         self._check_consistency()
-        return self._optimal_structure()
+        atoms = self._supercell2unitcell(self.generated_structure)
+        cf = self.corrFunc.get_cf(atoms, return_type="dict")
+        return atoms, cf
 
     def _accept(self):
         raise NotImplementedError('This should be implemented in the inherited '
@@ -281,19 +298,20 @@ class StructureGenerator(object):
     def _check_consistency(self):
         # Check to see if the cf is indeed preserved
         final_cf = \
-            self.corrFunc.get_cf_by_cluster_names(self.supercell,
+            self.corrFunc.get_cf_by_cluster_names(self.generated_structure,
                                                   self.calc.cluster_names,
-                                                  return_type='array')
+                                                  return_type='dict')
         # for i in range(len(self.calc.cluster_names)):
         #     print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
-        if not np.allclose(final_cf, self.calc.cf):
-            msg = 'The correlation function changed after simulated annealing'
-            raise ValueError(msg)
+        for k in final_cf:
+            if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
+                msg = 'The correlation function changed after simulated annealing'
+                raise ValueError(msg)
 
         for grp in self.periodic_indices:
-            ref_symbol = self.supercell[grp[0]].symbol
+            ref_symbol = self.generated_structure[grp[0]].symbol
             for indx in grp[1:]:
-                assert self.supercell[indx].symbol == ref_symbol
+                assert self.generated_structure[indx].symbol == ref_symbol
 
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""
@@ -372,8 +390,6 @@ class ProbeStructure(StructureGenerator):
         self.avg_diff = 0.0
 
         self.min_mv = None
-        self.min_mv_atoms = None
-        self.min_mv_cf = None
 
     def _accept(self):
         """Accept the last change."""
@@ -384,16 +400,16 @@ class ProbeStructure(StructureGenerator):
             n_mv = mean_variance(cfm, self.sigma, self.mu)
 
         # Always accept the first move
-        if self.min_mv_atoms is None:
-            self.min_mv_atoms = self._supercell2unitcell()
+        if self.generated_structure is None:
+            self.generated_structure = self.supercell.copy()
             self.min_mv = n_mv
-            self.min_mv_cf = deepcopy(self.calc.get_cf_dict())
+            self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
             return True
 
         if n_mv < self.o_mv:
-            self.min_mv_atoms = self._supercell2unitcell()
+            self.generated_structure = self.supercell.copy()
             self.min_mv = n_mv
-            self.min_mv_cf = deepcopy(self.calc.get_cf_dict())
+            self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
 
         if self.o_mv > n_mv:
             accept_move = True
@@ -415,9 +431,6 @@ class ProbeStructure(StructureGenerator):
         init_temp = 10 * avg_diff
         final_temp = 0.01 * avg_diff
         return init_temp, final_temp
-
-    def _optimal_structure(self):
-        return self.min_mv_atoms, self.min_mv_cf
 
     @property
     def avg_mean_variance(self):
@@ -470,23 +483,21 @@ class EminStructure(StructureGenerator):
         self.supercell.set_calculator(self.calc)
         self.old_energy = None
         self.min_energy = None
-        self.min_energy_atoms = None
-        self.min_energy_cf = None
 
     def _accept(self):
         """Accept the last change."""
         new_energy = self.supercell.get_potential_energy()
-        if self.old_energy is None:
+        if self.generated_structure is None:
             self.old_energy = new_energy
             self.min_energy = new_energy
-            self.min_energy_atoms = self._supercell2unitcell()
-            self.min_energy_cf = deepcopy(self.calc.get_cf_dict())
+            self.generated_structure = self.supercell.copy()
+            self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
             return True
     
         if new_energy < self.min_energy:
             self.min_energy = new_energy
-            self.min_energy_atoms = self._supercell2unitcell()
-            self.min_energy_cf = deepcopy(self.calc.get_cf_dict())
+            self.generated_structure = self.supercell.copy()
+            self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
 
         if new_energy < self.old_energy:
             self.old_energy = new_energy
@@ -499,9 +510,6 @@ class EminStructure(StructureGenerator):
         if accept_move:
             self.old_energy = new_energy
         return accept_move
-
-    def _optimal_structure(self):
-        return self.min_energy_atoms, self.min_energy_cf
 
 def mean_variance_full(cfm):
     prec = precision_matrix(cfm)
