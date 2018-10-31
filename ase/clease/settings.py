@@ -28,6 +28,16 @@ class ClusterExpansionSetting(object):
                  max_cluster_dia=None, basis_function='sanchez',
                  basis_elements=None, grouped_basis=None,
                  ignore_background_atoms=False):
+        self.kwargs = {'basis_elements': deepcopy(basis_elements),
+                       'size': size,
+                       'supercell_factor': supercell_factor,
+                       'db_name': db_name,
+                       'max_cluster_size': max_cluster_size,
+                       'max_cluster_dia': deepcopy(max_cluster_dia),
+                       'grouped_basis': deepcopy(grouped_basis),
+                       'dist_num_dec': dist_num_dec,
+                       'ignore_background_atoms': ignore_background_atoms}
+        self.num_basis = len(basis_elements)
         self.size = size
         self.unit_cell_type = 0
         self.unit_cell = self._get_unit_cell()
@@ -44,16 +54,18 @@ class ClusterExpansionSetting(object):
             raise TypeError("concentration has to be either dict or "
                             "instance of Concentration")
         self.kwargs["concentration"] = self.concentration.to_dict()
+        
 
         self.dist_num_dec = dist_num_dec
         self.db_name = db_name
         self.max_cluster_size = max_cluster_size
         self.max_cluster_dia = max_cluster_dia
-        self.basis_elements = basis_elements
+        self.basis_elements = deepcopy(basis_elements)
 
         if self.basis_elements != self.concentration.basis_elements:
             raise ValueError("basis_elements given to ClusterExpansionSetting "
                              "and Concentration classes have to match!")
+
         self.grouped_basis = grouped_basis
         self.all_elements = sorted([item for row in basis_elements for
                                     item in row])
@@ -531,12 +543,12 @@ class ClusterExpansionSetting(object):
             indx_by_equiv_all_atoms[symm_gr].append(atom.index)
         return indx_by_equiv_all_atoms
 
-    # def _get_grouped_basis_elements(self):
-    #     """Group elements in the 'equivalent group' together in a list."""
-    #     grouped_basis_elements = []
-    #     for group in self.grouped_basis:
-    #         grouped_basis_elements.append(self.basis_elements[group[0]])
-    #     return grouped_basis_elements
+    def _get_grouped_basis_elements(self):
+        """Group elements in the 'equivalent group' together in a list."""
+        grouped_basis_elements = []
+        for group in self.grouped_basis:
+            grouped_basis_elements.append(self.basis_elements[group[0]])
+        return grouped_basis_elements
 
     def _assign_correct_family_identifier(self):
         """Make the familily IDs increase size."""

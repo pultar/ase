@@ -81,26 +81,6 @@ class CEBulk(ClusterExpansionSetting):
                  grouped_basis=None, dist_num_dec=3,
                  ignore_background_atoms=False):
 
-        # Save raw input arguments for save/load. The arguments gets altered
-        # during the initalization process to handle 'ignore_background_atoms'
-        # case
-        self.kwargs = {'basis_elements': deepcopy(basis_elements),
-                       'crystalstructure': crystalstructure,
-                       'a': a,
-                       'c': c,
-                       'covera': covera,
-                       'u': u,
-                       'orthorhombic': orthorhombic,
-                       'cubic': cubic,
-                       'size': size,
-                       'supercell_factor': supercell_factor,
-                       'db_name': db_name,
-                       'max_cluster_size': max_cluster_size,
-                       'max_cluster_dia': deepcopy(max_cluster_dia),
-                       'grouped_basis': deepcopy(grouped_basis),
-                       'dist_num_dec': dist_num_dec,
-                       'ignore_background_atoms': ignore_background_atoms}
-
         # Initialization
         self.basis_elements = basis_elements
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
@@ -113,20 +93,31 @@ class CEBulk(ClusterExpansionSetting):
         self.u = u
         self.orthorhombic = orthorhombic
         self.cubic = cubic
-        self.num_basis = len(basis_elements)
-        if self.num_basis != self.structures[self.crystalstructure]:
-            msg = "{} has {} basis.".format(
-                self.crystalstructure, self.structures[self.crystalstructure])
-            msg += "The number of basis specified by basis_elements is "
-            msg += "{}".format(self.num_basis)
-            raise ValueError(msg)
-
+        
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function, basis_elements,
                                          grouped_basis,
                                          ignore_background_atoms)
+                                         
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs.update({'crystalstructure': crystalstructure,
+                            'a': a,
+                            'c': c,
+                            'covera': covera,
+                            'u': u,
+                            'orthorhombic': orthorhombic,
+                            'cubic': cubic})
+        
+        if self.num_basis != self.structures[self.crystalstructure]:
+            msg = "{} has {} basis.".format(
+                self.crystalstructure, self.structures[self.crystalstructure])
+            msg += "The number of basis specified by basis_elements is "
+            msg += "{}".format(self.num_basis)
+            raise ValueError(msg)
 
         if grouped_basis is None:
             self.index_by_basis = self._group_index_by_basis()
@@ -286,36 +277,15 @@ class CECrystal(ClusterExpansionSetting):
                  max_cluster_dia=None, basis_function='sanchez',
                  grouped_basis=None, dist_num_dec=3,
                  ignore_background_atoms=False):
-        # Save raw input arguments for save/load. The arguments gets altered
-        # during the initalization process to handle 'ignore_background_atoms'
-        # case
-        self.kwargs = {'basis_elements': deepcopy(basis_elements),
-                       'basis': deepcopy(basis),
-                       'spacegroup': spacegroup,
-                       'cell': cell,
-                       'cellpar': cellpar,
-                       'ab_normal': ab_normal,
-                       'size': size,
-                       'supercell_factor': supercell_factor,
-                       'primitive_cell': primitive_cell,
-                       'db_name': db_name,
-                       'max_cluster_size': max_cluster_size,
-                       'max_cluster_dia': deepcopy(max_cluster_dia),
-                       'grouped_basis': deepcopy(grouped_basis),
-                       'dist_num_dec': dist_num_dec,
-                       'ignore_background_atoms': ignore_background_atoms}
 
         # Initialization
         self.basis = basis
-        self.num_basis = len(basis)
         self.spacegroup = spacegroup
         self.cell = cell
         self.cellpar = cellpar
         self.ab_normal = ab_normal
         self.primitive_cell = primitive_cell
         self.symbols = []
-        for x in range(self.num_basis):
-            self.symbols.append(basis_elements[x][0])
 
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
@@ -323,6 +293,19 @@ class CECrystal(ClusterExpansionSetting):
                                          basis_function, basis_elements,
                                          grouped_basis,
                                          ignore_background_atoms)
+        
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs.update({'basis': deepcopy(basis),
+                            'spacegroup': spacegroup,
+                            'cell': cell,
+                            'cellpar': cellpar,
+                            'ab_normal': ab_normal,
+                            'primitive_cell': primitive_cell})
+        
+        for x in range(self.num_basis):
+            self.symbols.append(basis_elements[x][0])
 
         self.index_by_basis = self._group_index_by_basis()
 

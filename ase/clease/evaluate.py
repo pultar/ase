@@ -57,7 +57,10 @@ class Evaluate(object):
             raise TypeError(msg)
 
         self.setting = setting
-        self.cluster_names = setting.cluster_names
+        if cluster_names is None:
+            self.cluster_names = sorted(self.setting.cluster_names)
+        else:
+            self.cluster_names = sorted(cluster_names)
         self.num_elements = setting.num_elements
         self.scoring_scheme = scoring_scheme
         if max_cluster_size is None:
@@ -80,10 +83,7 @@ class Evaluate(object):
             else:
                 self.select_cond.append(select_cond)
 
-        if cluster_names is None:
-            self.cluster_names = self.setting.cluster_names
-        else:
-            self.cluster_names = cluster_names
+        
 
         # Remove the cluster names that correspond to clusters larger than the
         # specified size and diameter.
@@ -163,7 +163,7 @@ class Evaluate(object):
         self.eci = self.scheme.fit(self.cf_matrix, self.e_dft)
         return self.eci
 
-    def get_cluster_name_eci(self, return_type='tuple'):
+    def get_cluster_name_eci(self, return_type='dict'):
         """Determine cluster names and their corresponding ECI value.
 
         Arguments:
@@ -191,20 +191,15 @@ class Evaluate(object):
             return dict(pairs)
         return pairs
 
-    def save_cluster_name_eci(self, fitting_scheme="ridge", alpha=1E-5,
-                              filename='cluster_eci.json'):
+    def save_cluster_name_eci(self, filename='cluster_eci.json'):
         """Determine cluster names and their corresponding ECI value.
 
         Arguments:
         =========
-        alpha: int or float
-            regularization parameter.
-
         return_type: str
             the file name should end with either .json or .txt.
         """
-        eci_dict = self.get_cluster_name_eci(
-            fitting_scheme=fitting_scheme, alpha=alpha, return_type='dict')
+        eci_dict = self.get_cluster_name_eci(return_type='dict')
 
         extension = filename.split(".")[-1]
 
@@ -375,7 +370,7 @@ class Evaluate(object):
         # Generate a plot #
         # --------------- #
         # if logfile is present, read all entries from the file
-        if logfile:
+        if logfile is not None and logfile != '-':
             alphas, cv = self._get_alphas_cv_from_file(logfile)
 
         # get the minimum CV score and the corresponding alpha value
@@ -422,9 +417,11 @@ class Evaluate(object):
 
         existing_alpha = []
         with open(logfile) as f:
-            next(f)
-            for line in f:
-                existing_alpha.append(float(line.split()[0]))
+            lines = f.readlines()
+        for line_num, line in enumerate(lines):
+            if line_num == 0:
+                continue
+            existing_alpha.append(float(line.split()[0]))
         schemes = []
         for scheme in fitting_schemes:
             exists = np.isclose(existing_alpha, scheme.get_scalar_parameter(),
@@ -462,7 +459,7 @@ class Evaluate(object):
         from ase.clease.interactive_plot import InteractivePlot
 
         if self.eci is None:
-            raise ValueError("ECI is None. You have to call get_eci first!")
+            self.get_eci()
         distances = self._distance_from_names()
 
         # Structure the ECIs in terms by size

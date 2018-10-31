@@ -7,7 +7,7 @@
 """
 import os
 import json
-from ase.clease import CECrystal, GenerateStructures, CorrFunction
+from ase.clease import CECrystal, NewStructures, CorrFunction
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.db import connect
 from ase.test.clease.reference_corr_funcs import all_cf
@@ -166,11 +166,11 @@ def test_two_grouped_basis_probe_structure():
         assert abs(cf[key] - all_cf["Ta_O_X_grouped"][key]) < tol
 
     try:
-        gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=bsg, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
 
         db = connect(db_name)
@@ -223,11 +223,11 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
 
     try:
-        gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=bsg, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
         atoms = bsg.atoms.copy()
         indx_to_X = [0, 4, 8, 12, 16]
@@ -276,11 +276,11 @@ def test_narrow_angle_crystal():
     assert len(bsg.index_by_trans_symm) == 1
 
     try:
-        gs = GenerateStructures(setting=bsg, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=bsg, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
     except MaxAttemptReachedError as exc:
         print(str(exc))

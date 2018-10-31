@@ -7,7 +7,7 @@
 """
 
 import os
-from ase.clease import CEBulk, GenerateStructures, Evaluate
+from ase.clease import CEBulk, NewStructures, Evaluate
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
@@ -38,18 +38,17 @@ def test_binary_system():
                         basis_elements=basis_elements, size=[3, 3, 3],
                         concentration=concentration, db_name=db_name)
 
-    struct_generator = GenerateStructures(bc_setting, struct_per_gen=3)
-
-    # Name
+    newstruct = NewStructures(bc_setting, struct_per_gen=3)
+    
     print(struct_generator._get_name(bc_setting.atoms))
     atoms = bulk('Au', a=4.05)*(3, 1, 1)
     atoms[1].symbol = "Cu"
     atoms = atoms*(1, 3, 3)
     print(atoms.get_chemical_formula())
     print(struct_generator._get_name(atoms))
-
     quit()
-    struct_generator.generate_initial_pool()
+
+    newstruct.generate_initial_pool()
 
     # Compute the energy of the structures
     calc = EMT()
@@ -109,11 +108,11 @@ def test_grouped_basis_supercell():
                   a.symbol in setting.background_symbol]
     assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
     try:
-        gs = GenerateStructures(setting=setting, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=setting, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=setting, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
 
     except MaxAttemptReachedError as exc:
@@ -151,11 +150,11 @@ def test_grouped_basis_supercell():
     assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
 
     try:
-        gs = GenerateStructures(setting=setting, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=setting, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=setting, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
 
     except MaxAttemptReachedError as exc:
@@ -192,11 +191,11 @@ def test_grouped_basis_supercell():
     assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
 
     try:
-        gs = GenerateStructures(setting=setting, struct_per_gen=3)
-        gs.generate_initial_pool()
-        gs = GenerateStructures(setting=setting, struct_per_gen=2)
-        gs.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-                                    num_temp=5, num_steps=1000,
+        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=setting, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
 
     except MaxAttemptReachedError as exc:

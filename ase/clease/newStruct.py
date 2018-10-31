@@ -6,7 +6,8 @@ import numpy as np
 from fractions import gcd
 from functools import reduce
 from ase.clease import CEBulk, CECrystal, CorrFunction
-from ase.clease.probestructure import ProbeStructure
+# from ase.clease.probestructure import ProbeStructure
+from ase.clease.structure_generator import ProbeStructure, EminStructure
 from ase.clease.tools import wrap_and_sort_by_position
 from ase.utils.structure_comparator import SymmetryEquivalenceCheck
 from ase.atoms import Atoms
@@ -24,7 +25,8 @@ class MaxAttemptReachedError(Exception):
     pass
 
 
-class GenerateStructures(object):
+# class GenerateStructures(object):
+class NewStructures(object):
     """Generate new structure in Atoms object format.
 
     Arguments:
@@ -53,7 +55,7 @@ class GenerateStructures(object):
         self.struct_per_gen = struct_per_gen
 
     def generate_probe_structure(self, init_temp=None, final_temp=None,
-                                 num_temp=5, num_steps=10000,
+                                 num_temp=5, num_steps_per_temp=1000,
                                  approx_mean_var=False, num_samples_var=10000):
         """Generate a probe structure according to PRB 80, 165122 (2009).
 
@@ -68,7 +70,7 @@ class GenerateStructures(object):
         num_temp: int
             number of temperatures to be used in simulated annealing
 
-        num_steps: int
+        num_steps_per_temp: int
             number of steps in simulated annealing
 
         approx_mean_var: bool
@@ -127,8 +129,8 @@ class GenerateStructures(object):
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
-                                init_temp, final_temp, num_temp, num_steps,
-                                approx_mean_var)
+                                init_temp, final_temp, num_temp, 
+                                num_steps_per_temp, approx_mean_var)
             atoms, cf = ps.generate()
             conc = self._find_concentration(atoms)
             if self._exists_in_db(atoms, conc[0], conc[1]):
@@ -139,6 +141,66 @@ class GenerateStructures(object):
             else:
                 num_attempt = 0
 
+            kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
+            self.db.write(atoms, kvp)
+
+            if num_attempt >= max_attempt:
+                msg = "Could not generate probe structure in 10 attempts."
+                raise MaxAttemptReachedError(msg)
+
+    def generate_Emin_structure(self, atoms=None, init_temp=2000, final_temp=1, 
+                                num_temp=10, num_steps_per_temp=1000, 
+                                cluster_names_eci=None):
+        """Generate Emin structure.
+
+        Arguments:
+        =========
+        atoms: Atoms object
+            Atoms object with the desired composition of the new structure.
+            A random composition is selected if this is not specified.
+
+        init_temp: int or float
+            initial temperature (does not represent *physical* temperature)
+
+        final_temp: int or float
+            final temperature (does not represent *physical* temperature)
+
+        num_temp: int
+            number of temperatures to be used in simulated annealing
+
+        num_steps_per_temp: int
+            number of steps in simulated annealing
+        """
+        # raise NotImplementedError('We will get to this.')
+
+        print("Generate {} Emin structures.".format(self.struct_per_gen))
+        atoms = wrap_and_sort_by_position(atoms)
+        num_attempt = 0
+        while True:
+            # Break out of the loop if reached struct_per_gen
+            num_struct = len([row.id for row in
+                              self.db.select(gen=self.gen)])
+            if num_struct >= self.struct_per_gen:
+                break
+                
+            atoms = wrap_and_sort_by_position(atoms)
+            print('Generating {} out of {} structures.'
+                  .format(num_struct + 1, self.struct_per_gen))
+            es = EminStructure(self.setting, atoms, self.struct_per_gen,
+                               init_temp, final_temp, num_temp, 
+                               num_steps_per_temp, cluster_names_eci)
+            atoms, cf = es.generate()
+            conc = self._find_concentration(atoms)
+
+            if self._exists_in_db(atoms, conc[0], conc[1]):
+                print('generated structure is already in DB.')
+                print('generating again...')
+                num_attempt += 1
+                continue
+            else:
+                num_attempt = 0
+        
+            print('Structure with E = {} generated.'.format(es.min_energy))
             kvp = self._get_kvp(atoms, cf, conc[0], conc[1])
             self.db.write(atoms, kvp)
 

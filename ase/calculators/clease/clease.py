@@ -140,9 +140,12 @@ class Clease(Calculator):
         """
         self._check_atoms(atoms)
         Calculator.calculate(self, atoms)
-        self.update_energy()
+        swapped_indices = self.update_energy()
         self.results['energy'] = self.energy
         self.log()
+        if len(swapped_indices) == 0: 
+            return self.energy
+        
         self._copy_ref_to_old()
         self._copy_current_to_ref()
 
@@ -162,6 +165,8 @@ class Clease(Calculator):
 
     def restore(self, atoms):
         """Restore the old atoms and correlation functions to the reference."""
+        if self.old_atoms is None:
+            return
         self.ref_atoms = self.old_atoms.copy()
         self.ref_cf = deepcopy(self.old_cf)
         self.atoms = self.old_atoms.copy()
@@ -170,9 +175,9 @@ class Clease(Calculator):
 
     def update_energy(self):
         """Update correlation function and get new energy."""
-        self.update_cf()
+        swapped_indices = self.update_cf()
         self.energy = self.eci.dot(self.cf) * len(self.atoms)
-        return self.energy
+        return swapped_indices
 
     @property
     def indices_of_changed_atoms(self):
@@ -255,7 +260,7 @@ class Clease(Calculator):
                 cf_change = \
                     self._cf_change_by_indx(indx, t_indices, cluster, dec)
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
-
+        return swapped_indices
 
 
     def _cf_change_by_indx(self, ref_indx, trans_list, cluster, deco):
