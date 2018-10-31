@@ -1,7 +1,7 @@
 """Test to ensure the orthnormality of the basis functions."""
 import os
 import itertools
-from ase.clease import CEBulk
+from ase.clease import CEBulk, Concentration
 
 
 db_name = 'orthonormal_basis.db'
@@ -10,12 +10,13 @@ tol = 1E-9
 
 def test_2(basis_function):
     """Test for 2 element case."""
+    basis_elements = [['Au', 'Cu']]
+    concentration = Concentration(basis_elements=basis_elements)
+
     setting = CEBulk(crystalstructure="fcc",
                      a=4.05,
-                     basis_elements=[['Au', 'Cu']],
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0]],
-                                "conc_ratio_max_1": [[0, 1]]},
+                     concentration=concentration,
                      max_cluster_size=2,
                      db_name=db_name,
                      basis_function=basis_function)
@@ -24,12 +25,12 @@ def test_2(basis_function):
 
 def test_3(basis_function):
     """Test for 3 element case."""
+    basis_elements = [['Au', 'Cu', 'Ag']]
+    concentration = Concentration(basis_elements=basis_elements)
     setting = CEBulk(crystalstructure="fcc",
                      a=4.05,
-                     basis_elements=[['Au', 'Cu', 'Ag']],
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0, 0]],
-                                "conc_ratio_max_1": [[0, 1, 0]]},
+                     concentration=concentration,
                      max_cluster_size=2,
                      db_name=db_name,
                      basis_function=basis_function)
@@ -38,12 +39,12 @@ def test_3(basis_function):
 
 def test_4(basis_function):
     """Test for 4 element case."""
+    basis_elements = [['Au', 'Cu', 'Ag', 'Ni']]
+    concentration = Concentration(basis_elements=basis_elements)
     setting = CEBulk(crystalstructure="fcc",
                      a=4.05,
-                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni']],
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0]],
-                                "conc_ratio_max_1": [[0, 1, 0, 0]]},
+                     concentration=concentration,
                      max_cluster_size=2,
                      db_name=db_name,
                      basis_function=basis_function)
@@ -52,12 +53,12 @@ def test_4(basis_function):
 
 def test_5(basis_function):
     """Test for 5 element case."""
+    basis_elements = [['Au', 'Cu', 'Ag', 'Ni', 'Fe']]
+    concentration = Concentration(basis_elements=basis_elements)
     setting = CEBulk(crystalstructure="fcc",
                      a=4.05,
-                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe']],
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0]],
-                                "conc_ratio_max_1": [[0, 1, 0, 0, 0]]},
+                     concentration=concentration,
                      max_cluster_size=2,
                      db_name=db_name,
                      basis_function=basis_function)
@@ -65,12 +66,12 @@ def test_5(basis_function):
 
 def test_6(basis_function):
     """Test for 6 element case."""
+    basis_elements = [['Au', 'Cu', 'Ag', 'Ni', 'Fe', 'H']]
+    concentration = Concentration(basis_elements=basis_elements)
     setting = CEBulk(crystalstructure="fcc",
                      a=4.05,
-                     basis_elements=[['Au', 'Cu', 'Ag', 'Ni', 'Fe', 'H']],
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0, 0, 0, 0, 0]],
-                                "conc_ratio_max_1": [[0, 1, 0, 0, 0, 0]]},
+                     concentration=concentration,
                      max_cluster_size=2,
                      db_name=db_name,
                      basis_function=basis_function)

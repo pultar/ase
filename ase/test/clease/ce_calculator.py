@@ -2,7 +2,7 @@
 import os
 from random import randint
 import numpy as np
-from ase.clease import CEBulk, CECrystal, CorrFunction
+from ase.clease import CEBulk, CECrystal, CorrFunction, Concentration
 from ase.calculators.clease import Clease
 from ase.build import bulk
 from ase.spacegroup import crystal
@@ -19,12 +19,12 @@ def generate_ex_eci(setting):
 
 def get_binary():
     """Return a simple binary test structure."""
+    basis_elements = [["Au", "Cu"]]
+    concentration = Concentration(basis_elements=basis_elements)
     bc_setting = CEBulk(crystalstructure="fcc",
                         a=4.05,
-                        basis_elements=[["Au", "Cu"]],
                         size=[3, 3, 3],
-                        conc_args={"conc_ratio_min_1": [[1, 0]],
-                                   "conc_ratio_max_1": [[0, 1]]},
+                        concentration=concentration,
                         db_name=db_name)
 
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)
@@ -37,14 +37,12 @@ def get_binary():
 
 def get_ternary():
     """Return a ternary test structure."""
+    basis_elements = [["Au", "Cu", "Zn"]]
+    concentration = Concentration(basis_elements=basis_elements)
     bc_setting = CEBulk(crystalstructure="fcc",
                         a=4.05,
-                        basis_elements=[["Au", "Cu", "Zn"]],
                         size=[3, 3, 3],
-                        conc_args={"conc_ratio_min_1": [[1, 0, 0]],
-                                   "conc_ratio_max_1": [[0, 1, 0]],
-                                   "conc_ratio_min_2": [[2, 0, 0]],
-                                   "conc_ratio_max_2": [[0, 1, 1]]},
+                        concentration=concentration,
                         db_name=db_name)
 
     atoms = bulk("Au", crystalstructure="fcc", a=4.05)
@@ -58,13 +56,12 @@ def get_ternary():
 
 def get_rocksalt():
     """Test rocksalt where passed atoms with background_atoms."""
-    setting = CEBulk(basis_elements=[['Li', 'X', 'V'],
-                                     ['O']],
-                     crystalstructure='rocksalt',
+    basis_elements=[['Li', 'X', 'V'], ['O']]
+    concentration = Concentration(basis_elements=basis_elements)
+    setting = CEBulk(crystalstructure='rocksalt',
                      a=4.05,
                      size=[3, 3, 3],
-                     conc_args={"conc_ratio_min_1": [[2, 0, 1], [3]],
-                                "conc_ratio_max_1": [[2, 1, 0], [3]]},
+                     concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=3,
                      ignore_background_atoms=True)
@@ -89,18 +86,18 @@ def get_spacegroup():
     spacegroup = 55
     cellpar = [6.25, 7.4, 3.83, 90, 90, 90]
     size = [2, 2, 2]
+    basis_elements= [['O', 'X'], ['O', 'X'], ['O', 'X'], ['Ta']]
+    grouped_basis = [[0, 1, 2], [3]]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=grouped_basis)
 
-    setting = CECrystal(basis_elements=[['O', 'X'], ['O', 'X'],
-                                        ['O', 'X'], ['Ta']],
-                        basis=basis,
+    setting = CECrystal(basis=basis,
                         spacegroup=spacegroup,
                         cellpar=cellpar,
                         size=size,
-                        conc_args={"conc_ratio_min_1": [[5, 0], [2]],
-                                   "conc_ratio_max_1": [[4, 1], [2]]},
+                        concentration=concentration,
                         db_name=db_name,
-                        max_cluster_size=3,
-                        grouped_basis=[[0, 1, 2], [3]])
+                        max_cluster_size=3)
 
     atoms = crystal(symbols=['O', 'X', 'O', 'Ta'], basis=basis,
                     spacegroup=spacegroup, cell=None,

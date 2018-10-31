@@ -13,8 +13,12 @@ class IntConversionNotConsistentError(Exception):
 
 class Concentration(object):
     """"
+
     basis_elements: list
         List of chemical symbols of elements to occupy each basis.
+        Even for the cases where there is only one basis (e.g., fcc, bcc, sc),
+        a list of symbols should be grouped by basis as in [['Cu', 'Au']]
+        (note the nested list form).
 
     grouped_basis: list
         indices of basis_elements that are considered to be equivalent when

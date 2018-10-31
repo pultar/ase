@@ -139,13 +139,12 @@ def test_grouped_basis_supercell():
         print(str(exc))
 
     os.remove(db_name)
-    exit()
+
     # ---------------------------------- #
     # 2 grouped_basis + background atoms #
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    # [["Ca"], ["O", "F"]]
     basis_elements = [['Ca'], ['O', 'F'], ['O', 'F']]
     concentration = Concentration(basis_elements=basis_elements,
                                   grouped_basis=[[0], [1, 2]])

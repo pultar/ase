@@ -186,34 +186,31 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    bsg = CECrystal(basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'],
-                                    ['O', 'X']],
-                    basis=[(0., 0., 0.),
+    basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'], ['O', 'X']]
+    grouped_basis = [[1], [0, 2, 3]]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=grouped_basis)
+
+    bsg = CECrystal(basis=[(0., 0., 0.),
                            (0.2244, 0.3821, 0.),
                            (0.3894, 0.1405, 0.),
                            (0.201, 0.3461, 0.5)],
                     spacegroup=55,
                     cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
                     size=[2, 2, 3],
-                    conc_args={"conc_ratio_min_1": [[2], [5, 0]],
-                               "conc_ratio_max_1": [[2], [4, 1]]},
+                    concentration=concentration,
                     db_name=db_name,
                     max_cluster_size=3,
                     max_cluster_dia=3.0,
-                    grouped_basis=[[1], [0, 2, 3]],
                     ignore_background_atoms=True)
-    assert bsg.unique_elements == ['O', 'X']
+
+    assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'X': -1.0}
-    assert bsg.basis_elements == [['O', 'X'], ['O', 'X'], ['O', 'X']]
+    assert bsg.basis_elements == [['Ta'], ['O', 'X']]
     assert len(bsg.basis_functions) == 1
-    assert bsg.num_grouped_basis == 1
-    assert len(bsg.index_by_grouped_basis) == 1
-    assert bsg.num_grouped_elements == 2
+    assert bsg.num_basis == 2
+    assert len(bsg.index_by_basis) == 2
     assert len(bsg.basis_functions) == 1
-    flat = [i for sub in bsg.index_by_grouped_basis for i in sub]
-    background = [a.index for a in bsg.atoms_with_given_dim if
-                  a.symbol in bsg.background_symbol]
-    assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
 
     try:
         ns = NewStructures(setting=bsg, struct_per_gen=3)
@@ -279,11 +276,11 @@ def test_narrow_angle_crystal():
     os.remove(db_name)
 
 
-# test_spgroup_217()
-# test_two_grouped_basis()
-# test_two_grouped_basis_probe_structure()
-# test_two_grouped_basis_background_atoms_probe_structure()
-# test_narrow_angle_crystal()
+test_spgroup_217()
+test_two_grouped_basis()
+test_two_grouped_basis_probe_structure()
+test_two_grouped_basis_background_atoms_probe_structure()
+test_narrow_angle_crystal()
 
 if update_reference_file:
     print("Updating the reference correlation function file")

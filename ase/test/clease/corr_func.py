@@ -1,14 +1,17 @@
 """Unit tests for the corr function class."""
 import os
-from ase.clease import CEBulk, CorrFunction
+from ase.clease import CEBulk, CorrFunction, Concentration
 from ase.clease.corrFunc import equivalent_deco
 
 db_name = "test_corrfunc.db"
 conc_args = {"conc_ratio_min_1": [[1, 0]],
              "conc_ratio_max_1": [[0, 1]]}
-bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
-                    basis_elements=[["Au", "Cu", "Si"]], size=[4, 4, 4],
-                    conc_args=conc_args, db_name=db_name,
+basis_elements = [["Au", "Cu", "Si"]]
+concentration = Concentration(basis_elements=basis_elements)
+
+
+bc_setting = CEBulk(crystalstructure="fcc", a=4.05, size=[4, 4, 4],
+                    concentration=concentration, db_name=db_name,
                     max_cluster_size=3)
 
 

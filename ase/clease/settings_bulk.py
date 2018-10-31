@@ -60,11 +60,6 @@ class CEBulk(ClusterExpansionSetting):
     max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
-    grouped_basis: list
-        indices of basis_elements that are considered to be equivalent when
-        specifying concentration (e.g., useful when two basis are shared by
-        the same set of elements and no distinctions are made between them)
-
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
 
@@ -116,17 +111,6 @@ class CEBulk(ClusterExpansionSetting):
             msg += "{}".format(num_basis)
             raise ValueError(msg)
 
-        # if grouped_basis is None:
-        #     self.index_by_basis = self._group_index_by_basis()
-        #     self.index_by_grouped_basis = self.index_by_basis
-        # else:
-        #     self.num_grouped_basis = len(grouped_basis)
-        #     self.index_by_grouped_basis = self._group_index_by_basis_group()
-        #     self.grouped_basis_elements = self._get_grouped_basis_elements()
-        #     self.all_grouped_elements = [x for sub in
-        #                                  self.grouped_basis_elements
-        #                                  for x in sub]
-        #     self.num_grouped_elements = len(self.all_grouped_elements)
         self._check_first_elements()
 
     def _get_unit_cell(self):
@@ -296,17 +280,7 @@ class CECrystal(ClusterExpansionSetting):
                             'cellpar': cellpar,
                             'ab_normal': ab_normal,
                             'primitive_cell': primitive_cell})
-
-        # self.index_by_basis = self._group_index_by_basis()
-
-        # if grouped_basis is not None:
-        #     self.num_grouped_basis = len(grouped_basis)
-        #     self.index_by_grouped_basis = self._group_index_by_basis_group()
-        #     self.grouped_basis_elements = self._get_grouped_basis_elements()
-        #     self.all_grouped_elements = [x for sub in
-        #                                  self.grouped_basis_elements
-        #                                  for x in sub]
-        #     self.num_grouped_elements = len(self.all_grouped_elements)
+    
         self._check_first_elements()
 
     def _get_unit_cell(self):
@@ -319,11 +293,9 @@ class CECrystal(ClusterExpansionSetting):
 
     def _group_index_by_basis(self):
         num_basis = len(self.concentration.orig_basis_elements)
-        # indx_by_basis = [[] for _ in range(self.num_basis)]
         indx_by_basis = [[] for _ in range(num_basis)]
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
-        # scale_factor = np.multiply(self.supercell_scale_factor, self.size)
         scale_factor = self.size
 
         # account for the case where a supercell is needed

@@ -78,22 +78,29 @@ class ClusterExpansionSetting(object):
         #         raise TypeError('grouped_basis should be a list')
         #     self.num_groups = len(self.grouped_basis)
         #     self._check_grouped_basis_elements()
+        self.cluster_info = []
+        self.index_by_trans_symm = []
+        self.ref_index_trans_symm = []
+        self.kd_trees = None
+        self.set_template_atoms(0)
 
+        unique_element_no_bkg = self.unique_element_without_background()
         if isinstance(basis_function, BasisFunction):
-            if basis_function.unique_elements != self.unique_elements:
+            if basis_function.unique_elements != unique_element_no_bkg:
                 raise ValueError("Unique elements in BasiFunction instance "
                                  "is different from the one in settings")
             self.bf_scheme = basis_function
+        
         elif isinstance(basis_function, str):
             if basis_function.lower() == 'sanchez':
                 from ase.clease.basis_function import Sanchez
-                self.bf_scheme = Sanchez(self.unique_elements)
+                self.bf_scheme = Sanchez(unique_element_no_bkg)
             elif basis_function.lower() == 'vandewalle':
                 from ase.clease.basis_function import VandeWalle
-                self.bf_scheme = VandeWalle(self.unique_elements)
+                self.bf_scheme = VandeWalle(unique_element_no_bkg)
             elif basis_function.lower() == "sluiter":
                 from ase.clease.basis_function import Sluiter
-                self.bf_scheme = Sluiter(self.unique_elements)
+                self.bf_scheme = Sluiter(unique_element_no_bkg)
             else:
                 msg = "basis function scheme {} ".format(basis_function)
                 msg += "is not supported."
@@ -104,11 +111,11 @@ class ClusterExpansionSetting(object):
 
         self.spin_dict = self.bf_scheme.spin_dict
         self.basis_functions = self.bf_scheme.basis_functions
-        self.cluster_info = []
-        self.index_by_trans_symm = []
-        self.ref_index_trans_symm = []
-        self.kd_trees = None
-        self.set_template_atoms(0)
+        # self.cluster_info = []
+        # self.index_by_trans_symm = []
+        # self.ref_index_trans_symm = []
+        # self.kd_trees = None
+        # self.set_template_atoms(0)
 
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
@@ -131,6 +138,23 @@ class ClusterExpansionSetting(object):
             self._store_data()
         else:
             self._read_data()
+
+    def unique_element_without_background(self):
+        """Remove backgound elements."""
+        if not self.ignore_background_atoms:
+            return self.unique_elements
+        symbs = []
+        for indx in self.background_indices:
+            symbs.append(self.atoms[indx].symbol)
+        symbs = list(set(symbs))
+        
+        for atom in self.atoms:
+            if atom.index in self.background_indices:
+                continue
+            if atom.symbol in symbs:
+                symbs.remove(atom.symbol)
+        filtered = [e for e in self.unique_elements if e not in symbs]
+        return filtered
 
     def _group_index_by_basis(self):
         raise NotImplementedError("Has to be implemented in derived classes!")
@@ -331,87 +355,14 @@ class ClusterExpansionSetting(object):
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
 
         bkg_indices = []
+        tags = []
         for b_indx in basis:
-            bkg_indices += self.index_by_basis[b_indx]
+            new_tags = [self.atoms_with_given_dim[indx].tag 
+                        for indx in self.index_by_basis[b_indx]]
+            tags += list(set(new_tags))
+        tags = list(set(tags))
+        bkg_indices = [atom.index for atom in self.atoms if atom.tag in tags]
         return bkg_indices
-        
-        # if not basis:
-        #     return []
-
-        # symbol = [b[0] for b in self.basis_elements if len(b) == 1]
-        # self.num_basis -= len(basis)
-
-        # # change grouped_basis and conc_ratio_min/max if basis are grouped
-        # if self.concentration.grouped_basis is not None:
-        #     self._modify_group_basis_and_conc(basis)
-
-        # # change basis_elements
-        # for i in sorted(basis, reverse=True):
-        #     if hasattr(self, 'basis'):
-        #         del self.basis[i]
-        #     del self.basis_elements[i]
-        #     if self.grouped_basis is None:
-        #         del self.conc_ratio_min_1[i]
-        #         del self.conc_ratio_max_1[i]
-        #         if self.num_conc_var == 2:
-        #             del self.conc_ratio_min_2[i]
-        #             del self.conc_ratio_max_2[i]
-
-        # # change all_elements
-        # for s in symbol:
-        #     self.all_elements.remove(s)
-
-        # if self.grouped_basis is None:
-        #     return list(set(symbol))
-
-        # # reassign grouped_basis if they are grouped
-        # for ref in sorted(basis, reverse=True):
-        #     for i, group in enumerate(self.grouped_basis):
-        #         for j, element in enumerate(group):
-        #             if element > ref:
-        #                 self.grouped_basis[i][j] -= 1
-        # return list(set(symbol))
-
-    # def _modify_group_basis_and_conc(self, basis):
-    #     """Remove indices of background atoms in group_basis and conc_args."""
-    #     remapped = []
-    #     for i, group in enumerate(self.grouped_basis):
-    #         if group[0] in basis:
-    #             remapped.append(i)
-    #     for i in sorted(remapped, reverse=True):
-    #         del self.grouped_basis[i]
-    #         del self.conc_ratio_min_1[i]
-    #         del self.conc_ratio_max_1[i]
-    #         if self.num_conc_var == 2:
-    #             del self.conc_ratio_min_2[i]
-    #             del self.conc_ratio_max_2[i]
-
-    # def _check_basis_elements(self):
-    #     error = False
-    #     # check dimensions of the element list and concentration ratio lists
-    #     if self.num_basis == 1:
-    #         if not(self.num_basis == len(self.conc_ratio_min_1)
-    #                == len(self.conc_ratio_max_1)):
-    #             error = True
-    #
-    #         if self.num_conc_var == 2:
-    #             if not(self.num_basis == len(self.conc_ratio_min_2)
-    #                    == len(self.conc_ratio_max_2)):
-    #                 error = True
-    #     else:
-    #         element_size = [len(row) for row in self.basis_elements]
-    #         min_1_size = [len(row) for row in self.conc_ratio_min_1]
-    #         max_1_size = [len(row) for row in self.conc_ratio_max_1]
-    #         if not element_size == min_1_size == max_1_size:
-    #             error = True
-    #         if self.num_conc_var == 2:
-    #             min_2_size = [len(row) for row in self.conc_ratio_min_2]
-    #             max_2_size = [len(row) for row in self.conc_ratio_max_2]
-    #             if not element_size == min_2_size == max_2_size:
-    #                 error = True
-    #     if error:
-    #         raise ValueError('lengths of the basis_elements and conc_ratio'
-    #                          ' lists are not the same')
 
     def _get_atoms_with_given_dim(self):
         """Create atoms with a user-specified size."""
@@ -459,19 +410,7 @@ class ClusterExpansionSetting(object):
         # Group all the indices together if its atomic number and position
         # sequences are same
         indx_by_equiv = []
-        # bkg_indx_unit_cell = []
-
-        # if self.ignore_background_atoms:
-        #     bkg_indx_unit_cell = [a.index for a in self.unit_cell
-        #                           if a.symbol in self.background_symbol]
-
-        # for i, indx in enumerate(indices):
-        #     if indx not in bkg_indx_unit_cell:
-        #         break
-
-        #vec = self.unit_cell.get_distance(indices[0], ref_indx, vector=True)
         shifted = self.unit_cell.copy()
-        #shifted.translate(vec)
         shifted = wrap_and_sort_by_position(shifted)
         an = shifted.get_atomic_numbers()
         pos = shifted.get_positions()
@@ -513,8 +452,6 @@ class ClusterExpansionSetting(object):
                 symm_group_of_tag[item] = gr_id
 
         for atom in self.atoms:
-            # if atom.index in self.background_indices:
-            #     continue
             symm_gr = symm_group_of_tag[atom.tag]
             indx_by_equiv_all_atoms[symm_gr].append(atom.index)
         return indx_by_equiv_all_atoms
@@ -617,6 +554,9 @@ class ClusterExpansionSetting(object):
         # determine cluster information for each inequivalent site
         # (based on translation symmetry)
         for site, ref_indx in enumerate(self.ref_index_trans_symm):
+            if ref_indx in self.background_indices and self.ignore_background_atoms:
+                cluster_info.append({})
+                continue
             cluster_info_symm = {}
             cluster_info_symm['c0'] = {
                 "indices": [],
@@ -831,59 +771,6 @@ class ClusterExpansionSetting(object):
         nearby_indices.remove(ref_indx)
         return nearby_indices
 
-    # def _create_concentration_matrix(self):
-    #     min_1 = np.array([i for row in self.conc_ratio_min_1 for i in row])
-    #     max_1 = np.array([i for row in self.conc_ratio_max_1 for i in row])
-    #     if sum(min_1) != sum(max_1):
-    #         raise ValueError('conc_ratio values must be on the same scale')
-    #
-    #     natoms_cell = len(self.atoms_with_given_dim)
-    #     if self.ignore_background_atoms:
-    #         num_background = len([a.index for a in self.atoms_with_given_dim
-    #                               if a.symbol in self.background_symbol])
-    #         natoms_cell -= num_background
-    #     natoms_ratio = sum(min_1)
-    #     scale = int(natoms_cell / natoms_ratio)
-    #     min_1 *= scale
-    #     max_1 *= scale
-    #     # special case where there is only one concentration
-    #     if np.array_equal(min_1, max_1):
-    #         return min_1
-    #
-    #     diff_1 = [i - j for i, j in zip(max_1, min_1)]
-    #     nsteps_1 = max(diff_1)
-    #     increment_1 = diff_1 / nsteps_1
-    #
-    #     if self.num_conc_var == 1:
-    #         conc = np.zeros((nsteps_1 + 1, len(min_1)), dtype=int)
-    #         for n in range(nsteps_1 + 1):
-    #             if n == 0:
-    #                 conc[0] = min_1
-    #                 continue
-    #             conc[n] = conc[n - 1] + increment_1
-    #
-    #     if self.num_conc_var == 2:
-    #         min_2 = np.array([i for row in self.conc_ratio_min_2 for i in row])
-    #         max_2 = np.array([i for row in self.conc_ratio_max_2 for i in row])
-    #         if sum(min_2) != sum(max_2):
-    #             raise ValueError('conc_ratio values must be on the same scale')
-    #         scale = int(natoms_cell / natoms_ratio)
-    #         min_2 *= scale
-    #         max_2 *= scale
-    #         diff_2 = [i - j for i, j in zip(max_2, min_2)]
-    #         nsteps_2 = max(diff_2)
-    #         increment_2 = diff_2 / nsteps_2
-    #         conc = np.zeros((nsteps_1 + 1, nsteps_2 + 1, len(min_1)),
-    #                         dtype=int)
-    #         for i in range(nsteps_1 + 1):
-    #             if i == 0:
-    #                 conc[i][0] = min_1
-    #             else:
-    #                 conc[i][0] = conc[i - 1][0] + increment_1
-    #             for j in range(1, nsteps_2 + 1):
-    #                 conc[i][j] = conc[i][j - 1] + increment_2
-    #     return conc
-
     @property
     def cluster_family_names(self):
         """Return a list of all cluster names."""
@@ -979,41 +866,6 @@ class ClusterExpansionSetting(object):
                 return symm, n_indx
             except ValueError:
                 continue
-
-    # def in_conc_matrix(self, atoms):
-    #     """Check to see if the passed atoms object has allowed concentration.
-    #
-    #     Return True if it has allowed concentration, return False otherwise.
-    #     """
-    #     # determine the concentration of the given atoms
-    #     if self.grouped_basis is None:
-    #         num_elements = self.num_elements
-    #         all_elements = self.all_elements
-    #     else:
-    #         num_elements = self.num_grouped_elements
-    #         all_elements = self.all_grouped_elements
-    #
-    #     conc = np.zeros(num_elements, dtype=int)
-    #
-    #     for x in range(num_elements):
-    #         element = all_elements[x]
-    #         conc[x] = len([a for a in atoms if a.symbol == element])
-    #     # determine the dimensions of the concentration matrix
-    #     # then, search to see if there is a match
-    #     conc_shape = self.conc_matrix.shape
-    #     if self.conc_matrix.ndim == 1:
-    #         if np.array_equal(conc, self.conc_matrix):
-    #             return True
-    #     elif self.conc_matrix.ndim == 2:
-    #         for x in range(conc_shape[0]):
-    #             if np.array_equal(conc, self.conc_matrix[x]):
-    #                 return True
-    #     else:
-    #         for x in range(conc_shape[0]):
-    #             for y in range(conc_shape[1]):
-    #                 if np.array_equal(conc, self.conc_matrix[x][y]):
-    #                     return True
-    #     return False
 
     def _group_index_by_basis_group(self):
         if self.concentration.grouped_basis is None:
