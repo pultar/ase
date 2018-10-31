@@ -77,6 +77,7 @@ class Onetep(FileIOCalculator):
         self.species = []
         self.species_cond = []
         self.pseudos = []
+        self.solvers = []
         self.restart = False
         self.prefix = label
         self.directory = '.'
@@ -360,7 +361,8 @@ class Onetep(FileIOCalculator):
             species_ngwf_rad_var = 'species_ngwf_radius_cond'
             species_ngwf_num_var = 'species_ngwf_number_cond'
         for sp in set(zip(atoms.get_atomic_numbers(),
-                          atoms.get_chemical_symbols())):
+                          atoms.get_chemical_symbols(),
+                          ["" if i==0 else str(i) for i in atoms.get_tags()])):
             try:
                 ngrad = parameters[species_ngwf_rad_var][sp[1]]
             except KeyError:
@@ -370,15 +372,24 @@ class Onetep(FileIOCalculator):
             except KeyError:
                 ngnum = -1
             if not cond:
-                self.species.append((sp[1], sp[1], sp[0], ngnum, ngrad))
+                self.species.append((sp[1]+sp[2], sp[1], sp[0], ngnum, ngrad))
             else:
-                self.species_cond.append((sp[1], sp[1], sp[0], ngnum, ngrad))
+                self.species_cond.append((sp[1]+sp[2], sp[1], sp[0], ngnum, ngrad))
 
     def _generate_pseudo_block(self):
 
         for sp in self.species:
-            self.pseudos.append((sp[1], sp[1] +
+            self.pseudos.append((sp[0], sp[1] +
                                  self.parameters['pseudo_suffix']))
+
+    def _generate_solver_block(self):
+        for sp in self.species:
+            try:
+                atomic_string = self.parameters['species_solver'][sp[0]]
+            except KeyError:
+                atomic_string = 'SOLVE'
+
+            self.solvers.append((sp[0], atomic_string))
 
     def set_pseudos(self, pots):
         """ Sets the pseudopotential files used in this dat file
@@ -424,6 +435,9 @@ class Onetep(FileIOCalculator):
         if len(self.pseudos) < len(self.species):
             if 'pseudo_suffix' in self.parameters:
                 self._generate_pseudo_block()
+
+        if len(self.solvers) < len(self.species):
+            self._generate_solver_block()
 
         self._write_dat()
 
@@ -472,9 +486,11 @@ class Onetep(FileIOCalculator):
         keyword = 'POSITIONS_ABS'
 
         positions = atoms.get_positions()
+        tags = atoms.get_tags()
+        tags = ["" if i==0 else str(i) for i in tags]
         pos_block = [('%s %8.6f %8.6f %8.6f' %
-                      (x, y[0], y[1], y[2])) for (x, y)
-                     in zip(atoms.get_chemical_symbols(), positions)]
+                      (x+z, y[0], y[1], y[2])) for (x, y, z)
+                     in zip(atoms.get_chemical_symbols(), positions, tags)]
 
         fd.write('%%BLOCK %s\n' % keyword)
         fd.write('ang\n')
@@ -487,7 +503,7 @@ class Onetep(FileIOCalculator):
         sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species]
 
         fd.write('%%BLOCK %s\n' % keyword)
-        for line in sp_block:
+        for line in sorted(sp_block):
             fd.write('    %s\n' % line)
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
@@ -497,31 +513,25 @@ class Onetep(FileIOCalculator):
             sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species_cond]
 
             fd.write('%%BLOCK %s\n' % keyword)
-            for line in sp_block:
+            for line in sorted(sp_block):
                 fd.write('    %s\n' % line)
             fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         keyword = 'SPECIES_POT'
         fd.write('%%BLOCK %s\n' % keyword)
-        for sp in self.pseudos:
+        for sp in sorted(self.pseudos):
             fd.write('    %s "%s"\n' % (sp[0], sp[1]))
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         keyword = 'SPECIES_ATOMIC_SET'
         fd.write('%%BLOCK %s\n' % keyword)
-        for sym in set(self.atoms.get_chemical_symbols()):
-            try:
-                atomic_string = parameters['species_solver'][sym]
-            except KeyError:
-                atomic_string = 'SOLVE'
-
-            fd.write('    %s "%s"\n' % (sym, atomic_string))
+        for sp in sorted(self.solvers):
+            fd.write('    %s "%s"\n' % (sp[0], sp[1]))
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         if 'bsunfld_calculate' in self.parameters:
             if 'species_bsunfld_groups' not in self.parameters:
-                self.parameters['species_bsunfld_groups'] = \
-                    str(set(self.atoms.get_chemical_symbols()))
+                self.parameters['species_bsunfld_groups'] = self.atoms.get_chemical_symbols()
 
         # Loop over parameters entries in alphabetal order, outputting
         # them as keywords or blocks as appropriate
