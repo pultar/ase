@@ -12,14 +12,24 @@ class IntConversionNotConsistentError(Exception):
 
 
 class Concentration(object):
+    """"
+    basis_elements: list
+        List of chemical symbols of elements to occupy each basis.
+
+    grouped_basis: list
+        indices of basis_elements that are considered to be equivalent when
+        specifying concentration (e.g., useful when two basis are shared by
+        the same set of elements and no distinctions are made between them)
+    """
     def __init__(self, basis_elements=None, grouped_basis=None,
                  A_lb=None, b_lb=None, A_eq=None, b_eq=None):
         self.orig_basis_elements = basis_elements
         self.grouped_basis = grouped_basis
+        self._check_grouped_basis_elements()
         self.basis_elements = self._get_grouped_basis_elements()
 
-        num_implicit_eq = len(basis_elements)
-        self.num_concs = len([x for sub in basis_elements for x in sub])
+        num_implicit_eq = len(self.basis_elements)
+        self.num_concs = len([x for sub in self.basis_elements for x in sub])
         self.fixed_element_constraint_added = False
 
         num_usr_lb = 0
@@ -39,7 +49,7 @@ class Concentration(object):
 
         # Ensure concentration in each basis sum to 1
         start_col = 0
-        for i, basis in enumerate(basis_elements):
+        for i, basis in enumerate(self.basis_elements):
             if start_col + len(basis) >= self.A_eq.shape[1]:
                 self.A_eq[i, start_col:] = 1
             else:
@@ -77,7 +87,6 @@ class Concentration(object):
             gr_basis_elements.append(self.orig_basis_elements[group[0]])
         return gr_basis_elements
 
-
     def to_dict(self):
         """Return neescary information to store as JSON."""
         data = {
@@ -96,7 +105,7 @@ class Concentration(object):
         """Initialize data from dictionary."""
         return Concentration(**data)
 
-    def is_valid(self, conc):
+    def is_valid_conc(self, conc):
         """Check if the concentration is valid."""
         eq_valid = np.allclose(self.A_eq.dot(conc), self.b_eq)
         ineq_valid = np.all(self.A_lb.dot(conc) >= self.b_lb)
@@ -257,7 +266,7 @@ class Concentration(object):
 
             if ref_element is None:
                 raise RuntimeError("Did not find reference element for symbol "
-                                   "".format(variable))
+                                   "{}".format(variable))
 
             # Extract the coefficients of other elements with their
             # concenctrations defined as multiples of the symbol
@@ -528,7 +537,9 @@ class Concentration(object):
 
         if len(num_atoms_in_basis) != len(self.basis_elements):
             raise ValueError("Number of atoms has to be specified for each "
-                             "basis")
+                             "basis. Given: {}. Expected: {}"
+                             "".format(len(num_atoms_in_basis), 
+                                       len(self.basis_elements)))
 
         int_array = np.zeros(self.num_concs, dtype=int)
         start = 0
@@ -537,20 +548,73 @@ class Concentration(object):
             n = len(self.basis_elements[i])
             end = start + n
             if end >= len(int_array):
-                int_array[start:] = int(np.round(conc[start:]*num))
+                int_array[start:] = np.round(conc[start:]*num).astype(np.int32)
                 b_eq[start:] *= num
             else:
-                int_array[start: end] = int(np.round(conc[start: end]*num))
+                int_array[start: end] = np.round(conc[start: end]*num).astype(np.int32)
                 b_eq[start: end] *= num
             start += n
 
         # Make sure that equality constraints are satisfied
         dot_prod = self.A_eq.dot(int_array)
-        if not np.allclose(dot_prod, self.b_eq):
+        print(self.A_eq)
+        print(b_eq)
+        if not np.allclose(dot_prod, b_eq):
             msg = "The conversion from floating point concentration to int "
             msg += "is not consistent. Expected: {}, ".format(b_eq)
             msg += "got: {}".format(dot_prod)
             raise IntConversionNotConsistentError(msg)
+        return int_array
+
+    def _check_grouped_basis_elements(self):
+        # check number of basis
+        if self.grouped_basis is None:
+            return
+        
+        num_basis = len([i for sub in self.grouped_basis 
+                         for i in sub])
+        if num_basis != len(self.orig_basis_elements):
+            raise ValueError('grouped_basis do not contain all the basis')
+
+        # check if grouped basis have same elements
+        for group in self.grouped_basis:
+            ref_elements = self.orig_basis_elements[group[0]]
+            for indx in group[1:]:
+                if self.orig_basis_elements[indx] != ref_elements:
+                    raise ValueError('elements in the same group must be same')
+
+    def get_concentration_vector(self, index_by_basis, atoms):
+        """Get the concentration vector."""
+        assert len(index_by_basis) == len(self.basis_elements)
+
+        concs = np.zeros(self.num_concs)
+        start = 0
+        for i, indices in enumerate(index_by_basis):
+            symbol_lookuptable = \
+                {symb: start+j for j, symb in enumerate(self.basis_elements[i])}
+            for indx in indices:
+                concs[symbol_lookuptable[atoms[indx].symbol]] += 1
+            if start+len(self.basis_elements[i]) >= len(concs):
+                concs[start:] /= len(indices)
+            else:                
+                concs[start:start+len(self.basis_elements[i])] /= len(indices)
+            start += len(self.basis_elements[i])
+        assert np.all(concs < 1.0)
+        return concs
+
+    def is_valid(self, index_by_basis, atoms):
+        """Check if the atoms object has a valid concentration.
+
+        Arguments:
+        =========
+        index_by_basis: list
+            list where the indices of atoms is grouped by basis
+        atoms: Atoms
+            wrappend_and_sorted atoms object
+        """
+        x = self.get_concentration_vector(index_by_basis, atoms)
+        return self.is_valid_conc(x)
+            
 
 
 # Helper function used by the minimization algorithm

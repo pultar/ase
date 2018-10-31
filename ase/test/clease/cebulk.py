@@ -30,24 +30,12 @@ def test_binary_system():
     The EMT calculator is used for energy calculations
     """
     db_name = "test_crystal.db"
-    # conc_args = {"conc_ratio_min_1": [[1, 0]],
-    #              "conc_ratio_max_1": [[0, 1]]}
     basis_elements = [["Au", "Cu"]]
     concentration = Concentration(basis_elements=basis_elements)
-    bc_setting = CEBulk(crystalstructure="fcc", a=4.05,
-                        basis_elements=basis_elements, size=[3, 3, 3],
+    bc_setting = CEBulk(crystalstructure="fcc", a=4.05, size=[3, 3, 3],
                         concentration=concentration, db_name=db_name)
 
     newstruct = NewStructures(bc_setting, struct_per_gen=3)
-    
-    print(struct_generator._get_name(bc_setting.atoms))
-    atoms = bulk('Au', a=4.05)*(3, 1, 1)
-    atoms[1].symbol = "Cu"
-    atoms = atoms*(1, 3, 3)
-    print(atoms.get_chemical_formula())
-    print(struct_generator._get_name(atoms))
-    quit()
-
     newstruct.generate_initial_pool()
 
     # Compute the energy of the structures
@@ -88,25 +76,20 @@ def test_grouped_basis_supercell():
     # ------------------------------- #
     # initial_pool + probe_structures #
     # ------------------------------- #
-    setting = CEBulk(basis_elements=[['Na', 'Cl'], ['Na', 'Cl']],
-                     crystalstructure="rocksalt",
+    basis_elements = [['Na', 'Cl'], ['Na', 'Cl']]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0, 1]])
+    setting = CEBulk(crystalstructure="rocksalt",
                      a=4.0,
                      size=[2, 2, 1],
-                     conc_args={"conc_ratio_min_1": [[1, 0]],
-                                "conc_ratio_max_1": [[0, 1]]},
+                     concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=3,
-                     max_cluster_dia=4.,
-                     grouped_basis=[[0, 1]])
-    assert setting.num_grouped_basis == 1
-    assert len(setting.index_by_grouped_basis) == 1
+                     max_cluster_dia=4.)
+    assert setting.num_basis == 1
+    assert len(setting.index_by_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
-    assert setting.num_grouped_elements == 2
     assert len(setting.basis_functions) == 1
-    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    background = [a.index for a in setting.atoms_with_given_dim if
-                  a.symbol in setting.background_symbol]
-    assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
     try:
         ns = NewStructures(setting=setting, struct_per_gen=3)
         ns.generate_initial_pool()
@@ -125,29 +108,24 @@ def test_grouped_basis_supercell():
     # ------------------------------- #
     # initial_pool + probe_structures #
     # ------------------------------- #
-    setting = CEBulk(basis_elements=[['Zr', 'Ce'], ['O'], ['O']],
-                     crystalstructure="fluorite",
+    basis_elements = [['Zr', 'Ce'], ['O'], ['O']]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0], [1, 2]])
+    setting = CEBulk(crystalstructure="fluorite",
                      a=4.0,
                      size=[2, 2, 3],
-                     conc_args={"conc_ratio_min_1": [[1, 0], [2]],
-                                "conc_ratio_max_1": [[0, 1], [2]]},
+                     concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=2,
-                     max_cluster_dia=4.,
-                     grouped_basis=[[0], [1, 2]])
+                     max_cluster_dia=4.)
     fam_members = get_members_of_family(setting, "c2_4p000_7")
     assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
     assert len(fam_members[1]) == 6
     assert len(fam_members[2]) == 6
-    assert setting.num_grouped_basis == 2
-    assert len(setting.index_by_grouped_basis) == 2
+    assert setting.num_basis == 2
+    assert len(setting.index_by_basis) == 2
     assert setting.spin_dict == {'Ce': 1.0, 'O': -1.0, 'Zr': 0}
-    assert setting.num_grouped_elements == 3
     assert len(setting.basis_functions) == 2
-    flat = [i for sub in setting.index_by_grouped_basis for i in sub]
-    background = [a.index for a in setting.atoms_with_given_dim if
-                  a.symbol in setting.background_symbol]
-    assert len(flat) == len(setting.atoms_with_given_dim) - len(background)
 
     try:
         ns = NewStructures(setting=setting, struct_per_gen=3)
@@ -168,12 +146,13 @@ def test_grouped_basis_supercell():
     # initial_pool + probe_structures    #
     # ---------------------------------- #
     # [["Ca"], ["O", "F"]]
-    setting = CEBulk(basis_elements=[['Ca'], ['O', 'F'], ['O', 'F']],
+    basis_elements = [['Ca'], ['O', 'F'], ['O', 'F']]
+    concentration = Concentration(basis_elements=basis_elements)
+    setting = CEBulk(basis_elements=basis_elements,
                      crystalstructure="fluorite",
                      a=4.0,
                      size=[2, 2, 2],
-                     conc_args={"conc_ratio_min_1": [[1], [2, 0]],
-                                "conc_ratio_max_1": [[1], [0, 2]]},
+                     concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=3,
                      max_cluster_dia=4.,

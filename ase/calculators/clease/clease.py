@@ -188,7 +188,7 @@ class Clease(Calculator):
         changed = np.argwhere(check == 0)[:, 0]
         changed = np.unique(changed)
         for index in changed:
-            if self.atoms[index].symbol in self.setting.background_symbol:
+            if index in self.setting.background_indices:
                 raise MovedIgnoredAtomError("Atom with index {} ".format(index)
                                             + "is a background atom.")
 

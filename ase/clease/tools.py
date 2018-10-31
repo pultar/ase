@@ -33,27 +33,6 @@ def wrap_and_sort_by_position(atoms):
     return atoms
 
 
-def nCr(n, r):
-    """Compute and return combination."""
-    f = math.factorial
-    return f(n) / f(r) / f(n - r)
-
-
-def reduce_matrix(matrix):
-    """Remove columns of the matrix to match its rank."""
-    matrix = matrix[:, ~np.all(matrix == 0., axis=0)]
-    offset = 0
-    rank = matrix_rank(matrix)
-    while matrix.shape[1] > rank:
-        temp = np.delete(matrix, -1 - offset, axis=1)
-        if matrix_rank(temp) < rank:
-            offset += 1
-        else:
-            matrix = temp
-            offset = 0
-    return matrix
-
-
 def create_cluster(atoms, indices):
     """Create a cluster centered in the unit cell."""
     cluster = atoms[list(indices)]

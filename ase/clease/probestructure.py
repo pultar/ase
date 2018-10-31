@@ -111,10 +111,7 @@ class ProbeStructure(object):
         for tag in range(natoms):
             periodic_indices.append([a.index for a in atoms if a.tag == tag])
 
-        if self.setting.grouped_basis is None:
-            tag_by_basis = self.setting.index_by_basis
-        else:
-            tag_by_basis = self.setting.index_by_grouped_basis
+        tag_by_basis = self.setting.index_by_basis
 
         index_by_basis = []
         for basis in tag_by_basis:

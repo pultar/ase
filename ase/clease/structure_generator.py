@@ -13,7 +13,6 @@ from ase.units import kB
 import time
 
 
-# class ProbeStructure(object):
 class StructureGenerator(object):
     """Base class for generating new strctures."""
 
@@ -29,14 +28,14 @@ class StructureGenerator(object):
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
 
-        if self.setting.in_conc_matrix(atoms):
+        if self._is_valid(atoms):
             if len(atoms) != len(setting.atoms_with_given_dim):
                 raise ValueError("Passed Atoms has a wrong size.")
             self.supercell, self.periodic_indices, self.index_by_basis = \
                 self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
         else:
             raise ValueError("concentration of the elements in the provided"
-                             " atoms cannot be found in the conc_matrix")
+                             " atoms is not consistent with the settings.")
 
         # eci set to 1 to ensure that all correlation functions are included 
         # but the energy produced from this should never be used 
@@ -56,6 +55,10 @@ class StructureGenerator(object):
         self.generated_structure = None
         self.cf_generated_structure = None
 
+    def _is_valid(self, atoms):
+        return self.setting.concentration.is_valid(
+                self.setting.index_by_basis, atoms)
+
     def _build_supercell(self, atoms):
         for atom in atoms:
             atom.tag = atom.index
@@ -68,10 +71,7 @@ class StructureGenerator(object):
         for tag in range(natoms):
             periodic_indices.append([a.index for a in atoms if a.tag == tag])
 
-        if self.setting.grouped_basis is None:
-            tag_by_basis = self.setting.index_by_basis
-        else:
-            tag_by_basis = self.setting.index_by_grouped_basis
+        tag_by_basis = self.setting.index_by_basis
 
         index_by_basis = []
         for basis in tag_by_basis:
@@ -118,6 +118,7 @@ class StructureGenerator(object):
                             math.log10(self.final_temp),
                             self.num_temp)
         now = time.time()
+        change_element = self._has_more_than_one_conc()
         for temp in temps:
             self.temp = temp
             num_accepted = 0
@@ -133,7 +134,7 @@ class StructureGenerator(object):
 
                 if bool(getrandbits(1)) and self.alter_composition:
                     # Change element Type
-                    if self._has_more_than_one_conc():
+                    if change_element:
                         self._change_element_type()
                     else:
                         continue
@@ -209,13 +210,8 @@ class StructureGenerator(object):
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
 
-        # determine if the basis is grouped
-        if self.setting.grouped_basis is None:
-            basis_elements = self.setting.basis_elements
-            num_basis = self.setting.num_basis
-        else:
-            basis_elements = self.setting.grouped_basis_elements
-            num_basis = self.setting.num_grouped_basis
+        basis_elements = self.setting.basis_elements
+        num_basis = self.setting.num_basis
 
         # pick fist atom and determine its symbol and type
         while True:
@@ -245,9 +241,10 @@ class StructureGenerator(object):
         return indx
 
     def _has_more_than_one_conc(self):
-        if len(self.setting.conc_matrix) > 1 \
-                and self.setting.conc_matrix.ndim > 1:
-            return True
+        ranges = self.setting.concentration.get_individual_comp_range()
+        for r in ranges:
+            if abs(r[1] - r[0]) > 0.01:
+                return True
         return False
 
     def _change_element_type(self):
@@ -256,12 +253,8 @@ class StructureGenerator(object):
         If index and replacing element types are not specified, they are
         randomly generated.
         """
-        if self.setting.grouped_basis is None:
-            basis_elements = self.setting.basis_elements
-            num_basis = self.setting.num_basis
-        else:
-            basis_elements = self.setting.grouped_basis_elements
-            num_basis = self.setting.num_grouped_basis
+        basis_elements = self.setting.basis_elements
+        num_basis = self.setting.num_basis
         # ------------------------------------------------------
         # Change the type of element for a given index if given.
         # If index not given, pick a random index
@@ -286,7 +279,8 @@ class StructureGenerator(object):
                     self.supercell[grp_index].symbol \
                         = self.supercell[indx].symbol
 
-                if self.setting.in_conc_matrix(self._supercell2unitcell()):
+                if self.setting.concentration.is_valid(
+                        self.setting.index_by_basis, self._supercell2unitcell()):
                     break
                 self.supercell[indx].symbol = old_symbol
 
@@ -317,7 +311,7 @@ class StructureGenerator(object):
         """Get correlation function of every entry in DB."""
         cfm = []
         db = connect(self.setting.db_name)
-        for row in db.select([('name', '!=', 'information')]):
+        for row in db.select([('name', '!=', 'template')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         return cfm
