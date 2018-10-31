@@ -9,6 +9,7 @@ import os
 import json
 from ase.clease import CECrystal, NewStructures, CorrFunction
 from ase.clease.newStruct import MaxAttemptReachedError
+from ase.clease.concentration import Concentration
 from ase.db import connect
 from ase.test.clease.reference_corr_funcs import all_cf
 
@@ -44,20 +45,18 @@ def test_spgroup_217():
     cellpar = [a, b, c, alpha, beta, gamma]
     basis = [(0, 0, 0), (0.324, 0.324, 0.324),
              (0.3582, 0.3582, 0.0393), (0.0954, 0.0954, 0.2725)]
-    conc_args = {"conc_ratio_min_1": [[1, 0]],
-                 "conc_ratio_max_1": [[0, 1]]}
     basis_elements = [["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"], ["Al", "Mg"]]
 
     # Test with grouped basis
-    bsg = CECrystal(basis_elements=basis_elements,
-                    basis=basis,
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0, 1, 2, 3]])
+    bsg = CECrystal(basis=basis,
                     spacegroup=217,
                     cellpar=cellpar,
-                    conc_args=conc_args,
+                    concentration=concentration,
                     max_cluster_size=3,
                     db_name=db_name,
                     size=[1, 1, 1],
-                    grouped_basis=[[0, 1, 2, 3]],
                     max_cluster_dia=3.5)
     assert bsg.num_trans_symm == 29
     atoms = bsg.atoms.copy()
@@ -81,31 +80,28 @@ def test_two_grouped_basis():
     # ---------------------------------- #
     # 2 grouped_basis                    #
     # ---------------------------------- #
-    bsg = CECrystal(basis_elements=[['Li', 'X', 'V'], ['Li', 'X', 'V'],
-                                    ['O', 'F']],
-                    basis=[(0.00, 0.00, 0.00),
+    basis_elements = [['Li', 'X', 'V'], ['Li', 'X', 'V'],
+                      ['O', 'F']]
+    grouped_basis = [[0, 1], [2]]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=grouped_basis)
+
+    bsg = CECrystal(basis=[(0.00, 0.00, 0.00),
                            (1. / 3, 2. / 3, 0.00),
                            (1. / 3, 0.00, 0.25)],
                     spacegroup=167,
                     cellpar=[5.123, 5.123, 13.005, 90., 90., 120.],
+                    concentration=concentration,
                     size=[1, 1, 1],
-                    conc_args={"conc_ratio_min_1": [[0, 2, 1], [2, 1]],
-                               "conc_ratio_max_1": [[2, 0, 1], [2, 1]]},
                     db_name=db_name,
-                    grouped_basis=[[0, 1], [2]],
                     max_cluster_size=3,
                     max_cluster_dia=2.5)
     assert bsg.unique_elements == ['F', 'Li', 'O', 'V', 'X']
     assert bsg.spin_dict == {'F': 2.0, 'Li': -2.0, 'O': 1.0, 'V': -1.0, 'X': 0}
     assert len(bsg.basis_functions) == 4
-    assert bsg.num_grouped_basis == 2
-    assert len(bsg.index_by_grouped_basis) == 2
-    assert bsg.num_grouped_elements == 5
+    assert bsg.num_basis == 2
+    assert len(bsg.index_by_basis) == 2
     assert len(bsg.basis_functions) == 4
-    flat = [i for sub in bsg.index_by_grouped_basis for i in sub]
-    background = [a.index for a in bsg.atoms_with_given_dim if
-                  a.symbol in bsg.background_symbol]
-    assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
 
     atoms = bsg.atoms.copy()
     indx_to_X = [6, 33, 8, 35]
@@ -127,32 +123,29 @@ def test_two_grouped_basis_probe_structure():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    bsg = CECrystal(basis_elements=[['O', 'X'], ['O', 'X'],
-                                    ['O', 'X'], ['Ta']],
-                    basis=[(0., 0., 0.),
+    basis_elements = [['O', 'X'], ['O', 'X'],
+                      ['O', 'X'], ['Ta']]
+    grouped_basis = [[0, 1, 2], [3]]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=grouped_basis)
+
+    bsg = CECrystal(basis=[(0., 0., 0.),
                            (0.3894, 0.1405, 0.),
                            (0.201, 0.3461, 0.5),
                            (0.2244, 0.3821, 0.)],
                     spacegroup=55,
                     cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
                     size=[1, 2, 2],
-                    conc_args={"conc_ratio_min_1": [[5, 0], [2]],
-                               "conc_ratio_max_1": [[4, 1], [2]]},
+                    concentration=concentration,
                     db_name=db_name,
                     max_cluster_size=3,
-                    max_cluster_dia=3.0,
-                    grouped_basis=[[0, 1, 2], [3]])
+                    max_cluster_dia=3.0)
     assert bsg.unique_elements == ['O', 'Ta', 'X']
     assert bsg.spin_dict == {'O': 1.0, 'Ta': -1.0, 'X': 0.0}
     assert len(bsg.basis_functions) == 2
-    assert bsg.num_grouped_basis == 2
-    assert len(bsg.index_by_grouped_basis) == 2
-    assert bsg.num_grouped_elements == 3
+    assert bsg.num_basis == 2
+    assert len(bsg.index_by_basis) == 2
     assert len(bsg.basis_functions) == 2
-    flat = [i for sub in bsg.index_by_grouped_basis for i in sub]
-    background = [a.index for a in bsg.atoms_with_given_dim if
-                  a.symbol in bsg.background_symbol]
-    assert len(flat) == len(bsg.atoms_with_given_dim) - len(background)
 
     atoms = bsg.atoms.copy()
     indx_to_X = [0, 4, 8, 12, 16]
@@ -261,13 +254,12 @@ def test_narrow_angle_crystal():
     This test a crystal with internal angles 50, 20, 15 degree.
     """
     db_name = "test_spacegroup.db"
-
-    bsg = CECrystal(basis_elements=[['Mg', 'Si']],
-                    basis=[(0.0, 0.0, 0.0)],
+    basis_elements = [['Mg', 'Si']]
+    concentration = Concentration(basis_elements=basis_elements)
+    bsg = CECrystal(basis=[(0.0, 0.0, 0.0)],
                     spacegroup=225,
                     cellpar=[4.0, 4.0, 4.0, 50.0, 40.0, 15.0],
-                    conc_args={"conc_ratio_min_1": [[1, 0]],
-                               "conc_ratio_max_1": [[0, 1]]},
+                    concentration=concentration,
                     db_name=db_name,
                     size=[2, 2, 1],
                     max_cluster_size=3,
@@ -287,11 +279,11 @@ def test_narrow_angle_crystal():
     os.remove(db_name)
 
 
-test_spgroup_217()
-test_two_grouped_basis()
-test_two_grouped_basis_probe_structure()
-test_two_grouped_basis_background_atoms_probe_structure()
-test_narrow_angle_crystal()
+# test_spgroup_217()
+# test_two_grouped_basis()
+# test_two_grouped_basis_probe_structure()
+# test_two_grouped_basis_background_atoms_probe_structure()
+# test_narrow_angle_crystal()
 
 if update_reference_file:
     print("Updating the reference correlation function file")

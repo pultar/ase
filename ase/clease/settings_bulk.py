@@ -277,6 +277,9 @@ class CECrystal(ClusterExpansionSetting):
         self.ab_normal = ab_normal
         self.primitive_cell = primitive_cell
         self.symbols = []
+        num_basis = len(concentration.orig_basis_elements)
+        for x in range(num_basis):
+            self.symbols.append(concentration.orig_basis_elements[x][0])
 
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
@@ -293,9 +296,6 @@ class CECrystal(ClusterExpansionSetting):
                             'cellpar': cellpar,
                             'ab_normal': ab_normal,
                             'primitive_cell': primitive_cell})
-        
-        for x in range(self.num_basis):
-            self.symbols.append(self.basis_elements[x][0])
 
         # self.index_by_basis = self._group_index_by_basis()
 
@@ -318,7 +318,9 @@ class CECrystal(ClusterExpansionSetting):
         return atoms
 
     def _group_index_by_basis(self):
-        indx_by_basis = [[] for _ in range(self.num_basis)]
+        num_basis = len(self.concentration.orig_basis_elements)
+        # indx_by_basis = [[] for _ in range(self.num_basis)]
+        indx_by_basis = [[] for _ in range(num_basis)]
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
         # scale_factor = np.multiply(self.supercell_scale_factor, self.size)

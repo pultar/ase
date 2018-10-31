@@ -112,6 +112,8 @@ class Clease(Calculator):
         # structure (e.g., Monte Carlo Simulation)
         self.old_atoms = None
         self.old_cf = None
+        self.symmetry_group = None
+        self.is_backround_index = None
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
@@ -130,6 +132,11 @@ class Clease(Calculator):
             msg = "atomic positions of all atoms in the passed Atoms "
             msg += "object and setting.atoms should be the same. "
             raise ValueError(msg)
+        self.symmetry_group = np.zeros(len(atoms), dtype=int)
+        for symm, indices in enumerate(self.setting.index_by_trans_symm):
+            self.symmetry_group[indices] = symm
+        self.is_backround_index = np.zeros(len(atoms), dtype=np.uint8)
+        self.is_backround_index[self.setting.background_indices] = 1
 
     def calculate(self, atoms, properties, system_changes):
         """Calculate the energy of the passed atoms object.
@@ -188,7 +195,7 @@ class Clease(Calculator):
         changed = np.argwhere(check == 0)[:, 0]
         changed = np.unique(changed)
         for index in changed:
-            if index in self.setting.background_indices and self.setting.ignore_background_atoms:
+            if self.is_backround_index[index] and self.setting.ignore_background_atoms:
                 raise MovedIgnoredAtomError("Atom with index {} ".format(index)
                                             + "is a background atom.")
 
@@ -244,12 +251,7 @@ class Clease(Calculator):
                     self.cf[i] = self.CF.get_c1(self.atoms, int(dec_str))
                     continue
 
-                symm_group_found = False
-                for symm in range(len(self.setting.cluster_info)):
-                    if indx in self.setting.index_by_trans_symm[symm]:
-                        symm_group_found = True
-                        break
-                assert symm_group_found
+                symm = self.symmetry_group[indx]
 
                 if prefix not in self.setting.cluster_info[symm].keys():
                     continue

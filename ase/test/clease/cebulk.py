@@ -71,37 +71,37 @@ def test_grouped_basis_supercell():
     """Test a case where a grouped_basis is used with supercell."""
     db_name = "test_crystal.db"
 
-    # # ------------------------------- #
-    # # 1 grouped basis                 #
-    # # ------------------------------- #
-    # # initial_pool + probe_structures #
-    # # ------------------------------- #
-    # basis_elements = [['Na', 'Cl'], ['Na', 'Cl']]
-    # concentration = Concentration(basis_elements=basis_elements,
-    #                               grouped_basis=[[0, 1]])
-    # setting = CEBulk(crystalstructure="rocksalt",
-    #                  a=4.0,
-    #                  size=[2, 2, 1],
-    #                  concentration=concentration,
-    #                  db_name=db_name,
-    #                  max_cluster_size=3,
-    #                  max_cluster_dia=4.)
-    # assert setting.num_basis == 1
-    # assert len(setting.index_by_basis) == 1
-    # assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
-    # assert len(setting.basis_functions) == 1
-    # try:
-    #     ns = NewStructures(setting=setting, struct_per_gen=3)
-    #     ns.generate_initial_pool()
-    #     ns = NewStructures(setting=setting, struct_per_gen=2)
-    #     ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-    #                                 num_temp=5, num_steps_per_temp=100,
-    #                                 approx_mean_var=True)
+    # ------------------------------- #
+    # 1 grouped basis                 #
+    # ------------------------------- #
+    # initial_pool + probe_structures #
+    # ------------------------------- #
+    basis_elements = [['Na', 'Cl'], ['Na', 'Cl']]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0, 1]])
+    setting = CEBulk(crystalstructure="rocksalt",
+                     a=4.0,
+                     size=[2, 2, 1],
+                     concentration=concentration,
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.)
+    assert setting.num_basis == 1
+    assert len(setting.index_by_basis) == 1
+    assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
+    assert len(setting.basis_functions) == 1
+    try:
+        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns.generate_initial_pool()
+        ns = NewStructures(setting=setting, struct_per_gen=2)
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
+                                    approx_mean_var=True)
 
-    # except MaxAttemptReachedError as exc:
-    #     print(str(exc))
+    except MaxAttemptReachedError as exc:
+        print(str(exc))
 
-    # os.remove(db_name)
+    os.remove(db_name)
 
     # ------------------------------- #
     # 2 grouped basis                 #
@@ -138,7 +138,7 @@ def test_grouped_basis_supercell():
     except MaxAttemptReachedError as exc:
         print(str(exc))
 
-    # os.remove(db_name)
+    os.remove(db_name)
     exit()
     # ---------------------------------- #
     # 2 grouped_basis + background atoms #
@@ -176,5 +176,5 @@ def test_grouped_basis_supercell():
     os.remove(db_name)
 
 
-# test_binary_system()
+test_binary_system()
 test_grouped_basis_supercell()
