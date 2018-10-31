@@ -1,4 +1,6 @@
 import time
+import re
+import numpy as np
 
 def read_aims(filename):
     """Import FHI-aims geometry type files.
@@ -199,6 +201,13 @@ def read_aims_output(filename, index=-1):
     pbc = False
     found_aims_calculator = False
     v_unit = Ang / (1000.0 * fs)
+
+    hirshfeld_charges = []
+    hirshfeld_moments = []
+
+    mulliken_charges = []
+    mulliken_moments = []
+
     while True:
         line = fd.readline()
         if not line:
@@ -311,6 +320,72 @@ def read_aims_output(filename, index=-1):
             # if found_aims_calculator:
                 # calc.set_results(images[-1])
                 # images[-1].set_calculator(calc)
+        if "Performing Hirshfeld analysis" in line:
+            while True:
+                _line = fd.readline()
+                if 'Hirshfeld charge' in _line:
+                    charge = float(_line.split(':')[-1])
+                    hirshfeld_charges.append(charge)
+                if 'Hirshfeld spin moment' in _line:
+                    moment = float(_line.split(':')[-1])
+                    hirshfeld_moments.append(moment)
+                # terminate if empy line occures
+                if re.match('^\s+$', _line):
+                    break
+
+        # Mulliken charges
+        if 'Summary of the per-atom charge analysis' in line:
+            # skip next 2 text-lines
+            for i in range(2):
+                _line = fd.readline()
+            pattern = r'\s+\|\s+\d+\s+[\d\.]+\s+([\-\d\.]+)\s+'
+            while True:
+                _line = fd.readline()
+                m = re.match(pattern, _line)
+                if m:
+                    charge = float(m.groups()[-1])
+                    mulliken_charges.append(charge)
+                # terminate if empy line occures
+                if re.match('^\s+$', _line):
+                    break
+
+        # Mulliken spins
+        if 'Summary of the per-atom spin analysis' in line:
+            # skip next 2 text-lines
+            for i in range(2):
+                _line = fd.readline()
+            pattern = r'\s+\|\s+\d+\s+([\d\.])+\s+'
+            while True:
+                _line = fd.readline()
+                m = re.match(pattern, _line)
+                if m:
+                    moment = float(m.groups()[-1])
+                    mulliken_moments.append(moment)
+                # terminate if empy line occures
+                if re.match('^\s+$', _line):
+                    break
+
+
+    if hirshfeld_charges:
+        images[-1].info['hirshfeld_charges'] = np.asarray(hirshfeld_charges)
+        images[-1].set_initial_charges(hirshfeld_charges)
+
+    if mulliken_charges:
+        images[-1].info['mulliken_charges'] = np.asarray(mulliken_charges)
+        # use Hirshfeld charges if both are available
+        if not hirshfeld_charges:
+            images[-1].set_initial_charges(mulliken_charges)
+
+    if hirshfeld_moments:
+        images[-1].info['hirshfeld_moments'] = np.asarray(hirshfeld_moments)
+        images[-1].set_initial_magnetic_moments(hirshfeld_moments)
+
+    if mulliken_moments:
+        images[-1].info['mulliken_moments'] = np.asarray(mulliken_moments)
+        # use Hirshfeld moments if both are available
+        if not hirshfeld_moments:
+            images[-1].set_initial_magnetic_moments(mulliken_moments)
+
     fd.close()
     if molecular_dynamics:
         images = images[1:]
