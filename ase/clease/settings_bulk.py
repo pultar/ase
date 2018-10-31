@@ -163,7 +163,8 @@ class CEBulk(ClusterExpansionSetting):
 
         for basis in indx_by_basis:
             basis.sort()
-        return indx_by_basis
+        self.index_by_basis = indx_by_basis
+        return self.index_by_basis
 
     def _group_index_by_basis_group(self):
         return self.index_by_basis

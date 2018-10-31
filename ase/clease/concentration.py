@@ -544,21 +544,20 @@ class Concentration(object):
         int_array = np.zeros(self.num_concs, dtype=int)
         start = 0
         b_eq = self.b_eq.copy()
+
         for i, num in enumerate(num_atoms_in_basis):
             n = len(self.basis_elements[i])
             end = start + n
             if end >= len(int_array):
                 int_array[start:] = np.round(conc[start:]*num).astype(np.int32)
-                b_eq[start:] *= num
             else:
                 int_array[start: end] = np.round(conc[start: end]*num).astype(np.int32)
-                b_eq[start: end] *= num
+            b_eq[i] *= num
             start += n
 
         # Make sure that equality constraints are satisfied
         dot_prod = self.A_eq.dot(int_array)
-        print(self.A_eq)
-        print(b_eq)
+
         if not np.allclose(dot_prod, b_eq):
             msg = "The conversion from floating point concentration to int "
             msg += "is not consistent. Expected: {}, ".format(b_eq)
@@ -599,7 +598,7 @@ class Concentration(object):
             else:                
                 concs[start:start+len(self.basis_elements[i])] /= len(indices)
             start += len(self.basis_elements[i])
-        assert np.all(concs < 1.0)
+        assert np.all(concs <= 1.0)
         return concs
 
     def is_valid(self, index_by_basis, atoms):

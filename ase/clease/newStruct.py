@@ -111,6 +111,8 @@ class NewStructures(object):
                 break
             
             atoms = self._get_struct_at_conc(conc_type='random')
+            # from ase.visualize import view
+            # view(atoms)
             formula_unit = self._get_formula_unit(atoms)
             if self._exists_in_db(atoms, formula_unit):
                 num_attempt += 1
@@ -243,7 +245,12 @@ class NewStructures(object):
                               in self.setting.index_by_basis]
         num_atoms_to_insert = conc.conc_in_int(num_atoms_in_basis, x)
         atoms = self._random_struct_at_conc(num_atoms_to_insert)
-        return wrap_and_sort_by_position(atoms)
+        # from ase.visualize import view
+        # view(atoms)
+        # atoms = wrap_and_sort_by_position(atoms)
+        # view(atoms)
+        # exit()
+        return atoms
 
     def insert_structure(self, init_struct=None, final_struct=None, name=None):
         """Insert a user-supplied structure to the database.
@@ -403,16 +410,18 @@ class NewStructures(object):
         basis_elem = self.setting.concentration.basis_elements
         assert len(randomized_indices) == len(basis_elem)
         atoms = self.setting.atoms_with_given_dim.copy()
-
+        print(num_atoms_to_insert)
         current_conc = 0
+        num_atoms_inserted = 0
         for basis in range(len(randomized_indices)):
             current_indx = 0
             for symb in basis_elem[basis]:
                 for _ in range(num_atoms_to_insert[current_conc]):
                     atoms[randomized_indices[basis][current_indx]].symbol = symb
                     current_indx += 1
+                    num_atoms_inserted += 1
                 current_conc += 1
-        assert current_indx == len(atoms)
+        assert num_atoms_inserted == len(atoms)
         return atoms
 
     def _determine_gen_number(self):

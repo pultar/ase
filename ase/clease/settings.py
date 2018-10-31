@@ -62,7 +62,8 @@ class ClusterExpansionSetting(object):
         self.all_elements = sorted([item for row in self.basis_elements for
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
-        self.background_indices = self._get_background_indices()
+        # self.background_indices = self._get_background_indices()
+        self.background_indices = None
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
@@ -142,6 +143,8 @@ class ClusterExpansionSetting(object):
         """Sets a fixed template atoms object as the active."""
         self.atoms_with_given_dim, self.size = \
             self.template_atoms.get_atoms(uid, return_dims=True)
+        self.atoms_with_given_dim = \
+            wrap_and_sort_by_position(self.atoms_with_given_dim)
         
         self.index_by_basis = self._group_index_by_basis()
         self.cluster_info = []
@@ -456,29 +459,29 @@ class ClusterExpansionSetting(object):
         # Group all the indices together if its atomic number and position
         # sequences are same
         indx_by_equiv = []
-        bkg_indx_unit_cell = []
+        # bkg_indx_unit_cell = []
 
-        if self.ignore_background_atoms:
-            bkg_indx_unit_cell = [a.index for a in self.unit_cell
-                                  if a.symbol in self.background_symbol]
+        # if self.ignore_background_atoms:
+        #     bkg_indx_unit_cell = [a.index for a in self.unit_cell
+        #                           if a.symbol in self.background_symbol]
 
-        for i, indx in enumerate(indices):
-            if indx not in bkg_indx_unit_cell:
-                break
+        # for i, indx in enumerate(indices):
+        #     if indx not in bkg_indx_unit_cell:
+        #         break
 
-        vec = self.unit_cell.get_distance(indices[i], ref_indx, vector=True)
+        #vec = self.unit_cell.get_distance(indices[0], ref_indx, vector=True)
         shifted = self.unit_cell.copy()
-        shifted.translate(vec)
+        #shifted.translate(vec)
         shifted = wrap_and_sort_by_position(shifted)
         an = shifted.get_atomic_numbers()
         pos = shifted.get_positions()
 
-        temp = [[indices[i]]]
+        temp = [[indices[0]]]
         equiv_group_an = [an]
         equiv_group_pos = [pos]
-        for indx in indices[i + 1:]:
-            if indx in bkg_indx_unit_cell:
-                continue
+        for indx in indices[1:]:
+            # if indx in bkg_indx_unit_cell:
+            #     continue
             vec = self.unit_cell.get_distance(indx, ref_indx, vector=True)
             shifted = self.unit_cell.copy()
             shifted.translate(vec)
@@ -510,8 +513,8 @@ class ClusterExpansionSetting(object):
                 symm_group_of_tag[item] = gr_id
 
         for atom in self.atoms:
-            if atom.index in self.background_indices:
-                continue
+            # if atom.index in self.background_indices:
+            #     continue
             symm_gr = symm_group_of_tag[atom.tag]
             indx_by_equiv_all_atoms[symm_gr].append(atom.index)
         return indx_by_equiv_all_atoms

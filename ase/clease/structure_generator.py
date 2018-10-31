@@ -27,7 +27,6 @@ class StructureGenerator(object):
         self.cluster_names = self.setting.cluster_names
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
-
         if self._is_valid(atoms):
             if len(atoms) != len(setting.atoms_with_given_dim):
                 raise ValueError("Passed Atoms has a wrong size.")
