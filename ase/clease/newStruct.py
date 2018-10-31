@@ -4,7 +4,7 @@ import random
 import numpy as np
 from random import shuffle
 from copy import deepcopy
-from fractions import gcd
+from math import gcd
 from functools import reduce
 
 from ase.io import read

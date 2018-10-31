@@ -62,22 +62,12 @@ class ClusterExpansionSetting(object):
         self.all_elements = sorted([item for row in self.basis_elements for
                                     item in row])
         self.ignore_background_atoms = ignore_background_atoms
-        # self.background_indices = self._get_background_indices()
         self.background_indices = None
         self.num_elements = len(self.all_elements)
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
         self.index_by_basis = None
-        # self.index_by_grouped_basis = None
-        # if len(self.basis_elements) != self.num_basis:
-        #     raise ValueError("list of elements is needed for each basis")
-        # if grouped_basis is None:
-        #     self._check_basis_elements()
-        # else:
-        #     if not isinstance(grouped_basis, list):
-        #         raise TypeError('grouped_basis should be a list')
-        #     self.num_groups = len(self.grouped_basis)
-        #     self._check_grouped_basis_elements()
+        
         self.cluster_info = []
         self.index_by_trans_symm = []
         self.ref_index_trans_symm = []
@@ -111,28 +101,9 @@ class ClusterExpansionSetting(object):
 
         self.spin_dict = self.bf_scheme.spin_dict
         self.basis_functions = self.bf_scheme.basis_functions
-        # self.cluster_info = []
-        # self.index_by_trans_symm = []
-        # self.ref_index_trans_symm = []
-        # self.kd_trees = None
-        # self.set_template_atoms(0)
 
         if len(self.basis_elements) != self.num_basis:
             raise ValueError("list of elements is needed for each basis")
-
-        # self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        # self._check_conc_ratios(conc_args)
-        # self.cluster_info = []
-        #
-        # self.max_cluster_dia, self.supercell_scale_factor = \
-        #     self._get_max_cluster_dia_and_scale_factor(self.max_cluster_dia)
-        #
-        # self.atoms = self._create_template_atoms()
-        #
-        # self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
-        # self.num_trans_symm = len(self.index_by_trans_symm)
-        # self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
-        # self.kd_trees = self._create_kdtrees()
 
         if not os.path.exists(db_name):
             self._store_data()
