@@ -7,11 +7,12 @@
 """
 
 import os
-from ase.clease import CEBulk, NewStructures, Evaluate
+from ase.clease import CEBulk, NewStructures, Evaluate, Concentration
 from ase.clease.newStruct import MaxAttemptReachedError
+from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
 from ase.db import connect
-from ase.clease.concentration import Concentration
+
 
 
 def get_members_of_family(setting, cname):
@@ -40,25 +41,24 @@ def test_binary_system():
     # Compute the energy of the structures
     calc = EMT()
     database = connect(db_name)
-    all_atoms = []
-    key_value_pairs = []
-    for row in database.select("converged=0"):
-        atoms = row.toatoms()
-        all_atoms.append(atoms)
-        key_value_pairs.append(row.key_value_pairs)
+    # all_atoms = []
+    # key_value_pairs = []
+    # for row in database.select("converged=False"):
+    #     atoms = row.toatoms()
+    #     all_atoms.append(atoms)
+    #     key_value_pairs.append(row.key_value_pairs)
 
     # Write the atoms to the database
-    for atoms, kvp in zip(all_atoms, key_value_pairs):
+    # for atoms, kvp in zip(all_atoms, key_value_pairs):
+    for row in database.select([("converged", "=", False)]):
+        atoms = row.toatoms()
         atoms.set_calculator(calc)
         atoms.get_potential_energy()
-        kvp["converged"] = True
-        database.write(atoms, key_value_pairs=kvp)
-
+        update_db(uid_initial=row.id, final_struct=atoms, db_name=db_name)
     # Evaluate
     eval_l2 = Evaluate(bc_setting, fitting_scheme="l2", alpha=1E-6)
     eval_l2.get_cluster_name_eci(return_type='tuple')
     eval_l2.get_cluster_name_eci(return_type='dict')
-
 
     os.remove(db_name)
 

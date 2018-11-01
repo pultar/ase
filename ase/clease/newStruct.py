@@ -375,6 +375,7 @@ class NewStructures(object):
             count += 1
         kvp['name'] = formula_unit+"_{}".format(count)
         kvp['formula_unit'] = formula_unit
+        kvp['struct_type'] = 'initial'
         return kvp
 
     def _get_formula_unit(self, atoms):
