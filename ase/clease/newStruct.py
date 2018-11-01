@@ -1,21 +1,24 @@
 """Module for generating new structures for training."""
 import os
-import random
+import sys
 import numpy as np
 from random import shuffle
 from copy import deepcopy
-from math import gcd
 from functools import reduce
 
 from ase.io import read
 from ase.db import connect
 from ase.atoms import Atoms
 from ase.utils.structure_comparator import SymmetryEquivalenceCheck
-from ase.calculators.singlepoint import SinglePointCalculator
 
 from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.structure_generator import ProbeStructure, EminStructure
 from ase.clease.tools import wrap_and_sort_by_position
+
+if sys.version["major"] == 2:
+    from fractions import gcd
+else:
+    from math import gcd
 
 max_attempt = 10
 
@@ -109,7 +112,7 @@ class NewStructures(object):
                               self.db.select(gen=self.gen)])
             if num_struct >= self.struct_per_gen:
                 break
-            
+
             atoms = self._get_struct_at_conc(conc_type='random')
             # from ase.visualize import view
             # view(atoms)
@@ -121,7 +124,7 @@ class NewStructures(object):
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
             ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
-                                init_temp, final_temp, num_temp, 
+                                init_temp, final_temp, num_temp,
                                 num_steps_per_temp, approx_mean_var)
             atoms, cf = ps.generate()
             formula_unit = self._get_formula_unit(atoms)
@@ -140,8 +143,8 @@ class NewStructures(object):
                 msg = "Could not generate probe structure in 10 attempts."
                 raise MaxAttemptReachedError(msg)
 
-    def generate_Emin_structure(self, atoms=None, init_temp=2000, final_temp=1, 
-                                num_temp=10, num_steps_per_temp=1000, 
+    def generate_Emin_structure(self, atoms=None, init_temp=2000, final_temp=1,
+                                num_temp=10, num_steps_per_temp=1000,
                                 cluster_names_eci=None):
         """Generate Emin structure.
 
@@ -165,7 +168,7 @@ class NewStructures(object):
         """
 
         print("Generate {} Emin structures.".format(self.struct_per_gen))
-        
+
         num_attempt = 0
         while True:
             # Break out of the loop if reached struct_per_gen
@@ -182,7 +185,7 @@ class NewStructures(object):
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
             es = EminStructure(self.setting, atoms, self.struct_per_gen,
-                               init_temp, final_temp, num_temp, 
+                               init_temp, final_temp, num_temp,
                                num_steps_per_temp, cluster_names_eci)
             atoms, cf = es.generate()
             formula_unit = self._get_formula_unit(atoms)
@@ -194,7 +197,7 @@ class NewStructures(object):
                 continue
             else:
                 num_attempt = 0
-        
+
             print('Structure with E = {} generated.'.format(es.min_energy))
             kvp = self._get_kvp(atoms, cf, formula_unit)
             self.db.write(atoms, kvp)
@@ -208,7 +211,7 @@ class NewStructures(object):
 
         print("Generating initial pool consisting of one structure per "
               "concentration where the number of an element is at max/min")
-        
+
         for indx in range(self.setting.concentration.num_concs):
             for option in ["min", "max"]:
                 atoms = self._get_struct_at_conc(conc_type=option, index=indx)
@@ -219,7 +222,7 @@ class NewStructures(object):
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, formula_unit)
                     self.db.write(atoms, kvp)
-         
+
 
     def _get_struct_at_conc(self, conc_type='random', index=0):
         """Generate a structure at a concentration specified.
@@ -228,7 +231,7 @@ class NewStructures(object):
         =========
         conc_type: str
             One of 'min', 'max' and 'random'
-        
+
         index: int
             index of the flattened basis_element array to specify which element
             to be maximized/minimized
@@ -240,8 +243,8 @@ class NewStructures(object):
             x = conc.get_conc_max_component(index)
         else:
             x = conc.get_random_concentration()
-        
-        num_atoms_in_basis = [len(indices) for indices  
+
+        num_atoms_in_basis = [len(indices) for indices
                               in self.setting.index_by_basis]
         num_atoms_to_insert = conc.conc_in_int(num_atoms_in_basis, x)
         atoms = self._random_struct_at_conc(num_atoms_to_insert)
@@ -270,7 +273,7 @@ class NewStructures(object):
         """
         if init_struct is None:
             raise TypeError('init_struct must be provided')
-            
+
         if name is not None:
             num = sum(1 for _ in self.db.select(['name', '=', name]))
             if num > 0:
@@ -361,7 +364,7 @@ class NewStructures(object):
             reduced formula unit of the passed Atoms object
         """
         if formula_unit is None:
-            raise ValueError("Formula unit not specified!")                        
+            raise ValueError("Formula unit not specified!")
         kvp['gen'] = self.gen
         kvp['converged'] = False
         kvp['started'] = False

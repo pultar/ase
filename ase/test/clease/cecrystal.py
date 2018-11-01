@@ -186,7 +186,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     # ---------------------------------- #
     # initial_pool + probe_structures    #
     # ---------------------------------- #
-    basis_elements=[['O', 'X'], ['Ta'], ['O', 'X'], ['O', 'X']]
+    basis_elements = [['O', 'X'], ['Ta'], ['O', 'X'], ['O', 'X']]
     grouped_basis = [[1], [0, 2, 3]]
     concentration = Concentration(basis_elements=basis_elements,
                                   grouped_basis=grouped_basis)

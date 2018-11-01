@@ -42,7 +42,7 @@ class ClusterExpansionSetting(object):
         else:
             raise TypeError("concentration has to be either dict or "
                             "instance of Concentration")
-            
+
         self.kwargs["concentration"] = self.concentration.to_dict()
         self.basis_elements = deepcopy(concentration.basis_elements)
         self.num_basis = len(self.basis_elements)
@@ -53,7 +53,6 @@ class ClusterExpansionSetting(object):
         self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
                                             size=size, skew_threshold=4,
                                             unit_cells=[self.unit_cell])
-        
 
         self.dist_num_dec = dist_num_dec
         self.db_name = db_name
@@ -67,7 +66,7 @@ class ClusterExpansionSetting(object):
         self.unique_elements = sorted(list(set(deepcopy(self.all_elements))))
         self.num_unique_elements = len(self.unique_elements)
         self.index_by_basis = None
-        
+
         self.cluster_info = []
         self.index_by_trans_symm = []
         self.ref_index_trans_symm = []
@@ -80,7 +79,7 @@ class ClusterExpansionSetting(object):
                 raise ValueError("Unique elements in BasiFunction instance "
                                  "is different from the one in settings")
             self.bf_scheme = basis_function
-        
+
         elif isinstance(basis_function, str):
             if basis_function.lower() == 'sanchez':
                 from ase.clease.basis_function import Sanchez
@@ -118,7 +117,7 @@ class ClusterExpansionSetting(object):
         for indx in self.background_indices:
             symbs.append(self.atoms[indx].symbol)
         symbs = list(set(symbs))
-        
+
         for atom in self.atoms:
             if atom.index in self.background_indices:
                 continue
@@ -140,7 +139,7 @@ class ClusterExpansionSetting(object):
             self.template_atoms.get_atoms(uid, return_dims=True)
         self.atoms_with_given_dim = \
             wrap_and_sort_by_position(self.atoms_with_given_dim)
-        
+
         self.index_by_basis = self._group_index_by_basis()
         self.cluster_info = []
 
@@ -328,7 +327,7 @@ class ClusterExpansionSetting(object):
         bkg_indices = []
         tags = []
         for b_indx in basis:
-            new_tags = [self.atoms_with_given_dim[indx].tag 
+            new_tags = [self.atoms_with_given_dim[indx].tag
                         for indx in self.index_by_basis[b_indx]]
             tags += list(set(new_tags))
         tags = list(set(tags))
@@ -390,8 +389,6 @@ class ClusterExpansionSetting(object):
         equiv_group_an = [an]
         equiv_group_pos = [pos]
         for indx in indices[1:]:
-            # if indx in bkg_indx_unit_cell:
-            #     continue
             vec = self.unit_cell.get_distance(indx, ref_indx, vector=True)
             shifted = self.unit_cell.copy()
             shifted.translate(vec)
@@ -525,7 +522,8 @@ class ClusterExpansionSetting(object):
         # determine cluster information for each inequivalent site
         # (based on translation symmetry)
         for site, ref_indx in enumerate(self.ref_index_trans_symm):
-            if ref_indx in self.background_indices and self.ignore_background_atoms:
+            if (ref_indx in self.background_indices and
+                    self.ignore_background_atoms):
                 cluster_info.append({})
                 continue
             cluster_info_symm = {}

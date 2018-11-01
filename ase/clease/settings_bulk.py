@@ -86,13 +86,13 @@ class CEBulk(ClusterExpansionSetting):
         self.u = u
         self.orthorhombic = orthorhombic
         self.cubic = cubic
-        
+
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
                                          basis_function,
                                          ignore_background_atoms)
-                                         
+
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
         # case
@@ -152,24 +152,6 @@ class CEBulk(ClusterExpansionSetting):
 
     def _group_index_by_basis_group(self):
         return self.index_by_basis
-        # if self.num_grouped_basis == 1:
-        #     index_by_grouped_basis = [[a.index for a in
-        #                                self.atoms_with_given_dim if
-        #                                a.symbol not in self.background_symbol]]
-
-        # # only possibility that indices are grouped and has more than one
-        # # basis is fluorite
-        # else:
-        #     index_by_grouped_basis = []
-        #     for group in self.grouped_basis:
-        #         symbol = self.basis_elements[group[0]][0]
-        #         index_by_grouped_basis.append([a.index for a in
-        #                                        self.atoms_with_given_dim if
-        #                                        a.symbol == symbol])
-
-        # for basis in index_by_grouped_basis:
-        #     basis.sort()
-        # return index_by_grouped_basis
 
     @staticmethod
     def load(filename):
@@ -237,7 +219,6 @@ class CECrystal(ClusterExpansionSetting):
     max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
-
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
 
@@ -268,9 +249,9 @@ class CECrystal(ClusterExpansionSetting):
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_function, 
+                                         basis_function,
                                          ignore_background_atoms)
-        
+
         # Save raw input arguments for save/load. The arguments gets altered
         # during the initalization process to handle 'ignore_background_atoms'
         # case
@@ -280,7 +261,7 @@ class CECrystal(ClusterExpansionSetting):
                             'cellpar': cellpar,
                             'ab_normal': ab_normal,
                             'primitive_cell': primitive_cell})
-    
+
         self._check_first_elements()
 
     def _get_unit_cell(self):

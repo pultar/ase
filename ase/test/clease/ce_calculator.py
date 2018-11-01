@@ -86,7 +86,7 @@ def get_spacegroup():
     spacegroup = 55
     cellpar = [6.25, 7.4, 3.83, 90, 90, 90]
     size = [2, 2, 2]
-    basis_elements= [['O', 'X'], ['O', 'X'], ['O', 'X'], ['Ta']]
+    basis_elements = [['O', 'X'], ['O', 'X'], ['O', 'X'], ['Ta']]
     grouped_basis = [[0, 1, 2], [3]]
     concentration = Concentration(basis_elements=basis_elements,
                                   grouped_basis=grouped_basis)

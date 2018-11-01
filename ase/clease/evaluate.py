@@ -83,8 +83,6 @@ class Evaluate(object):
             else:
                 self.select_cond.append(select_cond)
 
-        
-
         # Remove the cluster names that correspond to clusters larger than the
         # specified size and diameter.
         self._filter_cluster_name()
@@ -264,7 +262,7 @@ class Evaluate(object):
         else:
             plt.show()
 
-         # Create a plot with the residuals
+        # Create a plot with the residuals
         fig_residual = plt.figure()
         ax_residual = fig_residual.add_subplot(111)
         ax_residual.set_title("Residuals")
@@ -276,7 +274,8 @@ class Evaluate(object):
             lines = ax_residual.get_lines()
             data_points = [lines[0]]
             annotations = [self.names]
-            ShowStructureOnClick(fig_residual, ax_residual, data_points, annotations, db_name)
+            ShowStructureOnClick(fig_residual, ax_residual, data_points,
+                                 annotations, db_name)
         else:
             plt.show()
 
@@ -449,8 +448,8 @@ class Evaluate(object):
     def plot_ECI(self, ignore_sizes=[0], interactive=True):
         """Plot the all the ECI.
 
-        Argument
-        =========
+        Argument:
+        ========
         ignore_sizes: list of ints
             Sizes listed in this list will not be plotted.
             Default is to ignore the emptry cluster.

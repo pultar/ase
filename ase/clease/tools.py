@@ -1,8 +1,6 @@
 """A collection of miscellaneous functions used for Cluster Expansion."""
-import math
 from itertools import permutations, combinations, product
 import numpy as np
-from numpy.linalg import matrix_rank
 import collections
 
 

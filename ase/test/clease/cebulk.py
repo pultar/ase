@@ -12,7 +12,6 @@ from ase.clease.newStruct import MaxAttemptReachedError
 from ase.calculators.emt import EMT
 from ase.db import connect
 from ase.clease.concentration import Concentration
-from ase.build import bulk
 
 
 def get_members_of_family(setting, cname):

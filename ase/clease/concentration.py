@@ -542,7 +542,7 @@ class Concentration(object):
         if len(num_atoms_in_basis) != len(self.basis_elements):
             raise ValueError("Number of atoms has to be specified for each "
                              "basis. Given: {}. Expected: {}"
-                             "".format(len(num_atoms_in_basis), 
+                             "".format(len(num_atoms_in_basis),
                                        len(self.basis_elements)))
 
         int_array = np.zeros(self.num_concs, dtype=int)
@@ -573,8 +573,8 @@ class Concentration(object):
         # check number of basis
         if self.grouped_basis is None:
             return
-        
-        num_basis = len([i for sub in self.grouped_basis 
+
+        num_basis = len([i for sub in self.grouped_basis
                          for i in sub])
         if num_basis != len(self.orig_basis_elements):
             raise ValueError('grouped_basis do not contain all the basis')
@@ -594,12 +594,13 @@ class Concentration(object):
         start = 0
         for i, indices in enumerate(index_by_basis):
             symbol_lookuptable = \
-                {symb: start+j for j, symb in enumerate(self.basis_elements[i])}
+                {symb: start+j for j, symb
+                 in enumerate(self.basis_elements[i])}
             for indx in indices:
                 concs[symbol_lookuptable[atoms[indx].symbol]] += 1
             if start+len(self.basis_elements[i]) >= len(concs):
                 concs[start:] /= len(indices)
-            else:                
+            else:
                 concs[start:start+len(self.basis_elements[i])] /= len(indices)
             start += len(self.basis_elements[i])
         assert np.all(concs <= 1.0)
@@ -617,7 +618,7 @@ class Concentration(object):
         """
         x = self.get_concentration_vector(index_by_basis, atoms)
         return self.is_valid_conc(x)
-            
+
 
 
 # Helper function used by the minimization algorithm
