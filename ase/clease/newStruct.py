@@ -15,7 +15,7 @@ from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.structure_generator import ProbeStructure, EminStructure
 from ase.clease.tools import wrap_and_sort_by_position
 
-if sys.version["major"] == 2:
+if sys.version_info[0] < 3:
     from fractions import gcd
 else:
     from math import gcd
