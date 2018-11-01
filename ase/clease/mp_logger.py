@@ -24,8 +24,8 @@ class MultiprocessHandler(lg.Handler):
 
     def setFormatter(self, fmt):
         """Set logging format."""
-        lg.Hander.setFormatter(self, fmt)
-        self._hander.setFormatter(fmt)
+        lg.Handler.setFormatter(self, fmt)
+        self._handler.setFormatter(fmt)
 
     def receive(self):
         """Receive message from queue."""
