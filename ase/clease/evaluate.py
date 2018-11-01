@@ -27,9 +27,10 @@ class Evaluate(object):
         Names of clusters to include in the evalutation.
         If None, all of the possible clusters are included.
 
-    select_cond: tuple or list of tuples
-        Extra selection condition specified by user.
-        Default only includes "converged=True".
+    select_cond: tuple or list of tuples (optional)
+        Custom selection condition specified by user.
+        Default only includes "converged=True" and 
+        "struct_type='initial'".
 
     max_cluster_size: int
         Maximum number of atoms in the cluster to include in the fit.
@@ -76,8 +77,11 @@ class Evaluate(object):
         self.scheme_string = None
         self.set_fitting_scheme(fitting_scheme, alpha)
         # Define the selection conditions
-        self.select_cond = [('converged', '=', True)]
-        if select_cond is not None:
+        self.select_cond = []
+        if select_cond is None: 
+            self.select_cond = [('converged', '=', True), 
+                                ('struct_type', '=', 'initial')]
+        else:
             if isinstance(select_cond, list):
                 self.select_cond += select_cond
             else:
@@ -619,7 +623,16 @@ class Evaluate(object):
         names = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
-            e_dft.append(row.energy / row.natoms)
+            final_struct_id = row.get("final_struct_id", -1)
+            if final_struct_id >= 0:
+                # New format where energy is stored
+                # in a separate DB entry
+                energy = db.get(id=final_struct_id).energy
+            else:
+                # Old format where the energy is 
+                # stored in the init structure
+                energy = row.energy
+            e_dft.append(energy / row.natoms)
             names.append(row.name)
         return np.array(e_dft), names
 

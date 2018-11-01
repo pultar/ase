@@ -222,3 +222,58 @@ def nested_array2list(array):
     except TypeError:
         pass
     return array
+
+def update_db(uid_initial=None, final_struct=None, db_name=None,
+              custom_kvp_init={}, custom_kvp_final={}):
+    """Update the database.
+    
+    Arguments:
+    =========
+    uid_initial: int
+        entry ID of the initial structure in the database 
+
+    final_struct: Atoms
+        Atoms object with the final structure with a physical 
+        quantity that needs to be modeled (e.g., DFT energy)
+
+    db_name: str
+        Database name          
+
+    custom_kvp_init: dict (optional)
+        If desired, one can pass additional key-value-pairs for the 
+        entry containing the initial structure
+    
+    custom_kvp_final: dict (optional)
+        If desired, one can pass additional key-value-pairs for the 
+        entry containing the final structure
+    """
+    from ase.db import connect
+    db = connect(db_name)
+
+    init_row = db.get(id=uid_initial)
+
+    # Check if a final structure already exits
+    name = init_row.name
+    select_cond = [('name', '=', name), ('struct_type', '=', 'final')]
+    exist = sum(1 for row in db.select(select_cond))
+    if exist >= 1:
+        print("A structure with 'name'={} and 'struct_type'=final "
+              "already exits in DB".format(name))          
+        return
+        
+    # Write the final structure to database
+    kvp_final = {'struct_type': 'final', 'name': name}
+    kvp_final.update(custom_kvp_final)
+    uid_final = db.write(final_struct, key_value_pairs=kvp_final)
+
+    kvp_update_init = {
+        'converged': True,
+        'started': '',
+        'queued': '',
+    }
+    if kvp_final['struct_type'] == 'final':
+        kvp_update_init['final_struct_id'] = uid_final
+    kvp_update_init.update(custom_kvp_init)
+
+    # Update info for the initial structure
+    db.update(uid_initial, **kvp_update_init)

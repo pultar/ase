@@ -169,7 +169,8 @@ class CorrFunction(object):
         Arguments
         =========
         select_cond: list
-            -None (default): select every item in DB except for 'information'
+            -None (default): select every item in DB except for 
+                             "struct_type='initial'"
             -else: select based on additional condictions provided
 
         reset: bool
@@ -180,7 +181,7 @@ class CorrFunction(object):
                     setting.
         """
         db = connect(self.setting.db_name)
-        select = [('name', '!=', 'information')]
+        select = [('struct_type', '=', 'initial')]
         if select_cond is not None:
             for cond in select_cond:
                 select.append(cond)
