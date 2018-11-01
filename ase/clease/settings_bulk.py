@@ -60,11 +60,6 @@ class CEBulk(ClusterExpansionSetting):
     max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
-    grouped_basis: list
-        indices of basis_elements that are considered to be equivalent when
-        specifying concentration (e.g., useful when two basis are shared by
-        the same set of elements and no distinctions are made between them)
-
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
 
@@ -73,35 +68,14 @@ class CEBulk(ClusterExpansionSetting):
         when creating clusters.
     """
 
-    def __init__(self, basis_elements=None, crystalstructure=None,
+    def __init__(self, crystalstructure=None,
                  a=None, c=None, covera=None, u=None, orthorhombic=False,
-                 cubic=False, size=None, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None,
-                 basis_function='sanchez', grouped_basis=None,
+                 cubic=False, size=None, supercell_factor=None,
+                 concentration=None, db_name=None, max_cluster_size=4,
+                 max_cluster_dia=None, basis_function='sanchez',
                  dist_num_dec=3, ignore_background_atoms=False):
 
-        # Save raw input arguments for save/load. The arguments gets altered
-        # during the initalization process to handle 'ignore_background_atoms'
-        # case
-        self.kwargs = {'basis_elements': deepcopy(basis_elements),
-                       'crystalstructure': crystalstructure,
-                       'a': a,
-                       'c': c,
-                       'covera': covera,
-                       'u': u,
-                       'orthorhombic': orthorhombic,
-                       'cubic': cubic,
-                       'size': size,
-                       'conc_args': deepcopy(conc_args),
-                       'db_name': db_name,
-                       'max_cluster_size': max_cluster_size,
-                       'max_cluster_dia': deepcopy(max_cluster_dia),
-                       'grouped_basis': deepcopy(grouped_basis),
-                       'dist_num_dec': dist_num_dec,
-                       'ignore_background_atoms': ignore_background_atoms}
-
         # Initialization
-        self.basis_elements = basis_elements
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
                            'zincblende': 2, 'rocksalt': 2, 'cesiumchloride': 2,
                            'fluorite': 3, 'wurtzite': 2}
@@ -112,57 +86,53 @@ class CEBulk(ClusterExpansionSetting):
         self.u = u
         self.orthorhombic = orthorhombic
         self.cubic = cubic
-        self.size = size
 
-        self.num_basis = len(basis_elements)
-        if self.num_basis != self.structures[self.crystalstructure]:
-            msg = "{} has {} basis.".format(
-                self.crystalstructure, self.structures[self.crystalstructure])
-            msg += "The number of basis specified by basis_elements is "
-            msg += "{}".format(self.num_basis)
-            raise ValueError(msg)
-
-        self.unit_cell = self._get_unit_cell()
-        self._tag_unit_cell()
-        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        self.dist_num_dec = dist_num_dec
-
-        ClusterExpansionSetting.__init__(self, conc_args, db_name,
+        ClusterExpansionSetting.__init__(self, size, supercell_factor,
+                                         dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_function, basis_elements,
-                                         grouped_basis,
+                                         basis_function,
                                          ignore_background_atoms)
 
-        if grouped_basis is None:
-            self.index_by_basis = self._group_index_by_basis()
-        else:
-            self.num_grouped_basis = len(grouped_basis)
-            self.index_by_grouped_basis = self._group_index_by_basis_group()
-            self.grouped_basis_elements = self._get_grouped_basis_elements()
-            self.all_grouped_elements = [x for sub in
-                                         self.grouped_basis_elements
-                                         for x in sub]
-            self.num_grouped_elements = len(self.all_grouped_elements)
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs.update({'crystalstructure': crystalstructure,
+                            'a': a,
+                            'c': c,
+                            'covera': covera,
+                            'u': u,
+                            'orthorhombic': orthorhombic,
+                            'cubic': cubic})
+        num_basis = len(self.concentration.orig_basis_elements)
+        if num_basis != self.structures[self.crystalstructure]:
+            msg = "{} has {} basis. ".format(
+                self.crystalstructure, self.structures[self.crystalstructure])
+            msg += "The number of basis specified by basis_elements is "
+            msg += "{}".format(num_basis)
+            raise ValueError(msg)
+
         self._check_first_elements()
 
     def _get_unit_cell(self):
-        if self.num_basis == 1:
-            atoms = bulk(name='{}'.format(self.basis_elements[0][0]),
+        basis_elements = self.concentration.orig_basis_elements
+        num_basis = len(basis_elements)
+        if num_basis == 1:
+            atoms = bulk(name='{}'.format(basis_elements[0][0]),
                          crystalstructure=self.crystalstructure, a=self.a,
                          c=self.c, covera=self.covera, u=self.u,
                          orthorhombic=self.orthorhombic, cubic=self.cubic)
 
-        elif self.num_basis == 2:
-            atoms = bulk(name='{}{}'.format(self.basis_elements[0][0],
-                                            self.basis_elements[1][0]),
+        elif num_basis == 2:
+            atoms = bulk(name='{}{}'.format(basis_elements[0][0],
+                                            basis_elements[1][0]),
                          crystalstructure=self.crystalstructure, a=self.a,
                          c=self.c, covera=self.covera, u=self.u,
                          orthorhombic=self.orthorhombic, cubic=self.cubic)
 
         else:
-            atoms = bulk(name='{}{}{}'.format(self.basis_elements[0][0],
-                                              self.basis_elements[1][0],
-                                              self.basis_elements[2][0]),
+            atoms = bulk(name='{}{}{}'.format(basis_elements[0][0],
+                                              basis_elements[1][0],
+                                              basis_elements[2][0]),
                          crystalstructure=self.crystalstructure, a=self.a,
                          c=self.c, covera=self.covera, u=self.u,
                          orthorhombic=self.orthorhombic, cubic=self.cubic)
@@ -170,12 +140,6 @@ class CEBulk(ClusterExpansionSetting):
         return atoms
 
     def _group_index_by_basis(self):
-        num_basis = self.structures[self.crystalstructure]
-        if num_basis == 1:
-            indx_by_basis = [[a.index for a in self.atoms_with_given_dim if
-                              a.symbol not in self.background_symbol]]
-            return indx_by_basis
-
         indx_by_basis = []
         for basis in self.basis_elements:
             indx_by_basis.append([a.index for a in self.atoms_with_given_dim if
@@ -183,27 +147,11 @@ class CEBulk(ClusterExpansionSetting):
 
         for basis in indx_by_basis:
             basis.sort()
-        return indx_by_basis
+        self.index_by_basis = indx_by_basis
+        return self.index_by_basis
 
     def _group_index_by_basis_group(self):
-        if self.num_grouped_basis == 1:
-            index_by_grouped_basis = [[a.index for a in
-                                       self.atoms_with_given_dim if
-                                       a.symbol not in self.background_symbol]]
-
-        # only possibility that indices are grouped and has more than one
-        # basis is fluorite
-        else:
-            index_by_grouped_basis = []
-            for group in self.grouped_basis:
-                symbol = self.basis_elements[group[0]][0]
-                index_by_grouped_basis.append([a.index for a in
-                                               self.atoms_with_given_dim if
-                                               a.symbol == symbol])
-
-        for basis in index_by_grouped_basis:
-            basis.sort()
-        return index_by_grouped_basis
+        return self.index_by_basis
 
     @staticmethod
     def load(filename):
@@ -271,11 +219,6 @@ class CECrystal(ClusterExpansionSetting):
     max_cluster_dia: float or int
         maximum diameter of cluster (in angstrom)
 
-    grouped_basis: list
-        indices of basis_elements that are considered to be equivalent when
-        specifying concentration (e.g., useful when two basis are shared by
-        the same set of elements and no distinctions are made between them)
-
     dist_num_dec: int
         number of decimal places used to determine the distances between atoms
 
@@ -284,64 +227,41 @@ class CECrystal(ClusterExpansionSetting):
         when creating clusters.
     """
 
-    def __init__(self, basis_elements=None, basis=None, spacegroup=1,
+    def __init__(self, basis=None, spacegroup=1,
                  cell=None, cellpar=None, ab_normal=(0, 0, 1), size=None,
-                 primitive_cell=False, conc_args=None, db_name=None,
-                 max_cluster_size=4, max_cluster_dia=None,
-                 basis_function='sanchez', grouped_basis=None,
+                 supercell_factor=None, primitive_cell=False,
+                 concentration=None, db_name=None, max_cluster_size=4,
+                 max_cluster_dia=None, basis_function='sanchez',
                  dist_num_dec=3, ignore_background_atoms=False):
-        # Save raw input arguments for save/load. The arguments gets altered
-        # during the initalization process to handle 'ignore_background_atoms'
-        # case
-        self.kwargs = {'basis_elements': deepcopy(basis_elements),
-                       'basis': deepcopy(basis),
-                       'spacegroup': spacegroup,
-                       'cell': cell,
-                       'cellpar': cellpar,
-                       'ab_normal': ab_normal,
-                       'size': size,
-                       'primitive_cell': primitive_cell,
-                       'conc_args': deepcopy(conc_args),
-                       'db_name': db_name,
-                       'max_cluster_size': max_cluster_size,
-                       'max_cluster_dia': deepcopy(max_cluster_dia),
-                       'grouped_basis': deepcopy(grouped_basis),
-                       'dist_num_dec': dist_num_dec,
-                       'ignore_background_atoms': ignore_background_atoms}
 
         # Initialization
         self.basis = basis
-        self.num_basis = len(basis)
         self.spacegroup = spacegroup
         self.cell = cell
         self.cellpar = cellpar
         self.ab_normal = ab_normal
-        self.size = np.array(size)
         self.primitive_cell = primitive_cell
         self.symbols = []
-        for x in range(self.num_basis):
-            self.symbols.append(basis_elements[x][0])
-        self.unit_cell = self._get_unit_cell()
-        self._tag_unit_cell()
-        self.atoms_with_given_dim = self._get_atoms_with_given_dim()
-        self.dist_num_dec = dist_num_dec
+        num_basis = len(concentration.orig_basis_elements)
+        for x in range(num_basis):
+            self.symbols.append(concentration.orig_basis_elements[x][0])
 
-        ClusterExpansionSetting.__init__(self, conc_args, db_name,
+        ClusterExpansionSetting.__init__(self, size, supercell_factor,
+                                         dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_function, basis_elements,
-                                         grouped_basis,
+                                         basis_function,
                                          ignore_background_atoms)
 
-        self.index_by_basis = self._group_index_by_basis()
+        # Save raw input arguments for save/load. The arguments gets altered
+        # during the initalization process to handle 'ignore_background_atoms'
+        # case
+        self.kwargs.update({'basis': deepcopy(basis),
+                            'spacegroup': spacegroup,
+                            'cell': cell,
+                            'cellpar': cellpar,
+                            'ab_normal': ab_normal,
+                            'primitive_cell': primitive_cell})
 
-        if grouped_basis is not None:
-            self.num_grouped_basis = len(grouped_basis)
-            self.index_by_grouped_basis = self._group_index_by_basis_group()
-            self.grouped_basis_elements = self._get_grouped_basis_elements()
-            self.all_grouped_elements = [x for sub in
-                                         self.grouped_basis_elements
-                                         for x in sub]
-            self.num_grouped_elements = len(self.all_grouped_elements)
         self._check_first_elements()
 
     def _get_unit_cell(self):
@@ -353,10 +273,10 @@ class CECrystal(ClusterExpansionSetting):
         return atoms
 
     def _group_index_by_basis(self):
-        indx_by_basis = [[] for _ in range(self.num_basis)]
+        num_basis = len(self.concentration.orig_basis_elements)
+        indx_by_basis = [[] for _ in range(num_basis)]
         sg = Spacegroup(self.spacegroup)
         sites, kinds = sg.equivalent_sites(self.basis)
-        # scale_factor = np.multiply(self.supercell_scale_factor, self.size)
         scale_factor = self.size
 
         # account for the case where a supercell is needed
@@ -397,8 +317,9 @@ class CECrystal(ClusterExpansionSetting):
 
         for basis in indx_by_basis:
             basis.sort()
-
-        return indx_by_basis
+        self.index_by_basis = indx_by_basis
+        return self._group_index_by_basis_group()
+        # return indx_by_basis
 
     @staticmethod
     def load(filename):

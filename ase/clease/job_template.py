@@ -5,6 +5,7 @@ from ase.io import write
 from subprocess import check_output
 from ase.clease import jobscripts
 
+
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):

@@ -13,7 +13,6 @@ from ase.units import kB
 import time
 
 
-# class ProbeStructure(object):
 class StructureGenerator(object):
     """Base class for generating new strctures."""
 
@@ -22,24 +21,23 @@ class StructureGenerator(object):
         if not isinstance(setting, (CEBulk, CECrystal)):
             raise TypeError("setting must be CEBulk or CECrystal "
                             "object")
-        
+
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
-
-        if self.setting.in_conc_matrix(atoms):
+        if self._is_valid(atoms):
             if len(atoms) != len(setting.atoms_with_given_dim):
                 raise ValueError("Passed Atoms has a wrong size.")
             self.supercell, self.periodic_indices, self.index_by_basis = \
                 self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
         else:
             raise ValueError("concentration of the elements in the provided"
-                             " atoms cannot be found in the conc_matrix")
+                             " atoms is not consistent with the settings.")
 
-        # eci set to 1 to ensure that all correlation functions are included 
-        # but the energy produced from this should never be used 
+        # eci set to 1 to ensure that all correlation functions are included
+        # but the energy produced from this should never be used
         eci = {name: 1. for name in self.cluster_names}
         self.calc = Clease(self.setting, cluster_name_eci=eci)
         self.supercell.set_calculator(self.calc)
@@ -51,10 +49,14 @@ class StructureGenerator(object):
         self.num_steps_per_temp = num_steps_per_temp
         self.alter_composition = True
 
-        # Structures and correlation function associated with 
+        # Structures and correlation function associated with
         # the generated structure so far
         self.generated_structure = None
         self.cf_generated_structure = None
+
+    def _is_valid(self, atoms):
+        return self.setting.concentration.is_valid(
+                self.setting.index_by_basis, atoms)
 
     def _build_supercell(self, atoms):
         for atom in atoms:
@@ -68,10 +70,7 @@ class StructureGenerator(object):
         for tag in range(natoms):
             periodic_indices.append([a.index for a in atoms if a.tag == tag])
 
-        if self.setting.grouped_basis is None:
-            tag_by_basis = self.setting.index_by_basis
-        else:
-            tag_by_basis = self.setting.index_by_grouped_basis
+        tag_by_basis = self.setting.index_by_basis
 
         index_by_basis = []
         for basis in tag_by_basis:
@@ -108,7 +107,7 @@ class StructureGenerator(object):
         self._reset()
         if self.init_temp is None or self.final_temp is None:
             self.init_temp, self.final_temp = self._determine_temps()
-        
+
         if self.init_temp <= self.final_temp:
             raise ValueError("Initial temperature must be higher than final"
                              " temperature")
@@ -118,6 +117,7 @@ class StructureGenerator(object):
                             math.log10(self.final_temp),
                             self.num_temp)
         now = time.time()
+        change_element = self._has_more_than_one_conc()
         for temp in temps:
             self.temp = temp
             num_accepted = 0
@@ -133,7 +133,7 @@ class StructureGenerator(object):
 
                 if bool(getrandbits(1)) and self.alter_composition:
                     # Change element Type
-                    if self._has_more_than_one_conc():
+                    if change_element:
                         self._change_element_type()
                     else:
                         continue
@@ -157,11 +157,11 @@ class StructureGenerator(object):
     def _accept(self):
         raise NotImplementedError('This should be implemented in the inherited '
                                   'class.')
-    
+
     def _estimate_temp_range(self):
         raise NotImplementedError('This should be implemented in the inherited '
                                   'class.')
-    
+
     def _optimal_structure(self):
         raise NotImplementedError("This shoud be implemented in the inherited "
                                   "class.")
@@ -173,7 +173,7 @@ class StructureGenerator(object):
         count = 0
         max_count = 100
         now = time.time()
-        # To avoid errors, just set the temperature to 
+        # To avoid errors, just set the temperature to
         # an arbitrary file
         self.temp = 10000000.0
         while count < max_count:
@@ -195,7 +195,7 @@ class StructureGenerator(object):
                     continue
                 count += 1
             self.supercell.get_potential_energy()
-            
+
             # By calling accept statistics on the correlation
             # function and variance will be collected
             self._accept()
@@ -209,13 +209,8 @@ class StructureGenerator(object):
         indx = np.zeros(2, dtype=int)
         symbol = [None] * 2
 
-        # determine if the basis is grouped
-        if self.setting.grouped_basis is None:
-            basis_elements = self.setting.basis_elements
-            num_basis = self.setting.num_basis
-        else:
-            basis_elements = self.setting.grouped_basis_elements
-            num_basis = self.setting.num_grouped_basis
+        basis_elements = self.setting.basis_elements
+        num_basis = self.setting.num_basis
 
         # pick fist atom and determine its symbol and type
         while True:
@@ -245,9 +240,10 @@ class StructureGenerator(object):
         return indx
 
     def _has_more_than_one_conc(self):
-        if len(self.setting.conc_matrix) > 1 \
-                and self.setting.conc_matrix.ndim > 1:
-            return True
+        ranges = self.setting.concentration.get_individual_comp_range()
+        for r in ranges:
+            if abs(r[1] - r[0]) > 0.01:
+                return True
         return False
 
     def _change_element_type(self):
@@ -256,12 +252,8 @@ class StructureGenerator(object):
         If index and replacing element types are not specified, they are
         randomly generated.
         """
-        if self.setting.grouped_basis is None:
-            basis_elements = self.setting.basis_elements
-            num_basis = self.setting.num_basis
-        else:
-            basis_elements = self.setting.grouped_basis_elements
-            num_basis = self.setting.num_grouped_basis
+        basis_elements = self.setting.basis_elements
+        num_basis = self.setting.num_basis
         # ------------------------------------------------------
         # Change the type of element for a given index if given.
         # If index not given, pick a random index
@@ -286,7 +278,8 @@ class StructureGenerator(object):
                     self.supercell[grp_index].symbol \
                         = self.supercell[indx].symbol
 
-                if self.setting.in_conc_matrix(self._supercell2unitcell()):
+                if self.setting.concentration.is_valid(
+                     self.setting.index_by_basis, self._supercell2unitcell()):
                     break
                 self.supercell[indx].symbol = old_symbol
 
@@ -305,7 +298,7 @@ class StructureGenerator(object):
         #     print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
         for k in final_cf:
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
-                msg = 'The correlation function changed after simulated annealing'
+                msg = 'Correlation function changed after simulated annealing'
                 raise ValueError(msg)
 
         for grp in self.periodic_indices:
@@ -317,7 +310,7 @@ class StructureGenerator(object):
         """Get correlation function of every entry in DB."""
         cfm = []
         db = connect(self.setting.db_name)
-        for row in db.select([('name', '!=', 'information')]):
+        for row in db.select([('name', '!=', 'template')]):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         return cfm
@@ -369,8 +362,9 @@ class ProbeStructure(StructureGenerator):
                  final_temp=None, num_temp=5, num_steps_per_temp=1000,
                  approx_mean_var=False):
 
-        StructureGenerator.__init__(self, setting, atoms, struct_per_gen, 
-                    init_temp, final_temp, num_temp, num_steps_per_temp)
+        StructureGenerator.__init__(self, setting, atoms, struct_per_gen,
+                                    init_temp, final_temp, num_temp,
+                                    num_steps_per_temp)
         self.o_cf = self.calc.cf
         self.o_cfm = np.vstack((self.cfm, self.o_cf))
         self.approx_mean_var = approx_mean_var
@@ -415,7 +409,7 @@ class ProbeStructure(StructureGenerator):
             accept_move = True
         else:
             accept_move = np.exp((self.o_mv-n_mv)/self.temp) > np.random.uniform()
-        
+
         self.avg_diff += abs(n_mv - self.o_mv)
         if accept_move:
             self.o_mv = n_mv
@@ -442,7 +436,7 @@ class ProbeStructure(StructureGenerator):
         self.avg_mv = 0.0
         self.avg_diff = 0.0
         self.num_steps = 0
-        
+
 
 class EminStructure(StructureGenerator):
     """Generate minimum energy structure.
@@ -473,10 +467,10 @@ class EminStructure(StructureGenerator):
                       cluster names and ECI
     """
     def __init__(self, setting, atoms, struct_per_gen, init_temp=2000,
-                 final_temp=10, num_temp=10, num_steps_per_temp=10000, 
+                 final_temp=10, num_temp=10, num_steps_per_temp=10000,
                  cluster_name_eci=None):
         StructureGenerator.__init__(self, setting, atoms, struct_per_gen,
-                                    init_temp, final_temp, num_temp, 
+                                    init_temp, final_temp, num_temp,
                                     num_steps_per_temp)
         self.alter_composition = False
         self.calc = Clease(self.setting, cluster_name_eci=cluster_name_eci)
@@ -493,7 +487,7 @@ class EminStructure(StructureGenerator):
             self.generated_structure = self.supercell.copy()
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
             return True
-    
+
         if new_energy < self.min_energy:
             self.min_energy = new_energy
             self.generated_structure = self.supercell.copy()
@@ -502,7 +496,7 @@ class EminStructure(StructureGenerator):
         if new_energy < self.old_energy:
             self.old_energy = new_energy
             return True
-        
+
         diff = new_energy - self.old_energy
         kT = kB*self.temp
         accept_move = np.random.uniform() < np.exp(-diff/kT)
@@ -510,6 +504,7 @@ class EminStructure(StructureGenerator):
         if accept_move:
             self.old_energy = new_energy
         return accept_move
+
 
 def mean_variance_full(cfm):
     prec = precision_matrix(cfm)
