@@ -82,7 +82,7 @@ def check_orthonormal(setting):
     """Check orthonormality."""
     for bf in setting.basis_functions:
         sum = 0
-        for key, value in setting.spin_dict.items():
+        for key, _ in setting.spin_dict.items():
             sum += bf[key] * bf[key]
         sum /= setting.num_unique_elements
         assert abs(sum - 1.0) < tol
@@ -92,7 +92,7 @@ def check_orthonormal(setting):
     comb = list(itertools.combinations(alpha, 2))
     for c in comb:
         sum = 0
-        for key, value in setting.spin_dict.items():
+        for key, _ in setting.spin_dict.items():
             sum += setting.basis_functions[c[0]][key] \
                 * setting.basis_functions[c[1]][key]
         sum /= setting.num_unique_elements

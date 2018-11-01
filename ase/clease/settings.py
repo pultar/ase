@@ -632,7 +632,7 @@ class ClusterExpansionSetting(object):
         """Creates a list with the unique indices."""
         all_indices = deepcopy(self.ref_index_trans_symm)
         for item in self.cluster_info:
-            for name, info in item.items():
+            for _, info in item.items():
                     all_indices += flatten(info["indices"])
         return list(set(all_indices))
 
@@ -656,7 +656,7 @@ class ClusterExpansionSetting(object):
 
         for name in mult_factor.keys():
             mult_factor[name] = mult_factor[name] / normalization[name]
-        for key, found in name_found.items():
+        for _, found in name_found.items():
             assert found
         return mult_factor
 
@@ -709,7 +709,7 @@ class ClusterExpansionSetting(object):
         dist_matrix and return the sorted distances (reverse order)
         """
         d = []
-        for t, tree in enumerate(self.kd_trees):
+        for _, tree in enumerate(self.kd_trees):
             row = []
             for x in combinations(cluster, 2):
                 x0 = tree.data[x[0], :]
@@ -820,7 +820,7 @@ class ClusterExpansionSetting(object):
     def _info_entries_to_list(self):
         """Convert entries in cluster info to list."""
         for info in self.cluster_info:
-            for name, cluster in info.items():
+            for _, cluster in info.items():
                 cluster['indices'] = nested_array2list(cluster['indices'])
                 cluster['equiv_sites'] = \
                     nested_array2list(cluster['equiv_sites'])

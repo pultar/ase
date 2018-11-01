@@ -201,8 +201,8 @@ class Concentration(object):
                 current_indx += 1
 
         # Ensure valid chemical formula
-        for k, v in sum_of_variable_coeff.items():
-            if v != 0:
+        for _, value in sum_of_variable_coeff.items():
+            if value != 0:
                 raise ValueError("Invalid formula! {} {}"
                                  "".format(string, sum_of_variable_coeff))
         return integers
@@ -306,7 +306,7 @@ class Concentration(object):
         num_elements_with_variable = {k: 0 for k in variable_range.keys()}
         for var in variable_range.keys():
             for basis_elem in element_conc:
-                for element_symbol, conc in basis_elem.items():
+                for _, conc in basis_elem.items():
                     if var in conc:
                         num_elements_with_variable[var] += 1
         return num_elements_with_variable
@@ -317,7 +317,9 @@ class Concentration(object):
         num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
         # For each element in basis
         # figure out if this is reference
-        for variable, rng in variable_range.items():
+        keys = sorted(variable_range.keys())        
+        for variable in keys:
+            rng = variable_range[variable]
             ref_element = reference_elements[variable]["symbol"]
             basis = self._get_basis_containg_variable(formulas, variable)
             col = self._get_col_of_element_in_basis(basis, ref_element)

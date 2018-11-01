@@ -40,7 +40,7 @@ def test_order_indep_ref_indx():
     This does only apply for clusters with only inequivalent
     sites
     """
-    for name, clst in bc_setting.cluster_info_given_size(3)[0].items():
+    for _, clst in bc_setting.cluster_info_given_size(3)[0].items():
         if clst["equiv_sites"]:
             # The cluster contains symmetrically equivalent sites
             # and then this test does not apply

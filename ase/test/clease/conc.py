@@ -63,9 +63,11 @@ def test_formula_unit1():
 def test_formula_unit2():
     basis_elements = [['Li', 'Ru', 'X'], ['O', 'X']]
     formulas = ["Li<x>Ru<1>X<2-x>", "O<3-y>X<y>"]
-    range = OrderedDict({"x": (0, 2), "y": (0, 0.75)})
+    var_range = OrderedDict()
+    var_range["x"] = (0, 2)
+    var_range["y"] = (0, 0.75)
     conc = Concentration(basis_elements=basis_elements)
-    conc.set_conc_formula_unit(formulas=formulas, variable_range=range)
+    conc.set_conc_formula_unit(formulas=formulas, variable_range=var_range)
     A_eq = np.array([[1, 1, 1, 0, 0],
                      [0, 0, 0, 1, 1],
                      [0, 3, 0, 0, 0]])
