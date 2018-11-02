@@ -169,7 +169,7 @@ class CorrFunction(object):
         Arguments
         =========
         select_cond: list
-            -None (default): select every item in DB except for 
+            -None (default): select every item in DB except for
                              "struct_type='initial'"
             -else: select based on additional condictions provided
 

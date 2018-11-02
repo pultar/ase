@@ -5,14 +5,19 @@ from collections import OrderedDict
 
 
 class IntConversionNotConsistentError(Exception):
-    """Exception that is raised if equality constraints are not satisfied
-       when converting to integers.
     """
+    Exception that is raised if equality constraints are not satisfied when
+    converting to integers.
+    """
+
     pass
 
 
 class Concentration(object):
-    """"
+    """"Class that specifies the concentration ranges of consituting elements.
+
+    Arguments:
+    =========
 
     basis_elements: list
         List of chemical symbols of elements to occupy each basis.
@@ -20,10 +25,18 @@ class Concentration(object):
         a list of symbols should be grouped by basis as in [['Cu', 'Au']]
         (note the nested list form).
 
-    grouped_basis: list
+    grouped_basis: list (optional, only used when basis are grouped)
         indices of basis_elements that are considered to be equivalent when
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
+
+    A_lb: list or numpy array (optional)
+        A two-dimention matrix (or nested list) used to specify the lower
+        bounds of the concentration ranges.
+
+    b_lb: list or numpy list (optional)
+        A list 
+
     """
     def __init__(self, basis_elements=None, grouped_basis=None,
                  A_lb=None, b_lb=None, A_eq=None, b_eq=None):
@@ -130,7 +143,7 @@ class Concentration(object):
                                                               self.b_lb)
 
     def set_conc_ranges(self, ranges):
-        """Set concentration based on lower and upper bound
+        """Set concentration based on lower and upper bounds.
 
         Arguments:
         ==========
@@ -317,7 +330,7 @@ class Concentration(object):
         num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
         # For each element in basis
         # figure out if this is reference
-        keys = sorted(variable_range.keys())        
+        keys = sorted(variable_range.keys())
         for variable in keys:
             rng = variable_range[variable]
             ref_element = reference_elements[variable]["symbol"]

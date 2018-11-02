@@ -1,11 +1,10 @@
 def vasp_restart(param, name, db_name):
-    script_text="""\
+    script_text = """\
     import os
     from ase.calculators.vasp import Vasp
     from ase.io import read, write
     from ase.db import connect
     from ase.io.trajectory import TrajectoryWriter
-    from ase.calculators.singlepoint import SinglePointCalculator
 
     # update database
     name='"""+str(name)+"""'
@@ -56,19 +55,19 @@ def vasp_restart(param, name, db_name):
     """
     return script_text
 
+
 def vasp_new(param, name, db_name):
-    script_text="""\
+    script_text = """\
     import os
     from ase.calculators.vasp import Vasp
     from ase.io import read, write
     from ase.db import connect
     from ase.io.trajectory import TrajectoryWriter
-    from ase.calculators.singlepoint import SinglePointCalculator
 
     def set_magmom(atoms):
         V_index = [a.index for a in atoms if a.symbol  == 'V']
         for V in V_index:
-            atoms[V].magmom = 2.0
+            atoms[V].magmom = 5.0
         Cr_index = [a.index for a in atoms if a.symbol  == 'Cr']
         for Cr in Cr_index:
             atoms[Cr].magmom = 5.0
@@ -121,7 +120,7 @@ def vasp_new(param, name, db_name):
 
 
 def slurm_script_8(job_name):
-    script_text="""\
+    script_text = """\
     #!/bin/bash
     #SBATCH --mail-user=user@univ.edu
     #SBATCH --mail-type=ALL
@@ -135,8 +134,9 @@ def slurm_script_8(job_name):
     python vasp.py"""
     return script_text
 
+
 def slurm_script_16(job_name):
-    script_text="""\
+    script_text = """\
     #!/bin/bash
     #SBATCH --mail-user=user@univ.edu
     #SBATCH --mail-type=ALL
@@ -150,8 +150,9 @@ def slurm_script_16(job_name):
     python vasp.py"""
     return script_text
 
+
 def slurm_script_24(job_name):
-    script_text="""\
+    script_text = """\
     #!/bin/bash
     #SBATCH --mail-user=user@univ.edu
     #SBATCH --mail-type=ALL

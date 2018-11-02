@@ -128,7 +128,7 @@ class StructureGenerator(object):
                     acc_rate = float(num_accepted)/count
                     print("Temp: {}. {} of {}. Acc. rate: {}"
                           "".format(temp, count, self.num_steps_per_temp,
-                                     acc_rate))
+                                    acc_rate))
                     now = time.time()
 
                 if bool(getrandbits(1)) and self.alter_composition:
@@ -155,16 +155,16 @@ class StructureGenerator(object):
         return atoms, cf
 
     def _accept(self):
-        raise NotImplementedError('This should be implemented in the inherited '
-                                  'class.')
+        raise NotImplementedError('_accept should be implemented in the '
+                                  'inherited class.')
 
     def _estimate_temp_range(self):
-        raise NotImplementedError('This should be implemented in the inherited '
-                                  'class.')
+        raise NotImplementedError('_estimate_temp_range should be '
+                                  'implemented in the inherited class.')
 
     def _optimal_structure(self):
-        raise NotImplementedError("This shoud be implemented in the inherited "
-                                  "class.")
+        raise NotImplementedError('_optimal_structure shoud be implemented '
+                                  'in the inherited class.')
 
     def _determine_temps(self):
         print("Temperature range not given. "
@@ -406,17 +406,17 @@ class ProbeStructure(StructureGenerator):
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
 
         if self.o_mv > n_mv:
-            accept_move = True
+            accept = True
         else:
-            accept_move = np.exp((self.o_mv-n_mv)/self.temp) > np.random.uniform()
+            accept = np.exp((self.o_mv-n_mv)/self.temp) > np.random.uniform()
 
         self.avg_diff += abs(n_mv - self.o_mv)
-        if accept_move:
+        if accept:
             self.o_mv = n_mv
 
         self.avg_mv += self.o_mv
         self.num_steps += 1
-        return accept_move
+        return accept
 
     def _estimate_temp_range(self):
         if self.num_steps == 0:

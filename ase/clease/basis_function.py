@@ -25,10 +25,7 @@ class BasisFunction(object):
                                   "in derived classes!")
 
     def customize_full_cluster_name(self, full_cluster_name):
-        """Function to customize the full cluster names.
-
-        Default is to do nothing
-        """
+        """Customize the full cluster names. Default is to do nothing."""
         return full_cluster_name
 
 
@@ -180,13 +177,14 @@ class VandeWalle(BasisFunction):
 
 
 def kronecker(i, j):
+    """Kronecker delta function."""
     if i == j:
         return 1
     return 0
 
 
 class Sluiter(BasisFunction):
-    """Pseudo spin and basis function from
+    """Pseudospin and basis function from Sluiter.
 
     Zhang, Xi, and Marcel HF Sluiter.
     Cluster expansions for thermodynamics and kinetics of multicomponent
@@ -228,7 +226,7 @@ class Sluiter(BasisFunction):
         return bf_list
 
     def _decoration2element(self, dec_num):
-        """Returns the element for which basis function is 1."""
+        """Get the element with its basis function equal to 1."""
         bf = self.bf_list[dec_num]
         for k, v in bf.items():
             if v == 1:

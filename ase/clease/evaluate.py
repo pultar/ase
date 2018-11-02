@@ -29,7 +29,7 @@ class Evaluate(object):
 
     select_cond: tuple or list of tuples (optional)
         Custom selection condition specified by user.
-        Default only includes "converged=True" and 
+        Default only includes "converged=True" and
         "struct_type='initial'".
 
     max_cluster_size: int
@@ -78,8 +78,8 @@ class Evaluate(object):
         self.set_fitting_scheme(fitting_scheme, alpha)
         # Define the selection conditions
         self.select_cond = []
-        if select_cond is None: 
-            self.select_cond = [('converged', '=', True), 
+        if select_cond is None:
+            self.select_cond = [('converged', '=', True),
                                 ('struct_type', '=', 'initial')]
         else:
             if isinstance(select_cond, list):
@@ -625,12 +625,10 @@ class Evaluate(object):
         for row in db.select(self.select_cond):
             final_struct_id = row.get("final_struct_id", -1)
             if final_struct_id >= 0:
-                # New format where energy is stored
-                # in a separate DB entry
+                # New format where energy is stored in a separate DB entry
                 energy = db.get(id=final_struct_id).energy
             else:
-                # Old format where the energy is 
-                # stored in the init structure
+                # Old format where the energy is stored in the init structure
                 energy = row.energy
             e_dft.append(energy / row.natoms)
             names.append(row.name)

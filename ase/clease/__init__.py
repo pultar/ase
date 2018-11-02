@@ -7,6 +7,6 @@ from ase.clease.concentration import Concentration
 from ase.clease.regression import LinearRegression, Tikhonov, Lasso
 
 
-__all__ = ['CEBulk', 'CECrystal', 'Concentration', 'CorrFunction', 
-           'NewStructures', 'NewStructures', 'Evaluate', 
+__all__ = ['CEBulk', 'CECrystal', 'Concentration', 'CorrFunction',
+           'NewStructures', 'NewStructures', 'Evaluate',
            'ConvexHull', 'LinearRegression', 'Tikhonov', 'Lasso']

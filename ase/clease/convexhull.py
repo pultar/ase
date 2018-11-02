@@ -118,8 +118,8 @@ class ConvexHull(object):
         while min_points[0] != conc_Emin_pairs[0]:
             slopes = []
             for point in left:
-                slopes.append(float((min_points[0][1] - point[1]))
-                              / (min_points[0][0] - point[0]))
+                slopes.append(float((min_points[0][1] - point[1])) /
+                              (min_points[0][0] - point[0]))
             min_index = slopes.index(max(slopes))
             min_points = [left[min_index]] + min_points
             left = left[:min_index]
@@ -129,8 +129,8 @@ class ConvexHull(object):
         while min_points[-1] != conc_Emin_pairs[-1]:
             slopes = []
             for point in right:
-                slopes.append(float((min_points[-1][1] - point[1]))
-                              / (min_points[-1][0] - point[0]))
+                slopes.append(float((min_points[-1][1] - point[1])) /
+                              (min_points[-1][0] - point[0]))
             min_index = slopes.index(min(slopes))
             min_points = min_points + [right[min_index]]
             right = right[min_index+1:]

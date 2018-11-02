@@ -926,8 +926,8 @@ class ClusterExpansionSetting(object):
         """
         class_types = ['CEBulk', 'CECrystal']
         if type(self).__name__ not in class_types:
-            raise NotImplementedError('Class {}'.format(type(self).__name__)
-                                      + 'is not supported.')
+            raise NotImplementedError('Class {} '.format(type(self).__name__)
+                                      'is not supported.')
 
         import json
         if type(self).__name__ == 'CEBulk':

@@ -178,7 +178,7 @@ class NewStructures(object):
             else:
                 atoms = wrap_and_sort_by_position(atoms)
                 num_struct = len([row.id for row in
-                                self.db.select(gen=self.gen)])
+                                  self.db.select(gen=self.gen)])
                 if num_struct >= self.struct_per_gen:
                     break
 
@@ -222,7 +222,6 @@ class NewStructures(object):
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, formula_unit)
                     self.db.write(atoms, kvp)
-
 
     def _get_struct_at_conc(self, conc_type='random', index=0):
         """Generate a structure at a concentration specified.
@@ -405,22 +404,22 @@ class NewStructures(object):
 
     def _random_struct_at_conc(self, num_atoms_to_insert):
         """Generate a random structure."""
-        randomized_indices = []
+        rnd_indices = []
         for indices in self.setting.index_by_basis:
-            randomized_indices.append(deepcopy(indices))
-            shuffle(randomized_indices[-1])
+            rnd_indices.append(deepcopy(indices))
+            shuffle(rnd_indices[-1])
 
         # Insert the number of atoms
         basis_elem = self.setting.concentration.basis_elements
-        assert len(randomized_indices) == len(basis_elem)
+        assert len(rnd_indices) == len(basis_elem)
         atoms = self.setting.atoms_with_given_dim.copy()
         current_conc = 0
         num_atoms_inserted = 0
-        for basis in range(len(randomized_indices)):
+        for basis in range(len(rnd_indices)):
             current_indx = 0
             for symb in basis_elem[basis]:
                 for _ in range(num_atoms_to_insert[current_conc]):
-                    atoms[randomized_indices[basis][current_indx]].symbol = symb
+                    atoms[rnd_indices[basis][current_indx]].symbol = symb
                     current_indx += 1
                     num_atoms_inserted += 1
                 current_conc += 1

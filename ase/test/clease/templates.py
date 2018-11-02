@@ -30,11 +30,3 @@ def test_hcp():
 
 test_fcc()
 test_hcp()
-
-
-# If user does not specify primitive/cubic --> both
-# If user specify size primtivie/cubic has to be specified
-# When settings are reconfigured then check if entries already in the database is consistent with a template atoms object, if not set a flag saying that this structure should be excluded
-# Add function for deleting excluded structures from the database.
-# In database information entries should have a key-value-pair with the repeated dimension i.e. 1x1x3,
-# Skewness factors should also be stored in the database

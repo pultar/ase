@@ -167,6 +167,3 @@ class TemplateAtoms(object):
         rand_num = np.random.rand()
         indx = np.argmax(cum_prob > rand_num)
         return indx
-        # if return_dims:
-        #     return self.templates["atoms"][indx], self.templates["dims"][indx]
-        # return self.templates["atoms"][indx]
