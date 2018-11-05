@@ -5,6 +5,7 @@ from ase.clease.newStruct import NewStructures
 from ase.clease.convexhull import ConvexHull
 from ase.clease.concentration import Concentration
 from ase.clease.regression import LinearRegression, Tikhonov, Lasso
+from ase.clease.ga_fit import GAFit
 
 
 __all__ = ['CEBulk', 'CECrystal', 'Concentration', 'CorrFunction',
