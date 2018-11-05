@@ -44,7 +44,7 @@ class ClusterExpansionSetting(object):
                             "instance of Concentration")
 
         self.kwargs["concentration"] = self.concentration.to_dict()
-        self.basis_elements = deepcopy(concentration.basis_elements)
+        self.basis_elements = deepcopy(self.concentration.basis_elements)
         self.num_basis = len(self.basis_elements)
         self.size = size
         self.unit_cell_type = 0
