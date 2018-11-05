@@ -58,13 +58,21 @@ class NewStructures(object):
 
         self.struct_per_gen = struct_per_gen
 
-    def generate_probe_structure(self, init_temp=None, final_temp=None,
-                                 num_temp=5, num_steps_per_temp=1000,
-                                 approx_mean_var=False, num_samples_var=10000):
+    def generate_probe_structure(self, size=None, init_temp=None,
+                                 final_temp=None, num_temp=5,
+                                 num_steps_per_temp=1000,
+                                 approx_mean_var=False,
+                                 num_samples_var=10000):
         """Generate a probe structure according to PRB 80, 165122 (2009).
 
         Arguments:
         =========
+        size: list of length=3 (optional)
+            If specified, the structure with the provided size is generated.
+            If None, the size will be generated randomly with a bias towards
+                more cubic cells (i.e., cell with similar magnitudes of vectors
+                a, b and c)
+
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
 
@@ -106,7 +114,7 @@ class NewStructures(object):
         print("Generate {} probe structures.".format(self.struct_per_gen))
         num_attempt = 0
         while True:
-            self.setting.set_new_template()
+            self.setting.set_new_template(size)
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
                               self.db.select(gen=self.gen)])
@@ -114,8 +122,7 @@ class NewStructures(object):
                 break
 
             atoms = self._get_struct_at_conc(conc_type='random')
-            # from ase.visualize import view
-            # view(atoms)
+
             formula_unit = self._get_formula_unit(atoms)
             if self._exists_in_db(atoms, formula_unit):
                 num_attempt += 1
@@ -143,8 +150,9 @@ class NewStructures(object):
                 msg = "Could not generate probe structure in 10 attempts."
                 raise MaxAttemptReachedError(msg)
 
-    def generate_Emin_structure(self, atoms=None, init_temp=2000, final_temp=1,
-                                num_temp=10, num_steps_per_temp=1000,
+    def generate_Emin_structure(self, atoms=None, size=None, init_temp=2000,
+                                final_temp=1, num_temp=10,
+                                num_steps_per_temp=1000,
                                 cluster_names_eci=None):
         """Generate Emin structure.
 
@@ -153,6 +161,12 @@ class NewStructures(object):
         atoms: Atoms object
             Atoms object with the desired composition of the new structure.
             A random composition is selected atoms=None.
+        
+        size: list of length=3 (optional)
+            If specified, the structure with the provided size is generated.
+            If None, the size will be generated randomly with a bias towards
+                more cubic cells (i.e., cell with similar magnitudes of vectors
+                a, b and c)
 
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
@@ -173,10 +187,17 @@ class NewStructures(object):
         while True:
             # Break out of the loop if reached struct_per_gen
             if atoms is None:
-                self.setting.set_new_template()
+                print("Generating a structure with size {} at a random "
+                      "concentration."
+                      "".format(size))
+                self.setting.set_new_template(size=size)
                 atoms = self._get_struct_at_conc(conc_type='random')
             else:
+                print("Generating a structure with the composition "
+                      "corresponding to the passed Atoms object "
+                      "(cell size is the same as the passed Atoms).")
                 atoms = wrap_and_sort_by_position(atoms)
+                self.setting.set_new_template(atoms=atoms)
                 num_struct = len([row.id for row in
                                   self.db.select(gen=self.gen)])
                 if num_struct >= self.struct_per_gen:
@@ -247,11 +268,7 @@ class NewStructures(object):
                               in self.setting.index_by_basis]
         num_atoms_to_insert = conc.conc_in_int(num_atoms_in_basis, x)
         atoms = self._random_struct_at_conc(num_atoms_to_insert)
-        # from ase.visualize import view
-        # view(atoms)
-        # atoms = wrap_and_sort_by_position(atoms)
-        # view(atoms)
-        # exit()
+
         return atoms
 
     def insert_structure(self, init_struct=None, final_struct=None, name=None):
