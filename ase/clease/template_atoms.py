@@ -90,7 +90,8 @@ class TemplateAtoms(object):
             lengths_template = template.get_cell_lengths_and_angles()
             if np.allclose(lengths, lengths_template):
                 return uid
-        raise ValueError("There is no template matching the given atoms object!")                          
+        raise ValueError("There is no template that matches the shape "
+                         "of given atoms object")
 
     def _is_unitary(self, matrix):
         return np.allclose(matrix.T.dot(matrix), np.identity(matrix.shape[0]))

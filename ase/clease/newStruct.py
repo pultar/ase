@@ -161,7 +161,7 @@ class NewStructures(object):
         atoms: Atoms object
             Atoms object with the desired composition of the new structure.
             A random composition is selected atoms=None.
-        
+
         size: list of length=3 (optional)
             If specified, the structure with the provided size is generated.
             If None, the size will be generated randomly with a bias towards
@@ -271,7 +271,8 @@ class NewStructures(object):
 
         return atoms
 
-    def insert_structure(self, init_struct=None, final_struct=None, name=None):
+    def insert_structure(self, init_struct=None, final_struct=None, name=None,
+                         generate_template=False):
         """Insert a user-supplied structure to the database.
 
         Arguments:
@@ -279,13 +280,17 @@ class NewStructures(object):
         init_struct: .xyz, .cif or .traj file
             *Unrelaxed* initial structure.
 
-        final_struct: .traj file
+        final_struct: .traj file (optional)
             Final structure that contains the energy.
             Needs to also supply init_struct in order to use the final_struct.
 
-        name: str
-            Name of the DB entry if non-default name is to be used.
+        name: str (optional)
+            Name of the DB entry if a custom name is to be used.
             If *None*, default naming convention will be used.
+
+        generate_template: bool (optional)
+            If set to *True*, a template matching the size of the passed
+            *init_struct* is created in DB.
         """
         if init_struct is None:
             raise TypeError('init_struct must be provided')

@@ -341,7 +341,7 @@ class CorrFunction(object):
         num_equiv = float(len(equiv_deco))
         return sp/num_equiv, count/num_equiv
 
-    def check_and_convert_cell_size(self, atoms):
+    def check_and_convert_cell_size(self, atoms, generate_template=False):
         """Check the size of provided cell and convert in necessary.
 
         If the size of the provided cell is the same as the size of the
@@ -349,19 +349,28 @@ class CorrFunction(object):
         (2) can make the same size by simple multiplication (supercell), the
         cell with the same size is returned after it is sorted by the position
         and wrapped. If not, it raises an error.
+
+        Arguments:
+        =========
+        atoms: Atoms object
+            *Unrelaxed* structure
+
+        generate_template: bool (optional)
+            If set to *True*, a template matching the size of the passed
+            *init_struct* is created in DB.
         """
-        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
+        cell_lengths = atoms.get_cell_lengths_and_angles()
         db = connect(self.setting.db_name)
         found_matching_template = False
         for row in db.select(name='template'):
             template = row.toatoms()
-            template_lengths = template.get_cell_lengths_and_angles()[:3]
+            template_lengths = template.get_cell_lengths_and_angles()
 
             if np.allclose(cell_lengths, template_lengths):
                 atoms = wrap_and_sort_by_position(atoms)
                 found_matching_template = True
                 break
-            #
+
             ratios = template_lengths / cell_lengths
             int_ratios = ratios.round(decimals=0).astype(int)
             if np.allclose(ratios, int_ratios):
@@ -370,8 +379,11 @@ class CorrFunction(object):
                 break
 
         if not found_matching_template:
-            raise TypeError("Cannot find the template atoms that matches the "
-                            "size of the passed atoms")
+            if not generate_template:
+                raise TypeError("Cannot find the template atoms that matches "
+                                "the size of the passed atoms")
+            # TODO: Generate template that matches the shape of passed atoms
+
         return atoms
 
 
