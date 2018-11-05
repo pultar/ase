@@ -24,6 +24,8 @@ class TemplateAtoms(object):
             if not self.templates["atoms"]:
                 raise RuntimeError("No template atoms matching criteria!")
         else:
+            # if size and supercell_factor are both specified,
+            # size will be used
             self.templates = {"atoms": [self.unit_cells[0]*size],
                               "dims": [size]}
 
@@ -62,12 +64,33 @@ class TemplateAtoms(object):
                 templates["dims"].append(size)
         return templates
 
+    @property
+    def num_templates(self):
+        return len(self.templates["atoms"])
+
     def get_atoms(self, uid, return_dims=False):
         """Return atoms at position."""
         if return_dims:
             return self.templates["atoms"][uid], self.templates["dims"][uid]
 
         return self.templates["atoms"][uid]
+
+    def get_uid_with_given_dim(self, dim):
+        try:
+            uid = self.templates["dims"].index(dim)
+        except ValueError:
+            raise ValueError("There is no template with dimensions "
+                             "{}.".format(dim))
+        return uid
+
+    def get_uid_matching_atoms(self, atoms):
+        """Get the UID for the template matching atoms."""
+        lengths = atoms.get_cell_lengths_and_angles()
+        for uid, template in enumerate(self.templates["atoms"]):
+            lengths_template = template.get_cell_lengths_and_angles()
+            if np.allclose(lengths, lengths_template):
+                return uid
+        raise ValueError("There is no template matching the given atoms object!")                          
 
     def _is_unitary(self, matrix):
         return np.allclose(matrix.T.dot(matrix), np.identity(matrix.shape[0]))
@@ -133,9 +156,6 @@ class TemplateAtoms(object):
             if factor <= max_supercell_factor:
                 found = True
         return num
-        # if return_dims:
-        #     return self.templates["atoms"][num], self.templates["dims"][num]
-        # return self.templates["atoms"][num]
 
     def _get_max_min_diag_ratio(self, atoms):
         """Return the ratio between the maximum and the minimum diagonal."""

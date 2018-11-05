@@ -26,7 +26,7 @@ class ClusterExpansionSetting(object):
     def __init__(self, size=None, supercell_factor=None, dist_num_dec=3,
                  concentration=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, basis_function='sanchez',
-                 ignore_background_atoms=False):
+                 skew_threshold=4, ignore_background_atoms=False):
         self.kwargs = {'size': size,
                        'supercell_factor': supercell_factor,
                        'db_name': db_name,
@@ -50,8 +50,15 @@ class ClusterExpansionSetting(object):
         self.unit_cell_type = 0
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
+
+        if (supercell_factor is not None and size is None and
+                max_cluster_dia is None):
+            raise ValueError("'max_cluster_dia' must be specified when "
+                             "'supercell_factor' is used. ")
+
         self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
-                                            size=size, skew_threshold=4,
+                                            size=size,
+                                            skew_threshold=skew_threshold,
                                             unit_cells=[self.unit_cell])
 
         self.dist_num_dec = dist_num_dec
@@ -71,6 +78,10 @@ class ClusterExpansionSetting(object):
         self.index_by_trans_symm = []
         self.ref_index_trans_symm = []
         self.kd_trees = None
+        self.template_atoms_uid = 0
+        for uid in range(self.template_atoms.num_templates):
+            self.set_template_atoms(uid)
+        # Set the initial template atoms to 0, which is the smallest cell
         self.set_template_atoms(0)
 
         unique_element_no_bkg = self.unique_element_without_background()
@@ -135,6 +146,7 @@ class ClusterExpansionSetting(object):
 
     def set_template_atoms(self, uid):
         """Sets a fixed template atoms object as the active."""
+        self.template_atoms_uid = uid
         self.atoms_with_given_dim, self.size = \
             self.template_atoms.get_atoms(uid, return_dims=True)
         self.atoms_with_given_dim = \
@@ -159,9 +171,16 @@ class ClusterExpansionSetting(object):
         # the nessecary data structures and store them in the database
         self._read_data()
 
-    def set_new_template(self):
+    def set_new_template(self, size=None, atoms=None):
         """Set a new template atoms object."""
-        uid = self.template_atoms.weighted_random_template()
+        if size is not None and atoms is not None:
+            raise ValueError("Specify either 'size' or pass Atoms object.")
+        if size is not None:
+            uid = self.template_atoms.get_uid_with_given_dim(size)
+        elif atoms is not None:
+            uid = self.template_atoms.get_uid_matching_atoms(atoms)
+        else:
+            uid = self.template_atoms.weighted_random_template()
         self.set_template_atoms(uid)
 
     def _check_conc_ratios(self, conc_args):
@@ -790,11 +809,14 @@ class ClusterExpansionSetting(object):
         return clusters
 
     def _store_data(self):
-        print('Generating cluster data. It may take several minutes depending'
-              ' on the values of max_cluster_size and max_cluster_dia...')
+        size_str = "x".join(str(s) for s in self.size)
+        num = self.template_atoms_uid
+        num_templates = self.template_atoms.num_templates
+        print('Generating cluster data for template with size: {}. '
+              '({} of {})'.format(size_str, num+1, num_templates))
+
         self._create_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
-        # self._check_equiv_sites()
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
@@ -900,9 +922,11 @@ class ClusterExpansionSetting(object):
     def reconfigure_settings(self):
         """Reconfigure settings stored in DB file."""
         db = connect(self.db_name)
-        ids = [row.id for row in db.select(name='information')]
+        ids = [row.id for row in db.select(name='template')]
         db.delete(ids)
-        self._store_data()
+        for uid in self.template_atoms.num_templates:
+            self.set_template(uid)
+        self.set_template(0)
 
     def _check_first_elements(self):
         basis_elements = self.basis_elements
