@@ -10,4 +10,5 @@ from ase.clease.ga_fit import GAFit
 
 __all__ = ['CEBulk', 'CECrystal', 'Concentration', 'CorrFunction',
            'NewStructures', 'NewStructures', 'Evaluate',
-           'ConvexHull', 'LinearRegression', 'Tikhonov', 'Lasso']
+           'ConvexHull', 'LinearRegression', 'Tikhonov', 'Lasso',
+           'GAFit']
