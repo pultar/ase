@@ -64,12 +64,13 @@ class GAFit(LinearRegression):
             "best_cv": [],
             "worst_cv": []
         }
+        self.evaluate_fitness()
 
     def _initialize_individuals(self):
         """Initialize a random population."""
         individuals = []
         if os.path.exists(self.fname):
-            individ_from_file = np.loadtxt(self.fname, delimiter=",")
+            individ_from_file = np.loadtxt(self.fname, delimiter=",").astype(int)
             for i in range(individ_from_file.shape[0]):
                 individuals.append(individ_from_file[i,:])
         else:
@@ -200,6 +201,8 @@ class GAFit(LinearRegression):
     def fit(self, X, y):
         """Perform fit using the best individual."""
         individual = self.best_individual
+        print(X)
+        print(self.evaluator.cf_matrix)
         if not np.allclose(X, self.evaluator.cf_matrix):
             raise RuntimeError("Design matrix X has to match "
                                "the cf_matrix in Evaluate!")
