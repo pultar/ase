@@ -68,6 +68,7 @@ def test_binary_system():
     ga_fit.run(gen_without_change=5, min_change=1.0)
     eval_l2.get_cluster_name_eci()
 
+    os.remove("ga_fit.csv")
     os.remove(db_name)
 
 
