@@ -254,7 +254,7 @@ class GAFit(LinearRegression):
                 self.save_population()
 
             if num_gen_without_change >= gen_without_change:
-                self.log("Reached {} generations, without sufficient improvement"
+                self.log("\nReached {} generations, without sufficient improvement"
                          "".format(gen_without_change))
                 break
             gen += 1
