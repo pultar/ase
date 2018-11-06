@@ -1,3 +1,4 @@
+from __future__ import print_function
 from ase.clease import LinearRegression, Tikhonov
 import numpy as np
 import os
@@ -24,9 +25,12 @@ class GAFit(LinearRegression):
     num_individuals: int or str
         Integer with the number of inidivuals or it is equal to "auto",
         in which case 10 times the number of candidate clusters is used
+    change_prob: float
+        If a mutation is selected this denotes the probability of a mutating
+        a given gene.
     """
     def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5, elitism=3,
-                 fname="ga_fit.csv", num_individuals="auto"):
+                 fname="ga_fit.csv", num_individuals="auto", change_prob=0.2):
         from ase.clease import Evaluate
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")
@@ -38,12 +42,17 @@ class GAFit(LinearRegression):
             self.pop_size = 10*self.evaluator.cf_matrix.shape[0]
         else:
             self.pop_size = int(num_individuals)
+        self.change_prob = change_prob
         self.num_genes = self.evaluator.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals()
         self.fitness = np.zeros(len(self.individuals))
         self.regression = Tikhonov(alpha=alpha)
         self.elitism = elitism
         self.mutation_prob = mutation_prob
+        self.statistics = {
+            "best_cv": [],
+            "worst_cv": []
+        }
 
     def _initialize_individuals(self):
         """Initialize a random population."""
@@ -82,7 +91,7 @@ class GAFit(LinearRegression):
     def flip_mutation(self, individual):
         """Apply mutation operation."""
         rand_num = np.random.rand(len(individual))
-        flip_indx = (rand_num<1.0/len(individual))
+        flip_indx = (rand_num<self.change_prob)
         individual[flip_indx] = (individual[flip_indx]+1)%2
         return individual
 
@@ -90,7 +99,7 @@ class GAFit(LinearRegression):
         """Change one 1 to 0."""
         indx = np.argwhere(individual==1)
         rand_num = np.random.rand(len(indx))
-        flip_indx = (rand_num < 1.0/len(indx))
+        flip_indx = (rand_num < self.change_prob)
         individual[indx[flip_indx]] = 0
         return individual
         
@@ -101,16 +110,28 @@ class GAFit(LinearRegression):
         srt_indx = np.argsort(self.fitness)[::-1]
 
         assert self.fitness[srt_indx[0]] >= self.fitness[srt_indx[1]]
+        mutation_type = ["flip", "sparsify"]
 
         # Pass the fittest to the next generation
         for i in range(self.elitism):
-            new_generation.append(self.individuals[srt_indx[i]])
+            individual = self.individuals[srt_indx[i]].copy()
+            new_generation.append(individual)
+
+            # Try to insert mutated versions of the best
+            # solutions
+            mut_type = choice(mutation_type)
+            if mut_type == "flip":
+                individual = self.flip_mutation(individual.copy())
+            else:
+                individual = self.sparsify_mutation(individual.copy())
+            new_generation.append(individual)
+        
 
         cumulative_sum = np.cumsum(self.fitness)
         cumulative_sum /= cumulative_sum[-1]
-        mutation_type = ["flip", "sparsify"]
+        num_inserted = len(new_generation)
         # Create new generation by mergin existing
-        for i in range(self.elitism, self.pop_size):
+        for i in range(num_inserted, self.pop_size):
             rand_num = np.random.rand()
             p1 = np.argmax(cumulative_sum>rand_num)
             p2 = p1
@@ -121,13 +142,25 @@ class GAFit(LinearRegression):
             crossing_point = np.random.randint(low=0, high=self.num_genes)
             new_individual = self.individuals[p1].copy()
             new_individual[crossing_point:] = self.individuals[p2][crossing_point:]
+
+            new_individual2 = self.individuals[p2].copy()
+            new_individual2[crossing_point:] = self.individuals[p1][crossing_point:]
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
                     new_individual = self.flip_mutation(new_individual)
+                    new_individual2 = self.flip_mutation(new_individual2)
                 else:
                     new_individual = self.sparsify_mutation(new_individual)
-            new_generation.append(new_individual)
+                    new_individual2 = self.sparsify_mutation(new_individual2)
+
+            if len(new_generation) <= len(self.individuals)-2:
+                new_generation.append(new_individual)
+                new_generation.append(new_individual2)
+            elif len(new_generation) == len(self.individuals)-1:
+                new_generation.append(new_individual)
+            else:
+                break
         self.individuals = new_generation
 
     def population_diversity(self):
@@ -135,9 +168,9 @@ class GAFit(LinearRegression):
         std = np.std(self.individuals)
         return np.mean(std)
 
-    def log(self, msg):
+    def log(self, msg, end="\n"):
         """Log messages."""
-        print(msg)
+        print(msg, end=end)
 
     @property
     def best_individual(self):
@@ -158,10 +191,26 @@ class GAFit(LinearRegression):
         self.evaluator.cf_matrix[:, individual==0] = 0.0
         return all_coeff
 
+    @staticmethod
+    def get_instance_array():
+        raise TypeError("Does not make sense to create an instance array "
+                        "GA.")
+
     def save_population(self):
         # Save population
         np.savetxt(self.fname, self.individuals, delimiter=",")
-        print("Population written to {}".format(self.fname))
+        print("\nPopulation written to {}".format(self.fname))
+
+    def plot_evolution(self):
+        """Create a plot of the evolution."""
+        from matplotlib import pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(self.statistics["best_cv"], label="best")
+        ax.plot(self.statistics["worst_cv"], label="worst")
+        ax.set_xlabel("Generation")
+        ax.set_ylabel("CV score (meV/atom)")
+        plt.show()
 
     def run(self, gen_without_change=1000, min_change=0.01, save_interval=100):
         """Run the genetic algorithm.
@@ -188,9 +237,11 @@ class GAFit(LinearRegression):
             cv = 1.0/self.fitness[best_indx]
             num_eci = np.sum(self.individuals[best_indx])
             diversity = self.population_diversity()
+            self.statistics["best_cv"].append(1.0/np.max(self.fitness))
+            self.statistics["worst_cv"].append(1.0/np.min(self.fitness))
             self.log("Generation: {}. Best CV: {:.2f} meV/atom "
                      "Num ECI: {}. Pop. div: {:.2f}"
-                     "".format(gen, cv, num_eci, diversity))
+                     "".format(gen, cv, num_eci, diversity), end="\r")
             self.create_new_generation()
 
             if abs(current_best - cv) > min_change:
