@@ -64,6 +64,12 @@ keyword              type      default value description
 ``kernel_cutoff``    ``str``   ``1000 bohr`` Cutoff Radius for density kernel
 ==================== ========= ============= =====================================
 
+Species Definitions
+===================
+
+By default, the calculator will create a "species" definition in the ONETEP input file for each type of element present in the calculation. However, if you add tags to certain atoms (either via the GUI or using the set_tags routine), then a species for each different combination of element and tag value.
+
+This provides a useful way to set up (for example) Local Density of States calculations, whereby a certain subset of the atoms are identified as an LDOS group.
 
 Example
 =======
@@ -76,18 +82,17 @@ Here is an example of setting up a calculation on a graphene sheet: ::
     index1=9
     index2=9
     alat = 2.45
-    clat = 19.2857142857
+    clat = 31.85
     gra = Graphene(symbol = 'C',latticeconstant={'a':alat,'c':clat},size=(index1,index2,1))
 
     # Set up a ONETEP calculation using PBE functional and ensemble DFT
     from ase.calculators.onetep import Onetep
-    from os.path import isfile, dirname, abspath, join 
     from os import environ
     environ["ASE_ONETEP_COMMAND"]="export OMP_NUM_THREADS=4;
         mpirun -n 6 /storage/nanosim/ONETEP/devel/bin/onetep.csc PREFIX.dat >> PREFIX.out 2> PREFIX.err"
     calc = Onetep(label='gra')
-    pseudos='/path/to/pseudos'
-    calc.set_pseudos([('C', join(pseudos, 'C.PBE-paw.abinit'))])
+    calc.set(pseudo_path='/path/to-pseudos')
+    calc.set(pseudo_suffix='.PBE-paw.abinit') # use pseudopotentials from JTH library in abinit format
     calc.set(paw=True,xc='PBE', cutoff_energy='500 eV',ngwf_radius=8,edft='T')
 
     # Run the calculation
@@ -104,12 +109,11 @@ Here is an example of setting up a calculation on a water molecule: ::
     
     # Set up a ONETEP geometry optimisation calculation using the PBE functional
     from ase.calculators.onetep import Onetep
-    from os.path import isfile, dirname, abspath, join 
     from os import environ
     environ["ASE_ONETEP_COMMAND"]="export OMP_NUM_THREADS=8; mpirun -n 2 /home/theory/phspvr/ONETEP/devel/bin/onetep.csc PREFIX.dat >> PREFIX.out 2> PREFIX.err"
     calc = Onetep(label='water')
-    prefix='/home/theory/phspvr/JTH_PBE'
-    calc.set_pseudos([('H', join(prefix, 'H.PBE-paw.abinit')), ('O', join(prefix, 'O.PBE-paw.abinit'))])
+    calc.set(pseudo_path='/home/theory/phspvr/JTH_PBE')
+    calc.set(pseudo_suffix='.PBE-paw.abinit') # use pseudopotentials from JTH library in abinit format
     calc.set(task='GeometryOptimization',paw=True,xc='PBE',cutoff_energy='600 eV')
     wat.set_calculator(calc)
     wat.get_forces()
