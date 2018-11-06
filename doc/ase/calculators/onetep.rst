@@ -91,7 +91,7 @@ Here is an example of setting up a calculation on a graphene sheet: ::
     environ["ASE_ONETEP_COMMAND"]="export OMP_NUM_THREADS=4;
         mpirun -n 6 /storage/nanosim/ONETEP/devel/bin/onetep.csc PREFIX.dat >> PREFIX.out 2> PREFIX.err"
     calc = Onetep(label='gra')
-    calc.set(pseudo_path='/path/to-pseudos')
+    calc.set(pseudo_path='/path/to/pseudos')
     calc.set(pseudo_suffix='.PBE-paw.abinit') # use pseudopotentials from JTH library in abinit format
     calc.set(paw=True,xc='PBE', cutoff_energy='500 eV',ngwf_radius=8,edft='T')
 
@@ -112,7 +112,7 @@ Here is an example of setting up a calculation on a water molecule: ::
     from os import environ
     environ["ASE_ONETEP_COMMAND"]="export OMP_NUM_THREADS=8; mpirun -n 2 /home/theory/phspvr/ONETEP/devel/bin/onetep.csc PREFIX.dat >> PREFIX.out 2> PREFIX.err"
     calc = Onetep(label='water')
-    calc.set(pseudo_path='/home/theory/phspvr/JTH_PBE')
+    calc.set(pseudo_path='/path/to/pseudos')
     calc.set(pseudo_suffix='.PBE-paw.abinit') # use pseudopotentials from JTH library in abinit format
     calc.set(task='GeometryOptimization',paw=True,xc='PBE',cutoff_energy='600 eV')
     wat.set_calculator(calc)
