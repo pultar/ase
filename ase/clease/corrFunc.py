@@ -19,11 +19,11 @@ class CorrFunction(object):
     =========
     setting: settings object
 
-    parallel: bool
+    parallel: bool (optional)
         specify whether or not to use the parallel processing for ``get_cf''
         method.
 
-    num_core: int or "all"
+    num_core: int or "all" (optional)
         specify the number of cores to use for parallelization.
     """
 
@@ -382,7 +382,7 @@ class CorrFunction(object):
             if not generate_template:
                 raise TypeError("Cannot find the template atoms that matches "
                                 "the size of the passed atoms")
-            # TODO: Generate template that matches the shape of passed atoms
+            # TODO: Generate a template that matches the shape of passed atoms
 
         return atoms
 
