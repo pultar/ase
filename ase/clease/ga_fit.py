@@ -28,6 +28,17 @@ class GAFit(LinearRegression):
     change_prob: float
         If a mutation is selected this denotes the probability of a mutating
         a given gene.
+
+    Examples:
+
+    from ase.clease import Evaluate
+    from ase.clease import GAFit
+    setting = None # Should be an ASE ClusterExpansionSetting object
+    evaluator = Evaluate(setting)
+    ga_fit = GAFit(evaluator)
+    ga_fit.run()
+    evaluator.get_cluster_name_eci()
+
     """
     def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5, elitism=3,
                  fname="ga_fit.csv", num_individuals="auto", change_prob=0.2):
