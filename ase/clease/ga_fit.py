@@ -103,6 +103,14 @@ class GAFit(LinearRegression):
         individual[indx[flip_indx]] = 0
         return individual
         
+    def make_valid(self, individual):
+        """Make sure that there is at least two active ECIs."""
+        if np.sum(individual) < 2:
+            while np.sum(individual) < 2:
+                indx = np.random.randint(low=0, high=len(individual))
+                individual[indx] = 1
+        return individual
+
     def create_new_generation(self):
         """Create a new generation."""
         from random import choice
@@ -124,7 +132,7 @@ class GAFit(LinearRegression):
                 individual = self.flip_mutation(individual.copy())
             else:
                 individual = self.sparsify_mutation(individual.copy())
-            new_generation.append(individual)
+            new_generation.append(self.make_valid(individual))
         
 
         cumulative_sum = np.cumsum(self.fitness)
@@ -155,10 +163,10 @@ class GAFit(LinearRegression):
                     new_individual2 = self.sparsify_mutation(new_individual2)
 
             if len(new_generation) <= len(self.individuals)-2:
-                new_generation.append(new_individual)
-                new_generation.append(new_individual2)
+                new_generation.append(self.make_valid(new_individual))
+                new_generation.append(self.make_valid(new_individual2))
             elif len(new_generation) == len(self.individuals)-1:
-                new_generation.append(new_individual)
+                new_generation.append(self.make_valid(new_individual))
             else:
                 break
         self.individuals = new_generation
