@@ -508,8 +508,7 @@ class Onetep(FileIOCalculator):
         keyword = 'POSITIONS_ABS'
 
         positions = atoms.get_positions()
-        tags = atoms.get_tags()
-        tags = ["" if i==0 else str(i) for i in tags]
+        tags = ["" if i==0 else str(i) for i in atoms.get_tags()]
         pos_block = [('%s %8.6f %8.6f %8.6f' %
                       (x+z, y[0], y[1], y[2])) for (x, y, z)
                      in zip(atoms.get_chemical_symbols(), positions, tags)]
