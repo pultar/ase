@@ -29,7 +29,7 @@ __all__ = ['Onetep']
 
 class Onetep(FileIOCalculator):
     """Implements the calculator for the onetep linear
-    scaling DFT code. Recomended ASE_ONETEP_COMMAND format
+    scaling DFT code. Recommended ASE_ONETEP_COMMAND format
     is "onetep_executable_name PREFIX.dat > PREFIX.out 2> PREFIX.err" """
 
     implemented_properties = ['energy', 'forces', 'dipole', 'magmom']
@@ -40,7 +40,8 @@ class Onetep(FileIOCalculator):
     # written elsewhere in the input file
     _dummy_parameters = ['ngwf_radius', 'xc', 'species_ngwf_radius',
                          'species_ngwf_number', 'species_solver',
-                         'ngwf_radius_cond', 'pseudo_suffix']
+                         'ngwf_radius_cond', 'pseudo_suffix',
+                         'species_core_wf']
 
     # Used to indicate which parameters are a kpoint path and should be
     # written as such
@@ -77,6 +78,7 @@ class Onetep(FileIOCalculator):
         self.species = []
         self.species_cond = []
         self.pseudos = []
+        self.core_wfs = []
         self.solvers = []
         self.restart = False
         self.prefix = label
@@ -391,6 +393,23 @@ class Onetep(FileIOCalculator):
 
             self.solvers.append((sp[0], atomic_string))
 
+    def _generate_core_wf_block(self):
+
+        any_core_wfs = False
+        for sp in self.species:
+            try:
+                core_wf_string = self.parameters['species_core_wf'][sp[0]]
+                any_core_wfs = True
+            except KeyError:
+                core_wf_string = 'NONE'
+
+            self.core_wfs.append((sp[0], core_wf_string))
+
+        # if no species core wavefunction definitions were set to anything
+        # other than 'NONE', delete the block entirely
+        if not any_core_wfs:
+            self.core_wfs = []
+
     def set_pseudos(self, pots):
         """ Sets the pseudopotential files used in this dat file
         TODO: add some verification - do the pseudos imply the same
@@ -438,6 +457,9 @@ class Onetep(FileIOCalculator):
 
         if len(self.solvers) < len(self.species):
             self._generate_solver_block()
+
+        if len(self.core_wfs) < len(self.species):
+            self._generate_core_wf_block()
 
         self._write_dat()
 
@@ -528,6 +550,13 @@ class Onetep(FileIOCalculator):
         for sp in sorted(self.solvers):
             fd.write('    %s "%s"\n' % (sp[0], sp[1]))
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
+
+        if self.core_wfs:
+            keyword = 'SPECIES_CORE_WFS'
+            fd.write('%%BLOCK %s\n' % keyword)
+            for sp in sorted(self.core_wfs):
+                fd.write('    %s "%s"\n' % (sp[0], sp[1]))
+            fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         if 'bsunfld_calculate' in self.parameters:
             if 'species_bsunfld_groups' not in self.parameters:
