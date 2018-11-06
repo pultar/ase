@@ -58,7 +58,7 @@ class NewStructures(object):
 
         self.struct_per_gen = struct_per_gen
 
-    def generate_probe_structure(self, size=None, init_temp=None,
+    def generate_probe_structure(self, atoms, size=None, init_temp=None,
                                  final_temp=None, num_temp=5,
                                  num_steps_per_temp=1000,
                                  approx_mean_var=False,
@@ -67,7 +67,12 @@ class NewStructures(object):
 
         Arguments:
         =========
-        size: list of length=3 (optional)
+        atoms: Atoms object
+            Atoms object with the desired cell size and shape of the new
+            structure.
+
+        size: list of length=3
+            This will be ignored if atoms is given.
             If specified, the structure with the provided size is generated.
             If None, the size will be generated randomly with a bias towards
                 more cubic cells (i.e., cell with similar magnitudes of vectors
@@ -114,7 +119,12 @@ class NewStructures(object):
         print("Generate {} probe structures.".format(self.struct_per_gen))
         num_attempt = 0
         while True:
-            self.setting.set_new_template(size)
+            if atoms is not None:
+                self.setting.set_new_template(atoms=atoms,
+                                              generate_template=True)
+            else:
+                self.setting.set_new_template(size=size,
+                                              generate_template=True)
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
                               self.db.select(gen=self.gen)])
@@ -305,9 +315,12 @@ class NewStructures(object):
         else:
             init = wrap_and_sort_by_position(read(init_struct))
 
+        self.setting.set_new_template(
+            atoms=init_struct, generate_template=generate_template)
+
         formula_unit = self._get_formula_unit(init)
         if self._exists_in_db(init, formula_unit):
-            raise RuntimeError('supplied structure already exists in DB')
+            raise RuntimeError('Supplied structure already exists in DB')
 
         cf = self.corrfunc.get_cf(init)
         kvp = self._get_kvp(init, cf, formula_unit)

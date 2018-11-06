@@ -46,10 +46,12 @@ class ClusterExpansionSetting(object):
         self.kwargs["concentration"] = self.concentration.to_dict()
         self.basis_elements = deepcopy(self.concentration.basis_elements)
         self.num_basis = len(self.basis_elements)
+        self.db_name = db_name
+        self.dist_num_dec = dist_num_dec
         self.size = size
-        self.unit_cell_type = 0
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
+        self.unit_cell_id = self._store_unit_cell()
 
         if (supercell_factor is not None and size is None and
                 max_cluster_dia is None):
@@ -59,10 +61,9 @@ class ClusterExpansionSetting(object):
         self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
                                             size=size,
                                             skew_threshold=skew_threshold,
-                                            unit_cells=[self.unit_cell])
+                                            unit_cells=[self.unit_cell],
+                                            unit_cell_ids=[self.unit_cell_id])
 
-        self.dist_num_dec = dist_num_dec
-        self.db_name = db_name
         self.max_cluster_size = max_cluster_size
         self.max_cluster_dia = max_cluster_dia
         self.all_elements = sorted([item for row in self.basis_elements for
@@ -141,16 +142,17 @@ class ClusterExpansionSetting(object):
         raise NotImplementedError("Has to be implemented in derived classes!")
 
     def _size2string(self):
-        """Converts the current size into a string."""
+        """Convert the current size into a string."""
         return "x".join((str(item) for item in self.size))
 
     def set_template_atoms(self, uid):
-        """Sets a fixed template atoms object as the active."""
+        """Set a fixed template atoms object as the active."""
         self.template_atoms_uid = uid
         self.atoms_with_given_dim, self.size = \
-            self.template_atoms.get_atoms(uid, return_dims=True)
+            self.template_atoms.get_atoms(uid, return_size=True)
         self.atoms_with_given_dim = \
             wrap_and_sort_by_position(self.atoms_with_given_dim)
+        self.unit_cell_id = self.template_atoms.get_unit_cell_id(uid)
 
         self.index_by_basis = self._group_index_by_basis()
         self.cluster_info = []
@@ -171,62 +173,36 @@ class ClusterExpansionSetting(object):
         # the nessecary data structures and store them in the database
         self._read_data()
 
-    def set_new_template(self, size=None, atoms=None):
+    def set_new_template(self, size=None, atoms=None, generate_template=False):
         """Set a new template atoms object."""
         if size is not None and atoms is not None:
-            raise ValueError("Specify either 'size' or pass Atoms object.")
+            raise ValueError("Specify either size or pass Atoms object.")
         if size is not None:
-            uid = self.template_atoms.get_uid_with_given_dim(size)
+            uid = self.template_atoms.get_uid_with_given_size(
+                size=size, generate_template=generate_template)
         elif atoms is not None:
-            uid = self.template_atoms.get_uid_matching_atoms(atoms)
+            uid = self.template_atoms.get_uid_matching_atoms(
+                atoms=atoms, generate_template=generate_template)
         else:
             uid = self.template_atoms.weighted_random_template()
         self.set_template_atoms(uid)
-
-    def _check_conc_ratios(self, conc_args):
-        # check for concentration ratios
-        conc_names = ['conc_ratio_min_1', 'conc_ratio_min_2',
-                      'conc_ratio_max_1', 'conc_ratio_max_2']
-        conc_ratio_min_1 = None
-        conc_ratio_min_2 = None
-        conc_ratio_max_1 = None
-        conc_ratio_max_2 = None
-        for ratio_type, ratio in conc_args.items():
-            if ratio_type not in conc_names:
-                raise NameError('The name {} is not supported. \n'
-                                'The allowed names are {}'
-                                .format(ratio_type, conc_names))
-            if ratio_type == conc_names[0]:
-                conc_ratio_min_1 = ratio
-            elif ratio_type == conc_names[1]:
-                conc_ratio_min_2 = ratio
-            elif ratio_type == conc_names[2]:
-                conc_ratio_max_1 = ratio
-            else:
-                conc_ratio_max_2 = ratio
-
-        if (conc_ratio_min_1 is None or conc_ratio_max_1 is None):
-            raise ValueError('Both min and max concentration ratios need be'
-                             ' specified')
-        if (conc_ratio_min_2 is not None and conc_ratio_max_2 is not None):
-            num_conc_var = 2
-        elif (conc_ratio_min_1 is None or conc_ratio_max_1 is None):
-            raise ValueError('Both min and max concentration ratios need be'
-                             ' specified')
-        else:
-            num_conc_var = 1
-        # Assign parameters
-        self.num_conc_var = num_conc_var
-        self.conc_ratio_min_1 = conc_ratio_min_1
-        self.conc_ratio_max_1 = conc_ratio_max_1
-        if num_conc_var == 2:
-            self.conc_ratio_min_2 = conc_ratio_min_2
-            self.conc_ratio_max_2 = conc_ratio_max_2
 
     def _tag_unit_cell(self):
         """Add a tag to all the atoms in the unit cell to track the index."""
         for atom in self.unit_cell:
             atom.tag = atom.index
+
+    def _store_unit_cell(self):
+        """Store unit cell to the database."""
+        db = connect(self.db_name)
+        shape = self.unit_cell.get_cell_lengths_and_angles()
+        for row in db.select(name='unit_cell'):
+            uc_shape = row.toatoms().get_cell_lengths_and_angles()
+            if np.allclose(shape, uc_shape):
+                return row.id
+
+        uid = db.write(self.unit_cell, name='unit_cell')
+        return uid
 
     def _get_unit_cell(self):
         raise NotImplementedError("This function has to be implemented in "
@@ -334,12 +310,7 @@ class ClusterExpansionSetting(object):
         return scale_factor
 
     def _get_background_indices(self):
-        """Get symbol of the background atoms.
-
-        This method also modifies grouped_basis, conc_args, num_basis, basis,
-        and all_elements attributes to reflect the changes from ignoring the
-        background atoms.
-        """
+        """Get indices of the background atoms."""
         # check if any basis consists of only one element type
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
 
@@ -822,14 +793,14 @@ class ClusterExpansionSetting(object):
                 'trans_matrix': self.trans_matrix}
 
         db.write(self.atoms, name='template', data=data,
-                 dims=self._size2string(), unit_cell_type=self.unit_cell_type)
+                 size=self._size2string(), unit_cell_id=self.unit_cell_id)
 
     def _read_data(self):
         db = connect(self.db_name)
         try:
             select_cond = [('name', '=', 'template'),
-                           ('dims', '=', self._size2string()),
-                           ('unit_cell_type', '=', self.unit_cell_type)]
+                           ('size', '=', self._size2string()),
+                           ('unit_cell_id', '=', self.unit_cell_id)]
             row = db.get(select_cond)
             self.cluster_info = row.data.cluster_info
             self._info_entries_to_list()
@@ -925,8 +896,8 @@ class ClusterExpansionSetting(object):
         ids = [row.id for row in db.select(name='template')]
         db.delete(ids)
         for uid in self.template_atoms.num_templates:
-            self.set_template(uid)
-        self.set_template(0)
+            self.set_template_atoms(uid)
+        self.set_template_atoms(0)
 
     def _check_first_elements(self):
         basis_elements = self.basis_elements
