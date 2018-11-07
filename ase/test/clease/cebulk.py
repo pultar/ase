@@ -30,9 +30,9 @@ def test_binary_system():
     The EMT calculator is used for energy calculations
     """
     db_name = "test_crystal.db"
-    basis_elements = [["Au", "Cu"]]
+    basis_elements = [['Au', 'Cu']]
     concentration = Concentration(basis_elements=basis_elements)
-    bc_setting = CEBulk(crystalstructure="fcc", a=4.05, size=[3, 3, 3],
+    bc_setting = CEBulk(crystalstructure='fcc', a=4.05, size=[3, 3, 3],
                         concentration=concentration, db_name=db_name)
 
     newstruct = NewStructures(bc_setting, struct_per_gen=3)
@@ -90,7 +90,7 @@ def test_grouped_basis_supercell():
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
     assert len(setting.basis_functions) == 1
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -127,7 +127,7 @@ def test_grouped_basis_supercell():
     assert len(setting.basis_functions) == 2
 
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -161,7 +161,7 @@ def test_grouped_basis_supercell():
     assert len(setting.basis_functions) == 1
 
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,

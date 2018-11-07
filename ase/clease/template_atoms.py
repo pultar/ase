@@ -77,7 +77,6 @@ class TemplateAtoms(object):
 
     def get_unit_cell_id(self, uid):
         """Return the unit cell id."""
-        print(self.templates['unit_cell_id'])
         return self.templates['unit_cell_id'][uid]
 
     def get_atoms(self, uid, return_size=False):
@@ -167,7 +166,7 @@ class TemplateAtoms(object):
         for i, unit_cell in enumerate(self.unit_cells):
             lengths_unit = unit_cell.get_cell_lengths_and_angles()[:3]
             scale = lengths / lengths_unit
-            scale_int = scale.round(decimal=0).astype(int)
+            scale_int = scale.round(decimals=0).astype(int)
             if np.allclose(scale, scale_int):
                 return i, scale_int
 

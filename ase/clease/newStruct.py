@@ -58,7 +58,7 @@ class NewStructures(object):
 
         self.struct_per_gen = struct_per_gen
 
-    def generate_probe_structure(self, atoms, size=None, init_temp=None,
+    def generate_probe_structure(self, atoms=None, size=None, init_temp=None,
                                  final_temp=None, num_temp=5,
                                  num_steps_per_temp=1000,
                                  approx_mean_var=False,
@@ -71,7 +71,7 @@ class NewStructures(object):
             Atoms object with the desired cell size and shape of the new
             structure.
 
-        size: list of length=3
+        size: list of length 3
             This will be ignored if atoms is given.
             If specified, the structure with the provided size is generated.
             If None, the size will be generated randomly with a bias towards
