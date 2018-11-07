@@ -250,7 +250,7 @@ class ClusterExpansionSetting(object):
         scale_factor = max(max_cluster_dia) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
         scale_factor = self._get_scale_factor(cell, max(max_cluster_dia))
-        return np.around(max_cluster_dia, self.dist_num_dec), scale_factor
+        return max_cluster_dia.round(decimals=self.dist_num_dec), scale_factor
 
     def _get_max_cluster_dia(self, cell, ret_weights=False):
         lengths = []
@@ -266,7 +266,7 @@ class ClusterExpansionSetting(object):
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
         min_length = min(lengths) / 2
-        min_length = np.round(min_length, self.dist_num_dec) - tol
+        min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
             min_indx = np.argmin(lengths)
@@ -712,7 +712,7 @@ class ClusterExpansionSetting(object):
         """Compute the Euclidean distance between two points."""
         diff = x1 - x0
         length = np.sqrt(diff.dot(diff))
-        return np.round(length, self.dist_num_dec)
+        return length.round(decimals=self.dist_num_dec)
 
     def indices_of_nearby_atom(self, ref_indx, size):
         """Return the indices of the atoms nearby.

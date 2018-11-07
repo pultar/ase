@@ -341,7 +341,7 @@ class CorrFunction(object):
         num_equiv = float(len(equiv_deco))
         return sp/num_equiv, count/num_equiv
 
-    def check_and_convert_cell_size(self, atoms, generate_template=False):
+    def check_and_convert_cell_size(self, atoms):
         """Check the size of provided cell and convert in necessary.
 
         If the size of the provided cell is the same as the size of the
@@ -354,10 +354,6 @@ class CorrFunction(object):
         =========
         atoms: Atoms object
             *Unrelaxed* structure
-
-        generate_template: bool (optional)
-            If set to *True*, a template matching the size of the passed
-            *init_struct* is created in DB.
         """
         cell_lengths = atoms.get_cell_lengths_and_angles()
         db = connect(self.setting.db_name)
@@ -379,10 +375,8 @@ class CorrFunction(object):
                 break
 
         if not found_matching_template:
-            if not generate_template:
-                raise TypeError("Cannot find the template atoms that matches "
-                                "the size of the passed atoms")
-            # TODO: Generate a template that matches the shape of passed atoms
+            raise TypeError("Cannot find the template atoms that matches the "
+                            "size of the passed atoms")
 
         return atoms
 
