@@ -3,7 +3,6 @@ import numpy as np
 from itertools import product, permutations
 from numpy.linalg import inv
 from random import choice
-from ase.clease.tools import wrap_and_sort_by_position
 
 
 class TemplateAtoms(object):
