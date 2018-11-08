@@ -61,8 +61,8 @@ class ClusterExpansionSetting(object):
         self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
                                             size=size,
                                             skew_threshold=skew_threshold,
-                                            unit_cells=[self.unit_cell],
-                                            unit_cell_ids=[self.unit_cell_id])
+                                            unit_cell_id=self.unit_cell_id,
+                                            db_name=self.db_name)
 
         self.max_cluster_size = max_cluster_size
         self.max_cluster_dia = max_cluster_dia
@@ -81,9 +81,9 @@ class ClusterExpansionSetting(object):
         self.kd_trees = None
         self.template_atoms_uid = 0
         for uid in range(self.template_atoms.num_templates):
-            self.set_template_atoms(uid)
+            self._set_active_template_by_uid(uid)
         # Set the initial template atoms to 0, which is the smallest cell
-        self.set_template_atoms(0)
+        self._set_active_template_by_uid(0)
 
         unique_element_no_bkg = self.unique_element_without_background()
         if isinstance(basis_function, BasisFunction):
@@ -145,7 +145,7 @@ class ClusterExpansionSetting(object):
         """Convert the current size into a string."""
         return "x".join((str(item) for item in self.size))
 
-    def set_template_atoms(self, uid):
+    def _set_active_template_by_uid(self, uid):
         """Set a fixed template atoms object as the active."""
         self.template_atoms_uid = uid
         self.atoms_with_given_dim, self.size = \
@@ -153,6 +153,10 @@ class ClusterExpansionSetting(object):
         self.atoms_with_given_dim = \
             wrap_and_sort_by_position(self.atoms_with_given_dim)
         self.unit_cell_id = self.template_atoms.get_unit_cell_id(uid)
+
+        # Load the corresponding unit cell from db
+        db = connect(self.db_name)
+        self.unit_cell = db.get(id=self.unit_cell_id).toatoms()
 
         self.index_by_basis = self._group_index_by_basis()
         self.cluster_info = []
@@ -162,7 +166,6 @@ class ClusterExpansionSetting(object):
 
         self.atoms = self._create_template_atoms()
         self.background_indices = self._get_background_indices()
-
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
@@ -173,19 +176,21 @@ class ClusterExpansionSetting(object):
         # the nessecary data structures and store them in the database
         self._read_data()
 
-    def set_new_template(self, size=None, atoms=None, generate_template=False):
+    def set_active_template(self, size=None, atoms=None, unit_cell_id=None,
+                            generate_template=False):
         """Set a new template atoms object."""
         if size is not None and atoms is not None:
             raise ValueError("Specify either size or pass Atoms object.")
         if size is not None:
             uid = self.template_atoms.get_uid_with_given_size(
-                size=size, generate_template=generate_template)
+                size=size, unit_cell_id=unit_cell_id,
+                generate_template=generate_template)
         elif atoms is not None:
             uid = self.template_atoms.get_uid_matching_atoms(
                 atoms=atoms, generate_template=generate_template)
         else:
             uid = self.template_atoms.weighted_random_template()
-        self.set_template_atoms(uid)
+        self._set_active_template_by_uid(uid)
 
     def _tag_unit_cell(self):
         """Add a tag to all the atoms in the unit cell to track the index."""
@@ -387,7 +392,7 @@ class ClusterExpansionSetting(object):
             pos = shifted.get_positions()
 
             for equiv_group in range(len(temp)):
-                if (an == equiv_group_an[equiv_group]).all() and \
+                if (an == equiv_group_an[equiv_group]).all() and\
                         np.allclose(pos, equiv_group_pos[equiv_group]):
                     temp[equiv_group].append(indx)
                     break
@@ -672,10 +677,6 @@ class ClusterExpansionSetting(object):
 
         tm = [{} for _ in range(natoms)]
 
-        # Add the index in the main atoms object to the tag
-        for indx, atom in enumerate(self.atoms):
-            atom.tag = indx
-
         for i, ref_indx in enumerate(self.ref_index_trans_symm):
             indices = index_by_position(self.atoms)
             tm[ref_indx] = {col: indices[col] for col in unique_indices}
@@ -791,7 +792,6 @@ class ClusterExpansionSetting(object):
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
-
         db.write(self.atoms, name='template', data=data,
                  size=self._size2string(), unit_cell_id=self.unit_cell_id)
 
@@ -891,13 +891,13 @@ class ClusterExpansionSetting(object):
         gui.run()
 
     def reconfigure_settings(self):
-        """Reconfigure settings stored in DB file."""
+        """Reconfigure templates stored in DB file."""
         db = connect(self.db_name)
         ids = [row.id for row in db.select(name='template')]
         db.delete(ids)
         for uid in self.template_atoms.num_templates:
-            self.set_template_atoms(uid)
-        self.set_template_atoms(0)
+            self._set_active_template_by_uid(uid)
+        self._set_active_template_by_uid(0)
 
     def _check_first_elements(self):
         basis_elements = self.basis_elements
