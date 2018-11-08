@@ -35,7 +35,7 @@ class Concentration(object):
         bounds of the concentration ranges.
 
     b_lb: list or numpy list (optional)
-        A list 
+        A list
 
     """
     def __init__(self, basis_elements=None, grouped_basis=None,

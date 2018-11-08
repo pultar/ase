@@ -79,7 +79,7 @@ class NewStructures(object):
                 more cubic cells (i.e., cell with similar magnitudes of vectors
                 a, b and c)
         
-        unit_cell_id: int 
+        unit_cell_id: int
             (only used when size is used)
             The ID of the unit cell in the database to be used
 
@@ -206,7 +206,7 @@ class NewStructures(object):
                 print("Generating a structure with size {} at a random "
                       "concentration."
                       "".format(size))
-                self.setting.set_active_template(size=size, 
+                self.setting.set_active_template(size=size,
                                                  unit_cell_id=unit_cell_id,
                                                  generate_template=True)
                 atoms = self._get_struct_at_conc(conc_type='random')
