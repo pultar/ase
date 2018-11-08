@@ -70,9 +70,7 @@ class CorrFunction(object):
                       values in the same order as the order in
                       "setting.full_cluster_names"
         """
-        if isinstance(atoms, Atoms):
-            atoms = self.check_and_convert_cell_size(atoms.copy())
-        else:
+        if not isinstance(atoms, Atoms):
             raise TypeError('atoms must be an Atoms object')
 
         bf_list = list(range(len(self.setting.basis_functions)))
@@ -363,22 +361,23 @@ class CorrFunction(object):
             template_lengths = template.get_cell_lengths_and_angles()
 
             if np.allclose(cell_lengths, template_lengths):
-                atoms = wrap_and_sort_by_position(atoms)
+                final_atoms = wrap_and_sort_by_position(atoms.copy())
                 found_matching_template = True
                 break
 
             ratios = template_lengths / cell_lengths
-            int_ratios = ratios.round(decimals=0).astype(int)
-            if np.allclose(ratios, int_ratios):
-                atoms = wrap_and_sort_by_position(atoms * int_ratios)
+            i_ratios = ratios.round(decimals=0).astype(int)
+            if np.allclose(ratios, i_ratios):
+                final_atoms = wrap_and_sort_by_position(atoms.copy()*i_ratios)
                 found_matching_template = True
                 break
 
         if not found_matching_template:
             raise TypeError("Cannot find the template atoms that matches the "
                             "size of the passed atoms")
+        self.setting.set_active_template(atoms=atoms, generate_template=True)
 
-        return atoms
+        return final_atoms
 
 
 def get_cf_parallel(args):
