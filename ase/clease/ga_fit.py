@@ -50,7 +50,7 @@ class GAFit(LinearRegression):
 
         self.fname = fname
         if num_individuals == "auto":
-            self.pop_size = 10*self.evaluator.cf_matrix.shape[0]
+            self.pop_size = 10*self.evaluator.cf_matrix.shape[1]
         else:
             self.pop_size = int(num_individuals)
         self.change_prob = change_prob
