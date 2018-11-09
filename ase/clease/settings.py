@@ -164,7 +164,7 @@ class ClusterExpansionSetting(object):
         self.max_cluster_dia, self.supercell_scale_factor = \
             self._get_max_cluster_dia_and_scale_factor(self.max_cluster_dia)
 
-        self.atoms = self._create_template_atoms()
+        self.atoms = self._create_atoms()
         self.background_indices = self._get_background_indices()
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
@@ -334,7 +334,7 @@ class ClusterExpansionSetting(object):
         atoms = self.unit_cell.copy() * self.size
         return wrap_and_sort_by_position(atoms)
 
-    def _create_template_atoms(self):
+    def _create_atoms(self):
         """Return atoms that can handle the specified maximum diameter.
 
         If maximum diameter is not specified, the user-specified cell
@@ -792,7 +792,7 @@ class ClusterExpansionSetting(object):
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
-        db.write(self.atoms, name='template', data=data,
+        db.write(self.atoms_with_given_dim, name='template', data=data,
                  size=self._size2string(), unit_cell_id=self.unit_cell_id)
 
     def _read_data(self):

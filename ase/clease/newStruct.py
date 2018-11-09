@@ -259,6 +259,7 @@ class NewStructures(object):
                 formula_unit = self._get_formula_unit(atoms)
 
                 if not self._exists_in_db(atoms, formula_unit):
+                    print(atoms.get_cell_lengths_and_angles())
                     kvp = self.corrfunc.get_cf(atoms)
                     kvp = self._get_kvp(atoms, kvp, formula_unit)
                     self.db.write(atoms, kvp)

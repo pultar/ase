@@ -119,7 +119,9 @@ class CorrFunction(object):
                       "cluster_names"
         """
         if isinstance(atoms, Atoms):
-            atoms = self.check_and_convert_cell_size(atoms.copy())
+            atoms = self.check_cell_size(atoms.copy())
+            atoms = wrap_and_sort_by_position(
+                        atoms*self.setting.supercell_scale_factor)
         else:
             raise TypeError('atoms must be Atoms object')
         cf = {}
@@ -339,7 +341,7 @@ class CorrFunction(object):
         num_equiv = float(len(equiv_deco))
         return sp/num_equiv, count/num_equiv
 
-    def check_and_convert_cell_size(self, atoms):
+    def check_cell_size(self, atoms):
         """Check the size of provided cell and convert in necessary.
 
         If the size of the provided cell is the same as the size of the
@@ -353,31 +355,24 @@ class CorrFunction(object):
         atoms: Atoms object
             *Unrelaxed* structure
         """
-        cell_lengths = atoms.get_cell_lengths_and_angles()
-        db = connect(self.setting.db_name)
-        found_matching_template = False
-        for row in db.select(name='template'):
-            template = row.toatoms()
-            template_lengths = template.get_cell_lengths_and_angles()
+        # cell_lengths = atoms.get_cell_lengths_and_angles()
+        # db = connect(self.setting.db_name)
+        # found_matching_template = False
+        # for row in db.select(name='template'):
+        #     template = row.toatoms()
+        #     template_lengths = template.get_cell_lengths_and_angles()
+        #     print(cell_lengths)
+        #     print(template_lengths)
+        #     if np.allclose(cell_lengths, template_lengths):
+        #         found_matching_template = True
+        #         break
 
-            if np.allclose(cell_lengths, template_lengths):
-                final_atoms = wrap_and_sort_by_position(atoms.copy())
-                found_matching_template = True
-                break
-
-            ratios = template_lengths / cell_lengths
-            i_ratios = ratios.round(decimals=0).astype(int)
-            if np.allclose(ratios, i_ratios):
-                final_atoms = wrap_and_sort_by_position(atoms.copy()*i_ratios)
-                found_matching_template = True
-                break
-
-        if not found_matching_template:
-            raise TypeError("Cannot find the template atoms that matches the "
-                            "size of the passed atoms")
+        # if not found_matching_template:
+        #     raise TypeError("Cannot find the template atoms that matches the "
+        #                     "size of the passed atoms")
         self.setting.set_active_template(atoms=atoms, generate_template=True)
 
-        return final_atoms
+        return atoms
 
 
 def get_cf_parallel(args):

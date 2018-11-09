@@ -13,6 +13,7 @@ from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
 from ase.db import connect
 
+db_name = "test_crystal.db"
 
 
 def get_members_of_family(setting, cname):
@@ -29,7 +30,6 @@ def test_binary_system():
 
     The EMT calculator is used for energy calculations
     """
-    db_name = "test_crystal.db"
     basis_elements = [['Au', 'Cu']]
     concentration = Concentration(basis_elements=basis_elements)
     bc_setting = CEBulk(crystalstructure='fcc', a=4.05, size=[3, 3, 3],
@@ -41,12 +41,6 @@ def test_binary_system():
     # Compute the energy of the structures
     calc = EMT()
     database = connect(db_name)
-    # all_atoms = []
-    # key_value_pairs = []
-    # for row in database.select("converged=False"):
-    #     atoms = row.toatoms()
-    #     all_atoms.append(atoms)
-    #     key_value_pairs.append(row.key_value_pairs)
 
     # Write the atoms to the database
     # for atoms, kvp in zip(all_atoms, key_value_pairs):
@@ -63,13 +57,8 @@ def test_binary_system():
     os.remove(db_name)
 
 
-def test_grouped_basis_supercell():
-    # ----------------------------------------------------------##
-    # Test probe structure generation with cell size (2, 2, 1). ##
-    # ----------------------------------------------------------##
+def test_1grouped_basis_probe():
     """Test a case where a grouped_basis is used with supercell."""
-    db_name = "test_crystal.db"
-
     # ------------------------------- #
     # 1 grouped basis                 #
     # ------------------------------- #
@@ -102,6 +91,8 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
+
+def test_2grouped_basis_probe():
     # ------------------------------- #
     # 2 grouped basis                 #
     # ------------------------------- #
@@ -139,6 +130,7 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
+def test_2grouped_basis_bckgrnd_probe():
     # ---------------------------------- #
     # 2 grouped_basis + background atoms #
     # ---------------------------------- #
@@ -174,5 +166,7 @@ def test_grouped_basis_supercell():
     os.remove(db_name)
 
 
-test_binary_system()
-test_grouped_basis_supercell()
+# test_binary_system()
+test_1grouped_basis_probe()
+# test_2grouped_basis_probe()
+# test_2grouped_basis_bckgrnd_probe()

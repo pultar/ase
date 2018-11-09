@@ -27,11 +27,12 @@ class StructureGenerator(object):
         self.cluster_names = self.setting.cluster_names
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
+        self.atoms = wrap_and_sort_by_position(atoms.copy())
         if self._is_valid(atoms):
             if len(atoms) != len(setting.atoms_with_given_dim):
                 raise ValueError("Passed Atoms has a wrong size.")
             self.supercell, self.periodic_indices, self.index_by_basis = \
-                self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
+                self._build_supercell()
         else:
             raise ValueError("concentration of the elements in the provided"
                              " atoms is not consistent with the settings.")
@@ -58,29 +59,29 @@ class StructureGenerator(object):
         return self.setting.concentration.is_valid(
                 self.setting.index_by_basis, atoms)
 
-    def _build_supercell(self, atoms):
-        for atom in atoms:
+    def _build_supercell(self):
+        for atom in self.atoms:
             atom.tag = atom.index
 
-        natoms = len(atoms)
-        atoms *= self.setting.supercell_scale_factor
-        atoms = wrap_and_sort_by_position(atoms)
+        natoms = len(self.atoms)
+        sc_atoms = self.atoms*self.setting.supercell_scale_factor
+        sc_atoms = wrap_and_sort_by_position(sc_atoms)
 
         periodic_indices = []
         for tag in range(natoms):
-            periodic_indices.append([a.index for a in atoms if a.tag == tag])
+            periodic_indices.append([a.index for a in sc_atoms if a.tag == tag])
 
         tag_by_basis = self.setting.index_by_basis
 
         index_by_basis = []
         for basis in tag_by_basis:
             basis_elements = []
-            for atom in atoms:
+            for atom in sc_atoms:
                 if atom.tag in basis:
                     basis_elements.append(atom.index)
             index_by_basis.append(basis_elements)
 
-        return atoms, periodic_indices, index_by_basis
+        return sc_atoms, periodic_indices, index_by_basis
 
     def _supercell2unitcell(self, sc_atoms=None):
         """Convert supercell to unitcell
@@ -90,13 +91,13 @@ class StructureGenerator(object):
         sc_atoms: Atoms
             supercell to convert. If None self.supercell is used.
         """
-        atoms = self.setting.atoms_with_given_dim.copy()
+        #atoms = self.setting.atoms_with_given_dim.copy()
         if sc_atoms is None:
             sc_atoms = self.supercell
 
-        for a in atoms:
+        for a in self.atoms:
             a.symbol = sc_atoms[self.periodic_indices[a.index][0]].symbol
-        return atoms
+        return self.atoms
 
     def _reset(self):
         pass
