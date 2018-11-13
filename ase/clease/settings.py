@@ -13,7 +13,7 @@ from ase.db import connect
 from ase.clease.floating_point_classification import FloatingPointClassifier
 from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
-                              create_cluster, dec_string, get_unique_name,
+                              dec_string, get_unique_name,
                               nested_array2list)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms

@@ -8,8 +8,6 @@
 
 import os
 from ase.clease import CEBulk, NewStructures, Evaluate, Concentration
-from ase.clease import CorrFunction
-from ase.clease.tools import wrap_and_sort_by_position
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
