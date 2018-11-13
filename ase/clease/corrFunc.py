@@ -19,11 +19,11 @@ class CorrFunction(object):
     =========
     setting: settings object
 
-    parallel: bool
+    parallel: bool (optional)
         specify whether or not to use the parallel processing for ``get_cf''
         method.
 
-    num_core: int or "all"
+    num_core: int or "all" (optional)
         specify the number of cores to use for parallelization.
     """
 
@@ -33,9 +33,6 @@ class CorrFunction(object):
                             "object")
         self.setting = setting
 
-        self.index_by_trans_symm = setting.index_by_trans_symm
-        self.num_trans_symm = setting.num_trans_symm
-        self.ref_index_trans_symm = setting.ref_index_trans_symm
         self.parallel = parallel
         self.num_core = num_core
         if parallel:
@@ -70,9 +67,7 @@ class CorrFunction(object):
                       values in the same order as the order in
                       "setting.full_cluster_names"
         """
-        if isinstance(atoms, Atoms):
-            atoms = self.check_and_convert_cell_size(atoms.copy())
-        else:
+        if not isinstance(atoms, Atoms):
             raise TypeError('atoms must be an Atoms object')
 
         bf_list = list(range(len(self.setting.basis_functions)))
@@ -121,7 +116,7 @@ class CorrFunction(object):
                       "cluster_names"
         """
         if isinstance(atoms, Atoms):
-            atoms = self.check_and_convert_cell_size(atoms.copy())
+            self.check_cell_size(atoms)
         else:
             raise TypeError('atoms must be Atoms object')
         cf = {}
@@ -215,7 +210,7 @@ class CorrFunction(object):
     def _spin_product(self, atoms, cluster, deco):
         """Get spin product of a given cluster.
 
-        Arguments
+        Arguments:
         =========
         atoms: Atoms object
 
@@ -232,7 +227,7 @@ class CorrFunction(object):
         count = 0
 
         # spin product of each atom in the symmetry equivalent group
-        indices_of_symm_group = self.index_by_trans_symm[cluster["symm_group"]]
+        indices_of_symm_group = self.setting.index_by_trans_symm[cluster["symm_group"]]
         ref_indx_grp = indices_of_symm_group[0]
 
         for ref_indx in indices_of_symm_group:
@@ -341,37 +336,15 @@ class CorrFunction(object):
         num_equiv = float(len(equiv_deco))
         return sp/num_equiv, count/num_equiv
 
-    def check_and_convert_cell_size(self, atoms):
-        """Check the size of provided cell and convert in necessary.
+    def check_cell_size(self, atoms):
+        """Check the size of provided cell and create a template if necessary.
 
-        If the size of the provided cell is the same as the size of the
-        template stored in the database. If it either (1) has the same size or
-        (2) can make the same size by simple multiplication (supercell), the
-        cell with the same size is returned after it is sorted by the position
-        and wrapped. If not, it raises an error.
+        Arguments:
+        =========
+        atoms: Atoms object
+            *Unrelaxed* structure
         """
-        cell_lengths = atoms.get_cell_lengths_and_angles()[:3]
-        db = connect(self.setting.db_name)
-        found_matching_template = False
-        for row in db.select(name='template'):
-            template = row.toatoms()
-            template_lengths = template.get_cell_lengths_and_angles()[:3]
-
-            if np.allclose(cell_lengths, template_lengths):
-                atoms = wrap_and_sort_by_position(atoms)
-                found_matching_template = True
-                break
-            #
-            ratios = template_lengths / cell_lengths
-            int_ratios = ratios.round(decimals=0).astype(int)
-            if np.allclose(ratios, int_ratios):
-                atoms = wrap_and_sort_by_position(atoms * int_ratios)
-                found_matching_template = True
-                break
-
-        if not found_matching_template:
-            raise TypeError("Cannot find the template atoms that matches the "
-                            "size of the passed atoms")
+        self.setting.set_active_template(atoms=atoms, generate_template=True)
         return atoms
 
 

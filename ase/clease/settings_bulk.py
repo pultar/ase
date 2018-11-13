@@ -143,7 +143,7 @@ class CEBulk(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         indx_by_basis = []
         for basis in self.basis_elements:
-            indx_by_basis.append([a.index for a in self.atoms_with_given_dim if
+            indx_by_basis.append([a.index for a in self.atoms if
                                   a.symbol == basis[0]])
 
         for basis in indx_by_basis:
@@ -303,7 +303,7 @@ class CECrystal(ClusterExpansionSetting):
                 shift = np.add(sites_temp, [0, 0, float(z) / scale_factor[2]])
                 sites = np.append(sites, shift, axis=0)
 
-        positions = self.atoms_with_given_dim.get_scaled_positions()
+        positions = self.atoms.get_scaled_positions()
         for i, site in enumerate(sites):
             for j, pos in enumerate(positions):
                 # Avoid position to be very close to 1.0 (e.g., 0.99999999)

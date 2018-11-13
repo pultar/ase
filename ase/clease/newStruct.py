@@ -58,7 +58,8 @@ class NewStructures(object):
 
         self.struct_per_gen = struct_per_gen
 
-    def generate_probe_structure(self, size=None, init_temp=None,
+    def generate_probe_structure(self, atoms=None, size=None,
+                                 unit_cell_id=None, init_temp=None,
                                  final_temp=None, num_temp=5,
                                  num_steps_per_temp=1000,
                                  approx_mean_var=False,
@@ -67,11 +68,20 @@ class NewStructures(object):
 
         Arguments:
         =========
-        size: list of length=3 (optional)
+        atoms: Atoms object
+            Atoms object with the desired cell size and shape of the new
+            structure.
+
+        size: list of length 3
+            (ignored if atoms is given)
             If specified, the structure with the provided size is generated.
             If None, the size will be generated randomly with a bias towards
                 more cubic cells (i.e., cell with similar magnitudes of vectors
                 a, b and c)
+        
+        unit_cell_id: int
+            (only used when size is used)
+            The ID of the unit cell in the database to be used
 
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
@@ -114,7 +124,13 @@ class NewStructures(object):
         print("Generate {} probe structures.".format(self.struct_per_gen))
         num_attempt = 0
         while True:
-            self.setting.set_new_template(size)
+            if atoms is not None:
+                self.setting.set_active_template(atoms=atoms,
+                                                 generate_template=True)
+            else:
+                self.setting.set_active_template(size=size,
+                                                 unit_cell_id=unit_cell_id,
+                                                 generate_template=True)
             # Break out of the loop if reached struct_per_gen
             num_struct = len([row.id for row in
                               self.db.select(gen=self.gen)])
@@ -150,8 +166,8 @@ class NewStructures(object):
                 msg = "Could not generate probe structure in 10 attempts."
                 raise MaxAttemptReachedError(msg)
 
-    def generate_Emin_structure(self, atoms=None, size=None, init_temp=2000,
-                                final_temp=1, num_temp=10,
+    def generate_Emin_structure(self, atoms=None, size=None, unit_cell_id=None,
+                                init_temp=2000, final_temp=1, num_temp=10,
                                 num_steps_per_temp=1000,
                                 cluster_names_eci=None):
         """Generate Emin structure.
@@ -161,7 +177,7 @@ class NewStructures(object):
         atoms: Atoms object
             Atoms object with the desired composition of the new structure.
             A random composition is selected atoms=None.
-        
+
         size: list of length=3 (optional)
             If specified, the structure with the provided size is generated.
             If None, the size will be generated randomly with a bias towards
@@ -190,14 +206,17 @@ class NewStructures(object):
                 print("Generating a structure with size {} at a random "
                       "concentration."
                       "".format(size))
-                self.setting.set_new_template(size=size)
+                self.setting.set_active_template(size=size,
+                                                 unit_cell_id=unit_cell_id,
+                                                 generate_template=True)
                 atoms = self._get_struct_at_conc(conc_type='random')
             else:
                 print("Generating a structure with the composition "
                       "corresponding to the passed Atoms object "
                       "(cell size is the same as the passed Atoms).")
                 atoms = wrap_and_sort_by_position(atoms)
-                self.setting.set_new_template(atoms=atoms)
+                self.setting.set_active_template(atoms=atoms,
+                                                 generate_template=True)
                 num_struct = len([row.id for row in
                                   self.db.select(gen=self.gen)])
                 if num_struct >= self.struct_per_gen:
@@ -271,7 +290,8 @@ class NewStructures(object):
 
         return atoms
 
-    def insert_structure(self, init_struct=None, final_struct=None, name=None):
+    def insert_structure(self, init_struct=None, final_struct=None, name=None,
+                         generate_template=False):
         """Insert a user-supplied structure to the database.
 
         Arguments:
@@ -279,13 +299,17 @@ class NewStructures(object):
         init_struct: .xyz, .cif or .traj file
             *Unrelaxed* initial structure.
 
-        final_struct: .traj file
+        final_struct: .traj file (optional)
             Final structure that contains the energy.
             Needs to also supply init_struct in order to use the final_struct.
 
-        name: str
-            Name of the DB entry if non-default name is to be used.
+        name: str (optional)
+            Name of the DB entry if a custom name is to be used.
             If *None*, default naming convention will be used.
+
+        generate_template: bool (optional)
+            If set to *True*, a template matching the size of the passed
+            *init_struct* is created in DB.
         """
         if init_struct is None:
             raise TypeError('init_struct must be provided')
@@ -300,9 +324,12 @@ class NewStructures(object):
         else:
             init = wrap_and_sort_by_position(read(init_struct))
 
+        self.setting.set_active_template(atoms=init_struct,
+                                         generate_template=generate_template)
+
         formula_unit = self._get_formula_unit(init)
         if self._exists_in_db(init, formula_unit):
-            raise RuntimeError('supplied structure already exists in DB')
+            raise RuntimeError('Supplied structure already exists in DB')
 
         cf = self.corrfunc.get_cf(init)
         kvp = self._get_kvp(init, cf, formula_unit)
@@ -392,6 +419,8 @@ class NewStructures(object):
         kvp['name'] = formula_unit+"_{}".format(count)
         kvp['formula_unit'] = formula_unit
         kvp['struct_type'] = 'initial'
+        kvp['unit_cell_id'] = self.setting.unit_cell_id
+        kvp['size'] = "x".join((str(d) for d in self.setting.size))
         return kvp
 
     def _get_formula_unit(self, atoms):
@@ -429,7 +458,7 @@ class NewStructures(object):
         # Insert the number of atoms
         basis_elem = self.setting.concentration.basis_elements
         assert len(rnd_indices) == len(basis_elem)
-        atoms = self.setting.atoms_with_given_dim.copy()
+        atoms = self.setting.atoms.copy()
         current_conc = 0
         num_atoms_inserted = 0
         for basis in range(len(rnd_indices)):

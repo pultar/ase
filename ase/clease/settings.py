@@ -13,7 +13,7 @@ from ase.db import connect
 from ase.clease.floating_point_classification import FloatingPointClassifier
 from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
-                              create_cluster, dec_string, get_unique_name,
+                              dec_string, get_unique_name,
                               nested_array2list)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
@@ -46,10 +46,12 @@ class ClusterExpansionSetting(object):
         self.kwargs["concentration"] = self.concentration.to_dict()
         self.basis_elements = deepcopy(self.concentration.basis_elements)
         self.num_basis = len(self.basis_elements)
+        self.db_name = db_name
+        self.dist_num_dec = dist_num_dec
         self.size = size
-        self.unit_cell_type = 0
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
+        self.unit_cell_id = self._store_unit_cell()
 
         if (supercell_factor is not None and size is None and
                 max_cluster_dia is None):
@@ -59,10 +61,9 @@ class ClusterExpansionSetting(object):
         self.template_atoms = TemplateAtoms(supercell_factor=supercell_factor,
                                             size=size,
                                             skew_threshold=skew_threshold,
-                                            unit_cells=[self.unit_cell])
+                                            unit_cell_id=self.unit_cell_id,
+                                            db_name=self.db_name)
 
-        self.dist_num_dec = dist_num_dec
-        self.db_name = db_name
         self.max_cluster_size = max_cluster_size
         self.max_cluster_dia = max_cluster_dia
         self.all_elements = sorted([item for row in self.basis_elements for
@@ -80,9 +81,9 @@ class ClusterExpansionSetting(object):
         self.kd_trees = None
         self.template_atoms_uid = 0
         for uid in range(self.template_atoms.num_templates):
-            self.set_template_atoms(uid)
+            self._set_active_template_by_uid(uid)
         # Set the initial template atoms to 0, which is the smallest cell
-        self.set_template_atoms(0)
+        self._set_active_template_by_uid(0)
 
         unique_element_no_bkg = self.unique_element_without_background()
         if isinstance(basis_function, BasisFunction):
@@ -141,16 +142,20 @@ class ClusterExpansionSetting(object):
         raise NotImplementedError("Has to be implemented in derived classes!")
 
     def _size2string(self):
-        """Converts the current size into a string."""
+        """Convert the current size into a string."""
         return "x".join((str(item) for item in self.size))
 
-    def set_template_atoms(self, uid):
-        """Sets a fixed template atoms object as the active."""
+    def _set_active_template_by_uid(self, uid):
+        """Set a fixed template atoms object as the active."""
         self.template_atoms_uid = uid
-        self.atoms_with_given_dim, self.size = \
-            self.template_atoms.get_atoms(uid, return_dims=True)
-        self.atoms_with_given_dim = \
-            wrap_and_sort_by_position(self.atoms_with_given_dim)
+        self.atoms, self.size = \
+            self.template_atoms.get_atoms(uid, return_size=True)
+        self.atoms = wrap_and_sort_by_position(self.atoms)
+        self.unit_cell_id = self.template_atoms.get_unit_cell_id(uid)
+
+        # Load the corresponding unit cell from db
+        db = connect(self.db_name)
+        self.unit_cell = db.get(id=self.unit_cell_id).toatoms()
 
         self.index_by_basis = self._group_index_by_basis()
         self.cluster_info = []
@@ -158,82 +163,55 @@ class ClusterExpansionSetting(object):
         self.max_cluster_dia, self.supercell_scale_factor = \
             self._get_max_cluster_dia_and_scale_factor(self.max_cluster_dia)
 
-        self.atoms = self._create_template_atoms()
         self.background_indices = self._get_background_indices()
-
         self.index_by_trans_symm = self._group_indices_by_trans_symmetry()
         self.num_trans_symm = len(self.index_by_trans_symm)
         self.ref_index_trans_symm = [i[0] for i in self.index_by_trans_symm]
-        self.kd_trees = self._create_kdtrees()
 
         # Read information from database
         # Note that if the data is not found, it will generate
         # the nessecary data structures and store them in the database
         self._read_data()
 
-    def set_new_template(self, size=None, atoms=None):
+    def set_active_template(self, size=None, atoms=None, unit_cell_id=None,
+                            generate_template=False):
         """Set a new template atoms object."""
         if size is not None and atoms is not None:
-            raise ValueError("Specify either 'size' or pass Atoms object.")
+            raise ValueError("Specify either size or pass Atoms object.")
         if size is not None:
-            uid = self.template_atoms.get_uid_with_given_dim(size)
+            uid = self.template_atoms.get_uid_with_given_size(
+                size=size, unit_cell_id=unit_cell_id,
+                generate_template=generate_template)
         elif atoms is not None:
-            uid = self.template_atoms.get_uid_matching_atoms(atoms)
+            uid = self.template_atoms.get_uid_matching_atoms(
+                atoms=atoms, generate_template=generate_template)
         else:
             uid = self.template_atoms.weighted_random_template()
-        self.set_template_atoms(uid)
-
-    def _check_conc_ratios(self, conc_args):
-        # check for concentration ratios
-        conc_names = ['conc_ratio_min_1', 'conc_ratio_min_2',
-                      'conc_ratio_max_1', 'conc_ratio_max_2']
-        conc_ratio_min_1 = None
-        conc_ratio_min_2 = None
-        conc_ratio_max_1 = None
-        conc_ratio_max_2 = None
-        for ratio_type, ratio in conc_args.items():
-            if ratio_type not in conc_names:
-                raise NameError('The name {} is not supported. \n'
-                                'The allowed names are {}'
-                                .format(ratio_type, conc_names))
-            if ratio_type == conc_names[0]:
-                conc_ratio_min_1 = ratio
-            elif ratio_type == conc_names[1]:
-                conc_ratio_min_2 = ratio
-            elif ratio_type == conc_names[2]:
-                conc_ratio_max_1 = ratio
-            else:
-                conc_ratio_max_2 = ratio
-
-        if (conc_ratio_min_1 is None or conc_ratio_max_1 is None):
-            raise ValueError('Both min and max concentration ratios need be'
-                             ' specified')
-        if (conc_ratio_min_2 is not None and conc_ratio_max_2 is not None):
-            num_conc_var = 2
-        elif (conc_ratio_min_1 is None or conc_ratio_max_1 is None):
-            raise ValueError('Both min and max concentration ratios need be'
-                             ' specified')
-        else:
-            num_conc_var = 1
-        # Assign parameters
-        self.num_conc_var = num_conc_var
-        self.conc_ratio_min_1 = conc_ratio_min_1
-        self.conc_ratio_max_1 = conc_ratio_max_1
-        if num_conc_var == 2:
-            self.conc_ratio_min_2 = conc_ratio_min_2
-            self.conc_ratio_max_2 = conc_ratio_max_2
+        self._set_active_template_by_uid(uid)
 
     def _tag_unit_cell(self):
         """Add a tag to all the atoms in the unit cell to track the index."""
         for atom in self.unit_cell:
             atom.tag = atom.index
 
+    def _store_unit_cell(self):
+        """Store unit cell to the database."""
+        db = connect(self.db_name)
+        shape = self.unit_cell.get_cell_lengths_and_angles()
+        for row in db.select(name='unit_cell'):
+            uc_shape = row.toatoms().get_cell_lengths_and_angles()
+            if np.allclose(shape, uc_shape):
+                return row.id
+
+        uid = db.write(self.unit_cell, name='unit_cell')
+        return uid
+
     def _get_unit_cell(self):
         raise NotImplementedError("This function has to be implemented in "
                                   "in derived classes.")
 
     def _get_max_cluster_dia_and_scale_factor(self, max_cluster_dia):
-        cell = self.atoms_with_given_dim.get_cell().T
+        cell = self.atoms.get_cell().T
         min_length = self._get_max_cluster_dia(cell)
 
         # ------------------------------------- #
@@ -264,7 +242,7 @@ class ClusterExpansionSetting(object):
         # --------------------------------- #
         # Get scale_factor in an array form #
         # --------------------------------- #
-        atoms = self.atoms_with_given_dim
+        atoms = self.atoms
 
         # TODO: Do we need to do something here?
         # It is not the cell vectors that needs to be twice as long as the
@@ -274,7 +252,7 @@ class ClusterExpansionSetting(object):
         scale_factor = max(max_cluster_dia) / lengths
         scale_factor = np.ceil(scale_factor).astype(int)
         scale_factor = self._get_scale_factor(cell, max(max_cluster_dia))
-        return np.around(max_cluster_dia, self.dist_num_dec), scale_factor
+        return max_cluster_dia.round(decimals=self.dist_num_dec), scale_factor
 
     def _get_max_cluster_dia(self, cell, ret_weights=False):
         lengths = []
@@ -290,7 +268,7 @@ class ClusterExpansionSetting(object):
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
         min_length = min(lengths) / 2
-        min_length = np.round(min_length, self.dist_num_dec) - tol
+        min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
             min_indx = np.argmin(lengths)
@@ -334,44 +312,25 @@ class ClusterExpansionSetting(object):
         return scale_factor
 
     def _get_background_indices(self):
-        """Get symbol of the background atoms.
-
-        This method also modifies grouped_basis, conc_args, num_basis, basis,
-        and all_elements attributes to reflect the changes from ignoring the
-        background atoms.
-        """
+        """Get indices of the background atoms."""
         # check if any basis consists of only one element type
         basis = [i for i, b in enumerate(self.basis_elements) if len(b) == 1]
 
         bkg_indices = []
-        tags = []
         for b_indx in basis:
-            new_tags = [self.atoms_with_given_dim[indx].tag
-                        for indx in self.index_by_basis[b_indx]]
-            tags += list(set(new_tags))
-        tags = list(set(tags))
-        bkg_indices = [atom.index for atom in self.atoms if atom.tag in tags]
+            bkg_indices += self.index_by_basis[b_indx]
         return bkg_indices
 
-    def _get_atoms_with_given_dim(self):
+    def _get_atoms(self):
         """Create atoms with a user-specified size."""
         atoms = self.unit_cell.copy() * self.size
         return wrap_and_sort_by_position(atoms)
 
-    def _create_template_atoms(self):
-        """Return atoms that can handle the specified maximum diameter.
-
-        If maximum diameter is not specified, the user-specified cell
-        size will be used.
-        """
-        atoms = self.atoms_with_given_dim * self.supercell_scale_factor
-        return wrap_and_sort_by_position(atoms)
-
-    def _create_kdtrees(self):
+    def _create_kdtrees(self, atoms):
         kd_trees = []
         trans = []
 
-        cell = self.atoms.get_cell().T
+        cell = atoms.get_cell().T
         weights = [-1, 0, 1]
         for comb in product(weights, repeat=3):
             vec = cell.dot(comb) / 2.0
@@ -383,10 +342,10 @@ class ClusterExpansionSetting(object):
         # the next line might be a quick fix. However, this introduce
         # a lot of overhead. For big systems one might easily run out of
         # memory.
-        # trans += [atom.position for atom in self.atoms]
+        # trans += [atom.position for atom in atoms]
 
         for t in trans:
-            shifted = self.atoms.copy()
+            shifted = atoms.copy()
             shifted.translate(t)
             shifted.wrap()
             kd_trees.append(KDTree(shifted.get_positions()))
@@ -416,7 +375,7 @@ class ClusterExpansionSetting(object):
             pos = shifted.get_positions()
 
             for equiv_group in range(len(temp)):
-                if (an == equiv_group_an[equiv_group]).all() and \
+                if (an == equiv_group_an[equiv_group]).all() and\
                         np.allclose(pos, equiv_group_pos[equiv_group]):
                     temp[equiv_group].append(indx)
                     break
@@ -461,6 +420,27 @@ class ClusterExpansionSetting(object):
             new_cluster_info.append(new_dict)
         self.cluster_info = new_cluster_info
 
+    def _corresponding_indices(self, indices, supercell):
+        """Find the indices in supercell that correspond to the ones in
+           self.atoms
+
+        Arguments
+        ===========
+        indices: list of int
+            Indices in self.atoms
+
+        supercell: Atoms
+            Supercell object where we want to find the indices
+            corresponding to the position in self.atoms
+        """
+        supercell_indices = []
+        for indx in indices:
+            pos = self.atoms[indx].position
+            dist = supercell.get_positions() - pos
+            lengths_sq = np.sum(dist**2, axis=1)
+            supercell_indices.append(np.argmin(lengths_sq))
+        return supercell_indices
+        
     def _create_cluster_information(self):
         """Create a set of parameters describing the structure.
 
@@ -528,6 +508,13 @@ class ClusterExpansionSetting(object):
 
             }
         """
+        atoms_cpy = self.atoms.copy()
+        for atom in atoms_cpy:
+            atom.tag = atom.index
+        supercell = atoms_cpy*self.supercell_scale_factor
+        supercell = wrap_and_sort_by_position(supercell)
+        kdtrees = self._create_kdtrees(supercell)
+
         cluster_info = []
         fam_identifier = []
         float_dist = FloatingPointClassifier(self.dist_num_dec)
@@ -540,8 +527,11 @@ class ClusterExpansionSetting(object):
 
         # determine cluster information for each inequivalent site
         # (based on translation symmetry)
-        for site, ref_indx in enumerate(self.ref_index_trans_symm):
-            if (ref_indx in self.background_indices and
+        ref_indices = self._corresponding_indices(
+            self.ref_index_trans_symm, supercell)
+        # for site, ref_indx in enumerate(self.ref_index_trans_symm):
+        for site, ref_indx in enumerate(ref_indices):
+            if (supercell[ref_indx].tag in self.background_indices and
                     self.ignore_background_atoms):
                 cluster_info.append({})
                 continue
@@ -550,7 +540,7 @@ class ClusterExpansionSetting(object):
                 "indices": [],
                 "equiv_sites": [],
                 "order": [],
-                "ref_indx": ref_indx,
+                "ref_indx": self.ref_index_trans_symm[site],
                 "symm_group": site,
                 "descriptor": "empty",
                 "name": "c0",
@@ -562,7 +552,7 @@ class ClusterExpansionSetting(object):
                 "indices": [],
                 "equiv_sites": [],
                 "order": [0],
-                "ref_indx": ref_indx,
+                "ref_indx": self.ref_index_trans_symm[site],
                 "symm_group": site,
                 "descriptor": "point_cluster",
                 "name": 'c1',
@@ -571,21 +561,21 @@ class ClusterExpansionSetting(object):
             }
 
             for size in range(2, self.max_cluster_size + 1):
-                indices = self.indices_of_nearby_atom(ref_indx, size)
+                indices = self.indices_of_nearby_atom(ref_indx, size, kdtrees)
                 if self.ignore_background_atoms:
                     indices = [i for i in indices if
-                               i not in self.background_indices]
+                               supercell[i].tag not in self.background_indices]
                 indx_set = []
                 descriptor_str = []
                 order_set = []
                 equiv_sites_set = []
                 max_cluster_diameter = []
                 for k in combinations(indices, size - 1):
-                    d = self.get_min_distance((ref_indx,) + k)
+                    d = self.get_min_distance((ref_indx,) + k, kdtrees)
                     if max(d) > self.max_cluster_dia[size]:
                         continue
                     order, eq_sites, string_description = \
-                        sort_by_internal_distances(self.atoms, (ref_indx,) + k,
+                        sort_by_internal_distances(supercell, (ref_indx,) + k,
                                                    float_dist,
                                                    float_ang)
                     descriptor_str.append(string_description)
@@ -593,7 +583,7 @@ class ClusterExpansionSetting(object):
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
                     max_cluster_diameter.append(float_max_dia.get(max(d)))
-
+                
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
                     msg += "Reduce max_cluster_size or "
@@ -619,7 +609,7 @@ class ClusterExpansionSetting(object):
                         "indices": [],
                         "equiv_sites": equiv_sites_set[indx],
                         "order": [],
-                        "ref_indx": ref_indx,
+                        "ref_indx": self.ref_index_trans_symm[site],
                         "symm_group": site,
                         "descriptor": desc,
                         "name": name,
@@ -632,7 +622,12 @@ class ClusterExpansionSetting(object):
                     max_dia = max_cluster_diameter[x]
                     fam_id = fam_identifier.index(unique_descriptors[category])
                     name = get_unique_name(size, max_dia, fam_id)
-                    cluster_info_symm[name]["indices"].append(indx_set[x])
+
+                    sc_index_set = indx_set[x]
+                    index_set = []
+                    for indx in sc_index_set:
+                        index_set.append(int(supercell[indx].tag))
+                    cluster_info_symm[name]["indices"].append(index_set)
                     cluster_info_symm[name]["order"].append(order_set[x])
 
                     assert cluster_info_symm[name]["equiv_sites"] \
@@ -701,10 +696,6 @@ class ClusterExpansionSetting(object):
 
         tm = [{} for _ in range(natoms)]
 
-        # Add the index in the main atoms object to the tag
-        for indx, atom in enumerate(self.atoms):
-            atom.tag = indx
-
         for i, ref_indx in enumerate(self.ref_index_trans_symm):
             indices = index_by_position(self.atoms)
             tm[ref_indx] = {col: indices[col] for col in unique_indices}
@@ -721,14 +712,14 @@ class ClusterExpansionSetting(object):
                 tm[indx] = {col: indices[col] for col in unique_indices}
         return tm
 
-    def get_min_distance(self, cluster):
+    def get_min_distance(self, cluster, kd_trees):
         """Get minimum distances.
 
         Get the minimum distances between the atoms in a cluster according to
         dist_matrix and return the sorted distances (reverse order)
         """
         d = []
-        for _, tree in enumerate(self.kd_trees):
+        for _, tree in enumerate(kd_trees):
             row = []
             for x in combinations(cluster, 2):
                 x0 = tree.data[x[0], :]
@@ -741,16 +732,16 @@ class ClusterExpansionSetting(object):
         """Compute the Euclidean distance between two points."""
         diff = x1 - x0
         length = np.sqrt(diff.dot(diff))
-        return np.round(length, self.dist_num_dec)
+        return length.round(decimals=self.dist_num_dec)
 
-    def indices_of_nearby_atom(self, ref_indx, size):
+    def indices_of_nearby_atom(self, ref_indx, size, kd_trees):
         """Return the indices of the atoms nearby.
 
         Indices of the atoms are only included if distances smaller than
         specified by max_cluster_dia from the reference atom index.
         """
         nearby_indices = []
-        for tree in self.kd_trees:
+        for tree in kd_trees:
             x0 = tree.data[ref_indx, :]
             result = tree.query_ball_point(x0, self.max_cluster_dia[size])
             nearby_indices += list(result)
@@ -820,16 +811,15 @@ class ClusterExpansionSetting(object):
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
-
         db.write(self.atoms, name='template', data=data,
-                 dims=self._size2string(), unit_cell_type=self.unit_cell_type)
+                 size=self._size2string(), unit_cell_id=self.unit_cell_id)
 
     def _read_data(self):
         db = connect(self.db_name)
         try:
             select_cond = [('name', '=', 'template'),
-                           ('dims', '=', self._size2string()),
-                           ('unit_cell_type', '=', self.unit_cell_type)]
+                           ('size', '=', self._size2string()),
+                           ('unit_cell_id', '=', self.unit_cell_id)]
             row = db.get(select_cond)
             self.cluster_info = row.data.cluster_info
             self._info_entries_to_list()
@@ -909,7 +899,21 @@ class ClusterExpansionSetting(object):
                     for i in range(1, len(group)):
                         atoms[keep_indx[group[i]]].tag = \
                             atoms[keep_indx[group[0]]].tag
-            atoms = create_cluster(atoms, keep_indx)
+            # atoms = create_cluster(atoms, keep_indx)
+
+            # Extract the atoms in cluster for visualization
+            atoms = atoms[keep_indx]
+            positions = atoms.get_positions()
+            cell = atoms.get_cell()
+            origin = cell[0, :] + cell[1, :] + cell[2, :]
+            supercell = atoms.copy()*(3, 3, 3)
+            size = len(keep_indx)
+            origin += positions[0, :]
+            pos_sc = supercell.get_positions()
+            lengths_sq = np.sum((pos_sc - origin)**2, axis=1)
+            indices = np.argsort(lengths_sq)[:size]
+            atoms = supercell[indices]
+
             atoms.info = {'name': name}
             cluster_atoms.append(atoms)
 
@@ -920,13 +924,13 @@ class ClusterExpansionSetting(object):
         gui.run()
 
     def reconfigure_settings(self):
-        """Reconfigure settings stored in DB file."""
+        """Reconfigure templates stored in DB file."""
         db = connect(self.db_name)
         ids = [row.id for row in db.select(name='template')]
         db.delete(ids)
         for uid in self.template_atoms.num_templates:
-            self.set_template(uid)
-        self.set_template(0)
+            self._set_active_template_by_uid(uid)
+        self._set_active_template_by_uid(0)
 
     def _check_first_elements(self):
         basis_elements = self.basis_elements

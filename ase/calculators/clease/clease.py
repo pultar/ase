@@ -264,7 +264,6 @@ class Clease(Calculator):
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
         return swapped_indices
 
-
     def _cf_change_by_indx(self, ref_indx, trans_list, cluster, deco):
         """Calculate the change in correlation function based on atomic index.
 
@@ -288,8 +287,10 @@ class Clease(Calculator):
                 indices = [indices[indx] for indx in order]
                 cf_new = 1.0
                 cf_ref = 1.0
+                counter = 0
                 for j, indx in enumerate(indices):
                     if indx == ref_indx:
+                        counter += 1
                         cf_new *= b_f[dec[j]][symbol[1]]
                         cf_ref *= b_f[dec[j]][symbol[0]]
                     else:
