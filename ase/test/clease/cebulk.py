@@ -76,37 +76,7 @@ def test_1grouped_basis_probe():
                      db_name=db_name,
                      max_cluster_size=3,
                      max_cluster_dia=4.)
-    # setting.view_clusters()
-    corr_func = CorrFunction(setting)
-    atoms = setting.atoms.copy()
-    atoms[1].symbol = 'Cl'
-    temp = atoms.copy()
-    from ase.visualize import view
-    view(temp)
-    cf = corr_func.get_cf(atoms)
-    print(setting.supercell_scale_factor)
-    atoms = atoms*(1, 1, 2)
-    atoms = wrap_and_sort_by_position(atoms)
-    cf2 = corr_func.get_cf(atoms)
-    print(setting.supercell_scale_factor)
-    atoms = atoms*(2, 2, 2)
-    atoms = wrap_and_sort_by_position(atoms)
-    cf3 = corr_func.get_cf(atoms)
-    print(setting.supercell_scale_factor)
-    atoms = atoms*(2, 2, 2)
-    atoms = wrap_and_sort_by_position(atoms)
-    print(setting.cluster_info_by_name('c2_2p000_2'))
 
-    atoms = temp*(2, 2, 3)
-    atoms = wrap_and_sort_by_position(atoms)
-    cf4 = corr_func.get_cf(atoms)
-    print(setting.supercell_scale_factor)
-    for k in cf.keys():
-        print(k, cf[k], cf2[k], cf3[k], cf4[k])
-    exit()    
-    # print(setting.cluster_info_by_name('c3_3p464_8'))
-    # print(setting.cluster_info_by_name('c2_2p828_3'))
-    print(setting.supercell_scale_factor)
     assert setting.num_basis == 1
     assert len(setting.index_by_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
@@ -115,12 +85,8 @@ def test_1grouped_basis_probe():
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
-        # ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
-        #                             num_temp=5, num_steps_per_temp=100,
-        #                             approx_mean_var=True)
-
-        ns.generate_probe_structure(init_temp=100, final_temp=99,
-                                    num_temp=2, num_steps_per_temp=1,
+        ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
+                                    num_temp=5, num_steps_per_temp=100,
                                     approx_mean_var=True)
 
     except MaxAttemptReachedError as exc:
@@ -184,7 +150,6 @@ def test_2grouped_basis_bckgrnd_probe():
                      max_cluster_size=3,
                      max_cluster_dia=4.,
                      ignore_background_atoms=True)
-    print(setting.cluster_info)
     assert setting.num_basis == 2
     assert len(setting.index_by_basis) == 2
     assert setting.spin_dict == {'F': 1.0, 'O': -1.0}
@@ -204,13 +169,14 @@ def test_2grouped_basis_bckgrnd_probe():
     os.remove(db_name)
 
 
-# print('binary')
-# test_binary_system()
+print('binary')
+test_binary_system()
 
 print('1 grouped basis with probe structure')
 test_1grouped_basis_probe()
 
-# print('2 grouped basis with probe structure')
-# test_2grouped_basis_probe()
-# print('2 grouped basis + background + probe structure')
-# test_2grouped_basis_bckgrnd_probe()
+print('2 grouped basis with probe structure')
+test_2grouped_basis_probe()
+
+print('2 grouped basis + background + probe structure')
+test_2grouped_basis_bckgrnd_probe()

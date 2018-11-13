@@ -342,7 +342,7 @@ class ClusterExpansionSetting(object):
         # the next line might be a quick fix. However, this introduce
         # a lot of overhead. For big systems one might easily run out of
         # memory.
-        # trans += [atom.position for atom in self.atoms]
+        # trans += [atom.position for atom in atoms]
 
         for t in trans:
             shifted = atoms.copy()
@@ -511,8 +511,7 @@ class ClusterExpansionSetting(object):
         atoms_cpy = self.atoms.copy()
         for atom in atoms_cpy:
             atom.tag = atom.index
-        supercell = atoms_cpy*self._get_scale_factor(self.atoms.get_cell(),
-                                                     max(self.max_cluster_dia))
+        supercell = atoms_cpy*self.supercell_scale_factor
         supercell = wrap_and_sort_by_position(supercell)
         kdtrees = self._create_kdtrees(supercell)
 
@@ -584,7 +583,7 @@ class ClusterExpansionSetting(object):
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
                     max_cluster_diameter.append(float_max_dia.get(max(d)))
-
+                
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
                     msg += "Reduce max_cluster_size or "

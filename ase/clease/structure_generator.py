@@ -235,16 +235,10 @@ class StructureGenerator(object):
             self.corrFunc.get_cf_by_cluster_names(self.generated_structure,
                                                   self.calc.cluster_names,
                                                   return_type='dict')
-        print(final_cf, self.cf_generated_structure)
         for k in final_cf:
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
                 msg = 'Correlation function changed after simulated annealing'
                 raise ValueError(msg)
-
-        # for grp in self.periodic_indices:
-        #     ref_symbol = self.generated_structure[grp[0]].symbol
-        #     for indx in grp[1:]:
-        #         assert self.generated_structure[indx].symbol == ref_symbol
 
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""
