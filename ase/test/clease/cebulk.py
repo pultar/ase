@@ -13,7 +13,7 @@ from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
 from ase.db import connect
 
-db_name = "test_crystal.db"
+db_name = "test_bulk.db"
 
 
 def get_members_of_family(setting, cname):
@@ -74,6 +74,10 @@ def test_1grouped_basis_probe():
                      db_name=db_name,
                      max_cluster_size=3,
                      max_cluster_dia=4.)
+    # setting.view_clusters()
+    print(setting.cluster_info_by_name('c3_3p464_8'))
+    print(setting.cluster_info_by_name('c2_2p828_3'))
+    print(setting.supercell_scale_factor)
     assert setting.num_basis == 1
     assert len(setting.index_by_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
@@ -147,6 +151,7 @@ def test_2grouped_basis_bckgrnd_probe():
                      max_cluster_size=3,
                      max_cluster_dia=4.,
                      ignore_background_atoms=True)
+    print(setting.cluster_info)
     assert setting.num_basis == 2
     assert len(setting.index_by_basis) == 2
     assert setting.spin_dict == {'F': 1.0, 'O': -1.0}
@@ -166,7 +171,13 @@ def test_2grouped_basis_bckgrnd_probe():
     os.remove(db_name)
 
 
+# print('binary')
 # test_binary_system()
+
+print('1 grouped basis with probe structure')
 test_1grouped_basis_probe()
+
+# print('2 grouped basis with probe structure')
 # test_2grouped_basis_probe()
+# print('2 grouped basis + background + probe structure')
 # test_2grouped_basis_bckgrnd_probe()

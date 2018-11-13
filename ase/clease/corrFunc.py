@@ -119,9 +119,7 @@ class CorrFunction(object):
                       "cluster_names"
         """
         if isinstance(atoms, Atoms):
-            atoms = self.check_cell_size(atoms.copy())
-            atoms = wrap_and_sort_by_position(
-                        atoms*self.setting.supercell_scale_factor)
+            self.check_cell_size(atoms)
         else:
             raise TypeError('atoms must be Atoms object')
         cf = {}
@@ -215,7 +213,7 @@ class CorrFunction(object):
     def _spin_product(self, atoms, cluster, deco):
         """Get spin product of a given cluster.
 
-        Arguments
+        Arguments:
         =========
         atoms: Atoms object
 
@@ -342,36 +340,14 @@ class CorrFunction(object):
         return sp/num_equiv, count/num_equiv
 
     def check_cell_size(self, atoms):
-        """Check the size of provided cell and convert in necessary.
-
-        If the size of the provided cell is the same as the size of the
-        template stored in the database. If it either (1) has the same size or
-        (2) can make the same size by simple multiplication (supercell), the
-        cell with the same size is returned after it is sorted by the position
-        and wrapped. If not, it raises an error.
+        """Check the size of provided cell and create a template if necessary.
 
         Arguments:
         =========
         atoms: Atoms object
             *Unrelaxed* structure
         """
-        # cell_lengths = atoms.get_cell_lengths_and_angles()
-        # db = connect(self.setting.db_name)
-        # found_matching_template = False
-        # for row in db.select(name='template'):
-        #     template = row.toatoms()
-        #     template_lengths = template.get_cell_lengths_and_angles()
-        #     print(cell_lengths)
-        #     print(template_lengths)
-        #     if np.allclose(cell_lengths, template_lengths):
-        #         found_matching_template = True
-        #         break
-
-        # if not found_matching_template:
-        #     raise TypeError("Cannot find the template atoms that matches the "
-        #                     "size of the passed atoms")
         self.setting.set_active_template(atoms=atoms, generate_template=True)
-
         return atoms
 
 

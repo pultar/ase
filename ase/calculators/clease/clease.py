@@ -258,12 +258,12 @@ class Clease(Calculator):
                 cluster = self.setting.cluster_info[symm][prefix]
                 count = self.norm_factor[prefix]
                 t_indices = self._translate_indx(indx, cluster["indices"])
+                print(t_indices)
                 cf_tot = self.cf[i] * count
                 cf_change = \
                     self._cf_change_by_indx(indx, t_indices, cluster, dec)
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
         return swapped_indices
-
 
     def _cf_change_by_indx(self, ref_indx, trans_list, cluster, deco):
         """Calculate the change in correlation function based on atomic index.

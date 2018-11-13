@@ -459,7 +459,7 @@ class NewStructures(object):
         # Insert the number of atoms
         basis_elem = self.setting.concentration.basis_elements
         assert len(rnd_indices) == len(basis_elem)
-        atoms = self.setting.atoms_with_given_dim.copy()
+        atoms = self.setting.atoms.copy()
         current_conc = 0
         num_atoms_inserted = 0
         for basis in range(len(rnd_indices)):
