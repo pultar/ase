@@ -511,8 +511,8 @@ class ClusterExpansionSetting(object):
         atoms_cpy = self.atoms.copy()
         for atom in atoms_cpy:
             atom.tag = atom.index
-        supercell = atoms_cpy * self._get_scale_factor(self.atoms.get_cell(), 
-                                                       max(self.max_cluster_dia))
+        supercell = atoms_cpy*self._get_scale_factor(self.atoms.get_cell(),
+                                                     max(self.max_cluster_dia))
         supercell = wrap_and_sort_by_position(supercell)
         kdtrees = self._create_kdtrees(supercell)
 
@@ -625,11 +625,10 @@ class ClusterExpansionSetting(object):
                     name = get_unique_name(size, max_dia, fam_id)
 
                     sc_index_set = indx_set[x]
-                    index_set_in_atoms = []
+                    index_set = []
                     for indx in sc_index_set:
-                        index_set_in_atoms.append(int(supercell[indx].tag))
-                    # cluster_info_symm[name]["indices"].append(indx_set[x])
-                    cluster_info_symm[name]["indices"].append(index_set_in_atoms)
+                        index_set.append(int(supercell[indx].tag))
+                    cluster_info_symm[name]["indices"].append(index_set)
                     cluster_info_symm[name]["order"].append(order_set[x])
 
                     assert cluster_info_symm[name]["equiv_sites"] \

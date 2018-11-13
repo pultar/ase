@@ -258,7 +258,6 @@ class Clease(Calculator):
                 cluster = self.setting.cluster_info[symm][prefix]
                 count = self.norm_factor[prefix]
                 t_indices = self._translate_indx(indx, cluster["indices"])
-                print(t_indices)
                 cf_tot = self.cf[i] * count
                 cf_change = \
                     self._cf_change_by_indx(indx, t_indices, cluster, dec)
@@ -288,8 +287,10 @@ class Clease(Calculator):
                 indices = [indices[indx] for indx in order]
                 cf_new = 1.0
                 cf_ref = 1.0
+                counter = 0
                 for j, indx in enumerate(indices):
                     if indx == ref_indx:
+                        counter += 1
                         cf_new *= b_f[dec[j]][symbol[1]]
                         cf_ref *= b_f[dec[j]][symbol[0]]
                     else:

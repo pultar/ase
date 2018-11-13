@@ -33,9 +33,6 @@ class CorrFunction(object):
                             "object")
         self.setting = setting
 
-        self.index_by_trans_symm = setting.index_by_trans_symm
-        self.num_trans_symm = setting.num_trans_symm
-        self.ref_index_trans_symm = setting.ref_index_trans_symm
         self.parallel = parallel
         self.num_core = num_core
         if parallel:
@@ -230,7 +227,7 @@ class CorrFunction(object):
         count = 0
 
         # spin product of each atom in the symmetry equivalent group
-        indices_of_symm_group = self.index_by_trans_symm[cluster["symm_group"]]
+        indices_of_symm_group = self.setting.index_by_trans_symm[cluster["symm_group"]]
         ref_indx_grp = indices_of_symm_group[0]
 
         for ref_indx in indices_of_symm_group:
