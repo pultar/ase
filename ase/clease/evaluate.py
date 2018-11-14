@@ -214,13 +214,22 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, interactive=True):
+    def plot_fit(self, interactive=True, savefig=False, fname=None):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
         ========
         alpha: int or float
             regularization parameter.
+
+        savefig: bool
+            - True: Save the plot with a file name specified in 'fname'. 
+                    Only works when interactive=False.
+                    This option does not display figure.
+            - False: Display figure without saving.
+
+        fname: str
+            file name of the figure (only used when savefig = True)
         """
         import matplotlib.pyplot as plt
         from ase.clease.interactive_plot import ShowStructureOnClick
@@ -264,7 +273,11 @@ class Evaluate(object):
             db_name = self.setting.db_name
             ShowStructureOnClick(fig, ax, data_points, annotations, db_name)
         else:
-            plt.show()
+            if savefig:
+                plt.savefig(fname=fname)
+                return
+            else:
+                plt.show()
 
         # Create a plot with the residuals
         fig_residual = plt.figure()
@@ -284,7 +297,7 @@ class Evaluate(object):
             plt.show()
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
-                logfile=None, fitting_schemes=None):
+                logfile=None, fitting_schemes=None, savefig=False, fname=None):
         """Plot CV for a given range of alpha.
 
         In addition to plotting CV with respect to alpha, logfile can be used
@@ -313,6 +326,14 @@ class Evaluate(object):
             - file object: use the file object for logging
 
         fitting_schemes: None or array of instance of LinearRegression
+
+        savefig: bool
+            - True: Save the plot with a file name specified in 'fname'. This
+                    option does not display figure.
+            - False: Display figure without saving.
+
+        fname: str
+            file name of the figure (only used when savefig = True)
 
         Note: If the file with the same name exists, it first checks if the
               alpha value already exists in the logfile and evalutes the CV of
@@ -393,7 +414,10 @@ class Evaluate(object):
                 "CV = {1:.3f} meV/atom".format(min_alpha, min_cv * 1000),
                 verticalalignment='bottom', horizontalalignment='left',
                 transform=ax.transAxes, fontsize=10)
-        plt.show()
+        if savefig:
+            plt.savefig(fname=fname)
+        else:
+            plt.show()
         return min_alpha
 
     def _get_alphas_cv_from_file(self, logfile):
