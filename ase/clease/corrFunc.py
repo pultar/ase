@@ -227,7 +227,8 @@ class CorrFunction(object):
         count = 0
 
         # spin product of each atom in the symmetry equivalent group
-        indices_of_symm_group = self.setting.index_by_trans_symm[cluster["symm_group"]]
+        indices_of_symm_group = \
+            self.setting.index_by_trans_symm[cluster["symm_group"]]
         ref_indx_grp = indices_of_symm_group[0]
 
         for ref_indx in indices_of_symm_group:

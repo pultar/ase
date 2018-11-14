@@ -52,6 +52,8 @@ class ClusterExpansionSetting(object):
         self.unit_cell = self._get_unit_cell()
         self._tag_unit_cell()
         self.unit_cell_id = self._store_unit_cell()
+        self.float_max_dia, self.float_ang, self.float_dist = \
+            self._init_floating_point_classifiers()
 
         if (supercell_factor is not None and size is None and
                 max_cluster_dia is None):
@@ -140,6 +142,41 @@ class ClusterExpansionSetting(object):
 
     def _group_index_by_basis(self):
         raise NotImplementedError("Has to be implemented in derived classes!")
+
+    def _store_floating_point_classifiers(self):
+        """Store classifiers in a separate DB entry."""
+        from ase.atoms import Atoms
+        db = connect(self.db_name)
+        if sum(1 for row in db.select(name="float_classification")) >= 1:
+            # Entry already exists
+            return
+
+        placeholder = Atoms()
+        data = {
+            "max_cluster_dia": self.float_max_dia.toJSON(),
+            "angles": self.float_ang.toJSON(),
+            "float_dist": self.float_dist.toJSON()
+        }
+        db.write(placeholder, data=data, name="float_classification")
+
+    def _init_floating_point_classifiers(self):
+        """Initialize the floating point classifiers from the DB if they
+           exist, otherwise initialize a new one."""
+
+        db = connect(self.db_name)
+        try:
+            row = db.get(name="float_classification")
+            max_dia = row.data["max_cluster_dia"]
+            angles = row.data["angles"]
+            dists = row.data["float_dist"]
+            float_max_dia = FloatingPointClassifier.fromJSON(max_dia)
+            float_ang = FloatingPointClassifier.fromJSON(angles)
+            dists = FloatingPointClassifier.fromJSON(dists)
+        except KeyError:
+            float_max_dia = FloatingPointClassifier(self.dist_num_dec)
+            float_ang = FloatingPointClassifier(0)
+            dists = FloatingPointClassifier(self.dist_num_dec)
+        return float_max_dia, float_ang, dists
 
     def _size2string(self):
         """Convert the current size into a string."""
@@ -440,7 +477,7 @@ class ClusterExpansionSetting(object):
             lengths_sq = np.sum(dist**2, axis=1)
             supercell_indices.append(np.argmin(lengths_sq))
         return supercell_indices
-        
+
     def _create_cluster_information(self):
         """Create a set of parameters describing the structure.
 
@@ -505,7 +542,6 @@ class ClusterExpansionSetting(object):
                                equivalent
                             4) If all atoms are symmetrically equivalent
                                equiv_sites = [[0, 1, 2, 3]]
-
             }
         """
         atoms_cpy = self.atoms.copy()
@@ -517,9 +553,9 @@ class ClusterExpansionSetting(object):
 
         cluster_info = []
         fam_identifier = []
-        float_dist = FloatingPointClassifier(self.dist_num_dec)
-        float_ang = FloatingPointClassifier(0)
-        float_max_dia = FloatingPointClassifier(self.dist_num_dec)
+        # float_dist = FloatingPointClassifier(self.dist_num_dec)
+        # float_ang = FloatingPointClassifier(0)
+        # float_max_dia = FloatingPointClassifier(self.dist_num_dec)
 
         # Need newer version
         if np.version.version <= '1.13':
@@ -576,14 +612,14 @@ class ClusterExpansionSetting(object):
                         continue
                     order, eq_sites, string_description = \
                         sort_by_internal_distances(supercell, (ref_indx,) + k,
-                                                   float_dist,
-                                                   float_ang)
+                                                   self.float_dist,
+                                                   self.float_ang)
                     descriptor_str.append(string_description)
                     indx_set.append(k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
-                    max_cluster_diameter.append(float_max_dia.get(max(d)))
-                
+                    max_cluster_diameter.append(self.float_max_dia.get(max(d)))
+
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
                     msg += "Reduce max_cluster_size or "
@@ -640,6 +676,7 @@ class ClusterExpansionSetting(object):
             cluster_info.append(cluster_info_symm)
         self.cluster_info = cluster_info
         self._assign_correct_family_identifier()
+        self._store_floating_point_classifiers()
 
     @property
     def unique_indices(self):
@@ -765,12 +802,14 @@ class ClusterExpansionSetting(object):
         for item in self.cluster_info:
             for cname, c_info in item.items():
                 sort_list.append((c_info["size"],
-                                  c_info["max_cluster_dia"], cname))
+                                  c_info["max_cluster_dia"],
+                                  c_info["descriptor"],
+                                  cname))
         sort_list.sort()
         sorted_names = []
         for item in sort_list:
-            if item[2] not in sorted_names:
-                sorted_names.append(item[2])
+            if item[3] not in sorted_names:
+                sorted_names.append(item[3])
         return sorted_names
 
     @property
@@ -811,8 +850,13 @@ class ClusterExpansionSetting(object):
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
-        db.write(self.atoms, name='template', data=data,
-                 size=self._size2string(), unit_cell_id=self.unit_cell_id)
+        try:
+            row = db.get(name="template", size=self._size2string(),
+                         unit_cell_id=self.unit_cell_id)
+            db.update(row.id, data=data)
+        except KeyError:
+            db.write(self.atoms, name='template', data=data,
+                     size=self._size2string(), unit_cell_id=self.unit_cell_id)
 
     def _read_data(self):
         db = connect(self.db_name)
@@ -926,11 +970,21 @@ class ClusterExpansionSetting(object):
     def reconfigure_settings(self):
         """Reconfigure templates stored in DB file."""
         db = connect(self.db_name)
-        ids = [row.id for row in db.select(name='template')]
+        # Reconfigure the float point classification based on setting
+        ids = [row.id for row in db.select(name='float_classification')]
         db.delete(ids)
-        for uid in self.template_atoms.num_templates:
+        self.float_max_dia, self.float_ang, self.float_dist = \
+            self._init_floating_point_classifiers()
+
+        # Reconfigure the cluster information for each template based on
+        # current max_cluster_size and max_cluster_dia
+        for uid in range(self.template_atoms.num_templates):
             self._set_active_template_by_uid(uid)
+            self._store_data()
         self._set_active_template_by_uid(0)
+        print('Cluster data updated for all templates.\n'
+              'You should also reconfigure DB entries (in CorrFunction class) '
+              'to make the information on each structure to be consistent. ')
 
     def _check_first_elements(self):
         basis_elements = self.basis_elements

@@ -1,6 +1,5 @@
 """Module for generating new structures for training."""
 import os
-import sys
 import numpy as np
 from random import shuffle
 from copy import deepcopy
@@ -15,10 +14,10 @@ from ase.clease import CEBulk, CECrystal, CorrFunction
 from ase.clease.structure_generator import ProbeStructure, EminStructure
 from ase.clease.tools import wrap_and_sort_by_position
 
-if sys.version_info[0] < 3:
-    from fractions import gcd
-else:
+try:
     from math import gcd
+except ImportError:
+    from fractions import gcd
 
 max_attempt = 10
 
@@ -78,7 +77,7 @@ class NewStructures(object):
             If None, the size will be generated randomly with a bias towards
                 more cubic cells (i.e., cell with similar magnitudes of vectors
                 a, b and c)
-        
+
         unit_cell_id: int
             (only used when size is used)
             The ID of the unit cell in the database to be used

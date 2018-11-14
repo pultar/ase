@@ -244,8 +244,7 @@ class StructureGenerator(object):
         """Get correlation function of every entry in DB."""
         cfm = []
         db = connect(self.setting.db_name)
-        for row in db.select([('name', '!=', 'template'),
-                              ('name', '!=', 'unit_cell')]):
+        for row in db.select(struct_type='initial'):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         return cfm
