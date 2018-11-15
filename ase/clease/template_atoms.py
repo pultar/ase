@@ -119,7 +119,7 @@ class TemplateAtoms(object):
         unit_cell_id, size = self._get_scale_factor(atoms)
         unit_cell = self.db.get(id=unit_cell_id).toatoms()
         self.templates['atoms'].append(unit_cell*size)
-        self.templates['size'].append(size)
+        self.templates['size'].append(list(size))
         self.templates['unit_cell_id'].append(unit_cell_id)
         self._check_templates_datastructure()
         return len(self.templates['atoms']) - 1
@@ -147,18 +147,18 @@ class TemplateAtoms(object):
     def _append_templates_from_db(self):
         if not os.path.isfile(self.db_name):
             return
-        for row in self.db.select([('name', '=', 'template')]):
+        for row in self.db.select(name='template'):
             found = False
             for i, _ in enumerate(self.templates['atoms']):
                 size = list(map(int, row.size.split('x')))
-                if (self.templates['size'][i] == size and
+                if (self.templates['size'][i] == list(size) and
                         self.templates['unit_cell_id'][i] == row.unit_cell_id):
                     found = True
                     break
             if not found:
                 atoms = self.db.get(id=row.unit_cell_id).toatoms()*size
                 self.templates['atoms'].append(atoms)
-                self.templates['size'].append(size)
+                self.templates['size'].append(list(size))
                 self.templates['unit_cell_id'].append(row.unit_cell_id)
         self._check_templates_datastructure()
 
@@ -169,7 +169,7 @@ class TemplateAtoms(object):
         if self.size is not None:
             for row in self.db.select(name='unit_cell'):
                 templates['atoms'].append(row.toatoms() * self.size)
-                templates['size'].append(self.size)
+                templates['size'].append(list(self.size))
                 templates['unit_cell_id'].append(row.id)
             return templates
 
@@ -181,7 +181,7 @@ class TemplateAtoms(object):
                 if np.prod(size) > self.supercell_factor:
                     continue
                 templates['atoms'].append(row.toatoms() * size)
-                templates['size'].append(size)
+                templates['size'].append(list(size))
                 templates['unit_cell_id'].append(row.id)
         return templates
 
@@ -230,7 +230,7 @@ class TemplateAtoms(object):
 
             if not duplicate:
                 filtered['atoms'].append(atoms)
-                filtered['size'].append(templates['size'][i])
+                filtered['size'].append(list(templates['size'][i]))
                 filtered['unit_cell_id'].append(templates['unit_cell_id'][i])
         return filtered
 
@@ -241,7 +241,7 @@ class TemplateAtoms(object):
             ratio = self._get_max_min_diag_ratio(atoms)
             if ratio < self.skew_threshold:
                 filtered['atoms'].append(atoms)
-                filtered['size'].append(templates['size'][i])
+                filtered['size'].append(list(templates['size'][i]))
                 filtered['unit_cell_id'].append(templates['unit_cell_id'][i])
         return filtered
 
