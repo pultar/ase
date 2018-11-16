@@ -162,7 +162,6 @@ class Submit(object):
         before passing the atoms object to a calculator.
         """
         del atoms[[atom.index for atom in atoms if atom.symbol == 'X']]
-        return True
 
     @property
     def jobs_in_queue(self):

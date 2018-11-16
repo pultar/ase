@@ -117,7 +117,7 @@ def slurm_script_8(job_name, num_nodes, email):
 
     module load VASP/5.4.1-iomkl-2017a
     python vasp.py"""
-    return script_text
+    return dedent(script_text)
 
 
 def slurm_script_16(job_name, num_nodes, email):
