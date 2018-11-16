@@ -33,7 +33,7 @@ def vasp_new(param1, param2, name, db_name):
     # run with the final structure to ensure convergence
     atoms = read('output.traj', -1)
     compute_param="""+str(param2)+"""
-    calc = Vasp(**compute_param)
+    calc = Vasp2(**compute_param)
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()
     # append the image to traj file
@@ -75,7 +75,7 @@ def vasp_restart(param1, param2, name, db_name):
     # run calculation
     atoms = read('output.traj', -1)
     compute_param="""+str(param1)+"""
-    calc = Vasp(**compute_param)
+    calc = Vasp2(**compute_param)
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()
     # store in traj file
@@ -86,7 +86,7 @@ def vasp_restart(param1, param2, name, db_name):
    # run with the final structure to ensure convergence
     atoms = read('output.traj', -1)
     compute_param="""+str(param2)+"""
-    calc = Vasp(**compute_param)
+    calc = Vasp2(**compute_param)
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()
     # append the image to traj file
