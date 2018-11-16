@@ -83,7 +83,7 @@ def vasp_restart(param1, param2, name, db_name):
     for atoms in outcar:
         writer.write(atoms=atoms)
 
-   # run with the final structure to ensure convergence
+    # run with the final structure to ensure convergence
     atoms = read('output.traj', -1)
     compute_param="""+str(param2)+"""
     calc = Vasp2(**compute_param)
