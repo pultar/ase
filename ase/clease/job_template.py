@@ -77,7 +77,8 @@ class Submit(object):
             runfile.close()
 
             os.system('chmod u+xwr vasp.py run.sh')
-            output_string = check_output(['sbatch run.sh'], shell=True)
+            output_string = check_output(['sbatch run.sh'], shell=True,
+                                         universal_newlines=True)
 
         # wait and get the response to confirm
         if "Submitted" not in output_string:
@@ -146,7 +147,8 @@ class Submit(object):
             runfile.close()
 
             os.system('chmod u+xwr vasp.py run.sh')
-            output_string = check_output(['sbatch run.sh'], shell=True)
+            output_string = check_output(['sbatch run.sh'], shell=True,
+                                         universal_newlines=True)
 
         # wait and get the response to confirm
         if "Submitted" not in output_string:
@@ -170,7 +172,8 @@ class Submit(object):
         """
         job_names = []
         jobs_string = check_output(['qstat -f | grep -C 1 $USER'],
-                                   shell=True).splitlines()
+                                   shell=True,
+                                   universal_newlines=True).splitlines()
         for line in jobs_string:
             if 'Job_Name' not in line:
                 continue
