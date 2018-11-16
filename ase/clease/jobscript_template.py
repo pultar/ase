@@ -28,6 +28,7 @@ def vasp_new(param1, param2, name, db_name):
     writer = TrajectoryWriter('output.traj', mode='w')
     for atoms in outcar:
         writer.write(atoms=atoms)
+    os.system('rm WAVECAR')
 
 
     # run with the final structure to ensure convergence
