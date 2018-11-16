@@ -336,9 +336,9 @@ class NewStructures(object):
         if name is not None:
             kvp['name'] = name
 
-        kvp['converged'] = True
-        kvp['started'] = ''
-        kvp['queued'] = ''
+        kvp['converged'] = False
+        kvp['started'] = False
+        kvp['queued'] = False
         kvp['struct_type'] = 'initial'
         uid_init = self.db.write(init, key_value_pairs=kvp)
 
@@ -349,7 +349,8 @@ class NewStructures(object):
                 final = read(final_struct)
             kvp_final = {'struct_type': 'final', 'name': kvp['name']}
             uid = self.db.write(final, kvp_final)
-            self.db.update(uid_init, final_struct_id=uid)
+            self.db.update(uid_init, converged=True, started='', queued='',
+                           final_struct_id=uid)
 
     def _exists_in_db(self, atoms, formula_unit=None):
         """Check to see if the passed atoms already exists in DB.
