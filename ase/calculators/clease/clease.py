@@ -31,7 +31,7 @@ class Clease(Calculator):
         Use '-' for stdout.
     """
 
-    name = 'ClusterExpansion'
+    name = 'CLEASE'
     implemented_properties = ['energy']
 
     def __init__(self, setting, cluster_name_eci=None, init_cf=None,
