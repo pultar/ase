@@ -41,7 +41,8 @@ class GAFit(LinearRegression):
 
     """
     def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5, elitism=3,
-                 fname="ga_fit.csv", num_individuals="auto", change_prob=0.2):
+                 fname="ga_fit.csv", num_individuals="auto", change_prob=0.2,
+                 local_decline=True):
         from ase.clease import Evaluate
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")
@@ -65,6 +66,7 @@ class GAFit(LinearRegression):
             "worst_cv": []
         }
         self.evaluate_fitness()
+        self.local_decline = local_decline
 
     def _initialize_individuals(self):
         """Initialize a random population."""
@@ -146,10 +148,10 @@ class GAFit(LinearRegression):
                 individual = self.sparsify_mutation(individual.copy())
             new_generation.append(self.make_valid(individual))
         
-
         cumulative_sum = np.cumsum(self.fitness)
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
+
         # Create new generation by mergin existing
         for i in range(num_inserted, self.pop_size):
             rand_num = np.random.rand()
@@ -197,6 +199,15 @@ class GAFit(LinearRegression):
         best_indx = np.argmax(self.fitness)
         individual = self.individuals[best_indx]
         return individual
+
+    @property
+    def best_cv(self):
+        return 1.0/np.max(self.fitness)
+
+    @property
+    def best_individual_indx(self):
+        best_indx = np.argmax(self.fitness)
+        return best_indx       
 
     def fit(self, X, y):
         """Perform fit using the best individual."""
@@ -256,6 +267,15 @@ class GAFit(LinearRegression):
             self.evaluate_fitness()
 
             best_indx = np.argmax(self.fitness)
+
+            # Start to perform local optimization on the best individual
+            # after the earliest possible return
+            # If local optimization is turned on too early it seems like
+            # it is easy to reach premature convergence
+            if best_indx != 0 and self.local_decline and gen >= gen_without_change:
+                self.log("Performing local optimization on new "
+                         "best candidate.")
+                self._local_optimization()
             cv = 1.0/self.fitness[best_indx]
             num_eci = np.sum(self.individuals[best_indx])
             diversity = self.population_diversity()
@@ -280,6 +300,41 @@ class GAFit(LinearRegression):
                          "".format(gen_without_change))
                 break
             gen += 1
+
+        if self.local_decline:
+            # Perform a last local optimization
+            self._local_optimization()
         self.save_population()
+
+    def _local_optimization(self, indx=None):
+        """Perform a local optimization strategy to the best individual."""
+        from random import choice
+        from copy import deepcopy
+        if indx is None:
+            individual = self.best_individual
+        else:
+            individual = self.individuals[indx]
+
+        num_steps = 10*len(individual)
+        cv_min = self.best_cv
+        for _ in range(num_steps):
+            flip_indx = choice(range(len(individual)))
+            individual_cpy = deepcopy(individual)
+            individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1)%2
+            _, cv = self.fit_individual(individual_cpy)
+
+            if cv < cv_min:
+                cv_min = cv
+                individual = individual_cpy
+        
+        for i in range(len(self.individuals)):
+            if np.allclose(individual, self.individuals[i]):
+                # The individual already exists in the 
+                # population so we don't insert it
+                return
+
+        self.individuals[self.best_individual_indx] = individual
+
+
         
 
