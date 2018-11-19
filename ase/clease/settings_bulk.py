@@ -73,7 +73,8 @@ class CEBulk(ClusterExpansionSetting):
                  cubic=False, size=None, supercell_factor=None,
                  concentration=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, basis_function='sanchez',
-                 dist_num_dec=3, ignore_background_atoms=False):
+                 dist_num_dec=3, skew_threshold=4,
+                 ignore_background_atoms=False):
 
         # Initialization
         self.structures = {'sc': 1, 'fcc': 1, 'bcc': 1, 'hcp': 1, 'diamond': 1,
@@ -90,7 +91,7 @@ class CEBulk(ClusterExpansionSetting):
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_function,
+                                         basis_function, skew_threshold,
                                          ignore_background_atoms)
 
         # Save raw input arguments for save/load. The arguments gets altered
@@ -142,7 +143,7 @@ class CEBulk(ClusterExpansionSetting):
     def _group_index_by_basis(self):
         indx_by_basis = []
         for basis in self.basis_elements:
-            indx_by_basis.append([a.index for a in self.atoms_with_given_dim if
+            indx_by_basis.append([a.index for a in self.atoms if
                                   a.symbol == basis[0]])
 
         for basis in indx_by_basis:
@@ -232,7 +233,8 @@ class CECrystal(ClusterExpansionSetting):
                  supercell_factor=None, primitive_cell=False,
                  concentration=None, db_name=None, max_cluster_size=4,
                  max_cluster_dia=None, basis_function='sanchez',
-                 dist_num_dec=3, ignore_background_atoms=False):
+                 dist_num_dec=3, skew_threshold=4,
+                 ignore_background_atoms=False):
 
         # Initialization
         self.basis = basis
@@ -249,7 +251,7 @@ class CECrystal(ClusterExpansionSetting):
         ClusterExpansionSetting.__init__(self, size, supercell_factor,
                                          dist_num_dec, concentration, db_name,
                                          max_cluster_size, max_cluster_dia,
-                                         basis_function,
+                                         basis_function, skew_threshold,
                                          ignore_background_atoms)
 
         # Save raw input arguments for save/load. The arguments gets altered
@@ -301,7 +303,7 @@ class CECrystal(ClusterExpansionSetting):
                 shift = np.add(sites_temp, [0, 0, float(z) / scale_factor[2]])
                 sites = np.append(sites, shift, axis=0)
 
-        positions = self.atoms_with_given_dim.get_scaled_positions()
+        positions = self.atoms.get_scaled_positions()
         for i, site in enumerate(sites):
             for j, pos in enumerate(positions):
                 # Avoid position to be very close to 1.0 (e.g., 0.99999999)

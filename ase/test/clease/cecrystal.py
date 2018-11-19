@@ -159,7 +159,7 @@ def test_two_grouped_basis_probe_structure():
         assert abs(cf[key] - all_cf["Ta_O_X_grouped"][key]) < tol
 
     try:
-        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -167,7 +167,7 @@ def test_two_grouped_basis_probe_structure():
                                     approx_mean_var=True)
 
         db = connect(db_name)
-        for row in db.select('id>4'):
+        for row in db.select(struct_type='initial'):
             atoms = row.toatoms(add_additional_information=True)
             kvp = atoms.info['key_value_pairs']
             cf = corr.get_cf(atoms, return_type='dict')
@@ -213,7 +213,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
     assert len(bsg.basis_functions) == 1
 
     try:
-        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -232,7 +232,7 @@ def test_two_grouped_basis_background_atoms_probe_structure():
             assert abs(cf[key] - all_cf["Ta_O_X_ungrouped"][key]) < tol
 
         db = connect(db_name)
-        for row in db.select('id>4'):
+        for row in db.select(struct_type='initial'):
             atoms = row.toatoms(add_additional_information=True)
             kvp = atoms.info['key_value_pairs']
             cf = corr.get_cf(atoms, return_type='dict')
@@ -265,7 +265,7 @@ def test_narrow_angle_crystal():
     assert len(bsg.index_by_trans_symm) == 1
 
     try:
-        ns = NewStructures(setting=bsg, struct_per_gen=3)
+        ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=bsg, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,

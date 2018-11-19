@@ -27,11 +27,10 @@ class StructureGenerator(object):
         self.cluster_names = self.setting.cluster_names
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
+        self.atoms = wrap_and_sort_by_position(atoms.copy())
         if self._is_valid(atoms):
-            if len(atoms) != len(setting.atoms_with_given_dim):
+            if len(atoms) != len(setting.atoms):
                 raise ValueError("Passed Atoms has a wrong size.")
-            self.supercell, self.periodic_indices, self.index_by_basis = \
-                self._build_supercell(wrap_and_sort_by_position(atoms.copy()))
         else:
             raise ValueError("concentration of the elements in the provided"
                              " atoms is not consistent with the settings.")
@@ -40,7 +39,7 @@ class StructureGenerator(object):
         # but the energy produced from this should never be used
         eci = {name: 1. for name in self.cluster_names}
         self.calc = Clease(self.setting, cluster_name_eci=eci)
-        self.supercell.set_calculator(self.calc)
+        self.atoms.set_calculator(self.calc)
         self.output_every = 30
         self.init_temp = init_temp
         self.final_temp = final_temp
@@ -57,46 +56,6 @@ class StructureGenerator(object):
     def _is_valid(self, atoms):
         return self.setting.concentration.is_valid(
                 self.setting.index_by_basis, atoms)
-
-    def _build_supercell(self, atoms):
-        for atom in atoms:
-            atom.tag = atom.index
-
-        natoms = len(atoms)
-        atoms *= self.setting.supercell_scale_factor
-        atoms = wrap_and_sort_by_position(atoms)
-
-        periodic_indices = []
-        for tag in range(natoms):
-            periodic_indices.append([a.index for a in atoms if a.tag == tag])
-
-        tag_by_basis = self.setting.index_by_basis
-
-        index_by_basis = []
-        for basis in tag_by_basis:
-            basis_elements = []
-            for atom in atoms:
-                if atom.tag in basis:
-                    basis_elements.append(atom.index)
-            index_by_basis.append(basis_elements)
-
-        return atoms, periodic_indices, index_by_basis
-
-    def _supercell2unitcell(self, sc_atoms=None):
-        """Convert supercell to unitcell
-
-        Arguments
-        =========
-        sc_atoms: Atoms
-            supercell to convert. If None self.supercell is used.
-        """
-        atoms = self.setting.atoms_with_given_dim.copy()
-        if sc_atoms is None:
-            sc_atoms = self.supercell
-
-        for a in atoms:
-            a.symbol = sc_atoms[self.periodic_indices[a.index][0]].symbol
-        return atoms
 
     def _reset(self):
         pass
@@ -139,20 +98,19 @@ class StructureGenerator(object):
                         continue
                 else:
                     indx = self._swap_two_atoms()
-                    if self.supercell[indx[0]].symbol == \
-                            self.supercell[indx[1]].symbol:
+                    if self.atoms[indx[0]].symbol == \
+                            self.atoms[indx[1]].symbol:
                         continue
-                self.supercell.get_potential_energy()
+                self.atoms.get_potential_energy()
 
                 if self._accept():
                     num_accepted += 1
                 else:
-                    self.calc.restore(self.supercell)
+                    self.calc.restore(self.atoms)
 
         self._check_consistency()
-        atoms = self._supercell2unitcell(self.generated_structure)
-        cf = self.corrFunc.get_cf(atoms, return_type="dict")
-        return atoms, cf
+        cf = self.corrFunc.get_cf(self.atoms, return_type="dict")
+        return self.atoms, cf
 
     def _accept(self):
         raise NotImplementedError('_accept should be implemented in the '
@@ -173,8 +131,7 @@ class StructureGenerator(object):
         count = 0
         max_count = 100
         now = time.time()
-        # To avoid errors, just set the temperature to
-        # an arbitrary file
+        # To avoid errors, just set the temperature to an arbitrary file
         self.temp = 10000000.0
         while count < max_count:
             if time.time() - now > self.output_every:
@@ -190,11 +147,11 @@ class StructureGenerator(object):
                     continue
             else:
                 indx = self._swap_two_atoms()
-                if self.supercell[indx[0]].symbol == \
-                        self.supercell[indx[1]].symbol:
+                if self.atoms[indx[0]].symbol == \
+                        self.atoms[indx[1]].symbol:
                     continue
                 count += 1
-            self.supercell.get_potential_energy()
+            self.atoms.get_potential_energy()
 
             # By calling accept statistics on the correlation
             # function and variance will be collected
@@ -218,25 +175,20 @@ class StructureGenerator(object):
             # a basis with only 1 type of element should not be chosen
             if len(basis_elements[basis]) < 2:
                 continue
-            indx[0] = choice(self.index_by_basis[basis])
-            symbol[0] = self.supercell[indx[0]].symbol
+            indx[0] = choice(self.setting.index_by_basis[basis])
+            symbol[0] = self.atoms[indx[0]].symbol
             break
         # pick second atom that occupies the same basis.
         while True:
-            indx[1] = choice(self.index_by_basis[basis])
-            symbol[1] = self.supercell[indx[1]].symbol
+            indx[1] = choice(self.setting.index_by_basis[basis])
+            symbol[1] = self.atoms[indx[1]].symbol
             if symbol[1] in basis_elements[basis]:
                 break
 
         # Swap two elements
-        self.supercell[indx[0]].symbol = symbol[1]
-        self.supercell[indx[1]].symbol = symbol[0]
+        self.atoms[indx[0]].symbol = symbol[1]
+        self.atoms[indx[1]].symbol = symbol[0]
 
-        # find which index it should be in unit cell
-        for i in indx:
-            unit_cell_indx = self.supercell[i].tag
-            for grp_index in self.periodic_indices[unit_cell_indx]:
-                self.supercell[grp_index].symbol = self.supercell[i].symbol
         return indx
 
     def _has_more_than_one_conc(self):
@@ -264,29 +216,18 @@ class StructureGenerator(object):
             if len(basis_elements[basis]) < 2:
                 continue
 
-            indx = choice(self.index_by_basis[basis])
-            old_symbol = self.supercell[indx].symbol
+            indx = choice(self.setting.index_by_basis[basis])
+            old_symbol = self.atoms[indx].symbol
 
             # change element type
             new_symbol = choice(basis_elements[basis])
             if new_symbol != old_symbol:
-                self.supercell[indx].symbol = new_symbol
-
-                # Update all periodic images
-                unit_cell_indx = self.supercell[indx].tag
-                for grp_index in self.periodic_indices[unit_cell_indx]:
-                    self.supercell[grp_index].symbol \
-                        = self.supercell[indx].symbol
+                self.atoms[indx].symbol = new_symbol
 
                 if self.setting.concentration.is_valid(
-                     self.setting.index_by_basis, self._supercell2unitcell()):
+                     self.setting.index_by_basis, self.atoms):
                     break
-                self.supercell[indx].symbol = old_symbol
-
-                # Revert all periodic images
-                for grp_index in self.periodic_indices[unit_cell_indx]:
-                    self.supercell[grp_index].symbol \
-                        = self.supercell[indx].symbol
+                self.atoms[indx].symbol = old_symbol
 
     def _check_consistency(self):
         # Check to see if the cf is indeed preserved
@@ -294,23 +235,16 @@ class StructureGenerator(object):
             self.corrFunc.get_cf_by_cluster_names(self.generated_structure,
                                                   self.calc.cluster_names,
                                                   return_type='dict')
-        # for i in range(len(self.calc.cluster_names)):
-        #     print(self.calc.cluster_names[i], final_cf[i] - self.calc.cf[i])
         for k in final_cf:
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
                 msg = 'Correlation function changed after simulated annealing'
                 raise ValueError(msg)
 
-        for grp in self.periodic_indices:
-            ref_symbol = self.generated_structure[grp[0]].symbol
-            for indx in grp[1:]:
-                assert self.generated_structure[indx].symbol == ref_symbol
-
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""
         cfm = []
         db = connect(self.setting.db_name)
-        for row in db.select([('name', '!=', 'template')]):
+        for row in db.select(struct_type='initial'):
             cfm.append([row[x] for x in self.cluster_names])
         cfm = np.array(cfm, dtype=float)
         return cfm
@@ -395,13 +329,13 @@ class ProbeStructure(StructureGenerator):
 
         # Always accept the first move
         if self.generated_structure is None:
-            self.generated_structure = self.supercell.copy()
+            self.generated_structure = self.atoms.copy()
             self.min_mv = n_mv
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
             return True
 
         if n_mv < self.o_mv:
-            self.generated_structure = self.supercell.copy()
+            self.generated_structure = self.atoms.copy()
             self.min_mv = n_mv
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
 
@@ -474,23 +408,23 @@ class EminStructure(StructureGenerator):
                                     num_steps_per_temp)
         self.alter_composition = False
         self.calc = Clease(self.setting, cluster_name_eci=cluster_name_eci)
-        self.supercell.set_calculator(self.calc)
+        self.atoms.set_calculator(self.calc)
         self.old_energy = None
         self.min_energy = None
 
     def _accept(self):
         """Accept the last change."""
-        new_energy = self.supercell.get_potential_energy()
+        new_energy = self.atoms.get_potential_energy()
         if self.generated_structure is None:
             self.old_energy = new_energy
             self.min_energy = new_energy
-            self.generated_structure = self.supercell.copy()
+            self.generated_structure = self.atoms.copy()
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
             return True
 
         if new_energy < self.min_energy:
             self.min_energy = new_energy
-            self.generated_structure = self.supercell.copy()
+            self.generated_structure = self.atoms.copy()
             self.cf_generated_structure = deepcopy(self.calc.get_cf_dict())
 
         if new_energy < self.old_energy:

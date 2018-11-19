@@ -64,6 +64,7 @@ def get_rocksalt():
                      concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=3,
+                     max_cluster_dia=[7.0, 4.0],
                      ignore_background_atoms=True)
 
     atoms = bulk("LiO", crystalstructure="rocksalt", a=4.05)

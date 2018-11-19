@@ -4,6 +4,19 @@ class FloatingPointClassifier(object):
         self.num_dec = num_decimals
         self.lut = []
 
+    def toJSON(self):
+        json_fields = {
+            "num_dec": self.num_dec,
+            "lut": self.lut
+        }
+        return json_fields
+
+    @staticmethod
+    def fromJSON(json_fields):
+        obj = FloatingPointClassifier(json_fields["num_dec"])
+        obj.lut = json_fields["lut"]
+        return obj
+
     def get(self, float_num):
         """Return the classification string of float_num."""
         tol = 2 * 10**(-self.num_dec)

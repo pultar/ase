@@ -14,6 +14,7 @@ from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
 from ase.db import connect
 
+db_name = "test_bulk.db"
 
 
 def get_members_of_family(setting, cname):
@@ -30,10 +31,9 @@ def test_binary_system():
 
     The EMT calculator is used for energy calculations
     """
-    db_name = "test_crystal.db"
-    basis_elements = [["Au", "Cu"]]
+    basis_elements = [['Au', 'Cu']]
     concentration = Concentration(basis_elements=basis_elements)
-    bc_setting = CEBulk(crystalstructure="fcc", a=4.05, size=[3, 3, 3],
+    bc_setting = CEBulk(crystalstructure='fcc', a=4.05, size=[3, 3, 3],
                         concentration=concentration, db_name=db_name)
 
     newstruct = NewStructures(bc_setting, struct_per_gen=3)
@@ -42,12 +42,6 @@ def test_binary_system():
     # Compute the energy of the structures
     calc = EMT()
     database = connect(db_name)
-    # all_atoms = []
-    # key_value_pairs = []
-    # for row in database.select("converged=False"):
-    #     atoms = row.toatoms()
-    #     all_atoms.append(atoms)
-    #     key_value_pairs.append(row.key_value_pairs)
 
     # Write the atoms to the database
     # for atoms, kvp in zip(all_atoms, key_value_pairs):
@@ -72,13 +66,8 @@ def test_binary_system():
     os.remove(db_name)
 
 
-def test_grouped_basis_supercell():
-    # ----------------------------------------------------------##
-    # Test probe structure generation with cell size (2, 2, 1). ##
-    # ----------------------------------------------------------##
+def test_1grouped_basis_probe():
     """Test a case where a grouped_basis is used with supercell."""
-    db_name = "test_crystal.db"
-
     # ------------------------------- #
     # 1 grouped basis                 #
     # ------------------------------- #
@@ -94,12 +83,13 @@ def test_grouped_basis_supercell():
                      db_name=db_name,
                      max_cluster_size=3,
                      max_cluster_dia=4.)
+
     assert setting.num_basis == 1
     assert len(setting.index_by_basis) == 1
     assert setting.spin_dict == {'Cl': 1.0, 'Na': -1.0}
     assert len(setting.basis_functions) == 1
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -111,6 +101,8 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
+
+def test_2grouped_basis_probe():
     # ------------------------------- #
     # 2 grouped basis                 #
     # ------------------------------- #
@@ -136,7 +128,7 @@ def test_grouped_basis_supercell():
     assert len(setting.basis_functions) == 2
 
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -148,6 +140,7 @@ def test_grouped_basis_supercell():
 
     os.remove(db_name)
 
+def test_2grouped_basis_bckgrnd_probe():
     # ---------------------------------- #
     # 2 grouped_basis + background atoms #
     # ---------------------------------- #
@@ -170,7 +163,7 @@ def test_grouped_basis_supercell():
     assert len(setting.basis_functions) == 1
 
     try:
-        ns = NewStructures(setting=setting, struct_per_gen=3)
+        ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
@@ -183,5 +176,14 @@ def test_grouped_basis_supercell():
     os.remove(db_name)
 
 
+print('binary')
 test_binary_system()
-test_grouped_basis_supercell()
+
+print('1 grouped basis with probe structure')
+test_1grouped_basis_probe()
+
+print('2 grouped basis with probe structure')
+test_2grouped_basis_probe()
+
+print('2 grouped basis + background + probe structure')
+test_2grouped_basis_bckgrnd_probe()

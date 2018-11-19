@@ -35,7 +35,7 @@ class Concentration(object):
         bounds of the concentration ranges.
 
     b_lb: list or numpy list (optional)
-        A list 
+        A list
 
     """
     def __init__(self, basis_elements=None, grouped_basis=None,
@@ -63,6 +63,7 @@ class Concentration(object):
 
         self.A_eq = np.zeros((num_implicit_eq, self.num_concs), dtype=int)
         self.b_eq = np.zeros(num_implicit_eq, dtype=int)
+        self.orig_num_equality = self.A_eq.shape[0]
 
         # Ensure concentration in each basis sum to 1
         start_col = 0
@@ -457,6 +458,7 @@ class Concentration(object):
         ranges = self.get_individual_comp_range()
         min_range = 0.01
         maxiter = 1000
+        self.orig_num_equality = self.A_eq.shape[0]
         for basis in self.basis_elements:
             iteration = 0
             rng = 0.5*min_range
@@ -466,7 +468,7 @@ class Concentration(object):
                 rng = ranges[indx][1] - ranges[indx][0]
             if iteration >= maxiter:
                 self.fixed_element_constraint_added = False
-                return
+                continue
             indices.append(indx)
             start += len(basis)
 
@@ -486,9 +488,8 @@ class Concentration(object):
         """Remove the last rows."""
         if not self.fixed_element_constraint_added:
             return
-        num_basis = len(self.basis_elements)
-        self.A_eq = self.A_eq[:-num_basis, :]
-        self.b_eq = self.b_eq[:-num_basis]
+        self.A_eq = self.A_eq[:self.orig_num_equality, :]
+        self.b_eq = self.b_eq[:self.orig_num_equality]
         self.fixed_element_constraint_added = False
 
     def get_individual_comp_range(self):
@@ -507,7 +508,7 @@ class Concentration(object):
         self._add_fixed_element_in_each_basis()
         # Setup the constraints
         constraints = self._get_constraints()
-        x0 = 2.0*np.random.rand(self.num_concs)
+        x0 = np.random.rand(self.num_concs)
 
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_random, x0, args=(x0,),
@@ -563,21 +564,21 @@ class Concentration(object):
         int_array = np.zeros(self.num_concs, dtype=int)
         start = 0
         b_eq = self.b_eq.copy()
-
         for i, num in enumerate(num_atoms_in_basis):
             n = len(self.basis_elements[i])
             end = start + n
             if end >= len(int_array):
                 int_array[start:] = np.round(conc[start:]*num).astype(np.int32)
             else:
-                int_array[start: end] = np.round(conc[start: end]*num).astype(np.int32)
+                int_array[start: end] = \
+                    np.round(conc[start: end]*num).astype(np.int32)
             b_eq[i] *= num
             start += n
 
         # Make sure that equality constraints are satisfied
         dot_prod = self.A_eq.dot(int_array)
-
-        if not np.allclose(dot_prod, b_eq):
+        num_basis = len(num_atoms_in_basis)
+        if not np.allclose(dot_prod[:num_basis], b_eq[:num_basis]):
             msg = "The conversion from floating point concentration to int "
             msg += "is not consistent. Expected: {}, ".format(b_eq)
             msg += "got: {}".format(dot_prod)
@@ -633,7 +634,6 @@ class Concentration(object):
         """
         x = self.get_concentration_vector(index_by_basis, atoms)
         return self.is_valid_conc(x)
-
 
 
 # Helper function used by the minimization algorithm
