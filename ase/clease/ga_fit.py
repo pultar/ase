@@ -3,6 +3,7 @@ from ase.clease import LinearRegression, Tikhonov
 import numpy as np
 import os
 
+
 class GAFit(LinearRegression):
     """
     Genetic Algorithm for selecting relevant clusters
@@ -10,18 +11,17 @@ class GAFit(LinearRegression):
     Arguments
     =========
     evaluator: Evaluate
-        Instance of the Evaluate class. The GA needs 
-        cf_matrix and e_dft from the evaluate class.
+        Instance of the Evaluate class. The GA needs cf_matrix and e_dft from
+        the evaluate class.
     alpha: float
-        Regularization parameter for ridge regression which is 
-        used internally to obtain the coefficient
+        Regularization parameter for ridge regression which is used internally
+        to obtain the coefficient
     elitism: int
-        Number of best structures that will be passed
-        unaltered on to the next generation
+        Number of best structures that will be passed unaltered on to the next
+        generation
     fname: str
-        Filename used to backup the population. If this file
-        exists, the next run will load the population from 
-        the file and start from there.
+        Filename used to backup the population. If this file exists, the next
+        run will load the population from the file and start from there.
     num_individuals: int or str
         Integer with the number of inidivuals or it is equal to "auto",
         in which case 10 times the number of candidate clusters is used
@@ -29,8 +29,9 @@ class GAFit(LinearRegression):
         If a mutation is selected this denotes the probability of a mutating
         a given gene.
 
-    Examples:
 
+    Example:
+    =======
     from ase.clease import Evaluate
     from ase.clease import GAFit
     setting = None # Should be an ASE ClusterExpansionSetting object
@@ -40,9 +41,9 @@ class GAFit(LinearRegression):
     evaluator.get_cluster_name_eci()
 
     """
-    def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5, elitism=3,
-                 fname="ga_fit.csv", num_individuals="auto", change_prob=0.2,
-                 local_decline=True):
+    def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5,
+                 elitism=3, fname="ga_fit.csv", num_individuals="auto",
+                 change_prob=0.2, local_decline=True):
         from ase.clease import Evaluate
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")
@@ -72,9 +73,10 @@ class GAFit(LinearRegression):
         """Initialize a random population."""
         individuals = []
         if os.path.exists(self.fname):
-            individ_from_file = np.loadtxt(self.fname, delimiter=",").astype(int)
+            individ_from_file = np.loadtxt(self.fname,
+                                           delimiter=",").astype(int)
             for i in range(individ_from_file.shape[0]):
-                individuals.append(individ_from_file[i,:])
+                individuals.append(individ_from_file[i, :])
         else:
             for _ in range(self.pop_size):
                 individual = np.random.choice(
@@ -84,7 +86,7 @@ class GAFit(LinearRegression):
         return individuals
 
     def fit_individual(self, individual):
-        X = self.evaluator.cf_matrix[:, individual==1]
+        X = self.evaluator.cf_matrix[:, individual == 1]
         y = self.evaluator.e_dft
         coeff = self.regression.fit(X, y)
 
@@ -105,18 +107,18 @@ class GAFit(LinearRegression):
     def flip_mutation(self, individual):
         """Apply mutation operation."""
         rand_num = np.random.rand(len(individual))
-        flip_indx = (rand_num<self.change_prob)
-        individual[flip_indx] = (individual[flip_indx]+1)%2
+        flip_indx = (rand_num < self.change_prob)
+        individual[flip_indx] = (individual[flip_indx]+1) % 2
         return individual
 
     def sparsify_mutation(self, individual):
         """Change one 1 to 0."""
-        indx = np.argwhere(individual==1)
+        indx = np.argwhere(individual == 1)
         rand_num = np.random.rand(len(indx))
         flip_indx = (rand_num < self.change_prob)
         individual[indx[flip_indx]] = 0
         return individual
-        
+
     def make_valid(self, individual):
         """Make sure that there is at least two active ECIs."""
         if np.sum(individual) < 2:
@@ -147,7 +149,7 @@ class GAFit(LinearRegression):
             else:
                 individual = self.sparsify_mutation(individual.copy())
             new_generation.append(self.make_valid(individual))
-        
+
         cumulative_sum = np.cumsum(self.fitness)
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
@@ -155,18 +157,20 @@ class GAFit(LinearRegression):
         # Create new generation by mergin existing
         for i in range(num_inserted, self.pop_size):
             rand_num = np.random.rand()
-            p1 = np.argmax(cumulative_sum>rand_num)
+            p1 = np.argmax(cumulative_sum > rand_num)
             p2 = p1
             while p2 == p1:
                 rand_num = np.random.rand()
-                p2 = np.argmax(cumulative_sum>rand_num)
+                p2 = np.argmax(cumulative_sum > rand_num)
 
             crossing_point = np.random.randint(low=0, high=self.num_genes)
             new_individual = self.individuals[p1].copy()
-            new_individual[crossing_point:] = self.individuals[p2][crossing_point:]
+            new_individual[crossing_point:] = \
+                self.individuals[p2][crossing_point:]
 
             new_individual2 = self.individuals[p2].copy()
-            new_individual2[crossing_point:] = self.individuals[p1][crossing_point:]
+            new_individual2[crossing_point:] = \
+                self.individuals[p1][crossing_point:]
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
@@ -207,7 +211,7 @@ class GAFit(LinearRegression):
     @property
     def best_individual_indx(self):
         best_indx = np.argmax(self.fitness)
-        return best_indx       
+        return best_indx
 
     def fit(self, X, y):
         """Perform fit using the best individual."""
@@ -219,15 +223,14 @@ class GAFit(LinearRegression):
                                "the cf_matrix in Evaluate!")
         coeff, _ = self.fit_individual(individual)
         all_coeff = np.zeros(X.shape[1])
-        all_coeff[individual==1] = coeff
+        all_coeff[individual == 1] = coeff
 
-        self.evaluator.cf_matrix[:, individual==0] = 0.0
+        self.evaluator.cf_matrix[:, individual == 0] = 0.0
         return all_coeff
 
     @staticmethod
     def get_instance_array():
-        raise TypeError("Does not make sense to create an instance array "
-                        "GA.")
+        raise TypeError("Does not make sense to create an instance array GA.")
 
     def save_population(self):
         # Save population
@@ -247,18 +250,17 @@ class GAFit(LinearRegression):
 
     def run(self, gen_without_change=1000, min_change=0.01, save_interval=100):
         """Run the genetic algorithm.
-        
+
         Arguments
         ===========
         gen_without_change: int
-            Terminate if gen_without_change are created without
-            sufficient improvement
+            Terminate if gen_without_change are created without sufficient
+            improvement
         min_change: float
-            Changes a larger than this value is considered
-            "sufficient" improvement
+            Changes a larger than this value is considered "sufficient"
+            improvement
         save_interval: int
-            Rate at which all the populations are backed up 
-            in a file
+            Rate at which all the populations are backed up in a file
         """
         num_gen_without_change = 0
         current_best = 0.0
@@ -272,7 +274,8 @@ class GAFit(LinearRegression):
             # after the earliest possible return
             # If local optimization is turned on too early it seems like
             # it is easy to reach premature convergence
-            if best_indx != 0 and self.local_decline and gen >= gen_without_change:
+            if best_indx != 0 and self.local_decline and \
+                    gen >= gen_without_change:
                 self.log("Performing local optimization on new "
                          "best candidate.")
                 self._local_optimization()
@@ -292,12 +295,12 @@ class GAFit(LinearRegression):
                 num_gen_without_change += 1
             current_best = cv
 
-            if gen%save_interval == 0:
+            if gen % save_interval == 0:
                 self.save_population()
 
             if num_gen_without_change >= gen_without_change:
-                self.log("\nReached {} generations, without sufficient improvement"
-                         "".format(gen_without_change))
+                self.log("\nReached {} generations without sufficient "
+                         "improvement".format(gen_without_change))
                 break
             gen += 1
 
@@ -320,21 +323,17 @@ class GAFit(LinearRegression):
         for _ in range(num_steps):
             flip_indx = choice(range(len(individual)))
             individual_cpy = deepcopy(individual)
-            individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1)%2
+            individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1) % 2
             _, cv = self.fit_individual(individual_cpy)
 
             if cv < cv_min:
                 cv_min = cv
                 individual = individual_cpy
-        
+
         for i in range(len(self.individuals)):
             if np.allclose(individual, self.individuals[i]):
-                # The individual already exists in the 
-                # population so we don't insert it
+                # The individual already exists in the population so we don't
+                # insert it
                 return
 
         self.individuals[self.best_individual_indx] = individual
-
-
-        
-
