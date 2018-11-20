@@ -136,21 +136,16 @@ class NewStructures(object):
             if num_struct >= self.struct_per_gen:
                 break
 
-            atoms = self._get_struct_at_conc(conc_type='random')
-
-            formula_unit = self._get_formula_unit(atoms)
-            if self._exists_in_db(atoms, formula_unit):
-                num_attempt += 1
-                continue
+            struct = self._get_struct_at_conc(conc_type='random')
 
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
-            ps = ProbeStructure(self.setting, atoms, self.struct_per_gen,
+            ps = ProbeStructure(self.setting, struct, self.struct_per_gen,
                                 init_temp, final_temp, num_temp,
                                 num_steps_per_temp, approx_mean_var)
-            atoms, cf = ps.generate()
-            formula_unit = self._get_formula_unit(atoms)
-            if self._exists_in_db(atoms, formula_unit):
+            probe_struct, cf = ps.generate()
+            formula_unit = self._get_formula_unit(probe_struct)
+            if self._exists_in_db(probe_struct, formula_unit):
                 print('generated structure is already in DB.')
                 print('generating again...')
                 num_attempt += 1
@@ -158,8 +153,9 @@ class NewStructures(object):
             else:
                 num_attempt = 0
 
-            kvp = self._get_kvp(atoms, cf, formula_unit)
-            self.db.write(atoms, kvp)
+            kvp = self._get_kvp(probe_struct, cf, formula_unit)
+            probe_struct.calc.results['energy'] = None
+            self.db.write(probe_struct, kvp)
 
             if num_attempt >= max_attempt:
                 msg = "Could not generate probe structure in 10 attempts."
@@ -182,6 +178,10 @@ class NewStructures(object):
             If None, the size will be generated randomly with a bias towards
                 more cubic cells (i.e., cell with similar magnitudes of vectors
                 a, b and c)
+
+        unit_cell_id: int
+            (only used when size is used)
+            The ID of the unit cell in the database to be used
 
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
@@ -208,13 +208,13 @@ class NewStructures(object):
                 self.setting.set_active_template(size=size,
                                                  unit_cell_id=unit_cell_id,
                                                  generate_template=True)
-                atoms = self._get_struct_at_conc(conc_type='random')
+                struct = self._get_struct_at_conc(conc_type='random')
             else:
                 print("Generating a structure with the composition "
                       "corresponding to the passed Atoms object "
                       "(cell size is the same as the passed Atoms).")
-                atoms = wrap_and_sort_by_position(atoms)
-                self.setting.set_active_template(atoms=atoms,
+                struct = wrap_and_sort_by_position(atoms)
+                self.setting.set_active_template(atoms=struct,
                                                  generate_template=True)
                 num_struct = len([row.id for row in
                                   self.db.select(gen=self.gen)])
@@ -223,13 +223,13 @@ class NewStructures(object):
 
             print('Generating {} out of {} structures.'
                   .format(num_struct + 1, self.struct_per_gen))
-            es = EminStructure(self.setting, atoms, self.struct_per_gen,
+            es = EminStructure(self.setting, struct, self.struct_per_gen,
                                init_temp, final_temp, num_temp,
                                num_steps_per_temp, cluster_names_eci)
-            atoms, cf = es.generate()
-            formula_unit = self._get_formula_unit(atoms)
+            emin_struct, cf = es.generate()
+            formula_unit = self._get_formula_unit(emin_struct)
 
-            if self._exists_in_db(atoms, formula_unit):
+            if self._exists_in_db(emin_struct, formula_unit):
                 print('generated structure is already in DB.')
                 print('generating again...')
                 num_attempt += 1
@@ -238,8 +238,8 @@ class NewStructures(object):
                 num_attempt = 0
 
             print('Structure with E = {} generated.'.format(es.min_energy))
-            kvp = self._get_kvp(atoms, cf, formula_unit)
-            self.db.write(atoms, kvp)
+            kvp = self._get_kvp(emin_struct, cf, formula_unit)
+            self.db.write(emin_struct, kvp)
 
             if num_attempt >= max_attempt:
                 msg = "Could not generate probe structure in 10 attempts."
