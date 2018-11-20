@@ -66,6 +66,31 @@ def test_binary_system():
     os.remove(db_name)
 
 
+def test_initial_pool():
+    from ase.db import connect
+    basis_elements = [['Li', 'V'], ['X', 'O']]
+    concentration = Concentration(basis_elements=basis_elements)
+
+    setting = CEBulk(crystalstructure="rocksalt",
+                     a=4.0,
+                     size=[2, 2, 1],
+                     concentration=concentration,
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.)
+    ns = NewStructures(setting=setting, struct_per_gen=2)
+    ns.generate_initial_pool()
+
+    # At this point there should be the following
+    # structures in the DB
+    expected_names = ["V1_O1_0", "Li1_X1_0", 
+                      "V1_X1_0", "Li1_O1_0"]
+    db = connect(db_name)
+    for name in expected_names:
+        num = sum(1 for row in db.select(name=name))
+        assert num == 1
+    os.remove(db_name)
+
 def test_1grouped_basis_probe():
     """Test a case where a grouped_basis is used with supercell."""
     # ------------------------------- #
@@ -175,7 +200,6 @@ def test_2grouped_basis_bckgrnd_probe():
 
     os.remove(db_name)
 
-
 print('binary')
 test_binary_system()
 
@@ -187,3 +211,6 @@ test_2grouped_basis_probe()
 
 print('2 grouped basis + background + probe structure')
 test_2grouped_basis_bckgrnd_probe()
+
+print('initial pool')
+test_initial_pool()
