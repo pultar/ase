@@ -247,20 +247,24 @@ class NewStructures(object):
 
     def generate_initial_pool(self):
         """Generate initial pool of random structures."""
-
+        from itertools import product
         print("Generating initial pool consisting of one structure per "
               "concentration where the number of an element is at max/min")
+        indx_in_each_basis = []
+        start = 0
+        for basis in self.setting.concentration.basis_elements:
+            indx_in_each_basis.append(list(range(start, start+len(basis))))
+            start += len(basis)
 
-        for indx in range(self.setting.concentration.num_concs):
-            for option in ["min", "max"]:
-                atoms = self._get_struct_at_conc(conc_type=option, index=indx)
-                atoms = wrap_and_sort_by_position(atoms)
-                formula_unit = self._get_formula_unit(atoms)
+        for indx in product(*indx_in_each_basis):
+            atoms = self._get_struct_at_conc(conc_type="max", index=indx)
+            atoms = wrap_and_sort_by_position(atoms)
+            formula_unit = self._get_formula_unit(atoms)
 
-                if not self._exists_in_db(atoms, formula_unit):
-                    kvp = self.corrfunc.get_cf(atoms)
-                    kvp = self._get_kvp(atoms, kvp, formula_unit)
-                    self.db.write(atoms, kvp)
+            if not self._exists_in_db(atoms, formula_unit):
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, formula_unit)
+                self.db.write(atoms, kvp)
 
     def _get_struct_at_conc(self, conc_type='random', index=0):
         """Generate a structure at a concentration specified.

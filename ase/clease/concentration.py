@@ -519,6 +519,9 @@ class Concentration(object):
 
     def get_conc_min_component(self, comp):
         """Generate all end points of the composition domain."""
+        if isinstance(comp, int):
+            comp = [comp]
+        comp = np.array(comp)
         constraints = self._get_constraints()
 
         x0 = np.random.rand(self.num_concs)
@@ -531,6 +534,10 @@ class Concentration(object):
 
     def get_conc_max_component(self, comp):
         """Generate all end points of the composition domain."""
+        if isinstance(comp, int):
+            # Create list with length one
+            comp = [comp]
+        comp = np.array(comp)
         constraints = self._get_constraints()
 
         x0 = np.random.rand(self.num_concs)
@@ -638,7 +645,7 @@ class Concentration(object):
 
 # Helper function used by the minimization algorithm
 def objective_component_min(x, indx):
-    return x[indx]
+    return np.sum(x[indx])
 
 
 def obj_jac_component_min(x, indx):
@@ -648,7 +655,7 @@ def obj_jac_component_min(x, indx):
 
 
 def objective_component_max(x, indx):
-    return -x[indx]
+    return -np.sum(x[indx])
 
 
 def obj_jac_component_max(x, indx):
