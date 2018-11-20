@@ -247,11 +247,16 @@ class NewStructures(object):
 
     def generate_initial_pool(self):
         """Generate initial pool of random structures."""
-
+        from itertools import product
         print("Generating initial pool consisting of one structure per "
               "concentration where the number of an element is at max/min")
+        indx_in_each_basis = []
+        start = 0
+        for basis in self.setting.concentration.basis_elements:
+            indx_in_each_basis.append(list(range(start, start+len(basis))))
+            start += len(basis)
 
-        for indx in range(self.setting.concentration.num_concs):
+        for indx in product(*indx_in_each_basis):
             for option in ["min", "max"]:
                 atoms = self._get_struct_at_conc(conc_type=option, index=indx)
                 atoms = wrap_and_sort_by_position(atoms)
