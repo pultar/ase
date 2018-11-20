@@ -154,6 +154,7 @@ class NewStructures(object):
                 num_attempt = 0
 
             kvp = self._get_kvp(probe_struct, cf, formula_unit)
+            probe_struct.calc.results['energy'] = None
             self.db.write(probe_struct, kvp)
 
             if num_attempt >= max_attempt:
@@ -177,6 +178,10 @@ class NewStructures(object):
             If None, the size will be generated randomly with a bias towards
                 more cubic cells (i.e., cell with similar magnitudes of vectors
                 a, b and c)
+
+        unit_cell_id: int
+            (only used when size is used)
+            The ID of the unit cell in the database to be used
 
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
