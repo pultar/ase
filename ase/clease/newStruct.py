@@ -257,15 +257,14 @@ class NewStructures(object):
             start += len(basis)
 
         for indx in product(*indx_in_each_basis):
-            for option in ["min", "max"]:
-                atoms = self._get_struct_at_conc(conc_type=option, index=indx)
-                atoms = wrap_and_sort_by_position(atoms)
-                formula_unit = self._get_formula_unit(atoms)
+            atoms = self._get_struct_at_conc(conc_type="max", index=indx)
+            atoms = wrap_and_sort_by_position(atoms)
+            formula_unit = self._get_formula_unit(atoms)
 
-                if not self._exists_in_db(atoms, formula_unit):
-                    kvp = self.corrfunc.get_cf(atoms)
-                    kvp = self._get_kvp(atoms, kvp, formula_unit)
-                    self.db.write(atoms, kvp)
+            if not self._exists_in_db(atoms, formula_unit):
+                kvp = self.corrfunc.get_cf(atoms)
+                kvp = self._get_kvp(atoms, kvp, formula_unit)
+                self.db.write(atoms, kvp)
 
     def _get_struct_at_conc(self, conc_type='random', index=0):
         """Generate a structure at a concentration specified.
