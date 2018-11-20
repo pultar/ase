@@ -291,6 +291,8 @@ class SymmetryEquivalenceCheck(object):
             if matrices is None:
                 matrices, translations = \
                     self._get_rotation_reflection_matrices()
+                if matrices is None:
+                    continue
 
             # After the candidate translation based on s1 has been computed
             # we need potentially to swap s1 and s2 for robust comparison
@@ -512,7 +514,14 @@ class SymmetryEquivalenceCheck(object):
                                               rtol=rtol, atol=0)
             # The first vector is not interesting
             correct_lengths_mask[0] = False
+
+            # If no trial vectors can be found (for any direction)
+            # then the candidates are different and we return None
+            if not np.any(correct_lengths_mask):
+                return None, None
+
             candidate_indices.append(np.nonzero(correct_lengths_mask)[0])
+
         # Now we calculate all relevant angles in one step. The relevant angles
         # are the ones made by the current candidates. We will have to keep
         # track of the indices in the angles matrix and the indices in the
