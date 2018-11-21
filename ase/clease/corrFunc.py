@@ -158,7 +158,7 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in cluster_names], dtype=float)
         return cf
 
-    def reconfig_db_entries(self, select_cond=None, reset=True, ignore_default=False):
+    def reconfig_db_entries(self, select_cond=None):
         """Reconfigure the correlation function values of the entries in DB.
 
         Arguments
@@ -167,24 +167,14 @@ class CorrFunction(object):
             -None (default): select every item in DB except for
                              "struct_type='initial'"
             -else: select based on additional condictions provided
-
-        reset: bool
-            -True: removes all the key-value pairs that describe correlation
-                   functions.
-            -False: leaves the existing correlation functions in the key-Value
-                    pairs, but overwrites the ones that exists in the current
-                    setting.
-        ignore_default: bool
-            If True no selection criteria is added by default
         """
         db = connect(self.setting.db_name)
         select = []
-        if not ignore_default:
-            select = [('struct_type', '=', 'initial')]
-            
         if select_cond is not None:
             for cond in select_cond:
                 select.append(cond)
+        else:
+            select = [('struct_type', '=', 'initial')]
 
         # get how many entries need to be reconfigured
         row_ids = [row.id for row in db.select(select)]
