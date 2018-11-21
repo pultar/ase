@@ -187,13 +187,12 @@ class CorrFunction(object):
             kvp = row.key_value_pairs
 
             # delete existing CF values
-            if reset:
-                keys = []
-                for key in kvp.keys():
-                    if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
-                                       'c6', 'c7', 'c8', 'c9')):
-                        keys.append(key)
-                db.update(row_id, delete_keys=keys)
+            keys = []
+            for key in kvp.keys():
+                if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
+                                    'c6', 'c7', 'c8', 'c9')):
+                    keys.append(key)
+            db.update(row_id, delete_keys=keys)
 
             # get new CF based on setting
             atoms = wrap_and_sort_by_position(row.toatoms())
