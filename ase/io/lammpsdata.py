@@ -45,6 +45,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     bonds_in = []
     angles_in = []
     dihedrals_in = []
+    impropers_in = []
 
     sections = ["Atoms",
                 "Velocities",
@@ -205,6 +206,12 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                                      int(fields[3]),
                                      int(fields[4]),
                                      int(fields[5])))
+            elif section == "Impropers": # id type atom1 atom2 atom3 atom4
+                impropers_in.append((int(fields[1]),
+                                     int(fields[2]),
+                                     int(fields[3]),
+                                     int(fields[4]),
+                                     int(fields[5])))
 
     # set cell
     cell = np.zeros((3, 3))
@@ -255,6 +262,10 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         dihedrals = [""] * N
     else:
         dihedrals = None
+    if len(impropers_in) > 0:
+        impropers = [""] * N
+    else:
+        impropers = None
 
     ind_of_id = {}
     # copy per-atom quantities from read-in values
@@ -348,6 +359,20 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             if len(dihedrals[i]) == 0:
                 dihedrals[i] = '_'
         at.arrays['dihedrals'] = np.array(dihedrals)
+
+    if impropers is not None:
+        for (type, a1, a2, a3, a4) in impropers_in:
+            i_a1 = ind_of_id[a1]
+            i_a2 = ind_of_id[a2]
+            i_a3 = ind_of_id[a3]
+            i_a4 = ind_of_id[a4]
+            if len(impropers[i_a1]) > 0:
+                impropers[i_a1] += ","
+            impropers[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, type)
+        for i in range(len(impropers)):
+            if len(impropers[i]) == 0:
+                impropers[i] = '_'
+        at.arrays['impropers'] = np.array(impropers)
 
     at.info['comment'] = comment
 
