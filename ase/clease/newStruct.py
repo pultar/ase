@@ -172,7 +172,7 @@ class NewStructures(object):
     def generate_Emin_structure(self, atoms=None, init_temp=2000,
                                 final_temp=1, num_temp=10,
                                 num_steps_per_temp=1000,
-                                cluster_names_eci=None,
+                                cluster_name_eci=None,
                                 random_composition=False):
         """Generate Emin structure.
 
@@ -235,7 +235,7 @@ class NewStructures(object):
                   .format(i+1, len(structs)))
             es = EminStructure(self.setting, struct, self.struct_per_gen,
                                init_temp, final_temp, num_temp,
-                               num_steps_per_temp, cluster_names_eci)
+                               num_steps_per_temp, cluster_name_eci)
             emin_struct, cf = es.generate()
             formula_unit = self._get_formula_unit(emin_struct)
 
@@ -275,11 +275,11 @@ class NewStructures(object):
                 num_attempt = 0
                 while len(concs) < self.num_to_gen:
                     x = self.setting.concentration.get_random_concentration()
-                    if x not in concs:
+                    if True in [np.allclose(x, i) for i in concs]:
+                        num_attempt += 1
+                    else:
                         concs.append(x)
                         num_attempt = 0
-                    else:
-                        num_attempt += 1
 
                     if num_attempt > 100:
                         raise RuntimeError("Could not find {} unique "
