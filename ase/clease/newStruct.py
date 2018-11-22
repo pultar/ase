@@ -154,10 +154,16 @@ class NewStructures(object):
             probe_struct, cf = ps.generate()
             formula_unit = self._get_formula_unit(probe_struct)
             if self._exists_in_db(probe_struct, formula_unit):
-                print('generated structure is already in DB.')
-                print('generating again...')
+                msg = 'generated structure is already in DB.\n'
+                msg += 'generating again... '
+                msg += '{} out of {} attempts'.format(num_attempt+1,
+                                                      max_attempt)
+                print(msg)
                 num_attempt += 1
-                continue
+                if num_attempt >= max_attempt:
+                    raise MaxAttemptReachedError("Could not generate Emin "
+                                                 "structure in {} attempts."
+                                                 .format(max_attempt))
             else:
                 num_attempt = 0
 
@@ -166,8 +172,9 @@ class NewStructures(object):
             self.db.write(probe_struct, kvp)
 
             if num_attempt >= max_attempt:
-                msg = "Could not generate probe structure in 10 attempts."
-                raise MaxAttemptReachedError(msg)
+                raise MaxAttemptReachedError("Could not generate probe "
+                                             "structure in {} attempts."
+                                             .format(max_attempt))
 
     def generate_Emin_structure(self, atoms=None, init_temp=2000,
                                 final_temp=1, num_temp=10,
@@ -228,11 +235,15 @@ class NewStructures(object):
                         structures have unique composition
         """
         structs = self._set_initial_structures(atoms, random_composition)
-        for i, struct in enumerate(structs):
+        current_count = 0
+        num_attempt = 0
+        print(structs)
+        while current_count < len(structs):
+            struct = structs[current_count].copy()
             self.setting.set_active_template(atoms=struct,
                                              generate_template=False)
             print("Generating {} out of {} structures."
-                  .format(i+1, len(structs)))
+                  .format(current_count+1, len(structs)))
             es = EminStructure(self.setting, struct, self.struct_per_gen,
                                init_temp, final_temp, num_temp,
                                num_steps_per_temp, cluster_name_eci)
@@ -240,20 +251,25 @@ class NewStructures(object):
             formula_unit = self._get_formula_unit(emin_struct)
 
             if self._exists_in_db(emin_struct, formula_unit):
-                print('generated structure is already in DB.')
-                print('generating again...')
+                msg = 'generated structure is already in DB.\n'
+                msg += 'generating again... '
+                msg += '{} out of {} attempts'.format(num_attempt+1,
+                                                      max_attempt)
+                print(msg)
                 num_attempt += 1
+                if num_attempt >= max_attempt:
+                    raise MaxAttemptReachedError("Could not generate Emin "
+                                                 "structure in {} attempts."
+                                                 .format(max_attempt))
                 continue
             else:
                 num_attempt = 0
 
-            print('Structure with E = {} generated.'.format(es.min_energy))
+            print('Structure with E = {:.3f} generated.'.format(es.min_energy))
             kvp = self._get_kvp(emin_struct, cf, formula_unit)
             self.db.write(emin_struct, kvp)
 
-            if num_attempt >= max_attempt:
-                msg = "Could not generate probe structure in 10 attempts."
-                raise MaxAttemptReachedError(msg)
+            current_count += 1
 
     def _set_initial_structures(self, atoms, random_composition=False):
         structs = []
