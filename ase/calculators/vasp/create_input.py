@@ -1351,7 +1351,7 @@ class GenerateVaspInput(object):
     def write_potcar(self, suffix="", directory='./'):
         """Writes the POTCAR file."""
         import tempfile
-        potfile = open(join(directory, 'POTCAR' + suffix), 'w')
+        potfile = open(join(directory, 'POTCAR' + suffix), 'wb+')
         for filename in self.ppp_list:
             if filename.endswith('R'):
                 for line in open(filename, 'r'):
