@@ -3,6 +3,8 @@ from ase.clease import LinearRegression, Tikhonov
 import numpy as np
 import os
 import multiprocessing as mp
+import os
+os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
 class GAFit(LinearRegression):
@@ -35,7 +37,12 @@ class GAFit(LinearRegression):
         solution with maximum 150 will be present in the initial pool.
     parallel: bool
         If True multiprocessing will be used to parallelize
-        over the individuals in the population
+        over the individuals in the population. 
+        NOTE: One of the most CPU intensive tasks involves
+        matrix manipulations using Numpy. If your Numpy 
+        installation uses hyperthreading, it is possible
+        that running with parallel=True actually leads to 
+        lower performance.
     num_cors: int
         Number of cores to use during parallelization. 
         If not given (and parallel=True) then mp.cpu_count()/2
