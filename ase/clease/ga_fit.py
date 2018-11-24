@@ -2,6 +2,9 @@ from __future__ import print_function
 from ase.clease import LinearRegression, Tikhonov
 import numpy as np
 import os
+import multiprocessing as mp
+import os
+os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
 class GAFit(LinearRegression):
@@ -28,8 +31,23 @@ class GAFit(LinearRegression):
     change_prob: float
         If a mutation is selected this denotes the probability of a mutating
         a given gene.
-
-
+    max_num_in_init_pool: int
+        If given the maximum clusters included in the initial population
+        is given by this number. If max_num_in_init_pool=150, then
+        solution with maximum 150 will be present in the initial pool.
+    parallel: bool
+        If True multiprocessing will be used to parallelize
+        over the individuals in the population. 
+        NOTE: One of the most CPU intensive tasks involves
+        matrix manipulations using Numpy. If your Numpy 
+        installation uses hyperthreading, it is possible
+        that running with parallel=True actually leads to 
+        lower performance.
+    num_cors: int
+        Number of cores to use during parallelization. 
+        If not given (and parallel=True) then mp.cpu_count()/2
+        will be used
+    
     Example:
     =======
     from ase.clease import Evaluate
@@ -43,7 +61,8 @@ class GAFit(LinearRegression):
     """
     def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
-                 change_prob=0.2, local_decline=True):
+                 change_prob=0.2, local_decline=True, max_num_in_init_pool=None,
+                 parallel=False, num_cores=None):
         from ase.clease import Evaluate
         if not isinstance(evaluator, Evaluate):
             raise TypeError("evaluator has to be of type Evaluate")
@@ -57,11 +76,13 @@ class GAFit(LinearRegression):
             self.pop_size = int(num_individuals)
         self.change_prob = change_prob
         self.num_genes = self.evaluator.cf_matrix.shape[1]
-        self.individuals = self._initialize_individuals()
+        self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
         self.regression = Tikhonov(alpha=alpha)
         self.elitism = elitism
         self.mutation_prob = mutation_prob
+        self.parallel = parallel
+        self.num_cores = num_cores
         self.statistics = {
             "best_cv": [],
             "worst_cv": []
@@ -69,8 +90,9 @@ class GAFit(LinearRegression):
         self.evaluate_fitness()
         self.local_decline = local_decline
 
-    def _initialize_individuals(self):
+    def _initialize_individuals(self, max_num):
         """Initialize a random population."""
+        from random import shuffle
         individuals = []
         if os.path.exists(self.fname):
             individ_from_file = np.loadtxt(self.fname,
@@ -78,10 +100,14 @@ class GAFit(LinearRegression):
             for i in range(individ_from_file.shape[0]):
                 individuals.append(individ_from_file[i, :])
         else:
+            max_num = max_num or self.num_genes
+            indices = list(range(self.num_genes))
             for _ in range(self.pop_size):
-                individual = np.random.choice(
-                        [0, 1], size=self.num_genes)
-                individual.astype(np.uint8)
+                shuffle(indices)
+                individual = np.zeros(self.num_genes, dtype=np.uint8)
+                num_non_zero = np.random.randint(low=3, high=max_num)
+                indx = indices[:num_non_zero]
+                individual[np.array(indx)] = 1
                 individuals.append(individual)
         return individuals
 
@@ -100,9 +126,16 @@ class GAFit(LinearRegression):
 
     def evaluate_fitness(self):
         """Evaluate fitness of all species."""
-        for i, ind in enumerate(self.individuals):
-            _, cv = self.fit_individual(ind)
-            self.fitness[i] = 1.0/cv
+
+        if self.parallel:
+            num_cores = self.num_cores or int(mp.cpu_count()/2)
+            args = [(self, indx) for indx in range(len(self.individuals))]
+            workers = mp.Pool(num_cores)
+            self.fitness[:] = workers.map(eval_fitness, args)
+        else:
+            for i, ind in enumerate(self.individuals):
+                _, cv = self.fit_individual(ind)
+                self.fitness[i] = 1.0/cv
 
     def flip_mutation(self, individual):
         """Apply mutation operation."""
@@ -337,3 +370,10 @@ class GAFit(LinearRegression):
                 return
 
         self.individuals[self.best_individual_indx] = individual
+
+
+def eval_fitness(args):
+    ga = args[0]
+    indx = args[1]
+    _, cv = ga.fit_individual(ga.individuals[indx])
+    return 1.0/cv
