@@ -164,9 +164,10 @@ class CorrFunction(object):
         Arguments
         =========
         select_cond: list
-            -None (default): select every item in DB except for
+            -None (default): select every item in DB with
                              "struct_type='initial'"
-            -else: select based on additional condictions provided
+            -else: select based on the condictions provided
+                  (struct_type='initial' is not automatically included)
         """
         db = connect(self.setting.db_name)
         select = []
@@ -190,7 +191,7 @@ class CorrFunction(object):
             keys = []
             for key in kvp.keys():
                 if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
-                                    'c6', 'c7', 'c8', 'c9')):
+                                   'c6', 'c7', 'c8', 'c9')):
                     keys.append(key)
             db.update(row_id, delete_keys=keys)
 
