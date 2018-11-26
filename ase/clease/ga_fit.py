@@ -11,20 +11,25 @@ class GAFit(object):
     """
     Genetic Algorithm for selecting relevant clusters
 
-    Arguments
+    Arguments:
     =========
     setting: ClusterExpansionSetting
         Setting object used for the cluster expanion
+
     max_cluster_dia: float
         Maximum diameter included in the population
+
     max_cluster_size: int
         Maximum number of atoms included in the largest cluster
+
     alpha: float
         Regularization parameter for ridge regression which is used internally
         to obtain the coefficient
+
     elitism: int
         Number of best structures that will be passed unaltered on to the next
         generation
+
     fname: str
         Filename used to backup the population. If this file exists, the next
         run will load the population from the file and start from there.
@@ -62,15 +67,15 @@ class GAFit(object):
     evaluator.get_cluster_name_eci()
 
     """
-    def __init__(self, setting=None, max_cluster_size=None, max_cluster_dia=None,
-                 mutation_prob=0.001, alpha=1E-5,
+    def __init__(self, setting=None, max_cluster_size=None,
+                 max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
-                 change_prob=0.2, local_decline=True, max_num_in_init_pool=None,
-                 parallel=False, num_cores=None):
+                 change_prob=0.2, local_decline=True,
+                 max_num_in_init_pool=None, parallel=False, num_cores=None):
         from ase.clease import Evaluate
-        evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia, 
+        evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size)
-        
+
         # Read required attributes from evaluate
         self.cf_matrix = evaluator.cf_matrix
         self.cluster_names = evaluator.cluster_names
@@ -86,7 +91,7 @@ class GAFit(object):
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
-        self.regression = Tikhonov(alpha=alpha)
+        self.regression = Tikhonov(alpha=alpha, penalize_bias_term=True)
         self.elitism = elitism
         self.mutation_prob = mutation_prob
         self.parallel = parallel
