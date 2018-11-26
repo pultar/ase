@@ -271,7 +271,6 @@ class GAFit(object):
 
     def save_cluster_names(self):
         """Store cluster names of best population to file."""
-        individual = self.best_individual
         with open(self.fname_cluster_names, 'w') as out:
             for name in self.selected_cluster_names:
                 out.write(name+"\n")
