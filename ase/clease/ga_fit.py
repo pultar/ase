@@ -99,7 +99,7 @@ class GAFit(object):
         self.elitism = elitism
         self.mutation_prob = mutation_prob
         self.parallel = parallel
-        self.num_cores = num_cores
+        self.num_core = num_core
         self.statistics = {
             "best_cv": [],
             "worst_cv": []
@@ -145,9 +145,9 @@ class GAFit(object):
         """Evaluate fitness of all species."""
 
         if self.parallel:
-            num_cores = self.num_cores or int(mp.cpu_count()/2)
+            num_core = self.num_core or int(mp.cpu_count()/2)
             args = [(self, indx) for indx in range(len(self.individuals))]
-            workers = mp.Pool(num_cores)
+            workers = mp.Pool(num_core)
             self.fitness[:] = workers.map(eval_fitness, args)
         else:
             for i, ind in enumerate(self.individuals):
