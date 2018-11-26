@@ -158,28 +158,24 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in cluster_names], dtype=float)
         return cf
 
-    def reconfig_db_entries(self, select_cond=None, reset=True):
+    def reconfig_db_entries(self, select_cond=None):
         """Reconfigure the correlation function values of the entries in DB.
 
         Arguments
         =========
         select_cond: list
-            -None (default): select every item in DB except for
+            -None (default): select every item in DB with
                              "struct_type='initial'"
-            -else: select based on additional condictions provided
-
-        reset: bool
-            -True: removes all the key-value pairs that describe correlation
-                   functions.
-            -False: leaves the existing correlation functions in the key-Value
-                    pairs, but overwrites the ones that exists in the current
-                    setting.
+            -else: select based on the condictions provided
+                  (struct_type='initial' is not automatically included)
         """
         db = connect(self.setting.db_name)
-        select = [('struct_type', '=', 'initial')]
+        select = []
         if select_cond is not None:
             for cond in select_cond:
                 select.append(cond)
+        else:
+            select = [('struct_type', '=', 'initial')]
 
         # get how many entries need to be reconfigured
         row_ids = [row.id for row in db.select(select)]
@@ -192,13 +188,12 @@ class CorrFunction(object):
             kvp = row.key_value_pairs
 
             # delete existing CF values
-            if reset:
-                keys = []
-                for key in kvp.keys():
-                    if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
-                                       'c6', 'c7', 'c8', 'c9')):
-                        keys.append(key)
-                db.update(row_id, delete_keys=keys)
+            keys = []
+            for key in kvp.keys():
+                if key.startswith(('c0', 'c1', 'c2', 'c3', 'c4', 'c5',
+                                   'c6', 'c7', 'c8', 'c9')):
+                    keys.append(key)
+            db.update(row_id, delete_keys=keys)
 
             # get new CF based on setting
             atoms = wrap_and_sort_by_position(row.toatoms())

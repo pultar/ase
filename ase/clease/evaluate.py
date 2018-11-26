@@ -193,7 +193,7 @@ class Evaluate(object):
             return dict(pairs)
         return pairs
 
-    def save_cluster_name_eci(self, filename='cluster_eci.json'):
+    def save_cluster_name_eci(self, fname='cluster_eci.json'):
         """Determine cluster names and their corresponding ECI value.
 
         Arguments:
@@ -203,13 +203,13 @@ class Evaluate(object):
         """
         eci_dict = self.get_cluster_name_eci(return_type='dict')
 
-        extension = filename.split(".")[-1]
+        extension = fname.split(".")[-1]
 
         if extension == 'json':
-            with open(filename, 'w') as outfile:
+            with open(fname, 'w') as outfile:
                 json.dump(eci_dict, outfile, indent=2, separators=(",", ": "))
         elif extension == 'txt':
-            with open(filename, 'r') as outfile:
+            with open(fname, 'r') as outfile:
                 outfile.write(eci_dict)
         else:
             raise TypeError('extension {} is not supported'.format(extension))
@@ -223,7 +223,7 @@ class Evaluate(object):
             regularization parameter.
 
         savefig: bool
-            - True: Save the plot with a file name specified in 'fname'. 
+            - True: Save the plot with a file name specified in 'fname'.
                     Only works when interactive=False.
                     This option does not display figure.
             - False: Display figure without saving.
