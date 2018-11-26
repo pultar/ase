@@ -55,7 +55,7 @@ class GAFit(object):
         hyperthreading, it is possible that running with parallel=True
         actually leads to lower performance.
 
-    num_cors: int
+    num_core: int
         Number of cores to use during parallelization. 
         If not given (and parallel=True) then mp.cpu_count()/2
         will be used
@@ -75,7 +75,7 @@ class GAFit(object):
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
-                 max_num_in_init_pool=None, parallel=False, num_cores=None):
+                 max_num_in_init_pool=None, parallel=False, num_core=None):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size)
