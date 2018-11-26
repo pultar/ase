@@ -33,24 +33,28 @@ class GAFit(object):
     fname: str
         Filename used to backup the population. If this file exists, the next
         run will load the population from the file and start from there.
+
     num_individuals: int or str
         Integer with the number of inidivuals or it is equal to "auto",
         in which case 10 times the number of candidate clusters is used
+
     change_prob: float
         If a mutation is selected this denotes the probability of a mutating
         a given gene.
+
     max_num_in_init_pool: int
         If given the maximum clusters included in the initial population
         is given by this number. If max_num_in_init_pool=150, then
         solution with maximum 150 will be present in the initial pool.
+
     parallel: bool
-        If True multiprocessing will be used to parallelize
-        over the individuals in the population. 
-        NOTE: One of the most CPU intensive tasks involves
-        matrix manipulations using Numpy. If your Numpy 
-        installation uses hyperthreading, it is possible
-        that running with parallel=True actually leads to 
-        lower performance.
+        If True multiprocessing will be used to parallelize over the
+        individuals in the population.
+        NOTE: One of the most CPU intensive tasks involves matrix
+        manipulations using Numpy. If your Numpy installation uses
+        hyperthreading, it is possible that running with parallel=True
+        actually leads to lower performance.
+
     num_cors: int
         Number of cores to use during parallelization. 
         If not given (and parallel=True) then mp.cpu_count()/2
