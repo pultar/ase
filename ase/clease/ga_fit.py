@@ -266,7 +266,7 @@ class GAFit(object):
 
     def save_population(self):
         # Save population
-        np.savetxt(self.fname, self.individuals, delimiter=",")
+        np.savetxt(self.fname, self.individuals, delimiter=",", fmt="%d")
         print("\nPopulation written to {}".format(self.fname))
 
     def save_cluster_names(self):
