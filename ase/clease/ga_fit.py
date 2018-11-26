@@ -1,5 +1,5 @@
 from __future__ import print_function
-from ase.clease import LinearRegression, Tikhonov
+from ase.clease import Tikhonov
 import numpy as np
 import os
 import multiprocessing as mp
@@ -7,15 +7,18 @@ import os
 os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
-class GAFit(LinearRegression):
+class GAFit(object):
     """
     Genetic Algorithm for selecting relevant clusters
 
     Arguments
     =========
-    evaluator: Evaluate
-        Instance of the Evaluate class. The GA needs cf_matrix and e_dft from
-        the evaluate class.
+    setting: ClusterExpansionSetting
+        Setting object used for the cluster expanion
+    max_cluster_dia: float
+        Maximum diameter included in the population
+    max_cluster_size: int
+        Maximum number of atoms included in the largest cluster
     alpha: float
         Regularization parameter for ridge regression which is used internally
         to obtain the coefficient
@@ -59,23 +62,28 @@ class GAFit(LinearRegression):
     evaluator.get_cluster_name_eci()
 
     """
-    def __init__(self, evaluator=None, mutation_prob=0.001, alpha=1E-5,
+    def __init__(self, setting=None, max_cluster_size=None, max_cluster_dia=None,
+                 mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True, max_num_in_init_pool=None,
                  parallel=False, num_cores=None):
         from ase.clease import Evaluate
-        if not isinstance(evaluator, Evaluate):
-            raise TypeError("evaluator has to be of type Evaluate")
-        self.evaluator = evaluator
-        self.evaluator.set_fitting_scheme(fitting_scheme=self)
-
+        evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia, 
+                             max_cluster_size=max_cluster_size)
+        
+        # Read required attributes from evaluate
+        self.cf_matrix = evaluator.cf_matrix
+        self.cluster_names = evaluator.cluster_names
+        self.e_dft = evaluator.e_dft
         self.fname = fname
+
+        self.fname_cluster_names = fname.rpartition(".")[0] + "_cluster_names.txt"
         if num_individuals == "auto":
-            self.pop_size = 10*self.evaluator.cf_matrix.shape[1]
+            self.pop_size = 10*self.cf_matrix.shape[1]
         else:
             self.pop_size = int(num_individuals)
         self.change_prob = change_prob
-        self.num_genes = self.evaluator.cf_matrix.shape[1]
+        self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
         self.regression = Tikhonov(alpha=alpha)
@@ -112,8 +120,8 @@ class GAFit(LinearRegression):
         return individuals
 
     def fit_individual(self, individual):
-        X = self.evaluator.cf_matrix[:, individual == 1]
-        y = self.evaluator.e_dft
+        X = self.cf_matrix[:, individual == 1]
+        y = self.e_dft
         coeff = self.regression.fit(X, y)
 
         e_pred = X.dot(coeff)
@@ -246,29 +254,27 @@ class GAFit(LinearRegression):
         best_indx = np.argmax(self.fitness)
         return best_indx
 
-    def fit(self, X, y):
-        """Perform fit using the best individual."""
-        individual = self.best_individual
-        print(X)
-        print(self.evaluator.cf_matrix)
-        if not np.allclose(X, self.evaluator.cf_matrix):
-            raise RuntimeError("Design matrix X has to match "
-                               "the cf_matrix in Evaluate!")
-        coeff, _ = self.fit_individual(individual)
-        all_coeff = np.zeros(X.shape[1])
-        all_coeff[individual == 1] = coeff
-
-        self.evaluator.cf_matrix[:, individual == 0] = 0.0
-        return all_coeff
-
     @staticmethod
     def get_instance_array():
         raise TypeError("Does not make sense to create an instance array GA.")
 
+    @property
+    def selected_cluster_names(self):
+        from itertools import compress
+        individual = self.best_individual
+        return list(compress(self.cluster_names, individual))
+
     def save_population(self):
         # Save population
-        np.savetxt(self.fname, self.individuals, delimiter=",")
+        np.savetxt(self.fname, self.individuals, delimiter=",", fmt="%d")
         print("\nPopulation written to {}".format(self.fname))
+
+    def save_cluster_names(self):
+        """Store cluster names of best population to file."""
+        with open(self.fname_cluster_names, 'w') as out:
+            for name in self.selected_cluster_names:
+                out.write(name+"\n")
+        print("Selected cluster names saved to {}".format(self.fname_cluster_names))
 
     def plot_evolution(self):
         """Create a plot of the evolution."""
@@ -330,6 +336,7 @@ class GAFit(LinearRegression):
 
             if gen % save_interval == 0:
                 self.save_population()
+                self.save_cluster_names()
 
             if num_gen_without_change >= gen_without_change:
                 self.log("\nReached {} generations without sufficient "
@@ -341,6 +348,8 @@ class GAFit(LinearRegression):
             # Perform a last local optimization
             self._local_optimization()
         self.save_population()
+        self.save_cluster_names()
+        return self.selected_cluster_names
 
     def _local_optimization(self, indx=None):
         """Perform a local optimization strategy to the best individual."""
