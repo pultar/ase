@@ -41,6 +41,7 @@ class Clease(Calculator):
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object."
             raise TypeError(msg)
+        self.parameters["eci"] = cluster_name_eci
         self.setting = setting
         self.CF = CorrFunction(setting)
         self.norm_factor = self._generate_normalization_factor()

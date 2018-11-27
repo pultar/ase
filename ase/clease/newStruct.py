@@ -68,7 +68,7 @@ class NewStructures(object):
                                  unit_cell_id=None, init_temp=None,
                                  final_temp=None, num_temp=5,
                                  num_steps_per_temp=1000,
-                                 approx_mean_var=False,
+                                 approx_mean_var=True,
                                  num_samples_var=10000):
         """Generate a probe structure according to PRB 80, 165122 (2009).
 

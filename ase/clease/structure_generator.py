@@ -236,9 +236,12 @@ class StructureGenerator(object):
                                                   self.calc.cluster_names,
                                                   return_type='dict')
         for k in final_cf:
+            print(k, final_cf[k], self.cf_generated_structure[k])
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
                 msg = 'Correlation function changed after simulated annealing'
-                raise ValueError(msg)
+                print(msg)
+                # raise ValueError(msg)
+        exit()
 
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""
@@ -415,6 +418,8 @@ class EminStructure(StructureGenerator):
     def _accept(self):
         """Accept the last change."""
         new_energy = self.atoms.get_potential_energy()
+
+        # Always accept the first move
         if self.generated_structure is None:
             self.old_energy = new_energy
             self.min_energy = new_energy
