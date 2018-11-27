@@ -31,8 +31,10 @@ class GAFit(object):
         generation
 
     fname: str
-        Filename used to backup the population. If this file exists, the next
+        File name used to backup the population. If this file exists, the next
         run will load the population from the file and start from there.
+        Another file named 'fname'_cluster_names.txt is created to store the
+        names of selected clusters.
 
     num_individuals: int or str
         Integer with the number of inidivuals or it is equal to "auto",
@@ -48,7 +50,7 @@ class GAFit(object):
         solution with maximum 150 will be present in the initial pool.
 
     parallel: bool
-        If True multiprocessing will be used to parallelize over the
+        If *True*, multiprocessing will be used to parallelize over the
         individuals in the population.
         NOTE: One of the most CPU intensive tasks involves matrix
         manipulations using Numpy. If your Numpy installation uses
@@ -56,20 +58,17 @@ class GAFit(object):
         actually leads to lower performance.
 
     num_core: int
-        Number of cores to use during parallelization. 
+        Number of cores to use during parallelization.
         If not given (and parallel=True) then mp.cpu_count()/2
         will be used
-    
+
     Example:
     =======
     from ase.clease import Evaluate
     from ase.clease import GAFit
     setting = None # Should be an ASE ClusterExpansionSetting object
-    evaluator = Evaluate(setting)
-    ga_fit = GAFit(evaluator)
+    ga_fit = GAFit(setting)
     ga_fit.run()
-    evaluator.get_cluster_name_eci()
-
     """
     def __init__(self, setting=None, max_cluster_size=None,
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
@@ -85,8 +84,8 @@ class GAFit(object):
         self.cluster_names = evaluator.cluster_names
         self.e_dft = evaluator.e_dft
         self.fname = fname
-
-        self.fname_cluster_names = fname.rpartition(".")[0] + "_cluster_names.txt"
+        self.fname_cluster_names = \
+            fname.rpartition(".")[0] + "_cluster_names.txt"
         if num_individuals == "auto":
             self.pop_size = 10*self.cf_matrix.shape[1]
         else:
@@ -283,7 +282,8 @@ class GAFit(object):
         with open(self.fname_cluster_names, 'w') as out:
             for name in self.selected_cluster_names:
                 out.write(name+"\n")
-        print("Selected cluster names saved to {}".format(self.fname_cluster_names))
+        print("Selected cluster names saved to "
+              "{}".format(self.fname_cluster_names))
 
     def plot_evolution(self):
         """Create a plot of the evolution."""
@@ -299,14 +299,19 @@ class GAFit(object):
     def run(self, gen_without_change=1000, min_change=0.01, save_interval=100):
         """Run the genetic algorithm.
 
-        Arguments
-        ===========
+        Return a list consisting of the names of selected clusters at the end
+        of the run.
+
+        Arguments:
+        =========
         gen_without_change: int
             Terminate if gen_without_change are created without sufficient
             improvement
+
         min_change: float
             Changes a larger than this value is considered "sufficient"
             improvement
+
         save_interval: int
             Rate at which all the populations are backed up in a file
         """
