@@ -62,9 +62,10 @@ class Tikhonov(LinearRegression):
                     The dimensions of the matrix should be M * M where M is the
                     number of features.
     """
-    def __init__(self, alpha=1E-5):
+    def __init__(self, alpha=1E-5, penalize_bias_term=False):
         LinearRegression.__init__(self)
         self.alpha = alpha
+        self.penalize_bias_term = penalize_bias_term
 
     def _get_tikhonov_matrix(self, num_clusters):
         if isinstance(self.alpha, np.ndarray):
@@ -77,7 +78,8 @@ class Tikhonov(LinearRegression):
         else:
             # Alpha is a floating point number
             tikhonov = np.identity(num_clusters)
-            tikhonov[0, 0] = 0.0
+            if not self.penalize_bias_term:
+                tikhonov[0, 0] = 0.0
             tikhonov *= np.sqrt(self.alpha)
         return tikhonov
 
