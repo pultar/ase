@@ -14,7 +14,8 @@ from ase.clease.floating_point_classification import FloatingPointClassifier
 from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
                               dec_string, get_unique_name,
-                              nested_array2list, get_all_internal_distances)
+                              nested_array2list, get_all_internal_distances,
+                              distance_string)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
 from ase.clease.concentration import Concentration
@@ -555,9 +556,6 @@ class ClusterExpansionSetting(object):
 
         cluster_info = []
         fam_identifier = []
-        # float_dist = FloatingPointClassifier(self.dist_num_dec)
-        # float_ang = FloatingPointClassifier(0)
-        # float_max_dia = FloatingPointClassifier(self.dist_num_dec)
 
         # Need newer version
         if np.version.version <= '1.13':
@@ -614,13 +612,12 @@ class ClusterExpansionSetting(object):
                         continue
                     order, eq_sites, string_description = \
                         sort_by_internal_distances(supercell, (ref_indx,) + k,
-                                                   self.float_dist,
                                                    self.float_ang)
                     descriptor_str.append(string_description)
                     indx_set.append(k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
-                    max_cluster_diameter.append(self.float_max_dia.get(max(d)))
+                    max_cluster_diameter.append(max(d))
 
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
@@ -639,7 +636,9 @@ class ClusterExpansionSetting(object):
                 for desc in unique_descriptors:
                     # Find the maximum cluster diameter of this category
                     indx = descriptor_str.index(desc)
-                    max_dia = max_cluster_diameter[indx]
+                    max_dia = distance_string(supercell.info["distances"],
+                                              max_cluster_diameter[indx])
+
                     fam_id = fam_identifier.index(desc)
                     name = get_unique_name(size, max_dia, fam_id)
 
@@ -651,13 +650,14 @@ class ClusterExpansionSetting(object):
                         "symm_group": site,
                         "descriptor": desc,
                         "name": name,
-                        "max_cluster_dia": max_dia,
+                        "max_cluster_dia": max_cluster_diameter[indx],
                         "size": size,
                     }
 
                 for x in range(len(indx_set)):
                     category = unique_descriptors.index(descriptor_str[x])
-                    max_dia = max_cluster_diameter[x]
+                    max_dia = distance_string(supercell.info["distances"],
+                                              max_cluster_diameter[x])
                     fam_id = fam_identifier.index(unique_descriptors[category])
                     name = get_unique_name(size, max_dia, fam_id)
 
@@ -670,8 +670,6 @@ class ClusterExpansionSetting(object):
 
                     assert cluster_info_symm[name]["equiv_sites"] \
                         == equiv_sites_set[x]
-                    assert cluster_info_symm[name]["max_cluster_dia"] == \
-                        max_cluster_diameter[x]
                     assert cluster_info_symm[name]["descriptor"] == \
                         descriptor_str[x]
 
@@ -771,7 +769,7 @@ class ClusterExpansionSetting(object):
         """Compute the Euclidean distance between two points."""
         diff = x1 - x0
         length = np.sqrt(diff.dot(diff))
-        return length.round(decimals=self.dist_num_dec)
+        return length
 
     def indices_of_nearby_atom(self, ref_indx, size, kd_trees):
         """Return the indices of the atoms nearby.
@@ -914,6 +912,32 @@ class ClusterExpansionSetting(object):
         from ase.gui.gui import GUI
         from ase.gui.images import Images
 
+        # set the active template which has the best chance of displaying
+        # the largest diameter
+        sizes = []
+        for i in range(self.template_atoms.num_templates):
+            atoms = self.template_atoms.get_atoms(i)
+            lengths = atoms.get_cell_lengths_and_angles()[:3]
+            sizes.append(lengths)
+
+        uid = 0
+        candidates = []
+        for i, size in enumerate(sizes):
+            if i == 0:
+                candidates.append(min(size))
+                uid = i
+                continue
+            if min(size) <= max(candidates):
+                continue
+            uid = i
+        self._set_active_template_by_uid(uid)
+        print(self.supercell_scale_factor)
+        if max(self.supercell_scale_factor) > 1:
+            print("Warning: the largest template atoms in DB is too small to "
+                  "accrately display large clusters. \nPlease change the "
+                  "'size' or 'supercell_factor' to include the largest "
+                  "template.")
+
         already_included_names = []
         cluster_atoms = []
         for unique_name in self.cluster_family_names_by_size:
@@ -968,6 +992,7 @@ class ClusterExpansionSetting(object):
         gui = GUI(images, expr='')
         gui.show_name = True
         gui.run()
+        self._set_active_template_by_uid(0)
 
     def reconfigure_settings(self):
         """Reconfigure templates stored in DB file."""
