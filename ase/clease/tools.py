@@ -297,12 +297,14 @@ def get_all_internal_distances(atoms, max_dist):
     for atom in atoms:
         indices = tree.query_ball_point(atom.position, max_dist)
         dists = atoms.get_distances(atom.index, indices)
-
         for d in dists:
             if np.any(np.abs(np.array(distances) - d) < 1E-6):
                 continue
             distances.append(d)
-    return np.array(sorted(distances[1:]))
+
+    # Make sure that the first element is 0
+    assert distances[0] < 1E-6
+    return np.array(sorted(distances)[1:])
 
 
 def distance_string(distance_array, distance):
@@ -310,4 +312,7 @@ def distance_string(distance_array, distance):
        based on the internal distances in an array."""
     indx = np.argmin(np.abs(distance_array - distance))
     assert abs(distance_array[indx] - distance) < 1E-6
+
+    if indx < 9:
+        return "0{}nn".format(indx+1)
     return "{}nn".format(indx+1)

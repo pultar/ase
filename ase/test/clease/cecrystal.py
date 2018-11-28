@@ -275,11 +275,16 @@ def test_narrow_angle_crystal():
         print(str(exc))
     os.remove(db_name)
 
-
+  
+print('test spacegroup 217')
 test_spgroup_217()
+print('test two_grouped_basis')
 test_two_grouped_basis()
+print('test two_grouped_basis_probe_structure')
 test_two_grouped_basis_probe_structure()
+print('test two_grouped_basis_background_atoms_probe_structure')
 test_two_grouped_basis_background_atoms_probe_structure()
+print('test narrow_angle_crystal')
 test_narrow_angle_crystal()
 
 if update_reference_file:

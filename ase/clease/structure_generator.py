@@ -239,9 +239,7 @@ class StructureGenerator(object):
             print(k, final_cf[k], self.cf_generated_structure[k])
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
                 msg = 'Correlation function changed after simulated annealing'
-                print(msg)
-                # raise ValueError(msg)
-        exit()
+                raise ValueError(msg)
 
     def _get_full_cf_matrix(self):
         """Get correlation function of every entry in DB."""

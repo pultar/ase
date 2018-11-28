@@ -555,8 +555,17 @@ class ClusterExpansionSetting(object):
             atom.tag = atom.index
         supercell = atoms_cpy*self.supercell_scale_factor
         supercell = wrap_and_sort_by_position(supercell)
+
+        # If the template atoms is not repeated we need to scale it to at
+        # least 2x2x2 when all internal distances are extracted
+        unit_cell_lengths = self.unit_cell.get_cell_lengths_and_angles()[:3]
+        sc_lengths = supercell.get_cell_lengths_and_angles()[:3]
+        ratio = np.round(sc_lengths/unit_cell_lengths, decimals=0).astype(int)
+        dist_sc_scale_factor = np.array([1, 1, 1])
+        dist_sc_scale_factor[ratio == 1] = 2
+
         supercell.info['distances'] = get_all_internal_distances(
-            supercell, max(self.max_cluster_dia))
+            supercell*dist_sc_scale_factor, max(self.max_cluster_dia))
         kdtrees = self._create_kdtrees(supercell)
 
         cluster_info = []
@@ -936,7 +945,6 @@ class ClusterExpansionSetting(object):
                 continue
             uid = i
         self._set_active_template_by_uid(uid)
-        print(self.supercell_scale_factor)
         if max(self.supercell_scale_factor) > 1:
             print("Warning: the largest template atoms in DB is too small to "
                   "accrately display large clusters. \nPlease change the "
@@ -957,7 +965,6 @@ class ClusterExpansionSetting(object):
                 continue
             ref_indx = self.ref_index_trans_symm[symm]
             name = cluster["name"]
-            print(cluster)
 
             atoms = self.atoms.copy()
 
