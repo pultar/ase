@@ -549,7 +549,8 @@ class ClusterExpansionSetting(object):
             atom.tag = atom.index
         supercell = atoms_cpy*self.supercell_scale_factor
         supercell = wrap_and_sort_by_position(supercell)
-        supercell.info['distances'] = get_all_internal_distances(supercell, max(self.max_cluster_dia))
+        supercell.info['distances'] = get_all_internal_distances(
+            supercell, max(self.max_cluster_dia))
         kdtrees = self._create_kdtrees(supercell)
 
         cluster_info = []
