@@ -14,7 +14,7 @@ from ase.clease.floating_point_classification import FloatingPointClassifier
 from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
                               dec_string, get_unique_name,
-                              nested_array2list)
+                              nested_array2list, get_all_internal_distances)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
 from ase.clease.concentration import Concentration
@@ -549,6 +549,7 @@ class ClusterExpansionSetting(object):
             atom.tag = atom.index
         supercell = atoms_cpy*self.supercell_scale_factor
         supercell = wrap_and_sort_by_position(supercell)
+        supercell.info['distances'] = get_all_internal_distances(supercell, max(self.max_cluster_dia))
         kdtrees = self._create_kdtrees(supercell)
 
         cluster_info = []

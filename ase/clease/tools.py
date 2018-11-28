@@ -125,7 +125,6 @@ def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
     site_types = [i for i in range(len(indices))]
     for i in range(len(sort_order)):
         for j in range(i + 1, len(sort_order)):
-            # if np.allclose(dist_ang[i], dist_ang[j], atol=0.002):
             if dist_ang[i] == dist_ang[j]:
                 if site_types[j] > i:
                     # This site has not been assigned to another category yet
@@ -287,3 +286,23 @@ def exclude_information_entries():
     return [('name', '!=', 'unit_cell'),
             ('name', '!=', 'template'),
             ('name', '!=', 'float_classification')]
+
+
+def get_all_internal_distances(atoms, max_dist):
+    """Obtain all internal distances of the passed atoms object and return a
+       Numpy array containing all the distances sorted in an ascending order.
+    """
+    from scipy.spatial import cKDTree as KDTree
+
+    tree = KDTree(atoms.get_positions())
+    distances = []
+    for atom in atoms:
+        indices = tree.query_ball_point(atom.position, max_dist)
+        dists = atoms.get_distances(atom.index, indices)
+
+        for d in dists:
+            if np.any(np.abs(np.array(distances) - d) < 1E-6):
+                continue
+            distances.append(d)
+    return np.array(sorted(distances[1:]))
+
