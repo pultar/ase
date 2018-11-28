@@ -443,18 +443,23 @@ class ClusterExpansionSetting(object):
     def _assign_correct_family_identifier(self):
         """Make the familily IDs increase size."""
         new_names = {}
-        for i, name in enumerate(self.cluster_family_names_by_size):
+        prev_id = {}
+        for name in self.cluster_family_names_by_size:
             if name == "c0" or name == "c1":
                 new_names[name] = name
             else:
-                new_name = name.rpartition("_")[0] + "_{}".format(i)
+                prefix = name.rpartition("_")[0]
+                new_id = prev_id.get(prefix, -1) + 1
+                new_name = prefix + "_{}".format(new_id)
                 new_names[name] = new_name
+                prev_id[prefix] = new_id
 
         new_cluster_info = []
         for item in self.cluster_info:
             new_dict = {}
             for name, info in item.items():
                 new_dict[new_names[name]] = info
+                new_dict[new_names[name]]["name"] = new_names[name]
             new_cluster_info.append(new_dict)
         self.cluster_info = new_cluster_info
 
@@ -952,6 +957,7 @@ class ClusterExpansionSetting(object):
                 continue
             ref_indx = self.ref_index_trans_symm[symm]
             name = cluster["name"]
+            print(cluster)
 
             atoms = self.atoms.copy()
 
