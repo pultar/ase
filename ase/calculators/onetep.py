@@ -41,7 +41,7 @@ class Onetep(FileIOCalculator):
     _dummy_parameters = ['ngwf_radius', 'xc', 'species_ngwf_radius',
                          'species_ngwf_number', 'species_solver',
                          'ngwf_radius_cond', 'pseudo_suffix',
-                         'species_core_wf']
+                         'species_pseudo', 'species_core_wf']
 
     # Used to indicate which parameters are a kpoint path and should be
     # written as such
@@ -381,8 +381,14 @@ class Onetep(FileIOCalculator):
     def _generate_pseudo_block(self):
 
         for sp in self.species:
-            self.pseudos.append((sp[0], sp[1] +
-                                 self.parameters['pseudo_suffix']))
+            try:
+		pseudo_string = self.parameters['species_pseudo'][sp[0]]
+            except KeyError:
+                try:
+	            pseudo_string = sp[1] + self.parameters['pseudo_suffix']
+                except KeyError:
+                    pseudo_string = sp[1] # bare elem name if pseudo suffix empty
+            self.pseudos.append((sp[0], pseudo_string))
 
     def _generate_solver_block(self):
         for sp in self.species:
@@ -551,7 +557,7 @@ class Onetep(FileIOCalculator):
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         if self.core_wfs:
-            keyword = 'SPECIES_CORE_WFS'
+            keyword = 'SPECIES_CORE_WF'
             fd.write('%%BLOCK %s\n' % keyword)
             for sp in sorted(self.core_wfs):
                 fd.write('    %s "%s"\n' % (sp[0], sp[1]))
