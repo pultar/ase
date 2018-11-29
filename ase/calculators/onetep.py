@@ -382,10 +382,10 @@ class Onetep(FileIOCalculator):
 
         for sp in self.species:
             try:
-		pseudo_string = self.parameters['species_pseudo'][sp[0]]
+                pseudo_string = self.parameters['species_pseudo'][sp[0]]
             except KeyError:
                 try:
-	            pseudo_string = sp[1] + self.parameters['pseudo_suffix']
+                    pseudo_string = sp[1] + self.parameters['pseudo_suffix']
                 except KeyError:
                     pseudo_string = sp[1] # bare elem name if pseudo suffix empty
             self.pseudos.append((sp[0], pseudo_string))
