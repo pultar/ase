@@ -301,10 +301,11 @@ def get_all_internal_distances(atoms, max_dist):
             if np.any(np.abs(np.array(distances) - d) < 1E-6):
                 continue
             distances.append(d)
+    distances = sorted(distances)
 
     # Make sure that the first element is 0
     assert distances[0] < 1E-6
-    return np.array(sorted(distances)[1:])
+    return np.array(distances[1:])
 
 
 def distance_string(distance_array, distance):

@@ -306,7 +306,7 @@ class ClusterExpansionSetting(object):
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
-        min_length = min(lengths) / 2
+        min_length = min(lengths) / 4.0
         min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
@@ -1081,16 +1081,22 @@ class ClusterExpansionSetting(object):
         db = connect(self.db_name)
         names = []
         descriptors = []
+        equiv_sites = {}
         for row in db.select(name='template'):
             cluster_info = row.data["cluster_info"]
 
             new_names = []
             new_desc = []
+            new_equiv_sites = {}
             # Extract all names
             for item in cluster_info:
                 for k, v in item.items():
                     new_names.append(k)
                     new_desc.append(v["descriptor"])
+                    if len(v["equiv_sites"]) == 0:
+                        new_equiv_sites[k] = 0
+                    else:
+                        new_equiv_sites[k] = len(v["equiv_sites"][0])
 
             new_names = sorted(new_names)
             new_desc = sorted(new_desc)
@@ -1099,6 +1105,8 @@ class ClusterExpansionSetting(object):
                 # This is the first entry
                 names = new_names.copy()
                 descriptors = new_desc.copy()
+                equiv_sites = new_equiv_sites.copy()
 
             assert new_names == names
             assert descriptors == new_desc
+            assert equiv_sites == new_equiv_sites
