@@ -25,8 +25,6 @@ class StructureGenerator(object):
         self.setting = setting
         self.trans_matrix = setting.trans_matrix
         self.cluster_names = self.setting.cluster_names
-        # print('i am in')
-        # print('c3_06nn_3_200' in self.cluster_names, 'c3_06nn_3_200' in self.setting.cluster_names)
         self.corrFunc = CorrFunction(setting)
         self.cfm = self._get_full_cf_matrix()
         self.atoms = wrap_and_sort_by_position(atoms.copy())

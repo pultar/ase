@@ -115,6 +115,8 @@ class Clease(Calculator):
         self.old_cf = None
         self.symmetry_group = None
         self.is_backround_index = None
+        self.num_si = self._get_num_self_interactions()
+        print(self.num_si)
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
@@ -151,9 +153,9 @@ class Clease(Calculator):
         swapped_indices = self.update_energy()
         self.results['energy'] = self.energy
         self.log()
-        if len(swapped_indices) == 0: 
+        if len(swapped_indices) == 0:
             return self.energy
-        
+
         self._copy_ref_to_old()
         self._copy_current_to_ref()
 
@@ -261,7 +263,7 @@ class Clease(Calculator):
                 t_indices = self._translate_indx(indx, cluster["indices"])
                 cf_tot = self.cf[i] * count
                 cf_change = \
-                    self._cf_change_by_indx(indx, t_indices, cluster, dec)
+                    self._cf_change_by_indx(indx, t_indices, cluster, dec)/self.num_si[prefix]
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
         return swapped_indices
 
@@ -332,3 +334,23 @@ class Clease(Calculator):
             return True
         self.logfile.write('{}\n'.format(self.energy))
         self.logfile.flush()
+
+    def _get_num_self_interactions(self):
+        num_si = {}
+        for item in self.setting.cluster_info:
+            for name, info in item.items():
+                if info["size"] <= 1:
+                    num_si[name] = 1.
+                    continue
+                ref_indx = info["ref_indx"]
+                #num_int = sum(sub.count(ref_indx)+1 for sub in info["indices"])
+                num_int = sum(sub.count(ref_indx) for sub in info["indices"])
+                num_equiv_indices = 0
+                for sub in info["indices"]:
+                    bin_count = np.bincount(sub)
+                    bin_count[bin_count>0] -= 1
+                    num_equiv_indices += np.sum(bin_count)
+                num_int += num_equiv_indices + len(info["indices"])
+                num_si[name] = float(num_int)/len(info["indices"])
+                num_si[name] = 1.0
+        return num_si

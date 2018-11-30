@@ -49,12 +49,12 @@ if __name__ == '__main__':
     with open('cluster_eci_2.json') as json_data:
         cluster_name_eci = json.load(json_data)
 
-    # db = connect(db_name)
-    # atoms = []
-    # for row in db.select(gen=10):
-    #     atoms.append(row.toatoms())
-    # ns = NewStructures(setting=setting, generation_number=15, struct_per_gen=5)
+    db = connect(db_name)
+    atoms = []
+    for row in db.select(gen=10):
+        atoms.append(row.toatoms())
+    ns = NewStructures(setting=setting, generation_number=15, struct_per_gen=5)
     # # ns.generate_probe_structure(approx_mean_var=True, num_steps_per_temp=1000)
-    # ns.generate_Emin_structure(atoms=atoms,
-    #                            random_composition=True,
-    #                            cluster_name_eci=cluster_name_eci)
+    ns.generate_Emin_structure(atoms=atoms,
+                               random_composition=True,
+                               cluster_name_eci=cluster_name_eci)
