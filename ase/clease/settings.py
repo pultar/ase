@@ -87,6 +87,7 @@ class ClusterExpansionSetting(object):
             self._set_active_template_by_uid(uid)
         # Set the initial template atoms to 0, which is the smallest cell
         self._set_active_template_by_uid(0)
+        self._check_cluster_info_consistency()
 
         unique_element_no_bkg = self.unique_element_without_background()
         if isinstance(basis_function, BasisFunction):
@@ -1074,3 +1075,25 @@ class ClusterExpansionSetting(object):
             dists += list(self.unit_cell.get_distances(ref_atom, indices,
                                                        mic=True))
         return min(dists)
+
+    def _check_cluster_info_consistency(self):
+        """Check that cluster names in all templates' info entries match."""
+        db = connect(self.db_name)
+        names = []
+        for row in db.select(name='template'):
+            cluster_info = row.data["cluster_info"]
+
+            new_names = []
+            # Extract all names
+            for item in cluster_info:
+                for k in item.keys():
+                    new_names.append(k)
+
+            new_names = sorted(new_names)
+
+            if not names:
+                # This is the first entry
+                names = new_names
+            else:
+                assert new_names == names
+        print('DONE')
