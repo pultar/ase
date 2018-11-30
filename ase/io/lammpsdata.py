@@ -200,13 +200,13 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                                   int(fields[2]),
                                   int(fields[3]),
                                   int(fields[4])))
-            elif section == "Dihedrals": # id type atom1 atom2 atom3 atom4
+            elif section == "Dihedrals":  # id type atom1 atom2 atom3 atom4
                 dihedrals_in.append((int(fields[1]),
                                      int(fields[2]),
                                      int(fields[3]),
                                      int(fields[4]),
                                      int(fields[5])))
-            elif section == "Impropers": # id type atom1 atom2 atom3 atom4
+            elif section == "Impropers":  # id type atom1 atom2 atom3 atom4
                 impropers_in.append((int(fields[1]),
                                      int(fields[2]),
                                      int(fields[3]),
@@ -251,19 +251,19 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     else:
         travel = None
     if len(bonds_in) > 0:
-        bonds = [""] * N
+        bonds = [{} for _ in range(N)]
     else:
         bonds = None
     if len(angles_in) > 0:
-        angles = [""] * N
+        angles = [{} for _ in range(N)]
     else:
         angles = None
     if len(dihedrals_in) > 0:
-        dihedrals = [""] * N
+        dihedrals = [{} for _ in range(N)]
     else:
         dihedrals = None
     if len(impropers_in) > 0:
-        impropers = [""] * N
+        impropers = [{} for _ in range(N)]
     else:
         impropers = None
 
@@ -273,7 +273,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         # by id
         ind_of_id[id] = i
         if sort_by_id:
-            ind = id-1
+            ind = id - 1
         else:
             ind = i
         type = pos_in[id][0]
@@ -325,12 +325,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         for (type, a1, a2) in bonds_in:
             i_a1 = ind_of_id[a1]
             i_a2 = ind_of_id[a2]
-            if len(bonds[i_a1]) > 0:
-                bonds[i_a1] += ","
-            bonds[i_a1] += "%d(%d)" % (i_a2, type)
-        for i in range(len(bonds)):
-            if len(bonds[i]) == 0:
-                bonds[i] = '_'
+            # Double list for bonds to make it consistent with other sections
+            bonds[i_a1][type] = bonds[i_a1].get(type, []) + [[i_a2]]
         at.arrays['bonds'] = np.array(bonds)
 
     if angles is not None:
@@ -338,12 +334,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a1 = ind_of_id[a1]
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
-            if len(angles[i_a2]) > 0:
-                angles[i_a2] += ","
-            angles[i_a2] += "%d-%d(%d)" % (i_a1, i_a3, type)
-        for i in range(len(angles)):
-            if len(angles[i]) == 0:
-                angles[i] = '_'
+            angles[i_a2][type] = angles[i_a2].get(type, []) + [[i_a1, i_a3]]
         at.arrays['angles'] = np.array(angles)
 
     if dihedrals is not None:
@@ -352,12 +343,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             i_a4 = ind_of_id[a4]
-            if len(dihedrals[i_a1]) > 0:
-                dihedrals[i_a1] += ","
-            dihedrals[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, type)
-        for i in range(len(dihedrals)):
-            if len(dihedrals[i]) == 0:
-                dihedrals[i] = '_'
+            dihedrals[i_a1][type] = dihedrals[i_a1].get(type, []) \
+                + [[i_a2, i_a3, i_a4]]
         at.arrays['dihedrals'] = np.array(dihedrals)
 
     if impropers is not None:
@@ -366,12 +353,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             i_a4 = ind_of_id[a4]
-            if len(impropers[i_a1]) > 0:
-                impropers[i_a1] += ","
-            impropers[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, type)
-        for i in range(len(impropers)):
-            if len(impropers[i]) == 0:
-                impropers[i] = '_'
+            impropers[i_a1][type] = impropers[i_a1].get(type, []) \
+                + [[i_a2, i_a3, i_a4]]
         at.arrays['impropers'] = np.array(impropers)
 
     at.info['comment'] = comment
