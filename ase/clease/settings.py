@@ -306,7 +306,7 @@ class ClusterExpansionSetting(object):
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
-        min_length = min(lengths) / 4.0
+        min_length = min(lengths) / 2.0
         min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
@@ -816,8 +816,11 @@ class ClusterExpansionSetting(object):
         sort_list = []
         for item in self.cluster_info:
             for cname, c_info in item.items():
+                # Sorted by 1) Number of atoms in cluster
+                # 2) diameter (since cname starts with c3_04nn etc.)
+                # 3) Unique descriptor
                 sort_list.append((c_info["size"],
-                                  c_info["max_cluster_dia"],
+                                  cname.rpartition("_")[0],
                                   c_info["descriptor"],
                                   cname))
         sort_list.sort()
@@ -891,7 +894,7 @@ class ClusterExpansionSetting(object):
     def _info_entries_to_list(self):
         """Convert entries in cluster info to list."""
         for info in self.cluster_info:
-            for _, cluster in info.items():
+            for name, cluster in info.items():
                 cluster['indices'] = nested_array2list(cluster['indices'])
                 cluster['equiv_sites'] = \
                     nested_array2list(cluster['equiv_sites'])
