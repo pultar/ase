@@ -1080,20 +1080,25 @@ class ClusterExpansionSetting(object):
         """Check that cluster names in all templates' info entries match."""
         db = connect(self.db_name)
         names = []
+        descriptors = []
         for row in db.select(name='template'):
             cluster_info = row.data["cluster_info"]
 
             new_names = []
+            new_desc = []
             # Extract all names
             for item in cluster_info:
-                for k in item.keys():
+                for k, v in item.items():
                     new_names.append(k)
+                    new_desc.append(v["descriptor"])
 
             new_names = sorted(new_names)
+            new_desc = sorted(new_desc)
 
             if not names:
                 # This is the first entry
-                names = new_names
-            else:
-                assert new_names == names
-        print('DONE')
+                names = new_names.copy()
+                descriptors = new_desc.copy()
+
+            assert new_names == names
+            assert descriptors == new_desc
