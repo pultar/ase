@@ -282,6 +282,18 @@ class Clease(Calculator):
         eq_sites = cluster["equiv_sites"]
         indx_order = cluster["order"]
 
+        # To tackle self interactions we need to
+        # collect some statistics on the clusters
+        all_clusters = []
+        cluster_count = {}
+        for cluster_indx, order in zip(trans_list, indx_order):
+            indices = [ref_indx] + cluster_indx
+            indices = [indices[indx] for indx in order]
+            k = list2str(indices)
+            cluster_count[k] = cluster_count.get(k, 0) + 1
+            all_clusters.append(indices)
+        num_unique_clusters = len(cluster_count.keys())
+
         equiv_deco = equivalent_deco(deco, eq_sites)
         for dec in equiv_deco:
             for cluster_indx, order in zip(trans_list, indx_order):
@@ -299,7 +311,33 @@ class Clease(Calculator):
                     else:
                         cf_new *= b_f[dec[j]][self.atoms[indx].symbol]
                         cf_ref *= b_f[dec[j]][self.atoms[indx].symbol]
-                delta_cf += (cf_new - cf_ref)/len(equiv_deco)
+
+                # If self interactions we need to down scale the 
+                # contribution because this cluster is present fewer times
+                # Example: If indices = [0, 23, 42], this particular clusters
+                # exists when 0, 23 and 42 is reference index (in total 3 times)
+                # if the cluster is [0, 23, 23], this cluster exists only
+                # when 0 and 23 is reference index (only 2 times).
+                # Hence, we need to down scale the contribution by a factor
+                # 2/3.
+                scale = len(np.unique(indices))/float(len(indices))
+                k = list2str(indices)
+
+                # We only inspect the effect of the change at one reference index
+                # However, we know that if we looped over all reference indices
+                # one given clusters would appear exactly m times, if m is the 
+                # multiplicity factor. On the other hand when inspecting only
+                # one cluster, that may not be the case.
+                # Example: If indices = [[0, 1, 1], [0, 1, 1], [1, 0, 0]]
+                # the situation is as follows. When 0 is reference index
+                # [0, 1, 1] occures to times and [1, 0, 0] occures one time
+                # When 1 is reference index [0, 1, 1] will occure one time
+                # and [1, 0, 0] will occure two times. Since we only
+                # inspect one of the cases, we need to correct for the
+                # fact that for one particular reference index the number
+                # of occurences can be distributed unevenly.
+                scale *= len(all_clusters)/(num_unique_clusters*cluster_count[k])
+                delta_cf += scale*(cf_new - cf_ref)/len(equiv_deco)
         return delta_cf
 
     def _translate_indx(self, ref_indx, indx_list):
@@ -354,3 +392,6 @@ class Clease(Calculator):
                 num_si[name] = float(num_int)/len(info["indices"])
                 num_si[name] = 1.0
         return num_si
+
+def list2str(array):
+    return "-".join(str(x) for x in array)

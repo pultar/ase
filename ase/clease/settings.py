@@ -306,7 +306,7 @@ class ClusterExpansionSetting(object):
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
-        min_length = min(lengths) / 4.0
+        min_length = min(lengths) / 2.0
         min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
@@ -1118,3 +1118,4 @@ class ClusterExpansionSetting(object):
             assert descriptors == new_desc
             assert equiv_sites == new_equiv_sites
             assert mult_factor == new_mult_factor
+                    
