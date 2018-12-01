@@ -121,7 +121,30 @@ def test_interaction_contribution_symmetric_clusters():
                 assert abs(sp - ref_sp) < 1E-8
 
 
+def test_supercell_consistency():
+    from ase.clease.tools import wrap_and_sort_by_position
+    basis_elements=[['Li', 'X'], ['O', 'X']]
+    concentration = Concentration(basis_elements=basis_elements)
+    db_name_sc = "rocksalt_sc.db"
+    setting = CEBulk(crystalstructure='rocksalt',
+                     a=4.05,
+                     size=[1, 1, 1],
+                     concentration=concentration,
+                     db_name=db_name_sc,
+                     max_cluster_size=3,
+                     max_cluster_dia=[7.0, 4.0])
+    atoms = setting.atoms.copy()
+    cf = CorrFunction(setting)
+    cf_dict = cf.get_cf(atoms)
+
+    atoms = wrap_and_sort_by_position(atoms*(4, 4, 4))
+    cf_dict_sc = cf.get_cf(atoms)
+    for k in cf_dict_sc.keys():
+        assert abs(cf_dict[k] - cf_dict_sc[k]) < 1E-6
+    os.remove(db_name_sc)
+
 test_trans_matrix()
 test_order_indep_ref_indx()
 test_interaction_contribution_symmetric_clusters()
+test_supercell_consistency()
 os.remove(db_name)
