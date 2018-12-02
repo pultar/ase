@@ -116,7 +116,7 @@ class Clease(Calculator):
         self.symmetry_group = None
         self.is_backround_index = None
         self.num_si = self._get_num_self_interactions()
-        print(self.num_si)
+        self.num_occurences = self._num_occurences()
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
@@ -263,11 +263,11 @@ class Clease(Calculator):
                 t_indices = self._translate_indx(indx, cluster["indices"])
                 cf_tot = self.cf[i] * count
                 cf_change = \
-                    self._cf_change_by_indx(indx, t_indices, cluster, dec)/self.num_si[prefix]
+                    self._cf_change_by_indx(indx, cluster, dec)/self.num_si[prefix]
                 self.cf[i] = (cf_tot + (n * cf_change)) / count
         return swapped_indices
 
-    def _cf_change_by_indx(self, ref_indx, trans_list, cluster, deco):
+    def _cf_change_by_indx(self, ref_indx, cluster, deco):
         """Calculate the change in correlation function based on atomic index.
 
         This method tracks changes in correaltion function due to change in
@@ -286,17 +286,21 @@ class Clease(Calculator):
         # collect some statistics on the clusters
         all_clusters = []
         cluster_count = {}
-        for cluster_indx, order in zip(trans_list, indx_order):
-            indices = [ref_indx] + cluster_indx
+        unique_cluster_count = {}
+        trans_list = self._translate_indx(ref_indx, cluster["indices"])
+        for cluster_indx, order in zip(cluster["indices"], indx_order):
+            indices = [cluster["ref_indx"]] + cluster_indx
             indices = [indices[indx] for indx in order]
             k = list2str(indices)
             cluster_count[k] = cluster_count.get(k, 0) + 1
-            all_clusters.append(indices)
-        num_unique_clusters = len(cluster_count.keys())
 
+            k_unique = list2str(sorted(np.unique(indices)))
+            unique_cluster_count[k_unique] = unique_cluster_count.get(k_unique, 0) + 1
+            all_clusters.append(indices)
+        
         equiv_deco = equivalent_deco(deco, eq_sites)
         for dec in equiv_deco:
-            for cluster_indx, order in zip(trans_list, indx_order):
+            for cluster_indx, order, non_trans in zip(trans_list, indx_order, all_clusters):
                 # NOTE: Here cluster_indx is already translated!
                 indices = [ref_indx] + cluster_indx
                 indices = [indices[indx] for indx in order]
@@ -321,7 +325,9 @@ class Clease(Calculator):
                 # Hence, we need to down scale the contribution by a factor
                 # 2/3.
                 scale = len(np.unique(indices))/float(len(indices))
-                k = list2str(indices)
+                k = list2str(non_trans)
+                srt_unique = sorted(np.unique(non_trans))
+                k_u = list2str(srt_unique)
 
                 # We only inspect the effect of the change at one reference index
                 # However, we know that if we looped over all reference indices
@@ -336,7 +342,12 @@ class Clease(Calculator):
                 # inspect one of the cases, we need to correct for the
                 # fact that for one particular reference index the number
                 # of occurences can be distributed unevenly.
-                scale *= len(all_clusters)/(num_unique_clusters*cluster_count[k])
+                #scale *= len(all_clusters)/(num_unique_clusters*cluster_count[k])
+                #scale *= unique_cluster_count[k_u]/cluster_count[k]
+                scale *= unique_cluster_count[k_u]/(cluster_count[k])#*len(srt_unique))
+                num_occ = self._average_num_occurences(cluster["name"], non_trans)
+                scale *= num_occ/cluster_count[k]
+                print(unique_cluster_count)
                 delta_cf += scale*(cf_new - cf_ref)/len(equiv_deco)
         return delta_cf
 
@@ -392,6 +403,42 @@ class Clease(Calculator):
                 num_si[name] = float(num_int)/len(info["indices"])
                 num_si[name] = 1.0
         return num_si
+
+    def _num_occurences(self):
+        num_occure = {}
+        srt_unique = {}
+        equiv_cluster_grp = {}
+        for item in self.setting.cluster_info:
+            for name, info in item.items():
+                for indx, order in zip(info["indices"], info["order"]):
+                    indices = [info["ref_indx"]] + indx
+                    indices = [indices[j] for j in order]
+                    k = list2str(indices)
+                    if name not in num_occure:
+                        num_occure[name] = {}
+                        srt_unique[name] = {}
+                        equiv_clusters[name] = {}
+                        
+                    k_u = list2str(sorted(np.unique(indices)))
+                    if k not in num_occure[name]:
+                        num_occure[name][k] = np.zeros(len(self.setting.cluster_info), dtype=np.int32)
+                    if k_u not in srt_unique[name]:
+                        srt_unique[name][k_u] = np.zeros(len(self.setting.cluster_info), dtype=np.int32)
+                    num_occure[name][k][info["symm_group"]] += 1
+                    srt_unique[name][k_u][info["symm_group"]] += 1
+                    equiv_cluster_grp[name][k] = k_u
+
+        # Calculate scaling factors
+        for k in num_occure.keys():
+
+
+        return num_occure
+
+    def _average_num_occurences(self, name, indices):
+        k = list2str(indices)
+        num_occure = self.num_occurences[name][k]
+        num_occure = num_occure[num_occure>0]
+        return np.mean(num_occure)
 
 def list2str(array):
     return "-".join(str(x) for x in array)

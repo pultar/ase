@@ -137,7 +137,7 @@ def test_supercell_consistency():
     cf = CorrFunction(setting)
     cf_dict = cf.get_cf(atoms)
 
-    atoms = wrap_and_sort_by_position(atoms*(4, 4, 4))
+    atoms = wrap_and_sort_by_position(atoms*(4, 3, 2))
     cf_dict_sc = cf.get_cf(atoms)
     for k in cf_dict_sc.keys():
         assert abs(cf_dict[k] - cf_dict_sc[k]) < 1E-6
