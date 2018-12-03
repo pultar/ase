@@ -39,7 +39,8 @@ class Onetep(FileIOCalculator):
     _dummy_parameters = ['ngwf_radius', 'xc', 'species_ngwf_radius',
                          'species_ngwf_number', 'species_solver',
                          'ngwf_radius_cond', 'pseudo_suffix',
-                         'species_pseudo', 'species_core_wf']
+                         'species_pseudo', 'species_core_wf',
+                         'species_solver_cond']
 
     # Used to indicate which parameters are a kpoint path and should be
     # written as such
@@ -78,6 +79,7 @@ class Onetep(FileIOCalculator):
         self.pseudos = []
         self.core_wfs = []
         self.solvers = []
+        self.solvers_cond = []
         self.restart = False
         self.prefix = label
         self.directory = '.'
@@ -377,6 +379,10 @@ class Onetep(FileIOCalculator):
                 self.species_cond.append((sp[1]+sp[2], sp[1], sp[0], ngnum, ngrad))
 
     def _generate_pseudo_block(self):
+        """Create a default onetep pseudopotentials block, using the
+        element name with the variable pseudo_suffix appended to it by default,
+        unless the user has set overrides for specific species by setting
+        specific entries in species_pseudo"""
 
         for sp in self.species:
             try:
@@ -388,16 +394,30 @@ class Onetep(FileIOCalculator):
                     pseudo_string = sp[1] # bare elem name if pseudo suffix empty
             self.pseudos.append((sp[0], pseudo_string))
 
-    def _generate_solver_block(self):
+    def _generate_solver_block(self,cond=False):
+        """Create a default onetep pseudoatomic solvers block, using 'SOLVE'
+        unless the user has set overrides for specific species by setting
+        specific entries in species_solver (_cond)"""
+
+        if not cond:
+            solver_var = 'species_solver'
+        else
+            solver_var = 'species_solver_cond'
         for sp in self.species:
             try:
-                atomic_string = self.parameters['species_solver'][sp[0]]
+                atomic_string = self.parameters[solver_var][sp[0]]
             except KeyError:
                 atomic_string = 'SOLVE'
-
-            self.solvers.append((sp[0], atomic_string))
+            if not cond:
+                self.solvers.append((sp[0], atomic_string))
+            else
+                self.solvers_cond.append((sp[0],atomic_string))
 
     def _generate_core_wf_block(self):
+        """Create a default onetep core wavefunctions block, using 'NONE'
+        unless the user has set overrides for specific species by setting
+        specific entries in species_core_wf. If all are NONE, no block
+        will be printed"""
 
         any_core_wfs = False
         for sp in self.species:
@@ -415,10 +435,7 @@ class Onetep(FileIOCalculator):
             self.core_wfs = []
 
     def set_pseudos(self, pots):
-        """ Sets the pseudopotential files used in this dat file
-        TODO: add some verification - do the pseudos imply the same
-        functional as we're using?"""
-
+        """ Sets the pseudopotential files used in this dat file """
         self.pseudos = deepcopy(pots)
 
     def set_atoms(self, atoms):
@@ -452,8 +469,6 @@ class Onetep(FileIOCalculator):
             self.parameters['read_denskern'] = True
 
         self._generate_species_block()
-        if 'ngwf_radius_cond' in self.parameters:
-            self._generate_species_block(cond=True)
 
         if len(self.pseudos) < len(self.species):
             if 'pseudo_suffix' in self.parameters:
@@ -461,6 +476,12 @@ class Onetep(FileIOCalculator):
 
         if len(self.solvers) < len(self.species):
             self._generate_solver_block()
+
+        if 'ngwf_radius_cond' in self.parameters:
+            if (self.species_cond) < len(self.species):
+                self._generate_species_block(cond=True)
+            if (self.solvers_cond) < len(self.species):
+                self._generate_solver_block(cond=True)
 
         if len(self.core_wfs) < len(self.species):
             self._generate_core_wf_block()
@@ -502,21 +523,19 @@ class Onetep(FileIOCalculator):
         fd.write('#ONETEP .dat file: %s\n' % filename)
         fd.write('#Created using the Atomic Simulation Environment (ASE)\n')
         fd.write('######################################################\n\n')
+
         fd.write('%BLOCK LATTICE_CART\n')
         fd.write('ang\n')
-
         for line in atoms.get_cell():
             fd.write('    %.10f %.10f %.10f\n' % tuple(line))
         fd.write('%ENDBLOCK LATTICE_CART\n\n\n')
 
         keyword = 'POSITIONS_ABS'
-
         positions = atoms.get_positions()
         tags = ["" if i==0 else str(i) for i in atoms.get_tags()]
         pos_block = [('%s %8.6f %8.6f %8.6f' %
                       (x+z, y[0], y[1], y[2])) for (x, y, z)
                      in zip(atoms.get_chemical_symbols(), positions, tags)]
-
         fd.write('%%BLOCK %s\n' % keyword)
         fd.write('ang\n')
         for line in pos_block:
@@ -524,9 +543,7 @@ class Onetep(FileIOCalculator):
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         keyword = 'SPECIES'
-
         sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species]
-
         fd.write('%%BLOCK %s\n' % keyword)
         for line in sorted(sp_block):
             fd.write('    %s\n' % line)
@@ -534,9 +551,7 @@ class Onetep(FileIOCalculator):
 
         if (self.parameters['ngwf_radius_cond'] > 0):
             keyword = 'SPECIES_COND'
-
             sp_block = [('%s %s %d %d %8.6f' % sp) for sp in self.species_cond]
-
             fd.write('%%BLOCK %s\n' % keyword)
             for line in sorted(sp_block):
                 fd.write('    %s\n' % line)
@@ -553,6 +568,13 @@ class Onetep(FileIOCalculator):
         for sp in sorted(self.solvers):
             fd.write('    %s "%s"\n' % (sp[0], sp[1]))
         fd.write('%%ENDBLOCK %s\n\n' % keyword)
+
+        if (self.parameters['ngwf_radius_cond'] > 0):
+            keyword = 'SPECIES_ATOMIC_SET_COND'
+            fd.write('%%BLOCK %s\n' % keyword)
+            for sp in sorted(self.solvers_cond):
+                fd.write('    %s "%s"\n' % (sp[0], sp[1]))
+            fd.write('%%ENDBLOCK %s\n\n' % keyword)
 
         if self.core_wfs:
             keyword = 'SPECIES_CORE_WF'
