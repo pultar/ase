@@ -116,7 +116,7 @@ class Clease(Calculator):
         self.symmetry_group = None
         self.is_backround_index = None
         self.num_si = self._get_num_self_interactions()
-        self.num_occurences = self._num_occurences()
+        self.dupl_tracker = DuplicationCountTracker(self.setting.cluster_info)
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
@@ -281,26 +281,11 @@ class Clease(Calculator):
 
         eq_sites = cluster["equiv_sites"]
         indx_order = cluster["order"]
-
-        # To tackle self interactions we need to
-        # collect some statistics on the clusters
-        all_clusters = []
-        cluster_count = {}
-        unique_cluster_count = {}
         trans_list = self._translate_indx(ref_indx, cluster["indices"])
-        for cluster_indx, order in zip(cluster["indices"], indx_order):
-            indices = [cluster["ref_indx"]] + cluster_indx
-            indices = [indices[indx] for indx in order]
-            k = list2str(indices)
-            cluster_count[k] = cluster_count.get(k, 0) + 1
-
-            k_unique = list2str(sorted(np.unique(indices)))
-            unique_cluster_count[k_unique] = unique_cluster_count.get(k_unique, 0) + 1
-            all_clusters.append(indices)
         
         equiv_deco = equivalent_deco(deco, eq_sites)
         for dec in equiv_deco:
-            for cluster_indx, order, non_trans in zip(trans_list, indx_order, all_clusters):
+            for cluster_indx, order, non_trans in zip(trans_list, indx_order, cluster["indices"]):
                 # NOTE: Here cluster_indx is already translated!
                 indices = [ref_indx] + cluster_indx
                 indices = [indices[indx] for indx in order]
@@ -325,9 +310,6 @@ class Clease(Calculator):
                 # Hence, we need to down scale the contribution by a factor
                 # 2/3.
                 scale = len(np.unique(indices))/float(len(indices))
-                k = list2str(non_trans)
-                srt_unique = sorted(np.unique(non_trans))
-                k_u = list2str(srt_unique)
 
                 # We only inspect the effect of the change at one reference index
                 # However, we know that if we looped over all reference indices
@@ -342,12 +324,7 @@ class Clease(Calculator):
                 # inspect one of the cases, we need to correct for the
                 # fact that for one particular reference index the number
                 # of occurences can be distributed unevenly.
-                #scale *= len(all_clusters)/(num_unique_clusters*cluster_count[k])
-                #scale *= unique_cluster_count[k_u]/cluster_count[k]
-                scale *= unique_cluster_count[k_u]/(cluster_count[k])#*len(srt_unique))
-                num_occ = self._average_num_occurences(cluster["name"], non_trans)
-                scale *= num_occ/cluster_count[k]
-                print(unique_cluster_count)
+                scale *= self.dupl_tracker.factor(cluster, non_trans, order)
                 delta_cf += scale*(cf_new - cf_ref)/len(equiv_deco)
         return delta_cf
 
@@ -404,41 +381,149 @@ class Clease(Calculator):
                 num_si[name] = 1.0
         return num_si
 
-    def _num_occurences(self):
-        num_occure = {}
-        srt_unique = {}
-        equiv_cluster_grp = {}
-        for item in self.setting.cluster_info:
-            for name, info in item.items():
-                for indx, order in zip(info["indices"], info["order"]):
-                    indices = [info["ref_indx"]] + indx
-                    indices = [indices[j] for j in order]
-                    k = list2str(indices)
-                    if name not in num_occure:
-                        num_occure[name] = {}
-                        srt_unique[name] = {}
-                        equiv_clusters[name] = {}
-                        
-                    k_u = list2str(sorted(np.unique(indices)))
-                    if k not in num_occure[name]:
-                        num_occure[name][k] = np.zeros(len(self.setting.cluster_info), dtype=np.int32)
-                    if k_u not in srt_unique[name]:
-                        srt_unique[name][k_u] = np.zeros(len(self.setting.cluster_info), dtype=np.int32)
-                    num_occure[name][k][info["symm_group"]] += 1
-                    srt_unique[name][k_u][info["symm_group"]] += 1
-                    equiv_cluster_grp[name][k] = k_u
-
-        # Calculate scaling factors
-        for k in num_occure.keys():
-
-
-        return num_occure
-
-    def _average_num_occurences(self, name, indices):
-        k = list2str(indices)
-        num_occure = self.num_occurences[name][k]
-        num_occure = num_occure[num_occure>0]
-        return np.mean(num_occure)
-
 def list2str(array):
     return "-".join(str(x) for x in array)
+
+
+class DuplicationCountTracker(object):
+    """Tracks duplication counts and normalization factors.
+    
+    Arguments
+    ==========
+    cluster_info: list of dicts
+        The entire info entry in settings
+    """
+    def __init__(self, cluster_info):
+        self.cluster_info = cluster_info
+        self._norm_factors = self._get_norm_factors()
+
+    def factor(self, cluster, indices, order):
+        """Get the normalization factor to correct for self interactions.
+
+        Arguments
+        ===========
+        cluster: dict
+            Dictionary holding information about the cluster
+        indices: list
+            Indices of the particular sub cluster
+        order: list
+            Order of the indices in the sub cluster
+        """
+        key = self.index_key(cluster["ref_indx"], indices, order)
+        return self._norm_factors[cluster["symm_group"]][cluster["name"]][key]
+
+    def index_key(self, ref_index, indices, order):
+        """Return a string representing the key for a given order.
+        
+        Arguments
+        ==========
+        ref_index: int
+            Reference index
+        indices: list
+            List representing the indices in a sub-cluster
+        order: list
+            Order of the indices in the sub cluster
+        """
+        index_with_ref = [ref_index] + indices
+        srt_indices = [index_with_ref[i] for i in order]
+        return list2str(srt_indices)
+
+    def key_with_unique_indices(self, ref_index, indices):
+        """Return the key consisting of only th unique indices in the cluster
+
+        Arguments
+        =========
+        ref_index: int
+            Reference index
+        indices: list
+            Indices in a sub cluster
+        """
+        srt_unique_indices = sorted(list(set([ref_index] + indices)))
+        return list2str(srt_unique_indices)
+
+    def _get_norm_factors(self):
+        """Calculate all normalization factors."""
+        norm_factors = []
+        for item in self.cluster_info:
+            factors = self._get_norm_factors_per_symm_group(item)
+            norm_factors.append(factors)
+        return norm_factors
+
+    def _get_norm_factors_per_symm_group(self, clusters):
+        """Get normalization factors per symmetry group.
+        
+        Arguments
+        =========
+        clusters: dict
+            Information dict about all clusters in a symmetry group
+        """
+        norm_factor = {}
+        for name, info in clusters.items():
+            occ_count = self._occurence_count(info)
+            grp = self._group_by_unique_indices(info)
+            norm_factor[name] = self._norm_factor(occ_count, grp)
+        return norm_factor
+
+    def _occurence_count(self, cluster):
+        """Count the number of occurences of each sub-cluster in the cluster
+
+        Arguments
+        ==========
+        cluster: dict
+            Dictionary with info about a particular cluster
+        """
+        occ_count = {}
+        for indices, order in zip(cluster["indices"], cluster["order"]):
+            key = self.index_key(cluster["ref_indx"], indices, order)
+            occ_count[key] = occ_count.get(key, 0) + 1
+        return occ_count
+
+    def _group_by_unique_indices(self, cluster):
+        """Group sub-clusters by their unique indices
+
+        Arguments
+        =========
+        cluster: dict
+            Dictionary with the info about a particular cluster
+        """
+        grp = {}
+        for indices, order in zip(cluster["indices"], cluster["order"]):
+            key = self.key_with_unique_indices(cluster["ref_indx"], indices) 
+            grp[key] = grp.get(key, set()) | set([self.index_key(cluster["ref_indx"], indices, order)])
+        return grp
+
+    def _norm_factor(self, occ_count, grp):
+        """Calculate the normalization factor for each sub cluster
+
+        Arguments
+        =========
+        occ_count: dict
+            Dictionary with the number of occurences of each cluster
+        grp: dict
+            Group dictrionary (sub-clusters grouped by their unique indices)
+        """
+        norm_count = {}
+        for k, v in occ_count.items():
+            indices = list(map(int, k.split("-")))
+            grp_key = self.key_with_unique_indices(indices[0], indices[1:])
+            tot_num_occ = self._total_number_of_occurences(occ_count, grp[grp_key])
+            num_cluster_mapped_to_same = len(grp[grp_key])
+            norm_count[k] = tot_num_occ/(num_cluster_mapped_to_same*v)
+        return norm_count
+
+    def _total_number_of_occurences(self, occ_count, key_set):
+        """Calculate the total number of occurences in a group
+
+        Arguments
+        ==========
+        occ_count: dict
+            Dictionary with the number of occurences of each sub cluster
+
+        key_set: set
+            Set with all the index_keys in a group
+        """
+        tot_num_occ = 0
+        for key in key_set:
+            tot_num_occ += occ_count[key]
+        return tot_num_occ
+
