@@ -409,10 +409,10 @@ class DuplicationCountTracker(object):
         order: list
             Order of the indices in the sub cluster
         """
-        key = self.index_key(cluster["ref_indx"], indices, order)
+        key = self.index_key(cluster["ref_indx"], indices, order, cluster["equiv_sites"])
         return self._norm_factors[cluster["symm_group"]][cluster["name"]][key]
 
-    def index_key(self, ref_index, indices, order):
+    def index_key(self, ref_index, indices, order, equiv_sites):
         """Return a string representing the key for a given order.
         
         Arguments
@@ -426,7 +426,7 @@ class DuplicationCountTracker(object):
         """
         index_with_ref = [ref_index] + indices
         srt_indices = [index_with_ref[i] for i in order]
-        return list2str(srt_indices)
+        return list2str(self._order_equiv_sites(equiv_sites, srt_indices))
 
     def key_with_unique_indices(self, ref_index, indices):
         """Return the key consisting of only th unique indices in the cluster
@@ -474,7 +474,7 @@ class DuplicationCountTracker(object):
         """
         occ_count = {}
         for indices, order in zip(cluster["indices"], cluster["order"]):
-            key = self.index_key(cluster["ref_indx"], indices, order)
+            key = self.index_key(cluster["ref_indx"], indices, order, cluster["equiv_sites"])
             occ_count[key] = occ_count.get(key, 0) + 1
         return occ_count
 
@@ -489,7 +489,7 @@ class DuplicationCountTracker(object):
         grp = {}
         for indices, order in zip(cluster["indices"], cluster["order"]):
             key = self.key_with_unique_indices(cluster["ref_indx"], indices) 
-            grp[key] = grp.get(key, set()) | set([self.index_key(cluster["ref_indx"], indices, order)])
+            grp[key] = grp.get(key, set()) | set([self.index_key(cluster["ref_indx"], indices, order, cluster["equiv_sites"])])
         return grp
 
     def _norm_factor(self, occ_count, grp):
@@ -526,4 +526,18 @@ class DuplicationCountTracker(object):
         for key in key_set:
             tot_num_occ += occ_count[key]
         return tot_num_occ
+
+    def show(self):
+        """Return a string represenatation."""
+        print(self._norm_factors)
+
+    def _order_equiv_sites(self, equiv_sites, ordered_indices):
+        """After the indices are ordered, adopt a consistent scheme
+           within the equivalent sites."""
+        for eq_group in equiv_sites:
+            equiv_indices = [ordered_indices[i] for i in eq_group]
+            equiv_indices.sort()
+            for count, i in enumerate(eq_group):
+                ordered_indices[i] = equiv_indices[count]
+        return ordered_indices
 
