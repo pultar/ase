@@ -3,9 +3,7 @@
 
 Authors:
     Edward Tait, ewt23@cam.ac.uk
-
-Recent updates:
-    Nicholas Hine, n.d.m.hine@warwick.ac.uk
+    Nicholas Hine, n.d.m.hine@warwick.ac.uk (current maintainer)
 
     Based on castep.py by:
     Max Hoffmann, max.hoffmann@ch.tum.de
