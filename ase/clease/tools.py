@@ -117,9 +117,7 @@ def sort_by_internal_distances(atoms, indices, float_obj_ang):
         return order, eq_sites, descr
 
     dist_ang = get_cluster_descriptor(cluster, float_obj_ang)
-    dist_ang_with_indx = [i+[j] for i, j in zip(dist_ang, indices)]
-    sort_order = [ind for _, ind in sorted(zip(dist_ang_with_indx, range(len(indices))))]
-    #sort_order = [ind for _, ind in sorted(zip(dist_ang, range(len(indices))))]
+    sort_order = [ind for _, ind in sorted(zip(dist_ang, range(len(indices))))]
     dist_ang.sort()
     equivalent_sites = [[i] for i in range(len(indices))]
     site_types = [i for i in range(len(indices))]
