@@ -236,7 +236,6 @@ class StructureGenerator(object):
                                                   self.calc.cluster_names,
                                                   return_type='dict')
         for k in final_cf:
-            print(k, final_cf[k], self.cf_generated_structure[k])
             if abs(final_cf[k] - self.cf_generated_structure[k]) > 1E-6:
                 msg = 'Correlation function changed after simulated annealing'
                 raise ValueError(msg)
