@@ -321,5 +321,5 @@ def distance_string(distance_array, distance):
 
 def reconfigure(setting, select_cond=None):
     from ase.clease import CorrFunction
-    setting.reconfigure_setting()
+    setting.reconfigure_settings()
     CorrFunction(setting).reconfigure_db_entries(select_cond)
