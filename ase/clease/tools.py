@@ -317,3 +317,9 @@ def distance_string(distance_array, distance):
     if indx < 9:
         return "0{}nn".format(indx+1)
     return "{}nn".format(indx+1)
+
+
+def reconfigure(setting, select_cond=None):
+    from ase.clease import CorrFunction
+    setting.reconfigure_setting()
+    CorrFunction(setting).reconfigure_db_entries(select_cond)
