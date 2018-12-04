@@ -306,7 +306,7 @@ class ClusterExpansionSetting(object):
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
-        min_length = min(lengths) / 4.0
+        min_length = min(lengths) / 2.0
         min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
