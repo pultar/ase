@@ -82,7 +82,7 @@ def get_rocksalt():
 
 
 def rocksalt_with_self_interaction(size):
-    basis_elements=[['Li', 'X'], ['O', 'X']]
+    basis_elements=[['Li', 'Mn', 'X'], ['O', 'X']]
     concentration = Concentration(basis_elements=basis_elements)
     setting = CEBulk(crystalstructure='rocksalt',
                      a=4.05,
@@ -90,7 +90,7 @@ def rocksalt_with_self_interaction(size):
                      concentration=concentration,
                      db_name=db_name,
                      max_cluster_size=3,
-                     max_cluster_dia=[7.0, 4.0])
+                     max_cluster_dia=[7.0, 5.0])
     atoms = setting.atoms.copy()
     return setting, atoms
 
@@ -175,40 +175,43 @@ def test_insert_element(setting, atoms, n_trial_configs=20):
         while symb2 == symb1:
             symb2 = choice(elements)
         atoms[indx1].symbol = symb2
-        #atoms[0].symbol = "X"
         atoms.get_potential_energy()
         brute_force_cf = cf.get_cf_by_cluster_names(atoms, calc.cluster_names)
         calc_cf = calc.get_cf_dict()
         for k in calc_cf:
             if k.startswith("c0") or k.startswith("c1"):
                 continue
+            if abs(calc_cf[k] - brute_force_cf[k]) > 1E-6:
+                print(k, calc_cf[k], brute_force_cf[k])
             assert abs(calc_cf[k] - brute_force_cf[k]) < 1E-6
 
 db_name = 'CE_calc_test.db'
 
-print('binary')
-bin_setting, bin_atoms = get_binary()
-test_update_correlation_functions(bin_setting, bin_atoms, n_trial_configs=5)
-os.remove(db_name)
 
-print('ternary')
-tern_setting, tern_atoms = get_ternary()
-test_update_correlation_functions(tern_setting, tern_atoms, n_trial_configs=5)
-os.remove(db_name)
+# print('binary')
+# bin_setting, bin_atoms = get_binary()
+# test_update_correlation_functions(bin_setting, bin_atoms, n_trial_configs=5)
+# os.remove(db_name)
 
-print('rocksalt')
-rs_setting, rs_atoms = get_rocksalt()
-test_update_correlation_functions(rs_setting, rs_atoms, n_trial_configs=5,
-                                  fixed=['O'])
-os.remove(db_name)
+# print('ternary')
+# tern_setting, tern_atoms = get_ternary()
+# test_update_correlation_functions(tern_setting, tern_atoms, n_trial_configs=5)
+# os.remove(db_name)
 
-print('rocksalt with self interaction 1x1x1')
-rs_setting, rs_atoms = rocksalt_with_self_interaction([1, 1, 1])
-test_insert_element(rs_setting, rs_atoms, n_trial_configs=5)
-os.remove(db_name)
+# print('rocksalt')
+# rs_setting, rs_atoms = get_rocksalt()
+# test_update_correlation_functions(rs_setting, rs_atoms, n_trial_configs=5,
+#                                   fixed=['O'])
+# os.remove(db_name)
+
+# print('rocksalt with self interaction 1x1x1')
+# rs_setting, rs_atoms = rocksalt_with_self_interaction([1, 1, 1])
+# test_insert_element(rs_setting, rs_atoms, n_trial_configs=5)
+# os.remove(db_name)
 
 print('rocksalt with self interaction 1x1x2')
 rs_setting, rs_atoms = rocksalt_with_self_interaction([1, 1, 2])
+print(rs_setting.cluster_info_by_name("c3_06nn_0"))
 test_insert_element(rs_setting, rs_atoms, n_trial_configs=10)
 os.remove(db_name)
 

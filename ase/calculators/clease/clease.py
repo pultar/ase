@@ -117,6 +117,8 @@ class Clease(Calculator):
         self.is_backround_index = None
         self.num_si = self._get_num_self_interactions()
         self.dupl_tracker = DuplicationCountTracker(self.setting.cluster_info)
+        print(self.dupl_tracker._norm_factors[0]["c3_06nn_0"])
+        print(self.dupl_tracker._norm_factors[1]["c3_06nn_0"])
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
