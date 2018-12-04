@@ -158,7 +158,7 @@ class CorrFunction(object):
             cf = np.array([cf[x] for x in cluster_names], dtype=float)
         return cf
 
-    def reconfig_db_entries(self, select_cond=None):
+    def reconfigure_db_entries(self, select_cond=None):
         """Reconfigure the correlation function values of the entries in DB.
 
         Arguments
