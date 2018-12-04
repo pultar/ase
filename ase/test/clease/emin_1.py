@@ -37,6 +37,8 @@ with open('emin_1_cluster_names.txt') as f:
 clusters = [x.strip() for x in clusters]
 # print(clusters)
 
+
+
 eval = Evaluate(setting=setting, cluster_names=clusters, fitting_scheme='l2',
                 alpha=1E-7)
 cluster_name_eci = eval.get_cluster_name_eci()
