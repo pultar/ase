@@ -1118,3 +1118,4 @@ class ClusterExpansionSetting(object):
             assert descriptors == new_desc
             assert equiv_sites == new_equiv_sites
             assert mult_factor == new_mult_factor
+                    
