@@ -167,7 +167,6 @@ def test_insert_element(setting, atoms, n_trial_configs=20):
     calc = Clease(setting, cluster_name_eci=eci)
     atoms.set_calculator(calc)
     elements = setting.unique_elements
-    init_cf = calc.get_cf_dict()
     for _ in range(n_trial_configs):
         indx1 = randint(0, len(atoms)-1)
         symb1 = atoms[indx1].symbol

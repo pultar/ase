@@ -260,7 +260,6 @@ class Clease(Calculator):
                     continue
                 cluster = self.setting.cluster_info[symm][prefix]
                 count = self.norm_factor[prefix]
-                t_indices = self._translate_indx(indx, cluster["indices"])
                 cf_tot = self.cf[i] * count
                 cf_change = \
                     self._cf_change_by_indx(indx, cluster, dec)/self.num_si[prefix]

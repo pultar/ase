@@ -1,7 +1,6 @@
 from __future__ import print_function
 from ase.clease import Tikhonov
 import numpy as np
-import os
 import multiprocessing as mp
 import os
 os.environ["OPENBLAS_MAIN_FREE"] = "1"
