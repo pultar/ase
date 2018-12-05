@@ -35,7 +35,7 @@ python_3_oldlibs_tests:
 python_3_tests:
   image: python:3-slim
   script:
-    - pip install pyflakes psycopg2-binary
+    - pip install pyflakes psycopg2-binary netCDF4
     - pip install .
     - python --version
     - ase test --strict
