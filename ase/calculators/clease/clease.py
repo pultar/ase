@@ -116,9 +116,9 @@ class Clease(Calculator):
         self.symmetry_group = None
         self.is_backround_index = None
         self.num_si = self._get_num_self_interactions()
-        self.dupl_tracker = DuplicationCountTracker(self.setting.cluster_info)
-        print(self.dupl_tracker._norm_factors[0]["c3_06nn_0"])
-        print(self.dupl_tracker._norm_factors[1]["c3_06nn_0"])
+        self.dupl_tracker = DuplicationCountTracker(self.setting)
+        #print(self.dupl_tracker._norm_factors[0]["c3_06nn_0"])
+        #print(self.dupl_tracker._norm_factors[1]["c3_06nn_0"])
 
     def set_atoms(self, atoms):
         self.atoms = atoms.copy()
@@ -326,6 +326,7 @@ class Clease(Calculator):
                 # fact that for one particular reference index the number
                 # of occurences can be distributed unevenly.
                 scale *= self.dupl_tracker.factor(cluster, non_trans, order)
+                #print(self.dupl_tracker.factor(cluster, non_trans, order))
                 delta_cf += scale*(cf_new - cf_ref)/len(equiv_deco)
         return delta_cf
 
@@ -394,8 +395,13 @@ class DuplicationCountTracker(object):
     cluster_info: list of dicts
         The entire info entry in settings
     """
-    def __init__(self, cluster_info):
-        self.cluster_info = cluster_info
+    def __init__(self, setting):
+        self.symm_group = np.zeros(len(setting.atoms), dtype=np.uint8)
+        for num, group in enumerate(setting.index_by_trans_symm):
+            self.symm_group[group] = num
+
+        self.cluster_info = setting.cluster_info
+        self.trans_matrix = setting.trans_matrix
         self._norm_factors = self._get_norm_factors()
 
     def factor(self, cluster, indices, order):
@@ -462,7 +468,8 @@ class DuplicationCountTracker(object):
         for name, info in clusters.items():
             occ_count = self._occurence_count(info)
             grp = self._group_by_unique_indices(info)
-            norm_factor[name] = self._norm_factor(occ_count, grp)
+            #norm_factor[name] = self._norm_factor(occ_count, grp)
+            norm_factor[name] = self._norm_factor(occ_count, info)
         return norm_factor
 
     def _occurence_count(self, cluster):
@@ -493,40 +500,77 @@ class DuplicationCountTracker(object):
             grp[key] = grp.get(key, set()) | set([self.index_key(cluster["ref_indx"], indices, order, cluster["equiv_sites"])])
         return grp
 
-    def _norm_factor(self, occ_count, grp):
-        """Calculate the normalization factor for each sub cluster
+    # def _norm_factor(self, occ_count, grp):
+    #     """Calculate the normalization factor for each sub cluster
 
-        Arguments
-        =========
-        occ_count: dict
-            Dictionary with the number of occurences of each cluster
-        grp: dict
-            Group dictrionary (sub-clusters grouped by their unique indices)
-        """
+    #     Arguments
+    #     =========
+    #     occ_count: dict
+    #         Dictionary with the number of occurences of each cluster
+    #     grp: dict
+    #         Group dictrionary (sub-clusters grouped by their unique indices)
+    #     """
+    #     norm_count = {}
+    #     for k, v in occ_count.items():
+    #         indices = list(map(int, k.split("-")))
+    #         grp_key = self.key_with_unique_indices(indices[0], indices[1:])
+    #         tot_num_occ = self._total_number_of_occurences(occ_count, grp[grp_key])
+    #         num_cluster_mapped_to_same = len(grp[grp_key])
+    #         norm_count[k] = tot_num_occ/(num_cluster_mapped_to_same*v)
+    #     return norm_count
+    def _norm_factor(self, occ_count, cluster):
         norm_count = {}
         for k, v in occ_count.items():
-            indices = list(map(int, k.split("-")))
-            grp_key = self.key_with_unique_indices(indices[0], indices[1:])
-            tot_num_occ = self._total_number_of_occurences(occ_count, grp[grp_key])
-            num_cluster_mapped_to_same = len(grp[grp_key])
-            norm_count[k] = tot_num_occ/(num_cluster_mapped_to_same*v)
+            tot_num = self._total_number_of_occurences(occ_count, k, cluster["name"])
+            num_unique = len(set(k.split("-")))
+            if cluster["name"] == "c3_03nn_0":
+                print(tot_num, k, v, num_unique)
+            norm_count[k] = tot_num/(num_unique*v)
         return norm_count
 
-    def _total_number_of_occurences(self, occ_count, key_set):
-        """Calculate the total number of occurences in a group
+    # def _total_number_of_occurences(self, occ_count, key_set):
+    #     """Calculate the total number of occurences in a group
 
-        Arguments
-        ==========
-        occ_count: dict
-            Dictionary with the number of occurences of each sub cluster
+    #     Arguments
+    #     ==========
+    #     occ_count: dict
+    #         Dictionary with the number of occurences of each sub cluster
 
-        key_set: set
-            Set with all the index_keys in a group
-        """
-        tot_num_occ = 0
-        for key in key_set:
-            tot_num_occ += occ_count[key]
-        return tot_num_occ
+    #     key_set: set
+    #         Set with all the index_keys in a group
+    #     """
+    #     tot_num_occ = 0
+    #     for key in key_set:
+    #         tot_num_occ += occ_count[key]
+    #     return tot_num_occ
+
+    def _corresponding_subcluster(self, new_ref_indx, target_cluster, name):
+        """Find the corresponding cluster when another index is ref_index."""
+        #print(self.trans_matrix[3])
+        cluster = self.cluster_info[self.symm_group[new_ref_indx]][name]
+        for sub, order in zip(cluster["indices"], cluster["order"]):
+            indices = [self.trans_matrix[new_ref_indx][indx] for indx in sub]
+            indices = [new_ref_indx] + indices
+            indices = [indices[j] for j in order]
+            indices = self._order_equiv_sites(cluster["equiv_sites"], indices)
+            
+            #print(new_ref_indx, indices, target_cluster)
+
+            if np.allclose(indices, target_cluster):
+                return indices
+        
+        raise RuntimeError("There are no matching subcluster. This should never happen and "
+                           "is a bug.")
+            
+    def _total_number_of_occurences(self, occ_count, key, name):
+        """Get the total number of occurences."""
+        indices = list(map(int, key.split("-")))
+        tot_num = 0
+        for ref_indx in set(indices):
+            corr_cluster = self._corresponding_subcluster(ref_indx, indices, name)
+            new_key = list2str(corr_cluster)
+            tot_num += occ_count[new_key]
+        return tot_num
 
     def show(self):
         """Return a string represenatation."""
