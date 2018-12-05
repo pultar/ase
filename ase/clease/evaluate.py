@@ -622,7 +622,9 @@ class Evaluate(object):
             if size < 2:
                 dia = -1
             else:
-                dia = float(name.split('_')[1].replace('p', '.'))
+                prefix = name.rpartition("_")[0]
+                info = self.setting.cluster_info_by_name(prefix)[0]
+                dia = info["max_cluster_dia"]
             if (size <= self.max_cluster_size and
                     dia < self.max_cluster_dia[size]):
                 filtered_cnames.append(name)

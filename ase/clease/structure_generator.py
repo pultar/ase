@@ -401,7 +401,7 @@ class EminStructure(StructureGenerator):
                       cluster names and ECI
     """
     def __init__(self, setting, atoms, struct_per_gen, init_temp=2000,
-                 final_temp=10, num_temp=10, num_steps_per_temp=10000,
+                 final_temp=10, num_temp=10, num_steps_per_temp=100000,
                  cluster_name_eci=None):
         StructureGenerator.__init__(self, setting, atoms, struct_per_gen,
                                     init_temp, final_temp, num_temp,
@@ -415,6 +415,8 @@ class EminStructure(StructureGenerator):
     def _accept(self):
         """Accept the last change."""
         new_energy = self.atoms.get_potential_energy()
+
+        # Always accept the first move
         if self.generated_structure is None:
             self.old_energy = new_energy
             self.min_energy = new_energy

@@ -144,7 +144,8 @@ def test_2grouped_basis_probe():
                      db_name=db_name,
                      max_cluster_size=2,
                      max_cluster_dia=4.)
-    fam_members = get_members_of_family(setting, "c2_4p000_7")
+    fam_members = get_members_of_family(setting, "c2_06nn_0")
+    print(fam_members)
     assert len(fam_members[0]) == 6  # TODO:  Sometimes 5, which is wrong
     assert len(fam_members[1]) == 6
     assert len(fam_members[2]) == 6

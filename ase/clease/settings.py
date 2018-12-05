@@ -14,7 +14,8 @@ from ase.clease.floating_point_classification import FloatingPointClassifier
 from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
                               flatten, sort_by_internal_distances,
                               dec_string, get_unique_name,
-                              nested_array2list)
+                              nested_array2list, get_all_internal_distances,
+                              distance_string)
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
 from ase.clease.concentration import Concentration
@@ -86,6 +87,7 @@ class ClusterExpansionSetting(object):
             self._set_active_template_by_uid(uid)
         # Set the initial template atoms to 0, which is the smallest cell
         self._set_active_template_by_uid(0)
+        self._check_cluster_info_consistency()
 
         unique_element_no_bkg = self.unique_element_without_background()
         if isinstance(basis_function, BasisFunction):
@@ -304,7 +306,7 @@ class ClusterExpansionSetting(object):
         # Introduce tolerance to make max distance strictly
         # smaller than half of the shortest cell dimension
         tol = 2 * 10**(-self.dist_num_dec)
-        min_length = min(lengths) / 2
+        min_length = min(lengths) / 2.0
         min_length = min_length.round(decimals=self.dist_num_dec) - tol
 
         if ret_weights:
@@ -442,18 +444,23 @@ class ClusterExpansionSetting(object):
     def _assign_correct_family_identifier(self):
         """Make the familily IDs increase size."""
         new_names = {}
-        for i, name in enumerate(self.cluster_family_names_by_size):
+        prev_id = {}
+        for name in self.cluster_family_names_by_size:
             if name == "c0" or name == "c1":
                 new_names[name] = name
             else:
-                new_name = name.rpartition("_")[0] + "_{}".format(i)
+                prefix = name.rpartition("_")[0]
+                new_id = prev_id.get(prefix, -1) + 1
+                new_name = prefix + "_{}".format(new_id)
                 new_names[name] = new_name
+                prev_id[prefix] = new_id
 
         new_cluster_info = []
         for item in self.cluster_info:
             new_dict = {}
             for name, info in item.items():
                 new_dict[new_names[name]] = info
+                new_dict[new_names[name]]["name"] = new_names[name]
             new_cluster_info.append(new_dict)
         self.cluster_info = new_cluster_info
 
@@ -549,13 +556,21 @@ class ClusterExpansionSetting(object):
             atom.tag = atom.index
         supercell = atoms_cpy*self.supercell_scale_factor
         supercell = wrap_and_sort_by_position(supercell)
+
+        # If the template atoms is not repeated we need to scale it to at
+        # least 2x2x2 when all internal distances are extracted
+        unit_cell_lengths = self.unit_cell.get_cell_lengths_and_angles()[:3]
+        sc_lengths = supercell.get_cell_lengths_and_angles()[:3]
+        ratio = np.round(sc_lengths/unit_cell_lengths, decimals=0).astype(int)
+        dist_sc_scale_factor = np.array([1, 1, 1])
+        dist_sc_scale_factor[ratio == 1] = 2
+
+        supercell.info['distances'] = get_all_internal_distances(
+            supercell*dist_sc_scale_factor, max(self.max_cluster_dia))
         kdtrees = self._create_kdtrees(supercell)
 
         cluster_info = []
         fam_identifier = []
-        # float_dist = FloatingPointClassifier(self.dist_num_dec)
-        # float_ang = FloatingPointClassifier(0)
-        # float_max_dia = FloatingPointClassifier(self.dist_num_dec)
 
         # Need newer version
         if np.version.version <= '1.13':
@@ -612,13 +627,12 @@ class ClusterExpansionSetting(object):
                         continue
                     order, eq_sites, string_description = \
                         sort_by_internal_distances(supercell, (ref_indx,) + k,
-                                                   self.float_dist,
                                                    self.float_ang)
                     descriptor_str.append(string_description)
                     indx_set.append(k)
                     order_set.append(order)
                     equiv_sites_set.append(eq_sites)
-                    max_cluster_diameter.append(self.float_max_dia.get(max(d)))
+                    max_cluster_diameter.append(max(d))
 
                 if not descriptor_str:
                     msg = "There is no cluster with size {}.\n".format(size)
@@ -637,7 +651,9 @@ class ClusterExpansionSetting(object):
                 for desc in unique_descriptors:
                     # Find the maximum cluster diameter of this category
                     indx = descriptor_str.index(desc)
-                    max_dia = max_cluster_diameter[indx]
+                    max_dia = distance_string(supercell.info["distances"],
+                                              max_cluster_diameter[indx])
+
                     fam_id = fam_identifier.index(desc)
                     name = get_unique_name(size, max_dia, fam_id)
 
@@ -649,13 +665,14 @@ class ClusterExpansionSetting(object):
                         "symm_group": site,
                         "descriptor": desc,
                         "name": name,
-                        "max_cluster_dia": max_dia,
+                        "max_cluster_dia": max_cluster_diameter[indx],
                         "size": size,
                     }
 
                 for x in range(len(indx_set)):
                     category = unique_descriptors.index(descriptor_str[x])
-                    max_dia = max_cluster_diameter[x]
+                    max_dia = distance_string(supercell.info["distances"],
+                                              max_cluster_diameter[x])
                     fam_id = fam_identifier.index(unique_descriptors[category])
                     name = get_unique_name(size, max_dia, fam_id)
 
@@ -668,8 +685,6 @@ class ClusterExpansionSetting(object):
 
                     assert cluster_info_symm[name]["equiv_sites"] \
                         == equiv_sites_set[x]
-                    assert cluster_info_symm[name]["max_cluster_dia"] == \
-                        max_cluster_diameter[x]
                     assert cluster_info_symm[name]["descriptor"] == \
                         descriptor_str[x]
 
@@ -769,7 +784,7 @@ class ClusterExpansionSetting(object):
         """Compute the Euclidean distance between two points."""
         diff = x1 - x0
         length = np.sqrt(diff.dot(diff))
-        return length.round(decimals=self.dist_num_dec)
+        return length
 
     def indices_of_nearby_atom(self, ref_indx, size, kd_trees):
         """Return the indices of the atoms nearby.
@@ -801,8 +816,11 @@ class ClusterExpansionSetting(object):
         sort_list = []
         for item in self.cluster_info:
             for cname, c_info in item.items():
+                # Sorted by 1) Number of atoms in cluster
+                # 2) diameter (since cname starts with c3_04nn etc.)
+                # 3) Unique descriptor
                 sort_list.append((c_info["size"],
-                                  c_info["max_cluster_dia"],
+                                  cname.rpartition("_")[0],
                                   c_info["descriptor"],
                                   cname))
         sort_list.sort()
@@ -876,7 +894,7 @@ class ClusterExpansionSetting(object):
     def _info_entries_to_list(self):
         """Convert entries in cluster info to list."""
         for info in self.cluster_info:
-            for _, cluster in info.items():
+            for name, cluster in info.items():
                 cluster['indices'] = nested_array2list(cluster['indices'])
                 cluster['equiv_sites'] = \
                     nested_array2list(cluster['equiv_sites'])
@@ -911,6 +929,31 @@ class ClusterExpansionSetting(object):
         """Display all clusters along with their names."""
         from ase.gui.gui import GUI
         from ase.gui.images import Images
+
+        # set the active template which has the best chance of displaying
+        # the largest diameter
+        sizes = []
+        for i in range(self.template_atoms.num_templates):
+            atoms = self.template_atoms.get_atoms(i)
+            lengths = atoms.get_cell_lengths_and_angles()[:3]
+            sizes.append(lengths)
+
+        uid = 0
+        candidates = []
+        for i, size in enumerate(sizes):
+            if i == 0:
+                candidates.append(min(size))
+                uid = i
+                continue
+            if min(size) <= max(candidates):
+                continue
+            uid = i
+        self._set_active_template_by_uid(uid)
+        if max(self.supercell_scale_factor) > 1:
+            print("Warning: the largest template atoms in DB is too small to "
+                  "accrately display large clusters. \nPlease change the "
+                  "'size' or 'supercell_factor' to include the largest "
+                  "template.")
 
         already_included_names = []
         cluster_atoms = []
@@ -966,6 +1009,7 @@ class ClusterExpansionSetting(object):
         gui = GUI(images, expr='')
         gui.show_name = True
         gui.run()
+        self._set_active_template_by_uid(0)
 
     def reconfigure_settings(self):
         """Reconfigure templates stored in DB file."""
@@ -1034,3 +1078,43 @@ class ClusterExpansionSetting(object):
             dists += list(self.unit_cell.get_distances(ref_atom, indices,
                                                        mic=True))
         return min(dists)
+
+    def _check_cluster_info_consistency(self):
+        """Check that cluster names in all templates' info entries match."""
+        db = connect(self.db_name)
+        names = []
+        descriptors = []
+        equiv_sites = {}
+        mult_factor = {}
+        for row in db.select(name='template'):
+            cluster_info = row.data["cluster_info"]
+
+            new_names = []
+            new_desc = []
+            new_equiv_sites = {}
+            new_mult_factor = {}
+            # Extract all names
+            for item in cluster_info:
+                for k, v in item.items():
+                    new_names.append(k)
+                    new_desc.append(v["descriptor"])
+                    if len(v["equiv_sites"]) == 0:
+                        new_equiv_sites[k] = 0
+                    else:
+                        new_equiv_sites[k] = len(v["equiv_sites"][0])
+                    new_mult_factor[k] = len(v["indices"])
+
+            new_names = sorted(new_names)
+            new_desc = sorted(new_desc)
+
+            if not names:
+                # This is the first entry
+                names = deepcopy(new_names)
+                descriptors = deepcopy(new_desc)
+                equiv_sites = deepcopy(new_equiv_sites)
+                mult_factor = deepcopy(new_mult_factor)
+
+            assert new_names == names
+            assert descriptors == new_desc
+            assert equiv_sites == new_equiv_sites
+            assert mult_factor == new_mult_factor

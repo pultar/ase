@@ -38,6 +38,8 @@ def test_hcp():
 
     assert dims == ref
 
+    os.remove(db_name)
+
 
 test_fcc()
 test_hcp()

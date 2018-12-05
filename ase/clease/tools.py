@@ -68,7 +68,7 @@ def shift(array):
     return array
 
 
-def distances_and_angles(atoms, ref_indx, float_obj_dist, float_obj_angle):
+def distances_and_angles(atoms, ref_indx, float_obj_angle):
     """Get sorted internal angles of a."""
     indices = [a.index for a in atoms if a.index != ref_indx]
     if len(atoms) < 2:
@@ -76,7 +76,7 @@ def distances_and_angles(atoms, ref_indx, float_obj_dist, float_obj_angle):
                          "{} body clusters".format(len(atoms)))
     if len(atoms) == 2:
         dist = atoms.get_distance(ref_indx, indices[0])
-        classifier = float_obj_dist.get(dist)
+        classifier = distance_string(atoms.info["distances"], dist)
         return [classifier]
 
     angles = []
@@ -89,43 +89,40 @@ def distances_and_angles(atoms, ref_indx, float_obj_dist, float_obj_angle):
 
     dists = atoms.get_distances(ref_indx, indices, mic=True)
     dists = sorted(dists.tolist(), reverse=True)
-    dists = [float_obj_dist.get(dist) for dist in dists]
-
+    dists = [distance_string(atoms.info["distances"], d) for d in dists]
     return dists + sorted(angles, reverse=True)
 
 
-def get_cluster_descriptor(cluster, float_obj_dist, float_obj_angle):
+def get_cluster_descriptor(cluster, float_obj_angle):
     """Create a unique descriptor for each cluster."""
     dist_ang_tuples = []
     for ref_indx in range(len(cluster)):
         dist_ang_list = distances_and_angles(cluster, ref_indx,
-                                             float_obj_dist, float_obj_angle)
+                                             float_obj_angle)
         dist_ang_tuples.append(dist_ang_list)
     return dist_ang_tuples
 
 
-def sort_by_internal_distances(atoms, indices, float_obj_dist, float_obj_ang):
+def sort_by_internal_distances(atoms, indices, float_obj_ang):
     """Sort the indices according to the distance to the other elements."""
     if len(indices) <= 1:
         return list(range(len(indices))), "point"
 
     cluster = create_cluster(atoms, indices)
     if len(indices) == 2:
-        dist_ang = get_cluster_descriptor(cluster, float_obj_dist,
-                                          float_obj_ang)
+        dist_ang = get_cluster_descriptor(cluster, float_obj_ang)
         order = list(range(len(indices)))
         eq_sites = [(0, 1)]
         descr = "{}_0".format(dist_ang[0][0])
         return order, eq_sites, descr
 
-    dist_ang = get_cluster_descriptor(cluster, float_obj_dist, float_obj_ang)
+    dist_ang = get_cluster_descriptor(cluster, float_obj_ang)
     sort_order = [ind for _, ind in sorted(zip(dist_ang, range(len(indices))))]
     dist_ang.sort()
     equivalent_sites = [[i] for i in range(len(indices))]
     site_types = [i for i in range(len(indices))]
     for i in range(len(sort_order)):
         for j in range(i + 1, len(sort_order)):
-            # if np.allclose(dist_ang[i], dist_ang[j], atol=0.002):
             if dist_ang[i] == dist_ang[j]:
                 if site_types[j] > i:
                     # This site has not been assigned to another category yet
@@ -287,3 +284,42 @@ def exclude_information_entries():
     return [('name', '!=', 'unit_cell'),
             ('name', '!=', 'template'),
             ('name', '!=', 'float_classification')]
+
+
+def get_all_internal_distances(atoms, max_dist):
+    """Obtain all internal distances of the passed atoms object and return a
+       Numpy array containing all the distances sorted in an ascending order.
+    """
+    from scipy.spatial import cKDTree as KDTree
+
+    tree = KDTree(atoms.get_positions())
+    distances = []
+    for atom in atoms:
+        indices = tree.query_ball_point(atom.position, max_dist)
+        dists = atoms.get_distances(atom.index, indices)
+        for d in dists:
+            if np.any(np.abs(np.array(distances) - d) < 1E-6):
+                continue
+            distances.append(d)
+    distances = sorted(distances)
+
+    # Make sure that the first element is 0
+    assert distances[0] < 1E-6
+    return np.array(distances[1:])
+
+
+def distance_string(distance_array, distance):
+    """Provide a name of the passed distance in terms of the nearest neighbor
+       based on the internal distances in an array."""
+    indx = np.argmin(np.abs(distance_array - distance))
+    assert abs(distance_array[indx] - distance) < 1E-6
+
+    if indx < 9:
+        return "0{}nn".format(indx+1)
+    return "{}nn".format(indx+1)
+
+
+def reconfigure(setting, select_cond=None):
+    from ase.clease import CorrFunction
+    setting.reconfigure_settings()
+    CorrFunction(setting).reconfigure_db_entries(select_cond)

@@ -50,18 +50,25 @@ class NewStructures(object):
         self.setting = setting
         self.db = connect(setting.db_name)
         self.corrfunc = CorrFunction(self.setting)
+        self.struct_per_gen = struct_per_gen
         if generation_number is None:
-            self.gen = self._determine_gen_number()
+            self.gen, self.num_in_gen = self._determine_gen_number()
         else:
             self.gen = generation_number
-
-        self.struct_per_gen = struct_per_gen
+            self.num_in_gen = len([row.id for row in
+                                   self.db.select(gen=self.gen)])
+        if self.num_in_gen >= self.struct_per_gen:
+            print("There are {} structures in generation {} in DB and "
+                  "struct_per_gen = {}. No more structures generated."
+                  .format(self.num_in_gen, self.gen, self.struct_per_gen))
+            exit(0)
+        self.num_to_gen = self.struct_per_gen - self.num_in_gen
 
     def generate_probe_structure(self, atoms=None, size=None,
                                  unit_cell_id=None, init_temp=None,
                                  final_temp=None, num_temp=5,
                                  num_steps_per_temp=1000,
-                                 approx_mean_var=False,
+                                 approx_mean_var=True,
                                  num_samples_var=10000):
         """Generate a probe structure according to PRB 80, 165122 (2009).
 
@@ -120,7 +127,8 @@ class NewStructures(object):
             if not os.path.isfile('probe_structure-sigma_mu.npz'):
                 self._generate_sigma_mu(num_samples_var)
 
-        print("Generate {} probe structures.".format(self.struct_per_gen))
+        print("Generate {} probe structures (struct_per_gen={}, {} present)."
+              .format(self.num_to_gen, self.struct_per_gen, self.num_in_gen))
         num_attempt = 0
         while True:
             if atoms is not None:
@@ -146,10 +154,16 @@ class NewStructures(object):
             probe_struct, cf = ps.generate()
             formula_unit = self._get_formula_unit(probe_struct)
             if self._exists_in_db(probe_struct, formula_unit):
-                print('generated structure is already in DB.')
-                print('generating again...')
+                msg = 'generated structure is already in DB.\n'
+                msg += 'generating again... '
+                msg += '{} out of {} attempts'.format(num_attempt+1,
+                                                      max_attempt)
+                print(msg)
                 num_attempt += 1
-                continue
+                if num_attempt >= max_attempt:
+                    raise MaxAttemptReachedError("Could not generate Emin "
+                                                 "structure in {} attempts."
+                                                 .format(max_attempt))
             else:
                 num_attempt = 0
 
@@ -158,30 +172,24 @@ class NewStructures(object):
             self.db.write(probe_struct, kvp)
 
             if num_attempt >= max_attempt:
-                msg = "Could not generate probe structure in 10 attempts."
-                raise MaxAttemptReachedError(msg)
+                raise MaxAttemptReachedError("Could not generate probe "
+                                             "structure in {} attempts."
+                                             .format(max_attempt))
 
-    def generate_Emin_structure(self, atoms=None, size=None, unit_cell_id=None,
-                                init_temp=2000, final_temp=1, num_temp=10,
+    def generate_Emin_structure(self, atoms=None, init_temp=2000,
+                                final_temp=1, num_temp=10,
                                 num_steps_per_temp=1000,
-                                cluster_names_eci=None):
+                                cluster_name_eci=None,
+                                random_composition=False):
         """Generate Emin structure.
 
         Arguments:
         =========
-        atoms: Atoms object
-            Atoms object with the desired composition of the new structure.
-            A random composition is selected atoms=None.
-
-        size: list of length=3 (optional)
-            If specified, the structure with the provided size is generated.
-            If None, the size will be generated randomly with a bias towards
-                more cubic cells (i.e., cell with similar magnitudes of vectors
-                a, b and c)
-
-        unit_cell_id: int
-            (only used when size is used)
-            The ID of the unit cell in the database to be used
+        atoms: Atoms object or a list of Atoms object
+            Atoms object with the desired size and composition of the new
+            structure. A list of Atoms with different size and/or compositions
+            can be passed. Compositions of the supplied Atoms object(s) are
+            ignored when random_composition=True.
 
         init_temp: int or float
             initial temperature (does not represent *physical* temperature)
@@ -194,56 +202,134 @@ class NewStructures(object):
 
         num_steps_per_temp: int
             number of steps in simulated annealing
+
+        cluster_name_eci: dict of list of tuples
+            cluster names and ECI values for calculating the energy
+
+        random_composition: bool
+            -*False* and atoms = Atoms object: One Emin structure with a
+                matching size and composition of the supplied Atoms object is
+                generated
+            -*False* and atoms = list: The same number of Emin structures that
+                matches the length of the list is generated
+                Note 1: num_struct_per_gen is ignored and all of the generated
+                        structures have the same generation number
+                Note 2: each Emin structure will have matching size and
+                        composition of the suplied Atoms objects
+            -*True* and atoms = Atoms object: Emin structure(s) with a
+                matching size of the Atoms object is generated at a random
+                composition (within the composition range specified in
+                Concentration class)
+                Note 1: This will generate Emin structures until the number of
+                        structures with the current generation number equals
+                        num_struct_per_gen
+                Note 2: A check is performed to ensure that none of the newly
+                        generated Emin structures have the same composition
+            -*True* and atoms = list: The same number of Emin structures that
+                matches the length of the list is generated
+                Note 1: num_struct_per_gen is ignored and all of the generated
+                        structures have the same generation number
+                Note 2: each Emin structure will have matching sizes of the
+                        supplied Atoms objects but with a random composition
+                Note 3: No check is performed to ensure that all new Emin
+                        structures have unique composition
         """
-
-        print("Generate {} Emin structures.".format(self.struct_per_gen))
-
+        structs = self._set_initial_structures(atoms, random_composition)
+        current_count = 0
         num_attempt = 0
-        while True:
-            # Break out of the loop if reached struct_per_gen
-            if atoms is None:
-                print("Generating a structure with size {} at a random "
-                      "concentration."
-                      "".format(size))
-                self.setting.set_active_template(size=size,
-                                                 unit_cell_id=unit_cell_id,
-                                                 generate_template=True)
-                struct = self._get_struct_at_conc(conc_type='random')
-            else:
-                print("Generating a structure with the composition "
-                      "corresponding to the passed Atoms object "
-                      "(cell size is the same as the passed Atoms).")
-                struct = wrap_and_sort_by_position(atoms)
-                self.setting.set_active_template(atoms=struct,
-                                                 generate_template=True)
-                num_struct = len([row.id for row in
-                                  self.db.select(gen=self.gen)])
-                if num_struct >= self.struct_per_gen:
-                    break
-
-            print('Generating {} out of {} structures.'
-                  .format(num_struct + 1, self.struct_per_gen))
+        print(structs)
+        while current_count < len(structs):
+            struct = structs[current_count].copy()
+            self.setting.set_active_template(atoms=struct,
+                                             generate_template=False)
+            print("Generating {} out of {} structures."
+                  .format(current_count+1, len(structs)))
             es = EminStructure(self.setting, struct, self.struct_per_gen,
                                init_temp, final_temp, num_temp,
-                               num_steps_per_temp, cluster_names_eci)
+                               num_steps_per_temp, cluster_name_eci)
             emin_struct, cf = es.generate()
             formula_unit = self._get_formula_unit(emin_struct)
 
             if self._exists_in_db(emin_struct, formula_unit):
-                print('generated structure is already in DB.')
-                print('generating again...')
+                msg = 'generated structure is already in DB.\n'
+                msg += 'generating again... '
+                msg += '{} out of {} attempts'.format(num_attempt+1,
+                                                      max_attempt)
+                print(msg)
                 num_attempt += 1
+                if num_attempt >= max_attempt:
+                    raise MaxAttemptReachedError("Could not generate Emin "
+                                                 "structure in {} attempts."
+                                                 .format(max_attempt))
                 continue
             else:
                 num_attempt = 0
 
-            print('Structure with E = {} generated.'.format(es.min_energy))
+            print('Structure with E = {:.3f} generated.'.format(es.min_energy))
             kvp = self._get_kvp(emin_struct, cf, formula_unit)
             self.db.write(emin_struct, kvp)
 
-            if num_attempt >= max_attempt:
-                msg = "Could not generate probe structure in 10 attempts."
-                raise MaxAttemptReachedError(msg)
+            current_count += 1
+
+    def _set_initial_structures(self, atoms, random_composition=False):
+        structs = []
+        if isinstance(atoms, Atoms):
+            struct = wrap_and_sort_by_position(atoms)
+            if random_composition is False:
+                self.num_to_gen = 1
+                print("Generate 1 Emin structure.")
+                structs.append(struct)
+            else:
+                print("Generate {} Emin structures "
+                      "(struct_per_gen={}, {} present)."
+                      .format(self.num_to_gen, self.struct_per_gen,
+                              self.num_in_gen))
+                self.setting.set_active_template(atoms=struct,
+                                                 generate_template=True)
+                concs = []
+                # Get unique concentrations
+                num_attempt = 0
+                while len(concs) < self.num_to_gen:
+                    x = self.setting.concentration.get_random_concentration()
+                    if True in [np.allclose(x, i) for i in concs]:
+                        num_attempt += 1
+                    else:
+                        concs.append(x)
+                        num_attempt = 0
+
+                    if num_attempt > 100:
+                        raise RuntimeError("Could not find {} unique "
+                                           "compositions using the provided "
+                                           "Atoms object"
+                                           .format(self.num_to_gen))
+                num_atoms_in_basis = [len(indices) for indices
+                                      in self.setting.index_by_basis]
+                for x in concs:
+                    num_insert = self.setting.concentration.conc_in_int(
+                        num_atoms_in_basis, x)
+                    structs.append(self._random_struct_at_conc(num_insert))
+
+        elif all(isinstance(a, Atoms) for a in atoms):
+            print("Generate {} Emin structures ".format(len(atoms)))
+            if random_composition is False:
+                for struct in atoms:
+                    structs.append(wrap_and_sort_by_position(struct))
+            else:
+                concs = []
+                for struct in atoms:
+                    self.setting.set_active_template(atoms=struct,
+                                                     generate_template=True)
+                    x = self.setting.concentration.get_random_concentration()
+                    num_atoms_in_basis = [len(indices) for indices
+                                          in self.setting.index_by_basis]
+                    num_insert = self.setting.concentration.conc_in_int(
+                        num_atoms_in_basis, x)
+                    structs.append(self._random_struct_at_conc(num_insert))
+
+        else:
+            raise ValueError("atoms must be either an Atoms object or a list "
+                             "of Atoms objects")
+        return structs
 
     def generate_initial_pool(self):
         """Generate initial pool of random structures."""
@@ -481,10 +567,15 @@ class NewStructures(object):
         try:
             gens = [row.get('gen') for row in self.db.select()]
             gens = [i for i in gens if i is not None]
-            gen = max(gens) + 1
+            gen = max(gens)
+            num_in_gen = len([row.id for row in self.db.select(gen=gen)])
+            if num_in_gen >= self.struct_per_gen:
+                gen += 1
+                num_in_gen = 0
         except ValueError:
             gen = 0
-        return gen
+            num_in_gen = 0
+        return gen, num_in_gen
 
     def _generate_sigma_mu(self, num_samples_var):
         print('===========================================================\n'
