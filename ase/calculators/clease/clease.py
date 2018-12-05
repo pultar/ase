@@ -493,7 +493,7 @@ class DuplicationCountTracker(object):
         for k, v in occ_count.items():
             tot_num = self._total_number_of_occurences(k, cluster["name"])
             num_unique = len(set(k.split("-")))
-            norm_count[k] = tot_num/(num_unique*v)
+            norm_count[k] = float(tot_num)/(num_unique*v)
         return norm_count
 
     def _corresponding_subcluster(self, new_ref_indx, target_cluster, name):

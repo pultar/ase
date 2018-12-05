@@ -1109,13 +1109,12 @@ class ClusterExpansionSetting(object):
 
             if not names:
                 # This is the first entry
-                names = new_names.copy()
-                descriptors = new_desc.copy()
-                equiv_sites = new_equiv_sites.copy()
-                mult_factor = new_mult_factor.copy()
+                names = deepcopy(new_names)
+                descriptors = deepcopy(new_desc)
+                equiv_sites = deepcopy(new_equiv_sites)
+                mult_factor = deepcopy(new_mult_factor)
 
             assert new_names == names
             assert descriptors == new_desc
             assert equiv_sites == new_equiv_sites
             assert mult_factor == new_mult_factor
-                    
