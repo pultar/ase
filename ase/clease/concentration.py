@@ -12,7 +12,7 @@ class IntConversionNotConsistentError(Exception):
     pass
 
 
-class NoValidConcentrationError(Exception):
+class InvalidConcentrationError(Exception):
     """Exception being raised if no valid concentration could be found."""
     pass
 
@@ -520,7 +520,12 @@ class Concentration(object):
                            constraints=constraints,
                            bounds=self.trivial_bounds)
         self._remove_fixed_element_in_each_basis_constraint()
-        return opt_res["x"]
+        x = opt_res["x"]
+
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
 
     @property
     def trivial_bounds(self):
@@ -545,7 +550,12 @@ class Concentration(object):
                            method="SLSQP", jac=obj_jac_component_min,
                            constraints=constraints, 
                            bounds=self.trivial_bounds)
-        return opt_res["x"]
+
+        x = opt_res["x"]
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
 
     def get_conc_max_component(self, comp):
         """Generate all end points of the composition domain."""
@@ -562,7 +572,11 @@ class Concentration(object):
                            method="SLSQP", jac=obj_jac_component_max,
                            constraints=constraints,
                            bounds=self.trivial_bounds)
-        return opt_res["x"]
+        x = opt_res["x"]
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
 
     def conc_in_int(self, num_atoms_in_basis, conc):
         """Converts concentration value to an integer that corresponds to the
