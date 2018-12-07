@@ -289,8 +289,9 @@ class NewStructures(object):
                 concs = []
                 # Get unique concentrations
                 num_attempt = 0
+                nib = [len(x) for x in self.setting.index_by_basis]
                 while len(concs) < self.num_to_gen:
-                    x = self.setting.concentration.get_random_concentration()
+                    x = self.setting.concentration.get_random_concentration(nib=nib)
                     if True in [np.allclose(x, i) for i in concs]:
                         num_attempt += 1
                     else:
@@ -316,10 +317,11 @@ class NewStructures(object):
                     structs.append(wrap_and_sort_by_position(struct))
             else:
                 concs = []
+                nib = [len(x) for x in self.setting.index_by_basis]
                 for struct in atoms:
                     self.setting.set_active_template(atoms=struct,
                                                      generate_template=True)
-                    x = self.setting.concentration.get_random_concentration()
+                    x = self.setting.concentration.get_random_concentration(nib=nib)
                     num_atoms_in_basis = [len(indices) for indices
                                           in self.setting.index_by_basis]
                     num_insert = self.setting.concentration.conc_in_int(
@@ -370,7 +372,8 @@ class NewStructures(object):
         elif conc_type == 'max':
             x = conc.get_conc_max_component(index)
         else:
-            x = conc.get_random_concentration()
+            nib = [len(x) for x in self.setting.index_by_basis]
+            x = conc.get_random_concentration(nib=nib)
 
         num_atoms_in_basis = [len(indices) for indices
                               in self.setting.index_by_basis]
