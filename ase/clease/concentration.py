@@ -130,7 +130,7 @@ class Concentration(object):
     def is_valid_conc(self, conc):
         """Check if the concentration is valid."""
         eq_valid = np.allclose(self.A_eq.dot(conc), self.b_eq)
-        ineq_valid = np.all(self.A_lb.dot(conc) >= self.b_lb)
+        ineq_valid = np.all(self.A_lb.dot(conc) - self.b_lb > -1e-6)
         return eq_valid and ineq_valid
 
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
