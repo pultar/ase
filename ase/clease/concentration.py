@@ -9,7 +9,11 @@ class IntConversionNotConsistentError(Exception):
     Exception that is raised if equality constraints are not satisfied when
     converting to integers.
     """
+    pass
 
+
+class NoValidConcentrationError(Exception):
+    """Exception being raised if no valid concentration could be found."""
     pass
 
 
@@ -513,9 +517,19 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_random, x0, args=(x0,),
                            method="SLSQP", jac=obj_jac_random,
-                           constraints=constraints)
+                           constraints=constraints,
+                           bounds=self.trivial_bounds)
         self._remove_fixed_element_in_each_basis_constraint()
         return opt_res["x"]
+
+    @property
+    def trivial_bounds(self):
+        """Return trivial bounds (i.e. 0 <= x <= 1)
+
+           NOTE: One can give stricter bounds, but these
+                 trivial bounds are always satisfied
+        """
+        return [(0, 1) for _ in range(self.num_concs)]
 
     def get_conc_min_component(self, comp):
         """Generate all end points of the composition domain."""
@@ -529,7 +543,8 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_component_min, x0, args=(comp,),
                            method="SLSQP", jac=obj_jac_component_min,
-                           constraints=constraints)
+                           constraints=constraints, 
+                           bounds=self.trivial_bounds)
         return opt_res["x"]
 
     def get_conc_max_component(self, comp):
@@ -545,7 +560,8 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_component_max, x0, args=(comp,),
                            method="SLSQP", jac=obj_jac_component_max,
-                           constraints=constraints)
+                           constraints=constraints,
+                           bounds=self.trivial_bounds)
         return opt_res["x"]
 
     def conc_in_int(self, num_atoms_in_basis, conc):
