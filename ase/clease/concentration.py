@@ -9,7 +9,11 @@ class IntConversionNotConsistentError(Exception):
     Exception that is raised if equality constraints are not satisfied when
     converting to integers.
     """
+    pass
 
+
+class InvalidConcentrationError(Exception):
+    """Exception being raised if no valid concentration could be found."""
     pass
 
 
@@ -126,7 +130,7 @@ class Concentration(object):
     def is_valid_conc(self, conc):
         """Check if the concentration is valid."""
         eq_valid = np.allclose(self.A_eq.dot(conc), self.b_eq)
-        ineq_valid = np.all(self.A_lb.dot(conc) >= self.b_lb)
+        ineq_valid = np.all(self.A_lb.dot(conc) - self.b_lb > -1e-6)
         return eq_valid and ineq_valid
 
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
@@ -513,9 +517,24 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_random, x0, args=(x0,),
                            method="SLSQP", jac=obj_jac_random,
-                           constraints=constraints)
+                           constraints=constraints,
+                           bounds=self.trivial_bounds)
         self._remove_fixed_element_in_each_basis_constraint()
-        return opt_res["x"]
+        x = opt_res["x"]
+
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
+
+    @property
+    def trivial_bounds(self):
+        """Return trivial bounds (i.e. 0 <= x <= 1)
+
+           NOTE: One can give stricter bounds, but these
+                 trivial bounds are always satisfied
+        """
+        return [(0, 1) for _ in range(self.num_concs)]
 
     def get_conc_min_component(self, comp):
         """Generate all end points of the composition domain."""
@@ -529,8 +548,14 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_component_min, x0, args=(comp,),
                            method="SLSQP", jac=obj_jac_component_min,
-                           constraints=constraints)
-        return opt_res["x"]
+                           constraints=constraints, 
+                           bounds=self.trivial_bounds)
+
+        x = opt_res["x"]
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
 
     def get_conc_max_component(self, comp):
         """Generate all end points of the composition domain."""
@@ -545,8 +570,13 @@ class Concentration(object):
         # Find the closest vector to x0 that satisfies all constraints
         opt_res = minimize(objective_component_max, x0, args=(comp,),
                            method="SLSQP", jac=obj_jac_component_max,
-                           constraints=constraints)
-        return opt_res["x"]
+                           constraints=constraints,
+                           bounds=self.trivial_bounds)
+        x = opt_res["x"]
+        if not self.is_valid_conc(x):
+            raise InvalidConcentrationError("Could not find valid concentration. "
+                                            "Revise the constraints.")
+        return x
 
     def conc_in_int(self, num_atoms_in_basis, conc):
         """Converts concentration value to an integer that corresponds to the
