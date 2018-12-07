@@ -179,6 +179,40 @@ def test_formula_unit6():
     assert np.allclose(A_lb, conc.A_lb)
     assert np.allclose(b_lb, conc.b_lb)
 
+def test_three_interlinked_basis():
+    basis_elements = [["Al", "Mg", "Si"], ["X", "O"], ["Ta", "Se"]]
+    A_eq = [[1, 0, 0, -1, 0, 0, 0]]
+    b_eq = [0]
+    A_lb = [[0, 0, 1, 0, 0, -1, 0]]
+    b_lb = [0]
+    conc = Concentration(basis_elements=basis_elements,
+                         A_eq=A_eq, b_eq=b_eq, A_lb=A_lb, b_lb=b_lb)
+    linked = conc._linked_basis
+    assert sum(1 for i, num in enumerate(linked) if num == i) == 1
+
+    A_lb = [[1, 0, 0, 1, 0, -1, 0]]
+    b_lb = [0]
+
+    conc = Concentration(basis_elements=basis_elements,
+                         A_lb=A_lb, b_lb=b_lb)
+    linked = conc._linked_basis
+    assert sum(1 for i, num in enumerate(linked) if num == i) == 1
+
+
+def test_two_of_four_linked_basis():
+    basis_elements = [["Al", "Mg"], ["X", "O"], ["Ta", "Se"], ["Ta", "O"]]
+    A_eq = [[1, 0, 0, 0, -1, 0, 0, 0]]
+    b_eq = [0]
+    A_lb = [[0, 0, 1, 0, 0, 0, 0, -1]]
+    b_lb = [0]
+    conc = Concentration(basis_elements=basis_elements,
+                         A_eq=A_eq, b_eq=b_eq, A_lb=A_lb, b_lb=b_lb)
+    linked = conc._linked_basis
+    assert sum(1 for i, num in enumerate(linked) if num == i) == 2
+
+
+
+
 
 test_full_range()
 fixed_composition()
@@ -190,3 +224,5 @@ test_formula_unit3()
 test_formula_unit4()
 test_formula_unit5()
 test_formula_unit6()
+test_three_interlinked_basis()
+test_two_of_four_linked_basis()

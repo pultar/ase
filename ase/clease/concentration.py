@@ -83,6 +83,7 @@ class Concentration(object):
         for i in range(self.num_concs):
             self.A_lb[i, i] = 1
 
+        self._linked_basis = [i for i in range(len(self.basis_elements))]
         if num_usr_eq > 0:
             self.add_usr_defined_eq_constraints(A_eq, b_eq)
 
@@ -139,6 +140,7 @@ class Concentration(object):
         self.b_eq = np.append(self.b_eq, b_eq)
         self.A_eq, self.b_eq = self._remove_redundant_entries(self.A_eq,
                                                               self.b_eq)
+        self._get_interbasis_relations_for_given_matrix(self.A_eq)
 
     def add_usr_defined_ineq_constraints(self, A_lb, b_lb):
         """Add the user defined constraints."""
@@ -146,6 +148,7 @@ class Concentration(object):
         self.b_lb = np.append(self.b_lb, b_lb)
         self.A_lb, self.b_lb = self._remove_redundant_entries(self.A_lb,
                                                               self.b_lb)
+        self._get_interbasis_relations_for_given_matrix(self.A_lb)
 
     def set_conc_ranges(self, ranges):
         """Set concentration based on lower and upper bounds.
@@ -452,18 +455,21 @@ class Concentration(object):
             constraints.append(new_constraint)
         return constraints
 
-    def _add_fixed_element_in_each_basis(self):
+    def _add_fixed_element_in_each_basis(self, nib=None):
         """Add constraints corresponding to the fixing elements in basis."""
         if self.fixed_element_constraint_added:
             return
         from random import choice
         indices = []
+        basis_of_index = []
         start = 0
         ranges = self.get_individual_comp_range()
         min_range = 0.01
         maxiter = 1000
         self.orig_num_equality = self.A_eq.shape[0]
-        for basis in self.basis_elements:
+        for i, basis in enumerate(self.basis_elements):
+            if self._is_linked_to_other_basis(i):
+                continue
             iteration = 0
             rng = 0.5*min_range
             while rng < min_range and iteration < maxiter:
@@ -474,6 +480,7 @@ class Concentration(object):
                 self.fixed_element_constraint_added = False
                 continue
             indices.append(indx)
+            basis_of_index.append(i)
             start += len(basis)
 
         A = np.zeros((len(indices), self.num_concs))
@@ -482,6 +489,10 @@ class Concentration(object):
             A[i, indx] = 1
             rng = ranges[indx][1] - ranges[indx][0]
             b[i] = np.random.rand()*rng + ranges[indx][0]
+            if nib is not None:
+                # Convert to closest rational number
+                n = nib[basis_of_index[i]]
+                b[i] = np.round((b[i]*n))/n
 
         # Add constraints
         self.A_eq = np.vstack((self.A_eq, A))
@@ -505,11 +516,11 @@ class Concentration(object):
             ranges.append((xmin[i], xmax[i]))
         return ranges
 
-    def get_random_concentration(self):
+    def get_random_concentration(self, nib=None):
         """Generate a valid random concentration."""
         assert self.A_eq.shape[0] == len(self.b_eq)
 
-        self._add_fixed_element_in_each_basis()
+        self._add_fixed_element_in_each_basis(nib=nib)
         # Setup the constraints
         constraints = self._get_constraints()
         x0 = np.random.rand(self.num_concs)
@@ -521,11 +532,53 @@ class Concentration(object):
                            bounds=self.trivial_bounds)
         self._remove_fixed_element_in_each_basis_constraint()
         x = opt_res["x"]
+        
 
         if not self.is_valid_conc(x):
-            raise InvalidConcentrationError("Could not find valid concentration. "
+            raise InvalidConcentrationError("Could not find valid "
+                                            "concentration. "
                                             "Revise the constraints.")
         return x
+
+    def _get_interbasis_relations(self):
+        self._linked_basis = [i for i in range(len(self.basis_elements))]
+        self._get_interbasis_relations_for_given_matrix(self.A_eq)
+        self._get_interbasis_relations_for_given_matrix(self.A_lb)
+
+    def _get_interbasis_relations_for_given_matrix(self, A):
+        basis_start_col = [0]
+        for i in range(0, len(self.basis_elements)-1):
+            start_col = basis_start_col[-1] + len(self.basis_elements[i])
+            basis_start_col.append(start_col)
+        
+        # Linked basis
+        tol = 1E-6
+        for i in range(A.shape[0]):
+            lowest_nonzoro_basis = None
+            for j, basis_start in enumerate(basis_start_col):
+                if j < len(basis_start_col)-1:
+                    b_end = basis_start_col[j+1]
+                    values = A[i, basis_start:b_end]
+                else:
+                    values = A[i, basis_start:]
+
+                if np.any(np.abs(values) > tol):
+                    # There is a non zero entry in the current basis
+                    if lowest_nonzoro_basis is None:
+                        lowest_nonzoro_basis = j
+                    else:
+                        # There exists a link between the two basis
+                        root = self._get_root_indx(lowest_nonzoro_basis)
+                        self._linked_basis[root] = j
+
+    def _get_root_indx(self, indx):
+        """Search find the root index of the link tree."""
+        while self._linked_basis[indx] != indx:
+            indx = self._linked_basis[indx]
+        return indx
+
+    def _is_linked_to_other_basis(self, indx):
+        return self._linked_basis[indx] != indx
 
     @property
     def trivial_bounds(self):
@@ -685,7 +738,7 @@ def obj_jac_component_min(x, indx):
 
 
 def objective_component_max(x, indx):
-    return -np.sum(x[indx])
+    return -1 * np.sum(x[indx])
 
 
 def obj_jac_component_max(x, indx):
