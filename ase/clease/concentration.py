@@ -552,17 +552,17 @@ class Concentration(object):
             basis_start_col.append(start_col)
         
         # Linked basis
-      
         tol = 1E-6
         for i in range(A.shape[0]):
             lowest_nonzoro_basis = None
             for j, basis_start in enumerate(basis_start_col):
                 if j < len(basis_start_col)-1:
                     b_end = basis_start_col[j+1]
+                    values = A[i, basis_start:b_end]
                 else:
-                    b_end = -1
+                    values = A[i, basis_start:]
 
-                if np.any(np.abs(A[i, basis_start:b_end]) > tol):
+                if np.any(np.abs(values) > tol):
                     # There is a non zero entry in the current basis
                     if lowest_nonzoro_basis is None:
                         lowest_nonzoro_basis = j
