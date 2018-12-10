@@ -536,6 +536,7 @@ class Onetep(FileIOCalculator):
         pos_block = [('%s %8.6f %8.6f %8.6f' %
                       (x+z, y[0], y[1], y[2])) for (x, y, z)
                      in zip(atoms.get_chemical_symbols(), positions, tags)]
+
         fd.write('%%BLOCK %s\n' % keyword)
         fd.write('ang\n')
         for line in pos_block:
