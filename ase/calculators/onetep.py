@@ -40,7 +40,8 @@ class Onetep(FileIOCalculator):
                          'species_ngwf_number', 'species_solver',
                          'ngwf_radius_cond', 'pseudo_suffix',
                          'species_pseudo', 'species_core_wf',
-                         'species_solver_cond']
+                         'species_solver_cond', 'species_ngwf_number_cond',
+                         'species_ngwf_radius_cond']
 
     # Used to indicate which parameters are a kpoint path and should be
     # written as such
@@ -401,7 +402,7 @@ class Onetep(FileIOCalculator):
 
         if not cond:
             solver_var = 'species_solver'
-        else
+        else:
             solver_var = 'species_solver_cond'
         for sp in self.species:
             try:
@@ -410,7 +411,7 @@ class Onetep(FileIOCalculator):
                 atomic_string = 'SOLVE'
             if not cond:
                 self.solvers.append((sp[0], atomic_string))
-            else
+            else:
                 self.solvers_cond.append((sp[0],atomic_string))
 
     def _generate_core_wf_block(self):
@@ -478,9 +479,9 @@ class Onetep(FileIOCalculator):
             self._generate_solver_block()
 
         if 'ngwf_radius_cond' in self.parameters:
-            if (self.species_cond) < len(self.species):
+            if len(self.species_cond) < len(self.species):
                 self._generate_species_block(cond=True)
-            if (self.solvers_cond) < len(self.species):
+            if len(self.solvers_cond) < len(self.species):
                 self._generate_solver_block(cond=True)
 
         if len(self.core_wfs) < len(self.species):
