@@ -54,6 +54,7 @@ def test_init_from_file():
     selector = GAFit(setting=setting, fname=backup)
     assert np.allclose(individuals, selector.individuals)
     os.remove(backup)
+    os.remove("ga_test_cluster_names.txt")
 
 test_init_from_file()
 os.remove(DB_NAME)
