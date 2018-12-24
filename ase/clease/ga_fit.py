@@ -110,10 +110,7 @@ class GAFit(object):
         from random import shuffle
         individuals = []
         if os.path.exists(self.fname):
-            individ_from_file = np.loadtxt(self.fname,
-                                           delimiter=",").astype(int)
-            for i in range(individ_from_file.shape[0]):
-                individuals.append(individ_from_file[i, :])
+            individuals = self._init_from_file()
         else:
             max_num = max_num or self.num_genes
             indices = list(range(self.num_genes))
@@ -123,6 +120,18 @@ class GAFit(object):
                 num_non_zero = np.random.randint(low=3, high=max_num)
                 indx = indices[:num_non_zero]
                 individual[np.array(indx)] = 1
+                individuals.append(individual)
+        return individuals
+
+    def _init_from_file(self):
+        """Initialize the population from file."""
+        print("Initializing population from {}".format(self.fname))
+        individuals = []
+        with open(self.fname, 'r') as infile:
+            for line in infile:
+                individual = np.zeros(self.num_genes, dtype=np.uint8)
+                indices = np.array([int(x.strip()) for x in line.split(",")])
+                individual[indices] = 1
                 individuals.append(individual)
         return individuals
 
@@ -279,14 +288,14 @@ class GAFit(object):
         individual: int
             Index of the individual
         """
-        return np.nonzero(self.individuals[individual, :])
+        return list(np.nonzero(self.individuals[individual])[0])
 
     def save_population(self):
         # Save population
         with open(self.fname, 'w') as out:
-            for i in range(self.individuals.shape[0]):
+            for i in range(len(self.individuals)):
                 out.write(",".join(str(x) for x in self.index_of_selected_clusters(i)))
-            out.write("\n")
+                out.write("\n")
         print("\nPopulation written to {}".format(self.fname))
 
     def save_cluster_names(self):
