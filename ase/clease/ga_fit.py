@@ -61,6 +61,10 @@ class GAFit(object):
         If not given (and parallel=True) then mp.cpu_count()/2
         will be used
 
+    select_cond: list
+        Select condition passed to Evaluate to select which 
+        data points from the database the should be included
+
     Example:
     =======
     from ase.clease import Evaluate
@@ -73,10 +77,12 @@ class GAFit(object):
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
-                 max_num_in_init_pool=None, parallel=False, num_core=None):
+                 max_num_in_init_pool=None, parallel=False, num_core=None,
+                 select_cond=None):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
-                             max_cluster_size=max_cluster_size)
+                             max_cluster_size=max_cluster_size,
+                             select_cond=select_cond)
 
         # Read required attributes from evaluate
         self.cf_matrix = evaluator.cf_matrix
