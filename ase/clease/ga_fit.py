@@ -271,9 +271,22 @@ class GAFit(object):
         individual = self.best_individual
         return list(compress(self.cluster_names, individual))
 
+    def index_of_selected_clusters(self, individual):
+        """Return the indices of the selected clusters
+
+        Arguments
+        ==========
+        individual: int
+            Index of the individual
+        """
+        return np.nonzero(self.individuals[individual, :])
+
     def save_population(self):
         # Save population
-        np.savetxt(self.fname, self.individuals, delimiter=",", fmt="%d")
+        with open(self.fname, 'w') as out:
+            for i in range(self.individuals.shape[0]):
+                out.write(",".join(str(x) for x in self.index_of_selected_clusters(i)))
+            out.write("\n")
         print("\nPopulation written to {}".format(self.fname))
 
     def save_cluster_names(self):
