@@ -32,6 +32,7 @@ def read_lammps_dump(fileobj, index=-1, order=True, atomsobj=Atoms):
             tilt = []
             id = []
             types = []
+            pbc = [False, False, False]
             positions = []
             scaled_positions = []
             velocities = []
@@ -53,6 +54,11 @@ def read_lammps_dump(fileobj, index=-1, order=True, atomsobj=Atoms):
                 hi.append(float(fields[1]))
                 if (len(fields) >= 3):
                     tilt.append(float(fields[2]))
+
+            #check pbc
+            pbc_items = tilt_items[-3:]
+            for i in range(3):
+                pbc[i] = pbc_items[i] == 'pp' or pbc_items[i] == 'p'
 
             # determine cell tilt (triclinic case!)
             if (len(tilt) >= 3):
@@ -130,16 +136,16 @@ def read_lammps_dump(fileobj, index=-1, order=True, atomsobj=Atoms):
 
             if len(quaternions):
                 images.append(Quaternions(symbols=types,
-                                          positions=positions,
+                                          positions=positions, pbc=pbc,
                                           cell=cell, celldisp=celldisp,
                                           quaternions=quaternions))
             elif len(positions):
                 images.append(atomsobj(
-                    symbols=types, positions=positions,
+                    symbols=types, positions=positions, pbc=pbc,
                     celldisp=celldisp, cell=cell))
             elif len(scaled_positions):
                 images.append(atomsobj(
-                    symbols=types, scaled_positions=scaled_positions,
+                    symbols=types, scaled_positions=scaled_positions, pbc=pbc,
                     celldisp=celldisp, cell=cell))
 
             if len(velocities):
