@@ -6,7 +6,8 @@ from ase.utils import basestring
 from collections import deque
 
 
-def read_lammps_dump(fileobj, index=-1, order=True, atomsobj=Atoms):
+def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
+                    atomsobj=Atoms):
     """Method which reads a LAMMPS dump file.
 
     order: Order the particles according to their id. Might be faster to
@@ -134,20 +135,26 @@ def read_lammps_dump(fileobj, index=-1, order=True, atomsobj=Atoms):
                 forces = reorder(forces)
                 quaternions = reorder(quaternions)
 
+            if Z_of_type is None:
+                numbers = types
+            else:
+                numbers = [Z_of_type[i] for i in types]
+
             if len(quaternions):
-                images.append(Quaternions(symbols=types,
+                images.append(Quaternions(symbols=numbers,
                                           positions=positions, pbc=pbc,
                                           cell=cell, celldisp=celldisp,
                                           quaternions=quaternions))
             elif len(positions):
                 images.append(atomsobj(
-                    symbols=types, positions=positions, pbc=pbc,
+                    symbols=numbers, positions=positions, pbc=pbc,
                     celldisp=celldisp, cell=cell))
             elif len(scaled_positions):
                 images.append(atomsobj(
-                    symbols=types, scaled_positions=scaled_positions, pbc=pbc,
+                    symbols=numbers, scaled_positions=scaled_positions, pbc=pbc,
                     celldisp=celldisp, cell=cell))
 
+            images[-1].set_array('type', types, int)
             if len(velocities):
                 images[-1].set_velocities(velocities)
             if len(forces):
