@@ -1,7 +1,7 @@
 import re
 import numpy as np
 
-from ase.atoms import Atoms
+from ase.lammpsatoms import LammpsAtoms
 from ase.parallel import paropen
 from ase.calculators.lammpslib import unit_convert
 from ase.utils import basestring
@@ -304,7 +304,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         velocities *= unit_convert("velocity", units)
 
     # create ase.Atoms
-    at = Atoms(positions=positions,
+    at = LammpsAtoms(positions=positions,
                numbers=numbers,
                masses=masses,
                cell=cell,
