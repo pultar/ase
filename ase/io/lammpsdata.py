@@ -312,14 +312,14 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
-    at.arrays['id'] = ids
-    at.arrays['type'] = types
+    at.set_array('id', ids, int)
+    at.set_array('type', types, int)
     if travel is not None:
-        at.arrays['travel'] = travel
+        at.set_array('travel', travel, int)
     if mol_id is not None:
-        at.arrays['mol-id'] = mol_id
+        at.set_array('mol-id', mol_id, int)
     if mmcharge is not None:
-        at.arrays['mmcharge'] = mmcharge
+        at.set_array('mmcharge', mmcharge, float)
 
     if bonds is not None:
         for (type, a1, a2) in bonds_in:
@@ -327,7 +327,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a2 = ind_of_id[a2]
             # Double list for bonds to make it consistent with other sections
             bonds[i_a1][type] = bonds[i_a1].get(type, []) + [[i_a2]]
-        at.arrays['bonds'] = np.array(bonds)
+        at.set_array('bonds', bonds, 'object')
 
     if angles is not None:
         for (type, a1, a2, a3) in angles_in:
@@ -335,7 +335,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             angles[i_a2][type] = angles[i_a2].get(type, []) + [[i_a1, i_a3]]
-        at.arrays['angles'] = np.array(angles)
+            at.set_array('angles', angles, 'object')
 
     if dihedrals is not None:
         for (type, a1, a2, a3, a4) in dihedrals_in:
@@ -345,7 +345,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a4 = ind_of_id[a4]
             dihedrals[i_a1][type] = dihedrals[i_a1].get(type, []) \
                 + [[i_a2, i_a3, i_a4]]
-        at.arrays['dihedrals'] = np.array(dihedrals)
+            at.set_array('dihedrals', dihedrals, 'object')
 
     if impropers is not None:
         for (type, a1, a2, a3, a4) in impropers_in:
@@ -355,7 +355,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a4 = ind_of_id[a4]
             impropers[i_a1][type] = impropers[i_a1].get(type, []) \
                 + [[i_a2, i_a3, i_a4]]
-        at.arrays['impropers'] = np.array(impropers)
+            at.set_array('impropers', impropers, 'object')
 
     at.info['comment'] = comment
 
