@@ -11,6 +11,7 @@ class LammpsAtoms(Atoms):
 
     def __init__(self, *args, **kwargs):
         Atoms.__init__(self, *args, **kwargs)
+        self.update()
 
     def get_num_type(self, prop):
         ''' returns number of types of prop: bonds, etc'''
@@ -47,7 +48,7 @@ class LammpsAtoms(Atoms):
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop):
                 for indx, item in enumerate(self.arrays[prop][slice(*index)],
-                        start=index[0]):
+                                            start=index[0]):
                     # holds empty keys for delition later
                     del_key = []
                     # extend can bring int item
@@ -77,6 +78,30 @@ class LammpsAtoms(Atoms):
                     for i in del_key:
                         self.arrays[prop][indx].pop(i)
 
+    def update(self):
+        '''updates id, mol-id and type to 1-Ntype'''
+
+        def unique(a):
+            id_ = np.unique(a)
+            if not np.all(id_ == np.arange(id_.size) + 1):
+                a = np.array([np.where(id_ == i)[0][0] + 1 for i in a])
+            return a
+
+        self.arrays['id'] = np.arange(len(self)) + 1
+
+        if not self.has('type'):
+            self.set_array('type',
+                           self.get_atomic_numbers(),
+                           int)
+
+        if not self.has('mol-id'):
+            self.set_array('mol-id',
+                           np.ones(len(self)),
+                           int)
+
+        for prop in ['mol-id', 'type']:
+            self.arrays[prop] = unique(self.get_array(prop))
+
     def __delitem__(self, i=-1):
         if not isinstance(i, list):
             i = [i]
@@ -96,7 +121,7 @@ class LammpsAtoms(Atoms):
         Atoms.__delitem__(self, i)
 
         # updating ids
-        self.arrays['id'] = list(range(1, len(self) + 1))
+        self.update()
 
     def __imul__(self, m):
         """In-place repeat of atoms."""
@@ -138,11 +163,11 @@ class LammpsAtoms(Atoms):
                     natoms += n
 
         # updating ids
-        self.arrays['id'] = list(range(1, len(self) + 1))
+        self.update()
 
         return self
 
-    def extend(self, other):
+    def extend(self, other, extend_type=False):
         """Extend atoms object by appending atoms from *other*."""
         if isinstance(other, Atom):
             other = self.__class__([other])
@@ -156,6 +181,8 @@ class LammpsAtoms(Atoms):
         molid1_max = None
         if self.has('mol-id'):
             molid1_max = np.max(self.arrays['mol-id'])
+        if self.has('type'):
+            type1_max = np.max(self.arrays['type'])
 
         Atoms.extend(self, other)
 
@@ -165,9 +192,11 @@ class LammpsAtoms(Atoms):
         self._set_indices_to(indx_of, [n1, None])
         if molid1_max and other.has('mol-id'):
             self.arrays['mol-id'][n1:] += molid1_max
+        if type1_max and other.has('type') and extend_type:
+            self.arrays['type'][n1:] += type1_max
 
         # updating ids
-        self.arrays['id'] = np.array(list(range(1, len(self) + 1)))
+        self.update()
 
         return self
 
