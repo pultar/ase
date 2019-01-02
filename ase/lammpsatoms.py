@@ -13,17 +13,19 @@ class LammpsAtoms(Atoms):
         Atoms.__init__(self, *args, **kwargs)
         self.update()
 
-    def get_num_type(self, prop):
+    def get_num_types(self, prop):
         ''' returns number of types of prop: bonds, etc'''
-        return len(self.get_type(prop))
+        return len(self.get_types(prop))
 
-    def get_type(self, prop):
+    def get_types(self, prop):
         '''returns types of prop: bonds, etc'''
         if not self.has(prop):
             return []
-        items = self.arrays[prop]
-        keys = np.unique([i for x in items for i in x.keys()])
-        return keys
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            items = self.arrays[prop]
+            return np.unique([i for x in items for i in x.keys()])
+        else:
+            return np.unique(self.get_array(prop))
 
     def get_num_prop(self, prop):
         ''' returns number of prop: bonds, etc.'''
