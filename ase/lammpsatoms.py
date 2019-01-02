@@ -9,8 +9,53 @@ class LammpsAtoms(Atoms):
     Atoms class with methods that support lammps-property methods
     '''
 
-    def __init__(self, *args, **kwargs):
-        Atoms.__init__(self, *args, **kwargs)
+    def __init__(self,
+                 symbols=None,
+                 *args,
+                 id=None,
+                 type=None,
+                 mol_id=None,
+                 mmcharge=None,
+                 bonds=None,
+                 angles=None,
+                 dihedrals=None,
+                 impropers=None, **kwargs):
+        if isinstance(symbols, Atoms):
+            if symbols.has('id') and id is None:
+                id = symbols.get_array('id')
+            if symbols.has('type') and type is None:
+                type = symbols.get_array('type')
+            if symbols.has('mol-id') and mol_id is None:
+                mol_id = symbols.get_array('mol-id')
+            if symbols.has('mmcharge') and mmcharge is None:
+                mmcharge = symbols.get_array('mmcharge')
+            if symbols.has('bonds') and bonds is None:
+                bonds = symbols.get_array('bonds')
+            if symbols.has('angles') and angles is None:
+                angles = symbols.get_array('angles')
+            if symbols.has('dihedrals') and dihedrals is None:
+                dihedrals = symbols.get_array('dihedrals')
+            if symbols.has('impropers') and impropers is None:
+                impropers = symbols.get_array('impropers')
+
+        Atoms.__init__(self, symbols, *args, **kwargs)
+
+        if id is not None:
+            self.set_array('id', id, int)
+        if type is not None:
+            self.set_array('type', type, int)
+        if mol_id is not None:
+            self.set_array('mol-id', mol_id, int)
+        if mmcharge is not None:
+            self.set_array('mmcharge', mmcharge, float)
+        if bonds is not None:
+            self.set_array('bonds', bonds, 'object')
+        if angles is not None:
+            self.set_array('angles', angles, 'object')
+        if dihedrals is not None:
+            self.set_array('dihedrals', dihedrals, 'object')
+        if impropers is not None:
+            self.set_array('impropers', impropers, 'object')
         self.update()
 
     def get_num_types(self, prop):
