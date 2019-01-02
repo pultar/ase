@@ -19,7 +19,8 @@ class LammpsAtoms(Atoms):
                  bonds=None,
                  angles=None,
                  dihedrals=None,
-                 impropers=None, **kwargs):
+                 impropers=None,
+                 specorder=None, **kwargs):
         if isinstance(symbols, Atoms):
             if symbols.has('id') and id is None:
                 id = symbols.get_array('id')
@@ -56,7 +57,7 @@ class LammpsAtoms(Atoms):
             self.set_array('dihedrals', dihedrals, 'object')
         if impropers is not None:
             self.set_array('impropers', impropers, 'object')
-        self.update()
+        self.update(specorder)
 
     def get_num_types(self, prop):
         ''' returns number of types of prop: bonds, etc'''
@@ -125,7 +126,7 @@ class LammpsAtoms(Atoms):
                     for i in del_key:
                         self.arrays[prop][indx].pop(i)
 
-    def update(self):
+    def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
 
         def unique(a):
@@ -133,6 +134,17 @@ class LammpsAtoms(Atoms):
             if not np.all(id_ == np.arange(id_.size) + 1):
                 a = np.array([np.where(id_ == i)[0][0] + 1 for i in a])
             return a
+
+        if specorder is not None:
+            order = np.unique(self.get_atomic_numbers())
+            if np.any(order != np.unique(specorder)):
+                raise RuntimeError('Atomic numbers found in specorder'
+                                   ' mismatch those found in system:'
+                                   ' {}'.format(order))
+            order_dict = dict(zip(order, specorder))
+            self.set_array('type',
+                           [order_dict[i] for i in self.get_atomic_numbers()],
+                           int)
 
         self.arrays['id'] = np.arange(len(self)) + 1
 
