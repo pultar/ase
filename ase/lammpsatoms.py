@@ -2,6 +2,7 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.atom import Atom
 from copy import deepcopy
+import numbers
 
 
 class LammpsAtoms(Atoms):
@@ -280,3 +281,33 @@ class LammpsAtoms(Atoms):
             return deepcopy(self.arrays[name])
         else:
             return self.arrays[name]
+
+    def __getitem__(self, item):
+        atoms = LammpsAtoms(Atoms.__getitem__(self, item))
+
+        if isinstance(item, numbers.Integral):
+            return atoms
+        elif not isinstance(item, slice):
+            item = np.array(item)
+            if item.dtype == bool:
+                try:
+                    item = np.arange(len(self))[item]
+                except IndexError:
+                    raise IndexError('length of item mask '
+                                     'mismatches that of {0}'
+                                     'object'.format(self.__class__.__name__))
+
+        lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+        for name in lammps_props:
+            if self.has(name):
+                atoms.arrays[name] = deepcopy(self.arrays[name][item])
+
+        indx_of = {i:None for i in range(len(self))}
+        count = 0
+        for i in np.array(range(len(self)))[item]:
+            indx_of[i] = count
+            count += 1
+        atoms._set_indices_to(indx_of)
+        atoms.update()
+
+        return atoms
