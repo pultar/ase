@@ -82,11 +82,8 @@ class LammpsAtoms(Atoms):
         values = [j for x in items for i in x.values() for j in i]
         return len(values)
 
-    def _set_indices_to(self, indx_of=None, index=[None, None]):
+    def _set_indices_to(self, indx_of, index=[0, None]):
         '''sets indices in bonds, etc as specified in indx_of'''
-        if indx_of is None:
-            return
-
         # selecting set of ids to remove
         ids = []
         for key, value in indx_of.items():
