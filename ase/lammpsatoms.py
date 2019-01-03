@@ -287,12 +287,7 @@ class LammpsAtoms(Atoms):
         elif not isinstance(item, slice):
             item = np.array(item)
             if item.dtype == bool:
-                try:
-                    item = np.arange(len(self))[item]
-                except IndexError:
-                    raise IndexError('length of item mask '
-                                     'mismatches that of {0}'
-                                     'object'.format(self.__class__.__name__))
+                item = np.arange(len(self))[item]
 
         lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
         for name in lammps_props:
