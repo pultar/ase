@@ -82,6 +82,55 @@ class LammpsAtoms(Atoms):
         values = [j for x in items for i in x.values() for j in i]
         return len(values)
 
+    def add_prop(self, prop, items):
+        ''' adds to prop
+        Parameters:
+            prop: name of property
+            items: dict of keys as type/resname, and keys as list of indices
+                   pertaining to the key
+        '''
+        length = {'bonds': 2,
+                  'angles': 3,
+                  'dihedrals': 4,
+                  'impropers': 4}
+
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if not self.has(prop):
+                array = [{} for i in range(len(self))]
+            else:
+                array = self.get_array(prop)
+
+            for key, values in items.items():
+                # make sure values are correct
+                try:
+                    _ = np.array(key, int)
+                    _ = np.array(values, int)
+                except ValueError as e:
+                    raise ValueError('key should be int and '
+                                     'values should be a list of '
+                                     '{0}: '.format(prop) + e.args[0])
+                if isinstance(values, np.ndarray):
+                    values = values.tolist()
+                if len(_.shape) == 1:
+                    values = [values]
+                    _ = np.array(values, int)
+                if _.shape[1] != length[prop]:
+                    raise RuntimeError('{0} should be set of '
+                                       '{1}'.format(prop, length[prop]))
+
+                if prop == 'angles':
+                    indx = [i.pop(1) for i in values]
+                else:
+                    indx = [i.pop(0) for i in values]
+
+                for i, j in enumerate(indx):
+                    array[j][key] = array[j].get(key, []) + [values[i]]
+
+            self.set_array(prop, array, 'object')
+        else:
+            raise NotImplementedError('add_prop not implemented for '
+                                      '{0}'.format(prop))
+
     def _set_indices_to(self, indx_of, index=[0, None]):
         '''sets indices in bonds, etc as specified in indx_of'''
         # selecting set of ids to remove
