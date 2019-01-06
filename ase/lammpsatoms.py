@@ -24,40 +24,40 @@ class LammpsAtoms(Atoms):
                  specorder=None, **kwargs):
         if isinstance(symbols, Atoms):
             if symbols.has('id') and id is None:
-                id = symbols.get_array('id')
+                id = symbols.get_prop('id')
             if symbols.has('type') and type is None:
-                type = symbols.get_array('type')
+                type = symbols.get_prop('type')
             if symbols.has('mol-id') and mol_id is None:
-                mol_id = symbols.get_array('mol-id')
+                mol_id = symbols.get_prop('mol-id')
             if symbols.has('mmcharge') and mmcharge is None:
-                mmcharge = symbols.get_array('mmcharge')
+                mmcharge = symbols.get_prop('mmcharge')
             if symbols.has('bonds') and bonds is None:
-                bonds = symbols.get_array('bonds')
+                bonds = symbols.get_prop('bonds')
             if symbols.has('angles') and angles is None:
-                angles = symbols.get_array('angles')
+                angles = symbols.get_prop('angles')
             if symbols.has('dihedrals') and dihedrals is None:
-                dihedrals = symbols.get_array('dihedrals')
+                dihedrals = symbols.get_prop('dihedrals')
             if symbols.has('impropers') and impropers is None:
-                impropers = symbols.get_array('impropers')
+                impropers = symbols.get_prop('impropers')
 
         Atoms.__init__(self, symbols, *args, **kwargs)
 
         if id is not None:
-            self.set_array('id', id, int)
+            self.set_prop('id', id, int)
         if type is not None:
-            self.set_array('type', type, int)
+            self.set_prop('type', type, int)
         if mol_id is not None:
-            self.set_array('mol-id', mol_id, int)
+            self.set_prop('mol-id', mol_id, int)
         if mmcharge is not None:
-            self.set_array('mmcharge', mmcharge, float)
+            self.set_prop('mmcharge', mmcharge, float)
         if bonds is not None:
-            self.set_array('bonds', bonds, 'object')
+            self.set_prop('bonds', bonds)
         if angles is not None:
-            self.set_array('angles', angles, 'object')
+            self.set_prop('angles', angles)
         if dihedrals is not None:
-            self.set_array('dihedrals', dihedrals, 'object')
+            self.set_prop('dihedrals', dihedrals)
         if impropers is not None:
-            self.set_array('impropers', impropers, 'object')
+            self.set_prop('impropers', impropers)
         self.update(specorder)
 
     def get_num_types(self, prop):
@@ -150,6 +150,12 @@ class LammpsAtoms(Atoms):
         else:
             raise NotImplementedError('add_prop not implemented for '
                                       '{0}'.format(prop))
+
+    def set_prop(self, prop, value, dtype=None):
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            self.add_prop(prop, value)
+        else:
+            self.set_array(prop, value, dtype)
 
     def _set_indices_to(self, indx_of, index=[0, None]):
         '''sets indices in bonds, etc as specified in indx_of'''
