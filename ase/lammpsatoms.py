@@ -74,6 +74,26 @@ class LammpsAtoms(Atoms):
         else:
             return np.unique(self.get_array(prop))
 
+    def get_prop(self,prop):
+        if not self.has(prop):
+            return {}
+
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            d = {}
+            for key in self.get_types(prop):
+                d[key] = []
+            for i, item in enumerate(self.get_array(prop)):
+                for key, values in item.items():
+                    for value in values:
+                        if prop == 'angles':
+                            value = [value[0], i, value[1]]
+                        else:
+                            value = [i] + value
+                        d[key].append(value)
+            return d
+        else:
+            return self.get_array(prop)
+
     def get_num_prop(self, prop):
         ''' returns number of prop: bonds, etc.'''
         if not self.has(prop):
