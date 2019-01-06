@@ -501,10 +501,10 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             for key, values in item.items():
                 for value in values:
                     f.write('{0:6} {1:6} {2:6} '
-                            '{3:6}'.format(count,
-                                           key,
-                                           indx + 1,
-                                           value[0]))
+                            '{3:6}\n'.format(count,
+                                              key,
+                                              indx + 1,
+                                              value[0]))
                     count += 1
 
     if atoms.has('angles'):
@@ -514,11 +514,11 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             for key, values in item.items():
                 for value in values:
                     f.write('{0:6} {1:6} {2:6}'
-                            '{3:6} {4:6}'.format(count,
-                                                 key,
-                                                 value[0],
-                                                 indx + 1,
-                                                 value[1]))
+                            '{3:6} {4:6}\n'.format(count,
+                                                   key,
+                                                   value[0],
+                                                   indx + 1,
+                                                   value[1]))
                     count += 1
 
     if atoms.has('dihedrals'):
@@ -529,10 +529,10 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 for value in values:
                     _ = [i + 1 for i in value]
                     f.write('{0:6} {1:6} {2:6} {3:6} {4:6} '
-                            '{5:6}'.format(count,
-                                           key,
-                                           indx + 1,
-                                           *_))
+                            '{5:6}\n'.format(count,
+                                             key,
+                                             indx + 1,
+                                             *_))
                     count += 1
 
 
@@ -544,10 +544,10 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 for value in values:
                     _ = [i + 1 for i in value]
                     f.write('{0:6} {1:6} {2:6} {3:6} {4:6} '
-                            '{5:6}'.format(count,
-                                           key,
-                                           indx + 1,
-                                           *_))
+                            '{5:6}\n'.format(count,
+                                             key,
+                                             indx + 1,
+                                             *_))
                     count += 1
 
     if velocities and atoms.get_velocities() is not None:
