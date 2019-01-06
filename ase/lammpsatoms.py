@@ -329,7 +329,7 @@ class LammpsAtoms(Atoms):
             return self.arrays[name]
 
     def __getitem__(self, item):
-        atoms = LammpsAtoms(Atoms.__getitem__(self, item))
+        atoms = Atoms.__getitem__(self, item)
 
         if isinstance(item, numbers.Integral):
             return atoms
@@ -337,6 +337,11 @@ class LammpsAtoms(Atoms):
             item = np.array(item)
             if item.dtype == bool:
                 item = np.arange(len(self))[item]
+
+        # Converting to LammpsAtoms now not earlier,
+        # since if single item is required, then
+        # converting Atom to LammpsAtoms causes errors
+        atoms = LammpsAtoms(atoms)
 
         lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
         for name in lammps_props:
