@@ -504,8 +504,9 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                             '{3:6}\n'.format(count,
                                               key,
                                               indx + 1,
-                                              value[0]))
+                                              value[0] + 1))
                     count += 1
+        f.write('\n\n')
 
     if atoms.has('angles'):
         count = 1
@@ -516,10 +517,11 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     f.write('{0:6} {1:6} {2:6}'
                             '{3:6} {4:6}\n'.format(count,
                                                    key,
-                                                   value[0],
+                                                   value[0] + 1,
                                                    indx + 1,
-                                                   value[1]))
+                                                   value[1] + 1))
                     count += 1
+        f.write('\n\n')
 
     if atoms.has('dihedrals'):
         count = 1
@@ -534,6 +536,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                              indx + 1,
                                              *_))
                     count += 1
+        f.write('\n\n')
 
 
     if atoms.has('impropers'):
@@ -549,6 +552,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                              indx + 1,
                                              *_))
                     count += 1
+        f.write('\n\n')
 
     if velocities and atoms.get_velocities() is not None:
         f.write('\n\nVelocities \n\n')
