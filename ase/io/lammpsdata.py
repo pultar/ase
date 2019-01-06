@@ -396,9 +396,9 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     symbols = atoms.get_chemical_symbols()
     n_atoms = len(symbols)
-    f.write('{0} \t atoms \n'.format(n_atoms))
+    f.write('{0:8} \t atoms \n'.format(n_atoms))
     for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-        f.write('{0} \t '
+        f.write('{0:8} \t '
                 '{1} \n'.format(atoms.get_num_prop(prop),
                                 prop))
 
@@ -407,7 +407,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     n_types = atoms.get_num_types('type')
     f.write('{0:8} \t '
-            'atoms types\n'.format(n_types))
+            'atom types\n'.format(n_types))
     for prop in ['bond types', 'angle types', 'dihedral types',
                  'improper types']:
         f.write('{0:8} \t '
