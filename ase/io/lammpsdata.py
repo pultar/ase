@@ -338,7 +338,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             angles[i_a2][type] = angles[i_a2].get(type, []) + [[i_a1, i_a3]]
-            at.set_array('angles', angles, 'object')
+        at.set_array('angles', angles, 'object')
 
     if dihedrals is not None:
         for (type, a1, a2, a3, a4) in dihedrals_in:
@@ -348,7 +348,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a4 = ind_of_id[a4]
             dihedrals[i_a1][type] = dihedrals[i_a1].get(type, []) \
                 + [[i_a2, i_a3, i_a4]]
-            at.set_array('dihedrals', dihedrals, 'object')
+        at.set_array('dihedrals', dihedrals, 'object')
 
     if impropers is not None:
         for (type, a1, a2, a3, a4) in impropers_in:
@@ -358,7 +358,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             i_a4 = ind_of_id[a4]
             impropers[i_a1][type] = impropers[i_a1].get(type, []) \
                 + [[i_a2, i_a3, i_a4]]
-            at.set_array('impropers', impropers, 'object')
+        at.set_array('impropers', impropers, 'object')
 
     at.info['comment'] = comment
 
