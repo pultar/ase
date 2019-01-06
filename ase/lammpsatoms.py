@@ -153,6 +153,9 @@ class LammpsAtoms(Atoms):
 
     def set_prop(self, prop, value, dtype=None):
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if self.has(prop):
+                # delete array
+                del self.arrays[prop]
             self.add_prop(prop, value)
         else:
             self.set_array(prop, value, dtype)
