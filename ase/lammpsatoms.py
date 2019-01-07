@@ -217,7 +217,8 @@ class LammpsAtoms(Atoms):
             for key in item.keys():
                 if key in indx_of.keys():
                     _ = self.arrays[prop][indx].pop(key)
-                    self.arrays[prop][indx][indx_of[key]] = _
+                    old = self.arrays[prop][indx].get(indx_of[key], [])
+                    self.arrays[prop][indx][indx_of[key]] = old + _
 
     def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
