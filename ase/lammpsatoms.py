@@ -203,6 +203,22 @@ class LammpsAtoms(Atoms):
                     for i in del_key:
                         self.arrays[prop][indx].pop(i)
 
+    def set_types_to(self, prop, indx_of, index=[0, None]):
+        '''
+        :param prop: property name
+        :param indx_of: dictionary, changes type from keys -> values
+        :param index: list of start and stop index to affect the change
+        '''
+        if not self.has(prop):
+            raise RuntimeError('{0} object has no '
+                               '{1}'.format(self.__class__.__name__, prop))
+        for indx, item in enumerate(self.arrays[prop][slice(*index)],
+                                            start=index[0]):
+            for key in item.keys():
+                if key in indx_of.keys():
+                    _ = self.arrays[prop][indx].pop(key)
+                    self.arrays[prop][indx][indx_of[key]] = _
+
     def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
 
@@ -315,22 +331,39 @@ class LammpsAtoms(Atoms):
 
         return self
 
-    def extend(self, other, extend_type=False):
-        """Extend atoms object by appending atoms from *other*."""
+    def extend(self,
+               other,
+               extend_prop=('mol-id',
+                            'type',
+                            'bonds',
+                            'angles',
+                            'dihedrals',
+                            'impropers')):
+        """Extend atoms object by appending atoms from *other*.
+        Parameters:
+            other: the other object
+            extend_prop: list of properties to extend"""
         if isinstance(other, Atom):
             other = self.__class__([other])
 
         if type(other) != self.__class__:
             other = self.__class__(other)
         other = other.copy()
+        other.update()
+        self.update()
 
         n1 = len(self)
         n2 = len(other)
-        molid1_max = None
-        if self.has('mol-id'):
-            molid1_max = np.max(self.arrays['mol-id'])
-        if self.has('type'):
-            type1_max = np.max(self.arrays['type'])
+        for prop in ['mol-id', 'type']:
+            if prop in extend_prop:
+                other.arrays[prop] += np.max(self.arrays[prop])
+        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if self.has(prop) and other.has(prop) and prop in extend_prop:
+                indx_of = {}
+                max_ = np.max(self.get_types(prop))
+                for i in other.get_types(prop):
+                    indx_of[i] = i + max_
+                other.set_types_to(prop, indx_of)
 
         Atoms.extend(self, other)
 
@@ -338,10 +371,6 @@ class LammpsAtoms(Atoms):
         for i in range(n2):
             indx_of[i] = i + n1
         self._set_indices_to(indx_of, [n1, None])
-        if molid1_max and other.has('mol-id'):
-            self.arrays['mol-id'][n1:] += molid1_max
-        if type1_max and other.has('type') and extend_type:
-            self.arrays['type'][n1:] += type1_max
 
         # updating ids
         self.update()
