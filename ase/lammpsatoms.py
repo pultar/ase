@@ -137,6 +137,7 @@ class LammpsAtoms(Atoms):
                 if _.shape[1] != length[prop]:
                     raise RuntimeError('{0} should be set of '
                                        '{1}'.format(prop, length[prop]))
+                values_copy = deepcopy(values)
 
                 if prop == 'angles':
                     indx = [i.pop(1) for i in values]
@@ -144,7 +145,26 @@ class LammpsAtoms(Atoms):
                     indx = [i.pop(0) for i in values]
 
                 for i, j in enumerate(indx):
-                    array[j][key] = array[j].get(key, []) + [values[i]]
+                    # check if the prop already exists
+                    # its done here as array gets updated
+                    exists = False
+                    if prop in ['dihedrals', 'impropers']:
+                        list_ = [y for x in array[j].values() for y in x]
+                        exists = values[i] in list_
+                    elif prop == 'bonds':
+                        list_ = [y for x in array[j].values() for y in x]
+                        list_1 = [y for x in array[values[i][0]].values()
+                                  for y in x]
+                        exists = [j] in list_1 or values[i] in list_
+                    elif prop == 'angles':
+                        list_ = [y for x in array[j].values() for y in x]
+                        list_ += [list(reversed(y))
+                                  for x in array[j].values() for y in x]
+                        exists = values[i] in list_
+                    if not exists:
+                        array[j][key] = array[j].get(key, []) + [values[i]]
+                    else:
+                        print('{0} already exists'.format(values_copy[i]))
 
             self.set_array(prop, array, 'object')
             self.update()
