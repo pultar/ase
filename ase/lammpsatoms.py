@@ -74,7 +74,7 @@ class LammpsAtoms(Atoms):
         else:
             return np.unique(self.get_array(prop))
 
-    def get_prop(self,prop):
+    def get_prop(self, prop):
         if not self.has(prop):
             return {}
 
@@ -263,7 +263,7 @@ class LammpsAtoms(Atoms):
         if isinstance(m, int):
             m = (m, m, m)
 
-        M = np.product(m)
+        size_m = np.product(m)
         n = len(self)
         if self.has('mol-id'):
             n_molid = np.max(self.arrays['mol-id'])
@@ -276,8 +276,8 @@ class LammpsAtoms(Atoms):
         for name in lammps_props:
             if self.has(name):
                 a = self.arrays[name][:n]
-                self.arrays[name] = np.empty(M * n, dtype='object')
-                for i in range(M):
+                self.arrays[name] = np.empty(size_m * n, dtype='object')
+                for i in range(size_m):
                     self.arrays[name][i * n:(i + 1) * n] = deepcopy(a)
 
         i0 = 0
@@ -377,7 +377,7 @@ class LammpsAtoms(Atoms):
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name][item])
 
-        indx_of = {i:None for i in range(len(self))}
+        indx_of = {i: None for i in range(len(self))}
         count = 0
         for i in np.array(range(len(self)))[item]:
             indx_of[i] = count
