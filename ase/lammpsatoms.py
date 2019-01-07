@@ -262,7 +262,7 @@ class LammpsAtoms(Atoms):
             if self.has(prop):
                 d = unique_ind(self.get_types(prop))
                 for index, item in enumerate(self.get_array(prop)):
-                    for key in item.keys():
+                    for key in sorted(item.keys()):
                         _ = self.arrays[prop][index].pop(key)
                         self.arrays[prop][index][d[key]] = _
 
