@@ -212,13 +212,23 @@ class LammpsAtoms(Atoms):
         if not self.has(prop):
             raise RuntimeError('{0} object has no '
                                '{1}'.format(self.__class__.__name__, prop))
-        for indx, item in enumerate(self.arrays[prop][slice(*index)],
-                                            start=index[0]):
-            for key in item.keys():
-                if key in indx_of.keys():
-                    _ = self.arrays[prop][indx].pop(key)
-                    old = self.arrays[prop][indx].get(indx_of[key], [])
-                    self.arrays[prop][indx][indx_of[key]] = old + _
+
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            for indx, item in enumerate(self.arrays[prop][slice(*index)],
+                                                start=index[0]):
+                for key in item.keys():
+                    if key in indx_of.keys():
+                        _ = self.arrays[prop][indx].pop(key)
+                        old = self.arrays[prop][indx].get(indx_of[key], [])
+                        self.arrays[prop][indx][indx_of[key]] = old + _
+        elif prop in ['mol-id', 'type']:
+            for indx, item in enumerate(self.arrays[prop][slice(*index)],
+                                        start=index[0]):
+                if item in indx_of.keys():
+                    self.arrays[prop][indx] = indx_of[item]
+        else:
+            raise NotImplementedError('set_types_to not implemented for '
+                                      '{0}'.format(prop))
 
     def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
