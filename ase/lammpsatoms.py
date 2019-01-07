@@ -147,6 +147,7 @@ class LammpsAtoms(Atoms):
                     array[j][key] = array[j].get(key, []) + [values[i]]
 
             self.set_array(prop, array, 'object')
+            self.update()
         else:
             raise NotImplementedError('add_prop not implemented for '
                                       '{0}'.format(prop))
@@ -205,11 +206,12 @@ class LammpsAtoms(Atoms):
     def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
 
-        def unique(a):
+        def unique_ind(a):
             id_ = np.unique(a)
-            if not np.all(id_ == np.arange(id_.size) + 1):
-                a = np.array([np.where(id_ == i)[0][0] + 1 for i in a])
-            return a
+            d = {}
+            for i, val in enumerate(id_, start=1):
+                d[val] = i
+            return d
 
         if specorder is not None:
             order = np.unique(self.get_atomic_numbers())
@@ -235,7 +237,18 @@ class LammpsAtoms(Atoms):
                            int)
 
         for prop in ['mol-id', 'type']:
-            self.arrays[prop] = unique(self.get_array(prop))
+            d = unique_ind(self.get_array(prop))
+            self.set_prop(prop,
+                          [d[x] for x in self.get_array(prop)],
+                          int)
+
+        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if self.has(prop):
+                d = unique_ind(self.get_types(prop))
+                for index, item in enumerate(self.get_array(prop)):
+                    for key in item.keys():
+                        _ = self.arrays[prop][index].pop(key)
+                        self.arrays[prop][index][d[key]] = _
 
     def __delitem__(self, i=-1):
         if not isinstance(i, list):
