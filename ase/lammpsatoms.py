@@ -153,6 +153,14 @@ class LammpsAtoms(Atoms):
                                       '{0}'.format(prop))
 
     def set_prop(self, prop, value, dtype=None):
+        '''
+        :param prop: Name of property
+        :param value: dict of keys as type/resname, and keys as list of indices
+                      pertaining to the key
+        :param dtype: (int/float/'object') type of values;
+                      'object' in case of bonds, angles, impropers, and dihedrals
+        :return: None
+        '''
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop):
                 # delete array
