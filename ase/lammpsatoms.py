@@ -76,7 +76,8 @@ class LammpsAtoms(Atoms):
 
     def get_prop(self, prop):
         if not self.has(prop):
-            return {}
+            raise RuntimeError('{0} object has no '
+                               '{1}'.format(self.__class__.__name__, prop))
 
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             d = {}
@@ -448,6 +449,7 @@ class LammpsAtoms(Atoms):
             if item.dtype == bool:
                 item = np.arange(len(self))[item]
 
+        '''
         # Converting to LammpsAtoms now not earlier,
         # since if single item is required, then
         # converting Atom to LammpsAtoms causes errors
@@ -457,7 +459,7 @@ class LammpsAtoms(Atoms):
         for name in lammps_props:
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name][item])
-
+        '''
         indx_of = {i: None for i in range(len(self))}
         count = 0
         for i in np.array(range(len(self)))[item]:
