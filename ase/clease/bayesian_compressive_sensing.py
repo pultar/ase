@@ -1,0 +1,187 @@
+import numpy as np
+from scipy.special import polygamma
+from scipy.optimize import brentq
+import time
+
+class BayesianCompressiveSensing(object):
+    def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
+                 X=None, y=None):
+        self.shape_var = shape_var
+        self.rate_var = rate_var
+        self.shape_lamb = shape_lamb
+        self.X = X
+        self.y = y
+
+        num_features = self.X.shape[1]
+        self.gammas = np.zeros(num_features)
+        self.eci = np.zeros_like(self.gammas)
+        self.inv_variance = 0.01*np.var(self.y)
+        self.lamb = 1E-6
+        self.inverse_sigma = np.zeros((num_features, num_features))
+        self.current_mu = np.zeros(num_features)
+
+        # Quantities used for fast updates
+        self.S = np.diag(self.inv_variance*self.X.T.dot(self.X))
+        self.Q = self.X.T.dot(self.y)
+        self.ss = self.S/(1.0 - self.gammas*self.S)
+        self.qq = self.Q/(1.0 - self.gammas*self.S)
+
+    def mu(self):
+        sel = self.selected
+        return self.inv_variance*self.inverse_sigma.dot(self.X[:, sel].T.dot(self.y))
+
+    def optimal_gamma(self, indx):
+        s = self.ss[indx]
+        qsq = self.qq[indx]**2
+        term1 = -s*(s + 2*self.lamb)
+
+        delta = (s+2*self.lamb)**2 - 4*self.lamb*(s - qsq + self.lamb)
+        assert delta >= 0.0
+
+        term2 = s*np.sqrt(delta)
+        gamma = (term1 + term2)/(2*self.lamb*s**2)
+        return gamma
+
+    def optimal_lamb(self):
+        N = self.X.shape[1]
+        return (N - 1 + 0.5*self.shape_lamb)/(0.5*np.sum(self.gammas) + self.shape_lamb*0.5)
+
+    def optimal_inv_variance(self):
+        N = self.X.shape[1]
+        a = 1.0
+        b = 0.0
+        mse = np.sum((self.y - self.X.dot(self.eci)**2))
+        return (0.5*N + a)/(0.5*mse + b)
+
+    def optimal_shape_lamb(self):
+        res = brentq(shape_parameter_equation, 1E-30, 1E100, args=(self.lamb,), maxiter=10000)
+        return res
+
+    def sherman_morrison(self, A_inv, u, v):
+        return A_inv - A_inv.dot(np.outer(u, v)).dot(A_inv)/(1 + v.T.dot(A_inv).dot(u))
+
+    def is_included(self, n):
+        return self.gammas[n] > 0.0
+
+    def update_quantities(self):
+        sel = self.selected
+        X_sel = self.X[:, sel]
+        prec = X_sel.dot(self.inverse_sigma).dot(X_sel.T)
+
+
+        self.S = np.diag(self.inv_variance*self.X.T.dot(self.X) - self.inv_variance**2 * self.X.T.dot(prec).dot(self.X))
+        self.Q = self.inv_variance*self.X.T.dot(self.y) - self.inv_variance**2 * self.X.T.dot(prec).dot(self.y)
+
+        self.ss = self.S/(1.0 - self.gammas*self.S)
+        self.qq = self.Q/(1.0 - self.gammas*self.S)
+
+    @property
+    def selected(self):
+        return np.argwhere(self.gammas > 0.0)[:, 0]
+
+    def update_sigma_mu(self, n, gamma, include=True):
+        """Update sigma and mu."""
+        X_sel = self.X[:, self.selected]
+        self.inverse_sigma = np.linalg.inv(self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected]))
+        self.current_mu[self.selected] = self.mu()
+
+    def get_basis_function_index(self):
+        return np.random.randint(low=0, high=len(self.gammas))
+
+    def obtain_ecis(self):
+
+        if len(self.selected) == 0:
+            return
+        X_sel = self.X[:, self.selected]
+        self.eci[self.selected] = np.linalg.inv(X_sel.T.dot(X_sel)).dot(X_sel.T).dot(self.y)
+
+    def log_posterior_mass(self):
+        
+        if len(self.selected) == 0:
+            return 0.0
+        sel = self.selected
+        diff = self.current_mu[sel] - self.X[:, sel].dot(self.eci[sel])
+        z = diff.dot(self.inverse_sigma.dot(diff))
+        return z
+
+    def rmse(self):
+        indx = self.selected
+        pred = self.X[:, indx].dot(self.eci[indx])
+        return np.sqrt(np.mean((pred - self.y)**2))
+
+    def log(self, msg):
+        print(msg)
+
+    @property
+    def num_ecis(self):
+        return np.count_nonzero(self.gammas)
+
+    def fit(self, min_change=1E-8, maxiter=100000, output_rate_sec=10):
+        change = 10*min_change
+        current_rmse = 1E100
+
+        is_first = True
+        iteration = 0
+        now = time.time()
+        while iteration < maxiter:
+            if time.time() - now > output_rate_sec:
+                msg = "Iter: {} ".format(iteration)
+                msg += "RMSE: {:3E} ".format(1000.0*self.rmse())
+                msg += "Num ECI: {}".format(self.num_ecis)
+                self.log(msg)
+                now = time.time()
+
+            iteration += 1
+            already_excluded = False
+
+            if is_first:
+                indx = np.argmax(self.qq**2 - self.ss)
+                is_first = False
+            else:
+                indx = self.get_basis_function_index()
+
+            gamma = self.optimal_gamma(indx)
+            if gamma > 0.0:
+                self.gammas[indx] = gamma
+                include = True
+            else:
+                gamma = self.gammas[indx]
+
+                if abs(gamma) < 1E-6:
+                    already_excluded = True
+
+                self.gammas[indx] = 0.0
+                self.eci[indx] = 0.0
+                self.current_mu[indx] = 0.0
+                include = False
+
+            if already_excluded:
+                # There is nothing to do in this case
+                change = 10*min_change # Set artificial change to avoid 
+                                       # termination
+                continue
+            
+            self.update_sigma_mu(indx, gamma, include=include)
+            self.update_quantities()
+            self.lamb = self.optimal_lamb()
+            self.shape_lamb = self.optimal_shape_lamb()
+
+            self.obtain_ecis()
+            new_rmse = self.rmse()
+            change = new_rmse - current_rmse
+            current_rmse = new_rmse
+
+    def show_shape_parameter(self):
+        from matplotlib import pyplot as plt
+        x = np.logspace(-10, 10)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(x, shape_parameter_equation(x, self.lamb))
+        ax.axhline(0, ls="--")
+        ax.set_xscale("log")
+        plt.show()
+
+
+def shape_parameter_equation(x, lamb):
+    return np.log(x/2.0) + 1 - polygamma(0, x/2) + np.log(lamb) - lamb
