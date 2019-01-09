@@ -85,8 +85,19 @@ class BayesianCompressiveSensing(object):
         self.inverse_sigma = np.linalg.inv(self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected]))
         self.current_mu[self.selected] = self.mu()
 
-    def get_basis_function_index(self):
-        return np.random.randint(low=0, high=len(self.gammas))
+    def get_basis_function_index(self, select_strategy):
+
+        if select_strategy == "random":
+            return np.random.randint(low=0, high=len(self.gammas))
+        elif select_strategy == "max_increase":
+            return self._get_bf_with_max_increase()
+
+    def _get_bf_with_max_increase(self):
+        new_gammas = np.array([self.optimal_gamma(i) for i in range(len(self.gammas))])
+        new_gammas[new_gammas < 0.0] = 0.0
+        l = np.log(1/(1+new_gammas*self.ss)) + self.qq**2*new_gammas/(1+new_gammas*self.ss) - \
+                self.lamb*new_gammas
+        return np.argmax(l)
 
     def obtain_ecis(self):
 
@@ -116,8 +127,13 @@ class BayesianCompressiveSensing(object):
     def num_ecis(self):
         return np.count_nonzero(self.gammas)
 
-    def fit(self, min_change=1E-8, maxiter=100000, output_rate_sec=10):
-        change = 10*min_change
+    def fit(self, min_change=1E-8, maxiter=100000, output_rate_sec=10,
+            select_strategy="max_increase"):
+        allowed_strategies = ["random", "max_increase"]
+
+        if select_strategy not in allowed_strategies:
+            raise ValueError("select_strategy has to be one of {}"
+                             "".format(allowed_strategies))
         current_rmse = 1E100
 
         is_first = True
@@ -138,7 +154,7 @@ class BayesianCompressiveSensing(object):
                 indx = np.argmax(self.qq**2 - self.ss)
                 is_first = False
             else:
-                indx = self.get_basis_function_index()
+                indx = self.get_basis_function_index(select_strategy)
 
             gamma = self.optimal_gamma(indx)
             if gamma > 0.0:
