@@ -140,7 +140,6 @@ def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
                     for i, v in zip(id, inlist):
                         outlist[i - 1] = v
                     return outlist
-                id = reorder(id)
                 types = reorder(types)
                 positions = reorder(positions)
                 scaled_positions = reorder(scaled_positions)
@@ -168,7 +167,6 @@ def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
                     celldisp=celldisp, cell=cell))
 
             images[-1].set_array('type', types, int)
-            images[-1].set_array('id', id, int)
             if lammps_data:
                 '''it assumes lammps_data has id = np.arange(len(self)) + 1'''
                 for prop in lammps_props:
