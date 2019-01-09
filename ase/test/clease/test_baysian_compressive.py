@@ -31,6 +31,6 @@ def test_sparse_solution(bayes):
     bayes.fit(output_rate_sec=2)
     assert bayes.num_ecis == 0
 
-#test_optimize_shape_parameter(bayes)
-#test_fit(bayes)
+test_optimize_shape_parameter(bayes)
+test_fit(bayes)
 test_sparse_solution(deepcopy(bayes))
