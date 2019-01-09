@@ -8,7 +8,6 @@
 
 import os
 from ase.clease import CEBulk, NewStructures, Evaluate, Concentration
-from ase.clease import GAFit
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
@@ -54,16 +53,6 @@ def test_binary_system():
     eval_l2 = Evaluate(bc_setting, fitting_scheme="l2", alpha=1E-6)
     eval_l2.get_cluster_name_eci(return_type='tuple')
     eval_l2.get_cluster_name_eci(return_type='dict')
-
-    # Also make sure that GA algirithm works
-    ga_fit = GAFit(setting=bc_setting)
-    
-    # Run a few steps
-    ga_fit.run(gen_without_change=5, min_change=1.0)
-    eval_l2.get_cluster_name_eci()
-
-    os.remove("ga_fit.csv")
-    os.remove("ga_fit_cluster_names.txt")
     os.remove(db_name)
 
 

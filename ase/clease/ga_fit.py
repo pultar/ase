@@ -61,6 +61,10 @@ class GAFit(object):
         If not given (and parallel=True) then mp.cpu_count()/2
         will be used
 
+    select_cond: list
+        Select condition passed to Evaluate to select which 
+        data points from the database the should be included
+
     Example:
     =======
     from ase.clease import Evaluate
@@ -73,10 +77,12 @@ class GAFit(object):
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
-                 max_num_in_init_pool=None, parallel=False, num_core=None):
+                 max_num_in_init_pool=None, parallel=False, num_core=None,
+                 select_cond=None):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
-                             max_cluster_size=max_cluster_size)
+                             max_cluster_size=max_cluster_size,
+                             select_cond=select_cond)
 
         # Read required attributes from evaluate
         self.cf_matrix = evaluator.cf_matrix
@@ -110,10 +116,7 @@ class GAFit(object):
         from random import shuffle
         individuals = []
         if os.path.exists(self.fname):
-            individ_from_file = np.loadtxt(self.fname,
-                                           delimiter=",").astype(int)
-            for i in range(individ_from_file.shape[0]):
-                individuals.append(individ_from_file[i, :])
+            individuals = self._init_from_file()
         else:
             max_num = max_num or self.num_genes
             indices = list(range(self.num_genes))
@@ -123,6 +126,18 @@ class GAFit(object):
                 num_non_zero = np.random.randint(low=3, high=max_num)
                 indx = indices[:num_non_zero]
                 individual[np.array(indx)] = 1
+                individuals.append(individual)
+        return individuals
+
+    def _init_from_file(self):
+        """Initialize the population from file."""
+        print("Initializing population from {}".format(self.fname))
+        individuals = []
+        with open(self.fname, 'r') as infile:
+            for line in infile:
+                individual = np.zeros(self.num_genes, dtype=np.uint8)
+                indices = np.array([int(x.strip()) for x in line.split(",")])
+                individual[indices] = 1
                 individuals.append(individual)
         return individuals
 
@@ -271,9 +286,22 @@ class GAFit(object):
         individual = self.best_individual
         return list(compress(self.cluster_names, individual))
 
+    def index_of_selected_clusters(self, individual):
+        """Return the indices of the selected clusters
+
+        Arguments
+        ==========
+        individual: int
+            Index of the individual
+        """
+        return list(np.nonzero(self.individuals[individual])[0])
+
     def save_population(self):
         # Save population
-        np.savetxt(self.fname, self.individuals, delimiter=",", fmt="%d")
+        with open(self.fname, 'w') as out:
+            for i in range(len(self.individuals)):
+                out.write(",".join(str(x) for x in self.index_of_selected_clusters(i)))
+                out.write("\n")
         print("\nPopulation written to {}".format(self.fname))
 
     def save_cluster_names(self):
