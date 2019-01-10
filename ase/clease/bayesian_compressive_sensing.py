@@ -1,17 +1,28 @@
+from ase.clease import LinearRegression
 import numpy as np
 from scipy.special import polygamma
 from scipy.optimize import brentq
 import time
 import json
 
-class BayesianCompressiveSensing(object):
+class BayesianCompressiveSensing(LinearRegression):
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 variance_opt_start=100, fname="bayes_compr_sens.json"):
+                 variance_opt_start=100, fname="bayes_compr_sens.json",
+                 maxiter=100000, output_rate_sec=10,
+                 select_strategy="max_increase"):
+        LinearRegression.__init__(self)
+
+        # Paramters
         self.shape_var = shape_var
         self.rate_var = rate_var
         self.shape_lamb = shape_lamb
         self.variance_opt_start = variance_opt_start
+        self.maxiter = maxiter
+        self.output_rate_sec = output_rate_sec
+        self.select_strategy = select_strategy
         self.fname = fname
+
+        # Arrays used during fitting
         self.X = None
         self.y = None
 
@@ -49,6 +60,12 @@ class BayesianCompressiveSensing(object):
             self.Q = self.X.T.dot(self.y)
             self.ss = self.S/(1.0 - self.gammas*self.S)
             self.qq = self.Q/(1.0 - self.gammas*self.S)
+
+    def precision_matrix(self, X):
+        if not np.allclose(X, self.X):
+            raise RuntimeError("Inconsistent design matrix given!")
+        X_sel = self.X[:, self.selected]
+        return np.linalg.inv(X_sel.T.dot(X_sel))
 
     def mu(self):
         sel = self.selected
@@ -160,6 +177,9 @@ class BayesianCompressiveSensing(object):
         data["rate_var"] = self.rate_var
         data["shape_lamb"] = self.shape_lamb
         data["lamb"] = self.lamb
+        data["maxiter"] = self.maxiter
+        data["output_rate_sec"] = self.output_rate_sec
+        data["select_strategy"] = self.select_strategy
         return data
 
     def save(self):
@@ -181,6 +201,9 @@ class BayesianCompressiveSensing(object):
         bayes.rate_var = data["rate_var"]
         bayes.shape_lamb = data["shape_lamb"]
         bayes.lamb = data["lamb"]
+        bayes.maxiter = data["maxiter"]
+        bayes.output_rate_sec = data["output_rate_sec"]
+        bayes.select_strategy = data["select_strategy"]
         return bayes
     
     def __eq__(self, other):
@@ -189,7 +212,8 @@ class BayesianCompressiveSensing(object):
         # Required fields to be equal if two objects
         # should be considered equal
         items = ["fname", "gammas", "inv_variance", "lamb",
-                 "shape_var", "rate_var", "shape_lamb", "lamb"]
+                 "shape_var", "rate_var", "shape_lamb", "lamb",
+                 "maxiter", "select_strategy", "output_rate_sec"]
         for k in items:
             v = self.__dict__[k]
             if isinstance(v, np.ndarray):
@@ -200,11 +224,10 @@ class BayesianCompressiveSensing(object):
                 equal = equal and (v == other.__dict__[k])
         return equal
 
-    def fit(self, X, y, min_change=1E-8, maxiter=100000, output_rate_sec=10,
-            select_strategy="max_increase"):
+    def fit(self, X, y):
         allowed_strategies = ["random", "max_increase"]
 
-        if select_strategy not in allowed_strategies:
+        if self.select_strategy not in allowed_strategies:
             raise ValueError("select_strategy has to be one of {}"
                              "".format(allowed_strategies))
 
@@ -215,8 +238,8 @@ class BayesianCompressiveSensing(object):
         is_first = True
         iteration = 0
         now = time.time()
-        while iteration < maxiter:
-            if time.time() - now > output_rate_sec:
+        while iteration < self.maxiter:
+            if time.time() - now > self.output_rate_sec:
                 msg = "Iter: {} ".format(iteration)
                 msg += "RMSE: {:3E} ".format(1000.0*self.rmse())
                 msg += "Num ECI: {}".format(self.num_ecis)
@@ -230,7 +253,7 @@ class BayesianCompressiveSensing(object):
                 indx = np.argmax(self.qq**2 - self.ss)
                 is_first = False
             else:
-                indx = self.get_basis_function_index(select_strategy)
+                indx = self.get_basis_function_index(self.select_strategy)
 
             gamma = self.optimal_gamma(indx)
             if gamma > 0.0:
@@ -258,6 +281,10 @@ class BayesianCompressiveSensing(object):
             if iteration > self.variance_opt_start:
                 self.inv_variance = self.optimal_inv_variance()
             self.obtain_ecis()
+
+        # Save backup for future restart
+        if self.fname:
+            self.save()
 
     def show_shape_parameter(self):
         from matplotlib import pyplot as plt

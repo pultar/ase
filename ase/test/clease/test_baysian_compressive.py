@@ -10,7 +10,8 @@ X = np.random.rand(30, 400)
 y = 60.0*X[:, 20] - 80.0*X[:, 2]
 fname = "test_bayes_compr_sens.json"
 
-bayes = BayesianCompressiveSensing(fname=fname)
+bayes = BayesianCompressiveSensing(fname=fname, output_rate_sec=2, 
+                                   maxiter=100)
    
 def test_optimize_shape_parameter(bayes):
     bayes.lamb = 1.0
@@ -18,7 +19,7 @@ def test_optimize_shape_parameter(bayes):
     assert abs(np.log(opt/2.0) - polygamma(0, opt/2.0)) < 1E-6
 
 def test_fit(bayes):
-    bayes.fit(X, y, output_rate_sec=2, maxiter=100)
+    bayes.fit(X, y)
 
     expected_eci = np.zeros(X.shape[1])
     expected_eci[20] = 60.0
@@ -29,7 +30,7 @@ def test_sparse_solution(bayes):
     # Check that the algorithm produce sparse
     # solution
     rand_y = np.random.rand(len(y))
-    bayes.fit(X, rand_y, output_rate_sec=2, maxiter=100)
+    bayes.fit(X, rand_y)
 
     # The point is that we should not get 30 ECIs
     # just set 10 here
