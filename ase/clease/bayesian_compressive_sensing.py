@@ -5,10 +5,11 @@ import time
 
 class BayesianCompressiveSensing(object):
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 X=None, y=None):
+                 variance_opt_start=100, X=None, y=None):
         self.shape_var = shape_var
         self.rate_var = rate_var
         self.shape_lamb = shape_lamb
+        self.variance_opt_start = variance_opt_start
         self.X = X
         self.y = y
 
@@ -100,6 +101,7 @@ class BayesianCompressiveSensing(object):
         return np.argmax(l)
 
     def obtain_ecis(self):
+        """Update the ECIs."""
 
         if len(self.selected) == 0:
             return
@@ -134,7 +136,6 @@ class BayesianCompressiveSensing(object):
         if select_strategy not in allowed_strategies:
             raise ValueError("select_strategy has to be one of {}"
                              "".format(allowed_strategies))
-        current_rmse = 1E100
 
         is_first = True
         iteration = 0
@@ -172,9 +173,6 @@ class BayesianCompressiveSensing(object):
                 include = False
 
             if already_excluded:
-                # There is nothing to do in this case
-                change = 10*min_change # Set artificial change to avoid 
-                                       # termination
                 continue
             
             self.update_sigma_mu(indx, gamma, include=include)
@@ -182,10 +180,9 @@ class BayesianCompressiveSensing(object):
             self.lamb = self.optimal_lamb()
             self.shape_lamb = self.optimal_shape_lamb()
 
+            if iteration > self.variance_opt_start:
+                self.inv_variance = self.optimal_inv_variance()
             self.obtain_ecis()
-            new_rmse = self.rmse()
-            change = new_rmse - current_rmse
-            current_rmse = new_rmse
 
     def show_shape_parameter(self):
         from matplotlib import pyplot as plt
