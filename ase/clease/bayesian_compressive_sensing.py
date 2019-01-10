@@ -6,6 +6,16 @@ import time
 import json
 
 class BayesianCompressiveSensing(LinearRegression):
+    """
+    Fit a sparse CE model to data. Based on the method 
+    described in
+
+    Babacan, S. Derin, Rafael Molina, and Aggelos K. Katsaggelos. 
+    "Bayesian compressive sensing using Laplace priors." 
+    IEEE Transactions on Image Processing 19.1 (2010): 53-63.
+
+    
+    """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
                  variance_opt_start=100, fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=10,
