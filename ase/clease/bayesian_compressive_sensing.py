@@ -2,30 +2,53 @@ import numpy as np
 from scipy.special import polygamma
 from scipy.optimize import brentq
 import time
+import json
 
 class BayesianCompressiveSensing(object):
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 variance_opt_start=100, X=None, y=None):
+                 variance_opt_start=100, fname="bayes_compr_sens.json"):
         self.shape_var = shape_var
         self.rate_var = rate_var
         self.shape_lamb = shape_lamb
         self.variance_opt_start = variance_opt_start
-        self.X = X
-        self.y = y
+        self.fname = fname
+        self.X = None
+        self.y = None
 
-        num_features = self.X.shape[1]
-        self.gammas = np.zeros(num_features)
-        self.eci = np.zeros_like(self.gammas)
-        self.inv_variance = 0.01*np.var(self.y)
+        self.gammas = None
+        self.eci = None
+        self.inv_variance = None
         self.lamb = 1E-6
+        self.inverse_sigma = None
+        self.current_mu = None
+
+        # Quantities used for fast updates
+        self.S = None
+        self.Q = None
+        self.ss = None
+        self.qq = None
+
+    def _initialize(self):
+        num_features = self.X.shape[1]
+        if self.gammas is None:
+            self.gammas = np.zeros(num_features)
+        self.eci = np.zeros_like(self.gammas)
+
+        if self.inv_variance is None and self.y is not None:
+            self.inv_variance = 0.01*np.var(self.y)
+        
+        if self.lamb is None:
+            self.lamb = 1E-6
+
         self.inverse_sigma = np.zeros((num_features, num_features))
         self.current_mu = np.zeros(num_features)
 
-        # Quantities used for fast updates
-        self.S = np.diag(self.inv_variance*self.X.T.dot(self.X))
-        self.Q = self.X.T.dot(self.y)
-        self.ss = self.S/(1.0 - self.gammas*self.S)
-        self.qq = self.Q/(1.0 - self.gammas*self.S)
+        if self.X is not None:
+            # Quantities used for fast updates
+            self.S = np.diag(self.inv_variance*self.X.T.dot(self.X))
+            self.Q = self.X.T.dot(self.y)
+            self.ss = self.S/(1.0 - self.gammas*self.S)
+            self.qq = self.Q/(1.0 - self.gammas*self.S)
 
     def mu(self):
         sel = self.selected
@@ -129,13 +152,65 @@ class BayesianCompressiveSensing(object):
     def num_ecis(self):
         return np.count_nonzero(self.gammas)
 
-    def fit(self, min_change=1E-8, maxiter=100000, output_rate_sec=10,
+    def to_dict(self):
+        data = {}
+        data["inv_variance"] = self.inv_variance
+        data["gammas"] = self.gammas.tolist()
+        data["shape_var"] = self.shape_var
+        data["rate_var"] = self.rate_var
+        data["shape_lamb"] = self.shape_lamb
+        data["lamb"] = self.lamb
+        return data
+
+    def save(self):
+        """Save the results from file."""
+        with open(self.fname, 'w') as outfile:
+            json.dump(self.to_dict(), outfile)
+        print("Backup data written to {}".format(self.fname))
+
+    @staticmethod
+    def load(fname):
+        bayes = BayesianCompressiveSensing()
+        bayes.fname = fname
+        with open(fname, 'r') as infile:
+            data = json.load(infile)
+        
+        bayes.inv_variance = data["inv_variance"]
+        bayes.gammas = np.array(data["gammas"])
+        bayes.shape_var = data["shape_var"]
+        bayes.rate_var = data["rate_var"]
+        bayes.shape_lamb = data["shape_lamb"]
+        bayes.lamb = data["lamb"]
+        return bayes
+    
+    def __eq__(self, other):
+        equal = True
+
+        # Required fields to be equal if two objects
+        # should be considered equal
+        items = ["fname", "gammas", "inv_variance", "lamb",
+                 "shape_var", "rate_var", "shape_lamb", "lamb"]
+        for k in items:
+            v = self.__dict__[k]
+            if isinstance(v, np.ndarray):
+                equal = equal and np.allclose(v, other.__dict__[k])
+            elif isinstance(v, float):
+                equal = equal and abs(v - other.__dict__[k]) < 1E-6
+            else:
+                equal = equal and (v == other.__dict__[k])
+        return equal
+
+    def fit(self, X, y, min_change=1E-8, maxiter=100000, output_rate_sec=10,
             select_strategy="max_increase"):
         allowed_strategies = ["random", "max_increase"]
 
         if select_strategy not in allowed_strategies:
             raise ValueError("select_strategy has to be one of {}"
                              "".format(allowed_strategies))
+
+        self.X = X
+        self.y = y
+        self._initialize()
 
         is_first = True
         iteration = 0
