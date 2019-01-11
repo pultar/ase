@@ -4,6 +4,7 @@ from scipy.special import polygamma
 from scipy.optimize import brentq
 import time
 import json
+from itertools import product
 
 class BayesianCompressiveSensing(LinearRegression):
     """
@@ -16,8 +17,8 @@ class BayesianCompressiveSensing(LinearRegression):
     """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
                  variance_opt_start=100, fname="bayes_compr_sens.json",
-                 maxiter=100000, output_rate_sec=10,
-                 select_strategy="max_increase"):
+                 maxiter=100000, output_rate_sec=2,
+                 select_strategy="max_increase", noise=0.1):
         LinearRegression.__init__(self)
 
         # Paramters
@@ -29,6 +30,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.output_rate_sec = output_rate_sec
         self.select_strategy = select_strategy
         self.fname = fname
+        self.noise = noise
 
         # Arrays used during fitting
         self.X = None
@@ -39,7 +41,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.inv_variance = None
         self.lamb = None
         self.inverse_sigma = None
-        self.current_mu = None
+        self.eci = None
 
         # Quantities used for fast updates
         self.S = None
@@ -53,14 +55,15 @@ class BayesianCompressiveSensing(LinearRegression):
             self.gammas = np.zeros(num_features)
         self.eci = np.zeros_like(self.gammas)
 
-        if self.inv_variance is None and self.y is not None:
-            self.inv_variance = 1.0/np.var(self.y)
+        if self.inv_variance is None:
+            self.inv_variance = 1.0/self.noise**2
         
         if self.lamb is None:
-            self.lamb = self.optimal_lamb()
+            self.lamb = 0.0
+            #self.lamb = self.optimal_lamb()
 
         self.inverse_sigma = np.zeros((num_features, num_features))
-        self.current_mu = np.zeros(num_features)
+        self.eci = np.zeros(num_features)
 
         if self.X is not None:
             # Quantities used for fast updates
@@ -72,8 +75,17 @@ class BayesianCompressiveSensing(LinearRegression):
     def precision_matrix(self, X):
         if not np.allclose(X, self.X):
             raise RuntimeError("Inconsistent design matrix given!")
-        X_sel = self.X[:, self.selected]
-        return np.linalg.inv(X_sel.T.dot(X_sel))
+        sel_indx = self.selected
+        X_sel = self.X[:, sel_indx]
+        prec = np.linalg.inv(X_sel.T.dot(X_sel))
+
+        N = self.X.shape[1]
+        full_prec = np.zeros((N, N))
+
+        indx = list(range(len(sel_indx)))
+        for i in product(indx, indx):
+            full_prec[sel_indx[i[0]], sel_indx[i[1]]] = prec[i[0], i[1]]
+        return full_prec
 
     def mu(self):
         sel = self.selected
@@ -82,6 +94,9 @@ class BayesianCompressiveSensing(LinearRegression):
     def optimal_gamma(self, indx):
         s = self.ss[indx]
         qsq = self.qq[indx]**2
+
+        if self.lamb < 1E-6:
+            return (qsq - s)/s**2
         term1 = s + 2*self.lamb
 
         delta = s**2 + 4*self.lamb*qsq
@@ -131,7 +146,7 @@ class BayesianCompressiveSensing(LinearRegression):
         """Update sigma and mu."""
         X_sel = self.X[:, self.selected]
         self.inverse_sigma = np.linalg.inv(self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected]))
-        self.current_mu[self.selected] = self.mu()
+        self.eci[self.selected] = self.mu()
 
     def get_basis_function_index(self, select_strategy):
         if select_strategy == "random":
@@ -154,23 +169,6 @@ class BayesianCompressiveSensing(LinearRegression):
 
         diff = new_likeli - current_likeli
         return np.argmax(diff)
-
-    def obtain_ecis(self):
-        """Update the ECIs."""
-
-        if len(self.selected) == 0:
-            return
-        X_sel = self.X[:, self.selected]
-        self.eci[self.selected] = np.linalg.inv(X_sel.T.dot(X_sel)).dot(X_sel.T.dot(self.y))
-
-    def log_posterior_mass(self):
-        
-        if len(self.selected) == 0:
-            return 0.0
-        sel = self.selected
-        diff = self.current_mu[sel] - self.X[:, sel].dot(self.eci[sel])
-        z = diff.dot(self.inverse_sigma.dot(diff))
-        return z
 
     def rmse(self):
         indx = self.selected
@@ -239,6 +237,14 @@ class BayesianCompressiveSensing(LinearRegression):
                 equal = equal and (v == other.__dict__[k])
         return equal
 
+    def estimate_loocv(self):
+        X_sel = self.X[:, self.selected]
+        e_pred = self.X.dot(self.eci)
+        delta_e = e_pred - self.y
+        prec = np.linalg.inv(X_sel.T.dot(X_sel))
+        cv_sq = np.mean((delta_e / (1 - np.diag(X_sel.dot(prec).dot(X_sel.T))))**2)
+        return np.sqrt(cv_sq)
+
     def fit(self, X, y):
         allowed_strategies = ["random", "max_increase"]
 
@@ -253,13 +259,15 @@ class BayesianCompressiveSensing(LinearRegression):
         is_first = True
         iteration = 0
         now = time.time()
+        d_gamma = 1E100
         while iteration < self.maxiter:
             if time.time() - now > self.output_rate_sec:
                 msg = "Iter: {} ".format(iteration)
                 msg += "RMSE: {:.3E} ".format(1000.0*self.rmse())
+                msg += "LOOCV (approx.): {:.3E}".format(1000.0*self.estimate_loocv())
                 msg += "Num ECI: {} ".format(self.num_ecis)
                 msg += "Lamb: {:.3E}. Shape lamb: {:.3E} ".format(self.lamb, self.shape_lamb)
-                msg += "Var: {:.3E}".format(1.0/self.inv_variance)
+                msg += "Noise: {:.3E}".format(np.sqrt(1.0/self.inv_variance))
                 self.log(msg)
                 now = time.time()
 
@@ -273,6 +281,7 @@ class BayesianCompressiveSensing(LinearRegression):
                 indx = self.get_basis_function_index(self.select_strategy)
 
             gamma = self.optimal_gamma(indx)
+            d_gamma = gamma - self.gammas[indx]
             if gamma > 0.0:
                 self.gammas[indx] = gamma
                 include = True
@@ -284,7 +293,6 @@ class BayesianCompressiveSensing(LinearRegression):
 
                 self.gammas[indx] = 0.0
                 self.eci[indx] = 0.0
-                self.current_mu[indx] = 0.0
                 include = False
 
             if already_excluded:
@@ -292,16 +300,19 @@ class BayesianCompressiveSensing(LinearRegression):
             
             self.update_sigma_mu(indx, gamma, include=include)
             self.update_quantities()
-            self.lamb = self.optimal_lamb()
-            self.shape_lamb = self.optimal_shape_lamb()
 
             if iteration > self.variance_opt_start:
+                self.lamb = self.optimal_lamb()
+                self.shape_lamb = self.optimal_shape_lamb()
                 self.inv_variance = self.optimal_inv_variance()
-            self.obtain_ecis()
+
+            if abs(d_gamma) < 1E-8:
+                break
 
         # Save backup for future restart
         if self.fname:
             self.save()
+        return self.eci
 
     def show_shape_parameter(self):
         from matplotlib import pyplot as plt
