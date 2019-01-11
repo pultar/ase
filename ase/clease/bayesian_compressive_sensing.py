@@ -218,8 +218,11 @@ class BayesianCompressiveSensing(LinearRegression):
         gammas: np.ndarray
             Value for all the gammas
         """
-        return np.log(1/(1+gammas*self.ss)) + self.qq**2*gammas/(1+gammas*self.ss) - \
-                self.lamb*gammas
+        denum = 1+gammas*self.ss
+        if np.any(denum < 0.0):
+            raise RuntimeError("Negative denuminator inside log function. Try to "
+                               "increase the noise parameter.")
+        return np.log(1/denum) + self.qq**2*gammas/denum - self.lamb*gammas
 
     def _get_bf_with_max_increase(self):
         """Return the index of the correlation function that leads
