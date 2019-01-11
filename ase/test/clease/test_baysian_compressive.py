@@ -24,17 +24,7 @@ def test_fit(bayes):
     expected_eci = np.zeros(X.shape[1])
     expected_eci[20] = 60.0
     expected_eci[2] = -80.0
-    assert np.allclose(bayes.eci, expected_eci)
-
-def test_sparse_solution(bayes):
-    # Check that the algorithm produce sparse
-    # solution
-    rand_y = np.random.rand(len(y))
-    bayes.fit(X, rand_y)
-
-    # The point is that we should not get 30 ECIs
-    # just set 10 here
-    assert bayes.num_ecis < 10
+    assert np.allclose(bayes.eci, expected_eci, rtol=1E-4)
 
 def test_save_load(bayes):
     bayes.save()
@@ -44,6 +34,5 @@ def test_save_load(bayes):
 
 test_optimize_shape_parameter(bayes)
 test_fit(bayes)
-test_sparse_solution(deepcopy(bayes))
 test_save_load(bayes)
 os.remove(fname)
