@@ -366,7 +366,6 @@ class BayesianCompressiveSensing(LinearRegression):
             d_gamma = gamma - self.gammas[indx]
             if gamma > 0.0:
                 self.gammas[indx] = gamma
-                include = True
             else:
                 gamma = self.gammas[indx]
 
@@ -375,7 +374,6 @@ class BayesianCompressiveSensing(LinearRegression):
 
                 self.gammas[indx] = 0.0
                 self.eci[indx] = 0.0
-                include = False
 
             if already_excluded:
                 continue
