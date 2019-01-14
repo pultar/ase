@@ -6,9 +6,9 @@ from ase.clease.convexhull import ConvexHull
 from ase.clease.concentration import Concentration
 from ase.clease.regression import LinearRegression, Tikhonov, Lasso
 from ase.clease.ga_fit import GAFit
-
+from ase.clease.bayesian_compressive_sensing import BayesianCompressiveSensing
 
 __all__ = ['CEBulk', 'CECrystal', 'Concentration', 'CorrFunction',
            'NewStructures', 'NewStructures', 'Evaluate',
            'ConvexHull', 'LinearRegression', 'Tikhonov', 'Lasso',
-           'GAFit']
+           'GAFit', 'BayesianCompressiveSensing']
