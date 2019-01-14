@@ -2,7 +2,6 @@ import os
 from ase.clease import BayesianCompressiveSensing
 import numpy as np
 from scipy.special import polygamma
-from copy import deepcopy
 
 # Construct 30 measurements with 400 basis functions
 np.random.seed(0)
