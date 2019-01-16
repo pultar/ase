@@ -57,12 +57,15 @@ class BayesianCompressiveSensing(LinearRegression):
         If 'random' correlation functions are selected at random
     noise: float
         Initial estimate of the noise in the data
+    init_lamb: float
+        Initial value for the lambda parameter
     """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
                  lamb_opt_start=200, variance_opt_start=100, 
                  fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=2,
-                 select_strategy="max_increase", noise=0.1):
+                 select_strategy="max_increase", noise=0.1,
+                 init_lamb=0.0):
         LinearRegression.__init__(self)
 
         # Paramters
@@ -84,7 +87,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.gammas = None
         self.eci = None
         self.inv_variance = None
-        self.lamb = None
+        self.lamb = init_lamb
         self.inverse_sigma = None
         self.eci = None
 
@@ -169,12 +172,12 @@ class BayesianCompressiveSensing(LinearRegression):
 
     def optimal_lamb(self):
         """Calculate the optimal value for the lambda parameter. """
-        N = self.X.shape[1]
+        N = self.X.shape[1] # Number of ECIs
         return 2*(N - 1 + 0.5*self.shape_lamb)/(np.sum(self.gammas) + self.shape_lamb)
 
     def optimal_inv_variance(self):
         """Calculate the optimal value for the inverse variance"""
-        N = self.X.shape[1]
+        N = self.X.shape[0] # Number of data points
         a = 1.0
         b = 0.0
         mse = np.sum((self.y - self.X.dot(self.eci))**2)
