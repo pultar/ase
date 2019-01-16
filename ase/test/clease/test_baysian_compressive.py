@@ -18,12 +18,12 @@ def test_optimize_shape_parameter(bayes):
 def test_fit(bayes):
     X = np.random.rand(30, 400)
     y = 60.0*X[:, 20] - 80.0*X[:, 2]
-    bayes.fit(X, y)
+    eci = bayes.fit(X, y)
 
     expected_eci = np.zeros(X.shape[1])
     expected_eci[20] = 60.0
     expected_eci[2] = -80.0
-    assert np.allclose(bayes.eci, expected_eci, rtol=1E-4)
+    assert np.allclose(eci, expected_eci, rtol=1E-4)
 
 def test_fit_more_coeff():
     bayes = BayesianCompressiveSensing(fname=fname, noise=0.1)
@@ -35,8 +35,8 @@ def test_fit_more_coeff():
     for c, i in zip(coeff, indx):
         y += X[:, i]*c
         expected_eci[i] = c
-    bayes.fit(X, y)
-    assert np.allclose(bayes.eci, expected_eci, atol=1E-2)
+    eci = bayes.fit(X, y)
+    assert np.allclose(eci, expected_eci, atol=1E-2)
     
 
 def test_save_load(bayes):
@@ -45,8 +45,29 @@ def test_save_load(bayes):
     bayes2 = BayesianCompressiveSensing.load(fname)
     assert bayes == bayes2
 
+def test_fit_linear_dep_col():
+    bayes = BayesianCompressiveSensing(fname=fname, noise=0.1)
+    X = np.random.rand(30, 400)
+    X[:, 2] = X[:, 0]
+    X[:, 8] = X[:, 20]
+    X[:, 23] = X[:, 50]
+    y = 20*X[:, 0] - 3*X[:, 23]
+    eci = bayes.fit(X, y)
+    assert len(eci) == 400
+
+    expected = np.zeros(400)
+    expected[0] = 20
+    expected[23] = -3
+    assert np.allclose(eci, expected, atol=1E-2)
+
+    prec = bayes.precision_matrix(X)
+    assert prec.shape == (400, 400)
+
+
+
 test_optimize_shape_parameter(bayes)
 test_fit(bayes)
 test_save_load(bayes)
 test_fit_more_coeff()
+test_fit_linear_dep_col()
 os.remove(fname)
