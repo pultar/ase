@@ -80,6 +80,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.lamb = None
         self.inverse_sigma = None
         self.eci = None
+        self.removed_columns = []
 
         # Quantities used for fast updates
         self.S = None
@@ -200,7 +201,9 @@ class BayesianCompressiveSensing(LinearRegression):
     def update_sigma_mu(self):
         """Update sigma and mu."""
         X_sel = self.X[:, self.selected]
-        self.inverse_sigma = np.linalg.inv(self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected]))
+        sigma = self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected])
+        #print(np.linalg.matrix_rank(X_sel.T.dot(X_sel)), sigma.shape[0])
+        self.inverse_sigma = np.linalg.inv(sigma)
         self.eci[self.selected] = self.mu()
 
     def get_basis_function_index(self, select_strategy):
@@ -321,6 +324,18 @@ class BayesianCompressiveSensing(LinearRegression):
         cv_sq = np.mean((delta_e / (1 - np.diag(X_sel.dot(prec).dot(X_sel.T))))**2)
         return np.sqrt(cv_sq)
 
+    def remove_linearly_dependent(self, X):
+        q, r = np.linalg.qr(X.T.dot(X))
+        unnessecary_cols = []
+        for i in range(r.shape[0]):
+            if np.allclose(r[i, :], 0.0):
+                unnessecary_cols.append(i)
+        mask = np.ones(X.shape[1], dtype=bool)
+        mask[unnessecary_cols] = False
+        X = X[:, mask]
+        self.removed_columns = unnessecary_cols
+        return X
+        
     def fit(self, X, y):
         """Fit ECIs to the data
 
@@ -337,6 +352,8 @@ class BayesianCompressiveSensing(LinearRegression):
             raise ValueError("select_strategy has to be one of {}"
                              "".format(allowed_strategies))
 
+        num_ecis = X.shape[1]
+        X = self.remove_linearly_dependent(X)
         self.X = X
         self.y = y
         self._initialize()
@@ -395,7 +412,12 @@ class BayesianCompressiveSensing(LinearRegression):
         # Save backup for future restart
         if self.fname:
             self.save()
-        return self.eci
+
+        mask = np.ones(num_ecis, dtype=bool)
+        mask[self.remove_linearly_dependent] = False
+        all_eci = np.zeros(num_ecis)
+        all_eci[mask] = self.eci
+        return all_eci
 
     def show_shape_parameter(self):
         """Show a plot of the transient equation for the optimal
