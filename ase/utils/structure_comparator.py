@@ -7,6 +7,7 @@ from scipy.spatial import cKDTree as KDTree
 from ase import Atom, Atoms
 from ase.build.tools import niggli_reduce
 
+
 def normalize(cell):
     for i in range(3):
         cell[i] /= np.linalg.norm(cell[i])
