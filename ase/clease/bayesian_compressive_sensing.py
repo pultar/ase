@@ -37,12 +37,13 @@ class BayesianCompressiveSensing(LinearRegression):
         Shape parameter for gamma distribution for the 
         lambda parameter (lambda -- gamma(x | 1, shape_lamb))
     variance_opt_start: int
-        Optimization of lambda, shape_lamb and 
-        inverse variance starts after this amount of iterations
-    optimize_lamb: bool
-        If True the lambda parameter will be optimized. 
-        Otherwise it will be kept fixed, during the entire
-        run.
+        Optimization of inverse variance starts after this amount 
+        of iterations
+    lamb_opt_start: int
+        Optimization of lambda and shape_lamb starts after this
+        amount of iterations. If this number is set very high,
+        lambda will be kept at zero, making the algorithm
+        efficitively a Relvance Vector Machine (RVM)
     fname: str
         Backup file for parameters
     maxiter: int
@@ -58,7 +59,7 @@ class BayesianCompressiveSensing(LinearRegression):
         Initial estimate of the noise in the data
     """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 optimize_lamb=True, variance_opt_start=100, 
+                 lamb_opt_start=200, variance_opt_start=100, 
                  fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=2,
                  select_strategy="max_increase", noise=0.1):
@@ -74,7 +75,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.select_strategy = select_strategy
         self.fname = fname
         self.noise = noise
-        self.optimize_lamb = optimize_lamb
+        self.lamb_opt_start = lamb_opt_start
 
         # Arrays used during fitting
         self.X = None
@@ -107,7 +108,6 @@ class BayesianCompressiveSensing(LinearRegression):
         
         if self.lamb is None:
             self.lamb = 0.0
-            #self.lamb = self.optimal_lamb()
 
         self.inverse_sigma = np.zeros((num_features, num_features))
         self.eci = np.zeros(num_features)
@@ -225,9 +225,11 @@ class BayesianCompressiveSensing(LinearRegression):
             Value for all the gammas
         """
         denum = 1+gammas*self.ss
-        if np.any(denum < 0.0):
-            raise RuntimeError("Negative denuminator inside log function. Try to "
-                               "increase the noise parameter.")
+
+        # quantities leading to a negativie denuminator should not
+        # be possible (but because of iterative increment they occure)
+        # once in a while. Set such numbers to a number close to zero.
+        denum[denum<0.0] = 1E-100
         return np.log(1/denum) + self.qq**2*gammas/denum - self.lamb*gammas
 
     def _get_bf_with_max_increase(self):
@@ -357,7 +359,7 @@ class BayesianCompressiveSensing(LinearRegression):
             if time.time() - now > self.output_rate_sec:
                 msg = "Iter: {} ".format(iteration)
                 msg += "RMSE: {:.3E} ".format(1000.0*self.rmse())
-                msg += "LOOCV (approx.): {:.3E}".format(1000.0*self.estimate_loocv())
+                msg += "LOOCV (approx.): {:.3E} ".format(1000.0*self.estimate_loocv())
                 msg += "Num ECI: {} ".format(self.num_ecis)
                 msg += "Lamb: {:.3E}. Shape lamb: {:.3E} ".format(self.lamb, self.shape_lamb)
                 msg += "Noise: {:.3E}".format(np.sqrt(1.0/self.inv_variance))
@@ -392,10 +394,11 @@ class BayesianCompressiveSensing(LinearRegression):
             self.update_sigma_mu()
             self.update_quantities()
 
+            if iteration > self.lamb_opt_start:
+                self.lamb = self.optimal_lamb()
+                self.shape_lamb = self.optimal_shape_lamb()
+
             if iteration > self.variance_opt_start:
-                if self.optimize_lamb:
-                    self.lamb = self.optimal_lamb()
-                    self.shape_lamb = self.optimal_shape_lamb()
                 self.inv_variance = self.optimal_inv_variance()
 
             if abs(d_gamma) < 1E-8:
