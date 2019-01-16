@@ -39,6 +39,10 @@ class BayesianCompressiveSensing(LinearRegression):
     variance_opt_start: int
         Optimization of lambda, shape_lamb and 
         inverse variance starts after this amount of iterations
+    optimize_lamb: bool
+        If True the lambda parameter will be optimized. 
+        Otherwise it will be kept fixed, during the entire
+        run.
     fname: str
         Backup file for parameters
     maxiter: int
@@ -54,7 +58,8 @@ class BayesianCompressiveSensing(LinearRegression):
         Initial estimate of the noise in the data
     """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 variance_opt_start=100, fname="bayes_compr_sens.json",
+                 optimize_lamb=True, variance_opt_start=100, 
+                 fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=2,
                  select_strategy="max_increase", noise=0.1):
         LinearRegression.__init__(self)
@@ -69,6 +74,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.select_strategy = select_strategy
         self.fname = fname
         self.noise = noise
+        self.optimize_lamb = optimize_lamb
 
         # Arrays used during fitting
         self.X = None
@@ -159,8 +165,6 @@ class BayesianCompressiveSensing(LinearRegression):
         delta = s**2 + 4*self.lamb*qsq
 
         gamma = (np.sqrt(delta) - term1)/(2*self.lamb*s)
-        #print(s, np.min(self.S))
-        #assert np.sign(gamma) == np.sign(qsq - s - self.lamb)
         return gamma
 
     def optimal_lamb(self):
@@ -389,8 +393,9 @@ class BayesianCompressiveSensing(LinearRegression):
             self.update_quantities()
 
             if iteration > self.variance_opt_start:
-                self.lamb = self.optimal_lamb()
-                self.shape_lamb = self.optimal_shape_lamb()
+                if self.optimize_lamb:
+                    self.lamb = self.optimal_lamb()
+                    self.shape_lamb = self.optimal_shape_lamb()
                 self.inv_variance = self.optimal_inv_variance()
 
             if abs(d_gamma) < 1E-8:
