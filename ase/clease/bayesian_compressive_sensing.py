@@ -276,6 +276,7 @@ class BayesianCompressiveSensing(LinearRegression):
         data["output_rate_sec"] = self.output_rate_sec
         data["select_strategy"] = self.select_strategy
         data["noise"] = self.noise
+        data["lamb_opt_start"] = self.lamb_opt_start
         return data
 
     def save(self):
@@ -301,6 +302,7 @@ class BayesianCompressiveSensing(LinearRegression):
         bayes.output_rate_sec = data["output_rate_sec"]
         bayes.select_strategy = data["select_strategy"]
         bayes.noise = data["noise"]
+        bayes.lamb_opt_start = data["lamb_opt_start"]
         return bayes
     
     def __eq__(self, other):
@@ -312,7 +314,7 @@ class BayesianCompressiveSensing(LinearRegression):
         items = ["fname", "gammas", "inv_variance", "lamb",
                  "shape_var", "rate_var", "shape_lamb", "lamb",
                  "maxiter", "select_strategy", "output_rate_sec",
-                 "noise"]
+                 "noise", "variance_opt_start"]
         for k in items:
             v = self.__dict__[k]
             if isinstance(v, np.ndarray):
