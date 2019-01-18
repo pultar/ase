@@ -46,7 +46,7 @@ def test_save_load(bayes):
     assert bayes == bayes2
 
 def test_fit_linear_dep_col():
-    bayes = BayesianCompressiveSensing(fname=fname, noise=0.1)
+    bayes = BayesianCompressiveSensing(fname=fname, noise=0.1, penalty=1E-4)
     X = np.random.rand(30, 400)
     X[:, 2] = X[:, 0]
     X[:, 8] = X[:, 20]
