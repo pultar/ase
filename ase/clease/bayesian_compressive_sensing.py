@@ -59,13 +59,16 @@ class BayesianCompressiveSensing(LinearRegression):
         Initial estimate of the noise in the data
     init_lamb: float
         Initial value for the lambda parameter
+    penalty: float
+        Penalization value added to the diagonal of matrice
+        to avoid singular matrices
     """
     def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
                  lamb_opt_start=200, variance_opt_start=100, 
                  fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=2,
                  select_strategy="max_increase", noise=0.1,
-                 init_lamb=0.0):
+                 init_lamb=0.0, penalty=1E-8):
         LinearRegression.__init__(self)
 
         # Paramters
@@ -79,6 +82,7 @@ class BayesianCompressiveSensing(LinearRegression):
         self.fname = fname
         self.noise = noise
         self.lamb_opt_start = lamb_opt_start
+        self.penalty = penalty
 
         # Arrays used during fitting
         self.X = None
@@ -132,7 +136,8 @@ class BayesianCompressiveSensing(LinearRegression):
             raise RuntimeError("Inconsistent design matrix given!")
         sel_indx = self.selected
         X_sel = self.X[:, sel_indx]
-        prec = np.linalg.inv(X_sel.T.dot(X_sel))
+        N = len(sel_indx)
+        prec = np.linalg.inv(X_sel.T.dot(X_sel) + self.penalty*np.eye(N))
 
         N = self.X.shape[1]
         full_prec = np.zeros((N, N))
@@ -330,9 +335,8 @@ class BayesianCompressiveSensing(LinearRegression):
         X_sel = self.X[:, self.selected]
         e_pred = self.X.dot(self.eci)
         delta_e = e_pred - self.y
-        reg = 1E-8
         N = X_sel.shape[1]
-        prec = np.linalg.inv(X_sel.T.dot(X_sel) + reg*np.eye(N))
+        prec = np.linalg.inv(X_sel.T.dot(X_sel) + self.penalty*np.eye(N))
         cv_sq = np.mean((delta_e / (1 - np.diag(X_sel.dot(prec).dot(X_sel.T))))**2)
         return np.sqrt(cv_sq)
 
