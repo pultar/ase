@@ -214,7 +214,10 @@ class BayesianCompressiveSensing(LinearRegression):
         """Update sigma and mu."""
         X_sel = self.X[:, self.selected]
         sigma = self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected])
-        self.inverse_sigma = np.linalg.inv(sigma)
+        try:
+            self.inverse_sigma = np.linalg.inv(sigma)
+        except np.linalg.LinAlgError:
+            self.inverse_sigma = np.linalg.pinv(sigma)
         self.eci[self.selected] = self.mu()
 
     def get_basis_function_index(self, select_strategy):
