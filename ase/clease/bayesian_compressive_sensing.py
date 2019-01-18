@@ -240,7 +240,7 @@ class BayesianCompressiveSensing(LinearRegression):
         # quantities leading to a negativie denuminator should not
         # be possible (but because of iterative increment they occure)
         # once in a while. Set such numbers to a number close to zero.
-        denum[denum<0.0] = 1E-10
+        denum[denum<=0.0] = 1E-10
         return np.log(1/denum) + self.qq**2*gammas/denum - self.lamb*gammas
 
     def _get_bf_with_max_increase(self):
