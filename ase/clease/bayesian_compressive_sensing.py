@@ -164,10 +164,15 @@ class BayesianCompressiveSensing(LinearRegression):
             Index of the selected correlation function
         """
         s = self.ss[indx]
+
+        # Conda had divide by zero error
+        if abs(s) < 1E-6:
+            s = 1E-6
         qsq = self.qq[indx]**2
 
         if self.lamb < 1E-6:
             return (self.qq[indx]/self.ss[indx])**2 - 1.0/self.ss[indx]
+            
         term1 = s + 2*self.lamb
 
         delta = s**2 + 4*self.lamb*qsq
