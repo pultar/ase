@@ -167,7 +167,7 @@ class BayesianCompressiveSensing(LinearRegression):
         qsq = self.qq[indx]**2
 
         if self.lamb < 1E-6:
-            return (qsq - s)/s**2
+            return (self.qq[indx]/self.ss[indx])**2 - 1.0/self.ss[indx]
         term1 = s + 2*self.lamb
 
         delta = s**2 + 4*self.lamb*qsq
