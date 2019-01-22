@@ -175,16 +175,17 @@ class GAFit(object):
 
         info_measure = None
         n_selected = np.sum(individual)
-        mse = np.mean(delta_e)
+        mse = np.mean(delta_e**2)
+
         if self.cost_func == "bic":
             info_measure = self.bic(mse, n_selected)
         elif self.cost_func == "aic":
             info_measure = self.aic(mse, n_selected)
         elif self.cost_func == "loocv":
-            # precision matrix
             prec = self.regression.precision_matrix(X)
             cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
-            info_measure = 1000.0*np.sqrt(cv_sq)
+            cv = 1000.0*np.sqrt(cv_sq)
+            info_measure = cv
         else:
             raise ValueError("Unknown cost function {}!"
                              "".format(self.cost_func))
@@ -200,8 +201,8 @@ class GAFit(object):
             self.fitness[:] = workers.map(eval_fitness, args)
         else:
             for i, ind in enumerate(self.individuals):
-                _, cv = self.fit_individual(ind)
-                self.fitness[i] = 1.0/cv
+                _, fit = self.fit_individual(ind)
+                self.fitness[i] = 1.0/fit
 
     def flip_mutation(self, individual):
         """Apply mutation operation."""
@@ -263,13 +264,14 @@ class GAFit(object):
                 p2 = np.argmax(cumulative_sum > rand_num)
 
             crossing_point = np.random.randint(low=0, high=self.num_genes)
+            crosssing_point2 = np.random.randint(low=crossing_point, high=self.num_genes)
             new_individual = self.individuals[p1].copy()
-            new_individual[crossing_point:] = \
-                self.individuals[p2][crossing_point:]
+            new_individual[crossing_point:crosssing_point2] = \
+                self.individuals[p2][crossing_point:crosssing_point2]
 
             new_individual2 = self.individuals[p2].copy()
-            new_individual2[crossing_point:] = \
-                self.individuals[p1][crossing_point:]
+            new_individual2[crossing_point:crosssing_point2] = \
+                self.individuals[p1][crossing_point:crosssing_point2]
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
@@ -400,7 +402,7 @@ class GAFit(object):
             diversity = self.population_diversity()
             self.statistics["best_cv"].append(1.0/np.max(self.fitness))
             self.statistics["worst_cv"].append(1.0/np.min(self.fitness))
-            self.log("Generation: {}. Best CV: {:.2f} meV/atom "
+            self.log("Generation: {}. Fitness: {:.2f} "
                      "Num ECI: {}. Pop. div: {:.2f}"
                      "".format(gen, cv, num_eci, diversity), end="\r")
             self.create_new_generation()
