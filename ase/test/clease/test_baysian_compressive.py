@@ -58,7 +58,7 @@ def test_fit_linear_dep_col():
     expected = np.zeros(400)
     expected[0] = 20
     expected[23] = -3
-    assert np.allclose(eci, expected, atol=1E-2)
+    assert np.allclose(eci, expected, atol=1E-1)
 
     prec = bayes.precision_matrix(X)
     assert prec.shape == (400, 400)
