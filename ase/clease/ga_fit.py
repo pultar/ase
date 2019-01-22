@@ -65,6 +65,13 @@ class GAFit(object):
         Select condition passed to Evaluate to select which 
         data points from the database the should be included
 
+    cost_func: str
+        Use the inverse as fitness measure. 
+        Possible cost functions:
+        bic - Bayes Information Criterion
+        aic - Afaike Information Criterion
+        loocv - Leave one out cross validation
+
     Example:
     =======
     from ase.clease import Evaluate
@@ -78,12 +85,19 @@ class GAFit(object):
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
-                 select_cond=None):
+                 select_cond=None, cost_func="bic"):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond)
 
+        allowed_cost_funcs = ["loocv", "bic", "aic"]
+
+        if cost_func not in allowed_cost_funcs:
+            raise ValueError("Cost func has to be one of {}"
+                             "".format(allowed_cost_funcs))
+
+        self.cost_func = cost_func
         # Read required attributes from evaluate
         self.cf_matrix = evaluator.cf_matrix
         self.cluster_names = evaluator.cluster_names
@@ -141,6 +155,16 @@ class GAFit(object):
                 individuals.append(individual)
         return individuals
 
+    def bic(self, mse, num_features):
+        """Return the Bayes Information Criteria."""
+        N = len(self.e_dft)
+        return N*np.log(mse) + num_features*np.log(N)
+
+    def aic(self, mse, num_features):
+        """Return Afaike information criterion."""
+        N = N = len(self.e_dft)
+        return N*np.log(mse) + 2*num_features
+
     def fit_individual(self, individual):
         X = self.cf_matrix[:, individual == 1]
         y = self.e_dft
@@ -149,10 +173,22 @@ class GAFit(object):
         e_pred = X.dot(coeff)
         delta_e = y - e_pred
 
-        # precision matrix
-        prec = self.regression.precision_matrix(X)
-        cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
-        return coeff, 1000.0*np.sqrt(cv_sq)
+        info_measure = None
+        n_selected = np.sum(individual)
+        mse = np.mean(delta_e)
+        if self.cost_func == "bic":
+            info_measure = self.bic(mse, n_selected)
+        elif self.cost_func == "aic":
+            info_measure = self.aic(mse, n_selected)
+        elif self.cost_func == "loocv":
+            # precision matrix
+            prec = self.regression.precision_matrix(X)
+            cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
+            info_measure = 1000.0*np.sqrt(cv_sq)
+        else:
+            raise ValueError("Unknown cost function {}!"
+                             "".format(self.cost_func))
+        return coeff, info_measure
 
     def evaluate_fitness(self):
         """Evaluate fitness of all species."""
