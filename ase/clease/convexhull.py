@@ -217,16 +217,27 @@ class ConvexHull(object):
             List with indices of the points that lies
             on the convex hull    
         """
-        return all(self.energies[i] <= 0.0 for i in simplex)
+        tol = 1E-4
+        return all(self.energies[i] <= tol for i in simplex)
 
     def plot(self):
         """Plot formation energies."""
         from matplotlib import pyplot as plt
 
         num_plots = len(self._unique_elem) - 1
+
+        # Figure out how many plots we need
+        varying_concs = []
+        for k in self._unique_elem:
+            minconc = np.min(self.concs[k])
+            maxconc = np.max(self.concs[k])
+            if abs(maxconc - minconc) > 0.01:
+                varying_concs.append(k)
+
+        num_plots = len(varying_concs) - 1
         
         fig = plt.figure()
-        elems = list(self._unique_elem)
+        elems = sorted(varying_concs)[:-1]
         for i in range(num_plots):
             ax = fig.add_subplot(1, num_plots, i+1)
 
