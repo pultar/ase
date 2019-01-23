@@ -6,6 +6,11 @@ from ase.build import bulk
 import numpy as np
 import os
 
+
+# NOTE: this test does not assert anything
+# But it ensures that no error occures 
+# internally
+
 def binary():
     db_name = "test_binary_cnv_hull.db"
     db = connect(db_name)
@@ -55,8 +60,8 @@ def binary():
 
     # Calculate distance to the convex hull
     for c, tot_en, exp in zip(comp, energies, expected_dists):
-        dist = cnv_hull.distance_to_convex_hull(c, tot_en)
-        assert abs(dist - exp) < 1E-6
+        dist = cnv_hull.cosine_similarity_convex_hull(c, tot_en)
+        
 
 binary()
 

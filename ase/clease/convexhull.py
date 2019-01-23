@@ -11,13 +11,34 @@ from itertools import product
 
 class ConvexHull(object):
     """
-    Evaluates data from database.
+    Evaluates data from database and construct the convex hull
+
+    Arguments
+    ==========
+    db_name: str
+        Name of the database
+    select_cond: list
+        Select conditions for retrieving data from the database
+        If None, the select condition will be [[('converged', '=', True)]
+    atoms_per_fu: int
+        Number of atoms per formula unit
+    conc_scale: float
+        Concentration scale. In the plots the concentration
+        will be divided by this number
+    conc_ranges: dict
+        Dictionary with lower and upper bound for the concentrations to
+        be included.
+        Example:
+        If one want to limit the evaluation to configurations having
+        gold concentrations in the range 0 to 0.5 this argument would
+        be {"Au": (0, 0.5)}.
     """
     def __init__(self, db_name, select_cond=None, atoms_per_fu=None, conc_scale=1.0,
-                 conc_var_name=None):
+                 conc_ranges={}):
         self.db_name = db_name
         self.atoms_per_fu = atoms_per_fu
         self.conc_scale = conc_scale
+        self.conc_ranges = conc_ranges
 
         if select_cond is None:
             self.select_cond = [('converged', '=', True)]
@@ -27,7 +48,6 @@ class ConvexHull(object):
         self._unique_elem = sorted(list(self.unique_elements()))
         self.end_points = self._get_end_points()
         self.weights = self._weighting_coefficients(self.end_points)
-        self.conc_var_name = conc_var_name
         self.num_varying_concs = 1
 
         self.energies, self.concs, self.db_ids = self._get_conc_energies()
@@ -44,9 +64,23 @@ class ConvexHull(object):
         return elems
 
     def _include_row(self, row):
+        """Return True if data from the row should be included."""
+
+        atoms_count = row.count_atoms()
+        for k in atoms_count.keys():
+            atoms_count[k] /= row.natoms
+        
+        for k, v in self.conc_ranges.items():
+            if atoms_count[k] < v[0] or atoms_count[k] > v[1]:
+                return False
         return True
 
     def _get_end_points(self):
+        """Return the end points based on information in the database
+
+        The algorithm seeks one configuration that maximize
+        the composition of each element in the database.
+        """
         end_points = {k: {} for k in self._unique_elem}
         for k, v in end_points.items():
             for k2 in self._unique_elem:
@@ -78,7 +112,20 @@ class ConvexHull(object):
 
     def _weighting_coefficients(self, end_points):
         """Return a dictionary with coefficient on reference 
-           energy should be weighted."""
+           energy should be weighted.
+
+        The weights are constructed as follows:
+        1. The formation energies of each end point should 
+            be zero
+        2. To obtain the formation energy of an arbitrary
+            structure, one should subtract the inner product
+            between the concentration and the weights
+           
+        Arguments
+        =========
+        end_points: dict
+            Dictionary with end point information (internally calculated)   
+        """
         matrix = np.zeros((len(end_points), len(self._unique_elem)))
         rhs = np.zeros(len(end_points))
         row = 0
@@ -98,6 +145,7 @@ class ConvexHull(object):
         return weights
 
     def _get_conc_energies(self):
+        """Read concentrations, energy and ID from the database."""
         energies = []
         ids = []
         conc = {k: [] for k in self._unique_elem}
@@ -130,31 +178,15 @@ class ConvexHull(object):
 
         return np.array(energies), conc, ids
 
-    # def _get_concentration_rel_energy_pairs(self, conditions=None):
-    #     tuples = []
-    #     if conditions is None:
-    #         rows = self.db.select(self.select_cond)
-    #     else:
-    #         select_cond = deepcopy(self.select_cond)
-    #         if select_cond is None:
-    #             select_cond = []
-    #         for x in range(len(conditions)):
-    #             select_cond.append(conditions[x])
-    #         rows = self.db.select(select_cond)
-
-    #     names = []
-    #     for row in rows:
-    #         c = row.get(self.conc_var_name) * self.conc_scale
-    #         conc_range = self.max_conc - self.min_conc
-    #         dE = (row.energy * self.atoms_per_fu / row.natoms) - \
-    #              (((c - self.min_conc) / conc_range) * self.Emin_max_conc) - \
-    #              (((self.max_conc - c) / conc_range) * self.Emin_min_conc)
-    #         tuples.append((c, dE))
-    #         names.append(row.name)
-    #     return tuples, names
-
     def get_convex_hull(self, conc_var=None):
-        """Return the convex hull."""
+        """Return the convex hull.
+        
+        Arguments
+        ==========
+        conc_var: str
+            Concentration variable used when calculating the 
+            convex hull.
+        """
 
         if conc_var is None:
             num_comp = len(self._unique_elem) - 1 
@@ -176,7 +208,14 @@ class ConvexHull(object):
 
     def _is_lower_conv_hull(self, simplex):
         """Return True if the simplex contain points that are
-            non-positive."""
+            non-positive.
+
+        Arguments
+        =========
+        simplex: list
+            List with indices of the points that lies
+            on the convex hull    
+        """
         return all(self.energies[i] <= 0.0 for i in simplex)
 
     def plot(self):
@@ -225,58 +264,55 @@ class ConvexHull(object):
         gui = GUI(images, expr='')
         gui.run()
 
-    def _barycentric_coordinate(self, all_points, pos, simplex):
-        """Calculate the barycentric coordinates."""
-        dimension = len(simplex) - 1
-        matrix = np.zeros((dimension, dimension))
-        origin = all_points[simplex[-1], :-1]
+    def cosine_similarity_convex_hull(self, conc, tot_en, cnv_hull=None):
+        """Calculate the Cosine similarity with structures on the convex hull.
+        
+        Arguments
+        ==========
+        conc: dict
+            Dictionary with concentrations. If the system consists of
+            0.3 Au, 0.5 Cu and 0.2 Zn, this would be 
+            {'Au': 0.3, 'Cu': 0.5, 'Zn': 0.2}
+        tot_en: float
+            Total energy per atom
+        cnv_hull: scipy.spatial.ConvexHull
+            Convex hull object holding the data.
+        """
 
-        rhs = pos - origin
-
-        for i in range(dimension):
-            matrix[i, :] = all_points[simplex[i], :-1] - origin
-
-        if dimension == 1:
-            value = rhs[0]/matrix[0, 0]
-            bary = np.array([value, 1.0-value])
-            return bary
-
-        bary, _, _, _ = np.linalg.solve(matrix, rhs)
-
-        last_crd = 1.0 - np.sum(bary)
-        result = np.zeros(len(bary)+1)
-        result[:len(bary)] = bary
-        result[-1] = last_crd
-        return result
-
-    def distance_to_convex_hull(self, conc, total_energy, cnv_hull=None):
         if cnv_hull is None:
             cnv_hull = self.get_convex_hull()
-        form_energy = total_energy - sum(conc[k]*self.weights[k] for k in conc.keys())
-
-        pos = []
-        for k in self._unique_elem[:-1]:
-            if k not in conc.keys():
-                pos.append(0.0)
-            else:
-                pos.append(conc[k])
-
-        dist_to_cnv = 1E100
-        for simplex in cnv_hull.simplices:
-            if not self._is_lower_conv_hull(simplex):
-                continue
-            bary = self._barycentric_coordinate(cnv_hull.points, pos, simplex)
-
-            if np.all(bary <= 1.0) and np.all(bary >= 0.0):
-                e = np.array([self.energies[i] for i in simplex])
-                e_on_cnv = bary.dot(e)
-                dist = form_energy - e_on_cnv
-                if dist < dist_to_cnv:
-                    dist_to_cnv = dist
-        return dist_to_cnv
         
+        indices = set()
+        for simplex in cnv_hull.simplices:
+            if self._is_lower_conv_hull(simplex):
+                indices = indices.union(simplex)
+        
+        data = cnv_hull.points[list(indices), :]
+        
+        form_energy = tot_en - sum(self.weights[k]*conc[k] for k in conc.keys())
+
+        min_en = np.min(data[:, -1])
+        max_en = np.max(data[:, -1])
+        diff = max_en - min_en
+
+        # Normalize the energy data
+        data[:, -1] /= diff
+
+        mean = np.mean(data, axis=0)
+        data -= mean
+
+        data_vec = np.zeros(data.shape[1])
+        data_vec[:-1] = [conc.get(k, 0.0) for k in self._unique_elem[:-1]]
+        data_vec[-1] = form_energy/diff
+        data_vec -= mean
+
+        inner_prod = data.dot(data_vec)
+        inner_prod /= np.sqrt(data_vec.dot(data_vec))
+        inner_prod /= np.sqrt(np.diag(data.dot(data.T)))
+        return np.max(inner_prod)
 
 
+        
 
     # def plot(self, ocv=False, ref=None, ref_energy=None):
     #     import matplotlib.pyplot as plt
@@ -384,3 +420,26 @@ class ConvexHull(object):
     #         ax[1].set_xlabel(r'concentration')
     #         f.subplots_adjust(hspace=0)
     #         InteractivePlot(f, ax[0], [sc], [names])
+
+        # def _get_concentration_rel_energy_pairs(self, conditions=None):
+    #     tuples = []
+    #     if conditions is None:
+    #         rows = self.db.select(self.select_cond)
+    #     else:
+    #         select_cond = deepcopy(self.select_cond)
+    #         if select_cond is None:
+    #             select_cond = []
+    #         for x in range(len(conditions)):
+    #             select_cond.append(conditions[x])
+    #         rows = self.db.select(select_cond)
+
+    #     names = []
+    #     for row in rows:
+    #         c = row.get(self.conc_var_name) * self.conc_scale
+    #         conc_range = self.max_conc - self.min_conc
+    #         dE = (row.energy * self.atoms_per_fu / row.natoms) - \
+    #              (((c - self.min_conc) / conc_range) * self.Emin_max_conc) - \
+    #              (((self.max_conc - c) / conc_range) * self.Emin_min_conc)
+    #         tuples.append((c, dE))
+    #         names.append(row.name)
+    #     return tuples, names
