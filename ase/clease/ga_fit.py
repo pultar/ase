@@ -65,6 +65,19 @@ class GAFit(object):
         Select condition passed to Evaluate to select which 
         data points from the database the should be included
 
+    cost_func: str
+        Use the inverse as fitness measure. 
+        Possible cost functions:
+        bic - Bayes Information Criterion
+        aic - Afaike Information Criterion
+        loocv - Leave one out cross validation
+
+    sparsity_slope: int
+        Ad hoc parameter that can be used to tune the sparsity
+        of the model GA selects. The higher it is, the
+        sparser models will be prefered. Has only impact
+        if cost_func is bic or aic. Default value is 1.
+
     Example:
     =======
     from ase.clease import Evaluate
@@ -78,12 +91,20 @@ class GAFit(object):
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
-                 select_cond=None):
+                 select_cond=None, cost_func="bic", sparsity_slope=1.0):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond)
 
+        allowed_cost_funcs = ["loocv", "bic", "aic"]
+
+        if cost_func not in allowed_cost_funcs:
+            raise ValueError("Cost func has to be one of {}"
+                             "".format(allowed_cost_funcs))
+
+        self.cost_func = cost_func
+        self.sparsity_slope = sparsity_slope
         # Read required attributes from evaluate
         self.cf_matrix = evaluator.cf_matrix
         self.cluster_names = evaluator.cluster_names
@@ -141,6 +162,17 @@ class GAFit(object):
                 individuals.append(individual)
         return individuals
 
+    def bic(self, mse, num_features):
+        """Return the Bayes Information Criteria."""
+        N = len(self.e_dft)
+        sparsity_cost = max((N, self.cf_matrix.shape[1]))
+        return N*np.log(mse) + num_features*np.log(sparsity_cost)*self.sparsity_slope
+
+    def aic(self, mse, num_features):
+        """Return Afaike information criterion."""
+        N = N = len(self.e_dft)
+        return N*np.log(mse) + 2*num_features*self.sparsity_slope
+
     def fit_individual(self, individual):
         X = self.cf_matrix[:, individual == 1]
         y = self.e_dft
@@ -149,10 +181,23 @@ class GAFit(object):
         e_pred = X.dot(coeff)
         delta_e = y - e_pred
 
-        # precision matrix
-        prec = self.regression.precision_matrix(X)
-        cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
-        return coeff, 1000.0*np.sqrt(cv_sq)
+        info_measure = None
+        n_selected = np.sum(individual)
+        mse = np.mean(delta_e**2)
+
+        if self.cost_func == "bic":
+            info_measure = self.bic(mse, n_selected)
+        elif self.cost_func == "aic":
+            info_measure = self.aic(mse, n_selected)
+        elif self.cost_func == "loocv":
+            prec = self.regression.precision_matrix(X)
+            cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
+            cv = 1000.0*np.sqrt(cv_sq)
+            info_measure = cv
+        else:
+            raise ValueError("Unknown cost function {}!"
+                             "".format(self.cost_func))
+        return coeff, info_measure
 
     def evaluate_fitness(self):
         """Evaluate fitness of all species."""
@@ -164,8 +209,8 @@ class GAFit(object):
             self.fitness[:] = workers.map(eval_fitness, args)
         else:
             for i, ind in enumerate(self.individuals):
-                _, cv = self.fit_individual(ind)
-                self.fitness[i] = 1.0/cv
+                _, fit = self.fit_individual(ind)
+                self.fitness[i] = -fit
 
     def flip_mutation(self, individual):
         """Apply mutation operation."""
@@ -203,17 +248,10 @@ class GAFit(object):
         for i in range(self.elitism):
             individual = self.individuals[srt_indx[i]].copy()
             new_generation.append(individual)
-
-            # Try to insert mutated versions of the best
-            # solutions
-            mut_type = choice(mutation_type)
-            if mut_type == "flip":
-                individual = self.flip_mutation(individual.copy())
-            else:
-                individual = self.sparsify_mutation(individual.copy())
             new_generation.append(self.make_valid(individual))
 
-        cumulative_sum = np.cumsum(self.fitness)
+        only_positive = self.fitness - np.min(self.fitness)
+        cumulative_sum = np.cumsum(only_positive)
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
 
@@ -227,13 +265,14 @@ class GAFit(object):
                 p2 = np.argmax(cumulative_sum > rand_num)
 
             crossing_point = np.random.randint(low=0, high=self.num_genes)
+            crosssing_point2 = np.random.randint(low=crossing_point, high=self.num_genes)
             new_individual = self.individuals[p1].copy()
-            new_individual[crossing_point:] = \
-                self.individuals[p2][crossing_point:]
+            new_individual[crossing_point:crosssing_point2] = \
+                self.individuals[p2][crossing_point:crosssing_point2]
 
             new_individual2 = self.individuals[p2].copy()
-            new_individual2[crossing_point:] = \
-                self.individuals[p1][crossing_point:]
+            new_individual2[crossing_point:crosssing_point2] = \
+                self.individuals[p1][crossing_point:crosssing_point2]
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
@@ -350,30 +389,27 @@ class GAFit(object):
 
             best_indx = np.argmax(self.fitness)
 
-            # Start to perform local optimization on the best individual
-            # after the earliest possible return
-            # If local optimization is turned on too early it seems like
-            # it is easy to reach premature convergence
-            if best_indx != 0 and self.local_decline and \
-                    gen >= gen_without_change:
-                self.log("Performing local optimization on new "
-                         "best candidate.")
+            # If best individual is repeated: Perform local 
+            # optimization
+            if best_indx == 0 and self.local_decline:
                 self._local_optimization()
-            cv = 1.0/self.fitness[best_indx]
+
             num_eci = np.sum(self.individuals[best_indx])
             diversity = self.population_diversity()
-            self.statistics["best_cv"].append(1.0/np.max(self.fitness))
-            self.statistics["worst_cv"].append(1.0/np.min(self.fitness))
-            self.log("Generation: {}. Best CV: {:.2f} meV/atom "
-                     "Num ECI: {}. Pop. div: {:.2f}"
-                     "".format(gen, cv, num_eci, diversity), end="\r")
-            self.create_new_generation()
+            self.statistics["best_cv"].append(np.max(self.fitness))
+            self.statistics["worst_cv"].append(np.min(self.fitness))
 
-            if abs(current_best - cv) > min_change:
+            self.log("Generation: {}. {}: {:.2e} "
+                     "Num ECI: {}. Pop. div: {:.2f}"
+                     "".format(gen, self.cost_func,
+                               -self.fitness[best_indx], 
+                               num_eci, diversity), end="\r")
+            self.create_new_generation()
+            if abs(current_best - self.fitness[best_indx]) > min_change:
                 num_gen_without_change = 0
             else:
                 num_gen_without_change += 1
-            current_best = cv
+            current_best = self.fitness[best_indx]
 
             if gen % save_interval == 0:
                 self.save_population()
@@ -402,7 +438,7 @@ class GAFit(object):
             individual = self.individuals[indx]
 
         num_steps = 10*len(individual)
-        cv_min = self.best_cv
+        cv_min = -np.max(self.fitness)
         for _ in range(num_steps):
             flip_indx = choice(range(len(individual)))
             individual_cpy = deepcopy(individual)
@@ -420,10 +456,11 @@ class GAFit(object):
                 return
 
         self.individuals[self.best_individual_indx] = individual
+        self.fitness[self.best_individual_indx] = -cv_min
 
 
 def eval_fitness(args):
     ga = args[0]
     indx = args[1]
     _, cv = ga.fit_individual(ga.individuals[indx])
-    return 1.0/cv
+    return -cv
