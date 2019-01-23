@@ -33,7 +33,7 @@ class ConvexHull(object):
         gold concentrations in the range 0 to 0.5 this argument would
         be {"Au": (0, 0.5)}.
     """
-    def __init__(self, db_name, select_cond=None, atoms_per_fu=None, conc_scale=1.0,
+    def __init__(self, db_name, select_cond=None, atoms_per_fu=1, conc_scale=1.0,
                  conc_ranges={}):
         self.db_name = db_name
         self.atoms_per_fu = atoms_per_fu
@@ -229,9 +229,20 @@ class ConvexHull(object):
         for i in range(num_plots):
             ax = fig.add_subplot(1, num_plots, i+1)
 
-            x = self.concs[elems[i]]
-            ax.plot(x, self.energies, "o", mfc="none")
+            x = np.array(self.concs[elems[i]])
+            x /= self.conc_scale
+            
+            ax.plot(x, self.energies*self.atoms_per_fu, "o", mfc="none")
             c_hull = self.get_convex_hull(conc_var=elems[i])
+
+            if self.atoms_per_fu > 1:
+                unit = "eV/f.u."
+            else:
+                unit = "eV/atom"
+            if i == 0:
+                ax.set_ylabel("Formation energy ({})".format(unit))
+            else:
+                ax.set_yticklabels([])
 
             for simpl in c_hull.simplices:
                 if self._is_lower_conv_hull(simpl):
