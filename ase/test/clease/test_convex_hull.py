@@ -36,10 +36,8 @@ def binary():
         atoms.set_calculator(calc)
         db.write(atoms, converged=True, expected_cnv_dist=0.5/len(atoms))
 
-    cnv_hull = ConvexHull(db_name)
-    from matplotlib import pyplot as plt
+    cnv_hull = ConvexHull(db_name, conc_ranges={"Au": (0, 1)})
     cnv_hull.plot()
-    plt.show()
 
     energies = []
     expected_dists = []

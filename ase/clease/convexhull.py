@@ -71,7 +71,8 @@ class ConvexHull(object):
             atoms_count[k] /= row.natoms
         
         for k, v in self.conc_ranges.items():
-            if atoms_count[k] < v[0] or atoms_count[k] > v[1]:
+            conc = atoms_count.get(k, 0.0)
+            if conc < v[0] or conc > v[1]:
                 return False
         return True
 
