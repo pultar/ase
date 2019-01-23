@@ -6,6 +6,7 @@ from operator import itemgetter
 from copy import deepcopy
 from scipy.spatial import ConvexHull as SciConvexHull
 from ase.db import connect
+from itertools import product
 
 
 class ConvexHull(object):
@@ -23,14 +24,13 @@ class ConvexHull(object):
         else:
             self.select_cond = select_cond
 
-        self._unique_elem = self.unique_elements()
-        print(self._unique_elem)
+        self._unique_elem = sorted(list(self.unique_elements()))
         self.end_points = self._get_end_points()
         self.weights = self._weighting_coefficients(self.end_points)
         self.conc_var_name = conc_var_name
         self.num_varying_concs = 1
 
-        self.energies, self.concs = self._get_conc_energies()
+        self.energies, self.concs, self.db_ids = self._get_conc_energies()
 
     def unique_elements(self):
         """Return the number of unique elements."""
@@ -99,6 +99,7 @@ class ConvexHull(object):
 
     def _get_conc_energies(self):
         energies = []
+        ids = []
         conc = {k: [] for k in self._unique_elem}
         db = connect(self.db_name)
 
@@ -125,8 +126,9 @@ class ConvexHull(object):
             # Subtract the appropriate weights
             form_energy -= sum(conc[k][-1]*self.weights[k] for k in conc.keys())
             energies.append(form_energy)
+            ids.append(row.id)
 
-        return np.array(energies), conc
+        return np.array(energies), conc, ids
 
     # def _get_concentration_rel_energy_pairs(self, conditions=None):
     #     tuples = []
@@ -157,9 +159,9 @@ class ConvexHull(object):
         if conc_var is None:
             num_comp = len(self._unique_elem) - 1 
             x = np.zeros((len(self.energies), num_comp))
-
+            elems = list(self._unique_elem)
             for i in range(num_comp):
-                x[:, i] = self.concs[self._unique_elem[i]]
+                x[:, i] = self.concs[elems[i]]
             nX = num_comp
         elif conc_var in self._unique_elem:
             x = np.array(self.concs[conc_var])
@@ -199,6 +201,82 @@ class ConvexHull(object):
                     ax.plot(x_cnv, y_cnv, color="black", marker="x")
             ax.set_xlabel("{} conc".format(elems[i]))
         return fig
+
+    def show_structures_on_convex_hull(self):
+        """Show all entries on the convex hull."""
+        from ase.gui.gui import GUI
+        from ase.gui.images import Images
+
+        c_hull = self.get_convex_hull()
+        indices = set()
+        for simplex in c_hull.simplices:
+            if self._is_lower_conv_hull(simplex):
+                indices = indices.union(simplex)
+        
+        cnv_hull_atoms = []
+        db = connect(self.db_name)
+        for i in indices:
+            db_id = self.db_ids[i]
+            atoms = db.get(id=db_id).toatoms()
+            cnv_hull_atoms.append(atoms)
+
+        images = Images()
+        images.initialize(cnv_hull_atoms)
+        gui = GUI(images, expr='')
+        gui.run()
+
+    def _barycentric_coordinate(self, all_points, pos, simplex):
+        """Calculate the barycentric coordinates."""
+        dimension = len(simplex) - 1
+        matrix = np.zeros((dimension, dimension))
+        origin = all_points[simplex[-1], :-1]
+
+        rhs = pos - origin
+
+        for i in range(dimension):
+            matrix[i, :] = all_points[simplex[i], :-1] - origin
+
+        if dimension == 1:
+            value = rhs[0]/matrix[0, 0]
+            bary = np.array([value, 1.0-value])
+            return bary
+
+        bary, _, _, _ = np.linalg.solve(matrix, rhs)
+
+        last_crd = 1.0 - np.sum(bary)
+        result = np.zeros(len(bary)+1)
+        result[:len(bary)] = bary
+        result[-1] = last_crd
+        return result
+
+    def distance_to_convex_hull(self, conc, total_energy, cnv_hull=None):
+        if cnv_hull is None:
+            cnv_hull = self.get_convex_hull()
+        form_energy = total_energy - sum(conc[k]*self.weights[k] for k in conc.keys())
+
+        pos = []
+        for k in self._unique_elem[:-1]:
+            if k not in conc.keys():
+                pos.append(0.0)
+            else:
+                pos.append(conc[k])
+
+        dist_to_cnv = 1E100
+        for simplex in cnv_hull.simplices:
+            if not self._is_lower_conv_hull(simplex):
+                continue
+            bary = self._barycentric_coordinate(cnv_hull.points, pos, simplex)
+
+            if np.all(bary <= 1.0) and np.all(bary >= 0.0):
+                e = np.array([self.energies[i] for i in simplex])
+                e_on_cnv = bary.dot(e)
+                dist = form_energy - e_on_cnv
+                if dist < dist_to_cnv:
+                    dist_to_cnv = dist
+        return dist_to_cnv
+        
+
+
 
     # def plot(self, ocv=False, ref=None, ref_energy=None):
     #     import matplotlib.pyplot as plt
