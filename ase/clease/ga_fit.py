@@ -70,7 +70,8 @@ class GAFit(object):
         Possible cost functions:
         bic - Bayes Information Criterion
         aic - Afaike Information Criterion
-        loocv - Leave one out cross validation
+        loocv - Leave one out cross validation (average)
+        max_loocv - Leave one out cross valdition (maximum)
 
     sparsity_slope: int
         Ad hoc parameter that can be used to tune the sparsity
@@ -95,14 +96,14 @@ class GAFit(object):
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
-                 select_cond=None, cost_func="bic", sparsity_slope=1.0,
+                 select_cond=None, cost_func="max_loocv", sparsity_slope=1.0,
                  min_weight=1.0):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond, min_weight=min_weight)
 
-        allowed_cost_funcs = ["loocv", "bic", "aic"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
@@ -194,11 +195,17 @@ class GAFit(object):
             info_measure = self.bic(mse, n_selected)
         elif self.cost_func == "aic":
             info_measure = self.aic(mse, n_selected)
-        elif self.cost_func == "loocv":
+        elif "loocv" in self.cost_func:
             prec = self.regression.precision_matrix(X)
             cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
             cv = 1000.0*np.sqrt(cv_sq)
-            info_measure = cv
+
+            if self.cost_func == "loocv":
+                info_measure = cv
+            elif self.cost_func == "max_loocv":
+                info_measure = np.max(cv)
+            else:
+                raise ValueError("Unknown LOOCV measure!")
         else:
             raise ValueError("Unknown cost function {}!"
                              "".format(self.cost_func))
