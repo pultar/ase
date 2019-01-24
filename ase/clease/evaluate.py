@@ -296,10 +296,26 @@ class Evaluate(object):
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.set_title('Fit using {} data points. Eff. num. data points {:.1f}'
-                     ''.format(self.e_dft.shape[0], 
-                               self.effective_num_data_pts))
-        ax.plot(e_pred, self.e_dft, 'bo', mfc='none')
+        if self.effective_num_data_pts != len(self.e_dft):
+            ax.set_title('Fit using {} data points. Eff. num. data points '
+                         '{:.1f}'.format(self.e_dft.shape[0],
+                                         self.effective_num_data_pts))
+        else:
+            ax.set_title('Fit using {} data points.'
+                         ''.format(self.e_dft.shape[0]))
+
+        if self.effective_num_data_pts != len(self.e_dft):
+            w = np.diag(self.weight_matrix)
+            im = ax.scatter(e_pred, self.e_dft, c=w)
+            cb = fig.colorbar(im)
+            cb.set_label("Weight")
+
+            # Plot again with zero marker width to make the interactive
+            # plot work
+            ax.plot(e_pred, self.e_dft, 'o', mfc='none', color="black",
+                    markeredgewidth=0.0)
+        else:
+            ax.plot(e_pred, self.e_dft, 'bo', mfc='none')
         ax.plot(t, t, 'r')
         ax.axis([rmin, rmax, rmin, rmax])
         ax.set_ylabel(r'$E_{DFT}$ (eV/atom)')
@@ -332,7 +348,18 @@ class Evaluate(object):
         fig_residual = plt.figure()
         ax_residual = fig_residual.add_subplot(111)
         ax_residual.set_title("Residuals")
-        ax_residual.plot((self.e_dft - e_pred)*1000.0, "x")
+        if self.effective_num_data_pts != len(self.e_dft):
+            x = range(len(self.e_dft))
+            im = ax_residual.scatter(x, (self.e_dft - e_pred)*1000.0, c=w)
+            cb = fig_residual.colorbar(im)
+            cb.set_label("Weight")
+            
+            # Plot again with zero with to make the interactive
+            # plot work
+            ax_residual.plot((self.e_dft - e_pred)*1000.0, "o", color="black",
+                             markeredgewidth=0.0, mfc="none")
+        else:
+            ax_residual.plot((self.e_dft - e_pred)*1000.0, "x")
         ax_residual.axhline(0, ls="--")
         ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
 
