@@ -125,7 +125,7 @@ class ConvexHull(object):
         matrix = np.zeros((len(end_points), len(self._unique_elem)))
         rhs = np.zeros(len(end_points))
         row = 0
-        for k, v in end_points.items():
+        for _, v in end_points.items():
             for j, symb in enumerate(self._unique_elem):
                 matrix[row, j] = v["{}_conc".format(symb)]
             rhs[row] = v["energy"]
@@ -190,10 +190,8 @@ class ConvexHull(object):
             elems = list(self._unique_elem)
             for i in range(num_comp):
                 x[:, i] = self.concs[elems[i]]
-            nX = num_comp
         elif conc_var in self._unique_elem:
             x = np.array(self.concs[conc_var])
-            nX = 1
         else:
             raise ValueError("conc_var has to be {} or None"
                              "".format(self._unique_elem))
