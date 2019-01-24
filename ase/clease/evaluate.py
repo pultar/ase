@@ -51,7 +51,7 @@ class Evaluate(object):
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  parallel=False, num_core="all", fitting_scheme="ridge",
                  alpha=1E-5, max_cluster_size=None, max_cluster_dia=None,
-                 scoring_scheme='loocv'):
+                 scoring_scheme='loocv', min_weight=1.0):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
@@ -92,7 +92,11 @@ class Evaluate(object):
         self._filter_cluster_name()
 
         self.cf_matrix = self._make_cf_matrix()
-        self.e_dft, self.names = self._get_dft_energy_per_atom()
+        self.e_dft, self.names, self.concs = self._get_dft_energy_per_atom()
+        self.effective_num_data_pts = len(self.e_dft)
+        self.weight_matrix = np.eye(len(self.e_dft))
+        self._apply_convex_hull_weight(min_weight)
+
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
@@ -154,6 +158,37 @@ class Evaluate(object):
             max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
 
         return max_cluster_dia
+
+    def _apply_convex_hull_weight(self, min_weight):
+        """Weight structure according to similarity with the 
+           most similar structure on the Convex Hull."""
+
+        if abs(min_weight - 1.0) < 1E-4:
+            return
+
+        from ase.clease import ConvexHull
+        cnv_hull = ConvexHull(self.setting.db_name)
+        hull = cnv_hull.get_convex_hull()
+
+        cosine_sim = []
+        for conc, energy in zip(self.concs, self.e_dft):
+            sim = cnv_hull.cosine_similarity_convex_hull(conc, energy, hull)
+            cosine_sim.append(sim)
+        cosine_sim = np.array(cosine_sim)
+
+        # Shift tha maximum value to 0
+        cosine_sim -= np.max(cosine_sim)
+        min_sim = np.min(cosine_sim)
+
+        decay = np.log(min_weight)/min_sim
+
+        self.weight_matrix = np.diag(np.exp(decay*cosine_sim))
+        self.effective_num_data_pts = np.sum(self.weight_matrix)
+
+        # Apply the weight matrix to the data points
+        w_sqrt = np.sqrt(self.weight_matrix)
+        self.cf_matrix = w_sqrt.dot(self.cf_matrix)
+        self.e_dft = w_sqrt.dot(self.e_dft)
 
     def get_eci(self):
         """Determine and return ECIs for a given alpha.
@@ -249,7 +284,9 @@ class Evaluate(object):
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.set_title('Fit using {} data points'.format(self.e_dft.shape[0]))
+        ax.set_title('Fit using {} data points. Eff. num. data points {:.1f}'
+                     ''.format(self.e_dft.shape[0], 
+                               self.effective_num_data_pts))
         ax.plot(e_pred, self.e_dft, 'bo', mfc='none')
         ax.plot(t, t, 'r')
         ax.axis([rmin, rmax, rmin, rmax])
@@ -578,8 +615,8 @@ class Evaluate(object):
         cfm = self.cf_matrix
         # precision matrix
         prec = self.scheme.precision_matrix(cfm)
-        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
-        return np.sqrt(cv_sq)
+        cv_sq = np.sum((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
+        return np.sqrt(cv_sq/self.effective_num_data_pts)
 
     def loocv(self):
         """Determine the CV score for the Leave-One-Out case."""
@@ -591,7 +628,8 @@ class Evaluate(object):
             delta_e = self.e_dft[i] - e_pred
             cv_sq += (delta_e)**2
             e_pred_loo.append(e_pred)
-        cv_sq /= self.cf_matrix.shape[0]
+        # cv_sq /= self.cf_matrix.shape[0]
+        cv_sq /= self.effective_num_data_pts
         self.e_pred_loo = e_pred_loo
         return np.sqrt(cv_sq)
 
@@ -647,6 +685,7 @@ class Evaluate(object):
         """Retrieve DFT energy and convert it to eV/atom unit."""
         e_dft = []
         names = []
+        concentrations = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
             final_struct_id = row.get("final_struct_id", -1)
@@ -658,7 +697,12 @@ class Evaluate(object):
                 energy = row.energy
             e_dft.append(energy / row.natoms)
             names.append(row.name)
-        return np.array(e_dft), names
+
+            count = row.count_atoms()
+            for k in count.keys():
+                count[k] /= row.natoms
+            concentrations.append(count)
+        return np.array(e_dft), names, concentrations
 
 
 def loocv_mp(args):
