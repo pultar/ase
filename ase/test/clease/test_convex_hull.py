@@ -65,7 +65,6 @@ def syst_with_one_fixed_comp():
 
     # Create energies that we know are on the 
     # convex hull
-    cnv_hull_enegies = [-x*(8-x) - x + 0.2 for x in range(9)]
 
     for n_cu in range(6):
         atoms = bulk("Au")
