@@ -2,7 +2,6 @@ from __future__ import division
 import numpy as np
 from scipy.spatial import ConvexHull as SciConvexHull
 from ase.db import connect
-from itertools import product
 
 
 class ConvexHull(object):
