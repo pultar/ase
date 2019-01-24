@@ -46,6 +46,18 @@ class Evaluate(object):
 
     scoring_scheme: str
         should be one of 'loocv' or 'loocv_fast'
+
+    min_weight: float
+        Weight given to the data point furthest away from
+        any structure on the convex hull. An exponential
+        weighting function is used and the decay rate
+        is calculated as
+
+        decay = log(min_weight)/min(sim_measure)
+
+        where sim_measure is a similarity measure
+        used to asses how different the structure
+        is from structures on the convex hull.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
