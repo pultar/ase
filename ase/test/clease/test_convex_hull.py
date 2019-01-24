@@ -7,8 +7,8 @@ import numpy as np
 import os
 
 def binary():
-    from matplotlib import pyplot as plt
-    plt.switch_backend("agg")
+    # from matplotlib import pyplot as plt
+    # plt.switch_backend("agg")
 
 
     db_name = "test_binary_cnv_hull.db"
