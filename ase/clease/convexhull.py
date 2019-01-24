@@ -1,9 +1,5 @@
 from __future__ import division
 import numpy as np
-import ase.db
-import os
-from operator import itemgetter
-from copy import deepcopy
 from scipy.spatial import ConvexHull as SciConvexHull
 from ase.db import connect
 from itertools import product
