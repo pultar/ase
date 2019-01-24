@@ -78,6 +78,10 @@ class GAFit(object):
         sparser models will be prefered. Has only impact
         if cost_func is bic or aic. Default value is 1.
 
+    min_weight: float
+        Weight given to the point furthest away from the
+        convex hull.
+
     Example:
     =======
     from ase.clease import Evaluate
@@ -91,11 +95,12 @@ class GAFit(object):
                  elitism=3, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
-                 select_cond=None, cost_func="bic", sparsity_slope=1.0):
+                 select_cond=None, cost_func="bic", sparsity_slope=1.0,
+                 min_weight=1.0):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
-                             select_cond=select_cond)
+                             select_cond=select_cond, min_weight=min_weight)
 
         allowed_cost_funcs = ["loocv", "bic", "aic"]
 
