@@ -28,8 +28,8 @@ class ConvexHull(object):
         gold concentrations in the range 0 to 0.5 this argument would
         be {"Au": (0, 0.5)}.
     """
-    def __init__(self, db_name, select_cond=None, atoms_per_fu=1, conc_scale=1.0,
-                 conc_ranges={}):
+    def __init__(self, db_name, select_cond=None, atoms_per_fu=1,
+                 conc_scale=1.0, conc_ranges={}):
         self.db_name = db_name
         self.atoms_per_fu = atoms_per_fu
         self.conc_scale = conc_scale
@@ -64,7 +64,6 @@ class ConvexHull(object):
         atoms_count = row.count_atoms()
         for k in atoms_count.keys():
             atoms_count[k] /= row.natoms
-        
         for k, v in self.conc_ranges.items():
             conc = atoms_count.get(k, 0.0)
             if conc < v[0] or conc > v[1]:
@@ -87,7 +86,6 @@ class ConvexHull(object):
         for row in db.select(self.select_cond):
             if not self._include_row(row):
                 continue
-            
             count = row.count_atoms()
             for k in self._unique_elem:
                 if k not in count.keys():
@@ -97,7 +95,7 @@ class ConvexHull(object):
             for k, v in end_points.items():
                 if k not in count.keys():
                     continue
-                
+
                 # Check if the current structure
                 # is an endpoint
                 if count[k] > v["{}_conc".format(k)]:
@@ -107,20 +105,20 @@ class ConvexHull(object):
         return end_points
 
     def _weighting_coefficients(self, end_points):
-        """Return a dictionary with coefficient on reference 
+        """Return a dictionary with coefficient on reference
            energy should be weighted.
 
         The weights are constructed as follows:
-        1. The formation energies of each end point should 
+        1. The formation energies of each end point should
             be zero
         2. To obtain the formation energy of an arbitrary
             structure, one should subtract the inner product
             between the concentration and the weights
-           
+
         Arguments
         =========
         end_points: dict
-            Dictionary with end point information (internally calculated)   
+            Dictionary with end point information (internally calculated)
         """
         matrix = np.zeros((len(end_points), len(self._unique_elem)))
         rhs = np.zeros(len(end_points))
@@ -130,12 +128,12 @@ class ConvexHull(object):
                 matrix[row, j] = v["{}_conc".format(symb)]
             rhs[row] = v["energy"]
             row += 1
-        
+
         try:
             inv_mat = np.linalg.inv(matrix)
         except np.linalg.LinAlgError:
             inv_mat = np.linalg.pinv(matrix)
-        
+
         coeff = inv_mat.dot(rhs)
         weights = {s: coeff[i] for i, s in enumerate(self._unique_elem)}
         return weights
@@ -166,7 +164,6 @@ class ConvexHull(object):
                 # Old format where the energy is stored in the init structure
                 form_energy = row.energy/row.natoms
 
-
             # Subtract the appropriate weights
             form_energy -= sum(conc[k][-1]*self.weights[k] for k in conc.keys())
             energies.append(form_energy)
@@ -176,16 +173,16 @@ class ConvexHull(object):
 
     def get_convex_hull(self, conc_var=None):
         """Return the convex hull.
-        
+
         Arguments
         ==========
         conc_var: str
-            Concentration variable used when calculating the 
+            Concentration variable used when calculating the
             convex hull.
         """
 
         if conc_var is None:
-            num_comp = len(self._unique_elem) - 1 
+            num_comp = len(self._unique_elem) - 1
             x = np.zeros((len(self.energies), num_comp))
             elems = list(self._unique_elem)
             for i in range(num_comp):
@@ -208,7 +205,7 @@ class ConvexHull(object):
         =========
         simplex: list
             List with indices of the points that lies
-            on the convex hull    
+            on the convex hull
         """
         tol = 1E-4
         return all(self.energies[i] <= tol for i in simplex)
@@ -228,7 +225,7 @@ class ConvexHull(object):
                 varying_concs.append(k)
 
         num_plots = len(varying_concs) - 1
-        
+
         fig = plt.figure()
         elems = sorted(varying_concs)[:-1]
         for i in range(num_plots):
@@ -236,7 +233,7 @@ class ConvexHull(object):
 
             x = np.array(self.concs[elems[i]])
             x /= self.conc_scale
-            
+
             ax.plot(x, self.energies*self.atoms_per_fu, "o", mfc="none")
             c_hull = self.get_convex_hull(conc_var=elems[i])
 
@@ -267,7 +264,7 @@ class ConvexHull(object):
         for simplex in c_hull.simplices:
             if self._is_lower_conv_hull(simplex):
                 indices = indices.union(simplex)
-        
+
         cnv_hull_atoms = []
         db = connect(self.db_name)
         for i in indices:
@@ -282,12 +279,12 @@ class ConvexHull(object):
 
     def cosine_similarity_convex_hull(self, conc, tot_en, cnv_hull=None):
         """Calculate the Cosine similarity with structures on the convex hull.
-        
+
         Arguments
         ==========
         conc: dict
             Dictionary with concentrations. If the system consists of
-            0.3 Au, 0.5 Cu and 0.2 Zn, this would be 
+            0.3 Au, 0.5 Cu and 0.2 Zn, this would be
             {'Au': 0.3, 'Cu': 0.5, 'Zn': 0.2}
         tot_en: float
             Total energy per atom
@@ -297,14 +294,14 @@ class ConvexHull(object):
 
         if cnv_hull is None:
             cnv_hull = self.get_convex_hull()
-        
+
         indices = set()
         for simplex in cnv_hull.simplices:
             if self._is_lower_conv_hull(simplex):
                 indices = indices.union(simplex)
-        
+
         data = cnv_hull.points[list(indices), :]
-        
+
         form_energy = tot_en - sum(self.weights[k]*conc[k] for k in conc.keys())
 
         min_en = np.min(data[:, -1])
