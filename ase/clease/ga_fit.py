@@ -102,6 +102,7 @@ class GAFit(object):
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond, min_weight=min_weight)
+        self.eff_num = evaluator.effective_num_data_pts
 
         allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
@@ -168,11 +169,11 @@ class GAFit(object):
                 individuals.append(individual)
         return individuals
 
-    def bic(self, mse, num_features):
+    def bic(self, mse, nsel):
         """Return the Bayes Information Criteria."""
         N = len(self.e_dft)
         sparsity_cost = max((N, self.cf_matrix.shape[1]))
-        return N*np.log(mse) + num_features*np.log(sparsity_cost)*self.sparsity_slope
+        return N*np.log(mse) + nsel*np.log(sparsity_cost)*self.sparsity_slope
 
     def aic(self, mse, num_features):
         """Return Afaike information criterion."""
@@ -189,7 +190,7 @@ class GAFit(object):
 
         info_measure = None
         n_selected = np.sum(individual)
-        mse = np.mean(delta_e**2)
+        mse = np.sum(delta_e**2)/self.eff_num
 
         if self.cost_func == "bic":
             info_measure = self.bic(mse, n_selected)
@@ -197,13 +198,14 @@ class GAFit(object):
             info_measure = self.aic(mse, n_selected)
         elif "loocv" in self.cost_func:
             prec = self.regression.precision_matrix(X)
-            cv_sq = np.mean((delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2)
+            loo_dev = (delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
+            cv_sq = np.sum(loo_dev)/self.eff_num
             cv = 1000.0*np.sqrt(cv_sq)
 
             if self.cost_func == "loocv":
                 info_measure = cv
             elif self.cost_func == "max_loocv":
-                info_measure = np.max(cv)
+                info_measure = np.sqrt(np.max(loo_dev))*1000.0
             else:
                 raise ValueError("Unknown LOOCV measure!")
         else:
@@ -276,15 +278,13 @@ class GAFit(object):
                 rand_num = np.random.rand()
                 p2 = np.argmax(cumulative_sum > rand_num)
 
-            crossing_point = np.random.randint(low=0, high=self.num_genes)
-            crosssing_point2 = np.random.randint(low=crossing_point, high=self.num_genes)
             new_individual = self.individuals[p1].copy()
-            new_individual[crossing_point:crosssing_point2] = \
-                self.individuals[p2][crossing_point:crosssing_point2]
-
             new_individual2 = self.individuals[p2].copy()
-            new_individual2[crossing_point:crosssing_point2] = \
-                self.individuals[p1][crossing_point:crosssing_point2]
+
+            mask = np.random.randint(0, high=2, dtype=np.uint8)
+            new_individual[mask] = self.individuals[p2][mask]
+            new_individual2[mask] = self.individuals[p1][mask]
+
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
@@ -351,7 +351,8 @@ class GAFit(object):
         # Save population
         with open(self.fname, 'w') as out:
             for i in range(len(self.individuals)):
-                out.write(",".join(str(x) for x in self.index_of_selected_clusters(i)))
+                out.write(",".join(str(x) for x in
+                                   self.index_of_selected_clusters(i)))
                 out.write("\n")
         print("\nPopulation written to {}".format(self.fname))
 
@@ -401,9 +402,9 @@ class GAFit(object):
 
             best_indx = np.argmax(self.fitness)
 
-            # If best individual is repeated: Perform local 
+            # If best individual is repeated: Perform local
             # optimization
-            if best_indx == 0 and self.local_decline:
+            if best_indx != 0 and self.local_decline:
                 self._local_optimization()
 
             num_eci = np.sum(self.individuals[best_indx])
@@ -414,7 +415,7 @@ class GAFit(object):
             self.log("Generation: {}. {}: {:.2e} "
                      "Num ECI: {}. Pop. div: {:.2f}"
                      "".format(gen, self.cost_func,
-                               -self.fitness[best_indx], 
+                               -self.fitness[best_indx],
                                num_eci, diversity), end="\r")
             self.create_new_generation()
             if abs(current_best - self.fitness[best_indx]) > min_change:
