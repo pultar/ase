@@ -3,6 +3,7 @@ from ase.clease import Tikhonov
 import numpy as np
 import multiprocessing as mp
 import os
+from random import shuffle
 os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
@@ -141,18 +142,19 @@ class GAFit(object):
 
     def _initialize_individuals(self, max_num):
         """Initialize a random population."""
-        from random import shuffle
         individuals = []
         if os.path.exists(self.fname):
             individuals = self._init_from_file()
         else:
             max_num = max_num or self.num_genes
             indices = list(range(self.num_genes))
-            for _ in range(self.pop_size):
+            num_non_zero = np.array(list(range(0, self.pop_size)))
+            num_non_zero %= max_num
+            num_non_zero[num_non_zero < 3] = 3
+            for i in range(self.pop_size):
                 shuffle(indices)
                 individual = np.zeros(self.num_genes, dtype=np.uint8)
-                num_non_zero = np.random.randint(low=3, high=max_num)
-                indx = indices[:num_non_zero]
+                indx = indices[:num_non_zero[i]]
                 individual[np.array(indx)] = 1
                 individuals.append(individual)
         return individuals
@@ -233,6 +235,12 @@ class GAFit(object):
         individual[flip_indx] = (individual[flip_indx]+1) % 2
         return individual
 
+    def flip_one_mutation(self, individual):
+        """Apply mutation where one bit flips."""
+        indx = np.random.randint(0, high=len(individual))
+        individual[indx] = (individual[indx] + 1) % 2
+        return individual
+
     def sparsify_mutation(self, individual):
         """Change one 1 to 0."""
         indx = np.argwhere(individual == 1)
@@ -240,6 +248,28 @@ class GAFit(object):
         flip_indx = (rand_num < self.change_prob)
         individual[indx[flip_indx]] = 0
         return individual
+
+    @property
+    def sparsest_individual(self):
+        num_coeff = len(self.individuals[0])
+        sprs = self.individuals[0].copy()
+        for ind in self.individuals:
+            if np.sum(ind) < num_coeff:
+                sprs = ind.copy()
+                num_coeff = np.sum(ind)
+        return sprs
+
+    def get_random_sparse_individual(self):
+        """Return new random individual that is
+            sparser than the current sparsest"""
+        sprs = self.sparsest_individual
+        num_non_zero = np.sum(sprs)
+        indices = list(range(0, len(sprs)))
+        shuffle(indices)
+        new = np.zeros_like(sprs)
+        indices = np.array(indices)
+        new[indices[:num_non_zero]] = 1
+        return new
 
     def make_valid(self, individual):
         """Make sure that there is at least two active ECIs."""
@@ -259,20 +289,46 @@ class GAFit(object):
         mutation_type = ["flip", "sparsify"]
 
         # Pass the fittest to the next generation
-        for i in range(self.elitism):
-            individual = self.individuals[srt_indx[i]].copy()
+        elitism_fit_selected = np.zeros(self.elitism)
+        num_transfered = 0
+        counter = 0
+        while num_transfered < self.elitism and counter < len(srt_indx):
+            indx = srt_indx[counter]
+            diff = np.abs(self.fitness[indx] - elitism_fit_selected)
+            if np.any(diff < 1E-4):
+                counter += 1
+                continue
+
+            individual = self.individuals[indx].copy()
+
+            # Transfer the best
             new_generation.append(individual)
-            new_generation.append(self.make_valid(individual))
+
+            # Transfer the best individual with a mutation
+            new_ind = self.flip_one_mutation(individual.copy())
+            new_generation.append(self.make_valid(new_ind))
+            elitism_fit_selected[num_transfered] = self.fitness[indx]
+            num_transfered += 1
+            counter += 1
+
+        if counter >= len(srt_indx):
+            raise RuntimeError("The entrie population has saturated!")
 
         only_positive = self.fitness - np.min(self.fitness)
         cumulative_sum = np.cumsum(only_positive)
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
 
+        # Insert two sparse solutions
+        new_generation.append(self.get_random_sparse_individual())
+        new_generation.append(self.get_random_sparse_individual())
+        num_inserted += 2
+
         # Create new generation by mergin existing
         for i in range(num_inserted, self.pop_size):
             rand_num = np.random.rand()
             p1 = np.argmax(cumulative_sum > rand_num)
+            p1 = np.random.randint(0, high=10)
             p2 = p1
             while p2 == p1:
                 rand_num = np.random.rand()
@@ -288,8 +344,8 @@ class GAFit(object):
             if np.random.rand() < self.mutation_prob:
                 mut_type = choice(mutation_type)
                 if mut_type == "flip":
-                    new_individual = self.flip_mutation(new_individual)
-                    new_individual2 = self.flip_mutation(new_individual2)
+                    new_individual = self.flip_one_mutation(new_individual)
+                    new_individual2 = self.flip_one_mutation(new_individual2)
                 else:
                     new_individual = self.sparsify_mutation(new_individual)
                     new_individual2 = self.sparsify_mutation(new_individual2)
