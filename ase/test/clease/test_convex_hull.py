@@ -83,6 +83,7 @@ def syst_with_one_fixed_comp():
     cnv_hull = ConvexHull(db_name, conc_ranges={"Au": (0, 1)})
 
     os.remove(db_name)
+    assert cnv_hull._unique_elem == ["Au", "Cu", "Zn"]
     # fig = cnv_hull.plot()
     # assert len(fig.get_axes()) == 1
 
