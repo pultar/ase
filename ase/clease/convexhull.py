@@ -99,7 +99,13 @@ class ConvexHull(object):
                 # Check if the current structure
                 # is an endpoint
                 if count[k] > v["{}_conc".format(k)]:
-                    v["energy"] = row.energy/row.natoms
+                    f_id = row.get("final_struct_id", -1)
+                    if f_id >= 0:
+                        # New format where energy is in a separate entry
+                        v["energy"] = db.get(id=f_id).energy/row.natoms
+                    else:
+                        # Old format where the energy is stored in same entry
+                        v["energy"] = row.energy/row.natoms
                     for k_count in count.keys():
                         v["{}_conc".format(k_count)] = count[k_count]
         return end_points
