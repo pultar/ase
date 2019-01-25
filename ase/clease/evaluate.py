@@ -396,7 +396,8 @@ class Evaluate(object):
                     concs[k].append(c.get(k, 0.0))
             form_en = [cnv_hull.get_formation_energy(c, e) 
                        for c, e in zip(self.concs, e_pred.tolist())]
-            cnv_hull.plot(fig=fig, concs=concs, energies=form_en)
+            cnv_hull.plot(fig=fig, concs=concs, energies=form_en, marker="x")
+            fig.suptitle("Convex hull DFT (o), CE (x)")
             plt.show()
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
