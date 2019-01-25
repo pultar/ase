@@ -87,7 +87,6 @@ class Evaluate(object):
 
         self.scheme = None
         self.scheme_string = None
-        self.set_fitting_scheme(fitting_scheme, alpha)
         # Define the selection conditions
         self.select_cond = []
         if select_cond is None:
@@ -107,7 +106,7 @@ class Evaluate(object):
         self.e_dft, self.names, self.concs = self._get_dft_energy_per_atom()
         self.effective_num_data_pts = len(self.e_dft)
         self.weight_matrix = np.eye(len(self.e_dft))
-        self._apply_convex_hull_weight(min_weight)
+        self._update_convex_hull_weight(min_weight)
 
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
@@ -119,6 +118,8 @@ class Evaluate(object):
                 self.num_core = int(mp.cpu_count() / 2)
             else:
                 self.num_core = int(num_core)
+        
+        self.set_fitting_scheme(fitting_scheme, alpha)
 
     def set_fitting_scheme(self, fitting_scheme="ridge", alpha=1E-9):
         from ase.clease.regression import LinearRegression
@@ -151,6 +152,13 @@ class Evaluate(object):
         # when the ECIs are requested
         self.eci = None
 
+        N = len(self.e_dft)
+
+        # If user has supplied any data weighting, pass the
+        # weight matrix to the fitting scheme
+        if np.any(np.abs(self.weight_matrix - np.eye(N) > 1E-6)):
+            self.scheme.weight_matrix = self.weight_matrix
+
     def _get_max_cluster_dia(self, max_cluster_dia):
         """Make max_cluster_dia in a numpy array form."""
         if isinstance(max_cluster_dia, (list, np.ndarray)):
@@ -171,7 +179,7 @@ class Evaluate(object):
 
         return max_cluster_dia
 
-    def _apply_convex_hull_weight(self, min_weight):
+    def _update_convex_hull_weight(self, min_weight):
         """Weight structure according to similarity with the 
            most similar structure on the Convex Hull."""
 
@@ -196,11 +204,6 @@ class Evaluate(object):
 
         self.weight_matrix = np.diag(np.exp(decay*cosine_sim))
         self.effective_num_data_pts = np.sum(self.weight_matrix)
-
-        # Apply the weight matrix to the data points
-        w_sqrt = np.sqrt(self.weight_matrix)
-        self.cf_matrix = w_sqrt.dot(self.cf_matrix)
-        self.e_dft = w_sqrt.dot(self.e_dft)
 
     def get_eci(self):
         """Determine and return ECIs for a given alpha.
@@ -347,26 +350,32 @@ class Evaluate(object):
         # Create a plot with the residuals
         fig_residual = plt.figure()
         ax_residual = fig_residual.add_subplot(111)
-        ax_residual.set_title("Residuals")
+        ax_residual.set_title("LOO residual (o). Residual (v)")
+        loo_delta = (self.e_dft - self.e_pred_loo)*1000.0
+        delta_e = (self.e_dft - e_pred)*1000.0
         if self.effective_num_data_pts != len(self.e_dft):
             x = range(len(self.e_dft))
-            im = ax_residual.scatter(x, (self.e_dft - e_pred)*1000.0, c=w)
+            im = ax_residual.scatter(x, (self.e_dft - self.e_pred_loo)*1000.0,
+                                     c=w)
             cb = fig_residual.colorbar(im)
             cb.set_label("Weight")
             
             # Plot again with zero with to make the interactive
             # plot work
-            ax_residual.plot((self.e_dft - e_pred)*1000.0, "o", color="black",
-                             markeredgewidth=0.0, mfc="none")
+            ax_residual.plot(loo_delta, "o",
+                             color="black", markeredgewidth=0.0, mfc="none")
         else:
-            ax_residual.plot((self.e_dft - e_pred)*1000.0, "x")
+            ax_residual.plot(loo_delta, "o")
+
+        ax_residual.plot(delta_e, "v", mfc="none")
+
         ax_residual.axhline(0, ls="--")
         ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
 
         if interactive:
             lines = ax_residual.get_lines()
-            data_points = [lines[0]]
-            annotations = [self.names]
+            data_points = [lines[0], lines[1]]
+            annotations = [self.names, self.names]
             ShowStructureOnClick(fig_residual, ax_residual, data_points,
                                  annotations, db_name)
         else:
@@ -620,7 +629,9 @@ class Evaluate(object):
             self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
-        return sum(np.absolute(delta_e)) / len(delta_e)
+        w = np.diag(self.weight_matrix)
+        delta_e *= w
+        return sum(np.absolute(delta_e)) / self.effective_num_data_pts
 
     def rmse(self):
         """Calculate root-mean-square error (RMSE) of the fit."""
@@ -628,11 +639,10 @@ class Evaluate(object):
             self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
-        num_entries = len(delta_e)
-        rmse_sq = 0.0
-        for i in range(num_entries):
-            rmse_sq += (delta_e[i])**2
-        rmse_sq /= num_entries
+
+        w = np.diag(self.weight_matrix)
+        rmse_sq = np.sum(w*delta_e**2)
+        rmse_sq /= self.effective_num_data_pts
         return np.sqrt(rmse_sq)
 
     def loocv_fast(self):
@@ -654,8 +664,13 @@ class Evaluate(object):
         cfm = self.cf_matrix
         # precision matrix
         prec = self.scheme.precision_matrix(cfm)
-        cv_sq = np.sum((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
-        return np.sqrt(cv_sq/self.effective_num_data_pts)
+        delta_e_loo = delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T)))
+        self.e_pred_loo = self.e_dft - delta_e_loo
+        w = np.diag(self.weight_matrix)
+        cv_sq = np.sum(w*delta_e_loo**2)
+
+        cv_sq /= self.effective_num_data_pts
+        return np.sqrt(cv_sq)
 
     def loocv(self):
         """Determine the CV score for the Leave-One-Out case."""
@@ -665,7 +680,7 @@ class Evaluate(object):
             eci = self._get_eci_loo(i)
             e_pred = self.cf_matrix[i][:].dot(eci)
             delta_e = self.e_dft[i] - e_pred
-            cv_sq += (delta_e)**2
+            cv_sq += self.weight_matrix[i, i]*(delta_e)**2
             e_pred_loo.append(e_pred)
         # cv_sq /= self.cf_matrix.shape[0]
         cv_sq /= self.effective_num_data_pts

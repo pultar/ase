@@ -6,7 +6,31 @@ from numpy.linalg import inv, pinv, cond
 
 class LinearRegression(object):
     def __init__(self):
-        pass
+        self._weight_matrix = None
+
+    @property
+    def weight_matrix(self):
+        return self._weight_matrix
+
+    @weight_matrix.setter
+    def weight_matrix(self, matrix):
+        self._weight_matrix = matrix
+
+    def _ensure_weight_matrix_consistency(self, data):
+        """Raise an error if the dimensions of the
+           weight matrix is not consistent.
+
+        Arguments
+        ==========
+        data: numpy.ndarray
+            y-values in the fit
+        """
+        if self._weight_matrix is not None:
+            if self._weight_matrix.shape[1] != len(data):
+                raise ValueError("The provided weight matrix needs to have "
+                                 "dimensiont {}x{}, {} given"
+                                 "".format(len(data), len(data),
+                                           self._weight_matrix.shape))
 
     def fit(self, X, y):
         """Fit a linear model by performing ordinary least squares
@@ -17,6 +41,7 @@ class LinearRegression(object):
         X: Design matrix (NxM)
         y: Datapints (vector of length N)
         """
+        self._ensure_weight_matrix_consistency(y)
         precision = self.precision_matrix(X)
         coeff = precision.dot(X.T.dot(y))
         return coeff
@@ -85,8 +110,15 @@ class Tikhonov(LinearRegression):
 
     def fit(self, X, y):
         """Fit coefficients based on Ridge regularizeation."""
+        self._ensure_weight_matrix_consistency(y)
+
+        if self.weight_matrix is None:
+            W = np.ones(len(y))
+        else:
+            W = np.diag(self.weight_matrix)
         precision = self.precision_matrix(X)
-        coeff = precision.dot(X.T.dot(y))
+
+        coeff = precision.dot(X.T.dot(W*y))
         return coeff
 
     def precision_matrix(self, X):
@@ -98,7 +130,10 @@ class Tikhonov(LinearRegression):
             raise ValueError("The dimensions of Tikhonov matrix do not match "
                              "the number of clusters!")
 
-        precision = inv(X.T.dot(X) + tikhonov.T.dot(tikhonov))
+        W = self.weight_matrix
+        if W is None:
+            W = np.eye(X.shape[0])
+        precision = inv(X.T.dot(W.dot(X)) + tikhonov.T.dot(tikhonov))
         return precision
 
     @staticmethod
@@ -139,6 +174,15 @@ class Lasso(LinearRegression):
                       normalize=True, max_iter=1e6)
         lasso.fit(X, y)
         return lasso.coef_
+
+    @property
+    def weight_matrix(self):
+        return LinearRegression.weight_matrix(self)
+
+    @weight_matrix.setter
+    def weight_matrix(self, X):
+        raise NotImplementedError("Currently Lasso does not support "
+                                  "data weighting.")
 
     @staticmethod
     def get_instance_array(alpha_min, alpha_max, num_alpha=10, scale='log'):
