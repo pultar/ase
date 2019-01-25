@@ -264,7 +264,8 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, interactive=True, savefig=False, fname=None):
+    def plot_fit(self, interactive=True, savefig=False, fname=None,
+                 show_hull=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -282,6 +283,7 @@ class Evaluate(object):
             file name of the figure (only used when savefig = True)
         """
         import matplotlib.pyplot as plt
+        from ase.clease import ConvexHull
         from ase.clease.interactive_plot import ShowStructureOnClick
 
         if self.eci is None:
@@ -380,6 +382,21 @@ class Evaluate(object):
                                  annotations, db_name)
         else:
             plt.show()
+
+        # Optionally show the convex hull
+        if show_hull:
+            cnv_hull = ConvexHull(self.setting.db_name)
+            fig = cnv_hull.plot()
+
+            concs = {k: [] for k in cnv_hull._unique_elem}
+            for c in self.concs:
+                for k in concs.keys():
+                    concs[k].append(c.get(k, 0.0))
+            form_en = [cnv_hull.get_formation_energy(c, e) for c, e in zip(self.concs, e_pred.tolist())]
+            cnv_hull.plot(fig=fig, concs=concs, energies=form_en)
+            plt.show()
+
+
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
                 logfile=None, fitting_schemes=None, savefig=False, fname=None):

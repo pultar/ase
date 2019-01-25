@@ -94,10 +94,10 @@ class GAFit(object):
     """
     def __init__(self, setting=None, max_cluster_size=None,
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
-                 elitism=3, fname="ga_fit.csv", num_individuals="auto",
+                 elitism=1, fname="ga_fit.csv", num_individuals="auto",
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
-                 select_cond=None, cost_func="max_loocv", sparsity_slope=1.0,
+                 select_cond=None, cost_func="bic", sparsity_slope=1.0,
                  min_weight=1.0):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,

@@ -210,10 +210,13 @@ class ConvexHull(object):
         tol = 1E-4
         return all(self.energies[i] <= tol for i in simplex)
 
-    def plot(self):
+    def plot(self, fig=None, concs=None, energies=None):
         """Plot formation energies."""
         from matplotlib import pyplot as plt
 
+        # We only add the Convex Hull for the DFT
+        # data
+        add_cnv_hull = concs is None
         num_plots = len(self._unique_elem) - 1
 
         # Figure out how many plots we need
@@ -226,16 +229,24 @@ class ConvexHull(object):
 
         num_plots = len(varying_concs) - 1
 
-        fig = plt.figure()
-        elems = sorted(varying_concs)[:-1]
-        for i in range(num_plots):
-            ax = fig.add_subplot(1, num_plots, i+1)
+        if fig is None:
+            fig = plt.figure()
+            for i in range(num_plots):
+                fig.add_subplot(1, num_plots, i+1)
 
-            x = np.array(self.concs[elems[i]])
+        if concs is None:
+            concs = self.concs
+        if energies is None:
+            energies = self.energies
+        
+        elems = sorted(varying_concs)[:-1]
+        for i, ax in enumerate(fig.get_axes()):
+            # ax = fig.add_subplot(1, num_plots, i+1)
+
+            x = np.array(concs[elems[i]])
             x /= self.conc_scale
 
-            ax.plot(x, self.energies*self.atoms_per_fu, "o", mfc="none")
-            c_hull = self.get_convex_hull(conc_var=elems[i])
+            ax.plot(x, energies*self.atoms_per_fu, "o", mfc="none")
 
             if self.atoms_per_fu > 1:
                 unit = "eV/f.u."
@@ -246,11 +257,13 @@ class ConvexHull(object):
             else:
                 ax.set_yticklabels([])
 
-            for simpl in c_hull.simplices:
-                if self._is_lower_conv_hull(simpl):
-                    x_cnv = [x[simpl[0]], x[simpl[1]]]
-                    y_cnv = [self.energies[simpl[0]], self.energies[simpl[1]]]
-                    ax.plot(x_cnv, y_cnv, color="black", marker="x")
+            if add_cnv_hull:
+                c_hull = self.get_convex_hull(conc_var=elems[i])
+                for simpl in c_hull.simplices:
+                    if self._is_lower_conv_hull(simpl):
+                        x_cnv = [x[simpl[0]], x[simpl[1]]]
+                        y_cnv = [self.energies[simpl[0]], self.energies[simpl[1]]]
+                        ax.plot(x_cnv, y_cnv, color="black")
             ax.set_xlabel("{} conc".format(elems[i]))
         return fig
 
@@ -324,3 +337,16 @@ class ConvexHull(object):
         inner_prod /= np.sqrt(data_vec.dot(data_vec))
         inner_prod /= np.sqrt(np.diag(data.dot(data.T)))
         return np.max(inner_prod)
+
+    def get_formation_energy(self, conc, tot_energy):
+        """Return the formation energy
+
+        Arguments
+        ==========
+        conc: dict
+            Dictionary with the concenatration
+        tot_energy: float
+            Total energy per atom
+        """
+        return tot_energy - sum(self.weights[k]*conc[k] for k in conc.keys())
+
