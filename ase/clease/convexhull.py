@@ -216,7 +216,8 @@ class ConvexHull(object):
         tol = 1E-4
         return all(self.energies[i] <= tol for i in simplex)
 
-    def plot(self, fig=None, concs=None, energies=None):
+    def plot(self, fig=None, concs=None, energies=None,
+             marker="o", mfc="none"):
         """Plot formation energies."""
         from matplotlib import pyplot as plt
 
@@ -252,7 +253,7 @@ class ConvexHull(object):
             x = np.array(concs[elems[i]])
             x /= self.conc_scale
 
-            ax.plot(x, energies*self.atoms_per_fu, "o", mfc="none")
+            ax.plot(x, energies*self.atoms_per_fu, marker, mfc=mfc)
 
             if self.atoms_per_fu > 1:
                 unit = "eV/f.u."
