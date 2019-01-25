@@ -46,12 +46,24 @@ class Evaluate(object):
 
     scoring_scheme: str
         should be one of 'loocv' or 'loocv_fast'
+
+    min_weight: float
+        Weight given to the data point furthest away from
+        any structure on the convex hull. An exponential
+        weighting function is used and the decay rate
+        is calculated as
+
+        decay = log(min_weight)/min(sim_measure)
+
+        where sim_measure is a similarity measure
+        used to asses how different the structure
+        is from structures on the convex hull.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  parallel=False, num_core="all", fitting_scheme="ridge",
                  alpha=1E-5, max_cluster_size=None, max_cluster_dia=None,
-                 scoring_scheme='loocv'):
+                 scoring_scheme='loocv', min_weight=1.0):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
@@ -75,7 +87,6 @@ class Evaluate(object):
 
         self.scheme = None
         self.scheme_string = None
-        self.set_fitting_scheme(fitting_scheme, alpha)
         # Define the selection conditions
         self.select_cond = []
         if select_cond is None:
@@ -92,7 +103,11 @@ class Evaluate(object):
         self._filter_cluster_name()
 
         self.cf_matrix = self._make_cf_matrix()
-        self.e_dft, self.names = self._get_dft_energy_per_atom()
+        self.e_dft, self.names, self.concs = self._get_dft_energy_per_atom()
+        self.effective_num_data_pts = len(self.e_dft)
+        self.weight_matrix = np.eye(len(self.e_dft))
+        self._update_convex_hull_weight(min_weight)
+
         self.multiplicity_factor = self.setting.multiplicity_factor
         self.eci = None
         self.alpha = None
@@ -103,6 +118,8 @@ class Evaluate(object):
                 self.num_core = int(mp.cpu_count() / 2)
             else:
                 self.num_core = int(num_core)
+        
+        self.set_fitting_scheme(fitting_scheme, alpha)
 
     def set_fitting_scheme(self, fitting_scheme="ridge", alpha=1E-9):
         from ase.clease.regression import LinearRegression
@@ -135,6 +152,13 @@ class Evaluate(object):
         # when the ECIs are requested
         self.eci = None
 
+        N = len(self.e_dft)
+
+        # If user has supplied any data weighting, pass the
+        # weight matrix to the fitting scheme
+        if np.any(np.abs(self.weight_matrix - np.eye(N) > 1E-6)):
+            self.scheme.weight_matrix = self.weight_matrix
+
     def _get_max_cluster_dia(self, max_cluster_dia):
         """Make max_cluster_dia in a numpy array form."""
         if isinstance(max_cluster_dia, (list, np.ndarray)):
@@ -154,6 +178,32 @@ class Evaluate(object):
             max_cluster_dia = np.insert(max_cluster_dia, 0, [0., 0.])
 
         return max_cluster_dia
+
+    def _update_convex_hull_weight(self, min_weight):
+        """Weight structure according to similarity with the 
+           most similar structure on the Convex Hull."""
+
+        if abs(min_weight - 1.0) < 1E-4:
+            return
+
+        from ase.clease import ConvexHull
+        cnv_hull = ConvexHull(self.setting.db_name)
+        hull = cnv_hull.get_convex_hull()
+
+        cosine_sim = []
+        for conc, energy in zip(self.concs, self.e_dft):
+            sim = cnv_hull.cosine_similarity_convex_hull(conc, energy, hull)
+            cosine_sim.append(sim)
+        cosine_sim = np.array(cosine_sim)
+
+        # Shift tha maximum value to 0
+        cosine_sim -= np.max(cosine_sim)
+        min_sim = np.min(cosine_sim)
+
+        decay = np.log(min_weight)/min_sim
+
+        self.weight_matrix = np.diag(np.exp(decay*cosine_sim))
+        self.effective_num_data_pts = np.sum(self.weight_matrix)
 
     def get_eci(self):
         """Determine and return ECIs for a given alpha.
@@ -214,7 +264,8 @@ class Evaluate(object):
         else:
             raise TypeError('extension {} is not supported'.format(extension))
 
-    def plot_fit(self, interactive=True, savefig=False, fname=None):
+    def plot_fit(self, interactive=True, savefig=False, fname=None,
+                 show_hull=True):
         """Plot calculated (DFT) and predicted energies for a given alpha.
 
         Argument:
@@ -232,6 +283,7 @@ class Evaluate(object):
             file name of the figure (only used when savefig = True)
         """
         import matplotlib.pyplot as plt
+        from ase.clease import ConvexHull
         from ase.clease.interactive_plot import ShowStructureOnClick
 
         if self.eci is None:
@@ -249,8 +301,26 @@ class Evaluate(object):
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.set_title('Fit using {} data points'.format(self.e_dft.shape[0]))
-        ax.plot(e_pred, self.e_dft, 'bo', mfc='none')
+        if self.effective_num_data_pts != len(self.e_dft):
+            ax.set_title('Fit using {} data points. Eff. num. data points '
+                         '{:.1f}'.format(self.e_dft.shape[0],
+                                         self.effective_num_data_pts))
+        else:
+            ax.set_title('Fit using {} data points.'
+                         ''.format(self.e_dft.shape[0]))
+
+        if self.effective_num_data_pts != len(self.e_dft):
+            w = np.diag(self.weight_matrix)
+            im = ax.scatter(e_pred, self.e_dft, c=w)
+            cb = fig.colorbar(im)
+            cb.set_label("Weight")
+
+            # Plot again with zero marker width to make the interactive
+            # plot work
+            ax.plot(e_pred, self.e_dft, 'o', mfc='none', color="black",
+                    markeredgewidth=0.0)
+        else:
+            ax.plot(e_pred, self.e_dft, 'bo', mfc='none')
         ax.plot(t, t, 'r')
         ax.axis([rmin, rmax, rmin, rmax])
         ax.set_ylabel(r'$E_{DFT}$ (eV/atom)')
@@ -282,19 +352,51 @@ class Evaluate(object):
         # Create a plot with the residuals
         fig_residual = plt.figure()
         ax_residual = fig_residual.add_subplot(111)
-        ax_residual.set_title("Residuals")
-        ax_residual.plot((self.e_dft - e_pred)*1000.0, "x")
+        ax_residual.set_title("LOO residual (o). Residual (v)")
+        loo_delta = (self.e_dft - self.e_pred_loo)*1000.0
+        delta_e = (self.e_dft - e_pred)*1000.0
+        if self.effective_num_data_pts != len(self.e_dft):
+            x = range(len(self.e_dft))
+            im = ax_residual.scatter(x, (self.e_dft - self.e_pred_loo)*1000.0,
+                                     c=w)
+            cb = fig_residual.colorbar(im)
+            cb.set_label("Weight")
+            
+            # Plot again with zero with to make the interactive
+            # plot work
+            ax_residual.plot(loo_delta, "o",
+                             color="black", markeredgewidth=0.0, mfc="none")
+        else:
+            ax_residual.plot(loo_delta, "o")
+
+        ax_residual.plot(delta_e, "v", mfc="none")
+
         ax_residual.axhline(0, ls="--")
         ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
 
         if interactive:
             lines = ax_residual.get_lines()
-            data_points = [lines[0]]
-            annotations = [self.names]
+            data_points = [lines[0], lines[1]]
+            annotations = [self.names, self.names]
             ShowStructureOnClick(fig_residual, ax_residual, data_points,
                                  annotations, db_name)
         else:
             plt.show()
+
+        # Optionally show the convex hull
+        if show_hull:
+            cnv_hull = ConvexHull(self.setting.db_name)
+            fig = cnv_hull.plot()
+
+            concs = {k: [] for k in cnv_hull._unique_elem}
+            for c in self.concs:
+                for k in concs.keys():
+                    concs[k].append(c.get(k, 0.0))
+            form_en = [cnv_hull.get_formation_energy(c, e) for c, e in zip(self.concs, e_pred.tolist())]
+            cnv_hull.plot(fig=fig, concs=concs, energies=form_en)
+            plt.show()
+
+
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
                 logfile=None, fitting_schemes=None, savefig=False, fname=None):
@@ -544,7 +646,9 @@ class Evaluate(object):
             self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
-        return sum(np.absolute(delta_e)) / len(delta_e)
+        w = np.diag(self.weight_matrix)
+        delta_e *= w
+        return sum(np.absolute(delta_e)) / self.effective_num_data_pts
 
     def rmse(self):
         """Calculate root-mean-square error (RMSE) of the fit."""
@@ -552,11 +656,10 @@ class Evaluate(object):
             self.get_eci()
         e_pred = self.cf_matrix.dot(self.eci)
         delta_e = self.e_dft - e_pred
-        num_entries = len(delta_e)
-        rmse_sq = 0.0
-        for i in range(num_entries):
-            rmse_sq += (delta_e[i])**2
-        rmse_sq /= num_entries
+
+        w = np.diag(self.weight_matrix)
+        rmse_sq = np.sum(w*delta_e**2)
+        rmse_sq /= self.effective_num_data_pts
         return np.sqrt(rmse_sq)
 
     def loocv_fast(self):
@@ -578,7 +681,12 @@ class Evaluate(object):
         cfm = self.cf_matrix
         # precision matrix
         prec = self.scheme.precision_matrix(cfm)
-        cv_sq = np.mean((delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T))))**2)
+        delta_e_loo = delta_e / (1 - np.diag(cfm.dot(prec).dot(cfm.T)))
+        self.e_pred_loo = self.e_dft - delta_e_loo
+        w = np.diag(self.weight_matrix)
+        cv_sq = np.sum(w*delta_e_loo**2)
+
+        cv_sq /= self.effective_num_data_pts
         return np.sqrt(cv_sq)
 
     def loocv(self):
@@ -589,9 +697,10 @@ class Evaluate(object):
             eci = self._get_eci_loo(i)
             e_pred = self.cf_matrix[i][:].dot(eci)
             delta_e = self.e_dft[i] - e_pred
-            cv_sq += (delta_e)**2
+            cv_sq += self.weight_matrix[i, i]*(delta_e)**2
             e_pred_loo.append(e_pred)
-        cv_sq /= self.cf_matrix.shape[0]
+        # cv_sq /= self.cf_matrix.shape[0]
+        cv_sq /= self.effective_num_data_pts
         self.e_pred_loo = e_pred_loo
         return np.sqrt(cv_sq)
 
@@ -647,6 +756,7 @@ class Evaluate(object):
         """Retrieve DFT energy and convert it to eV/atom unit."""
         e_dft = []
         names = []
+        concentrations = []
         db = connect(self.setting.db_name)
         for row in db.select(self.select_cond):
             final_struct_id = row.get("final_struct_id", -1)
@@ -658,7 +768,12 @@ class Evaluate(object):
                 energy = row.energy
             e_dft.append(energy / row.natoms)
             names.append(row.name)
-        return np.array(e_dft), names
+
+            count = row.count_atoms()
+            for k in count.keys():
+                count[k] /= row.natoms
+            concentrations.append(count)
+        return np.array(e_dft), names, concentrations
 
 
 def loocv_mp(args):
