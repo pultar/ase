@@ -104,6 +104,7 @@ class GAFit(object):
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond, min_weight=min_weight)
         self.eff_num = evaluator.effective_num_data_pts
+        self.W = np.diag(evaluator.weight_matrix)
 
         allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
@@ -192,7 +193,7 @@ class GAFit(object):
 
         info_measure = None
         n_selected = np.sum(individual)
-        mse = np.sum(delta_e**2)/self.eff_num
+        mse = np.sum(self.W*delta_e**2)/self.eff_num
 
         if self.cost_func == "bic":
             info_measure = self.bic(mse, n_selected)
@@ -200,7 +201,7 @@ class GAFit(object):
             info_measure = self.aic(mse, n_selected)
         elif "loocv" in self.cost_func:
             prec = self.regression.precision_matrix(X)
-            loo_dev = (delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
+            loo_dev = (self.W*delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
             cv_sq = np.sum(loo_dev)/self.eff_num
             cv = 1000.0*np.sqrt(cv_sq)
 
