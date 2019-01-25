@@ -187,7 +187,8 @@ class Evaluate(object):
             return
 
         from ase.clease import ConvexHull
-        cnv_hull = ConvexHull(self.setting.db_name)
+        cnv_hull = ConvexHull(self.setting.db_name,
+                              select_cond=self.select_cond)
         hull = cnv_hull.get_convex_hull()
 
         cosine_sim = []
@@ -385,18 +386,18 @@ class Evaluate(object):
 
         # Optionally show the convex hull
         if show_hull:
-            cnv_hull = ConvexHull(self.setting.db_name)
+            cnv_hull = ConvexHull(self.setting.db_name,
+                                  select_cond=self.select_cond)
             fig = cnv_hull.plot()
 
             concs = {k: [] for k in cnv_hull._unique_elem}
             for c in self.concs:
                 for k in concs.keys():
                     concs[k].append(c.get(k, 0.0))
-            form_en = [cnv_hull.get_formation_energy(c, e) for c, e in zip(self.concs, e_pred.tolist())]
+            form_en = [cnv_hull.get_formation_energy(c, e) 
+                       for c, e in zip(self.concs, e_pred.tolist())]
             cnv_hull.plot(fig=fig, concs=concs, energies=form_en)
             plt.show()
-
-
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
                 logfile=None, fitting_schemes=None, savefig=False, fname=None):
