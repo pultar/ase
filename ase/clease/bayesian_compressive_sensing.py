@@ -405,10 +405,11 @@ class BayesianCompressiveSensing(LinearRegression):
                 is_first = False
             else:
                 indx = self.get_basis_function_index(self.select_strategy)
-
             gamma = self.optimal_gamma(indx)
-            d_gamma = gamma - self.gammas[indx]
+
+            d_gamma = 0.0
             if gamma > 0.0:
+                d_gamma = gamma - self.gammas[indx]
                 self.gammas[indx] = gamma
             else:
                 gamma = self.gammas[indx]

@@ -62,15 +62,16 @@ def test_fit_linear_dep_col():
     expected = np.zeros(400)
     expected[0] = 20
     expected[23] = -3
+    print(np.argwhere(np.abs(eci) > 1E-8))
     assert np.allclose(eci, expected, atol=1E-2)
 
     prec = bayes.precision_matrix(X)
     assert prec.shape == (400, 400)
 
 
-test_optimize_shape_parameter(bayes)
-test_fit(bayes)
-test_save_load(bayes)
-test_fit_more_coeff()
+#test_optimize_shape_parameter(bayes)
+#test_fit(bayes)
+#test_save_load(bayes)
+#test_fit_more_coeff()
 test_fit_linear_dep_col()
 os.remove(fname)
