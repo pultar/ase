@@ -6,13 +6,14 @@ import time
 import json
 from itertools import product
 
+
 class BayesianCompressiveSensing(LinearRegression):
     """
-    Fit a sparse CE model to data. Based on the method 
+    Fit a sparse CE model to data. Based on the method
     described in
 
-    Babacan, S. Derin, Rafael Molina, and Aggelos K. Katsaggelos. 
-    "Bayesian compressive sensing using Laplace priors." 
+    Babacan, S. Derin, Rafael Molina, and Aggelos K. Katsaggelos.
+    "Bayesian compressive sensing using Laplace priors."
     IEEE Transactions on Image Processing 19.1 (2010): 53-63.
 
     Different values has different priors.
@@ -22,22 +23,22 @@ class BayesianCompressiveSensing(LinearRegression):
         (i.e. 1/var_i -- gamma(x | 1, lambda/2))
     3. The lambda parameter above is also gamma distributed
         (i.e. lamb -- gamma(x | shape_lamb/2, shape_lamb/2))
-    4. The noise parameter is uniformly distributed on the 
+    4. The noise parameter is uniformly distributed on the
         positive axis (i.e. noise -- uniform(x | 0, inf)
 
     Arguments
     ===========
     shape_var: float
-        Shape parameter for the gamma distribution for the 
+        Shape parameter for the gamma distribution for the
         inverse variance (1/var -- gamma(x | shape_var/2, rate_var/2))
     rate_var: float
-        Rate parameter for the gamma distribution for the 
+        Rate parameter for the gamma distribution for the
         inverse variance (1/var -- gamma(x | shape_var/2, rate_var/2))
     shape_lamb: float
-        Shape parameter for gamma distribution for the 
+        Shape parameter for gamma distribution for the
         lambda parameter (lambda -- gamma(x | 1, shape_lamb))
     variance_opt_start: int
-        Optimization of inverse variance starts after this amount 
+        Optimization of inverse variance starts after this amount
         of iterations
     lamb_opt_start: int
         Optimization of lambda and shape_lamb starts after this
@@ -51,9 +52,9 @@ class BayesianCompressiveSensing(LinearRegression):
     output_rate_sec: int
         Interval in seconds between status messages
     select_strategy: str
-        Strategy for selecting new correlation function for each iteration. 
+        Strategy for selecting new correlation function for each iteration.
         If 'max_increase' it will select the basis function that leads
-        to the largest increase in likelihood value. 
+        to the largest increase in likelihood value.
         If 'random' correlation functions are selected at random
     noise: float
         Initial estimate of the noise in the data
@@ -63,8 +64,8 @@ class BayesianCompressiveSensing(LinearRegression):
         Penalization value added to the diagonal of matrice
         to avoid singular matrices
     """
-    def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5, 
-                 lamb_opt_start=200, variance_opt_start=100, 
+    def __init__(self, shape_var=0.5, rate_var=0.5, shape_lamb=0.5,
+                 lamb_opt_start=200, variance_opt_start=100,
                  fname="bayes_compr_sens.json",
                  maxiter=100000, output_rate_sec=2,
                  select_strategy="max_increase", noise=0.1,
@@ -112,7 +113,7 @@ class BayesianCompressiveSensing(LinearRegression):
 
         if self.inv_variance is None:
             self.inv_variance = 1.0/self.noise**2
-        
+
         if self.lamb is None:
             self.lamb = 0.0
 
@@ -129,7 +130,7 @@ class BayesianCompressiveSensing(LinearRegression):
     def precision_matrix(self, X):
         """
         Return the precision matrix needed by the Evaluate class.
-        Only contributions from the correlation functions with 
+        Only contributions from the correlation functions with
         gamma > 0 are included.
         """
         if not np.allclose(X, self.X):
@@ -152,7 +153,8 @@ class BayesianCompressiveSensing(LinearRegression):
         Calculate the expectation value for the ECIs
         """
         sel = self.selected
-        return self.inv_variance*self.inverse_sigma.dot(self.X[:, sel].T.dot(self.y))
+        return self.inv_variance*self.inverse_sigma.dot(
+                self.X[:, sel].T.dot(self.y))
 
     def optimal_gamma(self, indx):
         """
@@ -182,12 +184,13 @@ class BayesianCompressiveSensing(LinearRegression):
 
     def optimal_lamb(self):
         """Calculate the optimal value for the lambda parameter. """
-        N = self.X.shape[1] # Number of ECIs
-        return 2*(N - 1 + 0.5*self.shape_lamb)/(np.sum(self.gammas) + self.shape_lamb)
+        N = self.X.shape[1]  # Number of ECIs
+        return 2*(N - 1 + 0.5*self.shape_lamb) / \
+            (np.sum(self.gammas) + self.shape_lamb)
 
     def optimal_inv_variance(self):
         """Calculate the optimal value for the inverse variance"""
-        N = self.X.shape[0] # Number of data points
+        N = self.X.shape[0]  # Number of data points
         a = 1.0
         b = 0.0
         mse = np.sum((self.y - self.X.dot(self.eci))**2)
@@ -195,7 +198,8 @@ class BayesianCompressiveSensing(LinearRegression):
 
     def optimal_shape_lamb(self):
         """Calculate the optimal value for the shape paremeter for lambda."""
-        res = brentq(shape_parameter_equation, 1E-30, 1E100, args=(self.lamb,), maxiter=10000)
+        res = brentq(shape_parameter_equation, 1E-30, 1E100,
+                     args=(self.lamb,), maxiter=10000)
         return res
 
     def update_quantities(self):
@@ -204,10 +208,11 @@ class BayesianCompressiveSensing(LinearRegression):
         X_sel = self.X[:, sel]
         prec = X_sel.dot(self.inverse_sigma).dot(X_sel.T)
 
+        self.S = np.diag(self.inv_variance*self.X.T.dot(self.X) -
+                         self.inv_variance**2 * self.X.T.dot(prec.dot(self.X)))
+        self.Q = self.inv_variance*self.X.T.dot(self.y) - \
+            self.inv_variance**2 * self.X.T.dot(prec.dot(self.y))
 
-        self.S = np.diag(self.inv_variance*self.X.T.dot(self.X) - self.inv_variance**2 * self.X.T.dot(prec.dot(self.X)))
-        self.Q = self.inv_variance*self.X.T.dot(self.y) - self.inv_variance**2 * self.X.T.dot(prec.dot(self.y))
-        
         self.ss = self.S/(1.0 - self.gammas*self.S)
         self.qq = self.Q/(1.0 - self.gammas*self.S)
 
@@ -218,7 +223,8 @@ class BayesianCompressiveSensing(LinearRegression):
     def update_sigma_mu(self):
         """Update sigma and mu."""
         X_sel = self.X[:, self.selected]
-        sigma = self.inv_variance*X_sel.T.dot(X_sel) + np.diag(1.0/self.gammas[self.selected])
+        sigma = self.inv_variance*X_sel.T.dot(X_sel) + \
+            np.diag(1.0/self.gammas[self.selected])
         try:
             self.inverse_sigma = np.linalg.inv(sigma)
         except np.linalg.LinAlgError:
@@ -245,16 +251,19 @@ class BayesianCompressiveSensing(LinearRegression):
         # quantities leading to a negativie denuminator should not
         # be possible (but because of iterative increment they occure)
         # once in a while. Set such numbers to a number close to zero.
-        denum[denum<=0.0] = 1E-10
+        denum[denum <= 0.0] = 1E-10
         return np.log(1/denum) + self.qq**2*gammas/denum - self.lamb*gammas
 
     def _get_bf_with_max_increase(self):
         """Return the index of the correlation function that leads
             to the largest increase in likelihiood value."""
 
-        new_gammas = np.array([self.optimal_gamma(i) for i in range(len(self.gammas))])
+        new_gammas = np.array([self.optimal_gamma(i)
+                               for i in range(len(self.gammas))])
+
         if np.all(new_gammas < 0.0):
-            raise RuntimeError("All gammas are smaller than 0! Cannot include any!")
+            raise RuntimeError("All gammas are smaller than 0!"
+                               "Cannot include any!")
 
         new_gammas[new_gammas < 0.0] = 0.0
         current_likeli = self.log_likelihood_for_each_gamma(self.gammas)
@@ -304,7 +313,7 @@ class BayesianCompressiveSensing(LinearRegression):
         bayes.fname = fname
         with open(fname, 'r') as infile:
             data = json.load(infile)
-        
+
         bayes.inv_variance = data["inv_variance"]
         bayes.gammas = np.array(data["gammas"])
         bayes.shape_var = data["shape_var"]
@@ -317,7 +326,7 @@ class BayesianCompressiveSensing(LinearRegression):
         bayes.noise = data["noise"]
         bayes.lamb_opt_start = data["lamb_opt_start"]
         return bayes
-    
+
     def __eq__(self, other):
         """Compare to BayesianCompressiveSensing objects."""
         equal = True
@@ -345,7 +354,9 @@ class BayesianCompressiveSensing(LinearRegression):
         delta_e = e_pred - self.y
         N = X_sel.shape[1]
         prec = np.linalg.inv(X_sel.T.dot(X_sel) + self.penalty*np.eye(N))
-        cv_sq = np.mean((delta_e / (1 - np.diag(X_sel.dot(prec).dot(X_sel.T))))**2)
+
+        delta_cv = delta_e / (1 - np.diag(X_sel.dot(prec).dot(X_sel.T)))
+        cv_sq = np.mean(delta_cv**2)
         return np.sqrt(cv_sq)
 
     def fit(self, X, y):
@@ -354,7 +365,8 @@ class BayesianCompressiveSensing(LinearRegression):
         Arguments
         =========
         X: np.ndarray
-            Design matrix (NxM: N number of datapoints, M number of correlation functions)
+            Design matrix (NxM: N number of datapoints,
+            M number of correlation functions)
         y: np.ndarray
             Array of length N with the energies
         """
@@ -376,9 +388,11 @@ class BayesianCompressiveSensing(LinearRegression):
             if time.time() - now > self.output_rate_sec:
                 msg = "Iter: {} ".format(iteration)
                 msg += "RMSE: {:.3E} ".format(1000.0*self.rmse())
-                msg += "LOOCV (approx.): {:.3E} ".format(1000.0*self.estimate_loocv())
+                cv = 1000.0*self.estimate_loocv()
+                msg += "LOOCV (approx.): {:.3E} ".format(cv)
                 msg += "Num ECI: {} ".format(self.num_ecis)
-                msg += "Lamb: {:.3E}. Shape lamb: {:.3E} ".format(self.lamb, self.shape_lamb)
+                msg += "Lamb: {:.3E} ".format(self.lamb)
+                msg += "Shape lamb: {:.3E}".format(self.shape_lamb)
                 msg += "Noise: {:.3E}".format(np.sqrt(1.0/self.inv_variance))
                 self.log(msg)
                 now = time.time()
@@ -407,7 +421,7 @@ class BayesianCompressiveSensing(LinearRegression):
 
             if already_excluded:
                 continue
-            
+
             self.update_sigma_mu()
             self.update_quantities()
 
