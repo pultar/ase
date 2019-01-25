@@ -3,17 +3,19 @@ from ase.clease import BayesianCompressiveSensing
 import numpy as np
 from scipy.special import polygamma
 
-# Construct 30 measurements with 400 basis functions
+# Fix the seed to ensure consistent tests
 np.random.seed(0)
 fname = "test_bayes_compr_sens.json"
 
 bayes = BayesianCompressiveSensing(fname=fname, output_rate_sec=2, 
                                    maxiter=100)
-   
+
+
 def test_optimize_shape_parameter(bayes):
     bayes.lamb = 1.0
     opt = bayes.optimal_shape_lamb()
     assert abs(np.log(opt/2.0) - polygamma(0, opt/2.0)) < 1E-6
+
 
 def test_fit(bayes):
     X = np.random.rand(30, 400)
@@ -24,6 +26,7 @@ def test_fit(bayes):
     expected_eci[20] = 60.0
     expected_eci[2] = -80.0
     assert np.allclose(eci, expected_eci, rtol=1E-4)
+
 
 def test_fit_more_coeff():
     bayes = BayesianCompressiveSensing(fname=fname, noise=0.1)
@@ -37,13 +40,14 @@ def test_fit_more_coeff():
         expected_eci[i] = c
     eci = bayes.fit(X, y)
     assert np.allclose(eci, expected_eci, atol=1E-2)
-    
+
 
 def test_save_load(bayes):
     bayes.save()
 
     bayes2 = BayesianCompressiveSensing.load(fname)
     assert bayes == bayes2
+
 
 def test_fit_linear_dep_col():
     bayes = BayesianCompressiveSensing(fname=fname, noise=0.2, penalty=1E-2)
@@ -62,7 +66,6 @@ def test_fit_linear_dep_col():
 
     prec = bayes.precision_matrix(X)
     assert prec.shape == (400, 400)
-
 
 
 test_optimize_shape_parameter(bayes)
