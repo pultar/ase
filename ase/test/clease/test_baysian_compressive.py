@@ -44,7 +44,6 @@ def test_fit_more_coeff():
 
 def test_save_load(bayes):
     bayes.save()
-
     bayes2 = BayesianCompressiveSensing.load(fname)
     assert bayes == bayes2
 
@@ -69,9 +68,9 @@ def test_fit_linear_dep_col():
     assert prec.shape == (400, 400)
 
 
-#test_optimize_shape_parameter(bayes)
-#test_fit(bayes)
-#test_save_load(bayes)
-#test_fit_more_coeff()
+test_optimize_shape_parameter(bayes)
+test_fit(bayes)
+test_save_load(bayes)
+test_fit_more_coeff()
 test_fit_linear_dep_col()
 os.remove(fname)
