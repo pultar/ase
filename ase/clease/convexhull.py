@@ -307,16 +307,17 @@ class ConvexHull(object):
         min_en = np.min(data[:, -1])
         max_en = np.max(data[:, -1])
         diff = max_en - min_en
+        normalization = 0.5*diff
 
         # Normalize the energy data
-        data[:, -1] /= diff
+        data[:, -1] /= normalization
 
         mean = np.mean(data, axis=0)
         data -= mean
 
         data_vec = np.zeros(data.shape[1])
         data_vec[:-1] = [conc.get(k, 0.0) for k in self._unique_elem[:-1]]
-        data_vec[-1] = form_energy/diff
+        data_vec[-1] = form_energy/normalization
         data_vec -= mean
 
         inner_prod = data.dot(data_vec)
