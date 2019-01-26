@@ -339,7 +339,6 @@ class GAFit(object):
         for i in range(num_inserted, self.pop_size):
             rand_num = np.random.rand()
             p1 = np.argmax(cumulative_sum > rand_num)
-            p1 = np.random.randint(0, high=10)
             p2 = p1
             while p2 == p1:
                 rand_num = np.random.rand()
@@ -523,6 +522,7 @@ class GAFit(object):
             flip_indx = choice(range(len(individual)))
             individual_cpy = deepcopy(individual)
             individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1) % 2
+            individual_cpy = self.make_valid(individual_cpy)
             _, cv = self.fit_individual(individual_cpy)
 
             if cv < cv_min:
