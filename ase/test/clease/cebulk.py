@@ -57,20 +57,20 @@ def test_binary_system():
     # Test subclusters for pairs
     for cluster in bc_setting.cluster_info_given_size(2):
         name = list(cluster.keys())[0]
-        sub_cl = set(bc_setting.subclusters(name)[0])
+        sub_cl = set(bc_setting.subclusters(name))
         assert sub_cl == set(["c0", "c1"])
 
     # Test a few known clusters. Triplet nearest neighbour
     name = "c3_01nn_0"
-    sub_cl = set(bc_setting.subclusters(name)[0])
+    sub_cl = set(bc_setting.subclusters(name))
     assert sub_cl == set(["c0", "c1", "c2_01nn_0"])
 
     name = "c3_02nn_0"
-    sub_cl = set(bc_setting.subclusters(name)[0])
+    sub_cl = set(bc_setting.subclusters(name))
     assert sub_cl == set(["c0", "c1", "c2_01nn_0", "c2_02nn_0"])
 
     name = "c4_01nn_0"
-    sub_cl = set(bc_setting.subclusters(name)[0])
+    sub_cl = set(bc_setting.subclusters(name))
     assert sub_cl == set(["c0", "c1", "c2_01nn_0", "c3_01nn_0"])
 
     os.remove(db_name)
