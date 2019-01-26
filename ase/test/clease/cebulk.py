@@ -53,6 +53,26 @@ def test_binary_system():
     eval_l2 = Evaluate(bc_setting, fitting_scheme="l2", alpha=1E-6)
     eval_l2.get_cluster_name_eci(return_type='tuple')
     eval_l2.get_cluster_name_eci(return_type='dict')
+
+    # Test subclusters for pairs
+    for cluster in bc_setting.cluster_info_given_size(2):
+        name = list(cluster.keys())[0]
+        sub_cl = set(bc_setting.subclusters(name)[0])
+        assert sub_cl == set(["c0", "c1"])
+
+    # Test a few known clusters. Triplet nearest neighbour
+    name = "c3_01nn_0"
+    sub_cl = set(bc_setting.subclusters(name)[0])
+    assert sub_cl == set(["c0", "c1", "c2_01nn_0"])
+
+    name = "c3_02nn_0"
+    sub_cl = set(bc_setting.subclusters(name)[0])
+    assert sub_cl == set(["c0", "c1", "c2_01nn_0", "c2_02nn_0"])
+
+    name = "c4_01nn_0"
+    sub_cl = set(bc_setting.subclusters(name)[0])
+    assert sub_cl == set(["c0", "c1", "c2_01nn_0", "c3_01nn_0"])
+
     os.remove(db_name)
 
 
@@ -194,14 +214,14 @@ def test_2grouped_basis_bckgrnd_probe():
 print('binary')
 test_binary_system()
 
-print('1 grouped basis with probe structure')
-test_1grouped_basis_probe()
+# print('1 grouped basis with probe structure')
+# test_1grouped_basis_probe()
 
-print('2 grouped basis with probe structure')
-test_2grouped_basis_probe()
+# print('2 grouped basis with probe structure')
+# test_2grouped_basis_probe()
 
-print('2 grouped basis + background + probe structure')
-test_2grouped_basis_bckgrnd_probe()
+# print('2 grouped basis + background + probe structure')
+# test_2grouped_basis_bckgrnd_probe()
 
-print('initial pool')
-test_initial_pool()
+# print('initial pool')
+# test_initial_pool()
