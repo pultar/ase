@@ -557,12 +557,11 @@ class GAFit(object):
         selected_indx = np.nonzero(individual)[0].tolist()
         active = set()
         for indx in selected_indx:
-            active.union(self.sub_constraint[indx])
+            active = active.union(self.sub_constraint[indx])
 
         active = list(active)
         if not active:
             return individual
-        print(active)
         individual[active] = 1
         return individual
 
