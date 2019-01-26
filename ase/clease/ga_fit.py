@@ -297,7 +297,7 @@ class GAFit(object):
         srt_indx = np.argsort(self.fitness)[::-1]
 
         assert self.fitness[srt_indx[0]] >= self.fitness[srt_indx[1]]
-        mutation_type = ["flip", "sparsify"]
+        mutation_type = ["flip", "sparsify", "remove_largest"]
 
         # Pass the fittest to the next generation
         elitism_fit_selected = np.zeros(self.elitism)
@@ -356,6 +356,9 @@ class GAFit(object):
                 if mut_type == "flip":
                     new_individual = self.flip_one_mutation(new_individual)
                     new_individual2 = self.flip_one_mutation(new_individual2)
+                elif mut_type == "remove_largest":
+                    new_individual = self._remove_largest_clusters(new_individual)
+                    new_individual2 = self._remove_largest_clusters(new_individual)
                 else:
                     new_individual = self.sparsify_mutation(new_individual)
                     new_individual2 = self.sparsify_mutation(new_individual2)
@@ -563,6 +566,18 @@ class GAFit(object):
         if not active:
             return individual
         individual[active] = 1
+        return individual
+
+    def _remove_largest_clusters(self, individual):
+        """Remove the largest selected cluster mutiation."""
+        selected_indx = np.nonzero(individual)[0].tolist()
+        sizes = [int(self.cluster_names[i][1]) for i in selected_indx]
+        max_size = max(sizes)
+
+        # Indices with the maximum size
+        deactivate = [selected_indx[i] for i, s in enumerate(sizes) 
+                      if s == max_size]
+        individual[deactivate] = 0
         return individual
 
 
