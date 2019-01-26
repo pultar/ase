@@ -1130,15 +1130,13 @@ class ClusterExpansionSetting(object):
             indices = item["indices"]
             size = item["size"]
 
-            sub_clusters_symm_grp = []
             # Search in clusters up it the current size
             for s in range(size):
                 clst_size = self.cluster_info_given_size(s)[symm]
                 for k, v in clst_size.items():
                     if self._is_subcluster(v["indices"], indices):
-                        sub_clusters_symm_grp.append(v["name"])
-            sub_clst.append(sub_clusters_symm_grp)
-        return sub_clst
+                        sub_clst.append(v["name"])
+        return list(set(sub_clst))
 
     def _is_subcluster(self, small_cluster, large_cluster):
         """Return True if small cluster is part of large cluster."""
