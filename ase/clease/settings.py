@@ -1118,3 +1118,40 @@ class ClusterExpansionSetting(object):
             assert descriptors == new_desc
             assert equiv_sites == new_equiv_sites
             assert mult_factor == new_mult_factor
+
+    def subclusters(self, cluster_name):
+        """Return all the sub-clusters of cluster."""
+        info = self.cluster_info_by_name(cluster_name)
+
+        sub_clst = []
+
+        # Loop over symmetry groups
+        for item in info:
+            indices = item["indices"]
+            size = item["size"]
+
+            sub_clusters_symm_grp = []
+            # Search in clusters up it the current size
+            for s in range(size):
+                clst_size = self.cluster_info_given_size(s)
+                for small in clst_size:
+                    if self._is_subcluster(small_cluster, indices):
+                        sub_clusters_symm_grp.append(clst_size["name"])
+            sub_clst.append(sub_clusters_symm_grp)
+        return sub_clst
+
+    def _is_subcluster(self, small_cluster, large_cluster):
+        """Return True if small cluster is part of large cluster."""
+        if len(small_cluster) == 0:
+            # Singlet and empty is always a sub cluster
+            return True
+
+        if len(small_cluster[0]) >= len(large_cluster[0]):
+            raise ValueError("A cluster with size {} cannot be a "
+                             "subcluster of a cluster with size {}"
+                             "".format(len(small_cluster[0],
+                                       len(large_cluster[0]))))
+
+        return any(set(s1).intersection(s2) for s1 in small_cluster
+                   for s2 in large_cluster)
+        
