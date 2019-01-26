@@ -98,13 +98,19 @@ class GAFit(object):
                  change_prob=0.2, local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
                  select_cond=None, cost_func="bic", sparsity_slope=1.0,
-                 min_weight=1.0):
+                 min_weight=1.0, include_subclusters=True):
         from ase.clease import Evaluate
         evaluator = Evaluate(setting, max_cluster_dia=max_cluster_dia,
                              max_cluster_size=max_cluster_size,
                              select_cond=select_cond, min_weight=min_weight)
+        self.setting = setting
         self.eff_num = evaluator.effective_num_data_pts
         self.W = np.diag(evaluator.weight_matrix)
+        self.cluster_names = evaluator.cluster_names
+        self.include_subclusters = include_subclusters
+        self.sub_constraint = None
+        if self.include_subclusters:
+            self.sub_constraint = self._initialize_sub_cluster_constraint()
 
         allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
@@ -278,6 +284,10 @@ class GAFit(object):
             while np.sum(individual) < 2:
                 indx = np.random.randint(low=0, high=len(individual))
                 individual[indx] = 1
+
+        # Check if subclusters should be included
+        if self.include_subclusters:
+            individual = self._activate_all_subclusters(individual)
         return individual
 
     def create_new_generation(self):
@@ -527,6 +537,29 @@ class GAFit(object):
 
         self.individuals[self.best_individual_indx] = individual
         self.fitness[self.best_individual_indx] = -cv_min
+
+    def _initialize_sub_cluster_constraint(self):
+        """Initialize the sub-cluster constraint."""
+        from itertools import chain
+        must_be_active = []
+        for name in self.cluster_names:
+            sub = self.setting.subclusters(name)
+            indx = []
+            flattened = set(list(chain(*indx)))
+            for sub_name in flattened:
+                indx.append(self.cluster_names.index(sub_name))
+            must_be_active.append(indx)
+        return must_be_active
+
+    def _activate_all_subclusters(self, individual):
+        """Activate all sub-clusters of the individual."""
+        selected_indx = np.argwhere(individual == 1)
+        active = set()
+        for indx in selected_indx:
+            active.union(self.sub_constraint[indx])
+        active = np.array(list(active))
+        individual[active] = 1
+        return individual
 
 
 def eval_fitness(args):
