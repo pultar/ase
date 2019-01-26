@@ -1126,17 +1126,17 @@ class ClusterExpansionSetting(object):
         sub_clst = []
 
         # Loop over symmetry groups
-        for item in info:
+        for symm, item in enumerate(info):
             indices = item["indices"]
             size = item["size"]
 
             sub_clusters_symm_grp = []
             # Search in clusters up it the current size
             for s in range(size):
-                clst_size = self.cluster_info_given_size(s)
-                for small in clst_size:
-                    if self._is_subcluster(small_cluster, indices):
-                        sub_clusters_symm_grp.append(clst_size["name"])
+                clst_size = self.cluster_info_given_size(s)[symm]
+                for k, v in clst_size.items():
+                    if self._is_subcluster(v["indices"], indices):
+                        sub_clusters_symm_grp.append(v["name"])
             sub_clst.append(sub_clusters_symm_grp)
         return sub_clst
 
@@ -1152,6 +1152,6 @@ class ClusterExpansionSetting(object):
                              "".format(len(small_cluster[0],
                                        len(large_cluster[0]))))
 
-        return any(set(s1).intersection(s2) for s1 in small_cluster
+        return any(set(s1).issubset(s2) for s1 in small_cluster
                    for s2 in large_cluster)
         
