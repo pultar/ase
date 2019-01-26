@@ -540,24 +540,29 @@ class GAFit(object):
 
     def _initialize_sub_cluster_constraint(self):
         """Initialize the sub-cluster constraint."""
-        from itertools import chain
         must_be_active = []
         for name in self.cluster_names:
-            sub = self.setting.subclusters(name)
+            prefix = name.rpartition("_")[0]
+            sub = self.setting.subclusters(prefix)
             indx = []
-            flattened = set(list(chain(*indx)))
-            for sub_name in flattened:
-                indx.append(self.cluster_names.index(sub_name))
+            for sub_name in sub:
+                indices = [i for i, name in enumerate(self.cluster_names) 
+                           if name.startswith(sub_name)]
+                indx += indices
             must_be_active.append(indx)
         return must_be_active
 
     def _activate_all_subclusters(self, individual):
         """Activate all sub-clusters of the individual."""
-        selected_indx = np.argwhere(individual == 1)
+        selected_indx = np.nonzero(individual)[0].tolist()
         active = set()
         for indx in selected_indx:
             active.union(self.sub_constraint[indx])
-        active = np.array(list(active))
+
+        active = list(active)
+        if not active:
+            return individual
+        print(active)
         individual[active] = 1
         return individual
 
