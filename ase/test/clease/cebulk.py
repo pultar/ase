@@ -215,13 +215,13 @@ print('binary')
 test_binary_system()
 
 # print('1 grouped basis with probe structure')
-# test_1grouped_basis_probe()
+test_1grouped_basis_probe()
 
 # print('2 grouped basis with probe structure')
-# test_2grouped_basis_probe()
+test_2grouped_basis_probe()
 
 # print('2 grouped basis + background + probe structure')
-# test_2grouped_basis_bckgrnd_probe()
+test_2grouped_basis_bckgrnd_probe()
 
 # print('initial pool')
-# test_initial_pool()
+test_initial_pool()
