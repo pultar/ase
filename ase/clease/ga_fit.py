@@ -352,16 +352,11 @@ class GAFit(object):
             new_individual2[mask] = self.individuals[p1][mask]
 
             if np.random.rand() < self.mutation_prob:
-                mut_type = choice(mutation_type)
-                if mut_type == "flip":
-                    new_individual = self.flip_one_mutation(new_individual)
-                    new_individual2 = self.flip_one_mutation(new_individual2)
-                elif mut_type == "remove_largest":
-                    new_individual = self._remove_largest_clusters(new_individual)
-                    new_individual2 = self._remove_largest_clusters(new_individual)
-                else:
-                    new_individual = self.sparsify_mutation(new_individual)
-                    new_individual2 = self.sparsify_mutation(new_individual2)
+                new_individual = self.flip_one_mutation(new_individual)
+                new_individual2 = self.flip_one_mutation(new_individual2)
+            elif np.random.rand() < 0.01*self.mutation_prob:
+                new_individual = self._remove_largest_clusters(new_individual)
+                new_individual2 = self._remove_largest_clusters(new_individual)
 
             if len(new_generation) <= len(self.individuals)-2:
                 new_generation.append(self.make_valid(new_individual))
