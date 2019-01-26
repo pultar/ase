@@ -331,8 +331,8 @@ class GAFit(object):
         num_inserted = len(new_generation)
 
         # Insert two sparse solutions
-        new_generation.append(self.get_random_sparse_individual())
-        new_generation.append(self.get_random_sparse_individual())
+        new_generation.append(self.make_valid(self.get_random_sparse_individual()))
+        new_generation.append(self.make_valid(self.get_random_sparse_individual()))
         num_inserted += 2
 
         # Create new generation by mergin existing
