@@ -131,6 +131,10 @@ class GAFit(object):
             self.pop_size = 10*self.cf_matrix.shape[1]
         else:
             self.pop_size = int(num_individuals)
+
+        # Make sure that the population size is an even number
+        if self.pop_size%2 == 1:
+            self.pop_size += 1
         self.change_prob = change_prob
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
@@ -293,6 +297,7 @@ class GAFit(object):
     def create_new_generation(self):
         """Create a new generation."""
         from random import choice
+        print(np.sort(self.fitness)[::-1][:20])
         new_generation = []
         srt_indx = np.argsort(self.fitness)[::-1]
 
@@ -317,7 +322,12 @@ class GAFit(object):
 
             # Transfer the best individual with a mutation
             new_ind = self.flip_one_mutation(individual.copy())
-            new_generation.append(self.make_valid(new_ind))
+            new_ind = self.make_valid(new_ind)
+            while self._is_in_population(new_ind, new_generation):
+                new_ind = self.flip_one_mutation(individual.copy())
+                new_ind = self.make_valid(new_ind)
+
+            new_generation.append(new_ind)
             elitism_fit_selected[num_transfered] = self.fitness[indx]
             num_transfered += 1
             counter += 1
@@ -330,13 +340,8 @@ class GAFit(object):
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
 
-        # Insert two sparse solutions
-        new_generation.append(self.make_valid(self.get_random_sparse_individual()))
-        new_generation.append(self.make_valid(self.get_random_sparse_individual()))
-        num_inserted += 2
-
         # Create new generation by mergin existing
-        for i in range(num_inserted, self.pop_size):
+        for i in range(num_inserted, int(self.pop_size/2)+1):
             rand_num = np.random.rand()
             p1 = np.argmax(cumulative_sum > rand_num)
             p2 = p1
@@ -349,23 +354,61 @@ class GAFit(object):
 
             mask = np.random.randint(0, high=2, dtype=np.uint8)
             new_individual[mask] = self.individuals[p2][mask]
-            new_individual2[mask] = self.individuals[p1][mask]
+            new_individual2[mask] = self.individuals[p1][mask] 
+            new_individual = self.make_valid(new_individual)
+            new_individual2 = self.make_valid(new_individual2)
 
-            if np.random.rand() < self.mutation_prob:
+            # Check if there are any equal individuals in 
+            # the population
+            while self._is_in_population(new_individual, new_generation):
                 new_individual = self.flip_one_mutation(new_individual)
-                new_individual2 = self.flip_one_mutation(new_individual2)
-            elif np.random.rand() < 0.01*self.mutation_prob:
-                new_individual = self._remove_largest_clusters(new_individual)
-                new_individual2 = self._remove_largest_clusters(new_individual)
+                new_individual = self.make_valid(new_individual)
 
-            if len(new_generation) <= len(self.individuals)-2:
-                new_generation.append(self.make_valid(new_individual))
-                new_generation.append(self.make_valid(new_individual2))
-            elif len(new_generation) == len(self.individuals)-1:
-                new_generation.append(self.make_valid(new_individual))
-            else:
-                break
+            new_generation.append(new_individual)
+
+            while self._is_in_population(new_individual2, new_generation):
+                new_individual2 = self.flip_one_mutation(new_individual2)
+                new_individual2 = self.make_valid(new_individual2)
+            new_generation.append(new_individual2)
+
+        print(len(new_generation), len(self.individuals))
+        assert len(new_generation) == len(self.individuals)
         self.individuals = new_generation
+
+    def _is_in_population(self, ind, pop):
+        """Check if the individual is already in the population."""
+        return any(np.all(ind == x) for x in pop)
+
+    def mutate(self):
+       """Introduce mutations."""
+       avg_f = np.mean(np.abs(self.fitness))
+       best_indx = np.argmax(self.fitness)
+       for i in range(len(self.individuals)):
+           if i == best_indx:
+               # Do not mutate the best individual
+               continue
+
+           mut_prob = self.mutation_prob
+           if abs(self.fitness[i]) > avg_f:
+               mut_prob *= abs(self.fitness[i])/avg_f
+
+           if mut_prob > 1.0:
+               mut_prob = 1.0
+
+           ind = self.individuals[i].copy()
+           mutated = False
+           assert mut_prob >= 0.0
+           if np.random.rand() < mut_prob:
+               ind = self.flip_one_mutation(ind)
+               mutated = True
+           if np.random.rand() < 0.01*mut_prob:
+               ind = self._remove_largest_clusters(ind)
+               mutated = True
+
+           if mutated:
+               self.individuals[i] = self.make_valid(ind)
+               _, fit = self.fit_individual(self.individuals[i])
+               self.fitness[i] = -fit
 
     def population_diversity(self):
         """Check the diversity of the population."""
@@ -481,6 +524,7 @@ class GAFit(object):
                      "".format(gen, self.cost_func,
                                -self.fitness[best_indx],
                                num_eci, diversity), end="\r")
+            self.mutate()
             self.create_new_generation()
             if abs(current_best - self.fitness[best_indx]) > min_change:
                 num_gen_without_change = 0
