@@ -519,6 +519,7 @@ class GAFit(object):
             individual = self.individuals[indx]
 
         num_steps = 1000*len(individual)
+        self.log("Local optimization with {} trial updates.".format(num_steps))
         cv_min = -np.max(self.fitness)
         for _ in range(num_steps):
             flip_indx = choice(range(len(individual)))
