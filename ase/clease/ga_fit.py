@@ -371,7 +371,6 @@ class GAFit(object):
                 new_individual2 = self.make_valid(new_individual2)
             new_generation.append(new_individual2)
 
-        print(len(new_generation), len(self.individuals))
         assert len(new_generation) == len(self.individuals)
         self.individuals = new_generation
 
