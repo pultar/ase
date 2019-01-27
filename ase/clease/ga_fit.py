@@ -518,7 +518,7 @@ class GAFit(object):
         else:
             individual = self.individuals[indx]
 
-        num_steps = 10*len(individual)
+        num_steps = 1000*len(individual)
         cv_min = -np.max(self.fitness)
         for _ in range(num_steps):
             flip_indx = choice(range(len(individual)))
