@@ -521,6 +521,7 @@ class GAFit(object):
         num_steps = 1000*len(individual)
         self.log("Local optimization with {} trial updates.".format(num_steps))
         cv_min = -np.max(self.fitness)
+        self.log("Initial {}: {:.2e}".format(self.cost_func, cv_min))
         for _ in range(num_steps):
             flip_indx = choice(range(len(individual)))
             individual_cpy = deepcopy(individual)
@@ -543,6 +544,7 @@ class GAFit(object):
 
         self.individuals[self.best_individual_indx] = individual
         self.fitness[self.best_individual_indx] = -cv_min
+        self.log("Final {}: {:.2e}".format(self.cost_func, cv_min))
 
     def _initialize_sub_cluster_constraint(self):
         """Initialize the sub-cluster constraint."""
