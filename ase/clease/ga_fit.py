@@ -527,10 +527,11 @@ class GAFit(object):
             self.statistics["best_cv"].append(np.max(self.fitness))
             self.statistics["worst_cv"].append(np.min(self.fitness))
 
-            self.log("Generation: {}. {}: {:.2e} "
+            best3 = np.abs(np.sort(self.fitness)[::-1][:3])
+            self.log("Generation: {}. Top 3 {}: {:.2e} {:.2e} {:.2e} "
                      "Num ECI: {}. Pop. div: {:.2f}"
                      "".format(gen, self.cost_func,
-                               -self.fitness[best_indx],
+                               best3[0], best3[1], best3[2],
                                num_eci, diversity), end="\r")
             self.mutate()
             self.create_new_generation()
