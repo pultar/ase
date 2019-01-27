@@ -109,8 +109,11 @@ class GAFit(object):
         self.cluster_names = evaluator.cluster_names
         self.include_subclusters = include_subclusters
         self.sub_constraint = None
+        self.super_constraint = None
         if self.include_subclusters:
             self.sub_constraint = self._initialize_sub_cluster_constraint()
+            self.super_constraint = self._initialize_super_cluster_constraint()
+        print(self.super_constraint)
 
         allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
@@ -250,6 +253,10 @@ class GAFit(object):
         """Apply mutation where one bit flips."""
         indx = np.random.randint(0, high=len(individual))
         individual[indx] = (individual[indx] + 1) % 2
+
+        if individual[indx] == 0 and self.include_subclusters:
+            name = self.cluster_names[indx]
+            individual = self._remove_super_clusters(name, individual) 
         return individual
 
     def sparsify_mutation(self, individual):
@@ -563,6 +570,9 @@ class GAFit(object):
             flip_indx = choice(range(len(individual)))
             individual_cpy = deepcopy(individual)
             individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1) % 2
+            if individual_cpy[flip_indx] == 0 and self.include_subclusters:
+                name = self.cluster_names[flip_indx]
+                individual_cpy = self._remove_super_clusters(name, individual_cpy)
             individual_cpy = self.make_valid(individual_cpy)
             _, cv = self.fit_individual(individual_cpy)
 
@@ -593,6 +603,22 @@ class GAFit(object):
             must_be_active.append(indx)
         return must_be_active
 
+    def _initialize_super_cluster_constraint(self):
+        """Initialize the super-clusters."""
+        deactivate = {}
+        for name in self.cluster_names:
+            prefix = name.rpartition("_")[0]
+            if prefix in deactivate.keys():
+                continue
+            indx = []
+            for i, name2 in enumerate(self.cluster_names):
+                prefix2 = name2.rpartition("_")[0]
+                sub = self.setting.subclusters(prefix2)
+                if prefix in sub:
+                    indx.append(i)
+            deactivate[prefix] = indx
+        return deactivate
+
     def _activate_all_subclusters(self, individual):
         """Activate all sub-clusters of the individual."""
         selected_indx = np.nonzero(individual)[0].tolist()
@@ -617,6 +643,13 @@ class GAFit(object):
                       if s == max_size]
         individual[deactivate] = 0
         return individual
+
+    def _remove_super_clusters(self, name, ind):
+        """Remove all the larger clusters."""
+        super_indx = []
+        prefix_name = name.rpartition("_")[0]
+        ind[self.super_constraint[prefix_name]] = 0
+        return ind
 
 
 def eval_fitness(args):
