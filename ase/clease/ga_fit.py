@@ -40,10 +40,6 @@ class GAFit(object):
         Integer with the number of inidivuals or it is equal to "auto",
         in which case 10 times the number of candidate clusters is used
 
-    change_prob: float
-        If a mutation is selected this denotes the probability of a mutating
-        a given gene.
-
     max_num_in_init_pool: int
         If given the maximum clusters included in the initial population
         is given by this number. If max_num_in_init_pool=150, then
@@ -95,7 +91,7 @@ class GAFit(object):
     def __init__(self, setting=None, max_cluster_size=None,
                  max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
                  elitism=1, fname="ga_fit.csv", num_individuals="auto",
-                 change_prob=0.2, local_decline=True,
+                 local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
                  select_cond=None, cost_func="bic", sparsity_slope=1.0,
                  min_weight=1.0, include_subclusters=True):
@@ -137,7 +133,6 @@ class GAFit(object):
         # Make sure that the population size is an even number
         if self.pop_size%2 == 1:
             self.pop_size += 1
-        self.change_prob = change_prob
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
@@ -241,13 +236,6 @@ class GAFit(object):
                 _, fit = self.fit_individual(ind)
                 self.fitness[i] = -fit
 
-    def flip_mutation(self, individual):
-        """Apply mutation operation."""
-        rand_num = np.random.rand(len(individual))
-        flip_indx = (rand_num < self.change_prob)
-        individual[flip_indx] = (individual[flip_indx]+1) % 2
-        return individual
-
     def flip_one_mutation(self, individual):
         """Apply mutation where one bit flips."""
         indx = np.random.randint(0, high=len(individual))
@@ -257,36 +245,6 @@ class GAFit(object):
             name = self.cluster_names[indx]
             individual = self._remove_super_clusters(name, individual) 
         return individual
-
-    def sparsify_mutation(self, individual):
-        """Change one 1 to 0."""
-        indx = np.argwhere(individual == 1)
-        rand_num = np.random.rand(len(indx))
-        flip_indx = (rand_num < self.change_prob)
-        individual[indx[flip_indx]] = 0
-        return individual
-
-    @property
-    def sparsest_individual(self):
-        num_coeff = len(self.individuals[0])
-        sprs = self.individuals[0].copy()
-        for ind in self.individuals:
-            if np.sum(ind) < num_coeff:
-                sprs = ind.copy()
-                num_coeff = np.sum(ind)
-        return sprs
-
-    def get_random_sparse_individual(self):
-        """Return new random individual that is
-            sparser than the current sparsest"""
-        sprs = self.sparsest_individual
-        num_non_zero = np.sum(sprs)
-        indices = list(range(0, len(sprs)))
-        shuffle(indices)
-        new = np.zeros_like(sprs)
-        indices = np.array(indices)
-        new[indices[:num_non_zero]] = 1
-        return new
 
     def make_valid(self, individual):
         """Make sure that there is at least two active ECIs."""
@@ -307,18 +265,12 @@ class GAFit(object):
         srt_indx = np.argsort(self.fitness)[::-1]
 
         assert self.fitness[srt_indx[0]] >= self.fitness[srt_indx[1]]
-        mutation_type = ["flip", "sparsify", "remove_largest"]
 
         # Pass the fittest to the next generation
-        elitism_fit_selected = np.zeros(self.elitism)
         num_transfered = 0
         counter = 0
         while num_transfered < self.elitism and counter < len(srt_indx):
             indx = srt_indx[counter]
-            diff = np.abs(self.fitness[indx] - elitism_fit_selected)
-            if np.any(diff < 1E-4):
-                counter += 1
-                continue
 
             individual = self.individuals[indx].copy()
 
@@ -333,7 +285,6 @@ class GAFit(object):
                 new_ind = self.make_valid(new_ind)
 
             new_generation.append(new_ind)
-            elitism_fit_selected[num_transfered] = self.fitness[indx]
             num_transfered += 1
             counter += 1
 
@@ -397,6 +348,9 @@ class GAFit(object):
                continue
 
            mut_prob = self.mutation_prob
+
+           # Increase the probability of introducing mutations
+           # to the least fit individuals
            if abs(self.fitness[i]) > avg_f:
                mut_prob *= abs(self.fitness[i])/avg_f
 
@@ -408,9 +362,6 @@ class GAFit(object):
            assert mut_prob >= 0.0
            if np.random.rand() < mut_prob:
                ind = self.flip_one_mutation(ind)
-               mutated = True
-           if np.random.rand() < 0.01*mut_prob:
-               ind = self._remove_largest_clusters(ind)
                mutated = True
 
            if mutated:
@@ -635,21 +586,8 @@ class GAFit(object):
         individual[active] = 1
         return individual
 
-    def _remove_largest_clusters(self, individual):
-        """Remove the largest selected cluster mutiation."""
-        selected_indx = np.nonzero(individual)[0].tolist()
-        sizes = [int(self.cluster_names[i][1]) for i in selected_indx]
-        max_size = max(sizes)
-
-        # Indices with the maximum size
-        deactivate = [selected_indx[i] for i, s in enumerate(sizes) 
-                      if s == max_size]
-        individual[deactivate] = 0
-        return individual
-
     def _remove_super_clusters(self, name, ind):
         """Remove all the larger clusters."""
-        super_indx = []
         prefix_name = name.rpartition("_")[0]
         ind[self.super_constraint[prefix_name]] = 0
         return ind
