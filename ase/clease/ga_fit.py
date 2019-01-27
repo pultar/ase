@@ -3,7 +3,7 @@ from ase.clease import Tikhonov
 import numpy as np
 import multiprocessing as mp
 import os
-from random import shuffle
+from random import shuffle, choice
 os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
@@ -147,6 +147,7 @@ class GAFit(object):
         }
         self.evaluate_fitness()
         self.local_decline = local_decline
+        self.check_valid()
 
     def _initialize_individuals(self, max_num):
         """Initialize a random population."""
@@ -164,7 +165,7 @@ class GAFit(object):
                 individual = np.zeros(self.num_genes, dtype=np.uint8)
                 indx = indices[:num_non_zero[i]]
                 individual[np.array(indx)] = 1
-                individuals.append(individual)
+                individuals.append(self.make_valid(individual))
         return individuals
 
     def _init_from_file(self):
@@ -238,7 +239,15 @@ class GAFit(object):
 
     def flip_one_mutation(self, individual):
         """Apply mutation where one bit flips."""
-        indx = np.random.randint(0, high=len(individual))
+        indx_sel = list(np.argwhere(individual.T==1).T[0])
+        ns = list(np.argwhere(individual.T==0).T[0])
+
+        # Flip included or not included cluster with equal
+        # probability
+        if np.random.rand() < 0.5:
+            indx = choice(indx_sel)
+        else:
+            indx = choice(ns)
         individual[indx] = (individual[indx] + 1) % 2
 
         if individual[indx] == 0 and self.include_subclusters:
@@ -415,6 +424,7 @@ class GAFit(object):
 
     def save_population(self):
         # Save population
+        self.check_valid()
         with open(self.fname, 'w') as out:
             for i in range(len(self.individuals)):
                 out.write(",".join(str(x) for x in
@@ -470,8 +480,8 @@ class GAFit(object):
 
             # If best individual is repeated: Perform local
             # optimization
-            if best_indx != 0 and self.local_decline:
-                self._local_optimization()
+            #if best_indx != 0 and self.local_decline:
+            #    self._local_optimization()
 
             num_eci = np.sum(self.individuals[best_indx])
             diversity = self.population_diversity()
@@ -518,7 +528,7 @@ class GAFit(object):
         else:
             individual = self.individuals[indx]
 
-        num_steps = 1000*len(individual)
+        num_steps = 100*len(individual)
         self.log("Local optimization with {} trial updates.".format(num_steps))
         cv_min = -np.max(self.fitness)
         self.log("Initial {}: {:.2e}".format(self.cost_func, cv_min))
@@ -594,6 +604,13 @@ class GAFit(object):
         prefix_name = name.rpartition("_")[0]
         ind[self.super_constraint[prefix_name]] = 0
         return ind
+
+    def check_valid(self):
+        """Check that the current population is valid."""
+        for ind in self.individuals:
+            valid = self.make_valid(ind.copy())
+            if np.any(valid != ind):
+                raise ValueError("Individual violate constraints!")
 
 
 def eval_fitness(args):
