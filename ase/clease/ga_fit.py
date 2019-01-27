@@ -304,7 +304,6 @@ class GAFit(object):
     def create_new_generation(self):
         """Create a new generation."""
         from random import choice
-        print(np.sort(self.fitness)[::-1][:20])
         new_generation = []
         srt_indx = np.argsort(self.fitness)[::-1]
 
