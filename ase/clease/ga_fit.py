@@ -113,7 +113,6 @@ class GAFit(object):
         if self.include_subclusters:
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
-        print(self.super_constraint)
 
         allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
 
@@ -377,7 +376,11 @@ class GAFit(object):
                 new_individual2 = self.make_valid(new_individual2)
             new_generation.append(new_individual2)
 
-        assert len(new_generation) == len(self.individuals)
+        if len(new_generation) != len(self.individuals):
+            raise RuntimeError("Size of generation changed! "
+                               "Original size: {}. New size: {}"
+                               "".format(len(self.individuals), 
+                                         len(new_generation)))
         self.individuals = new_generation
 
     def _is_in_population(self, ind, pop):
