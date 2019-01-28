@@ -59,11 +59,11 @@ class GAFit(object):
         will be used
 
     select_cond: list
-        Select condition passed to Evaluate to select which 
+        Select condition passed to Evaluate to select which
         data points from the database the should be included
 
     cost_func: str
-        Use the inverse as fitness measure. 
+        Use the inverse as fitness measure.
         Possible cost functions:
         bic - Bayes Information Criterion
         aic - Afaike Information Criterion
@@ -136,7 +136,7 @@ class GAFit(object):
             self.pop_size = int(num_individuals)
 
         # Make sure that the population size is an even number
-        if self.pop_size%2 == 1:
+        if self.pop_size % 2 == 1:
             self.pop_size += 1
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
@@ -244,8 +244,8 @@ class GAFit(object):
 
     def flip_one_mutation(self, individual):
         """Apply mutation where one bit flips."""
-        indx_sel = list(np.argwhere(individual.T==1).T[0])
-        ns = list(np.argwhere(individual.T==0).T[0])
+        indx_sel = list(np.argwhere(individual.T == 1).T[0])
+        ns = list(np.argwhere(individual.T == 0).T[0])
 
         # Flip included or not included cluster with equal
         # probability
@@ -257,7 +257,7 @@ class GAFit(object):
 
         if individual[indx] == 0 and self.include_subclusters:
             name = self.cluster_names[indx]
-            individual = self._remove_super_clusters(name, individual) 
+            individual = self._remove_super_clusters(name, individual)
         return individual
 
     def make_valid(self, individual):
@@ -324,11 +324,11 @@ class GAFit(object):
 
             mask = np.random.randint(0, high=2, dtype=np.uint8)
             new_individual[mask] = self.individuals[p2][mask]
-            new_individual2[mask] = self.individuals[p1][mask] 
+            new_individual2[mask] = self.individuals[p1][mask]
             new_individual = self.make_valid(new_individual)
             new_individual2 = self.make_valid(new_individual2)
 
-            # Check if there are any equal individuals in 
+            # Check if there are any equal individuals in
             # the population
             while self._is_in_population(new_individual, new_generation):
                 new_individual = self.flip_one_mutation(new_individual)
@@ -344,7 +344,7 @@ class GAFit(object):
         if len(new_generation) != len(self.individuals):
             raise RuntimeError("Size of generation changed! "
                                "Original size: {}. New size: {}"
-                               "".format(len(self.individuals), 
+                               "".format(len(self.individuals),
                                          len(new_generation)))
         self.individuals = new_generation
 
@@ -353,35 +353,35 @@ class GAFit(object):
         return any(np.all(ind == x) for x in pop)
 
     def mutate(self):
-       """Introduce mutations."""
-       avg_f = np.mean(np.abs(self.fitness))
-       best_indx = np.argmax(self.fitness)
-       for i in range(len(self.individuals)):
-           if i == best_indx:
-               # Do not mutate the best individual
-               continue
+        """Introduce mutations."""
+        avg_f = np.mean(np.abs(self.fitness))
+        best_indx = np.argmax(self.fitness)
+        for i in range(len(self.individuals)):
+            if i == best_indx:
+                # Do not mutate the best individual
+                continue
 
-           mut_prob = self.mutation_prob
+            mut_prob = self.mutation_prob
 
-           # Increase the probability of introducing mutations
-           # to the least fit individuals
-           if abs(self.fitness[i]) > avg_f:
-               mut_prob *= abs(self.fitness[i])/avg_f
+            # Increase the probability of introducing mutations
+            # to the least fit individuals
+            if abs(self.fitness[i]) > avg_f:
+                mut_prob *= abs(self.fitness[i])/avg_f
 
-           if mut_prob > 1.0:
-               mut_prob = 1.0
+            if mut_prob > 1.0:
+                mut_prob = 1.0
 
-           ind = self.individuals[i].copy()
-           mutated = False
-           assert mut_prob >= 0.0
-           if np.random.rand() < mut_prob:
-               ind = self.flip_one_mutation(ind)
-               mutated = True
+            ind = self.individuals[i].copy()
+            mutated = False
+            assert mut_prob >= 0.0
+            if np.random.rand() < mut_prob:
+                ind = self.flip_one_mutation(ind)
+                mutated = True
 
-           if mutated:
-               self.individuals[i] = self.make_valid(ind)
-               _, fit = self.fit_individual(self.individuals[i])
-               self.fitness[i] = -fit
+            if mutated:
+                self.individuals[i] = self.make_valid(ind)
+                _, fit = self.fit_individual(self.individuals[i])
+                self.fitness[i] = -fit
 
     def population_diversity(self):
         """Check the diversity of the population."""
@@ -483,11 +483,6 @@ class GAFit(object):
 
             best_indx = np.argmax(self.fitness)
 
-            # If best individual is repeated: Perform local
-            # optimization
-            #if best_indx != 0 and self.local_decline:
-            #    self._local_optimization()
-
             num_eci = np.sum(self.individuals[best_indx])
             diversity = self.population_diversity()
             self.statistics["best_cv"].append(np.max(self.fitness))
@@ -543,7 +538,8 @@ class GAFit(object):
             individual_cpy[flip_indx] = (individual_cpy[flip_indx]+1) % 2
             if individual_cpy[flip_indx] == 0 and self.include_subclusters:
                 name = self.cluster_names[flip_indx]
-                individual_cpy = self._remove_super_clusters(name, individual_cpy)
+                individual_cpy = self._remove_super_clusters(name,
+                                                             individual_cpy)
             individual_cpy = self.make_valid(individual_cpy)
             _, cv = self.fit_individual(individual_cpy)
 
@@ -569,7 +565,7 @@ class GAFit(object):
             sub = self.setting.subclusters(prefix)
             indx = []
             for sub_name in sub:
-                indices = [i for i, name in enumerate(self.cluster_names) 
+                indices = [i for i, name in enumerate(self.cluster_names)
                            if name.startswith(sub_name)]
                 indx += indices
             must_be_active.append(indx)
