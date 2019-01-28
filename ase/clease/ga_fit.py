@@ -67,6 +67,8 @@ class GAFit(object):
         Possible cost functions:
         bic - Bayes Information Criterion
         aic - Afaike Information Criterion
+        aicc - Modified Afaikes Information Criterion (tend to avoid
+            overfitting better than aic)
         loocv - Leave one out cross validation (average)
         max_loocv - Leave one out cross valdition (maximum)
 
@@ -193,8 +195,16 @@ class GAFit(object):
 
     def aic(self, mse, num_features):
         """Return Afaike information criterion."""
-        N = N = len(self.e_dft)
+        N = len(self.e_dft)
         return N*np.log(mse) + 2*num_features*self.sparsity_slope
+
+    def aicc(self, mse, num_features):
+        """Modified Afaikes informatiion criterion."""
+        aic = self.aic(mse, num_features)
+        N = len(self.e_dft)
+        corr = 2*num_features**2 + 2*num_features
+        corr /= (N - num_features - 1)
+        return aic + self.sparsity_slope*corr
 
     def fit_individual(self, individual):
         X = self.cf_matrix[:, individual == 1]
@@ -212,6 +222,8 @@ class GAFit(object):
             info_measure = self.bic(mse, n_selected)
         elif self.cost_func == "aic":
             info_measure = self.aic(mse, n_selected)
+        elif self.cost_func == "aicc":
+            info_measure = self.aicc(mse, n_selected)
         elif "loocv" in self.cost_func:
             prec = self.regression.precision_matrix(X)
             loo_dev = (self.W*delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
