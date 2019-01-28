@@ -80,6 +80,11 @@ class GAFit(object):
         Weight given to the point furthest away from the
         convex hull.
 
+    include_subclusters: bool
+        If True all sub-clusters are forced to be part of the solution.
+        If a 3-body cluster is included, all the 2-body clusters that
+        are part of it will automatically be included.
+
     Example:
     =======
     from ase.clease import Evaluate
