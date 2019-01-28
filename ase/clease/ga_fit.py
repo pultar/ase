@@ -117,7 +117,7 @@ class GAFit(object):
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
 
-        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
