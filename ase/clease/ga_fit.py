@@ -7,6 +7,10 @@ from random import shuffle, choice
 os.environ["OPENBLAS_MAIN_FREE"] = "1"
 
 
+class SaturatedPopulationError(Exception):
+    pass
+
+
 class GAFit(object):
     """
     Genetic Algorithm for selecting relevant clusters
@@ -259,6 +263,12 @@ class GAFit(object):
         indx_sel = list(np.argwhere(individual.T == 1).T[0])
         ns = list(np.argwhere(individual.T == 0).T[0])
 
+        assert len(indx_sel) != 0 or len(ns) != 0
+        if len(ns) == 0:
+            ns = indx_sel
+        elif len(indx_sel) == 0:
+            indx_sel = ns
+
         # Flip included or not included cluster with equal
         # probability
         if np.random.rand() < 0.5:
@@ -315,13 +325,16 @@ class GAFit(object):
             counter += 1
 
         if counter >= len(srt_indx):
-            raise RuntimeError("The entrie population has saturated!")
+            self.save_population()
+            raise SaturatedPopulationError("The entrie population has "
+                                           "saturated!")
 
         only_positive = self.fitness - np.min(self.fitness)
         cumulative_sum = np.cumsum(only_positive)
         cumulative_sum /= cumulative_sum[-1]
         num_inserted = len(new_generation)
 
+        max_attempts = 100*self.pop_size
         # Create new generation by mergin existing
         for i in range(num_inserted, int(self.pop_size/2)+1):
             rand_num = np.random.rand()
@@ -342,15 +355,29 @@ class GAFit(object):
 
             # Check if there are any equal individuals in
             # the population
-            while self._is_in_population(new_individual, new_generation):
+            counter = 0
+            while (self._is_in_population(new_individual, new_generation) and
+                    counter < max_attempts):
                 new_individual = self.flip_one_mutation(new_individual)
                 new_individual = self.make_valid(new_individual)
+                counter += 1
 
+            if counter >= max_attempts:
+                self.save_population()
+                raise SaturatedPopulationError("Popluation is saturated!")
             new_generation.append(new_individual)
 
-            while self._is_in_population(new_individual2, new_generation):
+            counter = 0
+            while (self._is_in_population(new_individual2, new_generation) and
+                    counter < max_attempts):
                 new_individual2 = self.flip_one_mutation(new_individual2)
                 new_individual2 = self.make_valid(new_individual2)
+                counter += 1
+
+            if counter >= max_attempts:
+                self.save_population()
+                raise SaturatedPopulationError("Popluation is saturated!")
+
             new_generation.append(new_individual2)
 
         if len(new_generation) != len(self.individuals):
