@@ -323,3 +323,28 @@ def reconfigure(setting, select_cond=None):
     from ase.clease import CorrFunction
     setting.reconfigure_settings()
     CorrFunction(setting).reconfigure_db_entries(select_cond)
+
+
+def split_dataset(X, y, nsplits=10):
+    """Split the dataset such that it can be used for k-fold
+        cross validation."""
+    from random import shuffle
+    indices = list(range(len(y)))
+    shuffle(indices)
+    partitions = []
+    for i in range(nsplits):
+        start = i*nsplits
+        end = (i+1)*nsplits
+        if i == nsplits-1:
+            end = -1
+        indx = [start:end]
+        mask = np.zeros(len(y), dtype=np.uint8)
+        mask[indx] = 1
+        data = {
+            "train_X": X[mask == 0, :],
+            "train_y": y[mask == 0]
+            "validate_X": X[mask == 1, :]
+            "validate_y": y[mask == 1]
+        }
+        partitions.append(data)
+    return partitions
