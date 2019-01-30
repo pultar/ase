@@ -1,5 +1,6 @@
 """Test case for tha GAFit"""
 from ase.clease import GAFit
+from ase.clease.ga_fit import SaturatedPopulationError
 from ase.clease import CEBulk, NewStructures, Concentration
 from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
@@ -9,6 +10,8 @@ import numpy as np
 import os
 
 DB_NAME = "ga_fit_test.db"
+
+
 def init_system():
     basis_elements = [['Au', 'Cu']]
     concentration = Concentration(basis_elements=basis_elements)
@@ -27,7 +30,6 @@ def init_system():
             atom.symbol = choice(symbols)
         newstruct.insert_structure(init_struct=atoms)
 
-
     # Compute the energy of the structures
     calc = EMT()
     database = connect(DB_NAME)
@@ -44,17 +46,23 @@ def init_system():
 
 setting = init_system()
 
+
 def test_init_from_file():
     backup = "ga_test.csv"
     selector = GAFit(setting=setting, fname=backup)
-    selector.run(gen_without_change=3, save_interval=1)
+    try:
+        selector.run(gen_without_change=3, save_interval=1)
+    except SaturatedPopulationError:
+        pass
     individuals = selector.individuals
 
     # Restart from file, this time data will be loaded
     selector = GAFit(setting=setting, fname=backup)
     assert np.allclose(individuals, selector.individuals)
     os.remove(backup)
-    os.remove("ga_test_cluster_names.txt")
+
+    if os.path.exists("ga_test_cluster_names.txt"):
+        os.remove("ga_test_cluster_names.txt")
 
 test_init_from_file()
 os.remove(DB_NAME)
