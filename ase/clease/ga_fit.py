@@ -259,6 +259,12 @@ class GAFit(object):
         indx_sel = list(np.argwhere(individual.T == 1).T[0])
         ns = list(np.argwhere(individual.T == 0).T[0])
 
+        assert len(indx_sel) != 0 or len(ns) != 0
+        if len(ns) == 0:
+            ns = indx_sel
+        elif len(indx_sel) == 0:
+            indx_sel = ns
+
         # Flip included or not included cluster with equal
         # probability
         if np.random.rand() < 0.5:
