@@ -45,7 +45,7 @@ class Evaluate(object):
         If *None*, no restriction on the diameter.
 
     scoring_scheme: str
-        should be one of 'loocv' or 'loocv_fast'
+        should be one of 'loocv', 'loocv_fast' or k-fold
 
     min_weight: float
         Weight given to the data point furthest away from
@@ -58,12 +58,23 @@ class Evaluate(object):
         where sim_measure is a similarity measure
         used to asses how different the structure
         is from structures on the convex hull.
+
+    nsplits: int
+        Number of splits to use when partitioning the dataset into
+        training and validation data. Only used when scoring_scheme='k-fold'
+
+    num_repetitions: int
+        Number of repetitions used to use when calculating k-fold cross
+        validation. The partitioning is repeated num_repetitions times
+        and the resulting value is the average of the k-fold cross
+        validation score obtained in each of the runs.
     """
 
     def __init__(self, setting, cluster_names=None, select_cond=None,
                  parallel=False, num_core="all", fitting_scheme="ridge",
                  alpha=1E-5, max_cluster_size=None, max_cluster_dia=None,
-                 scoring_scheme='loocv', min_weight=1.0):
+                 scoring_scheme='loocv', min_weight=1.0, nsplits=10,
+                 num_repetitions=1):
         """Initialize the Evaluate class."""
         if not isinstance(setting, (CEBulk, CECrystal)):
             msg = "setting must be CEBulk or CECrystal object"
@@ -87,6 +98,8 @@ class Evaluate(object):
 
         self.scheme = None
         self.scheme_string = None
+        self.nsplits = nsplits
+        self.num_repetitions = num_repetitions
         # Define the selection conditions
         self.select_cond = []
         if select_cond is None:
@@ -118,7 +131,7 @@ class Evaluate(object):
                 self.num_core = int(mp.cpu_count() / 2)
             else:
                 self.num_core = int(num_core)
-        
+       
         self.set_fitting_scheme(fitting_scheme, alpha)
 
     def set_fitting_scheme(self, fitting_scheme="ridge", alpha=1E-9):
@@ -295,10 +308,14 @@ class Evaluate(object):
         rmax = max(np.append(self.e_dft, e_pred)) + 0.1
 
         cv = None
+        cv_name = "LOOCV"
         if self.scoring_scheme == "loocv":
             cv = self.loocv()*1000
         elif self.scoring_scheme == "loocv_fast":
             cv = self.loocv_fast()*1000
+        elif self.scoring_scheme == "k-fold":
+            cv = self.k_fold_cv()*1000
+            cv_name = "{}-fold".format(self.nsplits)
         t = np.arange(rmin - 10, rmax + 10, 1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -327,8 +344,9 @@ class Evaluate(object):
         ax.set_ylabel(r'$E_{DFT}$ (eV/atom)')
         ax.set_xlabel(r'$E_{pred}$ (eV/atom)')
         ax.text(0.95, 0.01,
-                "CV = {0:.3f} meV/atom \n"
-                "RMSE = {1:.3f} meV/atom".format(cv, self.rmse() * 1000),
+                cv_name + " = {0:.3f} meV/atom \n"
+                "RMSE = {1:.3f} meV/atom"
+                "".format(cv, self.rmse() * 1000),
                 verticalalignment='bottom', horizontalalignment='right',
                 transform=ax.transAxes, fontsize=12)
         if self.e_pred_loo is not None:
@@ -354,12 +372,14 @@ class Evaluate(object):
         fig_residual = plt.figure()
         ax_residual = fig_residual.add_subplot(111)
         ax_residual.set_title("LOO residual (o). Residual (v)")
-        loo_delta = (self.e_dft - self.e_pred_loo)*1000.0
+        if self.e_pred_loo is None:
+            loo_delta = None
+        else:
+            loo_delta = (self.e_dft - self.e_pred_loo)*1000.0
         delta_e = (self.e_dft - e_pred)*1000.0
-        if self.effective_num_data_pts != len(self.e_dft):
+        if self.effective_num_data_pts != len(self.e_dft) and loo_delta is not None:
             x = range(len(self.e_dft))
-            im = ax_residual.scatter(x, (self.e_dft - self.e_pred_loo)*1000.0,
-                                     c=w)
+            im = ax_residual.scatter(x, loo_delta, c=w)
             cb = fig_residual.colorbar(im)
             cb.set_label("Weight")
             
@@ -368,7 +388,8 @@ class Evaluate(object):
             ax_residual.plot(loo_delta, "o",
                              color="black", markeredgewidth=0.0, mfc="none")
         else:
-            ax_residual.plot(loo_delta, "o")
+            if loo_delta is not None:
+                ax_residual.plot(loo_delta, "o")
 
         ax_residual.plot(delta_e, "v", mfc="none")
 
@@ -377,8 +398,12 @@ class Evaluate(object):
 
         if interactive:
             lines = ax_residual.get_lines()
-            data_points = [lines[0], lines[1]]
-            annotations = [self.names, self.names]
+            if loo_delta is not None:
+                data_points = [lines[0], lines[1]]
+                annotations = [self.names, self.names]
+            else:
+                data_points = [lines[0]]
+                annotations = [self.names]
             ShowStructureOnClick(fig_residual, ax_residual, data_points,
                                  annotations, db_name)
         else:
@@ -488,6 +513,8 @@ class Evaluate(object):
                     cv[i] = self.loocv()
                 elif self.scoring_scheme == "loocv_fast":
                     cv[i] = self.loocv_fast()
+                elif self.scoring_scheme == "k-fold":
+                    cv[i] = self.k_fold_cv()
                 num_eci = len(np.nonzero(self.get_eci())[0])
                 alpha = scheme.get_scalar_parameter()
                 alphas.append(alpha)
@@ -706,6 +733,24 @@ class Evaluate(object):
         self.e_pred_loo = e_pred_loo
         return np.sqrt(cv_sq)
 
+    def k_fold_cv(self):
+        """Determine the k-fold cross validation."""
+        from ase.clease.tools import split_dataset
+        print("Calculating {}-fold cross validation by averaging "
+              "{} random partitions"
+              "".format(self.nsplits, self.num_repetitions))
+        avg_score = 0.0
+        for _ in range(self.num_repetitions):
+            partitions = split_dataset(self.cf_matrix, self.e_dft,
+                                       nsplits=self.nsplits)
+            scores = []
+            for part in partitions:
+                eci = self.scheme.fit(part["train_X"], part["train_y"])
+                e_pred = part["validate_X"].dot(eci)
+                scores.append(np.mean((e_pred - part["validate_y"])**2))
+            avg_score += np.sqrt(np.mean(scores))
+        return avg_score/self.num_repetitions
+
     def _get_eci_loo(self, i):
         """Determine ECI values for the Leave-One-Out case.
 
@@ -795,6 +840,8 @@ def loocv_mp(args):
         cv = evaluator.loocv()
     elif evaluator.scoring_scheme == "loocv_fast":
         cv = evaluator.loocv_fast()
+    elif evaluator.scoring_scheme == "k-fold":
+        cv = evaluator.k_fold_cv()
     num_eci = len(np.nonzero(evaluator.get_eci())[0])
     logger.info('{:.10f}\t {}\t {:.10f}'.format(alpha, num_eci, cv))
     return cv
