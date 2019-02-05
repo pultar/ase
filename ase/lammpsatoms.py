@@ -264,6 +264,8 @@ class LammpsAtoms(Atoms):
 
         def unique_ind(a):
             id_ = np.unique(a)
+            if np.all(id_ == np.arange(len(id_)) + 1):
+                return None
             d = {}
             for i, val in enumerate(id_, start=1):
                 d[val] = i
@@ -294,17 +296,19 @@ class LammpsAtoms(Atoms):
 
         for prop in ['mol-id', 'type']:
             d = unique_ind(self.get_array(prop))
-            self.set_prop(prop,
-                          [d[x] for x in self.get_array(prop)],
-                          int)
+            if d:
+                self.set_prop(prop,
+                              [d[x] for x in self.get_array(prop)],
+                              int)
 
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop):
                 d = unique_ind(self.get_types(prop))
-                for index, item in enumerate(self.get_array(prop)):
-                    for key in sorted(item.keys()):
-                        _ = self.arrays[prop][index].pop(key)
-                        self.arrays[prop][index][d[key]] = _
+                if d:
+                    for index, item in enumerate(self.get_array(prop)):
+                        for key in sorted(item.keys()):
+                            _ = self.arrays[prop][index].pop(key)
+                            self.arrays[prop][index][d[key]] = _
 
     def __delitem__(self, i=-1):
         if not isinstance(i, list):
