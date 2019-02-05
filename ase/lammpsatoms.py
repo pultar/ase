@@ -97,11 +97,15 @@ class LammpsAtoms(Atoms):
 
     def get_num_prop(self, prop):
         ''' returns number of prop: bonds, etc.'''
-        if not self.has(prop):
-            return 0
-        items = self.arrays[prop]
-        values = [j for x in items for i in x.values() for j in i]
-        return len(values)
+        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if not self.has(prop):
+                return 0
+            items = self.arrays[prop]
+            values = [j for x in items for i in x.values() for j in i]
+            return len(values)
+        else:
+            raise NotImplementedError('get_num_prop not implemented for '
+                                      '{0}'.format(prop))
 
     def add_prop(self, prop, items):
         ''' adds to prop
