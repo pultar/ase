@@ -15,6 +15,8 @@ class LammpsAtoms(Atoms):
                  *args,
                  id=None,
                  type=None,
+                 name=None,
+                 resname=None,
                  mol_id=None,
                  mmcharge=None,
                  bonds=None,
@@ -27,6 +29,10 @@ class LammpsAtoms(Atoms):
                 id = symbols.get_prop('id')
             if symbols.has('type') and type is None:
                 type = symbols.get_prop('type')
+            if symbols.has('name') and name is None:
+                name = symbols.get_prop('name')
+            if symbols.has('resname') and resname is None:
+                resname = symbols.get_prop('resname')
             if symbols.has('mol-id') and mol_id is None:
                 mol_id = symbols.get_prop('mol-id')
             if symbols.has('mmcharge') and mmcharge is None:
@@ -46,6 +52,12 @@ class LammpsAtoms(Atoms):
             self.set_prop('id', id, int)
         if type is not None:
             self.set_prop('type', type, int)
+        if name is not None:
+            # numpy string dtypes are truncated
+            # numpy strings should be stored as objects
+            self.set_prop('name', name, object)
+        if resname is not None:
+            self.set_prop('resname', resname, object)
         if mol_id is not None:
             self.set_prop('mol-id', mol_id, int)
         if mmcharge is not None:
@@ -68,9 +80,15 @@ class LammpsAtoms(Atoms):
         '''returns types of prop: bonds, etc'''
         if not self.has(prop):
             return []
+
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             items = self.arrays[prop]
             return np.unique([i for x in items for i in x.keys()])
+        if prop == 'resname':
+            types = set()
+            for i in self.arrays[prop]:
+                types |= i
+            return np.asarray(list(types))
         else:
             return np.unique(self.get_array(prop))
 
@@ -91,6 +109,14 @@ class LammpsAtoms(Atoms):
                         else:
                             value = [i] + value
                         d[key].append(value)
+            return d
+        elif prop == 'resname':
+            d = {}
+            for resname in self.get_types(prop):
+                d[resname] = []
+            for i, resnames in enumerate(self.get_array(prop)):
+                for resname in resnames:
+                    d[resname].append(i)
             return d
         else:
             return self.get_array(prop)
@@ -171,8 +197,18 @@ class LammpsAtoms(Atoms):
                     else:
                         print('{0} already exists'.format(values_copy[i]))
 
-            self.set_array(prop, array, 'object')
-            self.update()
+            self.set_array(prop, array, object)
+        elif prop == 'resname':
+            if not self.has(prop):
+                array = [set() for _ in range(len(self))]
+            else:
+                array = self.get_array(prop)
+
+            for key, values in items.items():
+                for i in values:
+                    array[i] |= set([key])
+
+            self.set_array(prop, array, object)
         else:
             raise NotImplementedError('add_prop not implemented for '
                                       '{0}'.format(prop))
@@ -180,13 +216,14 @@ class LammpsAtoms(Atoms):
     def set_prop(self, prop, value, dtype=None):
         '''
         :param prop: Name of property
-        :param value: dict of keys as type/resname, and keys as list of indices
-                      pertaining to the key
+        :param value: dict of keys as type/resname, and keys as list of
+                      indices pertaining to the key
         :param dtype: (int/float/'object') type of values;
-                      'object' in case of bonds, angles, impropers, and dihedrals
+                      'object' in case of bonds, angles, impropers, and
+                      dihedrals
         :return: None
         '''
-        if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+        if prop in ['resname', 'bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop):
                 # delete array
                 del self.arrays[prop]
@@ -254,11 +291,18 @@ class LammpsAtoms(Atoms):
                         _ = self.arrays[prop][indx].pop(key)
                         old = self.arrays[prop][indx].get(indx_of[key], [])
                         self.arrays[prop][indx][indx_of[key]] = old + _
-        elif prop in ['mol-id', 'type']:
+        elif prop in ['mol-id', 'type', 'name']:
             for indx, item in enumerate(self.arrays[prop][slice(*index)],
                                         start=index[0]):
                 if item in indx_of.keys():
                     self.arrays[prop][indx] = indx_of[item]
+        elif prop == 'resname':
+            for indx, resnames in enumerate(self.arrays[prop][slice(*index)],
+                                        start=index[0]):
+                for resname in resnames:
+                    if resname in indx_of.keys():
+                        self.arrays[prop][indx] -= set([resname])
+                        self.arrays[prop][indx] |= set([indx_of[resname]])
         else:
             raise NotImplementedError('set_types_to not implemented for '
                                       '{0}'.format(prop))
@@ -275,17 +319,6 @@ class LammpsAtoms(Atoms):
                 d[val] = i
             return d
 
-        if specorder is not None:
-            order = np.unique(self.get_atomic_numbers())
-            if np.any(order != np.unique(specorder)):
-                raise RuntimeError('Atomic numbers found in specorder'
-                                   ' mismatch those found in system:'
-                                   ' {}'.format(order))
-            order_dict = dict(zip(order, specorder))
-            self.set_array('type',
-                           [order_dict[i] for i in self.get_atomic_numbers()],
-                           int)
-
         self.arrays['id'] = np.arange(len(self)) + 1
 
         if not self.has('type'):
@@ -297,6 +330,11 @@ class LammpsAtoms(Atoms):
             self.set_array('mol-id',
                            np.ones(len(self)),
                            int)
+
+        if not self.has('name'):
+            self.set_array('name',
+                           self.get_chemical_symbols(),
+                           object)
 
         for prop in ['mol-id', 'type']:
             d = unique_ind(self.get_array(prop))
@@ -313,6 +351,17 @@ class LammpsAtoms(Atoms):
                         for key in sorted(item.keys()):
                             _ = self.arrays[prop][index].pop(key)
                             self.arrays[prop][index][d[key]] = _
+
+        if specorder is not None:
+            order = np.unique(self.get_atomic_numbers())
+            if np.any(order != np.unique(specorder)):
+                raise RuntimeError('Atomic numbers found in specorder'
+                                   ' mismatch those found in system:'
+                                   ' {}'.format(order))
+            order_dict = dict(zip(order, specorder))
+            self.set_array('type',
+                           [order_dict[i] for i in self.get_atomic_numbers()],
+                           int)
 
     def __delitem__(self, i=-1):
         if not isinstance(i, list):
