@@ -48,7 +48,7 @@ class NGLDisplay:
         self.csel = Dropdown(options=nglview.color.COLOR_SCHEMES,
                              value=' ', description='Color scheme')
 
-        self.rad = FloatSlider(value=0.8, min=0.0, max=1.5, step=0.01,
+        self.rad = FloatSlider(value=0.5, min=0.0, max=1.5, step=0.01,
                                description='Ball size')
 
         self.asel.observe(self._select_atom)
@@ -56,7 +56,7 @@ class NGLDisplay:
         self.rad.observe(self._update_repr)
 
         self.view.update_spacefill(radiusType='covalent',
-                                   scale=0.8,
+                                   radiusScale=0.5,
                                    color_scheme=self.csel.value,
                                    color_scale='rainbow')
 
