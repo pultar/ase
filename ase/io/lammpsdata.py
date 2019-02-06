@@ -44,6 +44,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     mol_id_in = {}
     mmcharge_in = {}
     mass_in = {}
+    name_in = {}
+    resname_in = {}
     vel_in = {}
     bonds_in = []
     angles_in = []
@@ -109,7 +111,11 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         if comment is None:
             comment = line.rstrip()
         else:
+            line_comment = None
+            if '#' in line:
+                line_comment = line.split('#')[1]
             line = re.sub("#.*", "", line).rstrip().lstrip()
+            line = line.rstrip().lstrip()
             if re.match("^\\s*$", line):  # skip blank lines
                 continue
 
@@ -188,12 +194,16 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                     raise RuntimeError("Style '{}' not supported or invalid "
                                        "number of fields {}"
                                        "".format(style, len(fields)))
+                if line_comment:
+                    resname_in[id] = set(line_comment.split())
             elif section == "Velocities":  # id vx vy vz
                 vel_in[int(fields[0])] = (float(fields[1]),
                                           float(fields[2]),
                                           float(fields[3]))
             elif section == "Masses":
                 mass_in[int(fields[0])] = float(fields[1])
+                if line_comment:
+                    name_in[int(fields[0])] = line_comment.split()[0]
             elif section == "Bonds":  # id type atom1 atom2
                 bonds_in.append((int(fields[1]),
                                  int(fields[2]),
@@ -253,6 +263,14 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         travel = np.zeros((N, 3), int)
     else:
         travel = None
+    if len(name_in) > 0:
+        names = np.empty((N), object)
+    else:
+        names = None
+    if len(resname_in) > 0:
+        resnames = np.empty((N), object)
+    else:
+        resnames = None
     if len(bonds_in) > 0:
         bonds = [{} for _ in range(N)]
     else:
@@ -286,16 +304,20 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         if travel is not None:
             travel[ind] = travel_in[id]
         if mol_id is not None:
-            mol_id[i] = mol_id_in[id]
+            mol_id[ind] = mol_id_in[id]
+        if resnames is not None:
+            resnames[ind] = resname_in[id]
         if mmcharge is not None:
-            mmcharge[i] = mmcharge_in[id]
-        ids[i] = id
+            mmcharge[ind] = mmcharge_in[id]
+        ids[ind] = id
         # by type
         types[ind] = type
         if Z_of_type is None:
             numbers[ind] = type
         else:
             numbers[ind] = Z_of_type[type]
+        if names is not None:
+            names[ind] = name_in[type]
         if masses is not None:
             masses[ind] = mass_in[type]
     # convert units
@@ -308,10 +330,10 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
 
     # create ase.Atoms
     at = LammpsAtoms(positions=positions,
-               numbers=numbers,
-               masses=masses,
-               cell=cell,
-               pbc=[True, True, True])
+                     numbers=numbers,
+                     masses=masses,
+                     cell=cell,
+                     pbc=[True, True, True])
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
@@ -321,6 +343,14 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         at.set_array('travel', travel, int)
     if mol_id is not None:
         at.set_array('mol-id', mol_id, int)
+    if names is not None:
+        at.set_array('name', names, object)
+    if resnames is not None:
+        # removing name from resname
+        # if name doesnt exist, the LammpsAtoms __init__ already gave
+        # chemical symbol as names, else the previous line gave proper names
+        resnames -= np.asarray([set([i]) for i in at.arrays['name']])
+        at.set_array('resname', resnames, object)
     if mmcharge is not None:
         at.set_array('mmcharge', mmcharge, float)
 
@@ -364,6 +394,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
 
     return at
 
+
 def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                       prismobj=None, velocities=False, style='full'):
     """Write atomic structure data to a LAMMPS data_ file."""
@@ -402,8 +433,9 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 '{1} \n'.format(atoms.get_num_prop(prop),
                                 prop))
 
-    # LammpsAtoms always assigns type
+    # LammpsAtoms always assigns type and name
     types = atoms.get_array('type')
+    names = atoms.get_array('name')
 
     n_types = atoms.get_num_types('type')
     f.write('{0:8} \t '
@@ -431,7 +463,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     for i in atoms.get_types('type'):
         indx = np.where(i == types)[0][0]
         mass = atoms.get_masses()[indx]
-        sym = atoms.get_chemical_symbols()[indx]
+        sym = names[indx]
         f.write('{0:>6} {1:8.4f} # {2}\n'.format(i, mass, sym))
     f.write('\n\n')
 
@@ -440,6 +472,10 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         travel = atoms.get_array('travel')
     else:
         travel = None
+    if atoms.has('resname'):
+        resnames = atoms.get_array('resname')
+    else:
+        resnames = None
     id = atoms.get_array('id')
     mol_id = atoms.get_array('mol-id')
     pos = p.pos_to_lammps_fold_str(atoms.get_positions())
@@ -456,9 +492,11 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                               *r))
                 if travel:
                     f.write(' {0:8.4f} {1:8.4f} '
-                            '{2:8.4f}\n'.format(*travel[i]))
-                else:
-                    f.write('\n')
+                            '{2:8.4f}'.format(*travel[i]))
+                f.write(' # {0}'.format(names[i]))
+                if resnames is not None:
+                    f.write(' {0}'.format(' '.join(list(resnames[i]))))
+                f.write('\n')
         else:
             raise RuntimeError('style "full" not possible. '
                                'The system does not have mmcharge')
@@ -471,11 +509,13 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                           *r))
             if travel:
                 f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}\n'.format(*travel[i]))
-            else:
-                f.write('\n')
+                        '{2:8.4f}'.format(*travel[i]))
+            f.write(' # {0}'.format(names[i]))
+            if resnames is not None:
+                f.write(' {0}'.format(' '.join(list(resnames[i]))))
+            f.write('\n')
     elif (style == 'angle' or style == 'bond' or
-                       style == 'molecular'):
+          style == 'molecular'):
         # id mol-id type x y z [tx ty tz]
         for i, r in enumerate(pos):
             f.write('{0:6} {1:4} {2:4}'
@@ -485,9 +525,11 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                           *r))
             if travel:
                 f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}\n'.format(*travel[i]))
-            else:
-                f.write('\n')
+                        '{2:8.4f}'.format(*travel[i]))
+            f.write(' # {0}'.format(names[i]))
+            if resnames is not None:
+                f.write(' {0}'.format(' '.join(list(resnames[i]))))
+            f.write('\n')
     else:
         raise RuntimeError('style {0} not supported. '
                            'Use: full, atomic, angle, bond, or'
@@ -495,35 +537,41 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write('\n\n')
 
     if atoms.has('bonds'):
+        typ = atoms.get_types('bonds')
         count = 1
         f.write('Bonds \n\n')
         for indx, item in enumerate(atoms.get_array('bonds')):
             for key, values in item.items():
                 for value in values:
                     f.write('{0:6} {1:6} {2:6} '
-                            '{3:6}\n'.format(count,
-                                              key,
-                                              indx + 1,
-                                              value[0] + 1))
+                            '{3:6}\t# {4}\n'.format(count,
+                                                    key,
+                                                    indx + 1,
+                                                    value[0] + 1,
+                                                    typ[key]))
                     count += 1
         f.write('\n\n')
 
     if atoms.has('angles'):
+        typ = atoms.get_types('angles')
         count = 1
         f.write('Angles \n\n')
         for indx, item in enumerate(atoms.get_array('angles')):
             for key, values in item.items():
                 for value in values:
                     f.write('{0:6} {1:6} {2:6}'
-                            '{3:6} {4:6}\n'.format(count,
-                                                   key,
-                                                   value[0] + 1,
-                                                   indx + 1,
-                                                   value[1] + 1))
+                            '{3:6} {4:6}'
+                            '\t# {5}\n'.format(count,
+                                               key,
+                                               value[0] + 1,
+                                               indx + 1,
+                                               value[1] + 1,
+                                               typ[key]))
                     count += 1
         f.write('\n\n')
 
     if atoms.has('dihedrals'):
+        typ = atoms.get_types('dihedrals')
         count = 1
         f.write('Dihedrals \n\n')
         for indx, item in enumerate(atoms.get_array('dihedrals')):
@@ -531,15 +579,16 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 for value in values:
                     _ = [i + 1 for i in value]
                     f.write('{0:6} {1:6} {2:6} {3:6} {4:6} '
-                            '{5:6}\n'.format(count,
-                                             key,
-                                             indx + 1,
-                                             *_))
+                            '{5:6}'.format(count,
+                                           key,
+                                           indx + 1,
+                                           *_))
+                    f.write('\t# {0}\n'.format(typ[key]))
                     count += 1
         f.write('\n\n')
 
-
     if atoms.has('impropers'):
+        typ = atoms.get_types('impropers')
         count = 1
         f.write('Impropers \n\n')
         for indx, item in enumerate(atoms.get_array('impropers')):
@@ -547,16 +596,17 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 for value in values:
                     _ = [i + 1 for i in value]
                     f.write('{0:6} {1:6} {2:6} {3:6} {4:6} '
-                            '{5:6}\n'.format(count,
-                                             key,
-                                             indx + 1,
-                                             *_))
+                            '{5:6}'.format(count,
+                                           key,
+                                           indx + 1,
+                                           *_))
+                    f.write('\t# {0}\n'.format(typ[key]))
                     count += 1
         f.write('\n\n')
 
     if velocities and atoms.get_velocities() is not None:
         f.write('\n\nVelocities \n\n')
-        for i, v in enumerate(atoms.get_velocities() / (Ang/(fs*1000.))):
+        for i, v in enumerate(atoms.get_velocities() / (Ang / (fs*1000.))):
             f.write('{0:>6} {1} {2} {3}\n'.format(
                     *(i + 1,) + tuple(v)))
 
