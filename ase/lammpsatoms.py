@@ -74,17 +74,41 @@ class LammpsAtoms(Atoms):
 
     def get_num_types(self, prop):
         ''' returns number of types of prop: bonds, etc'''
-        return len(self.get_types(prop))
+        return len(self.get_types(prop, verbose=False))
 
-    def get_types(self, prop):
-        '''returns types of prop: bonds, etc'''
+    def get_types(self, prop, verbose=True):
+        '''returns types of prop: bonds, etc
+        :param prop: name of property
+        :param verbose: gives name abbreviation for the types'''
         if not self.has(prop):
             return []
 
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             items = self.arrays[prop]
-            return np.unique([i for x in items for i in x.keys()])
-        if prop == 'resname':
+            type_list = np.unique([i for x in items for i in x.keys()])
+
+            if not verbose:
+                return type_list
+
+            names = self.get_prop('name')
+            types = {}
+            for key in type_list:
+                for i, item in enumerate(items):
+                    if key in item.keys():
+                        eg_list = [i] + item[key][0]
+                        continue
+                name_list = names[eg_list].tolist()
+                if prop == 'bonds':
+                    name_list.sort()
+                if prop == 'angles':
+                    # vertex atom is at first index
+                    vertex = name_list.pop(0)
+                    name_list.sort()
+                    name_list.insert(1, vertex)
+                types[key] = '-'.join(name_list)
+            return types
+
+        elif prop == 'resname':
             types = set()
             for i in self.arrays[prop]:
                 types |= i
@@ -99,7 +123,7 @@ class LammpsAtoms(Atoms):
 
         if prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             d = {}
-            for key in self.get_types(prop):
+            for key in self.get_types(prop, verbose=False):
                 d[key] = []
             for i, item in enumerate(self.get_array(prop)):
                 for key, values in item.items():
@@ -112,7 +136,7 @@ class LammpsAtoms(Atoms):
             return d
         elif prop == 'resname':
             d = {}
-            for resname in self.get_types(prop):
+            for resname in self.get_types(prop, verbose=False):
                 d[resname] = []
             for i, resnames in enumerate(self.get_array(prop)):
                 for resname in resnames:
@@ -345,7 +369,7 @@ class LammpsAtoms(Atoms):
 
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop):
-                d = unique_ind(self.get_types(prop))
+                d = unique_ind(self.get_types(prop, verbose=False))
                 if d:
                     for index, item in enumerate(self.get_array(prop)):
                         for key in sorted(item.keys()):
@@ -457,8 +481,8 @@ class LammpsAtoms(Atoms):
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop) and other.has(prop) and prop in extend_prop:
                 indx_of = {}
-                max_ = np.max(self.get_types(prop))
-                for i in other.get_types(prop):
+                max_ = np.max(self.get_types(prop, verbose=False))
+                for i in other.get_types(prop, verbose=False):
                     indx_of[i] = i + max_
                 other.set_types_to(prop, indx_of)
 
@@ -506,17 +530,11 @@ class LammpsAtoms(Atoms):
             if item.dtype == bool:
                 item = np.arange(len(self))[item]
 
-        '''
-        # Converting to LammpsAtoms now not earlier,
-        # since if single item is required, then
-        # converting Atom to LammpsAtoms causes errors
-        atoms = LammpsAtoms(atoms)
-
-        lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+        lammps_props = ['name', 'bonds', 'angles', 'dihedrals', 'impropers']
         for name in lammps_props:
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name][item])
-        '''
+
         indx_of = {i: None for i in range(len(self))}
         count = 0
         for i in np.array(range(len(self)))[item]:
