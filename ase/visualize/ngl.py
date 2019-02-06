@@ -58,7 +58,7 @@ class NGLDisplay:
         self.view.update_spacefill(radiusType='covalent',
                                    radiusScale=0.5,
                                    color_scheme=self.csel.value,
-                                   color_scale='rainbow')
+                                   color_scale='element')
 
         wdg = [self.asel, self.csel, self.rad]
         if self.frm:
@@ -74,7 +74,7 @@ class NGLDisplay:
         self.view.update_spacefill(radiusType='covalent',
                                    scale=self.rad.value,
                                    color_scheme=self.csel.value,
-                                   color_scale='rainbow')
+                                   color_scale='element')
 
     def _update_frame(self, chg=None):
         self.view.frame = self.frm.value
