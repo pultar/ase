@@ -8,6 +8,7 @@ from ase.quaternions import Quaternions
 from ase.parallel import paropen
 from ase.calculators.lammpslib import unit_convert
 from ase.utils import basestring
+from ase.units import Ang, fs
 
 
 def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
