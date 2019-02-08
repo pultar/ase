@@ -266,6 +266,7 @@ by invoking the get_potential_energy() method::
         lammps_header=['units metal',
                        'atom_style atomic',
                        'atom_modify map array sort 0 0'],
+        amendments=None,
         boundary=True,
         create_box=True,
         create_atoms=True,
@@ -380,6 +381,10 @@ by invoking the get_potential_energy() method::
         self.lmp.command('echo log')  # switch back log
 
         self.set_lammps_pos(atoms)
+
+        if self.parameters.amendments is not None:
+            for cmd in self.parameters.amendments:
+                self.lmp.command(cmd)
 
         if n_steps > 0:
             if velocity_field is None:
