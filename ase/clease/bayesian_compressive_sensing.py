@@ -85,6 +85,23 @@ class BayesianCompressiveSensing(LinearRegression):
         self.lamb_opt_start = lamb_opt_start
         self.penalty = penalty
 
+        # Store a copy of all the key-word arguments
+        # passed by the user
+        self.user_supplied_args = {
+            "shape_var": shape_var,
+            "rate_var": rate_var,
+            "shape_lamb": shape_lamb,
+            "lamb_opt_start": lamb_opt_start,
+            "variance_opt_start": variance_opt_start,
+            "fname": fname,
+            "maxiter": maxiter,
+            "output_rate_sec": output_rate_sec,
+            "select_strategy": select_strategy,
+            "noise": noise,
+            "init_lamb": init_lamb,
+            "penalty": penalty
+        }
+
         # Arrays used during fitting
         self.X = None
         self.y = None
@@ -102,19 +119,21 @@ class BayesianCompressiveSensing(LinearRegression):
         self.ss = None
         self.qq = None
 
-    def _initialize(self):
+    def _initialize(self, reset=False):
         """
         Initialize all parameters after X and y is given
         """
+        if reset:
+            self.__dict__.update(self.user_supplied_args)
         num_features = self.X.shape[1]
-        if self.gammas is None:
+        if reset or self.gammas is None:
             self.gammas = np.zeros(num_features)
         self.eci = np.zeros_like(self.gammas)
 
-        if self.inv_variance is None:
+        if reset or self.inv_variance is None:
             self.inv_variance = 1.0/self.noise**2
 
-        if self.lamb is None:
+        if reset or self.lamb is None:
             self.lamb = 0.0
 
         self.inverse_sigma = np.zeros((num_features, num_features))
@@ -378,7 +397,7 @@ class BayesianCompressiveSensing(LinearRegression):
 
         self.X = X
         self.y = y
-        self._initialize()
+        self._initialize(reset=True)
 
         is_first = True
         iteration = 0
@@ -454,6 +473,15 @@ class BayesianCompressiveSensing(LinearRegression):
         ax.axhline(0, ls="--")
         ax.set_xscale("log")
         plt.show()
+
+    @property
+    def weight_matrix(self):
+        return LinearRegression.weight_matrix(self)
+
+    @weight_matrix.setter
+    def weight_matrix(self, X):
+        raise NotImplementedError("Currently Lasso does not support "
+                                  "data weighting.")
 
 
 def shape_parameter_equation(x, lamb):
