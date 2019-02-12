@@ -455,6 +455,15 @@ class BayesianCompressiveSensing(LinearRegression):
         ax.set_xscale("log")
         plt.show()
 
+    @property
+    def weight_matrix(self):
+        return LinearRegression.weight_matrix(self)
+
+    @weight_matrix.setter
+    def weight_matrix(self, X):
+        raise NotImplementedError("Currently Lasso does not support "
+                                  "data weighting.")
+
 
 def shape_parameter_equation(x, lamb):
     return np.log(x/2.0) + 1 - polygamma(0, x/2) + np.log(lamb) - lamb
