@@ -347,7 +347,8 @@ class GAFit(object):
             new_individual = self.individuals[p1].copy()
             new_individual2 = self.individuals[p2].copy()
 
-            mask = np.random.randint(0, high=2, dtype=np.uint8)
+            mask = np.random.randint(0, high=2, size=len(new_individual))
+            mask = mask.astype(np.uint8)
             new_individual[mask] = self.individuals[p2][mask]
             new_individual2[mask] = self.individuals[p1][mask]
             new_individual = self.make_valid(new_individual)
