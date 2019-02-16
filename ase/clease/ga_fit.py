@@ -75,6 +75,7 @@ class GAFit(object):
             overfitting better than aic)
         loocv - Leave one out cross validation (average)
         max_loocv - Leave one out cross valdition (maximum)
+        hcq - Hannan-Quinn information criterion
 
     sparsity_slope: int
         Ad hoc parameter that can be used to tune the sparsity
@@ -121,7 +122,7 @@ class GAFit(object):
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
 
-        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc", "hcq"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
@@ -202,6 +203,11 @@ class GAFit(object):
         N = len(self.e_dft)
         return N*np.log(mse) + 2*num_features*self.sparsity_slope
 
+    def hcq(self, mse, num_features):
+        """Return Hannan-Quinn information criterion."""
+        N = len(self.e_dft)
+        return N*np.log(mse) + 2*num_features*self.sparsity_slope
+
     def aicc(self, mse, num_features):
         """Modified Afaikes informatiion criterion."""
         aic = self.aic(mse, num_features)
@@ -250,6 +256,8 @@ class GAFit(object):
             info_measure = self.aic(mse, n_selected)
         elif self.cost_func == "aicc":
             info_measure = self.aicc(mse, n_selected)
+        elif self.cost_func == "hcq":
+            info_measure = self.hcq(mse, n_selected)
         elif "loocv" in self.cost_func:
             loo_dev = self.loo_dev(individual)
             cv_sq = np.sum(loo_dev)/self.eff_num
