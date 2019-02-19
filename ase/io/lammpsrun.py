@@ -126,7 +126,9 @@ def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
                 id.append(int(fields[atom_attributes['id']]))
                 types.append(int(fields[atom_attributes['type']]))
                 add_quantity(fields, positions, ['x', 'y', 'z'])
+                add_quantity(fields, positions, ['xu', 'yu', 'zu'])
                 add_quantity(fields, scaled_positions, ['xs', 'ys', 'zs'])
+                add_quantity(fields, scaled_positions, ['xsu', 'ysu', 'zsu'])
                 add_quantity(fields, velocities, ['vx', 'vy', 'vz'])
                 add_quantity(fields, forces, ['fx', 'fy', 'fz'])
                 add_quantity(fields, quaternions, ['c_q[1]', 'c_q[2]',
