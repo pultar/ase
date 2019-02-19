@@ -1,16 +1,55 @@
 import numpy as np
 from ase.clease.concentration import Concentration
 from collections import OrderedDict
+from ase.test import must_raise
+from ase.clease.concentration import InvalidConstraintError
 
 
 def test_full_range():
     basis_elements = [['Li', 'Ru', 'X'], ['O', 'X']]
-    conc = Concentration(basis_elements=basis_elements)
-    conc = conc.get_random_concentration()
+    conc_cls = Concentration(basis_elements=basis_elements)
+    conc = conc_cls.get_random_concentration()
     sum1 = np.sum(conc[:3])
     assert abs(sum1 - 1) < 1E-9
     sum2 = np.sum(conc[3:])
     assert abs(sum2 - 1) < 1E-9
+
+    # Test exceptions
+    # 1) Different length for A_eq and b_eq
+    A = [[1, 0, 0, 0, 1], [2, 3, 0, 1, 0]]
+    b = [0]
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_eq_constraints(A, b)
+
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_ineq_constraints(A, b)
+
+    # 2) Wrong number of columns
+    A = [[1, 1]]
+    b = [0]
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_eq_constraints(A, b)
+
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_ineq_constraints(A, b)
+
+    # 3) Wrong dimension on A matrix
+    A = [1, 0, 0, 0, 0]
+    b = [0]
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_eq_constraints(A, b)
+
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_ineq_constraints(A, b)
+
+    # 4) Wrong dimension on the b vector
+    A = [[1, 0, 0, 0, 0]]
+    b = [[0, 1]]
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_eq_constraints(A, b)
+
+    with must_raise(InvalidConstraintError):
+        conc_cls.add_usr_defined_ineq_constraints(A, b)
 
 
 def fixed_composition():
@@ -209,9 +248,6 @@ def test_two_of_four_linked_basis():
                          A_eq=A_eq, b_eq=b_eq, A_lb=A_lb, b_lb=b_lb)
     linked = conc._linked_basis
     assert sum(1 for i, num in enumerate(linked) if num == i) == 2
-
-
-
 
 
 test_full_range()

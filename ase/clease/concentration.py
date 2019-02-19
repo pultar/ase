@@ -17,6 +17,11 @@ class InvalidConcentrationError(Exception):
     pass
 
 
+class InvalidConstraintError(Exception):
+    """Exception being raised if user provides invalid constraints."""
+    pass
+
+
 class Concentration(object):
     """"Class that specifies the concentration ranges of consituting elements.
 
@@ -150,20 +155,21 @@ class Concentration(object):
         A_eq = np.array(A_eq)
         b_eq = np.array(b_eq)
         if len(A_eq.shape) != 2:
-            raise ValueError("A_eq has to be a 2D matrix!")
+            raise InvalidConstraintError("A_eq has to be a 2D matrix!")
         if len(b_eq.shape) != 1:
-            raise ValueError("b_eq has to be a 1D vector!")
+            raise InvalidConstraintError("b_eq has to be a 1D vector!")
 
         if A_eq.shape[1] != self.num_concs:
-            raise ValueError("The number of columns in A_eq has to "
-                             "match the number of concentration "
-                             "variables. Hence, A_eq needs to have "
-                             "{} columns".format(self.num_concs))
+            raise InvalidConstraintError(
+                "The number of columns in A_eq has to "
+                "match the number of concentration "
+                "variables. Hence, A_eq needs to have "
+                "{} columns".format(self.num_concs))
 
         if A_eq.shape[0] != len(b_eq):
-            raise ValueError("The length of b_eq has to be "
-                             "the same as the number of rows in "
-                             "A_eq.")
+            raise InvalidConstraintError(
+                "The length of b_eq has to be "
+                "the same as the number of rows in A_eq.")
 
         self.A_eq = np.vstack((self.A_eq, A_eq))
         self.b_eq = np.append(self.b_eq, b_eq)
@@ -186,21 +192,23 @@ class Concentration(object):
         A_lb = np.array(A_lb)
         b_lb = np.array(b_lb)
         if len(A_lb.shape) != 2:
-            raise ValueError("A_lb has to be a 2D matrix!")
+            raise InvalidConstraintError("A_lb has to be a 2D matrix!")
 
         if len(b_lb.shape) != 1:
-            raise ValueError("b_lb has to be a 1D vector!")
+            raise InvalidConstraintError("b_lb has to be a 1D vector!")
 
         if A_lb.shape[1] != self.num_concs:
-            raise ValueError("The number of columns in A_lb has to "
-                             "match the number of concentration "
-                             "variables. Hence, A_lb needs to have "
-                             "{} columns".format(self.num_concs))
+            raise InvalidConstraintError(
+                "The number of columns in A_lb has to "
+                "match the number of concentration "
+                "variables. Hence, A_lb needs to have "
+                "{} columns".format(self.num_concs))
 
         if A_lb.shape[0] != len(b_lb):
-            raise ValueError("The length of b_eq has to be "
-                             "the same as the number of rows in "
-                             "A_lb.")
+            raise InvalidConstraintError(
+                "The length of b_lb has to be "
+                "the same as the number of rows in "
+                "A_lb.")
 
         self.A_lb = np.vstack((self.A_lb, A_lb))
         self.b_lb = np.append(self.b_lb, b_lb)
