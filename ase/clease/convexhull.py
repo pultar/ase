@@ -199,7 +199,7 @@ class ConvexHull(object):
             raise ValueError("conc_var has to be {} or None"
                              "".format(self._unique_elem))
 
-        points = np.vstack((x.T, self.energies.T)).T
+        points = np.vstack((x.T, self.energies.T*self.atoms_per_fu)).T
         conv_hull = SciConvexHull(points)
         return conv_hull
 
