@@ -200,7 +200,7 @@ class ConvexHull(object):
             raise ValueError("conc_var has to be {} or None"
                              "".format(self._unique_elem))
 
-        points = np.vstack((x.T, self.energies.T*self.atoms_per_fu)).T
+        points = np.vstack((x.T, self.energies.T)).T
         conv_hull = SciConvexHull(points)
         return conv_hull
 
@@ -270,8 +270,8 @@ class ConvexHull(object):
                 for simpl in c_hull.simplices:
                     if self._is_lower_conv_hull(simpl):
                         x_cnv = [x[simpl[0]], x[simpl[1]]]
-                        y_cnv = [self.energies[simpl[0]],
-                                 self.energies[simpl[1]]]
+                        y_cnv = [self.energies[simpl[0]]*self.atoms_per_fu,
+                                 self.energies[simpl[1]]*self.atoms_per_fu]
                         ax.plot(x_cnv, y_cnv, color="black")
             ax.set_xlabel("{} conc".format(elems[i]))
         return fig
