@@ -307,6 +307,10 @@ class Evaluate(object):
         rmin = min(np.append(self.e_dft, e_pred)) - 0.1
         rmax = max(np.append(self.e_dft, e_pred)) + 0.1
 
+        prefix = ""
+        if fname is not None:
+            prefix = fname.rpartition(".")[0]
+
         cv = None
         cv_name = "LOOCV"
         if self.scoring_scheme == "loocv":
@@ -407,7 +411,10 @@ class Evaluate(object):
             ShowStructureOnClick(fig_residual, ax_residual, data_points,
                                  annotations, db_name)
         else:
-            plt.show()
+            if savefig:
+                fig_residual.savefig(prefix+"_residuals.png")
+            else:
+                plt.show()
 
         # Optionally show the convex hull
         if show_hull:
@@ -423,7 +430,11 @@ class Evaluate(object):
                        for c, e in zip(self.concs, e_pred.tolist())]
             cnv_hull.plot(fig=fig, concs=concs, energies=form_en, marker="x")
             fig.suptitle("Convex hull DFT (o), CE (x)")
-            plt.show()
+
+            if savefig:
+                fig.savefig(prefix+"_cnv_hull.png")
+            else:
+                plt.show()
 
     def plot_CV(self, alpha_min=1E-7, alpha_max=1.0, num_alpha=10, scale='log',
                 logfile=None, fitting_schemes=None, savefig=False, fname=None):
