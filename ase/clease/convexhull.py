@@ -171,7 +171,8 @@ class ConvexHull(object):
                 form_energy = row.energy/row.natoms
 
             # Subtract the appropriate weights
-            form_energy -= sum(conc[k][-1]*self.weights[k] for k in conc.keys())
+            form_energy -= sum(conc[k][-1]*self.weights[k]
+                               for k in conc.keys())
             energies.append(form_energy)
             ids.append(row.id)
 
@@ -245,7 +246,7 @@ class ConvexHull(object):
             concs = self.concs
         if energies is None:
             energies = self.energies
-        
+
         elems = sorted(varying_concs)[:-1]
         for i, ax in enumerate(fig.get_axes()):
             # ax = fig.add_subplot(1, num_plots, i+1)
@@ -269,7 +270,8 @@ class ConvexHull(object):
                 for simpl in c_hull.simplices:
                     if self._is_lower_conv_hull(simpl):
                         x_cnv = [x[simpl[0]], x[simpl[1]]]
-                        y_cnv = [self.energies[simpl[0]], self.energies[simpl[1]]]
+                        y_cnv = [self.energies[simpl[0]],
+                                 self.energies[simpl[1]]]
                         ax.plot(x_cnv, y_cnv, color="black")
             ax.set_xlabel("{} conc".format(elems[i]))
         return fig
@@ -322,7 +324,8 @@ class ConvexHull(object):
 
         data = cnv_hull.points[list(indices), :]
 
-        form_energy = tot_en - sum(self.weights[k]*conc[k] for k in conc.keys())
+        form_energy = tot_en - sum(self.weights[k]*conc[k]
+                                   for k in conc.keys())
 
         min_en = np.min(data[:, -1])
         max_en = np.max(data[:, -1])
@@ -356,4 +359,3 @@ class ConvexHull(object):
             Total energy per atom
         """
         return tot_energy - sum(self.weights[k]*conc[k] for k in conc.keys())
-
