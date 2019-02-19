@@ -344,6 +344,18 @@ class Concentration(object):
             key is a string, and the value should be int or float
             e.g., {"x": (0, 2), "y": (0, 0.7)}, {'x': (0., 1.)}
         """
+        if formulas is None or variable_range is None:
+            raise InvalidConstraintError("formula and variable range has to"
+                                         " be provided!")
+
+        if len(formulas) != len(self.basis_elements):
+            raise InvalidConstraintError(
+                "Inconsistent number of basis passed. "
+                "Expected: {}, got {}. Basis elements: {}"
+                "".format(len(self.basis_elements), len(formulas),
+                          self.basis_elements)
+            )
+            
         element_conc = self._parse_formula_unit_string(formulas)
         num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
 

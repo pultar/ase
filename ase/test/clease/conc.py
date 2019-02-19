@@ -71,6 +71,21 @@ def test_full_range():
     with must_raise(InvalidConstraintError):
         conc_cls.set_conc_ranges(ranges)
 
+    # 9) Formula not passed
+    variable_range = {"x": (0, 1)}
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_formula_unit(variable_range=variable_range)
+
+    # 10) Variable range not passed
+    formulas = []
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_formula_unit(formulas=formulas)
+
+    # 11) Wrong number of formulas
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_formula_unit(formulas=formulas, 
+                                       variable_range=variable_range)
+
 
 def fixed_composition():
     basis_elements = [['Li', 'Ru'], ['O', 'X']]
