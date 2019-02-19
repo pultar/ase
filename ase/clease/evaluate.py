@@ -368,7 +368,6 @@ class Evaluate(object):
         else:
             if savefig:
                 plt.savefig(fname=fname)
-                return
             else:
                 plt.show()
 
