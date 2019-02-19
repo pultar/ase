@@ -271,6 +271,53 @@ class NewStructures(object):
 
             current_count += 1
 
+    def generate_random_structures(self, atoms=None):
+        """Generate a given number of random structures.
+
+        Arguments:
+        ===========
+        atoms - Atoms object or None. If not None, this atoms
+            object will be used as template for all the random
+            structures being generated. If None, a random
+            template will be chosen (different for each structure)
+        """
+        print("Generating {} random structures...".format(self.struct_per_gen))
+        for _ in range(self.struct_per_gen):
+            self.generate_one_random_structure(atoms=atoms)
+
+    def generate_one_random_structure(self, atoms=None):
+        """Generate a random structure.
+
+        Arguments:
+        ===========
+        atoms - Atoms object or None. If None, this Atoms object
+            will be used as template for the generated structure.
+            Otherwise, a random template will be selected.
+        """
+        self.setting.set_active_template(atoms=atoms,
+                                         generate_template=False)
+
+        new_atoms = self._get_struct_at_conc(conc_type="random")
+        max_attempts = 100
+        fu = self._get_formula_unit(new_atoms)
+        attempt = 0
+        while self._exists_in_db(new_atoms, fu) and attempt < max_attempt:
+            attempt += 1
+            if attempt % 10 == 0:
+                # Change template if 10 random
+                # structures exists in the DB
+                self.setting.set_active_template()
+            new_atoms = self._get_struct_at_conc(conc_type="random")
+            fu = self._get_formula_unit(new_atoms)
+
+        if attempt >= max_attempt:
+            print("Could not find a structure that does not already exist "
+                  "in the DB. Try to pass an atoms object that is "
+                  "the template where random structures are desired")
+            return
+
+        self.insert_structure(init_struct=new_atoms)
+
     def _set_initial_structures(self, atoms, random_composition=False):
         structs = []
         if isinstance(atoms, Atoms):
@@ -291,7 +338,8 @@ class NewStructures(object):
                 num_attempt = 0
                 nib = [len(x) for x in self.setting.index_by_basis]
                 while len(concs) < self.num_to_gen:
-                    x = self.setting.concentration.get_random_concentration(nib=nib)
+                    x = self.setting.concentration.get_random_concentration(
+                        nib=nib)
                     if True in [np.allclose(x, i) for i in concs]:
                         num_attempt += 1
                     else:
@@ -321,7 +369,8 @@ class NewStructures(object):
                 for struct in atoms:
                     self.setting.set_active_template(atoms=struct,
                                                      generate_template=True)
-                    x = self.setting.concentration.get_random_concentration(nib=nib)
+                    x = self.setting.concentration.get_random_concentration(
+                        nib=nib)
                     num_atoms_in_basis = [len(indices) for indices
                                           in self.setting.index_by_basis]
                     num_insert = self.setting.concentration.conc_in_int(

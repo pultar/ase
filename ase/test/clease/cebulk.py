@@ -125,6 +125,7 @@ def test_1grouped_basis_probe():
     assert len(setting.basis_functions) == 1
     try:
         ns = NewStructures(setting=setting, struct_per_gen=2)
+        ns.generate_random_structures()
         ns.generate_initial_pool()
         ns = NewStructures(setting=setting, struct_per_gen=2)
         ns.generate_probe_structure(init_temp=1.0, final_temp=0.001,
