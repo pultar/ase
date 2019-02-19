@@ -135,7 +135,36 @@ class Concentration(object):
         return eq_valid and ineq_valid
 
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
-        """Add user defined constraints."""
+        """Add user defined constraints.
+
+        The concentrations are restrictred by the equation
+        A_eq*c = b_eq
+
+        Arguments:
+        ==========
+        A_eq - NxM matrix where N is the number of equations and
+            M is the overall number of concentrations
+        b_eq - right hand side vector of the equation length N
+        """
+
+        A_eq = np.array(A_eq)
+        b_eq = np.array(b_eq)
+        if len(A_eq.shape) != 2:
+            raise ValueError("A_eq has to be a 2D matrix!")
+        if len(b_eq.shape) != 1:
+            raise ValueError("b_eq has to be a 1D vector!")
+
+        if A_eq.shape[1] != self.num_concs:
+            raise ValueError("The number of columns in A_eq has to "
+                             "match the number of concentration "
+                             "variables. Hence, A_eq needs to have "
+                             "{} columns".format(self.num_concs))
+
+        if A_eq.shape[0] != len(b_eq):
+            raise ValueError("The length of b_eq has to be "
+                             "the same as the number of rows in "
+                             "A_eq.")
+
         self.A_eq = np.vstack((self.A_eq, A_eq))
         self.b_eq = np.append(self.b_eq, b_eq)
         self.A_eq, self.b_eq = self._remove_redundant_entries(self.A_eq,
@@ -143,7 +172,36 @@ class Concentration(object):
         self._get_interbasis_relations_for_given_matrix(self.A_eq)
 
     def add_usr_defined_ineq_constraints(self, A_lb, b_lb):
-        """Add the user defined constraints."""
+        """Add the user defined constraints.
+
+        The concentrations are restrictred by the equation
+        A_lb*c > b_lb
+
+        Arguments:
+        ==========
+        A_lb - NxM matrix where N is the number of equations and
+            M is the overall number of concentrations
+        b_lb - right hand side vector of the equation length N
+        """
+        A_lb = np.array(A_lb)
+        b_lb = np.array(b_lb)
+        if len(A_lb.shape) != 2:
+            raise ValueError("A_lb has to be a 2D matrix!")
+
+        if len(b_lb.shape) != 1:
+            raise ValueError("b_lb has to be a 1D vector!")
+
+        if A_lb.shape[1] != self.num_concs:
+            raise ValueError("The number of columns in A_lb has to "
+                             "match the number of concentration "
+                             "variables. Hence, A_lb needs to have "
+                             "{} columns".format(self.num_concs))
+
+        if A_lb.shape[0] != len(b_lb):
+            raise ValueError("The length of b_eq has to be "
+                             "the same as the number of rows in "
+                             "A_lb.")
+
         self.A_lb = np.vstack((self.A_lb, A_lb))
         self.b_lb = np.append(self.b_lb, b_lb)
         self.A_lb, self.b_lb = self._remove_redundant_entries(self.A_lb,
