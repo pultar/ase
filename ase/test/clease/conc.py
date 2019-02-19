@@ -51,6 +51,25 @@ def test_full_range():
     with must_raise(InvalidConstraintError):
         conc_cls.add_usr_defined_ineq_constraints(A, b)
 
+    # 5) Wrong number of basis
+    ranges = [[(0, 1), (0, 3)]]
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_ranges(ranges)
+
+    # 6) Wrong number of ranges in each basis
+    ranges = [[(0, 1), (0, 0.5)], [(0, 1), (0, 1)]]
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_ranges(ranges)
+
+    # 7) Wrong bounds
+    ranges = [[(0, 1), (0, 0.5), (-0.5, 2.1)], [(0, 1), (0, 1)]]
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_ranges(ranges)
+
+    # 8) Wrong number of bounds
+    ranges = [[(0, 1), (0, 0.5), (0, 1, 0.5)], [(0, 1), (0, 1)]]
+    with must_raise(InvalidConstraintError):
+        conc_cls.set_conc_ranges(ranges)
 
 def fixed_composition():
     basis_elements = [['Li', 'Ru'], ['O', 'X']]

@@ -227,6 +227,31 @@ class Concentration(object):
                      ranges coulde be
                      [[(0, 1), (0.2, 0.5), (0, 1)], [(0, 0.8), (0, 0.2)]]
         """
+        if len(ranges) != len(self.basis_elements):
+            raise InvalidConstraintError(
+                "The number of bases is wrong. Expected {}, got {}"
+                "".format(len(self.basis_elements), len(ranges))
+            )
+
+        for item, basis in zip(ranges, self.basis_elements):
+            if len(item) != len(basis):
+                raise InvalidConstraintError(
+                    "Inconsistent number of elements in basis. "
+                    "Expected {}, got {}. Basis elements: {}"
+                    "".format(len(basis), len(item), self.basis_elements)
+                )
+            for rng in item:
+                if len(rng) != 2:
+                    raise InvalidConstraintError(
+                        "Provided range needs to be of length 2. "
+                        "Lower and upper bound"
+                    )
+                if any(x < 0.0 or x > 1.0 for x in rng):
+                    raise InvalidConstraintError(
+                        "Concentrations below 0 or above 1 "
+                        "can not be used as concentration constraints"
+                    )
+
         flatten_rng = [item for sublist in ranges for item in sublist]
         A_lb = np.zeros((2*self.num_concs, self.num_concs))
         b_lb = np.zeros(2*self.num_concs)
