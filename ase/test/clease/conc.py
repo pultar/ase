@@ -71,6 +71,7 @@ def test_full_range():
     with must_raise(InvalidConstraintError):
         conc_cls.set_conc_ranges(ranges)
 
+
 def fixed_composition():
     basis_elements = [['Li', 'Ru'], ['O', 'X']]
     A_eq = [[0, 3, 0, 0], [0, 0, 0, 2]]
@@ -236,6 +237,7 @@ def test_formula_unit6():
     b_lb = np.append(b_lb_implicit, b_lb)
     assert np.allclose(A_lb, conc.A_lb)
     assert np.allclose(b_lb, conc.b_lb)
+
 
 def test_three_interlinked_basis():
     basis_elements = [["Al", "Mg", "Si"], ["X", "O"], ["Ta", "Se"]]
