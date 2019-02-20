@@ -1,5 +1,5 @@
 from __future__ import print_function
-from ase.clease import Tikhonov
+from ase.clease import Tikhonov, LinearRegression
 import numpy as np
 import multiprocessing as mp
 import os
@@ -148,7 +148,8 @@ class GAFit(object):
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
-        self.regression = Tikhonov(alpha=alpha, penalize_bias_term=True)
+        #self.regression = Tikhonov(alpha=alpha, penalize_bias_term=True)
+        self.regression = LinearRegression()
         self.elitism = elitism
         self.mutation_prob = mutation_prob
         self.parallel = parallel
