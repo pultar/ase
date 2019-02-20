@@ -390,8 +390,8 @@ class Evaluate(object):
         else:
             if loo_delta is not None:
                 ax_residual.plot(loo_delta, "o")
-
-        ax_residual.plot(delta_e, "v", mfc="none")
+        
+        ax_residual.plot(self.e_dft, delta_e, "v", mfc="none")
 
         ax_residual.axhline(0, ls="--")
         ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
