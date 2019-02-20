@@ -118,7 +118,8 @@ class GAFit(object):
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
 
-        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc", "hqc"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc",
+                              "hqc"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
@@ -202,7 +203,8 @@ class GAFit(object):
     def hqc(self, mse, num_features):
         """Return Hannan-Quinn information criterion."""
         N = len(self.e_dft)
-        return N*np.log(mse) + 2*num_features*self.sparsity_slope*np.log(np.log(N))
+        return N*np.log(mse) + \
+            2*num_features*self.sparsity_slope*np.log(np.log(N))
 
     def aicc(self, mse, num_features):
         """Modified Afaikes informatiion criterion."""
@@ -220,7 +222,7 @@ class GAFit(object):
 
     def design_matrix(self, individual):
         """Return the corresponding design matrix."""
-        return self.cf_matrix[:, individual==1]
+        return self.cf_matrix[:, individual == 1]
 
     def loo_dev(self, individual):
         """Calculate the prediction error of each data point when left out."""
@@ -557,7 +559,9 @@ class GAFit(object):
             loocv_msg = ""
             if "loocv" not in self.cost_func:
                 # Print the LOOCV
-                loocv_msg = "loocv: {:.2f}".format(self.loocv(self.best_individual))
+                loocv_msg = "loocv: {:.2f}".format(
+                    self.loocv(self.best_individual))
+
             self.log("Generation: {}. Top 3 {}: {:.2e} (-){:.2e} (-){:.2e} "
                      "Num ECI: {}. Pop. div: {:.2f} {}"
                      "".format(gen, self.cost_func,
