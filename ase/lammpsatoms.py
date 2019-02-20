@@ -12,7 +12,6 @@ class LammpsAtoms(Atoms):
 
     def __init__(self,
                  symbols=None,
-                 *args,
                  id=None,
                  type=None,
                  name=None,
@@ -23,7 +22,8 @@ class LammpsAtoms(Atoms):
                  angles=None,
                  dihedrals=None,
                  impropers=None,
-                 specorder=None, **kwargs):
+                 specorder=None,
+                 *args, **kwargs):
         if isinstance(symbols, Atoms):
             if symbols.has('id') and id is None:
                 id = symbols.get_prop('id')

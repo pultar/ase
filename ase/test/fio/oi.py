@@ -126,13 +126,22 @@ def test(format):
     fname1 = '{}/io-test.1.{}'.format(testdir, format)
     fname2 = '{}/io-test.2.{}'.format(testdir, format)
     if io.write:
-        write(fname1, atoms, format=format)
+        if format == 'lammps-data':
+            write(fname1, atoms, format=format, style='bond')
+        else:
+            write(fname1, atoms, format=format)
         if not io.single:
             write(fname2, images, format=format)
 
         if io.read:
-            for a in [read(fname1, format=format), read(fname1)]:
-                check(a, atoms, format)
+            if format == 'lammps-data':
+                for a in [read(fname1, format=format, style='bond'),
+                          read(fname1, style='bond')]:
+                    check(a, atoms, format)
+            else:
+                for a in [read(fname1, format=format),
+                          read(fname1)]:
+                    check(a, atoms, format)
 
             if not io.single:
                 if format in ['json', 'db']:
