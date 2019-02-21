@@ -374,8 +374,14 @@ class Evaluate(object):
                 plt.show()
 
         # Create a plot with the residuals
-        fig_residual = plt.figure()
-        ax_residual = fig_residual.add_subplot(111)
+
+        gridspec_kw = {
+            "wspace": 0.0,
+            "width_ratios": [5, 1]
+        }
+        fig_residual, ax_res = plt.subplots(ncols=2, sharey=True, 
+                                            gridspec_kw=gridspec_kw)
+        ax_residual = ax_res[0]
         ax_residual.set_title("LOO residual (o). Residual (v)")
         if self.e_pred_loo is None:
             loo_delta = None
@@ -383,23 +389,31 @@ class Evaluate(object):
             loo_delta = (self.e_dft - self.e_pred_loo)*1000.0
         delta_e = (self.e_dft - e_pred)*1000.0
         if self.effective_num_data_pts != len(self.e_dft) and loo_delta is not None:
-            x = range(len(self.e_dft))
-            im = ax_residual.scatter(x, loo_delta, c=w)
+            im = ax_residual.scatter(self.e_dft, loo_delta, c=w)
             cb = fig_residual.colorbar(im)
             cb.set_label("Weight")
             
             # Plot again with zero with to make the interactive
             # plot work
-            ax_residual.plot(loo_delta, "o",
+            ax_residual.plot(self.e_dft, loo_delta, "o",
                              color="black", markeredgewidth=0.0, mfc="none")
         else:
             if loo_delta is not None:
-                ax_residual.plot(loo_delta, "o")
-
-        ax_residual.plot(delta_e, "v", mfc="none")
+                ax_residual.plot(self.e_dft, loo_delta, "o")
+        
+        ax_residual.plot(self.e_dft, delta_e, "v", mfc="none")
 
         ax_residual.axhline(0, ls="--")
         ax_residual.set_ylabel(r"$E_{DFT} - E_{pred}$ (meV/atom)")
+
+        hist, bin_edges = np.histogram(delta_e, bins=30)
+        h = bin_edges[1] - bin_edges[0]
+        ax_res[1].barh(bin_edges[:-1], hist, height=h, color="#bdbdbd")
+
+        ax_res[1].set_xlabel("# occ")
+        ax_res[1].spines["right"].set_visible(False)
+        ax_res[1].spines["top"].set_visible(False)
+
 
         if interactive:
             lines = ax_residual.get_lines()
