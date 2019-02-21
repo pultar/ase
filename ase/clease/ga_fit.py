@@ -75,6 +75,7 @@ class GAFit(object):
             overfitting better than aic)
         loocv - Leave one out cross validation (average)
         max_loocv - Leave one out cross valdition (maximum)
+        hqc - Hannan-Quinn information criterion
 
     sparsity_slope: int
         Ad hoc parameter that can be used to tune the sparsity
@@ -121,7 +122,7 @@ class GAFit(object):
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
 
-        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc", "hqc"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
@@ -202,6 +203,11 @@ class GAFit(object):
         N = len(self.e_dft)
         return N*np.log(mse) + 2*num_features*self.sparsity_slope
 
+    def hqc(self, mse, num_features):
+        """Return Hannan-Quinn information criterion."""
+        N = len(self.e_dft)
+        return N*np.log(mse) + 2*num_features*self.sparsity_slope*np.log(np.log(N))
+
     def aicc(self, mse, num_features):
         """Modified Afaikes informatiion criterion."""
         aic = self.aic(mse, num_features)
@@ -210,13 +216,35 @@ class GAFit(object):
         corr /= (N - num_features - 1)
         return aic + self.sparsity_slope*corr
 
-    def fit_individual(self, individual):
-        X = self.cf_matrix[:, individual == 1]
+    def get_eci(self, individual):
+        """Calculate the LOOCV for the current individual."""
+        X = self.design_matrix(individual)
         y = self.e_dft
-        coeff = self.regression.fit(X, y)
+        return self.regression.fit(X, y)
 
+    def design_matrix(self, individual):
+        """Return the corresponding design matrix."""
+        return self.cf_matrix[:, individual==1]
+
+    def loo_dev(self, individual):
+        """Calculate the prediction error of each data point when left out."""
+        coeff = self.get_eci(individual)
+        X = self.design_matrix(individual)
         e_pred = X.dot(coeff)
-        delta_e = y - e_pred
+        delta_e = self.e_dft - e_pred
+        prec = self.regression.precision_matrix(X)
+        loo_dev = (self.W*delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
+        return loo_dev
+
+    def loocv(self, individual):
+        cv_sq = np.sum(self.loo_dev(individual))/self.eff_num
+        return 1000.0*np.sqrt(cv_sq)
+
+    def fit_individual(self, individual):
+        coeff = self.get_eci(individual)
+        X = self.design_matrix(individual)
+        e_pred = X.dot(coeff)
+        delta_e = self.e_dft - e_pred
 
         info_measure = None
         n_selected = np.sum(individual)
@@ -228,9 +256,10 @@ class GAFit(object):
             info_measure = self.aic(mse, n_selected)
         elif self.cost_func == "aicc":
             info_measure = self.aicc(mse, n_selected)
+        elif self.cost_func == "hqc":
+            info_measure = self.hqc(mse, n_selected)
         elif "loocv" in self.cost_func:
-            prec = self.regression.precision_matrix(X)
-            loo_dev = (self.W*delta_e / (1 - np.diag(X.dot(prec).dot(X.T))))**2
+            loo_dev = self.loo_dev(individual)
             cv_sq = np.sum(loo_dev)/self.eff_num
             cv = 1000.0*np.sqrt(cv_sq)
 
@@ -529,11 +558,15 @@ class GAFit(object):
             self.statistics["worst_cv"].append(np.min(self.fitness))
 
             best3 = np.abs(np.sort(self.fitness)[::-1][:3])
+            loocv_msg = ""
+            if "loocv" not in self.cost_func:
+                # Print the LOOCV
+                loocv_msg = "loocv: {:.2f}".format(self.loocv(self.best_individual))
             self.log("Generation: {}. Top 3 {}: {:.2e} {:.2e} {:.2e} "
-                     "Num ECI: {}. Pop. div: {:.2f}"
+                     "Num ECI: {}. Pop. div: {:.2f} {}"
                      "".format(gen, self.cost_func,
                                best3[0], best3[1], best3[2],
-                               num_eci, diversity), end="\r")
+                               num_eci, diversity, loocv_msg), end="\r")
             self.mutate()
             self.create_new_generation()
             if abs(current_best - self.fitness[best_indx]) > min_change:
