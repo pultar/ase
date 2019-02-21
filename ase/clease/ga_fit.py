@@ -1,5 +1,5 @@
 from __future__ import print_function
-from ase.clease import Tikhonov
+from ase.clease import LinearRegression
 import numpy as np
 import multiprocessing as mp
 import os
@@ -25,10 +25,6 @@ class GAFit(object):
 
     max_cluster_size: int
         Maximum number of atoms included in the largest cluster
-
-    alpha: float
-        Regularization parameter for ridge regression which is used internally
-        to obtain the coefficient
 
     elitism: int
         Number of best structures that will be passed unaltered on to the next
@@ -101,7 +97,7 @@ class GAFit(object):
     ga_fit.run()
     """
     def __init__(self, setting=None, max_cluster_size=None,
-                 max_cluster_dia=None, mutation_prob=0.001, alpha=1E-5,
+                 max_cluster_dia=None, mutation_prob=0.001,
                  elitism=1, fname="ga_fit.csv", num_individuals="auto",
                  local_decline=True,
                  max_num_in_init_pool=None, parallel=False, num_core=None,
@@ -122,7 +118,8 @@ class GAFit(object):
             self.sub_constraint = self._initialize_sub_cluster_constraint()
             self.super_constraint = self._initialize_super_cluster_constraint()
 
-        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc", "hqc"]
+        allowed_cost_funcs = ["loocv", "bic", "aic", "max_loocv", "aicc",
+                              "hqc"]
 
         if cost_func not in allowed_cost_funcs:
             raise ValueError("Cost func has to be one of {}"
@@ -148,7 +145,7 @@ class GAFit(object):
         self.num_genes = self.cf_matrix.shape[1]
         self.individuals = self._initialize_individuals(max_num_in_init_pool)
         self.fitness = np.zeros(len(self.individuals))
-        self.regression = Tikhonov(alpha=alpha, penalize_bias_term=True)
+        self.regression = LinearRegression()
         self.elitism = elitism
         self.mutation_prob = mutation_prob
         self.parallel = parallel
@@ -206,7 +203,8 @@ class GAFit(object):
     def hqc(self, mse, num_features):
         """Return Hannan-Quinn information criterion."""
         N = len(self.e_dft)
-        return N*np.log(mse) + 2*num_features*self.sparsity_slope*np.log(np.log(N))
+        return N*np.log(mse) + \
+            2*num_features*self.sparsity_slope*np.log(np.log(N))
 
     def aicc(self, mse, num_features):
         """Modified Afaikes informatiion criterion."""
@@ -224,7 +222,7 @@ class GAFit(object):
 
     def design_matrix(self, individual):
         """Return the corresponding design matrix."""
-        return self.cf_matrix[:, individual==1]
+        return self.cf_matrix[:, individual == 1]
 
     def loo_dev(self, individual):
         """Calculate the prediction error of each data point when left out."""
@@ -561,12 +559,15 @@ class GAFit(object):
             loocv_msg = ""
             if "loocv" not in self.cost_func:
                 # Print the LOOCV
-                loocv_msg = "loocv: {:.2f}".format(self.loocv(self.best_individual))
-            self.log("Generation: {}. Top 3 {}: {:.2e} {:.2e} {:.2e} "
+                loocv_msg = "loocv: {:.2f}".format(
+                    self.loocv(self.best_individual))
+
+            self.log("Generation: {}. Top 3 {}: {:.2e} (-){:.2e} (-){:.2e} "
                      "Num ECI: {}. Pop. div: {:.2f} {}"
                      "".format(gen, self.cost_func,
-                               best3[0], best3[1], best3[2],
-                               num_eci, diversity, loocv_msg), end="\r")
+                               best3[0], best3[0] - best3[1],
+                               best3[0] - best3[2], num_eci, diversity,
+                               loocv_msg), end="\r")
             self.mutate()
             self.create_new_generation()
             if abs(current_best - self.fitness[best_indx]) > min_change:
