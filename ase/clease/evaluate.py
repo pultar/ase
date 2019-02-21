@@ -117,6 +117,8 @@ class Evaluate(object):
 
         self.cf_matrix = self._make_cf_matrix()
         self.e_dft, self.names, self.concs = self._get_dft_energy_per_atom()
+        self._remove_duplicates()
+
         self.effective_num_data_pts = len(self.e_dft)
         self.weight_matrix = np.eye(len(self.e_dft))
         self._update_convex_hull_weight(min_weight)
@@ -808,6 +810,19 @@ class Evaluate(object):
         for row in db.select(self.select_cond):
             cf_matrix.append([row[x] for x in self.cluster_names])
         return np.array(cf_matrix, dtype=float)
+
+    def _remove_duplicates(self):
+        """Remove duplicate structures."""
+        num_data_orig = self.cf_matrix.shape[0]
+        cf_matrix, indx = np.unique(self.cf_matrix, return_index=True, axis=0)
+        self.cf_matrix = cf_matrix
+        self.e_dft = self.e_dft[indx]
+        self.concs = [self.concs[i] for i in indx]
+        self.names = [self.names[i] for i in indx]
+
+        if self.cf_matrix.shape[0] != num_data_orig:
+            print("Removed {} duplicate structures"
+                  "".format(num_data_orig - self.cf_matrix.shape[0]))
 
     def _get_dft_energy_per_atom(self):
         """Retrieve DFT energy and convert it to eV/atom unit."""
