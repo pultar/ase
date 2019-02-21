@@ -323,7 +323,6 @@ class GAFit(object):
 
     def create_new_generation(self):
         """Create a new generation."""
-        from random import choice
         new_generation = []
         srt_indx = np.argsort(self.fitness)[::-1]
 
@@ -595,7 +594,6 @@ class GAFit(object):
 
     def _local_optimization(self, indx=None):
         """Perform a local optimization strategy to the best individual."""
-        from random import choice
         from copy import deepcopy
         if indx is None:
             individual = self.best_individual
