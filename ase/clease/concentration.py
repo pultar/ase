@@ -17,6 +17,11 @@ class InvalidConcentrationError(Exception):
     pass
 
 
+class InvalidConstraintError(Exception):
+    """Exception being raised if user provides invalid constraints."""
+    pass
+
+
 class Concentration(object):
     """"Class that specifies the concentration ranges of consituting elements.
 
@@ -135,7 +140,37 @@ class Concentration(object):
         return eq_valid and ineq_valid
 
     def add_usr_defined_eq_constraints(self, A_eq, b_eq):
-        """Add user defined constraints."""
+        """Add user defined constraints.
+
+        The concentrations are restrictred by the equation
+        A_eq*c = b_eq
+
+        Arguments:
+        ==========
+        A_eq - NxM matrix where N is the number of equations and
+            M is the overall number of concentrations
+        b_eq - right hand side vector of the equation length N
+        """
+
+        A_eq = np.array(A_eq)
+        b_eq = np.array(b_eq)
+        if len(A_eq.shape) != 2:
+            raise InvalidConstraintError("A_eq has to be a 2D matrix!")
+        if len(b_eq.shape) != 1:
+            raise InvalidConstraintError("b_eq has to be a 1D vector!")
+
+        if A_eq.shape[1] != self.num_concs:
+            raise InvalidConstraintError(
+                "The number of columns in A_eq has to "
+                "match the number of concentration "
+                "variables. Hence, A_eq needs to have "
+                "{} columns".format(self.num_concs))
+
+        if A_eq.shape[0] != len(b_eq):
+            raise InvalidConstraintError(
+                "The length of b_eq has to be "
+                "the same as the number of rows in A_eq.")
+
         self.A_eq = np.vstack((self.A_eq, A_eq))
         self.b_eq = np.append(self.b_eq, b_eq)
         self.A_eq, self.b_eq = self._remove_redundant_entries(self.A_eq,
@@ -143,7 +178,38 @@ class Concentration(object):
         self._get_interbasis_relations_for_given_matrix(self.A_eq)
 
     def add_usr_defined_ineq_constraints(self, A_lb, b_lb):
-        """Add the user defined constraints."""
+        """Add the user defined constraints.
+
+        The concentrations are restrictred by the equation
+        A_lb*c > b_lb
+
+        Arguments:
+        ==========
+        A_lb - NxM matrix where N is the number of equations and
+            M is the overall number of concentrations
+        b_lb - right hand side vector of the equation length N
+        """
+        A_lb = np.array(A_lb)
+        b_lb = np.array(b_lb)
+        if len(A_lb.shape) != 2:
+            raise InvalidConstraintError("A_lb has to be a 2D matrix!")
+
+        if len(b_lb.shape) != 1:
+            raise InvalidConstraintError("b_lb has to be a 1D vector!")
+
+        if A_lb.shape[1] != self.num_concs:
+            raise InvalidConstraintError(
+                "The number of columns in A_lb has to "
+                "match the number of concentration "
+                "variables. Hence, A_lb needs to have "
+                "{} columns".format(self.num_concs))
+
+        if A_lb.shape[0] != len(b_lb):
+            raise InvalidConstraintError(
+                "The length of b_lb has to be "
+                "the same as the number of rows in "
+                "A_lb.")
+
         self.A_lb = np.vstack((self.A_lb, A_lb))
         self.b_lb = np.append(self.b_lb, b_lb)
         self.A_lb, self.b_lb = self._remove_redundant_entries(self.A_lb,
@@ -161,6 +227,31 @@ class Concentration(object):
                      ranges coulde be
                      [[(0, 1), (0.2, 0.5), (0, 1)], [(0, 0.8), (0, 0.2)]]
         """
+        if len(ranges) != len(self.basis_elements):
+            raise InvalidConstraintError(
+                "The number of bases is wrong. Expected {}, got {}"
+                "".format(len(self.basis_elements), len(ranges))
+            )
+
+        for item, basis in zip(ranges, self.basis_elements):
+            if len(item) != len(basis):
+                raise InvalidConstraintError(
+                    "Inconsistent number of elements in basis. "
+                    "Expected {}, got {}. Basis elements: {}"
+                    "".format(len(basis), len(item), self.basis_elements)
+                )
+            for rng in item:
+                if len(rng) != 2:
+                    raise InvalidConstraintError(
+                        "Provided range needs to be of length 2. "
+                        "Lower and upper bound"
+                    )
+                if any(x < 0.0 or x > 1.0 for x in rng):
+                    raise InvalidConstraintError(
+                        "Concentrations below 0 or above 1 "
+                        "can not be used as concentration constraints"
+                    )
+
         flatten_rng = [item for sublist in ranges for item in sublist]
         A_lb = np.zeros((2*self.num_concs, self.num_concs))
         b_lb = np.zeros(2*self.num_concs)
@@ -253,6 +344,18 @@ class Concentration(object):
             key is a string, and the value should be int or float
             e.g., {"x": (0, 2), "y": (0, 0.7)}, {'x': (0., 1.)}
         """
+        if formulas is None or variable_range is None:
+            raise InvalidConstraintError("formula and variable range has to"
+                                         " be provided!")
+
+        if len(formulas) != len(self.basis_elements):
+            raise InvalidConstraintError(
+                "Inconsistent number of basis passed. "
+                "Expected: {}, got {}. Basis elements: {}"
+                "".format(len(self.basis_elements), len(formulas),
+                          self.basis_elements)
+            )
+            
         element_conc = self._parse_formula_unit_string(formulas)
         num_atoms_in_basis = self._num_atoms_in_basis(formulas, variable_range)
 
