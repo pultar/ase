@@ -298,7 +298,6 @@ class NewStructures(object):
                                          generate_template=False)
 
         new_atoms = self._get_struct_at_conc(conc_type="random")
-        max_attempts = 100
         fu = self._get_formula_unit(new_atoms)
         attempt = 0
         while self._exists_in_db(new_atoms, fu) and attempt < max_attempt:
