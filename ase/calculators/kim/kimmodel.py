@@ -156,17 +156,17 @@ class KIMModelCalculator(Calculator, object):
             if self.debug:
                 n_space_1 = 21 - len(str(name))
                 n_space_2 = 7 - len(str(dtype))
-                print('Compute Argument name "{}" '.format(name)
-                      + ' ' * n_space_1
-                      + 'is of type "{}" '.format(dtype)
-                      + ' ' * n_space_2
-                      + 'and has support status "{}".'.format(arg_support))
+                print('Compute Argument name "{}" '.format(name) +
+                      ' ' * n_space_1 +
+                      'is of type "{}" '.format(dtype) +
+                      ' ' * n_space_2 +
+                      'and has support status "{}".'.format(arg_support))
 
             # the simulator can handle energy and force from a kim model
             # virial is computed within the calculator
             if arg_support == kimpy.support_status.required:
-                if (name != kimpy.compute_argument_name.partialEnergy and
-                        name != kimpy.compute_argument_name.partialForces):
+                if (name != kimpy.compute_argument_name.partialEnergy
+                        and name != kimpy.compute_argument_name.partialForces):
                     report_error(
                         'Unsupported required ComputeArgument {}'.format(name))
 
@@ -188,8 +188,8 @@ class KIMModelCalculator(Calculator, object):
 
             if self.debug:
                 n_space = 18 - len(str(name))
-                print('Compute callback "{}"'.format(name) + ' ' * n_space +
-                      'has support status "{}".'.format(support_status))
+                print('Compute callback "{}"'.format(name) + ' ' * n_space
+                      + 'has support status "{}".'.format(support_status))
 
             # cannot handle any "required" callbacks
             if support_status == kimpy.support_status.required:
@@ -561,7 +561,8 @@ class KIMModelCalculator(Calculator, object):
         forces = assemble_padding_forces(self.forces,
                                          self.num_contributing_particles,
                                          self.padding_image_of)
-        stress = compute_virial_stress(self.forces, self.coords)
+
+        stress = compute_virial_stress(self.forces, self.coords, atoms.get_volume())
 
         # return values
         self.results['energy'] = energy
@@ -695,7 +696,7 @@ def assemble_padding_forces(forces, n, padding_image_of):
     return total_forces
 
 
-def compute_virial_stress(forces, coords):
+def compute_virial_stress(forces, coords, volume):
     """Compute the virial stress in voigt notation.
 
     Parameters
@@ -706,18 +707,21 @@ def compute_virial_stress(forces, coords):
       coords: 2D array
         coordinates of all atoms (padding included)
 
+      volume: float
+        volume of cell
+
     Returns
     -------
       stress: 1D array
         stress in Voigt order (xx, yy, zz, yz, xz, xy)
     """
     stress = np.zeros(6)
-    stress[0] = -np.dot(forces[:, 0], coords[:, 0])
-    stress[1] = -np.dot(forces[:, 1], coords[:, 1])
-    stress[2] = -np.dot(forces[:, 2], coords[:, 2])
-    stress[3] = -np.dot(forces[:, 1], coords[:, 2])
-    stress[4] = -np.dot(forces[:, 0], coords[:, 2])
-    stress[5] = -np.dot(forces[:, 0], coords[:, 1])
+    stress[0] = -np.dot(forces[:, 0], coords[:, 0]) / volume
+    stress[1] = -np.dot(forces[:, 1], coords[:, 1]) / volume
+    stress[2] = -np.dot(forces[:, 2], coords[:, 2]) / volume
+    stress[3] = -np.dot(forces[:, 1], coords[:, 2]) / volume
+    stress[4] = -np.dot(forces[:, 0], coords[:, 2]) / volume
+    stress[5] = -np.dot(forces[:, 0], coords[:, 1]) / volume
 
     return stress
 

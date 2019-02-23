@@ -137,7 +137,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
                     raise KIMCalculatorError(
                         'Unknown element species {0}.'.format(species))
                 massstr = str(atomic_masses[atomic_numbers[species]])
-                parameters['mass'].append(str(i+1) + " " + massstr)
+                parameters['mass'].append(str(i + 1) + " " + massstr)
 
             # Return LAMMPS calculator
             return LAMMPS(parameters=parameters, files=param_filenames,
@@ -172,6 +172,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
     if simulator is None:
         if simulator_name == 'asap':
             simulator = 'asap'
+            raise KIMCalculatorError('"asap" is not supported now.')
         elif simulator_name == 'lammps':
             simulator = 'lammpslib'
 
@@ -411,7 +412,7 @@ def _get_params_for_LAMMPS_calculator(model_defn, supported_species):
             raise KIMCalculatorError(
                 'Unknown element species {0}.'.format(species))
         massstr = str(atomic_masses[atomic_numbers[species]])
-        parameters['mass'].append(str(i+1) + " " + massstr)
+        parameters['mass'].append(str(i + 1) + " " + massstr)
 
     return parameters
 
