@@ -42,7 +42,24 @@ def string2symbols(s):
     if c.isupper():
         i = 1
         if 1 < n and s[1].islower():
-            i += 1
+            if s[1] == 'u':
+                # Check if this 'u' could possibly be part of a 'userXX'
+                # element
+                if n >= 7:
+                    if s[1:4] == 'user':
+                        # Add the element corresponding to the upper-case
+                        # letter at the start of the string to the list and
+                        # proceed
+                        symbol = c
+                        if symbol not in atomic_numbers:
+                            raise ValueError
+                        return [symbol] + string2symbols(s[1:])
+                    else:
+                        i += 1
+                else:
+                    i += 1
+            else:
+                i += 1
         j = i
         while j < n and s[j].isdigit():
             j += 1
@@ -54,8 +71,30 @@ def string2symbols(s):
         if symbol not in atomic_numbers:
             raise ValueError
         return m * [symbol] + string2symbols(s[j:])
-    else:
-        raise ValueError
+
+    elif c.islower():
+        # Special case where 'userXX' is at the start of the string
+        if n >= 6:
+            if s[0:4] == 'user':
+                # Check if there are integers directly after 'userXX'
+                # indicating multiplicity
+                i = 6
+                j = i
+                while j < n and s[j].isdigit():
+                    j += 1
+                if j > i:
+                    m = int(s[i:j])
+                else:
+                    m = 1
+
+                symbol = s[:i]
+                if symbol not in atomic_numbers:
+                    raise ValueError
+                return m * [symbol] + string2symbols(s[j:])
+            else:
+                raise ValueError
+        else:
+            raise ValueError
 
 
 def symbols2numbers(symbols):
@@ -66,7 +105,7 @@ def symbols2numbers(symbols):
         if isinstance(s, basestring):
             numbers.append(atomic_numbers[s])
         else:
-            numbers.append(int(s))
+            numbers.append(s)
     return numbers
 
 

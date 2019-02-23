@@ -49,7 +49,7 @@ class LAMMPS:
     def __init__(self, label='lammps', tmp_dir=None, parameters={},
                  specorder=None, files=[], always_triclinic=False,
                  keep_alive=True, keep_tmp_files=False,
-                 no_data_file=False):
+                 no_data_file=False, has_charges=False):
         """The LAMMPS calculators object
 
         files: list
@@ -75,6 +75,8 @@ class LAMMPS:
         always_triclinic: bool
             Force use of a triclinic cell in LAMMPS, even if the cell is
             a perfect parallelepiped.
+        has_charges: bool
+            Potential has charges that need to be outputted or read in
         """
 
         self.label = label
@@ -88,6 +90,7 @@ class LAMMPS:
         self.keep_alive = keep_alive
         self.keep_tmp_files = keep_tmp_files
         self.no_data_file = no_data_file
+        self.has_charges = has_charges
 
         # if True writes velocities from atoms.get_velocities() to LAMMPS input
         self.write_velocities = False
@@ -271,6 +274,11 @@ class LAMMPS:
         if self.keep_tmp_files:
             lammps_in_fd.close()
 
+        # Close stdin to LAMMPS process so as not to interfere with
+        # kim-lammps-preprocessor
+        # TODO: THINK
+        # self._lmp_end()
+
         # Wait for log output to be read (i.e., for LAMMPS to finish)
         # and close the log file if there is one
         thr_read_log.join()
@@ -308,7 +316,7 @@ class LAMMPS:
         write_lammps_data(
             lammps_data, self.atoms, self.specorder,
             force_skew=self.always_triclinic, prismobj=self.prism,
-            velocities=self.write_velocities)
+            velocities=self.write_velocities, has_charges=self.has_charges)
 
     def write_lammps_in(self, lammps_in=None, lammps_trj=None,
                         lammps_data=None):
@@ -337,8 +345,20 @@ class LAMMPS:
                                 for p in parameters['package']]) +
                      '\n').encode('utf-8'))
 
+        # write initialization lines needed for some LAMMPS potentials
+        if 'model_init' in parameters:
+            mlines = parameters['model_init']
+            for ii in range(0,len(mlines)):
+                f.write(mlines[ii].encode('utf-8'))
+
+        # write units
+        if 'units' in parameters:
+           units_line = 'units ' + parameters['units'] + '\n'
+           f.write(units_line.encode('utf-8'))
+        else:
+           f.write('units metal\n'.encode('utf-8'))
+
         pbc = self.atoms.get_pbc()
-        f.write('units metal \n'.encode('utf-8'))
         if 'boundary' in parameters:
             f.write('boundary {0} \n'.format(
                 parameters['boundary']).encode('utf-8'))
@@ -408,8 +428,15 @@ class LAMMPS:
             for pair_coeff in parameters['pair_coeff']:
                 f.write('pair_coeff {0} \n'
                         ''.format(pair_coeff).encode('utf-8'))
+            # write additional lines needed for some LAMMPS potentials
+            if 'model_post' in parameters:
+                mlines = parameters['model_post']
+                for ii in range(0,len(mlines)):
+                    f.write(mlines[ii].encode('utf-8'))
             if 'mass' in parameters:
                 for mass in parameters['mass']:
+                    # Note that the variable mass is a string containing
+                    # the type number and value of mass separated by a space
                     f.write('mass {0} \n'.format(mass).encode('utf-8'))
         else:
             # simple default parameters
@@ -573,7 +600,7 @@ class LAMMPS:
                 positions = [x for _,x in sorted(zip(id, positions))]
                 velocities = [x for _,x in sorted(zip(id, velocities))]
                 forces = [x for _,x in sorted(zip(id, forces))]
-                
+
                 # determine cell tilt (triclinic case!)
                 if len(tilt) >= 3:
                     # for >=lammps-7Jul09 use labels behind "ITEM: BOX BOUNDS"
@@ -617,7 +644,7 @@ class LAMMPS:
                 #       boxlo_bound[0] = MIN(boxlo_bound[0],boxlo_bound[0]+xz);
                 #       boxlo_bound[1] = MIN(boxlo[1],boxlo[1]+yz);
                 #       boxlo_bound[2] = boxlo[2];
-                #       #           boxhi_bound[0] = MAX(boxhi[0],boxhi[0]+xy);
+                #       boxhi_bound[0] = MAX(boxhi[0],boxhi[0]+xy);
                 #       boxhi_bound[0] = MAX(boxhi_bound[0],boxhi_bound[0]+xz);
                 #       boxhi_bound[1] = MAX(boxhi[1],boxhi[1]+yz);
                 #       boxhi_bound[2] = boxhi[2];
@@ -832,7 +859,7 @@ class Prism(object):
 
 
 def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
-                      prismobj=None, velocities=False):
+                      prismobj=None, velocities=False, has_charges=False):
     """Write atomic structure data to a LAMMPS data_ file."""
     if isinstance(fileobj, basestring):
         f = paropen(fileobj, 'wb')
@@ -880,10 +907,19 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write('\n\n'.encode('utf-8'))
 
     f.write('Atoms \n\n'.encode('utf-8'))
-    for i, r in enumerate(p.positions_to_lammps_strs(atoms.get_positions())):
-        s = species.index(symbols[i]) + 1
-        f.write('{0:>6} {1:>3} {2} {3} {4}\n'.format(
-                *(i + 1, s) + tuple(r)).encode('utf-8'))
+
+    # TODO: TEMPORARY. NEED TO GET CHARGES FROM ASE
+    atomcharge = 0.
+    if has_charges:
+        for i, r in enumerate(p.positions_to_lammps_strs(atoms.get_positions())):
+            s = species.index(symbols[i]) + 1
+            f.write('{0:>6} {1:>3} {2} {3} {4} {5}\n'.format(
+                    *(i + 1, s, atomcharge) + tuple(r)).encode('utf-8'))
+    else:
+        for i, r in enumerate(p.positions_to_lammps_strs(atoms.get_positions())):
+            s = species.index(symbols[i]) + 1
+            f.write('{0:>6} {1:>3} {2} {3} {4}\n'.format(
+                    *(i + 1, s) + tuple(r)).encode('utf-8'))
 
     if velocities and atoms.get_velocities() is not None:
         f.write('\n\nVelocities \n\n'.encode('utf-8'))
