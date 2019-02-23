@@ -383,7 +383,7 @@ class KIMModelCalculator(Calculator, object):
                 [self.species_map[s] for s in all_species],
                 dtype=np.intc)
         except KeyError as e:
-            report_error('Species not support by KIM model; {}'.format(e))
+            report_error('Species not supported by KIM model; {}'.format(e))
 
         if self.debug:
             print('Debug: called update_ase_neigh')
@@ -414,7 +414,7 @@ class KIMModelCalculator(Calculator, object):
             contributing_species_code = np.array(
                 [self.species_map[s] for s in contributing_species], dtype=np.intc)
         except KeyError as e:
-            report_error('Species not support by KIM model; {}'.format(e))
+            report_error('Species not supported by KIM model; {}'.format(e))
 
         if pbc.any():  # need padding atoms
             # create padding atoms
@@ -498,7 +498,7 @@ class KIMModelCalculator(Calculator, object):
     def update_kim_coords(self, atoms):
         """Update the atom positions in self.coords, which is registered in KIM."""
         if self.padding_image_of.size != 0:
-            disp_contrib = atoms.positions - self.last_update_positions
+            disp_contrib = atoms.positions - [self.coords[i] for i, val in enumerate(self.particle_contributing) if val]
             disp_pad = disp_contrib[self.padding_image_of]
             disp = np.concatenate((disp_contrib, disp_pad))
             self.coords += disp
@@ -639,7 +639,6 @@ class KIMModelCalculator(Calculator, object):
             check_error(error, 'kim_model.compute_arguments_destroy')
 
             kimpy.model.destroy(self.kim_model)
-
 
 def compare_atoms(atoms1, atoms2, tol=1e-15):
     """Check for system changes since last calculation.
