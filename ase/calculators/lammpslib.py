@@ -23,18 +23,18 @@ from ase.utils import basestring
 #   into a python function that can be called
 # 8. make matscipy as fallback
 # 9. keep_alive not needed with no system changes
-#10. it may be a good idea to unify the cell handling with the one found in
+# 10. it may be a good idea to unify the cell handling with the one found in
 #    lammpsrun.py
 
 
 # this one may be moved to some more generic place
-def is_valid_lammps_cell(arr, atol=1e-8):
+def is_upper_triangular(arr, atol=1e-8):
     """test for upper triangular matrix based on numpy"""
     # must be (n x n) matrix
-    assert len(arr.shape)==2
+    assert len(arr.shape) == 2
     assert arr.shape[0] == arr.shape[1]
     return np.allclose(np.tril(arr, k=-1), 0., atol=atol) and \
-           np.all(np.diag(arr) >= 0.0)
+        np.all(np.diag(arr) >= 0.0)
 
 
 def convert_cell(ase_cell):
@@ -45,7 +45,7 @@ def convert_cell(ase_cell):
     """
     cell = ase_cell.T
 
-    if not is_valid_lammps_cell(cell):
+    if not is_upper_triangular(cell):
         # rotate bases into triangular matrix
         tri_mat = np.zeros((3, 3))
         A = cell[:, 0]
@@ -75,9 +75,9 @@ lammps_real = {
     "mass": 0.001 * ase.units.kg / ase.units.mol,
     "distance": ase.units.Angstrom,
     "time": ase.units.fs,
-    "energy": ase.units.kcal/ase.units.mol,
+    "energy": ase.units.kcal / ase.units.mol,
     "velocity": ase.units.Angstrom / ase.units.fs,
-    "force": ase.units.kcal/ase.units.mol/ase.units.Angstrom,
+    "force": ase.units.kcal / ase.units.mol / ase.units.Angstrom,
     "pressure": 101325 * ase.units.Pascal
 }
 
@@ -86,8 +86,8 @@ lammps_metal = {
     "distance": ase.units.Angstrom,
     "time": 1e-12 * ase.units.second,
     "energy": ase.units.eV,
-    "velocity": ase.units.Angstrom / (1e-12*ase.units.second),
-    "force": ase.units.eV/ase.units.Angstrom,
+    "velocity": ase.units.Angstrom / (1e-12 * ase.units.second),
+    "force": ase.units.eV / ase.units.Angstrom,
     "pressure": 1e5 * ase.units.Pascal
 }
 
@@ -338,12 +338,10 @@ by invoking the get_potential_energy() method::
         self.lmp.scatter_atoms('x', 1, 3, lmp_c_positions)
 
     def calculate(self, atoms, properties, system_changes):
-        ##NB Calculator.calculate(self, atoms, properties, system_changes) # update system_changes
         self.propagate(atoms, properties, system_changes, 0)
 
     def propagate(self, atoms, properties, system_changes, n_steps, dt=None,
                   dt_not_real_time=False, velocity_field=None):
-
         """"atoms: Atoms object
             Contains positions, unit-cell, ...
         properties: list of str
@@ -384,11 +382,11 @@ by invoking the get_potential_energy() method::
             change_box_cmd = change_box_str.format(self.lammpsbc(atoms))
             self.lmp.command(change_box_cmd)
 
-
-        do_rebuild = (not np.array_equal(atoms.numbers, self.previous_atoms_numbers)
-                      or ("numbers" in system_changes))
+        do_rebuild = (not np.array_equal(atoms.numbers, self.previous_atoms_numbers) or
+                      ("numbers" in system_changes))
         if not do_rebuild:
-            do_redo_atom_types = not np.array_equal(atoms.numbers, self.previous_atoms_numbers)
+            do_redo_atom_types = not np.array_equal(
+                atoms.numbers, self.previous_atoms_numbers)
         else:
             do_redo_atom_types = False
 
@@ -430,7 +428,7 @@ by invoking the get_potential_energy() method::
                 self.lmp.command('timestep %.30f' % dt)
             else:
                 self.lmp.command('timestep %.30f' %
-                                 (dt/unit_convert("time", self.units)))
+                                 (dt / unit_convert("time", self.units)))
         self.lmp.command('run %d' % n_steps)
 
         if n_steps > 0:
@@ -451,8 +449,8 @@ by invoking the get_potential_energy() method::
                     vel * unit_convert("velocity", self.units))
 
         # Extract the forces and energy
-        self.results['energy'] = (self.lmp.extract_variable('pe', None, 0) *
-                                  unit_convert("energy", self.units))
+        self.results['energy'] = (self.lmp.extract_variable('pe', None, 0)
+                                  * unit_convert("energy", self.units))
 
         stress = np.empty(6)
         stress_vars = ['pxx', 'pyy', 'pzz', 'pyz', 'pxz', 'pxy']
@@ -480,8 +478,8 @@ by invoking the get_potential_energy() method::
         stress[4] = stress_mat[0, 2]
         stress[5] = stress_mat[0, 1]
 
-        self.results['stress'] = (stress *
-                                  (-unit_convert("pressure", self.units)))
+        self.results['stress'] = (stress
+                                  * (-unit_convert("pressure", self.units)))
 
         # this does not necessarily yield the forces ordered by atom-id!
         # f = np.zeros((len(atoms), 3))
@@ -493,8 +491,8 @@ by invoking the get_potential_energy() method::
         #         unit_convert("force", self.units))
 
         # definitely yields atom-id ordered array
-        f = (np.array(self.lmp.gather_atoms("f", 1, 3)).reshape(-1,3) *
-                unit_convert("force", self.units))
+        f = (np.array(self.lmp.gather_atoms("f", 1, 3)).reshape(-1, 3) *
+             unit_convert("force", self.units))
 
         if self.coord_transform is not None:
             self.results['forces'] = np.dot(f, self.coord_transform)
@@ -502,29 +500,28 @@ by invoking the get_potential_energy() method::
             self.results['forces'] = f.copy()
 
         # otherwise check_state will always trigger a new calculation
-        ##NB
         self.atoms = atoms.copy()
 
         if not self.parameters.keep_alive:
             self.lmp.close()
 
     # Handle nonperiodic cases where the cell size
-    #     in some directions is small (for example for a dimer).
-    def lammpsbc(self,atoms):
+    # in some directions is small (for example for a dimer).
+    def lammpsbc(self, atoms):
         retval = ''
         pbc = atoms.get_pbc()
         if np.all(pbc):
             retval = 'p p p'
         else:
             pos = atoms.get_positions()
-            posmin = np.amin(pos,axis=0)
-            posmax = np.amax(pos,axis=0)
-            for i in range(0,3):
+            posmin = np.amin(pos, axis=0)
+            posmax = np.amax(pos, axis=0)
+            for i in range(0, 3):
                 if pbc[i]:
                     retval += 'p '
                 else:
                     # decide if to return "s" or "m"
-                    if abs(posmax[i]-posmin[i])<0.1:
+                    if abs(posmax[i] - posmin[i]) < 0.1:
                         retval += 'm '  # spacing along this direction is small
                     else:               # so use minimum size set by cell
                         retval += 's '
@@ -637,8 +634,7 @@ by invoking the get_potential_energy() method::
             s = atoms.get_chemical_symbols()
             _, idx = np.unique(s, return_index=True)
             s_red = np.array(s)[np.sort(idx)].tolist()
-            self.parameters.atom_types = {j : i+1  for i, j in enumerate(s_red)}
-
+            self.parameters.atom_types = {j: i + 1 for i, j in enumerate(s_red)}
 
         # Collect chemical symbols
         symbols = np.asarray(atoms.get_chemical_symbols())
@@ -665,7 +661,6 @@ by invoking the get_potential_energy() method::
 
         # Set masses after user commands,
         # to override EAM provided masses, e.g.
-        ##NB  WILL THERE BE PUSHBACK ON BREAKING CURRENT FUNCTIONALITY?
         for sym in self.parameters.atom_types:
             if self.parameters.atom_type_masses is None:
                 mass = ase.data.atomic_masses[ase.data.atomic_numbers[sym]]
@@ -674,15 +669,6 @@ by invoking the get_potential_energy() method::
             self.lmp.command('mass %d %.30f' % (
                 self.parameters.atom_types[sym],
                 mass / unit_convert("mass", self.units)))
-##NB        masses = atoms.get_masses()
-##NB        for sym in self.parameters.atom_types:
-##NB            for i in range(len(atoms)):
-##NB                if symbols[i] == sym:
-##NB                    # convert from amu (ASE) to lammps mass unit)
-##NB                    self.lmp.command('mass %d %.30f' % (
-##NB                        self.parameters.atom_types[sym],
-##NB                        masses[i] / unit_convert("mass", self.units)))
-##NB                    break
 
         # Define force & energy variables for extraction
         self.lmp.command('variable pxx equal pxx')
@@ -709,7 +695,6 @@ by invoking the get_potential_energy() method::
         self.initialized = True
 
 
-
 # keep this one for the moment being...
 def write_lammps_data(filename, atoms, atom_types, comment=None, cutoff=None,
                       molecule_ids=None, charges=None, units='metal'):
@@ -725,7 +710,6 @@ def write_lammps_data(filename, atoms, atom_types, comment=None, cutoff=None,
 
     fh.write('{0} atoms\n'.format(len(atoms)))
     fh.write('{0} atom types\n'.format(len(atom_types)))
-
 
     fh.write('\n')
     cell, coord_transform = convert_cell(atoms.get_cell())
@@ -745,8 +729,8 @@ def write_lammps_data(filename, atoms, atom_types, comment=None, cutoff=None,
                 sym_mass[sym] = masses[i] / unit_convert("mass", units)
                 break
             else:
-                sym_mass[sym] = (atomic_masses[chemical_symbols.index(sym)] /
-                                 unit_convert("mass", units))
+                sym_mass[sym] = (atomic_masses[chemical_symbols.index(sym)]
+                                 / unit_convert("mass", units))
 
     for (sym, typ) in sorted(atom_types.items(), key=operator.itemgetter(1)):
         fh.write('{0} {1}\n'.format(typ, sym_mass[sym]))

@@ -276,7 +276,6 @@ class LAMMPS:
 
         # Close stdin to LAMMPS process so as not to interfere with
         # kim-lammps-preprocessor
-        # TODO: THINK
         # self._lmp_end()
 
         # Wait for log output to be read (i.e., for LAMMPS to finish)
@@ -908,7 +907,6 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     f.write('Atoms \n\n'.encode('utf-8'))
 
-    # TODO: TEMPORARY. NEED TO GET CHARGES FROM ASE
     atomcharge = 0.
     if has_charges:
         for i, r in enumerate(p.positions_to_lammps_strs(atoms.get_positions())):
