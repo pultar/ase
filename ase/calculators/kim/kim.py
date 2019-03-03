@@ -24,8 +24,6 @@ except:
     kimsm_loaded = False
 from ase.calculators.lammpslib import LAMMPSlib
 from ase.calculators.lammpsrun import LAMMPS
-# from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters, \
-#    OpenKIMcalculator
 from .kimmodel import KIMModelCalculator
 from .exceptions import KIMCalculatorError
 from ase.data import atomic_numbers
@@ -108,6 +106,11 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
                 return KIMModelCalculator(extended_kim_id, debug=debug)
 
         elif simulator == 'asap':
+            try:
+                from asap3 import OpenKIMcalculator
+            except ImportError as e:
+                raise ImportError(str(e) + ' You need to install asap3 first.')
+
             msg = _check_conflict_options(
                 options, asap_kimmo_not_allowed_options, simulator)
             if msg is not None:
@@ -168,11 +171,11 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
 
     # Get simulator name
     simulator_name = ksm.get_model_simulator_name().lower()
+
     # determine simulator
     if simulator is None:
         if simulator_name == 'asap':
             simulator = 'asap'
-            raise KIMCalculatorError('"asap" is not supported now.')
         elif simulator_name == 'lammps':
             simulator = 'lammpslib'
 
@@ -188,6 +191,11 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
             'file of Simulator Model "%s".' % extended_kim_id)
 
     if simulator_name == "asap":
+        try:
+            from asap3 import EMT, EMTMetalGlassParameters, EMTRasmussenParameters
+        except ImportError as e:
+            raise ImportError(str(e) + ' You need to install asap3 first.')
+
         # check options
         msg = _check_conflict_options(
             options, asap_simmo_not_allowed_options, simulator)
@@ -469,7 +477,10 @@ def KIM_get_supported_species_list(extended_kim_id, simulator='kimmodel'):
             speclist = list(calc.get_kim_model_supported_species())
 
         elif simulator == 'asap':
-
+            try:
+                from asap3 import OpenKIMcalculator
+            except ImportError as e:
+                raise ImportError(str(e) + ' You need to install asap3 first.')
             calc = OpenKIMcalculator(extended_kim_id)
             speclist = list(calc.get_kim_model_supported_species())
 
