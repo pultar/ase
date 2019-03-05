@@ -142,7 +142,7 @@ def read_single_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None):
             break
 
         symbol = line.split()[0]
-        m = re.match(r'\s*([A-Z]|[a-z][a-z]?)(\S*)', line)
+        m = re.match(r'\s*(([A-Z]|[a-z])[a-z]?)(\S*)', line)
         assert m is not None, line
         symbol, label = m.group(1, 2)
         symbol = symbol.capitalize()
@@ -161,7 +161,8 @@ def read_single_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None):
             fx, fy, fz = f.readline().split()[:3]
             forces.append([float(fx), float(fy), float(fz)])
 
-    assert a+1 == len(symbols), ("Error, counter is at {:} but you gave {:} symbols".format(a+1,len(symbols)))
+    if symbols:
+        assert a+1 == len(symbols), ("Error, counter is at {:} but you gave {:} symbols".format(a+1,len(symbols)))
 
     if imcon == 0:
         pbc = False
