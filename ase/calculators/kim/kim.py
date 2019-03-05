@@ -15,18 +15,16 @@ from __future__ import print_function
 from __future__ import division
 import re
 import os
-import subprocess
 from ase.data import atomic_masses, atomic_numbers
 try:
     from kimpy import simulator_models as kimsm
     kimsm_loaded = True
-except:
+except Exception:
     kimsm_loaded = False
 from ase.calculators.lammpslib import LAMMPSlib
 from ase.calculators.lammpsrun import LAMMPS
 from .kimmodel import KIMModelCalculator
 from .exceptions import KIMCalculatorError
-from ase.data import atomic_numbers
 
 
 def KIM(extended_kim_id, simulator=None, options=None, debug=False):
@@ -155,7 +153,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
                 'ERROR: Unsupported simulator "%s" requested to run KIM API '
                 'compliant KIM Models.' % simulator)
 
-    ### If we get to here, the model is a KIM Simulator Model ###
+    # If we get to here, the model is a KIM Simulator Model ###
 
     # Initialize KIM SM object
     ksm = kimsm.ksm_object(extended_kim_id=extended_kim_id)
@@ -221,7 +219,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
             # pull out potential parameters
             pp = ''
             mobj = re.search(r"\(([A-Za-z0-9_\(\)]+)\)", model_defn[0])
-            if not mobj == None:
+            if mobj is not None:
                 pp = mobj.group(1).strip().lower()
             if pp == '':
                 calc = EMT()
