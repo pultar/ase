@@ -114,7 +114,7 @@ def KIM(extended_kim_id, simulator=None, options=None, debug=False):
             if msg is not None:
                 raise KIMCalculatorError(msg)
             else:
-                return(OpenKIMcalculator(name=extended_kim_id, verbose=debug))
+                return OpenKIMcalculator(name=extended_kim_id, verbose=debug)
 
         elif simulator == 'lammpsrun':
             # check options
@@ -480,7 +480,7 @@ def KIM_get_supported_species_list(extended_kim_id, simulator='kimmodel'):
             except ImportError as e:
                 raise ImportError(str(e) + ' You need to install asap3 first.')
             calc = OpenKIMcalculator(extended_kim_id)
-            speclist = list(calc.get_kim_model_supported_species())
+            speclist = list(calc.get_supported_elements())
 
         else:
             raise KIMCalculatorError(
