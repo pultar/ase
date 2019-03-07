@@ -96,7 +96,7 @@ class LammpsAtoms(Atoms):
                 for i, item in enumerate(items):
                     if key in item.keys():
                         eg_list = [i] + item[key][0]
-                        continue
+                        break
                 name_list = names[eg_list].tolist()
                 if prop == 'bonds':
                     name_list.sort()
