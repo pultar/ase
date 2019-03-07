@@ -3,6 +3,8 @@ from ase.atoms import Atoms
 from ase.atom import Atom
 from copy import deepcopy
 import numbers
+from ase.utils import natural_cutoffs
+from ase.neighborlist import NeighborList
 
 
 class LammpsAtoms(Atoms):
@@ -236,6 +238,114 @@ class LammpsAtoms(Atoms):
         else:
             raise NotImplementedError('add_prop not implemented for '
                                       '{0}'.format(prop))
+
+    def generate_topology(self, topo_dict):
+        # check and reformat topo_dict
+        length = {'bonds': 2,
+                  'angles': 3,
+                  'dihedrals': 4,
+                  'impropers': 4}
+
+        for key, values in topo_dict.items():
+            if key not in ['bonds', 'angles', 'dihedrals', 'impropers']:
+                raise ValueError('{} not supported. Supported properties: '
+                                 '{}'.format(key, ['bonds',
+                                                   'angles',
+                                                   'dihedrals',
+                                                   'impropers']))
+            if type(values) == np.ndarray:
+                values = values.tolist()
+                topo_dict[key] = topo_dict[key].tolist()
+
+            if not np.all([len(x) == length[key] for x in values]):
+                raise ValueError('{} are lists of length '
+                                 '{}'.format(key, length[key]))
+            for i, value in enumerate(values):
+                if key == 'bonds':
+                    value.sort()
+                if key == 'angles':
+                    vertex = value.pop(1)
+                    value.sort()
+                    value.insert(1, vertex)
+                topo_dict[key][i] = '-'.join(value)
+
+        # get neighbor list
+        nl = NeighborList(natural_cutoffs(self))
+        nl.update(self)
+
+        # making symmetric neighbor matrix
+        neighbor_matrix = nl.get_connectivity_matrix().toarray()
+        neighbor_matrix = np.asarray(neighbor_matrix
+                                     + neighbor_matrix.T,
+                                     dtype=bool)
+
+        symbols = self.get_prop('name')
+        d = []
+        for i, array in enumerate(neighbor_matrix):
+            neighbor_list = np.where(array)[0]
+            if i in neighbor_list:
+                mask = np.ones(len(neighbor_list), dtype=bool)
+                mask[np.where(neighbor_list == i)[0]] = False
+                neighbor_list = neighbor_list[mask]
+            d.append(neighbor_list)
+
+        if 'bonds' in topo_dict:
+            seen_bonds = []
+            bonds = {}
+            for i, neighbor in enumerate(d):
+                for j in neighbor:
+                    name_list = [symbols[x] for x in [i, j]]
+                    name_list.sort()
+                    name_list = '-'.join(name_list)
+                    if name_list in topo_dict['bonds'] and not [i, j] in seen_bonds:
+                        indx = topo_dict['bonds'].index(name_list) + 1
+                        bonds[indx] = bonds.get(indx, []) + [[i, j]]
+                        seen_bonds.append([i, j])
+                        seen_bonds.append([j, i])
+            self.add_prop('bonds', bonds)
+
+        if 'angles' in topo_dict:
+            angles = {}
+            for i, neighbor in enumerate(d):
+                for indx, j in enumerate(neighbor):
+                    for k in neighbor[indx + 1:]:
+                        name_list = [symbols[x] for x in [k, i, j]]
+                        vertex = name_list.pop(1)
+                        name_list.sort()
+                        name_list.insert(1, vertex)
+                        name_list = '-'.join(name_list)
+                        if name_list in topo_dict['angles']:
+                            indx = topo_dict['angles'].index(name_list) + 1
+                            angles[indx] = angles.get(indx, []) + [[k, i, j]]
+            self.add_prop('angles', angles)
+
+        if 'dihedrals' in topo_dict:
+            dihedrals = {}
+            for i, neighbor_i in enumerate(d):
+                for j in neighbor_i:
+                    for k in set(d[j]) - set([i, j]):
+                        for l in set(d[k]) - set([i, j, k]):
+                            name_list = [symbols[x] for x in [i, j, k, l]]
+                            name_list.sort()
+                            name_list = '-'.join(name_list)
+                            if name_list in topo_dict['dihedrals']:
+                                indx = topo_dict['dihedrals'].index(name_list) + 1
+                                dihedrals[indx] = dihedrals.get(indx, []) + [[i, j, k, l]]
+            self.add_prop('dihedrals', dihedrals)
+
+        if 'impropers' in topo_dict:
+            impropers = {}
+            for i, neighbor in enumerate(d):
+                for indx_j, j in enumerate(neighbor):
+                    for indx_k, k in enumerate(neighbor[indx_j + 1:], start=indx_j + 1):
+                        for l in neighbor[indx_k + 1:]:
+                            name_list = [symbols[x] for x in [i, j, k, l]]
+                            name_list.sort()
+                            name_list = '-'.join(name_list)
+                            if name_list in topo_dict['impropers']:
+                                indx = topo_dict['impropers'].index(name_list) + 1
+                                impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
+            self.add_prop('impropers', impropers)
 
     def set_prop(self, prop, value, dtype=None):
         '''
