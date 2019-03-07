@@ -17,7 +17,7 @@ def _get_frame_positions(f):
     #header line contains name of system
     init_pos = f.tell()
     f.seek(0)
-    name = f.readline().strip()
+    f.readline() #system name
     line = f.readline().strip().split()
     if len(line) == 5:
         classic = False
@@ -69,7 +69,7 @@ def read_dlp_history(f, index=-1, symbols=None):
 
 def iread_dlp_history(f, symbols=None):
     """Generator version of read_history"""
-    levcfg,imcon,nAtoms,pos = _get_frame_positions(f)
+    levcfg,imcon,natoms,pos = _get_frame_positions(f)
     for p in pos:
         yield read_single_image(f, levcfg, imcon, natoms, is_trajectory=True, symbols=symbols)
 
