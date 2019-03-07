@@ -9,6 +9,18 @@ Git master branch
 
 :git:`master <>`.
 
+* Dynamics and structure optimizers can now run as an iterator using the
+  new ``irun()`` mechanism::
+
+    for conv in opt.irun(fmax=0.05):
+        print('hello')
+
+  This makes it easier to execute custom code during runs.  The ``conv``
+  variable indicates whether the current iteration meets the convergence
+  criterion, although this behaviour may change in future versions.
+
+* :class:`Analysis tool <ase.geometry.analysis.Analysis>` for extracting bond lengths and angles from atoms.
+
 * Multiple improvements to the ONETEP Calculator. Input files can now be
   written that specify LDOS, bsunfolding and many other functionalities.
 
@@ -17,7 +29,7 @@ Git master branch
 * The genetic algorithm module :mod:`ase.ga` now has operators for crystal
   structure prediction. See :ref:`ga_bulk_tutorial`.
 
-* New :func:`ase.geometry.analyze_dimensionality` function.  See:
+* New :func:`ase.geometry.dimensionality.analyze_dimensionality` function.  See:
   :ref:`dimtutorial`.
 
 * New :func:`ase.utils.deltacodesdft.delta` function:  Calculates the
@@ -26,6 +38,7 @@ Git master branch
 
 * Calculation of stress tensor implemented for
   :class:`~ase.calculators.emt.EMT` potential
+
 
 Version 3.17.0
 ==============
