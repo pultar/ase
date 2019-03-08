@@ -596,6 +596,13 @@ class LammpsAtoms(Atoms):
                     indx_of[i] = i + max_
                 other.set_types_to(prop, indx_of)
 
+        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if not self.has(prop) and other.has(prop):
+                self.set_array(prop, [{} for _ in range(len(self))], object)
+
+        if not self.has('resname') and other.has('resname'):
+            self.set_array('resname', [set([]) for _ in range(len(self))], object)
+
         Atoms.extend(self, other)
 
         indx_of = {}
