@@ -18,28 +18,28 @@ def _get_frame_positions(f):
     init_pos = f.tell()
     f.seek(0)
     f.readline() #system name
-    line = f.readline().strip().split()
-    if len(line) == 5:
+    items = f.readline().strip().split()
+    if len(items) == 5:
         classic = False
-    elif len(line) == 3:
+    elif len(items) == 3:
         classic = True
     else:
         raise RuntimeError("Cannot determine version of HISTORY file format.")
 
-    levcfg,imcon,natoms = [int(x) for x in line[0:3]]
+    levcfg,imcon,natoms = [int(x) for x in items[0:3]]
     if classic:
         #we have to iterate over the entire file
         startpos = f.tell()
         pos = []
+        line = True
         while line:
             line = f.readline()
             if 'timestep' in line:
                 pos.append(f.tell())
         f.seek(startpos)
-        frames = len(pos)
     else:
-        frames = int(line[4])
-        pos = [ (natoms*2 + 1)*i + 2 for i in range(frames) ]
+        nFrames = int(line[4])
+        pos = [(natoms * 2 + 1) * i + 2 for i in range(nFrames)]
 
     f.seek(init_pos)
     return levcfg,imcon,natoms,pos
@@ -54,17 +54,17 @@ def read_dlp_history(f, index=-1, symbols=None):
     Provide a list of element strings to symbols to ignore naming from the HISTORY file.
     """
     levcfg,imcon,natoms,pos = _get_frame_positions(f)
-    if isinstance(index, int):
+    if np.isscalar(index):
         selected = [pos[index]]
     else:
         selected = pos[index]
 
-    ret = []
-    for p in selected:
-        f.seek(p+1)
-        ret.append(read_single_image(f, levcfg, imcon, natoms, is_trajectory=True, symbols=symbols))
+    images = []
+    for fpos in selected:
+        f.seek(fpos+1)
+        images.append(read_single_image(f, levcfg, imcon, natoms, is_trajectory=True, symbols=symbols))
 
-    return ret
+    return images
 
 
 def iread_dlp_history(f, symbols=None):
@@ -143,7 +143,7 @@ def read_single_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None):
             break
 
         symbol = line.split()[0]
-        m = re.match(r'\s*(([A-Z]|[a-z])[a-z]?)(\S*)', line)
+        m = re.match(r'\s*([A-Za-z][a-z]?)(\S*)', line)
         assert m is not None, line
         symbol, label = m.group(1, 2)
         symbol = symbol.capitalize()
