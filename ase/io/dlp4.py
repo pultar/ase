@@ -1,7 +1,7 @@
 """ Read/Write DL_POLY_4 CONFIG files """
 import re
 
-from numpy import zeros
+from numpy import zeros, isscalar
 
 from ase.atoms import Atoms
 from ase.data import chemical_symbols
@@ -54,7 +54,7 @@ def read_dlp_history(f, index=-1, symbols=None):
     Provide a list of element strings to symbols to ignore naming from the HISTORY file.
     """
     levcfg,imcon,natoms,pos = _get_frame_positions(f)
-    if np.isscalar(index):
+    if isscalar(index):
         selected = [pos[index]]
     else:
         selected = pos[index]
