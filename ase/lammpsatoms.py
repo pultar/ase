@@ -269,24 +269,17 @@ class LammpsAtoms(Atoms):
                     value.insert(1, vertex)
                 topo_dict[key][i] = '-'.join(value)
 
-        # get neighbor list
-        nl = NeighborList(natural_cutoffs(self))
-        nl.update(self)
-
         # making symmetric neighbor matrix
+        nl = NeighborList(natural_cutoffs(self),
+                          self_interaction=False,
+                          bothways=True)
+        nl.update(self)
         neighbor_matrix = nl.get_connectivity_matrix().toarray()
-        neighbor_matrix = np.asarray(neighbor_matrix
-                                     + neighbor_matrix.T,
-                                     dtype=bool)
 
         symbols = self.get_prop('name')
         d = []
         for i, array in enumerate(neighbor_matrix):
             neighbor_list = np.where(array)[0]
-            if i in neighbor_list:
-                mask = np.ones(len(neighbor_list), dtype=bool)
-                mask[np.where(neighbor_list == i)[0]] = False
-                neighbor_list = neighbor_list[mask]
             d.append(neighbor_list)
 
         if 'bonds' in topo_dict:
