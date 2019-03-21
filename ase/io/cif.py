@@ -291,7 +291,7 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
 
     kwargs = {}
     if store_tags:
-        kwargs['info'].update(tags.copy())
+        kwargs['info'] = tags.copy()
 
     if 'D' in symbols:
         deuterium = [symbol == 'D' for symbol in symbols]
