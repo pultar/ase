@@ -311,29 +311,25 @@ def open_with_compression(filename, format, mode='r'):
 
     root, compression = get_compression(filename)
 
-    def has_encoding(func):
-        try:
-            return 'encoding' in inspect.getargspec(func).args
-        except TypeError:
-            return False
-
-    # Python 3 fix for 'cif' format
-    def open_encoding(func, filename, mode):
-        if format == 'cif' and has_encoding(func):
-            return func(filename, mode, encoding='latin-1')
-        else:
-            return func(filename, mode)
+    def open_with_encoding(func, filename, mode):
+        # Python 3 fix for 'cif' format
+        if format == 'cif':
+            try:
+                return func(filename, mode, encoding='latin-1')
+            except:
+                pass
+        return func(filename, mode)
 
     if compression is None:
-        return open_encoding(open, filename, mode)
+        return open_with_encoding(open, filename, mode)
     elif compression == 'gz':
         import gzip
-        fd = open_encoding(gzip.open, filename, mode)
+        fd = open_with_encoding(gzip.open, filename, mode)
     elif compression == 'bz2':
         import bz2
         if hasattr(bz2, 'open'):
             # Python 3 only
-            fd = open_encoding(bz2.open, filename, mode)
+            fd = open_with_encoding(bz2.open, filename, mode)
         else:
             # Python 2
             fd = bz2.BZ2File(filename, mode=mode)
@@ -342,9 +338,9 @@ def open_with_compression(filename, format, mode='r'):
             from lzma import open as lzma_open
         except ImportError:
             from backports.lzma import open as lzma_open
-        fd = open_encoding(lzma_open, filename, mode)
+        fd = open_with_encoding(lzma_open, filename, mode)
     else:
-        fd = open_encoding(open, filename, mode)
+        fd = open_with_encoding(open, filename, mode)
 
     return fd
 
