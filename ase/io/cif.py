@@ -17,6 +17,7 @@ from ase.spacegroup import crystal
 from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
 from ase.utils import basestring
 from ase.data import atomic_numbers, atomic_masses
+from ase.io.cif_unicode import format_unicode
 
 
 # Old conventions:
@@ -31,7 +32,7 @@ def convert_value(value):
     """Convert CIF value string to corresponding python type."""
     value = value.strip()
     if re.match('(".*")|(\'.*\')$', value):
-        return value[1:-1]
+        return format_unicode(value[1:-1])
     elif re.match(r'[+-]?\d+$', value):
         return int(value)
     elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$', value):
@@ -44,7 +45,7 @@ def convert_value(value):
         warnings.warn('Badly formed number: "{0}"'.format(value))
         return float(value[:value.index('(')])  # strip off uncertainties
     else:
-        return value
+        return format_unicode(value)
 
 
 def parse_multiline_string(lines, line):
