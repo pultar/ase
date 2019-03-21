@@ -172,7 +172,10 @@ def parse_cif(fileobj):
     """Parse a CIF file. Returns a list of blockname and tag
     pairs. All tag names are converted to lower case."""
     if isinstance(fileobj, basestring):
-        fileobj = open(fileobj)
+        try:
+            fileobj = open(fileobj, encoding='latin-1')
+        except:
+            fileobj = open(fileobj)
     lines = [''] + fileobj.readlines()[::-1]  # all lines (reversed)
     blocks = []
     while True:
@@ -393,9 +396,10 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     true, is that it will not be possible to determine the primitive
     cell.
 
-    If *fractional_occupancies* is true, the resulting atoms object will be tagged
-    equipped with an array `occupancy`. Also, in case of mixed occupancies, the
-    atom's chemical symbol will be that of the most dominant species.
+    If *fractional_occupancies* is true, the resulting atoms object will be
+    tagged equipped with an array `occupancy`. Also, in case of mixed
+    occupancies, the atom's chemical symbol will be that of the most dominant
+    species.
     """
     blocks = parse_cif(fileobj)
     # Find all CIF blocks with valid crystal data
@@ -447,7 +451,6 @@ def write_cif(fileobj, images, format='default'):
             fileobj.write('_chemical_formula_structural       %s\n' %
                           atoms.get_chemical_formula(mode='reduce'))
             fileobj.write('_chemical_formula_sum      "%s"\n' % formula_sum)
-
 
         # Do this only if there's three non-zero lattice vectors
         if atoms.number_of_lattice_vectors == 3:
