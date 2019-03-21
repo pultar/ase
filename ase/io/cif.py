@@ -16,6 +16,7 @@ from ase.parallel import paropen
 from ase.spacegroup import crystal
 from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
 from ase.utils import basestring
+from ase.data import atomic_numbers, atomic_masses
 
 
 # Old conventions:
@@ -343,6 +344,13 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
             _ = Atoms(symbols, positions=positions,
                       cell=[a, b, c, alpha, beta, gamma])
             scaled_positions = _.get_scaled_positions()
+
+        if deuterium:
+            numbers = np.array([atomic_numbers[s] for s in symbols])
+            masses = atomic_masses[numbers]
+            masses[deuterium] = 2.01355
+            kwargs['masses'] = masses
+
         atoms = crystal(symbols, basis=scaled_positions,
                         cellpar=[a, b, c, alpha, beta, gamma],
                         spacegroup=spacegroup,
@@ -360,11 +368,11 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
                 occ_dict[i] = {sym: occupancies[i]}
             atoms.info['occupancy'] = occ_dict
 
-    if deuterium:
-        masses = atoms.get_masses()
-        masses[atoms.numbers == 1] = 1.00783
-        masses[deuterium] = 2.01355
-        atoms.set_masses(masses)
+        if deuterium:
+            masses = atoms.get_masses()
+            masses[atoms.numbers == 1] = 1.00783
+            masses[deuterium] = 2.01355
+            atoms.set_masses(masses)
 
     return atoms
 
