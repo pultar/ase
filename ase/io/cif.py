@@ -438,13 +438,14 @@ def split_chem_form(comp_name):
 
 
 def write_enc(fileobj, s):
+    """Write string in latin-1 encoding."""
     fileobj.write(s.encode("latin-1"))
 
 
 def write_cif(fileobj, images, format='default'):
     """Write *images* to CIF file."""
     if isinstance(fileobj, basestring):
-        fileobj = paropen(fileobj, 'w')
+        fileobj = paropen(fileobj, 'wb')
 
     if hasattr(images, 'get_positions'):
         images = [images]
