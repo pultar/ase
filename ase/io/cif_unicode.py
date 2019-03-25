@@ -4,29 +4,10 @@ unicode. CIF text is neither unicode nor bibtex/latex code.
 
 Rules for character formatting in CIF files are specified at:
 https://www.iucr.org/resources/cif/spec/version1.1/semantics
-
-P M Larsen, September 2018
 '''
 
 import re
-from sys import version_info
-
-if version_info[0] == 3 and version_info[1] >= 4:
-
-    # >= python3.4
-    import html
-
-elif version_info[0] == 3 and version_info[1] <= 3:
-
-    # <= python3.3
-    import html.parser
-    html = html.parser.HTMLParser()
-
-elif version_info[0] == 2:
-
-    # python2
-    import HTMLParser
-    html = HTMLParser.HTMLParser()
+import html
 
 
 subs_dict = {
