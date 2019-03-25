@@ -56,7 +56,7 @@ all_formats = {
     'castep-md': ('CASTEP molecular dynamics file', '+F'),
     'castep-phonon': ('CASTEP phonon file', '1F'),
     'cfg': ('AtomEye configuration', '1F'),
-    'cif': ('CIF-file', '+F'),
+    'cif': ('CIF-file', '+B'),
     'cmdft': ('CMDFT-file', '1F'),
     'crystal': ('Crystal fort.34 format', '1S'),
     'cube': ('CUBE file', '1F'),
@@ -265,7 +265,7 @@ def get_compression(filename):
         return filename, None
 
 
-def open_with_compression(filename, format, mode='r'):
+def open_with_compression(filename, mode='r'):
     """
     Wrapper around builtin `open` that will guess compression of a file
     from the filename and open it for reading or writing as if it were
@@ -311,25 +311,16 @@ def open_with_compression(filename, format, mode='r'):
 
     root, compression = get_compression(filename)
 
-    def open_with_encoding(func, filename, mode):
-        # Python 3 fix for 'cif' format
-        if format == 'cif':
-            try:
-                return func(filename, mode, encoding='latin-1')
-            except:
-                pass
-        return func(filename, mode)
-
     if compression is None:
-        return open_with_encoding(open, filename, mode)
+        return open(filename, mode)
     elif compression == 'gz':
         import gzip
-        fd = open_with_encoding(gzip.open, filename, mode)
+        fd = gzip.open(filename, mode=mode)
     elif compression == 'bz2':
         import bz2
         if hasattr(bz2, 'open'):
             # Python 3 only
-            fd = open_with_encoding(bz2.open, filename, mode)
+            fd = bz2.open(filename, mode=mode)
         else:
             # Python 2
             fd = bz2.BZ2File(filename, mode=mode)
@@ -338,9 +329,9 @@ def open_with_compression(filename, format, mode='r'):
             from lzma import open as lzma_open
         except ImportError:
             from backports.lzma import open as lzma_open
-        fd = open_with_encoding(lzma_open, filename, mode)
+        fd = lzma_open(filename, mode)
     else:
-        fd = open_with_encoding(open, filename, mode)
+        fd = open(filename, mode)
 
     return fd
 
@@ -430,7 +421,7 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
             mode = 'wb' if io.isbinary else 'w'
             if append:
                 mode = mode.replace('w', 'a')
-            fd = open_with_compression(filename, format, mode)
+            fd = open_with_compression(filename, mode)
         io.write(fd, images, **kwargs)
         if open_new:
             fd.close()
@@ -539,7 +530,7 @@ def _iread(filename, index, format, io, parallel=None, full_output=False,
     if isinstance(filename, basestring):
         if io.acceptsfd:
             mode = 'rb' if io.isbinary else 'r'
-            fd = open_with_compression(filename, format, mode)
+            fd = open_with_compression(filename, mode)
             must_close_fd = True
         else:
             fd = filename
@@ -663,7 +654,7 @@ def filetype(filename, read=True, guess=True):
                 raise UnknownFileTypeError('Could not guess file type')
             return extension2format.get(ext, ext)
 
-        fd = open_with_compression(filename, None, 'rb')
+        fd = open_with_compression(filename, 'rb')
     else:
         fd = filename
         if fd is sys.stdin:

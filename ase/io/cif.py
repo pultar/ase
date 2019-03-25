@@ -178,7 +178,10 @@ def parse_cif(fileobj):
             fileobj = open(fileobj, encoding='latin-1')
         except:
             fileobj = open(fileobj)
-    lines = [''] + fileobj.readlines()[::-1]  # all lines (reversed)
+
+    data = fileobj.read().decode('latin1')
+    lines = [''] + data.split('\n')[::-1]    # all lines (reversed)
+
     blocks = []
     while True:
         if not lines:
