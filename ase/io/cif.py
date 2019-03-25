@@ -173,11 +173,15 @@ def parse_block(lines, line):
 def parse_cif(fileobj):
     """Parse a CIF file. Returns a list of blockname and tag
     pairs. All tag names are converted to lower case."""
+
     if isinstance(fileobj, basestring):
         fileobj = open(fileobj, 'rb')
 
-    data = fileobj.read().decode('latin1')
-    lines = [''] + data.split('\n')[::-1]    # all lines (reversed)
+    data = fileobj.read()
+    if isinstance(data, bytes):
+        data = data.decode('latin1')
+    data = [e for e in data.split('\n') if len(e) > 0]
+    lines = [''] + data[::-1]    # all lines (reversed)
 
     blocks = []
     while True:
