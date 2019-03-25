@@ -437,6 +437,10 @@ def split_chem_form(comp_name):
     return split_form
 
 
+def write_encoded(fileobj, s):
+    fileobj.write(s.encode("latin-1"))
+
+
 def write_cif(fileobj, images, format='default'):
     """Write *images* to CIF file."""
     if isinstance(fileobj, basestring):
@@ -446,7 +450,7 @@ def write_cif(fileobj, images, format='default'):
         images = [images]
 
     for i, atoms in enumerate(images):
-        fileobj.write('data_image%d\n' % i)
+        write_encoded(fileobj, 'data_image%d\n' % i)
 
         a, b, c, alpha, beta, gamma = atoms.get_cell_lengths_and_angles()
 
@@ -461,51 +465,51 @@ def write_cif(fileobj, images, format='default'):
                 ii = ii + 2
 
             formula_sum = str(formula_sum)
-            fileobj.write('_chemical_formula_structural       %s\n' %
+            write_encoded(fileobj, '_chemical_formula_structural       %s\n' %
                           atoms.get_chemical_formula(mode='reduce'))
-            fileobj.write('_chemical_formula_sum      "%s"\n' % formula_sum)
+            write_encoded(fileobj, '_chemical_formula_sum      "%s"\n' % formula_sum)
 
         # Do this only if there's three non-zero lattice vectors
         if atoms.number_of_lattice_vectors == 3:
-            fileobj.write('_cell_length_a       %g\n' % a)
-            fileobj.write('_cell_length_b       %g\n' % b)
-            fileobj.write('_cell_length_c       %g\n' % c)
-            fileobj.write('_cell_angle_alpha    %g\n' % alpha)
-            fileobj.write('_cell_angle_beta     %g\n' % beta)
-            fileobj.write('_cell_angle_gamma    %g\n' % gamma)
-            fileobj.write('\n')
+            write_encoded(fileobj, '_cell_length_a       %g\n' % a)
+            write_encoded(fileobj, '_cell_length_b       %g\n' % b)
+            write_encoded(fileobj, '_cell_length_c       %g\n' % c)
+            write_encoded(fileobj, '_cell_angle_alpha    %g\n' % alpha)
+            write_encoded(fileobj, '_cell_angle_beta     %g\n' % beta)
+            write_encoded(fileobj, '_cell_angle_gamma    %g\n' % gamma)
+            write_encoded(fileobj, '\n')
 
-            fileobj.write('_symmetry_space_group_name_H-M    %s\n' % '"P 1"')
-            fileobj.write('_symmetry_int_tables_number       %d\n' % 1)
-            fileobj.write('\n')
+            write_encoded(fileobj, '_symmetry_space_group_name_H-M    %s\n' % '"P 1"')
+            write_encoded(fileobj, '_symmetry_int_tables_number       %d\n' % 1)
+            write_encoded(fileobj, '\n')
 
-            fileobj.write('loop_\n')
-            fileobj.write('  _symmetry_equiv_pos_as_xyz\n')
-            fileobj.write("  'x, y, z'\n")
-            fileobj.write('\n')
+            write_encoded(fileobj, 'loop_\n')
+            write_encoded(fileobj, '  _symmetry_equiv_pos_as_xyz\n')
+            write_encoded(fileobj, "  'x, y, z'\n")
+            write_encoded(fileobj, '\n')
 
-        fileobj.write('loop_\n')
+        write_encoded(fileobj, 'loop_\n')
 
         # Is it a periodic system?
         coord_type = 'fract' if atoms.pbc.all() else 'Cartn'
 
         if format == 'mp':
-            fileobj.write('  _atom_site_type_symbol\n')
-            fileobj.write('  _atom_site_label\n')
-            fileobj.write('  _atom_site_symmetry_multiplicity\n')
-            fileobj.write('  _atom_site_{0}_x\n'.format(coord_type))
-            fileobj.write('  _atom_site_{0}_y\n'.format(coord_type))
-            fileobj.write('  _atom_site_{0}_z\n'.format(coord_type))
-            fileobj.write('  _atom_site_occupancy\n')
+            write_encoded(fileobj, '  _atom_site_type_symbol\n')
+            write_encoded(fileobj, '  _atom_site_label\n')
+            write_encoded(fileobj, '  _atom_site_symmetry_multiplicity\n')
+            write_encoded(fileobj, '  _atom_site_{0}_x\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_{0}_y\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_{0}_z\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_occupancy\n')
         else:
-            fileobj.write('  _atom_site_label\n')
-            fileobj.write('  _atom_site_occupancy\n')
-            fileobj.write('  _atom_site_{0}_x\n'.format(coord_type))
-            fileobj.write('  _atom_site_{0}_y\n'.format(coord_type))
-            fileobj.write('  _atom_site_{0}_z\n'.format(coord_type))
-            fileobj.write('  _atom_site_thermal_displace_type\n')
-            fileobj.write('  _atom_site_B_iso_or_equiv\n')
-            fileobj.write('  _atom_site_type_symbol\n')
+            write_encoded(fileobj, '  _atom_site_label\n')
+            write_encoded(fileobj, '  _atom_site_occupancy\n')
+            write_encoded(fileobj, '  _atom_site_{0}_x\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_{0}_y\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_{0}_z\n'.format(coord_type))
+            write_encoded(fileobj, '  _atom_site_thermal_displace_type\n')
+            write_encoded(fileobj, '  _atom_site_B_iso_or_equiv\n')
+            write_encoded(fileobj, '  _atom_site_type_symbol\n')
 
         if coord_type == 'fract':
             coords = atoms.get_scaled_positions().tolist()
@@ -536,12 +540,12 @@ def write_cif(fileobj, images, format='default'):
             else:
                 no[symbol] = 1
             if format == 'mp':
-                fileobj.write(
+                write_encoded(fileobj, 
                     '  %-2s  %4s  %4s  %7.5f  %7.5f  %7.5f  %6.1f\n' %
                     (symbol, symbol + str(no[symbol]), 1,
                      pos[0], pos[1], pos[2], occ))
             else:
-                fileobj.write(
+                write_encoded(fileobj, 
                     '  %-8s %6.4f %7.5f  %7.5f  %7.5f  %4s  %6.3f  %s\n' %
                     ('%s%d' % (symbol, no[symbol]),
                      occ,
