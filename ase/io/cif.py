@@ -3,6 +3,7 @@
 See http://www.iucr.org/resources/cif/spec/version1.1/cifsyntax for a
 description of the file format.  STAR extensions as save frames,
 global blocks, nested loops and multi-data values are not supported.
+The "latin-1" encoding is required by the IUCR specification.
 """
 
 import re
