@@ -222,7 +222,7 @@ def analyze_kintervals(atoms, method='RDA', merge=True):
 
     intervals: list
         List of KIntervals for each interval identified.  A KInterval is a
-        namedtuple with the following field names:
+        class with the following field names:
 
         score: float
             Dimensionality score in the range [0, 1]
