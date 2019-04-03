@@ -16,7 +16,7 @@ import os
 from os.path import join, isfile, islink
 import numpy as np
 import shutil
-from ase.units import Ry, eV, Bohr
+from ase.units import Ry, eV, Bohr, Ha
 from ase.data import atomic_numbers
 from ase.calculators.siesta.import_functions import read_rho, xv_to_atoms
 from ase.calculators.siesta.import_functions import \
@@ -997,6 +997,49 @@ class BaseSiesta(FileIOCalculator):
                     dipole = np.array([float(f) for f in line.split()[5:8]])
         # debye to e*Ang
         self.results['dipole'] = dipole * 0.2081943482534
+
+    def calc_DOS(self, Emin, Emax, dE, sigma):
+        """
+        Calculate the density of states using the eigenvalues from Siesta
+        calculations
+
+        Parameters
+        ----------
+        Emin: float
+            start energy interval
+        Emax: float
+             end energy interval
+        dE: float
+            energy step
+        sigma: float
+            width of the DOS
+            
+        
+        Returns
+        -------
+        Efermi: float
+            Fermi energy
+        Energy: array, float
+            Energy range at which the DOS is calculated
+        DOS: array, float
+            calculated density of states
+        """
+
+        self.read_eigenvalues()
+        ksn2e = []
+        nkpts = len(self.results['eigenvalues'])
+        for kpts, eig in self.results['eigenvalues'].items():
+            ksn2e.append(eig)
+        ksn2e = np.array(ksn2e)/Ha
+
+        omegas = np.arange(Emin, Emax, dE) + 1.0j*sigma
+        omegas/= Ha
+
+        dos = np.zeros((omegas.size))
+        for iw, w in enumerate(omegas):
+            dos[iw] = -(1.0/(w - ksn2e)).sum().imag
+
+        return self.results['fermi_energy'], omegas.real*Ha, dos.real/np.pi/nkpts
 
     def pyscf_tddft(self, Edir=np.array([1.0, 0.0, 0.0]),
                           freq=np.arange(0.0, 10.0, 0.1),
