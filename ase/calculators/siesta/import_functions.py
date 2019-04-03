@@ -41,7 +41,7 @@ def xv_to_atoms(filename):
     atomnumbers = np.array(atomnumbers)
     xyz = np.array(xyz)
     atoms = Atoms(numbers=atomnumbers, positions=xyz, cell=vectors)
-
+    assert natoms == len(atoms)
     return atoms
 
 
