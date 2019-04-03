@@ -1002,6 +1002,9 @@ class BaseSiesta(FileIOCalculator):
         """
         Calculate the density of states using the eigenvalues from Siesta
         calculations
+        
+        Working for 1 kpoint, the function has not been checked for periodic
+        systems
 
         Parameters
         ----------
@@ -1025,9 +1028,18 @@ class BaseSiesta(FileIOCalculator):
             calculated density of states
         """
 
+        import warnings
+
         self.read_eigenvalues()
         ksn2e = []
         nkpts = len(self.results['eigenvalues'])
+        if nkpts > 1:
+            mess = """
+            More than 1 kpoints in your Siesta calculaions. The routine
+            has not been checked for this case. You should cross check the DOS
+            """
+            warnings.warn(mess)
+
         for kpts, eig in self.results['eigenvalues'].items():
             ksn2e.append(eig)
         ksn2e = np.array(ksn2e)/Ha
