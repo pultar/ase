@@ -1051,7 +1051,7 @@ class BaseSiesta(FileIOCalculator):
         for iw, w in enumerate(omegas):
             dos[iw] = -(1.0/(w - ksn2e)).sum().imag
 
-        return self.results['fermi_energy'], omegas.real*Ha, dos.real/np.pi/nkpts
+        return self.results['fermi_energy'], omegas.real*Ha, dos/np.pi/nkpts
 
     def pyscf_tddft(self, Edir=np.array([1.0, 0.0, 0.0]),
                           freq=np.arange(0.0, 10.0, 0.1),
