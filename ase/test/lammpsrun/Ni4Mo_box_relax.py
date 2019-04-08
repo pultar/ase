@@ -6,14 +6,12 @@ from __future__ import print_function, absolute_import
 
 import unittest
 import shutil
-import nose
 import numpy as np
 
 from ase.calculators.lammpsrun import LAMMPS
 from ase.io import read, Trajectory
 from ase.units import GPa
 from os.path import dirname, join, exists
-from nose.tools import assert_equal, assert_almost_equal
 
 
 __author__ = 'Xin Chen'
@@ -54,15 +52,15 @@ class Ni4MoBoxRelaxTest(unittest.TestCase):
         calc.calculate(cryst)
 
         traj = Trajectory(self.traj_file)
-        assert_equal(len(traj), 154)
+        self.assertEqual(len(traj), 154)
 
         for index, atoms in enumerate(traj):
-            assert_equal(atoms.get_potential_energy(),
-                         calc.thermo_content[index]['etotal'])
+            self.assertEqual(atoms.get_potential_energy(),
+                             calc.thermo_content[index]['etotal'])
 
-            assert_almost_equal(atoms.get_volume(),
-                                calc.thermo_content[index]['vol'],
-                                delta=1e-6)
+            self.assertAlmostEqual(atoms.get_volume(),
+                                   calc.thermo_content[index]['vol'],
+                                   delta=1e-6)
 
         rotation_ase2lammps = calc.prism.R
 
@@ -75,15 +73,15 @@ class Ni4MoBoxRelaxTest(unittest.TestCase):
         forces = traj[10].get_forces()
         lmp_forces = np.dot(forces, rotation_ase2lammps)
 
-        assert_almost_equal(lmp_forces[0, 0], 0.0, delta=1e-8)
-        assert_almost_equal(lmp_forces[0, 1], 0.0, delta=1e-8)
-        assert_almost_equal(lmp_forces[0, 2], 0.0, delta=1e-8)
-        assert_almost_equal(lmp_forces[1, 0], -0.0335347, delta=1e-6)
-        assert_almost_equal(lmp_forces[2, 0], 0.375029, delta=1e-6)
-        assert_almost_equal(lmp_forces[3, 0], -0.375029, delta=1e-8)
-        assert_almost_equal(lmp_forces[1, 1], 0.0172581, delta=1e-8)
-        assert_almost_equal(lmp_forces[3, 2], 0.0378692, delta=1e-8)
-        assert_almost_equal(lmp_forces[4, 2], 0.409472, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[0, 0], 0.0, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[0, 1], 0.0, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[0, 2], 0.0, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[1, 0], -0.0335347, delta=1e-6)
+        self.assertAlmostEqual(lmp_forces[2, 0], 0.375029, delta=1e-6)
+        self.assertAlmostEqual(lmp_forces[3, 0], -0.375029, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[1, 1], 0.0172581, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[3, 2], 0.0378692, delta=1e-8)
+        self.assertAlmostEqual(lmp_forces[4, 2], 0.409472, delta=1e-8)
 
         stress = traj[100].get_stress(voigt=False)
         lmp_stress = np.dot(np.linalg.inv(rotation_ase2lammps), stress)
@@ -94,23 +92,22 @@ class Ni4MoBoxRelaxTest(unittest.TestCase):
         pxx, pyy, pzz, pyz, pxz, pxy = lmp_stress[[0, 1, 2, 1, 0, 0],
                                                   [0, 1, 2, 2, 2, 1]]
 
-        assert_almost_equal(pxx, -153.11793, delta=1e-5)
-        assert_almost_equal(pyy, 516.55652, delta=1e-5)
-        assert_almost_equal(pzz, -425.39416, delta=1e-5)
-        assert_almost_equal(pxy, -2961.0069, delta=1e-5)
-        assert_almost_equal(pxz, -1893.5721, delta=1e-5)
-        assert_almost_equal(pyz, -2612.0746, delta=1e-5)
+        self.assertAlmostEqual(pxx, -153.11793, delta=1e-5)
+        self.assertAlmostEqual(pyy, 516.55652, delta=1e-5)
+        self.assertAlmostEqual(pzz, -425.39416, delta=1e-5)
+        self.assertAlmostEqual(pxy, -2961.0069, delta=1e-5)
+        self.assertAlmostEqual(pxz, -1893.5721, delta=1e-5)
+        self.assertAlmostEqual(pyz, -2612.0746, delta=1e-5)
 
-        assert_almost_equal(traj[-1].get_volume(), 58.167359, delta=1e-5)
+        self.assertAlmostEqual(traj[-1].get_volume(), 58.167359, delta=1e-5)
 
     def tearDown(self) -> None:
         """
         The cleanup function.
         """
-        # if exists(self.tmp_dir):
-        #     shutil.rmtree(self.tmp_dir, ignore_errors=True)
-        pass
+        if exists(self.tmp_dir):
+            shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
-    nose.run()
+    unittest.main()
