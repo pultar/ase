@@ -731,16 +731,21 @@ class LAMMPS:
                     cell_atoms = np.linalg.inv(
                         np.dot(folded_R, np.linalg.inv(cell)))
 
+                    pbc_atoms = self.atoms.get_pbc()
+
                 else:
                     positions_atoms = positions
                     forces_atoms = forces
                     stress_atoms = lmp_stress
                     velocities_atoms = velocities
+                    pbc_atoms = [True, True, True]
 
                 if set_atoms:
                     # assume periodic boundary conditions here (as in
                     # write_lammps)
-                    self.atoms = Atoms(type_atoms, positions=positions_atoms,
+                    self.atoms = Atoms(type_atoms,
+                                       positions=positions_atoms,
+                                       pbc=pbc_atoms,
                                        cell=cell_atoms)
                     self.atoms.set_velocities(velocities_atoms * v_unit)
                     self.atoms.arrays['stress'] = stress_atoms
@@ -753,7 +758,8 @@ class LAMMPS:
                     atoms_at_step = Atoms(
                         type_atoms,
                         positions=positions_atoms,
-                        cell=cell_atoms)
+                        cell=cell_atoms,
+                        pbc=pbc_atoms)
                     atoms_at_step.set_velocities(velocities_atoms)
                     results = {
                         'energy': self.thermo_content[timestep]['etotal'],
