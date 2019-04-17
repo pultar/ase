@@ -171,28 +171,32 @@ def parse_block(lines, line):
     return blockname, tags
 
 
-def parse_cif(fileobj):
+def parse_cif(fileobj, reader='ase'):
     """Parse a CIF file. Returns a list of blockname and tag
     pairs. All tag names are converted to lower case."""
 
-    if isinstance(fileobj, basestring):
-        fileobj = open(fileobj, 'rb')
-
-    data = fileobj.read()
-    if isinstance(data, bytes):
-        data = data.decode('latin1')
-    data = [e for e in data.split('\n') if len(e) > 0]
-    lines = [''] + data[::-1]    # all lines (reversed)
-
     blocks = []
-    while True:
-        if not lines:
-            break
-        line = lines.pop()
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        blocks.append(parse_block(lines, line))
+    if reader == 'ase':
+        if isinstance(fileobj, basestring):
+            fileobj = open(fileobj, 'rb')
+
+        data = fileobj.read()
+        if isinstance(data, bytes):
+            data = data.decode('latin1')
+        data = [e for e in data.split('\n') if len(e) > 0]
+        lines = [''] + data[::-1]    # all lines (reversed)
+
+        while True:
+            if not lines:
+                break
+            line = lines.pop()
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            blocks.append(parse_block(lines, line))
+    elif reader == 'pycodcif':
+        pass
+
     return blocks
 
 
@@ -387,7 +391,8 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
 
 
 def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
-             subtrans_included=True, fractional_occupancies=True):
+             subtrans_included=True, fractional_occupancies=True,
+             reader='ase'):
     """Read Atoms object from CIF file. *index* specifies the data
     block number or name (if string) to return.
 
@@ -415,7 +420,7 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     occupancies, the atom's chemical symbol will be that of the most dominant
     species.
     """
-    blocks = parse_cif(fileobj)
+    blocks = parse_cif(fileobj, reader)
     # Find all CIF blocks with valid crystal data
     images = []
     for name, tags in blocks:
