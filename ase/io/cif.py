@@ -204,8 +204,11 @@ def parse_cif(fileobj, reader='ase'):
         for datablock in data:
             tags = datablock['values']
             for tag in tags.keys():
-                if len(tags[tag]) == 1:
-                    tags[tag] = tags[tag][0]
+                values = [convert_value(x) for x in tags[tag]]
+                if len(values) == 1:
+                    tags[tag] = values[0]
+                else:
+                    tags[tag] = values
             blocks.append((datablock['name'], tags))
 
     return blocks
