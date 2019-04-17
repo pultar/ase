@@ -12,7 +12,7 @@ import warnings
 from ase.utils import basestring
 from ase.io.cif import tags2atoms
 
-from pycodcif import parse_cif as pycodcif_parse_cif
+from pycodcif import parse
 
 
 def pycodcif2blocks(datablocks):
@@ -33,7 +33,7 @@ def parse_cif(fileobj):
     if not isinstance(fileobj, basestring):
         fileobj = fileobj.name()
 
-    data = pycodcif_parse_cif(fileobj)
+    data = parse(fileobj)
     return pycodcif2blocks(data)
 
 
