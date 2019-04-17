@@ -22,7 +22,7 @@ def pycodcif2blocks(datablocks):
         for tag in tags.keys():
             if len(tags[tag]) == 1:
                 tags[tag] = tags[tag][0]
-        blocks.append(datablock['name'], tags)
+        blocks.append((datablock['name'], tags))
     return blocks
 
 
@@ -33,7 +33,7 @@ def parse_cif(fileobj):
     if not isinstance(fileobj, basestring):
         fileobj = fileobj.name()
 
-    data = parse(fileobj)
+    data,_,_ = parse(fileobj)
     return pycodcif2blocks(data)
 
 
