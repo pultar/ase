@@ -29,6 +29,17 @@ old_spacegroup_names = {'Abm2': 'Aem2',
                         'Ccca': 'Ccc1'}
 
 
+def pycodcif2blocks(datablocks):
+    blocks = []
+    for datablock in datablocks:
+        tags = datablock['values']
+        for tag in tags.keys():
+            if len(tags[tag]) == 1:
+                tags[tag] = tags[tag][0]
+        blocks.append(datablock['name'], tags)
+    return blocks
+
+
 def convert_value(value):
     """Convert CIF value string to corresponding python type."""
     value = value.strip()
@@ -175,25 +186,11 @@ def parse_cif(fileobj):
     """Parse a CIF file. Returns a list of blockname and tag
     pairs. All tag names are converted to lower case."""
 
-    if isinstance(fileobj, basestring):
-        fileobj = open(fileobj, 'rb')
+    if not isinstance(fileobj, basestring):
+        fileobj = fileobj.name()
 
-    data = fileobj.read()
-    if isinstance(data, bytes):
-        data = data.decode('latin1')
-    data = [e for e in data.split('\n') if len(e) > 0]
-    lines = [''] + data[::-1]    # all lines (reversed)
-
-    blocks = []
-    while True:
-        if not lines:
-            break
-        line = lines.pop()
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        blocks.append(parse_block(lines, line))
-    return blocks
+    data = pycodcif_parse_cif(fileobj)
+    return pycodcif2blocks(data)
 
 
 def tags2atoms(tags, store_tags=False, primitive_cell=False,
