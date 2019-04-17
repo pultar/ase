@@ -195,7 +195,18 @@ def parse_cif(fileobj, reader='ase'):
                 continue
             blocks.append(parse_block(lines, line))
     elif reader == 'pycodcif':
-        pass
+        if not isinstance(fileobj, basestring):
+            fileobj = fileobj.name()
+
+        from pycodcif import parse
+        data,_,_ = parse(fileobj)
+
+        for datablock in data:
+            tags = datablock['values']
+            for tag in tags.keys():
+                if len(tags[tag]) == 1:
+                    tags[tag] = tags[tag][0]
+            blocks.append((datablock['name'], tags))
 
     return blocks
 
