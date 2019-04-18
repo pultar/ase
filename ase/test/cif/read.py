@@ -3,7 +3,7 @@ import unittest
 
 from ase.io.cif import read_cif
 try:
-    from pycodcif import parse
+    from pycodcif import parse # noqa: F401
 except ImportError:
     # Skip test if pycodcif installation is broken:
     raise unittest.SkipTest
