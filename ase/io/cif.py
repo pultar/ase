@@ -196,7 +196,7 @@ def parse_cif(fileobj, reader='ase'):
             blocks.append(parse_block(lines, line))
     elif reader == 'pycodcif':
         if not isinstance(fileobj, basestring):
-            fileobj = fileobj.name()
+            fileobj = fileobj.name
 
         from pycodcif import parse
         data,_,_ = parse(fileobj)
