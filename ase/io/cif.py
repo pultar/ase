@@ -191,6 +191,10 @@ def parse_cif_ase(fileobj):
     if isinstance(data, bytes):
         data = data.decode('latin1')
     data = [e for e in data.split('\n') if len(e) > 0]
+    if len(data) > 0 and data[0].rstrip() == '#\\#CIF_2.0':
+        warnings.warn('CIF v2.0 file format detected; `ase` CIF reader might '
+                      'incorrectly interpret some syntax constructions, use '
+                      '`pycodcif` reader instead')
     lines = [''] + data[::-1]    # all lines (reversed)
 
     while True:
