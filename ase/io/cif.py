@@ -175,41 +175,54 @@ def parse_cif(fileobj, reader='ase'):
     """Parse a CIF file. Returns a list of blockname and tag
     pairs. All tag names are converted to lower case."""
 
-    blocks = []
     if reader == 'ase':
-        if isinstance(fileobj, basestring):
-            fileobj = open(fileobj, 'rb')
-
-        data = fileobj.read()
-        if isinstance(data, bytes):
-            data = data.decode('latin1')
-        data = [e for e in data.split('\n') if len(e) > 0]
-        lines = [''] + data[::-1]    # all lines (reversed)
-
-        while True:
-            if not lines:
-                break
-            line = lines.pop()
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            blocks.append(parse_block(lines, line))
+        return parse_cif_ase(fileobj)
     elif reader == 'pycodcif':
-        if not isinstance(fileobj, basestring):
-            fileobj = fileobj.name
+        return parse_cif_pycodcif(fileobj)
 
-        from pycodcif import parse
-        data,_,_ = parse(fileobj)
 
-        for datablock in data:
-            tags = datablock['values']
-            for tag in tags.keys():
-                values = [convert_value(x) for x in tags[tag]]
-                if len(values) == 1:
-                    tags[tag] = values[0]
-                else:
-                    tags[tag] = values
-            blocks.append((datablock['name'], tags))
+def parse_cif_ase(fileobj):
+    """Parse a CIF file using ase CIF parser"""
+    blocks = []
+    if isinstance(fileobj, basestring):
+        fileobj = open(fileobj, 'rb')
+
+    data = fileobj.read()
+    if isinstance(data, bytes):
+        data = data.decode('latin1')
+    data = [e for e in data.split('\n') if len(e) > 0]
+    lines = [''] + data[::-1]    # all lines (reversed)
+
+    while True:
+        if not lines:
+            break
+        line = lines.pop()
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        blocks.append(parse_block(lines, line))
+
+    return blocks
+
+
+def parse_cif_pycodcif(fileobj):
+    """Parse a CIF file using pycodcif CIF parser"""
+    blocks = []
+    if not isinstance(fileobj, basestring):
+        fileobj = fileobj.name
+
+    from pycodcif import parse
+    data,_,_ = parse(fileobj)
+
+    for datablock in data:
+        tags = datablock['values']
+        for tag in tags.keys():
+            values = [convert_value(x) for x in tags[tag]]
+            if len(values) == 1:
+                tags[tag] = values[0]
+            else:
+                tags[tag] = values
+        blocks.append((datablock['name'], tags))
 
     return blocks
 
