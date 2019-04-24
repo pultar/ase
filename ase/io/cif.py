@@ -215,7 +215,13 @@ def parse_cif_pycodcif(fileobj):
     if not isinstance(fileobj, basestring):
         fileobj = fileobj.name
 
-    from pycodcif import parse
+    try:
+        from pycodcif import parse
+    except:
+        raise ImportError(
+            'parse_cif_pycodcif requires pycodcif ' +
+            '(http://wiki.crystallography.net/cod-tools/pycodcif/)')
+
     data,_,_ = parse(fileobj)
 
     for datablock in data:
