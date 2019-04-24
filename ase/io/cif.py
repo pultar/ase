@@ -456,6 +456,10 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     tagged equipped with an array `occupancy`. Also, in case of mixed
     occupancies, the atom's chemical symbol will be that of the most dominant
     species.
+
+    String *reader* is used to select CIF reader. Value `ase` selects
+    built-in CIF reader (default), while `pycodcif` selects CIF reader based
+    on `pycodcif` package.
     """
     blocks = parse_cif(fileobj, reader)
     # Find all CIF blocks with valid crystal data
