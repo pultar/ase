@@ -54,4 +54,4 @@ with tempfile.NamedTemporaryFile() as temp:
     temp.seek(0)
     cif_pycodcif = read_cif(temp, 0, reader='pycodcif')
 
-    assert [x.__repr__() for x in cif_ase] == [x.__repr__() for x in cif_pycodcif]
+    assert [repr(x) for x in cif_ase] == [repr(x) for x in cif_pycodcif]
