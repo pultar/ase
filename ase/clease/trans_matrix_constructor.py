@@ -1,25 +1,24 @@
 from ase.neighborlist import neighbor_list
+import numpy as np
 
 
 class TransMatrixConstructor(object):
     """Class for constructor translation matrices."""
     def __init__(self, atoms, cutoff):
         self.num_atoms = len(atoms)
-        self.neighbor = self._construct_neighbor_list(atoms, cutoff)    
+        self.neighbor = self._construct_neighbor_list(atoms, cutoff)
 
     def _construct_neighbor_list(self, atoms, cutoff):
         """
         Construct neighbour list structure
         """
-        raw_neigh = neighbor_list('ijDS', atoms, cutoff)
-
+        i_first, i_second, d_vec = neighbor_list('ijD', atoms, cutoff)
         # Transfer to more convenienct strucutre
-        neighbor = [{"neigh_index": [], "dist": [], "shift": []}]*len(atoms)
+        neighbor = [{"neigh_index": [], "dist": []} for _ in range(len(atoms))]
 
-        for i, j, d, s in raw_neigh:
-            neighbor[i]["neigh_index"].append(j)
-            neighbor[i]["dist"].append(d)
-            neighbor[i]["shift"].append(shift)
+        for i in range(len(i_first)):
+            neighbor[i_first[i]]["neigh_index"].append(i_second[i])
+            neighbor[i_first[i]]["dist"].append(d_vec[i])
         return neighbor
 
     def _map_one(self, indx, template_indx):
@@ -32,7 +31,7 @@ class TransMatrixConstructor(object):
 
         for i, d in zip(neigh_indx, neigh_dist):
             dist_vec = np.array(ref_dists) - np.array(d)
-            lengths = dist_vec.dot(dist_vec)
+            lengths = np.sum(dist_vec**2, axis=1)
             corresponding_indx = ref_indx[np.argmin(lengths)]
             mapped[corresponding_indx] = i
         return mapped
