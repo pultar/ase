@@ -226,15 +226,18 @@ class CorrFunction(object):
             self.setting.index_by_trans_symm[cluster["symm_group"]]
         ref_indx_grp = indices_of_symm_group[0]
 
+        eq_sites = list(cluster["equiv_sites"])
+        equiv_deco = np.array(equivalent_deco(deco, eq_sites))
+
         for ref_indx in indices_of_symm_group:
             sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
-                atoms, ref_indx, cluster, ref_indx_grp, deco)
+                atoms, ref_indx, cluster, ref_indx_grp, equiv_deco)
             sp += sp_temp
             count += count_temp
         return sp, count
 
     def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, cluster,
-                                         ref_indx_grp, deco):
+                                         ref_indx_grp, equiv_deco):
         """Compute sp of cluster with same shape and deco for given ref atom.
 
         Arguments
@@ -275,13 +278,13 @@ class CorrFunction(object):
                 self._spin_product_one_cluster(atoms, ref_indx,
                                                cluster_indices, order,
                                                cluster["equiv_sites"],
-                                               ref_indx_grp, deco)
+                                               ref_indx_grp, equiv_deco)
             sp += temp_sp
             count += temp_cnt
         return sp, count
 
     def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
-                                  order, eq_sites, ref_indx_grp, deco):
+                                  order, eq_sites, ref_indx_grp, equiv_deco):
         """Compute spin product for one cluster (same shape, deco, ref_indx).
 
         Arguments
@@ -319,9 +322,11 @@ class CorrFunction(object):
         indices = [ref_indx_grp] + list(cluster_indices)
         sorted_indices = [indices[indx] for indx in order]
         # Average over decoration numbers of equivalent sites
-        eq_sites = list(eq_sites)
-        equiv_deco = equivalent_deco(deco, eq_sites)
-        for dec in equiv_deco:
+        #eq_sites = list(eq_sites)
+        #equiv_deco = equivalent_deco(deco, eq_sites)
+        #for dec in equiv_deco:
+        for dec_num in range(equiv_deco.shape[0]):
+            dec = equiv_deco[dec_num, :]
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
             for i, indx in enumerate(sorted_indices):
