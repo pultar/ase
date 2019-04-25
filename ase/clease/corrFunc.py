@@ -5,6 +5,8 @@ from ase.clease import CEBulk, CECrystal
 from ase.clease.tools import wrap_and_sort_by_position, equivalent_deco
 from ase.db import connect
 import multiprocessing as mp
+#from numba import jit
+from ase.clease.jit import jit
 
 # workers can not be a member of CorrFunction since CorrFunctions is passed
 # as argument to the map function. Hence, we leave it as a global variable,
@@ -35,6 +37,18 @@ class CorrFunction(object):
 
         self.parallel = parallel
         self.num_core = num_core
+
+        bf = self.setting.basis_functions
+        self.symb_id = {}
+        for i, symb in enumerate(bf[0].keys()):
+            self.symb_id[symb] = i
+
+        self.bf_npy = np.zeros((len(bf), len(self.symb_id.keys())))
+        self.tm = self._full_trans_matrix()
+        for i, item in enumerate(bf):
+            for k, v in self.symb_id.items():
+                self.bf_npy[i, v] = item[k]
+
         if parallel:
             global workers
             if self.num_core == "all":
@@ -43,6 +57,21 @@ class CorrFunction(object):
                 num_proc = int(self.num_core)
             if workers is None:
                 workers = mp.Pool(num_proc)
+
+    def _atoms2npy(self, atoms):
+        array = np.zeros(len(atoms), dtype=np.int32)
+        for atom in atoms:
+            array[atom.index] = self.symb_id.get(atom.symbol, -1)
+        return array
+
+    def _full_trans_matrix(self):
+        num_atoms = len(self.setting.trans_matrix)
+        tm = np.zeros((num_atoms, num_atoms), dtype=np.int32)
+        for i, row in enumerate(self.setting.trans_matrix):
+            for k, v in row.items():
+                tm[i, k] = v
+        self.tm = tm
+        return tm
 
     def get_c1(self, atoms, dec):
         """Get correlation function for single-body clusters."""
@@ -121,6 +150,8 @@ class CorrFunction(object):
             raise TypeError('atoms must be Atoms object')
         cf = {}
 
+        atoms_npy = self._atoms2npy(atoms)
+        self.tm = self._full_trans_matrix()
         for name in cluster_names:
             if name == 'c0':
                 cf[name] = 1.
@@ -144,7 +175,7 @@ class CorrFunction(object):
                     continue
                 cluster = cluster_set[prefix]
                 sp_temp, count_temp = \
-                    self._spin_product(atoms, cluster, dec_list)
+                    self._spin_product(atoms_npy, cluster, dec_list)
                 sp += sp_temp
                 count += count_temp
             cf_temp = sp / count
@@ -229,14 +260,19 @@ class CorrFunction(object):
         eq_sites = list(cluster["equiv_sites"])
         equiv_deco = np.array(equivalent_deco(deco, eq_sites))
 
+        # Convert to numpy arrays
+        indices = np.array(cluster["indices"])
+        order = np.array(cluster["order"])
+
         for ref_indx in indices_of_symm_group:
-            sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
-                atoms, ref_indx, cluster, ref_indx_grp, equiv_deco)
+            # sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
+            #     atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco)
+            sp_temp, count_temp = _sp_same_shape_deco_for_ref_indx_jit(atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco, self.tm, self.bf_npy)
             sp += sp_temp
             count += count_temp
         return sp, count
 
-    def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, cluster,
+    def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indices, order,
                                          ref_indx_grp, equiv_deco):
         """Compute sp of cluster with same shape and deco for given ref atom.
 
@@ -272,19 +308,19 @@ class CorrFunction(object):
         """
         count = 0
         sp = 0.0
-        for cluster_indices, order in zip(cluster["indices"],
-                                          cluster["order"]):
+        # for cluster_indices, order in zip(cluster["indices"],
+        #                                   cluster["order"]):
+        for i in range(indices.shape[0]):
             temp_sp, temp_cnt = \
                 self._spin_product_one_cluster(atoms, ref_indx,
-                                               cluster_indices, order,
-                                               cluster["equiv_sites"],
-                                               ref_indx_grp, equiv_deco)
+                                               indices[i, :], order[i, :],
+                                               ref_indx_grp, equiv_deco, bf, tm)
             sp += temp_sp
             count += temp_cnt
         return sp, count
 
     def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
-                                  order, eq_sites, ref_indx_grp, equiv_deco):
+                                  order, ref_indx_grp, equiv_deco, bf, tm):
         """Compute spin product for one cluster (same shape, deco, ref_indx).
 
         Arguments
@@ -316,11 +352,23 @@ class CorrFunction(object):
             Decoration number that specifies which basis function should be
             used for getting the spin variable of each atom.
         """
+        return _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
+                                             order, ref_indx_grp, equiv_deco,
+                                             tm, bf)
         bf = self.setting.basis_functions
         count = 0
         sp = 0.0
-        indices = [ref_indx_grp] + list(cluster_indices)
-        sorted_indices = [indices[indx] for indx in order]
+        #indices = [ref_indx_grp] + list(cluster_indices)
+        indices = np.append([ref_indx_grp], cluster_indices)
+        indices = np.zeros(len(cluster_indices) + 1)
+        indices[0] = ref_indx_grp
+        for i in range(len(cluster_indices)):
+            indices[i+1] = cluster_indices[i]
+        #sorted_indices = [indices[indx] for indx in order]
+        sorted_indices = np.zeros(len(indices))
+        for i in range(len(indices)):
+            sorted_indices[i] = indices[order[i]]
+
         # Average over decoration numbers of equivalent sites
         #eq_sites = list(eq_sites)
         #equiv_deco = equivalent_deco(deco, eq_sites)
@@ -329,12 +377,14 @@ class CorrFunction(object):
             dec = equiv_deco[dec_num, :]
             sp_temp = 1.0
             # loop through indices of atoms in each cluster
-            for i, indx in enumerate(sorted_indices):
+            for i in range(len(sorted_indices)):
+                indx = sorted_indices[i]
                 trans_indx = self.setting.trans_matrix[ref_indx][indx]
-                sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
+                sp_temp *= self.bf_npy[dec[i], atoms[trans_indx]]
+                #sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
             sp += sp_temp
             count += 1
-        num_equiv = float(len(equiv_deco))
+        num_equiv = float(equiv_deco.shape[0])
         return sp/num_equiv, count/num_equiv
 
     def check_cell_size(self, atoms):
@@ -354,3 +404,47 @@ def get_cf_parallel(args):
     atoms = args[1]
     name = args[2]
     return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple")
+
+
+@jit(nopython=True)
+def _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
+                                  order, ref_indx_grp, equiv_deco,
+                                  trans_matrix, bf):
+        count = 0
+        sp = 0.0
+        indices = np.zeros(len(cluster_indices) + 1)
+        indices[0] = ref_indx_grp
+        for i in range(len(cluster_indices)):
+            indices[i+1] = cluster_indices[i]
+
+        sorted_indices = np.zeros(len(indices), dtype=np.int32)
+        for i in range(len(indices)):
+            sorted_indices[i] = indices[order[i]]
+
+        for dec_num in range(equiv_deco.shape[0]):
+            dec = equiv_deco[dec_num, :]
+            sp_temp = 1.0
+            # loop through indices of atoms in each cluster
+            for i in range(len(sorted_indices)):
+                indx = sorted_indices[i]
+                trans_indx = trans_matrix[ref_indx, indx]
+                sp_temp *= bf[dec[i], atoms[trans_indx]]
+            sp += sp_temp
+            count += 1
+        num_equiv = float(equiv_deco.shape[0])
+        return sp/num_equiv, count/num_equiv
+
+
+@jit(nopython=True)
+def _sp_same_shape_deco_for_ref_indx_jit(atoms, ref_indx, indices, order,
+                                         ref_indx_grp, equiv_deco, tm, bf):
+        count = 0
+        sp = 0.0
+        for i in range(indices.shape[0]):
+            temp_sp, temp_cnt = \
+                _spin_product_one_cluster_jit(atoms, ref_indx,
+                                              indices[i, :], order[i, :],
+                                              ref_indx_grp, equiv_deco, tm, bf)
+            sp += temp_sp
+            count += temp_cnt
+        return sp, count
