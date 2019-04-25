@@ -3,7 +3,15 @@ import numpy as np
 
 
 class TransMatrixConstructor(object):
-    """Class for constructor translation matrices."""
+    """Class for constructor translation matrices.
+
+    Arguments
+    ==========
+    atoms: Atoms
+        ASE atoms object (assumed to be wrapped and sorted)
+    cutoff: float
+        Cut-off distance in angstrom
+    """
     def __init__(self, atoms, cutoff):
         self.num_atoms = len(atoms)
         self.neighbor = self._construct_neighbor_list(atoms, cutoff)
@@ -37,7 +45,20 @@ class TransMatrixConstructor(object):
         return mapped
 
     def construct(self, ref_symm_group, symm_group):
-        """Construct the translation matrix."""
+        """Construct the translation matrix.
+
+        Arguments
+        =========
+        ref_symm_group: list
+            List of reference indices. If the atoms object has only one
+            basis this will be [0], otherwise it can for instance be
+            [0, 5, 15] if the atoms object have three basis
+        symm_group: list
+            List with the symmetry groups of each atoms object. If the object
+            has only one basis this will be [0, 0, 0, ...0], if it has two
+            basis this can be [0, 0, 1, 1, 0, 1...]. The reference index of the
+            symmetry group of atoms k will be ref_symm_group[symm_group[k]]
+        """
         tm = []
         for indx in range(self.num_atoms):
             group = symm_group[indx]
