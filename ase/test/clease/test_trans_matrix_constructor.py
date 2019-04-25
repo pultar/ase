@@ -88,10 +88,10 @@ def timing():
 
         sizes.append(n)
 
-    np.savetxt("trans_mat_timing.csv", 
+    np.savetxt("trans_mat_timing.csv",
                np.vstack((sizes, brute_force_time, fast_time)).T,
                header="Size, Brute force, fast")
 
 test_fcc()
 test_two_basis()
-#timing()
+# timing()
