@@ -217,7 +217,7 @@ def parse_cif_pycodcif(fileobj):
 
     try:
         from pycodcif import parse
-    except:
+    except ImportError:
         raise ImportError(
             'parse_cif_pycodcif requires pycodcif ' +
             '(http://wiki.crystallography.net/cod-tools/pycodcif/)')
