@@ -70,7 +70,6 @@ class CorrFunction(object):
         for i, row in enumerate(self.setting.trans_matrix):
             for k, v in row.items():
                 tm[i, k] = v
-        self.tm = tm
         return tm
 
     def get_c1(self, atoms, dec):
