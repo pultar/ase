@@ -162,7 +162,7 @@ def time_jit():
 
     cf = CorrFunction(setting)
     start = time.time()
-    cf_dict = cf.get_cf(atoms)
+    cf.get_cf(atoms)
 
     for n in range(10):
         start = time.time()
