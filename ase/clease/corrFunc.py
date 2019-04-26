@@ -45,6 +45,7 @@ class CorrFunction(object):
 
         self.bf_npy = np.zeros((len(bf), len(self.symb_id.keys())))
         self.tm = self._full_trans_matrix()
+        self.atoms_npy = None
         for i, item in enumerate(bf):
             for k, v in self.symb_id.items():
                 self.bf_npy[i, v] = item[k]
@@ -81,6 +82,16 @@ class CorrFunction(object):
         c1 /= float(len(atoms))
         return c1
 
+    def _prepare_corr_func_calculation(self, atoms):
+        if isinstance(atoms, Atoms):
+            self.check_cell_size(atoms)
+        else:
+            raise TypeError('atoms must be Atoms object')
+
+        self.atoms_npy = self._atoms2npy(atoms)
+        self.tm = self._full_trans_matrix()
+        
+
     def get_cf(self, atoms, return_type='dict'):
         """Calculate correlation function for all possible clusters.
 
@@ -112,6 +123,10 @@ class CorrFunction(object):
 
         cnames = self.setting.cluster_names
         if self.parallel:
+            # Pre-calculate nessecary stuff prior to parallel
+            # execution
+            self._prepare_corr_func_calculation(atoms)
+
             args = [(self, atoms, name) for name in cnames]
             res = workers.map(get_cf_parallel, args)
             cf = {}
@@ -125,7 +140,7 @@ class CorrFunction(object):
         return self.get_cf_by_cluster_names(atoms, cnames, return_type)
 
     def get_cf_by_cluster_names(self, atoms, cluster_names,
-                                return_type='dict'):
+                                return_type='dict', warm=False):
         """Calculate correlation functions of the specified clusters.
 
         Arguments
@@ -136,6 +151,12 @@ class CorrFunction(object):
             names (str) of the clusters for which the correlation functions are
             calculated for the structure provided in atoms
 
+        warm: bool
+            If True, no preparations will be performed. Note this is only
+            intended to be used for the parallel execution to avoid reading
+            templates from DB for each cluster. Normally warm=False should be
+            used.
+
         return_type: str
             -'dict' (default): returns a dictionary (e.g., {'name': cf_value})
             -'tuple': returns a list of tuples (e.g., [('name', cf_value)])
@@ -143,14 +164,19 @@ class CorrFunction(object):
                       values in the same order as the order provided in the
                       "cluster_names"
         """
-        if isinstance(atoms, Atoms):
-            self.check_cell_size(atoms)
-        else:
-            raise TypeError('atoms must be Atoms object')
-        cf = {}
+        # if isinstance(atoms, Atoms):
+        #     self.check_cell_size(atoms)
+        # else:
+        #     raise TypeError('atoms must be Atoms object')
+        # cf = {}
 
-        atoms_npy = self._atoms2npy(atoms)
-        self.tm = self._full_trans_matrix()
+        # self.atoms_npy = self._atoms2npy(atoms)
+        # self.tm = self._full_trans_matrix()
+
+        if not warm:
+            self._prepare_corr_func_calculation(atoms)
+
+        cf = {}
         for name in cluster_names:
             if name == 'c0':
                 cf[name] = 1.
@@ -174,7 +200,7 @@ class CorrFunction(object):
                     continue
                 cluster = cluster_set[prefix]
                 sp_temp, count_temp = \
-                    self._spin_product(atoms_npy, cluster, dec_list)
+                    self._spin_product(self.atoms_npy, cluster, dec_list)
                 sp += sp_temp
                 count += count_temp
             cf_temp = sp / count
@@ -287,7 +313,7 @@ def get_cf_parallel(args):
     cf = args[0]
     atoms = args[1]
     name = args[2]
-    return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple")
+    return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple", warm=True)
 
 
 @jit(nopython=True)
