@@ -60,31 +60,26 @@ def test_two_basis():
     tm_fast = tm_constructor.construct(ref_indx, symm_group)
     assert check_sparse_dense(tm_fast, tm_brute)
 
+
 def test_four_basis():
-    atoms = crystal(symbols=['H', 'O', 'X', 'Fe'],
+    unitcell = crystal(symbols=['H', 'O', 'X', 'Fe'],
                     basis=[(0., 0., 0.), (0.39, 0.14, 0.),
                            (0.2, 0.35, 0.5), (0.22, 0.38, 0.)],
                     spacegroup=55, 
-                    cellpar = [6.25, 7.4, 3.83, 90, 90, 90],
-                    size=[2, 2, 3], primitive_cell=False)
+                    cellpar=[6.25, 7.4, 3.83, 90, 90, 90],
+                    size=[1, 1, 1], primitive_cell=False)
 
-    atoms = wrap_and_sort_by_position(atoms)
-    for atom in atoms:
-        if atom.symbol == 'H':
-            atom.tag = 0
-        elif atom.symbol == 'O':
-            atom.tag = 1
-        elif atom.symbol == 'X':
-            atom.tag = 2
-        else:
-            atom.tag = 3       
+    for atom in unitcell:
+        atom.tag = atom.index
+
+    atoms = wrap_and_sort_by_position(unitcell*(3, 3, 2))
 
     symm_group = [atom.tag for atom in atoms]
-    index_by_group = [[], [], [], []]
+    index_by_group = [[] for _ in range(len(unitcell))]
+
     for atom in atoms:
         index_by_group[atom.tag].append(atom.index)
-    ref_indx = [min(index_by_group[0]), min(index_by_group[1]),
-                min(index_by_group[2]), min(index_by_group[3])]
+    ref_indx = [min(gr) for gr in index_by_group]
 
     tm_brute = brute_force_tm_construction(ref_indx, index_by_group, atoms)
 
