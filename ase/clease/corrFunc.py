@@ -267,7 +267,9 @@ class CorrFunction(object):
         for ref_indx in indices_of_symm_group:
             # sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
             #     atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco)
-            sp_temp, count_temp = _sp_same_shape_deco_for_ref_indx_jit(atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco, self.tm, self.bf_npy)
+            sp_temp, count_temp = _sp_same_shape_deco_for_ref_indx_jit(
+                atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco,
+                self.tm, self.bf_npy)
             sp += sp_temp
             count += count_temp
         return sp, count
@@ -355,37 +357,37 @@ class CorrFunction(object):
         return _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
                                              order, ref_indx_grp, equiv_deco,
                                              tm, bf)
-        bf = self.setting.basis_functions
-        count = 0
-        sp = 0.0
-        #indices = [ref_indx_grp] + list(cluster_indices)
-        indices = np.append([ref_indx_grp], cluster_indices)
-        indices = np.zeros(len(cluster_indices) + 1)
-        indices[0] = ref_indx_grp
-        for i in range(len(cluster_indices)):
-            indices[i+1] = cluster_indices[i]
-        #sorted_indices = [indices[indx] for indx in order]
-        sorted_indices = np.zeros(len(indices))
-        for i in range(len(indices)):
-            sorted_indices[i] = indices[order[i]]
+        # bf = self.setting.basis_functions
+        # count = 0
+        # sp = 0.0
+        # #indices = [ref_indx_grp] + list(cluster_indices)
+        # indices = np.append([ref_indx_grp], cluster_indices)
+        # indices = np.zeros(len(cluster_indices) + 1)
+        # indices[0] = ref_indx_grp
+        # for i in range(len(cluster_indices)):
+        #     indices[i+1] = cluster_indices[i]
+        # #sorted_indices = [indices[indx] for indx in order]
+        # sorted_indices = np.zeros(len(indices))
+        # for i in range(len(indices)):
+        #     sorted_indices[i] = indices[order[i]]
 
-        # Average over decoration numbers of equivalent sites
-        #eq_sites = list(eq_sites)
-        #equiv_deco = equivalent_deco(deco, eq_sites)
-        #for dec in equiv_deco:
-        for dec_num in range(equiv_deco.shape[0]):
-            dec = equiv_deco[dec_num, :]
-            sp_temp = 1.0
-            # loop through indices of atoms in each cluster
-            for i in range(len(sorted_indices)):
-                indx = sorted_indices[i]
-                trans_indx = self.setting.trans_matrix[ref_indx][indx]
-                sp_temp *= self.bf_npy[dec[i], atoms[trans_indx]]
-                #sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
-            sp += sp_temp
-            count += 1
-        num_equiv = float(equiv_deco.shape[0])
-        return sp/num_equiv, count/num_equiv
+        # # Average over decoration numbers of equivalent sites
+        # #eq_sites = list(eq_sites)
+        # #equiv_deco = equivalent_deco(deco, eq_sites)
+        # #for dec in equiv_deco:
+        # for dec_num in range(equiv_deco.shape[0]):
+        #     dec = equiv_deco[dec_num, :]
+        #     sp_temp = 1.0
+        #     # loop through indices of atoms in each cluster
+        #     for i in range(len(sorted_indices)):
+        #         indx = sorted_indices[i]
+        #         trans_indx = self.setting.trans_matrix[ref_indx][indx]
+        #         sp_temp *= self.bf_npy[dec[i], atoms[trans_indx]]
+        #         #sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
+        #     sp += sp_temp
+        #     count += 1
+        # num_equiv = float(equiv_deco.shape[0])
+        # return sp/num_equiv, count/num_equiv
 
     def check_cell_size(self, atoms):
         """Check the size of provided cell and create a template if necessary.
@@ -410,6 +412,45 @@ def get_cf_parallel(args):
 def _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
                                   order, ref_indx_grp, equiv_deco,
                                   trans_matrix, bf):
+        """Compute sp of cluster with same shape and deco for given ref atom.
+
+        Arguments
+        =========
+        atoms: np.ndarray
+            1D numpy array representation of the atoms object. Each symbol
+            has a unique number set by the CorrFunction class. Example: If
+            curr_func.symb_id = {"Al": 0, "Cu": 1, "Li": 2} and the symbols
+            are ["Al", "Al", "Li", "Cu", "Li"], this array would be
+            [0, 0, 2, 1, 2]
+
+        ref_indx: int
+            Index of the atom used as a reference to get clusters.
+
+        cluster_indices: np.ndarray
+            1D numpy array of inidices that constitue a cluster. Each row
+            correspond to a sub-cluster. For a triplet this could be
+            [0, 1]
+            hence the reference index itself is not included.
+
+        indx_order: np.ndarray
+            A 1D array of how the indices in "cluster_indices" should be
+            ordered. The indices of atoms are sorted in a decrease order of
+            internal distances to other members of the cluster.
+
+        ref_indx_grp: int
+            Index of the reference atom used for the translational symmetry
+            group.
+
+        deco: np.ndarray
+            Decoration number that specifies which basis function should be
+            used for getting the spin variable of each atom. Each row in the
+            array represents the different combination that by symmetry should
+            be averaged.
+        trans_matrix: np.ndarray
+            2D Numpy array of the full translation matrix.
+        bf: np.ndarray
+            2D Numpy array of holding the basis functions.
+        """
         count = 0
         sp = 0.0
         indices = np.zeros(len(cluster_indices) + 1)
@@ -438,6 +479,47 @@ def _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
 @jit(nopython=True)
 def _sp_same_shape_deco_for_ref_indx_jit(atoms, ref_indx, indices, order,
                                          ref_indx_grp, equiv_deco, tm, bf):
+        """Compute sp of cluster with same shape and deco for given ref atom.
+
+        Arguments
+        =========
+        atoms: np.ndarray
+            1D numpy array representation of the atoms object. Each symbol
+            has a unique number set by the CorrFunction class. Example: If
+            curr_func.symb_id = {"Al": 0, "Cu": 1, "Li": 2} and the symbols
+            are ["Al", "Al", "Li", "Cu", "Li"], this array would be
+            [0, 0, 2, 1, 2]
+
+        ref_indx: int
+            Index of the atom used as a reference to get clusters.
+
+        indx_list: np.ndarray
+            2D numpy array of inidices that constitue a cluster. Each row
+            correspond to a sub-cluster. For a triplet this could be
+            [[0, 1]
+             [5, 2]
+             [7, 8]]
+             hence the reference index itself is not included.
+
+        indx_order: np.ndarray
+            A 2D array of how the indices in "indx_list" should be ordered.
+            The indices of atoms are sorted in a decrease order of internal
+            distances to other members of the cluster.
+
+        ref_indx_grp: int
+            Index of the reference atom used for the translational symmetry
+            group.
+
+        deco: np.ndarray
+            Decoration number that specifies which basis function should be
+            used for getting the spin variable of each atom. Each row in the
+            array represents the different combination that by symmetry should
+            be averaged.
+        tm: np.ndarray
+            2D Numpy array of the full translation matrix.
+        bf: np.ndarray
+            2D Numpy array of holding the basis functions.
+        """
         count = 0
         sp = 0.0
         for i in range(indices.shape[0]):
