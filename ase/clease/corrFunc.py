@@ -271,48 +271,6 @@ class CorrFunction(object):
             count += count_temp
         return sp, count
 
-    def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
-                                  order, ref_indx_grp, equiv_deco, bf, tm):
-        """Compute spin product for one cluster (same shape, deco, ref_indx).
-
-        Arguments
-        =========
-        atoms: np.ndarray
-            1D numpy array representation of the atoms object. Each symbol
-            has a unique number set by the CorrFunction class. Example: If
-            curr_func.symb_id = {"Al": 0, "Cu": 1, "Li": 2} and the symbols
-            are ["Al", "Al", "Li", "Cu", "Li"], this array would be
-            [0, 0, 2, 1, 2]
-
-        ref_indx: int
-            Index of the atom used as a reference to get clusters.
-
-        cluster_indices: list
-            A list where indices of the atoms that consistute a cluster.
-
-        order: list
-            A list of how the indices in "cluster_indices" should be ordered.
-            The indices of atoms are sorted in a decrease order of internal
-            distances to other members of the cluster.
-
-        eq_sites: list
-            A list that groups the equivalent atoms in a cluster. Atoms are
-            classified as equivalent when they are inditinguishable based on
-            the geometry of the cluster.
-            (e.g., equilateral triangles have 3 indistinguishable points.)
-
-        ref_indx_grp: int
-            Index of the reference atom used for the translational symmetry
-            group.
-
-        deco: tuple
-            Decoration number that specifies which basis function should be
-            used for getting the spin variable of each atom.
-        """
-        return _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
-                                             order, ref_indx_grp, equiv_deco,
-                                             tm, bf)
-
     def check_cell_size(self, atoms):
         """Check the size of provided cell and create a template if necessary.
 
