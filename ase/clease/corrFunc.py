@@ -274,52 +274,52 @@ class CorrFunction(object):
             count += count_temp
         return sp, count
 
-    def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indices, order,
-                                         ref_indx_grp, equiv_deco):
-        """Compute sp of cluster with same shape and deco for given ref atom.
+    # def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indices, order,
+    #                                      ref_indx_grp, equiv_deco):
+    #     """Compute sp of cluster with same shape and deco for given ref atom.
 
-        Arguments
-        =========
-        atoms: Atoms object
+    #     Arguments
+    #     =========
+    #     atoms: Atoms object
 
-        ref_indx: int
-            Index of the atom used as a reference to get clusters.
+    #     ref_indx: int
+    #         Index of the atom used as a reference to get clusters.
 
-        indx_list: list
-            A nested list where indices of the atoms that consistute a cluster
-            are grouped together.
+    #     indx_list: list
+    #         A nested list where indices of the atoms that consistute a cluster
+    #         are grouped together.
 
-        indx_order: list
-            A nested list of how the indices in "indx_list" should be ordered.
-            The indices of atoms are sorted in a decrease order of internal
-            distances to other members of the cluster.
+    #     indx_order: list
+    #         A nested list of how the indices in "indx_list" should be ordered.
+    #         The indices of atoms are sorted in a decrease order of internal
+    #         distances to other members of the cluster.
 
-        eq_sites: list
-            A nested list that groups the equivalent atoms in a cluster. Atoms
-            are classified as equivalent when they are inditinguishable based
-            on the geometry of the cluster
-            (e.g., equilateral triangles have 3 indistinguishable points.)
+    #     eq_sites: list
+    #         A nested list that groups the equivalent atoms in a cluster. Atoms
+    #         are classified as equivalent when they are inditinguishable based
+    #         on the geometry of the cluster
+    #         (e.g., equilateral triangles have 3 indistinguishable points.)
 
-        ref_indx_grp: int
-            Index of the reference atom used for the translational symmetry
-            group.
+    #     ref_indx_grp: int
+    #         Index of the reference atom used for the translational symmetry
+    #         group.
 
-        deco: tuple
-            Decoration number that specifies which basis function should be
-            used for getting the spin variable of each atom.
-        """
-        count = 0
-        sp = 0.0
-        # for cluster_indices, order in zip(cluster["indices"],
-        #                                   cluster["order"]):
-        for i in range(indices.shape[0]):
-            temp_sp, temp_cnt = \
-                self._spin_product_one_cluster(atoms, ref_indx,
-                                               indices[i, :], order[i, :],
-                                               ref_indx_grp, equiv_deco, bf, tm)
-            sp += temp_sp
-            count += temp_cnt
-        return sp, count
+    #     deco: tuple
+    #         Decoration number that specifies which basis function should be
+    #         used for getting the spin variable of each atom.
+    #     """
+    #     count = 0
+    #     sp = 0.0
+    #     # for cluster_indices, order in zip(cluster["indices"],
+    #     #                                   cluster["order"]):
+    #     for i in range(indices.shape[0]):
+    #         temp_sp, temp_cnt = \
+    #             self._spin_product_one_cluster(atoms, ref_indx,
+    #                                            indices[i, :], order[i, :],
+    #                                            ref_indx_grp, equiv_deco, bf, tm)
+    #         sp += temp_sp
+    #         count += temp_cnt
+    #     return sp, count
 
     def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
                                   order, ref_indx_grp, equiv_deco, bf, tm):
