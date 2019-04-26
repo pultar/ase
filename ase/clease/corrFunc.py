@@ -264,8 +264,6 @@ class CorrFunction(object):
         order = np.array(cluster["order"])
 
         for ref_indx in indices_of_symm_group:
-            # sp_temp, count_temp = self._sp_same_shape_deco_for_ref_indx(
-            #     atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco)
             sp_temp, count_temp = _sp_same_shape_deco_for_ref_indx_jit(
                 atoms, ref_indx, indices, order, ref_indx_grp, equiv_deco,
                 self.tm, self.bf_npy)
