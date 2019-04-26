@@ -166,7 +166,7 @@ def time_jit():
 
     for n in range(10):
         start = time.time()
-        cf_dict = cf.get_cf(atoms)
+        cf.get_cf(atoms)
         print(time.time() - start)
 
 
@@ -174,5 +174,5 @@ test_trans_matrix()
 test_order_indep_ref_indx()
 #test_interaction_contribution_symmetric_clusters()
 test_supercell_consistency()
-time_jit()
+#time_jit()
 os.remove(db_name)
