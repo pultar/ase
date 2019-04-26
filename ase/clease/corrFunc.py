@@ -327,7 +327,12 @@ class CorrFunction(object):
 
         Arguments
         =========
-        atoms: Atoms object
+        atoms: np.ndarray
+            1D numpy array representation of the atoms object. Each symbol
+            has a unique number set by the CorrFunction class. Example: If
+            curr_func.symb_id = {"Al": 0, "Cu": 1, "Li": 2} and the symbols
+            are ["Al", "Al", "Li", "Cu", "Li"], this array would be
+            [0, 0, 2, 1, 2]
 
         ref_indx: int
             Index of the atom used as a reference to get clusters.
