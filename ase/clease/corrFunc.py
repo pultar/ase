@@ -274,53 +274,6 @@ class CorrFunction(object):
             count += count_temp
         return sp, count
 
-    # def _sp_same_shape_deco_for_ref_indx(self, atoms, ref_indx, indices, order,
-    #                                      ref_indx_grp, equiv_deco):
-    #     """Compute sp of cluster with same shape and deco for given ref atom.
-
-    #     Arguments
-    #     =========
-    #     atoms: Atoms object
-
-    #     ref_indx: int
-    #         Index of the atom used as a reference to get clusters.
-
-    #     indx_list: list
-    #         A nested list where indices of the atoms that consistute a cluster
-    #         are grouped together.
-
-    #     indx_order: list
-    #         A nested list of how the indices in "indx_list" should be ordered.
-    #         The indices of atoms are sorted in a decrease order of internal
-    #         distances to other members of the cluster.
-
-    #     eq_sites: list
-    #         A nested list that groups the equivalent atoms in a cluster. Atoms
-    #         are classified as equivalent when they are inditinguishable based
-    #         on the geometry of the cluster
-    #         (e.g., equilateral triangles have 3 indistinguishable points.)
-
-    #     ref_indx_grp: int
-    #         Index of the reference atom used for the translational symmetry
-    #         group.
-
-    #     deco: tuple
-    #         Decoration number that specifies which basis function should be
-    #         used for getting the spin variable of each atom.
-    #     """
-    #     count = 0
-    #     sp = 0.0
-    #     # for cluster_indices, order in zip(cluster["indices"],
-    #     #                                   cluster["order"]):
-    #     for i in range(indices.shape[0]):
-    #         temp_sp, temp_cnt = \
-    #             self._spin_product_one_cluster(atoms, ref_indx,
-    #                                            indices[i, :], order[i, :],
-    #                                            ref_indx_grp, equiv_deco, bf, tm)
-    #         sp += temp_sp
-    #         count += temp_cnt
-    #     return sp, count
-
     def _spin_product_one_cluster(self, atoms, ref_indx, cluster_indices,
                                   order, ref_indx_grp, equiv_deco, bf, tm):
         """Compute spin product for one cluster (same shape, deco, ref_indx).
@@ -362,37 +315,6 @@ class CorrFunction(object):
         return _spin_product_one_cluster_jit(atoms, ref_indx, cluster_indices,
                                              order, ref_indx_grp, equiv_deco,
                                              tm, bf)
-        # bf = self.setting.basis_functions
-        # count = 0
-        # sp = 0.0
-        # #indices = [ref_indx_grp] + list(cluster_indices)
-        # indices = np.append([ref_indx_grp], cluster_indices)
-        # indices = np.zeros(len(cluster_indices) + 1)
-        # indices[0] = ref_indx_grp
-        # for i in range(len(cluster_indices)):
-        #     indices[i+1] = cluster_indices[i]
-        # #sorted_indices = [indices[indx] for indx in order]
-        # sorted_indices = np.zeros(len(indices))
-        # for i in range(len(indices)):
-        #     sorted_indices[i] = indices[order[i]]
-
-        # # Average over decoration numbers of equivalent sites
-        # #eq_sites = list(eq_sites)
-        # #equiv_deco = equivalent_deco(deco, eq_sites)
-        # #for dec in equiv_deco:
-        # for dec_num in range(equiv_deco.shape[0]):
-        #     dec = equiv_deco[dec_num, :]
-        #     sp_temp = 1.0
-        #     # loop through indices of atoms in each cluster
-        #     for i in range(len(sorted_indices)):
-        #         indx = sorted_indices[i]
-        #         trans_indx = self.setting.trans_matrix[ref_indx][indx]
-        #         sp_temp *= self.bf_npy[dec[i], atoms[trans_indx]]
-        #         #sp_temp *= bf[dec[i]][atoms[trans_indx].symbol]
-        #     sp += sp_temp
-        #     count += 1
-        # num_equiv = float(equiv_deco.shape[0])
-        # return sp/num_equiv, count/num_equiv
 
     def check_cell_size(self, atoms):
         """Check the size of provided cell and create a template if necessary.
