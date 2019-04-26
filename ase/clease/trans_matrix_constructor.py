@@ -3,12 +3,13 @@ import numpy as np
 
 
 class TransMatrixConstructor(object):
-    """Class for constructor translation matrices.
+    """Class that constructs translation matrices.
 
-    Arguments
-    ==========
-    atoms: Atoms
+    Arguments:
+    =========
+    atoms: Atoms object 
         ASE atoms object (assumed to be wrapped and sorted)
+
     cutoff: float
         Cut-off distance in angstrom
     """
@@ -17,27 +18,26 @@ class TransMatrixConstructor(object):
         self.neighbor = self._construct_neighbor_list(atoms, cutoff)
 
     def _construct_neighbor_list(self, atoms, cutoff):
-        """
-        Construct neighbour list structure
-        """
+        """Construct neighbour list structure."""
         i_first, i_second, d_vec = neighbor_list('ijD', atoms, cutoff)
         # Transfer to more convenienct strucutre
-        neighbor = [{"neigh_index": [], "dist": []} for _ in range(len(atoms))]
+        neighbor = [{"nb_index": [], "dist": []} for _ in range(len(atoms))]
 
         for i in range(len(i_first)):
-            neighbor[i_first[i]]["neigh_index"].append(i_second[i])
+            neighbor[i_first[i]]["nb_index"].append(i_second[i])
             neighbor[i_first[i]]["dist"].append(d_vec[i])
         return neighbor
 
     def _map_one(self, indx, template_indx):
+        """Map indices of neighbors to another reference atom."""
         mapped = {template_indx: indx}
 
-        neigh_indx = self.neighbor[indx]["neigh_index"]
-        neigh_dist = self.neighbor[indx]["dist"]
+        nb_indx = self.neighbor[indx]["nb_index"]
+        nb_dist = self.neighbor[indx]["dist"]
+        ref_indx = self.neighbor[template_indx]["nb_index"]
         ref_dists = self.neighbor[template_indx]["dist"]
-        ref_indx = self.neighbor[template_indx]["neigh_index"]
 
-        for i, d in zip(neigh_indx, neigh_dist):
+        for i, d in zip(nb_indx, nb_dist):
             dist_vec = np.array(ref_dists) - np.array(d)
             lengths = np.sum(dist_vec**2, axis=1)
             corresponding_indx = ref_indx[np.argmin(lengths)]
@@ -45,24 +45,27 @@ class TransMatrixConstructor(object):
         return mapped
 
     def construct(self, ref_symm_group, symm_group):
-        """Construct the translation matrix.
+        """Construct translation matrix.
 
-        Arguments
+        Arguments:
         =========
         ref_symm_group: list
-            List of reference indices. If the atoms object has only one
-            basis this will be [0], otherwise it can for instance be
-            [0, 5, 15] if the atoms object have three basis
+            List of reference indices. 
+            If passed Atoms object has only one basis, ref_symm_group is [0],
+            otherwise it hold indices of reference atoms in each basis. 
+            (e.g., [0, 5, 15] for the Atoms object with 3 basis)
+
         symm_group: list
-            List with the symmetry groups of each atoms object. If the object
-            has only one basis this will be [0, 0, 0, ...0], if it has two
-            basis this can be [0, 0, 1, 1, 0, 1...]. The reference index of the
-            symmetry group of atoms k will be ref_symm_group[symm_group[k]]
+            List of the symmetry groups of each Atoms object. 
+            If passed Atoms object has only one basis, symm_group is 
+            [0, 0, ..., 0].  
+            If it has two basis,  this can be [0, 0, 1, 1, 0, 1, ...]. 
+            The index of the reference atom for the basis where the atom
+            with index k belongs to is ref_symm_group[symm_group[k]]
         """
         tm = []
         for indx in range(self.num_atoms):
-            group = symm_group[indx]
-            ref_indx = ref_symm_group[group]
+            ref_indx = ref_symm_group[symm_group[indx]]
             mapped = self._map_one(indx, ref_indx)
             tm.append(mapped)
         return tm

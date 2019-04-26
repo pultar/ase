@@ -25,6 +25,12 @@ class InvalidConstraintError(Exception):
 class Concentration(object):
     """"Class that specifies the concentration ranges of consituting elements.
 
+    Concentration range can be specified using three different ways:
+        1. specifying the equality and lower bound conditions by specifying 
+           A_lb, b_lb, A_eq and b_eq during initialization,
+        2. using set_conc_formula_unit() method, and
+        3. using set_conc_ranges() method.
+
     Arguments:
     =========
 
@@ -39,13 +45,24 @@ class Concentration(object):
         specifying concentration (e.g., useful when two basis are shared by
         the same set of elements and no distinctions are made between them)
 
-    A_lb: list or numpy array (optional)
+    A_lb: list or numpy array (optional, 
+                               only used for linear algegra representation)
         A two-dimention matrix (or nested list) used to specify the lower
         bounds of the concentration ranges.
 
-    b_lb: list or numpy list (optional)
-        A list
+    b_lb: list or numpy list (optional, 
+                              only used for linear algegra representation)
+        A list used tp specify the lower bounds of the concentration ranges.
 
+    A_eq: list or numpy array (optional, 
+                               only used for linear algegra representation)
+        A two-dimention matrix (or nested list) used to specify the equality
+        conditions of the concentration ranges.
+
+    b_eq: list or numpy list (optional, 
+                              only used for linear algegra representation)
+        A list used tp specify the equality condisitons of the concentration
+        ranges.
     """
     def __init__(self, basis_elements=None, grouped_basis=None,
                  A_lb=None, b_lb=None, A_eq=None, b_eq=None):
