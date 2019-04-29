@@ -11,7 +11,7 @@ from ase.clease import CECrystal, NewStructures, CorrFunction
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.clease.concentration import Concentration
 from ase.db import connect
-from ase.test.clease.reference_corr_funcs import all_cf
+from ase.test.clease.reference_corr_funcs_crystal import all_cf
 
 # If this is True, the JSON file containing the correlation functions
 # Used to check consistency of the reference functions is updated
@@ -290,5 +290,5 @@ test_narrow_angle_crystal()
 if update_reference_file:
     print("Updating the reference correlation function file")
     print("This should normally not be done.")
-    with open("reference_corr_funcs.py", 'w') as outfile:
+    with open("reference_corr_funcs_crystal.py", 'w') as outfile:
         json.dump(all_cf, outfile, indent=2, separators=(',', ': '))
