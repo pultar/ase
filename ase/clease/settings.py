@@ -19,6 +19,7 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
 from ase.clease.concentration import Concentration
+from ase.clease.trans_matrix_constructor import TransMatrixConstructor
 
 
 class ClusterExpansionSetting(object):
@@ -856,6 +857,13 @@ class ClusterExpansionSetting(object):
             clusters.append(info_dict)
         return clusters
 
+    def _get_symm_groups(self):
+        symm_groups = -np.ones(len(self.atoms), dtype=int)
+
+        for group, indices in enumerate(self.index_by_trans_symm):
+            symm_groups[indices] = group
+        return symm_groups.tolist()
+
     def _store_data(self):
         size_str = "x".join(str(s) for s in self.size)
         num = self.template_atoms_uid
@@ -865,6 +873,21 @@ class ClusterExpansionSetting(object):
 
         self._create_cluster_information()
         self.trans_matrix = self._create_translation_matrix()
+        # symm_group = [atom.tag for atom in self.atoms]
+        symm_group = self._get_symm_groups()
+        print(self.ref_index_trans_symm)
+        print(symm_group)
+        tm = TransMatrixConstructor(self.atoms, max(self.max_cluster_dia)).construct(self.ref_index_trans_symm, symm_group)
+        self.trans_matrix_new = [{k: row[k] for k in self.unique_indices} for row in tm]
+        print(self.trans_matrix)
+        print(self.trans_matrix_new)
+        for _ in range(len(self.trans_matrix)):
+            print(self.trans_matrix[_])
+            print(self.trans_matrix_new[_])
+            assert self.trans_matrix[_] == self.trans_matrix_new[_]
+        assert len(self.trans_matrix) == len(self.trans_matrix_new)
+        assert self.trans_matrix == self.trans_matrix_new
+
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
