@@ -7,11 +7,19 @@
 """
 
 import os
-from ase.clease import CEBulk, NewStructures, Evaluate, Concentration
+import json
+from ase.clease import CEBulk, CorrFunction, NewStructures, Evaluate, Concentration
 from ase.clease.newStruct import MaxAttemptReachedError
 from ase.clease.tools import update_db
 from ase.calculators.emt import EMT
 from ase.db import connect
+from ase.test.clease.reference_corr_funcs_bulk import all_cf
+
+# If this is True, the JSON file containing the correlation functions
+# Used to check consistency of the reference functions is updated
+# This should normally be False
+update_reference_file = False
+tol = 1E-9
 
 db_name = "test_bulk.db"
 
@@ -23,6 +31,90 @@ def get_members_of_family(setting, cname):
     for entry in info:
         members.append(entry["indices"])
     return members
+
+def calculate_cf(setting, atoms):
+    cf = CorrFunction(setting)
+    return cf.get_cf(atoms, return_type='dict')
+
+def test_corrfunc():
+    basis_elements = [['Au', 'Cu']]
+    concentration = Concentration(basis_elements=basis_elements)
+    setting = CEBulk(crystalstructure='fcc', a=4.05, size=[3, 3, 3],
+                        concentration=concentration, db_name=db_name)
+    atoms = setting.atoms.copy()
+    atoms[0].symbol = 'Cu'
+    atoms[3].symbol = 'Cu'
+    cf = calculate_cf(setting, atoms)
+
+    if update_reference_file:
+        all_cf["binary_fcc"] = cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["binary_fcc"][key]) < tol
+    
+    os.remove(db_name)
+
+    basis_elements = [['Li', 'V'], ['X', 'O']]
+    concentration = Concentration(basis_elements=basis_elements)
+    setting = CEBulk(crystalstructure="rocksalt",
+                     a=4.0,
+                     size=[2, 2, 1],
+                     concentration=concentration,
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.)
+    atoms = setting.atoms.copy()
+    Li_ind = [atom.index for atom in atoms if atom.symbol=='Li']
+    X_ind = [atom.index for atom in atoms if atom.symbol=='X']
+    atoms[Li_ind[0]].symbol = 'V'
+    atoms[X_ind[0]].symbol = 'O'
+    cf = calculate_cf(setting, atoms)
+    if update_reference_file:
+        all_cf["two_basis"] = cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["two_basis"][key]) < tol
+    os.remove(db_name)
+
+    basis_elements = [['Na', 'Cl'], ['Na', 'Cl']]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0, 1]])
+    setting = CEBulk(crystalstructure="rocksalt",
+                     a=4.0,
+                     size=[2, 2, 1],
+                     concentration=concentration,
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.)
+    atoms = setting.atoms.copy()
+    atoms[1].symbol = 'Cl'
+    atoms[7].symbol = 'Cl'
+    cf = calculate_cf(setting, atoms)
+    if update_reference_file:
+        all_cf["one_grouped_basis"] = cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["one_grouped_basis"][key]) < tol
+    os.remove(db_name)
+
+    basis_elements = [['Ca'], ['O', 'F'], ['O', 'F']]
+    concentration = Concentration(basis_elements=basis_elements,
+                                  grouped_basis=[[0], [1, 2]])
+    setting = CEBulk(crystalstructure="fluorite",
+                     a=4.0,
+                     size=[2, 2, 2],
+                     concentration=concentration,
+                     db_name=db_name,
+                     max_cluster_size=3,
+                     max_cluster_dia=4.,
+                     ignore_background_atoms=True)
+    atoms = setting.atoms.copy()
+    O_ind = [atom.index for atom in atoms if atom.symbol=='O']
+    atoms[O_ind[0]].symbol = 'F'
+    atoms[O_ind[1]].symbol = 'F'
+    cf = calculate_cf(setting, atoms)
+    if update_reference_file:
+        all_cf["two_grouped_basis_bckgrnd"] = cf
+    for key in cf.keys():
+        assert abs(cf[key] - all_cf["two_grouped_basis_bckgrnd"][key]) < tol
+    os.remove(db_name)
 
 
 def test_binary_system():
@@ -226,3 +318,10 @@ test_2grouped_basis_bckgrnd_probe()
 
 print('initial pool')
 test_initial_pool()
+test_corrfunc()
+
+if update_reference_file:
+    print("Updating the reference correlation function file")
+    print("This should normally not be done.")
+    with open("reference_corr_funcs_bulk.py", 'w') as outfile:
+        json.dump(all_cf, outfile, indent=2, separators=(',', ': '))
