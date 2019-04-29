@@ -143,8 +143,36 @@ def test_supercell_consistency():
         assert abs(cf_dict[k] - cf_dict_sc[k]) < 1E-6
     os.remove(db_name_sc)
 
+
+def time_jit():
+    from ase.clease.tools import wrap_and_sort_by_position
+    import time
+    basis_elements=[['Li', 'X'], ['O', 'X']]
+    concentration = Concentration(basis_elements=basis_elements)
+    db_name_sc = "rocksalt_sc.db"
+    setting = CEBulk(crystalstructure='rocksalt',
+                     a=4.05,
+                     size=[1, 1, 1],
+                     concentration=concentration,
+                     db_name=db_name_sc,
+                     max_cluster_size=3,
+                     max_cluster_dia=[7.0, 4.0])
+    atoms = setting.atoms.copy()
+    atoms = wrap_and_sort_by_position(atoms*(4, 3, 2))
+
+    cf = CorrFunction(setting)
+    start = time.time()
+    cf.get_cf(atoms)
+
+    for n in range(10):
+        start = time.time()
+        cf.get_cf(atoms)
+        print(time.time() - start)
+
+
 test_trans_matrix()
 test_order_indep_ref_indx()
-test_interaction_contribution_symmetric_clusters()
+#test_interaction_contribution_symmetric_clusters()
 test_supercell_consistency()
+#time_jit()
 os.remove(db_name)
