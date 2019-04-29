@@ -151,12 +151,6 @@ class CorrFunction(object):
             names (str) of the clusters for which the correlation functions are
             calculated for the structure provided in atoms
 
-        warm: bool
-            If True, no preparations will be performed. Note this is only
-            intended to be used for the parallel execution to avoid reading
-            templates from DB for each cluster. Normally warm=False should be
-            used.
-
         return_type: str
             -'dict' (default): returns a dictionary (e.g., {'name': cf_value})
             -'tuple': returns a list of tuples (e.g., [('name', cf_value)])
@@ -164,16 +158,8 @@ class CorrFunction(object):
                       values in the same order as the order provided in the
                       "cluster_names"
         """
-        # if isinstance(atoms, Atoms):
-        #     self.check_cell_size(atoms)
-        # else:
-        #     raise TypeError('atoms must be Atoms object')
-        # cf = {}
 
-        # self.atoms_npy = self._atoms2npy(atoms)
-        # self.tm = self._full_trans_matrix()
-
-        if not warm:
+        if not self.parallel:
             self._prepare_corr_func_calculation(atoms)
 
         cf = {}
@@ -313,7 +299,7 @@ def get_cf_parallel(args):
     cf = args[0]
     atoms = args[1]
     name = args[2]
-    return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple", warm=True)
+    return cf.get_cf_by_cluster_names(atoms, [name], return_type="tuple")
 
 
 @jit(nopython=True)
@@ -423,8 +409,10 @@ def _sp_same_shape_deco_for_ref_indx_jit(atoms, ref_indx, indices, order,
             used for getting the spin variable of each atom. Each row in the
             array represents the different combination that by symmetry should
             be averaged.
+    
         tm: np.ndarray
             2D Numpy array of the full translation matrix.
+
         bf: np.ndarray
             2D Numpy array of holding the basis functions.
         """
