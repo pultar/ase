@@ -19,6 +19,7 @@ from ase.clease.tools import (wrap_and_sort_by_position, index_by_position,
 from ase.clease.basis_function import BasisFunction
 from ase.clease.template_atoms import TemplateAtoms
 from ase.clease.concentration import Concentration
+from ase.clease.trans_matrix_constructor import TransMatrixConstructor
 
 
 class ClusterExpansionSetting(object):
@@ -44,6 +45,7 @@ class ClusterExpansionSetting(object):
             raise TypeError("concentration has to be either dict or "
                             "instance of Concentration")
 
+        self.check_old_tm_algorithm = False
         self.kwargs["concentration"] = self.concentration.to_dict()
         self.basis_elements = deepcopy(self.concentration.basis_elements)
         self.num_basis = len(self.basis_elements)
@@ -856,6 +858,22 @@ class ClusterExpansionSetting(object):
             clusters.append(info_dict)
         return clusters
 
+    def _get_symm_groups(self):
+        symm_groups = -np.ones(len(self.atoms), dtype=int)
+
+        for group, indices in enumerate(self.index_by_trans_symm):
+            symm_groups[indices] = group
+        return symm_groups.tolist()
+
+    def _cutoff_for_tm_construction(self):
+        indices = self.unique_indices
+        max_dist = -1.0
+        for ref in indices:
+            distances = self.atoms.get_distances(ref, indices, mic=True)
+            if np.max(distances) > max_dist:
+                max_dist = np.max(distances)
+        return max_dist + 1E-5
+
     def _store_data(self):
         size_str = "x".join(str(s) for s in self.size)
         num = self.template_atoms_uid
@@ -864,7 +882,19 @@ class ClusterExpansionSetting(object):
               '({} of {})'.format(size_str, num+1, num_templates))
 
         self._create_cluster_information()
-        self.trans_matrix = self._create_translation_matrix()
+       
+        symm_group = self._get_symm_groups()
+        tm_cutoff = self._cutoff_for_tm_construction()
+        tmc = TransMatrixConstructor(self.atoms, tm_cutoff)
+        tm = tmc.construct(self.ref_index_trans_symm, symm_group)
+        self.trans_matrix = [{k: row[k] for k in self.unique_indices} for row in tm]
+        if self.check_old_tm_algorithm:
+            self.trans_matrix_old = self._create_translation_matrix()
+            for _ in range(len(self.trans_matrix)):
+                assert self.trans_matrix_old[_] == self.trans_matrix[_]
+            assert len(self.trans_matrix_old) == len(self.trans_matrix)
+            assert self.trans_matrix_old == self.trans_matrix
+
         db = connect(self.db_name)
         data = {'cluster_info': self.cluster_info,
                 'trans_matrix': self.trans_matrix}
