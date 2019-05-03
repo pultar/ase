@@ -7,6 +7,7 @@ from numpy.linalg import inv, pinv, cond
 class LinearRegression(object):
     def __init__(self):
         self._weight_matrix = None
+        self.tol = 1E-8
 
     @property
     def weight_matrix(self):
@@ -42,17 +43,23 @@ class LinearRegression(object):
         y: Datapints (vector of length N)
         """
         self._ensure_weight_matrix_consistency(y)
-        precision = self.precision_matrix(X)
-        coeff = precision.dot(X.T.dot(y))
+
+        # We use SVD to carry out the fit
+        U, D, V_h = np.linalg.svd(X, full_matrices=False)
+        V = V_h.T
+        diag_item = np.zeros_like(D)
+        mask = np.abs(D) > self.tol
+        diag_item[mask] = 1.0/D[mask]
+        coeff = V.dot(np.diag(diag_item)).dot(U.T).dot(y)
         return coeff
 
     def precision_matrix(self, X):
-        a = X.T.dot(X)
-        if cond(a) < 1. / sys.float_info.epsilon:
-            precision = inv(a)
-        else:
-            precision = pinv(a)
-        return precision
+        U, D, V_h = np.linalg.svd(X, full_matrices=False)
+        V = V_h.T
+        diag = np.zeros_like(D)
+        mask = np.abs(D) > self.tol
+        diag[mask] = 1.0/D[mask]**2
+        return V.dot(np.diag(diag)).dot(V.T)
 
     @staticmethod
     def get_instance_array():
