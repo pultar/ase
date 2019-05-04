@@ -133,3 +133,7 @@ a = read('5.nc')
 assert(len(a) == 2)
 
 os.remove('5.nc')
+
+traj = NetCDFTrajectory('example1.nc')
+a = traj[1]
+
