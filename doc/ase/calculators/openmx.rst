@@ -178,7 +178,7 @@ Similarly, You can use PBS method by specifying kwargs,
 
 .. code-block:: python
 
-  calc = OpenMX(pbs={'processes':20, 'threads':3, 'walltime'='100:00:00'}, ...)
+  calc = OpenMX(pbs={'processes':20, 'threads':3, 'walltime':'100:00:00'}, ...)
 
 .. note::
 
