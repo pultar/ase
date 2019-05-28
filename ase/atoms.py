@@ -1047,6 +1047,21 @@ class Atoms(object):
 
         self.arrays['positions'] += np.array(displacement)
 
+    def pretty_translation(atoms):
+        """Translates atoms such that scaled positions are minimized."""
+
+        n = len(atoms)
+        scaled = atoms.get_scaled_positions()
+
+        for i in range(3):
+            indices = np.argsort(scaled[:, i])
+            sp = scaled[indices, i]
+            widths = (np.roll(sp, 1) - sp) % 1.0
+            scaled[:, i] -= sp[np.argmin(widths)]
+
+        atoms.set_scaled_positions(scaled)
+        atoms.wrap(eps=0)
+
     def center(self, vacuum=None, axis=(0, 1, 2), about=None):
         """Center atoms in unit cell.
 
