@@ -29,9 +29,7 @@ def _translate_pretty(fractional, pbc, eps):
         indices = np.where(widths < -eps)[0]
         widths[indices] %= 1.0
         fractional[:, i] -= sp[np.argmin(widths)]
-
-    indices = np.where(fractional < -eps)
-    fractional[indices] %= 1.0
+        fractional[indices, i] %= 1.0
     return fractional
 
 
@@ -85,12 +83,6 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
     if not hasattr(pbc, '__len__'):
         pbc = (pbc,) * 3
 
-    if pretty_translation:
-        fractional = np.linalg.solve(cell.T,
-                                     np.asarray(positions).T).T
-        fractional = translate_pretty(fractional, pbc, eps)
-        return np.dot(fractional, cell)
-
     if not hasattr(center, '__len__'):
         center = (center,) * 3
 
@@ -105,10 +97,16 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
     fractional = np.linalg.solve(cell.T,
                                  np.asarray(positions).T).T - shift
 
-    for i, periodic in enumerate(pbc):
-        if periodic:
-            fractional[:, i] %= 1.0
-            fractional[:, i] += shift[i]
+    if pretty_translation:
+        fractional = translate_pretty(fractional, pbc, eps)
+        shift = np.asarray(center) - 0.5
+        shift[np.logical_not(pbc)] = 0.0
+        fractional += shift
+    else:
+        for i, periodic in enumerate(pbc):
+            if periodic:
+                fractional[:, i] %= 1.0
+                fractional[:, i] += shift[i]
 
     return np.dot(fractional, cell)
 
