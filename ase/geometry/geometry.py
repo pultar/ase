@@ -15,9 +15,9 @@ import numpy as np
 from ase.geometry import complete_cell
 
 
-def _translate_pretty(fractional, pbc, eps):
+def translate_pretty(fractional, pbc):
+    """Translates atoms such that fractional positions are minimized."""
 
-    fractional = np.copy(fractional)
     for i in range(3):
         if not pbc[i]:
             continue
@@ -25,24 +25,10 @@ def _translate_pretty(fractional, pbc, eps):
         indices = np.argsort(fractional[:, i])
         sp = fractional[indices, i]
 
-        widths = (np.roll(sp, 1) - sp)
-        indices = np.where(widths < -eps)[0]
-        widths[indices] %= 1.0
+        widths = (np.roll(sp, 1) - sp) % 1.0
         fractional[:, i] -= sp[np.argmin(widths)]
-        fractional[indices, i] %= 1.0
+        fractional[:, i] %= 1.0
     return fractional
-
-
-def translate_pretty(fractional, pbc, eps):
-    """Translates atoms such that fractional positions are minimized."""
-
-    # Don't use the tolerance unless it gives better results
-    f0 = _translate_pretty(fractional, pbc, 0)
-    f1 = _translate_pretty(fractional, pbc, eps)
-    if np.max(f0) < np.max(f1) + eps:
-        return f0
-    else:
-        return f1
 
 
 def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
@@ -98,7 +84,7 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
                                  np.asarray(positions).T).T - shift
 
     if pretty_translation:
-        fractional = translate_pretty(fractional, pbc, eps)
+        fractional = translate_pretty(fractional, pbc)
         shift = np.asarray(center) - 0.5
         shift[np.logical_not(pbc)] = 0.0
         fractional += shift

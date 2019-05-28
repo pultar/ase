@@ -160,23 +160,21 @@ positions = np.array([
     [0, 0, 0],
     [0, 1, 1],
     [1, 0, 1],
-    [1, 1, 0]])
+    [1, 1, 0.]])
 cell = np.diag([2, 2, 2])
 result = wrap_positions(positions, cell, pbc=[True, True, True],
                         pretty_translation=True)
 assert np.max(result) < 1 + 1E-10
+assert np.min(result) > -1E-10
 
-result = wrap_positions(positions - 1E-9, cell, pbc=[True, True, True],
-                        pretty_translation=True, eps=1E-7)
+result = wrap_positions(positions - 5, cell, pbc=[True, True, True],
+                        pretty_translation=True)
 assert np.max(result) < 1 + 1E-10
 
-result = wrap_positions(positions - 1E-9, cell, pbc=[True, True, True],
-                        pretty_translation=True, eps=0)
-assert np.max(result) > 1 - 1E-8
-
-result = wrap_positions(positions - [5, 0, 0], cell, pbc=[False, True, True],
+result = wrap_positions(positions - 5, cell, pbc=[False, True, True],
                         pretty_translation=True)
 assert np.max(result[:, 0]) < -3
+assert np.max(result[:, 1:]) < 1 + 1E-10
 
 # Get the correct crystal structure from a range of different cells
 assert crystal_structure_from_cell(bulk('Al').get_cell()) == 'fcc'
