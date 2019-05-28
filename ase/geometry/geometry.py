@@ -15,8 +15,40 @@ import numpy as np
 from ase.geometry import complete_cell
 
 
+def _translate_pretty(fractional, pbc, eps):
+
+    fractional = np.copy(fractional)
+    for i in range(3):
+        if not pbc[i]:
+            continue
+
+        indices = np.argsort(fractional[:, i])
+        sp = fractional[indices, i]
+
+        widths = (np.roll(sp, 1) - sp)
+        indices = np.where(widths < -eps)[0]
+        widths[indices] %= 1.0
+        fractional[:, i] -= sp[np.argmin(widths)]
+
+    indices = np.where(fractional < -eps)
+    fractional[indices] %= 1.0
+    return fractional
+
+
+def translate_pretty(fractional, pbc, eps):
+    """Translates atoms such that fractional positions are minimized."""
+
+    # Don't use the tolerance unless it gives better results
+    f0 = _translate_pretty(fractional, pbc, 0)
+    f1 = _translate_pretty(fractional, pbc, eps)
+    if np.max(f0) < np.max(f1) + eps:
+        return f0
+    else:
+        return f1
+
+
 def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
-                   eps=1e-7):
+                   pretty_translation=False, eps=1e-7):
     """Wrap positions to unit cell.
 
     Returns positions changed by a multiple of the unit cell vectors to
@@ -35,6 +67,8 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
     center: three float
         The positons in fractional coordinates that the new positions
         will be nearest possible to.
+    pretty_translation: bool
+        Translates atoms such that fractional coordinates are minimized.
     eps: float
         Small number to prevent slightly negative coordinates from being
         wrapped.
@@ -50,6 +84,12 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
 
     if not hasattr(pbc, '__len__'):
         pbc = (pbc,) * 3
+
+    if pretty_translation:
+        fractional = np.linalg.solve(cell.T,
+                                     np.asarray(positions).T).T
+        fractional = translate_pretty(fractional, pbc, eps)
+        return np.dot(fractional, cell)
 
     if not hasattr(center, '__len__'):
         center = (center,) * 3
@@ -243,7 +283,7 @@ def get_distances(p1, p2=None, cell=None, pbc=None):
     D = np.zeros((len(p1), len(p2), 3))
 
     for offset, pos1 in enumerate(p1):
-        D[offset, :, :] = p2 - pos1 
+        D[offset, :, :] = p2 - pos1
 
     # Collapse to linear indexing
     D.shape = (-1, 3)
