@@ -1050,7 +1050,6 @@ class Atoms(object):
     def pretty_translation(atoms):
         """Translates atoms such that scaled positions are minimized."""
 
-        n = len(atoms)
         scaled = atoms.get_scaled_positions()
 
         for i in range(3):
