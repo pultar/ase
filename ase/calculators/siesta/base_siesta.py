@@ -758,6 +758,7 @@ class BaseSiesta(FileIOCalculator):
         self.read_forces_stress()
         self.read_eigenvalues()
         self.read_kpoints()
+        self.read_kpoints()
         self.read_dipole()
         self.read_pseudo_density()
         self.read_hsx()
