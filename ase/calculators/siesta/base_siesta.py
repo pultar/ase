@@ -402,7 +402,7 @@ class BaseSiesta(FileIOCalculator):
             self._write_fdf_arguments(f)
 
             # Use the saved density matrix if only 'cell' and 'positions'
-            # haved changes.
+            # have changed.
             if (system_changes is None or
                 ('numbers' not in system_changes and
                  'initial_magmoms' not in system_changes and
