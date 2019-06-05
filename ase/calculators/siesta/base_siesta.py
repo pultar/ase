@@ -758,7 +758,6 @@ class BaseSiesta(FileIOCalculator):
         self.read_forces_stress()
         self.read_eigenvalues()
         self.read_kpoints()
-        self.read_kpoints()
         self.read_dipole()
         self.read_pseudo_density()
         self.read_hsx()
@@ -950,7 +949,7 @@ class BaseSiesta(FileIOCalculator):
         self.results['forces'] *= Ry / Bohr
 
     def read_eigenvalues(self):
-        """ A simpler procedure using the suggestion by Federico Marchesin """
+        """ A robust procedure using the suggestion by Federico Marchesin """
 
         fname = os.path.join(self.directory, self.label) + '.EIG'
         try:
