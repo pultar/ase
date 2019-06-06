@@ -43,6 +43,7 @@ class Siesta3_2(BaseSiesta):
         'Optical.EnergyMaximum': 'eV',
         'Optical.Broaden': 'eV',
         'Optical.Scissor': 'eV',
+        'PAO.EnergyShift': 'eV',
         'MD.MaxForceTol': 'eV/Ang',
         'MD.MaxStressTol': 'eV/Ang**3',
         'MD.MaxCGDispl': 'Ang',
@@ -70,7 +71,7 @@ class Siesta3_2(BaseSiesta):
         ('ChemicalSpeciesLabel', None),
         ('PAO.BasisSize', "DZP"),
         ('PAO.BasisSizes', None),
-        ("PAO.EnergyShift", 0.02 / un.Ry),  # 0.02Ry
+        ('PAO.EnergyShift', 0.2721139613),  # 0.02Ry
         ('PAO.BasisType', "split"),
         ('PAO.SplitNorm', 0.15),
         ('PAO.SplitNormH', 0.15),
@@ -340,6 +341,7 @@ class SiestaTrunk462(BaseSiesta):
         'Optical.EnergyMaximum': 'eV',
         'Optical.Broaden': 'eV',
         'Opticalcissor': 'eV',
+        'PAO.EnergyShift': 'eV',
         'MD.MaxForceTol': 'eV/Ang',
         'MD.MaxStressTol': 'eV/Ang**3',
         'MD.MaxCGDispl': 'Ang',
@@ -368,6 +370,7 @@ class SiestaTrunk462(BaseSiesta):
         ('PAO.BasisSize', "DZP"),
         ('PAO.BasisSizes', None),
         ('PAO.BasisType', "split"),
+        ('PAO.EnergyShift', 0.2721139613),  # 0.02Ry
         ('PAO.SplitNorm', 0.15),
         ('PAO.SplitNormH', 0.15),
         ('PAO.NewSplitCode', False),
@@ -415,7 +418,7 @@ class SiestaTrunk462(BaseSiesta):
         ('XC.functional', "LDA"),
         ('XC.authors', "PZ"),
         ('XC.hydrid', None),
-        ('SpinPolarised', False),
+        ('SpinPolarized', False),
         ('NonCollinearSpin', False),
         ('FixSpin', False),
         ('TotalSpin', 0.0),
