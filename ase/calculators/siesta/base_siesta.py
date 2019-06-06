@@ -12,7 +12,7 @@ http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 """
 
 from __future__ import print_function
-import os
+import os, warnings
 from os.path import join, isfile, islink
 import numpy as np
 import shutil
@@ -460,7 +460,7 @@ class BaseSiesta(FileIOCalculator):
                 else:
                     f.write(format_fdf(key, fdf_arguments[key]))
             else:
-                print( key, 'ignored?')
+                warnings.warn('Ignoring unknown keyword "{}"'.format(key))
 
 
     def remove_analysis(self):
@@ -1459,7 +1459,6 @@ class BaseSiesta(FileIOCalculator):
         """
         from ase.calculators.siesta.mbpt_lcao import MBPT_LCAO
         from ase.calculators.siesta.mbpt_lcao_io import read_mbpt_lcao_output
-        import warnings
 
         warnings.warn("Out dated version, try get_polarizability_pyscf")
 
