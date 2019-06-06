@@ -10,8 +10,6 @@ Home of the SIESTA package:
 http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 """
 from ase.calculators.siesta.base_siesta import BaseSiesta
-import ase.units as un
-
 
 # Version 3.2 of Siesta
 class Siesta3_2(BaseSiesta):
