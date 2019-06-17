@@ -81,7 +81,7 @@ calc.write_kpoints()
 
 with open('KPOINTS.ref', 'w') as f:
     f.write("""KPOINTS created by Atomic Simulation Environment
-3
+3 
 Cartesian
 0.100000 0.200000 0.300000 2.000000 
 0.000000 0.000000 0.000000 1.000000 
@@ -98,7 +98,7 @@ calc.write_kpoints()
 
 with open('KPOINTS.ref', 'w') as f:
     f.write("""KPOINTS created by Atomic Simulation Environment
-3
+3 
 Reciprocal
 0.100000 0.200000 0.300000 1.0 
 0.000000 0.000000 0.000000 1.0 
