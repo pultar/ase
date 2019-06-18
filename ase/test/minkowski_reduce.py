@@ -1,0 +1,13 @@
+import numpy as np
+from ase.geometry import minkowski_reduce
+
+tol = 1E-14
+np.random.seed(0)
+
+for i in range(40):
+    B = np.random.uniform(-1, 1, (3, 3))
+    R, H = minkowski_reduce(B)
+    assert np.allclose(H @ B, R, atol=tol)
+
+    norms = np.linalg.norm(R, axis=1)
+    assert (np.argsort(norms) == range(3)).all()
