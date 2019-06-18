@@ -11,3 +11,7 @@ for i in range(40):
 
     norms = np.linalg.norm(R, axis=1)
     assert (np.argsort(norms) == range(3)).all()
+
+    # Test idempotency
+    _, _H = minkowski_reduce(R)
+    assert (_H == np.eye(3).astype(np.int)).all()
