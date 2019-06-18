@@ -56,8 +56,9 @@ def closest_vector(t0, u, v):
 
 def minkowski_reduce(B):
 
-    """Calculate a Minkowski-reduced lattice basis.  Implements the method
-    described in:
+    """Calculate a Minkowski-reduced lattice basis.  The reduced basis
+    has the shortest possible vector lengths and has |a| <= |b| <= |c|.
+    Implements the method described in:
 
     Low-dimensional Lattice Basis Reduction Revisited
     Nguyen, Phong Q. and Stehl{\'e}, Damien,
