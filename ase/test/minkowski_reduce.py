@@ -2,10 +2,10 @@ import numpy as np
 from ase.geometry import minkowski_reduce
 
 tol = 1E-14
-np.random.seed(0)
+rng = np.random.RandomState(0)
 
 for i in range(40):
-    B = np.random.uniform(-1, 1, (3, 3))
+    B = rng.uniform(-1, 1, (3, 3))
     R, H = minkowski_reduce(B)
     assert np.allclose(H @ B, R, atol=tol)
 

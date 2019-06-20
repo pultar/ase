@@ -19,7 +19,7 @@ def gauss(B, hu, hv):
         if np.dot(u, u) >= np.dot(v, v):
             return hv, hu
 
-    raise Exception("Gaussian basis not found after %d iterations" % max_it)
+    raise RuntimeError("Gaussian basis not found after %d iterations" % max_it)
 
 
 def relevant_vectors_2D(u, v):
@@ -32,7 +32,7 @@ def relevant_vectors_2D(u, v):
 
 def closest_vector(t0, u, v):
 
-    t = t0[::]
+    t = t0
     rs, cs = relevant_vectors_2D(u, v)
     a = np.array([0, 0])
 
@@ -51,7 +51,7 @@ def closest_vector(t0, u, v):
         a += kopt * cs[index]
         t = t0 + a[0] * u + a[1] * v
 
-    raise Exception("Closest vector not found after %d iterations" % max_it)
+    raise RuntimeError("Closest vector not found after %d iterations" % max_it)
 
 
 def minkowski_reduce(B):
@@ -63,7 +63,7 @@ def minkowski_reduce(B):
     Implements the method described in:
 
     Low-dimensional Lattice Basis Reduction Revisited
-    Nguyen, Phong Q. and Stehl{\'e}, Damien,
+    Nguyen, Phong Q. and Stehlé, Damien,
     ACM Trans. Algorithms 5(4) 46:1--46:48, 2009
     https://doi.org/10.1145/1597036.1597050
 
@@ -117,4 +117,4 @@ def minkowski_reduce(B):
         if norms[2] >= norms[1] or (nb == 0).all():
             return R, H
 
-    raise Exception("Minkowski basis not found after %d iterations" % max_it)
+    raise RuntimeError("Minkowski basis not found after %d iterations" % max_it)
