@@ -7,20 +7,20 @@ This module defines the central object in the ASE package: the Atoms
 object.
 """
 
+import copy
 import numbers
 import warnings
 from math import cos, sin, pi
-import copy
 
 import numpy as np
 
 import ase.units as units
 from ase.atom import Atom
+from ase.cell import Cell
 from ase.constraints import FixConstraint, FixBondLengths, FixLinearTriatomic
 from ase.data import atomic_masses
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
-from ase.geometry.cell import Cell
 from ase.symbols import Symbols, symbols2numbers
 
 
@@ -1214,10 +1214,10 @@ class Atoms(object):
                        'where v is a vector to rotate around and '
                        'a is the angle in degrees.')
             if isinstance(v, (float, int)):
-                warnings.warn(warning)
+                warnings.warn(warning, FutureWarning)
                 a, v = v * 180 / pi, a
             elif v is None:
-                warnings.warn(warning)
+                warnings.warn(warning, FutureWarning)
                 v = a
                 a = None
             else:
@@ -1291,7 +1291,7 @@ class Atoms(object):
         warnings.warn(
             'Please use this method instead: '
             'euler_rotate(phi=0, theta=0, psi=0, center=(0, 0, 0)) '
-            'where the angles are given in degrees')
+            'where the angles are given in degrees', FutureWarning)
         self.euler_rotate(phi * 180 / pi, theta * 180 / pi, psi * 180 / pi,
                           center)
 
@@ -1368,12 +1368,15 @@ class Atoms(object):
             warnings.warn(
                 'Please use new API (which will return the angle in degrees): '
                 'atoms_obj.get_dihedral(a1,a2,a3,a4)*pi/180 instead of '
-                'atoms_obj.get_dihedral([a1,a2,a3,a4])')
+                'atoms_obj.get_dihedral([a1,a2,a3,a4])', FutureWarning)
             assert a3 is None and a4 is None
             a1, a2, a3, a4 = a1
             f = pi / 180
         else:
             f = 1
+
+        if any(a is None for a in [a2, a3, a4]):
+            raise ValueError('a2, a3 and a4 must not be None')
 
         # vector 1->2, 2->3, 3->4 and their normalized cross products:
         a = self.positions[a2] - self.positions[a1]
@@ -1443,12 +1446,14 @@ class Atoms(object):
         """
 
         if isinstance(a1, int):
+            if any(a is None for a in [a2, a3, a4, angle]):
+                raise ValueError('a2, a3, a4, and angle must not be None')
             angle *= pi / 180
         else:
             warnings.warn(
                 'Please use new API: '
                 'atoms_obj.set_dihedral(a1,a2,a3,a4,angle) '
-                'where angle is given in degrees')
+                'where angle is given in degrees', FutureWarning)
             if angle is None:
                 angle = a2
                 if mask is None:
@@ -1481,22 +1486,24 @@ class Atoms(object):
         Same usage as in :meth:`ase.Atoms.set_dihedral`: Rotate a group by a
         predefined dihedral angle, starting from its current configuration.
         """
-        if isinstance(a1, int):
-            start = self.get_dihedral(a1, a2, a3, a4)
-            self.set_dihedral(a1, a2, a3, a4, angle + start, mask, indices)
-        else:
+        if not isinstance(a1, int):
             warnings.warn(
                 'Please use new API: '
                 'atoms_obj.rotate_dihedral(a1,a2,a3,a4,angle) '
-                'where angle is given in degrees')
+                'where angle is given in degrees', FutureWarning)
             if angle is None:
                 angle = a2
                 if mask is None and indices is None:
                     mask = a3
             else:
                 assert a2 is None and a3 is None and a4 is None
-            start = self.get_dihedral(a1)
-            self.set_dihedral(a1, angle + start, mask, indices)
+            a1, a2, a3, a4 = a1
+
+        if any(a is None for a in [a2, a3, a4, angle]):
+            raise ValueError('a2, a3, a4, and angle must not be None')
+
+        start = self.get_dihedral(a1, a2, a3, a4)
+        self.set_dihedral(a1, a2, a3, a4, angle + start, mask, indices)
 
     def get_angle(self, a1, a2, a3, mic=False):
         """Get angle formed by three atoms.
@@ -1508,24 +1515,7 @@ class Atoms(object):
         angle across periodic boundaries.
         """
 
-        indices = np.array([[a1, a2, a3]])
-
-        a1s = self.positions[indices[:, 0]]
-        a2s = self.positions[indices[:, 1]]
-        a3s = self.positions[indices[:, 2]]
-
-        v12 = a1s - a2s
-        v32 = a3s - a2s
-
-        cell = None
-        pbc = None
-
-        if mic:
-            cell = self.cell
-            pbc = self.pbc
-
-        return get_angles(v12, v32, cell=cell, pbc=pbc)[0]
-
+        return self.get_angles([[a1, a2, a3]], mic=mic)[0]
 
     def get_angles(self, indices, mic=False):
         """Get angle formed by three atoms for multiple groupings.
@@ -1555,7 +1545,6 @@ class Atoms(object):
 
         return get_angles(v12, v32, cell=cell, pbc=pbc)
 
-
     def set_angle(self, a1, a2=None, a3=None, angle=None, mask=None, indices=None, add=False):
         """Set angle (in degrees) formed by three atoms.
 
@@ -1572,7 +1561,7 @@ class Atoms(object):
             warnings.warn(
                 'Please use new API: '
                 'atoms_obj.set_angle(a1,a2,a3,angle) '
-                'where angle is given in degrees')
+                'where angle is given in degrees', FutureWarning)
             if angle is None:
                 angle = a2
                 if mask is None:
@@ -1581,6 +1570,9 @@ class Atoms(object):
             else:
                 assert a2 is None and a3 is None
             angle *= 180 / pi
+
+        if any(a is None for a in [a2, a3, angle]):
+            raise ValueError('a2, a3, and angle must not be None')
 
         # If not provided, set mask to the last atom in the angle description
         if mask is None and indices is None:
@@ -1606,8 +1598,7 @@ class Atoms(object):
         center = self.positions[a2]
         self._masked_rotate(center, axis, diff, mask)
 
-
-    def rattle(self, stdev=0.001, seed=42):
+    def rattle(self, stdev=0.001, seed=None, rng=None):
         """Randomly displace atoms.
 
         This method adds random displacements to the atomic positions,
@@ -1617,10 +1608,16 @@ class Atoms(object):
         For a parallel calculation, it is important to use the same
         seed on all processors!  """
 
-        rs = np.random.RandomState(seed)
+        if seed is not None and rng is not None:
+            raise ValueError('Please do not provide both seed and rng.')
+
+        if rng is None:
+            if seed is None:
+                seed = 42
+            rng = np.random.RandomState(seed)
         positions = self.arrays['positions']
         self.set_positions(positions +
-                           rs.normal(scale=stdev, size=positions.shape))
+                           rng.normal(scale=stdev, size=positions.shape))
 
     def get_distance(self, a0, a1, mic=False, vector=False):
         """Return distance between two atoms.
@@ -1629,24 +1626,7 @@ class Atoms(object):
         vector=True gives the distance vector (from a0 to a1).
         """
 
-        R = self.arrays['positions']
-        p1 = [R[a0]]
-        p2 = [R[a1]]
-
-        cell = None
-        pbc = None
-
-        if mic:
-            cell = self.cell
-            pbc = self.pbc
-
-        D, D_len = get_distances(p1, p2, cell=cell, pbc=pbc)
-
-        if vector:
-            return D[0, 0]
-        else:
-            return D_len[0, 0]
-
+        return self.get_distances(a0, [a1], mic=mic, vector=vector)[0]
 
     def get_distances(self, a, indices, mic=False, vector=False):
         """Return distances of atom No.i with a list of atoms.
@@ -1675,7 +1655,6 @@ class Atoms(object):
             D_len.shape = (-1,)
             return D_len
 
-
     def get_all_distances(self, mic=False, vector=False):
         """Return distances of all of the atoms with all of the atoms.
 
@@ -1697,7 +1676,6 @@ class Atoms(object):
         else:
             return D_len
 
-
     def set_distance(self, a0, a1, distance, fix=0.5, mic=False, mask=None, indices=None, add=False, factor=False):
         """Set the distance between two atoms.
 
@@ -1714,6 +1692,9 @@ class Atoms(object):
 
         It is assumed that the atoms in *mask*/*indices* move together
         with *a1*. If *fix=1*, only *a0* will therefore be moved."""
+
+        if a0 % len(self) == a1 % len(self):
+            raise ValueError('a0 and a1 must not be the same')
 
         if add:
             oldDist = self.get_distance(a0, a1, mic=mic)
@@ -1734,16 +1715,15 @@ class Atoms(object):
         x = 1.0 - distance / D_len[0]
 
         if mask is None and indices is None:
-            indices = [ a0, a1 ]
+            indices = [a0, a1]
         elif mask:
-            indices = [ i for i in range(len(self)) if mask[i] ]
+            indices = [i for i in range(len(self)) if mask[i]]
 
         for i in indices:
             if i == a0:
                 R[a0] += (x * fix) * D[0]
             else:
                 R[i] -= (x * (1.0 - fix)) * D[0]
-
 
     def get_scaled_positions(self, wrap=True):
         """Get positions relative to unit cell.
@@ -1768,7 +1748,8 @@ class Atoms(object):
         """Set positions relative to unit cell."""
         self.positions[:] = self.cell.cartesian_positions(scaled)
 
-    def wrap(self, center=(0.5, 0.5, 0.5), pbc=None, eps=1e-7):
+    def wrap(self, center=(0.5, 0.5, 0.5), pbc=None, pretty_translation=False,
+             eps=1e-7):
         """Wrap positions to unit cell.
 
         Parameters:
@@ -1780,6 +1761,8 @@ class Atoms(object):
             For each axis in the unit cell decides whether the positions
             will be moved along this axis.  By default, the boundary
             conditions of the Atoms object will be used.
+        pretty_translation: bool
+            Translates atoms such that fractional coordinates are minimized.
         eps: float
             Small number to prevent slightly negative coordinates from being
             wrapped.
@@ -1800,7 +1783,8 @@ class Atoms(object):
             pbc = self.pbc
 
         self.positions[:] = wrap_positions(self.positions, self.cell,
-                                           pbc, center, eps)
+                                           pbc, center, pretty_translation,
+                                           eps)
 
     def get_temperature(self):
         """Get the temperature in Kelvin."""

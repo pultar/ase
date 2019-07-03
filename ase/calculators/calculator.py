@@ -131,7 +131,18 @@ special = {'cp2k': 'CP2K',
            'tip3p': 'TIP3P'}
 
 
-def get_calculator(name):
+external_calculators = {}
+
+
+def register_calculator_class(name, cls):
+    """ Add the class into the database. """
+    assert name not in external_calculators
+    external_calculators[name] = cls
+    names.append(name)
+    names.sort()
+
+
+def get_calculator_class(name):
     """Return calculator class."""
     if name == 'asap':
         from asap3 import EMT as Calculator
@@ -143,6 +154,8 @@ def get_calculator(name):
         from ase.calculators.vasp import Vasp2 as Calculator
     elif name == 'ace':
         from ase.calculators.acemolecule import ACE as Calculator
+    elif name in external_calculators:
+        Calculator = external_calculators[name]
     else:
         classname = special.get(name, name.title())
         module = __import__('ase.calculators.' + name, {}, None, [classname])
@@ -263,6 +276,8 @@ def kpts2kpts(kpts, atoms=None):
         return kpts
 
     if isinstance(kpts, dict):
+        if 'kpts' in kpts:
+            return KPoints(kpts['kpts'])
         if 'path' in kpts:
             path = bandpath(cell=atoms.cell, **kpts)
             return path
@@ -325,9 +340,28 @@ class Parameters(dict):
     @classmethod
     def read(cls, filename):
         """Read parameters from file."""
-        file = open(os.path.expanduser(filename))
-        parameters = cls(eval(file.read()))
-        file.close()
+        # We use ast to evaluate literals, avoiding eval()
+        # for security reasons.
+        import ast
+        with open(filename) as fd:
+            txt = fd.read().strip()
+        assert txt.startswith('dict(')
+        assert txt.endswith(')')
+        txt = txt[5:-1]
+
+        # The tostring() representation "dict(...)" is not actually
+        # a literal, so we manually parse that along with the other
+        # formatting that we did manually:
+        dct = {}
+        for line in txt.splitlines():
+            key, val = line.split('=', 1)
+            key = key.strip()
+            val = val.strip()
+            if val[-1] == ',':
+                val = val[:-1]
+            dct[key] = ast.literal_eval(val)
+
+        parameters = cls(dct)
         return parameters
 
     def tostring(self):
@@ -361,7 +395,7 @@ class Calculator(object):
     'Default parameters'
 
     def __init__(self, restart=None, ignore_bad_restart_file=False, label=None,
-                 atoms=None, **kwargs):
+                 atoms=None, directory='.', **kwargs):
         """Basic calculator implementation.
 
         restart: str
@@ -370,8 +404,13 @@ class Calculator(object):
         ignore_bad_restart_file: bool
             Ignore broken or missing restart file.  By default, it is an
             error if the restart file is missing or broken.
+        directory: str
+            Working directory in which to read and write files and
+            perform calculations.
         label: str
-            Name used for all files.  May contain a directory.
+            Name used for all files.  Not supported by all calculators.
+            May contain a directory, but please use the directory parameter
+            for that instead.
         atoms: Atoms object
             Optional Atoms object to which the calculator will be
             attached.  When restarting, atoms will get its positions and
@@ -390,11 +429,15 @@ class Calculator(object):
                 else:
                     raise
 
-        self.label = None
-        self.directory = None
+        self.directory = directory
         self.prefix = None
-
-        self.set_label(label)
+        if label is not None:
+            if directory != '.' and '/' in label:
+                raise ValueError('Directory redundantly specified though '
+                                 'directory="{}" and label="{}".  '
+                                 'Please omit "/" in label.'
+                                 .format(directory, label))
+            self.set_label(label)
 
         if self.parameters is None:
             # Use default parameters if they were not read from file:
@@ -415,6 +458,40 @@ class Calculator(object):
         if not hasattr(self, 'name'):
             self.name = self.__class__.__name__.lower()
 
+    @property
+    def label(self):
+        if self.directory == '.':
+            return self.prefix
+
+        # Generally, label ~ directory/prefix
+        #
+        # We use '/' rather than os.pathsep because
+        #   1) directory/prefix does not represent any actual path
+        #   2) We want the same string to work the same on all platforms
+        if self.prefix is None:
+            return self.directory + '/'
+
+        return '{}/{}'.format(self.directory, self.prefix)
+
+    @label.setter
+    def label(self, label):
+        if label is None:
+            self.directory = '.'
+            self.prefix = None
+            return
+
+        tokens = label.rsplit('/', 1)
+        if len(tokens) == 2:
+            directory, prefix = tokens
+        else:
+            assert len(tokens) == 1
+            directory = '.'
+            prefix = tokens[0]
+        if prefix == '':
+            prefix = None
+        self.directory = directory
+        self.prefix = prefix
+
     def set_label(self, label):
         """Set label and convert label to directory and prefix.
 
@@ -422,20 +499,12 @@ class Calculator(object):
 
         * label='abc': (directory='.', prefix='abc')
         * label='dir1/abc': (directory='dir1', prefix='abc')
+        * label=None: (directory='.', prefix=None)
 
         Calculators that must write results to files with fixed names
-        can overwrite this method so that the directory is set to all
+        can override this method so that the directory is set to all
         of label."""
-
         self.label = label
-
-        if label is None:
-            self.directory = None
-            self.prefix = None
-        else:
-            self.directory, self.prefix = os.path.split(label)
-            if self.directory == '':
-                self.directory = os.curdir
 
     def get_default_parameters(self):
         return Parameters(copy.deepcopy(self.default_parameters))
@@ -734,13 +803,15 @@ class FileIOCalculator(Calculator):
                 'Please set ${} environment variable '
                 .format('ASE_' + self.name.upper() + '_COMMAND') +
                 'or supply the command keyword')
-        command = self.command.replace('PREFIX', self.prefix)
+        command = self.command
+        if 'PREFIX' in command:
+            command = command.replace('PREFIX', self.prefix)
         errorcode = subprocess.call(command, shell=True, cwd=self.directory)
 
         if errorcode:
+            path = os.path.abspath(self.directory)
             raise CalculationFailed('{} in {} returned an error: {}'
-                                    .format(self.name, self.directory,
-                                            errorcode))
+                                    .format(self.name, path, errorcode))
         self.read_results()
 
     def write_input(self, atoms, properties=None, system_changes=None):
@@ -749,7 +820,8 @@ class FileIOCalculator(Calculator):
         Call this method first in subclasses so that directories are
         created automatically."""
 
-        if self.directory != os.curdir and not os.path.isdir(self.directory):
+        absdir = os.path.abspath(self.directory)
+        if absdir != os.curdir and not os.path.isdir(self.directory):
             os.makedirs(self.directory)
 
     def read_results(self):
