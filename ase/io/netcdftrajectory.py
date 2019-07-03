@@ -119,7 +119,7 @@ class NetCDFTrajectory:
         index_var='id':
             Name of variable containing the atom indices. Atoms are reordered
             by this index upon reading if this variable is present. Default
-            value is for LAMMPS output.
+            value is for LAMMPS output. None switches atom indices off.
 
         index_offset=-1:
             Set to 0 if atom index is zero based, set to -1 if atom index is
@@ -147,7 +147,8 @@ class NetCDFTrajectory:
         self.index_var = index_var
         self.index_offset = index_offset
 
-        self._default_vars += [self.index_var]
+        if self.index_var is not None:
+            self._default_vars += [self.index_var]
 
         # 'l' should be a valid type according to the netcdf4-python
         # documentation, but does not appear to work.
@@ -520,7 +521,8 @@ class NetCDFTrajectory:
                 origin = np.zeros([3], dtype=float)
 
             # Do we have an index variable?
-            if self._has_variable(self.index_var):
+            if self.index_var is not None and \
+                self._has_variable(self.index_var):
                 index = np.array(self.nc.variables[self.index_var][i][:]) + \
                     self.index_offset
             else:
