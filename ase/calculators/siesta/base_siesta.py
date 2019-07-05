@@ -532,7 +532,6 @@ class BaseSiesta(FileIOCalculator):
             else:
                 warnings.warn('Ignoring unknown keyword "{}"'.format(key))
 
-
     def getpath(self, fname=None, ext=None):
         """ Returns the directory/fname string """
         if fname is None:
