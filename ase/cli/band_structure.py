@@ -91,7 +91,7 @@ def atoms2bandstructure(atoms, parser, args):
         eps = eps.transpose(1, 0, 2)
 
     special_points = get_special_points(cell)
-    path = BandPath(atoms.cell, scaled_kpts=path_kpts,
+    path = BandPath(atoms.cell, kpts=path_kpts,
                     special_points=special_points)
 
     return BandStructure(path, eps, reference=efermi)
@@ -119,6 +119,10 @@ def read_band_structure(args, parser):
     return bs
 
 def main(args, parser):
+    import matplotlib.pyplot as plt
     bs = read_band_structure(args, parser)
     emin, emax = (float(e) for e in args.range)
-    bs.plot(emin=emin, emax=emax)
+    fig = plt.gcf()
+    fig.canvas.set_window_title(args.calculation)
+    ax = fig.gca()
+    bs.plot(ax=ax, emin=emin, emax=emax)
