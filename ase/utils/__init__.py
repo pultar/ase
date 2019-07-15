@@ -392,14 +392,14 @@ def iofunction(func, mode):
     (Won't work on functions that return a generator.)"""
 
     @functools.wraps(func)
-    def iofunc(f, *args, **kwargs):
-        openandclose = isinstance(f, (basestring, PurePath))
+    def iofunc(filename, *args, **kwargs):
+        openandclose = isinstance(filename, (basestring, PurePath))
         fd = None
         try:
             if openandclose:
-                fd = open(f, mode)
+                fd = open(filename, mode)
             else:
-                fd = file
+                fd = filename
             obj = func(fd, *args, **kwargs)
             return obj
         finally:
