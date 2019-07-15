@@ -1100,9 +1100,30 @@ class Vasp2(GenerateVaspInput, Calculator):
         raise NotImplementedError
 
     def read_vib_freq(self, lines=None):
-        """Read vibrational frequencies.
+        """
+        Read vibrational frequencies from OUTCAR file.
 
-        Returns list of real and list of imaginary frequencies."""
+        Returns list of real and list of imaginary frequencies. Frequencies are
+        given in units of THz, and are _not_ multiplied by a factor of 2*pi.
+
+        Parameters:
+
+        lines: list 
+            A list of strings corresponding to VASP OUTCAR output containing
+            information about the vibrational frequencies of the system.
+
+        Returns:
+
+        freq: list
+            A list of floats corresponding to the real vibrational
+            frequencies in THz (not multiplied by a factor of 2*pi).
+
+        i_freq: list
+            A list of floats corresponding to the imaginary vibrational
+            frequencies in THz (not multiplied by a factor of 2*pi).
+
+        """
+
         freq = []
         i_freq = []
 
@@ -1113,9 +1134,9 @@ class Vasp2(GenerateVaspInput, Calculator):
             data = line.split()
             if 'THz' in data:
                 if 'f/i=' not in data:
-                    freq.append(float(data[-2]))
+                    freq.append(float(data[-8]))
                 else:
-                    i_freq.append(float(data[-2]))
+                    i_freq.append(float(data[-8]))
         return freq, i_freq
 
     def get_nonselfconsistent_energies(self, bee_type):
