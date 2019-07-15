@@ -393,7 +393,7 @@ def iofunction(func, mode):
 
     @functools.wraps(func)
     def iofunc(file, *args, **kwargs):
-        openandclose = isinstance(file, basestring)
+        openandclose = isinstance(file, (basestring, PurePath))
         fd = None
         try:
             if openandclose:
