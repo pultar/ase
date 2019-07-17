@@ -109,7 +109,7 @@ def convert_string_to_fd(name, world=None):
     if name == '-':
         return sys.stdout
     if isinstance(name, (basestring, PurePath)):
-        return open(name, 'w')
+        return open(str(name), 'w')  # str for py3.5 pathlib
     return name  # we assume name is already a file-descriptor
 
 
@@ -392,14 +392,14 @@ def iofunction(func, mode):
     (Won't work on functions that return a generator.)"""
 
     @functools.wraps(func)
-    def iofunc(filename, *args, **kwargs):
-        openandclose = isinstance(filename, (basestring, PurePath))
+    def iofunc(file, *args, **kwargs):
+        openandclose = isinstance(file, (basestring, PurePath))
         fd = None
         try:
             if openandclose:
-                fd = open(filename, mode)
+                fd = open(str(file), mode)
             else:
-                fd = filename
+                fd = file
             obj = func(fd, *args, **kwargs)
             return obj
         finally:
