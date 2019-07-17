@@ -15,7 +15,7 @@ assert isinstance(p, PurePath)
 def clean():
     if p.exists():
         import shutil
-        shutil.rmtree(p)
+        shutil.rmtree(str(p))
 
 
 clean()
