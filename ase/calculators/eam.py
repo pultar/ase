@@ -240,8 +240,7 @@ End EAM Interface Documentation
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label=os.curdir, atoms=None, form=None, **kwargs):
 
-        if form is not None:
-            self.form = form
+        self.form = form
 
         if 'potential' in kwargs:
             self.read_potential(kwargs['potential'])
