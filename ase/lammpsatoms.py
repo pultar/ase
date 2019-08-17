@@ -3,8 +3,435 @@ from ase.atoms import Atoms
 from ase.atom import Atom
 from copy import deepcopy
 import numbers
-from ase.utils import natural_cutoffs
+from ase.utils import natural_cutoffs, basestring
 from ase.neighborlist import NeighborList
+from ase.io.formats import string2index
+
+
+def unique_ind(a):
+    ''' Returns dict with new indices as values of old indices as keys,
+     or None if indices are already continuous whole numbers'''
+    id_ = np.unique(a)
+    if np.all(id_ == np.arange(len(id_)) + 1):
+        return None
+    d = {}
+    for i, val in enumerate(id_, start=1):
+        d[val] = i
+    return d
+
+
+class _TopoAttribute(object):
+
+    def __init__(self, topo_attr_prop):
+        self._ins = topo_attr_prop._ins
+        self.prop = topo_attr_prop.prop
+
+    def __repr__(self):
+        return str(self.get_types())
+
+    def __getitem__(self, item):
+        if type(item) is str:
+            reverse_type = {i:j for j, i in self.get_types().items()}
+            item = reverse_type[item]
+        return self.get_value()[item]
+
+    def _check_exists(func):
+        '''Decorator to check if the property exists'''
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            if not self._ins.has(self.prop):
+                raise RuntimeError('{0} object has no '
+                                   '{1}'.format(self._ins.__class__.__name__,
+                                                self.prop))
+            return func(*args, **kwargs)
+        return wrapper
+
+    @_check_exists
+    def get_num_types(self):
+        ''' returns number of types of prop: bonds, etc'''
+        return len(self.get_types(verbose=False))
+
+    @_check_exists
+    def get_types(self, verbose=True):
+        '''returns types of prop: bonds, etc
+        :param prop: name of property
+        :param verbose: gives name abbreviation for the types'''
+
+        items = self._ins.arrays[self.prop]
+        type_list = np.unique([i for x in items for i in x.keys()])
+
+        if not verbose:
+            return type_list
+
+        names = self._ins.arrays['name']
+        types = {}
+        for key in type_list:
+            for i, item in enumerate(items):
+                if key in item.keys():
+                    eg_list = [i] + item[key][0]
+                    break
+            name_list = names[eg_list].tolist()
+            if self.prop == 'bonds':
+                name_list.sort()
+            if self.prop == 'angles':
+                # vertex atom is at first index
+                vertex = name_list.pop(0)
+                name_list.sort()
+                name_list.insert(1, vertex)
+            types[key] = '-'.join(name_list)
+        return types
+
+    @_check_exists
+    def get_value(self):
+
+        d = {}
+        for key in self.get_types(verbose=False):
+            d[key] = []
+        for i, item in enumerate(self._ins.arrays[self.prop]):
+            for key, values in item.items():
+                for value in values:
+                    if self.prop == 'angles':
+                        value = [value[0], i, value[1]]
+                    else:
+                        value = [i] + value
+                    d[key].append(value)
+        return d
+
+    __call__ = get_value
+
+    def set_value(self, value):
+        '''
+        '''
+        if self._ins.has(self.prop):
+            # delete array
+            del self._ins.arrays[self.prop]
+        self.add(value)
+
+    @_check_exists
+    def get_count(self):
+        ''' returns number of prop: bonds, etc.'''
+        items = self._ins.arrays[self.prop]
+        values = [j for x in items for i in x.values() for j in i]
+        return len(values)
+
+    def add(self, items):
+        ''' adds to prop
+        Parameters:
+            items: dict of keys as type/resname, and keys as list of indices
+                   pertaining to the key
+        '''
+        length = {'bonds': 2,
+                  'angles': 3,
+                  'dihedrals': 4,
+                  'impropers': 4}
+
+        if not self._ins.has(self.prop):
+            array = [{} for i in range(len(self._ins))]
+        else:
+            array = self._ins.get_array(self.prop)
+
+        for key, values in items.items():
+            # make sure values are correct
+            try:
+                _ = np.array(key, int)
+                _ = np.array(values, int)
+            except ValueError as e:
+                raise ValueError('key should be int and '
+                                 'values should be a list of '
+                                 '{0}: '.format(self.prop) + e.args[0])
+            if isinstance(values, np.ndarray):
+                values = values.tolist()
+            if len(_.shape) == 1:
+                values = [values]
+                _ = np.array(values, int)
+            if _.shape[1] != length[self.prop]:
+                raise RuntimeError('{0} should be set of '
+                                   '{1}'.format(self.prop, length[self.prop]))
+            values_copy = deepcopy(values)
+
+            if self.prop == 'angles':
+                indx = [i.pop(1) for i in values]
+            else:
+                indx = [i.pop(0) for i in values]
+
+            for i, j in enumerate(indx):
+                # check if the prop already exists
+                # its done here as array gets updated
+                exists = False
+                if self.prop in ['dihedrals', 'impropers']:
+                    list_ = [y for x in array[j].values() for y in x]
+                    exists = values[i] in list_
+                elif self.prop == 'bonds':
+                    list_ = [y for x in array[j].values() for y in x]
+                    list_1 = [y for x in array[values[i][0]].values()
+                              for y in x]
+                    exists = [j] in list_1 or values[i] in list_
+                elif self.prop == 'angles':
+                    list_ = [y for x in array[j].values() for y in x]
+                    list_ += [list(reversed(y))
+                              for x in array[j].values() for y in x]
+                    exists = values[i] in list_
+                if not exists:
+                    array[j][key] = array[j].get(key, []) + [values[i]]
+                else:
+                    print('{0} already exists'.format(values_copy[i]))
+
+        self._ins.set_array(self.prop, array, object)
+        self.update()
+
+    @_check_exists
+    def update(self):
+
+        d = unique_ind(self.get_types(verbose=False))
+        if d:
+            for index, item in enumerate(self._ins.arrays[self.prop]):
+                for key in sorted(item.keys()):
+                    _ = self._ins.arrays[self.prop][index].pop(key)
+                    self._ins.arrays[self.prop][index][d[key]] = _
+
+    @_check_exists
+    def set_types_to(self, indx_of, index=":"):
+        '''
+        :param indx_of: dictionary, changes type from keys -> values
+        :param index: list of start and stop index to affect the change
+        '''
+        if isinstance(index, basestring):
+            try:
+                index = string2index(index)
+            except ValueError:
+                pass
+
+
+        for indx, item in zip(index, self._ins.arrays[self.prop][index]):
+            for key in item.keys():
+                if key in indx_of.keys():
+                    _ = self._ins.arrays[self.prop][indx].pop(key)
+                    old = self._ins.arrays[self.prop][indx].get(indx_of[key], [])
+                    self._ins.arrays[self.prop][indx][indx_of[key]] = old + _
+
+    def _set_indices_to(self, ids, indx_of, index):
+        for indx, item in zip(index, self._ins.arrays[self.prop][index]):
+            # holds empty keys for deletion later
+            del_key = []
+            # extend() can bring int item
+            # which gives AttributeError at item.items()
+            try:
+                for key, value in item.items():
+                    # holds index of list that contains removed bonds etc
+                    del_id = []
+                    for i, j in enumerate(value):
+                        if np.any([x in ids for x in j]):
+                            del_id.append(i)
+                        else:
+                            for k, l in enumerate(j):
+                                value[i][k] = indx_of[l]
+                    del_id.sort(reverse=True)
+                    for i in del_id:
+                        value.pop(i)
+                    # If value is empty then mark key for delition
+                    # note that if it is empty, the arrays is not changed
+                    # hence, delition is necessary
+                    if len(value) == 0:
+                        del_key.append(key)
+                    else:
+                        self._ins.arrays[self.prop][indx][key] = value
+            except AttributeError:
+                self._ins.arrays[self.prop][indx] = {}
+            for i in del_key:
+                self._ins.arrays[self.prop][indx].pop(i)
+
+
+class _TopoAttributeProperty(object):
+
+    def __init__(self, prop):
+        self.prop = prop
+
+    def __get__(self, topo_base, owner):
+        if topo_base is None:
+            return self
+        self._ins = topo_base._ins
+        return _TopoAttribute(self)
+
+    def __set__(self, topo_base, value):
+        self._ins = topo_base
+        _TopoAttribute(self).set_value(value)
+
+    def __delete__(self, topo_base):
+        del topo_base._ins.arrays[self.prop]
+
+
+class _TopoBase(object):
+
+    Bonds = _TopoAttributeProperty('bonds')
+    Angles = _TopoAttributeProperty('angles')
+    Dihedrals = _TopoAttributeProperty('dihedrals')
+    Impropers = _TopoAttributeProperty('impropers')
+
+    topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+
+    def __init__(self, topo_base_prop):
+        self._ins = topo_base_prop._ins
+        self._prop_dict = {'bonds': self.Bonds,
+                           'angles': self.Angles,
+                           'dihedrals': self.Dihedrals,
+                           'impropers': self.Impropers}
+        self.update()
+
+    def __repr__(self):
+        tokens = []
+        for key, values in self._dict.items():
+            tokens.append("{}= {}".format(key, values))
+        return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
+
+    def __getitem__(self, item):
+        return self._dict[item]
+
+    def update(self):
+
+        self._dict = {}
+        for prop in self.topo_props:
+            if self._ins.has(prop):
+                self._dict[prop] = self._prop_dict[prop]
+                self._dict[prop].update()
+
+    def generate(self, topo_dict, cutoffs=None):
+        # check and reformat topo_dict
+        length = {'bonds': 2,
+                  'angles': 3,
+                  'dihedrals': 4,
+                  'impropers': 4}
+
+        for key, values in topo_dict.items():
+            if key not in ['bonds', 'angles', 'dihedrals', 'impropers']:
+                raise ValueError('{} not supported. Supported properties: '
+                                 '{}'.format(key, ['bonds',
+                                                   'angles',
+                                                   'dihedrals',
+                                                   'impropers']))
+            if type(values) == np.ndarray:
+                values = values.tolist()
+                topo_dict[key] = topo_dict[key].tolist()
+
+            if not np.all([len(x) == length[key] for x in values]):
+                raise ValueError('{} are lists of length '
+                                 '{}'.format(key, length[key]))
+            for i, value in enumerate(values):
+                if key == 'bonds':
+                    value.sort()
+                if key == 'angles':
+                    vertex = value.pop(1)
+                    value.sort()
+                    value.insert(1, vertex)
+                topo_dict[key][i] = '-'.join(value)
+
+        # making symmetric neighbor matrix
+        if cutoffs is None:
+            cutoffs = natural_cutoffs(self._ins)
+        elif len(cutoffs) != len(self._ins):
+            raise RuntimeError("length of cutoffs doesn't match "
+                               "the number of atoms")
+        nl = NeighborList(cutoffs,
+                          self_interaction=False,
+                          bothways=True)
+        nl.update(self._ins)
+        neighbor_matrix = nl.get_connectivity_matrix().toarray()
+
+        symbols = self._ins.get_array('name')
+        d = []
+        for i, array in enumerate(neighbor_matrix):
+            neighbor_list = np.where(array)[0]
+            d.append(neighbor_list)
+
+        if 'bonds' in topo_dict:
+            seen_bonds = []
+            bonds = {}
+            for i, neighbor in enumerate(d):
+                for j in neighbor:
+                    name_list = [symbols[x] for x in [i, j]]
+                    name_list.sort()
+                    name_list = '-'.join(name_list)
+                    if name_list in topo_dict['bonds'] and not [i, j] in seen_bonds:
+                        indx = topo_dict['bonds'].index(name_list) + 1
+                        bonds[indx] = bonds.get(indx, []) + [[i, j]]
+                        seen_bonds.append([i, j])
+                        seen_bonds.append([j, i])
+            self.Bonds.add(bonds)
+
+        if 'angles' in topo_dict:
+            angles = {}
+            for i, neighbor in enumerate(d):
+                for indx, j in enumerate(neighbor):
+                    for k in neighbor[indx + 1:]:
+                        name_list = [symbols[x] for x in [k, i, j]]
+                        vertex = name_list.pop(1)
+                        name_list.sort()
+                        name_list.insert(1, vertex)
+                        name_list = '-'.join(name_list)
+                        if name_list in topo_dict['angles']:
+                            indx = topo_dict['angles'].index(name_list) + 1
+                            angles[indx] = angles.get(indx, []) + [[k, i, j]]
+            self.Angles.add(angles)
+
+        if 'dihedrals' in topo_dict:
+            dihedrals = {}
+            for i, neighbor_i in enumerate(d):
+                for j in neighbor_i:
+                    for k in set(d[j]) - set([i, j]):
+                        for l in set(d[k]) - set([i, j, k]):
+                            name_list = [symbols[x] for x in [i, j, k, l]]
+                            name_list.sort()
+                            name_list = '-'.join(name_list)
+                            if name_list in topo_dict['dihedrals']:
+                                indx = topo_dict['dihedrals'].index(name_list) + 1
+                                dihedrals[indx] = dihedrals.get(indx, []) + [[i, j, k, l]]
+            self.Dihedrals.add(dihedrals)
+
+        if 'impropers' in topo_dict:
+            impropers = {}
+            for i, neighbor in enumerate(d):
+                for indx_j, j in enumerate(neighbor):
+                    for indx_k, k in enumerate(neighbor[indx_j + 1:], start=indx_j + 1):
+                        for l in neighbor[indx_k + 1:]:
+                            name_list = [symbols[x] for x in [i, j, k, l]]
+                            name_list.sort()
+                            name_list = '-'.join(name_list)
+                            if name_list in topo_dict['impropers']:
+                                indx = topo_dict['impropers'].index(name_list) + 1
+                                impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
+            self.Impropers.add(impropers)
+
+    def _set_indices_to(self, indx_of, index=":"):
+        '''sets indices in bonds, etc as specified in indx_of'''
+        # selecting set of ids to remove
+        if isinstance(index, basestring):
+            try:
+                index = string2index(index)
+            except ValueError:
+                pass
+        ids = []
+        for key, value in indx_of.items():
+            if value is None:
+                ids.append(key)
+
+        # removing bonds etc containing non-existing ids
+        for prop in self._dict.values():
+            prop._set_indices_to(ids, indx_of, index)
+
+
+
+class _TopoBaseProperty(object):
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        self._ins = instance
+        return _TopoBase(self)
+
+    def __delete__(self, instance):
+        self._ins = instance
+        topo = _TopoBase(self)
+        for i in topo._dict.values():
+            del i
 
 
 class LammpsAtoms(Atoms):
@@ -437,15 +864,6 @@ class LammpsAtoms(Atoms):
     def update(self, specorder=None):
         '''updates id, mol-id and type to 1-Ntype'''
 
-        def unique_ind(a):
-            id_ = np.unique(a)
-            if np.all(id_ == np.arange(len(id_)) + 1):
-                return None
-            d = {}
-            for i, val in enumerate(id_, start=1):
-                d[val] = i
-            return d
-
         self.arrays['id'] = np.arange(len(self)) + 1
 
         if not self.has('type'):
@@ -524,9 +942,9 @@ class LammpsAtoms(Atoms):
 
         Atoms.__imul__(self, m)
 
-        lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+        topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
 
-        for name in lammps_props:
+        for name in topo_props:
             if self.has(name):
                 a = self.arrays[name][:n]
                 self.arrays[name] = np.empty(size_m * n, dtype='object')
@@ -614,8 +1032,8 @@ class LammpsAtoms(Atoms):
         """Return a copy."""
         atoms = Atoms.copy(self)
 
-        lammps_props = ['bonds', 'angles', 'dihedrals', 'impropers']
-        for name in lammps_props:
+        topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+        for name in topo_props:
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name])
         return atoms
@@ -640,8 +1058,8 @@ class LammpsAtoms(Atoms):
             if item.dtype == bool:
                 item = np.arange(len(self))[item]
 
-        lammps_props = ['name', 'bonds', 'angles', 'dihedrals', 'impropers']
-        for name in lammps_props:
+        topo_props = ['name', 'bonds', 'angles', 'dihedrals', 'impropers']
+        for name in topo_props:
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name][item])
 
@@ -654,3 +1072,5 @@ class LammpsAtoms(Atoms):
         atoms.update()
 
         return atoms
+
+    Topology = _TopoBaseProperty()
