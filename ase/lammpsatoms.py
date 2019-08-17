@@ -26,15 +26,6 @@ class _TopoAttribute(object):
         self._ins = topo_attr_prop._ins
         self.prop = topo_attr_prop.prop
 
-    def __repr__(self):
-        return str(self.get_types())
-
-    def __getitem__(self, item):
-        if type(item) is str:
-            reverse_type = {i:j for j, i in self.get_types().items()}
-            item = reverse_type[item]
-        return self.get()[item]
-
     def _check_exists(func):
         '''Decorator to check if the property exists'''
         def wrapper(*args, **kwargs):
@@ -45,6 +36,26 @@ class _TopoAttribute(object):
                                                 self.prop))
             return func(*args, **kwargs)
         return wrapper
+
+    @_check_exists
+    def __repr__(self):
+        return str(self.get_types())
+
+    @_check_exists
+    def __getitem__(self, item):
+        if type(item) is str:
+            reverse_type = {i:j for j, i in self.get_types().items()}
+            item = reverse_type[item]
+        return self.get()[item]
+
+    @_check_exists
+    def __delitem__(self, item):
+        if type(item) is str:
+            reverse_type = {i: j for j, i in self.get_types().items()}
+            item = reverse_type[item]
+        props = self.get()
+        props.pop(item)
+        self.set(props)
 
     @_check_exists
     def get_num_types(self):
@@ -126,6 +137,10 @@ class _TopoAttribute(object):
                   'impropers': 4}
 
         if not self._ins.has(self.prop):
+            if items == {}:
+                # instance does not have the prop, and
+                # nothing will be added
+                return
             array = [{} for i in range(len(self._ins))]
         else:
             array = self._ins.get_array(self.prop)
