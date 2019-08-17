@@ -33,7 +33,7 @@ class _TopoAttribute(object):
         def wrapper(*args, **kwargs):
             self = args[0]
             if not self._ins.has(self.prop):
-                raise RuntimeError('{0} object has no '
+                raise KeyError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
             return func(*args, **kwargs)
@@ -302,7 +302,7 @@ class _TopoBase(object):
         return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
 
     def __getitem__(self, item):
-        return self._dict[item]
+        return self._prop_dict[item]
 
     def update(self):
 
@@ -458,7 +458,7 @@ class _Resname(object):
         def wrapper(*args, **kwargs):
             self = args[0]
             if not self._ins.has('resname'):
-                raise RuntimeError('{0} object has no '
+                raise KeyError('{0} object has no '
                                    'resname'.format(self._ins.__class__.__name__))
             return func(*args, **kwargs)
         return wrapper
@@ -623,7 +623,7 @@ class LammpsAtoms(Atoms):
         for prop in ['mol-id', 'type']:
             d = unique_ind(self.get_array(prop))
             if d:
-                self.set_prop(prop,
+                self.set_array(prop,
                               [d[x] for x in self.get_array(prop)],
                               int)
 
