@@ -209,7 +209,12 @@ class _TopoAttribute(object):
                     old = self._ins.arrays[self.prop][indx].get(indx_of[key], [])
                     self._ins.arrays[self.prop][indx][indx_of[key]] = old + _
 
-    def _set_indices_to(self, ids, indx_of, index):
+    def _set_indices_to(self, indx_of, index):
+        # selecting set of ids to remove
+        ids = []
+        for key, value in indx_of.items():
+            if value is None:
+                ids.append(key)
         for indx, item in zip(index, self._ins.arrays[self.prop][index]):
             # holds empty keys for deletion later
             del_key = []
@@ -402,20 +407,15 @@ class _TopoBase(object):
 
     def _set_indices_to(self, indx_of, index=":"):
         '''sets indices in bonds, etc as specified in indx_of'''
-        # selecting set of ids to remove
         if isinstance(index, basestring):
             try:
                 index = string2index(index)
             except ValueError:
                 pass
-        ids = []
-        for key, value in indx_of.items():
-            if value is None:
-                ids.append(key)
 
         # removing bonds etc containing non-existing ids
         for prop in self._dict.values():
-            prop._set_indices_to(ids, indx_of, index)
+            prop._set_indices_to(indx_of, index)
 
 
 class _TopoBaseProperty(object):
