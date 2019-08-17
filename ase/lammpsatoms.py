@@ -28,6 +28,8 @@ class _TopoAttribute(object):
 
     def _check_exists(func):
         '''Decorator to check if the property exists'''
+        # Only added to functions on which other functions already depend on
+        # eg get_types, or to functions that don't depend on any other func
         def wrapper(*args, **kwargs):
             self = args[0]
             if not self._ins.has(self.prop):
@@ -37,11 +39,9 @@ class _TopoAttribute(object):
             return func(*args, **kwargs)
         return wrapper
 
-    @_check_exists
     def __repr__(self):
         return str(self.get_types())
 
-    @_check_exists
     def __getitem__(self, item):
         if type(item) is str:
             reverse_type = {i:j for j, i in self.get_types().items()}
@@ -57,7 +57,6 @@ class _TopoAttribute(object):
         props.pop(item)
         self.set(props)
 
-    @_check_exists
     def get_num_types(self):
         ''' returns number of types of prop: bonds, etc'''
         return len(self.get_types(verbose=False))
@@ -92,7 +91,6 @@ class _TopoAttribute(object):
             types[key] = '-'.join(name_list)
         return types
 
-    @_check_exists
     def get(self):
 
         d = {}
@@ -194,7 +192,6 @@ class _TopoAttribute(object):
         self._ins.set_array(self.prop, array, object)
         self.update()
 
-    @_check_exists
     def update(self):
 
         d = unique_ind(self.get_types(verbose=False))
@@ -224,6 +221,7 @@ class _TopoAttribute(object):
                     old = self._ins.arrays[self.prop][indx].get(indx_of[key], [])
                     self._ins.arrays[self.prop][indx][indx_of[key]] = old + _
 
+    @_check_exists
     def _set_indices_to(self, indx_of, index):
         # selecting set of ids to remove
         ids = []
@@ -455,6 +453,8 @@ class _Resname(object):
 
     def _check_exists(func):
         '''Decorator to check if the property exists'''
+        # Only added to functions on which other functions already depend on
+        # eg get_types, or to functions that don't depend on any other func
         def wrapper(*args, **kwargs):
             self = args[0]
             if not self._ins.has('resname'):
@@ -463,14 +463,12 @@ class _Resname(object):
             return func(*args, **kwargs)
         return wrapper
 
-    @_check_exists
     def __repr__(self):
         tokens = []
         for token in self.get_types():
             tokens.append("{}=...".format(token))
         return "{}.Resname({})".format(self._ins.__class__.__name__, ", ".join(tokens))
 
-    @_check_exists
     def __getitem__(self, item):
         return self.get()[item]
 
@@ -483,7 +481,6 @@ class _Resname(object):
             resnames.pop(ii)
         self.set(resnames)
 
-    @_check_exists
     def get(self):
         d = {}
         for resname in self.get_types():
