@@ -33,7 +33,7 @@ class _TopoAttribute(object):
         if type(item) is str:
             reverse_type = {i:j for j, i in self.get_types().items()}
             item = reverse_type[item]
-        return self.get_value()[item]
+        return self.get()[item]
 
     def _check_exists(func):
         '''Decorator to check if the property exists'''
@@ -82,7 +82,7 @@ class _TopoAttribute(object):
         return types
 
     @_check_exists
-    def get_value(self):
+    def get(self):
 
         d = {}
         for key in self.get_types(verbose=False):
@@ -97,9 +97,9 @@ class _TopoAttribute(object):
                     d[key].append(value)
         return d
 
-    __call__ = get_value
+    __call__ = get
 
-    def set_value(self, value):
+    def set(self, value):
         '''
         '''
         if self._ins.has(self.prop):
@@ -254,7 +254,7 @@ class _TopoAttributeProperty(object):
 
     def __set__(self, topo_base, value):
         self._ins = topo_base
-        _TopoAttribute(self).set_value(value)
+        _TopoAttribute(self).set(value)
 
     def __delete__(self, topo_base):
         del topo_base._ins.arrays[self.prop]
@@ -418,7 +418,6 @@ class _TopoBase(object):
             prop._set_indices_to(ids, indx_of, index)
 
 
-
 class _TopoBaseProperty(object):
 
     def __get__(self, instance, owner):
@@ -432,6 +431,94 @@ class _TopoBaseProperty(object):
         topo = _TopoBase(self)
         for i in topo._dict.values():
             del i
+
+
+class _Resname(object):
+
+    def __init__(self, _resmame_prop):
+        self._ins = _resmame_prop._ins
+
+    def _check_exists(func):
+        '''Decorator to check if the property exists'''
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            if not self._ins.has('resname'):
+                raise RuntimeError('{0} object has no '
+                                   'resname'.format(self._ins.__class__.__name__))
+            return func(*args, **kwargs)
+        return wrapper
+
+    @_check_exists
+    def __repr__(self):
+        tokens = []
+        for token in self.get_types():
+            tokens.append("{}=...".format(token))
+        return "{}.Resname({})".format(self._ins.__class__.__name__, ", ".join(tokens))
+
+    @_check_exists
+    def __getitem__(self, item):
+        return self.get()[item]
+
+    @_check_exists
+    def __delitem__(self, i):
+        if not isinstance(i, list):
+            i = [i]
+        resnames = self.get()
+        for ii in i:
+            resnames.pop(ii)
+        self.set(resnames)
+
+    @_check_exists
+    def get(self):
+        d = {}
+        for resname in self.get_types():
+            d[resname] = []
+        for i, resnames in enumerate(self._ins.arrays['resname']):
+            for resname in resnames:
+                d[resname].append(i)
+        return d
+
+    __call__ = get
+
+    def set(self, value):
+        if self._ins.has('resname'):
+            # delete array
+            del self._ins.arrays['resname']
+        self.add(value)
+
+    @_check_exists
+    def get_types(self):
+        types = set()
+        for i in self._ins.arrays['resname']:
+            types |= i
+        return np.asarray(list(types))
+
+    def add(self, items):
+        if not self._ins.has('resname'):
+            array = [set() for _ in range(len(self._ins))]
+        else:
+            array = self._ins.get_array('resname')
+
+        for key, values in items.items():
+            for i in values:
+                array[i] |= set([key])
+
+        self._ins.set_array('resname', array, object)
+
+class _ResnameProperty(object):
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        self._ins = instance
+        return _Resname(self)
+
+    def __set__(self, instance, value):
+        self._ins = instance
+        _Resname(self).set(value)
+
+    def __delete__(self, instance):
+        del self._ins.arrays['resname']
 
 
 class LammpsAtoms(Atoms):
@@ -1074,3 +1161,4 @@ class LammpsAtoms(Atoms):
         return atoms
 
     Topology = _TopoBaseProperty()
+    Resname = _ResnameProperty()
