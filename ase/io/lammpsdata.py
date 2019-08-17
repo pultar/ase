@@ -430,21 +430,29 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     n_atoms = len(symbols)
     f.write('{0:8} \t atoms \n'.format(n_atoms))
     for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+        try:
+            num = atoms.Topology[prop].get_count()
+        except KeyError:
+            num = 0
         f.write('{0:8} \t '
-                '{1} \n'.format(atoms.get_num_prop(prop),
+                '{1} \n'.format(num,
                                 prop))
 
     # LammpsAtoms always assigns type and name
     types = atoms.get_array('type')
     names = atoms.get_array('name')
 
-    n_types = atoms.get_num_types('type')
+    n_types = len(np.unique(atoms.get_array('type')))
     f.write('{0:8} \t '
             'atom types\n'.format(n_types))
     for prop in ['bond types', 'angle types', 'dihedral types',
                  'improper types']:
+        try:
+            num = atoms.Topology[prop.split()[0] + 's'].get_num_types()
+        except KeyError:
+            num = 0
         f.write('{0:8} \t '
-                '{1} \n'.format(atoms.get_num_types(prop.split()[0] + 's'),
+                '{1} \n'.format(num,
                                 prop))
     if prismobj is None:
         p = Prism(atoms.get_cell(), digits=6)
@@ -461,7 +469,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write('\n\n')
 
     f.write('Masses \n\n')
-    for i in atoms.get_types('type'):
+    for i in np.unique(atoms.get_array('type')):
         indx = np.where(i == types)[0][0]
         mass = atoms.get_masses()[indx]
         sym = names[indx]
@@ -538,7 +546,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write('\n\n')
 
     if atoms.has('bonds'):
-        typ = atoms.get_types('bonds')
+        typ = atoms.Topology['bonds'].get_types()
         count = 1
         f.write('Bonds \n\n')
         for indx, item in enumerate(atoms.get_array('bonds')):
@@ -554,7 +562,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         f.write('\n\n')
 
     if atoms.has('angles'):
-        typ = atoms.get_types('angles')
+        typ = atoms.Topology['angles'].get_types()
         count = 1
         f.write('Angles \n\n')
         for indx, item in enumerate(atoms.get_array('angles')):
@@ -572,7 +580,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         f.write('\n\n')
 
     if atoms.has('dihedrals'):
-        typ = atoms.get_types('dihedrals')
+        typ = atoms.Topology['dihedrals'].get_types()
         count = 1
         f.write('Dihedrals \n\n')
         for indx, item in enumerate(atoms.get_array('dihedrals')):
@@ -589,7 +597,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         f.write('\n\n')
 
     if atoms.has('impropers'):
-        typ = atoms.get_types('impropers')
+        typ = atoms.Topology['impropers'].get_types()
         count = 1
         f.write('Impropers \n\n')
         for indx, item in enumerate(atoms.get_array('impropers')):
