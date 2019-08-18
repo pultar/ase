@@ -1099,33 +1099,49 @@ class Vasp2(GenerateVaspInput, Calculator):
     def get_bz_k_points(self):
         raise NotImplementedError
 
-    def read_vib_freq(self, lines=None):
+    def _read_vib_eigenvalues(self, units, lines=None):
         """
-        Read vibrational frequencies from OUTCAR file.
+        Read vibrational frequencies (eigenvalues) from OUTCAR file.
 
-        Returns list of real and list of imaginary frequencies. Frequencies are
-        given in units of THz, and are _not_ multiplied by a factor of 2*pi.
+        Returns list of real and list of imaginary eigenvalues.
 
         Parameters:
 
         lines: list 
             A list of strings corresponding to VASP OUTCAR output containing
-            information about the vibrational frequencies of the system.
+            information about the vibrational frequencies of the system. An
+            exame string looks like this:
+
+                11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
+
+        units: str = ["THz", "2PiTHz", "cm-1", "meV"]
+            Specifies the units in which the eigenvalues are to be returned.
 
         Returns:
 
         freq: list
             A list of floats corresponding to the real vibrational
-            frequencies in THz (not multiplied by a factor of 2*pi).
+            frequencies in inverse centimeters.
 
         i_freq: list
             A list of floats corresponding to the imaginary vibrational
-            frequencies in THz (not multiplied by a factor of 2*pi).
+            frequencies in inverse centimeters..
 
         """
 
+        # Reference: sample OUTCAR line containing frequency info:
+        #  11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
+
         freq = []
         i_freq = []
+
+        unit_mapping = {"THz": -8, "2PiTHz": -6, "cm-1": -4, "meV": -2}
+
+        try:
+            unit_mapping[units]
+        except KeyError:
+            raise ValueError(
+                "Please specify a valid unit for the returned eigenvalues.")
 
         if not lines:
             lines = self.load_file('OUTCAR')
@@ -1134,10 +1150,118 @@ class Vasp2(GenerateVaspInput, Calculator):
             data = line.split()
             if 'THz' in data:
                 if 'f/i=' not in data:
-                    freq.append(float(data[-8]))
+                    #
+                    freq.append(float(data[unit_mapping[units]]))
                 else:
-                    i_freq.append(float(data[-8]))
+                    i_freq.append(float(data[unit_mapping[units]]))
         return freq, i_freq
+
+    def get_vib_frequencies(self, lines=None):
+        """
+        Read vibrational frequencies (invcm) from OUTCAR file.
+
+        Returns list of real and list of imaginary frequencies in
+        units of inverse centimeters.
+
+        Parameters:
+
+        lines: list 
+            A list of strings corresponding to VASP OUTCAR output containing
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
+
+                11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
+
+
+        Returns:
+
+        freq: list
+            A list of floats corresponding to the real vibrational
+            frequencies in inverse centimeters.
+
+        i_freq: list
+            A list of floats corresponding to the imaginary vibrational
+            frequencies in inverse centimeters.
+
+        """
+
+        return self._read_vib_eigenvalues(self, units="cm-1", lines=lines)
+
+    def get_vib_energies(self, lines=None):
+        """
+        Read vibrational energies (eV) from OUTCAR file.
+
+        Returns list of real and list of imaginary frequencies in
+        units of eV.
+
+        Parameters:
+
+        lines: list 
+            A list of strings corresponding to VASP OUTCAR output containing
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
+
+                11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
+
+        Returns:
+
+        freq: list
+            A list of floats corresponding to the real vibrational
+            frequencies in eV.
+
+        i_freq: list
+            A list of floats corresponding to the imaginary vibrational
+            frequencies in eV.
+
+        """
+
+        freq, ifreq = self._read_vib_eigenvalues(
+            self, units="meV", lines=lines)
+
+        # Convert from meV to eV.
+        freq = (np.array(freq) / 1e3).tolist()
+        ifreq = (np.array(ifreq) / 1e3).tolist()
+
+        return freq, ifreq
+
+    def read_vib_freq(self, lines=None):
+        """
+        Warning: This function will be deprecated in a future ASE release.
+        Use get_vib_energies() instead.
+
+        Read vibrational energies (eV) from OUTCAR file.
+
+        Returns list of real and list of imaginary frequencies in
+        units of meV.
+
+        Parameters:
+
+        lines: list 
+            A list of strings corresponding to VASP OUTCAR output containing
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
+
+                11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
+
+        Returns:
+
+        freq: list
+            A list of floats corresponding to the real vibrational
+            frequencies in eV.
+
+        i_freq: list
+            A list of floats corresponding to the imaginary vibrational
+            frequencies in eV.
+
+        """
+
+        warn(("This legacy function returns vibrational energies in meV "
+              "(a non-standard ASE unit), and will be deprecated"
+              "in a future ASE release."
+              "We recommend using the get_vib_energies function, which"
+              "conforms to ASE's standard energy unit of eV."))
+
+        return self._read_vib_eigenvalues(self, units="meV", lines=lines)
 
     def get_nonselfconsistent_energies(self, bee_type):
         """ Method that reads and returns BEE energy contributions
