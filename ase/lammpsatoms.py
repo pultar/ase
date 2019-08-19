@@ -9,15 +9,14 @@ from ase.io.formats import string2index
 
 
 def unique_ind(a):
-    ''' Returns dict with new indices as values of old indices as keys,
-     or None if indices are already continuous whole numbers'''
+    ''' Returns dict with new indices as values of old indices as keys
+    if old index needs a change'''
     id_ = np.unique(a)
-    if np.all(id_ == np.arange(len(id_)) + 1):
-        return None
-    d = {}
+    ind_of = {}
     for i, val in enumerate(id_, start=1):
-        d[val] = i
-    return d
+        if val != i:
+            ind_of[val] = i
+    return ind_of
 
 
 class _TopoAttribute(object):
@@ -207,9 +206,8 @@ class _TopoAttribute(object):
                     ind_of[i] = rev_types[j]
             self.set_types_to(ind_of)
 
-        d = unique_ind(self.get_types(verbose=False))
-        if d:
-            self.set_types_to(d)
+        ind_of = unique_ind(self.get_types(verbose=False))
+        self.set_types_to(ind_of)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
@@ -647,11 +645,10 @@ class LammpsAtoms(Atoms):
                            object)
 
         for prop in ['mol-id', 'type']:
-            d = unique_ind(self.get_array(prop))
-            if d:
-                self.set_array(prop,
-                              [d[x] for x in self.get_array(prop)],
-                              int)
+            ind_of = unique_ind(self.get_array(prop))
+            self.set_array(prop,
+                          [(ind_of[x] if x in ind_of else x) for x in self.get_array(prop)],
+                          int)
 
         self.Topology.update()
 
