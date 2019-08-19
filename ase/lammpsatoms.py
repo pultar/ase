@@ -308,7 +308,7 @@ class _TopoBase(object):
                            'angles': self.Angles,
                            'dihedrals': self.Dihedrals,
                            'impropers': self.Impropers}
-        self.update(init=True)
+        self.update(_init=True)
 
     def __repr__(self):
         tokens = []
@@ -319,13 +319,13 @@ class _TopoBase(object):
     def __getitem__(self, item):
         return self._prop_dict[item]
 
-    def update(self, init=False):
+    def update(self, _init=False):
 
         self._dict = {}
         for prop in self.topo_props:
             if self._ins.has(prop):
                 self._dict[prop] = self._prop_dict[prop]
-                if not init:
+                if not _init:
                     self._dict[prop].update()
 
     def generate(self, topo_dict, cutoffs=None):
@@ -657,6 +657,37 @@ class LammpsAtoms(Atoms):
             self.set_array('name',
                            self.get_chemical_symbols(),
                            object)
+
+        # update type when
+        # same name has two types
+        # happens during self.extend
+        # or same type has two names
+        types = self.get_array('type')
+        names = self.get_array('name')
+        types_dict = {}
+        n_max = max(types)
+        for i in set(types):
+            name_ = sorted(np.unique(names[types == i]))
+            types_dict[i] = name_[0]
+            for j in name_[1:]:
+                # same type has two names
+                # then make it into case:
+                # same name has two types
+                # since j might already exist in other types
+                n_max += 1
+                types_dict[n_max] = j
+                types[np.logical_and(types == i, names == j)] = n_max
+        # same name has two types
+        rev_types = {} # names to types
+        for i in reversed(list(types_dict.keys())):
+            rev_types[types_dict[i]] = i
+        ind_of = {}
+        for i, j in types_dict.items():
+            if i != rev_types[j]:
+                ind_of[i] = rev_types[j]
+        self.set_array('type',
+                       [(ind_of[x] if x in ind_of else x) for x in types],
+                       int)
 
         for prop in ['mol-id', 'type']:
             ind_of = unique_ind(self.get_array(prop))
