@@ -722,13 +722,7 @@ class LammpsAtoms(Atoms):
         return self
 
     def extend(self,
-               other,
-               extend_prop=('mol-id',
-                            'type',
-                            'bonds',
-                            'angles',
-                            'dihedrals',
-                            'impropers')):
+               other):
         """Extend atoms object by appending atoms from *other*.
         Parameters:
             other: the other object
@@ -745,10 +739,9 @@ class LammpsAtoms(Atoms):
         n1 = len(self)
         n2 = len(other)
         for prop in ['mol-id', 'type']:
-            if prop in extend_prop:
-                other.arrays[prop] += np.max(self.arrays[prop])
+            other.arrays[prop] += np.max(self.arrays[prop])
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            if self.has(prop) and other.has(prop) and prop in extend_prop:
+            if self.has(prop) and other.has(prop):
                 indx_of = {}
                 max_ = np.max(self.Topology[prop].get_types(verbose=False))
                 for i in other.Topology[prop].get_types(verbose=False):
