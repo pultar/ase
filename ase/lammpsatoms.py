@@ -22,6 +22,8 @@ def unique_ind(a):
 class _TopoAttribute(object):
 
     def __init__(self, topo_attr_prop):
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         self._ins = topo_attr_prop._ins
         self.prop = topo_attr_prop.prop
 
@@ -269,12 +271,16 @@ class _TopoAttribute(object):
 class _TopoAttributeProperty(object):
 
     def __init__(self, prop):
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         self.prop = prop
 
     def __get__(self, topo_base, owner):
         if topo_base is None:
             return self
         self._ins = topo_base._ins
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         return _TopoAttribute(self)
 
     def __set__(self, topo_base, value):
@@ -295,12 +301,14 @@ class _TopoBase(object):
     topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
 
     def __init__(self, topo_base_prop):
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         self._ins = topo_base_prop._ins
         self._prop_dict = {'bonds': self.Bonds,
                            'angles': self.Angles,
                            'dihedrals': self.Dihedrals,
                            'impropers': self.Impropers}
-        self.update()
+        self.update(init=True)
 
     def __repr__(self):
         tokens = []
@@ -311,13 +319,14 @@ class _TopoBase(object):
     def __getitem__(self, item):
         return self._prop_dict[item]
 
-    def update(self):
+    def update(self, init=False):
 
         self._dict = {}
         for prop in self.topo_props:
             if self._ins.has(prop):
                 self._dict[prop] = self._prop_dict[prop]
-                self._dict[prop].update()
+                if not init:
+                    self._dict[prop].update()
 
     def generate(self, topo_dict, cutoffs=None):
         # check and reformat topo_dict
@@ -460,6 +469,8 @@ class _TopoBaseProperty(object):
         if instance is None:
             return self
         self._ins = instance
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         return _TopoBase(self)
 
     def __delete__(self, instance):
@@ -472,6 +483,8 @@ class _TopoBaseProperty(object):
 class _Resname(object):
 
     def __init__(self, _resmame_prop):
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         self._ins = _resmame_prop._ins
 
     def _check_exists(func):
@@ -546,6 +559,8 @@ class _ResnameProperty(object):
         if instance is None:
             return self
         self._ins = instance
+        # every trivial call goes through this step
+        # Thus, init should not be computationally intensive
         return _Resname(self)
 
     def __set__(self, instance, value):
