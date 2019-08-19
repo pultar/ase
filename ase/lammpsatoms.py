@@ -194,12 +194,22 @@ class _TopoAttribute(object):
 
     def update(self):
 
+        # Correct if same prop has two types
+        types = self.get_types()
+        if len(set(types.keys())) != len(set(types.values())):
+            # same prop has two types
+            rev_types = {}
+            for i in reversed(list(types.keys())):
+                rev_types[types[i]] = i
+            ind_of = {}
+            for i, j in types.items():
+                if i != rev_types[j]:
+                    ind_of[i] = rev_types[j]
+            self.set_types_to(ind_of)
+
         d = unique_ind(self.get_types(verbose=False))
         if d:
-            for index, item in enumerate(self._ins.arrays[self.prop]):
-                for key in sorted(item.keys()):
-                    _ = self._ins.arrays[self.prop][index].pop(key)
-                    self._ins.arrays[self.prop][index][d[key]] = _
+            self.set_types_to(d)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
