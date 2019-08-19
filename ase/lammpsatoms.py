@@ -361,6 +361,10 @@ class _TopoBase(object):
             d.append(neighbor_list)
 
         if 'bonds' in topo_dict:
+            if 'bonds' in self._dict:
+                n_types = self._dict['bonds'].get_num_types()
+            else:
+                n_types = 0
             seen_bonds = []
             bonds = {}
             for i, neighbor in enumerate(d):
@@ -369,13 +373,17 @@ class _TopoBase(object):
                     name_list.sort()
                     name_list = '-'.join(name_list)
                     if name_list in topo_dict['bonds'] and not [i, j] in seen_bonds:
-                        indx = topo_dict['bonds'].index(name_list) + 1
+                        indx = topo_dict['bonds'].index(name_list) + 1 + n_types
                         bonds[indx] = bonds.get(indx, []) + [[i, j]]
                         seen_bonds.append([i, j])
                         seen_bonds.append([j, i])
             self.Bonds.add(bonds)
 
         if 'angles' in topo_dict:
+            if 'angles' in self._dict:
+                n_types = self._dict['angles'].get_num_types()
+            else:
+                n_types = 0
             angles = {}
             for i, neighbor in enumerate(d):
                 for indx, j in enumerate(neighbor):
@@ -386,11 +394,15 @@ class _TopoBase(object):
                         name_list.insert(1, vertex)
                         name_list = '-'.join(name_list)
                         if name_list in topo_dict['angles']:
-                            indx = topo_dict['angles'].index(name_list) + 1
+                            indx = topo_dict['angles'].index(name_list) + 1 + n_types
                             angles[indx] = angles.get(indx, []) + [[k, i, j]]
             self.Angles.add(angles)
 
         if 'dihedrals' in topo_dict:
+            if 'dihedrals' in self._dict:
+                n_types = self._dict['dihedrals'].get_num_types()
+            else:
+                n_types = 0
             dihedrals = {}
             for i, neighbor_i in enumerate(d):
                 for j in neighbor_i:
@@ -400,11 +412,15 @@ class _TopoBase(object):
                             name_list.sort()
                             name_list = '-'.join(name_list)
                             if name_list in topo_dict['dihedrals']:
-                                indx = topo_dict['dihedrals'].index(name_list) + 1
+                                indx = topo_dict['dihedrals'].index(name_list) + 1 + n_types
                                 dihedrals[indx] = dihedrals.get(indx, []) + [[i, j, k, l]]
             self.Dihedrals.add(dihedrals)
 
         if 'impropers' in topo_dict:
+            if 'impropers' in self._dict:
+                n_types = self._dict['impropers'].get_num_types()
+            else:
+                n_types = 0
             impropers = {}
             for i, neighbor in enumerate(d):
                 for indx_j, j in enumerate(neighbor):
@@ -414,7 +430,7 @@ class _TopoBase(object):
                             name_list.sort()
                             name_list = '-'.join(name_list)
                             if name_list in topo_dict['impropers']:
-                                indx = topo_dict['impropers'].index(name_list) + 1
+                                indx = topo_dict['impropers'].index(name_list) + 1 + n_types
                                 impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
             self.Impropers.add(impropers)
 
