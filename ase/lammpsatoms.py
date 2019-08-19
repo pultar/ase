@@ -221,10 +221,9 @@ class _TopoAttribute(object):
             except ValueError:
                 pass
 
-
-        for indx, item in zip(index, self._ins.arrays[self.prop][index]):
-            for key in item.keys():
-                if key in indx_of.keys():
+        for key in indx_of.keys():
+            for indx in np.arange(len(self._ins))[index]:
+                if key in self._ins.arrays[self.prop][indx].keys():
                     _ = self._ins.arrays[self.prop][indx].pop(key)
                     old = self._ins.arrays[self.prop][indx].get(indx_of[key], [])
                     self._ins.arrays[self.prop][indx][indx_of[key]] = old + _
