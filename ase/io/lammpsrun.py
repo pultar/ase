@@ -4,8 +4,8 @@ from os.path import splitext
 from collections import deque
 import numpy as np
 
-from ase.atoms import Atoms
-from ase.quaternions import Quaternions
+from ase.topoatoms import TopoAtoms
+from ase.topoquaternions import TopoQuaternions
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -48,7 +48,7 @@ def read_lammps_dump(infileobj, **kwargs):
 
 
 def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
-                             pbc=False, atomsobj=Atoms, order=True,
+                             pbc=False, atomsobj=TopoAtoms, order=True,
                              specorder=None, prismobj=None,
                              units="metal"):
     """Extract positions and other per-atom parameters and create Atoms
@@ -80,7 +80,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
 
     # reconstruct types from given specorder
     if specorder:
-        types = [specorder[t - 1] for t in types]
+        symbols = [specorder[t - 1] for t in types]
 
     def get_quantity(labels, quantity=None):
         try:
@@ -110,9 +110,10 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
         cell = prismobj.update_cell(cell)
 
     if quaternions:
-        out_atoms = Quaternions(
-            symbols=types,
+        out_atoms = TopoQuaternions(
+            symbols=symbols,
             positions=positions,
+            type=types,
             cell=cell,
             celldisp=celldisp,
             pbc=pbc,
@@ -125,15 +126,17 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
             positions = prismobj.vector_to_ase(positions, wrap=True)
 
         out_atoms = atomsobj(
-            symbols=types,
+            symbols=symbols,
             positions=positions,
+            type=types,
             pbc=pbc,
             celldisp=celldisp,
             cell=cell,
         )
     elif scaled_positions is not None:
         out_atoms = atomsobj(
-            symbols=types,
+            symbols=symbols,
+            type=types,
             scaled_positions=scaled_positions,
             pbc=pbc,
             celldisp=celldisp,
