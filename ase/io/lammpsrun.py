@@ -1,5 +1,5 @@
-from ase.lammpsatoms import LammpsAtoms
-from ase.lammpsquaternions import LammpsQuaternions
+from ase.topoatoms import TopoAtoms
+from ase.topoquarternions import TopoQuaternions
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -7,7 +7,7 @@ from collections import deque
 
 
 def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
-                    atomsobj=LammpsAtoms, lammps_data=None):
+                    atomsobj=TopoAtoms, lammps_data=None):
     """Method which reads a LAMMPS dump file.
 
     order: Order the particles according to their id. Might be faster to
@@ -155,7 +155,7 @@ def read_lammps_dump(fileobj, index=-1, order=True, Z_of_type=None,
                 numbers = [Z_of_type[i] for i in types]
 
             if len(quaternions):
-                images.append(LammpsQuaternions(symbols=numbers,
+                images.append(TopoQuaternions(symbols=numbers,
                                           positions=positions, pbc=pbc,
                                           cell=cell, celldisp=celldisp,
                                           quaternions=quaternions))

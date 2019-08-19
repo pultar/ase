@@ -2,8 +2,8 @@ import re
 import numpy as np
 
 import decimal as dec
-from ase.lammpsatoms import LammpsAtoms
-from ase.lammpsquaternions import LammpsQuaternions
+from ase.topoatoms import TopoAtoms
+from ase.topoquarternions import TopoQuaternions
 from ase.quaternions import Quaternions
 from ase.parallel import paropen
 from ase.calculators.lammpslib import unit_convert
@@ -330,7 +330,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         velocities *= unit_convert("velocity", units)
 
     # create ase.Atoms
-    at = LammpsAtoms(positions=positions,
+    at = TopoAtoms(positions=positions,
                      numbers=numbers,
                      masses=masses,
                      cell=cell,
@@ -348,7 +348,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         at.set_array('name', names, object)
     if resnames is not None:
         # removing name from resname
-        # if name doesnt exist, the LammpsAtoms __init__ already gave
+        # if name doesnt exist, the TopoAtoms __init__ already gave
         # chemical symbol as names, else the previous line gave proper names
         resnames -= np.asarray([set([i]) for i in at.arrays['name']])
         at.set_array('resname', resnames, object)
@@ -415,9 +415,9 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     # TODO: add quarternions printing
     if type(atoms) == Quaternions:
-        atoms = LammpsQuaternions(atoms)
-    elif not isinstance(atoms, LammpsAtoms):
-        atoms = LammpsAtoms(atoms)
+        atoms = TopoQuaternions(atoms)
+    elif not isinstance(atoms, TopoAtoms):
+        atoms = TopoAtoms(atoms)
 
     if specorder is not None:
         # To index elements in the LAMMPS data file
@@ -438,7 +438,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 '{1} \n'.format(num,
                                 prop))
 
-    # LammpsAtoms always assigns type and name
+    # TopoAtoms always assigns type and name
     types = atoms.get_array('type')
     names = atoms.get_array('name')
 

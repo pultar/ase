@@ -571,9 +571,9 @@ class _ResnameProperty(object):
         del self._ins.arrays['resname']
 
 
-class LammpsAtoms(Atoms):
+class TopoAtoms(Atoms):
     '''
-    Atoms class with methods that support lammps-property methods
+    Atoms class with methods that support Topology-property methods
     '''
 
     def __init__(self,
