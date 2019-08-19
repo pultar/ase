@@ -3,8 +3,8 @@ from ase.atoms import Atoms
 from ase.atom import Atom
 from copy import deepcopy
 import numbers
-from ase.utils import natural_cutoffs, basestring
-from ase.neighborlist import NeighborList
+from ase.utils import basestring
+from ase.neighborlist import NeighborList, natural_cutoffs
 from ase.io.formats import string2index
 
 

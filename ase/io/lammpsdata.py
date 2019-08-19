@@ -6,13 +6,12 @@ from ase.topoatoms import TopoAtoms
 from ase.topoquarternions import TopoQuaternions
 from ase.quaternions import Quaternions
 from ase.parallel import paropen
-from ase.calculators.lammpslib import unit_convert
 from ase.utils import basestring
-from ase.units import Ang, fs
+from ase.calculators.lammps import Prism, convert
 
 
-def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
-                     units="metal"):
+def read_lammps_data(fileobj, Z_of_type=None, style="full",
+                     sort_by_id=False, units="metal"):
     """Method which reads a LAMMPS data file.
 
     sort_by_id: Order the particles according to their id. Might be faster to
@@ -43,7 +42,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     pos_in = {}
     travel_in = {}
     mol_id_in = {}
-    mmcharge_in = {}
+    charge_in = {}
     mass_in = {}
     name_in = {}
     resname_in = {}
@@ -53,58 +52,62 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     dihedrals_in = []
     impropers_in = []
 
-    sections = ["Atoms",
-                "Velocities",
-                "Masses",
-                "Charges",
-                "Ellipsoids",
-                "Lines",
-                "Triangles",
-                "Bodies",
-                "Bonds",
-                "Angles",
-                "Dihedrals",
-                "Impropers",
-                "Impropers Pair Coeffs",
-                "PairIJ Coeffs",
-                "Pair Coeffs",
-                "Bond Coeffs",
-                "Angle Coeffs",
-                "Dihedral Coeffs",
-                "Improper Coeffs",
-                "BondBond Coeffs",
-                "BondAngle Coeffs",
-                "MiddleBondTorsion Coeffs",
-                "EndBondTorsion Coeffs",
-                "AngleTorsion Coeffs",
-                "AngleAngleTorsion Coeffs",
-                "BondBond13 Coeffs",
-                "AngleAngle Coeffs"]
-    header_fields = ["atoms",
-                     "bonds",
-                     "angles",
-                     "dihedrals",
-                     "impropers",
-                     "atom types",
-                     "bond types",
-                     "angle types",
-                     "dihedral types",
-                     "improper types",
-                     "extra bond per atom",
-                     "extra angle per atom",
-                     "extra dihedral per atom",
-                     "extra improper per atom",
-                     "extra special per atom",
-                     "ellipsoids",
-                     "lines",
-                     "triangles",
-                     "bodies",
-                     "xlo xhi",
-                     "ylo yhi",
-                     "zlo zhi",
-                     "xy xz yz"]
-    sections_re = '(' + '|'.join(sections).replace(' ', '\\s+') + ')'
-    header_fields_re = '(' + '|'.join(header_fields).replace(' ', '\\s+') + ')'
+    sections = [
+        "Atoms",
+        "Velocities",
+        "Masses",
+        "Charges",
+        "Ellipsoids",
+        "Lines",
+        "Triangles",
+        "Bodies",
+        "Bonds",
+        "Angles",
+        "Dihedrals",
+        "Impropers",
+        "Impropers Pair Coeffs",
+        "PairIJ Coeffs",
+        "Pair Coeffs",
+        "Bond Coeffs",
+        "Angle Coeffs",
+        "Dihedral Coeffs",
+        "Improper Coeffs",
+        "BondBond Coeffs",
+        "BondAngle Coeffs",
+        "MiddleBondTorsion Coeffs",
+        "EndBondTorsion Coeffs",
+        "AngleTorsion Coeffs",
+        "AngleAngleTorsion Coeffs",
+        "BondBond13 Coeffs",
+        "AngleAngle Coeffs",
+    ]
+    header_fields = [
+        "atoms",
+        "bonds",
+        "angles",
+        "dihedrals",
+        "impropers",
+        "atom types",
+        "bond types",
+        "angle types",
+        "dihedral types",
+        "improper types",
+        "extra bond per atom",
+        "extra angle per atom",
+        "extra dihedral per atom",
+        "extra improper per atom",
+        "extra special per atom",
+        "ellipsoids",
+        "lines",
+        "triangles",
+        "bodies",
+        "xlo xhi",
+        "ylo yhi",
+        "zlo zhi",
+        "xy xz yz",
+    ]
+    sections_re = "(" + "|".join(sections).replace(" ", "\\s+") + ")"
+    header_fields_re = "(" + "|".join(header_fields).replace(" ", "\\s+") + ")"
 
     section = None
     header = True
@@ -161,36 +164,54 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             fields = line.split()
             if section == "Atoms":  # id *
                 id = int(fields[0])
-                if style == 'full' and (len(fields) == 7 or len(fields) == 10):
+                if style == "full" and (len(fields) == 7 or len(fields) == 10):
                     # id mol-id type q x y z [tx ty tz]
-                    pos_in[id] = (int(fields[2]), float(fields[4]),
-                                  float(fields[5]), float(fields[6]))
+                    pos_in[id] = (
+                        int(fields[2]),
+                        float(fields[4]),
+                        float(fields[5]),
+                        float(fields[6]),
+                    )
                     mol_id_in[id] = int(fields[1])
-                    mmcharge_in[id] = float(fields[3])
+                    charge_in[id] = float(fields[3])
                     if len(fields) == 10:
-                        travel_in[id] = (int(fields[7]),
-                                         int(fields[8]),
-                                         int(fields[9]))
-                elif (style == 'atomic' and
-                      (len(fields) == 5 or len(fields) == 8)):
+                        travel_in[id] = (
+                            int(fields[7]),
+                            int(fields[8]),
+                            int(fields[9]),
+                        )
+                elif style == "atomic" and (
+                        len(fields) == 5 or len(fields) == 8
+                ):
                     # id type x y z [tx ty tz]
-                    pos_in[id] = (int(fields[1]), float(fields[2]),
-                                  float(fields[3]), float(fields[4]))
+                    pos_in[id] = (
+                        int(fields[1]),
+                        float(fields[2]),
+                        float(fields[3]),
+                        float(fields[4]),
+                    )
                     if len(fields) == 8:
-                        travel_in[id] = (int(fields[5]),
-                                         int(fields[6]),
-                                         int(fields[7]))
-                elif ((style == 'angle' or style == 'bond' or
-                       style == 'molecular') and
-                      (len(fields) == 6 or len(fields) == 9)):
+                        travel_in[id] = (
+                            int(fields[5]),
+                            int(fields[6]),
+                            int(fields[7]),
+                        )
+                elif (style in ("angle", "bond", "molecular")
+                      ) and (len(fields) == 6 or len(fields) == 9):
                     # id mol-id type x y z [tx ty tz]
-                    pos_in[id] = (int(fields[2]), float(fields[3]),
-                                  float(fields[4]), float(fields[5]))
+                    pos_in[id] = (
+                        int(fields[2]),
+                        float(fields[3]),
+                        float(fields[4]),
+                        float(fields[5]),
+                    )
                     mol_id_in[id] = int(fields[1])
                     if len(fields) == 9:
-                        travel_in[id] = (int(fields[6]),
-                                         int(fields[7]),
-                                         int(fields[8]))
+                        travel_in[id] = (
+                            int(fields[6]),
+                            int(fields[7]),
+                            int(fields[8]),
+                        )
                 else:
                     raise RuntimeError("Style '{}' not supported or invalid "
                                        "number of fields {}"
@@ -198,34 +219,48 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                 if line_comment:
                     resname_in[id] = set(line_comment.split())
             elif section == "Velocities":  # id vx vy vz
-                vel_in[int(fields[0])] = (float(fields[1]),
-                                          float(fields[2]),
-                                          float(fields[3]))
+                vel_in[int(fields[0])] = (
+                    float(fields[1]),
+                    float(fields[2]),
+                    float(fields[3]),
+                )
             elif section == "Masses":
                 mass_in[int(fields[0])] = float(fields[1])
                 if line_comment:
                     name_in[int(fields[0])] = line_comment.split()[0]
             elif section == "Bonds":  # id type atom1 atom2
-                bonds_in.append((int(fields[1]),
-                                 int(fields[2]),
-                                 int(fields[3])))
+                bonds_in.append(
+                    (int(fields[1]), int(fields[2]), int(fields[3]))
+                )
             elif section == "Angles":  # id type atom1 atom2 atom3
-                angles_in.append((int(fields[1]),
-                                  int(fields[2]),
-                                  int(fields[3]),
-                                  int(fields[4])))
+                angles_in.append(
+                    (
+                        int(fields[1]),
+                        int(fields[2]),
+                        int(fields[3]),
+                        int(fields[4]),
+                    )
+                )
             elif section == "Dihedrals":  # id type atom1 atom2 atom3 atom4
-                dihedrals_in.append((int(fields[1]),
-                                     int(fields[2]),
-                                     int(fields[3]),
-                                     int(fields[4]),
-                                     int(fields[5])))
+                dihedrals_in.append(
+                    (
+                        int(fields[1]),
+                        int(fields[2]),
+                        int(fields[3]),
+                        int(fields[4]),
+                        int(fields[5]),
+                    )
+                )
             elif section == "Impropers":  # id type atom1 atom2 atom3 atom4
-                impropers_in.append((int(fields[1]),
-                                     int(fields[2]),
-                                     int(fields[3]),
-                                     int(fields[4]),
-                                     int(fields[5])))
+                impropers_in.append(
+                    (
+                        int(fields[1]),
+                        int(fields[2]),
+                        int(fields[3]),
+                        int(fields[4]),
+                        int(fields[5]),
+                    )
+                )
 
     # set cell
     cell = np.zeros((3, 3))
@@ -256,10 +291,10 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         mol_id = np.zeros((N), int)
     else:
         mol_id = None
-    if len(mmcharge_in) > 0:
-        mmcharge = np.zeros((N), float)
+    if len(charge_in) > 0:
+        charge = np.zeros((N), float)
     else:
-        mmcharge = None
+        charge = None
     if len(travel_in) > 0:
         travel = np.zeros((N, 3), int)
     else:
@@ -308,8 +343,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
             mol_id[ind] = mol_id_in[id]
         if resnames is not None:
             resnames[ind] = resname_in[id]
-        if mmcharge is not None:
-            mmcharge[ind] = mmcharge_in[id]
+        if charge is not None:
+            charge[ind] = charge_in[id]
         ids[ind] = id
         # by type
         types[ind] = type
@@ -322,12 +357,12 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
         if masses is not None:
             masses[ind] = mass_in[type]
     # convert units
-    positions *= unit_convert("distance", units)
-    cell *= unit_convert("distance", units)
+    positions = convert(positions, "distance", units, "ASE")
+    cell = convert(cell, "distance", units, "ASE")
     if masses is not None:
-        masses *= unit_convert("mass", units)
+        masses = convert(masses, "mass", units, "ASE")
     if velocities is not None:
-        velocities *= unit_convert("velocity", units)
+        velocities = convert(velocities, "velocity", units, "ASE")
 
     # create ase.Atoms
     at = TopoAtoms(positions=positions,
@@ -338,22 +373,21 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
-    at.set_array('id', ids, int)
-    at.set_array('type', types, int)
+    at.arrays["id"] = ids
+    at.arrays["type"] = types
     if travel is not None:
-        at.set_array('travel', travel, int)
+        at.arrays["travel"] = travel
     if mol_id is not None:
-        at.set_array('mol-id', mol_id, int)
-    if names is not None:
-        at.set_array('name', names, object)
+        at.arrays["mol-id"] = mol_id
+    if charge is not None:
+        at.arrays["initial_charges"] = charge
+        at.arrays["mmcharges"] = charge.copy()
     if resnames is not None:
         # removing name from resname
         # if name doesnt exist, the TopoAtoms __init__ already gave
         # chemical symbol as names, else the previous line gave proper names
         resnames -= np.asarray([set([i]) for i in at.arrays['name']])
         at.set_array('resname', resnames, object)
-    if mmcharge is not None:
-        at.set_array('mmcharge', mmcharge, float)
 
     if bonds is not None:
         for (type, a1, a2) in bonds_in:
@@ -391,16 +425,17 @@ def read_lammps_data(fileobj, Z_of_type=None, style='full', sort_by_id=False,
                 + [[i_a2, i_a3, i_a4]]
         at.set_array('impropers', impropers, 'object')
 
-    at.info['comment'] = comment
+    at.info["comment"] = comment
 
     return at
 
 
 def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
-                      prismobj=None, velocities=False, style='full'):
+                      prismobj=None, velocities=False, units="metal",
+                      style='atomic'):
     """Write atomic structure data to a LAMMPS data_ file."""
     if isinstance(fileobj, basestring):
-        f = paropen(fileobj, 'wb')
+        f = paropen(fileobj, "wb")
         close_file = True
     else:
         # Presume fileobj acts like a fileobj
@@ -424,11 +459,11 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         # (indices must correspond to order in the potential file)
         atoms.update(specorder)
 
-    f.write('{0} (written by ASE) \n\n'.format(f.name))
+    f.write('{0} (written by ASE) \n\n'.format(f.name).encode("utf-8"))
 
     symbols = atoms.get_chemical_symbols()
     n_atoms = len(symbols)
-    f.write('{0:8} \t atoms \n'.format(n_atoms))
+    f.write('{0:8} \t atoms \n'.format(n_atoms).encode("utf-8"))
     for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
         try:
             num = atoms.Topology[prop].get_count()
@@ -436,7 +471,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             num = 0
         f.write('{0:8} \t '
                 '{1} \n'.format(num,
-                                prop))
+                                prop).encode("utf-8"))
 
     # TopoAtoms always assigns type and name
     types = atoms.get_array('type')
@@ -444,7 +479,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     n_types = len(np.unique(atoms.get_array('type')))
     f.write('{0:8} \t '
-            'atom types\n'.format(n_types))
+            'atom types\n'.format(n_types).encode("utf-8"))
     for prop in ['bond types', 'angle types', 'dihedral types',
                  'improper types']:
         try:
@@ -453,30 +488,40 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             num = 0
         f.write('{0:8} \t '
                 '{1} \n'.format(num,
-                                prop))
+                                prop).encode("utf-8"))
     if prismobj is None:
-        p = Prism(atoms.get_cell(), digits=6)
+        p = Prism(atoms.get_cell())
     else:
         p = prismobj
-    xhi, yhi, zhi, xy, xz, yz = p.get_lammps_prism_str()
 
-    f.write('\t 0.0 {0}  xlo xhi\n'.format(xhi))
-    f.write('\t 0.0 {0}  ylo yhi\n'.format(yhi))
-    f.write('\t 0.0 {0}  zlo zhi\n'.format(zhi))
+    # Get cell parameters and convert from ASE units to LAMMPS units
+    xhi, yhi, zhi, xy, xz, yz = convert(p.get_lammps_prism(), "distance",
+                                        "ASE", units)
+
+    f.write("/t 0.0 {0:12.6f}  xlo xhi\n".format(xhi).encode("utf-8"))
+    f.write("/t 0.0 {0:12.6f}  ylo yhi\n".format(yhi).encode("utf-8"))
+    f.write("/t 0.0 {0:12.6f}  zlo zhi\n".format(zhi).encode("utf-8"))
 
     if force_skew or p.is_skewed():
-        f.write('{0} {1} {2}  xy xz yz\n'.format(xy, xz, yz))
-    f.write('\n\n')
+        f.write(
+            "{0:12.6f} {1:12.6f} {2:12.6f}  xy xz yz\n".format(
+                xy, xz, yz
+            ).encode("utf-8")
+        )
+    f.write("\n\n".encode("utf-8"))
 
-    f.write('Masses \n\n')
+    f.write('Masses \n\n'.encode("utf-8"))
     for i in np.unique(atoms.get_array('type')):
         indx = np.where(i == types)[0][0]
         mass = atoms.get_masses()[indx]
         sym = names[indx]
-        f.write('{0:>6} {1:8.4f} # {2}\n'.format(i, mass, sym))
-    f.write('\n\n')
+        f.write('{0:>6} {1:8.4f} # {2}\n'.format(
+                i, mass, sym
+            ).encode("utf-8")
+        )
+    f.write('\n\n'.encode("utf-8"))
 
-    f.write('Atoms \n\n')
+    f.write('Atoms \n\n'.encode("utf-8"))
     if atoms.has('travel'):
         travel = atoms.get_array('travel')
     else:
@@ -487,68 +532,108 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         resnames = None
     id = atoms.get_array('id')
     mol_id = atoms.get_array('mol-id')
-    pos = p.pos_to_lammps_fold_str(atoms.get_positions())
+    pos = p.vector_to_lammps(atoms.get_positions(), wrap=True)
+    charges = atoms.get_initial_charges()
     if style == 'full':
         # id mol-id type q x y z [tx ty tz]
-        if atoms.has('mmcharge'):
-            mmcharge = atoms.get_array('mmcharge')
-            for i, r in enumerate(pos):
-                f.write('{0:6} {1:4} {2:4} {3:8.6f}'
-                        ' {4} {5} {6}'.format(id[i],
-                                              mol_id[i],
-                                              types[i],
-                                              mmcharge[i],
-                                              *r))
-                if travel:
-                    f.write(' {0:8.4f} {1:8.4f} '
-                            '{2:8.4f}'.format(*travel[i]))
-                f.write(' # {0}'.format(names[i]))
-                if resnames is not None:
-                    f.write(' {0}'.format(' '.join(list(resnames[i]))))
-                f.write('\n')
-        else:
-            raise RuntimeError('style "full" not possible. '
-                               'The system does not have mmcharge')
+        for i, (q, r) in enumerate(zip(charges, pos)):
+            r = convert(r, "distance", "ASE", units)
+            q = convert(q, "charge", "ASE", units)
+            f.write('{0:6} {1:4} {2:4} {3:8.6f}'
+                    ' {4:12.6f} {5:12.6f} {6:12.6f}'.format(
+                                          id[i],
+                                          mol_id[i],
+                                          types[i],
+                                          q,
+                                          *r
+                        ).encode("utf-8")
+                    )
+            if travel:
+                f.write(' {0:8.4f} {1:8.4f} '
+                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
+                        )
+            f.write(' # {0}'.format(names[i]).encode("utf-8")
+                    )
+            if resnames is not None:
+                f.write(' {0}'.format(' '.join(list(resnames[i]))
+                                      ).encode("utf-8"))
+            f.write('\n'.encode("utf-8"))
+    elif style == 'charge':
+        # id type q x y z [tx ty tz]
+        for i, (q, r) in enumerate(zip(charges, pos)):
+            r = convert(r, "distance", "ASE", units)
+            q = convert(q, "charge", "ASE", units)
+            f.write('{0:6} {1:4} {2:8.6f}'
+                    ' {3:12.6f} {4:12.6f} {5:12.6f}'.format(
+                                          id[i],
+                                          mol_id[i],
+                                          types[i],
+                                          q,
+                                          *r
+                        ).encode("utf-8")
+                    )
+            if travel:
+                f.write(' {0:8.4f} {1:8.4f} '
+                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
+                        )
+            f.write(' # {0}'.format(names[i]).encode("utf-8")
+                    )
+            if resnames is not None:
+                f.write(' {0}'.format(' '.join(list(resnames[i]))
+                                      ).encode("utf-8"))
+            f.write('\n'.encode("utf-8"))
     elif style == 'atomic':
         # id type x y z [tx ty tz]
         for i, r in enumerate(pos):
             f.write('{0:6} {1:4}'
-                    ' {2} {3} {4}'.format(id[i],
+                    ' {2:12.6f} {3:12.6f} {4:12.6f}'.format(
+                                          id[i],
                                           types[i],
-                                          *r))
+                                          *r
+                        ).encode("utf-8")
+                    )
             if travel:
                 f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]))
-            f.write(' # {0}'.format(names[i]))
+                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
+                        )
+            f.write(' # {0}'.format(names[i]).encode("utf-8")
+                    )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))))
-            f.write('\n')
+                f.write(' {0}'.format(' '.join(list(resnames[i]))
+                                      ).encode("utf-8"))
+            f.write('\n'.encode("utf-8"))
     elif (style == 'angle' or style == 'bond' or
           style == 'molecular'):
         # id mol-id type x y z [tx ty tz]
         for i, r in enumerate(pos):
             f.write('{0:6} {1:4} {2:4}'
-                    ' {3} {4} {5}'.format(id[i],
+                    ' {3:12.6f} {4:12.6f} {5:12.6f}'.format(
+                                          id[i],
                                           mol_id[i],
                                           types[i],
-                                          *r))
+                                          *r
+                        ).encode("utf-8")
+                    )
             if travel:
                 f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]))
-            f.write(' # {0}'.format(names[i]))
+                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
+                        )
+            f.write(' # {0}'.format(names[i]).encode("utf-8")
+                    )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))))
-            f.write('\n')
+                f.write(' {0}'.format(' '.join(list(resnames[i]))
+                                      ).encode("utf-8"))
+            f.write('\n'.encode("utf-8"))
     else:
-        raise RuntimeError('style {0} not supported. '
-                           'Use: full, atomic, angle, bond, or'
-                           'molecular'.format(style))
-    f.write('\n\n')
+        raise NotImplementedError('style {0} not supported. '
+                                  'Use: full, atomic, angle, bond, charge,'
+                                  ' or molecular'.format(style))
+    f.write('\n\n'.encode("utf-8"))
 
     if atoms.has('bonds'):
         typ = atoms.Topology['bonds'].get_types()
         count = 1
-        f.write('Bonds \n\n')
+        f.write('Bonds \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('bonds')):
             for key, values in item.items():
                 for value in values:
@@ -557,14 +642,16 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                                     key,
                                                     indx + 1,
                                                     value[0] + 1,
-                                                    typ[key]))
+                                                    typ[key]
+                                                    ).encode("utf-8")
+                            )
                     count += 1
-        f.write('\n\n')
+        f.write('\n\n'.encode("utf-8"))
 
     if atoms.has('angles'):
         typ = atoms.Topology['angles'].get_types()
         count = 1
-        f.write('Angles \n\n')
+        f.write('Angles \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('angles')):
             for key, values in item.items():
                 for value in values:
@@ -575,14 +662,16 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                                value[0] + 1,
                                                indx + 1,
                                                value[1] + 1,
-                                               typ[key]))
+                                               typ[key]
+                                               ).encode("utf-8")
+                            )
                     count += 1
-        f.write('\n\n')
+        f.write('\n\n'.encode("utf-8"))
 
     if atoms.has('dihedrals'):
         typ = atoms.Topology['dihedrals'].get_types()
         count = 1
-        f.write('Dihedrals \n\n')
+        f.write('Dihedrals \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('dihedrals')):
             for key, values in item.items():
                 for value in values:
@@ -591,15 +680,18 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                             '{5:6}'.format(count,
                                            key,
                                            indx + 1,
-                                           *_))
-                    f.write('\t# {0}\n'.format(typ[key]))
+                                           *_).encode("utf-8")
+                            )
+                    f.write('\t# {0}\n'.format(typ[key]
+                                               ).encode("utf-8")
+                            )
                     count += 1
-        f.write('\n\n')
+        f.write('\n\n'.encode("utf-8"))
 
     if atoms.has('impropers'):
         typ = atoms.Topology['impropers'].get_types()
         count = 1
-        f.write('Impropers \n\n')
+        f.write('Impropers \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('impropers')):
             for key, values in item.items():
                 for value in values:
@@ -608,141 +700,25 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                             '{5:6}'.format(count,
                                            key,
                                            indx + 1,
-                                           *_))
-                    f.write('\t# {0}\n'.format(typ[key]))
+                                           *_
+                                           ).encode("utf-8")
+                            )
+                    f.write('\t# {0}\n'.format(typ[key]
+                                               ).encode("utf-8")
+                            )
                     count += 1
-        f.write('\n\n')
+        f.write('\n\n'.encode("utf-8"))
 
     if velocities and atoms.get_velocities() is not None:
-        f.write('\n\nVelocities \n\n')
-        for i, v in enumerate(atoms.get_velocities() / (Ang / (fs*1000.))):
-            f.write('{0:>6} {1} {2} {3}\n'.format(
-                    *(i + 1,) + tuple(v)))
+        f.write("\n\nVelocities \n\n".encode("utf-8"))
+        vel = p.vector_to_lammps(atoms.get_velocities())
+        for i, v in enumerate(vel):
+            # Convert velocity from ASE units to LAMMPS units
+            v = convert(v, "velocity", "ASE", units)
+            f.write('{0:>6} {1:12.6f} {2:12.6f} {3:12.6f}\n'.format(
+                        *(i + 1,) + tuple(v)).encode("utf-8")
+                    )
 
     f.flush()
     if close_file:
         f.close()
-
-
-class Prism(object):
-
-    def __init__(self, cell, pbc=(True, True, True), digits=10):
-        """Create a lammps-style triclinic prism object from a cell
-
-        The main purpose of the prism-object is to create suitable
-        string representations of prism limits and atom positions
-        within the prism.
-        When creating the object, the digits parameter (default set to 10)
-        specify the precision to use.
-        lammps is picky about stuff being within semi-open intervals,
-        e.g. for atom positions (when using create_atom in the in-file),
-        x must be within [xlo, xhi).
-        """
-        a, b, c = cell
-        an, bn, cn = [np.linalg.norm(v) for v in cell]
-
-        alpha = np.arccos(np.dot(b, c) / (bn * cn))
-        beta = np.arccos(np.dot(a, c) / (an * cn))
-        gamma = np.arccos(np.dot(a, b) / (an * bn))
-
-        xhi = an
-        xyp = np.cos(gamma) * bn
-        yhi = np.sin(gamma) * bn
-        xzp = np.cos(beta) * cn
-        yzp = (bn * cn * np.cos(alpha) - xyp * xzp) / yhi
-        zhi = np.sqrt(cn**2 - xzp**2 - yzp**2)
-
-        # Set precision
-        self.car_prec = dec.Decimal('10.0') ** \
-            int(np.floor(np.log10(max((xhi, yhi, zhi)))) - digits)
-        self.dir_prec = dec.Decimal('10.0') ** (-digits)
-        self.acc = float(self.car_prec)
-        self.eps = np.finfo(xhi).eps
-
-        # For rotating positions from ase to lammps
-        Apre = np.array(((xhi, 0, 0),
-                         (xyp, yhi, 0),
-                         (xzp, yzp, zhi)))
-        self.R = np.dot(np.linalg.inv(cell), Apre)
-
-        # Actual lammps cell may be different from what is used to create R
-        def fold(vec, pvec, i):
-            p = pvec[i]
-            x = vec[i] + 0.5 * p
-            n = (np.mod(x, p) - x) / p
-            return [float(self.f2qdec(a)) for a in (vec + n * pvec)]
-
-        Apre[1, :] = fold(Apre[1, :], Apre[0, :], 0)
-        Apre[2, :] = fold(Apre[2, :], Apre[1, :], 1)
-        Apre[2, :] = fold(Apre[2, :], Apre[0, :], 0)
-
-        self.A = Apre
-        self.Ainv = np.linalg.inv(self.A)
-
-        if self.is_skewed() and \
-                (not (pbc[0] and pbc[1] and pbc[2])):
-            raise RuntimeError('Skewed lammps cells MUST have '
-                               'PBC == True in all directions!')
-
-    def f2qdec(self, f):
-        return dec.Decimal(repr(f)).quantize(self.car_prec, dec.ROUND_DOWN)
-
-    def f2qs(self, f):
-        return str(self.f2qdec(f))
-
-    def f2s(self, f):
-        return str(dec.Decimal(repr(f)).quantize(self.car_prec,
-                                                 dec.ROUND_HALF_EVEN))
-
-    def dir2car(self, v):
-        """Direct to cartesian coordinates"""
-        return np.dot(v, self.A)
-
-    def car2dir(self, v):
-        """Cartesian to direct coordinates"""
-        return np.dot(v, self.Ainv)
-
-    def fold_to_str(self, v):
-        """Fold a position into the lammps cell (semi open)
-
-        Returns tuple of str.
-        """
-        # Two-stage fold, first into box, then into semi-open interval
-        # (within the given precision).
-        d = [x % (1 - self.dir_prec) for x in
-             map(dec.Decimal,
-                 map(repr, np.mod(self.car2dir(v) + self.eps, 1.0)))]
-        return tuple([self.f2qs(x) for x in
-                      self.dir2car(list(map(float, d)))])
-
-    def get_lammps_prism(self):
-        A = self.A
-        return A[0, 0], A[1, 1], A[2, 2], A[1, 0], A[2, 0], A[2, 1]
-
-    def get_lammps_prism_str(self):
-        """Return a tuple of strings"""
-        p = self.get_lammps_prism()
-        return tuple([self.f2s(x) for x in p])
-
-    def pos_to_lammps_strs(self, positions):
-        """Rotate an ase-cell position to the lammps cell orientation
-
-        Returns tuple of str.
-        """
-        rot_positions = np.dot(positions, self.R)
-        return [tuple([self.f2s(x) for x in position])
-                for position in rot_positions]
-
-    def pos_to_lammps_fold_str(self, positions):
-        """Rotate and fold an ase-cell position into the lammps cell
-
-        Returns tuple of str.
-        """
-        return [self.fold_to_str(np.dot(position, self.R))
-                for position in positions]
-
-    def is_skewed(self):
-        acc = self.acc
-        prism = self.get_lammps_prism()
-        axy, axz, ayz = [np.abs(x) for x in prism[3:]]
-        return (axy >= acc) or (axz >= acc) or (ayz >= acc)

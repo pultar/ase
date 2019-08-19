@@ -74,6 +74,7 @@ reserved_keys = set(all_properties +
                     all_changes +
                     list(atomic_numbers) +
                     ['id', 'unique_id', 'ctime', 'mtime', 'user',
+                     'fmax', 'smax',
                      'momenta', 'constraints', 'natoms', 'formula', 'age',
                      'calculator', 'calculator_parameters',
                      'key_value_pairs', 'data'])
@@ -83,6 +84,11 @@ numeric_keys = set(['id', 'energy', 'magmom', 'charge', 'natoms'])
 
 def check(key_value_pairs):
     for key, value in key_value_pairs.items():
+        if key == "external_tables":
+            # Checks for external_tables are not
+            # performed
+            continue
+
         if not word.match(key) or key in reserved_keys:
             raise ValueError('Bad key: {}'.format(key))
         try:
@@ -135,6 +141,9 @@ def connect(name, type='extract_from_name', create_indices=True,
         Use append=False to start a new database.
     """
 
+    if isinstance(name, PurePath):
+        name = str(name)
+
     if type == 'extract_from_name':
         if name is None:
             type = None
@@ -143,6 +152,8 @@ def connect(name, type='extract_from_name', create_indices=True,
         elif (name.startswith('postgresql://') or
               name.startswith('postgres://')):
             type = 'postgresql'
+        elif name.startswith('mysql://') or name.startswith('mariadb://'):
+            type = 'mysql'
         else:
             type = os.path.splitext(name)[1][1:]
             if type == '':
@@ -151,13 +162,11 @@ def connect(name, type='extract_from_name', create_indices=True,
     if type is None:
         return Database()
 
-    if not append and world.rank == 0 and os.path.isfile(name):
-        os.remove(name)
+    if not append and world.rank == 0:
+        if isinstance(name, str) and os.path.isfile(name):
+            os.remove(name)
 
-    if isinstance(name, PurePath):
-        name = str(name)
-
-    if type != 'postgresql' and isinstance(name, basestring):
+    if type not in ['postgresql', 'mysql'] and isinstance(name, basestring):
         name = os.path.abspath(name)
 
     if type == 'json':
@@ -170,6 +179,10 @@ def connect(name, type='extract_from_name', create_indices=True,
     if type == 'postgresql':
         from ase.db.postgresql import PostgreSQLDatabase
         return PostgreSQLDatabase(name)
+
+    if type == 'mysql':
+        from ase.db.mysql import MySQLDatabase
+        return MySQLDatabase(name)
     raise ValueError('Unknown database type: ' + type)
 
 
@@ -515,20 +528,6 @@ class Database:
         check(add_key_value_pairs)
 
         row = self._get_row(id)
-
-        if atoms:
-            oldrow = row
-            row = AtomsRow(atoms)
-
-            # Copy over data, kvp, ctime, user and id
-            row._data = oldrow._data
-            kvp = oldrow.key_value_pairs
-            row.__dict__.update(kvp)
-            row._keys = list(kvp)
-            row.ctime = oldrow.ctime
-            row.user = oldrow.user
-            row.id = id
-
         kvp = row.key_value_pairs
 
         n = len(kvp)
@@ -546,8 +545,21 @@ class Database:
         if not data:
             data = None
 
-        self._write(row, kvp, data, row.id)
+        if atoms:
+            oldrow = row
+            row = AtomsRow(atoms)
+            # Copy over data, kvp, ctime, user and id
+            row._data = oldrow._data
+            row.__dict__.update(kvp)
+            row._keys = list(kvp)
+            row.ctime = oldrow.ctime
+            row.user = oldrow.user
+            row.id = id
 
+        if atoms or os.path.splitext(self.filename)[1] == '.json':
+            self._write(row, kvp, data, row.id)
+        else:
+            self._update(row.id, kvp, data)
         return m, n
 
     def delete(self, ids):

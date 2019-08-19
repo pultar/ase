@@ -43,8 +43,6 @@ def parprint(*args, **kwargs):
         print(*args, **kwargs)
 
 
-
-
 class DummyMPI:
     rank = 0
     size = 1
@@ -54,6 +52,8 @@ class DummyMPI:
         # returned, or on arrays, in-place.
         if np.isscalar(a):
             return a
+        if hasattr(a, '__array__'):
+            a = a.__array__()
         assert isinstance(a, np.ndarray)
         return None
 
@@ -175,14 +175,14 @@ def broadcast(obj, root=0, comm=world):
         n = np.empty(1, int)
     comm.broadcast(n, root)
     if comm.rank == root:
-        string = np.fromstring(string, np.int8)
+        string = np.frombuffer(string, np.int8)
     else:
         string = np.zeros(n, np.int8)
     comm.broadcast(string, root)
     if comm.rank == root:
         return obj
     else:
-        return pickle.loads(string.tostring())
+        return pickle.loads(string.tobytes())
 
 
 def parallel_function(func):
