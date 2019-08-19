@@ -583,7 +583,7 @@ class TopoAtoms(Atoms):
                  name=None,
                  resname=None,
                  mol_id=None,
-                 mmcharge=None,
+                 charges=None,
                  bonds=None,
                  angles=None,
                  dihedrals=None,
@@ -601,8 +601,8 @@ class TopoAtoms(Atoms):
                 resname = symbols.get_array('resname')
             if symbols.has('mol-id') and mol_id is None:
                 mol_id = symbols.get_array('mol-id')
-            if symbols.has('mmcharge') and mmcharge is None:
-                mmcharge = symbols.get_array('mmcharge')
+            if symbols.has('initial_charges') and charges is None:
+                charges = symbols.get_initial_charges()
             if symbols.has('bonds') and bonds is None:
                 bonds = symbols.get_array('bonds')
             if symbols.has('angles') and angles is None:
@@ -626,8 +626,8 @@ class TopoAtoms(Atoms):
             self.set_array('resname', resname, object)
         if mol_id is not None:
             self.set_array('mol-id', mol_id, int)
-        if mmcharge is not None:
-            self.set_array('mmcharge', mmcharge, float)
+        if charges is not None:
+            self.set_initial_charges(charges)
         if bonds is not None:
             self.set_array('bonds', bonds, object)
         if angles is not None:
