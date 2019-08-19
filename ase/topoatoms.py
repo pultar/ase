@@ -237,7 +237,8 @@ class _TopoAttribute(object):
         for key, value in indx_of.items():
             if value is None:
                 ids.append(key)
-        for indx, item in zip(index, self._ins.arrays[self.prop][index]):
+        for indx in np.arange(len(self._ins))[index]:
+            item =  self._ins.arrays[self.prop][indx]
             # holds empty keys for deletion later
             del_key = []
             # extend() can bring int item
@@ -665,29 +666,32 @@ class TopoAtoms(Atoms):
         types = self.get_array('type')
         names = self.get_array('name')
         types_dict = {}
-        n_max = max(types)
-        for i in set(types):
-            name_ = sorted(np.unique(names[types == i]))
-            types_dict[i] = name_[0]
-            for j in name_[1:]:
-                # same type has two names
-                # then make it into case:
-                # same name has two types
-                # since j might already exist in other types
-                n_max += 1
-                types_dict[n_max] = j
-                types[np.logical_and(types == i, names == j)] = n_max
-        # same name has two types
-        rev_types = {} # names to types
-        for i in reversed(list(types_dict.keys())):
-            rev_types[types_dict[i]] = i
-        ind_of = {}
-        for i, j in types_dict.items():
-            if i != rev_types[j]:
-                ind_of[i] = rev_types[j]
-        self.set_array('type',
-                       [(ind_of[x] if x in ind_of else x) for x in types],
-                       int)
+        # ASE atoms with no atoms can be encountered
+        # during ASE.__getitem__
+        if len(types) != 0:
+            n_max = np.max(types)
+            for i in set(types):
+                name_ = sorted(np.unique(names[types == i]))
+                types_dict[i] = name_[0]
+                for j in name_[1:]:
+                    # same type has two names
+                    # then make it into case:
+                    # same name has two types
+                    # since j might already exist in other types
+                    n_max += 1
+                    types_dict[n_max] = j
+                    types[np.logical_and(types == i, names == j)] = n_max
+            # same name has two types
+            rev_types = {} # names to types
+            for i in reversed(list(types_dict.keys())):
+                rev_types[types_dict[i]] = i
+            ind_of = {}
+            for i, j in types_dict.items():
+                if i != rev_types[j]:
+                    ind_of[i] = rev_types[j]
+            self.set_array('type',
+                           [(ind_of[x] if x in ind_of else x) for x in types],
+                           int)
 
         for prop in ['mol-id', 'type']:
             ind_of = unique_ind(self.get_array(prop))
