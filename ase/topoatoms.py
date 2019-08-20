@@ -714,6 +714,30 @@ class TopoAtoms(Atoms):
                            [order_dict[i] for i in self.get_atomic_numbers()],
                            int)
 
+    @property
+    def types(self):
+        return self.arrays['type']
+
+    @types.setter
+    def types(self, other):
+        self.set_array('type', other, int)
+
+    @property
+    def mol_ids(self):
+        return self.arrays['mol-id']
+
+    @mol_ids.setter
+    def mol_ids(self, other):
+        self.set_array('mol-id', other, int)
+
+    @property
+    def names(self):
+        return self.arrays['name']
+
+    @names.setter
+    def names(self, other):
+        self.set_array('name', other, int)
+
     def __delitem__(self, i=-1):
         if not isinstance(i, list):
             i = [i]
