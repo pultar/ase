@@ -223,7 +223,9 @@ class _TopoAttribute(object):
             except ValueError:
                 pass
 
-        for key in indx_of.keys():
+        # keys are reversed so that double change is stopped
+        # eg {1:2, 2:3} would change 1 to 3, which is not intended
+        for key in reversed(list(indx_of.keys())):
             for indx in np.arange(len(self._ins))[index]:
                 if key in self._ins.arrays[self.prop][indx].keys():
                     _ = self._ins.arrays[self.prop][indx].pop(key)
