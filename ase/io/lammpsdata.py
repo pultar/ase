@@ -498,9 +498,9 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     xhi, yhi, zhi, xy, xz, yz = convert(p.get_lammps_prism(), "distance",
                                         "ASE", units)
 
-    f.write("/t 0.0 {0:12.6f}  xlo xhi\n".format(xhi).encode("utf-8"))
-    f.write("/t 0.0 {0:12.6f}  ylo yhi\n".format(yhi).encode("utf-8"))
-    f.write("/t 0.0 {0:12.6f}  zlo zhi\n".format(zhi).encode("utf-8"))
+    f.write("\t 0.0 {0:12.6f}  xlo xhi\n".format(xhi).encode("utf-8"))
+    f.write("\t 0.0 {0:12.6f}  ylo yhi\n".format(yhi).encode("utf-8"))
+    f.write("\t 0.0 {0:12.6f}  zlo zhi\n".format(zhi).encode("utf-8"))
 
     if force_skew or p.is_skewed():
         f.write(
