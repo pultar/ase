@@ -5,7 +5,7 @@ from collections import deque
 import numpy as np
 
 from ase.topoatoms import TopoAtoms
-from ase.topoquaternions import TopoQuaternions
+from ase.topoquarternions import TopoQuaternions
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring
