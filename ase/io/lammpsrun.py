@@ -229,6 +229,7 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
 
             #check pbc
             pbc_items = tilt_items[-3:]
+            pbc = np.empty(3, dtype=bool)
             for i in range(3):
                 pbc[i] = pbc_items[i] == 'pp' or pbc_items[i] == 'p'
 
@@ -248,12 +249,6 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
                 offdiag = (0.0,) * 3
 
             cell, celldisp = construct_cell(diagdisp, offdiag)
-
-            # Handle pbc conditions
-            if len(tilt_items) > 3:
-                pbc = ["p" in d.lower() for d in tilt_items[3:]]
-            else:
-                pbc = (False,) * 3
 
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]
