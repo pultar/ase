@@ -55,6 +55,10 @@ assert len(imgs) == len(written)
 for img1, img2 in zip(imgs, written):
     assert img1 == img2
 
+# Verify slicing works.
+read_traj = Trajectory('1.traj', 'r')
+assert len(read_traj[3:8]) == 5
+
 # append to a nonexisting file:
 fname = '2.traj'
 if os.path.isfile(fname):
