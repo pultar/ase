@@ -1,7 +1,5 @@
 import re
 import numpy as np
-
-import decimal as dec
 from ase.topoatoms import TopoAtoms
 from ase.topoquarternions import TopoQuaternions
 from ase.quaternions import Quaternions

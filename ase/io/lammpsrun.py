@@ -81,6 +81,8 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
     # reconstruct types from given specorder
     if specorder:
         symbols = [specorder[t - 1] for t in types]
+    else:
+        symbols = types
 
     def get_quantity(labels, quantity=None):
         try:
@@ -262,7 +264,7 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
                 colnames=colnames,
                 cell=cell,
                 celldisp=celldisp,
-                atomsobj=Atoms,
+                atomsobj=TopoAtoms,
                 pbc=pbc,
                 **kwargs
             )
