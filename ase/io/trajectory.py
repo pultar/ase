@@ -290,7 +290,6 @@ class SlicedTrajectory(TrajectoryReader):
     """Wrapper to return a slice from a trajectory without loading
     from disk. Initialize with a trajectory (in read mode) and the
     desired slice object."""
-    # FIXME: Don't forget test and doc mods.
 
     def __init__(self, trajectory, sliced):
         self.trajectory = trajectory
