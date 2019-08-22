@@ -32,6 +32,7 @@ from ase.utils import devnull, basestring
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.calculators.calculator import PropertyNotImplementedError
 from .create_input import GenerateVaspInput, read_potcar_numbers_of_electrons
+from warnings import warn
 
 
 class Vasp(GenerateVaspInput, Calculator):
@@ -681,8 +682,8 @@ class Vasp(GenerateVaspInput, Calculator):
 
         lines: list 
             A list of strings corresponding to VASP OUTCAR output containing
-            information about the vibrational frequencies of the system. The
-            string is of the format:
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
 
                 11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
 
@@ -739,8 +740,8 @@ class Vasp(GenerateVaspInput, Calculator):
 
         lines: list 
             A list of strings corresponding to VASP OUTCAR output containing
-            information about the vibrational frequencies of the system. The
-            string is of the format:
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
 
                 11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
 
@@ -770,8 +771,8 @@ class Vasp(GenerateVaspInput, Calculator):
 
         lines: list 
             A list of strings corresponding to VASP OUTCAR output containing
-            information about the vibrational frequencies of the system. The
-            string is of the format:
+            information about the vibrational frequencies of the system. An
+            example string looks like this:
 
                 11 f  =    1.854649 THz    11.653106 2PiTHz   61.864446 cm-1     7.670216 meV
 
@@ -798,7 +799,8 @@ class Vasp(GenerateVaspInput, Calculator):
 
     def read_vib_freq(self, lines=None):
         """
-        Warning: Deprecated.
+        Warning: This function will be deprecated in a future ASE release.
+        Use get_vib_energies() instead.
 
         Read vibrational energies (eV) from OUTCAR file.
 
@@ -826,8 +828,9 @@ class Vasp(GenerateVaspInput, Calculator):
 
         """
 
-        warn(("This legacy function returns vibrational energies in meV,"
-              "which is a non-standard ASE unit. "
+        warn(("This legacy function returns vibrational energies in meV "
+              "(a non-standard ASE unit), and will be deprecated"
+              "in a future ASE release."
               "We recommend using the get_vib_energies function, which"
               "conforms to ASE's standard energy unit of eV."))
 
