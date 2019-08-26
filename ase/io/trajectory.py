@@ -250,6 +250,11 @@ class TrajectoryReader:
         self.backend.close()
 
     def __getitem__(self, i=-1):
+        if isinstance(i, slice):
+            items = []
+            for index in range(len(self))[i]:
+                items.append(self[index])
+            return items
         b = self.backend[i]
         if 'numbers' in b:
             # numbers and other header info was written alongside the image:
