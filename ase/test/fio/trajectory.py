@@ -57,7 +57,11 @@ for img1, img2 in zip(imgs, written):
 
 # Verify slicing works.
 read_traj = Trajectory('1.traj', 'r')
-assert len(read_traj[3:8]) == 5
+sliced_traj = read_traj[3:8]
+assert len(sliced_traj) == 5
+sliced_again = sliced_traj[1:-1]
+assert len(sliced_again) == 3
+assert sliced_traj[1] == sliced_again[0]
 
 # append to a nonexisting file:
 fname = '2.traj'

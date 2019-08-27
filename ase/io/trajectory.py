@@ -297,7 +297,10 @@ class SlicedTrajectory(TrajectoryReader):
 
     def __getitem__(self, i):
         if isinstance(i, slice):
-            return SlicedTrajectory(self, i)
+            # Map directly to the original traj, not recursively.
+            traj = SlicedTrajectory(self.trajectory, slice(0, None))
+            traj.map = self.map[i]
+            return traj
         return self.trajectory[self.map[i]]
 
     def __len__(self):
