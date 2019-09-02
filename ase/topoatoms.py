@@ -657,9 +657,33 @@ class TopoAtoms(Atoms):
                            int)
 
         if not self.has('name'):
-            self.set_array('name',
-                           self.get_chemical_symbols(),
-                           object)
+            # if types are defined
+            # but not names, eg when reading lammps dump
+            # names have to be different
+            if len(np.unique(self.types)) == len(np.unique(self.numbers)):
+                self.set_array('name',
+                               self.get_chemical_symbols(),
+                               object)
+            else:
+                names = self.get_chemical_symbols()
+                types = self.get_array('type')
+                type_of_name = {}
+                names_counter = {}
+                for i, j in enumerate(names):
+                    if j in type_of_name:
+                        if type_of_name[j] != types[i]:
+                            if types[i] in type_of_name.values():
+                                name_of_types = {k: l for l, k in type_of_name.items()}
+                                names[i] = name_of_types[types[i]]
+                            else:
+                                names_counter[j] = names_counter.get(j, 0) + 1
+                                names[i] += str(names_counter[j])
+                                type_of_name[names[i]] = types[i]
+                    else:
+                        type_of_name[j] = types[i]
+                self.set_array('name',
+                               names,
+                               object)
 
         # update type when
         # same name has two types
