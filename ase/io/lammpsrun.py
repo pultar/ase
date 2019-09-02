@@ -202,6 +202,18 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
     # load everything into memory
     lines = deque(fileobj.readlines())
 
+    # take only lines needed in index
+    timestep_line_number = {}
+    count = 0
+    for i, j in enumerate(lines):
+        if j.startswith("ITEM: TIMESTEP"):
+            timestep_line_number[count] = i
+            count += 1
+    indices = np.arange(len(timestep_line_number))[index]
+    min = timestep_line_number[np.min(indices)]
+    for _ in range(min):
+        lines.popleft()
+
     n_atoms = 0
     images = []
 
@@ -265,10 +277,22 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
             )
             images.append(out_atoms)
 
-        if len(images) > index >= 0:
+        # stop if requested indices has been found
+        # it has to read all indices between min and max
+        # then later the indices can be selected if list passed
+        if len(images) >= (np.max(indices)
+                           - np.min(indices)) >= 0:
             break
 
-    return images[index]
+    '''
+    # if ase.io.read supports lists
+    if type(indices) is list or type(indices) is tuple:
+        indices = np.array(indices, dtype=int) - np.min(indices)
+        return images[indices]
+    else:
+        return images
+    '''
+    return images
 
 
 def read_lammps_dump_binary(fileobj, index=-1, colnames=None,
