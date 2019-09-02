@@ -12,7 +12,7 @@ from ase.utils import basestring
 from ase.calculators.lammps import convert
 
 
-def read_lammps_dump(infileobj, **kwargs):
+def read_lammps_dump(infileobj, *args, **kwargs):
     """Method which reads a LAMMPS dump file.
 
        LAMMPS chooses output method depending on the given suffix:
@@ -42,9 +42,9 @@ def read_lammps_dump(infileobj, **kwargs):
         fileobj = infileobj
 
     if suffix == ".bin":
-        return read_lammps_dump_binary(fileobj, **kwargs)
+        return read_lammps_dump_binary(fileobj, *args, **kwargs)
 
-    return read_lammps_dump_string(fileobj, **kwargs)
+    return read_lammps_dump_string(fileobj, *args, **kwargs)
 
 
 def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
