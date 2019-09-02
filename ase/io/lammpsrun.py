@@ -80,7 +80,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
 
     # reconstruct types from given specorder
     if specorder:
-        symbols = [specorder[t - 1] for t in types]
+        symbols = [specorder[t] for t in types]
     else:
         symbols = types
 
