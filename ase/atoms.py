@@ -357,6 +357,8 @@ class Atoms(object):
         """Get the unit cell displacement vectors."""
         return self._celldisp.copy()
 
+    celldisp = property(get_celldisp, set_celldisp)
+
     def get_cell(self, complete=False):
         """Get the three unit cell vectors as a `class`:ase.cell.Cell` object.
 
@@ -396,6 +398,15 @@ class Atoms(object):
     def get_pbc(self):
         """Get periodic boundary condition flags."""
         return self.pbc.copy()
+
+    def _get_pbc(self):
+        """Return reference to pbc-flags for in-place manipulations."""
+        # XXX deprecating cell.pbc
+        return self.cell._pbc
+
+    pbc = property(_get_pbc, set_pbc,
+                   doc='Attribute for direct manipulation ' +
+                   'of the periodic boundary condition flags.')
 
     def new_array(self, name, a, dtype=None, shape=None):
         """Add new array.
@@ -473,6 +484,15 @@ class Atoms(object):
         """Get integer array of atomic numbers."""
         return self.arrays['numbers'].copy()
 
+    def _get_atomic_numbers(self):
+        """Return reference to atomic numbers for in-place
+        manipulations."""
+        return self.arrays['numbers']
+
+    numbers = property(_get_atomic_numbers, set_atomic_numbers,
+                       doc='Attribute for direct ' +
+                       'manipulation of the atomic numbers.')
+
     def get_chemical_symbols(self):
         """Get list of chemical symbol strings.
 
@@ -526,6 +546,8 @@ class Atoms(object):
         else:
             return np.zeros(len(self), int)
 
+    tags = property(get_tags, set_tags)
+
     def set_momenta(self, momenta, apply_constraint=True):
         """Set momenta."""
         if (apply_constraint and len(self.constraints) > 0 and
@@ -536,16 +558,26 @@ class Atoms(object):
                     constraint.adjust_momenta(self, momenta)
         self.set_array('momenta', momenta, float, (3,))
 
-    def set_velocities(self, velocities):
-        """Set the momenta by specifying the velocities."""
-        self.set_momenta(self.get_masses()[:, np.newaxis] * velocities)
-
     def get_momenta(self):
         """Get array of momenta."""
         if 'momenta' in self.arrays:
             return self.arrays['momenta'].copy()
         else:
             return np.zeros((len(self), 3))
+
+    def set_velocities(self, velocities):
+        """Set the momenta by specifying the velocities."""
+        self.set_momenta(self.get_masses()[:, np.newaxis] * velocities)
+
+    def get_velocities(self):
+        """Get array of velocities."""
+        momenta = self.arrays.get('momenta')
+        if momenta is None:
+            return None
+        m = self.arrays.get('masses')
+        if m is None:
+            m = atomic_masses[self.arrays['numbers']]
+        return momenta / m.reshape(-1, 1)
 
     def set_masses(self, masses='defaults'):
         """Set atomic masses in atomic mass units.
@@ -691,16 +723,6 @@ class Atoms(object):
         if momenta is None:
             return 0.0
         return 0.5 * np.vdot(momenta, self.get_velocities())
-
-    def get_velocities(self):
-        """Get array of velocities."""
-        momenta = self.arrays.get('momenta')
-        if momenta is None:
-            return None
-        m = self.arrays.get('masses')
-        if m is None:
-            m = atomic_masses[self.arrays['numbers']]
-        return momenta / m.reshape(-1, 1)
 
     def get_total_energy(self):
         """Get the total energy - potential plus kinetic energy."""
@@ -1875,30 +1897,12 @@ class Atoms(object):
                       "info['adsorbate_info']", FutureWarning)
         self.info['adsorbate_info'] = dct
 
-    def _get_atomic_numbers(self):
-        """Return reference to atomic numbers for in-place
-        manipulations."""
-        return self.arrays['numbers']
-
-    numbers = property(_get_atomic_numbers, set_atomic_numbers,
-                       doc='Attribute for direct ' +
-                       'manipulation of the atomic numbers.')
-
     def _get_cell(self):
         """Return reference to unit cell for in-place manipulations."""
         return self._cellobj
 
     cell = property(_get_cell, set_cell, doc='Attribute for direct ' +
                     'manipulation of the unit :class:`ase.cell.Cell`.')
-
-    def _get_pbc(self):
-        """Return reference to pbc-flags for in-place manipulations."""
-        # XXX deprecating cell.pbc
-        return self.cell._pbc
-
-    pbc = property(_get_pbc, set_pbc,
-                   doc='Attribute for direct manipulation ' +
-                   'of the periodic boundary condition flags.')
 
     def write(self, filename, format=None, **kwargs):
         """Write atoms object to a file.
