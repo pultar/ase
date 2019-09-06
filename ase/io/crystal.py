@@ -1,65 +1,110 @@
+import numpy as np
 from ase.utils import basestring
 from ase.atoms import Atoms
+import ase.spacegroup
 
 
-def write_crystal(filename, atoms):
+def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
     """Method to write atom structure in crystal format
        (fort.34 format)
+
+    The 'symmetry' option may be used to include symmetry operations. If True,
+    the spacegroup is detected using spglib according to 'tolerance' option.
+    Alternatives, a spacegroup may be specified (e.g. symmetry=255) or disable
+    symmetry with symmetry=False (equivalent to symmetry=1; a P1 spacegoup will
+    be established.) The default `None` is equivalent to `True` for systems
+    with 3D periodicity, and `False` for others. (Wallpaper and frieze groups
+    are not yet supported.)
+
     """
+
+    if isinstance(atoms, (list, tuple)):
+        if len(atoms) > 1:
+            raise RuntimeError('Don\'t know how to save more than ' +
+                               'one image to CRYSTAL input')
+        else:
+            atoms = atoms[0]
 
     myfile = open(filename, 'w')
 
-    ispbc = atoms.get_pbc()
-    box = atoms.get_cell()
+    pbc = list(atoms.get_pbc())
+    ndim = pbc.count(True)
 
-    # here it is assumed that the non-periodic direction are z
-    # in 2D case, z and y in the 1D case.
+    if ndim == 0:
+        if symmetry is not None and symmetry:
+            raise ValueError("ASE cannot currently set symmetry groups for 0D "
+                             "cluster in CRYSTAL fort.34 file.")
+        else:
+            spg = ase.spacegroup.Spacegroup(1)
 
-    if ispbc[2]:
-        myfile.write('%2s %2s %2s %23s \n' %
-                     ('3', '1', '1', 'E -0.0E+0 DE 0.0E+0( 1)'))
-    elif ispbc[1]:
-        myfile.write('%2s %2s %2s %23s \n' %
-                     ('2', '1', '1', 'E -0.0E+0 DE 0.0E+0( 1)'))
-        box[2, 2] = 500.
-    elif ispbc[0]:
-        myfile.write('%2s %2s %2s %23s \n' %
-                     ('1', '1', '1', 'E -0.0E+0 DE 0.0E+0( 1)'))
-        box[2, 2] = 500.
-        box[1, 1] = 500.
+    elif ndim == 1:
+        if symmetry is not None and symmetry:
+            raise ValueError("ASE cannot currently set symmetry groups for 1D "
+                             "rod in CRYSTAL fort.34 file.")
+        elif (pbc == [True, False, False]
+            and abs(np.dot(cell[0], [0, 1, 1])) < tol
+            and abs(np.dot(cell[1], [1, 0, 0])) < tol
+            and abs(np.dot(cell[2], [1, 0, 0])) < tol):
+            spg = ase.spacegroup.Spacegroup(1)
+        else:
+            raise ValueError("If using 1D periodic boundary with CRYSTAL, "
+                             "non-periodic directions must be Cartesian y, z "
+                             "and vector 'a' must be orthogonal to y, z")
+
+    elif ndim == 2:
+        if symmetry is not None and symmetry:
+            raise ValueError("ASE cannot currently set symmetry groups for 2D "
+                             "slab in CRYSTAL fort.34 file.")
+        elif (atoms.get_pbc() == [True, True, False]
+            and abs(np.dot(cell[0], [0, 0, 1])) < tol
+            and abs(np.dot(cell[1], [0, 0, 1])) < tol
+            and abs(np.dot(cell[2], [1, 1, 0])) < tol):
+            spg = ase.spacegroup.Spacegroup(1)
+        else:
+            raise ValueError("If using 2D periodic boundary with CRYSTAL, "
+                             "non-periodic direction must be Cartesian z, "
+                             "a, b vectors must be orthogonal to c")
     else:
-        myfile.write('%2s %2s %2s %23s \n' %
-                     ('0', '1', '1', 'E -0.0E+0 DE 0.0E+0( 1)'))
-        box[2, 2] = 500.
-        box[1, 1] = 500.
-        box[0, 0] = 500.
+        if symmetry is None or (isinstance(symmetry, bool) and symmetry):
+            spg = ase.spacegroup.get_spacegroup(atoms, symprec=tolerance)
+        else:
+            spg = ase.spacegroup.Spacegroup(1)
 
-    # write box
-    # crystal dummy
-    myfile.write(' %.17E %.17E %.17E \n'
-                 % (box[0][0], box[0][1], box[0][2]))
-    myfile.write(' %.17E %.17E %.17E \n'
-                 % (box[1][0], box[1][1], box[1][2]))
-    myfile.write(' %.17E %.17E %.17E \n'
-                 % (box[2][0], box[2][1], box[2][2]))
+    # We have already asserted that the non-periodic direction are z
+    # in 2D case, z and y in the 1D case. These are marked for CRYSTAL by
+    # setting the length equal to 500.
 
-    # write symmetry operations (not implemented yet for
-    # higher symmetries than C1)
-    myfile.write(' %2s \n' % (1))
-    myfile.write(' %.17E %.17E %.17E \n' % (1, 0, 0))
-    myfile.write(' %.17E %.17E %.17E \n' % (0, 1, 0))
-    myfile.write(' %.17E %.17E %.17E \n' % (0, 0, 1))
-    myfile.write(' %.17E %.17E %.17E \n' % (0, 0, 0))
+    myfile.write('{dimensions:4d} {centring:4d} {crystaltype:4d}\n'.format(
+        dimensions=ndim,
+        centring=1,
+        crystaltype=1))
 
-    # write coordinates
-    myfile.write(' %8s \n' % (len(atoms)))
-    coords = atoms.get_positions()
-    tags = atoms.get_tags()
-    atomnum = atoms.get_atomic_numbers()
-    for iatom, coord in enumerate(coords):
-        myfile.write('%5i  %19.16f %19.16f %19.16f \n'
-                     % (atomnum[iatom] + tags[iatom],
-                        coords[iatom][0], coords[iatom][1], coords[iatom][2]))
+    for vector, identity, periodic in zip(atoms.cell, np.eye(3), pbc):
+        if periodic:
+            row = list(vector)
+        else:
+            row = list(identity * 500.)
+        myfile.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
+
+    # Convert symmetry operations to Cartesian coordinates before writing
+    cart_vectors = atoms.cell.T
+    inv_cart_vectors = np.linalg.inv(cart_vectors)
+
+    for rotation, translation in spg.get_symop():
+        rotation = cart_vectors.dot(rotation.dot(inv_cart_vectors))
+        translation = cart_vectors.dot(translation)
+
+        for row in rotation:
+            myfile.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
+        myfile.write(
+            '{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*translation))
+
+    myfile.write('{0:5d}\n'.format(len(atoms)))
+    for z, position in zip(atoms.get_atomic_numbers(),
+                           atoms.get_positions()):
+        myfile.write(
+            '{0:5d} {1:-17.12f} {2:-17.12f} {3:-17.12f}\n'.format(z,
+                                                                  *position))
 
     if isinstance(filename, basestring):
         myfile.close()
