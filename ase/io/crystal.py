@@ -20,7 +20,7 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
 
     if isinstance(atoms, (list, tuple)):
         if len(atoms) > 1:
-            raise RuntimeError('Don\'t know how to save more than ' +
+            raise RuntimeError('Don\'t know how to save more than '
                                'one image to CRYSTAL input')
         else:
             atoms = atoms[0]
@@ -42,9 +42,9 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
             raise ValueError("ASE cannot currently set symmetry groups for 1D "
                              "rod in CRYSTAL fort.34 file.")
         elif (pbc == [True, False, False]
-            and abs(np.dot(cell[0], [0, 1, 1])) < tol
-            and abs(np.dot(cell[1], [1, 0, 0])) < tol
-            and abs(np.dot(cell[2], [1, 0, 0])) < tol):
+              and abs(np.dot(atoms.cell[0], [0, 1, 1])) < tolerance
+              and abs(np.dot(atoms.cell[1], [1, 0, 0])) < tolerance
+              and abs(np.dot(atoms.cell[2], [1, 0, 0])) < tolerance):
             spg = ase.spacegroup.Spacegroup(1)
         else:
             raise ValueError("If using 1D periodic boundary with CRYSTAL, "
@@ -56,9 +56,9 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
             raise ValueError("ASE cannot currently set symmetry groups for 2D "
                              "slab in CRYSTAL fort.34 file.")
         elif (atoms.get_pbc() == [True, True, False]
-            and abs(np.dot(cell[0], [0, 0, 1])) < tol
-            and abs(np.dot(cell[1], [0, 0, 1])) < tol
-            and abs(np.dot(cell[2], [1, 1, 0])) < tol):
+              and abs(np.dot(atoms.cell[0], [0, 0, 1])) < tolerance
+              and abs(np.dot(atoms.cell[1], [0, 0, 1])) < tolerance
+              and abs(np.dot(atoms.cell[2], [1, 1, 0])) < tolerance):
             spg = ase.spacegroup.Spacegroup(1)
         else:
             raise ValueError("If using 2D periodic boundary with CRYSTAL, "
