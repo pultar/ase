@@ -90,6 +90,7 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
     cart_vectors = atoms.cell.T
     inv_cart_vectors = np.linalg.inv(cart_vectors)
 
+    myfile.write('{0:5d}\n'.format(len(spg.get_symop())))
     for rotation, translation in spg.get_symop():
         rotation = cart_vectors.dot(rotation.dot(inv_cart_vectors))
         translation = cart_vectors.dot(translation)
