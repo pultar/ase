@@ -4,7 +4,8 @@ from ase.atoms import Atoms
 import ase.spacegroup
 
 
-def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
+def write_crystal(filename, atoms, symmetry=None,
+                  refine=False, tolerance=1e-6):
     """Method to write atom structure in crystal format
        (fort.34 format)
 
@@ -15,6 +16,15 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
     be established.) The default `None` is equivalent to `True` for systems
     with 3D periodicity, and `False` for others. (Wallpaper and frieze groups
     are not yet supported.)
+
+    The 'refine' option may be used to symmetrise the structure using
+    spglib. This will always target the spacegroup detected using 'tolerance'.
+    It is strongly recommended to use this when creating a structure from other
+    inputs as CRYSTAL only looks a small distance for redundant atoms when
+    interpreting the fort.34 file.
+
+    The 'tolerance' option is passed to spglib as a distance threshold (in
+    Angstrom) to determine the symmetry of the system.
 
     """
 
@@ -29,6 +39,9 @@ def write_crystal(filename, atoms, symmetry=None, tolerance=1e-6):
 
     pbc = list(atoms.get_pbc())
     ndim = pbc.count(True)
+
+    if refine:
+        atoms = _refine_cell(atoms, tolerance)
 
     if ndim == 0:
         if symmetry is not None and symmetry:
@@ -161,3 +174,13 @@ def read_crystal(filename):
                   cell=mycell, pbc=my_pbc)
 
     return atoms
+
+def _refine_cell(atoms, tolerance):
+    try:
+        import spglib
+    except ImportError:
+        raise ImportError('Could not import spglib; required if writing '
+                          'CRYSTAL fort.34 file with "refine=True".')
+
+    cell, positions, numbers = spglib.refine_cell(atoms, symprec=tolerance)
+    return Atoms(numbers, scaled_positions=positions, cell=cell)
