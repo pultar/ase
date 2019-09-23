@@ -14,6 +14,7 @@ http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 from __future__ import print_function
 import os
 import warnings
+from pathlib import Path
 from os.path import join, isfile, islink
 import numpy as np
 import shutil
@@ -404,23 +405,38 @@ class BaseSiesta(FileIOCalculator):
                              "the keywords: %s" % str(offending_keys))
 
     def rm_output(self):
-        """ The calculator needs to delete the output files (i.e. files which
-        are never read by the calculator only written) before starting new
-        calculation. This action could only improve the coherence of the
-        output data. For SIESTA, the output files are:
+        """ The calculator needs to delete the output-only files (i.e. files
+        which are never read by the calculator only written) before starting
+        new calculation. This action improves the coherence of the output data.
+        
+        For example, consider that a band structure is calculated with a block
+        BandPoints. In this case SIESTA creates a corresponding output file
+        "siesta.bands". Now, if in a subsequent calculation is done with empty 
+        block BandPoints (or .bandpath attribute with zero k-points), then
+        SIESTA would not touch the file "siesta.bands". This leads to an
+        assertion error while reading bands because "siesta.bands" is out of
+        sync with the .bandpath attribute. Generally, "siesta.bands" can become
+        out of sync if not deleted before the calculation. 
+
+        Similar troubles may occur with other output-only files such as
+        siesta.fullBZ.WFSX, siesta.HSX, siesta.bands, siesta.EIG, siesta.KP etc.
+
+        For SIESTA, the output files are:
         *.ion, *.ion.xml, siesta.out, 
         siesta.fullBZ.WFSX, siesta.HSX, siesta.bands, siesta.EIG, 
         siesta.KP, etc.
         """
-        from pathlib import Path
-        from glob import glob
-        from os import remove
+        d = Path(self.directory)
 
-        lsout = glob(Path(self.directory) / "*.ion")
-        print(lsout)
-        print()
-        
-        
+        for fmask in ("*.ion", "*.ion.xml"):
+            for p in d.glob(fmask): 
+                p.unlink()
+
+        for suffix in (".fullBZ.WFSX", ".EIG", ".KP", ".HSX", ".bands"):
+            p = (d / self.prefix).with_suffix(suffix)
+            if p.exists():
+                p.unlink()
+
     def calculate(self,
                   atoms=None,
                   properties=['energy'],
@@ -432,7 +448,7 @@ class BaseSiesta(FileIOCalculator):
         """
 
         self.rm_output()
-        
+
         FileIOCalculator.calculate(
             self,
             atoms=atoms,
