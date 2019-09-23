@@ -12,7 +12,8 @@ http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 """
 
 from __future__ import print_function
-import os, warnings
+import os
+import warnings
 from os.path import join, isfile, islink
 import numpy as np
 import shutil
@@ -49,11 +50,6 @@ def read_bands_file(fd):
     header = next(fd)  # Array shape: nbands, nspins, nkpoints
     nbands, nspins, nkpts = np.array(header.split()).astype(int)
 
-    print(efermi)
-    print(nbands, nspins, nkpts)
-    print(__file__)
-    print()
-    
     # three fields for kpt coords, then all the energies
     ntokens = nbands*nspins + 3
 
@@ -407,6 +403,24 @@ class BaseSiesta(FileIOCalculator):
                              "argument does not allow " +
                              "the keywords: %s" % str(offending_keys))
 
+    def rm_output(self):
+        """ The calculator needs to delete the output files (i.e. files which
+        are never read by the calculator only written) before starting new
+        calculation. This action could only improve the coherence of the
+        output data. For SIESTA, the output files are:
+        *.ion, *.ion.xml, siesta.out, 
+        siesta.fullBZ.WFSX, siesta.HSX, siesta.bands, siesta.EIG, 
+        siesta.KP, etc.
+        """
+        from pathlib import Path
+        from glob import glob
+        from os import remove
+
+        lsout = glob(Path(self.directory) / "*.ion")
+        print(lsout)
+        print()
+        
+        
     def calculate(self,
                   atoms=None,
                   properties=['energy'],
@@ -417,6 +431,8 @@ class BaseSiesta(FileIOCalculator):
         See base FileIocalculator for documentation.
         """
 
+        self.rm_output()
+        
         FileIOCalculator.calculate(
             self,
             atoms=atoms,
