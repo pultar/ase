@@ -18,7 +18,7 @@ import ase.units as units
 from ase.atom import Atom
 from ase.cell import Cell
 from ase.constraints import FixConstraint, FixBondLengths, FixLinearTriatomic
-from ase.data import atomic_masses
+from ase.data import atomic_masses, atomic_masses_common
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
@@ -126,6 +126,8 @@ class Atoms(object):
     ...           cell=(d, 0, 0),
     ...           pbc=(1, 0, 0))
     """
+
+    ase_objtype = 'atoms'  # For JSONability
 
     def __init__(self, symbols=None,
                  positions=None, numbers=None,
@@ -554,8 +556,11 @@ class Atoms(object):
         the masses argument is not given or for those elements of the
         masses list that are None, standard values are set."""
 
-        if isinstance(masses, basestring) and masses == 'defaults':
-            masses = atomic_masses[self.arrays['numbers']]
+        if isinstance(masses, basestring):
+            if masses == 'defaults':
+                masses = atomic_masses[self.arrays['numbers']]
+            elif masses == 'most_common':
+                masses = atomic_masses_common[self.arrays['numbers']]
         elif isinstance(masses, (list, tuple)):
             newmasses = []
             for m, Z in zip(masses, self.arrays['numbers']):
@@ -801,6 +806,20 @@ class Atoms(object):
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
         return atoms
+
+    def todict(self):
+        """For basic JSON (non-database) support."""
+        d = dict(self.arrays)
+        d['cell'] = np.asarray(self.cell)
+        d['pbc'] = self.pbc
+        if self._celldisp.any():
+            d['celldisp'] = self._celldisp
+        if self.constraints:
+            d['constraints'] = self.constraints
+        if self.info:
+            d['info'] = self.info
+        # Calculator...  trouble.
+        return d
 
     def __len__(self):
         return len(self.arrays['positions'])
