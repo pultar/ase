@@ -49,11 +49,6 @@ def read_bands_file(fd):
     header = next(fd)  # Array shape: nbands, nspins, nkpoints
     nbands, nspins, nkpts = np.array(header.split()).astype(int)
 
-    print(efermi)
-    print(nbands, nspins, nkpts)
-    print(__file__)
-    print()
-    
     # three fields for kpt coords, then all the energies
     ntokens = nbands*nspins + 3
 
