@@ -14,7 +14,6 @@ http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 from __future__ import print_function
 import os
 import warnings
-from pathlib import Path
 from os.path import join, isfile, islink
 import numpy as np
 import shutil
