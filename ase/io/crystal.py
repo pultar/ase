@@ -6,26 +6,49 @@ import ase.spacegroup
 
 
 def write_crystal(filename, atoms, symmetry=None,
-                  refine=False, tolerance=1e-6):
+                  refine=False, tolerance=1e-6,
+                  asymmetric=False):
     """Method to write atom structure in crystal format
        (fort.34 format)
 
-    The 'symmetry' option may be used to include symmetry operations. If True,
-    the spacegroup is detected using spglib according to 'tolerance' option.
-    Alternatives, a spacegroup may be specified (e.g. symmetry=255) or disable
-    symmetry with symmetry=False (equivalent to symmetry=1; a P1 spacegoup will
-    be established.) The default `None` is equivalent to `True` for systems
-    with 3D periodicity, and `False` for others. (Wallpaper and frieze groups
-    are not yet supported.)
+    Parameters
+    ----------
 
-    The 'refine' option may be used to symmetrise the structure using
-    spglib. This will always target the spacegroup detected using 'tolerance'.
-    It is strongly recommended to use this when creating a structure from other
-    inputs as CRYSTAL only looks a small distance for redundant atoms when
-    interpreting the fort.34 file.
+    filename: str
 
-    The 'tolerance' option is passed to spglib as a distance threshold (in
-    Angstrom) to determine the symmetry of the system.
+    atoms: ase.atoms.Atoms
+
+    symmetry: (bool, int or None)
+
+        The 'symmetry' option may be used to include symmetry operations. If
+        True, the spacegroup is detected using spglib according to 'tolerance'
+        option.  Alternatives, a spacegroup may be specified
+        (e.g. symmetry=255) or disable symmetry with symmetry=False (equivalent
+        to symmetry=1; a P1 spacegoup will be established.) The default `None`
+        is equivalent to `True` for systems with 3D periodicity, and `False`
+        for others. (Wallpaper and frieze groups are not yet supported.)
+
+    refine: bool
+
+        The 'refine' option may be used to symmetrise the structure using
+        spglib. This will always target the spacegroup detected using
+        'tolerance'.  It is strongly recommended to use this when creating a
+        structure from other inputs as CRYSTAL only looks a small distance for
+        redundant atoms when interpreting the fort.34 file.
+
+    tolerance: float
+
+        The 'tolerance' option is passed to spglib as a distance threshold (in
+        Angstrom) to determine the symmetry of the system.
+
+    asymmetric: bool
+
+        write only a minimal basis of atoms (the "asymmetric unit cell"), to be
+        expanded to the full set of atoms by the symmetry operations. Recent
+        versions of CRYSTAL will accept either form. Spglib will be used to a)
+        identify the spacegroup b) identify equivalent sites in the unit cell.
+        The sites with positive fractional coordinates closest to the origin
+        will then be used.
 
     """
 
@@ -79,10 +102,15 @@ def write_crystal(filename, atoms, symmetry=None,
                              "non-periodic direction must be Cartesian z, "
                              "a, b vectors must be orthogonal to c")
     else:
-        if symmetry is None or (isinstance(symmetry, bool) and symmetry):
+        if isinstance(symmetry, ase.spacegroup.Spacegroup):
+            spg = symmetry
+        elif symmetry is None or (isinstance(symmetry, bool) and symmetry):
             spg = ase.spacegroup.get_spacegroup(atoms, symprec=tolerance)
         else:
             spg = ase.spacegroup.Spacegroup(1)
+
+    if asymmetric:
+        atoms = _prune_to_asymmetric(atoms, spg, tolerance=tolerance)
 
     # We have already asserted that the non-periodic direction are z
     # in 2D case, z and y in the 1D case. These are marked for CRYSTAL by
@@ -128,6 +156,41 @@ def write_crystal(filename, atoms, symmetry=None,
     if isinstance(filename, basestring):
         myfile.close()
 
+def _prune_to_asymmetric(atoms, spg, tolerance=1e-6):
+    """Remove symmetry-equivalent atoms to leave a minimimal basis
+
+    Atoms are grouped by chemical symbols and tags, and in each group redundant
+    sites are removed according to the symmetry operations of the spacegroup
+
+    Parameters
+    ----------
+
+    atoms: ase.atoms.Atoms
+    spg: ase.spacegroup.Spacegroup
+
+    Returns
+    -------
+
+    ase.atoms.Atoms
+
+    """
+    asym_atoms = []
+    elements = sorted(list(set(atoms.get_chemical_symbols())))
+    for element in elements:
+        el_sites = (np.array(atoms.get_chemical_symbols(), dtype=np.string_)
+                    == np.string_(element))
+
+        tags = sorted(list(set(atoms.get_tags()[el_sites])))
+        for tag in tags:
+            tag_sites = (atoms.get_tags() == tag)
+            scaled_positions = atoms.get_scaled_positions()[
+                np.logical_and(el_sites, tag_sites)]
+            _, mask = spg.unique_sites(scaled_positions,
+                                       symprec=tolerance,
+                                       output_mask=True)
+            asym_atoms += list(atoms[np.logical_and(el_sites,
+                                                    tag_sites)][mask])
+    return Atoms(asym_atoms, cell=atoms.cell, pbc=atoms.pbc)
 
 def read_crystal(filename):
     """Method to read coordinates form 'fort.34' files
@@ -190,5 +253,6 @@ def _refine_cell(atoms, tolerance):
         raise ImportError('Could not import spglib; required if writing '
                           'CRYSTAL fort.34 file with "refine=True".')
 
-    cell, positions, numbers = spglib.refine_cell(atoms, symprec=tolerance)
+    cell, positions, numbers = spglib.refine_cell(atoms,
+                                                  symprec=tolerance)
     return Atoms(numbers, scaled_positions=positions, cell=cell)
