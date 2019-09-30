@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 from ase.utils import basestring
 from ase.atoms import Atoms
@@ -114,10 +115,14 @@ def write_crystal(filename, atoms, symmetry=None,
             '{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*translation))
 
     myfile.write('{0:5d}\n'.format(len(atoms)))
-    for z, position in zip(atoms.get_atomic_numbers(),
-                           atoms.get_positions()):
+    for z, tag, position in zip(atoms.get_atomic_numbers(),
+                                atoms.get_tags(),
+                                atoms.get_positions()):
+        if not isinstance(tag, numbers.Integral):
+            raise ValueError("Non-integer tag encountered. Accepted values are"
+                             " 100, 200, 300...")
         myfile.write(
-            '{0:5d} {1:-17.12f} {2:-17.12f} {3:-17.12f}\n'.format(z,
+            '{0:5d} {1:-17.12f} {2:-17.12f} {3:-17.12f}\n'.format(z + tag,
                                                                   *position))
 
     if isinstance(filename, basestring):
@@ -126,14 +131,15 @@ def write_crystal(filename, atoms, symmetry=None,
 
 def read_crystal(filename):
     """Method to read coordinates form 'fort.34' files
-    additionally read information about
-    periodic boundary condition
+
+    Additionally read information about periodic boundary condition.
     """
     with open(filename, 'r') as myfile:
         lines = myfile.readlines()
 
     atoms_pos = []
     anumber_list = []
+    tags = []
     my_pbc = [False, False, False]
     mycell = []
 
@@ -164,14 +170,16 @@ def read_crystal(filename):
     natoms = int(lines[9].split()[0])
     for i in range(natoms):
         index = 10 + i
-        anum = int(lines[index].split()[0]) % 100
+        anum_plus_tag = int(lines[index].split()[0])
+        anum = anum_plus_tag % 100
         anumber_list.append(anum)
+        tag_list.append(anum_plus_tag - anum)
 
         position = [float(p) for p in lines[index].split()[1:]]
         atoms_pos.append(position)
 
     atoms = Atoms(positions=atoms_pos, numbers=anumber_list,
-                  cell=mycell, pbc=my_pbc)
+                  tags=tag_list, cell=mycell, pbc=my_pbc)
 
     return atoms
 
