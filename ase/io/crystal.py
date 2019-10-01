@@ -248,7 +248,8 @@ def read_crystal(filename):
     return atoms
 
 
-def _refine_cell(atoms, tolerance):
+def _refine_cell(atoms, tolerance, primitive=True):
+    """Use spglib to tune structure for symmetry at high precision"""
     try:
         import spglib
     except ImportError:
@@ -256,5 +257,6 @@ def _refine_cell(atoms, tolerance):
                           'CRYSTAL fort.34 file with "refine=True".')
 
     cell, positions, numbers = spglib.refine_cell(atoms,
-                                                  symprec=tolerance)
+                                                  symprec=tolerance,
+                                                  primitive=primitive)
     return Atoms(numbers, scaled_positions=positions, cell=cell)
