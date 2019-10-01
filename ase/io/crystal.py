@@ -156,6 +156,7 @@ def write_crystal(filename, atoms, symmetry=None,
     if isinstance(filename, basestring):
         myfile.close()
 
+
 def _prune_to_asymmetric(atoms, spg, tolerance=1e-6):
     """Remove symmetry-equivalent atoms to leave a minimimal basis
 
@@ -192,6 +193,7 @@ def _prune_to_asymmetric(atoms, spg, tolerance=1e-6):
                                                     tag_sites)][mask])
     return Atoms(asym_atoms, cell=atoms.cell, pbc=atoms.pbc)
 
+
 def read_crystal(filename):
     """Method to read coordinates form 'fort.34' files
 
@@ -202,7 +204,7 @@ def read_crystal(filename):
 
     atoms_pos = []
     anumber_list = []
-    tags = []
+    tag_list = []
     my_pbc = [False, False, False]
     mycell = []
 
@@ -243,8 +245,8 @@ def read_crystal(filename):
 
     atoms = Atoms(positions=atoms_pos, numbers=anumber_list,
                   tags=tag_list, cell=mycell, pbc=my_pbc)
-
     return atoms
+
 
 def _refine_cell(atoms, tolerance):
     try:
