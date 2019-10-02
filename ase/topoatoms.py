@@ -167,7 +167,10 @@ class _TopoAttribute(object):
         ''' adds to prop
         Parameters:
             items: dict of keys as type/resname, and keys as list of indices
-                   pertaining to the key
+                   pertaining to the key for resname, bonds, angles, dihedrals,
+                   impropers; list of strings for name; or list of ints for
+                   mol-ids or types; None for nothing to add, or to initiate
+                   the prop.
         '''
         length = {'bonds': 2,
                   'angles': 3,
@@ -176,14 +179,12 @@ class _TopoAttribute(object):
 
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if not self._ins.has(self.prop):
-                if items == {}:
-                    # instance does not have the prop, and
-                    # nothing will be added
-                    return
                 array = [{} for i in range(len(self._ins))]
             else:
                 array = self._ins.get_array(self.prop)
 
+            if items is None:
+                items = {}
             for key, values in items.items():
                 # make sure values are correct
                 try:
@@ -238,13 +239,20 @@ class _TopoAttribute(object):
             else:
                 array = self._ins.get_array('resnames')
 
+            if items is None:
+                items = {}
             for key, values in items.items():
                 for i in values:
                     array[i] |= set([key])
 
             self._ins.set_array('resnames', array, object)
+        elif self.prop == 'names':
+            if items is not None:
+                self._ins.set_array(self.prop, items, object)
+            self.update()
         else:
-            self._ins.set_array(self.prop, items, object)
+            if items is not None:
+                self._ins.set_array(self.prop, items, int)
             self.update()
 
 
@@ -255,6 +263,10 @@ class _TopoAttribute(object):
                          'angles',
                          'dihedrals',
                          'impropers']:
+            if not self._ins.has(self.prop):
+                self._ins.set_array(self.prop,
+                                    [{} for _ in range(len(self._ins))],
+                                    object)
             # Correct if same prop has two types
             types = self.get_types()
             if len(set(types.keys())) != len(set(types.values())):
@@ -271,7 +283,10 @@ class _TopoAttribute(object):
             ind_of = unique_ind(self.get_types(verbose=False))
             self.set_types_to(ind_of)
         elif self.prop == 'mol-ids':
-
+            if not self._ins.has(self.prop):
+                self._ins.set_array('mol-ids',
+                                    np.ones(len(self)),
+                                    int)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
@@ -366,23 +381,15 @@ class _TopoAttributeProperty(object):
         return _TopoAttribute(self)
 
     def __set__(self, topo_base, value):
-        self._ins = topo_base
+        self._ins = topo_base._ins
         _TopoAttribute(self).set(value)
 
     def __delete__(self, topo_base):
-        if self.prop in ['bonds',
-                         'angles',
-                         'dihedrals',
-                         'impropers']:
-            topo_base._ins.arrays[self.prop] = [{} for _ in range(len(topo_base._ins))]
-        elif self.prop == 'resnames':
-            topo_base._ins.arrays[self.prop] = [set() for _ in range(len(topo_base._ins))]
-        elif self.prop == 'names':
-            topo_base._ins.arrays[self.prop] = [set() for _ in range(len(topo_base._ins))]
+        self.__set__(topo_base, None)
 
 
 
-class _TopoBase(object):
+class Topology(object):
     Names = _TopoAttributeProperty('names')
     Mol_ids = _TopoAttributeProperty('mol-ids')
     Types = _TopoAttributeProperty('types')
@@ -394,10 +401,10 @@ class _TopoBase(object):
 
     topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
 
-    def __init__(self, topo_base_prop):
+    def __init__(self, instance):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
-        self._ins = topo_base_prop._ins
+        self._ins = instance
         self._dict = {'names': self.Names,
                       'mol-ids': self.Mol_ids,
                       'types': self.Types,
@@ -416,13 +423,12 @@ class _TopoBase(object):
     def __getitem__(self, item):
         return self._prop_dict[item]
 
-    def update(self, topo_dict=False):
-
-        for prop in self.topo_props:
-            if self._ins.has(prop):
-                self._dict[prop] = self._prop_dict[prop]
-                if not _init:
-                    self._dict[prop].update()
+    def update(self, topo_dict={}):
+        for prop in self._dict.keys():
+            if prop in topo_dict:
+                self._dict[prop].set(topo_dict[prop])
+            else:
+                self._dict[prop].update()
 
     def generate(self, topo_dict, cutoffs=None):
         # check and reformat topo_dict
@@ -557,23 +563,6 @@ class _TopoBase(object):
         # removing bonds etc containing non-existing ids
         for prop in self._dict.values():
             prop._set_indices_to(indx_of, index)
-
-
-class _TopoBaseProperty(object):
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        self._ins = instance
-        # every trivial call goes through this step
-        # Thus, init should not be computationally intensive
-        return _TopoBase(self)
-
-    def __delete__(self, instance):
-        self._ins = instance
-        topo = _TopoBase(self)
-        for i in topo._dict.values():
-            del i
 
 
 class _Resname(object):
@@ -818,7 +807,7 @@ class TopoAtoms(Atoms):
                           [(ind_of[x] if x in ind_of else x) for x in self.get_array(prop)],
                           int)
 
-        self.Topology.update()
+        self.topology.update()
 
         if specorder is not None:
             order = np.unique(self.get_atomic_numbers())
@@ -869,7 +858,7 @@ class TopoAtoms(Atoms):
             else:
                 indx_of[j] = j - count
 
-        self.Topology._set_indices_to(indx_of=indx_of)
+        self.topology._set_indices_to(indx_of=indx_of)
 
         Atoms.__delitem__(self, i)
 
@@ -907,7 +896,7 @@ class TopoAtoms(Atoms):
                     i1 = i0 + n
                     for i in range(n):
                         indx_of[i] = i + natoms
-                    self.Topology._set_indices_to(indx_of, "{}:{}".format(i0, i1))
+                    self.topology._set_indices_to(indx_of, "{}:{}".format(i0, i1))
                     if self.has('mol-ids'):
                         _ = self.arrays['mol-ids'][i0:i1] + nmolids
                         self.arrays['mol-ids'][i0:i1] = _
@@ -942,10 +931,10 @@ class TopoAtoms(Atoms):
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if self.has(prop) and other.has(prop):
                 indx_of = {}
-                max_ = np.max(self.Topology[prop].get_types(verbose=False))
-                for i in other.Topology[prop].get_types(verbose=False):
+                max_ = np.max(self.topology[prop].get_types(verbose=False))
+                for i in other.topology[prop].get_types(verbose=False):
                     indx_of[i] = i + max_
-                other.Topology[prop].set_types_to(indx_of)
+                other.topology[prop].set_types_to(indx_of)
 
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if not self.has(prop) and other.has(prop):
@@ -959,7 +948,7 @@ class TopoAtoms(Atoms):
         indx_of = {}
         for i in range(n2):
             indx_of[i] = i + n1
-        self.Topology._set_indices_to(indx_of, "{}:".format(n1))
+        self.topology._set_indices_to(indx_of, "{}:".format(n1))
 
         # updating ids
         self.update()
@@ -1013,10 +1002,23 @@ class TopoAtoms(Atoms):
         for i in np.array(range(len(self)))[item]:
             indx_of[i] = count
             count += 1
-        atoms.Topology._set_indices_to(indx_of)
+        atoms.topology._set_indices_to(indx_of)
         atoms.update()
 
         return atoms
 
-    Topology = _TopoBaseProperty()
-    Resname = _ResnameProperty()
+    @property
+    def topology(self):
+        return Topology(self)
+
+    @topology.setter
+    def topology(self, value):
+        top = Topology(self)
+        top.update(value)
+
+    @topology.deleter
+    def topology(self):
+        top = Topology(self)
+        for i in top._dict.keys():
+            del self.arrays[i]
+
