@@ -371,21 +371,23 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
-    at.arrays["id"] = ids
-    at.arrays["type"] = types
+    at.arrays["ids"] = ids
+    at.arrays["types"] = types
+    if names is not None:
+        at.arrays["names"] = names
     if travel is not None:
         at.arrays["travel"] = travel
     if mol_id is not None:
-        at.arrays["mol-id"] = mol_id
+        at.arrays["mol-ids"] = mol_id
     if charge is not None:
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
     if resnames is not None:
-        # removing name from resname
-        # if name doesnt exist, the TopoAtoms __init__ already gave
-        # chemical symbol as names, else the previous line gave proper names
-        resnames -= np.asarray([set([i]) for i in at.arrays['name']])
-        at.set_array('resname', resnames, object)
+        # removing names from resnames
+        # if names exist
+        if names is not None:
+            resnames -= np.asarray([set([i]) for i in names])
+        at.set_array('resnames', resnames, object)
 
     if bonds is not None:
         for (type, a1, a2) in bonds_in:
@@ -424,6 +426,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         at.set_array('impropers', impropers, 'object')
 
     at.info["comment"] = comment
+    at.topology.update()
 
     return at
 
