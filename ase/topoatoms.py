@@ -41,7 +41,10 @@ class _TopoAttribute(object):
         return wrapper
 
     def __repr__(self):
-        return str(self.get_types())
+        if self.prop == 'ids':
+            return '...'
+        else:
+            return str(self.get_types())
 
     def __getitem__(self, item):
         if type(item) is str and self.prop in ['bonds',
@@ -73,7 +76,8 @@ class _TopoAttribute(object):
             self.set(props)
         elif self.prop in ['mol-ids',
                            'names',
-                           'types']:
+                           'types',
+                           'ids']:
             del_ind = []
             for item in items:
                 del_ind += np.where(self.get() == item)[0].tolist()
@@ -151,6 +155,9 @@ class _TopoAttribute(object):
         if self._ins.has(self.prop):
             # delete array
             del self._ins.arrays[self.prop]
+        if self.prop == 'ids':
+            raise NotImplementedError('changing ids shuffles the atoms,'
+                                      'which is not implemented yet')
         self.add(value)
 
     @_check_exists
@@ -251,12 +258,13 @@ class _TopoAttribute(object):
             if items is not None:
                 self._ins.set_array(self.prop, items, object)
             self.update()
+        elif self.prop == 'ids':
+            raise NotImplementedError('changing ids shuffles atoms indices,'
+                                      'which is not implemented yet.')
         else:
             if items is not None:
                 self._ins.set_array(self.prop, items, int)
             self.update()
-
-
 
     def update(self):
 
@@ -283,6 +291,8 @@ class _TopoAttribute(object):
 
             ind_of = unique_ind(self.get_types(verbose=False))
             self.set_types_to(ind_of)
+        elif self.prop == 'ids':
+            self._ins.arrays[self.prop] = np.arange(len(self._ins)) + 1
         elif self.prop == 'mol-ids':
             if not self._ins.has(self.prop):
                 self._ins.set_array('mol-ids',
@@ -391,6 +401,7 @@ class _TopoAttributeProperty(object):
 
 
 class Topology(object):
+    Ids = _TopoAttributeProperty('ids')
     Names = _TopoAttributeProperty('names')
     Mol_ids = _TopoAttributeProperty('mol-ids')
     Types = _TopoAttributeProperty('types')
@@ -405,6 +416,7 @@ class Topology(object):
         # Thus, init should not be computationally intensive
         self._ins = instance
         self._dict = {'names': self.Names,
+                      'ids': self.Ids,
                       'mol-ids': self.Mol_ids,
                       'types': self.Types,
                       'resnames': self.Resnames,
