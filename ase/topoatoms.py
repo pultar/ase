@@ -150,15 +150,26 @@ class _TopoAttribute(object):
 
     def set(self, value=None):
         '''
-        value to set. None resets the property to empty.
+        value to set. None value deletes the property
         '''
         if self._ins.has(self.prop):
             # delete array
             del self._ins.arrays[self.prop]
         if self.prop == 'ids':
+            self.update()
             raise NotImplementedError('changing ids shuffles the atoms,'
                                       'which is not implemented yet')
-        self.add(value)
+        elif self.prop == 'names':
+            self._ins.set_array(self.prop, value, object)
+        elif self.prop in ['types', 'mol-ids']:
+            self._ins.set_array(self.prop, value, int)
+        elif self.prop in ['resnames',
+                           'bonds',
+                           'angles',
+                           'dihedrals',
+                           'impropers']:
+            self.add(value)
+        self.update()
 
     @_check_exists
     def get_count(self):
@@ -176,9 +187,7 @@ class _TopoAttribute(object):
         Parameters:
             items: dict of keys as type/resname, and keys as list of indices
                    pertaining to the key for resname, bonds, angles, dihedrals,
-                   impropers; list of strings for name; or list of ints for
-                   mol-ids or types; None for nothing to add, or to initiate
-                   the prop.
+                   impropers;
         '''
         length = {'bonds': 2,
                   'angles': 3,
@@ -191,8 +200,6 @@ class _TopoAttribute(object):
             else:
                 array = self._ins.get_array(self.prop)
 
-            if items is None:
-                items = {}
             for key, values in items.items():
                 # make sure values are correct
                 try:
@@ -247,24 +254,14 @@ class _TopoAttribute(object):
             else:
                 array = self._ins.get_array('resnames')
 
-            if items is None:
-                items = {}
             for key, values in items.items():
                 for i in values:
                     array[i] |= set([key])
 
             self._ins.set_array('resnames', array, object)
-        elif self.prop == 'names':
-            if items is not None:
-                self._ins.set_array(self.prop, items, object)
-            self.update()
-        elif self.prop == 'ids':
-            raise NotImplementedError('changing ids shuffles atoms indices,'
-                                      'which is not implemented yet.')
         else:
-            if items is not None:
-                self._ins.set_array(self.prop, items, int)
-            self.update()
+            raise NotImplementedError('{} does not support '
+                                      'add'.format(self.prop))
 
     def update(self):
 
@@ -298,6 +295,11 @@ class _TopoAttribute(object):
                 self._ins.set_array('mol-ids',
                                     np.ones(len(self)),
                                     int)
+        elif self.prop == 'resnames':
+            if not self._ins.has(self.prop):
+                self._ins.set_array(self.prop,
+                                    [set() for _ in range(len(self._ins))],
+                                    object)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
