@@ -526,7 +526,19 @@ class Topology(object):
 
     __call__ = get_topology_dict
 
-    def update(self, topo_dict={}):
+    def update(self, topo_dict={}, specorder=None):
+        if specorder is not None:
+            order = np.unique(self._ins.get_atomic_numbers())
+            if np.any(order != np.unique(specorder)):
+                raise RuntimeError('Atomic numbers found in specorder'
+                                   ' mismatch those found in system:'
+                                   ' {}'.format(order))
+            order_dict = dict(zip(order, specorder))
+            self._ins.set_array('types',
+                                [order_dict[i]
+                                 for i in self._ins.get_atomic_numbers()],
+                                int)
+
         # types should be updated before names
         for prop in ['ids',
                      'types',
@@ -745,101 +757,7 @@ class TopoAtoms(Atoms):
         self.update(specorder)
 
     def update(self, specorder=None):
-        '''updates id, mol-id and type to 1-Ntype'''
-
-        self.arrays['id'] = np.arange(len(self)) + 1
-
-        if not self.has('types'):
-            self.set_array('types',
-                           self.get_atomic_numbers(),
-                           int)
-
-        if not self.has('mol-ids'):
-            self.set_array('mol-ids',
-                           np.ones(len(self)),
-                           int)
-
-        if not self.has('names'):
-            # if types are defined
-            # but not names, eg when reading lammps dump
-            # names have to be different
-            if len(np.unique(self.types)) == len(np.unique(self.numbers)):
-                self.set_array('names',
-                               self.get_chemical_symbols(),
-                               object)
-            else:
-                names = self.get_chemical_symbols()
-                types = self.get_array('types')
-                type_of_name = {}
-                names_counter = {}
-                for i, j in enumerate(names):
-                    if j in type_of_name:
-                        if type_of_name[j] != types[i]:
-                            if types[i] in type_of_name.values():
-                                name_of_types = {k: l for l, k in type_of_name.items()}
-                                names[i] = name_of_types[types[i]]
-                            else:
-                                names_counter[j] = names_counter.get(j, 0) + 1
-                                names[i] += str(names_counter[j])
-                                type_of_name[names[i]] = types[i]
-                    else:
-                        type_of_name[j] = types[i]
-                self.set_array('names',
-                               names,
-                               object)
-
-        # update type when
-        # same name has two types
-        # happens during self.extend
-        # or same type has two names
-        types = self.get_array('types')
-        names = self.get_array('names')
-        types_dict = {}
-        # ASE atoms with no atoms can be encountered
-        # during ASE.__getitem__
-        if len(types) != 0:
-            n_max = np.max(types)
-            for i in set(types):
-                name_ = sorted(np.unique(names[types == i]))
-                types_dict[i] = name_[0]
-                for j in name_[1:]:
-                    # same type has two names
-                    # then make it into case:
-                    # same name has two types
-                    # since j might already exist in other types
-                    n_max += 1
-                    types_dict[n_max] = j
-                    types[np.logical_and(types == i, names == j)] = n_max
-            # same name has two types
-            rev_types = {} # names to types
-            for i in reversed(list(types_dict.keys())):
-                rev_types[types_dict[i]] = i
-            ind_of = {}
-            for i, j in types_dict.items():
-                if i != rev_types[j]:
-                    ind_of[i] = rev_types[j]
-            self.set_array('types',
-                           [(ind_of[x] if x in ind_of else x) for x in types],
-                           int)
-
-        for prop in ['mol-ids', 'types']:
-            ind_of = unique_ind(self.get_array(prop))
-            self.set_array(prop,
-                          [(ind_of[x] if x in ind_of else x) for x in self.get_array(prop)],
-                          int)
-
-        self.topology.update()
-
-        if specorder is not None:
-            order = np.unique(self.get_atomic_numbers())
-            if np.any(order != np.unique(specorder)):
-                raise RuntimeError('Atomic numbers found in specorder'
-                                   ' mismatch those found in system:'
-                                   ' {}'.format(order))
-            order_dict = dict(zip(order, specorder))
-            self.set_array('types',
-                           [order_dict[i] for i in self.get_atomic_numbers()],
-                           int)
+       self.topology.update(specorder)
 
     @property
     def types(self):
