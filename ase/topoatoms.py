@@ -422,6 +422,17 @@ class Topology(object):
     def __getitem__(self, item):
         return self._dict[item]
 
+    def get_topology_dict(self):
+        '''Gives topology dict that can be inherited by other topology
+        classes'''
+        topo_dict = {}
+        for key, values in self._dict.items():
+            topo_dict[key] = values.get()
+
+        return topo_dict
+
+    __call__ = get_topology_dict
+
     def update(self, topo_dict={}):
         for prop in self._dict.keys():
             if prop in topo_dict:
