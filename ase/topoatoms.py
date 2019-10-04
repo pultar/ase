@@ -87,11 +87,12 @@ class _TopoAttribute(object):
         ''' returns number of types of prop: bonds, etc'''
         return len(self.get_types(verbose=False))
 
-    @_check_exists
     def get_types(self, verbose=True):
         '''returns types of prop: bonds, etc
         :param prop: name of property
         :param verbose: gives name abbreviation for the types'''
+        if not self._ins.has(self.prop):
+            return np.array([])
 
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             items = self._ins.arrays[self.prop]
@@ -696,65 +697,18 @@ class TopoAtoms(Atoms):
 
     def __init__(self,
                  symbols=None,
-                 id=None,
-                 type=None,
-                 name=None,
-                 resname=None,
-                 mol_id=None,
-                 charges=None,
-                 bonds=None,
-                 angles=None,
-                 dihedrals=None,
-                 impropers=None,
+                 topo_dict={},
                  specorder=None,
                  *args, **kwargs):
-        if isinstance(symbols, Atoms):
-            if symbols.has('id') and id is None:
-                id = symbols.get_array('id')
-            if symbols.has('types') and type is None:
-                type = symbols.get_array('types')
-            if symbols.has('names') and name is None:
-                name = symbols.get_array('names')
-            if symbols.has('resnames') and resname is None:
-                resname = symbols.get_array('resnames')
-            if symbols.has('mol-ids') and mol_id is None:
-                mol_id = symbols.get_array('mol-ids')
-            if symbols.has('initial_charges') and charges is None:
-                charges = symbols.get_initial_charges()
-            if symbols.has('bonds') and bonds is None:
-                bonds = symbols.get_array('bonds')
-            if symbols.has('angles') and angles is None:
-                angles = symbols.get_array('angles')
-            if symbols.has('dihedrals') and dihedrals is None:
-                dihedrals = symbols.get_array('dihedrals')
-            if symbols.has('impropers') and impropers is None:
-                impropers = symbols.get_array('impropers')
+        if isinstance(symbols, Atoms) and symbols.has('id'):
+            # topology exists
+            topo_dict.update(symbols.topology())
 
         Atoms.__init__(self, symbols, *args, **kwargs)
 
-        if id is not None:
-            self.set_array('id', id, int)
-        if type is not None:
-            self.set_array('types', type, int)
-        if name is not None:
-            # numpy string dtypes are truncated
-            # numpy strings should be stored as objects
-            self.set_array('names', name, object)
-        if resname is not None:
-            self.set_array('resnames', resname, object)
-        if mol_id is not None:
-            self.set_array('mol-ids', mol_id, int)
-        if charges is not None:
-            self.set_initial_charges(charges)
-        if bonds is not None:
-            self.set_array('bonds', bonds, object)
-        if angles is not None:
-            self.set_array('angles', angles, object)
-        if dihedrals is not None:
-            self.set_array('dihedrals', dihedrals, object)
-        if impropers is not None:
-            self.set_array('impropers', impropers, object)
-        self.update(specorder)
+        if topo_dict:
+            self.topology = topo_dict
+            self.update(specorder)
 
     def update(self, specorder=None):
        self.topology.update(specorder)
