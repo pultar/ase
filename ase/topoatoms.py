@@ -296,7 +296,7 @@ class _TopoAttribute(object):
         elif self.prop == 'mol-ids':
             if not self._ins.has(self.prop):
                 self._ins.set_array('mol-ids',
-                                    np.ones(len(self)),
+                                    np.ones(len(self._ins)),
                                     int)
 
         elif self.prop == 'resnames':
