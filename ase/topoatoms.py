@@ -288,18 +288,88 @@ class _TopoAttribute(object):
 
             ind_of = unique_ind(self.get_types(verbose=False))
             self.set_types_to(ind_of)
+
         elif self.prop == 'ids':
             self._ins.arrays[self.prop] = np.arange(len(self._ins)) + 1
+
         elif self.prop == 'mol-ids':
             if not self._ins.has(self.prop):
                 self._ins.set_array('mol-ids',
                                     np.ones(len(self)),
                                     int)
+
         elif self.prop == 'resnames':
             if not self._ins.has(self.prop):
                 self._ins.set_array(self.prop,
                                     [set() for _ in range(len(self._ins))],
                                     object)
+
+        elif self.prop == 'names':
+            if not self._ins.has('names'):
+                # types should be updated first
+                # if types are defined
+                # but not names, eg when reading lammps dump
+                # names have to be different
+                if (len(np.unique(self._ins.arrays['types']))
+                        == len(np.unique(self._ins.numbers))):
+                    self._ins.set_array('names',
+                                        self._ins.get_chemical_symbols(),
+                                        object)
+                else:
+                    names = self._ins.get_chemical_symbols()
+                    types = self._ins.get_array('types')
+                    type_of_name = {}
+                    names_counter = {}
+                    for i, j in enumerate(names):
+                        if j in type_of_name:
+                            if type_of_name[j] != types[i]:
+                                if types[i] in type_of_name.values():
+                                    _ = {k: l for l, k in type_of_name.items()}
+                                    name_of_types = _
+                                    names[i] = name_of_types[types[i]]
+                                else:
+                                    names_counter[j] = names_counter.get(j, 0) + 1
+                                    names[i] += str(names_counter[j])
+                                    type_of_name[names[i]] = types[i]
+                        else:
+                            type_of_name[j] = types[i]
+                    self._ins.set_array('names',
+                                        names,
+                                        object)
+            # update type when
+            # same name has two types
+            # happens during self.extend
+            # or same type has two names
+            types = self._ins.get_array('types')
+            names = self._ins.get_array('names')
+            types_dict = {}
+            # ASE atoms with no atoms can be encountered
+            # during ASE.__getitem__
+            if len(types) != 0:
+                n_max = np.max(types)
+                for i in set(types):
+                    name_ = sorted(np.unique(names[types == i]))
+                    types_dict[i] = name_[0]
+                    for j in name_[1:]:
+                        # same type has two names
+                        # then make it into case:
+                        # same name has two types
+                        # since j might already exist in other types
+                        n_max += 1
+                        types_dict[n_max] = j
+                        types[np.logical_and(types == i, names == j)] = n_max
+                # same name has two types
+                rev_types = {} # names to types
+                for i in reversed(list(types_dict.keys())):
+                    rev_types[types_dict[i]] = i
+                ind_of = {}
+                for i, j in types_dict.items():
+                    if i != rev_types[j]:
+                        ind_of[i] = rev_types[j]
+                self._ins.set_array('types',
+                                    [(ind_of[x] if x in ind_of else x)
+                                     for x in types],
+                                    int)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
