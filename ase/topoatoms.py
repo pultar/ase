@@ -940,18 +940,17 @@ class TopoAtoms(Atoms):
 
         return atoms
 
-    @property
-    def topology(self):
+    def get_topology(self):
         return Topology(self)
 
-    @topology.setter
-    def topology(self, value):
+    def set_topology(self, value={}):
         top = Topology(self)
         top.update(value)
 
-    @topology.deleter
-    def topology(self):
+    def _del_topology(self):
         top = Topology(self)
         for i in top._dict.keys():
             del self.arrays[i]
 
+    topology = property(get_topology, set_topology,
+                        _del_topology, doc='handles topology information of atoms')
