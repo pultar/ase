@@ -144,8 +144,9 @@ class _TopoAttribute(object):
 
     __call__ = get
 
-    def set(self, value):
+    def set(self, value=None):
         '''
+        value to set. None resets the property to empty.
         '''
         if self._ins.has(self.prop):
             # delete array
@@ -399,8 +400,6 @@ class Topology(object):
     Dihedrals = _TopoAttributeProperty('dihedrals')
     Impropers = _TopoAttributeProperty('impropers')
 
-    topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
-
     def __init__(self, instance):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
@@ -421,7 +420,7 @@ class Topology(object):
         return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
 
     def __getitem__(self, item):
-        return self._prop_dict[item]
+        return self._dict[item]
 
     def update(self, topo_dict={}):
         for prop in self._dict.keys():
@@ -561,8 +560,8 @@ class Topology(object):
                 pass
 
         # removing bonds etc containing non-existing ids
-        for prop in self._dict.values():
-            prop._set_indices_to(indx_of, index)
+        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            self._dict[prop]._set_indices_to(indx_of, index)
 
 
 class TopoAtoms(Atoms):
