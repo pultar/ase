@@ -371,6 +371,15 @@ class _TopoAttribute(object):
                                      for x in types],
                                     int)
 
+        if self.prop == 'types':
+            # if types get changed,
+            # names can set types uniquely
+            # to change types, change names first
+            if not self._ins.has('types'):
+                self._ins.set_array('types',
+                                    self._ins.get_atomic_numbers(),
+                                    int)
+
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
         '''
