@@ -158,8 +158,8 @@ class _TopoAttribute(object):
             del self._ins.arrays[self.prop]
         if self.prop == 'ids':
             self.update()
-            raise NotImplementedError('changing ids shuffles the atoms,'
-                                      'which is not implemented yet')
+            #raise NotImplementedError('changing ids shuffles the atoms,'
+            #                          'which is not implemented yet')
         elif self.prop == 'names':
             self._ins.set_array(self.prop, value, object)
         elif self.prop in ['types', 'mol-ids']:
