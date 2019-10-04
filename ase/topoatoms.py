@@ -41,8 +41,8 @@ class _TopoAttribute(object):
         return wrapper
 
     def __repr__(self):
-        if self.prop == 'ids':
-            return '...'
+        if self.prop in ['ids', 'mol-ids']:
+            return '1 ... {}'.format(self.get_num_types())
         else:
             return str(self.get_types())
 
