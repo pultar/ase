@@ -518,7 +518,16 @@ class Topology(object):
     __call__ = get_topology_dict
 
     def update(self, topo_dict={}):
-        for prop in self._dict.keys():
+        # types should be updated before names
+        for prop in ['ids',
+                     'types',
+                     'names',
+                     'mol-ids',
+                     'resnames',
+                     'bonds',
+                     'angles',
+                     'dihedrals',
+                     'impropers']:
             if prop in topo_dict:
                 self._dict[prop].set(topo_dict[prop])
             else:
