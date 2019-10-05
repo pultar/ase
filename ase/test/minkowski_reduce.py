@@ -51,17 +51,11 @@ zcell[0] = lcell[0]
 rcell, _ = Cell(zcell).minkowski_reduce()
 assert np.allclose(rcell, zcell, atol=tol)
 
-def pseudo_det(cell, pbc):
-    indices = np.where(pbc)[0]
-    cell = cell[indices]
-    return np.prod(np.linalg.svd(cell)[1])
-
 # test 2D
 for i in range(3):
     pbc = np.roll([0, 1, 1], i)
     rcell, op = minkowski_reduce(lcell.astype(np.float), pbc=pbc)
     assert (rcell[i] == lcell[i]).all()
-    assert np.sign(pseudo_det(rcell, pbc)) == np.sign(pseudo_det(lcell, pbc))
 
     zcell = np.copy(lcell.astype(np.float))
     zcell[i] = 0
