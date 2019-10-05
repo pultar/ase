@@ -300,12 +300,12 @@ class Cell:
         cell, op = niggli_reduce_cell(self, epsfactor=1e-5)
         return Cell(cell), op
 
-    def minkowski_reduce(self, pbc=True):
+    def minkowski_reduce(self):
         """Minkowski-reduce this cell, returning new cell and mapping.
 
         See also :func:`ase.geometry.minkowski_reduction.minkowski_reduce`."""
         from ase.geometry.minkowski_reduction import minkowski_reduce
-        rcell, op = minkowski_reduce(self, pbc)
+        rcell, op = minkowski_reduce(self, cell.any(1) & self._pbc)
         return Cell(rcell), op
 
     # XXX We want a reduction function that brings the cell into
