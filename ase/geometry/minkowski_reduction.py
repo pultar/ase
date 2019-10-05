@@ -141,10 +141,17 @@ def minkowski_reduce(cell, pbc=True):
         _, op = reduction_full(cell)
 
     # maintain cell handedness
-    if np.sign(np.linalg.det(cell)) != np.sign(np.linalg.det(op @ cell)):
-        if dim == 3:
+    if dim == 3:
+        if np.sign(np.linalg.det(cell)) != np.sign(np.linalg.det(op @ cell)):
             op = -op
-        elif dim == 2:
+    elif dim == 2:
+        index = np.argmin(pbc)
+        _cell = cell.copy()
+        _cell[index] = (1, 1, 1)
+        _rcell = op @ cell
+        _rcell[index] = (1, 1, 1)
+
+        if np.sign(np.linalg.det(_cell)) != np.sign(np.linalg.det(_rcell)):
             index = np.argmax(pbc)
             op[:, index] *= -1
 

@@ -1,5 +1,7 @@
 import numpy as np
 from ase.geometry import minkowski_reduce
+from ase.cell import Cell
+
 
 tol = 1E-14
 rng = np.random.RandomState(0)
@@ -17,8 +19,11 @@ for i in range(40):
     _, _H = minkowski_reduce(R)
     assert (_H == np.eye(3).astype(np.int)).all()
 
+    rcell, _ = Cell(B).minkowski_reduce()
+    assert np.allclose(rcell, R, atol=tol)
 
-cell = np.array([[1, 1, 1], [0, 1, 4], [0, 0, 1]])
+
+cell = np.array([[1, 1, 2], [0, 1, 4], [0, 0, 1]])
 unimodular = np.array([[1, 2, 2], [0, 1, 2], [0, 0, 1]])
 assert np.linalg.det(unimodular) == 1
 lcell = unimodular.T @ cell
@@ -41,8 +46,25 @@ for i in range(3):
     rcell, op = minkowski_reduce(lcell, pbc=np.roll([1, 0, 0], i))
     assert (rcell == lcell).all()
 
+zcell = np.zeros((3, 3))
+zcell[0] = lcell[0]
+rcell, _ = Cell(zcell).minkowski_reduce()
+assert np.allclose(rcell, zcell, atol=tol)
+
+def pseudo_det(cell, pbc):
+    indices = np.where(pbc)[0]
+    cell = cell[indices]
+    return np.prod(np.linalg.svd(cell)[1])
+
 # test 2D
 for i in range(3):
-    rcell, op = minkowski_reduce(lcell, pbc=np.roll([0, 1, 1], i))
+    pbc = np.roll([0, 1, 1], i)
+    rcell, op = minkowski_reduce(lcell.astype(np.float), pbc=pbc)
     assert (rcell[i] == lcell[i]).all()
-    assert np.sign(np.linalg.det(rcell)) == np.sign(np.linalg.det(lcell))
+    assert np.sign(pseudo_det(rcell, pbc)) == np.sign(pseudo_det(lcell, pbc))
+
+    zcell = np.copy(lcell.astype(np.float))
+    zcell[i] = 0
+    rzcell, _ = Cell(zcell).minkowski_reduce()
+    rcell[i] = 0
+    assert np.allclose(rzcell, rcell, atol=tol)
