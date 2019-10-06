@@ -989,8 +989,9 @@ class TopoAtoms(Atoms):
                                '()'.format(self.__class__.__name__))
 
     def set_topology(self, value={}):
-        top = Topology(self)
-        top.update(value)
+        if value is not None:
+            top = Topology(self)
+            top.update(value)
 
     def _del_topology(self):
         top = Topology(self)
