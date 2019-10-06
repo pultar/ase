@@ -701,6 +701,22 @@ class Topology(object):
         self._set_indices_to(indx_of)
         self.update()
 
+    def _del_item(self, i):
+        if not isinstance(i, list):
+            i = [i]
+        # making index map dictionary, with index to delete as None
+        # and setting indices to the map
+        indx_of = {}
+        count = 0
+        for j in range(len(self._ins)):
+            if j in i:
+                indx_of[j] = None
+                count += 1
+            else:
+                indx_of[j] = j - count
+
+        self._set_indices_to(indx_of=indx_of)
+        self.update()
 
 class TopoAtoms(Atoms):
     '''
@@ -750,25 +766,11 @@ class TopoAtoms(Atoms):
         self.set_array('names', other, int)
 
     def __delitem__(self, i=-1):
-        if not isinstance(i, list):
-            i = [i]
-        # making index map dictionary, with index to delete as None
-        # and setting indices to the map
-        indx_of = {}
-        count = 0
-        for j in range(len(self)):
-            if j in i:
-                indx_of[j] = None
-                count += 1
-            else:
-                indx_of[j] = j - count
 
-        self.topology._set_indices_to(indx_of=indx_of)
+        # the indices should be renamed first
+        self.topology._del_item(i)
 
         Atoms.__delitem__(self, i)
-
-        # updating ids
-        self.update()
 
     def __imul__(self, m):
         """In-place repeat of atoms."""
