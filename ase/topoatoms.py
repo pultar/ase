@@ -689,6 +689,18 @@ class Topology(object):
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             self._dict[prop]._set_indices_to(indx_of, index)
 
+    def _get_item(self, item):
+        '''used when _get_item is called in atoms object
+        Method corrects bonds, angles, dihedrals, and impropers that
+        point to wrong indices due to array slicing'''
+        indx_of = {i: None for i in range(len(self._ins))}
+        count = 0
+        for i in np.array(range(len(self._ins)))[item]:
+            indx_of[i] = count
+            count += 1
+        self._set_indices_to(indx_of)
+        self.update()
+
 
 class TopoAtoms(Atoms):
     '''
@@ -890,13 +902,7 @@ class TopoAtoms(Atoms):
             if self.has(name):
                 atoms.arrays[name] = deepcopy(self.arrays[name][item])
 
-        indx_of = {i: None for i in range(len(self))}
-        count = 0
-        for i in np.array(range(len(self)))[item]:
-            indx_of[i] = count
-            count += 1
-        atoms.topology._set_indices_to(indx_of)
-        atoms.update()
+        atoms.topology._get_item(item)
 
         return atoms
 
