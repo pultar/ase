@@ -916,7 +916,9 @@ class TopoAtoms(Atoms):
         if self.has('ids'):
             return Topology(self)
         else:
-            raise RuntimeError('Topology not initialised')
+            raise RuntimeError('Topology not initialised;'
+                               ' use: {}.set_topology'
+                               '()'.format(self.__class__.__name__))
 
     def set_topology(self, value={}):
         top = Topology(self)
