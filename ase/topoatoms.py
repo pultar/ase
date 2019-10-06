@@ -8,17 +8,6 @@ from ase.neighborlist import NeighborList, natural_cutoffs
 from ase.io.formats import string2index
 
 
-def unique_ind(a):
-    ''' Returns dict with new indices as values of old indices as keys
-    if old index needs a change'''
-    id_ = np.unique(a)
-    ind_of = {}
-    for i, val in enumerate(id_, start=1):
-        if val != i:
-            ind_of[val] = i
-    return ind_of
-
-
 class _TopoAttribute(object):
 
     def __init__(self, topo_attr_prop):
@@ -314,6 +303,15 @@ class _TopoAttribute(object):
                                       'add'.format(self.prop))
 
     def update(self):
+        def unique_ind(a):
+            ''' Returns dict with new indices as values of old indices as keys
+            if old index needs a change'''
+            id_ = np.unique(a)
+            ind_of = {}
+            for i, val in enumerate(id_, start=1):
+                if val != i:
+                    ind_of[val] = i
+            return ind_of
 
         if self.prop in ['bonds',
                          'angles',
@@ -347,6 +345,12 @@ class _TopoAttribute(object):
                 self._ins.set_array('mol-ids',
                                     np.ones(len(self._ins)),
                                     int)
+            ind_of = unique_ind(self._ins.arrays[self.prop])
+            self._ins.set_array(self.prop,
+                                [(ind_of[x] if x in ind_of else x)
+                                 for x in self._ins.get_array(self.prop)],
+                                int)
+
 
         elif self.prop == 'resnames':
             if not self._ins.has(self.prop):
@@ -429,6 +433,11 @@ class _TopoAttribute(object):
                 self._ins.set_array('types',
                                     self._ins.get_atomic_numbers(),
                                     int)
+            ind_of = unique_ind(self._ins.arrays[self.prop])
+            self._ins.set_array(self.prop,
+                                [(ind_of[x] if x in ind_of else x)
+                                 for x in self._ins.get_array(self.prop)],
+                                int)
 
     @_check_exists
     def set_types_to(self, indx_of, index=":"):
@@ -803,6 +812,38 @@ class Topology(object):
 
         self.update()
 
+    def _extend(self, n1, n2):
+        # raise types and mo-ids of other with the highest in self
+        for prop in ['mol-ids', 'types']:
+            self._ins.arrays[prop][n1:] += np.max(self._ins.arrays[prop][:n1])
+
+        indx_of = {}
+        for i in range(n2):
+            indx_of[i] = i + n1
+        self._set_indices_to(indx_of, "{}:".format(n1))
+
+        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            print(prop, self._dict[prop].get_types(index=':{}'.format(n1),
+                                                   verbose=False))
+            try:
+                max_ = np.max(self._dict[prop].get_types(index=':{}'.format(n1),
+                                                         verbose=False))
+            except ValueError:
+                # get_types is empty
+                max_ = 0
+            indx_of = {}
+            print(n1, self._dict[prop].get_types(index='{}:'.format(n1),
+                                                   verbose=False))
+            print(self._ins.arrays[prop])
+            for i in self._dict[prop].get_types(index='{}:'.format(n1),
+                                                verbose=False):
+                indx_of[i] = i + max_
+            print(prop, indx_of)
+            self._dict[prop].set_types_to(indx_of, index='{}:'.format(n1))
+
+        # updating ids
+        self.update()
+
 
 class TopoAtoms(Atoms):
     '''
@@ -825,7 +866,7 @@ class TopoAtoms(Atoms):
             self.update(specorder)
 
     def update(self, specorder=None):
-       self.topology.update(specorder)
+       self.topology.update(specorder=specorder)
 
     @property
     def types(self):
@@ -886,32 +927,10 @@ class TopoAtoms(Atoms):
 
         n1 = len(self)
         n2 = len(other)
-        for prop in ['mol-ids', 'types']:
-            other.arrays[prop] += np.max(self.arrays[prop])
-        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            if self.has(prop) and other.has(prop):
-                indx_of = {}
-                max_ = np.max(self.topology[prop].get_types(verbose=False))
-                for i in other.topology[prop].get_types(verbose=False):
-                    indx_of[i] = i + max_
-                other.topology[prop].set_types_to(indx_of)
-
-        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            if not self.has(prop) and other.has(prop):
-                self.set_array(prop, [{} for _ in range(len(self))], object)
-
-        if not self.has('resnames') and other.has('resnames'):
-            self.set_array('resnames', [set([]) for _ in range(len(self))], object)
 
         Atoms.extend(self, other)
 
-        indx_of = {}
-        for i in range(n2):
-            indx_of[i] = i + n1
-        self.topology._set_indices_to(indx_of, "{}:".format(n1))
-
-        # updating ids
-        self.update()
+        self.topology._extend(n1, n2)
 
         return self
 
