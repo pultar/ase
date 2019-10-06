@@ -87,21 +87,70 @@ class _TopoAttribute(object):
         ''' returns number of types of prop: bonds, etc'''
         return len(self.get_types(verbose=False))
 
-    def get_types(self, verbose=True):
+    def get_types(self, index=':', verbose=True):
         '''returns types of prop: bonds, etc
         :param prop: name of property
         :param verbose: gives name abbreviation for the types'''
         if not self._ins.has(self.prop):
             return np.array([])
 
+        if isinstance(index, basestring):
+            try:
+                index = string2index(index)
+            except ValueError:
+                pass
+
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            items = self._ins.arrays[self.prop]
+            items = deepcopy(self._ins.arrays[self.prop][index])
+            # remove indices not present in index
+            indx_of = {}
+            _ = np.arange(len(self._ins))[index]
+            count = 0
+            # ids to delete
+            ids = []
+            for i in range(len(self._ins)):
+                if i in _:
+                    indx_of[i] = count
+                    count += 1
+                else:
+                    ids.append(i)
+            for indx in range(len(items)):
+                # holds empty keys for deletion later
+                del_key = []
+                # extend() can bring int item
+                # which gives AttributeError at item.items()
+                try:
+                    for key, value in items[indx].items():
+                        # holds index of list that contains removed bonds etc
+                        del_id = []
+                        for i, j in enumerate(value):
+                            if np.any([x in ids for x in j]):
+                                del_id.append(i)
+                            else:
+                                for k, l in enumerate(j):
+                                    value[i][k] = indx_of[l]
+                        del_id.sort(reverse=True)
+                        for i in del_id:
+                            value.pop(i)
+                        # If value is empty then mark key for delition
+                        # note that if it is empty, the arrays is not changed
+                        # hence, delition is necessary
+                        if len(value) == 0:
+                            del_key.append(key)
+                        else:
+                            items[indx][key] = value
+                except AttributeError:
+                    items[indx] = {}
+
+                for i in del_key:
+                    items[indx].pop(i)
+
             type_list = np.unique([i for x in items for i in x.keys()])
 
             if not verbose:
                 return type_list
 
-            names = self._ins.arrays['names']
+            names = self._ins.arrays['names'][index]
             types = {}
             for key in type_list:
                 for i, item in enumerate(items):
@@ -120,11 +169,11 @@ class _TopoAttribute(object):
             return types
         elif self.prop == 'resnames':
             types = set()
-            for i in self._ins.arrays[self.prop]:
+            for i in self._ins.arrays[self.prop][index]:
                 types |= i
             return np.asarray(list(types))
         else:
-            return np.unique(self._ins.get_array(self.prop))
+            return np.unique(self._ins.get_array(self.prop)[index])
 
     def get(self):
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
