@@ -718,6 +718,43 @@ class Topology(object):
         self._set_indices_to(indx_of=indx_of)
         self.update()
 
+    def _imul(self, m):
+        size_m = np.product(m)
+        # n contains the original length of atoms
+        n = int(len(self._ins) / size_m)
+        if self._ins.has('mol-ids'):
+            n_molid = np.max(self._ins.arrays['mol-ids'])
+            nmolids = 0
+
+        topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
+
+        for name in topo_props:
+            if self._ins.has(name):
+                a = self._ins.arrays[name][:n]
+                self._ins.arrays[name] = np.empty(size_m * n, dtype='object')
+                for i in range(size_m):
+                    self._ins.arrays[name][i * n:(i + 1) * n] = deepcopy(a)
+
+        i0 = 0
+        natoms = 0
+        indx_of = {}
+        for m0 in range(m[0]):
+            for m1 in range(m[1]):
+                for m2 in range(m[2]):
+                    i1 = i0 + n
+                    for i in range(n):
+                        indx_of[i] = i + natoms
+                    self._set_indices_to(indx_of, "{}:{}".format(i0, i1))
+                    if self._ins.has('mol-ids'):
+                        _ = self._ins.arrays['mol-ids'][i0:i1] + nmolids
+                        self._ins.arrays['mol-ids'][i0:i1] = _
+                        nmolids += n_molid
+                    i0 = i1
+                    natoms += n
+
+        self.update()
+
+
 class TopoAtoms(Atoms):
     '''
     Atoms class with methods that support Topology-property methods
@@ -777,42 +814,9 @@ class TopoAtoms(Atoms):
         if isinstance(m, int):
             m = (m, m, m)
 
-        size_m = np.product(m)
-        n = len(self)
-        if self.has('mol-ids'):
-            n_molid = np.max(self.arrays['mol-ids'])
-            nmolids = 0
-
         Atoms.__imul__(self, m)
 
-        topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
-
-        for name in topo_props:
-            if self.has(name):
-                a = self.arrays[name][:n]
-                self.arrays[name] = np.empty(size_m * n, dtype='object')
-                for i in range(size_m):
-                    self.arrays[name][i * n:(i + 1) * n] = deepcopy(a)
-
-        i0 = 0
-        natoms = 0
-        indx_of = {}
-        for m0 in range(m[0]):
-            for m1 in range(m[1]):
-                for m2 in range(m[2]):
-                    i1 = i0 + n
-                    for i in range(n):
-                        indx_of[i] = i + natoms
-                    self.topology._set_indices_to(indx_of, "{}:{}".format(i0, i1))
-                    if self.has('mol-ids'):
-                        _ = self.arrays['mol-ids'][i0:i1] + nmolids
-                        self.arrays['mol-ids'][i0:i1] = _
-                        nmolids += n_molid
-                    i0 = i1
-                    natoms += n
-
-        # updating ids
-        self.update()
+        self.topology._imul(m)
 
         return self
 
