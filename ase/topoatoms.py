@@ -907,7 +907,10 @@ class TopoAtoms(Atoms):
         return atoms
 
     def get_topology(self):
-        return Topology(self)
+        if self.has('ids'):
+            return Topology(self)
+        else:
+            raise RuntimeError('Topology not initialised')
 
     def set_topology(self, value={}):
         top = Topology(self)
