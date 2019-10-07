@@ -1,7 +1,6 @@
 import re
 import numpy as np
-from ase.topoatoms import TopoAtoms
-from ase.topoquarternions import TopoQuaternions
+from ase.atoms import Atoms
 from ase.quaternions import Quaternions
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -363,11 +362,11 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         velocities = convert(velocities, "velocity", units, "ASE")
 
     # create ase.Atoms
-    at = TopoAtoms(positions=positions,
-                     numbers=numbers,
-                     masses=masses,
-                     cell=cell,
-                     pbc=[True, True, True])
+    at = Atoms(positions=positions,
+               numbers=numbers,
+               masses=masses,
+               cell=cell,
+               pbc=[True, True, True])
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
@@ -450,15 +449,13 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         atoms = atoms[0]
 
     # TODO: add quarternions printing
-    if type(atoms) == Quaternions:
-        atoms = TopoQuaternions(atoms)
-    elif not isinstance(atoms, TopoAtoms):
-        atoms = TopoAtoms(atoms)
+    if not atoms.has('ids'):
+        atoms.set_topology()
 
     if specorder is not None:
         # To index elements in the LAMMPS data file
         # (indices must correspond to order in the potential file)
-        atoms.update(specorder)
+        atoms.topology.update(specorder=specorder)
 
     f.write('{0} (written by ASE) \n\n'.format(f.name).encode("utf-8"))
 
@@ -467,7 +464,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write('{0:8} \t atoms \n'.format(n_atoms).encode("utf-8"))
     for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
         try:
-            num = atoms.Topology[prop].get_count()
+            num = atoms.topology[prop].get_count()
         except KeyError:
             num = 0
         f.write('{0:8} \t '
@@ -475,16 +472,16 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                 prop).encode("utf-8"))
 
     # TopoAtoms always assigns type and name
-    types = atoms.get_array('type')
-    names = atoms.get_array('name')
+    types = atoms.get_array('types')
+    names = atoms.get_array('names')
 
-    n_types = len(np.unique(atoms.get_array('type')))
+    n_types = len(np.unique(atoms.get_array('types')))
     f.write('{0:8} \t '
             'atom types\n'.format(n_types).encode("utf-8"))
     for prop in ['bond types', 'angle types', 'dihedral types',
                  'improper types']:
         try:
-            num = atoms.Topology[prop.split()[0] + 's'].get_num_types()
+            num = atoms.topology[prop.split()[0] + 's'].get_num_types()
         except KeyError:
             num = 0
         f.write('{0:8} \t '
@@ -512,7 +509,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write("\n\n".encode("utf-8"))
 
     f.write('Masses \n\n'.encode("utf-8"))
-    for i in np.unique(atoms.get_array('type')):
+    for i in np.unique(atoms.get_array('types')):
         indx = np.where(i == types)[0][0]
         mass = atoms.get_masses()[indx]
         sym = names[indx]
@@ -527,12 +524,12 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
         travel = atoms.get_array('travel')
     else:
         travel = None
-    if atoms.has('resname'):
-        resnames = atoms.get_array('resname')
+    if atoms.has('resnames'):
+        resnames = atoms.get_array('resnames')
     else:
         resnames = None
-    id = atoms.get_array('id')
-    mol_id = atoms.get_array('mol-id')
+    id = atoms.get_array('ids')
+    mol_id = atoms.get_array('mol-ids')
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=True)
     charges = atoms.get_initial_charges()
     if style == 'full':
@@ -631,8 +628,8 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                   ' or molecular'.format(style))
     f.write('\n\n'.encode("utf-8"))
 
-    if atoms.has('bonds'):
-        typ = atoms.Topology['bonds'].get_types()
+    if atoms.topology['bonds'].get_count():
+        typ = atoms.topology['bonds'].get_types()
         count = 1
         f.write('Bonds \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('bonds')):
@@ -649,8 +646,8 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.has('angles'):
-        typ = atoms.Topology['angles'].get_types()
+    if atoms.topology['angles'].get_count():
+        typ = atoms.topology['angles'].get_types()
         count = 1
         f.write('Angles \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('angles')):
@@ -669,8 +666,8 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.has('dihedrals'):
-        typ = atoms.Topology['dihedrals'].get_types()
+    if atoms.topology['dihedrals'].get_count():
+        typ = atoms.topology['dihedrals'].get_types()
         count = 1
         f.write('Dihedrals \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('dihedrals')):
@@ -689,8 +686,8 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.has('impropers'):
-        typ = atoms.Topology['impropers'].get_types()
+    if atoms.topology['impropers'].get_count():
+        typ = atoms.topology['impropers'].get_types()
         count = 1
         f.write('Impropers \n\n'.encode("utf-8"))
         for indx, item in enumerate(atoms.get_array('impropers')):
