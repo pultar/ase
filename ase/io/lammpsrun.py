@@ -4,8 +4,8 @@ from os.path import splitext
 from collections import deque
 import numpy as np
 
-from ase.topoatoms import TopoAtoms
-from ase.topoquarternions import TopoQuaternions
+from ase.atoms import Atoms
+from ase.quarternions import Quaternions
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -48,7 +48,7 @@ def read_lammps_dump(infileobj, *args, **kwargs):
 
 
 def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
-                             pbc=False, atomsobj=TopoAtoms, order=True,
+                             pbc=False, atomsobj=Atoms, order=True,
                              specorder=None, prismobj=None,
                              units="metal"):
     """Extract positions and other per-atom parameters and create Atoms
@@ -112,10 +112,9 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
         cell = prismobj.update_cell(cell)
 
     if quaternions:
-        out_atoms = TopoQuaternions(
+        out_atoms = Quaternions(
             symbols=symbols,
             positions=positions,
-            type=types,
             cell=cell,
             celldisp=celldisp,
             pbc=pbc,
@@ -130,7 +129,6 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
         out_atoms = atomsobj(
             symbols=symbols,
             positions=positions,
-            type=types,
             pbc=pbc,
             celldisp=celldisp,
             cell=cell,
@@ -138,12 +136,13 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
     elif scaled_positions is not None:
         out_atoms = atomsobj(
             symbols=symbols,
-            type=types,
             scaled_positions=scaled_positions,
             pbc=pbc,
             celldisp=celldisp,
             cell=cell,
         )
+
+    out_atoms.set_topology({'types': types})
 
     if velocities is not None:
         if prismobj:
@@ -271,7 +270,7 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
                 colnames=colnames,
                 cell=cell,
                 celldisp=celldisp,
-                atomsobj=TopoAtoms,
+                atomsobj=Atoms,
                 pbc=pbc,
                 **kwargs
             )
