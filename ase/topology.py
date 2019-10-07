@@ -957,7 +957,7 @@ class TopologyObject(object):
             ids = np.array(values, dtype=int)
         except ValueError as e:
             raise ValueError(e, 'ids should be integer')
-        self._dict['ids'] = values
+        self._dict['ids'] = ids
 
     @property
     def names(self):
@@ -980,7 +980,7 @@ class TopologyObject(object):
             types = np.array(values, dtype=int)
         except ValueError as e:
             raise ValueError(e, 'types should be integer')
-        self._dict['types'] = values
+        self._dict['types'] = types
 
     @property
     def mol_ids(self):
@@ -992,7 +992,7 @@ class TopologyObject(object):
             mol_ids = np.array(values, dtype=int)
         except ValueError as e:
             raise ValueError(e, 'mol-ids should be integer')
-        self._dict['mol-ids'] = values
+        self._dict['mol-ids'] = mol_ids
 
     @property
     def resnames(self):
