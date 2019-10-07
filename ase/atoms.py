@@ -22,7 +22,7 @@ from ase.data import atomic_masses
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
-from ase.topology import Topology
+from ase.topology import Topology, TopologyObject
 
 
 class Atoms(object):
@@ -189,7 +189,7 @@ class Atoms(object):
                 calculator = atoms.get_calculator()
             if topology is None:
                 if atoms.has('ids'):
-                    topology = atoms.topology.get_topology_dict()
+                    topology = atoms.topology.get_topology_object()
             if info is None:
                 info = copy.deepcopy(atoms.info)
 
@@ -316,7 +316,7 @@ class Atoms(object):
                                ' use: {}.set_topology'
                                '()'.format(self.__class__.__name__))
 
-    def set_topology(self, value={}):
+    def set_topology(self, value=TopologyObject()):
         if value is not None:
             top = Topology(self)
             top.update(value)
@@ -839,7 +839,7 @@ class Atoms(object):
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
         if self.has('ids'):
-            atoms.topology = self.topology.get_topology_dict()
+            atoms.topology = self.topology.get_topology_object()
         return atoms
 
     def __len__(self):

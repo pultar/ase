@@ -631,18 +631,25 @@ class Topology(object):
     def __getitem__(self, item):
         return self._dict[item]
 
-    def get_topology_dict(self):
+    def get_topology_object(self):
         '''Gives topology dict that can be inherited by other topology
         classes'''
         topo_dict = {}
         for key, values in self._dict.items():
             topo_dict[key] = values.get()
 
-        return topo_dict
+        return TopologyObject(topo_dict)
 
-    __call__ = get_topology_dict
+    __call__ = get_topology_object
 
-    def update(self, topo_dict={}, specorder=None):
+    def update(self, topo_object=None, specorder=None):
+        if topo_object is None:
+            topo_dict = {}
+        elif type(topo_object) is TopologyObject:
+            topo_dict = topo_object._dict
+        else:
+            topo_dict = TopologyObject(topo_object)._dict
+
         if specorder is not None:
             order = np.unique(self._ins.get_atomic_numbers())
             if np.any(order != np.unique(specorder)):

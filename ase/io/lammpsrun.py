@@ -6,6 +6,7 @@ import numpy as np
 
 from ase.atoms import Atoms
 from ase.quaternions import Quaternions
+from ase.topology import TopologyObject
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -142,7 +143,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
             cell=cell,
         )
 
-    out_atoms.set_topology({'types': types})
+    out_atoms.set_topology(TopologyObject({'types': types}))
 
     if velocities is not None:
         if prismobj:
