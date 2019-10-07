@@ -22,6 +22,7 @@ from ase.data import atomic_masses
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
+from ase.topology import Topology
 
 
 class Atoms(object):
@@ -88,6 +89,9 @@ class Atoms(object):
     calculator: calculator object
         Used to attach a calculator for calculating energies and atomic
         forces.
+    topology: dict of key-value pairs
+        Used to get topology properties like ids, names, types, mol-ids,
+        bonds, angles, dihedrals, impropers and resname
     info: dict of key-value pairs
         Dictionary of key-value pairs with additional information
         about the system.  The following keys may be used by ase:
@@ -135,6 +139,7 @@ class Atoms(object):
                  cell=None, pbc=None, celldisp=None,
                  constraint=None,
                  calculator=None,
+                 topology=None,
                  info=None):
 
         self._cellobj = Cell.new(pbc=False)
@@ -182,6 +187,9 @@ class Atoms(object):
                 constraint = [c.copy() for c in atoms.constraints]
             if calculator is None:
                 calculator = atoms.get_calculator()
+            if topology is None:
+                if atoms.has('ids'):
+                    topology = atoms.topology.get_topology_dict()
             if info is None:
                 info = copy.deepcopy(atoms.info)
 
@@ -224,6 +232,7 @@ class Atoms(object):
         self.new_array('positions', positions, float, (3,))
 
         self.set_constraint(constraint)
+        self.set_topology(topology)
         self.set_tags(default(tags, 0))
         self.set_masses(default(masses, None))
         self.set_initial_magnetic_moments(default(magmoms, 0.0))
@@ -298,6 +307,27 @@ class Atoms(object):
 
     constraints = property(_get_constraints, set_constraint, _del_constraints,
                            'Constraints of the atoms.')
+    def get_topology(self):
+        '''Allows attacing topology information to the atoms object'''
+        if self.has('ids'):
+            return Topology(self)
+        else:
+            raise RuntimeError('Topology not initialised;'
+                               ' use: {}.set_topology'
+                               '()'.format(self.__class__.__name__))
+
+    def set_topology(self, value={}):
+        if value is not None:
+            top = Topology(self)
+            top.update(value)
+
+    def _del_topology(self):
+        top = Topology(self)
+        for i in top._dict.keys():
+            del self.arrays[i]
+
+    topology = property(get_topology, set_topology,
+                        _del_topology, doc='handles topology information of atoms')
 
     def set_cell(self, cell, scale_atoms=False):
         """Set unit cell vectors.
@@ -435,8 +465,13 @@ class Atoms(object):
 
         Returns a copy unless the optional argument copy is false.
         """
+        from copy import deepcopy
         if copy:
-            return self.arrays[name].copy()
+            if self.has('ids'):
+                # topology arrays require deepcopy
+                return deepcopy(self.arrays[name])
+            else:
+                return self.arrays[name].copy()
         else:
             return self.arrays[name]
 
@@ -803,6 +838,8 @@ class Atoms(object):
         for name, a in self.arrays.items():
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
+        if self.has('ids'):
+            atoms.topology = self.topology.get_topology_dict()
         return atoms
 
     def __len__(self):
@@ -884,6 +921,8 @@ class Atoms(object):
         if isinstance(other, Atom):
             other = self.__class__([other])
 
+        # prevents changes in other if topology is attached
+        other = other.copy()
         n1 = len(self)
         n2 = len(other)
 
@@ -909,6 +948,9 @@ class Atoms(object):
                 a[:n1] = 0
 
             self.set_array(name, a)
+
+        if self.has('ids'):
+            self.topology._extend(n1, n2)
 
         return self
 
@@ -950,6 +992,7 @@ class Atoms(object):
                                      'object'.format(self.__class__.__name__))
 
         import copy
+        from copy import deepcopy
 
         conadd = []
         # Constraints need to be deepcopied, but only the relevant ones.
@@ -969,9 +1012,14 @@ class Atoms(object):
 
         atoms.arrays = {}
         for name, a in self.arrays.items():
-            atoms.arrays[name] = a[i].copy()
+            if self.has('ids'):
+                atoms.arrays[name] = deepcopy(a[i])
+            else:
+                atoms.arrays[name] = a[i].copy()
 
         atoms.constraints = conadd
+        if self.has('ids'):
+            atoms.topology._get_item(i)
         return atoms
 
     def __delitem__(self, i):
@@ -997,6 +1045,10 @@ class Atoms(object):
                 if c is not None:
                     constraints.append(c)
             self.constraints = constraints
+
+        # the indices should be renamed first
+        if self.has('ids'):
+            self.topology._del_item(i)
 
         mask = np.ones(len(self), bool)
         mask[i] = False
@@ -1039,6 +1091,9 @@ class Atoms(object):
             self.constraints = [c.repeat(m, n) for c in self.constraints]
 
         self.cell = np.array([m[c] * self.cell[c] for c in range(3)])
+
+        if self.has('ids'):
+            self.topology._imul(m)
 
         return self
 
