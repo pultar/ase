@@ -894,3 +894,193 @@ class Topology(object):
 
         # updating ids
         self.update()
+
+
+class TopologyObject(object):
+    '''Topology object that can be used to transfer topologies
+    attached to Atoms object'''
+
+    topo_props = ['ids',
+                  'names',
+                  'types',
+                  'mol-ids',
+                  'resnames',
+                  'bonds',
+                  'angles',
+                  'dihedrals',
+                  'impropers']
+
+    lengths = {'bonds': 2,
+               'angles': 3,
+               'dihedrals': 4,
+               'impropers': 4}
+
+    def __init__(self, topology_dict={}):
+        self._dict = {}
+        for i in topology_dict:
+            if i in self.topo_props:
+                if i == 'ids':
+                    self.ids = topology_dict[i]
+                if i == 'names':
+                    self.names = topology_dict[i]
+                if i == 'types':
+                    self.types = topology_dict[i]
+                if i == 'mol-ids':
+                    self.mol_ids = topology_dict[i]
+                if i == 'resnames':
+                    self.resnames = topology_dict[i]
+                if i == 'bonds':
+                    self.bonds = topology_dict[i]
+                if i == 'angles':
+                    self.angles = topology_dict[i]
+                if i == 'dihedrals':
+                    self.dihedrals = topology_dict[i]
+                if i == 'impropers':
+                    self.impropers = topology_dict [i]
+            else:
+                raise RuntimeError('{} not a topology property'.format(i))
+
+    @property
+    def ids(self):
+       return self._dict['ids']
+
+    @ids.setter
+    def ids(self, values):
+        try:
+            ids = np.array(values, dtype=int)
+        except ValueError as e:
+            raise ValueError(e, 'ids should be integer')
+        self._dict['ids'] = values
+
+    @property
+    def names(self):
+        return self._dict['names']
+
+    @names.setter
+    def names(self, values):
+        for i in values:
+            if not type(i) is str:
+                raise ValueError('names should be str')
+        self._dict['names'] = values
+
+    @property
+    def types(self):
+        return self._dict['types']
+
+    @types.setter
+    def types(self, values):
+        try:
+            types = np.array(values, dtype=int)
+        except ValueError as e:
+            raise ValueError(e, 'types should be integer')
+        self._dict['types'] = values
+
+    @property
+    def mol_ids(self):
+        return self._dict['mol-ids']
+
+    @mol_ids.setter
+    def mol_ids(self, values):
+        try:
+            mol_ids = np.array(values, dtype=int)
+        except ValueError as e:
+            raise ValueError(e, 'mol-ids should be integer')
+        self._dict['mol-ids'] = values
+
+    @property
+    def resnames(self):
+        return self._dict['resnames']
+
+    @resnames.setter
+    def resnames(self, values):
+        for i in values:
+            if not type(i) is set:
+                raise ValueError('resnames should be sets')
+            for j in i:
+                if not type(j) is str:
+                    raise ValueError('The resname sets should contain str')
+        self._dict['resnames'] = values
+
+    @property
+    def bonds(self):
+        return self._dict['bonds']
+
+    @bonds.setter
+    def bonds(self, values):
+        if not type(values) is dict:
+            raise ValueError('bonds should be dict')
+        for key in values.keys():
+            if not type(key) is int:
+                raise ValueError('bonds keys should be int')
+        for bonds in values.values():
+            for bond in bonds:
+                if len(bond) != self.lengths['bonds']:
+                    raise ValueError('bonds should be of size '
+                                     '{}'.format(self.lengths['bonds']))
+                for ind in bond:
+                    if not type(ind) is int:
+                        raise ValueError('bond indices should be int')
+        self._dict['bonds'] = values
+
+    @property
+    def angles(self):
+        return self._dict['angles']
+
+    @angles.setter
+    def angles(self, values):
+        if not type(values) is dict:
+            raise ValueError('angles should be dict')
+        for key in values.keys():
+            if not type(key) is int:
+                raise ValueError('angles keys should be int')
+        for angles in values.values():
+            for angle in angles:
+                if len(angle) != self.lengths['angles']:
+                    raise ValueError('angles should be of size '
+                                     '{}'.format(self.lengths['angles']))
+                for ind in angle:
+                    if not type(ind) is int:
+                        raise ValueError('angle indices should be int')
+        self._dict['angles'] = values
+
+    @property
+    def dihedrals(self):
+        return self._dict['dihedrals']
+
+    @dihedrals.setter
+    def dihedrals(self, values):
+        if not type(values) is dict:
+            raise ValueError('dihedrals should be dict')
+        for key in values.keys():
+            if not type(key) is int:
+                raise ValueError('dihedrals keys should be int')
+        for dihedrals in values.values():
+            for dihedral in dihedrals:
+                if len(dihedral) != self.lengths['dihedrals']:
+                    raise ValueError('dihedrals should be of size '
+                                     '{}'.format(self.lengths['dihedrals']))
+                for ind in dihedral:
+                    if not type(ind) is int:
+                        raise ValueError('dihedral indices should be int')
+        self._dict['dihedrals'] = values
+
+    @property
+    def impropers(self):
+        return self._dict['impropers']
+
+    @impropers.setter
+    def impropers(self, values):
+        if not type(values) is dict:
+            raise ValueError('impropers should be dict')
+        for key in values.keys():
+            if not type(key) is int:
+                raise ValueError('impropers keys should be int')
+        for impropers in values.values():
+            for improper in impropers:
+                if len(improper) != self.lengths['impropers']:
+                    raise ValueError('impropers should be of size '
+                                     '{}'.format(self.lengths['impropers']))
+                for ind in improper:
+                    if not type(ind) is int:
+                        raise ValueError('improper indices should be int')
+        self._dict['impropers'] = values
