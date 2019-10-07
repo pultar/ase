@@ -1,11 +1,22 @@
 import numpy as np
-from ase.atoms import Atoms
-from ase.atom import Atom
 from copy import deepcopy
-import numbers
 from ase.utils import basestring
 from ase.neighborlist import NeighborList, natural_cutoffs
-from ase.io.formats import string2index
+
+
+def string2index(string):
+    '''converts sring to index
+    cannot be imported from ase.io.formats.'''
+    if ':' not in string:
+        return int(string)
+    i = []
+    for s in string.split(':'):
+        if s == '':
+            i.append(None)
+        else:
+            i.append(int(s))
+    i += (3 - len(i)) * [None]
+    return slice(*i)
 
 
 class _TopoAttribute(object):
@@ -464,7 +475,7 @@ class _TopoAttribute(object):
             for indx in np.arange(len(self._ins))[index]:
                 try:
                     _ = indx_of[self._ins.arrays[self.prop][indx]]
-                except IndexError as e:
+                except IndexError:
                     continue
                 self._ins.arrays[self.prop][indx] = _
                 self.update()
@@ -823,8 +834,6 @@ class Topology(object):
         self._set_indices_to(indx_of, "{}:".format(n1))
 
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            print(prop, self._dict[prop].get_types(index=':{}'.format(n1),
-                                                   verbose=False))
             try:
                 max_ = np.max(self._dict[prop].get_types(index=':{}'.format(n1),
                                                          verbose=False))
@@ -832,171 +841,10 @@ class Topology(object):
                 # get_types is empty
                 max_ = 0
             indx_of = {}
-            print(n1, self._dict[prop].get_types(index='{}:'.format(n1),
-                                                   verbose=False))
-            print(self._ins.arrays[prop])
             for i in self._dict[prop].get_types(index='{}:'.format(n1),
                                                 verbose=False):
                 indx_of[i] = i + max_
-            print(prop, indx_of)
             self._dict[prop].set_types_to(indx_of, index='{}:'.format(n1))
 
         # updating ids
         self.update()
-
-
-class TopoAtoms(Atoms):
-    '''
-    Atoms class with methods that support Topology-property methods
-    '''
-
-    def __init__(self,
-                 symbols=None,
-                 topo_dict={},
-                 specorder=None,
-                 *args, **kwargs):
-        if isinstance(symbols, Atoms) and symbols.has('id'):
-            # topology exists
-            topo_dict.update(symbols.topology())
-
-        Atoms.__init__(self, symbols, *args, **kwargs)
-
-        if topo_dict:
-            self.topology = topo_dict
-            self.update(specorder)
-
-    def update(self, specorder=None):
-       self.topology.update(specorder=specorder)
-
-    @property
-    def types(self):
-        return self.arrays['types']
-
-    @types.setter
-    def types(self, other):
-        self.set_array('types', other, int)
-
-    @property
-    def mol_ids(self):
-        return self.arrays['mol-ids']
-
-    @mol_ids.setter
-    def mol_ids(self, other):
-        self.set_array('mol-ids', other, int)
-
-    @property
-    def names(self):
-        return self.arrays['names']
-
-    @names.setter
-    def names(self, other):
-        self.set_array('names', other, int)
-
-    def __delitem__(self, i=-1):
-
-        # the indices should be renamed first
-        self.topology._del_item(i)
-
-        Atoms.__delitem__(self, i)
-
-    def __imul__(self, m):
-        """In-place repeat of atoms."""
-        if isinstance(m, int):
-            m = (m, m, m)
-
-        Atoms.__imul__(self, m)
-
-        self.topology._imul(m)
-
-        return self
-
-    def extend(self,
-               other):
-        """Extend atoms object by appending atoms from *other*.
-        Parameters:
-            other: the other object
-            extend_prop: list of properties to extend"""
-        if isinstance(other, Atom):
-            other = self.__class__([other])
-
-        if type(other) != self.__class__:
-            other = self.__class__(other)
-        other = other.copy()
-        other.update()
-        self.update()
-
-        n1 = len(self)
-        n2 = len(other)
-
-        Atoms.extend(self, other)
-
-        self.topology._extend(n1, n2)
-
-        return self
-
-    __iadd__ = extend
-
-    def copy(self):
-        """Return a copy."""
-        atoms = Atoms.copy(self)
-
-        topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
-        for name in topo_props:
-            if self.has(name):
-                atoms.arrays[name] = deepcopy(self.arrays[name])
-        return atoms
-
-    def get_array(self, name, copy=True):
-        """Get an array.
-
-        Returns a copy unless the optional argument copy is false.
-        """
-        if copy:
-            return deepcopy(self.arrays[name])
-        else:
-            return self.arrays[name]
-
-    def __getitem__(self, item):
-        atoms = Atoms.__getitem__(self, item)
-
-        if isinstance(item, numbers.Integral):
-            return atoms
-        elif not isinstance(item, slice):
-            item = np.array(item)
-            if item.dtype == bool:
-                item = np.arange(len(self))[item]
-
-        topo_props = ['names',
-                      'resnames',
-                      'bonds',
-                      'angles',
-                      'dihedrals',
-                      'impropers']
-        for name in topo_props:
-            if self.has(name):
-                atoms.arrays[name] = deepcopy(self.arrays[name][item])
-
-        atoms.topology._get_item(item)
-
-        return atoms
-
-    def get_topology(self):
-        if self.has('ids'):
-            return Topology(self)
-        else:
-            raise RuntimeError('Topology not initialised;'
-                               ' use: {}.set_topology'
-                               '()'.format(self.__class__.__name__))
-
-    def set_topology(self, value={}):
-        if value is not None:
-            top = Topology(self)
-            top.update(value)
-
-    def _del_topology(self):
-        top = Topology(self)
-        for i in top._dict.keys():
-            del self.arrays[i]
-
-    topology = property(get_topology, set_topology,
-                        _del_topology, doc='handles topology information of atoms')
