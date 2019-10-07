@@ -503,15 +503,21 @@ class _TopoAttribute(object):
             except ValueError:
                 pass
 
+        if indx_of == {}:
+            return
+
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            # keys are reversed so that double change is stopped
-            # eg {1:2, 2:3} would change 1 to 3, which is not intended
-            for key in reversed(list(indx_of.keys())):
-                for indx in np.arange(len(self._ins))[index]:
-                    if key in self._ins.arrays[self.prop][indx].keys():
-                        _ = self._ins.arrays[self.prop][indx].pop(key)
-                        old = self._ins.arrays[self.prop][indx].get(indx_of[key], [])
-                        self._ins.arrays[self.prop][indx][indx_of[key]] = old + _
+            for indx in np.arange(len(self._ins))[index]:
+                keys = self._ins.arrays[self.prop][indx].keys()
+                new_keys = []
+                for i in keys:
+                    if i in indx_of.keys():
+                        new_keys.append(indx_of[i])
+                    else:
+                        new_keys.append(i)
+                values = [self._ins.arrays[self.prop][indx][x] for x in keys]
+                self._ins.arrays[self.prop][indx] = dict(zip(new_keys, values))
+
         elif self.prop in ['mol-ids', 'types', 'names']:
             for indx in np.arange(len(self._ins))[index]:
                 try:
