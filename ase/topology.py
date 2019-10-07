@@ -197,15 +197,17 @@ class _TopoAttribute(object):
             #                          'which is not implemented yet')
         elif self.prop == 'names':
             self._ins.set_array(self.prop, value, object)
+            self.update(_name_set=True)
         elif self.prop in ['types', 'mol-ids']:
             self._ins.set_array(self.prop, value, int)
+            self.update()
         elif self.prop in ['resnames',
                            'bonds',
                            'angles',
                            'dihedrals',
                            'impropers']:
             self.add(value)
-        self.update()
+            self.update()
 
     def get_count(self):
         ''' returns number of prop: bonds, etc.'''
@@ -298,7 +300,12 @@ class _TopoAttribute(object):
             raise NotImplementedError('{} does not support '
                                       'add'.format(self.prop))
 
-    def update(self):
+    def update(self, _name_set=False):
+        '''
+        Parameters
+            _name_set: bool
+                when names are set, types, bonds etc needs updating
+        '''
         def unique_ind(a):
             ''' Returns dict with new indices as values of old indices as keys
             if old index needs a change'''
@@ -420,6 +427,56 @@ class _TopoAttribute(object):
                                     [(ind_of[x] if x in ind_of else x)
                                      for x in types],
                                     int)
+                self._ins.topology['types'].update()
+
+        if _name_set:
+            # update bonds etc
+            for prop in ['bonds',
+                         'angles',
+                         'dihedrals',
+                         'impropers']:
+                items = self._ins.get_array(prop)
+                types = self._ins.topology[prop].get_types()
+                names = self._ins.arrays['names']
+                rev_types = {j: i for i, j in types.items()}
+                for i, item in enumerate(items):
+                    item_ = deepcopy(item)
+                    for key, values in item.items():
+                        pop_ind = []
+                        for j, value in enumerate(values):
+                            eg_list = [i] + value
+                            name_list = names[eg_list].tolist()
+                            if self.prop == 'bonds':
+                                name_list.sort()
+                            if self.prop == 'angles':
+                                # vertex atom is at first index
+                                vertex = name_list.pop(0)
+                                name_list.sort()
+                                name_list.insert(1, vertex)
+                            prop_name = '-'.join(name_list)
+                            if prop_name in rev_types:
+                                if rev_types[prop_name] != key:
+                                    pop_ind.append(j)
+                                    hold = item_.get(rev_types[prop_name], [])
+                                    hold.append(value)
+                                    item_[rev_types[prop_name]] = hold
+                            else:
+                                max_ = max(rev_types.values())
+                                rev_types[prop_name] = max_ + 1
+                                pop_ind.append(j)
+                                hold = item_.get(rev_types[prop_name], [])
+                                hold.append(value)
+                                item_[rev_types[prop_name]] = hold
+                        pop_ind = reversed(pop_ind)
+                        for k in pop_ind:
+                            item_[key].pop(k)
+                        if item_[key] == []:
+                            del item_[key]
+                    items[i] = deepcopy(item_)
+                self._ins.set_array(prop,
+                                    items,
+                                    object)
+                self._ins.topology[prop].update()
 
         if self.prop == 'types':
             # if types get changed,
@@ -672,7 +729,7 @@ class Topology(object):
                         bonds[indx] = bonds.get(indx, []) + [[i, j]]
                         seen_bonds.append([i, j])
                         seen_bonds.append([j, i])
-            self.Bonds.add(bonds)
+            self.bonds.add(bonds)
 
         if 'angles' in topo_dict:
             if 'angles' in self._dict:
@@ -691,7 +748,7 @@ class Topology(object):
                         if name_list in topo_dict['angles']:
                             indx = topo_dict['angles'].index(name_list) + 1 + n_types
                             angles[indx] = angles.get(indx, []) + [[k, i, j]]
-            self.Angles.add(angles)
+            self.angles.add(angles)
 
         if 'dihedrals' in topo_dict:
             if 'dihedrals' in self._dict:
@@ -709,7 +766,7 @@ class Topology(object):
                             if name_list in topo_dict['dihedrals']:
                                 indx = topo_dict['dihedrals'].index(name_list) + 1 + n_types
                                 dihedrals[indx] = dihedrals.get(indx, []) + [[i, j, k, l]]
-            self.Dihedrals.add(dihedrals)
+            self.dihedrals.add(dihedrals)
 
         if 'impropers' in topo_dict:
             if 'impropers' in self._dict:
@@ -727,7 +784,7 @@ class Topology(object):
                             if name_list in topo_dict['impropers']:
                                 indx = topo_dict['impropers'].index(name_list) + 1 + n_types
                                 impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
-            self.Impropers.add(impropers)
+            self.impropers.add(impropers)
 
     def _set_indices_to(self, indx_of, index=":"):
         '''sets indices in bonds, etc as specified in indx_of'''
