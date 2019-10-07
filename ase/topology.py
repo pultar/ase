@@ -535,29 +535,29 @@ class _TopoAttributeProperty(object):
 
 
 class Topology(object):
-    Ids = _TopoAttributeProperty('ids')
-    Names = _TopoAttributeProperty('names')
-    Mol_ids = _TopoAttributeProperty('mol-ids')
-    Types = _TopoAttributeProperty('types')
-    Resnames = _TopoAttributeProperty('resnames')
-    Bonds = _TopoAttributeProperty('bonds')
-    Angles = _TopoAttributeProperty('angles')
-    Dihedrals = _TopoAttributeProperty('dihedrals')
-    Impropers = _TopoAttributeProperty('impropers')
+    ids = _TopoAttributeProperty('ids')
+    names = _TopoAttributeProperty('names')
+    mol_ids = _TopoAttributeProperty('mol-ids')
+    types = _TopoAttributeProperty('types')
+    resnames = _TopoAttributeProperty('resnames')
+    bonds = _TopoAttributeProperty('bonds')
+    angles = _TopoAttributeProperty('angles')
+    dihedrals = _TopoAttributeProperty('dihedrals')
+    impropers = _TopoAttributeProperty('impropers')
 
     def __init__(self, instance):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = instance
-        self._dict = {'names': self.Names,
-                      'ids': self.Ids,
-                      'mol-ids': self.Mol_ids,
-                      'types': self.Types,
-                      'resnames': self.Resnames,
-                      'bonds': self.Bonds,
-                      'angles': self.Angles,
-                      'dihedrals': self.Dihedrals,
-                      'impropers': self.Impropers}
+        self._dict = {'names': self.names,
+                      'ids': self.ids,
+                      'mol-ids': self.mol_ids,
+                      'types': self.types,
+                      'resnames': self.resnames,
+                      'bonds': self.bonds,
+                      'angles': self.angles,
+                      'dihedrals': self.dihedrals,
+                      'impropers': self.impropers}
 
     def __repr__(self):
         tokens = []
