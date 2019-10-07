@@ -27,19 +27,6 @@ class _TopoAttribute(object):
         self._ins = topo_attr_prop._ins
         self.prop = topo_attr_prop.prop
 
-    def _check_exists(func):
-        '''Decorator to check if the property exists'''
-        # Only added to functions on which other functions already depend on
-        # eg get_types, or to functions that don't depend on any other func
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if not self._ins.has(self.prop):
-                raise KeyError('{0} object has no '
-                                   '{1}'.format(self._ins.__class__.__name__,
-                                                self.prop))
-            return func(*args, **kwargs)
-        return wrapper
-
     def __repr__(self):
         if self.prop in ['ids', 'mol-ids']:
             return '1 ... {}'.format(self.get_num_types())
@@ -55,7 +42,6 @@ class _TopoAttribute(object):
             item = reverse_type[item]
         return self.get()[item]
 
-    @_check_exists
     def __delitem__(self, items):
         if not isinstance(items, list):
             items = [items]
@@ -221,7 +207,6 @@ class _TopoAttribute(object):
             self.add(value)
         self.update()
 
-    @_check_exists
     def get_count(self):
         ''' returns number of prop: bonds, etc.'''
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
@@ -450,7 +435,6 @@ class _TopoAttribute(object):
                                  for x in self._ins.get_array(self.prop)],
                                 int)
 
-    @_check_exists
     def set_types_to(self, indx_of, index=":"):
         '''
         :param indx_of: dictionary, changes type from keys -> values
@@ -486,7 +470,6 @@ class _TopoAttribute(object):
                         self._ins.arrays[self.prop][indx] -= set([resname])
                         self._ins.arrays[self.prop][indx] |= set([indx_of[resname]])
 
-    @_check_exists
     def _set_indices_to(self, indx_of, index):
         # selecting set of ids to remove
         if self.prop not in ['bonds', 'angles', 'dihedrals', 'impropers']:
