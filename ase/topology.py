@@ -3,6 +3,8 @@ from copy import deepcopy
 from ase.utils import basestring
 from ase.neighborlist import NeighborList, natural_cutoffs
 
+import operator
+
 
 def string2index(string):
     '''converts sring to index
@@ -435,6 +437,8 @@ class _TopoAttribute(object):
                          'angles',
                          'dihedrals',
                          'impropers']:
+                if not self._ins.has(prop):
+                    continue
                 items = self._ins.get_array(prop)
                 types = self._ins.topology[prop].get_types()
                 names = self._ins.arrays['names']
@@ -1005,12 +1009,14 @@ class TopologyObject(object):
 
     @resnames.setter
     def resnames(self, values):
-        for i in values:
-            if not type(i) is set:
-                raise ValueError('resnames should be sets')
-            for j in i:
-                if not type(j) is str:
-                    raise ValueError('The resname sets should contain str')
+        for i in values.keys():
+            if not type(i) is str:
+                raise ValueError('resnames should be str')
+        for i in values.values():
+            try:
+                _ = np.array(list(i), dtype=int)
+            except ValueError as e:
+                raise ValueError(e, 'resnames indices should be int')
         self._dict['resnames'] = values
 
     @property
@@ -1020,18 +1026,20 @@ class TopologyObject(object):
     @bonds.setter
     def bonds(self, values):
         if not type(values) is dict:
-            raise ValueError('bonds should be dict')
-        for key in values.keys():
-            if not type(key) is int:
-                raise ValueError('bonds keys should be int')
+            raise TypeError('bonds should be dict')
+        try:
+            _ = np.array(list(values.keys()), dtype=int)
+        except ValueError as e:
+            raise ValueError(e, 'bonds keys should be int')
         for bonds in values.values():
             for bond in bonds:
                 if len(bond) != self.lengths['bonds']:
                     raise ValueError('bonds should be of size '
                                      '{}'.format(self.lengths['bonds']))
-                for ind in bond:
-                    if not type(ind) is int:
-                        raise ValueError('bond indices should be int')
+                try:
+                    _ = np.array(bond, dtype=int)
+                except ValueError as e:
+                    raise ValueError(e, 'bond indices should be int')
         self._dict['bonds'] = values
 
     @property
@@ -1041,18 +1049,21 @@ class TopologyObject(object):
     @angles.setter
     def angles(self, values):
         if not type(values) is dict:
-            raise ValueError('angles should be dict')
+            raise TypeError('angles should be dict')
         for key in values.keys():
-            if not type(key) is int:
-                raise ValueError('angles keys should be int')
+            try:
+                _ = operator.index(key)
+            except TypeError as e:
+                raise TypeError(e, 'angles keys should be int')
         for angles in values.values():
             for angle in angles:
                 if len(angle) != self.lengths['angles']:
                     raise ValueError('angles should be of size '
                                      '{}'.format(self.lengths['angles']))
-                for ind in angle:
-                    if not type(ind) is int:
-                        raise ValueError('angle indices should be int')
+                try:
+                    _ = np.array(angle, dtype=int)
+                except ValueError as e:
+                    raise ValueError(e, 'angle indices should be int')
         self._dict['angles'] = values
 
     @property
@@ -1062,18 +1073,21 @@ class TopologyObject(object):
     @dihedrals.setter
     def dihedrals(self, values):
         if not type(values) is dict:
-            raise ValueError('dihedrals should be dict')
+            raise TypeError('dihedrals should be dict')
         for key in values.keys():
-            if not type(key) is int:
-                raise ValueError('dihedrals keys should be int')
+            try:
+                _ = operator.index(key)
+            except TypeError as e:
+                raise TypeError(e, 'dihedrals keys should be int')
         for dihedrals in values.values():
             for dihedral in dihedrals:
                 if len(dihedral) != self.lengths['dihedrals']:
                     raise ValueError('dihedrals should be of size '
                                      '{}'.format(self.lengths['dihedrals']))
-                for ind in dihedral:
-                    if not type(ind) is int:
-                        raise ValueError('dihedral indices should be int')
+                try:
+                    _ = np.array(dihedral, dtype=int)
+                except ValueError as e:
+                    raise ValueError(e, 'dihedral indices should be int')
         self._dict['dihedrals'] = values
 
     @property
@@ -1083,16 +1097,19 @@ class TopologyObject(object):
     @impropers.setter
     def impropers(self, values):
         if not type(values) is dict:
-            raise ValueError('impropers should be dict')
+            raise TypeError('impropers should be dict')
         for key in values.keys():
-            if not type(key) is int:
-                raise ValueError('impropers keys should be int')
+            try:
+                _ = operator.index(key)
+            except TypeError as e:
+                raise TypeError(e, 'impropers keys should be int')
         for impropers in values.values():
             for improper in impropers:
                 if len(improper) != self.lengths['impropers']:
                     raise ValueError('impropers should be of size '
                                      '{}'.format(self.lengths['impropers']))
-                for ind in improper:
-                    if not type(ind) is int:
-                        raise ValueError('improper indices should be int')
+                try:
+                    _ = np.array(improper, dtype=int)
+                except ValueError as e:
+                    raise ValueError(e, 'improper indices should be int')
         self._dict['impropers'] = values
