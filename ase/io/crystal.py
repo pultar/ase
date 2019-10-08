@@ -129,8 +129,11 @@ def write_crystal(filename, atoms, symmetry=None,
         myfile.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
 
     # Convert symmetry operations to Cartesian coordinates before writing
-    cart_vectors = atoms.cell.T
-    inv_cart_vectors = np.linalg.inv(cart_vectors)
+    if atoms.cell.T.any():
+        cart_vectors = atoms.cell.T
+        inv_cart_vectors = np.linalg.inv(cart_vectors)
+    else:
+        cart_vectors = inv_cart_vectors = np.eye(3)  # use identity if no cell
 
     myfile.write('{0:5d}\n'.format(len(spg.get_symop())))
     for rotation, translation in spg.get_symop():
