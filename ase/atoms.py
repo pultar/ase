@@ -1019,7 +1019,7 @@ class Atoms(object):
 
         atoms.constraints = conadd
         if self.has('ids'):
-            atoms.topology._get_item(i)
+            atoms.topology._get_item(i, len(self))
         return atoms
 
     def __delitem__(self, i):

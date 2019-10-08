@@ -811,13 +811,18 @@ class Topology(object):
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             self._dict[prop]._set_indices_to(indx_of, index)
 
-    def _get_item(self, item):
+    def _get_item(self, item, len_self):
         '''used when _get_item is called in atoms object
         Method corrects bonds, angles, dihedrals, and impropers that
-        point to wrong indices due to array slicing'''
-        indx_of = {i: None for i in range(len(self._ins))}
+        point to wrong indices due to array slicing
+        parameters
+            item: slice
+                Used for selecting atoms
+            len_self: int
+                length of original Atoms object'''
+        indx_of = {i: None for i in range(len_self)}
         count = 0
-        for i in np.array(range(len(self._ins)))[item]:
+        for i in np.array(range(len_self))[item]:
             indx_of[i] = count
             count += 1
         self._set_indices_to(indx_of)
