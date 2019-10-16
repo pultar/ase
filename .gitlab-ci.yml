@@ -39,7 +39,7 @@ python_3_tests:
   image: python:3-slim
   script:
     - pip install flake8 pymysql cryptography
-    - pip install scipy==1.2.1  # TODO: Delete me
+    - pip install scipy
     - pip install .
     - python --version
     - ase test --strict
