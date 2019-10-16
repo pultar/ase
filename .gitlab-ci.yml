@@ -62,9 +62,10 @@ python_3_tests:
 #     - python --version
 #     - ase test --strict
 
-# Should be same image as python_3_tests
+# Should be same image as python_3_tests except
+# not slim because then we don't have tk
 docs_test:
-  image: python:3.7-slim
+  image: python:3.7
   script:
     - pip install .[docs]
     - ase info
