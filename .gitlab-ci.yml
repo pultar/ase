@@ -36,7 +36,7 @@ python_3_oldlibs_tests:
 # Also netCDF4.  We should re-enable as soon as possible.
 # --askhl 2019-10-16
 python_3_tests:
-  image: python:3-slim
+  image: python:buster
   script:
     - pip install flake8 pymysql cryptography
     - pip install scipy
