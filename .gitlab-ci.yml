@@ -31,15 +31,11 @@ python_3_oldlibs_tests:
 # We currently use scipy 1.2.1 because of failures with 1.3.0 on py3.7.
 # TODO: Make things work with 1.3.0
 # psycopg2-binary is for testing the postgres backend for ase.db
-#
-# psycopg2-binary install currently failing, I am removing this.
-# Also netCDF4.  We should re-enable as soon as possible.
-# --askhl 2019-10-16
 python_3_tests:
-  image: python:buster
+  image: python:3.7-slim
   script:
-    - pip install flake8 pymysql cryptography
-    - pip install scipy
+    - pip install flake8 psycopg2-binary netCDF4 pymysql cryptography
+    - pip install scipy==1.2.1  # TODO: Delete me
     - pip install .
     - python --version
     - ase test --strict
