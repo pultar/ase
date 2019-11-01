@@ -53,7 +53,7 @@ python_3_tests:
 #
 # Grrr.  Failing after image updates, or something.  Disabling.
 # --askhl 2019-10-16
-conda_tests:
+.conda_tests:
   image: continuumio/anaconda3
   script:
     - apt-get update
