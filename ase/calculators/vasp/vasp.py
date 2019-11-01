@@ -758,7 +758,7 @@ class Vasp(GenerateVaspInput, Calculator):
 
         """
 
-        return self._read_vib_eigenvalues(self, units="cm-1", lines=lines)
+        return self._read_vib_eigenvalues("cm-1", lines=lines)
 
     def get_vib_energies(self, lines=None):
         """
@@ -789,11 +789,11 @@ class Vasp(GenerateVaspInput, Calculator):
         """
 
         freq, ifreq = self._read_vib_eigenvalues(
-            self, units="meV", lines=lines)
+            "meV", lines=lines)
 
         # Convert from meV to eV.
-        freq = (np.array(freq) / 1e3).tolist()
-        ifreq = (np.array(ifreq) / 1e3).tolist()
+        freq = (np.array(freq) / 1.0e3).tolist()
+        ifreq = (np.array(ifreq) / 1.0e3).tolist()
 
         return freq, ifreq
 
@@ -834,7 +834,7 @@ class Vasp(GenerateVaspInput, Calculator):
               "We recommend using the get_vib_energies function, which"
               "conforms to ASE's standard energy unit of eV."))
 
-        return self._read_vib_eigenvalues(self, units="meV", lines=lines)
+        return self._read_vib_eigenvalues("meV", lines=lines)
 
     def get_nonselfconsistent_energies(self, bee_type):
         """ Method that reads and returns BEE energy contributions
