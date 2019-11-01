@@ -29,12 +29,26 @@ class _TopoAttribute(object):
         self._ins = topo_attr_prop._ins
         self.prop = topo_attr_prop.prop
 
+    def _check_exists(func):
+        '''Decorator to check if the property exists'''
+        # Only added to functions which need already existing values in
+        # atoms.arrays, otherwise the counting methods return 0
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            if not self._ins.has(self.prop):
+                raise KeyError('{0} object has no '
+                                   '{1}'.format(self._ins.__class__.__name__,
+                                                self.prop))
+            return func(*args, **kwargs)
+        return wrapper
+
     def __repr__(self):
         if self.prop in ['ids', 'mol-ids']:
             return '1 ... {}'.format(self.get_num_types())
         else:
             return str(self.get_types())
 
+    @_check_exists
     def __getitem__(self, item):
         if type(item) is str and self.prop in ['bonds',
                                                'angles',
@@ -44,6 +58,7 @@ class _TopoAttribute(object):
             item = reverse_type[item]
         return self.get()[item]
 
+    @_check_exists
     def __delitem__(self, items):
         if not isinstance(items, list):
             items = [items]
@@ -105,30 +120,25 @@ class _TopoAttribute(object):
             for indx in range(len(items)):
                 # holds empty keys for deletion later
                 del_key = []
-                # extend() can bring int item
-                # which gives AttributeError at item.items()
-                try:
-                    for key, value in items[indx].items():
-                        # holds index of list that contains removed bonds etc
-                        del_id = []
-                        for i, j in enumerate(value):
-                            if np.any([x in ids for x in j]):
-                                del_id.append(i)
-                            else:
-                                for k, l in enumerate(j):
-                                    value[i][k] = indx_of[l]
-                        del_id.sort(reverse=True)
-                        for i in del_id:
-                            value.pop(i)
-                        # If value is empty then mark key for delition
-                        # note that if it is empty, the arrays is not changed
-                        # hence, delition is necessary
-                        if len(value) == 0:
-                            del_key.append(key)
+                for key, value in items[indx].items():
+                    # holds index of list that contains removed bonds etc
+                    del_id = []
+                    for i, j in enumerate(value):
+                        if np.any([x in ids for x in j]):
+                            del_id.append(i)
                         else:
-                            items[indx][key] = value
-                except AttributeError:
-                    items[indx] = {}
+                            for k, l in enumerate(j):
+                                value[i][k] = indx_of[l]
+                    del_id.sort(reverse=True)
+                    for i in del_id:
+                        value.pop(i)
+                    # If value is empty then mark key for delition
+                    # note that if it is empty, the arrays is not changed
+                    # hence, delition is necessary
+                    if len(value) == 0:
+                        del_key.append(key)
+                    else:
+                        items[indx][key] = value
 
                 for i in del_key:
                     items[indx].pop(i)
@@ -163,6 +173,7 @@ class _TopoAttribute(object):
         else:
             return np.unique(self._ins.get_array(self.prop)[index])
 
+    @_check_exists
     def get(self):
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             d = {}
@@ -214,6 +225,8 @@ class _TopoAttribute(object):
     def get_count(self):
         ''' returns number of prop: bonds, etc.'''
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+            if not self._ins.has(self.prop):
+                return 0
             items = self._ins.arrays[self.prop]
             values = [j for x in items for i in x.values() for j in i]
             return len(values)
@@ -322,25 +335,22 @@ class _TopoAttribute(object):
                          'angles',
                          'dihedrals',
                          'impropers']:
-            if not self._ins.has(self.prop):
-                self._ins.set_array(self.prop,
-                                    [{} for _ in range(len(self._ins))],
-                                    object)
             # Correct if same prop has two types
-            types = self.get_types()
-            if len(set(types.keys())) != len(set(types.values())):
-                # same prop has two types
-                rev_types = {}
-                for i in reversed(list(types.keys())):
-                    rev_types[types[i]] = i
-                ind_of = {}
-                for i, j in types.items():
-                    if i != rev_types[j]:
-                        ind_of[i] = rev_types[j]
-                self.set_types_to(ind_of)
+            if self._ins.has(self.prop):
+                types = self.get_types()
+                if len(set(types.keys())) != len(set(types.values())):
+                    # same prop has two types
+                    rev_types = {}
+                    for i in reversed(list(types.keys())):
+                        rev_types[types[i]] = i
+                    ind_of = {}
+                    for i, j in types.items():
+                        if i != rev_types[j]:
+                            ind_of[i] = rev_types[j]
+                    self.set_types_to(ind_of)
 
-            ind_of = unique_ind(self.get_types(verbose=False))
-            self.set_types_to(ind_of)
+                ind_of = unique_ind(self.get_types(verbose=False))
+                self.set_types_to(ind_of)
 
         elif self.prop == 'ids':
             self._ins.arrays[self.prop] = np.arange(len(self._ins)) + 1
@@ -496,6 +506,7 @@ class _TopoAttribute(object):
                                  for x in self._ins.get_array(self.prop)],
                                 int)
 
+    @_check_exists
     def set_types_to(self, indx_of, index=":"):
         '''
         :param indx_of: dictionary, changes type from keys -> values
@@ -537,6 +548,7 @@ class _TopoAttribute(object):
                         self._ins.arrays[self.prop][indx] -= set([resname])
                         self._ins.arrays[self.prop][indx] |= set([indx_of[resname]])
 
+    @_check_exists
     def _set_indices_to(self, indx_of, index):
         # selecting set of ids to remove
         if self.prop not in ['bonds', 'angles', 'dihedrals', 'impropers']:
@@ -616,15 +628,25 @@ class Topology(object):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = instance
-        self._dict = {'names': self.names,
-                      'ids': self.ids,
-                      'mol-ids': self.mol_ids,
-                      'types': self.types,
-                      'resnames': self.resnames,
-                      'bonds': self.bonds,
-                      'angles': self.angles,
-                      'dihedrals': self.dihedrals,
-                      'impropers': self.impropers}
+        # a dict to hold all attributes
+        self._prop_dict = {'names': self.names,
+                           'ids': self.ids,
+                           'mol-ids': self.mol_ids,
+                           'types': self.types,
+                           'resnames': self.resnames,
+                           'bonds': self.bonds,
+                           'angles': self.angles,
+                           'dihedrals': self.dihedrals,
+                           'impropers': self.impropers}
+        # a dict to store only available properties
+        # ids, mol-ids, names, and types should always be present
+        self._dict = {}
+        for key, val in self._prop_dict.items():
+            if self._ins.has(key) or key in ['ids',
+                                             'mol-ids',
+                                             'names',
+                                             'types']:
+                self._dict[key] = val
 
     def __repr__(self):
         tokens = []
@@ -667,6 +689,9 @@ class Topology(object):
                                 int)
 
         # types should be updated before names
+        # if types are defined
+        # but not names, eg when reading lammps dump
+        # names have to be different
         for prop in ['ids',
                      'types',
                      'names',
@@ -677,8 +702,9 @@ class Topology(object):
                      'dihedrals',
                      'impropers']:
             if prop in topo_dict:
+                self._dict[prop] = self._prop_dict[prop]
                 self._dict[prop].set(topo_dict[prop])
-            else:
+            elif prop in self._dict:
                 self._dict[prop].update()
 
     def generate(self, topo_dict, cutoffs=None):
@@ -813,7 +839,8 @@ class Topology(object):
 
         # removing bonds etc containing non-existing ids
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            self._dict[prop]._set_indices_to(indx_of, index)
+            if prop in self._dict:
+                self._dict[prop]._set_indices_to(indx_of, index)
 
     def _get_item(self, item, len_self):
         '''used when _get_item is called in atoms object
@@ -896,17 +923,18 @@ class Topology(object):
         self._set_indices_to(indx_of, "{}:".format(n1))
 
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            try:
-                max_ = np.max(self._dict[prop].get_types(index=':{}'.format(n1),
-                                                         verbose=False))
-            except ValueError:
-                # get_types is empty
-                max_ = 0
-            indx_of = {}
-            for i in self._dict[prop].get_types(index='{}:'.format(n1),
-                                                verbose=False):
-                indx_of[i] = i + max_
-            self._dict[prop].set_types_to(indx_of, index='{}:'.format(n1))
+            if prop in self._dict:
+                try:
+                    max_ = np.max(self._dict[prop].get_types(index=':{}'.format(n1),
+                                                             verbose=False))
+                except ValueError:
+                    # get_types is empty
+                    max_ = 0
+                indx_of = {}
+                for i in self._dict[prop].get_types(index='{}:'.format(n1),
+                                                    verbose=False):
+                    indx_of[i] = i + max_
+                self._dict[prop].set_types_to(indx_of, index='{}:'.format(n1))
 
         # updating ids
         self.update()
