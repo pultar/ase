@@ -18,7 +18,7 @@ variables:
 #
 # Py3.5 wheels exist from scipy-0.16.x, July 2015.  We choose scipy-0.17.1.
 # Consistent with numpy-1.10.x (October 2015).  We choose 1.10.4.
-python_3_oldlibs_tests:
+.python_3_oldlibs_tests:
   image: python:3.5-slim
   script:
     - pip install numpy==1.10.4 scipy==0.17.1 matplotlib==2.0.0
@@ -32,7 +32,7 @@ python_3_oldlibs_tests:
 # We currently use scipy 1.2.1 because of failures with 1.3.0 on py3.7.
 # TODO: Make things work with 1.3.0
 # psycopg2-binary is for testing the postgres backend for ase.db
-python_3_tests:
+.python_3_tests:
   image: python:3.7-slim
   script:
     - pip install flake8 psycopg2-binary netCDF4 pymysql cryptography
@@ -51,20 +51,20 @@ python_3_tests:
 #
 # Grrr.  Failing after image updates, or something.  Disabling.
 # --askhl 2019-10-16
-#conda_tests:
-#   image: continuumio/anaconda3
-#   script:
-#     - apt-get update
-#     - echo $PATH
-#     - export PATH=/opt/conda/bin:$PATH
-#     - conda install -yq pip wheel numpy scipy==1.2.1 matplotlib flask
-#     - pip install .
-#     - python --version
-#     - ase test --strict
+.conda_tests:
+   image: continuumio/anaconda3
+   script:
+     - apt-get update
+     - echo $PATH
+     - export PATH=/opt/conda/bin:$PATH
+     - conda install -yq pip wheel numpy scipy==1.2.1 matplotlib flask
+     - pip install .
+     - python --version
+     - ase test --strict
 
 # Should be same image as python_3_tests except
 # not slim because then we don't have tk
-docs_test:
+.docs_test:
   image: python:3.7
   script:
     - pip install .[docs]
