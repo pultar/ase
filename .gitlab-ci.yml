@@ -78,7 +78,8 @@ variables:
 distribution_package:
   image: python:3.7
   script:
-    - apt-get install gettext  # For compiling ase gui translations
+    - apt-get update
+    - apt-get install -y gettext  # For compiling ase gui translations
     - mkdir dist
     - python setup.py sdist | tee dist/setup_sdist.log
     - python setup.py bdist_wheel | tee dist/setup_bdist_wheel.log
