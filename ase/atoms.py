@@ -944,6 +944,10 @@ class Atoms(object):
             a[n1:] = a2
             if name == 'masses':
                 a[:n1] = self.get_masses()[:n1]
+            elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
+                a[:n1] = {}
+            elif name == 'resnames':
+                a[:n1] = set([])
             else:
                 a[:n1] = 0
 
