@@ -947,7 +947,7 @@ class Atoms(object):
             elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
                 a[:n1] = {}
             elif name == 'resnames':
-                a[:n1] = set([])
+                a[:n1] = ''
             else:
                 a[:n1] = 0
 

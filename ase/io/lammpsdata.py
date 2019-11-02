@@ -214,6 +214,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                                        "".format(style, len(fields)))
                 if line_comment:
                     resname_in[id] = set(line_comment.split())
+                else:
+                    resname_in[id] = set([])
             elif section == "Velocities":  # id vx vy vz
                 vel_in[int(fields[0])] = (
                     float(fields[1]),
@@ -385,6 +387,10 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         # if names exist
         if names is not None:
             resnames -= np.asarray([set([i]) for i in names])
+        # converting resnames to string object
+        for i in range(N):
+            resname = list(resnames[i])
+            resnames[i] = (resname[0] if len(resname) > 0 else '')
         at.set_array('resnames', resnames, object)
 
     if bonds is not None:
@@ -552,8 +558,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             f.write(' # {0}'.format(names[i]).encode("utf-8")
                     )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))
-                                      ).encode("utf-8"))
+                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
             f.write('\n'.encode("utf-8"))
     elif style == 'charge':
         # id type q x y z [tx ty tz]
@@ -576,8 +581,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             f.write(' # {0}'.format(names[i]).encode("utf-8")
                     )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))
-                                      ).encode("utf-8"))
+                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
             f.write('\n'.encode("utf-8"))
     elif style == 'atomic':
         # id type x y z [tx ty tz]
@@ -596,8 +600,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             f.write(' # {0}'.format(names[i]).encode("utf-8")
                     )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))
-                                      ).encode("utf-8"))
+                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
             f.write('\n'.encode("utf-8"))
     elif (style == 'angle' or style == 'bond' or
           style == 'molecular'):
@@ -618,8 +621,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
             f.write(' # {0}'.format(names[i]).encode("utf-8")
                     )
             if resnames is not None:
-                f.write(' {0}'.format(' '.join(list(resnames[i]))
-                                      ).encode("utf-8"))
+                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
             f.write('\n'.encode("utf-8"))
     else:
         raise NotImplementedError('style {0} not supported. '

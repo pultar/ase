@@ -166,10 +166,8 @@ class _TopoAttribute(object):
                 types[key] = '-'.join(name_list)
             return types
         elif self.prop == 'resnames':
-            types = set()
-            for i in self._ins.arrays[self.prop][index]:
-                types |= i
-            return np.asarray(list(types))
+            types = np.unique(self._ins.get_array(self.prop)[index])
+            return np.array(list(set(types) - set([''])))
         else:
             return np.unique(self._ins.get_array(self.prop)[index])
 
@@ -188,8 +186,8 @@ class _TopoAttribute(object):
             return d
         elif self.prop == 'resnames':
             d = {}
-            for i, resnames in enumerate(self._ins.arrays['resnames']):
-                for resname in resnames:
+            for i, resname in enumerate(self._ins.get_array(self.prop)):
+                if not resname == '':
                     d[resname] = d.get(resname, []) + [i]
             return d
         else:
@@ -301,16 +299,15 @@ class _TopoAttribute(object):
             self._ins.set_array(self.prop, array, object)
             self.update()
         elif self.prop == 'resnames':
-            if not self._ins.has('resnames'):
-                array = [set() for _ in range(len(self._ins))]
+            if self._ins.has('resnames'):
+                resnames = self._ins.get_array(self.prop)
             else:
-                array = self._ins.get_array('resnames')
+                resnames = ['' for _ in range(len(self._ins))]
 
-            for key, values in items.items():
-                for i in values:
-                    array[i] |= set([key])
-
-            self._ins.set_array('resnames', array, object)
+            for key, vals in items.items():
+                for val in vals:
+                    resnames[val] = key
+            self._ins.set_array(self.prop, resnames, object)
         else:
             raise NotImplementedError('{} does not support '
                                       'add'.format(self.prop))
@@ -365,13 +362,6 @@ class _TopoAttribute(object):
                                 [(ind_of[x] if x in ind_of else x)
                                  for x in self._ins.get_array(self.prop)],
                                 int)
-
-
-        elif self.prop == 'resnames':
-            if not self._ins.has(self.prop):
-                self._ins.set_array(self.prop,
-                                    [set() for _ in range(len(self._ins))],
-                                    object)
 
         elif self.prop == 'names':
             if not self._ins.has('names'):
@@ -533,20 +523,14 @@ class _TopoAttribute(object):
                 values = [self._ins.arrays[self.prop][indx][x] for x in keys]
                 self._ins.arrays[self.prop][indx] = dict(zip(new_keys, values))
 
-        elif self.prop in ['mol-ids', 'types', 'names']:
+        elif self.prop in ['mol-ids', 'types', 'names', 'resnames']:
             for indx in np.arange(len(self._ins))[index]:
                 try:
                     _ = indx_of[self._ins.arrays[self.prop][indx]]
                 except IndexError:
                     continue
                 self._ins.arrays[self.prop][indx] = _
-                self.update()
-        elif self.prop == 'resname':
-            for indx in np.arange(len(self._ins))[index]:
-                for resname in self._ins.arrays[self.prop][indx]:
-                    if resname in indx_of.keys():
-                        self._ins.arrays[self.prop][indx] -= set([resname])
-                        self._ins.arrays[self.prop][indx] |= set([indx_of[resname]])
+            self.update()
 
     @_check_exists
     def _set_indices_to(self, indx_of, index):
@@ -696,7 +680,6 @@ class Topology(object):
                      'types',
                      'names',
                      'mol-ids',
-                     'resnames',
                      'bonds',
                      'angles',
                      'dihedrals',
