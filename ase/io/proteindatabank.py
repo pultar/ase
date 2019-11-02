@@ -19,7 +19,7 @@ from ase.geometry import cellpar_to_cell
 from ase.utils import basestring
 from ase.io.espresso import label_to_symbol
 
-
+# TODO: read and write of 'CONECT' field with topology
 def read_atom_line(line_full):
     """
     Read atom line from pdb format
@@ -33,8 +33,10 @@ def read_atom_line(line_full):
         name = line[12:16].strip()
 
         altloc = line[16]
-        resname = line[17:21]
-        # chainid = line[21]        # Not used 
+        # resname and chainid are merged
+        #  they are space separated
+        resname = line[17:22]
+        # chainid = line[21]
 
         resseq = int(line[22:26].split()[0])  # sequence identifier
         # icode = line[26]          # insertion code, not used
@@ -62,7 +64,7 @@ def read_atom_line(line_full):
             bfactor = 0.0  # The PDB use a default of zero if the data is missing
 
         # segid = line[72:76] # not used
-        symbol = line[76:78].strip().upper()
+        symbol = line[76:78].strip().capitalize()
 
     else:
         raise ValueError("Only ATOM and HETATM supported")
@@ -99,9 +101,9 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
 
         info = {'occupancy': occ,
                 'bfactor': bfactor,
-                'residuenames': residuenames,
-                'atomtypes': atomtypes,
-                'residuenumbers': residuenumbers}
+                'resnames': residuenames,
+                'names': atomtypes,
+                'mol-ids': residuenumbers}
         for name, array in info.items():
             if len(array) == 0:
                 pass
@@ -111,6 +113,7 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
                               format(name, len(array), len(atoms)))
             else:
                 atoms.set_array(name, np.array(array))
+        atoms.set_topology()
         return atoms
 
     for line in fileobj.readlines():
@@ -188,6 +191,10 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
     if hasattr(images, 'get_positions'):
         images = [images]
 
+    fileobj.write('TITLE     '
+                  '{}\n'.format(images[0].get_chemical_formula().upper()))
+    fileobj.write('AUTHOR    ASE\n')
+
 
     rotation = None
     if images[0].get_pbc().any():
@@ -203,8 +210,8 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
                                 cellpar[3], cellpar[4], cellpar[5]))
 
     #     1234567 123 6789012345678901   89   67   456789012345678901234567 890
-    format = ('ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f%6.2f%6.2f'
-              '          %2s  \n')
+    format = ('ATOM  {0:>5d} {1:4s} {2:>3s} {3:1s}{4:>4d}    {5:8.3f}'
+              '{6:8.3f}{7:8.3f}{8:6.2f}{9:6.2f}          {10:>2s}  \n')
 
     # RasMol complains if the atom index exceeds 100000. There might
     # be a limit of 5 digit numbers in this field.
@@ -215,6 +222,35 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
 
     for n, atoms in enumerate(images):
         fileobj.write('MODEL     ' + str(n + 1) + '\n')
+        if atoms.has('ids'):
+            # topology exists
+            names = atoms.get_array('names')
+            resnames = atoms.get_array('resnames')
+            resnames[resnames == ''] = 'MOL'
+            resnumbers = atoms.get_array('mol-ids')
+            # making sure that atoms with same mol-id has same resname
+            # a resname can have atoms of different mol-ids
+            restypes = {}
+            change = {}
+            max_resnumber = np.max(resnumbers)
+            for i, resnumber in enumerate(resnumbers):
+                if resnumber not in restypes:
+                    restypes[resnumber] = resnames[i]
+                if restypes[resnumber] != resnames[i]:
+                    if resnames[i] not in change:
+                        change[resnames[i]] = {}
+                    if resnumber in change[resnames[i]]:
+                        resnumbers[i] = change[resnames[i]][resnumber]
+                    else:
+                        resnumbers[i] = max_resnumber + 1
+                        restypes[resnumbers[i]] = resnames[i]
+                        max_resnumber += 1
+                        change[resnames[i]][resnumber] = resnumbers[i]
+
+        else:
+            names = symbols
+            resnames = ['MOL'] * natoms
+            resnumbers = [1] * natoms
         p = atoms.get_positions()
         occupancy = np.ones(len(atoms))
         bfactor = np.zeros(len(atoms))
@@ -229,6 +265,10 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
             x, y, z = p[a]
             occ = occupancy[a]
             bf = bfactor[a]
-            fileobj.write(format % (a % MAXNUM, symbols[a],
-                                    x, y, z, occ, bf, symbols[a].upper()))
+            resname = resnames[a].split()[0]
+            chain_id = ('A' if len(resnames[a].split()) == 1
+                        else resnames[a].split()[1])
+            fileobj.write(format.format(a % MAXNUM + 1, names[a], resname,
+                                        chain_id, resnumbers[a],
+                                        x, y, z, occ, bf, symbols[a].upper()))
         fileobj.write('ENDMDL\n')
