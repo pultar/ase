@@ -62,7 +62,7 @@ class _TopoAttribute(object):
     def __delitem__(self, items):
         if not isinstance(items, list):
             items = [items]
-        if self.prop in ['resname',
+        if self.prop in ['resnames',
                          'bonds',
                          'angles',
                          'dihedrals',
@@ -202,6 +202,8 @@ class _TopoAttribute(object):
         if self._ins.has(self.prop):
             # delete array
             del self._ins.arrays[self.prop]
+        if value is None:
+            return None
         if self.prop == 'ids':
             self.update()
             #raise NotImplementedError('changing ids shuffles the atoms,'

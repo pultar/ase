@@ -935,6 +935,10 @@ class Atoms(object):
                 a2 = other.arrays.get(name)
             if a2 is not None:
                 a[n1:] = a2
+            elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
+                a[n1:] = {}
+            elif name == 'resnames':
+                a[n1:] = ''
             self.arrays[name] = a
 
         for name, a2 in other.arrays.items():
