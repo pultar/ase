@@ -692,7 +692,29 @@ class Topology(object):
             elif prop in self._dict:
                 self._dict[prop].update()
 
-    def generate(self, topo_dict, cutoffs=None):
+    def generate_with_names(self, topo_dict, cutoffs=None):
+        '''
+        Generates bonds, angles, dihedrals, and impropers based on names
+        of atoms, given as topo_dict
+
+        Parameters:
+        topo_dict: dictionary with 'bonds', 'angles', 'dihedrals', and
+            'impropers' as keys, and a list of list of names involved in bonds/
+            angles/impropers/dihedrals
+        cutoffs: float array with cuttoffs of each atom in atoms object
+
+        Example:
+
+        >>> water = Atoms('H2O', positions=[[0, 0, 0],
+        ...                                 [1, 1, 0],
+        ...                                 [-1, -1, 0]]
+        ...              )
+        >>> water.set_topology()
+        >>> water.topology.generate_with_names({'bonds': [['H', 'O']],
+         ...                                    'angles': [['H', 'O', 'H']]}
+         ...                                  )
+        '''
+
         # check and reformat topo_dict
         length = {'bonds': 2,
                   'angles': 3,
@@ -813,6 +835,58 @@ class Topology(object):
                                 indx = topo_dict['impropers'].index(name_list) + 1 + n_types
                                 impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
             self.impropers.add(impropers)
+
+    def generate_with_indices(self, topo_dict):
+        '''
+        Generates bonds, angles, dihedrals, and impropers based on indices
+        of atoms, given as topo_dict
+        The property is automatically assigned type, base of names of property
+        involved
+
+        Parameters:
+        topo_dict: dictionary with 'bonds', 'angles', 'dihedrals', and
+            'impropers' as keys, and a list of list of indices involved in bonds/
+            angles/impropers/dihedrals
+
+        Example:
+
+        >>> water = Atoms('H2O', positions=[[0, 0, 0],
+        ...                                 [1, 1, 0],
+        ...                                 [-1, -1, 0]]
+        ...              )
+        >>> water.set_topology()
+        >>> water.topology.generate_with_indices({'bonds': [[0, 2], [1, 2]],
+         ...                                      'angles': [[0, 2, 1]]}
+         ...                                    )
+        '''
+
+        # check and reformat topo_dict
+        length = {'bonds': 2,
+                  'angles': 3,
+                  'dihedrals': 4,
+                  'impropers': 4}
+
+        for key, values in topo_dict.items():
+            if key not in ['bonds', 'angles', 'dihedrals', 'impropers']:
+                raise ValueError('{} not supported. Supported properties: '
+                                 '{}'.format(key, ['bonds',
+                                                   'angles',
+                                                   'dihedrals',
+                                                   'impropers']))
+            if type(values) == np.ndarray:
+                values = values.tolist()
+                topo_dict[key] = topo_dict[key].tolist()
+
+            if not np.all([len(x) == length[key] for x in values]):
+                raise ValueError('{} are lists of length '
+                                 '{}'.format(key, length[key]))
+
+        for key, values in topo_dict.items():
+            self._prop_dict[key].add({1: values})
+
+        # update as if names has to be set
+        # this updates properties with names
+        self.names.update(_name_set=True)
 
     def _set_indices_to(self, indx_of, index=":"):
         '''sets indices in bonds, etc as specified in indx_of'''
