@@ -246,6 +246,9 @@ class _TopoAttribute(object):
                   'dihedrals': 4,
                   'impropers': 4}
 
+        if len(items) == 0:
+            return
+
         if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
             if not self._ins.has(self.prop):
                 array = [{} for i in range(len(self._ins))]
