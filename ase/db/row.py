@@ -244,6 +244,9 @@ class AtomsRow:
                 atoms.info['key_value_pairs'] = self.key_value_pairs
             data = self.get('data')
             if data:
+                if 'topology' in data:
+                    atoms.set_topology(data['topology'])
+                    data.pop('topology')
                 atoms.info['data'] = data
 
         return atoms
