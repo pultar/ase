@@ -1120,7 +1120,8 @@ class TopologyObject(object):
         try:
             _ = np.array(list(values.keys()), dtype=int)
         except ValueError as e:
-            raise ValueError(e, 'bonds keys should be int')
+            raise ValueError(e.args[0]
+                            + ' bonds keys should be int')
         for bonds in values.values():
             for bond in bonds:
                 if len(bond) != self.lengths['bonds']:
@@ -1129,7 +1130,8 @@ class TopologyObject(object):
                 try:
                     _ = np.array(bond, dtype=int)
                 except ValueError as e:
-                    raise ValueError(e, 'bond indices should be int')
+                    raise ValueError(e.args[0]
+                                    + ' bond indices should be int')
         self._dict['bonds'] = values
 
     @property
@@ -1144,7 +1146,8 @@ class TopologyObject(object):
             try:
                 _ = operator.index(key)
             except TypeError as e:
-                raise TypeError(e, 'angles keys should be int')
+                raise TypeError(e.args[0]
+                                + ' angles keys should be int')
         for angles in values.values():
             for angle in angles:
                 if len(angle) != self.lengths['angles']:
@@ -1153,7 +1156,8 @@ class TopologyObject(object):
                 try:
                     _ = np.array(angle, dtype=int)
                 except ValueError as e:
-                    raise ValueError(e, 'angle indices should be int')
+                    raise ValueError(e.args[0]
+                                    + ' angle indices should be int')
         self._dict['angles'] = values
 
     @property
@@ -1168,7 +1172,8 @@ class TopologyObject(object):
             try:
                 _ = operator.index(key)
             except TypeError as e:
-                raise TypeError(e, 'dihedrals keys should be int')
+                raise TypeError(e.args[0]
+                                + ' dihedrals keys should be int')
         for dihedrals in values.values():
             for dihedral in dihedrals:
                 if len(dihedral) != self.lengths['dihedrals']:
@@ -1177,7 +1182,8 @@ class TopologyObject(object):
                 try:
                     _ = np.array(dihedral, dtype=int)
                 except ValueError as e:
-                    raise ValueError(e, 'dihedral indices should be int')
+                    raise ValueError(e.args[0]
+                                    + ' dihedral indices should be int')
         self._dict['dihedrals'] = values
 
     @property
@@ -1192,7 +1198,8 @@ class TopologyObject(object):
             try:
                 _ = operator.index(key)
             except TypeError as e:
-                raise TypeError(e, 'impropers keys should be int')
+                raise TypeError(e.args[0]
+                                + ' impropers keys should be int')
         for impropers in values.values():
             for improper in impropers:
                 if len(improper) != self.lengths['impropers']:
@@ -1201,5 +1208,6 @@ class TopologyObject(object):
                 try:
                     _ = np.array(improper, dtype=int)
                 except ValueError as e:
-                    raise ValueError(e, 'improper indices should be int')
+                    raise ValueError(e.args[0]
+                                     + ' improper indices should be int')
         self._dict['impropers'] = values
