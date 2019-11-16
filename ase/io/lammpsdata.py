@@ -629,7 +629,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                                   ' or molecular'.format(style))
     f.write('\n\n'.encode("utf-8"))
 
-    if atoms.topology['bonds'].get_count():
+    if atoms.has('bonds'):
         typ = atoms.topology['bonds'].get_types()
         count = 1
         f.write('Bonds \n\n'.encode("utf-8"))
@@ -647,7 +647,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.topology['angles'].get_count():
+    if atoms.has('angles'):
         typ = atoms.topology['angles'].get_types()
         count = 1
         f.write('Angles \n\n'.encode("utf-8"))
@@ -667,7 +667,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.topology['dihedrals'].get_count():
+    if atoms.has('dihedrals'):
         typ = atoms.topology['dihedrals'].get_types()
         count = 1
         f.write('Dihedrals \n\n'.encode("utf-8"))
@@ -687,7 +687,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                     count += 1
         f.write('\n\n'.encode("utf-8"))
 
-    if atoms.topology['impropers'].get_count():
+    if atoms.has('impropers'):
         typ = atoms.topology['impropers'].get_types()
         count = 1
         f.write('Impropers \n\n'.encode("utf-8"))
