@@ -36,7 +36,7 @@ class _TopoAttribute(object):
         def wrapper(*args, **kwargs):
             self = args[0]
             if not self._ins.has(self.prop):
-                raise KeyError('{0} object has no '
+                raise RuntimeError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
             return func(*args, **kwargs)
@@ -340,6 +340,10 @@ class _TopoAttribute(object):
             # Correct if same prop has two types
             if self._ins.has(self.prop):
                 types = self.get_types()
+                if len(types) == 0:
+                    # prop is empty
+                    del self._ins.arrays[self.prop]
+                    return
                 if len(set(types.keys())) != len(set(types.values())):
                     # same prop has two types
                     rev_types = {}
@@ -353,6 +357,11 @@ class _TopoAttribute(object):
 
                 ind_of = unique_ind(self.get_types(verbose=False))
                 self.set_types_to(ind_of)
+
+        elif self.prop == 'resnames':
+            if self._ins.has(self.prop):
+                if len(self.get_types()) == 0:
+                    del self._ins.arrays[self.prop]
 
         elif self.prop == 'ids':
             self._ins.arrays[self.prop] = np.arange(len(self._ins)) + 1
@@ -685,6 +694,7 @@ class Topology(object):
                      'types',
                      'names',
                      'mol-ids',
+                     'resnames',
                      'bonds',
                      'angles',
                      'dihedrals',
