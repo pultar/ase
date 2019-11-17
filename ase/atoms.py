@@ -921,8 +921,15 @@ class Atoms(object):
         if isinstance(other, Atom):
             other = self.__class__([other])
 
-        # prevents changes in other if topology is attached
-        other = other.copy()
+        # if self or other has topology, then set topology for all
+        if self.has('ids'):
+            if not other.has('ids'):
+                other.set_topology()
+            other = other.copy()
+        elif other.has('ids'):
+            self.set_topology()
+            other = other.copy()
+
         n1 = len(self)
         n2 = len(other)
 
@@ -936,9 +943,9 @@ class Atoms(object):
             if a2 is not None:
                 a[n1:] = a2
             elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
-                a[n1:] = {}
+                a[n1:] = [{} for _ in range(n2)]
             elif name == 'resnames':
-                a[n1:] = ''
+                a[n1:] = ['' for _ in range(n2)]
             self.arrays[name] = a
 
         for name, a2 in other.arrays.items():
@@ -949,9 +956,9 @@ class Atoms(object):
             if name == 'masses':
                 a[:n1] = self.get_masses()[:n1]
             elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
-                a[:n1] = {}
+                a[:n1] = [{} for _ in range(n1)]
             elif name == 'resnames':
-                a[:n1] = ''
+                a[:n1] = ['' for _ in range(n1)]
             else:
                 a[:n1] = 0
 
