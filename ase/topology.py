@@ -613,6 +613,43 @@ class _TopoAttribute(object):
             for i in del_key:
                 self._ins.arrays[self.prop][indx].pop(i)
 
+    @_check_exists
+    def get_statistics(self, index=':'):
+        '''
+        Returns statistics for specific attribute
+        :param index: indices to return statistics for
+        :return: dictionary with bond/angles/dihedral names with a
+            list of values
+        '''
+        if isinstance(index, basestring):
+            try:
+                index = string2index(index)
+            except ValueError:
+                pass
+        index = np.arange(len(self._ins))[index]
+
+        if self.prop == 'bonds':
+            func = self._ins.get_distance
+        elif self.prop == 'angles':
+            func = self._ins.get_angle
+        elif self.prop == 'dihedrals':
+            func = self._ins.get_dihedral
+        elif self.prop == 'impropers':
+            NotImplementedError('Statistics not implemented for {}'
+                                '',format(self.prop))
+        else:
+            RuntimeError('{} has no statistics',format(self.prop))
+
+        types = self.get_types()
+        #! TODO: return named list instead of dictionary
+        stats = {}
+        for key, values in self.get().items():
+            for value in values:
+                if np.all([x in index for x in value]):
+                    stats[types[key]] = (stats.get(types[key], [])
+                                         + [func(*value, mic=True)])
+        return stats
+
 
 class _TopoAttributeProperty(object):
 
@@ -1060,6 +1097,20 @@ class Topology(object):
 
         # updating ids
         self.update()
+
+    def get_statistics(self, index=':'):
+        '''
+        Returns statistics for bonds, angles, and dihedrals
+        :param index: indices to return statistics for
+        :return: a dictionary with names of attribute as keys, and
+            the statistics dictionary as value
+        '''
+        stats = {}
+        for prop in ['bonds', 'angles', 'dihedrals']:
+            if prop in self._dict:
+                stats[prop] = self._dict[prop].get_statistics(index)
+
+        return stats
 
 
 class TopologyObject(object):
