@@ -27,6 +27,7 @@ class _TopoAttribute(object):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = topo_attr_prop._ins
+        self.persistent = topo_attr_prop.persistent
         self.prop = topo_attr_prop.prop
 
     def _check_exists(func):
@@ -39,6 +40,16 @@ class _TopoAttribute(object):
                 raise RuntimeError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
+            return func(*args, **kwargs)
+        return wrapper
+
+    def _check_persistence(func):
+        '''Decorator to check if the topology is persistent'''
+        # Only added to functions which may edit/set topology data
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            if not self.persistent:
+                raise RuntimeError('Topology is not persistent')
             return func(*args, **kwargs)
         return wrapper
 
@@ -58,6 +69,7 @@ class _TopoAttribute(object):
             item = reverse_type[item]
         return self.get()[item]
 
+    @_check_persistence
     @_check_exists
     def __delitem__(self, items):
         if not isinstance(items, list):
@@ -195,6 +207,7 @@ class _TopoAttribute(object):
 
     __call__ = get
 
+    @_check_persistence
     def set(self, value=None):
         '''
         value to set. None value deletes the property
@@ -234,6 +247,7 @@ class _TopoAttribute(object):
             raise NotImplementedError('get_count only implemented for bonds,'
                                       ' angles, dihedrals, impropers')
 
+    @_check_persistence
     def add(self, items):
         ''' adds to prop
         Parameters:
@@ -330,6 +344,10 @@ class _TopoAttribute(object):
             _name_set: bool
                 when names are set, types, bonds etc needs updating
         '''
+        # if topology not persistent, then don't update
+        if not self.persistent:
+            return
+
         def unique_ind(a):
             ''' Returns dict with new indices as values of old indices as keys
             if old index needs a change'''
@@ -518,6 +536,7 @@ class _TopoAttribute(object):
                                 int)
 
     @_check_exists
+    @_check_persistence
     def set_types_to(self, indx_of, index=":"):
         '''
         :param indx_of: dictionary, changes type from keys -> values
@@ -554,6 +573,7 @@ class _TopoAttribute(object):
             self.update()
 
     @_check_exists
+    @_check_persistence
     def _set_indices_to(self, indx_of, index):
         # selecting set of ids to remove
         if self.prop not in ['bonds', 'angles', 'dihedrals', 'impropers']:
@@ -605,6 +625,7 @@ class _TopoAttributeProperty(object):
         if topo_base is None:
             return self
         self._ins = topo_base._ins
+        self.persistent = topo_base.persistent
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         return _TopoAttribute(self)
@@ -629,10 +650,14 @@ class Topology(object):
     dihedrals = _TopoAttributeProperty('dihedrals')
     impropers = _TopoAttributeProperty('impropers')
 
-    def __init__(self, instance):
+    def __init__(self, instance, persistent=True):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = instance
+        # a bool to see if the topology is persistent
+        # i.e. the set/edit methods can be used or not
+        # changed to the passed persistent when __init__ ends
+        self.persistent = True
         # a dict to hold all attributes
         self._prop_dict = {'names': self.names,
                            'ids': self.ids,
@@ -652,6 +677,21 @@ class Topology(object):
                                              'names',
                                              'types']:
                 self._dict[key] = val
+
+        if not persistent:
+            if not self._ins.has('ids'):
+                self.update()
+            self.persistent = False
+
+    def _check_persistence(func):
+        '''Decorator to check if the topology is persistent'''
+        # Only added to functions which may edit/set topology data
+        def wrapper(*args, **kwargs):
+            self = args[0]
+            if not self.persistent:
+                raise RuntimeError('Topology is not persistent')
+            return func(*args, **kwargs)
+        return wrapper
 
     def __repr__(self):
         tokens = []
@@ -673,6 +713,7 @@ class Topology(object):
 
     __call__ = get_topology_object
 
+    @_check_persistence
     def update(self, topo_object=None, specorder=None):
         if topo_object is None:
             topo_dict = {}
@@ -712,6 +753,7 @@ class Topology(object):
             elif prop in self._dict:
                 self._dict[prop].update()
 
+    @_check_persistence
     def generate_with_names(self, topo_dict, cutoffs=None):
         '''
         Generates bonds, angles, dihedrals, and impropers based on names
@@ -856,6 +898,7 @@ class Topology(object):
                                 impropers[indx] = impropers.get(indx, []) + [[i, j, k, l]]
             self.impropers.add(impropers)
 
+    @_check_persistence
     def generate_with_indices(self, topo_dict):
         '''
         Generates bonds, angles, dihedrals, and impropers based on indices

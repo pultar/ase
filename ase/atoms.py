@@ -307,14 +307,20 @@ class Atoms(object):
 
     constraints = property(_get_constraints, set_constraint, _del_constraints,
                            'Constraints of the atoms.')
-    def get_topology(self):
+
+    def get_topology(self, persistent=False):
         '''Allows attacing topology information to the atoms object'''
-        if self.has('ids'):
+        if not persistent:
+            other = self.copy()
+            return Topology(other, persistent=False)
+        elif self.has('ids'):
             return Topology(self)
         else:
             raise RuntimeError('Topology not initialised;'
-                               ' use: {}.set_topology'
-                               '()'.format(self.__class__.__name__))
+                               ' use {atoms}.set_topology() to set '
+                               'persistent topology, else use '
+                               '{atoms}.get_topology()'
+                               ''.format(atoms=self.__class__.__name__))
 
     def set_topology(self, value=TopologyObject()):
         if value is not None:
@@ -326,7 +332,10 @@ class Atoms(object):
         for i in top._dict.keys():
             del self.arrays[i]
 
-    topology = property(get_topology, set_topology,
+    def _get_persistent_topology(self):
+        return self.get_topology(persistent=True)
+
+    topology = property(_get_persistent_topology, set_topology,
                         _del_topology, doc='handles topology information of atoms')
 
     def set_cell(self, cell, scale_atoms=False):
