@@ -10,11 +10,11 @@ import os
 
 import numpy as np
 import warnings
-import time
 
 from ase.units import Hartree
-from ase.io.aims import write_aims, read_aims
+from ase.utils import basestring
 from ase.data import atomic_numbers
+from ase.io.aims import write_aims, read_aims
 from ase.calculators.calculator import (
     FileIOCalculator,
     Parameters,
@@ -22,23 +22,46 @@ from ase.calculators.calculator import (
     ReadError,
     PropertyNotImplementedError,
 )
-from ase.utils import basestring
+
+from ._io import get_file_header
 from .keys import bool_keys
+
+implemented_properties = [
+    "energy",
+    "forces",
+    "stress",
+    "stresses",
+    "dipole",
+    "magmom",
+]
+
+_aims_geometry_file = "geometry.in"
+_aims_control_file = "control.in"
+_ase_parameters_file = "parameters.ase"
+
+_aims_command_default = "aims.version.serial.x > aims.out"
+_aims_outfilename_default = "aims.out"
+
+_command_env = "ASE_AIMS_COMMAND"
+_species_path_env = "AIMS_SPECIES_DIR"
+
+
+def _get_species_path_from_environment():
+    """returns the species default path saved in $AIMS_SPECIES_DIR"""
+    species_path = os.getenv(_species_path_env)
+    msg = (
+        "Missing species directory!  Use `species_dir` "
+        "parameter or set environment variable " + _species_path_env
+    )
+    if species_path is None:
+        raise RuntimeError(msg)
+
+    return species_path
 
 
 class Aims(FileIOCalculator):
     # was "command" before the refactoring to dynamical commands
-    __command_default = "aims.version.serial.x > aims.out"
-    __outfilename_default = "aims.out"
-
-    implemented_properties = [
-        "energy",
-        "forces",
-        "stress",
-        "stresses",
-        "dipole",
-        "magmom",
-    ]
+    implemented_properties = implemented_properties
 
     def __init__(
         self,
@@ -139,15 +162,15 @@ class Aims(FileIOCalculator):
         if run_command:
             # this warning is debatable... in my eyes it is more consistent to
             # use 'command'
-            warnings.warn(
+            msg = (
                 'Argument "run_command" is deprecated and will be replaced '
                 'with "command". Alternatively, use "aims_command" '
                 'and "outfile". See documentation for more details.'
             )
+            warnings.warn(msg)
             if command:
-                warnings.warn(
-                    'Caution! Argument "command" overwrites "run_command.'
-                )
+                msg = 'Caution! Argument "command" overwrites "run_command.'
+                warnings.warn(msg)
             else:
                 command = run_command
 
@@ -155,7 +178,7 @@ class Aims(FileIOCalculator):
         if np.all([i is None for i in (command, aims_command, outfilename)]):
             # we go for the FileIOCalculator default way (env variable) with
             # the former default as fallback
-            command = os.environ.get("ASE_AIMS_COMMAND", Aims.__command_default)
+            command = os.getenv(_command_env, _aims_command_default)
 
         # filter the command and set the member variables "aims_command"
         # and "outfilename"
@@ -205,7 +228,7 @@ class Aims(FileIOCalculator):
 
     def __init_command(self, command=None, aims_command=None, outfilename=None):
         """
-        Create the private variables for which properties are defines and set
+        Create the private variables for which properties are defined and set
         them accordingly.
         """
         # new class variables due to dynamical command handling
@@ -272,7 +295,7 @@ class Aims(FileIOCalculator):
                 # but just to ensure legacy behavior of how "run_command"
                 # was handled
                 self.__aims_command = command.strip()
-                self.__outfilename = Aims.__outfilename_default
+                self.__outfilename = _aims_outfilename_default
         else:
             if aims_command is not None:
                 self.__aims_command = aims_command
@@ -284,7 +307,7 @@ class Aims(FileIOCalculator):
             else:
                 # default to 'aims.out'
                 if not self.outfilename:
-                    self.__outfilename = Aims.__outfilename_default
+                    self.__outfilename = _aims_outfilename_default
 
         self.__command = "{0:s} > {1:s}".format(
             self.aims_command, self.outfilename
@@ -342,21 +365,30 @@ class Aims(FileIOCalculator):
 
         have_lattice_vectors = atoms.pbc.any()
         have_k_grid = "k_grid" in self.parameters or "kpts" in self.parameters
+
         if have_lattice_vectors and not have_k_grid:
             raise RuntimeError("Found lattice vectors but no k-grid!")
         if not have_lattice_vectors and have_k_grid:
             raise RuntimeError("Found k-grid but no lattice vectors!")
+
+        file = os.path.join(self.directory, _aims_geometry_file)
         write_aims(
-            os.path.join(self.directory, "geometry.in"),
+            file,
             atoms,
             scaled,
             geo_constrain,
             velocities=velocities,
             ghosts=ghosts,
         )
-        self.write_control(atoms, os.path.join(self.directory, "control.in"))
-        self.write_species(atoms, os.path.join(self.directory, "control.in"))
-        self.parameters.write(os.path.join(self.directory, "parameters.ase"))
+
+        file = os.path.join(self.directory, _aims_control_file)
+        self.write_control(atoms, file)
+
+        file = os.path.join(self.directory, _aims_control_file)
+        self.write_species(atoms, file)
+
+        file = os.path.join(self.directory, _ase_parameters_file)
+        self.parameters.write(file)
 
     def prepare_input_files(self):
         """
@@ -368,23 +400,14 @@ class Aims(FileIOCalculator):
         self.write_input(self.atoms)
 
     def write_control(self, atoms, filename, debug=False):
-        lim = "#" + "=" * 79
         output = open(filename, "w")
-        output.write(lim + "\n")
-        for line in [
-            "FHI-aims file: " + filename,
-            "Created using the Atomic Simulation Environment (ASE)",
-            time.asctime(),
-        ]:
-            output.write("# " + line + "\n")
         if debug:
-            output.write(
-                "# \n# List of parameters used to initialize the calculator:"
-            )
-            for p, v in self.parameters.items():
-                s = "#     {} : {}\n".format(p, v)
-                output.write(s)
-        output.write(lim + "\n")
+            p = self.parameters
+            header = get_file_header(filename, parameters=p)
+        else:
+            header = get_file_header(filename)
+
+        output.write(header)
 
         assert not ("kpts" in self.parameters and "k_grid" in self.parameters)
         assert not (
@@ -429,24 +452,24 @@ class Aims(FileIOCalculator):
                 output.write("%-35s%r\n" % (key, value))
         if self.cubes:
             self.cubes.write(output)
-        output.write(lim + "\n\n")
+        ll = "#=======================================================\n\n"
+        output.write(ll)
         output.close()
 
     def read(self, label=None):
         if label is None:
             label = self.label
         FileIOCalculator.read(self, label)
-        geometry = os.path.join(self.directory, "geometry.in")
-        control = os.path.join(self.directory, "control.in")
+        geometry = os.path.join(self.directory, _aims_geometry_file)
+        control = os.path.join(self.directory, _aims_control_file)
 
         for filename in [geometry, control, self.out]:
             if not os.path.isfile(filename):
                 raise ReadError
 
         self.atoms, symmetry_block = read_aims(geometry, True)
-        self.parameters = Parameters.read(
-            os.path.join(self.directory, "parameters.ase")
-        )
+        file = os.path.join(self.directory, _ase_parameters_file)
+        self.parameters = Parameters.read(file)
         if symmetry_block:
             self.parameters["symmetry_block"] = symmetry_block
         self.read_results()
@@ -496,16 +519,12 @@ class Aims(FileIOCalculator):
         ):
             self.read_dipole()
 
-    def write_species(self, atoms, filename="control.in"):
+    def write_species(self, atoms, filename=_aims_control_file):
         self.ctrlname = filename
         species_path = self.parameters.get("species_dir")
         if species_path is None:
-            species_path = os.environ.get("AIMS_SPECIES_DIR")
-        if species_path is None:
-            raise RuntimeError(
-                "Missing species directory!  Use species_dir "
-                + "parameter or set $AIMS_SPECIES_DIR environment variable."
-            )
+            species_path = _get_species_path_from_environment()
+
         control = open(filename, "a")
         symbols = atoms.get_chemical_symbols()
         symbols2 = []
