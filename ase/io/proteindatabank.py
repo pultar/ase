@@ -293,4 +293,3 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
                     fileobj.write('{:5d}'.format(j + 1))
                     count += 1
             fileobj.write('\n')
-        fileobj.write('END\n')

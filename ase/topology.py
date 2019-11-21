@@ -246,6 +246,13 @@ class _TopoAttribute(object):
                   'dihedrals': 4,
                   'impropers': 4}
 
+        # Deletes empty items
+        _del_key = []
+        for key, values in items.items():
+            if len(values) == 0:
+                _del_key.append(key)
+        for key in _del_key:
+            items.pop(key)
         if len(items) == 0:
             return
 

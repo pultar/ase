@@ -336,9 +336,11 @@ class Database:
         kvp = dict(key_value_pairs)  # modify a copy
         kvp.update(kwargs)
 
-        if atoms.has('ids'):
-            top_data = {'topology': atoms.topology.get_topology_object()._dict}
-            data.update(top_data)
+        if isinstance(atoms, Atoms):
+            if atoms.has('ids'):
+                top_data = {'topology':
+                                atoms.topology.get_topology_object()._dict}
+                data.update(top_data)
 
         id = self._write(atoms, kvp, data, id)
         return id
