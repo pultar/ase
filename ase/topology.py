@@ -791,7 +791,7 @@ class Topology(object):
                 self._dict[prop].update()
 
     @_check_persistence
-    def generate_with_names(self, topo_dict, cutoffs=None):
+    def generate_with_names(self, topo_dict=None, cutoffs=None):
         '''
         Generates bonds, angles, dihedrals, and impropers based on names
         of atoms, given as topo_dict
@@ -819,6 +819,43 @@ class Topology(object):
                   'angles': 3,
                   'dihedrals': 4,
                   'impropers': 4}
+
+        if topo_dict is None:
+            topo_dict = {}
+
+        if len(topo_dict) == 0:
+            # add all possible name interactions
+            names = self.names.get_types()
+            # bonds
+            topo_dict['bonds'] = []
+            for i, name_i in enumerate(names):
+                for name_j in names[i:]:
+                    topo_dict['bonds'].append([name_i, name_j])
+            # angles
+            topo_dict['angles'] = []
+            for name_i in names:
+                for j, name_j in enumerate(names):
+                    for name_k in names[j:]:
+                        topo_dict['angles'].append([name_j,
+                                                    name_i,
+                                                    name_k])
+            # dihedrals and impropers
+            topo_dict['dihedrals'] = []
+            topo_dict['impropers'] = []
+            for i, name_i in enumerate(names):
+                for j, name_j in enumerate(names[i:],
+                                           start=i):
+                    for k, name_k in enumerate(names[j:],
+                                               start=j):
+                        for name_l in names[k:]:
+                            topo_dict['dihedrals'].append([name_i,
+                                                           name_j,
+                                                           name_k,
+                                                           name_l])
+                            topo_dict['impropers'].append([name_i,
+                                                           name_j,
+                                                           name_k,
+                                                           name_l])
 
         for key, values in topo_dict.items():
             if key not in ['bonds', 'angles', 'dihedrals', 'impropers']:
