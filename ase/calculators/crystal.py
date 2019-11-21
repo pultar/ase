@@ -1,51 +1,54 @@
-"""This module defines an ASE interface to CRYSTAL14/CRYSTAL17
-
-http://www.crystal.unito.it/
-
-Written by:
-
-    Daniele Selli, daniele.selli@unimib.it
-    Gianluca Fazio, g.fazio3@campus.unimib.it
-
-The file 'fort.34' contains the input and output geometry
-and it will be updated during the crystal calculations.
-The wavefunction is stored in 'fort.20' as binary file.
-
-The keywords are given, for instance, as follows:
-
-    guess = True,
-    xc = 'PBE',
-    kpts = (2,2,2),
-    otherkeys = [ 'scfdir', 'anderson', ['maxcycles','500'],
-                 ['fmixing','90']],
-    ...
-
-
-    When used for QM/MM, Crystal calculates coulomb terms
-    within all point charges. This is wrong and should be corrected by either:
-
-        1. Re-calculating the terms and subtracting them
-        2. Reading in the values from FORCES_CHG.DAT and subtracting
-
-
-    BOTH Options should be available, with 1 as standard, since 2 is
-    only available in a development version of CRYSTAL
-
-"""
-
 from ase.units import Hartree, Bohr
 from ase.io import write
 import numpy as np
 import os
 from ase.calculators.calculator import FileIOCalculator
 
+from subprocess import Popen, PIPE, STDOUT
+import shutil
+
+class CrystalProfile:
+    # Simple crystal profile class
+    def __init__(self):
+        self.name = "crystal"
+        self.command = self.name + "< INPUT > OUTPUT 2>&1"
+        self.pseudo_path = None
+        
+    def get_version(self) -> str:
+        """Get crystal version number and release date."""
+        if self.available():
+            f = open("kill", "w+")
+            f.write("END\n")
+            f.write("END\n")
+            f.close()
+            args = self.name + "< kill"
+            p = Popen(args, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+            output = p.stdout.read().decode()
+            index = output.index("CRYSTAL")
+            version = output[index:].split('\n')[1].replace('*', '').strip()        
+            if os.path.exists("kill"):
+                os.remove("kill")            
+            return version
+        else:
+            raise NotImplementedError("{} not available.".format(self.name))                
+
+    def available(self) -> bool:
+        """ Check if program is availale."""
+        return shutil.which(self.name) is not None
+        
+if __name__ == "__main__":
+    cry = CrystalProfile()    
+    version = cry.get_version()
+    there = cry.available()
+    print(version)
+    print(there)
+
 class CRYSTAL(FileIOCalculator):
     """ A crystal calculator with ase-FileIOCalculator nomenclature
     """
 
-    implemented_properties = ['energy', 'forces', 'stress', 'charges',
-                              'dipole']
-
+    implemented_properties = ['energy', 'forces', 'stress', 'charges', 'dipole']
+    
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label='cry', atoms=None, crys_pcc=False, **kwargs):
         """Construct a crystal calculator.
