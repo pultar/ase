@@ -717,7 +717,19 @@ class Topology(object):
 
         if not persistent:
             if not self._ins.has('ids'):
+                # if no topology already,
+                # update all attributes needed
+                # add bonds/angles/dihedrals/impropers based on
+                # connectivity, in ase.neighborlists
                 self.update()
+                self.generate_with_names()
+                # add props now introduced
+                for i in ['bonds',
+                          'angles',
+                          'dihedrals',
+                          'impropers']:
+                    if self._ins.has(i):
+                        self._dict[i] = self._prop_dict[i]
             self.persistent = False
 
     def _check_persistence(func):
