@@ -1,8 +1,9 @@
 """This module defines an ASE interface to FHI-aims.
 
-Felix Hanke hanke@liverpool.ac.uk
-Jonas Bjork j.bjork@liverpool.ac.uk
+Florian Knoop knoop@fhi-berlin.mpg.de
 Simon P. Rittmeyer simon.rittmeyer@tum.de
+Jonas Bjork j.bjork@liverpool.ac.uk
+Felix Hanke hanke@liverpool.ac.uk
 """
 
 import os
