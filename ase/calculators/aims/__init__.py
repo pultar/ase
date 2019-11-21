@@ -9,10 +9,10 @@ Felix Hanke hanke@liverpool.ac.uk
 import os
 import re
 import shutil
-
-import numpy as np
 import warnings
 import subprocess as sp
+
+import numpy as np
 
 from ase.units import Hartree
 from ase.utils import basestring
@@ -52,10 +52,11 @@ class AimsTemplate:
     outfilename_default = "aims.out"
 
     command_envvar = "ASE_AIMS_COMMAND"
-    command = os.getenv(command_envvar, command_default)
+    command = os.getenv(command_envvar, command_envvar)
+    run_command = shutil.which(command)
 
     species_path_envvar = "AIMS_SPECIES_DIR"
-    species_path = os.getenv(species_path_envvar)
+    species_path = os.getenv(species_path_envvar, species_path_envvar)
 
     test_basisset = "01_H_default"
 
@@ -79,29 +80,31 @@ def _get_species_path_from_environment():
 class AimsProfile(AimsTemplate):
     """collect data about the status of the local FHI-aims setup"""
 
-    @property
-    def run_command(self):
-        return shutil.which(self.command)
-
     def available(self):
-        self.check_state(self.run_command)
-        self.check_state(self.species_path)
-        self.check_state(os.path.join(self.species_path, self.test_basisset))
+        self.check_state(self.run_command, "run_command")
+        self.check_state(self.species_path, "species_path")
+        p = os.path.join(self.species_path, self.test_basisset)
+        self.check_state(p, "test_basisset")
 
         return True
 
-    def check_state(self, path):
-        if not os.path.exists(path):
-            raise RuntimeError("path `{}` not found".format(path))
+    def check_state(self, path, prefix="path"):
+        if path is None or not os.path.exists(path):
+            m = "*** AimsProfile: {} at `{}` not found".format(prefix, path)
+            print(m)
+            return False
+        return True
 
     def get_version(self):
-        output = sp.check_output(self.run_command, stderr=sp.STDOUT)
-        match = re.findall("FHI-aims version.*$", output.decode(), re.MULTILINE)
+        if self.run_command is not None:
+            output = sp.check_output(self.run_command, stderr=sp.STDOUT)
+            s = "FHI-aims version.*$"
+            match = re.findall(s, output.decode(), re.MULTILINE)
 
-        if match:
-            version = match[0].split(":")[1].strip()
+            if match:
+                version = match[0].split(":")[1].strip()
 
-            return version
+                return version
 
 
 class Aims(FileIOCalculator):
