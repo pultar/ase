@@ -26,42 +26,60 @@ from ase.calculators.calculator import (
 from ._io import get_file_header
 from .keys import bool_keys
 
-implemented_properties = [
-    "energy",
-    "forces",
-    "stress",
-    "stresses",
-    "dipole",
-    "magmom",
-]
 
-_aims_geometry_file = "geometry.in"
-_aims_control_file = "control.in"
-_ase_parameters_file = "parameters.ase"
+class AimsTemplate:
+    """Template configuration for FHI-aims"""
 
-_aims_command_default = "aims.version.serial.x > aims.out"
-_aims_outfilename_default = "aims.out"
+    implemented_properties = [
+        "energy",
+        "forces",
+        "stress",
+        "stresses",
+        "dipole",
+        "magmom",
+    ]
 
-_command_env = "ASE_AIMS_COMMAND"
-_species_path_env = "AIMS_SPECIES_DIR"
+    geometry_file = "geometry.in"
+    control_file = "control.in"
+    parameters_file = "parameters.ase"
+
+    command_default = "aims.version.serial.x > aims.out"
+    outfilename_default = "aims.out"
+
+    command_envvar = "ASE_AIMS_COMMAND"
+    command = os.getenv(command_envvar, command_default)
+
+    species_path_envvar = "AIMS_SPECIES_DIR"
+    species_path = os.getenv(species_path_envvar)
+
+
+class AimsSpeciesMissing(RuntimeError):
+    msg = (
+        "Missing species directory!  Use `species_dir` "
+        "parameter or set environment variable "
+        + AimsTemplate.species_path_envvar
+    )
+
+    def __init__(self):
+        super().__init__(self.msg)
 
 
 def _get_species_path_from_environment():
     """returns the species default path saved in $AIMS_SPECIES_DIR"""
-    species_path = os.getenv(_species_path_env)
-    msg = (
-        "Missing species directory!  Use `species_dir` "
-        "parameter or set environment variable " + _species_path_env
-    )
-    if species_path is None:
-        raise RuntimeError(msg)
+    return AimsTemplate.species_path
 
-    return species_path
+
+class AimsProfile:
+    """collect data about the status of the local FHI-aims setup"""
+
+    name = "aims"
+    command = AimsTemplate.command
+    species_path = _get_species_path_from_environment
 
 
 class Aims(FileIOCalculator):
     # was "command" before the refactoring to dynamical commands
-    implemented_properties = implemented_properties
+    implemented_properties = AimsTemplate.implemented_properties
 
     def __init__(
         self,
@@ -178,7 +196,7 @@ class Aims(FileIOCalculator):
         if np.all([i is None for i in (command, aims_command, outfilename)]):
             # we go for the FileIOCalculator default way (env variable) with
             # the former default as fallback
-            command = os.getenv(_command_env, _aims_command_default)
+            command = AimsTemplate.command
 
         # filter the command and set the member variables "aims_command"
         # and "outfilename"
@@ -295,7 +313,7 @@ class Aims(FileIOCalculator):
                 # but just to ensure legacy behavior of how "run_command"
                 # was handled
                 self.__aims_command = command.strip()
-                self.__outfilename = _aims_outfilename_default
+                self.__outfilename = AimsTemplate.outfilename_default
         else:
             if aims_command is not None:
                 self.__aims_command = aims_command
@@ -307,7 +325,7 @@ class Aims(FileIOCalculator):
             else:
                 # default to 'aims.out'
                 if not self.outfilename:
-                    self.__outfilename = _aims_outfilename_default
+                    self.__outfilename = AimsTemplate.outfilename_default
 
         self.__command = "{0:s} > {1:s}".format(
             self.aims_command, self.outfilename
@@ -371,7 +389,7 @@ class Aims(FileIOCalculator):
         if not have_lattice_vectors and have_k_grid:
             raise RuntimeError("Found k-grid but no lattice vectors!")
 
-        file = os.path.join(self.directory, _aims_geometry_file)
+        file = os.path.join(self.directory, AimsTemplate.geometry_file)
         write_aims(
             file,
             atoms,
@@ -381,13 +399,11 @@ class Aims(FileIOCalculator):
             ghosts=ghosts,
         )
 
-        file = os.path.join(self.directory, _aims_control_file)
+        file = os.path.join(self.directory, AimsTemplate.control_file)
         self.write_control(atoms, file)
-
-        file = os.path.join(self.directory, _aims_control_file)
         self.write_species(atoms, file)
 
-        file = os.path.join(self.directory, _ase_parameters_file)
+        file = os.path.join(self.directory, AimsTemplate.parameters_file)
         self.parameters.write(file)
 
     def prepare_input_files(self):
@@ -460,15 +476,15 @@ class Aims(FileIOCalculator):
         if label is None:
             label = self.label
         FileIOCalculator.read(self, label)
-        geometry = os.path.join(self.directory, _aims_geometry_file)
-        control = os.path.join(self.directory, _aims_control_file)
+        geometry = os.path.join(self.directory, AimsTemplate.geometry_file)
+        control = os.path.join(self.directory, AimsTemplate.control_file)
 
         for filename in [geometry, control, self.out]:
             if not os.path.isfile(filename):
                 raise ReadError
 
         self.atoms, symmetry_block = read_aims(geometry, True)
-        file = os.path.join(self.directory, _ase_parameters_file)
+        file = os.path.join(self.directory, AimsTemplate.parameters_file)
         self.parameters = Parameters.read(file)
         if symmetry_block:
             self.parameters["symmetry_block"] = symmetry_block
@@ -519,11 +535,14 @@ class Aims(FileIOCalculator):
         ):
             self.read_dipole()
 
-    def write_species(self, atoms, filename=_aims_control_file):
+    def write_species(self, atoms, filename=AimsTemplate.control_file):
         self.ctrlname = filename
-        species_path = self.parameters.get("species_dir")
+
+        species_path = self.parameters.get(
+            "species_dir", AimsTemplate.species_path
+        )
         if species_path is None:
-            species_path = _get_species_path_from_environment()
+            raise AimsSpeciesMissing
 
         control = open(filename, "a")
         symbols = atoms.get_chemical_symbols()
