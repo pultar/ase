@@ -7,9 +7,12 @@ Felix Hanke hanke@liverpool.ac.uk
 """
 
 import os
+import re
+import shutil
 
 import numpy as np
 import warnings
+import subprocess as sp
 
 from ase.units import Hartree
 from ase.utils import basestring
@@ -39,6 +42,8 @@ class AimsTemplate:
         "magmom",
     ]
 
+    name = "aims"
+
     geometry_file = "geometry.in"
     control_file = "control.in"
     parameters_file = "parameters.ase"
@@ -51,6 +56,8 @@ class AimsTemplate:
 
     species_path_envvar = "AIMS_SPECIES_DIR"
     species_path = os.getenv(species_path_envvar)
+
+    test_basisset = "01_H_default"
 
 
 class AimsSpeciesMissing(RuntimeError):
@@ -69,12 +76,32 @@ def _get_species_path_from_environment():
     return AimsTemplate.species_path
 
 
-class AimsProfile:
+class AimsProfile(AimsTemplate):
     """collect data about the status of the local FHI-aims setup"""
 
-    name = "aims"
-    command = AimsTemplate.command
-    species_path = _get_species_path_from_environment
+    @property
+    def run_command(self):
+        return shutil.which(self.command)
+
+    def available(self):
+        self.check_state(self.run_command)
+        self.check_state(self.species_path)
+        self.check_state(os.path.join(self.species_path, self.test_basisset))
+
+        return True
+
+    def check_state(self, path):
+        if not os.path.exists(path):
+            raise RuntimeError("path `{}` not found".format(path))
+
+    def get_version(self):
+        output = sp.check_output(self.run_command, stderr=sp.STDOUT)
+        match = re.findall("FHI-aims version.*$", output.decode(), re.MULTILINE)
+
+        if match:
+            version = match[0].split(":")[1].strip()
+
+            return version
 
 
 class Aims(FileIOCalculator):
