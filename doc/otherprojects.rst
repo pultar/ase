@@ -34,7 +34,7 @@ link and descriptive paragraph.
 
  * `Sella <https://github.com/zadorlab/sella>`_:
    Sella is a saddle point refinement (optimization) tool which uses
-   the `Optimize <ase/optimize>` API. Sella supports minimization and
+   the `Optimize <ase/optimize.html>`_ API. Sella supports minimization and
    refinement of arbitrary-order saddle points with constraints.
    Additionally, Sella can perform intrinsic reaction coordinate (IRC)
    calculations.
