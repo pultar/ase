@@ -377,7 +377,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
     if travel is not None:
         at.arrays["travel"] = travel
     if mol_id is not None:
-        at.arrays["mol-ids"] = mol_id
+        at.arrays["tags"] = mol_id
     if charge is not None:
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
@@ -539,7 +539,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     else:
         resnames = None
     id = atoms.get_array('ids')
-    mol_id = atoms.get_array('mol-ids')
+    mol_id = atoms.get_array('tags')
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=True)
     charges = atoms.get_initial_charges()
     if style == 'full':

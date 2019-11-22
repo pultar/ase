@@ -54,7 +54,7 @@ class _TopoAttribute(object):
         return wrapper
 
     def __repr__(self):
-        if self.prop in ['ids', 'mol-ids']:
+        if self.prop in ['ids', 'tags']:
             return '1 ... {}'.format(self.get_num_types())
         else:
             return str(self.get_types())
@@ -89,7 +89,7 @@ class _TopoAttribute(object):
                     item = reverse_type[item]
                 props.pop(item)
             self.set(props)
-        elif self.prop in ['mol-ids',
+        elif self.prop in ['tags',
                            'names',
                            'ids']:
             del_ind = []
@@ -223,7 +223,7 @@ class _TopoAttribute(object):
         elif self.prop == 'names':
             self._ins.set_array(self.prop, value, object)
             self.update(_name_set=True)
-        elif self.prop == 'mol-ids':
+        elif self.prop == 'tags':
             self._ins.set_array(self.prop, value, int)
             self.update()
         elif self.prop in ['resnames',
@@ -390,9 +390,9 @@ class _TopoAttribute(object):
         elif self.prop == 'ids':
             self._ins.arrays[self.prop] = np.arange(len(self._ins)) + 1
 
-        elif self.prop == 'mol-ids':
+        elif self.prop == 'tags':
             if not self._ins.has(self.prop):
-                self._ins.set_array('mol-ids',
+                self._ins.set_array('tags',
                                     np.ones(len(self._ins)),
                                     int)
             ind_of = unique_ind(self._ins.arrays[self.prop])
@@ -406,7 +406,6 @@ class _TopoAttribute(object):
                 self._ins.set_array('names',
                                     self._ins.get_chemical_symbols(),
                                     object)
-
         if _name_set:
             # update bonds etc
             for prop in ['bonds',
@@ -486,7 +485,7 @@ class _TopoAttribute(object):
                 values = [self._ins.arrays[self.prop][indx][x] for x in keys]
                 self._ins.arrays[self.prop][indx] = dict(zip(new_keys, values))
 
-        elif self.prop in ['mol-ids', 'names', 'resnames']:
+        elif self.prop in ['tags', 'names', 'resnames']:
             for indx in np.arange(len(self._ins))[index]:
                 try:
                     _ = indx_of[self._ins.arrays[self.prop][indx]]
@@ -602,7 +601,7 @@ class _TopoAttributeProperty(object):
 class Topology(object):
     ids = _TopoAttributeProperty('ids')
     names = _TopoAttributeProperty('names')
-    mol_ids = _TopoAttributeProperty('mol-ids')
+    tags = _TopoAttributeProperty('tags')
     resnames = _TopoAttributeProperty('resnames')
     bonds = _TopoAttributeProperty('bonds')
     angles = _TopoAttributeProperty('angles')
@@ -620,18 +619,18 @@ class Topology(object):
         # a dict to hold all attributes
         self._prop_dict = {'names': self.names,
                            'ids': self.ids,
-                           'mol-ids': self.mol_ids,
+                           'tags': self.tags,
                            'resnames': self.resnames,
                            'bonds': self.bonds,
                            'angles': self.angles,
                            'dihedrals': self.dihedrals,
                            'impropers': self.impropers}
         # a dict to store only available properties
-        # ids, mol-ids, and names should always be present
+        # ids, tags, and names should always be present
         self._dict = {}
         for key, val in self._prop_dict.items():
             if self._ins.has(key) or key in ['ids',
-                                             'mol-ids',
+                                             'tags',
                                              'names']:
                 self._dict[key] = val
 
@@ -693,7 +692,7 @@ class Topology(object):
 
         for prop in ['ids',
                      'names',
-                     'mol-ids',
+                     'tags',
                      'resnames',
                      'bonds',
                      'angles',
@@ -991,8 +990,8 @@ class Topology(object):
         size_m = np.product(m)
         # n contains the original length of atoms
         n = int(len(self._ins) / size_m)
-        if self._ins.has('mol-ids'):
-            n_molid = np.max(self._ins.arrays['mol-ids'])
+        if self._ins.has('tags'):
+            n_molid = np.max(self._ins.arrays['tags'])
             nmolids = 0
 
         topo_props = ['bonds', 'angles', 'dihedrals', 'impropers']
@@ -1014,9 +1013,9 @@ class Topology(object):
                     for i in range(n):
                         indx_of[i] = i + natoms
                     self._set_indices_to(indx_of, "{}:{}".format(i0, i1))
-                    if self._ins.has('mol-ids'):
-                        _ = self._ins.arrays['mol-ids'][i0:i1] + nmolids
-                        self._ins.arrays['mol-ids'][i0:i1] = _
+                    if self._ins.has('tags'):
+                        _ = self._ins.arrays['tags'][i0:i1] + nmolids
+                        self._ins.arrays['tags'][i0:i1] = _
                         nmolids += n_molid
                     i0 = i1
                     natoms += n
@@ -1024,8 +1023,8 @@ class Topology(object):
         self.update()
 
     def _extend(self, n1, n2):
-        # raise mol-ids of other with the highest in self
-        self._ins.arrays['mol-ids'][n1:] += np.max(self._ins.arrays['mol-ids'][:n1])
+        # raise tags of other with the highest in self
+        self._ins.arrays['tags'][n1:] += np.max(self._ins.arrays['tags'][:n1])
 
         indx_of = {}
         for i in range(n2):
@@ -1070,7 +1069,7 @@ class TopologyObject(object):
 
     topo_props = ['ids',
                   'names',
-                  'mol-ids',
+                  'tags',
                   'resnames',
                   'bonds',
                   'angles',
@@ -1090,8 +1089,8 @@ class TopologyObject(object):
                     self.ids = topology_dict[i]
                 if i == 'names':
                     self.names = topology_dict[i]
-                if i == 'mol-ids':
-                    self.mol_ids = topology_dict[i]
+                if i == 'tags':
+                    self.tags = topology_dict[i]
                 if i == 'resnames':
                     self.resnames = topology_dict[i]
                 if i == 'bonds':
@@ -1129,16 +1128,16 @@ class TopologyObject(object):
         self._dict['names'] = values
 
     @property
-    def mol_ids(self):
-        return self._dict['mol-ids']
+    def tags(self):
+        return self._dict['tags']
 
-    @mol_ids.setter
-    def mol_ids(self, values):
+    @tags.setter
+    def tags(self, values):
         try:
-            mol_ids = np.array(values, dtype=int)
+            tags = np.array(values, dtype=int)
         except ValueError as e:
-            raise ValueError(e, 'mol-ids should be integer')
-        self._dict['mol-ids'] = mol_ids
+            raise ValueError(e, 'tags should be integer')
+        self._dict['tags'] = tags
 
     @property
     def resnames(self):

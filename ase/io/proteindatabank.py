@@ -103,7 +103,7 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
                 'bfactor': bfactor,
                 'resnames': residuenames,
                 'names': atomtypes,
-                'mol-ids': residuenumbers}
+                'tags': residuenumbers}
         for name, array in info.items():
             if len(array) == 0:
                 pass
@@ -234,9 +234,9 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
             names = atoms.get_array('names')
             resnames = atoms.get_array('resnames')
             resnames[resnames == ''] = 'MOL'
-            resnumbers = atoms.get_array('mol-ids')
-            # making sure that atoms with same mol-id has same resname
-            # a resname can have atoms of different mol-ids
+            resnumbers = atoms.get_array('tags')
+            # making sure that atoms with same tag has same resname
+            # a resname can have atoms of different tags
             restypes = {}
             change = {}
             max_resnumber = np.max(resnumbers)
