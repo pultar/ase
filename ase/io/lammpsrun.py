@@ -143,7 +143,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
             cell=cell,
         )
 
-    out_atoms.set_topology(TopologyObject({'types': types}))
+    out_atoms.set_topology()
 
     if velocities is not None:
         if prismobj:

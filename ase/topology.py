@@ -91,7 +91,6 @@ class _TopoAttribute(object):
             self.set(props)
         elif self.prop in ['mol-ids',
                            'names',
-                           'types',
                            'ids']:
             del_ind = []
             for item in items:
@@ -224,7 +223,7 @@ class _TopoAttribute(object):
         elif self.prop == 'names':
             self._ins.set_array(self.prop, value, object)
             self.update(_name_set=True)
-        elif self.prop in ['types', 'mol-ids']:
+        elif self.prop == 'mol-ids':
             self._ins.set_array(self.prop, value, int)
             self.update()
         elif self.prop in ['resnames',
@@ -404,71 +403,9 @@ class _TopoAttribute(object):
 
         elif self.prop == 'names':
             if not self._ins.has('names'):
-                # types should be updated first
-                # if types are defined
-                # but not names, eg when reading lammps dump
-                # names have to be different
-                if (len(np.unique(self._ins.arrays['types']))
-                        == len(np.unique(self._ins.numbers))):
-                    self._ins.set_array('names',
-                                        self._ins.get_chemical_symbols(),
-                                        object)
-                else:
-                    names = self._ins.get_chemical_symbols()
-                    types = self._ins.get_array('types')
-                    type_of_name = {}
-                    names_counter = {}
-                    for i, j in enumerate(names):
-                        if j in type_of_name:
-                            if type_of_name[j] != types[i]:
-                                if types[i] in type_of_name.values():
-                                    _ = {k: l for l, k in type_of_name.items()}
-                                    name_of_types = _
-                                    names[i] = name_of_types[types[i]]
-                                else:
-                                    names_counter[j] = names_counter.get(j, 0) + 1
-                                    names[i] += str(names_counter[j])
-                                    type_of_name[names[i]] = types[i]
-                        else:
-                            type_of_name[j] = types[i]
-                    self._ins.set_array('names',
-                                        names,
-                                        object)
-            # update type when
-            # same name has two types
-            # happens during self.extend
-            # or same type has two names
-            types = self._ins.get_array('types')
-            names = self._ins.get_array('names')
-            types_dict = {}
-            # ASE atoms with no atoms can be encountered
-            # during ASE.__getitem__
-            if len(types) != 0:
-                n_max = np.max(types)
-                for i in set(types):
-                    name_ = sorted(np.unique(names[types == i]))
-                    types_dict[i] = name_[0]
-                    for j in name_[1:]:
-                        # same type has two names
-                        # then make it into case:
-                        # same name has two types
-                        # since j might already exist in other types
-                        n_max += 1
-                        types_dict[n_max] = j
-                        types[np.logical_and(types == i, names == j)] = n_max
-                # same name has two types
-                rev_types = {} # names to types
-                for i in reversed(list(types_dict.keys())):
-                    rev_types[types_dict[i]] = i
-                ind_of = {}
-                for i, j in types_dict.items():
-                    if i != rev_types[j]:
-                        ind_of[i] = rev_types[j]
-                self._ins.set_array('types',
-                                    [(ind_of[x] if x in ind_of else x)
-                                     for x in types],
-                                    int)
-                self._ins.topology['types'].update()
+                self._ins.set_array('names',
+                                    self._ins.get_chemical_symbols(),
+                                    object)
 
         if _name_set:
             # update bonds etc
@@ -521,20 +458,6 @@ class _TopoAttribute(object):
                                     object)
                 self._ins.topology[prop].update()
 
-        if self.prop == 'types':
-            # if types get changed,
-            # names can set types uniquely
-            # to change types, change names first
-            if not self._ins.has('types'):
-                self._ins.set_array('types',
-                                    self._ins.get_atomic_numbers(),
-                                    int)
-            ind_of = unique_ind(self._ins.arrays[self.prop])
-            self._ins.set_array(self.prop,
-                                [(ind_of[x] if x in ind_of else x)
-                                 for x in self._ins.get_array(self.prop)],
-                                int)
-
     @_check_exists
     @_check_persistence
     def set_types_to(self, indx_of, index=":"):
@@ -563,7 +486,7 @@ class _TopoAttribute(object):
                 values = [self._ins.arrays[self.prop][indx][x] for x in keys]
                 self._ins.arrays[self.prop][indx] = dict(zip(new_keys, values))
 
-        elif self.prop in ['mol-ids', 'types', 'names', 'resnames']:
+        elif self.prop in ['mol-ids', 'names', 'resnames']:
             for indx in np.arange(len(self._ins))[index]:
                 try:
                     _ = indx_of[self._ins.arrays[self.prop][indx]]
@@ -680,7 +603,6 @@ class Topology(object):
     ids = _TopoAttributeProperty('ids')
     names = _TopoAttributeProperty('names')
     mol_ids = _TopoAttributeProperty('mol-ids')
-    types = _TopoAttributeProperty('types')
     resnames = _TopoAttributeProperty('resnames')
     bonds = _TopoAttributeProperty('bonds')
     angles = _TopoAttributeProperty('angles')
@@ -699,20 +621,18 @@ class Topology(object):
         self._prop_dict = {'names': self.names,
                            'ids': self.ids,
                            'mol-ids': self.mol_ids,
-                           'types': self.types,
                            'resnames': self.resnames,
                            'bonds': self.bonds,
                            'angles': self.angles,
                            'dihedrals': self.dihedrals,
                            'impropers': self.impropers}
         # a dict to store only available properties
-        # ids, mol-ids, names, and types should always be present
+        # ids, mol-ids, and names should always be present
         self._dict = {}
         for key, val in self._prop_dict.items():
             if self._ins.has(key) or key in ['ids',
                                              'mol-ids',
-                                             'names',
-                                             'types']:
+                                             'names']:
                 self._dict[key] = val
 
         if not persistent:
@@ -763,7 +683,7 @@ class Topology(object):
     __call__ = get_topology_object
 
     @_check_persistence
-    def update(self, topo_object=None, specorder=None):
+    def update(self, topo_object=None):
         if topo_object is None:
             topo_dict = {}
         elif type(topo_object) is TopologyObject:
@@ -771,24 +691,7 @@ class Topology(object):
         else:
             topo_dict = TopologyObject(topo_object)._dict
 
-        if specorder is not None:
-            order = np.unique(self._ins.get_atomic_numbers())
-            if np.any(order != np.unique(specorder)):
-                raise RuntimeError('Atomic numbers found in specorder'
-                                   ' mismatch those found in system:'
-                                   ' {}'.format(order))
-            order_dict = dict(zip(order, specorder))
-            self._ins.set_array('types',
-                                [order_dict[i]
-                                 for i in self._ins.get_atomic_numbers()],
-                                int)
-
-        # types should be updated before names
-        # if types are defined
-        # but not names, eg when reading lammps dump
-        # names have to be different
         for prop in ['ids',
-                     'types',
                      'names',
                      'mol-ids',
                      'resnames',
@@ -1121,9 +1024,8 @@ class Topology(object):
         self.update()
 
     def _extend(self, n1, n2):
-        # raise types and mo-ids of other with the highest in self
-        for prop in ['mol-ids', 'types']:
-            self._ins.arrays[prop][n1:] += np.max(self._ins.arrays[prop][:n1])
+        # raise mol-ids of other with the highest in self
+        self._ins.arrays['mol-ids'][n1:] += np.max(self._ins.arrays['mol-ids'][:n1])
 
         indx_of = {}
         for i in range(n2):
@@ -1168,7 +1070,6 @@ class TopologyObject(object):
 
     topo_props = ['ids',
                   'names',
-                  'types',
                   'mol-ids',
                   'resnames',
                   'bonds',
@@ -1189,8 +1090,6 @@ class TopologyObject(object):
                     self.ids = topology_dict[i]
                 if i == 'names':
                     self.names = topology_dict[i]
-                if i == 'types':
-                    self.types = topology_dict[i]
                 if i == 'mol-ids':
                     self.mol_ids = topology_dict[i]
                 if i == 'resnames':
@@ -1228,18 +1127,6 @@ class TopologyObject(object):
             if not type(i) is str:
                 raise ValueError('names should be str')
         self._dict['names'] = values
-
-    @property
-    def types(self):
-        return self._dict['types']
-
-    @types.setter
-    def types(self, values):
-        try:
-            types = np.array(values, dtype=int)
-        except ValueError as e:
-            raise ValueError(e, 'types should be integer')
-        self._dict['types'] = types
 
     @property
     def mol_ids(self):

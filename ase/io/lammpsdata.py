@@ -372,7 +372,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
     if velocities is not None:
         at.set_velocities(velocities)
     at.arrays["ids"] = ids
-    at.arrays["types"] = types
     if names is not None:
         at.arrays["names"] = names
     if travel is not None:
@@ -437,7 +436,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
 
 def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                       prismobj=None, velocities=False, units="metal",
-                      style='atomic'):
+                      style='atomic', nameorder=None):
     """Write atomic structure data to a LAMMPS data_ file."""
     if isinstance(fileobj, basestring):
         f = paropen(fileobj, "wb")
@@ -457,10 +456,20 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     if not atoms.has('ids'):
         atoms.set_topology()
 
+    # TopoAtoms always assigns name
+    names = atoms.get_array('names')
+
     if specorder is not None:
         # To index elements in the LAMMPS data file
         # (indices must correspond to order in the potential file)
-        atoms.topology.update(specorder=specorder)
+        types = [specorder[x] for x in atoms.numbers]
+    elif nameorder is not None:
+        types = [nameorder[x] for x in atoms.topology.names()]
+    else:
+        unique_names = np.unique(names)
+        nameorder = {key: value
+                     for value, key in enumerate(unique_names, start=1)}
+        types = [nameorder[x] for x in atoms.topology.names()]
 
     f.write('{0} (written by ASE) \n\n'.format(f.name).encode("utf-8"))
 
@@ -476,11 +485,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                 '{1} \n'.format(num,
                                 prop).encode("utf-8"))
 
-    # TopoAtoms always assigns type and name
-    types = atoms.get_array('types')
-    names = atoms.get_array('names')
-
-    n_types = len(np.unique(atoms.get_array('types')))
+    n_types = len(np.unique(types))
     f.write('{0:8} \t '
             'atom types\n'.format(n_types).encode("utf-8"))
     for prop in ['bond types', 'angle types', 'dihedral types',
@@ -514,7 +519,7 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
     f.write("\n\n".encode("utf-8"))
 
     f.write('Masses \n\n'.encode("utf-8"))
-    for i in np.unique(atoms.get_array('types')):
+    for i in np.unique(types):
         indx = np.where(i == types)[0][0]
         mass = atoms.get_masses()[indx]
         sym = names[indx]
