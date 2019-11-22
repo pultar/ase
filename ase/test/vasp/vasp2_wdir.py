@@ -6,7 +6,6 @@ This is conditional on the existence of the ASE_VASP_COMMAND, VASP_COMMAND
 or VASP_SCRIPT environment variables
 
 """
-
 import filecmp
 import os
 import shutil
@@ -16,11 +15,12 @@ from ase.test.vasp import installed2 as installed
 from ase import Atoms
 from ase.calculators.vasp import Vasp2 as Vasp
 
-assert installed()
 
 def compare_paths(path1, path2):
     assert os.path.abspath(path1) == os.path.abspath(path2)
 
+
+assert installed()
 
 # Test setup system, borrowed from vasp_co.py
 d = 1.14
@@ -69,9 +69,11 @@ with open(file2, 'w') as f:
     atoms.set_calculator(calc2)
     atoms.get_potential_energy()
 
-
-# Make sure the two outputfiles are identical
-assert filecmp.cmp(os.path.join(calc.directory, file1), file2)
+# Make sure the two outputfiles exist and have the same size
+assert (os.path.exists(os.path.join(calc.directory, file1))
+        and os.path.exists(file2))
+assert (os.path.getsize(os.path.join(calc.directory, file1))
+        == os.path.getsize(file2))
 
 # Test restarting from working directory in test directory
 label2 = os.path.join(testdir, file3)
