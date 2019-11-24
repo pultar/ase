@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import numpy as np
 from numpy.testing import assert_allclose
 
 from ase.build import molecule
@@ -18,7 +17,6 @@ def main():
     atoms.get_forces()
     assert_allclose(atoms.get_potential_energy(), -2056.785854116349,
                     rtol=1e-4, atol=1e-4)
-
 
     # Test the reader
     calc2 = Psi4()
