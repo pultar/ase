@@ -90,7 +90,7 @@ class Atoms(object):
         Used to attach a calculator for calculating energies and atomic
         forces.
     topology: dict of key-value pairs
-        Used to get topology properties like ids, names, types, mol-ids,
+        Used to get topology properties like names, tags,
         bonds, angles, dihedrals, impropers and resname
     info: dict of key-value pairs
         Dictionary of key-value pairs with additional information
@@ -188,7 +188,7 @@ class Atoms(object):
             if calculator is None:
                 calculator = atoms.get_calculator()
             if topology is None:
-                if atoms.has('ids'):
+                if atoms._topology:
                     topology = atoms.topology.get_topology_object()
             if info is None:
                 info = copy.deepcopy(atoms.info)
@@ -313,7 +313,7 @@ class Atoms(object):
         if not persistent:
             other = self.copy()
             return Topology(other, persistent=False)
-        elif self.has('ids'):
+        elif self._topology is not None:
             return Topology(self)
         else:
             raise RuntimeError('Topology not initialised;'
@@ -323,14 +323,17 @@ class Atoms(object):
                                ''.format(atoms=self.__class__.__name__))
 
     def set_topology(self, value=TopologyObject()):
-        if value is not None:
+        if value is None:
+            # during __init__
+            self._topology = None
+        else:
             top = Topology(self)
             top.update(value)
 
     def _del_topology(self):
-        top = Topology(self)
-        for i in top._dict.keys():
-            del self.arrays[i]
+        self._topology = None
+        del self.arrays['names']
+
 
     def _get_persistent_topology(self):
         return self.get_topology(persistent=True)
@@ -474,13 +477,8 @@ class Atoms(object):
 
         Returns a copy unless the optional argument copy is false.
         """
-        from copy import deepcopy
         if copy:
-            if self.has('ids'):
-                # topology arrays require deepcopy
-                return deepcopy(self.arrays[name])
-            else:
-                return self.arrays[name].copy()
+            return self.arrays[name].copy()
         else:
             return self.arrays[name]
 
@@ -847,7 +845,7 @@ class Atoms(object):
         for name, a in self.arrays.items():
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
-        if self.has('ids'):
+        if self._topology:
             atoms.topology = self.topology.get_topology_object()
         return atoms
 
@@ -930,14 +928,10 @@ class Atoms(object):
         if isinstance(other, Atom):
             other = self.__class__([other])
 
-        # if self or other has topology, then set topology for all
-        if self.has('ids'):
-            if not other.has('ids'):
-                other.set_topology()
-            other = other.copy()
-        elif other.has('ids'):
+        # if other has topology and self has not
+        # then initiate self topology
+        if other._topology is not None and self._topology is None:
             self.set_topology()
-            other = other.copy()
 
         n1 = len(self)
         n2 = len(other)
@@ -951,10 +945,6 @@ class Atoms(object):
                 a2 = other.arrays.get(name)
             if a2 is not None:
                 a[n1:] = a2
-            elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
-                a[n1:] = [{} for _ in range(n2)]
-            elif name == 'resnames':
-                a[n1:] = ['' for _ in range(n2)]
             self.arrays[name] = a
 
         for name, a2 in other.arrays.items():
@@ -964,17 +954,18 @@ class Atoms(object):
             a[n1:] = a2
             if name == 'masses':
                 a[:n1] = self.get_masses()[:n1]
-            elif name in ['bonds', 'angles', 'dihedrals', 'impropers']:
-                a[:n1] = [{} for _ in range(n1)]
-            elif name == 'resnames':
-                a[:n1] = ['' for _ in range(n1)]
             else:
                 a[:n1] = 0
 
             self.set_array(name, a)
 
-        if self.has('ids'):
-            self.topology._extend(n1, n2)
+        # updating tags
+        if self.has('tags'):
+            self.arrays['tags'][n1:] += np.max(self.arrays['tags'][:n1]) + 1
+
+        # if other has topology, then add to self
+        if other._topology:
+            self.topology._extend(other._topology)
 
         return self
 
@@ -1016,7 +1007,6 @@ class Atoms(object):
                                      'object'.format(self.__class__.__name__))
 
         import copy
-        from copy import deepcopy
 
         conadd = []
         # Constraints need to be deepcopied, but only the relevant ones.
@@ -1036,13 +1026,12 @@ class Atoms(object):
 
         atoms.arrays = {}
         for name, a in self.arrays.items():
-            if self.has('ids'):
-                atoms.arrays[name] = deepcopy(a[i])
-            else:
                 atoms.arrays[name] = a[i].copy()
 
         atoms.constraints = conadd
-        if self.has('ids'):
+
+        # update topology
+        if self._topology:
             atoms.topology._get_item(i, len(self))
         return atoms
 
@@ -1071,7 +1060,7 @@ class Atoms(object):
             self.constraints = constraints
 
         # the indices should be renamed first
-        if self.has('ids'):
+        if self._topology:
             self.topology._del_item(i)
 
         mask = np.ones(len(self), bool)
@@ -1116,7 +1105,7 @@ class Atoms(object):
 
         self.cell = np.array([m[c] * self.cell[c] for c in range(3)])
 
-        if self.has('ids'):
+        if self._topology:
             self.topology._imul(m)
 
         return self
