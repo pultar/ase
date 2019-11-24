@@ -1090,12 +1090,18 @@ class Atoms(object):
             self.arrays[name] = np.tile(a, (M,) + (1,) * (len(a.shape) - 1))
 
         positions = self.arrays['positions']
+        max_tags = 0
+        n_tags = np.max(self.get_tags())
         i0 = 0
         for m0 in range(m[0]):
             for m1 in range(m[1]):
                 for m2 in range(m[2]):
                     i1 = i0 + n
                     positions[i0:i1] += np.dot((m0, m1, m2), self.cell)
+                    if self.has('tags'):
+                        _ = self.arrays['tags'][i0:i1] + max_tags
+                        self.arrays['tags'][i0:i1] = _
+                        max_tags += n_tags
                     i0 = i1
 
         if self.constraints is not None:
