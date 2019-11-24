@@ -973,6 +973,10 @@ class Atoms(object):
 
             self.set_array(name, a)
 
+        # updating tags
+        if self.has('tags'):
+            self.arrays['tags'][n1:] += np.max(self.arrays['tags'][:n1]) + 1
+
         return self
 
     __iadd__ = extend
