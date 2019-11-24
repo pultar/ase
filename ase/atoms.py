@@ -22,7 +22,7 @@ from ase.data import atomic_masses
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
-from ase.topology import Topology, TopologyObject
+from ase.topology import Topology
 
 
 class Atoms(object):
@@ -322,13 +322,15 @@ class Atoms(object):
                                '{atoms}.get_topology()'
                                ''.format(atoms=self.__class__.__name__))
 
-    def set_topology(self, value=TopologyObject()):
+    def set_topology(self, value=0):
         if value is None:
             # during __init__
             self._topology = None
-        else:
-            top = Topology(self)
-            top.update(value)
+            return
+        elif value == 0:
+            value = {}
+        top = Topology(self)
+        top.update(value)
 
     def _del_topology(self):
         self._topology = None
@@ -846,7 +848,7 @@ class Atoms(object):
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
         if self._topology:
-            atoms.topology = self.topology.get_topology_object()
+            atoms.topology = self.topology()
         return atoms
 
     def __len__(self):
@@ -965,7 +967,7 @@ class Atoms(object):
 
         # if other has topology, then add to self
         if other._topology:
-            self.topology._extend(other._topology)
+            self.topology._extend(other._topology, _offset=n1)
 
         return self
 
@@ -1092,8 +1094,8 @@ class Atoms(object):
             self.arrays[name] = np.tile(a, (M,) + (1,) * (len(a.shape) - 1))
 
         positions = self.arrays['positions']
-        max_tags = 1
-        n_tags = np.max(self.get_tags())
+        max_tags = 0
+        n_tags = np.max(self.get_tags()) + 1
         i0 = 0
         for m0 in range(m[0]):
             for m1 in range(m[1]):

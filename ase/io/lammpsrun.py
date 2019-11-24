@@ -6,7 +6,6 @@ import numpy as np
 
 from ase.atoms import Atoms
 from ase.quaternions import Quaternions
-from ase.topology import TopologyObject
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.utils import basestring

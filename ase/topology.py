@@ -37,16 +37,7 @@ class _TopoAttribute(object):
         # atoms.arrays, otherwise the counting methods return 0
         def wrapper(*args, **kwargs):
             self = args[0]
-            exist = True
-            if self.prop in ['bonds',
-                             'angles',
-                             'dihedrals',
-                             'impropers']:
-                if self.prop not in self._ins._topology:
-                    exist = False
-            elif self._ins.has(self.prop):
-                exist = False
-            if not exist:
+            if self.prop not in self._ins._topology and not self._ins.has(self.prop):
                 raise RuntimeError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
@@ -64,8 +55,8 @@ class _TopoAttribute(object):
         return wrapper
 
     def __repr__(self):
-        if self.prop in ['ids', 'tags']:
-            return '1 ... {}'.format(self.get_num_types())
+        if self.prop == 'tags':
+            return '0 ... {}'.format(np.max(self.get_types()))
         else:
             return str(self.get_types())
 
@@ -118,7 +109,7 @@ class _TopoAttribute(object):
         '''returns types of prop: bonds, etc
         :param prop: name of property
         :param verbose: if true, returns types of individual bond/angles/etc'''
-        if self.prop not in self._ins._topology:
+        if (self.prop not in self._ins._topology and self.prop not in ['names', 'tags']):
             return np.array([])
 
         if isinstance(index, basestring):
@@ -139,7 +130,7 @@ class _TopoAttribute(object):
 
             # giving connectivity names
             names = self._ins.arrays['names']
-            type_list = [None for _ in len(items_indx)]
+            type_list = [None for _ in range(len(items_indx))]
             for i, connectivity in enumerate(items_indx):
                 name_list = names[connectivity].tolist()
                 if self.prop == 'bonds':
@@ -179,9 +170,9 @@ class _TopoAttribute(object):
             array = self._ins._topology[self.prop]
             types = self.get_types(verbose=True)
             dict_ = {}
-            for i, connectivity in array:
+            for i, connectivity in enumerate(array):
                 dict_[types[i]] = (dict_.get(types[i], [])
-                                   + [connectivity])
+                                   + [connectivity.tolist()])
             return dict_
         elif self.prop == 'resnames':
             return  self._ins._topology[self.prop]
@@ -202,6 +193,8 @@ class _TopoAttribute(object):
         if value is None:
             return None
         if self.prop == 'names':
+            if np.any([type(x) is not str for x in value]):
+                raise RuntimeError('names should be str')
             self._ins.set_array(self.prop, value, object)
             self.update()
         elif self.prop == 'tags':
@@ -294,6 +287,15 @@ class _TopoAttribute(object):
             self.update()
 
         elif self.prop == 'resnames':
+            # make sure resnames are valid
+            for i in items.keys():
+                if not type(i) is str:
+                    raise ValueError('resnames should be str')
+            for i in items.values():
+                try:
+                    _ = np.array(list(i), dtype=int)
+                except ValueError as e:
+                    raise ValueError(e, 'resnames indices should be int')
             # make sure indices are within length of atoms object
             if np.any([x >= len(self._ins)
                        for values in items.values() for x in values]):
@@ -538,13 +540,14 @@ class Topology(object):
     def __repr__(self):
         tokens = []
         for key, values in self._dict.items():
-            tokens.append("{}= {}".format(key, values))
+            if key in self._ins._topology or key in ['names', 'tags']:
+                tokens.append("{}= {}".format(key, values))
         return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
 
     def __getitem__(self, item):
         return self._dict[item]
 
-    def get_topology_object(self):
+    def get_topology_dictionary(self):
         '''Gives topology dict that can be inherited by other topology
         classes'''
         topo_dict = {'names': self._ins.arrays['names'],
@@ -553,20 +556,16 @@ class Topology(object):
             if prop in self._ins._topology:
                 topo_dict[prop] = self._ins._topology[prop]
 
-        return TopologyObject(topo_dict)
+        return topo_dict
 
-    __call__ = get_topology_object
+    __call__ = get_topology_dictionary
 
-    def update(self, topo_object=None):
+    def update(self, topo_dict=None):
         if not self.persistent:
             raise RuntimeError('Topology is not persistent')
         # sanity check for topo_object
-        if topo_object is None:
+        if topo_dict is None:
             topo_dict = {}
-        elif type(topo_object) is TopologyObject:
-            topo_dict = topo_object._dict
-        else:
-            topo_dict = TopologyObject(topo_object)._dict
 
         # initialise topology
         if self._ins._topology is None:
@@ -871,6 +870,7 @@ class Topology(object):
         # n contains the original length of atoms
         n = int(len(self._ins) / size_m)
 
+        array = deepcopy(self._ins._topology)
         i0 = 0
         for m0 in range(m[0]):
             for m1 in range(m[1]):
@@ -883,8 +883,7 @@ class Topology(object):
                                      'impropers']:
                             if prop in self._ins._topology:
                                 # add prop with an offset
-                                array = self._ins._topology[prop]
-                                self._dict[prop].add(array, _offset=i0)
+                                self._dict[prop].add(array[prop], _offset=i0)
                     i0 = i1
 
         self.update()
@@ -917,199 +916,3 @@ class Topology(object):
                 stats[prop] = self._dict[prop].get_statistics(index)
 
         return stats
-
-
-class TopologyObject(object):
-    '''Topology object that can be used to transfer topologies
-    attached to Atoms object'''
-
-    topo_props = ['ids',
-                  'names',
-                  'tags',
-                  'resnames',
-                  'bonds',
-                  'angles',
-                  'dihedrals',
-                  'impropers']
-
-    lengths = {'bonds': 2,
-               'angles': 3,
-               'dihedrals': 4,
-               'impropers': 4}
-
-    def __init__(self, topology_dict={}):
-        self._dict = {}
-        for i in topology_dict:
-            if i in self.topo_props:
-                if i == 'ids':
-                    self.ids = topology_dict[i]
-                if i == 'names':
-                    self.names = topology_dict[i]
-                if i == 'tags':
-                    self.tags = topology_dict[i]
-                if i == 'resnames':
-                    self.resnames = topology_dict[i]
-                if i == 'bonds':
-                    self.bonds = topology_dict[i]
-                if i == 'angles':
-                    self.angles = topology_dict[i]
-                if i == 'dihedrals':
-                    self.dihedrals = topology_dict[i]
-                if i == 'impropers':
-                    self.impropers = topology_dict [i]
-            else:
-                raise RuntimeError('{} not a topology property'.format(i))
-
-    @property
-    def ids(self):
-       return self._dict['ids']
-
-    @ids.setter
-    def ids(self, values):
-        try:
-            ids = np.array(values, dtype=int)
-        except ValueError as e:
-            raise ValueError(e, 'ids should be integer')
-        self._dict['ids'] = ids
-
-    @property
-    def names(self):
-        return self._dict['names']
-
-    @names.setter
-    def names(self, values):
-        for i in values:
-            if not type(i) is str:
-                raise ValueError('names should be str')
-        self._dict['names'] = values
-
-    @property
-    def tags(self):
-        return self._dict['tags']
-
-    @tags.setter
-    def tags(self, values):
-        try:
-            tags = np.array(values, dtype=int)
-        except ValueError as e:
-            raise ValueError(e, 'tags should be integer')
-        self._dict['tags'] = tags
-
-    @property
-    def resnames(self):
-        return self._dict['resnames']
-
-    @resnames.setter
-    def resnames(self, values):
-        for i in values.keys():
-            if not type(i) is str:
-                raise ValueError('resnames should be str')
-        for i in values.values():
-            try:
-                _ = np.array(list(i), dtype=int)
-            except ValueError as e:
-                raise ValueError(e, 'resnames indices should be int')
-        self._dict['resnames'] = values
-
-    @property
-    def bonds(self):
-        return self._dict['bonds']
-
-    @bonds.setter
-    def bonds(self, values):
-        if not type(values) is dict:
-            raise TypeError('bonds should be dict')
-        try:
-            _ = np.array(list(values.keys()), dtype=int)
-        except ValueError as e:
-            raise ValueError(e.args[0]
-                            + ' bonds keys should be int')
-        for bonds in values.values():
-            for bond in bonds:
-                if len(bond) != self.lengths['bonds']:
-                    raise ValueError('bonds should be of size '
-                                     '{}'.format(self.lengths['bonds']))
-                try:
-                    _ = np.array(bond, dtype=int)
-                except ValueError as e:
-                    raise ValueError(e.args[0]
-                                    + ' bond indices should be int')
-        self._dict['bonds'] = values
-
-    @property
-    def angles(self):
-        return self._dict['angles']
-
-    @angles.setter
-    def angles(self, values):
-        if not type(values) is dict:
-            raise TypeError('angles should be dict')
-        for key in values.keys():
-            try:
-                _ = operator.index(key)
-            except TypeError as e:
-                raise TypeError(e.args[0]
-                                + ' angles keys should be int')
-        for angles in values.values():
-            for angle in angles:
-                if len(angle) != self.lengths['angles']:
-                    raise ValueError('angles should be of size '
-                                     '{}'.format(self.lengths['angles']))
-                try:
-                    _ = np.array(angle, dtype=int)
-                except ValueError as e:
-                    raise ValueError(e.args[0]
-                                    + ' angle indices should be int')
-        self._dict['angles'] = values
-
-    @property
-    def dihedrals(self):
-        return self._dict['dihedrals']
-
-    @dihedrals.setter
-    def dihedrals(self, values):
-        if not type(values) is dict:
-            raise TypeError('dihedrals should be dict')
-        for key in values.keys():
-            try:
-                _ = operator.index(key)
-            except TypeError as e:
-                raise TypeError(e.args[0]
-                                + ' dihedrals keys should be int')
-        for dihedrals in values.values():
-            for dihedral in dihedrals:
-                if len(dihedral) != self.lengths['dihedrals']:
-                    raise ValueError('dihedrals should be of size '
-                                     '{}'.format(self.lengths['dihedrals']))
-                try:
-                    _ = np.array(dihedral, dtype=int)
-                except ValueError as e:
-                    raise ValueError(e.args[0]
-                                    + ' dihedral indices should be int')
-        self._dict['dihedrals'] = values
-
-    @property
-    def impropers(self):
-        return self._dict['impropers']
-
-    @impropers.setter
-    def impropers(self, values):
-        if not type(values) is dict:
-            raise TypeError('impropers should be dict')
-        for key in values.keys():
-            try:
-                _ = operator.index(key)
-            except TypeError as e:
-                raise TypeError(e.args[0]
-                                + ' impropers keys should be int')
-        for impropers in values.values():
-            for improper in impropers:
-                if len(improper) != self.lengths['impropers']:
-                    raise ValueError('impropers should be of size '
-                                     '{}'.format(self.lengths['impropers']))
-                try:
-                    _ = np.array(improper, dtype=int)
-                except ValueError as e:
-                    raise ValueError(e.args[0]
-                                     + ' improper indices should be int')
-        self._dict['impropers'] = values
