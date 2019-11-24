@@ -9,23 +9,28 @@ from ase.calculators.psi4 import Psi4
 
 
 def main():
-    atoms = molecule('CH4')
-    atoms.calc = Psi4(basis='3-21G')
-    assert_allclose(atoms.get_potential_energy(), -1087.8229067535328)
+    atoms = molecule('H2O')
+    calc = Psi4(basis='3-21G')
+    atoms.set_calculator(calc)
 
-    F1_ref = np.array([
-        [-3.20324666e-09, +7.13619716e-10, -1.22699616e-07],
-        [-2.03993160e-01, +4.51311288e-09, -1.44244915e-01],
-        [+2.03993163e-01, -4.59098567e-09, -1.44244918e-01],
-        [-4.50580226e-09, +2.03993067e-01, +1.44244978e-01],
-        [+4.47061790e-09, -2.03993067e-01, +1.44244978e-01]])
-    assert_allclose(atoms.get_forces(), F1_ref, atol=1e-14)
+    # Calculate forces ahead of time, compare against finite difference after
+    # checking the psi4-calc.dat file
+    atoms.get_forces()
+    assert_allclose(atoms.get_potential_energy(), -2056.785854116349,
+                    rtol=1e-4, atol=1e-4)
+
 
     # Test the reader
     calc2 = Psi4()
     calc2.read('psi4-calc')
-    assert_allclose(calc2.results['energy'], atoms.get_potential_energy())
-    assert_allclose(calc2.results['forces'], atoms.get_forces(), atol=1e-14)
+    assert_allclose(calc2.results['energy'], atoms.get_potential_energy(),
+                    rtol=1e-4, atol=1e-4)
+    assert_allclose(calc2.results['forces'], atoms.get_forces(),
+                    rtol=1e-4, atol=1e-4)
+
+    # Compare analytical vs numerical forces
+    assert_allclose(atoms.get_forces(), calc.calculate_numerical_forces(atoms),
+                    rtol=1e-4, atol=1e-4)
 
     os.remove('psi4-calc.dat')
     # Unfortunately, we can't currently remove timer.dat, because Psi4
