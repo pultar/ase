@@ -356,7 +356,7 @@ class _TopoAttribute(object):
             # change sparse tags to uniform tags
             id_ = np.unique(self._ins.arrays[self.prop])
             ind_of = {}
-            for i, val in enumerate(id_, start=1):
+            for i, val in enumerate(id_):
                 if val != i:
                     ind_of[val] = i
             self._ins.set_array(self.prop,
@@ -872,8 +872,6 @@ class Topology(object):
         n = int(len(self._ins) / size_m)
 
         i0 = 0
-        max_tags = 0
-        n_tags = np.max(self._ins.get_tags())
         for m0 in range(m[0]):
             for m1 in range(m[1]):
                 for m2 in range(m[2]):
@@ -887,10 +885,6 @@ class Topology(object):
                                 # add prop with an offset
                                 array = self._ins._topology[prop]
                                 self._dict[prop].add(array, _offset=i0)
-                    if self._ins.has('tags'):
-                        _ = self._ins.arrays['tags'][i0:i1] + max_tags
-                        self._ins.arrays['tags'][i0:i1] = _
-                        max_tags += n_tags
                     i0 = i1
 
         self.update()
