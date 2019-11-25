@@ -17,6 +17,7 @@ __codata_version__ = '2014'
 # Instead of a plain dict, if the units are in the __dict__ of a
 # dict subclass, they can be accessed as attributes in a similar way
 # to a module.
+# New comments for testing purpose v3
 class Units(dict):
     """Dictionary for units that supports .attribute access."""
     def __init__(self, *args, **kwargs):
