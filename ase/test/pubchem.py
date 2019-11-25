@@ -1,7 +1,6 @@
 from ase.data.pubchem import pubchem_search, pubchem_conformer_search
 from ase.data.pubchem import pubchem_atoms_search
 from ase.data.pubchem import pubchem_atoms_conformer_search
-from unittest import SkipTest
 
 # check class functionality
 data = pubchem_search('ammonia', mock_test=True)
