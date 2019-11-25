@@ -188,8 +188,8 @@ class Atoms(object):
             if calculator is None:
                 calculator = atoms.get_calculator()
             if topology is None:
-                if atoms._topology:
-                    topology = atoms.topology.get_topology_object()
+                if atoms._topology is not None:
+                    topology = atoms.topology.get_topology_dict()
             if info is None:
                 info = copy.deepcopy(atoms.info)
 
@@ -961,10 +961,9 @@ class Atoms(object):
 
             self.set_array(name, a)
 
-        # updating tags
-        if self.has('tags'):
+        # if self has topology, update tags
+        if self._topology is not None:
             self.arrays['tags'][n1:] += np.max(self.arrays['tags'][:n1]) + 1
-
         # if other has topology, then add to self
         if other._topology:
             self.topology._extend(other._topology, _offset=n1)
@@ -1094,18 +1093,12 @@ class Atoms(object):
             self.arrays[name] = np.tile(a, (M,) + (1,) * (len(a.shape) - 1))
 
         positions = self.arrays['positions']
-        max_tags = 0
-        n_tags = np.max(self.get_tags()) + 1
         i0 = 0
         for m0 in range(m[0]):
             for m1 in range(m[1]):
                 for m2 in range(m[2]):
                     i1 = i0 + n
                     positions[i0:i1] += np.dot((m0, m1, m2), self.cell)
-                    if self.has('tags'):
-                        _ = self.arrays['tags'][i0:i1] + max_tags
-                        self.arrays['tags'][i0:i1] = _
-                        max_tags += n_tags
                     i0 = i1
 
         if self.constraints is not None:
