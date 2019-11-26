@@ -307,7 +307,7 @@ class _TopoAttribute(object):
             try:
                 for i in items.keys():
                     items[i] = np.array(items[i], dtype=int)
-            except ValueError as e:
+            except ValueError:
                 raise ValueError('resnames indices should be int')
 
             if _offset is not None:
@@ -324,7 +324,7 @@ class _TopoAttribute(object):
 
             if self.prop in self._ins._topology:
                 # add resnames to the array
-                for key, values in self._ins._topology[self.prop]:
+                for key, values in self._ins._topology[self.prop].items():
                     for value in values:
                         resnames[value] = key
 
@@ -366,7 +366,14 @@ class _TopoAttribute(object):
 
         elif self.prop == 'resnames':
             if self.prop in self._ins._topology:
-                if len(self.get_types()) == 0:
+                # remove empty keys
+                del_key = []
+                for key, values in self._ins._topology[self.prop].items():
+                    if len(values) == 0:
+                        del_key.append(key)
+                for i in del_key:
+                    self._ins._topology[self.prop].pop(i)
+                if not self._ins._topology[self.prop]:
                     del self._ins.array[self.prop]
 
         elif self.prop == 'tags':
@@ -433,20 +440,31 @@ class _TopoAttribute(object):
                 then delete the index
         """
         # selecting set of ids to remove
-        if (self.prop not in ['bonds', 'angles', 'dihedrals', 'impropers']
-                and self.prop not in self._ins._topology):
-            return None
-
-        array = self._ins._topology[self.prop]
-        mask = np.ones(len(array))
-        for i in range(len(array)):
-            if np.any([indx_of[x] is None for x in array[i]]):
-                mask[i] = 0
-                continue
-            for j in range(array.shape[1]):
-                array[i, j] = indx_of[array[i, j]]
-        array = array[mask]
-        self._ins._topology[self.prep] = array
+        if (self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']
+                and self.prop in self._ins._topology):
+            array = self._ins._topology[self.prop]
+            mask = np.ones(len(array), dtype=bool)
+            for i in range(len(array)):
+                if np.any([indx_of[x] is None for x in array[i]]):
+                    mask[i] = 0
+                    continue
+                for j in range(array.shape[1]):
+                    array[i, j] = indx_of[array[i, j]]
+            array = array[mask]
+            self._ins._topology[self.prop] = array
+        elif self.prop == 'resnames' and self.prop in self._ins._topology:
+            resnames = self._ins._topology[self.prop]
+            for key, values in resnames.items():
+                values = np.array(values)
+                mask = np.ones(len(values), dtype=bool)
+                for i in range(len(values)):
+                    if indx_of[values[i]] is None:
+                        mask[i] = 0
+                        continue
+                    values[i] = indx_of[values[i]]
+                values = values[mask]
+                resnames[key] = values.tolist()
+            self._ins._topology[self.prop] = resnames
 
     @_check_exists
     def get_statistics(self, index=':'):
@@ -577,7 +595,11 @@ class Topology(object):
         classes"""
         topo_dict = {'names': self._ins.arrays['names'],
                      'tags': self._ins.arrays['tags']}
-        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+        for prop in ['resnames',
+                     'bonds',
+                     'angles',
+                     'dihedrals',
+                     'impropers']:
             if self.has(prop):
                 topo_dict[prop] = self._ins._topology[prop]
 
@@ -802,8 +824,8 @@ class Topology(object):
             if check_.prop_exists('dihedrals'):
                 for i, neighbor_i in enumerate(d):
                     for j in neighbor_i:
-                        for k in set(d[j]) - set([i, j]):
-                            for l in set(d[k]) - set([i, j, k]):
+                        for k in set(d[j]) - {i, j}:
+                            for l in set(d[k]) - {i, j, k}:
                                 name_list = [symbols[x] for x in [i, j, k, l]]
                                 name_list = '-'.join(name_list)
                                 if check_(name_list, 'dihedrals'):
@@ -841,14 +863,18 @@ class Topology(object):
     def _set_indices_to(self, indx_of):
         """sets indices in bonds, etc as specified in indx_of"""
         # removing bonds etc containing non-existing ids
-        for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
+        for prop in ['resnames',
+                     'bonds',
+                     'angles',
+                     'dihedrals',
+                     'impropers']:
             if prop in self._dict:
                 self._dict[prop]._set_indices_to(indx_of)
 
     def _get_item(self, item, len_self):
         """used when _get_item is called in atoms object
-        Method corrects bonds, angles, dihedrals, and impropers that
-        point to wrong indices due to array slicing
+        Method returns topology dict with resnames, bonds, angles, dihedrals,
+        and impropers, from indices given
         parameters
             item: slice
                 Used for selecting atoms

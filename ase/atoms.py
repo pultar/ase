@@ -914,6 +914,9 @@ class Atoms(object):
                 constraint = self.constraints
             tokens.append('constraint={0}'.format(repr(constraint)))
 
+        if self._topology is not None:
+            tokens.append('topology=...')
+
         if self._calc is not None:
             tokens.append('calculator={0}(...)'
                           .format(self._calc.__class__.__name__))
@@ -1033,6 +1036,7 @@ class Atoms(object):
 
         # update topology
         if self._topology:
+            atoms._topology = copy.deepcopy(self._topology)
             atoms.topology._get_item(i, len(self))
         return atoms
 
