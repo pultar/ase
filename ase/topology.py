@@ -575,8 +575,10 @@ class Topology(object):
 
         # initialise topology
         if not hasattr(self._ins, '_topology'):
+            # setting new atoms object from prev one with topology
+            # leads to this case
             self._ins._topology = {}
-        if self._ins._topology is None:
+        elif self._ins._topology is None:
             self._ins._topology = {}
 
         for prop in ['names',
@@ -663,15 +665,23 @@ class Topology(object):
         topo_dict_indx = {}
         if bonds is not None:
             if len(bonds) != 0:
+                if len(np.array(bonds).shape) != 2:
+                    raise RuntimeError('a list of connectivities is expected')
                 topo_dict['bonds'] = bonds
         if angles is not None:
             if len(angles) != 0:
+                if len(np.array(angles).shape) != 2:
+                    raise RuntimeError('a list of connectivities is expected')
                 topo_dict['angles'] = angles
         if dihedrals is not None:
             if len(dihedrals) != 0:
+                if len(np.array(dihedrals).shape) != 2:
+                    raise RuntimeError('a list of connectivities is expected')
                 topo_dict['dihedrals'] = dihedrals
         if impropers is not None:
             if len(impropers) != 0:
+                if len(np.array(impropers).shape) != 2:
+                    raise RuntimeError('a list of connectivities is expected')
                 topo_dict['impropers'] = impropers
 
         length = {'bonds': 2,
