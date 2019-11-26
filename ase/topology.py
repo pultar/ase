@@ -175,10 +175,23 @@ class _TopoAttribute(object):
                                    + [connectivity.tolist()])
             return dict_
         elif self.prop == 'resnames':
-            return  self._ins._topology[self.prop]
+            if with_names:
+                return  self._ins._topology[self.prop]
+            else:
+                resnames = ['' for _ in range(len(self._ins))]
+                for key, values in self._ins._topology[self.prop].items():
+                    for value in values:
+                        resnames[value] = key
+                return resnames
         else:
             # tags and names
-            return self._ins.arrays[self.prop]
+            if with_names:
+                prop = {}
+                for i, name in enumerate(self._ins.arrays[self.prop]):
+                    prop[name] = prop.get(name, []) + [i]
+                return prop
+            else:
+                return self._ins.arrays[self.prop]
 
     __call__ = get
 
