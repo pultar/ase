@@ -101,7 +101,6 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
 
         info = {'occupancy': occ,
                 'bfactor': bfactor,
-                'resnames': residuenames,
                 'names': atomtypes,
                 'tags': residuenumbers}
         for name, array in info.items():
@@ -113,8 +112,12 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
                               format(name, len(array), len(atoms)))
             else:
                 atoms.set_array(name, np.array(array))
-        atoms.set_topology()
-        atoms.topology.generate_with_indices({'bonds': bonds})
+        # residue names
+        resname_dict = {}
+        for i, resname in enumerate(residuenames):
+            resname_dict[resname] = resname_dict.get(resname, []) + [i]
+        atoms.set_topology({'resnames': resname_dict})
+        atoms.topology.generate(bonds=bonds)
         return atoms
 
     for line in fileobj.readlines():
@@ -191,7 +194,7 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
     return images[index]
 
 
-def write_proteindatabank(fileobj, images, write_arrays=True):
+def write_proteindatabank(fileobj, images, order_tags=True, write_arrays=True):
     """Write images to PDB-file."""
     if isinstance(fileobj, basestring):
         fileobj = paropen(fileobj, 'w')
@@ -229,30 +232,34 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
 
     for n, atoms in enumerate(images):
         fileobj.write('MODEL     ' + str(n + 1) + '\n')
-        if atoms.has('ids'):
+        if atoms._topology is not None:
             # topology exists
             names = atoms.get_array('names')
-            resnames = atoms.get_array('resnames')
+            if atoms.topology.has('resnames'):
+                resnames = atoms.topology.resnames.get()
+            else:
+                resnames = ['MOL' for _ in range(len(atoms))]
             resnames[resnames == ''] = 'MOL'
             resnumbers = atoms.get_array('tags')
-            # making sure that atoms with same tag has same resname
-            # a resname can have atoms of different tags
-            restypes = {}
-            change = {}
-            max_resnumber = np.max(resnumbers)
-            for i, resnumber in enumerate(resnumbers):
-                if resnumber not in restypes:
-                    restypes[resnumber] = resnames[i]
-                if restypes[resnumber] != resnames[i]:
-                    if resnames[i] not in change:
-                        change[resnames[i]] = {}
-                    if resnumber in change[resnames[i]]:
-                        resnumbers[i] = change[resnames[i]][resnumber]
-                    else:
-                        resnumbers[i] = max_resnumber + 1
-                        restypes[resnumbers[i]] = resnames[i]
-                        max_resnumber += 1
-                        change[resnames[i]][resnumber] = resnumbers[i]
+            if order_tags:
+                # making sure that atoms with same tag has same resname
+                # a resname can have atoms of different tags
+                restypes = {}
+                change = {}
+                max_resnumber = np.max(resnumbers)
+                for i, resnumber in enumerate(resnumbers):
+                    if resnumber not in restypes:
+                        restypes[resnumber] = resnames[i]
+                    if restypes[resnumber] != resnames[i]:
+                        if resnames[i] not in change:
+                            change[resnames[i]] = {}
+                        if resnumber in change[resnames[i]]:
+                            resnumbers[i] = change[resnames[i]][resnumber]
+                        else:
+                            resnumbers[i] = max_resnumber + 1
+                            restypes[resnumbers[i]] = resnames[i]
+                            max_resnumber += 1
+                            change[resnames[i]][resnumber] = resnumbers[i]
 
         else:
             names = symbols
