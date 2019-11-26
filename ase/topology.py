@@ -374,7 +374,7 @@ class _TopoAttribute(object):
                 for i in del_key:
                     self._ins._topology[self.prop].pop(i)
                 if not self._ins._topology[self.prop]:
-                    del self._ins.array[self.prop]
+                    del self._ins._topology[self.prop]
 
         elif self.prop == 'tags':
             if not self._ins.has(self.prop):

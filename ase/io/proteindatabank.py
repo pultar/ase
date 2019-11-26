@@ -280,7 +280,7 @@ def write_proteindatabank(fileobj, images, order_tags=True, write_arrays=True):
             occ = occupancy[a]
             bf = bfactor[a]
             resname = resnames[a].split()[0]
-            chain_id = ('A' if len(resnames[a].split()) == 1
+            chain_id = (' ' if len(resnames[a].split()) == 1
                         else resnames[a].split()[1])
             fileobj.write(format.format(a % MAXNUM + 1, names[a], resname,
                                         chain_id, resnumbers[a],
