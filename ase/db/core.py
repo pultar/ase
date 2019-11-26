@@ -337,9 +337,9 @@ class Database:
         kvp.update(kwargs)
 
         if isinstance(atoms, Atoms):
-            if atoms.has('ids'):
+            if atoms._topology is not None:
                 top_data = {'topology':
-                                atoms.topology.get_topology_object()._dict}
+                                atoms.topology.get_topology_dict()}
                 data.update(top_data)
 
         id = self._write(atoms, kvp, data, id)
