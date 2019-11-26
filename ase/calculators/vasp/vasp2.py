@@ -19,7 +19,6 @@ $VASP_SCRIPT pointing to a python script looking something like::
 
 www.vasp.at
 """
-from __future__ import print_function, division
 
 import os
 import sys
@@ -482,7 +481,8 @@ class Vasp2(GenerateVaspInput, Calculator):
                     self.resort.append(int(resort))
         else:
             # Redo the sorting
-            self.initialize(self.atoms)
+            atoms = read(self._indir('CONTCAR'))
+            self.initialize(atoms)
 
     def read_atoms(self, filename='CONTCAR'):
         """Read the atoms from file located in the VASP

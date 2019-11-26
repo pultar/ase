@@ -1,14 +1,10 @@
-from __future__ import print_function
 import pickle
 import sys
 
 
 def main():
     import matplotlib.pyplot as plt
-    stdin = sys.stdin
-    if sys.version_info[0] == 3:
-        stdin = stdin.buffer
-    task, data = pickle.load(stdin)
+    task, data = pickle.load(sys.stdin.buffer)
     if task == 'eos':
         from ase.eos import plot
         plot(*data)
@@ -16,8 +12,8 @@ def main():
         from ase.neb import plot_band_from_fit
         plot_band_from_fit(*data)
     elif task == 'reciprocal':
-        from ase.dft.bz import bz3d_plot
-        bz3d_plot(**data)
+        from ase.dft.bz import bz_plot
+        bz_plot(**data)
     elif task == 'graph':
         from ase.gui.graphs import make_plot
         make_plot(show=False, *data)

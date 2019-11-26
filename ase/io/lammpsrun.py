@@ -12,7 +12,7 @@ from ase.utils import basestring
 from ase.calculators.lammps import convert
 
 
-def read_lammps_dump(infileobj, *args, **kwargs):
+def read_lammps_dump(infileobj, **kwargs):
     """Method which reads a LAMMPS dump file.
 
        LAMMPS chooses output method depending on the given suffix:
@@ -42,15 +42,23 @@ def read_lammps_dump(infileobj, *args, **kwargs):
         fileobj = infileobj
 
     if suffix == ".bin":
-        return read_lammps_dump_binary(fileobj, *args, **kwargs)
+        return read_lammps_dump_binary(fileobj, **kwargs)
 
-    return read_lammps_dump_string(fileobj, *args, **kwargs)
+    return read_lammps_dump_text(fileobj, **kwargs)
 
 
-def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
-                             pbc=False, atomsobj=Atoms, order=True,
-                             specorder=None, prismobj=None,
-                             units="metal"):
+def lammps_data_to_ase_atoms(
+    data,
+    colnames,
+    cell,
+    celldisp,
+    pbc=False,
+    atomsobj=Atoms,
+    order=True,
+    specorder=None,
+    prismobj=None,
+    units="metal",
+):
     """Extract positions and other per-atom parameters and create Atoms
 
     :param data: per atom data
@@ -80,9 +88,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
 
     # reconstruct types from given specorder
     if specorder:
-        symbols = [specorder[t] for t in types]
-    else:
-        symbols = types
+        types = [specorder[t - 1] for t in types]
 
     def get_quantity(labels, quantity=None):
         try:
@@ -113,7 +119,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
 
     if quaternions:
         out_atoms = Quaternions(
-            symbols=symbols,
+            symbols=types,
             positions=positions,
             cell=cell,
             celldisp=celldisp,
@@ -127,22 +133,16 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
             positions = prismobj.vector_to_ase(positions, wrap=True)
 
         out_atoms = atomsobj(
-            symbols=symbols,
-            positions=positions,
-            pbc=pbc,
-            celldisp=celldisp,
-            cell=cell,
+            symbols=types, positions=positions, pbc=pbc, celldisp=celldisp, cell=cell
         )
     elif scaled_positions is not None:
         out_atoms = atomsobj(
-            symbols=symbols,
+            symbols=types,
             scaled_positions=scaled_positions,
             pbc=pbc,
             celldisp=celldisp,
             cell=cell,
         )
-
-    out_atoms.set_topology()
 
     if velocities is not None:
         if prismobj:
@@ -156,9 +156,7 @@ def lammps_data_to_ase_atoms(data, colnames, cell, celldisp,
         # !TODO: use another calculator if available (or move forces
         #        to atoms.property) (other problem: synchronizing
         #        parallel runs)
-        calculator = SinglePointCalculator(
-            out_atoms, energy=0.0, forces=forces
-        )
+        calculator = SinglePointCalculator(out_atoms, energy=0.0, forces=forces)
         out_atoms.set_calculator(calculator)
 
     return out_atoms
@@ -189,29 +187,25 @@ def construct_cell(diagdisp, offdiag):
     return cell, celldisp
 
 
-def read_lammps_dump_string(fileobj, index=-1, **kwargs):
+def get_max_index(index):
+    if np.isscalar(index):
+        return index
+    elif isinstance(index, slice):
+        return index.stop if (index.stop is not None) else float("inf")
+
+
+def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     """Process cleartext lammps dumpfiles
 
     :param fileobj: filestream providing the trajectory data
-    :param index: selection for multiple images (default: the last)
+    :param index: integer or slice object (default: get the last timestep)
     :returns: list of Atoms objects
     :rtype: list
     """
-
-    # load everything into memory
+    # Load all dumped timesteps into memory simultaneously
     lines = deque(fileobj.readlines())
 
-    # take only lines needed in index
-    timestep_line_number = {}
-    count = 0
-    for i, j in enumerate(lines):
-        if j.startswith("ITEM: TIMESTEP"):
-            timestep_line_number[count] = i
-            count += 1
-    indices = np.arange(len(timestep_line_number))[index]
-    min = timestep_line_number[np.min(indices)]
-    for _ in range(min):
-        lines.popleft()
+    index_end = get_max_index(index)
 
     n_atoms = 0
     images = []
@@ -238,12 +232,6 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
             celldata = np.loadtxt(celldatarows)
             diagdisp = celldata[:, :2].reshape(6, 1).flatten()
 
-            #check pbc
-            pbc_items = tilt_items[-3:]
-            pbc = np.empty(3, dtype=bool)
-            for i in range(3):
-                pbc[i] = pbc_items[i] == 'pp' or pbc_items[i] == 'p'
-
             # determine cell tilt (triclinic case!)
             if len(celldata[0]) > 2:
                 # for >=lammps-7Jul09 use labels behind "ITEM: BOX BOUNDS"
@@ -252,14 +240,18 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
                 # ... otherwise assume default order in 3rd column
                 # (if the latter was present)
                 if len(tilt_items) >= 3:
-                    sort_index = [
-                        tilt_items.index(i) for i in ["xy", "xz", "yz"]
-                    ]
+                    sort_index = [tilt_items.index(i) for i in ["xy", "xz", "yz"]]
                     offdiag = offdiag[sort_index]
             else:
                 offdiag = (0.0,) * 3
 
             cell, celldisp = construct_cell(diagdisp, offdiag)
+
+            # Handle pbc conditions
+            if len(tilt_items) > 3:
+                pbc = ["p" in d.lower() for d in tilt_items[3:]]
+            else:
+                pbc = (False,) * 3
 
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]
@@ -276,33 +268,22 @@ def read_lammps_dump_string(fileobj, index=-1, **kwargs):
             )
             images.append(out_atoms)
 
-        # stop if requested indices has been found
-        # it has to read all indices between min and max
-        # then later the indices can be selected if list passed
-        if len(images) >= (np.max(indices)
-                           - np.min(indices)) >= 0:
+        if len(images) > index_end >= 0:
             break
 
-    '''
-    # if ase.io.read supports lists
-    if type(indices) is list or type(indices) is tuple:
-        indices = np.array(indices, dtype=int) - np.min(indices)
-        return images[indices]
-    else:
-        return images
-    '''
-    return images
+    return images[index]
 
 
-def read_lammps_dump_binary(fileobj, index=-1, colnames=None,
-                            intformat="SMALLBIG", **kwargs):
+def read_lammps_dump_binary(
+    fileobj, index=-1, colnames=None, intformat="SMALLBIG", **kwargs
+):
     """Read binary dump-files (after binary2txt.cpp from lammps/tools)
 
     :param fileobj: file-stream containing the binary lammps data
-    :param index: if the file contains multiple images, which to return
+    :param index: integer or slice object (default: get the last timestep)
     :param colnames: data is columns and identified by a header
-    :param intformat: lammps support different integer size.  Parameter set at
-    compile-time and can unfortunately not derived from data file
+    :param intformat: lammps support different integer size.  Parameter set \
+    at compile-time and can unfortunately not derived from data file
     :returns: list of Atoms-objects
     :rtype: list
     """
@@ -313,21 +294,11 @@ def read_lammps_dump_binary(fileobj, index=-1, colnames=None,
         SMALLSMALL=("i", "i"), SMALLBIG=("i", "q"), BIGBIG=("q", "q")
     )[intformat]
 
+    index_end = get_max_index(index)
+
     # Standard columns layout from lammpsrun
     if not colnames:
-        colnames = [
-            "id",
-            "type",
-            "x",
-            "y",
-            "z",
-            "vx",
-            "vy",
-            "vz",
-            "fx",
-            "fy",
-            "fz",
-        ]
+        colnames = ["id", "type", "x", "y", "z", "vx", "vy", "vz", "fx", "fy", "fz"]
 
     images = []
 
@@ -384,7 +355,7 @@ def read_lammps_dump_binary(fileobj, index=-1, colnames=None,
             images.append(out_atoms)
 
             # stop if requested index has been found
-            if len(images) > index >= 0:
+            if len(images) > index_end >= 0:
                 break
 
         except EOFError:

@@ -1,5 +1,6 @@
 import re
 import numpy as np
+
 from ase.atoms import Atoms
 from ase.parallel import paropen
 from ase.utils import basestring
@@ -40,13 +41,10 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
     mol_id_in = {}
     charge_in = {}
     mass_in = {}
-    name_in = {}
-    resname_in = {}
     vel_in = {}
     bonds_in = []
     angles_in = []
     dihedrals_in = []
-    impropers_in = []
 
     sections = [
         "Atoms",
@@ -111,11 +109,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         if comment is None:
             comment = line.rstrip()
         else:
-            line_comment = None
-            if '#' in line:
-                line_comment = line.split('#')[1]
             line = re.sub("#.*", "", line).rstrip().lstrip()
-            line = line.rstrip().lstrip()
             if re.match("^\\s*$", line):  # skip blank lines
                 continue
 
@@ -209,13 +203,11 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[8]),
                         )
                 else:
-                    raise RuntimeError("Style '{}' not supported or invalid "
-                                       "number of fields {}"
-                                       "".format(style, len(fields)))
-                if line_comment:
-                    resname_in[id] = set(line_comment.split())
-                else:
-                    resname_in[id] = set([])
+                    raise RuntimeError(
+                        "Style '{}' not supported or invalid "
+                        "number of fields {}"
+                        "".format(style, len(fields))
+                    )
             elif section == "Velocities":  # id vx vy vz
                 vel_in[int(fields[0])] = (
                     float(fields[1]),
@@ -224,8 +216,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                 )
             elif section == "Masses":
                 mass_in[int(fields[0])] = float(fields[1])
-                if line_comment:
-                    name_in[int(fields[0])] = line_comment.split()[0]
             elif section == "Bonds":  # id type atom1 atom2
                 bonds_in.append(
                     (int(fields[1]), int(fields[2]), int(fields[3]))
@@ -241,16 +231,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                 )
             elif section == "Dihedrals":  # id type atom1 atom2 atom3 atom4
                 dihedrals_in.append(
-                    (
-                        int(fields[1]),
-                        int(fields[2]),
-                        int(fields[3]),
-                        int(fields[4]),
-                        int(fields[5]),
-                    )
-                )
-            elif section == "Impropers":  # id type atom1 atom2 atom3 atom4
-                impropers_in.append(
                     (
                         int(fields[1]),
                         int(fields[2]),
@@ -297,23 +277,18 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         travel = np.zeros((N, 3), int)
     else:
         travel = None
-    if len(name_in) > 0:
-        names = np.empty((N), object)
-    else:
-        names = None
-    if len(resname_in) > 0:
-        resnames = np.empty((N), object)
-    else:
-        resnames = None
-    topo_dict = {}
     if len(bonds_in) > 0:
-        topo_dict['bonds'] = []
+        bonds = [""] * N
+    else:
+        bonds = None
     if len(angles_in) > 0:
-        topo_dict['angles'] = []
+        angles = [""] * N
+    else:
+        angles = None
     if len(dihedrals_in) > 0:
-        topo_dict['dihedrals'] = []
-    if len(impropers_in) > 0:
-        topo_dict['impropers'] = []
+        dihedrals = [""] * N
+    else:
+        dihedrals = None
 
     ind_of_id = {}
     # copy per-atom quantities from read-in values
@@ -332,8 +307,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
             travel[ind] = travel_in[id]
         if mol_id is not None:
             mol_id[ind] = mol_id_in[id]
-        if resnames is not None:
-            resnames[ind] = resname_in[id]
         if charge is not None:
             charge[ind] = charge_in[id]
         ids[ind] = id
@@ -343,8 +316,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
             numbers[ind] = type
         else:
             numbers[ind] = Z_of_type[type]
-        if names is not None:
-            names[ind] = name_in[type]
         if masses is not None:
             masses[ind] = mass_in[type]
     # convert units
@@ -356,138 +327,111 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         velocities = convert(velocities, "velocity", units, "ASE")
 
     # create ase.Atoms
-    at = Atoms(positions=positions,
-               numbers=numbers,
-               masses=masses,
-               cell=cell,
-               pbc=[True, True, True])
+    at = Atoms(
+        positions=positions,
+        numbers=numbers,
+        masses=masses,
+        cell=cell,
+        pbc=[True, True, True],
+    )
     # set velocities (can't do it via constructor)
     if velocities is not None:
         at.set_velocities(velocities)
-    if names is not None:
-        at.arrays["names"] = names
+    at.arrays["id"] = ids
+    at.arrays["type"] = types
     if travel is not None:
         at.arrays["travel"] = travel
     if mol_id is not None:
-        at.arrays["tags"] = mol_id
+        at.arrays["mol-id"] = mol_id
     if charge is not None:
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
-    if resnames is not None:
-        # removing names from resnames
-        # if names exist
-        if names is not None:
-            resnames -= np.asarray([set([i]) for i in names])
-        # converting resnames to dictionary
-        d = {}
-        for i in range(N):
-            resname = list(resnames[i])
-            resname = (resname[0] if len(resname) > 0 else '')
-            d[resname] = d.get(resname, []) + [i]
-        topo_dict['resnames'] = d
 
-    if 'bonds' in topo_dict:
-        topo_dict['bonds'] = [[ind_of_id[a] for a in x[1:]]
-                              for x in bonds_in]
+    if bonds is not None:
+        for (type, a1, a2) in bonds_in:
+            i_a1 = ind_of_id[a1]
+            i_a2 = ind_of_id[a2]
+            if len(bonds[i_a1]) > 0:
+                bonds[i_a1] += ","
+            bonds[i_a1] += "%d(%d)" % (i_a2, type)
+        for i in range(len(bonds)):
+            if len(bonds[i]) == 0:
+                bonds[i] = "_"
+        at.arrays["bonds"] = np.array(bonds)
 
-    if 'angles' in topo_dict:
-        topo_dict['angles'] = [[ind_of_id[a] for a in x[1:]]
-                               for x in angles_in]
+    if angles is not None:
+        for (type, a1, a2, a3) in angles_in:
+            i_a1 = ind_of_id[a1]
+            i_a2 = ind_of_id[a2]
+            i_a3 = ind_of_id[a3]
+            if len(angles[i_a2]) > 0:
+                angles[i_a2] += ","
+            angles[i_a2] += "%d-%d(%d)" % (i_a1, i_a3, type)
+        for i in range(len(angles)):
+            if len(angles[i]) == 0:
+                angles[i] = "_"
+        at.arrays["angles"] = np.array(angles)
 
-    if 'dihedrals' in topo_dict:
-        topo_dict['dihedrals'] = [[ind_of_id[a] for a in x[1:]]
-                                  for x in dihedrals_in]
-
-    if 'impropers' in topo_dict:
-        topo_dict['impropers'] = [[ind_of_id[a] for a in x[1:]]
-                                  for x in impropers_in]
+    if dihedrals is not None:
+        for (type, a1, a2, a3, a4) in dihedrals_in:
+            i_a1 = ind_of_id[a1]
+            i_a2 = ind_of_id[a2]
+            i_a3 = ind_of_id[a3]
+            i_a4 = ind_of_id[a4]
+            if len(dihedrals[i_a1]) > 0:
+                dihedrals[i_a1] += ","
+            dihedrals[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, type)
+        for i in range(len(dihedrals)):
+            if len(dihedrals[i]) == 0:
+                dihedrals[i] = "_"
+        at.arrays["dihedrals"] = np.array(dihedrals)
 
     at.info["comment"] = comment
-    at.set_topology(topo_dict)
 
     return at
 
 
 def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
                       prismobj=None, velocities=False, units="metal",
-                      style='atomic', nameorder=None, bondorder=None,
-                      angleorder=None, dihedralorder=None,
-                      improperorder=None):
-    """Write atomic structure data to a LAMMPS data_ file."""
+                      atom_style='atomic'):
+    """Write atomic structure data to a LAMMPS data file."""
     if isinstance(fileobj, basestring):
-        f = paropen(fileobj, "wb")
+        f = paropen(fileobj, "w", encoding="ascii")
         close_file = True
     else:
         # Presume fileobj acts like a fileobj
         f = fileobj
         close_file = False
 
+    # FIXME: We should add a check here that the encoding of the file object
+    #        is actually ascii once the 'encoding' attribute of IOFormat objects
+    #        starts functioning in implementation (currently it doesn't do
+    #         anything).
+
     if isinstance(atoms, list):
         if len(atoms) > 1:
             raise ValueError(
-                'Can only write one configuration to a lammps data file!')
+                "Can only write one configuration to a lammps data file!"
+            )
         atoms = atoms[0]
 
-    # TODO: add quarternions printing
-    if atoms._topology is None:
-        atoms.set_topology()
-
-    # TopoAtoms always assigns name
-    names = atoms.get_array('names')
-
-    # ordering
-    if specorder is not None:
-        # To index elements in the LAMMPS data file
-        # (indices must correspond to order in the potential file)
-        types = [specorder[x] for x in atoms.numbers]
-    elif nameorder is not None:
-        types = [nameorder[x] for x in atoms.topology.names()]
-    else:
-        unique_names = np.unique(names)
-        nameorder = {key: value
-                     for value, key in enumerate(unique_names, start=1)}
-        types = [nameorder[x] for x in atoms.topology.names()]
-    order = {'bonds': bondorder,
-             'angles': angleorder,
-             'dihedrals': dihedralorder,
-             'impropers': improperorder}
-    topo_types = {}
-    for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-        if atoms.topology.has(prop):
-            if order[prop] is not None:
-                topo_types[prop] = {x: order[prop][x]
-                                    for x in atoms.topology[prop].get_types()}
-            else:
-                _ = atoms.topology[prop].get_types()
-                topo_types[prop] = {x: i for i, x in enumerate(_, start=1)}
-
-
-    f.write('{0} (written by ASE) \n\n'.format(f.name).encode("utf-8"))
+    f.write("{0} (written by ASE) \n\n".format(f.name))
 
     symbols = atoms.get_chemical_symbols()
     n_atoms = len(symbols)
-    f.write('{0:8} \t atoms \n'.format(n_atoms).encode("utf-8"))
-    for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-        try:
-            num = atoms.topology[prop].get_count()
-        except KeyError:
-            num = 0
-        f.write('{0:8} \t '
-                '{1} \n'.format(num,
-                                prop).encode("utf-8"))
+    f.write("{0} \t atoms \n".format(n_atoms))
 
-    n_types = len(np.unique(types))
-    f.write('{0:8} \t '
-            'atom types\n'.format(n_types).encode("utf-8"))
-    for prop in ['bond types', 'angle types', 'dihedral types',
-                 'improper types']:
-        try:
-            num = atoms.topology[prop.split()[0] + 's'].get_num_types()
-        except KeyError:
-            num = 0
-        f.write('{0:8} \t '
-                '{1} \n'.format(num,
-                                prop).encode("utf-8"))
+    if specorder is None:
+        # This way it is assured that LAMMPS atom types are always
+        # assigned predictably according to the alphabetic order
+        species = sorted(set(symbols))
+    else:
+        # To index elements in the LAMMPS data file
+        # (indices must correspond to order in the potential file)
+        species = specorder
+    n_atom_types = len(species)
+    f.write("{0}  atom types\n".format(n_atom_types))
+
     if prismobj is None:
         p = Prism(atoms.get_cell())
     else:
@@ -495,214 +439,72 @@ def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False,
 
     # Get cell parameters and convert from ASE units to LAMMPS units
     xhi, yhi, zhi, xy, xz, yz = convert(p.get_lammps_prism(), "distance",
-                                        "ASE", units)
+            "ASE", units)
 
-    f.write("\t 0.0 {0:12.6f}  xlo xhi\n".format(xhi).encode("utf-8"))
-    f.write("\t 0.0 {0:12.6f}  ylo yhi\n".format(yhi).encode("utf-8"))
-    f.write("\t 0.0 {0:12.6f}  zlo zhi\n".format(zhi).encode("utf-8"))
+    f.write("0.0 {0:23.17g}  xlo xhi\n".format(xhi))
+    f.write("0.0 {0:23.17g}  ylo yhi\n".format(yhi))
+    f.write("0.0 {0:23.17g}  zlo zhi\n".format(zhi))
 
     if force_skew or p.is_skewed():
         f.write(
-            "{0:12.6f} {1:12.6f} {2:12.6f}  xy xz yz\n".format(
+            "{0:23.17g} {1:23.17g} {2:23.17g}  xy xz yz\n".format(
                 xy, xz, yz
-            ).encode("utf-8")
+            )
         )
-    f.write("\n\n".encode("utf-8"))
+    f.write("\n\n")
 
-    f.write('Masses \n\n'.encode("utf-8"))
-    for i in np.unique(types):
-        indx = np.where(i == types)[0][0]
-        mass = atoms.get_masses()[indx]
-        sym = names[indx]
-        f.write('{0:>6} {1:8.4f} # {2}\n'.format(
-                i, mass, sym
-            ).encode("utf-8")
-        )
-    f.write('\n\n'.encode("utf-8"))
-
-    f.write('Atoms \n\n'.encode("utf-8"))
-    if atoms.has('travel'):
-        travel = atoms.get_array('travel')
-    else:
-        travel = None
-    if atoms.topology.has('resnames'):
-        resnames = atoms.topology.resnames()
-    else:
-        resnames = None
-    id = np.arange(len(atoms)) + 1
-    mol_id = atoms.get_array('tags')
+    f.write("Atoms \n\n")
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=True)
-    charges = atoms.get_initial_charges()
-    if style == 'full':
-        # id mol-id type q x y z [tx ty tz]
+
+    if atom_style == 'atomic':
+        for i, r in enumerate(pos):
+            # Convert position from ASE units to LAMMPS units
+            r = convert(r, "distance", "ASE", units)
+            s = species.index(symbols[i]) + 1
+            f.write(
+                "{0:>6} {1:>3} {2:23.17g} {3:23.17g} {4:23.17g}\n".format(
+                    *(i + 1, s) + tuple(r)
+                )
+            )
+    elif atom_style == 'charge':
+        charges = atoms.get_initial_charges()
         for i, (q, r) in enumerate(zip(charges, pos)):
+            # Convert position and charge from ASE units to LAMMPS units
             r = convert(r, "distance", "ASE", units)
             q = convert(q, "charge", "ASE", units)
-            f.write('{0:6} {1:4} {2:4} {3:8.6f}'
-                    ' {4:12.6f} {5:12.6f} {6:12.6f}'.format(
-                                          id[i],
-                                          mol_id[i],
-                                          types[i],
-                                          q,
-                                          *r
-                        ).encode("utf-8")
-                    )
-            if travel:
-                f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
-                        )
-            f.write(' # {0}'.format(names[i]).encode("utf-8")
-                    )
-            if resnames is not None:
-                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
-            f.write('\n'.encode("utf-8"))
-    elif style == 'charge':
-        # id type q x y z [tx ty tz]
+            s = species.index(symbols[i]) + 1
+            f.write(
+                "{0:>6} {1:>3} {2:>5} {3:23.17g} {4:23.17g} {5:23.17g}\n".format(
+                    *(i + 1, s, q) + tuple(r)
+                )
+            )
+    elif atom_style == 'full':
+        charges = atoms.get_initial_charges()
+        molecule = 1 # Assign all atoms to a single molecule
         for i, (q, r) in enumerate(zip(charges, pos)):
+            # Convert position and charge from ASE units to LAMMPS units
             r = convert(r, "distance", "ASE", units)
             q = convert(q, "charge", "ASE", units)
-            f.write('{0:6} {1:4} {2:8.6f}'
-                    ' {3:12.6f} {4:12.6f} {5:12.6f}'.format(
-                                          id[i],
-                                          mol_id[i],
-                                          types[i],
-                                          q,
-                                          *r
-                        ).encode("utf-8")
-                    )
-            if travel:
-                f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
-                        )
-            f.write(' # {0}'.format(names[i]).encode("utf-8")
-                    )
-            if resnames is not None:
-                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
-            f.write('\n'.encode("utf-8"))
-    elif style == 'atomic':
-        # id type x y z [tx ty tz]
-        for i, r in enumerate(pos):
-            f.write('{0:6} {1:4}'
-                    ' {2:12.6f} {3:12.6f} {4:12.6f}'.format(
-                                          id[i],
-                                          types[i],
-                                          *r
-                        ).encode("utf-8")
-                    )
-            if travel:
-                f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
-                        )
-            f.write(' # {0}'.format(names[i]).encode("utf-8")
-                    )
-            if resnames is not None:
-                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
-            f.write('\n'.encode("utf-8"))
-    elif (style == 'angle' or style == 'bond' or
-          style == 'molecular'):
-        # id mol-id type x y z [tx ty tz]
-        for i, r in enumerate(pos):
-            f.write('{0:6} {1:4} {2:4}'
-                    ' {3:12.6f} {4:12.6f} {5:12.6f}'.format(
-                                          id[i],
-                                          mol_id[i],
-                                          types[i],
-                                          *r
-                        ).encode("utf-8")
-                    )
-            if travel:
-                f.write(' {0:8.4f} {1:8.4f} '
-                        '{2:8.4f}'.format(*travel[i]).encode("utf-8")
-                        )
-            f.write(' # {0}'.format(names[i]).encode("utf-8")
-                    )
-            if resnames is not None:
-                f.write(' {0}'.format(resnames[i]).encode("utf-8"))
-            f.write('\n'.encode("utf-8"))
+            s = species.index(symbols[i]) + 1
+            f.write(
+                "{0:>6} {1:>3} {2:>3} {3:>5} {4:23.17g} {5:23.17g} {6:23.17g}\n".format(
+                    *(i + 1, molecule, s, q) + tuple(r)
+                )
+            )
     else:
-        raise NotImplementedError('style {0} not supported. '
-                                  'Use: full, atomic, angle, bond, charge,'
-                                  ' or molecular'.format(style))
-    f.write('\n\n'.encode("utf-8"))
-
-    if atoms.topology.has('bonds'):
-        bonds = atoms.topology.bonds.get(with_names=True)
-        count = 1
-        f.write('Bonds \n\n'.encode("utf-8"))
-        for key, values in bonds.items():
-            for value in values:
-                f.write('{0:6} {1:6} {2:6} '
-                        '{3:6}\t# {4}\n'.format(count,
-                                                topo_types['bonds'][key],
-                                                value[0] + 1,
-                                                value[1] + 1,
-                                                key
-                                                ).encode("utf-8")
-                        )
-                count += 1
-        f.write('\n\n'.encode("utf-8"))
-
-    if atoms.topology.has('angles'):
-        angles = atoms.topology.angles.get(with_names=True)
-        count = 1
-        f.write('Angles \n\n'.encode("utf-8"))
-        for key, values in angles.items():
-            for value in values:
-                f.write('{0:6} {1:6} {2:6} {3:6} {4:6}'
-                        '\t# {5}\n'.format(count,
-                                           topo_types['angles'][key],
-                                           value[0] + 1,
-                                           value[1] + 1,
-                                           value[2] + 1,
-                                           key
-                                           ).encode("utf-8")
-                        )
-                count += 1
-        f.write('\n\n'.encode("utf-8"))
-
-    if atoms.topology.has('dihedrals'):
-        dihedrals = atoms.topology.dihedrals.get(with_names=True)
-        count = 1
-        f.write('Dihedrals \n\n'.encode("utf-8"))
-        for key, values in dihedrals.items():
-            for value in values:
-                _ = [i + 1 for i in value]
-                f.write('{0:6} {1:6} {2:6} {3:6} {4:6} {5:6}'
-                        '\t# {0}\n'.format(count,
-                                           topo_types['dihedrals'][key],
-                                           *_,
-                                           key
-                                           ).encode("utf-8")
-                        )
-                count += 1
-        f.write('\n\n'.encode("utf-8"))
-
-    if atoms.topology.has('impropers'):
-        impropers = atoms.topology.impropers.get(with_names=True)
-        count = 1
-        f.write('Impropers \n\n'.encode("utf-8"))
-        for key, values in impropers.items():
-            for value in values:
-                _ = [i + 1 for i in value]
-                f.write('{0:6} {1:6} {2:6} {3:6} {4:6} {5:6}'
-                        '\t# {0}\n'.format(count,
-                                           topo_types['impropers'][key],
-                                           *_,
-                                           key
-                                           ).encode("utf-8")
-                        )
-                count += 1
-        f.write('\n\n'.encode("utf-8"))
+        raise NotImplementedError
 
     if velocities and atoms.get_velocities() is not None:
-        f.write("\n\nVelocities \n\n".encode("utf-8"))
+        f.write("\n\nVelocities \n\n")
         vel = p.vector_to_lammps(atoms.get_velocities())
         for i, v in enumerate(vel):
             # Convert velocity from ASE units to LAMMPS units
             v = convert(v, "velocity", "ASE", units)
-            f.write('{0:>6} {1:12.6f} {2:12.6f} {3:12.6f}\n'.format(
-                        *(i + 1,) + tuple(v)).encode("utf-8")
-                    )
+            f.write(
+                "{0:>6} {1:23.17g} {2:23.17g} {3:23.17g}\n".format(
+                    *(i + 1,) + tuple(v)
+                )
+            )
 
     f.flush()
     if close_file:
