@@ -1842,6 +1842,13 @@ class Atoms:
             else:
                 R[i] -= (x * (1.0 - fix)) * D[0]
 
+    def get_fractional_coordinates(self, wrap=False):
+        """Get fractional coordinates
+
+        Wraps `get_scaled_positions` with `wrap=False` default
+        """
+        return self.get_scaled_positions(wrap=wrap)
+
     def get_scaled_positions(self, wrap=True):
         """Get positions relative to unit cell.
 
