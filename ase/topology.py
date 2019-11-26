@@ -559,9 +559,15 @@ class Topology(object):
     def __repr__(self):
         tokens = []
         for key, values in self._dict.items():
-            if key in self._ins._topology or key in ['names', 'tags']:
+            if self.has(key):
                 tokens.append("{}= {}".format(key, values))
         return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
+
+    def has(self, prop):
+        if prop in self._ins._topology or prop in ['names', 'tags']:
+            return True
+        else:
+            return False
 
     def __getitem__(self, item):
         return self._dict[item]
@@ -572,7 +578,7 @@ class Topology(object):
         topo_dict = {'names': self._ins.arrays['names'],
                      'tags': self._ins.arrays['tags']}
         for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            if prop in self._ins._topology:
+            if self.has(prop):
                 topo_dict[prop] = self._ins._topology[prop]
 
         return topo_dict
@@ -925,7 +931,7 @@ class Topology(object):
         """
         stats = {}
         for prop in ['bonds', 'angles', 'dihedrals']:
-            if prop in self._ins._topology:
+            if self.has(prop):
                 stats[prop] = self._dict[prop].get_statistics(index)
 
         return stats
