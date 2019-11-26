@@ -593,7 +593,8 @@ class Topology(object):
     def get_topology_dict(self):
         """Gives topology dict that can be inherited by other topology
         classes"""
-        topo_dict = {'names': self._ins.arrays['names'],
+        # names are saved to list, to ease database storage
+        topo_dict = {'names': self._ins.arrays['names'].tolist(),
                      'tags': self._ins.arrays['tags']}
         for prop in ['resnames',
                      'bonds',

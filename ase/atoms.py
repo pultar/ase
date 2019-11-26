@@ -1000,6 +1000,9 @@ class Atoms(object):
         # then initiate self topology
         if other._topology is not None and self._topology is None:
             self.set_topology()
+        # visa-versa
+        if self._topology is not None and other._topology is None:
+            other.set_topology()
 
         n1 = len(self)
         n2 = len(other)
