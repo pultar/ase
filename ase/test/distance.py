@@ -57,3 +57,78 @@ for indxs in itertools.permutations(range(3)):
     dist = distance(org, new)
     print('permutation', indxs, '-> distance', dist)
     assert dist < maxdist
+
+from ase.geometry.distance import dist_from_point,dist_from_line,dist_from_line_segment,dist_from_plane,repeats,dist_from_plane_normal
+
+# 2-D testing
+visual = False
+positions = np.array([
+    [1, 1],
+    [2, 2],
+    [3, 3],
+])
+
+m = np.array([1, 1])
+b = np.array([0, 1])
+d = dist_from_point(positions, b)
+d = dist_from_line(positions, m, b)
+print('distances from line m={} b={} is d={}'.format(m,b,d))
+assert((abs(d - np.roll(d,1)) < 0.05).all())
+
+if visual:
+    import matplotlib.pyplot as plt
+    plt.plot(*positions.transpose(),'o')
+    plt.plot(*np.vstack((5*m+b,b)).transpose())
+    plt.plot(*np.vstack((m+b,b)).transpose())
+    plt.show()
+
+cell = np.array([[3, 0], [0, 3]])
+ds = [dist_from_line(tp,m,b) for tp in repeats(positions,cell)]
+ds = np.min(ds, axis=0)
+ds_2 = [dist_from_line(positions,m,tp) for tp in repeats(np.array([b]), cell)]
+ds_2 = np.min(ds_2,axis=0)
+
+assert(sorted(ds) == sorted(ds_2))
+
+# 3-D testing
+positions = np.array([
+    [1, 1, 1],
+    [2, 2, 2],
+    [3, 3, 3],
+    [4, 4, 4]
+])
+m = np.array([1, 1, 1])
+b = np.array([1, 0, 0])
+d1 = dist_from_line(positions, m, b)
+print('distances from line m={} b={} is d={}'.format(m,b,d1))
+d2=dist_from_line_segment(positions,b,b+5*m)
+print('distances from line segment b1={} b2={} is d={}'.format(b,b+5*m,d2))
+
+assert(sum(d1) < sum(d2))
+
+if visual:
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    fig=plt.figure()
+    ax=fig.add_subplot(111,projection='3d')
+    ax.plot3D(*np.vstack((b,b+5*m)).transpose())
+    ax.scatter(*positions.transpose())
+    plt.show()
+
+# plane
+m1 = np.array([-2, 1, 1])
+m2 = np.array([1, -2, 1])
+b = np.array([1, 1, 1])
+cell = np.array([[5, 0, 0], [0, 5, 0], [0, 0, 5]], dtype=np.float64)
+
+ds = [dist_from_plane(tp, m1, m2, b) for tp in repeats(positions,cell)]
+ds = np.min(ds, axis=0)
+ds_2 = [dist_from_plane(positions, m1, m2, tp) for tp in repeats(np.array([b]),cell)]
+ds_2 = np.min(ds_2, axis=0)
+
+assert(sorted(ds) == sorted(ds_2))
+
+atoms = Atoms('Cu4',positions=positions)
+atoms.set_cell(cell)
+ds = dist_from_plane_normal(atoms,np.array([0,0,1]),b)
+print('layer sort numbers = {}'.format(ds))
