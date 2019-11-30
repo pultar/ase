@@ -146,7 +146,7 @@ def dist_from_plane(positions, m1, m2, b):
         (norm(m1)**2 * norm(m2)**2 - (m1@m2)**2)
     y = ((u@m2) * norm(m1)**2 - (u@m1) * (m1@m2)) / \
         (norm(m1)**2 * norm(m2)**2 - (m1@m2)**2)
-    return norm(u - np.outer(x, m1) - np.outer(x, m2), axis=1)
+    return norm(u - np.outer(x, m1) - np.outer(y, m2), axis=1)
 
 
 def dist_from_plane_segment(positions, m1, m2, m3): 
