@@ -206,9 +206,7 @@ def repeats(positions, cell):
 
     .. math:: 
     
-       |(\mathbf{r}_1 + n\mathbf{a} + m\mathbf{b} + p\mathbf{c})
-    - \mathbf{r}_2| = | (\mathbf{r}_2 - n\mathbf{a} +m\mathbf{b} +
-    p\mathbf{c}) - \mathbf{r}_1 |
+       || (r_1 + n a + m b + pc) - r_2 || = || (r_2 - n a - m b - p c) - r_1 ||
 
     it is equivalent to move either the positions of atoms or of a
     geometry.
