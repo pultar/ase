@@ -38,18 +38,19 @@ Finally one may sort by distance from a plane:
 .. literalinclude:: sort.py
   :lines: 26-31
 
-One may also want to sort hierarchially, meaning to sort with respect to one set of distances, then another, and so on. For this example, a more interesting molecule is taken which has atoms in the same plane so the hierarchial sort will be different from the non-hierarchial sort. The hierarchial sort is done with tuple comparison. Try this to see how it works:
+One may also want to sort hierarchically, meaning to sort with respect to one set of distances, then another, and so on. For this example, a more interesting molecule is taken which has atoms in the same plane so the hierarchical sort will be different from the non-hierarchical sort. The hierarchical sort is done with tuple comparison. Try this to see how it works:
 
->>> (1,0) < (0,1)
->>> (0,1) < (1,0)
->>> (1,0) < (1,1)
+>>> c1 = (1,0) < (0,1)
+>>> c2 = (0,1) < (1,0)
+>>> c3 = (1,0) < (1,1)
+>>> print(c1, c2, c3)
 
 The code is:
 
 .. literalinclude:: sort.py
   :lines: 33-47
 
-The numpy ``roll`` is used to make the hierarchially ordered yz-, zx-, and xy-planes bisecting the centered molecule. The distances are rounded to make sure the tuples evaluate to something different than the non-hierarchail sort. Try this to see why:
+The numpy ``roll`` is used to make the hierarchically ordered yz-, zx-, and xy-planes bisecting the centered molecule. The distances are rounded to make sure the tuples evaluate to something different than the non-hierarchical sort. Try this to see why:
 
 >>> (1.e-14,0) < (0,1)
 
