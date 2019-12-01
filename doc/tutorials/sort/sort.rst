@@ -48,7 +48,7 @@ One may also want to sort hierarchically, meaning to sort with respect to one se
 The code is:
 
 .. literalinclude:: sort.py
-  :lines: 33-47
+  :lines: 33-46
 
 The numpy ``roll`` is used to make the hierarchically ordered yz-, zx-, and xy-planes bisecting the centered molecule. The distances are rounded to make sure the tuples evaluate to something different than the non-hierarchical sort. Try this to see why:
 
