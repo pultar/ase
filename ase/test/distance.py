@@ -62,7 +62,7 @@ from ase.geometry.distance import dist_from_point,dist_from_line,\
         dist_from_line_segment,dist_from_plane,repeats,dist_from_plane_normal
 
 # 2-D testing
-visual = True
+visual = False
 positions = np.array([
     [1, 1],
     [2, 2],
@@ -71,16 +71,17 @@ positions = np.array([
 
 m = np.array([1, 1])
 b = np.array([0, 1])
-d = dist_from_point(positions, b)
 d = dist_from_line(positions, m, b)
 print('distances from line m={} b={} is d={}'.format(m,b,d))
 assert((abs(d - np.roll(d,1)) < 0.05).all())
+d = dist_from_line_segment(positions, b, m+b)
+print('distances from line segment b1={} b2={} is d={}'.format(b, m+b, d))
 
 if visual:
     import matplotlib.pyplot as plt
     plt.plot(*positions.transpose(),'o')
-    plt.plot(*np.vstack((5*m+b,b)).transpose())
-    plt.plot(*np.vstack((m+b,b)).transpose())
+    plt.plot(*np.vstack((5*m+b,b)).transpose(),'k-')
+    plt.plot(*np.vstack((m+b,b)).transpose(),'ko-')
     plt.show()
 
 cell = np.array([[3, 0], [0, 3]])
@@ -102,7 +103,7 @@ m = np.array([1, 1, 1])
 b = np.array([1, 0, 0])
 d1 = dist_from_line(positions, m, b)
 print('distances from line m={} b={} is d={}'.format(m,b,d1))
-d2=dist_from_line_segment(positions,b,b+5*m)
+d2=dist_from_line_segment(positions,b,b+m)
 print('distances from line segment b1={} b2={} is d={}'.format(b,b+5*m,d2))
 
 assert(sum(d1) < sum(d2))
@@ -112,7 +113,8 @@ if visual:
     import mpl_toolkits.mplot3d
     fig=plt.figure()
     ax=fig.add_subplot(111,projection='3d')
-    ax.plot3D(*np.vstack((b,b+5*m)).transpose())
+    ax.plot3D(*np.vstack((b,b+5*m)).transpose(),'k-')
+    ax.plot3D(*np.vstack((b,b+m)).transpose(),'ko-')
     ax.scatter(*positions.transpose())
     plt.show()
 

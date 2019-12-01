@@ -115,7 +115,9 @@ def dist_from_line_segment(positions, b1, b2):
     d: vector of distances from positions to point
      """
 
-    x = -((b2 - positions)@(b1 + b2)) / (norm(b1)**2 - norm(b2)**2)
+#    x = -((b2 - positions)@(b1+b2)) / (norm(b1)**2 - norm(b2)**2)
+    den = norm(b1)**2 - norm(b2)**2
+    x = np.array([(b2-p)@(b1+b2)/den for p in positions])
     c1 = norm(positions - np.outer(x, b1) - np.outer(1 - x, b2), axis=1)
     c2 = norm(positions - b1, axis=1)
     c3 = norm(positions - b2, axis=1)
@@ -202,7 +204,9 @@ def repeats(positions, cell):
     """Returns an array containing the shifted positions according to boundary
     conditions. Since
 
-    .. math:: |(\mathbf{r}_1 + n\mathbf{a} + m\mathbf{b} + p\mathbf{c})
+    .. math:: 
+    
+       |(\mathbf{r}_1 + n\mathbf{a} + m\mathbf{b} + p\mathbf{c})
     - \mathbf{r}_2| = | (\mathbf{r}_2 - n\mathbf{a} +m\mathbf{b} +
     p\mathbf{c}) - \mathbf{r}_1 |
 
