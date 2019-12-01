@@ -58,10 +58,11 @@ for indxs in itertools.permutations(range(3)):
     print('permutation', indxs, '-> distance', dist)
     assert dist < maxdist
 
-from ase.geometry.distance import dist_from_point,dist_from_line,dist_from_line_segment,dist_from_plane,repeats,dist_from_plane_normal
+from ase.geometry.distance import dist_from_point,dist_from_line,\
+        dist_from_line_segment,dist_from_plane,repeats,dist_from_plane_normal
 
 # 2-D testing
-visual = False
+visual = True
 positions = np.array([
     [1, 1],
     [2, 2],
@@ -108,7 +109,7 @@ assert(sum(d1) < sum(d2))
 
 if visual:
     import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
+    import mpl_toolkits.mplot3d
     fig=plt.figure()
     ax=fig.add_subplot(111,projection='3d')
     ax.plot3D(*np.vstack((b,b+5*m)).transpose())
