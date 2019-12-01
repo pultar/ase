@@ -54,4 +54,4 @@ The numpy ``roll`` is used to make the hierarchically ordered yz-, zx-, and xy-p
 
 >>> (1.e-14,0) < (0,1)
 
-The full script is at :download:`sort.py`.
+The full script is at :download:`sort.py`. A LaTex document deriving the equations used to calculate the distances is at :download:`nearest-dist.pdf`.
