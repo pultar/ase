@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\section{Remarks}
+The problem of finding the minimum distance from a line segment or finite plane (plane segment) is simple because the derivative of the Euclidean distance yields a linear problem.
+
+\section{Minimum distance from a line segment}
+Given a point on a line segment defined between two points $\vec{a}$ and $\vec{b}$, 
+$$\vec{p}= x\vec{a} + (1-x) \vec{b} \,, $$
+
+The length along that line segment defined from starting point $\vec{a}$, in particular the fraction $x$, is to be such that the distance between the point $\vec{p}$ and some other point $\vec{s}$ is minimum, that is,
+
+$$\min_{x} \Vert \vec{s} - \vec{p} \Vert  \,.$$
+
+Since the square modulus is monotonic with its argument, it suffices to minimize the square distance, $\Vert \vec{s} - \vec{p}\Vert^2$. Let $d$ be the distance, then the minimum condition reads
+
+$$\frac{dd}{dx} = -2[(s_x - x a_x - (1-x)b_x)(a_x+b_x) + (s_y-xa_y-(1-x)b_y)(a_y+b_y)+(s_z-xa_z-(1-x)b_z)(a_z+b_z)] \,. $$
+
+Setting this to zero and rearranging,
+
+$$ x = \frac{\vec{s} \cdot (\vec{a}+\vec{b}) - \vec{b}\cdot(\vec{a}+\vec{b})}{\vec{a}\cdot(\vec{a}+\vec{b}) - \vec{b}\cdot(\vec{a}+\vec{b})}\,.$$
+
+The denominator may be simplfied and the numerator rearranged to yield
+
+$$x = \frac{(\vec{s}-\vec{b})\cdot(\vec{a}+\vec{b})}{\Vert \vec{a}\Vert^2 - \Vert \vec{b}\Vert^2} \,.$$
+
+When $\vec{s}=\vec{b}$, $x=0$, and when $\vec{s}=\vec{a}$, $x=1$, and the form is asymmetrical with respect to $\vec{a}$ and $\vec{b}$ because of the definition of the interpolating direction as being positive from $\vec{a}$.
+
+\subsection{Minimum distance from a line}
+Given a point on a line defined by an intercept $\vec{b}$ and a slope $\vec{m}$, 
+
+$$ \vec{p} = \vec{m} x + \vec{b} \,,$$
+
+the distance to some other point $\vec{s}$ is minimum when the square distance is minimum,
+
+$$ \min_x (\vec{p} - \vec{s})\cdot (\vec{p} - \vec{s}) \,. $$ 
+
+Applying the minimum condition,
+
+$$ 0 = 2 \frac{d\vec{p}}{dx} \cdot (\vec{p} - \vec{s}) \,.$$
+
+Evaluating the derivative and distributing the dot product,
+
+$$0 = \vec m \cdot \vec m x + \vec m \cdot \vec b - \vec m \cdot \vec s \,. $$
+
+Solving for $x$ gives
+
+$$ x = \frac{\vec{m}\cdot(\vec{s}-\vec{b})}{\Vert\vec m \Vert^2} \,. $$
+
+\section{Minimum distance from a plane}
+
+The point on the plane defined by one point and two spanning vectors,
+
+$$\vec{p} = \vec{c} + x\vec{a} + y\vec{b} \,, $$
+
+is to be found such that the distance to some other point $\vec{s}$ is minimum, that is,
+
+$$\min_{x,y} \Vert \vec{s} - \vec{p} \Vert \,. $$
+
+Again, since the square modulus is monotonic with its argument, it suffices to minimize the square distance which is again called $d$. Also let $\vec{u} = \vec{s} - \vec{c}$ for brevity. Then the minimum conditions read
+
+\begin{align*}
+    \frac{\partial d}{\partial x} = -2[(u_x - xa_x -yb_x)a_x + (u_y - xa_y -yb_y)a_y + (u_z-xa_z-yb_z)a_z] \,,\\
+    \frac{\partial d}{\partial y} = -2[(u_x - xa_x -yb_x)b_x + (u_y - xa_y -yb_y)b_y + (u_z-xa_z-yb_z)b_z] \,,\\
+\end{align*}
+
+Setting both of these to zero and rearranging,
+
+\begin{align*}
+    0&=\vec{u}\cdot\vec{a} - x\Vert \vec{a}\Vert^2 - y\vec{b}\cdot\vec{a} \,,\\
+    0&=\vec{u}\cdot\vec{b} - x\vec{a}\cdot\vec{b} - y\Vert\vec{b}\Vert^2 \,.
+\end{align*}
+
+Inverting the equations for $x$ and $y$,
+
+\begin{align*}
+    x=\frac{(\vec{u}\cdot\vec{b})(\vec{a}\cdot\vec{b}) - \vec{u}\cdot\vec{a} \Vert\vec{b}\Vert^2}{\Vert\vec{a}\Vert^2\Vert\vec{b}\Vert^2- (\vec{a}\cdot\vec{b})^2}\,,\\
+    y=\frac{(\vec{u}\cdot\vec{a})(\vec{a}\cdot\vec{b}) - \vec{u}\cdot\vec{b} \Vert\vec{a}\Vert^2}{\Vert\vec{a}\Vert^2\Vert\vec{b}\Vert^2 - (\vec{a}\cdot\vec{b})^2 } \,.
+\end{align*}
+
+Examining this expression, it has all the correct features: the denominator is greater than $0$ for all $\vert \vec{a}\vert \neq \vert\vec{b}\vert$ since the dot product of two vectors is at most the product of magnitudes. The expressions for $x$ and $y$ are symmetric with respect to exchange of $\vec{a}$ and $\vec{b}$ as expected since $x$ and $y$ are defined as their coefficients.
+
+\subsection{Minimum square distance from a finite plane (plane segment)}
+
+Given a plane described by
+
+$$ \vec{p} = x\vec{a} + y\vec{b} + z\vec{c} \,, $$
+
+subject to
+
+$$ x+y+z= 1 \,,$$
+
+find the minimum distance between a point on the plane segment and any point $\vec{s}$. Using the method of Lagrange multipliers, that is, minimize the objective function over an unconstrained domain
+
+$$ \min_{x,y,z,\lambda} (\vec{p}-\vec{s})\cdot(\vec{p}-\vec{s}) - \lambda (1-x-y-z) \,. $$
+
+The same procedure as before, the derivative being taken with respect to now four variables, leads to the matrix equation
+
+$$\begin{pmatrix}
+    \Vert \vec{a}\Vert^2 & \vec{a}\cdot\vec{b} & \vec{a}\cdot\vec{c}& 1 \\ 
+    \vec{b}\cdot\vec{a} & \Vert\vec{b}\Vert^2 & \vec{b}\cdot\vec{c}&1 \\
+    \vec{c}\cdot\vec{a} & \vec{c}\cdot\vec{b} & \Vert\vec{c}\Vert^2 &1 \\
+    -1 & -1 & -1 & 0
+    \end{pmatrix} 
+    \begin{pmatrix}x\\y\\z\\\lambda\end{pmatrix} 
+        = \begin{pmatrix} \vec{a}\cdot\vec{s} \\ \vec{b}\cdot\vec{s} \\ \vec{c} \cdot\vec{s} \\ -1 \end{pmatrix} \,. $$
+
+The objective function and the resulting optima equations differ between square distance and distance on introducing the Lagrange multiplier terms. Yet for the point which is minimum in square distance it still holds due to the monotonicity that the distance is minimum at that point. Given a set of points $p_1,p_2,\ldots$, if the function $f$ is minimum at $f(p_1)$, then it follows that the function $g(x) = f(x)^2$ is minimum at $g(p_1)$. The addition of constraints only changes $p_1$ and the value $f(p_1)$, but not their existence. The addition of Lagrange multipliers still allows changing the objective function to be a monotonic function of the original objective function. The minimum square distance is at the same point as the minimum distance.
+
+\section{Periodic Boundary Conditions}
+
+In many cases a system is periodic and the nearest distance to the given geometric object is not for the atom which is in the starting space but in one of its periodic images. Thus there is to be considered not just $\vec s$ but
+
+$$ \vec s + m\vec a + n\vec b + p\vec c\,,$$
+
+where $m$, $n$ and $p$ take on the values $-1$, $0$, and $1$. Since very minimization has the difference $\vec{p} - \vec{s}$, it is equivalent to consider
+
+$$\vec{p} := \vec p - m\vec a - n\vec b - p \vec c = \vec p + m \vec a + n \vec b + p \vec c \,. $$
+
+The last equality holds from the symmetry of the values which $m$, $n$, and $p$ take on. Thus either the positions or the geometry may be translated, the result for the difference is the same. Since the number of points is usually significantly more than the number of geometric objects, there is some savings (though insignificant in cost) to translating the geometric objects.
+
+\end{document}
