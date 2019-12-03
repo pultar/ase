@@ -259,7 +259,7 @@ def _refine_cell(atoms, tolerance, primitive=True):
         raise ImportError('Could not import spglib; required if writing '
                           'CRYSTAL fort.34 file with "refine=True".')
 
-    cell, positions, numbers = spglib.refine_cell(atoms,
-                                                  symprec=tolerance,
-                                                  primitive=primitive)
+    cell, positions, numbers = spglib.standardize_cell(atoms,
+                                                       symprec=tolerance,
+                                                       to_primitive=primitive)
     return Atoms(numbers, scaled_positions=positions, cell=cell)
