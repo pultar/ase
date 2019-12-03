@@ -48,7 +48,7 @@ class NWChem(FileIOCalculator):
     def band_structure(self):
         self.calculate()
         label = self.parameters.get('label', 'nwchem')
-        perm = os.path.abspath(self.parameters.get('perm', label))
+        perm = self.parameters.get('perm', label)
         if self.calc.get_spin_polarized():
             alpha = np.loadtxt(os.path.join(perm, label + '.alpha_band'))
             beta = np.loadtxt(os.path.join(perm, label + '.beta_band'))
@@ -57,6 +57,4 @@ class NWChem(FileIOCalculator):
             data = np.loadtxt(os.path.join(perm, label + '.restricted_band'))
             energies = data[np.newaxis, :, 1:] * Hartree
         eref = self.calc.get_fermi_level()
-        if eref is not None:
-            energies -= eref
         return BandStructure(self.parameters.bandpath, energies, eref)
