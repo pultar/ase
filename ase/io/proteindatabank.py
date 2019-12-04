@@ -34,7 +34,7 @@ def read_atom_line(line_full):
         altloc = line[16]
         # resname and chainid are merged
         #  they are space separated
-        resname = line[17:22]
+        resname = line[17:22].strip()
         # chainid = line[21]
 
         resseq = int(line[22:26].split()[0])  # sequence identifier
@@ -285,18 +285,19 @@ def write_proteindatabank(fileobj, images, order_tags=True, write_arrays=True):
             fileobj.write(format.format(a % MAXNUM + 1, names[a], resname,
                                         chain_id, resnumbers[a],
                                         x, y, z, occ, bf, symbols[a].upper()))
-        fileobj.write('ENDMDL\n')
-        if atoms.has('bonds'):
-            conect_mat = np.zeros((len(atoms), len(atoms)))
-            for y in atoms.topology.bonds().values():
-                for x in y:
+        # add CONECT
+        if atoms._topology is not None:
+            if atoms.topology.has('bonds'):
+                conect_mat = np.zeros((len(atoms), len(atoms)))
+                for x in atoms.topology.bonds():
                     conect_mat[x[0], x[1]] = 1
-            conect_mat = np.asarray(conect_mat + conect_mat.T, dtype=bool)
-            for i in range(len(atoms)):
-                count = 0
-                for j in np.where(conect_mat[i])[0]:
-                    if count % 4 == 0:
-                        fileobj.write('\nCONECT{:5d}'.format(i + 1))
-                    fileobj.write('{:5d}'.format(j + 1))
-                    count += 1
-            fileobj.write('\n')
+                conect_mat = np.asarray(conect_mat + conect_mat.T, dtype=bool)
+                for i in range(len(atoms)):
+                    count = 0
+                    for j in np.where(conect_mat[i])[0]:
+                        if count % 4 == 0:
+                            fileobj.write('\nCONECT{:5d}'.format(i + 1))
+                        fileobj.write('{:5d}'.format(j + 1))
+                        count += 1
+                fileobj.write('\n')
+        fileobj.write('ENDMDL\n')
