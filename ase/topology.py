@@ -3,8 +3,6 @@ from copy import deepcopy
 from ase.utils import basestring
 from ase.neighborlist import NeighborList, natural_cutoffs
 
-import operator
-
 
 # ! TODO update 'names' array to the future ASE labels
 def string2index(string):
@@ -73,7 +71,7 @@ class _TopoAttribute(object):
         if not isinstance(items, list):
             items = [items]
         if self.prop in ['resnames']:
-            props = self.get()
+            props = self.get(with_names=True)
             for item in items:
                 props.pop(item)
             self.set(props)
@@ -83,7 +81,7 @@ class _TopoAttribute(object):
                            'impropers']:
             types = self.get_types(verbose=True)
             array = self._ins._topology[self.prop]
-            mask = np.ones(len(array))
+            mask = np.ones(len(array), dtype=int)
             for item in items:
                 # check if item exists
                 if item not in types:
@@ -94,8 +92,7 @@ class _TopoAttribute(object):
             self._ins._topology[self.prop] = array
             self.update()
         elif self.prop in ['tags',
-                           'names',
-                           'ids']:
+                           'names']:
             del_ind = []
             for item in items:
                 del_ind += np.where(self.get() == item)[0].tolist()
@@ -921,7 +918,7 @@ class Topology(object):
                     i1 = i0 + n
                     if i0 != 0:
                         # extend connectivities with an offset
-                        self._extend(self._ins._topology, _offset=i0)
+                        self._extend(array, _offset=i0)
                     if self._ins.has('tags'):
                         _ = self._ins.arrays['tags'][i0:i1] + max_tags
                         self._ins.arrays['tags'][i0:i1] = _

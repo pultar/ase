@@ -885,6 +885,8 @@ class Atoms(object):
             d['constraints'] = self.constraints
         if self.info:
             d['info'] = self.info
+        if self._topology is not None:
+            d['topology'] = self._topology
         # Calculator...  trouble.
         return d
 
@@ -905,6 +907,9 @@ class Atoms(object):
                     celldisp=dct.pop('celldisp', None),
                     info=dct.pop('info', None), **kw)
         natoms = len(atoms)
+
+        # topology
+        atoms._topology = dct.pop('topology', None)
 
         # Some arrays are named differently from the atoms __init__ keywords.
         # Also, there may be custom arrays.  Hence we set them directly:
