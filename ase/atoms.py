@@ -310,37 +310,25 @@ class Atoms(object):
     constraints = property(_get_constraints, set_constraint, _del_constraints,
                            'Constraints of the atoms.')
 
-    def get_topology(self, persistent=False):
+    def get_topology(self, _persistent=False):
         '''Allows attacing topology information to the atoms object'''
-        if not persistent:
-            other = self.copy()
-            return Topology(other, persistent=False)
-        elif self._topology is not None:
-            return Topology(self)
-        else:
-            raise RuntimeError('Topology not initialised;'
-                               ' use {atoms}.set_topology() to set '
-                               'persistent topology, else use '
-                               '{atoms}.get_topology()'
-                               ''.format(atoms=self.__class__.__name__))
+        return Topology(self, _persistent=_persistent)
 
-    def set_topology(self, value=0):
+    def set_topology(self, value=frozenset({})):
         if value is None:
             # during __init__
             self._topology = None
-            return
-        elif value == 0:
-            value = {}
-        top = Topology(self)
-        top.update(value)
+        else:
+            # initiate topology
+            self._topology = {}
+            top = Topology(self, _persistent=True)
+            top.update(dict(value))
 
     def _del_topology(self):
         self._topology = None
-        del self.arrays['names']
-
 
     def _get_persistent_topology(self):
-        return self.get_topology(persistent=True)
+        return self.get_topology(_persistent=True)
 
     topology = property(_get_persistent_topology, set_topology,
                         _del_topology, doc='handles topology information of atoms')
@@ -870,7 +858,7 @@ class Atoms(object):
         for name, a in self.arrays.items():
             atoms.arrays[name] = a.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
-        if self._topology:
+        if self._topology is not None:
             atoms.topology = self.topology()
         return atoms
 
@@ -1106,7 +1094,7 @@ class Atoms(object):
         atoms.constraints = conadd
 
         # update topology
-        if self._topology:
+        if self._topology is not None:
             atoms._topology = copy.deepcopy(self._topology)
             atoms.topology._get_item(i, len(self))
         return atoms
@@ -1136,7 +1124,7 @@ class Atoms(object):
             self.constraints = constraints
 
         # the indices should be renamed first
-        if self._topology:
+        if self._topology is not None:
             self.topology._del_item(i)
 
         mask = np.ones(len(self), bool)
@@ -1181,7 +1169,7 @@ class Atoms(object):
 
         self.cell = np.array([m[c] * self.cell[c] for c in range(3)])
 
-        if self._topology:
+        if self._topology is not None:
             self.topology._imul(m)
 
         return self

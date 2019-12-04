@@ -26,7 +26,6 @@ class _TopoAttribute(object):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = topo_attr_prop._ins
-        self.persistent = topo_attr_prop.persistent
         self.prop = topo_attr_prop.prop
 
     def _check_exists(func):
@@ -39,16 +38,6 @@ class _TopoAttribute(object):
                 raise RuntimeError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
-            return func(*args, **kwargs)
-        return wrapper
-
-    def _check_persistence(func):
-        """Decorator to check if the topology is persistent"""
-        # Only added to functions which may edit/set topology data
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if not self.persistent:
-                raise RuntimeError('Topology is not persistent')
             return func(*args, **kwargs)
         return wrapper
 
@@ -65,7 +54,6 @@ class _TopoAttribute(object):
             raise RuntimeError('{} not in {}'.format(item, self.prop))
         return props[item]
 
-    @_check_persistence
     @_check_exists
     def __delitem__(self, items):
         if not isinstance(items, list):
@@ -192,7 +180,6 @@ class _TopoAttribute(object):
 
     __call__ = get
 
-    @_check_persistence
     def set(self, value=None):
         """
         value to set. None value deletes the property
@@ -228,7 +215,6 @@ class _TopoAttribute(object):
             raise NotImplementedError('get_count only implemented for bonds,'
                                       ' angles, dihedrals, impropers')
 
-    @_check_persistence
     def add(self, items, _offset=None):
         """ adds to prop
         Parameters:
@@ -346,11 +332,6 @@ class _TopoAttribute(object):
     def update(self):
         """
         """
-        # if topology not persistent, then don't update
-        # the _check_persistent wrapper is not used
-        if not self.persistent:
-            return
-
         if self.prop in ['bonds',
                          'angles',
                          'dihedrals',
@@ -396,7 +377,6 @@ class _TopoAttribute(object):
                                     object)
 
     @_check_exists
-    @_check_persistence
     def set_types_to(self, indx_of, index=":"):
         """
         :param indx_of: dictionary, changes type from keys -> values
@@ -513,7 +493,6 @@ class _TopoAttributeProperty(object):
         if topo_base is None:
             return self
         self._ins = topo_base._ins
-        self.persistent = topo_base.persistent
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         return _TopoAttribute(self)
@@ -544,14 +523,27 @@ class Topology(object):
     dihedrals = _TopoAttributeProperty('dihedrals')
     impropers = _TopoAttributeProperty('impropers')
 
-    def __init__(self, instance, persistent=True):
+    def __init__(self, instance, _persistent=False):
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
-        self._ins = instance
+
         # a bool to see if the topology is persistent
-        # i.e. the set/edit methods can be used or not
-        # changed to the passed persistent when __init__ ends
-        self.persistent = True
+        self._persistent = _persistent
+        if self._persistent:
+            # the instance is edited along with topology
+            self._ins = instance
+            if self._ins._topology is None:
+                # no topology but atoms.topology called
+                _ = self._ins.__class__.__name__
+                raise RuntimeError('Topology not initialised;'
+                                   ' use {atoms}.set_topology() to set '
+                                   'a persistent topology, else use '
+                                   '{atoms}.get_topology()'
+                                   ''.format(atoms=_))
+        else:
+            # topology object gets its own atoms object
+            self._ins = instance.copy()
+
         # a dict to hold all attributes
         self._dict = {'names': self.names,
                       'tags': self.tags,
@@ -561,31 +553,39 @@ class Topology(object):
                       'dihedrals': self.dihedrals,
                       'impropers': self.impropers}
 
-        if not persistent:
+        if not self._persistent:
+            # persistent topology is always updated when
+            # a function called by user needs it
+            # non-persistent topology has a new atoms object
+            # that should be updated for names and tags
             if self._ins._topology is None:
-                # if no topology already,
-                # update all attributes needed
-                # add bonds/angles/dihedrals/impropers based on
-                # connectivity, in ase.neighborlists
-                self.update()
-                self.generate()
-            self.persistent = False
+                # add topology for its own atoms object
+                self._ins._topology = {}
+            # requires _dict to be defined
+            self.update()
 
     def __repr__(self):
         tokens = []
         for key, values in self._dict.items():
             if self.has(key):
                 tokens.append("{}= {}".format(key, values))
-        return "{}.Topology({})".format(self._ins.__class__.__name__, ", ".join(tokens))
+        if self._persistent:
+            return "{}.Topology({})".format(self._ins.__class__.__name__,
+                                            ", ".join(tokens))
+        else:
+            return "Topology({})".format(", ".join(tokens))
 
     def has(self, prop):
-        if prop in self._ins._topology or prop in ['names', 'tags']:
-            return True
-        else:
-            return False
+        return prop in self._ins._topology or prop in ['names', 'tags']
 
     def __getitem__(self, item):
         return self._dict[item]
+
+    def get_perstisting_atoms_object(self):
+        '''Returns the atoms object that is being edited using  topology
+        if the topology is non-persistent, then this object has the topology
+        generated with this topology object'''
+        return self._ins
 
     def get_topology_dict(self):
         """Gives topology dict that can be inherited by other topology
@@ -606,19 +606,9 @@ class Topology(object):
     __call__ = get_topology_dict
 
     def update(self, topo_dict=None):
-        if not self.persistent:
-            raise RuntimeError('Topology is not persistent')
         # sanity check for topo_object
         if topo_dict is None:
             topo_dict = {}
-
-        # initialise topology
-        if not hasattr(self._ins, '_topology'):
-            # setting new atoms object from prev one with topology
-            # leads to this case
-            self._ins._topology = {}
-        elif self._ins._topology is None:
-            self._ins._topology = {}
 
         for prop in ['names',
                      'tags',
@@ -661,9 +651,6 @@ class Topology(object):
          ...                        angles = [['H', 'O', 'H']]
          ...                       )
         """
-        if not self.persistent:
-            raise RuntimeError('Topology is not persistent')
-
         # dict to hold str connectivities
         topo_dict = {}
         # dict to hold int connectivities
@@ -921,8 +908,6 @@ class Topology(object):
             _offset: int
                 To offset the indices by _offset
         """
-        if not self.persistent:
-            raise RuntimeError('Topology is not persistent')
         for key, values in topo_dict.items():
             if key in self._dict:
                 self._dict[key].add(values, _offset)
