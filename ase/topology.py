@@ -661,40 +661,6 @@ class Topology(object):
          ...                        angles = [['H', 'O', 'H']]
          ...                       )
         """
-        class check_exist():
-            """
-            Class to check if index is present in topo_dict.
-            """
-            def __init__(self, topo_dict):
-                # dict to hold connectivity names
-                self.topo_ = {}
-                if topo_dict is True:
-                    self.gen_all = True
-                else:
-                    self.gen_all = False
-                    for key, values in topo_dict.items():
-                        for i, value in enumerate(values):
-                            if key == 'bonds':
-                                value = np.sort(value)
-                            if key == 'angles':
-                                edges = np.sort([value[0], value[2]])
-                                value[0], value[2] = edges
-                            self.topo_[key] = (self.topo_.get(key, [])
-                                                + ['-'.join(value)])
-
-            def __call__(self, index, prop):
-                if self.gen_all:
-                    return True
-                else:
-                    return index in self.topo_[prop]
-
-            def prop_exists(self, prop):
-                if self.gen_all:
-                    return True
-                else:
-                    return prop in self.topo_
-
-
         if not self.persistent:
             raise RuntimeError('Topology is not persistent')
 
@@ -702,6 +668,8 @@ class Topology(object):
         topo_dict = {}
         # dict to hold int connectivities
         topo_dict_indx = {}
+        # dict to hold str connectivities joined by -
+        topo_names = {}
         if bonds is not None:
             if len(bonds) != 0:
                 if len(np.array(bonds).shape) != 2:
@@ -733,9 +701,10 @@ class Topology(object):
                 and dihedrals is None
                 and impropers is None):
             # empty generate passed, all connectivities to be added
-            topo_dict = True
+            generate_all = True
         else:
             # move connectivities based on str or indices
+            generate_all = False
             for prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
                 if prop not in topo_dict:
                     continue
@@ -749,19 +718,28 @@ class Topology(object):
                     # move them to topo_dict_indx
                     topo_dict_indx[prop] = array
                     topo_dict.pop(prop)
-                elif np.all([type(y) is str
+                elif np.all([isinstance(y, (str, np.str_))
                            for x in topo_dict[prop] for y in x]):
                     # else str given
                     topo_dict[prop] = np.array(topo_dict[prop])
                     if topo_dict[prop].shape[1] != length[prop]:
                         raise RuntimeError('{} should be of length {}'
                                            ''.format(prop, length[prop]))
+                    # renaming topo_dict connectivity as single string
+                    for key, values in topo_dict.items():
+                        for i, value in enumerate(values):
+                            if key == 'bonds':
+                                value = np.sort(value)
+                            if key == 'angles':
+                                edges = np.sort([value[0], value[2]])
+                                value[0], value[2] = edges
+                            topo_names[key] = (topo_names.get(key, [])
+                                                    + ['-'.join(value)])
                 else:
                     raise RuntimeError('indices should be either all int, or str')
 
         # convert str connectivities to int connectivities
-        if topo_dict:
-            check_ = check_exist(topo_dict)
+        if topo_names or generate_all:
 
             # making symmetric neighbor matrix
             if cutoffs is None:
@@ -781,7 +759,7 @@ class Topology(object):
                 neighbor_list = np.where(array)[0]
                 d.append(neighbor_list)
 
-            if check_.prop_exists('bonds'):
+            if 'bonds' in topo_names or generate_all:
                 for i, neighbor in enumerate(d):
                     for j in neighbor:
                         if i <= j:
@@ -790,7 +768,8 @@ class Topology(object):
                         name_list = [symbols[x] for x in [i, j]]
                         name_list.sort()
                         name_list = '-'.join(name_list)
-                        if check_(name_list, 'bonds'):
+                        if (name_list in topo_names.get('bonds', [])
+                                or generate_all):
                             if 'bonds' not in topo_dict_indx:
                                 # initiate topo_dict_indx
                                 topo_dict_indx['bonds'] = np.array([[i, j]],
@@ -800,7 +779,7 @@ class Topology(object):
                             topo_dict_indx['bonds'] = _
 
 
-            if check_.prop_exists('angles'):
+            if 'angles' in topo_names or generate_all:
                 for i, neighbor in enumerate(d):
                     for indx, j in enumerate(neighbor):
                         for k in neighbor[indx + 1:]:
@@ -809,7 +788,8 @@ class Topology(object):
                             name_list.sort()
                             name_list.insert(1, vertex)
                             name_list = '-'.join(name_list)
-                            if check_(name_list, 'angles'):
+                            if (name_list in topo_names.get('angles', [])
+                                    or generate_all):
                                 if 'angles' not in topo_dict_indx:
                                     # initiate topo_dict_indx
                                     _ = np.array([[j, i, k]], dtype=int)
@@ -819,14 +799,15 @@ class Topology(object):
                                                [j, i, k]])
                                 topo_dict_indx['angles'] = _
 
-            if check_.prop_exists('dihedrals'):
+            if 'dihedrals' in topo_names or generate_all:
                 for i, neighbor_i in enumerate(d):
                     for j in neighbor_i:
                         for k in set(d[j]) - {i, j}:
                             for l in set(d[k]) - {i, j, k}:
                                 name_list = [symbols[x] for x in [i, j, k, l]]
                                 name_list = '-'.join(name_list)
-                                if check_(name_list, 'dihedrals'):
+                                if (name_list in topo_names.get('dihedrals', [])
+                                        or generate_all):
                                     if 'dihedrals' not in topo_dict_indx:
                                         # initiate topo_dict_indx
                                         _ = np.array([[i, j, k, l]], dtype=int)
@@ -836,7 +817,7 @@ class Topology(object):
                                                    [i, j, k, l]])
                                     topo_dict_indx['dihedrals'] = _
 
-            if check_.prop_exists('impropers'):
+            if 'impropers' in topo_names or generate_all:
                 for i, neighbor in enumerate(d):
                     for indx_j, j in enumerate(neighbor):
                         for indx_k, k in enumerate(neighbor[indx_j + 1:],
@@ -844,7 +825,8 @@ class Topology(object):
                             for l in neighbor[indx_k + 1:]:
                                 name_list = [symbols[x] for x in [i, j, k, l]]
                                 name_list = '-'.join(name_list)
-                                if check_(name_list, 'impropers'):
+                                if (name_list in topo_names.get('impropers', [])
+                                        or generate_all):
                                     if 'impropers' not in topo_dict_indx:
                                         # initiate topo_dict_indx
                                         _ = np.array([[i, j, k, l]], dtype=int)
