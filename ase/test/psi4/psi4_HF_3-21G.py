@@ -2,20 +2,29 @@
 
 import os
 from numpy.testing import assert_allclose
+from numpy import array
 
-from ase.build import molecule
+from ase.atoms import Atoms
 from ase.calculators.psi4 import Psi4
 
 
 def main():
-    atoms = molecule('H2O')
+    atoms = Atoms(symbols='OH2',
+                  pbc=array([False, False, False]),
+                  cell=array([[15., 0., 0.],
+                              [0., 15.1, 0.],
+                              [0., 0., 15.2]]),
+                  positions=array([[7.5, 7.81624166, 8.0409556],
+                                   [7.5, 8.41255066, 7.2777166],
+                                   [7.5, 6.68744934, 7.1590444]]))
+
     calc = Psi4(basis='3-21G')
     atoms.set_calculator(calc)
 
     # Calculate forces ahead of time, compare against finite difference after
     # checking the psi4-calc.dat file
     atoms.get_forces()
-    assert_allclose(atoms.get_potential_energy(), -2056.785854116349,
+    assert_allclose(atoms.get_potential_energy(), -2054.324039873539,
                     rtol=1e-4, atol=1e-4)
 
     # Test the reader
