@@ -77,7 +77,7 @@ Git master branch
   The calculator also now supports
   `plane-wave calculations <https://github.com/nwchemgit/nwchem/wiki/Plane-Wave-Density-Functional-Theory>`_,
   including band structure calculations through ASE's :class:`~ase.dft.band_structure.BandStructure` utilities.
-  To facilitate these changes, the format of the calculator keywords have changed. Please read the updated
+  To facilitate these changes, the format of the calculator keywords has been changed. Please read the updated
   :mod:`NWChem <ase.calculators.nwchem>` calculator documentation for more details.
 
 Version 3.18.1
