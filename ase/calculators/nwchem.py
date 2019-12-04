@@ -31,9 +31,8 @@ class NWChem(FileIOCalculator):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
 
         # Prepare perm and scratch directories
-        label = self.parameters.get('label', 'nwchem')
-        perm = os.path.abspath(self.parameters.get('perm', label))
-        scratch = os.path.abspath(self.parameters.get('scratch', label))
+        perm = os.path.abspath(self.parameters.get('perm', self.label))
+        scratch = os.path.abspath(self.parameters.get('scratch', self.label))
         os.makedirs(perm, exist_ok=True)
         os.makedirs(scratch, exist_ok=True)
 
@@ -57,4 +56,6 @@ class NWChem(FileIOCalculator):
             data = np.loadtxt(os.path.join(perm, label + '.restricted_band'))
             energies = data[np.newaxis, :, 1:] * Hartree
         eref = self.calc.get_fermi_level()
+        if eref is None:
+            eref = 0.
         return BandStructure(self.parameters.bandpath, energies, eref)
