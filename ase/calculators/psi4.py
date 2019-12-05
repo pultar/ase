@@ -30,14 +30,8 @@ class Psi4(Calculator):
 
     default_parameters = {
         "basis": "aug-cc-pvtz",
-        "num_threads": None,
         "method": "hf",
-        "memory": None,
-        'charge': None,
-        'multiplicity': None,
-        'reference': None,
-        'symmetry': 'c1',
-        'PSI_SCRATCH': None}
+        'symmetry': 'c1'}
 
     def __init__(self, restart=None, ignore_bad_restart=False,
                  label='psi4-calc', atoms=None, command=None,
@@ -60,22 +54,20 @@ class Psi4(Calculator):
         # The default is /tmp
         if 'PSI_SCRATCH' in os.environ:
             pass
-        elif self.parameters['PSI_SCRATCH']:
+        elif self.parameters.get('PSI_SCRATCH'):
             os.environ['PSI_SCRATCH'] = self.parameters['PSI_SCRATCH']
 
         # Input spin settings
-        if self.parameters['reference'] is not None:
+        if self.parameters.get('reference') is not None:
             self.psi4.set_options({'reference':
                                    self.parameters['reference']})
         # Memory
-        if self.parameters['memory'] is not None:
+        if self.parameters.get('memory') is not None:
             self.psi4.set_memory(self.parameters['memory'])
 
         # Threads
-        nthreads = self.parameters.get('num_threads')
-        if nthreads is None:
-            nthreads = 1
-        elif nthreads == 'max':
+        nthreads = self.parameters.get('num_threads', 1)
+        if nthreads == 'max':
             nthreads = multiprocessing.cpu_count()
         self.psi4.set_num_threads(nthreads)
 
@@ -116,7 +108,7 @@ class Psi4(Calculator):
         geom.append('units angstrom')
 
         charge = self.parameters.get('charge')
-        mult = self.parameters.get('mult')
+        mult = self.parameters.get('multiplicity')
         if mult is None:
             mult = 1
             if charge is not None:
