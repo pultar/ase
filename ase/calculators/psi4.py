@@ -122,7 +122,7 @@ class Psi4(Calculator):
             if charge is not None:
                 warnings.warn('A charge was provided without a spin '
                               'multiplicity. A multiplicity of 1 is assumed')
-        elif charge is None:
+        if charge is None:
             charge = 0
 
         geom.append('{} {}'.format(charge, mult))
