@@ -3,6 +3,7 @@ import warnings
 
 from ase.units import kJ
 from ase.utils import basestring
+from ase.plotting import get_fig
 
 import numpy as np
 
@@ -307,23 +308,19 @@ class EquationOfState:
         show the figure and *filename='abc.png'* or
         *filename='abc.eps'* to save the figure to a file."""
 
-        # Switching the backend to Agg makes it possible to generate plots
-        # in environments with no X11, e.g. while running on a compute
-        # node in a cluster.
-        if not show:
-            import matplotlib as mpl
-            mpl.use('Agg')
-
-        import matplotlib.pyplot as plt
-
         plotdata = self.getplotdata()
+
+        if ax is None:
+            fig = get_fig(interactive=show)
+            ax = fig.gca()
+        else:
+            fig = ax.get_figure()
 
         ax = plot(*plotdata, ax=ax)
 
         if show:
-            plt.show()
+            fig.show()
         if filename is not None:
-            fig = ax.get_figure()
             fig.savefig(filename)
         return ax
 
@@ -359,11 +356,7 @@ class EquationOfState:
         return self.v0, self.e0, self.B
 
 
-def plot(eos_string, e0, v0, B, x, y, v, e, ax=None):
-    if ax is None:
-        import matplotlib.pyplot as plt
-        ax = plt.gca()
-
+def plot(eos_string, e0, v0, B, x, y, v, e, ax):
     ax.plot(x, y, ls='-', color='C3')  # By default red line
     ax.plot(v, e, ls='', marker='o', mec='C0', mfc='C0')  # By default blue marker
 
