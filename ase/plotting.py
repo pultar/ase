@@ -5,5 +5,5 @@ def get_fig(*args, interactive=False, **kwargs):
     from matplotlib.figure import Figure
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     fig = Figure(*args, **kwargs)
-    canvas = FigureCanvasAgg(fig)
+    FigureCanvasAgg(fig)
     return fig
