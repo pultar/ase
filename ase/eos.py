@@ -307,6 +307,13 @@ class EquationOfState:
         show the figure and *filename='abc.png'* or
         *filename='abc.eps'* to save the figure to a file."""
 
+        # Switching the backend to Agg makes it possible to generate plots
+        # in environments with no X11, e.g. while running on a compute
+        # node in a cluster.
+        if not show:
+            import matplotlib as mpl
+            mpl.use('Agg')
+
         import matplotlib.pyplot as plt
 
         plotdata = self.getplotdata()
