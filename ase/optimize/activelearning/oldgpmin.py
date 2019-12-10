@@ -6,9 +6,9 @@ from scipy.optimize import minimize
 
 from ase.parallel import world
 
-from ase.optimize.gpmin.gp import GaussianProcess
-from ase.optimize.gpmin.kernel import SquaredExponential
-from ase.optimize.gpmin.prior import ConstantPrior
+from ase.optimize.activelearning.gp.gp import GaussianProcess
+from ase.optimize.activelearning.gp.kernel import SquaredExponential
+from ase.optimize.activelearning.gp.prior import ConstantPrior
 
 import pickle
 
