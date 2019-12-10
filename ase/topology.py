@@ -651,32 +651,48 @@ class Topology(object):
          ...                        angles = [['H', 'O', 'H']]
          ...                       )
         """
+        def update_topo_dict_indx(prop, list_):
+            '''updates topo_dict_indx for list of connectivity
+            Parameters
+                prop: str
+                    name of connectivity
+                list_: list of int
+                    indices to be added to topo_dict_indx
+            '''
+            name_list = [symbols[x] for x in list_]
+            if prop == 'bonds':
+                name_list.sort()
+            elif prop == 'angles':
+                vertex = name_list.pop(1)
+                name_list.sort()
+                name_list.insert(1, vertex)
+            name_list = '-'.join(name_list)
+            if (name_list in topo_names.get(prop, [])
+                    or generate_all):
+                if prop not in topo_dict_indx:
+                    # initiate topo_dict_indx
+                    topo_dict_indx[prop] = np.array([list_],
+                                                       dtype=int)
+                    return
+                _ = np.vstack([topo_dict_indx[prop], list_])
+                topo_dict_indx[prop] = _
+
         # dict to hold str connectivities
         topo_dict = {}
         # dict to hold int connectivities
         topo_dict_indx = {}
         # dict to hold str connectivities joined by -
         topo_names = {}
-        if bonds is not None:
-            if len(bonds) != 0:
-                if len(np.array(bonds).shape) != 2:
-                    raise RuntimeError('a list of connectivities is expected')
-                topo_dict['bonds'] = bonds
-        if angles is not None:
-            if len(angles) != 0:
-                if len(np.array(angles).shape) != 2:
-                    raise RuntimeError('a list of connectivities is expected')
-                topo_dict['angles'] = angles
-        if dihedrals is not None:
-            if len(dihedrals) != 0:
-                if len(np.array(dihedrals).shape) != 2:
-                    raise RuntimeError('a list of connectivities is expected')
-                topo_dict['dihedrals'] = dihedrals
-        if impropers is not None:
-            if len(impropers) != 0:
-                if len(np.array(impropers).shape) != 2:
-                    raise RuntimeError('a list of connectivities is expected')
-                topo_dict['impropers'] = impropers
+        topo_prop = {'bonds': bonds,
+                     'angles': angles,
+                     'dihedrals': dihedrals,
+                     'impropers': impropers}
+        for name_, prop in topo_prop.items():
+            if prop is not None:
+                if len(prop) != 0:
+                    if len(np.array(prop).shape) != 2:
+                        raise RuntimeError('a list of connectivities is expected')
+                    topo_dict[name_] = prop
 
         length = {'bonds': 2,
                   'angles': 3,
@@ -752,57 +768,21 @@ class Topology(object):
                         if i <= j:
                             # removes double counting
                             continue
-                        name_list = [symbols[x] for x in [i, j]]
-                        name_list.sort()
-                        name_list = '-'.join(name_list)
-                        if (name_list in topo_names.get('bonds', [])
-                                or generate_all):
-                            if 'bonds' not in topo_dict_indx:
-                                # initiate topo_dict_indx
-                                topo_dict_indx['bonds'] = np.array([[i, j]],
-                                                                   dtype=int)
-                                continue
-                            _ = np.vstack([topo_dict_indx['bonds'], [i, j]])
-                            topo_dict_indx['bonds'] = _
-
+                        update_topo_dict_indx('bonds', [i, j])
 
             if 'angles' in topo_names or generate_all:
                 for i, neighbor in enumerate(d):
                     for indx, j in enumerate(neighbor):
                         for k in neighbor[indx + 1:]:
-                            name_list = [symbols[x] for x in [k, i, j]]
-                            vertex = name_list.pop(1)
-                            name_list.sort()
-                            name_list.insert(1, vertex)
-                            name_list = '-'.join(name_list)
-                            if (name_list in topo_names.get('angles', [])
-                                    or generate_all):
-                                if 'angles' not in topo_dict_indx:
-                                    # initiate topo_dict_indx
-                                    _ = np.array([[j, i, k]], dtype=int)
-                                    topo_dict_indx['angles'] = _
-                                    continue
-                                _ = np.vstack([topo_dict_indx['angles'],
-                                               [j, i, k]])
-                                topo_dict_indx['angles'] = _
+                            update_topo_dict_indx('angles', [i, j, k])
 
             if 'dihedrals' in topo_names or generate_all:
                 for i, neighbor_i in enumerate(d):
                     for j in neighbor_i:
                         for k in set(d[j]) - {i, j}:
                             for l in set(d[k]) - {i, j, k}:
-                                name_list = [symbols[x] for x in [i, j, k, l]]
-                                name_list = '-'.join(name_list)
-                                if (name_list in topo_names.get('dihedrals', [])
-                                        or generate_all):
-                                    if 'dihedrals' not in topo_dict_indx:
-                                        # initiate topo_dict_indx
-                                        _ = np.array([[i, j, k, l]], dtype=int)
-                                        topo_dict_indx['dihedrals'] = _
-                                        continue
-                                    _ = np.vstack([topo_dict_indx['dihedrals'],
-                                                   [i, j, k, l]])
-                                    topo_dict_indx['dihedrals'] = _
+                                update_topo_dict_indx('dihedrals',
+                                                      [i, j, k, l])
 
             if 'impropers' in topo_names or generate_all:
                 for i, neighbor in enumerate(d):
@@ -810,18 +790,8 @@ class Topology(object):
                         for indx_k, k in enumerate(neighbor[indx_j + 1:],
                                                    start=indx_j + 1):
                             for l in neighbor[indx_k + 1:]:
-                                name_list = [symbols[x] for x in [i, j, k, l]]
-                                name_list = '-'.join(name_list)
-                                if (name_list in topo_names.get('impropers', [])
-                                        or generate_all):
-                                    if 'impropers' not in topo_dict_indx:
-                                        # initiate topo_dict_indx
-                                        _ = np.array([[i, j, k, l]], dtype=int)
-                                        topo_dict_indx['impropers'] = _
-                                        continue
-                                    _ = np.vstack([topo_dict_indx['impropers'],
-                                                   [i, j, k, l]])
-                                    topo_dict_indx['impropers'] = _
+                                update_topo_dict_indx('impropers',
+                                                      [i, j, k, l])
 
         # extend all connectivities
         if topo_dict_indx:
