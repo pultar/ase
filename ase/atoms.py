@@ -22,6 +22,9 @@ from ase.data import atomic_masses, atomic_masses_common
 from ase.utils import basestring
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
+from ase.calculators.calculator import get_calculator_class, all_properties
+from ase.calculators.calculator import PropertyNotImplementedError
+from ase.calculators.singlepoint import SinglePointCalculator
 
 
 class Atoms(object):
@@ -839,7 +842,20 @@ class Atoms(object):
             d['constraints'] = self.constraints
         if self.info:
             d['info'] = self.info
-        # Calculator...  trouble.
+        if self.calc is not None:
+            d['calculator'] = self.calc.name.lower()
+            d['calculator_parameters'] = self.calc.todict()
+            # add calculator properties, if state is same
+            if len(self.calc.check_state(self)) == 0:
+                for prop in all_properties:
+                    try:
+                        x = self.calc.get_property(prop, self, False)
+                    except PropertyNotImplementedError:
+                        pass
+                    else:
+                        if x is not None:
+                            d[prop] = x
+
         return d
 
     @classmethod
@@ -859,6 +875,20 @@ class Atoms(object):
                     celldisp=dct.pop('celldisp', None),
                     info=dct.pop('info', None), **kw)
         natoms = len(atoms)
+
+        # add calculator
+        if 'calculator' in dct:
+            params = dct.pop('calculator_parameters', {})
+            atoms.calc = get_calculator_class(dct.pop('calculator'))(**params)
+
+        else:
+            results = {}
+            for prop in all_properties:
+                if prop in dct:
+                    results[prop] = dct.pop(prop)
+            if results:
+                atoms.calc = SinglePointCalculator(atoms, **results)
+                atoms.calc.name = 'unknown'
 
         # Some arrays are named differently from the atoms __init__ keywords.
         # Also, there may be custom arrays.  Hence we set them directly:
