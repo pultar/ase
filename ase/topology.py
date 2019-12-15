@@ -21,17 +21,36 @@ def string2index(string):
 
 
 class _TopoAttribute(object):
+    """
+    Class to handle individual topology attribute like bonds, angles,
+    impropers, dihedrals etc. It includes methods that makes handling the
+    attribute easy to work with. Since, all these attributes have mostly the
+    same data-structure, it is easily handled in this one class.
+
+    It is attached to topology class as individual property, eg.
+    topology.bonds, or topology.angles etc
+    """
 
     def __init__(self, topo_attr_prop):
+        """
+        A simple initialisation that stores the name of the attribute
+        this instance of class will represent, and the atoms object that
+        holds the data.
+        Parameters
+            topo_attr_prop: _TopoAttributeProperty object
+                contains pointer to the atoms object and name of property
+        """
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
         self._ins = topo_attr_prop._ins
         self.prop = topo_attr_prop.prop
 
     def _check_exists(func):
-        """Decorator to check if the property exists"""
+        """Decorator to check if the property exists
+        Since topology defines all properties already, like topology.bonds
+        it is necessary to add this check to most get functions."""
         # Only added to functions which need already existing values in
-        # atoms.arrays, otherwise the counting methods return 0
+        # atoms._topology, otherwise the counting methods return 0
         def wrapper(*args, **kwargs):
             self = args[0]
             if self.prop not in self._ins._topology and not self._ins.has(self.prop):
@@ -42,13 +61,11 @@ class _TopoAttribute(object):
         return wrapper
 
     def __repr__(self):
-        if self.prop == 'tags':
-            return '0-{}'.format(np.max(self.get_types()))
-        else:
-            return str(self.get_types())
+        return str(self.get_types())
 
     @_check_exists
     def __getitem__(self, item):
+        """Returns property by name"""
         props = self.get(with_names=True)
         if item not in props:
             raise RuntimeError('{} not in {}'.format(item, self.prop))
@@ -59,10 +76,8 @@ class _TopoAttribute(object):
         if not isinstance(items, list):
             items = [items]
         if self.prop in ['resnames']:
-            props = self.get(with_names=True)
             for item in items:
-                props.pop(item)
-            self.set(props)
+                self._ins._topology['resnames'].pop(item)
         elif self.prop in ['bonds',
                            'angles',
                            'dihedrals',
@@ -79,12 +94,6 @@ class _TopoAttribute(object):
             array = array[mask]
             self._ins._topology[self.prop] = array
             self.update()
-        elif self.prop in ['tags',
-                           'names']:
-            del_ind = []
-            for item in items:
-                del_ind += np.where(self.get() == item)[0].tolist()
-            del self._ins[del_ind]
 
     def get_num_types(self):
         """ returns number of types of prop: bonds, etc"""
@@ -94,7 +103,7 @@ class _TopoAttribute(object):
         """returns types of prop: bonds, etc
         :param prop: name of property
         :param verbose: if true, returns types of individual bond/angles/etc"""
-        if (self.prop not in self._ins._topology and self.prop not in ['names', 'tags']):
+        if self.prop not in self._ins._topology:
             return np.array([])
 
         if isinstance(index, basestring):
@@ -134,9 +143,6 @@ class _TopoAttribute(object):
 
         elif self.prop == 'resnames':
             return np.array(list(self._ins._topology[self.prop].keys()))
-        else:
-            # tags and names
-            return np.unique(self._ins.get_array(self.prop)[index])
 
     @_check_exists
     def get(self, with_names=False):
@@ -168,15 +174,6 @@ class _TopoAttribute(object):
                     for value in values:
                         resnames[value] = key
                 return resnames
-        else:
-            # tags and names
-            if with_names:
-                prop = {}
-                for i, name in enumerate(self._ins.arrays[self.prop]):
-                    prop[name] = prop.get(name, []) + [i]
-                return prop
-            else:
-                return self._ins.arrays[self.prop]
 
     __call__ = get
 
@@ -189,21 +186,9 @@ class _TopoAttribute(object):
             del self._ins._topology[self.prop]
         if value is None:
             return None
-        if self.prop == 'names':
-            if np.any([type(x) is not str for x in value]):
-                raise RuntimeError('names should be str')
-            self._ins.set_array(self.prop, value, object)
-            self.update()
-        elif self.prop == 'tags':
-            self._ins.set_array(self.prop, value, int)
-            self.update()
-        elif self.prop in ['resnames',
-                           'bonds',
-                           'angles',
-                           'dihedrals',
-                           'impropers']:
-            self.add(value)
-            self.update()
+
+        self.add(value)
+        self.update()
 
     def get_count(self):
         """ returns number of prop: bonds, etc."""
@@ -322,15 +307,12 @@ class _TopoAttribute(object):
                 if resname != '':
                     d[resname] = d.get(resname, []) + [i]
             self._ins._topology[self.prop] = d
-        else:
-            # tags and names
-            raise NotImplementedError('{} does not support '
-                                      'add'.format(self.prop))
 
     # no _check_* since its called by functions
     # non error raising methods of checking implemented
     def update(self):
         """
+        Updates the _topology by removing empty properties
         """
         if self.prop in ['bonds',
                          'angles',
@@ -353,59 +335,6 @@ class _TopoAttribute(object):
                     self._ins._topology[self.prop].pop(i)
                 if not self._ins._topology[self.prop]:
                     del self._ins._topology[self.prop]
-
-        elif self.prop == 'tags':
-            if not self._ins.has(self.prop):
-                self._ins.set_array('tags',
-                                    np.ones(len(self._ins)),
-                                    int)
-            # change sparse tags to uniform tags
-            id_ = np.unique(self._ins.arrays[self.prop])
-            ind_of = {}
-            for i, val in enumerate(id_):
-                if val != i:
-                    ind_of[val] = i
-            self._ins.set_array(self.prop,
-                                [(ind_of[x] if x in ind_of else x)
-                                 for x in self._ins.get_array(self.prop)],
-                                int)
-
-        elif self.prop == 'names':
-            if not self._ins.has('names'):
-                self._ins.set_array('names',
-                                    self._ins.get_chemical_symbols(),
-                                    object)
-
-    @_check_exists
-    def set_types_to(self, indx_of, index=":"):
-        """
-        :param indx_of: dictionary, changes type from keys -> values
-        :param index: list of start and stop index to affect the change
-        """
-        if isinstance(index, basestring):
-            try:
-                index = string2index(index)
-            except ValueError:
-                pass
-
-        if len(indx_of) == 0:
-            return
-
-        if self.prop in ['tags', 'names']:
-            for indx in np.arange(len(self._ins))[index]:
-                try:
-                    _ = indx_of[self._ins.arrays[self.prop][indx]]
-                except IndexError:
-                    continue
-                self._ins.arrays[self.prop][indx] = _
-            self.update()
-        elif self.prop == 'resnames':
-            prop = self._ins._topology[self.prop]
-            for key in list(prop.keys()):
-                if key in indx_of:
-                    prop[indx_of[key]] = prop[key]
-                    prop.pop(key)
-            self._ins._topology[self.prop] = prop
 
     def _set_indices_to(self, indx_of):
         """
@@ -483,6 +412,8 @@ class _TopoAttribute(object):
 
 
 class _TopoAttributeProperty(object):
+    """Modified python property to handle passing of atoms object and
+    attribute name"""
 
     def __init__(self, prop):
         # every trivial call goes through this step
@@ -490,6 +421,12 @@ class _TopoAttributeProperty(object):
         self.prop = prop
 
     def __get__(self, topo_base, owner):
+        """
+        Parameters
+            topo_base: the object that this property is attached to
+        Returns
+            An instance of _TopoAttribute that handles the attribute
+        """
         if topo_base is None:
             return self
         self._ins = topo_base._ins
@@ -508,15 +445,12 @@ class _TopoAttributeProperty(object):
 
 class Topology(object):
     """
-    Adds topology to atoms object. The topology saves molecule tags, names,
-    bonds, angles, dihedrals and impropers. The molecule tags and names are
-    save as arrays in atoms object, and the rest are saved as numpy array in
+    Adds topology to atoms object. The topology saves bonds, angles,
+    dihedrals and impropers. These are saved as numpy arrays in
     atoms._topology dictionary.
-    On initialisation through atoms object, names and tags are auto initiated
+    On initialisation through atoms object, names are auto initiated
     and the connectivity is initiated by the user.
     """
-    names = _TopoAttributeProperty('names')
-    tags = _TopoAttributeProperty('tags')
     resnames = _TopoAttributeProperty('resnames')
     bonds = _TopoAttributeProperty('bonds')
     angles = _TopoAttributeProperty('angles')
@@ -545,9 +479,8 @@ class Topology(object):
             self._ins = instance.copy()
 
         # a dict to hold all attributes
-        self._dict = {'names': self.names,
-                      'tags': self.tags,
-                      'resnames': self.resnames,
+        # for easy access by loop functions
+        self._dict = {'resnames': self.resnames,
                       'bonds': self.bonds,
                       'angles': self.angles,
                       'dihedrals': self.dihedrals,
@@ -557,7 +490,7 @@ class Topology(object):
             # persistent topology is always updated when
             # a function called by user needs it
             # non-persistent topology has a new atoms object
-            # that should be updated for names and tags
+            # that should be updated
             if self._ins._topology is None:
                 # add topology for its own atoms object
                 self._ins._topology = {}
@@ -576,13 +509,16 @@ class Topology(object):
             return "Topology({})".format(", ".join(tokens))
 
     def has(self, prop):
-        return prop in self._ins._topology or prop in ['names', 'tags']
+        """
+        Checks if prop is in _topology
+        """
+        return prop in self._ins._topology
 
     def __getitem__(self, item):
         return self._dict[item]
 
     def get_perstisting_atoms_object(self):
-        '''Returns the atoms object that is being edited using  topology
+        '''Returns the atoms object that is being edited using topology
         if the topology is non-persistent, then this object has the topology
         generated with this topology object'''
         return self._ins
@@ -590,36 +526,32 @@ class Topology(object):
     def get_topology_dict(self):
         """Gives topology dict that can be inherited by other topology
         classes"""
-        # names are saved to list, to ease database storage
-        topo_dict = {'names': self._ins.arrays['names'].tolist(),
-                     'tags': self._ins.arrays['tags']}
-        for prop in ['resnames',
-                     'bonds',
-                     'angles',
-                     'dihedrals',
-                     'impropers']:
-            if self.has(prop):
-                topo_dict[prop] = self._ins._topology[prop]
-
-        return topo_dict
+        return deepcopy(self._ins._topology)
 
     __call__ = get_topology_dict
 
     def update(self, topo_dict=None):
-        # sanity check for topo_object
+        """
+        Updates all topology attributes, reforms tags, and add names if
+        they don't exists
+        Parameters
+            topo_dict: dictionary
+                a dictionary of topology, with bonds, angles etc as keys, and
+                connectivities as values.
+        """
         if topo_dict is None:
             topo_dict = {}
 
-        for prop in ['names',
-                     'tags',
-                     'resnames',
-                     'bonds',
-                     'angles',
-                     'dihedrals',
-                     'impropers']:
+        # add names if does not exist
+        if not self._ins.has('names'):
+            self._ins.set_array('names',
+                                self._ins.get_chemical_symbols(),
+                                object)
+
+        for prop in self._dict.keys():
             if prop in topo_dict:
                 self._dict[prop].set(topo_dict[prop])
-            elif prop in self._dict:
+            elif prop in self._ins._topology:
                 self._dict[prop].update()
 
     def generate(self,
@@ -666,6 +598,9 @@ class Topology(object):
                 vertex = name_list.pop(1)
                 name_list.sort()
                 name_list.insert(1, vertex)
+            elif prop == 'dihedrals':
+                if name_list[0] > name_list[3]:
+                    name_list.reverse()
             name_list = '-'.join(name_list)
             if (name_list in topo_names.get(prop, [])
                     or generate_all):
@@ -677,9 +612,9 @@ class Topology(object):
                 _ = np.vstack([topo_dict_indx[prop], list_])
                 topo_dict_indx[prop] = _
 
-        # dict to hold str connectivities
+        # dict to hold str connectivities as lists
         topo_dict = {}
-        # dict to hold int connectivities
+        # dict to hold int connectivities as lists
         topo_dict_indx = {}
         # dict to hold str connectivities joined by -
         topo_names = {}
@@ -715,20 +650,23 @@ class Topology(object):
                            for x in topo_dict[prop] for y in x]):
                     # if indices are given
                     array = np.array(topo_dict[prop], dtype=int)
+                    # check for length
                     if array.shape[1] != length[prop]:
                         raise RuntimeError('{} should be of length {}'
                                            ''.format(prop, length[prop]))
-                    # move them to topo_dict_indx
+                    # and move them to topo_dict_indx
                     topo_dict_indx[prop] = array
                     topo_dict.pop(prop)
                 elif np.all([isinstance(y, (str, np.str_))
                            for x in topo_dict[prop] for y in x]):
                     # else str given
                     topo_dict[prop] = np.array(topo_dict[prop])
+                    # check for length
                     if topo_dict[prop].shape[1] != length[prop]:
                         raise RuntimeError('{} should be of length {}'
                                            ''.format(prop, length[prop]))
-                    # renaming topo_dict connectivity as single string
+                    # and add topo_dict connectivity as single string
+                    # in topo_names
                     for key, values in topo_dict.items():
                         for i, value in enumerate(values):
                             if key == 'bonds':
@@ -739,9 +677,9 @@ class Topology(object):
                             topo_names[key] = (topo_names.get(key, [])
                                                     + ['-'.join(value)])
                 else:
-                    raise RuntimeError('indices should be either all int, or str')
+                    raise RuntimeError('indices should be either all int or str')
 
-        # convert str connectivities to int connectivities
+        # now convert all str connectivities to int connectivities
         if topo_names or generate_all:
 
             # making symmetric neighbor matrix
@@ -793,25 +731,19 @@ class Topology(object):
                                 update_topo_dict_indx('impropers',
                                                       [i, j, k, l])
 
-        # extend all connectivities
+        # finally extend all int connectivities
         if topo_dict_indx:
             self._extend(topo_dict_indx)
 
     def _set_indices_to(self, indx_of):
         """sets indices in bonds, etc as specified in indx_of"""
         # removing bonds etc containing non-existing ids
-        for prop in ['resnames',
-                     'bonds',
-                     'angles',
-                     'dihedrals',
-                     'impropers']:
-            if prop in self._dict:
+        for prop in self._dict.keys():
+            if prop in self._ins._topology:
                 self._dict[prop]._set_indices_to(indx_of)
 
     def _get_item(self, item, len_self):
-        """used when _get_item is called in atoms object
-        Method returns topology dict with resnames, bonds, angles, dihedrals,
-        and impropers, from indices given
+        """used when __getitem__ is called in atoms object
         parameters
             item: slice
                 Used for selecting atoms
@@ -826,6 +758,8 @@ class Topology(object):
         self.update()
 
     def _del_item(self, i):
+        """used when __delitem__ is called in atoms object
+        """
         if not isinstance(i, list):
             i = [i]
         # making index map dictionary, with index to delete as None
@@ -843,13 +777,13 @@ class Topology(object):
         self.update()
 
     def _imul(self, m):
+        """used when __imul__ is called in atoms object
+        """
         size_m = np.product(m)
         # n contains the original length of atoms
         n = int(len(self._ins) / size_m)
 
         array = deepcopy(self._ins._topology)
-        max_tags = 0
-        n_tags = np.max(self._ins.get_tags()) + 1
         i0 = 0
         for m0 in range(m[0]):
             for m1 in range(m[1]):
@@ -858,10 +792,6 @@ class Topology(object):
                     if i0 != 0:
                         # extend connectivities with an offset
                         self._extend(array, _offset=i0)
-                    if self._ins.has('tags'):
-                        _ = self._ins.arrays['tags'][i0:i1] + max_tags
-                        self._ins.arrays['tags'][i0:i1] = _
-                        max_tags += n_tags
                     i0 = i1
 
         self.update()

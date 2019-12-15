@@ -1023,9 +1023,6 @@ class Atoms(object):
 
             self.set_array(name, a)
 
-        # if self has topology, update tags
-        if self._topology is not None:
-            self.arrays['tags'][n1:] += np.max(self.arrays['tags'][:n1]) + 1
         # if other has topology, then add to self
         if other._topology:
             self.topology._extend(other._topology, _offset=n1)
