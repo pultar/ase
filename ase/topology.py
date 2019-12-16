@@ -53,7 +53,7 @@ class _TopoAttribute(object):
         # atoms._topology, otherwise the counting methods return 0
         def wrapper(*args, **kwargs):
             self = args[0]
-            if self.prop not in self._ins._topology and not self._ins.has(self.prop):
+            if self.prop not in self._ins._topology:
                 raise RuntimeError('{0} object has no '
                                    '{1}'.format(self._ins.__class__.__name__,
                                                 self.prop))
@@ -73,27 +73,21 @@ class _TopoAttribute(object):
 
     @_check_exists
     def __delitem__(self, items):
+        """
+        deletes attribute by their bond, angle, improper or dihedral name
+        """
         if not isinstance(items, list):
             items = [items]
-        if self.prop in ['resnames']:
-            for item in items:
-                self._ins._topology['resnames'].pop(item)
-        elif self.prop in ['bonds',
-                           'angles',
-                           'dihedrals',
-                           'impropers']:
-            types = self.get_types(verbose=True)
-            array = self._ins._topology[self.prop]
-            mask = np.ones(len(array), dtype=int)
-            for item in items:
-                # check if item exists
-                if item not in types:
-                    raise RuntimeWarning('{} {} does not exist'
-                                         ''.format(self.prop, item))
-                mask[types == item] = 0
-            array = array[mask]
-            self._ins._topology[self.prop] = array
-            self.update()
+        types = self.get_types(verbose=True)
+        array = self._ins._topology[self.prop]
+        # a mask to get only needed properties
+        mask = np.ones(len(array), dtype=int)
+        for item in items:
+            # if item does not exists then nothing is changed
+            mask[types == item] = 0
+        array = array[mask]
+        self._ins._topology[self.prop] = array
+        self.update()
 
     def get_num_types(self):
         """ returns number of types of prop: bonds, etc"""
@@ -101,7 +95,7 @@ class _TopoAttribute(object):
 
     def get_types(self, index=':', verbose=False):
         """returns types of prop: bonds, etc
-        :param prop: name of property
+        :param index: the index of atoms to affect
         :param verbose: if true, returns types of individual bond/angles/etc"""
         if self.prop not in self._ins._topology:
             return np.array([])
@@ -112,37 +106,33 @@ class _TopoAttribute(object):
             except ValueError:
                 pass
 
-        if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            items = self._ins._topology[self.prop]
-            items_indx = []
-            _ = np.arange(len(self._ins))[index]
-            for connectivity in items:
-                # connectivity is a list of indices
-                if np.all([x in _ for x in connectivity]):
-                    # the connectivity is acceptible
-                    items_indx.append(connectivity)
+        items = self._ins._topology[self.prop]
+        items_indx = []
+        _ = np.arange(len(self._ins))[index]
+        for connectivity in items:
+            # connectivity is a list of indices
+            if np.all([x in _ for x in connectivity]):
+                # the connectivity is acceptible
+                items_indx.append(connectivity)
 
-            # giving connectivity names
-            names = self._ins.arrays['names']
-            type_list = [None for _ in range(len(items_indx))]
-            for i, connectivity in enumerate(items_indx):
-                name_list = names[connectivity].tolist()
-                if self.prop == 'bonds':
-                    name_list.sort()
-                elif self.prop == 'angles':
-                    # vertex atom is at second index
-                    vertex = name_list.pop(1)
-                    name_list.sort()
-                    name_list.insert(1, vertex)
-                type_list[i] = '-'.join(name_list)
+        # giving connectivity names
+        names = self._ins.arrays['names']
+        type_list = [None for _ in range(len(items_indx))]
+        for i, connectivity in enumerate(items_indx):
+            name_list = names[connectivity].tolist()
+            if self.prop == 'bonds':
+                name_list.sort()
+            elif self.prop == 'angles':
+                # vertex atom is at second index
+                vertex = name_list.pop(1)
+                name_list.sort()
+                name_list.insert(1, vertex)
+            type_list[i] = '-'.join(name_list)
 
-            if verbose:
-                return np.array(type_list)
-            else:
-                return np.unique(type_list)
-
-        elif self.prop == 'resnames':
-            return np.array(list(self._ins._topology[self.prop].keys()))
+        if verbose:
+            return np.array(type_list)
+        else:
+            return np.unique(type_list)
 
     @_check_exists
     def get(self, with_names=False):
@@ -152,28 +142,15 @@ class _TopoAttribute(object):
                 returns bonds/angles/dihedrals/impropers as dict of
                 connectivity name as key and list of indices of
                 connectivities"""
-        if self.prop in ['bonds',
-                         'angles',
-                         'dihedrals',
-                         'impropers']:
-            if not with_names:
-                return self._ins._topology[self.prop]
-            array = self._ins._topology[self.prop]
-            types = self.get_types(verbose=True)
-            dict_ = {}
-            for i, connectivity in enumerate(array):
-                dict_[types[i]] = (dict_.get(types[i], [])
-                                   + [connectivity.tolist()])
-            return dict_
-        elif self.prop == 'resnames':
-            if with_names:
-                return  self._ins._topology[self.prop]
-            else:
-                resnames = ['' for _ in range(len(self._ins))]
-                for key, values in self._ins._topology[self.prop].items():
-                    for value in values:
-                        resnames[value] = key
-                return resnames
+        if not with_names:
+            return self._ins._topology[self.prop]
+        array = self._ins._topology[self.prop]
+        types = self.get_types(verbose=True)
+        dict_ = {}
+        for i, connectivity in enumerate(array):
+            dict_[types[i]] = (dict_.get(types[i], [])
+                               + [connectivity.tolist()])
+        return dict_
 
     __call__ = get
 
@@ -192,13 +169,9 @@ class _TopoAttribute(object):
 
     def get_count(self):
         """ returns number of prop: bonds, etc."""
-        if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            if self.prop not in self._ins._topology:
-                return 0
-            return len(self._ins._topology[self.prop])
-        else:
-            raise NotImplementedError('get_count only implemented for bonds,'
-                                      ' angles, dihedrals, impropers')
+        if self.prop not in self._ins._topology:
+            return 0
+        return len(self._ins._topology[self.prop])
 
     def add(self, items, _offset=None):
         """ adds to prop
@@ -230,83 +203,45 @@ class _TopoAttribute(object):
         if len(items) == 0:
             return
 
-        if self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']:
-            # make sure items is int and of correct size
-            items = np.array(items, dtype=int)
-            if (np.any([len(np.unique(item)) != length[self.prop]
-                       for item in items]) or len(items.shape) != 2):
-                raise RuntimeError('{0} should be unique indices of size '
-                                   '{1}'.format(self.prop, length[self.prop]))
+        # make sure items is int and of correct size
+        items = np.array(items, dtype=int)
+        if (np.any([len(np.unique(item)) != length[self.prop]
+                   for item in items]) or len(items.shape) != 2):
+            raise RuntimeError('{0} should be unique indices of size '
+                               '{1}'.format(self.prop, length[self.prop]))
 
-            if _offset is not None:
-                items += _offset
+        if _offset is not None:
+            items += _offset
 
-            # make sure indices are within length of atoms object
-            if np.any([x >= len(self._ins) for x in items.reshape(-1)]):
-                raise RuntimeError('indices should be lower than length of '
-                                   '{}'.format(self._ins.__class__.__name__))
+        # make sure indices are within length of atoms object
+        if np.any([x >= len(self._ins) for x in items.reshape(-1)]):
+            raise RuntimeError('indices should be lower than length of '
+                               '{}'.format(self._ins.__class__.__name__))
 
-            if self.prop not in self._ins._topology:
-                array = []
-            else:
-                array = self._ins._topology[self.prop].tolist()
+        if self.prop not in self._ins._topology:
+            array = []
+        else:
+            array = self._ins._topology[self.prop].tolist()
 
-            # check if connectivity already exists
-            for item in items:
-                item = item.tolist()
-                if self.prop == 'bonds':
-                    item.sort()
-                elif self.prop == 'angles':
-                    indx = item.pop(1)
-                    item.sort()
-                    item.insert(1, indx)
-                elif self.prop == 'dihedrals':
-                    if item[0] > item[3]:
-                        item.reverse()
-                if item not in array:
-                    array.append(item)
-            self._ins._topology[self.prop] = np.array(array, dtype=int)
-            self.update()
-
-        elif self.prop == 'resnames':
-            # make sure resnames are valid
-            if np.any([type(i) is not str for i in items.keys()]):
-                raise ValueError('resnames should be str')
-            try:
-                for i in items.keys():
-                    items[i] = np.array(items[i], dtype=int)
-            except ValueError:
-                raise ValueError('resnames indices should be int')
-
-            if _offset is not None:
-                for i in items.keys():
-                    items[i] += _offset
-
-            # make sure indices are within length of atoms object
-            if np.any([x >= len(self._ins)
-                       for values in items.values() for x in values]):
-                raise RuntimeError('indices should be lower than length of '
-                                   '{}'.format(self._ins.__class__.__name__))
-            # to make sure each atom has a single resname we make an array
-            resnames = ['' for _ in range(len(self._ins))]
-
-            if self.prop in self._ins._topology:
-                # add resnames to the array
-                for key, values in self._ins._topology[self.prop].items():
-                    for value in values:
-                        resnames[value] = key
-
-            # add new resnames
-            for key, vals in items.items():
-                for val in vals:
-                    resnames[val] = key
-
-            # convert it back to dictionary
-            d = {}
-            for i, resname in enumerate(resnames):
-                if resname != '':
-                    d[resname] = d.get(resname, []) + [i]
-            self._ins._topology[self.prop] = d
+        # check if connectivity already exists
+        for item in items:
+            item = item.tolist()
+            if self.prop == 'bonds':
+                # makes bonds unique
+                item.sort()
+            elif self.prop == 'angles':
+                # makes angles unique
+                indx = item.pop(1)
+                item.sort()
+                item.insert(1, indx)
+            elif self.prop == 'dihedrals':
+                # makes dihedrals unique
+                if item[0] > item[3]:
+                    item.reverse()
+            if item not in array:
+                array.append(item)
+        self._ins._topology[self.prop] = np.array(array, dtype=int)
+        self.update()
 
     # no _check_* since its called by functions
     # non error raising methods of checking implemented
@@ -314,27 +249,11 @@ class _TopoAttribute(object):
         """
         Updates the _topology by removing empty properties
         """
-        if self.prop in ['bonds',
-                         'angles',
-                         'dihedrals',
-                         'impropers']:
-            # Correct for empty connectivity
-            if self.prop in self._ins._topology:
-                if len(self._ins._topology[self.prop]) == 0:
-                    # prop is empty
-                    del self._ins._topology[self.prop]
-
-        elif self.prop == 'resnames':
-            if self.prop in self._ins._topology:
-                # remove empty keys
-                del_key = []
-                for key, values in self._ins._topology[self.prop].items():
-                    if len(values) == 0:
-                        del_key.append(key)
-                for i in del_key:
-                    self._ins._topology[self.prop].pop(i)
-                if not self._ins._topology[self.prop]:
-                    del self._ins._topology[self.prop]
+        # Correct for empty connectivity
+        if self.prop in self._ins._topology:
+            if len(self._ins._topology[self.prop]) == 0:
+                # prop is empty
+                del self._ins._topology[self.prop]
 
     def _set_indices_to(self, indx_of):
         """
@@ -346,31 +265,21 @@ class _TopoAttribute(object):
                 then delete the index
         """
         # selecting set of ids to remove
-        if (self.prop in ['bonds', 'angles', 'dihedrals', 'impropers']
-                and self.prop in self._ins._topology):
+        if self.prop in self._ins._topology:
             array = self._ins._topology[self.prop]
+            # mask to choose only needed connectivity
             mask = np.ones(len(array), dtype=bool)
             for i in range(len(array)):
+                # if indx_of any index in connectivity is None,
+                # then remove the connectivity
                 if np.any([indx_of[x] is None for x in array[i]]):
                     mask[i] = 0
-                    continue
-                for j in range(array.shape[1]):
-                    array[i, j] = indx_of[array[i, j]]
+                else:
+                    # else change indices as indicated in indx_of
+                    for j in range(array.shape[1]):
+                        array[i, j] = indx_of[array[i, j]]
             array = array[mask]
             self._ins._topology[self.prop] = array
-        elif self.prop == 'resnames' and self.prop in self._ins._topology:
-            resnames = self._ins._topology[self.prop]
-            for key, values in resnames.items():
-                values = np.array(values)
-                mask = np.ones(len(values), dtype=bool)
-                for i in range(len(values)):
-                    if indx_of[values[i]] is None:
-                        mask[i] = 0
-                        continue
-                    values[i] = indx_of[values[i]]
-                values = values[mask]
-                resnames[key] = values.tolist()
-            self._ins._topology[self.prop] = resnames
 
     @_check_exists
     def get_statistics(self, index=':'):
@@ -458,6 +367,17 @@ class Topology(object):
     impropers = _TopoAttributeProperty('impropers')
 
     def __init__(self, instance, _persistent=False):
+        """
+        To initialise the topology.
+        Parameters
+            instance: Atoms object
+            _persistent: bool, default False
+                To indicate if the topology is persistent. If True, then the
+                internal atoms object points to the passed atoms object, and
+                updates are reflected in the passed atoms object. If False,
+                then the topology class keeps its own copy of atoms object,
+                and the passed atoms object is not affected.
+        """
         # every trivial call goes through this step
         # Thus, init should not be computationally intensive
 
@@ -480,17 +400,18 @@ class Topology(object):
 
         # a dict to hold all attributes
         # for easy access by loop functions
-        self._dict = {'resnames': self.resnames,
-                      'bonds': self.bonds,
+        self._dict = {'bonds': self.bonds,
                       'angles': self.angles,
                       'dihedrals': self.dihedrals,
                       'impropers': self.impropers}
 
         if not self._persistent:
-            # persistent topology is always updated when
+            # persistent topology is only updated when
             # a function called by user needs it
+            # this avoids multiple updating, as the topology object
+            # is thrown away when not needed
             # non-persistent topology has a new atoms object
-            # that should be updated
+            # that should be updated here
             if self._ins._topology is None:
                 # add topology for its own atoms object
                 self._ins._topology = {}
