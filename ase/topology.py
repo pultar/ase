@@ -519,9 +519,6 @@ class Topology(object):
                 vertex = name_list.pop(1)
                 name_list.sort()
                 name_list.insert(1, vertex)
-            elif prop == 'dihedrals':
-                if name_list[0] > name_list[3]:
-                    name_list.reverse()
             name_list = '-'.join(name_list)
             if (name_list in topo_names.get(prop, [])
                     or generate_all):
@@ -633,9 +630,11 @@ class Topology(object):
                 for i, neighbor in enumerate(d):
                     for indx, j in enumerate(neighbor):
                         for k in neighbor[indx + 1:]:
-                            update_topo_dict_indx('angles', [i, j, k])
+                            update_topo_dict_indx('angles', [j, i, k])
 
             if 'dihedrals' in topo_names or generate_all:
+                # sends i-j-k-l, and l-k-j-i. only the order given in generate
+                # is accepted
                 for i, neighbor_i in enumerate(d):
                     for j in neighbor_i:
                         for k in set(d[j]) - {i, j}:
