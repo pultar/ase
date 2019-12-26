@@ -65,7 +65,18 @@ class _TopoAttribute(object):
 
     @_check_exists
     def __getitem__(self, item):
-        """Returns property by name"""
+        """Returns property by name, shortens the regular call
+        >>> water = Atoms('H2O', positions=[[0, 0, 0],
+        ...                                 [1, 1, 0],
+        ...                                 [-1, -1, 0]]
+        ...              )
+        >>> water.set_topology()
+        >>> water.topology.generate(bonds = [['H', 'O']],
+         ...                        angles = [['H', 'O', 'H']]
+         ...                       )
+        >>> water.topology.angles(with_names=True)['H-O-H']
+        >>> water.topology.angles['H-O-H']
+        """
         props = self.get(with_names=True)
         if item not in props:
             raise RuntimeError('{} not in {}'.format(item, self.prop))
@@ -176,12 +187,10 @@ class _TopoAttribute(object):
     def add(self, items, _offset=None):
         """ adds to prop
         Parameters:
-            items: array or dict
+            items: array
                 Array of shape (num_prop, x), where num prop is number of
                 of bonds/angles/dihedrals/impropers, and x is size of
                 connectivity.
-                or dict of keys as resname, and keys as list of indices
-                pertaining to the key for resname
             _offset: int
                 Added to items to offset indices. Useful when adding atoms
                 objects
@@ -191,14 +200,6 @@ class _TopoAttribute(object):
                   'dihedrals': 4,
                   'impropers': 4}
 
-        if isinstance(items, dict):
-            # Deletes empty items
-            _del_key = []
-            for key, values in items.items():
-                if len(values) == 0:
-                    _del_key.append(key)
-            for key in _del_key:
-                items.pop(key)
         # if items is empty return
         if len(items) == 0:
             return
