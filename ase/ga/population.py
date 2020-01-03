@@ -7,9 +7,7 @@ import numpy as np
 
 from ase.db.core import now
 from ase.ga import get_raw_score
-from ase.utils.timing import Timer
-
-timer = Timer()
+from collections import defaultdict
 
 
 def count_looks_like(a, all_cand, comp):
@@ -619,47 +617,35 @@ class RankFitnessPopulation(Population):
         Population.__init__(self, data_connection, population_size,
                             comparator, logfile, use_extinct)
 
-    def get_rank(self, rcand, key=None):
-        # Set the initial order of the candidates, will need to
-        # be returned in this order at the end of ranking.
-        ordered = list(zip(range(len(rcand)), rcand))
+    def get_rank(self, candidates, key):
+        rank = np.array([-1] * len(candidates))
+        # Remember the order when decreasing rank later
+        order = dict((candidates[i].info['key_value_pairs']['gaid'], i)
+                     for i in range(len(candidates)))
 
-        # Niche and rank candidates.
-        rec_nic = []
-        rank_fit = []
-        for o, c in ordered:
-            if o not in rec_nic:
-                ntr = []
-                ce1 = self.vf(c)
-                rec_nic.append(o)
-                ntr.append([o, c])
-                for oother, cother in ordered:
-                    if oother not in rec_nic:
-                        ce2 = self.vf(cother)
-                        if ce1 == ce2:
-                            # put the now processed in oother
-                            # in rec_nic as well
-                            rec_nic.append(oother)
-                            ntr.append([oother, cother])
-                # Each niche is sorted according to raw_score and
-                # assigned a fitness according to the ranking of
-                # the candidates
-                ntr.sort(key=lambda x: x[1].info['key_value_pairs'][key],
-                         reverse=True)
-                start_rank = -1
-                cor = 0
-                for on, cn in ntr:
-                    rank = start_rank - cor
-                    rank_fit.append([on, cn, rank])
-                    cor += 1
-        # The original order is reformed
-        rank_fit.sort(key=itemgetter(0), reverse=False)
-        return np.array(list(zip(*rank_fit))[2])
+        # Group candidates in niches according to the variable
+        # function vf and also sort them according to raw score
+        self.set_vf_dict(candidates, key=get_raw_score, reverse=True)
+        # Decrease the rank of the not best candidates in each niche
+        for vf, li in self.vf_dict.items():
+            for i, c in enumerate(li):
+                rank[order[c.info['key_value_pairs']['gaid']]] -= i
+
+        return rank
+
+    def set_vf_dict(self, candidates, **sort_arguments):
+        d = defaultdict(list)
+        for c in candidates:
+            d[self.vf(c)].append(c)
+        if sort_arguments:
+            for cl in d.values():
+                cl.sort(**sort_arguments)
+        self.vf_dict = d
 
     def __get_fitness__(self, candidates):
         expf = self.exp_function
-        with timer('getting rank'):
-            rfit = self.get_rank(candidates, key='raw_score')
+
+        rfit = self.get_rank(candidates, key='raw_score')
 
         if not expf:
             rmax = max(rfit)
@@ -691,50 +677,29 @@ class RankFitnessPopulation(Population):
     def __initialize_pop__(self):
         # Get all relaxed candidates from the database
         ue = self.use_extinct
-        with timer('getting relaxed candidates'):
-            all_cand = self.dc.get_all_relaxed_candidates(use_extinct=ue)
-        with timer('all here, now sorting'):
-            all_cand.sort(key=lambda x: get_raw_score(x), reverse=True)
-        print('sorting done!')
-
-        print(f'# candidates: {len(all_cand)}')
+        all_cand = self.dc.get_all_relaxed_candidates(use_extinct=ue)
+        all_cand.sort(key=lambda x: get_raw_score(x), reverse=True)
 
         if len(all_cand) > 0:
-            print('getting fitness')
-            with timer('getting fitness'):
-                fitf = self.__get_fitness__(all_cand)
-            print('sorting fitness')
-            with timer('sorting fitness'):
-                all_sorted = list(zip(fitf, all_cand))
-                all_sorted.sort(key=itemgetter(0), reverse=True)
-                sort_cand = []
-                for _, t2 in all_sorted:
-                    sort_cand.append(t2)
-                all_sorted = sort_cand
+            fitf = self.__get_fitness__(all_cand)
+            all_sorted = list(zip(fitf, all_cand))
+            all_sorted.sort(key=itemgetter(0), reverse=True)
+            sort_cand = []
+            for _, t2 in all_sorted:
+                sort_cand.append(t2)
+            all_sorted = sort_cand
 
             # Fill up the population with the self.pop_size most stable
             # unique candidates.
-            print('filling in candidates')
-            with timer('filling in candidates'):
-                i = 0
-                while i < len(all_sorted) and len(self.pop) < self.pop_size:
-                    c = all_sorted[i]
-                    c_vf = self.vf(c)
-                    i += 1
-                    eq = False
-                    for a in self.pop:
-                        a_vf = self.vf(a)
-                        # Only run comparator if the variable_function (self.vf)
-                        # returns the same. If it returns something different the
-                        # candidates are inherently different.
-                        # This is done to speed up.
-                        if a_vf == c_vf:
-                            if self.comparator.looks_like(a, c):
-                                eq = True
-                                break
-                    if not eq:
-                        self.pop.append(c)
-            timer.write()
+            i = 0
+            while i < len(all_sorted) and len(self.pop) < self.pop_size:
+                c = all_sorted[i]
+                i += 1
+                if i > 2:
+                    if self.comparator.in_population(self.pop, c):
+                        continue
+                self.pop.append(c)
+
         self.all_cand = all_cand
 
     def get_two_candidates(self):

@@ -304,14 +304,12 @@ class DataConnection(object):
             Set to True if the extinct key (and mass extinction) is going
             to be used. Default: False."""
 
-        print('selecting')
         if use_extinct:
             entries = self.c.select('relaxed=1,extinct=0',
                                     sort='-raw_score')
         else:
             entries = self.c.select('relaxed=1', sort='-raw_score')
 
-        print('putting in list')
         trajs = []
         for v in entries:
             if only_new and v.gaid in self.already_returned:
