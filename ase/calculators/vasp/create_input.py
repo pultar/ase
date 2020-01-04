@@ -1801,13 +1801,26 @@ class GenerateVaspInput:
 
         ktype = lines[2].split()[0].lower()[0]
         if ktype in ['g', 'm', 'a']:
-            if ktype == 'g':
+            if ktype == 'g':  # Gamma-centered mesh (N x N x N)
                 self.set(gamma=True)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(3)])
-            elif ktype == 'a':
+            elif ktype == 'a':  # Auto (single value sets density)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(1)])
-            elif ktype == 'm':
+            elif ktype == 'm':  # Monkhorst-pack mesh (N x N x N)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(3)])
+        elif ktype == 'l':  # Line-mode (List of line segments)
+            units = lines[3].split()[0].lower()[0]
+            if units in ['c', 'k']:
+                self.set(reciprocal=False)
+            elif units == 'r':
+                self.set(reciprocal=True)
+            else:
+                raise IOError('Line-mode detected, but k-point coordinate '
+                              'system not recognized.')
+
+            pts_per_branch=int(lines[1].split()[0])
+            kpts = self._read_line_mode_kpts(lines[4:], pts_per_branch)
+            
         else:
             if ktype in ['c', 'k']:
                 self.set(reciprocal=False)
@@ -1816,6 +1829,50 @@ class GenerateVaspInput:
             kpts = np.array(
                 [list(map(float, line.split())) for line in lines[3:]])
         self.set(kpts=kpts)
+
+    @staticmethod
+    def _read_line_mode_kpts(lines, pts_per_branch):
+        """Convert band data from KPOINTS file in line mode to list of points
+
+        Typical format for this data would be e.g.
+
+        0.0 0.0 0.0     G
+        0.5 0.5 0.5     L
+        0.5 0.5 0.5     L
+        0.5 0.25 0.75   W
+        0.0 0.0 0.0     G
+        0.5 0.0 0.5     X
+
+        For a path G -> L -> W | G -> X ; points are repeated if the path would
+        continue without a discontinuity. There should always be an even number
+        of points.
+
+        Args:
+            lines (list): List of text lines from KPOINTS file
+            pts_per_branch (int):
+                Number of points per branch (from second line of KPOINTS file).
+                A list of explicit points will be linearly interpolated. Note
+                that line-mode uses a constant number of points for all 
+                branches between special points, rather than distribute points
+                evenly in reciprocal space.
+
+        Returns: (list)
+            Explicit list of kpoints interpolated along branches, including
+            repeated values at turning points.
+        """
+        iterlines = filter(None, (line.split() for line in lines))
+
+        kpts = []
+        for branch_start in iterlines:
+            branch_end = next(iterlines)
+
+            branch_start, branch_end = [list(map(float, line[:3]))
+                                        for line in (branch_start, branch_end)]
+            branch_kpts = np.linspace(branch_start, branch_end, pts_per_branch)
+            kpts = kpts + branch_kpts.tolist()
+
+        return kpts
+
 
     def read_potcar(self, filename):
         """ Read the pseudopotential XC functional from POTCAR file.
