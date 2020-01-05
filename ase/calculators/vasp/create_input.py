@@ -1199,7 +1199,7 @@ class GenerateVaspInput:
                         LDA:  $VASP_PP_PATH/potpaw/
                         PBE:  $VASP_PP_PATH/potpaw_PBE/
                         PW91: $VASP_PP_PATH/potpaw_GGA/
-                        
+
                         No pseudopotential for {}!""".format(potcar, symbol))
                 raise RuntimeError(msg)
         return ppp_list
@@ -1818,9 +1818,9 @@ class GenerateVaspInput:
                 raise IOError('Line-mode detected, but k-point coordinate '
                               'system not recognized.')
 
-            pts_per_branch=int(lines[1].split()[0])
+            pts_per_branch = int(lines[1].split()[0])
             kpts = self._read_line_mode_kpts(lines[4:], pts_per_branch)
-            
+
         else:  # List of points
             if ktype in ['c', 'k']:
                 self.set(reciprocal=False)
@@ -1854,7 +1854,7 @@ class GenerateVaspInput:
             pts_per_branch (int):
                 Number of points per branch (from second line of KPOINTS file).
                 A list of explicit points will be linearly interpolated. Note
-                that line-mode uses a constant number of points for all 
+                that line-mode uses a constant number of points for all
                 branches between special points, rather than distribute points
                 evenly in reciprocal space.
 
@@ -1997,11 +1997,11 @@ def read_potcar_numbers_of_electrons(file_obj):
 
 def count_symbols(atoms, exclude=()):
     """Count symbols in atoms object, excluding a set of indices
-    
+
     Parameters:
         atoms: Atoms object to be grouped
         exclude: List of indices to be excluded from the counting
-    
+
     Returns:
         Tuple of (symbols, symbolcount)
         symbols: The unique symbols in the included list
