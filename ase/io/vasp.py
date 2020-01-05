@@ -385,14 +385,6 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
 
             if event == 'end':
                 if elem.tag == 'kpoints':
-                    for subelem in elem.iter(tag='generation'):
-                        kpts_params = OrderedDict()
-                        parameters['kpoints_generation'] = kpts_params
-                        for par in subelem.iter():
-                            if par.tag in ['v', 'i']:
-                                parname = par.attrib['name'].lower()
-                                kpts_params[parname] = __get_xml_parameter(par)
-
                     kpts = elem.findall("varray[@name='kpointlist']/v")
                     ibz_kpts = np.zeros((len(kpts), 3))
 
