@@ -1821,13 +1821,15 @@ class GenerateVaspInput:
             pts_per_branch=int(lines[1].split()[0])
             kpts = self._read_line_mode_kpts(lines[4:], pts_per_branch)
             
-        else:
+        else:  # List of points
             if ktype in ['c', 'k']:
                 self.set(reciprocal=False)
             else:
                 self.set(reciprocal=True)
-            kpts = np.array(
-                [list(map(float, line.split())) for line in lines[3:]])
+
+            # filter(None, iter) removes the empty lines - [] is "false-y"
+            kpts = np.array(list(filter(None, (list(map(float, line.split()))
+                                               for line in lines[3:]))))
         self.set(kpts=kpts)
 
     @staticmethod
@@ -1856,8 +1858,8 @@ class GenerateVaspInput:
                 branches between special points, rather than distribute points
                 evenly in reciprocal space.
 
-        Returns: (list)
-            Explicit list of kpoints interpolated along branches, including
+        Returns: (np.ndarray)
+            Nx3 array of kpoints interpolated along branches, including
             repeated values at turning points.
         """
         iterlines = filter(None, (line.split() for line in lines))
@@ -1871,7 +1873,7 @@ class GenerateVaspInput:
             branch_kpts = np.linspace(branch_start, branch_end, pts_per_branch)
             kpts = kpts + branch_kpts.tolist()
 
-        return kpts
+        return np.array(kpts)
 
 
     def read_potcar(self, filename):
