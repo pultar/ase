@@ -51,7 +51,10 @@ class JSONDatabase(Database, object):
             dct['key_value_pairs'] = key_value_pairs
 
         if data:
+            data.update(row._data)
             dct['data'] = data
+        elif row._data:
+            dct['data'] = row._data
 
         constraints = row.get('constraints')
         if constraints:

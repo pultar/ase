@@ -297,6 +297,8 @@ class SQLite3Database(Database, object):
 
         if not data:
             data = row._data
+        else:
+            data.update(row._data)
         if not isinstance(data, (str, bytes)):
             data = encode(data, binary=self.version >= 9)
 

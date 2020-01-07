@@ -550,7 +550,8 @@ class Database:
             oldrow = row
             row = AtomsRow(atoms)
             # Copy over data, kvp, ctime, user and id
-            row._data = oldrow._data
+            oldrow._data.pop('_custom_arrays', None)
+            row._data.update(oldrow._data)
             row.__dict__.update(kvp)
             row._keys = list(kvp)
             row.ctime = oldrow.ctime
