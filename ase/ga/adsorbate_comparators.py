@@ -1,7 +1,8 @@
 """Comparator objects relevant to particles with adsorbates."""
 
 from ase import Atoms
-        
+from .standard_comparators import Comparator
+
 
 def count_ads(atoms, adsorbate):
     """Very naive implementation only taking into account
@@ -23,16 +24,17 @@ def count_ads(atoms, adsorbate):
             raise NotImplementedError
 
 
-class AdsorbateCountComparator(object):
+class AdsorbateCountComparator(Comparator):
     """Compares the number of adsorbates on the particles and
     returns True if the numbers are the same, False otherwise.
-    
+
     Parameters:
 
     adsorbate: list or string
     a supplied list of adsorbates or a string if only one adsorbate
     is possible
     """
+
     def __init__(self, adsorbate):
         try:
             adsorbate + ''
@@ -50,7 +52,7 @@ class AdsorbateCountComparator(object):
         return True
 
 
-class AdsorptionSitesComparator(object):
+class AdsorptionSitesComparator(Comparator):
     """Compares the metal atoms in the adsorption sites and returns True
     if less than min_diff_adsorption_sites of the sites with adsorbates
     consist of different atoms.
@@ -66,6 +68,7 @@ class AdsorptionSitesComparator(object):
     (2*('Cu','Ni')-1*('Cu','Ni')=1, 1*('Ni','Ni','Ni')=1, 2*('Ni')-2*('Ni')=0)
 
     """
+
     def __init__(self, min_diff_adsorption_sites=2):
         self.min_diff_adsorption_sites = min_diff_adsorption_sites
 
@@ -100,7 +103,7 @@ class AdsorptionSitesComparator(object):
         return False
 
 
-class AdsorptionMetalsComparator(object):
+class AdsorptionMetalsComparator(Comparator):
     """Compares the number of adsorbate-metal bonds and returns True if the
     number for a1 and a2 differs by less than the supplied parameter
     ``same_adsorption_number``
@@ -110,6 +113,7 @@ class AdsorptionMetalsComparator(object):
     a2.info['data']['adsorbates_bound_to'] = {'Cu':.5, 'Ni':3.5}
     will have a difference of .5 in both elements:
     """
+
     def __init__(self, same_adsorption_number):
         self.same_adsorption_number = same_adsorption_number
 

@@ -3,10 +3,11 @@ from itertools import combinations_with_replacement
 from math import erf
 from scipy.spatial.distance import cdist
 from ase.neighborlist import NeighborList
+from .standard_comparators import Comparator
 from ase.utils import pbc2pbc
 
 
-class OFPComparator(object):
+class OFPComparator(Comparator):
     """Implementation of comparison using Oganov's fingerprint (OFP)
     functions, based on:
 
