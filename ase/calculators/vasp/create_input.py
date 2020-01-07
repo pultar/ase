@@ -1864,16 +1864,25 @@ class GenerateVaspInput:
         """
         iterlines = filter(None, (line.split() for line in lines))
 
+        numpy_can_linspace_vectors = np.version.short_version > '1.16.6'
+
         kpts = []
         for branch_start in iterlines:
             branch_end = next(iterlines)
 
             branch_start, branch_end = [list(map(float, line[:3]))
                                         for line in (branch_start, branch_end)]
-            branch_kpts = np.linspace(np.array(branch_start),
-                                      np.array(branch_end),
-                                      pts_per_branch)
-            kpts = kpts + branch_kpts.tolist()
+
+            if numpy_can_linspace_vectors:
+                branch_kpts = np.linspace(branch_start,
+                                          branch_end,
+                                          pts_per_branch).tolist()
+            else:
+                branch_kpts = list(
+                    zip(*[np.linspace(start, end, pts_per_branch)
+                          for start, end in zip(branch_start, branch_end)]))
+
+            kpts = kpts + branch_kpts
 
         return np.array(kpts)
 
