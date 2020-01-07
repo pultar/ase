@@ -21,6 +21,7 @@ from ase.constraints import FixConstraint, FixBondLengths, FixLinearTriatomic
 from ase.data import atomic_masses, atomic_masses_common
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
+from ase.numbers import _NumbersProperty
 
 
 class Atoms(object):
@@ -483,12 +484,14 @@ class Atoms(object):
         return name in self.arrays
 
     def set_atomic_numbers(self, numbers):
-        """Set atomic numbers."""
-        self.set_array('numbers', numbers, int, ())
+        """Set atomic numbers and change labels if present"""
+        self.numbers = numbers
 
     def get_atomic_numbers(self):
         """Get integer array of atomic numbers."""
         return self.arrays['numbers'].copy()
+
+    numbers = _NumbersProperty()
 
     def get_chemical_symbols(self):
         """Get list of chemical symbol strings.
@@ -498,7 +501,7 @@ class Atoms(object):
 
     def set_chemical_symbols(self, symbols):
         """Set chemical symbols."""
-        self.set_array('numbers', symbols2numbers(symbols), int, ())
+        self.numbers = symbols2numbers(symbols)
 
     def get_chemical_formula(self, mode='hill', empirical=False):
         """Get the chemical formula as a string based on the chemical symbols.
@@ -1980,15 +1983,6 @@ class Atoms(object):
                       " inside the info dictionary, i.e. atoms." +
                       "info['adsorbate_info']", FutureWarning)
         self.info['adsorbate_info'] = dct
-
-    def _get_atomic_numbers(self):
-        """Return reference to atomic numbers for in-place
-        manipulations."""
-        return self.arrays['numbers']
-
-    numbers = property(_get_atomic_numbers, set_atomic_numbers,
-                       doc='Attribute for direct ' +
-                       'manipulation of the atomic numbers.')
 
     def _get_cell(self):
         """Return reference to unit cell for in-place manipulations."""
