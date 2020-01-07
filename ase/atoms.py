@@ -593,6 +593,19 @@ class Atoms(object):
         else:
             return atomic_masses[self.arrays['numbers']]
 
+    def set_labels(self, labels=None):
+        """Set labels to atom in atoms"""
+        if labels is None:
+            labels = self.get_chemical_symbols()
+        self.set_array('labels', labels, object, ())
+
+    def get_labels(self):
+        """Get atom labels"""
+        if 'labels' in self.arrays:
+            return self.arrays['labels'].copy()
+        else:
+            return self.get_chemical_symbols()
+
     def set_initial_magnetic_moments(self, magmoms=None):
         """Set the initial magnetic moments.
 
@@ -994,6 +1007,8 @@ class Atoms(object):
             a[:n1] = a1
             if name == 'masses':
                 a2 = other.get_masses()
+            elif name == 'labels':
+                a2 = other.get_labels()
             else:
                 a2 = other.arrays.get(name)
             if a2 is not None:
@@ -1007,6 +1022,8 @@ class Atoms(object):
             a[n1:] = a2
             if name == 'masses':
                 a[:n1] = self.get_masses()[:n1]
+            elif name == 'labels':
+                a[:n1] = self.get_labels()[:n1]
             else:
                 a[:n1] = 0
 
