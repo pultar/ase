@@ -61,6 +61,25 @@ def atoms2dict(atoms):
                 else:
                     if x is not None:
                         dct[prop] = x
+    # Some arrays are named differently from the atoms __init__ keywords.
+    # Also, there may be custom arrays.
+    custom_arrays = {}
+    for key, values in atoms.arrays.items():
+        if key not in ['initial_magmoms',
+                       'initial_charges',
+                       'masses',
+                       'tags',
+                       'momenta',
+                       'positions',
+                       'numbers']:
+            # numpy object arrays cannot be read from database
+            # string arrays are saved as object arrays in numpy
+            if isinstance(values, np.ndarray):
+                if values.dtype is np.dtype(object):
+                    values = values.tolist()
+            custom_arrays[key] = values
+    if custom_arrays:
+        dct['data'] = {'_custom_arrays': custom_arrays}
     return dct
 
 
@@ -231,6 +250,17 @@ class AtomsRow:
                       momenta=self.get('momenta'),
                       constraint=self.constraints)
 
+        if '_custom_arrays' in self.get('data'):
+            custom_arrays = self.get('data')['_custom_arrays']
+
+            for name, arr in custom_arrays.items():
+                assert len(arr) == len(atoms), name
+                # some arrays might not be a numpy array
+                # like strings
+                if not isinstance(arr, np.ndarray):
+                    arr = np.array(arr)
+                atoms.arrays[name] = arr
+
         if attach_calculator:
             params = self.get('calculator_parameters', {})
             atoms.calc = get_calculator_class(self.calculator)(**params)
@@ -249,6 +279,7 @@ class AtomsRow:
             if self._keys:
                 atoms.info['key_value_pairs'] = self.key_value_pairs
             data = self.get('data')
+            data.pop('_custom_arrays', None)
             if data:
                 atoms.info['data'] = data
 
