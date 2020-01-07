@@ -18,6 +18,9 @@ class MyEncoder(json.JSONEncoder):
                 d['__ase_objtype__'] = obj.ase_objtype
 
             return d
+        if hasattr(obj, 'array'):
+            # arraylike classes
+            obj = obj.array
         if isinstance(obj, np.ndarray):
             flatobj = obj.ravel()
             if np.iscomplexobj(obj):
