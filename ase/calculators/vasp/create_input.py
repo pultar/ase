@@ -1870,7 +1870,9 @@ class GenerateVaspInput:
 
             branch_start, branch_end = [list(map(float, line[:3]))
                                         for line in (branch_start, branch_end)]
-            branch_kpts = np.linspace(branch_start, branch_end, pts_per_branch)
+            branch_kpts = np.linspace(np.array(branch_start),
+                                      np.array(branch_end),
+                                      pts_per_branch)
             kpts = kpts + branch_kpts.tolist()
 
         return np.array(kpts)
