@@ -603,8 +603,6 @@ class Atoms(object):
 
     def set_labels(self, labels=None):
         """Set labels to atom in atoms"""
-        if labels is None:
-            labels = self.get_chemical_symbols()
         self.set_array('labels', labels, object, ())
 
     def get_labels(self):
