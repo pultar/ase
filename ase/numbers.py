@@ -64,7 +64,7 @@ class _NumbersProperty(object):
         Parameters
             instance: the object that this property is attached to
         Returns
-            An instance of _TopoAttribute that handles the attribute
+            An instance of Numbers that handles the numbers array.
         """
         if instance is None:
             return self
