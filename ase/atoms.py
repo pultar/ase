@@ -59,6 +59,8 @@ class Atoms(object):
         Momenta for all atoms.
     masses: list of float
         Atomic masses in atomic units.
+    labels: list of strings
+        Atomic labels for each atom.
     magmoms: list of float or list of xyz-values
         Magnetic moments.  Can be either a single value for each atom
         for collinear calculations or three numbers for each atom for
@@ -132,7 +134,7 @@ class Atoms(object):
     def __init__(self, symbols=None,
                  positions=None, numbers=None,
                  tags=None, momenta=None, masses=None,
-                 magmoms=None, charges=None,
+                 magmoms=None, charges=None, labels=None,
                  scaled_positions=None,
                  cell=None, pbc=None, celldisp=None,
                  constraint=None,
@@ -173,6 +175,8 @@ class Atoms(object):
                 magmoms = atoms.get_initial_magnetic_moments()
             if masses is None and atoms.has('masses'):
                 masses = atoms.get_masses()
+            if labels is None and atoms.has('labels'):
+                labels = atoms.get_labels()
             if charges is None and atoms.has('initial_charges'):
                 charges = atoms.get_initial_charges()
             if cell is None:
@@ -230,6 +234,7 @@ class Atoms(object):
         self.set_constraint(constraint)
         self.set_tags(default(tags, 0))
         self.set_masses(default(masses, None))
+        self.set_labels(default(labels, None))
         self.set_initial_magnetic_moments(default(magmoms, 0.0))
         self.set_initial_charges(default(charges, 0.0))
         if pbc is None:
