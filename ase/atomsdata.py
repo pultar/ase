@@ -37,14 +37,14 @@ class AtomsData:
 
     The entries of the array are as follows:
 
-    number: signed 64-bit integer
-        The atomic number of the element, nominally between 1 and 118,
+    numbers: signed 64-bit integer
+        The atomic numbers of the elements, nominally between 1 and 118,
         inclusive, but we used a signed 64-bit int to add flexibility.
 
-        Modifying 'number' resets the following properties:
-            - mass
-            - symbol
-            - label
+        Modifying 'numbers' resets the following properties:
+            - masses
+            - symbols
+            - labels
 
     tags: signed 64-bit integer
         Optional integer tags. Defaults to 0.
@@ -221,16 +221,16 @@ class AtomsData:
     # Magnetic moments
     def get_initial_magmoms(self):
         if self.noncollinear:
-            return self.data.initial_magmom
-        return self.data.initial_magmom[:, 2]
+            return self.data.initial_magmoms
+        return self.data.initial_magmoms[:, 2]
 
     def set_initial_magmoms(self, val):
         if val is None:
-            self.initialized['initial_magmom'] = False
+            self.initialized['initial_magmoms'] = False
             self.data.magmom = 0.
             return
 
-        self.initialized['initial_magmom'] = True
+        self.initialized['initial_magmoms'] = True
         magmoms = np.asarray(val).reshape((len(self), -1))
         if magmoms.shape[1] == 3:
             self.noncollinear = True
