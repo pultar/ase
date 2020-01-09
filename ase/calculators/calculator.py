@@ -92,21 +92,23 @@ def compare_atoms(atoms1, atoms2, tol=1e-15, excluded_properties=None):
                 if not equal(getattr(atoms1, prop), getattr(atoms2, prop), tol):
                     system_changes.append(prop)
 
-        arrays1 = set(atoms1.arrays)
-        arrays2 = set(atoms2.arrays)
+        prop1 = {p for p, init in atoms1.data.initialized.items() if init}
+        prop2 = {p for p, init in atoms2.data.initialized.items() if init}
 
         # Add any properties that are only in atoms1.arrays or only in
         # atoms2.arrays (and aren't excluded).  Note that if, e.g. arrays1 has
         # `initial_charges` which is merely zeros and arrays2 does not have
         # this array, we'll still assume that the system has changed.  However,
         # this should only occur rarely.
-        system_changes += properties_to_check & (arrays1 ^ arrays2)
+        system_changes += properties_to_check & (prop1 ^ prop2)
 
         # Finally, check all of the non-excluded properties shared by the atoms
         # arrays
-        for prop in properties_to_check & arrays1 & arrays2:
-                if not equal(atoms1.arrays[prop], atoms2.arrays[prop], tol):
-                    system_changes.append(prop)
+        for prop in properties_to_check & prop1 & prop2:
+            prop1 = getattr(atoms1.data, prop)
+            prop2 = getattr(atoms2.data, prop)
+            if not equal(prop1, prop2, tol):
+                system_changes.append(prop)
 
     return system_changes
 

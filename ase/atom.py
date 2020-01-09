@@ -135,8 +135,8 @@ class Atom(object):
             return self.data[name]
 
         plural = names[name][0]
-        if plural in self.atoms.arrays:
-            return self.atoms.arrays[plural][self.index]
+        if plural == 'numbers' or self.atoms.data.initialized[plural]:
+            return getattr(self.atoms.data, plural)[self.index]
         else:
             return None
 
@@ -161,22 +161,14 @@ class Atom(object):
             self.data[name] = value
         else:
             plural, default = names[name]
-            if plural in self.atoms.arrays:
-                array = self.atoms.arrays[plural]
-                if name == 'magmom' and array.ndim == 2:
+            if name == 'number' or self.atoms.data.initialized[plural]:
+                if name == 'magmom' and self.atoms.data.noncollinear:
                     assert len(value) == 3
-                array[self.index] = value
             else:
+                self.atoms.data.initialized[plural] = True
                 if name == 'magmom' and np.asarray(value).ndim == 1:
-                    array = np.zeros((len(self.atoms), 3))
-                elif name == 'mass':
-                    array = self.atoms.get_masses()
-                else:
-                    default = np.asarray(default)
-                    array = np.zeros((len(self.atoms),) + default.shape,
-                                     default.dtype)
-                array[self.index] = value
-                self.atoms.new_array(plural, array)
+                    self.atoms.data.noncollinear = True
+            getattr(self.atoms.data, plural)[self.index] = value
 
     def delete(self, name):
         """Delete name attribute."""
