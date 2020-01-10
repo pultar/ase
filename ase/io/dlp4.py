@@ -184,7 +184,7 @@ def read_single_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None):
                   # Cell is centered around (0, 0, 0) in dlp4:
                   celldisp=-cell.sum(axis=0) / 2)
 
-    atoms.set_array(DLP4_LABELS_KEY, labels, str)
+    atoms.set_array(DLP4_LABELS_KEY, labels, None)
     if levcfg > 0:
         atoms.set_velocities(velocities)
     if levcfg > 1:

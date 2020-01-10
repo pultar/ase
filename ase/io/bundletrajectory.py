@@ -338,17 +338,16 @@ class BundleTrajectory:
         framedir = os.path.join(self.filename, 'F' + str(n))
         framezero = os.path.join(self.filename, 'F0')
         smalldata = self.backend.read_small(framedir)
-        data = {}
-        data['pbc'] = smalldata['pbc']
-        data['cell'] = smalldata['cell']
-        data['constraint'] = smalldata['constraints']
         if self.subtype == 'split':
             self.backend.set_fragments(smalldata['fragments'])
             self.atom_id, dummy = self.backend.read_split(framedir, 'ID')
         else:
             self.atom_id = None
-        atoms = Atoms(**data)
         natoms = smalldata['natoms']
+        atoms = Atoms(pbc=smalldata['pbc'],
+                      cell=smalldata['cell'],
+                      constraint=smalldata['constraints'],
+                      numbers=[0] * natoms)
         for name in ('positions', 'numbers', 'tags', 'masses',
                      'momenta'):
             if self.datatypes.get(name):

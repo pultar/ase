@@ -21,6 +21,7 @@ from ase.constraints import FixConstraint, FixBondLengths, FixLinearTriatomic
 from ase.data import atomic_masses, atomic_masses_common
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
+from ase.atomsdata import AtomsData
 
 
 class Atoms(object):
@@ -187,8 +188,6 @@ class Atoms(object):
             if info is None:
                 info = copy.deepcopy(atoms.info)
 
-        self.arrays = {}
-
         if symbols is None:
             if numbers is None:
                 if positions is not None:
@@ -198,13 +197,15 @@ class Atoms(object):
                 else:
                     natoms = 0
                 numbers = np.zeros(natoms, int)
-            self.new_array('numbers', numbers, int)
         else:
             if numbers is not None:
                 raise TypeError(
                     'Use only one of "symbols" and "numbers".')
             else:
-                self.new_array('numbers', symbols2numbers(symbols), int)
+                numbers = symbols2numbers(symbols)
+
+        self.arrays = AtomsData.new(len(numbers))
+        self.set_array('numbers', numbers, int)
 
         if cell is None:
             cell = np.zeros((3, 3))
@@ -224,7 +225,7 @@ class Atoms(object):
             if scaled_positions is not None:
                 raise TypeError(
                     'Use only one of "symbols" and "numbers".')
-        self.new_array('positions', positions, float, (3,))
+        self.set_array('positions', positions, float, (3,))
 
         self.set_constraint(constraint)
         self.set_tags(default(tags, 0))
@@ -418,30 +419,30 @@ class Atoms(object):
         """Add new array.
 
         If *shape* is not *None*, the shape of *a* will be checked."""
+        arr = np.asarray(a)
 
-        if dtype is not None:
-            a = np.array(a, dtype, order='C')
-            if len(a) == 0 and shape is not None:
-                a.shape = (-1,) + shape
-        else:
-            if not a.flags['C_CONTIGUOUS']:
-                a = np.ascontiguousarray(a)
-            else:
-                a = a.copy()
+        if dtype is None:
+            dtype = arr.dtype
+
+        descr = [name, dtype]
+        if shape is not None:
+            if len(shape) > 0:
+                descr.append(shape)
+        elif len(arr.shape) > 1:
+            descr.append(arr.shape[1:])
 
         if name in self.arrays:
             raise RuntimeError('Array {} already present'.format(name))
 
-        for b in self.arrays.values():
-            if len(a) != len(b):
-                raise ValueError('Array "%s" has wrong length: %d != %d.' %
-                                 (name, len(a), len(b)))
-            break
+        if len(a) != len(self.arrays):
+            raise ValueError('Array "%s" has wrong length: %d != %d.' %
+                             (name, len(a), len(self.arrays)))
 
-        if shape is not None and a.shape[1:] != shape:
+        if shape is not None and arr.shape[1:] != shape:
             raise ValueError('Array "%s" has wrong shape %s != %s.' %
-                             (a.name, a.shape, (a.shape[0:1] + shape)))
+                             (name, a.shape, (a.shape[0:1] + shape)))
 
+        self.arrays.new_array(name, descr)
         self.arrays[name] = a
 
     def get_array(self, name, copy=True):
@@ -460,19 +461,19 @@ class Atoms(object):
         If *shape* is not *None*, the shape of *a* will be checked.
         If *a* is *None*, then the array is deleted."""
 
-        b = self.arrays.get(name)
-        if b is None:
-            if a is not None:
-                self.new_array(name, a, dtype, shape)
-        else:
+        arr = np.asarray(a)
+        if name in self.arrays:
             if a is None:
                 del self.arrays[name]
             else:
-                a = np.asarray(a)
-                if a.shape != b.shape:
+                b = self.arrays[name]
+                if arr.shape != b.shape:
                     raise ValueError('Array "%s" has wrong shape %s != %s.' %
-                                     (name, a.shape, b.shape))
-                b[:] = a
+                                     (name, arr.shape, b.shape))
+                self.arrays[name] = a
+        else:
+            if a is not None:
+                self.new_array(name, a, dtype=dtype, shape=shape)
 
     def has(self, name):
         """Check for existence of array.
@@ -861,9 +862,7 @@ class Atoms(object):
         atoms = self.__class__(cell=self.cell, pbc=self.pbc, info=self.info,
                                celldisp=self._celldisp.copy())
 
-        atoms.arrays = {}
-        for name, a in self.arrays.items():
-            atoms.arrays[name] = a.copy()
+        atoms.arrays = self.arrays.copy()
         atoms.constraints = copy.deepcopy(self.constraints)
         return atoms
 
@@ -986,31 +985,7 @@ class Atoms(object):
         if isinstance(other, Atom):
             other = self.__class__([other])
 
-        n1 = len(self)
-        n2 = len(other)
-
-        for name, a1 in self.arrays.items():
-            a = np.zeros((n1 + n2,) + a1.shape[1:], a1.dtype)
-            a[:n1] = a1
-            if name == 'masses':
-                a2 = other.get_masses()
-            else:
-                a2 = other.arrays.get(name)
-            if a2 is not None:
-                a[n1:] = a2
-            self.arrays[name] = a
-
-        for name, a2 in other.arrays.items():
-            if name in self.arrays:
-                continue
-            a = np.empty((n1 + n2,) + a2.shape[1:], a2.dtype)
-            a[n1:] = a2
-            if name == 'masses':
-                a[:n1] = self.get_masses()[:n1]
-            else:
-                a[:n1] = 0
-
-            self.set_array(name, a)
+        self.arrays = self.arrays + other.arrays
 
     def __iadd__(self, other):
         self.extend(other)
@@ -1069,10 +1044,7 @@ class Atoms(object):
                                celldisp=self._celldisp)
         # TODO: Do we need to shuffle indices in adsorbate_info too?
 
-        atoms.arrays = {}
-        for name, a in self.arrays.items():
-            atoms.arrays[name] = a[i].copy()
-
+        atoms.arrays = self.arrays[i].copy()
         atoms.constraints = conadd
         return atoms
 
@@ -1102,8 +1074,7 @@ class Atoms(object):
 
         mask = np.ones(len(self), bool)
         mask[i] = False
-        for name, a in self.arrays.items():
-            self.arrays[name] = a[mask]
+        self.arrays = self.arrays[mask]
 
     def pop(self, i=-1):
         """Remove and return atom at index *i* (default last)."""
@@ -1125,8 +1096,7 @@ class Atoms(object):
         M = np.product(m)
         n = len(self)
 
-        for name, a in self.arrays.items():
-            self.arrays[name] = np.tile(a, (M,) + (1,) * (len(a.shape) - 1))
+        self.arrays = self.arrays * M
 
         positions = self.arrays['positions']
         i0 = 0
