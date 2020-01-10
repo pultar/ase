@@ -43,7 +43,6 @@ class AtomsData:
 
         Modifying 'numbers' resets the following properties:
             - masses
-            - symbols
             - labels
 
     tags: signed 64-bit integer
@@ -70,13 +69,8 @@ class AtomsData:
         component. Defaults to (0, 0, 0).
 
     symbols: Up to 3 unicode characters
-        The elemental symbols of the atoms. No default, this value must
-        be provided.
-
-        Modifying 'symbols' resets the following properties:
-            - numbers
-            - masses
-            - labels
+        The elemental symbols of the atoms. This value is determined from
+        numbers, and cannot be set manually.
 
     labels: Up to 5 unicode characters
         Optional labels, allowing the possibility to distinguish
