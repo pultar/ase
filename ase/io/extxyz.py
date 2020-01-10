@@ -461,7 +461,7 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict, nvec=0
         del arrays['move_mask']
 
     for name, array in arrays.items():
-        atoms.new_array(name, array)
+        setattr(atoms.data, name, array)
 
     if duplicate_numbers is not None:
         atoms.set_atomic_numbers(duplicate_numbers)
@@ -481,9 +481,9 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict, nvec=0
                                    stress[0, 2],
                                    stress[0, 1]])
                 results[key] = stress
-    for key in list(atoms.arrays.keys()):
+    for key, init in atoms.data.initialized.items():
         if key in all_properties:
-            results[key] = atoms.arrays[key]
+            results[key] = getattr(atoms.data, key)
     if results != {}:
         calculator = SinglePointCalculator(atoms, **results)
         atoms.set_calculator(calculator)
@@ -693,7 +693,7 @@ def output_column_format(atoms, columns, arrays,
 
 
 def write_xyz(fileobj, images, comment='', columns=None, write_info=True,
-              write_results=True, plain=False, vec_cell=False, append=False, 
+              write_results=True, plain=False, vec_cell=False, append=False,
               tolerant=False):
     """
     Write output in extended XYZ format
@@ -721,10 +721,10 @@ def write_xyz(fileobj, images, comment='', columns=None, write_info=True,
             fr_cols = columns[:]
 
         if fr_cols is None:
-            fr_cols = (['symbols', 'positions']
-                       + [key for key in atoms.arrays.keys() if
-                          key not in ['symbols', 'positions', 'numbers',
-                                      'species', 'pos']])
+            fr_cols = ['symbols', 'positions']
+            for key, init in atoms.data.initialized.items():
+                if init and key not in ['symbols', 'positions', 'numbers']:
+                    fr_cols.append(key)
 
         if vec_cell:
             plain = True
@@ -770,16 +770,13 @@ def write_xyz(fileobj, images, comment='', columns=None, write_info=True,
             fr_cols[1], fr_cols[i] = fr_cols[i], fr_cols[1]
 
         # Check first column "looks like" atomic symbols
-        if fr_cols[0] in atoms.arrays:
-            symbols = atoms.arrays[fr_cols[0]]
-        else:
-            symbols = atoms.get_chemical_symbols()
+        symbols = atoms.data.symbols
 
         if natoms > 0 and not isinstance(symbols[0], str):
             raise ValueError('First column must be symbols-like')
 
         # Check second column "looks like" atomic positions
-        pos = atoms.arrays[fr_cols[1]]
+        pos = atoms.data.positions
         if pos.shape != (natoms, 3) or pos.dtype.kind != 'f':
             raise ValueError('Second column must be position-like')
 
@@ -823,8 +820,8 @@ def write_xyz(fileobj, images, comment='', columns=None, write_info=True,
         for column in fr_cols:
             if column == 'positions':
                 arrays[column] = pos
-            elif column in atoms.arrays:
-                arrays[column] = atoms.arrays[column]
+            elif atoms.data.initialized.get(column, False):
+                arrays[column] = getattr(atoms, column)
             elif column == 'symbols':
                 arrays[column] = np.array(symbols)
             elif column == 'move_mask':
@@ -846,7 +843,7 @@ def write_xyz(fileobj, images, comment='', columns=None, write_info=True,
                                                        fr_cols,
                                                        arrays,
                                                        write_info,
-                                                       per_frame_results, 
+                                                       per_frame_results,
                                                        tolerant)
 
         if plain or comment != '':

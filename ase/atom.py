@@ -135,7 +135,7 @@ class Atom(object):
             return self.data[name]
 
         plural = names[name][0]
-        if plural == 'numbers' or self.atoms.data.initialized[plural]:
+        if self.atoms.data.initialized[plural]:
             return getattr(self.atoms.data, plural)[self.index]
         else:
             return None

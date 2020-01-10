@@ -95,9 +95,10 @@ class AtomsData:
             initialized = dict()
             for item in adata:
                 prop = item[0]
-                if prop in ['numbers', 'symbols']:
+                if prop in ['symbols']:
                     continue
                 initialized[prop] = False
+            initialized['numbers'] = True
         self.initialized = initialized
 
     def copy(self):
@@ -264,7 +265,7 @@ class AtomsData:
     labels = property(get_labels)
 
     def __mul__(self, val):
-        newdata = np.repeat(self.data, val)
+        newdata = np.tile(self.data, val)
         return self.__class__(newdata,
                               default_masses=self.default_masses,
                               noncollinear=self.noncollinear,

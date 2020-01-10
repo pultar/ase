@@ -361,7 +361,7 @@ class Atoms(object):
 
         if scale_atoms:
             M = np.linalg.solve(self.cell.complete(), cell.complete())
-            self.positions[:] = np.dot(self.positions, M)
+            self.set_positions(np.dot(self.positions, M))
 
         self.cell[:] = cell
 
