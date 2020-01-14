@@ -21,7 +21,7 @@ from ase.constraints import FixConstraint, FixBondLengths, FixLinearTriatomic
 from ase.data import atomic_masses, atomic_masses_common
 from ase.geometry import wrap_positions, find_mic, get_angles, get_distances
 from ase.symbols import Symbols, symbols2numbers
-from ase.numbers import _NumbersProperty
+from ase.numbers import Numbers
 
 
 class Atoms(object):
@@ -490,13 +490,20 @@ class Atoms(object):
 
     def set_atomic_numbers(self, numbers):
         """Set atomic numbers and change labels if present"""
-        self.numbers = numbers
+        Numbers(self).set(numbers)
 
     def get_atomic_numbers(self):
         """Get integer array of atomic numbers."""
         return self.arrays['numbers'].copy()
 
-    numbers = _NumbersProperty()
+    def _get_atomic_numbers(self):
+        """Return numbers object in-place manipulations."""
+        return Numbers(self)
+
+    numbers = property(_get_atomic_numbers,
+                       set_atomic_numbers,
+                       doc='Attribute for direct manipulation of ' +
+                           'the unit :class:`ase.numbers.Numbers`.')
 
     def get_chemical_symbols(self):
         """Get list of chemical symbol strings.

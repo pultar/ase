@@ -55,20 +55,3 @@ class Numbers:
 
     def __setitem__(self, key, numbers):
         self.set(numbers, key)
-
-class _NumbersProperty(object):
-    """Modified python property to handle passing of atoms object"""
-
-    def __get__(self, instance, owner):
-        """
-        Parameters
-            instance: the object that this property is attached to
-        Returns
-            An instance of Numbers that handles the numbers array.
-        """
-        if instance is None:
-            return self
-        return Numbers(instance)
-
-    def __set__(self, instance, numbers):
-        Numbers(instance).set(numbers)
