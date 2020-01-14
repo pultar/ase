@@ -489,7 +489,7 @@ class Atoms(object):
         return name in self.arrays
 
     def set_atomic_numbers(self, numbers):
-        """Set atomic numbers and change labels if present"""
+        """Set atomic numbers and change labels and masses if present"""
         Numbers(self).set(numbers)
 
     def get_atomic_numbers(self):
@@ -497,7 +497,7 @@ class Atoms(object):
         return self.arrays['numbers'].copy()
 
     def _get_atomic_numbers(self):
-        """Return numbers object in-place manipulations."""
+        """Return numbers object for in-place manipulations."""
         return Numbers(self)
 
     numbers = property(_get_atomic_numbers,

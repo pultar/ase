@@ -1,5 +1,6 @@
 import numpy as np
 from ase.utils.arraywrapper import arraylike
+from ase.data import atomic_masses
 
 
 __all__ = ['Numbers']
@@ -10,7 +11,8 @@ class Numbers:
     A class that handles numbers in atoms object
 
     This class behaves as a numpy array of numbers, however
-    on setting of the property the atom labels are updated
+    on setting of the property the atom labels and masses
+    are updated
     """
 
     def __init__(self, atoms):
@@ -20,6 +22,7 @@ class Numbers:
             atoms: Atoms object
         """
         self._atoms = atoms
+        # make it consistent with arraylike convention
         self.array = self._atoms.arrays['numbers']
 
     def __repr__(self):
@@ -33,7 +36,8 @@ class Numbers:
 
     def set(self, numbers, key=None):
         """
-        Sets numbers according to key, and changes labels accordingly
+        Sets numbers according to key, and changes labels and masses
+        accordingly
         """
         array = self.array.copy()
         if key is None:
@@ -52,6 +56,12 @@ class Numbers:
             # no set_array, since labels have to be objects
             # set_array doesn't change dtype of already existing array
             self._atoms.arrays['labels'] = labels
+
+        # if masses in atoms, then rollback to default
+        if 'masses' in self._atoms.arrays:
+            masses = self._atoms.arrays['masses']
+            default_masses = atomic_masses[self.array]
+            masses[key] = default_masses[key]
 
     def __setitem__(self, key, numbers):
         self.set(numbers, key)
