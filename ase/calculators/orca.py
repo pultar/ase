@@ -98,6 +98,9 @@ class ORCA(FileIOCalculator):
             if estring in line:
                 energy = float(line.split()[-1])
                 break
+        else:
+            raise ReadError("Failed to find energy in ORCA output!")
+
         self.results['energy'] = energy * Hartree
 
     def read_forces(self):
