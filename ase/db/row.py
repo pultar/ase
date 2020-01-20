@@ -75,8 +75,7 @@ def atoms2dict(atoms):
             # numpy object arrays cannot be read from database
             # string arrays are saved as object arrays in numpy
             if isinstance(values, np.ndarray):
-                if values.dtype is np.dtype(object):
-                    values = values.tolist()
+                values = values.tolist()
             custom_arrays[key] = values
     if custom_arrays:
         dct['data'] = {'_custom_arrays': custom_arrays}
