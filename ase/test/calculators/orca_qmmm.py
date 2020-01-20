@@ -17,7 +17,7 @@ atoms.calc = EIQMMM(selection=[0, 1, 2],
                     mmcalc=TIP4P(),
                     interaction=lj,
                     output='orca_qmmm.log')
-                            
+
 
 e = atoms.get_potential_energy()
 
