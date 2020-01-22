@@ -327,10 +327,11 @@ potentials)
         # Close lammps input and wait for lammps to end. Return process
         # return value
         if self._lmp_alive():
-            self._lmp_handle.stdout.close()
-            self._lmp_handle.stdin.close()
             # !TODO: handle lammps error codes
-            return self._lmp_handle.wait()
+            err = self._lmp_handle.wait()
+            self._lmp_handle.stdin.close()
+            self._lmp_handle.stdout.close()
+            return err
 
     def set_missing_parameters(self):
         """Verify that all necessary variables are set.
