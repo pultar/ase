@@ -25,7 +25,7 @@
 import os
 import shutil
 import shlex
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, TimeoutExpired
 from threading import Thread
 from re import compile as re_compile, IGNORECASE
 from tempfile import mkdtemp, NamedTemporaryFile, mktemp as uns_mktemp
@@ -328,9 +328,13 @@ potentials)
         # return value
         if self._lmp_alive():
             # !TODO: handle lammps error codes
-            self._lmp_handle.stdin.close()
-            err = self._lmp_handle.wait()
-            self._lmp_handle.stdout.close()
+            try:
+                self._lmp_handle.communicate(timeout=5)
+            except TimeoutExpired:
+                self._lmp_handle.kill()
+                self._lmp_handle.communicate()
+            err = self._lmp_handle.poll()
+            assert err is not None
             return err
 
     def set_missing_parameters(self):
