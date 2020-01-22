@@ -328,8 +328,8 @@ potentials)
         # return value
         if self._lmp_alive():
             # !TODO: handle lammps error codes
-            err = self._lmp_handle.wait()
             self._lmp_handle.stdin.close()
+            err = self._lmp_handle.wait()
             self._lmp_handle.stdout.close()
             return err
 
