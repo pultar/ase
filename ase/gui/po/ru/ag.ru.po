@@ -19,64 +19,66 @@ msgstr ""
 
 #: ../add.py:10
 msgid "(selection)"
-msgstr "()"
+msgstr "(выбор)"
 
 #: ../add.py:15
 msgid "Add atoms"
-msgstr ""
+msgstr "Добавить атомы"
 
 #: ../add.py:16
 msgid "Specify chemical symbol, formula, or filename."
-msgstr ""
+msgstr "Определить химические символы, формулы или имя файла."
 
 #: ../add.py:38
 msgid "Add:"
-msgstr ""
+msgstr "Добавить:"
 
 #: ../add.py:39
 msgid "File ..."
-msgstr ""
+msgstr "Файл..."
 
 #: ../add.py:49
 msgid "Get molecule:"
-msgstr ""
+msgstr "Достать молекулу:"
 
 #: ../add.py:55
 msgid "Coordinates:"
-msgstr ""
+msgstr "Координаты:"
 
 #: ../add.py:57
 msgid ""
 "Coordinates are relative to the center of the selection, if any, else "
 "absolute."
-msgstr ""
+msgstr "Координаты определяются относительно центра выбора если таковой "
+"имеется, иначе считаются абсолютные."
 
 #: ../add.py:59
 msgid "Check positions"
-msgstr ""
+msgstr "Проверить координаты"
 
 #: ../add.py:60 ../nanoparticle.py:262
 msgid "Add"
-msgstr ""
+msgstr "Добавить"
 
 #. May show UI error
 #: ../add.py:104
 msgid "Cannot add atoms"
-msgstr ""
+msgstr "Невозможно добавить атомы"
 
 #: ../add.py:105
 msgid "{} is neither atom, molecule, nor file"
-msgstr ""
+msgstr "{} это не атом, не молекула и не файл"
 
 #: ../add.py:144
 msgid "Bad positions"
-msgstr ""
+msgstr "Плохие координаты"
 
 #: ../add.py:145
 msgid ""
 "Atom would be less than 0.5 Ã… from an existing atom.  To override, uncheck "
 "the check positions option."
-msgstr ""
+msgstr "Атом должен быть менее чем на 0.5 Ã от существующего атома."
+"Чтобы переопределить, снимите галочку Проверить координаты"
 
 #. TRANSLATORS: This is a title of a window.
 #: ../celleditor.py:46
