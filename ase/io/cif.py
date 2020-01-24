@@ -579,10 +579,11 @@ def write_cif(fileobj, images, format='default',
         symbols = atoms.get_chemical_symbols()
         occupancies = [1 for i in range(len(symbols))]
 
-        # try to fetch occupancies // rely on the tag - occupancy mapping
+        # try to fetch occupancies // spacegroup_kinds - occupancy mapping
         try:
             occ_info = atoms.info['occupancy']
-            for i, tag in enumerate(atoms.get_tags()):
+            tags = atoms.info['spacegroup_kinds']
+            for i, tag in enumerate(tags):
                 occupancies[i] = occ_info[tag][symbols[i]]
                 # extend the positions array in case of mixed occupancy
                 for sym, occ in occ_info[tag].items():
