@@ -19,7 +19,7 @@ msgstr ""
 
 #: ../add.py:10
 msgid "(selection)"
-msgstr ""
+msgstr "()"
 
 #: ../add.py:15
 msgid "Add atoms"
@@ -363,7 +363,7 @@ msgstr ""
 
 #: ../graphs.py:44
 msgid "Save"
-msgstr ""
+msgstr "Sokhranit"
 
 #: ../graphs.py:67
 msgid "Save data to file ... "
