@@ -688,7 +688,7 @@ msgstr "_Двигать выбранные атомы"
 
 #: ../gui.py:511
 msgid "_Rotate selected atoms"
-msgstr "_Повернить выбранные атомы"
+msgstr "_Повернуть выбранные атомы"
 
 #: ../gui.py:513
 msgid "NE_B plot"
@@ -705,15 +705,15 @@ msgstr "Обратное пространство ..."
 #. TRANSLATORS: Set up (i.e. build) surfaces, nanoparticles, ...
 #: ../gui.py:518
 msgid "_Setup"
-msgstr "_Установка"
+msgstr "_Создание"
 
 #: ../gui.py:519
 msgid "_Bulk Crystal"
-msgstr "_Объемный Кристалл"
+msgstr "_Объемный кристалл"
 
 #: ../gui.py:520
 msgid "_Surface slab"
-msgstr "_Плита поверхности"
+msgstr "_Поверхность"
 
 #: ../gui.py:521
 msgid "_Nanoparticle"
@@ -825,7 +825,7 @@ msgid ""
 "WARNING: The Wulff construction currently only works with cubic crystals!\n"
 msgstr ""
 "Создать наночастицу указав число слоев или используя метод Вульфа.\n"
-"Пожалуйста нажмите кнопку [Помощь] чтобы узнать как выбирать направления.\n"
+"Пожалуйста нажмите кнопку [Помощь] (внизу) для дальнейших инструкций.\n"
 "ВНИМАНИЕ: метод Вульфа реализован пока только для кубических кристаллов!\n"
 
 #: ../nanoparticle.py:28
@@ -1417,7 +1417,7 @@ msgstr ""
 "  Используйте этот диалог, чтобы создать поверхность. Выберите элемент\n"
 "написав его химический символ или его атомное число. Затем\n"
 "выберите тип кристаллической структуры. Заметьте, что некоторые поверхности\n"
-"могут быть созданы и ортогональной или неортогональной элементарной ячейкой."
+"могут быть созданы и ортогональной или неортогональной элементарной ячейкой.\n"
 "В этих случайх неортогональные элементарная ячейка будет содержать меньше\n"
 "атомов.\n"
 "  Если выбранная кристаллическая структура совпадает с экспериментально\n"
@@ -1432,7 +1432,7 @@ msgstr "ГЦК(100)"
 #: ../surfaceslab.py:22 ../surfaceslab.py:23 ../surfaceslab.py:24
 #: ../surfaceslab.py:25
 msgid "fcc"
-msgstr "гцк"
+msgstr "fcc"
 
 #: ../surfaceslab.py:23
 msgid "FCC(110)"
@@ -1452,7 +1452,7 @@ msgstr "ОЦК(100)"
 
 #: ../surfaceslab.py:26 ../surfaceslab.py:27 ../surfaceslab.py:28
 msgid "bcc"
-msgstr "оцк"
+msgstr "bcc"
 
 #: ../surfaceslab.py:27 ../surfaceslab.py:168
 msgid "BCC(110)"
@@ -1469,7 +1469,7 @@ msgstr "ГКС(110)"
 #: ../surfaceslab.py:29 ../surfaceslab.py:30 ../surfaceslab.py:132
 #: ../surfaceslab.py:188
 msgid "hcp"
-msgstr "гкс"
+msgstr "hcp"
 
 #: ../surfaceslab.py:30 ../surfaceslab.py:181
 msgid "HCP(10-10)"
@@ -1481,7 +1481,7 @@ msgstr "АЛМАЗ(100)"
 
 #: ../surfaceslab.py:31 ../surfaceslab.py:32
 msgid "diamond"
-msgstr "алмаз"
+msgstr "diamond"
 
 #: ../surfaceslab.py:32
 msgid "DIAMOND(111)"
@@ -1569,7 +1569,7 @@ msgstr "Версия"
 
 #: ../ui.py:40
 msgid "Web-page"
-msgstr "Веб.страница"
+msgstr "Веб-страница"
 
 #: ../ui.py:41
 msgid "About"
