@@ -896,11 +896,11 @@ msgstr ""
 #. 4-index (boolean), two lattice const (bool), factory
 #: ../nanoparticle.py:88
 msgid "Face centered cubic (fcc)"
-msgstr "Кубическая гране-центрированная (fcc)"
+msgstr "Кубическая гране-центрированная (ГЦК)"
 
 #: ../nanoparticle.py:90
 msgid "Body centered cubic (bcc)"
-msgstr "Кубическая объемно-центрированная (bcc)"
+msgstr "Кубическая объемно-центрированная (ОЦК)"
 
 #: ../nanoparticle.py:92
 msgid "Simple cubic (sc)"
@@ -908,7 +908,7 @@ msgstr "Кубическая простая (sc)"
 
 #: ../nanoparticle.py:94
 msgid "Hexagonal closed-packed (hcp)"
-msgstr "Гексагональная плотная упаковка (hcp)"
+msgstr "Гексагональная плотная упаковка (ГКС)"
 
 #: ../nanoparticle.py:96
 msgid "Graphite"
@@ -1414,7 +1414,7 @@ msgid ""
 "look up the lattice constant, otherwise you have to specify it\n"
 "yourself."
 msgstr ""
-"  Используйте этот диалог, чтобы создать поверхности. Выберите элемент\n"
+"  Используйте этот диалог, чтобы создать поверхность. Выберите элемент\n"
 "написав его химический символ или его атомное число. Затем\n"
 "выберите тип кристаллической структуры. Заметьте, что некоторые поверхности\n"
 "могут быть созданы и ортогональной или неортогональной элементарной ячейкой."
@@ -1481,77 +1481,77 @@ msgstr "АЛМАЗ(100)"
 
 #: ../surfaceslab.py:31 ../surfaceslab.py:32
 msgid "diamond"
-msgstr ""
+msgstr "алмаз"
 
 #: ../surfaceslab.py:32
 msgid "DIAMOND(111)"
-msgstr ""
+msgstr "АЛМАЗ(111)"
 
 #: ../surfaceslab.py:53
 msgid "Get from database"
-msgstr ""
+msgstr "Получить из базы данных"
 
 #: ../surfaceslab.py:65
 msgid "Surface"
-msgstr ""
+msgstr "Поверхность"
 
 #: ../surfaceslab.py:69
 msgid "Orthogonal cell:"
-msgstr ""
+msgstr "Ортогональная ячейка"
 
 #: ../surfaceslab.py:70
 msgid "Lattice constant:"
-msgstr ""
+msgstr "Постоянная решетки"
 
 #: ../surfaceslab.py:71
 msgid "\ta"
-msgstr ""
+msgstr "\ta"
 
 #: ../surfaceslab.py:72
 msgid "\tc"
-msgstr ""
+msgstr "\tc"
 
 #: ../surfaceslab.py:73
 msgid "Size:"
-msgstr ""
+msgstr "Размер:"
 
 #: ../surfaceslab.py:74
 msgid "\tx: "
-msgstr ""
+msgstr "\tx: "
 
 #: ../surfaceslab.py:74 ../surfaceslab.py:75 ../surfaceslab.py:76
 msgid " unit cells"
-msgstr ""
+msgstr " единичные ячейки"
 
 #: ../surfaceslab.py:75
 msgid "\ty: "
-msgstr ""
+msgstr "\ty: "
 
 #: ../surfaceslab.py:76
 msgid "\tz: "
-msgstr ""
+msgstr "\tz: "
 
 #. TRANSLATORS: This is a title of a window.
 #: ../surfaceslab.py:80
 msgid "Creating a surface."
-msgstr ""
+msgstr "Создание поверхности"
 
 #. TRANSLATORS: E.g. "... assume fcc crystal structure for Au"
 #: ../surfaceslab.py:108
 msgid "Error: Reference values assume {} crystal structure for {}!"
-msgstr ""
+msgstr "Ошибка: эталонная структура {} для {}!"
 
 #: ../surfaceslab.py:162
 msgid "Please enter an even value for orthogonal cell"
-msgstr ""
+msgstr "Пожалуйста введите четное число для ортогональной ячейки"
 
 #: ../surfaceslab.py:175
 msgid "Please enter a value divisible by 3 for orthogonal cell"
-msgstr ""
+msgstr "Пожалуйста введите значение делимое на три для ортогональной ячейки"
 
 #: ../surfaceslab.py:195
 msgid " Vacuum: {} Ã…."
-msgstr ""
+msgstr " Вакуум: {} Ã…."
 
 #. TRANSLATORS: e.g. "Au fcc100 surface with 2 atoms."
 #. or "Au fcc100 surface with 2 atoms. Vacuum: 5 Ã…."
@@ -1559,49 +1559,49 @@ msgstr ""
 #, python-brace-format
 msgid "{symbol} {surf} surface with one atom.{vacuum}"
 msgid_plural "{symbol} {surf} surface with {natoms} atoms.{vacuum}"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{symbol} {surf} поверхность с одним атомом.{vacuum}"
+msgstr[1] "{symbol} {surf} поверхность с {natoms}-я атомами.{vacuum}"
+msgstr[2] "{symbol} {surf} поверхность с {natoms}-й атомов.{vacuum}"
 
 #: ../ui.py:39
 msgid "Version"
-msgstr ""
+msgstr "Версия"
 
 #: ../ui.py:40
 msgid "Web-page"
-msgstr ""
+msgstr "Веб.страница"
 
 #: ../ui.py:41
 msgid "About"
-msgstr ""
+msgstr "О Программе"
 
 #: ../ui.py:46 ../ui.py:50 ../widgets.py:16
 msgid "Help"
-msgstr ""
+msgstr "Помощь"
 
 #: ../ui.py:550
 msgid "Open ..."
-msgstr ""
+msgstr "Открыть ..."
 
 #: ../ui.py:551
 msgid "Automatic"
-msgstr ""
+msgstr "Автоматически"
 
 #: ../ui.py:569
 msgid "Choose parser:"
-msgstr ""
+msgstr "Выберите анализатор:"
 
 #: ../ui.py:575
 msgid "Read error"
-msgstr ""
+msgstr "Ошибка чтения"
 
 #: ../ui.py:576
 msgid "Could not read {}: {}"
-msgstr ""
+msgstr "Невозможно прочесть {}: {}"
 
 #: ../widgets.py:13
 msgid "Element:"
-msgstr ""
+msgstr "Элемент:"
 
 #. This infobox is indescribably ugly because of the
 #. ridiculously large font size used by Tkinter.  Ouch!
@@ -1610,15 +1610,17 @@ msgid ""
 "Enter a chemical symbol or the name of a molecule from the G2 testset:\n"
 "{}"
 msgstr ""
+"Введите химический символ или имя молекулы из тестового набора G2:\n"
+"{}"
 
 #: ../widgets.py:67
 msgid "No element specified!"
-msgstr ""
+msgstr "Никакой элемент не выбран!"
 
 #: ../widgets.py:89
 msgid "ERROR: Invalid element!"
-msgstr ""
+msgstr "Ошибка: неправильный элемент!"
 
 #: ../widgets.py:106
 msgid "No Python code"
-msgstr ""
+msgstr "Это не программа на Питоне"
