@@ -35,11 +35,11 @@ msgstr "Добавить:"
 
 #: ../add.py:39
 msgid "File ..."
-msgstr "Файл..."
+msgstr "Файл ..."
 
 #: ../add.py:49
 msgid "Get molecule:"
-msgstr "Достать молекулу:"
+msgstr "Получить молекулу:"
 
 #: ../add.py:55
 msgid "Coordinates:"
@@ -49,8 +49,8 @@ msgstr "Координаты:"
 msgid ""
 "Coordinates are relative to the center of the selection, if any, else "
 "absolute."
-msgstr "Координаты определяются относительно центра выбора если таковой "
-"имеется, иначе считаются абсолютные."
+msgstr "Координаты определяются относительно центра выбранных атомов"
+"если таковой имеется, иначе считаются абсолютными."
 
 #: ../add.py:59
 msgid "Check positions"
@@ -77,7 +77,7 @@ msgstr "Плохие координаты"
 msgid ""
 "Atom would be less than 0.5 Ã… from an existing atom.  To override, uncheck "
 "the check positions option."
-msgstr "Атом должен быть менее чем на 0.5 Ã от существующего атома."
+msgstr "Атом должен быть удален менее чем на 0.5 Ã от существующего атома."
 "Чтобы переопределить, снимите галочку Проверить координаты"
 
 #. TRANSLATORS: This is a title of a window.
@@ -246,7 +246,7 @@ msgid ""
 "optionally be saturated with hydrogen (or another element)."
 msgstr ""
 "Задать лист графена или наноленту. Нанолента может быть\n"
-"насыщена водородом или другими химическими элементами."
+"насыщена водородом или другим химическим элементом."
 
 #: ../graphene.py:27
 #, python-format
@@ -311,7 +311,7 @@ msgstr "Ширина: "
 
 #: ../graphene.py:94
 msgid "  Length: "
-msgstr "  Длина:"
+msgstr "  Длина: "
 
 #. Vacuum
 #: ../graphene.py:102 ../surfaceslab.py:77
@@ -402,7 +402,7 @@ msgstr "Ошибка подпроцесса"
 
 #: ../gui.py:280
 msgid "Plotting failed"
-msgstr "Построение неудалось"
+msgstr "Построение не удалось"
 
 #: ../gui.py:287
 msgid "Images must have energies and forces, and atoms must not be stationary."
@@ -410,7 +410,7 @@ msgstr "Образы должны иметь энергии и силы, и ат
 
 #: ../gui.py:300
 msgid "Images must have energies and varying cell."
-msgstr "Образы должны иметь энергии и незакрепленные ячейки."
+msgstr "Образы должны иметь энергии и незакрепленные единичные ячейки."
 
 #: ../gui.py:307
 msgid "Requires 3D cell."
@@ -680,7 +680,7 @@ msgstr "Ограничения ..."
 
 #: ../gui.py:509
 msgid "Render scene ..."
-msgstr "Сделать картинку ..."
+msgstr "Отрисовать сцену ..."
 
 #: ../gui.py:510
 msgid "_Move selected atoms"
@@ -738,7 +738,7 @@ msgstr "_О программе"
 
 #: ../gui.py:537
 msgid "Webpage ..."
-msgstr "Веб ..."
+msgstr "Вебстраница ..."
 
 #. Host window will never be shown
 #: ../images.py:286
@@ -747,7 +747,7 @@ msgstr "Ограничение убрано"
 
 #: ../images.py:287
 msgid "Constraints other than FixAtoms have been discarded."
-msgstr "Ограничения отличные от закрепленных атомов (FixAtoms) были убраны"
+msgstr "Ограничения отличные от закрепленных атомов (FixAtoms) были убраны."
 
 #: ../modify.py:18
 msgid "No atoms selected!"
@@ -883,7 +883,7 @@ msgstr ""
 "т.е. (0,0,1) означает (1,0,0), (-1,0,0) и т.д."
 "Если одно из этих направлений задано еще раз, то второе значение"
 "переопределяет это определенное направление.\n"
-"Поэтому, порядок играет роль и Вы можете переставить направления клавишами\n"
+"Поэтому, порядок играет роль и Вы можете переставлять направления клавишами\n"
 "[Вверх] и [Вниз]. Кроме того, вы можете добавить новое направление.\n"
 "Не забудьте нажать кнопку [Добавить новое направление] \n"
 "или оно не будет добавлено.\n"
@@ -908,7 +908,7 @@ msgstr "Кубическая простая (sc)"
 
 #: ../nanoparticle.py:94
 msgid "Hexagonal closed-packed (hcp)"
-msgstr "Гексагональная плотная упаковка (ГКС)"
+msgstr "Гексагональная плотная упаковка (ГПУ)"
 
 #: ../nanoparticle.py:96
 msgid "Graphite"
@@ -940,7 +940,7 @@ msgstr "Метод Вульфа"
 
 #: ../nanoparticle.py:164
 msgid "Method: "
-msgstr "Метод:"
+msgstr "Метод: "
 
 #: ../nanoparticle.py:172
 msgid "Add new direction:"
@@ -953,7 +953,7 @@ msgstr "Информация о созданном кластере:"
 
 #: ../nanoparticle.py:179
 msgid "Number of atoms: "
-msgstr "Число атомов:"
+msgstr "Число атомов: "
 
 #: ../nanoparticle.py:181
 msgid "   Approx. diameter: "
@@ -1032,8 +1032,8 @@ msgid "Rounding: If exact size is not possible, choose the size:"
 msgstr "Округление: если точный размер невозможен, то использовать:"
 
 #: ../nanoparticle.py:315
-msgid "Поверхностные энергии (энерия/площадь, не на атом):"
-msgstr ""
+msgid "Surface energies (as energy/area, NOT per atom):"
+msgstr "Поверхностные энергии (энергия/площадь, НЕ на атом):"
 
 #: ../nanoparticle.py:317
 msgid "Number of layers:"
@@ -1085,7 +1085,7 @@ msgstr "Нанотрубка"
 
 #: ../nanotube.py:41
 msgid "Bond length: "
-msgstr "Межатомное расстояние:"
+msgstr "Межатомное расстояние: "
 
 #: ../nanotube.py:44
 msgid "Select roll-up vector (n,m) and tube length:"
@@ -1199,7 +1199,7 @@ msgstr "Ширина линии"
 
 #: ../render.py:28
 msgid "Ã…ngstrÃ¶m"
-msgstr "Ã…ngstrÃ¶m"
+msgstr "Ангстрем"
 
 #: ../render.py:30
 msgid "Render constraints"
@@ -1244,7 +1244,7 @@ msgstr "Запустить povray"
 
 #: ../render.py:62
 msgid "Keep povray files"
-msgstr "Оставить файлы от povray"
+msgstr "Не удалять файлы от povray"
 
 #: ../render.py:63
 msgid "Show output window"
@@ -1351,7 +1351,7 @@ msgstr "Убрать все ограничения"
 #. Visibility
 #: ../settings.py:21
 msgid "Visibility:"
-msgstr "Видимость"
+msgstr "Видимость:"
 
 #: ../settings.py:22
 msgid "Hide"
@@ -1417,8 +1417,8 @@ msgstr ""
 "  Используйте этот диалог, чтобы создать поверхность. Выберите элемент\n"
 "написав его химический символ или его атомное число. Затем\n"
 "выберите тип кристаллической структуры. Заметьте, что некоторые поверхности\n"
-"могут быть созданы и ортогональной или неортогональной элементарной ячейкой.\n"
-"В этих случайх неортогональные элементарная ячейка будет содержать меньше\n"
+"могут быть созданы с ортогональной или неортогональной элементарной ячейкой.\n"
+"В этих случаях неортогональные элементарная ячейка будет содержать меньше\n"
 "атомов.\n"
 "  Если выбранная кристаллическая структура совпадает с экспериментально\n"
 "определенной структурой, то Вы можете использовать известные постоянные\n"
@@ -1464,7 +1464,7 @@ msgstr "ОЦК(111)"
 
 #: ../surfaceslab.py:29 ../surfaceslab.py:178
 msgid "HCP(0001)"
-msgstr "ГКС(110)"
+msgstr "ГПУ(0001)"
 
 #: ../surfaceslab.py:29 ../surfaceslab.py:30 ../surfaceslab.py:132
 #: ../surfaceslab.py:188
@@ -1473,7 +1473,7 @@ msgstr "hcp"
 
 #: ../surfaceslab.py:30 ../surfaceslab.py:181
 msgid "HCP(10-10)"
-msgstr "ГКС(10-10)"
+msgstr "ГПУ(10-10)"
 
 #: ../surfaceslab.py:31
 msgid "DIAMOND(100)"
@@ -1534,7 +1534,7 @@ msgstr "\tz: "
 #. TRANSLATORS: This is a title of a window.
 #: ../surfaceslab.py:80
 msgid "Creating a surface."
-msgstr "Создание поверхности"
+msgstr "Создание поверхности."
 
 #. TRANSLATORS: E.g. "... assume fcc crystal structure for Au"
 #: ../surfaceslab.py:108
@@ -1559,7 +1559,7 @@ msgstr " Вакуум: {} Ã…."
 #, python-brace-format
 msgid "{symbol} {surf} surface with one atom.{vacuum}"
 msgid_plural "{symbol} {surf} surface with {natoms} atoms.{vacuum}"
-msgstr[0] "{symbol} {surf} поверхность с одним атомом.{vacuum}"
+msgstr[0] "{symbol} {surf} поверхность с {natoms}-им атомом.{vacuum}"
 msgstr[1] "{symbol} {surf} поверхность с {natoms}-я атомами.{vacuum}"
 msgstr[2] "{symbol} {surf} поверхность с {natoms}-й атомов.{vacuum}"
 
