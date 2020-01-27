@@ -7,15 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ase\n"
 "Report-Msgid-Bugs-To: ase-users@listserv.fysik.dtu.dk\n"
-"POT-Creation-Date: 2020-01-24 18:06+0100\n"
-"PO-Revision-Date: 2020-01-24 18:11+0100\n"
+"POT-Creation-Date: 2020-01-26 22:28+0100\n"
+"PO-Revision-Date: 2020-01-26 22:31+0100\n"
 "Last-Translator: Peter Koval <p.koval@simuneatomistics.com>\n"
 "Language-Team: Russian\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: ../add.py:10
 msgid "(selection)"
@@ -49,8 +50,9 @@ msgstr "Координаты:"
 msgid ""
 "Coordinates are relative to the center of the selection, if any, else "
 "absolute."
-msgstr "Координаты определяются относительно центра выбранных атомов"
-"если таковой имеется, иначе считаются абсолютными."
+msgstr ""
+"Координаты определяются относительно центра выбранных атомовесли таковой "
+"имеется, иначе считаются абсолютными."
 
 #: ../add.py:59
 msgid "Check positions"
@@ -75,10 +77,9 @@ msgstr "Плохие координаты"
 
 #: ../add.py:145
 msgid ""
-"Atom would be less than 0.5 Ã… from an existing atom.  To override, uncheck "
+"Atom would be less than 0.5 Å from an existing atom.  To override, uncheck "
 "the check positions option."
-msgstr "Атом должен быть удален менее чем на 0.5 Ã от существующего атома."
-"Чтобы переопределить, снимите галочку Проверить координаты"
+msgstr "Атом должен быть удален менее чем на 0.5 Å от существующего атома.Чтобы переопределить, снимите галочку Проверить координаты"
 
 #. TRANSLATORS: This is a title of a window.
 #: ../celleditor.py:46
@@ -114,16 +115,16 @@ msgid "||C||:"
 msgstr "||C||:"
 
 #: ../celleditor.py:56
-msgid "âˆ BC:"
-msgstr "âˆ BC:"
+msgid "∠BC:"
+msgstr "∠BC:"
 
 #: ../celleditor.py:56
-msgid "âˆ AC:"
-msgstr "âˆ AC:"
+msgid "∠AC:"
+msgstr "∠AC:"
 
 #: ../celleditor.py:57
-msgid "âˆ AB:"
-msgstr "âˆ AB:"
+msgid "∠AB:"
+msgstr "∠AB:"
 
 #: ../celleditor.py:58
 msgid "Scale atoms with cell:"
@@ -143,8 +144,8 @@ msgstr "Задать Углы"
 
 #: ../celleditor.py:62
 msgid ""
-"Pressing ã€ˆEnterã€‰ as you enter values will automatically apply correctly"
-msgstr "Нажимая ã€ˆВводã€‰ по мере ввода будет правильно присваивать значения"
+"Pressing 〈Enter〉 as you enter values will automatically apply correctly"
+msgstr "Нажимая 〈Ввод〉 по мере ввода будет правильно присваивать значения"
 
 #. TRANSLATORS: verb
 #: ../celleditor.py:65
@@ -292,8 +293,8 @@ msgid "  Bond length: "
 msgstr "  Длина хим. связи: "
 
 #: ../graphene.py:69 ../graphene.py:80 ../graphene.py:104 ../nanotube.py:43
-msgid "Ã…"
-msgstr "Ã…"
+msgid "Å"
+msgstr "Å"
 
 #. Choose the saturation element and bond length
 #: ../graphene.py:74
@@ -360,7 +361,6 @@ msgid ""
 "<c>n<sub>2</sub></c>, <c>n<sub>3</sub></c> and <c>n<sub>4</sub></c>\n"
 "<c>T</c>: temperature (K)"
 msgstr ""
- ""
 "Символы:\n"
 "<c>e</c>: полная энергия\n"
 "<c>epot</c>: потенциальная энергия\n"
@@ -878,11 +878,11 @@ msgstr ""
 "Как задать направления:\n"
 "------------------------------\n"
 "\n"
-"Если направление встречается первый раз, то оно интерпретируется как"
-"целое семейство направлений,\n"
-"т.е. (0,0,1) означает (1,0,0), (-1,0,0) и т.д."
-"Если одно из этих направлений задано еще раз, то второе значение"
-"переопределяет это определенное направление.\n"
+"Если направление встречается первый раз, то оно интерпретируется какцелое "
+"семейство направлений,\n"
+"т.е. (0,0,1) означает (1,0,0), (-1,0,0) и т.д.Если одно из этих направлений "
+"задано еще раз, то второе значениепереопределяет это определенное "
+"направление.\n"
 "Поэтому, порядок играет роль и Вы можете переставлять направления клавишами\n"
 "[Вверх] и [Вниз]. Кроме того, вы можете добавить новое направление.\n"
 "Не забудьте нажать кнопку [Добавить новое направление] \n"
@@ -1024,8 +1024,8 @@ msgid "atoms"
 msgstr "атомы"
 
 #: ../nanoparticle.py:285
-msgid "Ã…Â³"
-msgstr "Ã…Â³"
+msgid "Å³"
+msgstr "Å³"
 
 #: ../nanoparticle.py:287
 msgid "Rounding: If exact size is not possible, choose the size:"
@@ -1073,11 +1073,9 @@ msgstr ""
 #: ../nanotube.py:24
 #, python-brace-format
 msgid ""
-"{natoms} atoms, diameter: {diameter:.3f} Ã…, total length: {total_length:.3f} "
-"Ã…"
-msgstr ""
-"{natoms} атомов, диаметр: {diameter:.3f} Ã…, полная длина: {total_length:.3f} "
-"Ã…"
+"{natoms} atoms, diameter: {diameter:.3f} Å, total length: {total_length:.3f} "
+"Å"
+msgstr "{natoms} атомов, диаметр: {diameter:.3f} Å…, полная длина: {total_length:.3f} Å…"
 
 #: ../nanotube.py:38
 msgid "Nanotube"
@@ -1104,16 +1102,16 @@ msgid "Single image loaded."
 msgstr "Загружен один образ."
 
 #: ../quickinfo.py:34
-msgid "Image {} loaded (0â€“{})."
-msgstr "Образ {} загружен (0â€“{})."
+msgid "Image {} loaded (0–{})."
+msgstr "Образ {} загружен (0–{})."
 
 #: ../quickinfo.py:36
 msgid "Number of atoms: {}"
 msgstr "Число атомов: {}"
 
 #: ../quickinfo.py:46
-msgid "Unit cell [Ã…]:"
-msgstr "Элементарная ячейка [Ã…]:"
+msgid "Unit cell [Å]:"
+msgstr "Элементарная ячейка [Å]:"
 
 #: ../quickinfo.py:48
 msgid "no"
@@ -1129,16 +1127,16 @@ msgid "Periodic: {}, {}, {}"
 msgstr "Периодичность: {}, {}, {}"
 
 #: ../quickinfo.py:55
-msgid "Lengths [Ã…]: {:.3f}, {:.3f}, {:.3f}"
-msgstr "Длины [Ã…]: {:.3f}, {:.3f}, {:.3f}"
+msgid "Lengths [Å]: {:.3f}, {:.3f}, {:.3f}"
+msgstr "Длины [Å]: {:.3f}, {:.3f}, {:.3f}"
 
 #: ../quickinfo.py:56
-msgid "Angles: {:.1f}Â°, {:.1f}Â°, {:.1f}Â°"
-msgstr "Углы: {:.1f}Â°, {:.1f}Â°, {:.1f}Â°"
+msgid "Angles: {:.1f}°, {:.1f}°, {:.1f}°"
+msgstr "Углы: {:.1f}°, {:.1f}°, {:.1f}°"
 
 #: ../quickinfo.py:59
-msgid "Volume: {:.3f} Ã…Â³"
-msgstr "Объем: {:.3f} Ã…Â³"
+msgid "Volume: {:.3f} Å³"
+msgstr "Объем: {:.3f} Å³"
 
 #: ../quickinfo.py:65
 msgid "Unit cell is fixed."
@@ -1173,12 +1171,12 @@ msgid "Energy: {:.3f} eV"
 msgstr "Энергия: {:.3f} эВ"
 
 #: ../quickinfo.py:118
-msgid "Max force: {:.3f} eV/Ã…"
-msgstr "Макс. сила: {:.3f} эВ/Ã…"
+msgid "Max force: {:.3f} eV/Å"
+msgstr "Макс. сила: {:.3f} эВ/Å…"
 
 #: ../quickinfo.py:122
-msgid "Magmom: {:.3f} Âµ"
-msgstr "Магн. мом.: {:.3f} Âµ"
+msgid "Magmom: {:.3f} µ"
+msgstr "Магн. мом.: {:.3f} µ"
 
 #: ../render.py:16
 msgid "Render current view in povray ... "
@@ -1198,7 +1196,7 @@ msgid "Line width"
 msgstr "Ширина линии"
 
 #: ../render.py:28
-msgid "Ã…ngstrÃ¶m"
+msgid "Ångström"
 msgstr "Ангстрем"
 
 #: ../render.py:30
@@ -1417,7 +1415,8 @@ msgstr ""
 "  Используйте этот диалог, чтобы создать поверхность. Выберите элемент\n"
 "написав его химический символ или его атомное число. Затем\n"
 "выберите тип кристаллической структуры. Заметьте, что некоторые поверхности\n"
-"могут быть созданы с ортогональной или неортогональной элементарной ячейкой.\n"
+"могут быть созданы с ортогональной или неортогональной элементарной "
+"ячейкой.\n"
 "В этих случаях неортогональная ячейка будет содержать меньше атомов.\n"
 "  Если выбранная кристаллическая структура совпадает с экспериментально\n"
 "определенной структурой, то Вы можете использовать известные постоянные\n"
@@ -1549,11 +1548,11 @@ msgid "Please enter a value divisible by 3 for orthogonal cell"
 msgstr "Пожалуйста введите значение делимое на три для ортогональной ячейки"
 
 #: ../surfaceslab.py:195
-msgid " Vacuum: {} Ã…."
-msgstr " Вакуум: {} Ã…."
+msgid " Vacuum: {} Å."
+msgstr " Вакуум: {} Å."
 
 #. TRANSLATORS: e.g. "Au fcc100 surface with 2 atoms."
-#. or "Au fcc100 surface with 2 atoms. Vacuum: 5 Ã…."
+#. or "Au fcc100 surface with 2 atoms. Vacuum: 5 Å."
 #: ../surfaceslab.py:203
 #, python-brace-format
 msgid "{symbol} {surf} surface with one atom.{vacuum}"
@@ -1623,3 +1622,18 @@ msgstr "Ошибка: неправильный элемент!"
 #: ../widgets.py:106
 msgid "No Python code"
 msgstr "Это не программа на Питоне"
+
+#~ msgid "âˆ BC:"
+#~ msgstr "âˆ BC:"
+
+#~ msgid "âˆ AC:"
+#~ msgstr "âˆ AC:"
+
+#~ msgid "âˆ AB:"
+#~ msgstr "âˆ AB:"
+
+#~ msgid "Ã…"
+#~ msgstr "Ã…"
+
+#~ msgid "Ã…Â³"
+#~ msgstr "Ã…Â³"
