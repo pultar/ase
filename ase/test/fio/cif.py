@@ -333,3 +333,38 @@ Se6 Se2- 2 a 0.0050(4) 0.4480(6) 0.9025(6) 0.9102(6) 1. 0
 
 cif_file = io.StringIO(content)
 atoms = read(cif_file, format='cif')
+
+# Test for save_raw_labels
+content = u"""
+data_1
+
+
+_chemical_name_common                  'Mysterious something'
+_cell_length_a                         5.50000
+_cell_length_b                         5.50000
+_cell_length_c                         5.50000
+_cell_angle_alpha                      90
+_cell_angle_beta                       90
+_cell_angle_gamma                      90
+_space_group_name_H-M_alt              'P -1'
+_space_group_IT_number                 2
+
+loop_
+_space_group_symop_operation_xyz
+   'x, y, z'
+   '-x, -y, -z'
+
+loop_
+   _atom_site_label
+   _atom_site_type_symbol
+   _atom_site_fract_x
+   _atom_site_fract_y
+   _atom_site_fract_z
+A  Na         0.250000      0.000000      0.000000   
+B  K          0.000000      0.250000      0.000000
+"""
+
+cif_file = io.StringIO(content)
+atoms = read(cif_file, format='cif', save_raw_labels=True)
+
+assert((atoms.get_array('cif_site_labels') == ['A', 'A', 'B', 'B']).all())
