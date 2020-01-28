@@ -422,7 +422,7 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
                         primitive_cell=primitive_cell,
                         tags=np.arange(len(symbols)),
                         **kwargs)
-        if save_raw_labels:
+        if raw_labels is not None:
             raw_labels = np.array(raw_labels)[atoms.get_tags()]
 
     else:
@@ -442,7 +442,7 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
             atoms.set_masses(masses)
 
 
-    if save_raw_labels:
+    if raw_labels is not None:
         atoms.new_array('cif_site_labels', raw_labels)
 
     return atoms
