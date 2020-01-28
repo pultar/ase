@@ -11,16 +11,16 @@ def check_fractional_occupancies(atoms):
     assert atoms.info['spacegroup_kinds']
 
     occupancies = atoms.info['occupancy']
-    tags = atoms.info['spacegroup_kinds']
+    kinds = atoms.info['spacegroup_kinds']
     for a in atoms:
         if a.symbol == 'Na':
-            assert len(occupancies[tags[a.index]]) == 2
-            assert occupancies[tags[a.index]]['K'] == 0.25
-            assert occupancies[tags[a.index]]['Na'] == 0.75
+            assert len(occupancies[kinds[a.index]]) == 2
+            assert occupancies[kinds[a.index]]['K'] == 0.25
+            assert occupancies[kinds[a.index]]['Na'] == 0.75
         else:
-            assert len(occupancies[tags[a.index]]) == 1
+            assert len(occupancies[kinds[a.index]]) == 1
         if a.symbol == 'Cl':
-            assert occupancies[tags[a.index]]['Cl'] == 0.3
+            assert occupancies[kinds[a.index]]['Cl'] == 0.3
 
 content = u"""
 data_1
