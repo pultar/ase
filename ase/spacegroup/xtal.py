@@ -22,7 +22,7 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
             cell=None, cellpar=None,
             ab_normal=(0, 0, 1), a_direction=None, size=(1, 1, 1),
             onduplicates='warn', symprec=0.001,
-            pbc=True, primitive_cell=False, **kwargs):
+            pbc=True, primitive_cell=False, tags=None, **kwargs):
     """Create an Atoms instance for a conventional unit cell of a
     space group.
 
@@ -78,6 +78,11 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
     primitive_cell : bool
         Whether to return the primitive instead of the conventional
         unit cell.
+    tags: list of int
+        Special purpose tags. These will be properly reordered so that they
+        preserve the association with the symbols as they are being passed to
+        this function. They will be ignored if occupancies are defined.
+        Default is None.
 
     Keyword arguments:
 
@@ -152,9 +157,13 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
 
     if occupancies is None:
         symbols = [symbols[i] for i in kinds]
+        tags = [tags[i] for i in kinds]
     else:
+        tags = None # Can't track them if there's occupancies...
         # make sure that we put the dominant species there
-        symbols = [sorted(occupancies_dict[i].items(), key=lambda x : x[1])[-1][0] for i in kinds]
+        symbols = [sorted(occupancies_dict[i].items(), 
+                          key=lambda x : x[1])[-1][0] 
+                   for i in kinds]
 
     if cell is None:
         cell = cellpar_to_cell(cellpar, ab_normal, a_direction)
@@ -179,6 +188,7 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
                       cell=cell,
                       pbc=pbc,
                       masses=masses,
+                      tags=tags,
                       **kwargs)
 
     #  if all occupancies are 1, no partial occupancy present

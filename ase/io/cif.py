@@ -238,7 +238,8 @@ def parse_cif_pycodcif(fileobj):
 
 
 def tags2atoms(tags, store_tags=False, primitive_cell=False,
-               subtrans_included=True, fractional_occupancies=True):
+               subtrans_included=True, fractional_occupancies=True, 
+               save_raw_labels=False):
     """Returns an Atoms object from a cif tags dictionary.  See read_cif()
     for a description of the arguments."""
     if primitive_cell and subtrans_included:
@@ -289,6 +290,11 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
         m = re.search(r'([A-Z][a-z]?)', s)
         symbol = m.group(0)
         symbols.append(symbol)
+
+    if save_raw_labels:
+        raw_labels = tags.get('_atom_site_label', None)
+    else:
+        raw_labels = None
 
     # Symmetry specification, see
     # http://www.iucr.org/resources/cif/dictionaries/cif_sym for a
@@ -414,7 +420,11 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
                         occupancies=occupancies,
                         setting=setting,
                         primitive_cell=primitive_cell,
+                        tags=np.arange(len(symbols)),
                         **kwargs)
+        if save_raw_labels:
+            raw_labels = np.array(raw_labels)[atoms.get_tags()]
+
     else:
         atoms = Atoms(symbols, positions=positions,
                       info=kwargs.get('info', None))
@@ -431,12 +441,16 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
             masses[deuterium] = 2.01355
             atoms.set_masses(masses)
 
+
+    if save_raw_labels:
+        atoms.new_array('cif_site_labels', raw_labels)
+
     return atoms
 
 
 def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
              subtrans_included=True, fractional_occupancies=True,
-             reader='ase'):
+             reader='ase', save_raw_labels=False):
     """Read Atoms object from CIF file. *index* specifies the data
     block number or name (if string) to return.
 
@@ -464,6 +478,10 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     occupancies, the atom's chemical symbol will be that of the most dominant
     species.
 
+    If *save_raw_labels* is true, the resulting atoms object will preserve any
+    _atom_site_label information present in the CIF fiel in an appropriate 
+    cif_site_labels array.
+
     String *reader* is used to select CIF reader. Value `ase` selects
     built-in CIF reader (default), while `pycodcif` selects CIF reader based
     on `pycodcif` package.
@@ -475,7 +493,8 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
         try:
             atoms = tags2atoms(tags, store_tags, primitive_cell,
                                subtrans_included,
-                               fractional_occupancies=fractional_occupancies)
+                               fractional_occupancies=fractional_occupancies,
+                               save_raw_labels=save_raw_labels)
             images.append(atoms)
         except KeyError:
             pass
