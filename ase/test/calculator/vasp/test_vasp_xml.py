@@ -39,7 +39,7 @@ def test_main(factory, atoms_co):
 
     # check that parsing of vasprun.xml file works
     conf = read('vasprun.xml')
-    assert conf.calc.parameters['kpoints_generation']
+    assert np.allclose(conf.calc.ibz_kpts[0], [0, 0, 0])
     assert conf.calc.parameters['sigma'] == 1.0
     assert conf.calc.parameters['ialgo'] == 68
     assert energy - conf.get_potential_energy() == 0.0
