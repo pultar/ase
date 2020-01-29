@@ -167,7 +167,9 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
     else:
         info['unit_cell'] = 'conventional'
 
-
+    if kinds:
+        info['spacegroup_kinds'] = kinds
+        
     if 'info' in kwargs:
         info.update(kwargs['info'])
 
@@ -182,13 +184,6 @@ def crystal(symbols=None, basis=None, occupancies=None, spacegroup=1, setting=1,
                       pbc=pbc,
                       masses=masses,
                       **kwargs)
-
-    #  if all occupancies are 1, no partial occupancy present
-    if occupancies:
-        if not all([occ == 1 for occ in occupancies]):
-            # use tags to identify sites, and in particular the occupancy
-            atoms.set_tags(kinds)
-
 
     if isinstance(basis, ase.Atoms):
         for name in basis.arrays:
