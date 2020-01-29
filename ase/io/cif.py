@@ -420,7 +420,6 @@ def tags2atoms(tags, store_tags=False, primitive_cell=False,
                         occupancies=occupancies,
                         setting=setting,
                         primitive_cell=primitive_cell,
-                        tags=np.arange(len(symbols)),
                         **kwargs)
         if raw_labels is not None:
             raw_labels = np.array(raw_labels)[atoms.get_tags()]
