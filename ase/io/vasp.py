@@ -327,7 +327,7 @@ def read_vasp_xdatcar(filename='XDATCAR', index=-1):
         return images[index]
 
 
-def __get_xml_parameter(par):
+def __get_xml_parameter(par):  # noqa: N802
     """An auxiliary function that enables convenient extraction of
     parameter values from a vasprun.xml file with proper type
     handling.
@@ -477,6 +477,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         # e_0_energy - e_fr_energy from calculation/scstep/energy, then
         # apply that correction to e_fr_energy from calculation/energy.
         lastscf = step.findall('scstep/energy')[-1]
+
         dipoles = step.findall('scstep/dipole')
         if dipoles:
             lastdipole = dipoles[-1]
