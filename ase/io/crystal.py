@@ -1,24 +1,33 @@
+from typing import Dict, List, Union, Tuple
 import numbers
 import numpy as np
-from ase.utils import basestring
 from ase.atoms import Atoms
+from ase.cell import Cell
+from ase.io.jsonio import write_json
 import ase.spacegroup
 
+SymmetryDataset = Dict[str, Union[int, str, np.narray, List[str]]]
 
-def write_crystal(filename, atoms, symmetry=None,
-                  refine=False, tolerance=1e-6,
-                  asymmetric=False):
+
+def write_crystal(filename: str,
+                  atoms: Atoms,
+                  symmetry: Union[bool, int] = None,
+                  idealize: bool = False,
+                  tolerance: float = 1e-6,
+                  asymmetric: bool = False,
+                  write_transformation: bool = True) -> None:
     """Method to write atom structure in crystal format
        (fort.34 format)
 
     Parameters
     ----------
 
-    filename: str
+    filename: output filename. Typically for CRYSTAL the extension will be .gui
+        or the file is named "fort.34".
 
-    atoms: ase.atoms.Atoms
+    atoms: structure
 
-    symmetry: (bool, int or None)
+    symmetry:
 
         The 'symmetry' option may be used to include symmetry operations. If
         True, the spacegroup is detected using spglib according to 'tolerance'
@@ -28,27 +37,37 @@ def write_crystal(filename, atoms, symmetry=None,
         is equivalent to `True` for systems with 3D periodicity, and `False`
         for others. (Wallpaper and frieze groups are not yet supported.)
 
-    refine: bool
+        If symmetry is applied, the structure written to file will be
+        rotated/translated as appropriate to a high-symmetry setting consistent
+        with the symmetry operations. See write_transformation to write data
+        allowing this operation to be reversed when reading output structures.
 
-        The 'refine' option may be used to symmetrise the structure using
-        spglib. This will always target the spacegroup detected using
-        'tolerance'.  It is strongly recommended to use this when creating a
-        structure from other inputs as CRYSTAL only looks a small distance for
-        redundant atoms when interpreting the fort.34 file.
-
-    tolerance: float
+    tolerance:
 
         The 'tolerance' option is passed to spglib as a distance threshold (in
         Angstrom) to determine the symmetry of the system.
 
-    asymmetric: bool
+    idealize:
+        The 'idealize' option may be used to symmetrise the structure using
+        spglib. This will always target the spacegroup specified with
+        *symmetry* or detected with *tolerance*.  It is strongly recommended to
+        use this when creating a structure from other inputs as CRYSTAL only
+        looks a small distance for redundant atoms when interpreting the
+        fort.34 file.
+
+    asymmetric:
 
         write only a minimal basis of atoms (the "asymmetric unit cell"), to be
         expanded to the full set of atoms by the symmetry operations. Recent
         versions of CRYSTAL will accept either form. Spglib will be used to a)
         identify the spacegroup b) identify equivalent sites in the unit cell.
-        The sites with positive fractional coordinates closest to the origin
-        will then be used.
+
+    write_transformation:
+
+        If True, the rotation and translation operation to a standard
+        high-symmetry cell will be written to the file FILENAME.transform.json
+        to facilitate "undoing" the rotation when reading results, obtaining
+        an object consistent with the initial Atoms.
 
     """
 
@@ -59,13 +78,8 @@ def write_crystal(filename, atoms, symmetry=None,
         else:
             atoms = atoms[0]
 
-    myfile = open(filename, 'w')
-
     pbc = list(atoms.get_pbc())
     ndim = pbc.count(True)
-
-    if refine:
-        atoms = _refine_cell(atoms, tolerance)
 
     if ndim == 0:
         if symmetry is not None and symmetry:
@@ -109,92 +123,61 @@ def write_crystal(filename, atoms, symmetry=None,
         else:
             spg = ase.spacegroup.Spacegroup(1)
 
-    if asymmetric:
-        atoms = _prune_to_asymmetric(atoms, spg, tolerance=tolerance)
+    if spg.no > 1:
+        atoms, symmetry_data = _get_standard_atoms(
+            atoms, spg, write_transformation=write_transformation,
+            tolerance=tolerance, asymmetric=asymmetric, idealize=idealize)
+        rotations = symmetry_data['rotations']
+        translations = symmetry_data['translations']
+    else:
+        rotations = [np.eye(3)]
+        translations = [np.zeros(3)]
 
     # We have already asserted that the non-periodic direction are z
     # in 2D case, z and y in the 1D case. These are marked for CRYSTAL by
     # setting the length equal to 500.
 
-    myfile.write('{dimensions:4d} {centring:4d} {crystaltype:4d}\n'.format(
-        dimensions=ndim,
-        centring=1,
-        crystaltype=1))
+    with open(filename, 'w') as fd:
 
-    for vector, identity, periodic in zip(atoms.cell, np.eye(3), pbc):
-        if periodic:
-            row = list(vector)
+        fd.write('{dimensions:4d} {centring:4d} {crystaltype:4d}\n'.format(
+            dimensions=ndim,
+            centring=1,
+            crystaltype=1))
+
+        for vector, identity, periodic in zip(atoms.cell, np.eye(3), pbc):
+            if periodic:
+                row = list(vector)
+            else:
+                row = list(identity * 500.)
+            fd.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
+
+        # Convert symmetry operations to Cartesian coordinates before writing
+        if atoms.cell.T.any():
+            cart_vectors = atoms.cell.T
+            inv_cart_vectors = np.linalg.inv(cart_vectors)
         else:
-            row = list(identity * 500.)
-        myfile.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
+            # use identity matrix if no unit cell
+            cart_vectors = inv_cart_vectors = np.eye(3)
 
-    # Convert symmetry operations to Cartesian coordinates before writing
-    if atoms.cell.T.any():
-        cart_vectors = atoms.cell.T
-        inv_cart_vectors = np.linalg.inv(cart_vectors)
-    else:
-        cart_vectors = inv_cart_vectors = np.eye(3)  # use identity if no cell
+        fd.write('{0:5d}\n'.format(len(rotations)))
+        for rotation, translation in zip(rotations, translations):
+            rotation = cart_vectors.dot(rotation.dot(inv_cart_vectors))
+            translation = cart_vectors.dot(translation)
 
-    myfile.write('{0:5d}\n'.format(len(spg.get_symop())))
-    for rotation, translation in spg.get_symop():
-        rotation = cart_vectors.dot(rotation.dot(inv_cart_vectors))
-        translation = cart_vectors.dot(translation)
+            for row in rotation:
+                fd.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
+            fd.write(
+                '{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*translation))
 
-        for row in rotation:
-            myfile.write('{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*row))
-        myfile.write(
-            '{0:-20.12E} {1:-20.12E} {2:-20.12E}\n'.format(*translation))
-
-    myfile.write('{0:5d}\n'.format(len(atoms)))
-    for z, tag, position in zip(atoms.get_atomic_numbers(),
-                                atoms.get_tags(),
-                                atoms.get_positions()):
-        if not isinstance(tag, numbers.Integral):
-            raise ValueError("Non-integer tag encountered. Accepted values are"
-                             " 100, 200, 300...")
-        myfile.write(
-            '{0:5d} {1:-17.12f} {2:-17.12f} {3:-17.12f}\n'.format(z + tag,
-                                                                  *position))
-
-    if isinstance(filename, basestring):
-        myfile.close()
-
-
-def _prune_to_asymmetric(atoms, spg, tolerance=1e-6):
-    """Remove symmetry-equivalent atoms to leave a minimimal basis
-
-    Atoms are grouped by chemical symbols and tags, and in each group redundant
-    sites are removed according to the symmetry operations of the spacegroup
-
-    Parameters
-    ----------
-
-    atoms: ase.atoms.Atoms
-    spg: ase.spacegroup.Spacegroup
-
-    Returns
-    -------
-
-    ase.atoms.Atoms
-
-    """
-    asym_atoms = []
-    elements = sorted(list(set(atoms.get_chemical_symbols())))
-    for element in elements:
-        el_sites = (np.array(atoms.get_chemical_symbols(), dtype=np.string_)
-                    == np.string_(element))
-
-        tags = sorted(list(set(atoms.get_tags()[el_sites])))
-        for tag in tags:
-            tag_sites = (atoms.get_tags() == tag)
-            scaled_positions = atoms.get_scaled_positions()[
-                np.logical_and(el_sites, tag_sites)]
-            _, mask = spg.unique_sites(scaled_positions,
-                                       symprec=tolerance,
-                                       output_mask=True)
-            asym_atoms += list(atoms[np.logical_and(el_sites,
-                                                    tag_sites)][mask])
-    return Atoms(asym_atoms, cell=atoms.cell, pbc=atoms.pbc)
+        fd.write('{0:5d}\n'.format(len(atoms)))
+        for z, tag, position in zip(atoms.get_atomic_numbers(),
+                                    atoms.get_tags(),
+                                    atoms.get_positions()):
+            if not isinstance(tag, numbers.Integral):
+                raise ValueError("Non-integer tag encountered. Accepted values"
+                                 " are 100, 200, 300...")
+            fd.write('{0:5d} {1:-17.12f} {2:-17.12f} '
+                     '{3:-17.12f}\n'.format(z + tag, *position))
 
 
 def read_crystal(filename):
@@ -251,15 +234,91 @@ def read_crystal(filename):
     return atoms
 
 
-def _refine_cell(atoms, tolerance, primitive=True):
-    """Use spglib to tune structure for symmetry at high precision"""
+def _get_standard_atoms(atoms: Atoms,
+                        spg: ase.spacegroup.Spacegroup,
+                        tolerance: float,
+                        filename: str,
+                        write_transformation: bool = True,
+                        asymmetric: bool = False,
+                        idealize: bool = False
+                        ) -> Tuple[Atoms, SymmetryDataset]:
+    """Set atoms into standard position/orientation for spacegroup
+
+    Optionally write a file with transformation data
+
+    Args:
+        atoms: input structure
+        spg: spacegroup with desired symmetry operations
+        tolerance: distance tolerance used when mapping spacegroup to structure
+        filename: name (without symmetry.json extension) for transformation
+            data. Conventionally this is equal to the output structure file for
+            CRYSTAL, e.g. fort.34
+        write_transformation: write the symmetry data to json file so that an
+            Atoms object can be recovered in the original orientation.
+        asymmetric: Omit equivalent atoms, leaving a minimal asymmetric unit.
+        idealize: Snap atoms to high-symmetry positions in standard cell
+
+    Returns:
+        transformed copy of atoms
+
+    """
     try:
         import spglib
     except ImportError:
-        raise ImportError('Could not import spglib; required if writing '
-                          'CRYSTAL fort.34 file with "refine=True".')
+        raise ImportError("The spglib library is required for symmetry "
+                          "analysis when writing CRYSTAL input files")
 
-    cell, positions, numbers = spglib.standardize_cell(atoms,
-                                                       symprec=tolerance,
-                                                       to_primitive=primitive)
-    return Atoms(numbers, scaled_positions=positions, cell=cell)
+    spglib_cell = (atoms.cell, atoms.get_scaled_positions(), atoms.numbers)
+    # spglib prefers Hall number to int tables number; Hall numbers are a
+    # larger set that specifies setting more exactly than int table numbers.
+    # However, we expect ASE users to be more familiar with int table numbers
+    # so this is what users are allowed to input.  Here we ask spglib for a
+    # Hall number compatible with the symmetry data from our ASE spacegroup.
+    # This might lead to unnecessary changes in orientation/setting, but
+    # those can be undone with the other transformation to standard setting
+    hall_number = spglib.get_hall_number_from_symmetry(*zip(*spg.get_symop()))
+    symmetry_data = spglib.get_symmetry_dataset(spglib_cell,
+                                                symprec=tolerance,
+                                                hall_number=hall_number)
+    if symmetry_data is None:
+        raise Exception("Could not obtain symmetry data for spacegroup {}"
+                        "(Hall number {}) with tolerance {}.".format(
+                            spg.no, hall_number, tolerance))
+    if _is_supercell(symmetry_data):
+        raise ValueError("Cannot write CRYSTAL symmetry operations for a "
+                         "supercell")
+
+    if idealize:
+        assert symmetry_data['numbers'] == atoms.numbers
+        new_cell = symmetry_data['std_lattice'],
+        new_scaled_positions = symmetry_data['std_positions']
+
+    else:
+        # From spglib docs: (a_s b_s c_s) = (a b c) P^-1
+        # We store cell with lattice vectors as rows, so use transpose to get
+        # in and out of column format
+        p_matrix = symmetry_data['transformation_matrix']
+        new_cell = atoms.cell.T.dot(np.linalg.inv(p_matrix)).T
+        # x_s = P_x + p (mod 1)
+        new_scaled_positions = ([p_matrix.dot(scaled_position[:, np.newaxis])
+                                 for scaled_position
+                                 in atoms.get_scaled_positions()]
+                                + symmetry_data['origin_shift'])
+
+    new_atoms = atoms.copy()
+    new_atoms.cell(new_cell)
+    new_atoms.set_scaled_positions(new_scaled_positions)
+
+    if asymmetric:
+        new_atoms = new_atoms[list(set(symmetry_data['equivalent_atoms']))]
+
+    if write_transformation:
+        transformation = {key: symmetry_data[key] for key in
+                          ('transformation_matrix', 'origin_shift')}
+        write_json(filename + '.transform.json', transformation)
+
+    return new_atoms
+
+
+def _is_supercell(symmetry_data, tol=1e-3):
+    return Cell(symmetry_data['transformation_matrix']).volume > (1 + tol)
