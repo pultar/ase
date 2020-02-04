@@ -124,23 +124,27 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     # This is not working due to the UnitCellFilter method.
 
     # Set up standard parameters to openmx keyword
-    keywords['scf_maxiter'] = parameters.get('maxiter')
-    keywords['scf_xctype'] = get_xc(parameters.get('xc'))
-    keywords['scf_energycutoff'] = parameters.get('energy_cutoff') / Ry
-    keywords['scf_criterion'] = parameters.get('convergence') / Ha
-    keywords['scf_kgrid'] = get_scf_kgrid(
-                                        kpts=parameters.get('kpts'),
-                                        scf_kgrid=parameters.get('scf_kgrid'),
-                                        atoms=atoms)
+    par = parameters  # To compacts code
+    keywords['scf_maxiter'] = par.get('maxiter', par.get('scf_maxiter'))
+    keywords['scf_xctype'] = get_xc(par.get('xc'), par.get('scf_xctype'))
+    keywords['scf_energycutoff'] = par.get('energy_cutoff' / Ry,  # eV to Ry
+                                           par.get('scf_energycutoff'))
+    keywords['scf_criterion'] = par.get('convergence' / Ha,  # eV to Ha
+                                        par.get('scf_criterion'))
+    keywords['scf_kgrid'] = get_scf_kgrid(kpts=par.get('kpts'),
+                                          scf_kgrid=par.get('scf_kgrid'),
+                                          atoms=atoms)
     keywords['scf_eigenvaluesolver'] = get_eigensolver(atoms, parameters)
     keywords['scf_spinpolarization'] = get_spinpol(atoms, parameters)
-    keywords['scf_external_fields'] = parameters.get('external')
-    keywords['scf_mixing_type'] = parameters.get('mixer')
-    keywords['scf_electronic_temperature'] = parameters.get('smearing')
-    keywords['scf_system_charge'] = parameters.get('charge')
+    keywords['scf_external_fields'] = par.get('external',
+                                              par.get('scf_external_fields'))
+    keywords['scf_mixing_type'] = par.get('mixer', par.get('scf_mixing_type'))
+    elc_tmp, sys_chr = 'scf_electronic_temperature', 'scf_system_charge'
+    keywords[elc_tmp] = par.get('smearing', par.get(elc_tmp))
+    keywords['scf_system_charge'] = par.get('charge', par.get(sys_chr))
     if parameters.get('band_kpath') is not None:
         keywords['band_dispersion'] = True
-    keywords['band_nkpath'] = parameters.get('band_kpath')
+    keywords['band_nkpath'] = par.get('band_kpath', par.get('band_nkpath'))
     if keywords['band_nkpath'] is not None:
         keywords['band_nkpath'] = len(keywords['band_nkpath'])
 
@@ -163,14 +167,17 @@ def get_species(symbols):
     return species
 
 
-def get_xc(xc):
+def get_xc(xc, scf_xctype):
+    xc, scf_xctype = xc.upper(), scf_xctype.upper()
+    if xc is None:
+        return scf_xctype
     if xc in ['PBE', 'GGA', 'GGA-PBE']:
         return 'GGA-PBE'
     elif xc in ['LDA']:
         return 'LDA'
     elif xc in ['CA', 'PW']:
         return 'LSDA-' + xc
-    elif xc in ['LSDA','LSDA-CA']:
+    elif xc in ['LSDA', 'LSDA-CA']:
         return 'LSDA-CA'
     elif xc in ['LSDA-PW']:
         return 'LSDA-PW'
@@ -192,12 +199,8 @@ def get_scf_kgrid(kpts=None, scf_kgrid=None, atoms=None):
         return kpts
     elif isinstance(kpts, float) or isinstance(kpts, int):
         return tuple(kpts2sizeandoffsets(atoms=atoms, density=kpts)[0])
-    elif scf_kgrid is not None:
-        assert len(scf_kgrid) == 3
-        return scf_kgrid
     else:
-        # kpts default value
-        return (4, 4, 4)
+        return scf_kgrid
 
 
 def get_definition_of_atomic_species(atoms, parameters):
@@ -226,15 +229,19 @@ def get_definition_of_atomic_species(atoms, parameters):
     """
     if parameters.get('definition_of_atomic_species') is not None:
         return parameters['definition_of_atomic_species']
+
     definition_of_atomic_species = []
-    xc = parameters.get('scf_xctype')
-    xc = parameters.get('xc')
+    # 'xc' overrides 'scf_xctype'
+    xc = get_xc(parameters.get('xc'), parameters.get('scf_xctype'))
+    # Check 'xc' is valid
+    assert xc.upper() in param.OpenMXParameters().allowed_xc
     chem = atoms.get_chemical_symbols()
     species = get_species(chem)
+    year = get_pseudo_potential_generation_year(parameters)
     for element in species:
         rad_orb = get_cutoff_radius_and_orbital(element=element)
-        potential = get_pseudo_potential_suffix(element=element, xc=xc)
-        definition_of_atomic_species.append([element, rad_orb, potential])
+        suffix = get_pseudo_potential_suffix(element=element, xc=xc, year=year)
+        definition_of_atomic_species.append([element, rad_orb, suffix])
     # Put the same orbital and radii with chemical symbol.
     wannier_projectors = parameters.get('definition_of_wannier_projectors', [])
     for i, projector in enumerate(wannier_projectors):
@@ -242,6 +249,25 @@ def get_definition_of_atomic_species(atoms, parameters):
         full_projector[0] = projector
         definition_of_atomic_species.append(full_projector)
     return definition_of_atomic_species
+
+
+def get_pseudo_potential_generation_year(parameters):
+    """
+    It seems there is no version or potential year checker in openmx, thus we
+    implemented one. It parse the pesudo potential path variable such as
+    `~/PATH/TO/OPENMX/openmx3.9/DFT_DATA19/` or `.../openmx3.8/DFT_DATA13/`.
+    By spliting this string, we harness the number of the year that generated
+    such pseudo potential path.
+    """
+    if parameters.get('dft_data_year') is not None:
+        return str(parameters.get('dft_data_year'))
+    path = parameters.get('data_path', os.get_environ('OPENMX_DFT_DATA_PATH'))
+    year = path.split('DATA_PATH')[1][:2]
+    if year is not None:
+        return year
+    else:
+        raise ValueError('DFT_DATA year can not be found. Please specify '
+                         '`dft_data_year` as year of pseudo potential relesed')
 
 
 def get_cutoff_radius_and_orbital(element=None, orbital=None):
@@ -264,19 +290,20 @@ def get_cutoff_radius_and_orbital(element=None, orbital=None):
     return orbital
 
 
-def get_pseudo_potential_suffix(element=None, xc=None):
+def get_pseudo_potential_suffix(element=None, xc=None, year='13'):
     """
     For a given element, returns the string specifying pseudo potential suffix.
     For example,
         'Si'   ->   'Si_CA13'
-    We used 2013 version of pseudo potential
+    or
+        'Si'   ->   'Si_CA19'
+    depending on pseudo potential generation year
     """
     from ase.calculators.openmx import default_settings
     default_dictionary = default_settings.default_dictionary
     pseudo_potential_suffix = element
-    xc_label = {'PBE': 'PBE', 'GGA': 'PBE', 'GGA-PBE': 'PBE'}
     suffix = default_dictionary[element]['pseudo-potential suffix']
-    pseudo_potential_suffix += '_' + xc_label.get(xc, 'CA')  + '13' + suffix
+    pseudo_potential_suffix += '_' + xc + year + suffix
     return pseudo_potential_suffix
 
 
