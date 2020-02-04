@@ -187,16 +187,16 @@ def get_eigensolver(atoms, parameters):
 
 
 def get_scf_kgrid(kpts=None, scf_kgrid=None, atoms=None):
-    if isinstance(kpts, tuple) or isinstance(kpts, list):
-        if len(kpts) == 3 and isinstance(kpts[0], int):
-            return kpts
-        elif scf_kgrid is not None:
-            return scf_kgrid
-        else:
-            return (4, 4, 4)
+    if isinstance(kpts, (tuple, list, np.ndarray))\
+                             and len(kpts) == 3 and isinstance(kpts[0], int):
+        return kpts
     elif isinstance(kpts, float) or isinstance(kpts, int):
         return tuple(kpts2sizeandoffsets(atoms=atoms, density=kpts)[0])
+    elif scf_kgrid is not None:
+        assert len(scf_kgrid) == 3
+        return scf_kgrid
     else:
+        # kpts default value
         return (4, 4, 4)
 
 
