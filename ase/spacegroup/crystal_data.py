@@ -54,20 +54,26 @@ for i, (start, pg) in enumerate(_point_group_ranges[:-1]):
         _point_groups.append(pg)
 
 
-def get_bravais_class(sg):
+def validate_space_group(sg):
     sg = int(sg)
     if sg < 1:
         raise ValueError('Spacegroup must be positive, but is {}'.format(sg))
     if sg > 230:
         raise ValueError('Bad spacegroup', sg)
+
+
+def get_bravais_class(sg):
+    sg = validate_space_group(sg)
     pearson_symbol = _lattice_system[sg] + _lattice_centering[sg]
     return bravais_classes[pearson_symbol]
 
 
 def get_point_group(sg):
-    sg = int(sg)
-    if sg < 1:
-        raise ValueError('Spacegroup must be positive, but is {}'.format(sg))
-    if sg > 230:
-        raise ValueError('Bad spacegroup', sg)
+    sg = validate_space_group(sg)
     return _point_groups[sg]
+
+
+def polar_space_group(sg):
+    sg = validate_space_group(sg)
+    pg = get_point_group(sg)
+    return pg in ['1', '2', 'm', 'mm2', '4', '4mm', '3', '3m', '6', '6mm']
