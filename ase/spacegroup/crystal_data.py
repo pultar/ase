@@ -60,6 +60,7 @@ def validate_space_group(sg):
         raise ValueError('Spacegroup must be positive, but is {}'.format(sg))
     if sg > 230:
         raise ValueError('Bad spacegroup', sg)
+    return sg
 
 
 def get_bravais_class(sg):
