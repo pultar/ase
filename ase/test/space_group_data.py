@@ -8,11 +8,13 @@ import ase.lattice
 functions = [get_bravais_class, get_point_group, polar_space_group]
 
 
-@pytest.mark.parametrize("func,answer",
-                         zip(functions,
-                             [ase.lattice.FCC, '4/m -3 2/m', False]))
-def test_valid_spacegroup(func, answer):
-    assert func(225) == answer
+@pytest.mark.parametrize("sg,lattice,point_group,polar",
+                         [[100, ase.lattice.TET, '4mm', True],
+                          [225, ase.lattice.FCC, '4/m -3 2/m', False]])
+def test_valid_spacegroup(sg, lattice, point_group, polar):
+    assert get_bravais_class(sg) == lattice
+    assert get_point_group(sg) == point_group
+    assert polar_space_group(sg) == polar
 
 
 @pytest.mark.parametrize("func", functions)
