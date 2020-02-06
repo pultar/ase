@@ -284,12 +284,3 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
     rk_space_params()
     mix_tol_params()
     mix_tol_em_params()
-
-
-if __name__ == '__main__':
-    from ase.build import bulk, make_supercell
-
-    Atoms = bulk('Al', 'bcc', a=3.624, cubic=True)
-    Atoms = make_supercell(Atoms, ([[4, 0, 0], [0, 4, 0], [0, 0, 4]]))
-    Atoms[1].symbol = 'Fe'
-    write_input_parameters_file(Atoms)
