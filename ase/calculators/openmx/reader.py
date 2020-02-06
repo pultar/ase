@@ -358,8 +358,7 @@ def read_band_file(filename=None):
 
 def read_electron_valency(filename='H_CA13'):
     array = []
-    with open(os.path.join(os.environ['OPENMX_DFT_DATA_PATH'],
-                           'VPS/' + filename + '.vps'), 'r') as f:
+    with open(filename, 'r') as f:
         array = f.readlines()
         f.close()
     required_line = ''
@@ -737,8 +736,11 @@ def get_results(out_data=None, log_data=None, restart_data=None,
     return results
 
 
-def get_file_name(extension='.out', filename=None):
+def get_file_name(extension='.out', filename=None, absolute_directory=True):
     directory, prefix = os.path.split(filename)
     if directory == '':
         directory = os.curdir
-    return os.path.abspath(directory + '/' + prefix + extension)
+    if absolute_directory:
+        return os.path.abspath(directory + '/' + prefix + extension)
+    else:
+        return os.path.basename(directory + '/' + prefix + extension)
