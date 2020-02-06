@@ -19,7 +19,6 @@ functional theories.
 """
 from ase.calculators.calculator import Parameters
 from ase.calculators.openmx.default_settings import default_dictionary
-from ase.units import Ha, Ry
 
 
 # Keys that have length 3
