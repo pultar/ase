@@ -1,9 +1,10 @@
 """ Class for handling several simultaneous jobs.
     The class has been tested on linux and Mac OS X.
 """
-from subprocess import Popen, PIPE
 import os
 import time
+from subprocess import Popen, PIPE
+
 from ase.io import write, read
 
 

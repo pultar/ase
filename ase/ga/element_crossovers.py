@@ -3,8 +3,8 @@ atoms objects.
 
 """
 import random
-import numpy as np
 
+import numpy as np
 from ase.ga.offspring_creator import OffspringCreator
 
 

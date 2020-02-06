@@ -20,13 +20,12 @@ import os
 import sqlite3
 import sys
 
-import numpy as np
-
 import ase.io.jsonio
+import numpy as np
 from ase.data import atomic_numbers
-from ase.db.row import AtomsRow
 from ase.db.core import (Database, ops, now, lock, invop, parse_selection,
                          object_to_bytes, bytes_to_object)
+from ase.db.row import AtomsRow
 from ase.parallel import parallel_function
 
 VERSION = 9

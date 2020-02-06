@@ -1,5 +1,6 @@
 """ Methods for generating new random starting candidates. """
 from random import shuffle
+
 import numpy as np
 from ase import Atoms
 from ase.ga.utilities import get_mic_distance

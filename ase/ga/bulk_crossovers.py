@@ -4,14 +4,15 @@ please consider citing:
     M. Van den Bossche, Henrik Gronbeck, B. Hammer,
     J. Chem. Theory Comput., doi:10.1021/acs.jctc.8b00039
 in addition to the papers mentioned in the docstrings."""
-import numpy as np
 from random import random, randrange
+
+import numpy as np
 from ase import Atoms
-from ase.geometry import find_mic
 from ase.build import niggli_reduce
+from ase.ga.offspring_creator import OffspringCreator
 from ase.ga.utilities import (atoms_too_close, atoms_too_close_two_sets,
                               gather_atoms_by_tag)
-from ase.ga.offspring_creator import OffspringCreator
+from ase.geometry import find_mic
 
 
 class Positions(object):

@@ -2,13 +2,14 @@
 Allowed compositions are respected.
 Identical indexing of the slabs are assumed for the cut-splice operator."""
 import random
-from operator import itemgetter
-from collections import Counter
 from itertools import permutations
-import numpy as np
+from operator import itemgetter
 
-from ase.ga.offspring_creator import OffspringCreator
+import numpy as np
 from ase.ga.element_mutations import get_row_column
+from ase.ga.offspring_creator import OffspringCreator
+
+from collections import Counter
 
 try:
     import spglib

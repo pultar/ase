@@ -2,13 +2,14 @@
 Deaven and Ho.
 
 """
+from math import pi, cos, sin
+from random import random, randrange
+
 import numpy as np
 from ase import Atoms
-from random import random, randrange
+from ase.ga.offspring_creator import OffspringCreator
 from ase.ga.utilities import atoms_too_close
 from ase.ga.utilities import atoms_too_close_two_sets
-from ase.ga.offspring_creator import OffspringCreator
-from math import pi, cos, sin
 
 
 class Position(object):

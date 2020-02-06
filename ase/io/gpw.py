@@ -1,9 +1,9 @@
+import ase.io.ulm as ulm
 from ase import Atoms
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
-from ase.units import Bohr, Hartree
-import ase.io.ulm as ulm
 from ase.io.trajectory import read_atoms
+from ase.units import Bohr, Hartree
 
 
 def read_gpw(filename):

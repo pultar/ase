@@ -22,20 +22,19 @@ or this::
 
 """
 
-import io
 import sys
-from typing import Dict, Any
 from pathlib import Path
-
-from flask import Flask, render_template, request
+from typing import Dict, Any
 
 from ase.db import connect
 from ase.db.core import Database
-from ase.formula import Formula
-from ase.db.web import create_key_descriptions, Session
 from ase.db.row import row2dct, AtomsRow
 from ase.db.table import all_columns
+from ase.db.web import create_key_descriptions, Session
+from ase.formula import Formula
+from flask import Flask, render_template, request
 
+import io
 
 root = Path(__file__).parent.parent.parent
 app = Flask(__name__, template_folder=str(root))

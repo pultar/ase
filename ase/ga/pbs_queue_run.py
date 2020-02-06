@@ -1,9 +1,10 @@
 """ Class for handling interaction with the PBS queuing system."""
-from ase.io import write
 import os
-from ase.io.trajectory import Trajectory
-from subprocess import Popen, PIPE
 import time
+from subprocess import Popen, PIPE
+
+from ase.io import write
+from ase.io.trajectory import Trajectory
 
 
 class PBSQueueRun(object):

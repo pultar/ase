@@ -1,6 +1,5 @@
 import json
 import sys
-from collections import defaultdict
 from random import randint
 
 import ase.io
@@ -9,6 +8,8 @@ from ase.db.core import convert_str_to_int_float_or_str
 from ase.db.row import row2dct
 from ase.db.table import Table, all_columns
 from ase.utils import plural
+
+from collections import defaultdict
 
 
 class CLICommand:

@@ -1,12 +1,13 @@
 """ Various utility methods used troughout the GA. """
-from ase.data import covalent_radii
 import itertools
-import numpy as np
-from ase.io import write, read
+import math
 import os
 import time
-import math
+
+import numpy as np
+from ase.data import covalent_radii
 from ase.ga import get_neighbor_list
+from ase.io import write, read
 from scipy.spatial.distance import cdist
 
 

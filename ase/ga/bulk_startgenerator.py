@@ -5,10 +5,11 @@ useful in your work, please consider citing:
     J. Chem. Theory Comput., doi:10.1021/acs.jctc.8b00039
 in addition to the papers mentioned in the docstrings."""
 from random import shuffle, random, sample
+
 import numpy as np
 from ase import Atoms
-from ase.data import atomic_numbers
 from ase.build import molecule
+from ase.data import atomic_numbers
 from ase.ga.utilities import closest_distances_generator, atoms_too_close
 
 

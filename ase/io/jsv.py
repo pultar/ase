@@ -8,11 +8,10 @@ By Jesper Friis, Jan. 2012
 
 import re
 
-import numpy as np
-
 import ase
-from ase.spacegroup import Spacegroup, crystal
+import numpy as np
 from ase.geometry import cellpar_to_cell, cell_to_cellpar
+from ase.spacegroup import Spacegroup, crystal
 
 
 def read_jsv(f):

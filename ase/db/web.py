@@ -2,10 +2,9 @@
 import re
 from typing import List, Tuple, Dict, Any
 
-from flask import flash
-
 from ase.db.core import default_key_descriptions, Database
 from ase.db.table import Table, all_columns
+from flask import flash
 
 
 class Session:

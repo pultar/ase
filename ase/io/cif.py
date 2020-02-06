@@ -11,14 +11,12 @@ import shlex
 import warnings
 
 import numpy as np
-
 from ase import Atoms
+from ase.data import atomic_numbers, atomic_masses
+from ase.io.cif_unicode import format_unicode, handle_subscripts
 from ase.parallel import paropen
 from ase.spacegroup import crystal
 from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
-from ase.data import atomic_numbers, atomic_masses
-from ase.io.cif_unicode import format_unicode, handle_subscripts
-
 
 # Old conventions:
 old_spacegroup_names = {'Abm2': 'Aem2',

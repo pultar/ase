@@ -1,7 +1,7 @@
 import os
-import numpy as np
 from copy import deepcopy
 
+import numpy as np
 from ase.calculators.calculator import KPoints, kpts2kpts
 
 _special_kws = ['center', 'autosym', 'autoz', 'theory', 'basis', 'xc', 'task',

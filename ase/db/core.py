@@ -9,7 +9,6 @@ from time import time
 from typing import List, Any
 
 import numpy as np
-
 from ase.atoms import Atoms
 from ase.calculators.calculator import all_properties, all_changes
 from ase.data import atomic_numbers
@@ -18,7 +17,6 @@ from ase.formula import Formula
 from ase.io.jsonio import create_ase_object
 from ase.parallel import world, DummyMPI, parallel_function, parallel_generator
 from ase.utils import Lock, PurePath
-
 
 T2000 = 946681200.0  # January 1. 2000
 YEAR = 31557600.0  # 365.25 days

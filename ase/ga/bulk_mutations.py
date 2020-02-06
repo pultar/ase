@@ -6,15 +6,16 @@ please consider citing:
 in addition to the papers mentioned in the docstrings."""
 import inspect
 import json
-import numpy as np
 from random import gauss
-from ase.data import covalent_radii
-from ase.neighborlist import NeighborList
+
+import numpy as np
 from ase.build import niggli_reduce
+from ase.data import covalent_radii
+from ase.ga.bulk_utilities import get_rotation_matrix
 from ase.ga.offspring_creator import OffspringCreator, CombinationMutation
 from ase.ga.utilities import (atoms_too_close, atoms_too_close_two_sets,
                               gather_atoms_by_tag)
-from ase.ga.bulk_utilities import get_rotation_matrix
+from ase.neighborlist import NeighborList
 from scipy.spatial.distance import cdist
 
 
