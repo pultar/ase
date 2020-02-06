@@ -6,7 +6,7 @@ from ase.cell import Cell
 from ase.io.jsonio import write_json
 import ase.spacegroup
 
-SymmetryDataset = Dict[str, Union[int, str, np.narray, List[str]]]
+SymmetryDataset = Dict[str, Union[int, str, np.ndarray, List[str]]]
 
 
 def write_crystal(filename: str,
@@ -125,7 +125,7 @@ def write_crystal(filename: str,
 
     if spg.no > 1:
         atoms, symmetry_data = _get_standard_atoms(
-            atoms, spg, write_transformation=write_transformation,
+            atoms, spg, filename, write_transformation=write_transformation,
             tolerance=tolerance, asymmetric=asymmetric, idealize=idealize)
         rotations = symmetry_data['rotations']
         translations = symmetry_data['translations']
@@ -236,8 +236,8 @@ def read_crystal(filename):
 
 def _get_standard_atoms(atoms: Atoms,
                         spg: ase.spacegroup.Spacegroup,
-                        tolerance: float,
                         filename: str,
+                        tolerance: float = 1e-6,
                         write_transformation: bool = True,
                         asymmetric: bool = False,
                         idealize: bool = False
@@ -284,13 +284,20 @@ def _get_standard_atoms(atoms: Atoms,
         raise Exception("Could not obtain symmetry data for spacegroup {}"
                         "(Hall number {}) with tolerance {}.".format(
                             spg.no, hall_number, tolerance))
+
     if _is_supercell(symmetry_data):
         raise ValueError("Cannot write CRYSTAL symmetry operations for a "
                          "supercell")
+    elif _is_smaller_cell(symmetry_data):
+        raise ValueError("Atoms object is a primitive cell but spglib wants to"
+                         " use symmetry operations for a conventional cell. "
+                         "This breaks the 1-to-1 mapping to transformed cell; "
+                         "please convert your structure to conventional cell "
+                         "to use symmetry operations with CRYSTAL.")
 
     if idealize:
-        assert symmetry_data['numbers'] == atoms.numbers
-        new_cell = symmetry_data['std_lattice'],
+        assert np.all(symmetry_data['std_types'] == atoms.numbers)
+        new_cell = symmetry_data['std_lattice']
         new_scaled_positions = symmetry_data['std_positions']
 
     else:
@@ -301,24 +308,36 @@ def _get_standard_atoms(atoms: Atoms,
         new_cell = atoms.cell.T.dot(np.linalg.inv(p_matrix)).T
         # x_s = P_x + p (mod 1)
         new_scaled_positions = ([p_matrix.dot(scaled_position[:, np.newaxis])
+                                 .flatten()
                                  for scaled_position
                                  in atoms.get_scaled_positions()]
                                 + symmetry_data['origin_shift'])
-
     new_atoms = atoms.copy()
-    new_atoms.cell(new_cell)
+    new_atoms.cell = new_cell
     new_atoms.set_scaled_positions(new_scaled_positions)
-
-    if asymmetric:
-        new_atoms = new_atoms[list(set(symmetry_data['equivalent_atoms']))]
+    new_atoms.wrap()
 
     if write_transformation:
         transformation = {key: symmetry_data[key] for key in
                           ('transformation_matrix', 'origin_shift')}
         write_json(filename + '.transform.json', transformation)
 
-    return new_atoms
+    # Now we need to recalculate the symmetry data to remove the origin shift
+    # from the translation part of symmetry operations.
+    new_spglib_cell = (new_atoms.cell,
+                       new_atoms.get_scaled_positions(),
+                       new_atoms.numbers)
+    updated_symmetry_data = spglib.get_symmetry_dataset(
+        new_spglib_cell, symprec=tolerance, hall_number=hall_number)
+
+    if asymmetric:
+        new_atoms = new_atoms[list(set(symmetry_data['equivalent_atoms']))]
+
+    return (new_atoms, updated_symmetry_data)
 
 
 def _is_supercell(symmetry_data, tol=1e-3):
     return Cell(symmetry_data['transformation_matrix']).volume > (1 + tol)
+
+def _is_smaller_cell(symmetry_data, tol=1e-3):
+    return Cell(symmetry_data['transformation_matrix']).volume < (1 - tol)
