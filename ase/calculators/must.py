@@ -9,33 +9,6 @@ import glob
 import warnings
 
 
-class CpaAtoms:
-    """
-    CPA atoms class for KKR-CPA method.
-    """
-
-    def __init__(self, a, bravais_lattice, cpa_atoms):
-        """
-        a (float) : lattice parameter in Angstrom
-        bravais_lattice (str or array) : bravais lattice vectors
-        cpa_atoms (list): list of dictionaries having key-value pairs as position:(x,y,z) and symbol:occupancy
-        """
-        self.lattice_parameter = a / Bohr  # Bohr Radius
-
-        lattice_structures = {'bcc': np.array([[0.500, 0.500, -0.500],
-                                               [0.500, -0.500, 0.500],
-                                               [-0.500, 0.500, 0.500]]),
-                              'fcc': np.array([[0.500, 0.500, 0.000],
-                                               [0.500, 0.000, 0.500],
-                                               [0.000, 0.500, 0.500]])}
-        if bravais_lattice in lattice_structures.keys():
-            self.lattice = lattice_structures[bravais_lattice]
-
-        else:
-            self.lattice = bravais_lattice
-        self.cpa_atoms = cpa_atoms
-
-
 def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc=1, lmax=3,
                                  print_level=1, ncomp=1, conc=1., mt_radius=0., ws_radius=0,
                                  egrid=(10, -0.4, 0.3), ef=0.7, niter=50, mp=0.1):
@@ -160,15 +133,3 @@ class MuST(FileIOCalculator):
             warnings.warn('SCF Convergence not reached (Rms_pot > ptol)', UserWarning)
 
         self.results['energy'] = read_energy
-
-
-if __name__ == '__main__':
-    from ase.build import bulk
-
-    Atoms = bulk('Al', 'bcc', a=3.624, cubic=True)
-    Atoms[1].symbol = 'Fe'
-    calc = MuST(atoms=Atoms)
-    Atoms.set_calculator(calc)
-    generate_starting_potentials(Atoms, crystal_type=1, a=3.624)
-    energy = calc.get_potential_energy()
-    print(energy)
