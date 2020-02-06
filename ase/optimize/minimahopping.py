@@ -30,7 +30,8 @@ class MinimaHopping:
         'timestep': 1.0,  # fs, timestep for MD simulations
         'optimizer': QuasiNewton,  # local optimizer to use
         'minima_traj': 'minima.traj',  # storage file for minima list
-        'fmax': 0.05}  # eV/A, max force for optimizations
+        'fmax': 0.05,  # eV/A, max force for optimizations
+        'md': VelocityVerlet} # MolecularDynamics class to use
 
     def __init__(self, atoms, **kwargs):
         """Initialize with an ASE atoms object and keyword arguments."""
@@ -314,7 +315,7 @@ class MinimaHopping:
                                          force_temp=True)
         traj = io.Trajectory('md%05i.traj' % self._counter, 'a',
                              self._atoms)
-        dyn = VelocityVerlet(self._atoms, timestep=self._timestep * units.fs)
+        dyn = self._md(self._atoms, timestep=self._timestep * units.fs)
         log = MDLogger(dyn, self._atoms, 'md%05i.log' % self._counter,
                        header=True, stress=False, peratom=False)
         dyn.attach(log, interval=1)
