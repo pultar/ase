@@ -131,17 +131,24 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
         In a situation conflicting ASE standard parameters and OpenMX keywords,
         ASE parameters overrides to OpenMX keywords. While doing so, units are
         converted to OpenMX unit.
-        However, if both parameters and keyword are not given, we put the value
-        in counterparts
+        However, if both parameters and keyword are not given, we fill up that
+        part in suitable manner
+          openmx_keyword : key |  Name of key used in OpenMX
+          keyword : value | value corresponds to openmx_keyword
+          ase_parameter : key | Name of parameter used in ASE
+          parameter : value | value corresponds to ase_parameter
         """
-        if parameters.get(counterparts[openmx_keyword]) is not None:
+        ase_parameter = counterparts[openmx_keyword]
+        keyword = parameters.get(openmx_keyword)
+        parameter = parameters.get(ase_parameter)
+        if parameter is not None:
             # Handles the unit
-            if unit_dict.get(openmx_keyword) is not None:
-                unit = standard_units[unit_dict.get(openmx_keyword)]
+            unit = unit_dict.get(openmx_keyword)
+            if unit is not None:
                 return parameters[counterparts[openmx_keyword]] / unit
-            return parameters.get(counterparts[openmx_keyword])
-        elif parameters.get(openmx_keyword) is not None:
-            return parameters.get(openmx_keyword)
+            return parameter
+        elif keyword is not None:
+            return keyword
         elif 'scf' in openmx_keyword:
             return None
         else:
