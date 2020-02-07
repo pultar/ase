@@ -120,6 +120,12 @@ def read_file(filename, debug=False):
             for key in param.list_bool_keys:
                 if key in line:
                     out_data[get_standard_key(key)] = read_list_bool(line)
+            for key in param.tuple_integer_keys:
+                if key in line:
+                    out_data[get_standard_key(key)] = read_tuple_integer(line)
+            for key in param.tuple_float_keys:
+                if key in line:
+                    out_data[get_standard_key(key)] = read_tuple_float(line)
             for key in param.matrix_keys:
                 if '<'+key in line:
                     out_data[get_standard_key(key)] = read_matrix(line, key, f)
@@ -496,15 +502,14 @@ def read_eigenvalues(line, f, debug=False):
     f.seek(current_line)  # Retrun to the original position
 
     kgrid = read_tuple_integer(line)
-    prind('scf.Kgrid is %d, %d, %d' % kgrid)
-
     line = f.readline()
     line = f.readline()
-    if '1' not in line:  # Non - Gamma point calculation
+    if kgrid != ():
         prind('Non-Gamma point calculation')
+        prind('scf.Kgrid is %d, %d, %d' % kgrid)
         gamma_flag = False
         f.seek(f.tell()+57)
-    else:                        # Gamma point calculation case
+    else:
         prind('Gamma point calculation')
         gamma_flag = True
 
