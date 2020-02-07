@@ -143,7 +143,7 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
         parameter = parameters.get(ase_parameter)
         if parameter is not None:
             # Handles the unit
-            unit = unit_dict.get(openmx_keyword)
+            unit = standard_units[unit_dict.get(openmx_keyword)]
             if unit is not None:
                 return parameters[counterparts[openmx_keyword]] / unit
             return parameter
