@@ -156,7 +156,7 @@ unit_dat_keywords = {
 
 omx_parameter_defaults = dict(
     scf_ngrid=None,
-    scf_kgrid=(4, 4, 4),
+    scf_kgrid=None,
     dos_kgrid=None,
     scf_electric_field=None,
     level_of_stdout=None,
