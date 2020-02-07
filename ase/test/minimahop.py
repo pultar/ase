@@ -3,6 +3,8 @@ from ase.build import fcc111
 from ase.optimize.minimahopping import MinimaHopping
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, Hookean
+from ase.md.nvtberendsen import NVTBerendsen
+from functools import partial
 
 # Make Pt 111 slab with Cu2 adsorbate.
 atoms = fcc111('Pt', (2, 2, 1), vacuum=7., orthogonal=True)
@@ -32,3 +34,8 @@ hop = MinimaHopping(atoms,
 hop(totalsteps=3)
 # Test ability to restart and temperature stopping.
 hop(maxtemp=3000)
+
+# Test specifying a different MD class
+hop = MinimaHopping(atoms,
+                    md=partial(NVTBerendsen, taut=1.0, temperature=300))
+hop(totalsteps=3)
