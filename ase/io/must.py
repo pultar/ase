@@ -86,7 +86,7 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
                                 temperature, val_e_rel, core_e_rel,
                                 potential_type, xc, uniform_grid,
                                 read_mesh, n_egrids, erbot, real_axis_method, real_axis_points,
-                                spin, lmax_T, ndivin, liz_cutoff, k_scheme, kpts, bzsym,
+                                spin, lmax_T, mt_radius, ndivin, liz_cutoff, k_scheme, kpts, bzsym,
                                 mix_algo, mix_quantity, mix_param, etol, ptol,
                                 em_iter, em_scheme, em_mix_param, em_eswitch, em_tm_tol):
     hline = 80 * '='
@@ -211,9 +211,13 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
             for entry in contents:
                 filehandle.write('%s\n' % entry)
 
-    def scattering_theory__params():
+    def scattering_theory_params():
         contents = ['{:^80s}'.format('Scattering Theory-related Parameters'), hline,
                     'Default Lmax-T matrix      ::  ' + str(lmax_T),
+                    'Default Muffin-tin Radius  ::  ' + str(mt_radius),
+                    '   = 0: Using the inscribed sphere radius\n' +
+                    '   = 1: Using the internal muffin-tin radius defined in ChemElementModule\n'+
+                    '   = A specific real value (> 0.0, in atomic units)',
                     'Default No. Rad Points ndivin  :: ' + str(ndivin),
                     '   = 0: Not specified ---------------\n'
                     '   > 0: Speciflied. Note:  0  < r(j)=exp(j*hin) <= rmt, j=1,2,...,ndivin',
@@ -280,7 +284,7 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
     lda_pot_params()
     energy_contour_params()
     magnetism_params()
-    scattering_theory__params()
+    scattering_theory_params()
     rk_space_params()
     mix_tol_params()
     mix_tol_em_params()

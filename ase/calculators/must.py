@@ -70,7 +70,7 @@ class MuST(FileIOCalculator):
                               temperature=0.0, val_e_rel=0, core_e_rel=0,
                               potential_type=0, xc=4, uniform_grid=(64, 64, 64),
                               read_mesh=False, n_egrids=30, erbot=-0.40, real_axis_method=0, real_axis_points=300,
-                              spin=1, lmax_T=3, ndivin=1001, liz_cutoff=4.5, k_scheme=0, kpts=(10, 10, 10), bzsym=1,
+                              spin=1, lmax_T=3, mt_radius=0, ndivin=1001, liz_cutoff=4.5, k_scheme=0, kpts=(10, 10, 10), bzsym=1,
                               mix_algo=2, mix_quantity=1, mix_param=0.1, etol=5e-5, ptol=1e-6,
                               em_iter=80, em_scheme=1, em_mix_param=(0.1, 0.1), em_eswitch=0.04, em_tm_tol=1e-7)
 
@@ -102,6 +102,7 @@ class MuST(FileIOCalculator):
                                     real_axis_points=self.parameters['real_axis_points'],
                                     spin=self.parameters['spin'],
                                     lmax_T=self.parameters['lmax_T'],
+                                    mt_radius=self.parameters['mt_radius'],
                                     ndivin=self.parameters['ndivin'],
                                     liz_cutoff=self.parameters['liz_cutoff'],
                                     k_scheme=self.parameters['k_scheme'],
