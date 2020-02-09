@@ -89,6 +89,17 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
                                 spin, lmax_T, mt_radius, ndivin, liz_cutoff, k_scheme, kpts, bzsym,
                                 mix_algo, mix_quantity, mix_param, etol, ptol,
                                 em_iter, em_scheme, em_mix_param, em_eswitch, em_tm_tol):
+    # Unit Conversions
+    if mt_radius != 0 and mt_radius != 1:
+        mt_radius = mt_radius / Bohr
+
+    liz_cutoff = liz_cutoff / Bohr
+
+    etol = etol / Rydberg
+    ptol = ptol / Rydberg
+    em_eswitch = em_eswitch / Rydberg
+
+    # Header
     hline = 80 * '='
     separator = 18 * ' ' + 3 * ('* * *' + 14 * ' ')
     header = [hline, '{:^80s}'.format('Input Parameter Data File'),
@@ -229,7 +240,7 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
 
     def rk_space_params():
         contents = ['{:^80s}'.format('R-space or K-space Related Parameters'), hline,
-                    'Default LIZ Cutoff Radius  :: ' + str(np.round(liz_cutoff / Bohr, 2)),
+                    'Default LIZ Cutoff Radius  :: ' + str(np.round(liz_cutoff, 2)),
                     'Scheme to Generate K (>=0) ::  ' + str(k_scheme),
                     '     0. Special K-points ---------\n'
                     '     1. Tetrahedron      ---------\n'
@@ -255,8 +266,8 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
                     '     0. Charge mixing      ---------\n'
                     '     1. Potential mixing   ---------',
                     'Default Mixing Parameter   ::  ' + str(mix_param),
-                    'Energy (Ryd) Tol (> 0)     ::  ' + str(etol / Rydberg),
-                    'Potential Tol (> 0)        ::  ' + str(ptol / Rydberg),
+                    'Energy (Ryd) Tol (> 0)     ::  ' + str(etol),
+                    'Potential Tol (> 0)        ::  ' + str(ptol),
                     hline, separator, hline]
 
         with open('i_new', 'a') as filehandle:
@@ -271,7 +282,7 @@ def write_input_parameters_file(atoms, pot_in_form, pot_out_form,
                     'Effective Medium Mixing Parameters    :: ' + str(em_mix_param)[1:-1],
                     '     Note: The first mixing value is for the energy points in standard mixing mode; the second mixing value\n'
                     '           is for the energy points in conservative mixing mode',
-                    'Effective Medium Mixing eSwitch Value :: ' + str(np.round(em_eswitch / Rydberg, 3)),
+                    'Effective Medium Mixing eSwitch Value :: ' + str(np.round(em_eswitch, 3)),
                     '     Note: If Re[E] > 0 and Im[E] < eSwitch, the effective medium iteration is switched to the conservative mode',
                     'Effective Medium T-matrix Tol (> 0)   ::  ' + str(em_tm_tol), hline]
 
