@@ -46,7 +46,7 @@ def write_atomic_pot_input(symbol, nspins=1, moment=0., xc=1, niter=40, mp=0.1):
 
 
 def write_single_site_pot_input(symbol, crystal_type, a, nspins=1, moment=0., xc=1, lmax=3, print_level=1, ncomp=1,
-                                conc=1., mt_radius=0., ws_radius=0, egrid=(10, -0.4, 0.3), ef=0.7, niter=50, mp=0.1):
+                                conc=1., mt_radius=0., ws_radius=0, egrid=(10, -0.4, 0.3), ef=9.524, niter=50, mp=0.1):
     title = str(symbol) + ' Single Site Potential'
     output_file = str(symbol) + '_ss_out'
     input_file = str(symbol) + '_a_pot'
