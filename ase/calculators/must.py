@@ -1,7 +1,10 @@
+"""ASE interface for MST implemented in MuST package available at
+ https://github.com/mstsuite/MuST"""
+
 import numpy as np
-from ase.units import Bohr, Rydberg
+from ase.units import Rydberg
 from ase.calculators.calculator import FileIOCalculator
-from ase.io.must import write_atomic_pot_input, write_positions_input, write_single_site_pot_input, \
+from ase.io.must.must import write_atomic_pot_input, write_positions_input, write_single_site_pot_input, \
     write_input_parameters_file
 import os
 import subprocess
@@ -15,15 +18,10 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
     species = np.unique(atoms.get_chemical_symbols())
 
     for symbol in species:
+        # Generate atomic potential
         write_atomic_pot_input(symbol, nspins=nspins, moment=moment,
                                xc=xc, niter=niter, mp=mp)
 
-        write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
-                                    a=a, nspins=nspins, moment=moment, xc=xc,
-                                    lmax=lmax, print_level=print_level, ncomp=ncomp,
-                                    conc=conc, mt_radius=mt_radius, ws_radius=ws_radius,
-                                    egrid=egrid, ef=ef, niter=niter, mp=mp)
-        # Generate atomic potential
         newa = 'newa < ' + str(symbol) + '_a_in'
         try:
             proc = subprocess.Popen(newa, shell=True, cwd='.')
@@ -41,6 +39,12 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
             break
 
         # Generate single site potential
+        write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
+                                    a=a, nspins=nspins, moment=moment, xc=xc,
+                                    lmax=lmax, print_level=print_level, ncomp=ncomp,
+                                    conc=conc, mt_radius=mt_radius, ws_radius=ws_radius,
+                                    egrid=egrid, ef=ef, niter=niter, mp=mp)
+
         newss = 'newss < ' + str(symbol) + '_ss_in'
         try:
             proc = subprocess.Popen(newss, shell=True, cwd='.')
@@ -65,14 +69,6 @@ class MuST(FileIOCalculator):
 
     implemented_properties = ['energy']
     command = 'mst2 < i_new'
-    default_parameters = dict(pot_in_form=0, pot_out_form=0,
-                              stop_rout_name='main', nscf=60, method=2, out_to_scr='n',
-                              temperature=0.0, val_e_rel=0, core_e_rel=0,
-                              potential_type=0, xc=4, uniform_grid=(64, 64, 64),
-                              read_mesh=False, n_egrids=30, erbot=-0.40, real_axis_method=0, real_axis_points=300,
-                              spin=1, lmax_T=3, mt_radius=0, ndivin=1001, liz_cutoff=4.5, k_scheme=0, kpts=(10, 10, 10), bzsym=1,
-                              mix_algo=2, mix_quantity=1, mix_param=0.1, etol=5e-5, ptol=1e-6,
-                              em_iter=80, em_scheme=1, em_mix_param=(0.1, 0.1), em_eswitch=0.04, em_tm_tol=1e-7)
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label='mst', atoms=None, **kwargs):
@@ -83,41 +79,7 @@ class MuST(FileIOCalculator):
         FileIOCalculator.write_input(self, atoms, properties=None, system_changes=None)
 
         write_positions_input(atoms)
-        write_input_parameters_file(atoms=atoms, pot_in_form=self.parameters['pot_in_form'],
-                                    pot_out_form=self.parameters['pot_out_form'],
-                                    stop_rout_name=self.parameters['stop_rout_name'],
-                                    nscf=self.parameters['nscf'],
-                                    method=self.parameters['method'],
-                                    out_to_scr=self.parameters['out_to_scr'],
-                                    temperature=self.parameters['temperature'],
-                                    val_e_rel=self.parameters['val_e_rel'],
-                                    core_e_rel=self.parameters['core_e_rel'],
-                                    potential_type=self.parameters['potential_type'],
-                                    xc=self.parameters['xc'],
-                                    uniform_grid=self.parameters['uniform_grid'],
-                                    read_mesh=self.parameters['read_mesh'],
-                                    n_egrids=self.parameters['n_egrids'],
-                                    erbot=self.parameters['erbot'],
-                                    real_axis_method=self.parameters['real_axis_method'],
-                                    real_axis_points=self.parameters['real_axis_points'],
-                                    spin=self.parameters['spin'],
-                                    lmax_T=self.parameters['lmax_T'],
-                                    mt_radius=self.parameters['mt_radius'],
-                                    ndivin=self.parameters['ndivin'],
-                                    liz_cutoff=self.parameters['liz_cutoff'],
-                                    k_scheme=self.parameters['k_scheme'],
-                                    kpts=self.parameters['kpts'],
-                                    bzsym=self.parameters['bzsym'],
-                                    mix_algo=self.parameters['mix_algo'],
-                                    mix_quantity=self.parameters['mix_quantity'],
-                                    mix_param=self.parameters['mix_param'],
-                                    etol=self.parameters['etol'],
-                                    ptol=self.parameters['ptol'],
-                                    em_iter=self.parameters['em_iter'],
-                                    em_scheme=self.parameters['em_scheme'],
-                                    em_mix_param=self.parameters['em_mix_param'],
-                                    em_eswitch=self.parameters['em_eswitch'],
-                                    em_tm_tol=self.parameters['em_tm_tol'])
+        write_input_parameters_file(atoms=atoms, parameters=self.parameters)
 
     def read_results(self):
         outfile = glob.glob('k_n00000_*')[0]
@@ -128,9 +90,14 @@ class MuST(FileIOCalculator):
 
         results = {tag: value for tag, value in zip(lines[9].split(), lines[-1].split())}
 
-        read_energy = (float(results['Energy']) + e_offset) * Rydberg
+        read_energy = (float(results['Energy']) + e_offset)
 
-        if float(results['Rms_pot']) > self.parameters['ptol']:
+        if 'ptol' in self.parameters.keys():
+            ptol = self.parameters['ptol'] / Rydberg
+        else:
+            ptol = 1e-7
+
+        if float(results['Rms_pot']) > ptol:
             warnings.warn('SCF Convergence not reached (Rms_pot > ptol)', UserWarning)
 
-        self.results['energy'] = read_energy
+        self.results['energy'] = read_energy * Rydberg
