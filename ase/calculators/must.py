@@ -89,15 +89,20 @@ class MuST(FileIOCalculator):
         e_offset = float(lines[7].split()[-1])
 
         results = {tag: value for tag, value in zip(lines[9].split(), lines[-1].split())}
-
         read_energy = (float(results['Energy']) + e_offset)
 
-        if 'ptol' in self.parameters.keys():
-            ptol = self.parameters['ptol'] / Rydberg
-        else:
-            ptol = 1e-7
+        convergence = False
 
-        if float(results['Rms_pot']) > ptol:
-            warnings.warn('SCF Convergence not reached (Rms_pot > ptol)', UserWarning)
+        outfile = glob.glob('o_n00000_*')[0]
+        with open(outfile, 'r') as file:
+            lines = file.readlines()
+
+        for line in lines:
+            if 'SCF Convergence is reached' in line:
+                convergence = True
+                break
+
+        if convergence is False:
+            warnings.warn('SCF Convergence not reached', UserWarning)
 
         self.results['energy'] = read_energy * Rydberg

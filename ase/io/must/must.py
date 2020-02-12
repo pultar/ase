@@ -89,7 +89,7 @@ def write_input_parameters_file(atoms, parameters):
     energy_params = ['etol', 'ptol', 'ftol',
                      'offset_energy_pt', 'em_switch']    # Parameters with units of energy
     distance_params = ['liz_cutoff', 'max_core_radius',
-                       'max_mt_radius', 'core_radius', 'mt_radius'] # Parameters with units of length
+                       'max_mt_radius', 'core_radius', 'mt_radius']   # Parameters with units of length
     vector_params = ['uniform_grid', 'grid_origin', 'grid_1', 'grid_2', 'grid_3', 'grid_pts', 'kpts',
                      'moment_direction', 'constrain_field', 'liz_shell_lmax', 'em_mix_param']    # vector parameters
     # Header
