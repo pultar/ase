@@ -1,4 +1,5 @@
-{
+
+defaults = {
     "nscf": "No. Iterations (> 0)",
     "method": "Method of SCF Calculation",
     "out_to_scr": "Output to Screen (y/n)",

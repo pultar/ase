@@ -3,7 +3,7 @@
 from ase import Atoms
 import numpy as np
 from ase.units import Bohr, Rydberg
-import json
+from ase.io.must.default_params import defaults
 
 magmoms = {'Fe': 2.1,
            'Co': 1.4,
@@ -111,9 +111,6 @@ def write_input_parameters_file(atoms, parameters):
     contents = ['Default Potential Input File Name  ::  ' + pot_files]
 
     # Rest of the parameters:
-    with open('default_parameters.json', 'r') as filehandle:
-        mst_defaults = json.load(filehandle)
-
     for key in parameters.keys():
         if key in energy_params:
             parameters[key] = parameters[key] / Rydberg
@@ -124,7 +121,7 @@ def write_input_parameters_file(atoms, parameters):
         if key in vector_params:
             parameters[key] = str(parameters[key])[1:-1]
 
-        contents.append(mst_defaults[key] + '  ::  ' + parameters[key])
+        contents.append(defaults[key] + '  ::  ' + str(parameters[key]))
 
     with open('i_new', 'a') as filehandle:
         for entry in contents:
