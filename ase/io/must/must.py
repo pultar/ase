@@ -10,7 +10,7 @@ magmoms = {'Fe': 2.1,
            'Ni': 0.6}
 
 
-def write_positions_input(atoms):
+def write_positions_input(atoms, method):
     with open('position.dat', 'w') as filehandle:
         filehandle.write(str(1.0) + '\n\n')
 
@@ -18,8 +18,22 @@ def write_positions_input(atoms):
             filehandle.write('%s\n' % str(atoms.get_cell()[i] / Bohr)[1:-1])
         filehandle.write('\n')
 
-        for index in range(len(atoms)):
-            filehandle.write('%s %s\n' % (atoms[index].symbol, str(atoms[index].position / Bohr)[1:-1]))
+        if method == 3:
+
+            for site in atoms.cpa_sites:
+                sitestring = 'CPA  %s' % str(np.array(site['position']) / Bohr)[1:-1]
+
+                for key in site.keys():
+                    if key == 'position':
+                        pass
+                    else:
+                        sitestring += '  %s %s' % (key, str(site[key]))
+                sitestring += '\n'
+                filehandle.write(sitestring)
+
+        else:
+            for index in range(len(atoms)):
+                filehandle.write('%s %s\n' % (atoms[index].symbol, str(atoms[index].position / Bohr)[1:-1]))
 
 
 def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
@@ -85,19 +99,26 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc, lma
 
 
 def write_input_parameters_file(atoms, parameters):
-
     energy_params = ['etol', 'ptol', 'ftol',
-                     'offset_energy_pt', 'em_switch']    # Parameters with units of energy
+                     'offset_energy_pt', 'em_switch']  # Parameters with units of energy
     distance_params = ['liz_cutoff', 'max_core_radius',
-                       'max_mt_radius', 'core_radius', 'mt_radius']   # Parameters with units of length
+                       'max_mt_radius', 'core_radius', 'mt_radius']  # Parameters with units of length
     vector_params = ['uniform_grid', 'grid_origin', 'grid_1', 'grid_2', 'grid_3', 'grid_pts', 'kpts',
-                     'moment_direction', 'constrain_field', 'liz_shell_lmax', 'em_mix_param']    # vector parameters
+                     'moment_direction', 'constrain_field', 'liz_shell_lmax', 'em_mix_param']  # vector parameters
     # Header
     hline = 80 * '='
     separator = 18 * ' ' + 3 * ('* * *' + 14 * ' ')
     header = [hline, '{:^80s}'.format('Input Parameter Data File'),
-              hline, separator, hline, '{:^80}'.format('System Related Parameters'), hline,
-              'No. Atoms in System (> 0)  ::  ' + str(len(atoms)), hline, separator, hline]
+              hline, separator, hline, '{:^80}'.format('System Related Parameters'), hline]
+
+    # Get number of atoms from CPA sites if self.parameters['method'] == 3
+    if 'method' in parameters.keys():
+        if parameters['method'] == 3:
+            header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms.cpa_sites)), hline, separator, hline]
+        else:
+            header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms)), hline, separator, hline]
+    else:
+        header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms)), hline, separator, hline]
 
     with open('i_new', 'w') as filehandle:
         for entry in header:

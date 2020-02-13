@@ -78,7 +78,16 @@ class MuST(FileIOCalculator):
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties=None, system_changes=None)
 
-        write_positions_input(atoms)
+        # Write positions using CPA sites if self.parameters['method'] == 3
+        if 'method' in self.parameters.keys():
+            if self.parameters['method'] == 3:
+                write_positions_input(atoms, method=self.parameters['method'])
+            else:
+                write_positions_input(atoms, method=None)
+
+        else:
+            write_positions_input(atoms, method=None)
+
         write_input_parameters_file(atoms=atoms, parameters=self.parameters)
 
     def read_results(self):
