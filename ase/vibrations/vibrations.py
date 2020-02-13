@@ -88,7 +88,9 @@ class Vibrations:
 
     """
 
-    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2):
+    def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2,
+            method = 'standard', direction = 'central'):
+
         assert nfree in [2, 4]
         self.atoms = atoms
         self.calc = atoms.get_calculator()
@@ -102,11 +104,19 @@ class Vibrations:
         self.ir = None
         self.ram = None
 
+        self.method = method.lower()
+        self.direction = direction.lower()
+        assert self.method in ['standard', 'frederiksen']
+        assert self.direction in ['central', 'forward', 'backward']
+
+        #self.default_method='standard'
+        #self.default_direction='central'
+
     def run(self):
         """Run the vibration calculations.
 
-        This will calculate the forces for 6 displacements per atom +/-x,
-        +/-y, +/-z. Only those calculations that are not already done will be
+        This will calculate the forces for finite displacements per atom in x,
+        y, z. Only those calculations that are not already done will be
         started. Be aware that an interrupted calculation may produce an empty
         file (ending with .pckl), which must be deleted before restarting the
         job. Otherwise the forces will not be calculated for that
@@ -157,9 +167,15 @@ class Vibrations:
             yield atoms
 
     def displacements(self):
+        if self.direction == 'forward':
+            signs = [1]
+        elif self.direction == 'backward':
+            signs = [-1]
+        else: # defaults to 'central' since it will gather the data for 'forward' and 'backward' thus is the safe default
+            signs = [-1, 1]
         for a in self.indices:
             for i in range(3):
-                for sign in [-1, 1]:
+                for sign in signs:
                     for ndis in range(1, self.nfree // 2 + 1):
                         dispName = ('%s.%d%s%s' %
                                     (self.name, a, 'xyz'[i],
@@ -280,11 +296,11 @@ class Vibrations:
         os.remove(combined_name)
         return 1  # One file removed
 
-    def read(self, method='standard', direction='central'):
-        self.method = method.lower()
-        self.direction = direction.lower()
-        assert self.method in ['standard', 'frederiksen']
-        assert self.direction in ['central', 'forward', 'backward']
+    def read(self, method=None, direction=None):
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
 
         def load(fname, combined_data=None):
             if combined_data is None:
@@ -313,8 +329,12 @@ class Vibrations:
         for a in self.indices:
             for i in 'xyz':
                 name = '%s.%d%s' % (self.name, a, i)
-                fminus = load(name + '-.pckl', combined_data)
-                fplus = load(name + '+.pckl', combined_data)
+                if direction != 'forward':  
+                    print(direction, self.direction)
+                    fminus = load(name + '-.pckl', combined_data)
+                if direction != 'backward': 
+                    fplus  = load(name + '+.pckl', combined_data)
+
                 if self.method == 'frederiksen':
                     fminus[a] -= fminus.sum(0)
                     fplus[a] -= fplus.sum(0)
@@ -355,21 +375,31 @@ class Vibrations:
         s = units._hbar * 1e10 / sqrt(units._e * units._amu)
         self.hnu = s * omega2.astype(complex)**0.5
 
-    def get_energies(self, method='standard', direction='central', **kw):
+    def get_energies(self, method=None, direction=None, **kw):
         """Get vibration energies in eV."""
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
 
         if (self.H is None or method.lower() != self.method or
             direction.lower() != self.direction):
             self.read(method, direction, **kw)
         return self.hnu
 
-    def get_frequencies(self, method='standard', direction='central'):
+    def get_frequencies(self, method=None, direction=None):
+
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
+
         """Get vibration frequencies in cm^-1."""
 
         s = 1. / units.invcm
         return s * self.get_energies(method, direction)
 
-    def summary(self, method='standard', direction='central', freq=None,
+    def summary(self, method=None, direction=None, freq=None,
                 log=sys.stdout):
         """Print a summary of the vibrational frequencies.
 
@@ -387,6 +417,11 @@ class Vibrations:
             stdout. Can be an object with a write() method or the name of a
             file to create.
         """
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
+
 
         if isinstance(log, str):
             log = paropen(log, 'a')
@@ -518,13 +553,19 @@ class Vibrations:
 
     def write_dos(self, out='vib-dos.dat', start=800, end=4000,
                   npts=None, width=10,
-                  type='Gaussian', method='standard', direction='central'):
+                  type='Gaussian', method=None, direction=None):
         """Write out the vibrational density of states to file.
 
         First column is the wavenumber in cm^-1, the second column the
         folded vibrational density of states.
         Start and end points, and width of the Gaussian/Lorentzian
         should be given in cm^-1."""
+    
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
+
         frequencies = self.get_frequencies(method, direction).real
         intensities = np.ones(len(frequencies))
         energies, spectrum = self.fold(frequencies, intensities,
