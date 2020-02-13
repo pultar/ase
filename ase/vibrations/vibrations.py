@@ -109,9 +109,6 @@ class Vibrations:
         assert self.method in ['standard', 'frederiksen']
         assert self.direction in ['central', 'forward', 'backward']
 
-        #self.default_method='standard'
-        #self.default_direction='central'
-
     def run(self):
         """Run the vibration calculations.
 
@@ -330,7 +327,6 @@ class Vibrations:
             for i in 'xyz':
                 name = '%s.%d%s' % (self.name, a, i)
                 if direction != 'forward':  
-                    print(direction, self.direction)
                     fminus = load(name + '-.pckl', combined_data)
                 if direction != 'backward': 
                     fplus  = load(name + '+.pckl', combined_data)
