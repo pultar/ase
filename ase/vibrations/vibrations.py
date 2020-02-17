@@ -294,6 +294,7 @@ class Vibrations:
         return 1  # One file removed
 
     def read(self, method=None, direction=None):
+        '''finite differnce formulas from  doi:10.1090/S0025-5718-1988-0935077-0'''
         if method == None:
             method = self.method
         if direction == None:
@@ -321,38 +322,59 @@ class Vibrations:
             combined_data = load(self.name + '.all.pckl')
         else:
             combined_data = None
+            
+        ## do we need the central image of the finite difference?
         if direction != 'central':
             feq = load(self.name + '.eq.pckl', combined_data)
+        else:
+            feq = None
+        # 
+        # populate what's availible 
+        suffixes = ['','+.pckl','++.pckl','--.pckl','-.pckl']
         for a in self.indices:
             for i in 'xyz':
                 name = '%s.%d%s' % (self.name, a, i)
-                if direction != 'forward':  
-                    fminus = load(name + '-.pckl', combined_data)
-                if direction != 'backward': 
-                    fplus  = load(name + '+.pckl', combined_data)
+                
+                f = [feq, None, None, None, None]
+                for i in range(1,5):
+                    if op.isfile(name+suffixes[i]):
+                        f[i] = load(name + suffixes[i], combined_data)
+                        
+
+                #if direction != 'forward':  
+                #    f[-1] = load(name + '-.pckl', combined_data)
+                #if direction != 'backward': 
+                #    f[1]  = load(name + '+.pckl', combined_data)
 
                 if self.method == 'frederiksen':
-                    fminus[a] -= fminus.sum(0)
-                    fplus[a] -= fplus.sum(0)
-                if self.nfree == 4:
-                    fminusminus = load(name + '--.pckl', combined_data)
-                    fplusplus = load(name + '++.pckl', combined_data)
-                    if self.method == 'frederiksen':
-                        fminusminus[a] -= fminusminus.sum(0)
-                        fplusplus[a] -= fplusplus.sum(0)
+                    f[-1][a] -= f[-1].sum(0)
+                    f[1][a] -= f[1].sum(0)
+                    if self.nfree == 4:
+                        #f[-2] = load(name + '--.pckl', combined_data)
+                        #f[2] = load(name + '++.pckl', combined_data)
+                        f[-2][a] -= f[-2].sum(0)
+                        f[2][a] -= f[2].sum(0)
                 if self.direction == 'central':
                     if self.nfree == 2:
-                        H[r] = .5 * (fminus - fplus)[self.indices].ravel()
+                        H[r] = .5 * (f[-1] - f[1])[self.indices].ravel()
                     else:
-                        H[r] = H[r] = (-fminusminus +
-                                       8 * fminus -
-                                       8 * fplus +
-                                       fplusplus)[self.indices].ravel() / 12.0
+                        H[r] = H[r] = (-f[-2] +
+                                       8 * f[-1] -
+                                       8 * f[1] +
+                                       f[2])[self.indices].ravel() / 12.0
                 elif self.direction == 'forward':
-                    H[r] = (feq - fplus)[self.indices].ravel()
+                    H[r] = (f[0] - f[1])[self.indices].ravel()
+                    if self.nfree == 4:
+                        H[r] = (3*f[0] -
+                                4*f[1] + 
+                                f[2] )[self.indices].ravel() /2.0
                 else:
                     assert self.direction == 'backward'
-                    H[r] = (fminus - feq)[self.indices].ravel()
+                    H[r] = (f[-1] - f[0])[self.indices].ravel()
+                    if self.nfree == 4:
+                        H[r] = (-3*f[0] +
+                                4*f[-1] -
+                                f[-2] )[self.indices].ravel() /2.0
                 H[r] /= 2 * self.delta
                 r += 1
         H += H.copy().T
