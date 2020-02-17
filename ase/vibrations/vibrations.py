@@ -600,3 +600,88 @@ class Vibrations:
             fd.write('%.3f  %15.5e\n' %
                      (row[0], row[1]))
         fd.close()
+        
+        
+
+
+
+def progressive_vibrations_by_index(atoms, sorted_index_list,
+    name = 'vib',
+    finite_displacement = 0.01,
+    clean_empty_files=True,
+    method='standard',
+    direction = 'central' , nfree = 2, write_progession_files = True):
+    
+    import numpy as np
+    import os
+    
+    from ase.vibrations import Vibrations
+
+    def float_list_to_string(fl):
+        s = ''
+        for f in fl:
+            s = s + '%.3e %.3ej  '%(f.real, f.imag)
+        return s +'\n'
+
+    from ase.calculators.singlepoint import SinglePointCalculator
+
+
+    def write_mode_traj( vib, fname='modes.traj'):
+        from ase.io.trajectory import Trajectory
+
+        traj = Trajectory(fname, 'w')
+
+        vib_energies = vib.get_energies()
+
+        atoms = vib.atoms.copy()
+
+        for n in range(len(vib.hnu)):
+            mode = vib.get_mode(n) #* len(vib.hnu) * scale
+            fakec = SinglePointCalculator(atoms, forces=mode, energy=vib_energies[n])
+            atoms.set_calculator(fakec)
+            traj.write(atoms)
+        traj.close()
+
+
+    natoms_inlcuded_list = []
+    
+    if write_progession_files:
+        fid1 = open('rate_convergence.txt','w')
+        fid2 = open('mode_energies.txt','w')
+        fid1.write('# Natoms in Hessian, Nth atom index, prefactor freq (Hz), Kinetic rate for barrier (Hz)\n')
+    
+    #vib   = Vibrations(atoms, delta = finite_displacement,
+    #               method = method, direction = direction, name=name)
+    for natoms_included in range(1,len(sorted_index_list)+1):
+
+        indices_included = sorted_index_list[0:natoms_included]
+
+        print('Computing Hessian for atom %i'    % indices_included[-1])
+        print(natoms_included,'/',len(sorted_index_list), indices_included)
+
+        # re-instantiation works, while updating the list doesn't
+        #vib.indices = np.asarray(indices_included)
+
+        
+        vib   = Vibrations(atoms, indices = indices_included, delta = finite_displacement,
+                       method = method, direction = direction, name=name, nfree=nfree)
+        if clean_empty_files: vib.clean(empty_files=True, combined = False)
+        vib.run()
+        
+        vib_energies = vib.get_energies()
+        natoms_inlcuded_list.append(natoms_included)
+        
+        if write_progession_files:
+            fid1.write('%i %i %e %e\n'%(natoms_included, indices_included[-1], min(vib_energies), max(vib_energies) ))
+            fid1.flush()
+
+            fid2.write(float_list_to_string(vib_energies))
+            fid2.flush()
+        
+        write_mode_traj( vib = vib, fname= '%i_atoms_included.traj'%natoms_included)
+
+    fid1.close()
+    fid2.close()
+
+
+    return vib
