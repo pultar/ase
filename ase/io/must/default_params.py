@@ -1,11 +1,11 @@
-
-defaults = {
+{
     "nscf": "No. Iterations (> 0)",
     "method": "Method of SCF Calculation",
     "out_to_scr": "Output to Screen (y/n)",
     "out_level": "Output Level (>= -1)",
     "out_proc_id": "Output Proc. ID (>= -1)",
-    "out_atom_id": "Output Atom ID (>= 0)",
+    "out_atom_id": "Output Atom ID (>= -1)",
+    "generate_movie": "Generate System Movie",
     "stop_rout_name": "Stop-at Routine Name",
     "write_pot_niter": "No. Iter for Each Pot. Write",
     "movie_niter": "No. Iter for Each Movie",
@@ -67,8 +67,8 @@ defaults = {
     "real_axis_points": "SS Real Axis Int. Points",
     "t_inversion": "T-matrix inversion (>= 0)",
     "m_inversion": "M-matrix inversion (>= 0)",
-    "n_time_steps": "No. Time Steps (>= 0)",
-    "time_step": "Time Step",
+    "n_time_steps": "No. Spin-dynamics Time Steps (>= 0)",
+    "time_step": "Spin-dynamics Time Step",
     "mix_quantity": "Mixing quantity type",
     "mix_algo": "Mixing algorithm",
     "lloyd_correction": "Lloyd correction",
