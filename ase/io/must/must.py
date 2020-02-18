@@ -21,10 +21,10 @@ def write_positions_input(atoms, method):
         if method == 3:
 
             for site in atoms.cpa_sites:
-                sitestring = 'CPA  %s' % str(np.array(site['position']) / Bohr)[1:-1]
+                sitestring = 'CPA  %s' % str(atoms[site['index']].position / Bohr)[1:-1]
 
                 for key in site.keys():
-                    if key == 'position':
+                    if key == 'index':
                         pass
                     else:
                         sitestring += '  %s %s' % (key, str(site[key]))
