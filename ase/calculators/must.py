@@ -4,8 +4,7 @@
 import numpy as np
 from ase.units import Rydberg
 from ase.calculators.calculator import FileIOCalculator
-from ase.io.must.must import write_atomic_pot_input, write_positions_input, write_single_site_pot_input, \
-    write_input_parameters_file
+from ase.io.must import must as io
 import os
 import subprocess
 import glob
@@ -19,8 +18,8 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
 
     for symbol in species:
         # Generate atomic potential
-        write_atomic_pot_input(symbol, nspins=nspins, moment=moment,
-                               xc=xc, niter=niter, mp=mp)
+        io.write_atomic_pot_input(symbol, nspins=nspins, moment=moment,
+                                  xc=xc, niter=niter, mp=mp)
 
         newa = 'newa < ' + str(symbol) + '_a_in'
         try:
@@ -39,11 +38,11 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
             break
 
         # Generate single site potential
-        write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
-                                    a=a, nspins=nspins, moment=moment, xc=xc,
-                                    lmax=lmax, print_level=print_level, ncomp=ncomp,
-                                    conc=conc, mt_radius=mt_radius, ws_radius=ws_radius,
-                                    egrid=egrid, ef=ef, niter=niter, mp=mp)
+        io.write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
+                                       a=a, nspins=nspins, moment=moment, xc=xc,
+                                       lmax=lmax, print_level=print_level, ncomp=ncomp,
+                                       conc=conc, mt_radius=mt_radius, ws_radius=ws_radius,
+                                       egrid=egrid, ef=ef, niter=niter, mp=mp)
 
         newss = 'newss < ' + str(symbol) + '_ss_in'
         try:
@@ -81,14 +80,14 @@ class MuST(FileIOCalculator):
         # Write positions using CPA sites if self.parameters['method'] == 3
         if 'method' in self.parameters.keys():
             if self.parameters['method'] == 3:
-                write_positions_input(atoms, method=self.parameters['method'])
+                io.write_positions_input(atoms, method=self.parameters['method'])
             else:
-                write_positions_input(atoms, method=None)
+                io.write_positions_input(atoms, method=None)
 
         else:
-            write_positions_input(atoms, method=None)
+            io.write_positions_input(atoms, method=None)
 
-        write_input_parameters_file(atoms=atoms, parameters=self.parameters)
+        io.write_input_parameters_file(atoms=atoms, parameters=self.parameters)
 
     def read_results(self):
         outfile = glob.glob('k_n00000_*')[0]
