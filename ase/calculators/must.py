@@ -4,7 +4,7 @@
 import numpy as np
 from ase.units import Rydberg
 from ase.calculators.calculator import FileIOCalculator
-from ase.io.must import must as io
+import ase.io.must.must as io
 import os
 import subprocess
 import glob
