@@ -36,6 +36,18 @@ def test_fcc(method):
     assert m.dimtype == '3D'
 
 
+def test_isolation_0D():
+    atoms = ase.build.molecule('H2O', vacuum=3.0)
+
+    result = isolate_components(atoms, kcutoff=1.1)
+    assert len(result) == 1
+    key, components = list(result.items())[0]
+    assert key == '0D'
+    assert len(components) == 1
+    molecule = components[0]
+    assert molecule.get_chemical_formula() == atoms.get_chemical_formula()
+
+
 def test_isolation_1D():
     atoms = Atoms(symbols='Cl6Ti2', pbc=True,
                   cell=[[6.27, 0, 0],
@@ -58,3 +70,32 @@ def test_isolation_1D():
     chain = components[0]
     assert (chain.pbc == [False, False, True]).all()
     assert chain.get_chemical_formula() == atoms.get_chemical_formula()
+
+
+def test_isolation_2D():
+    atoms = ase.build.mx2(formula='MoS2', kind='2H', a=3.18, thickness=3.19)
+    atoms.cell[2, 2] = 7
+    atoms.set_pbc((1, 1, 1))
+    atoms *= 2
+
+    result = isolate_components(atoms)
+    assert len(result) == 1
+    key, components = list(result.items())[0]
+    assert key == '2D'
+    assert len(components) == 2
+    for layer in components:
+        empirical = atoms.get_chemical_formula(empirical=True)
+        assert empirical == layer.get_chemical_formula(empirical=True)
+        assert (layer.pbc == [True, True, False]).all()
+
+
+def test_isolation_3D():
+    atoms = FaceCenteredCubic(size=(2, 2, 2), symbol='Cu', pbc=(1, 1, 1))
+
+    result = isolate_components(atoms)
+    assert len(result) == 1
+    key, components = list(result.items())[0]
+    assert key == '3D'
+    assert len(components) == 1
+    bulk = components[0]
+    assert bulk.get_chemical_formula() == atoms.get_chemical_formula()
