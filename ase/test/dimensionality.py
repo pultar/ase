@@ -5,6 +5,7 @@ from ase.lattice.cubic import FaceCenteredCubic
 from ase.geometry.dimensionality import (analyze_dimensionality,
                                          isolate_components)
 
+
 @pytest.mark.parametrize("method", ['TSA', 'RDA'])
 def test_mx2(method):
     atoms = ase.build.mx2(formula='MoS2', kind='2H', a=3.18, thickness=3.19)
