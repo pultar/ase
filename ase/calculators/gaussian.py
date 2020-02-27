@@ -51,6 +51,7 @@ link0_keys = ['chk',
 # Ex:  Opt, Opt=QST2, Opt=Conical, etc.
 # These keywords are given here.
 route_self_keys = ['opt',
+                   'irc',
                    'force',
                    'freq',
                    'complex',
@@ -87,7 +88,6 @@ route_keys = [# int keys
               'guess',
               'gvb',
               'integral',
-              'irc',
               'ircmax',
               'name',
               'nmr',
@@ -104,23 +104,88 @@ route_keys = [# int keys
               'temperature']
 
 
+class GaussianOptimizer:
+    def __init__(self, atoms, calc):
+        self.atoms = atoms
+        self.calc = calc
+
+    def todict(self):
+        return {'type': 'optimization',
+                'optimizer': 'GaussianOptimizer'}
+
+    def run(self, fmax=None, steps=None, **gaussian_kwargs):
+        if fmax is not None:
+            if not isinstance(fmax, str):
+                raise ValueError('Only strings are accepted as fmax values for the GaussianOptimizer.')
+
+        opt = gaussian_kwargs.pop('opt', '')
+        force = gaussian_kwargs.pop('force', None)
+        irc = gaussian_kwargs.pop('irc', None)
+
+        if fmax is not None:
+            opt = '{}, {}'.format(opt, fmax)
+        if steps is not None:
+            opt = '{}, maxcycles={}'.format(opt, steps)
+
+        gaussian_kwargs['opt'] = opt
+
+        self.calc.set(**gaussian_kwargs)
+        self.atoms.calc = self.calc
+        self.atoms.get_potential_energy()
+        self.atoms.cell = self.calc.atoms.cell
+        self.atoms.positions = self.calc.atoms.positions.copy()
+        # TODO: add back irc and force keywords
+
+
+class GaussianIRC:
+    def __init__(self, atoms, calc):
+        self.atoms = atoms
+        self.calc = calc
+
+    def todict(self):
+        return {'type': 'irc',
+                'optimizer': 'GaussianIRC'}
+
+    def run(self, direction=None, steps=None, **gaussian_kwargs):
+
+        irc = gaussian_kwargs.pop('irc', '')
+        opt = gaussian_kwargs.pop('opt', None)
+        force = gaussian_kwargs.pop('force', None)
+        freq = gaussian_kwargs.pop('freq', None)
+        print(gaussian_kwargs)
+
+        if direction is not None:
+            irc = '{}, {}'.format(irc, direction)
+        if steps is not None:
+            irc = '{}, maxpoints={}'.format(irc, steps)
+
+        gaussian_kwargs['irc'] = irc
+
+        self.calc.set(**gaussian_kwargs)
+        self.atoms.calc = self.calc
+        self.atoms.get_potential_energy()
+        self.atoms.cell = self.calc.get_atoms().cell
+        self.atoms.positions = self.calc.get_atoms().copy()
+        # TODO: add back opt and force keywords
+
+
 class Gaussian(FileIOCalculator):
     """
     Gaussian calculator
     """
     name = 'Gaussian'
 
-    implemented_properties = ['energy', 'forces', 'dipole']
+    implemented_properties = ['energy', 'forces', 'dipole', 'freq']
 
     command = 'GAUSSIAN < PREFIX.com > PREFIX.log'
 
     default_parameters = {'charge': 0,
                           'method': 'hf',
-                          'basis': '6-31g*',
-                          'force': 'force'}
+                          'basis': '6-31g*'}
+
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
-                 label=None, atoms=None, scratch=None, ioplist=list(),
+                 label=None, atoms=None, optimized=None, scratch=None, ioplist=list(),
                  basisfile=None, extra=None, addsec=None, **kwargs):
 
         """Constructs a Gaussian-calculator object.
@@ -151,6 +216,7 @@ class Gaussian(FileIOCalculator):
                 else:
                     raise
 
+        self.optimized  = optimized
         self.ioplist = ioplist
         self.scratch = scratch
         self.basisfile = basisfile
@@ -194,8 +260,11 @@ class Gaussian(FileIOCalculator):
         inputfile = open(filename, 'w')
 
         link0 = str()
-        route = '#p %s/%s' % (self.parameters['method'],
-                              self.parameters['basis'])
+        if self.parameters['basis'] != '':
+            route = '#p %s/%s' % (self.parameters['method'],
+                                  self.parameters['basis'])
+        else:
+            route = '#p %s' % (self.parameters['method'])
 
         for key, val in self.parameters.items():
             if key.lower() in link0_keys:
@@ -212,6 +281,8 @@ class Gaussian(FileIOCalculator):
             elif key.lower() in route_keys:
                 route += ' %s=%s' % (key, val)
 
+        if 'forces' in properties and 'force' not in self.parameters:
+            route += ' force'
         # include any other keyword(s)
         if self.extra is not None:
             route += ' ' + self.extra
@@ -237,6 +308,21 @@ class Gaussian(FileIOCalculator):
             inputfile.write('\n')
 
         inputfile.write('\n')
+
+        if 'opt' in self.parameters:
+            if 'modredun' in [par.lower() for par in self.parameters['opt'].split(',')]:
+                if 'release' in self.parameters: #coordinates that first need to be unfrozen
+                    for r in self.parameters['release']:
+                        inputfile.write('%s A\n'%' '.join(map(str,r)))
+                if 'fix' in self.parameters: #coordinates that need to be frozen
+                    for fi in self.parameters['fix']:
+                        inputfile.write('%s F\n'%' '.join(map(str,fi)))
+                if 'change' in self.parameters: #coordinates that first need to be updated and then frozen
+                    for c in self.parameters['change']:
+                        inputfile.write('%s F\n'%' '.join(map(str,c)))
+                if 'relaxed_scan' in self.parameters: #coordinates that first need to be scanned
+                    for s in self.parameters['relaxed_scan']:
+                        inputfile.write('%s S %i %.2f\n'%(' '.join(map(str,s[:-2])),s[-2],s[-1]))
 
         if 'gen' in self.parameters['basis'].lower():
             if self.basisfile is None:
@@ -314,3 +400,6 @@ class Gaussian(FileIOCalculator):
 
     def get_version(self):
         return self.read_output(self.label + '.log', 'version')
+
+    def get_opt_state(self):
+        return self.optimized
