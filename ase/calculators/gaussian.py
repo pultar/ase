@@ -134,7 +134,7 @@ class GaussianOptimizer:
         self.atoms.get_potential_energy()
         self.atoms.cell = self.calc.atoms.cell
         self.atoms.positions = self.calc.atoms.positions.copy()
-        # TODO: add back irc and force keywords
+        # TODO: add back irc and force keywords to kwargs
 
 
 class GaussianIRC:
