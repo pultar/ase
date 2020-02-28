@@ -106,9 +106,10 @@ route_keys = [# int keys
 
 
 class GaussianOptimizer:
-    def __init__(self, atoms, calc):
+    def __init__(self, atoms, calc, label):
         self.atoms = atoms
         self.calc = calc
+        self.label = label
 
     def todict(self):
         return {'type': 'optimization',
@@ -127,11 +128,15 @@ class GaussianOptimizer:
         if steps is not None:
             opt = '{}, maxcycles={}'.format(opt, steps)
 
+        self.calc.set(**gaussian_kwargs)
         force = self.calc.parameters.pop('force', None)
         irc = self.calc.parameters.pop('irc', None)
         self.calc.parameters['opt'] = opt
         self.atoms.calc = self.calc
+
         self.atoms.get_potential_energy()
+
+        self.calc.read(self.label)
         self.atoms.cell = self.calc.atoms.cell
         self.atoms.positions = self.calc.atoms.positions.copy()
         if force is not None:
@@ -143,9 +148,10 @@ class GaussianOptimizer:
 
 
 class GaussianIRC:
-    def __init__(self, atoms, calc):
+    def __init__(self, atoms, calc, label):
         self.atoms = atoms
         self.calc = calc
+        self.label = label
 
     def todict(self):
         return {'type': 'irc',
@@ -161,12 +167,16 @@ class GaussianIRC:
         if steps is not None:
             irc = '{}, maxpoints={}'.format(irc, steps)
 
+        self.calc.set(**gaussian_kwargs)
         opt = self.calc.parameters.pop('opt', None)
         force = self.calc.parameters.pop('force', None)
         freq = self.calc.parameters.pop('freq', None)
         self.calc.parameters['irc'] = irc
         self.atoms.calc = self.calc
+
         self.atoms.get_potential_energy()
+
+        self.calc.read(self.label)
         self.atoms.cell = self.calc.get_atoms().cell
         self.atoms.positions = self.calc.get_atoms().copy()
         if force is not None:
@@ -318,21 +328,6 @@ class Gaussian(FileIOCalculator):
             inputfile.write('\n')
 
         inputfile.write('\n')
-
-        if 'opt' in self.parameters:
-            if 'modredun' in [par.lower() for par in self.parameters['opt'].split(',')]:
-                if 'release' in self.parameters: #coordinates that first need to be unfrozen
-                    for r in self.parameters['release']:
-                        inputfile.write('%s A\n'%' '.join(map(str,r)))
-                if 'fix' in self.parameters: #coordinates that need to be frozen
-                    for fi in self.parameters['fix']:
-                        inputfile.write('%s F\n'%' '.join(map(str,fi)))
-                if 'change' in self.parameters: #coordinates that first need to be updated and then frozen
-                    for c in self.parameters['change']:
-                        inputfile.write('%s F\n'%' '.join(map(str,c)))
-                if 'relaxed_scan' in self.parameters: #coordinates that first need to be scanned
-                    for s in self.parameters['relaxed_scan']:
-                        inputfile.write('%s S %i %.2f\n'%(' '.join(map(str,s[:-2])),s[-2],s[-1]))
 
         if 'gen' in self.parameters['basis'].lower():
             if self.basisfile is None:

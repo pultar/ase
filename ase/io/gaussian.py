@@ -34,7 +34,7 @@ allowed_dft_functionals = ['lsda',  # = 'svwn'
                            'tpssh',
                            'tpsstpss',
                            'wb97xd',
-                           'am1']
+                           'am1']  # not dft
 
 
 def read_gaussian_out(filename, index=-1, quantity='atoms'):
