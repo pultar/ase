@@ -125,10 +125,9 @@ class GaussianOptimizer:
         if steps is not None:
             opt = '{}, maxcycles={}'.format(opt, steps)
 
-        gaussian_kwargs['opt'] = opt
-
         force = self.calc.parameters.pop('force', None)
         irc = self.calc.parameters.pop('irc', None)
+        self.calc.parameters['opt'] = opt
         self.atoms.calc = self.calc
         self.atoms.get_potential_energy()
         self.atoms.cell = self.calc.atoms.cell
@@ -157,11 +156,10 @@ class GaussianIRC:
         if steps is not None:
             irc = '{}, maxpoints={}'.format(irc, steps)
 
-        gaussian_kwargs['irc'] = irc
-
         opt = self.calc.parameters.pop('opt', None)
         force = self.calc.parameters.pop('force', None)
         freq = self.calc.parameters.pop('freq', None)
+        self.calc.parameters['irc'] = irc
         self.atoms.calc = self.calc
         self.atoms.get_potential_energy()
         self.atoms.cell = self.calc.get_atoms().cell
