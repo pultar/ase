@@ -116,11 +116,9 @@ class GaussianOptimizer:
     def run(self, fmax=None, steps=None, **gaussian_kwargs):
         if fmax is not None:
             if not isinstance(fmax, str):
-                raise ValueError('Only strings are accepted as fmax values for the GaussianOptimizer.')
+                raise ValueError('fmax has to be a string if the internal optimizer of Gaussian is called via ASE.')
 
         opt = gaussian_kwargs.pop('opt', '')
-        force = gaussian_kwargs.pop('force', None)
-        irc = gaussian_kwargs.pop('irc', None)
 
         if fmax is not None:
             opt = '{}, {}'.format(opt, fmax)
@@ -129,12 +127,16 @@ class GaussianOptimizer:
 
         gaussian_kwargs['opt'] = opt
 
-        self.calc.set(**gaussian_kwargs)
+        force = self.calc.parameters.pop('force', None)
+        irc = self.calc.parameters.pop('irc', None)
         self.atoms.calc = self.calc
         self.atoms.get_potential_energy()
         self.atoms.cell = self.calc.atoms.cell
         self.atoms.positions = self.calc.atoms.positions.copy()
-        # TODO: add back irc and force keywords to kwargs
+        if force is not None:
+            self.atoms.calc['force'] = force
+        if irc is not None:
+            self.atoms.calc['irc'] = irc
 
 
 class GaussianIRC:
@@ -149,10 +151,6 @@ class GaussianIRC:
     def run(self, direction=None, steps=None, **gaussian_kwargs):
 
         irc = gaussian_kwargs.pop('irc', '')
-        opt = gaussian_kwargs.pop('opt', None)
-        force = gaussian_kwargs.pop('force', None)
-        freq = gaussian_kwargs.pop('freq', None)
-        print(gaussian_kwargs)
 
         if direction is not None:
             irc = '{}, {}'.format(irc, direction)
@@ -161,12 +159,19 @@ class GaussianIRC:
 
         gaussian_kwargs['irc'] = irc
 
-        self.calc.set(**gaussian_kwargs)
+        opt = self.calc.parameters.pop('opt', None)
+        force = self.calc.parameters.pop('force', None)
+        freq = self.calc.parameters.pop('freq', None)
         self.atoms.calc = self.calc
         self.atoms.get_potential_energy()
         self.atoms.cell = self.calc.get_atoms().cell
         self.atoms.positions = self.calc.get_atoms().copy()
-        # TODO: add back opt and force keywords
+        if force is not None:
+            self.atoms.calc['force'] = force
+        if opt is not None:
+            self.atoms.calc['opt'] = opt
+        if freq is not None:
+            self.atoms.calc['freq'] = freq
 
 
 class Gaussian(FileIOCalculator):
