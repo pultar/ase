@@ -19,6 +19,7 @@ See accompanying license files for details.
 """
 import os
 from shutil import which
+import copy
 
 from ase.calculators.calculator import EnvironmentError, FileIOCalculator, Parameters, ReadError
 
@@ -119,6 +120,7 @@ class GaussianOptimizer:
                 raise ValueError('fmax has to be a string if the internal optimizer of Gaussian is called via ASE.')
 
         opt = gaussian_kwargs.pop('opt', '')
+        opt_save = copy.deepcopy(opt)
 
         if fmax is not None:
             opt = '{}, {}'.format(opt, fmax)
@@ -133,9 +135,11 @@ class GaussianOptimizer:
         self.atoms.cell = self.calc.atoms.cell
         self.atoms.positions = self.calc.atoms.positions.copy()
         if force is not None:
-            self.atoms.calc['force'] = force
+            self.atoms.calc.parameters['force'] = force
         if irc is not None:
-            self.atoms.calc['irc'] = irc
+            self.atoms.calc.parameters['irc'] = irc
+        if opt_save is not None:
+            self.atoms.calc.parameters['opt'] = opt_save
 
 
 class GaussianIRC:
@@ -150,6 +154,7 @@ class GaussianIRC:
     def run(self, direction=None, steps=None, **gaussian_kwargs):
 
         irc = gaussian_kwargs.pop('irc', '')
+        irc_save = copy.deepcopy(irc)
 
         if direction is not None:
             irc = '{}, {}'.format(irc, direction)
@@ -165,11 +170,13 @@ class GaussianIRC:
         self.atoms.cell = self.calc.get_atoms().cell
         self.atoms.positions = self.calc.get_atoms().copy()
         if force is not None:
-            self.atoms.calc['force'] = force
+            self.atoms.calc.parameters['force'] = force
         if opt is not None:
-            self.atoms.calc['opt'] = opt
+            self.atoms.calc.parameters['opt'] = opt
         if freq is not None:
-            self.atoms.calc['freq'] = freq
+            self.atoms.calc.parameters['freq'] = freq
+        if irc_save is not None:
+            self.atoms.calc.paramaters['irc'] = irc_save
 
 
 class Gaussian(FileIOCalculator):
