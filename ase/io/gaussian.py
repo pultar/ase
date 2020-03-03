@@ -33,7 +33,8 @@ allowed_dft_functionals = ['lsda',  # = 'svwn'
                            'm062x',
                            'tpssh',
                            'tpsstpss',
-                           'wb97xd']
+                           'wb97xd',
+                           'am1']  # not dft
 
 
 def read_gaussian_out(filename, index=-1, quantity='atoms'):
@@ -108,12 +109,28 @@ def read_gaussian_out(filename, index=-1, quantity='atoms'):
         convert = ase.units.Hartree / ase.units.Bohr
         forces = np.array(forces) * convert
 
+    positions = []
+    for ind, line in enumerate(reversed(lines)):
+        if ('Input orientation:' in line):
+            j = 0
+            while 1:
+                if '---------' in lines[-ind + 4 + j]:
+                    break
+                else:
+                    pos = np.array(lines[-ind + 4 + j].split()[3:6]).astype(float)
+                    positions.append(pos)
+                j += 1
+            break
+    natom = len(positions)
+
     energy *= ase.units.Hartree  # Convert the energy from a.u. to eV
     calc = SinglePointCalculator(atoms, energy=energy, forces=forces)
     atoms.set_calculator(calc)
 
     if (quantity == 'energy'):
         return energy
+    elif (quantity == 'positions'):
+        return positions
     elif (quantity == 'forces'):
         return forces[index]
     elif (quantity == 'dipole'):

@@ -19,6 +19,7 @@ See accompanying license files for details.
 """
 import os
 from shutil import which
+import copy
 
 from ase.calculators.calculator import EnvironmentError, FileIOCalculator, Parameters, ReadError
 
@@ -51,6 +52,7 @@ link0_keys = ['chk',
 # Ex:  Opt, Opt=QST2, Opt=Conical, etc.
 # These keywords are given here.
 route_self_keys = ['opt',
+                   'irc',
                    'force',
                    'freq',
                    'complex',
@@ -87,7 +89,6 @@ route_keys = [# int keys
               'guess',
               'gvb',
               'integral',
-              'irc',
               'ircmax',
               'name',
               'nmr',
@@ -104,23 +105,107 @@ route_keys = [# int keys
               'temperature']
 
 
+class GaussianOptimizer:
+    def __init__(self, atoms, calc, label):
+        self.atoms = atoms
+        self.calc = calc
+        self.label = label
+
+    def todict(self):
+        return {'type': 'optimization',
+                'optimizer': 'GaussianOptimizer'}
+
+    def run(self, fmax=None, steps=None, **gaussian_kwargs):
+        if fmax is not None:
+            if not isinstance(fmax, str):
+                raise ValueError('fmax has to be a string if the internal optimizer of Gaussian is called via ASE.')
+
+        opt = gaussian_kwargs.pop('opt', '')
+        opt_save = copy.deepcopy(opt)
+
+        if fmax is not None:
+            opt = '{}, {}'.format(opt, fmax)
+        if steps is not None:
+            opt = '{}, maxcycles={}'.format(opt, steps)
+
+        self.calc.set(**gaussian_kwargs)
+        force = self.calc.parameters.pop('force', None)
+        irc = self.calc.parameters.pop('irc', None)
+        self.calc.parameters['opt'] = opt
+        self.atoms.calc = self.calc
+
+        self.atoms.get_potential_energy()
+
+        self.calc.read(self.label)
+        self.atoms.cell = self.calc.atoms.cell
+        self.atoms.positions = self.calc.atoms.positions.copy()
+        if force is not None:
+            self.atoms.calc.parameters['force'] = force
+        if irc is not None:
+            self.atoms.calc.parameters['irc'] = irc
+        if opt_save is not None:
+            self.atoms.calc.parameters['opt'] = opt_save
+
+
+class GaussianIRC:
+    def __init__(self, atoms, calc, label):
+        self.atoms = atoms
+        self.calc = calc
+        self.label = label
+
+    def todict(self):
+        return {'type': 'irc',
+                'optimizer': 'GaussianIRC'}
+
+    def run(self, direction=None, steps=None, **gaussian_kwargs):
+
+        irc = gaussian_kwargs.pop('irc', '')
+        irc_save = copy.deepcopy(irc)
+
+        if direction is not None:
+            irc = '{}, {}'.format(irc, direction)
+        if steps is not None:
+            irc = '{}, maxpoints={}'.format(irc, steps)
+
+        self.calc.set(**gaussian_kwargs)
+        opt = self.calc.parameters.pop('opt', None)
+        force = self.calc.parameters.pop('force', None)
+        freq = self.calc.parameters.pop('freq', None)
+        self.calc.parameters['irc'] = irc
+        self.atoms.calc = self.calc
+
+        self.atoms.get_potential_energy()
+
+        self.calc.read(self.label)
+        self.atoms.cell = self.calc.get_atoms().cell
+        self.atoms.positions = self.calc.get_atoms().copy()
+        if force is not None:
+            self.atoms.calc.parameters['force'] = force
+        if opt is not None:
+            self.atoms.calc.parameters['opt'] = opt
+        if freq is not None:
+            self.atoms.calc.parameters['freq'] = freq
+        if irc_save is not None:
+            self.atoms.calc.paramaters['irc'] = irc_save
+
+
 class Gaussian(FileIOCalculator):
     """
     Gaussian calculator
     """
     name = 'Gaussian'
 
-    implemented_properties = ['energy', 'forces', 'dipole']
+    implemented_properties = ['energy', 'forces', 'dipole', 'freq']
 
     command = 'GAUSSIAN < PREFIX.com > PREFIX.log'
 
     default_parameters = {'charge': 0,
                           'method': 'hf',
-                          'basis': '6-31g*',
-                          'force': 'force'}
+                          'basis': '6-31g*'}
+
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
-                 label=None, atoms=None, scratch=None, ioplist=list(),
+                 label=None, atoms=None, optimized=None, scratch=None, ioplist=list(),
                  basisfile=None, extra=None, addsec=None, **kwargs):
 
         """Constructs a Gaussian-calculator object.
@@ -151,6 +236,7 @@ class Gaussian(FileIOCalculator):
                 else:
                     raise
 
+        self.optimized  = optimized
         self.ioplist = ioplist
         self.scratch = scratch
         self.basisfile = basisfile
@@ -194,8 +280,11 @@ class Gaussian(FileIOCalculator):
         inputfile = open(filename, 'w')
 
         link0 = str()
-        route = '#p %s/%s' % (self.parameters['method'],
-                              self.parameters['basis'])
+        if self.parameters['basis'] != '':
+            route = '#p %s/%s' % (self.parameters['method'],
+                                  self.parameters['basis'])
+        else:
+            route = '#p %s' % (self.parameters['method'])
 
         for key, val in self.parameters.items():
             if key.lower() in link0_keys:
@@ -212,6 +301,8 @@ class Gaussian(FileIOCalculator):
             elif key.lower() in route_keys:
                 route += ' %s=%s' % (key, val)
 
+        if 'forces' in properties and 'force' not in self.parameters:
+            route += ' force'
         # include any other keyword(s)
         if self.extra is not None:
             route += ' ' + self.extra
@@ -314,3 +405,6 @@ class Gaussian(FileIOCalculator):
 
     def get_version(self):
         return self.read_output(self.label + '.log', 'version')
+
+    def get_opt_state(self):
+        return self.optimized
