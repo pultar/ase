@@ -39,3 +39,5 @@ __ https://doi.org/10.1103/PhysRevMaterials.3.034003
 
 
 .. autofunction:: ase.geometry.dimensionality.analyze_dimensionality
+
+.. autofunction:: ase.geometry.dimensionality.isolate_components
