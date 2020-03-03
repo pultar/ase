@@ -32,6 +32,8 @@ The method is described in the article:
 
 __ https://doi.org/10.1103/PhysRevMaterials.3.034003
 
+A preprint is available `here <https://arxiv.org/pdf/1808.02114.pdf>`_.
+
 .. seealso::
 
     More examples here: `Dimensionality analysis of ICSD and COD databases
