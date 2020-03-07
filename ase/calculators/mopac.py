@@ -83,7 +83,11 @@ class MOPAC(FileIOCalculator):
             s += 'RELSCF={0} '.format(p.relscf)
 
         # Write charge:
-        charge = atoms.get_initial_charges().sum()
+        if hasattr(p, 'charge'):
+            charge = p.charge
+        else
+            charge = atoms.get_initial_charges().sum()
+            
         if charge != 0:
             s += 'CHARGE={0} '.format(int(round(charge)))
 
