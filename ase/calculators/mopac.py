@@ -85,7 +85,7 @@ class MOPAC(FileIOCalculator):
         # Write charge:
         if hasattr(p, 'charge'):
             charge = p.charge
-        else
+        else:
             charge = atoms.get_initial_charges().sum()
             
         if charge != 0:
