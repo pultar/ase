@@ -17,7 +17,7 @@ class Comparator(object):
         candidates in the population. It returns True if any candidate
         in the population looks like a1. The implementation in each
         comparator could be more clever e.g. by utilising cached
-        values if possible."""
+        values or using numpy matrix operations if possible."""
         for a2 in population:
             if self.looks_like(a1, a2):
                 return True
