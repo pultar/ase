@@ -112,7 +112,8 @@ def compare_atoms(atoms1, atoms2, tol=1e-15, excluded_properties=None):
 
 
 all_properties = ['energy', 'forces', 'stress', 'stresses', 'dipole',
-                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies']
+                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies',
+                  'ensemble_energies']
 
 
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
@@ -664,6 +665,20 @@ class Calculator(object):
             return self.results['free_energy']
         else:
             return energy
+    
+    def get_ensemble_energies(self, atoms=None, force_consistent=False):
+        energies = self.get_property('ensemble_energies', atoms)
+        if force_consistent:
+            if 'ensemble_energies' not in self.results:
+                name = self.__class__.__name__
+                # XXX but we don't know why the energy is not there.
+                # We should raise PropertyNotPresent.  Discuss
+                raise PropertyNotImplementedError(
+                    'Force consistent/ensemble energies ("ensemble_energies") '
+                    'not provided by {0} calculator'.format(name))
+            return self.results['ensemble_energies']
+        else:
+            return energies
 
     def get_potential_energies(self, atoms=None):
         return self.get_property('energies', atoms)

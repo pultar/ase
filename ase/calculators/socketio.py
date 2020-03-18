@@ -84,13 +84,18 @@ class IPIProtocol:
         assert np.isfinite(a).all()
         return a
 
-    def sendposdata(self, cell, icell, positions):
+    def sendposdata(self, cell, icell, positions, ensemble=False):
         assert cell.size == 9
         assert icell.size == 9
         assert positions.size % 3 == 0
 
-        self.log(' sendposdata')
-        self.sendmsg('POSDATA')
+        if ensemble:
+            self.log(' genensemble')
+            self.sendmsg('GENENSEMBLE')
+        else:
+            
+            self.log(' sendposdata')
+            self.sendmsg('POSDATA')
         self.send(cell.T / units.Bohr, np.float64)
         self.send(icell.T * units.Bohr, np.float64)
         self.send(len(positions), np.int32)
@@ -104,11 +109,20 @@ class IPIProtocol:
         positions = self.recv((natoms, 3), np.float64)
         return cell * units.Bohr, icell / units.Bohr, positions * units.Bohr
 
-    def sendrecv_force(self):
+    def sendrecv_force(self, ensemble):
         self.log(' sendrecv_force')
-        self.sendmsg('GETFORCE')
-        msg = self.recvmsg()
-        assert msg == 'FORCEREADY', msg
+        if ensemble:
+            self.sendmsg('GETENSEMBLE')
+            msg = self.recvmsg()
+            assert msg == 'ENSEMBREADY', msg
+            energies = self.recv((2000,1), np.float64)
+            beefxc = self.recv((32,1), np.float64)
+        else:
+            self.sendmsg('GETFORCE')
+            msg = self.recvmsg()
+            assert msg == 'FORCEREADY', msg
+            energies = []
+            beefxc = []
         e = self.recv(1, np.float64)[0]
         natoms = self.recv(1, np.int32)
         assert natoms >= 0
@@ -122,7 +136,7 @@ class IPIProtocol:
         else:
             morebytes = b''
         return (e * units.Ha, (units.Ha / units.Bohr) * forces,
-                units.Ha * virial, morebytes)
+                units.Ha * virial, energies, beefxc, morebytes)
 
     def sendforce(self, energy, forces, virial,
                   morebytes=np.zeros(1, dtype=np.byte)):
@@ -172,7 +186,22 @@ class IPIProtocol:
         self.send(1, np.int32)
         self.send(np.zeros(1), np.byte)  # initialization string
 
-    def calculate(self, positions, cell):
+    def ionic_step(self, positions, cell, ensemble):
+        icell = np.linalg.pinv(cell).transpose()
+        self.sendposdata(cell, icell, positions, ensemble)
+        msg = self.status()
+        assert msg == 'HAVEDATA', msg
+        e, forces, virial, energies, beefxc, morebytes = self.sendrecv_force(ensemble)
+        r = dict(energy=e,
+                 forces=forces,
+                 virial=virial)     
+        if ensemble:
+            r['ensemble_energies']=[energies,beefxc]
+        if morebytes:
+            r['morebytes'] = morebytes
+        return r
+
+    def calculate(self, positions, cell, ensemble):
         self.log('calculate')
         msg = self.status()
         # We don't know how NEEDINIT is supposed to work, but some codes
@@ -181,16 +210,7 @@ class IPIProtocol:
             self.sendinit()
             msg = self.status()
         assert msg == 'READY', msg
-        icell = np.linalg.pinv(cell).transpose()
-        self.sendposdata(cell, icell, positions)
-        msg = self.status()
-        assert msg == 'HAVEDATA', msg
-        e, forces, virial, morebytes = self.sendrecv_force()
-        r = dict(energy=e,
-                 forces=forces,
-                 virial=virial)
-        if morebytes:
-            r['morebytes'] = morebytes
+        r = self.ionic_step(positions, cell, ensemble)
         return r
 
 
@@ -339,7 +359,7 @@ class SocketServer:
             os.unlink(self._created_socket_file)
         # self.log('IPI server closed')
 
-    def calculate(self, atoms):
+    def calculate(self, atoms, ensemble):
         """Send geometry to client and return calculated things as dict.
 
         This will block until client has established connection, then
@@ -350,7 +370,7 @@ class SocketServer:
         # until the client catches up:
         if self.protocol is None:
             self._accept()
-        return self.protocol.calculate(atoms.positions, atoms.cell)
+        return self.protocol.calculate(atoms.positions, atoms.cell, ensemble)
 
 
 class SocketClient:
@@ -511,7 +531,7 @@ class SocketClient:
 
 
 class SocketIOCalculator(Calculator):
-    implemented_properties = ['energy', 'forces', 'stress']
+    implemented_properties = ['energy', 'forces', 'stress', 'ensemble_energies']
     supported_changes = {'positions', 'cell'}
 
     def __init__(self, calc=None, port=None,
@@ -634,7 +654,8 @@ class SocketIOCalculator(Calculator):
             self.launch_server(cmd)
 
         self.atoms = atoms.copy()
-        results = self.server.calculate(atoms)
+        ensemble = 'ensemble_energies' in properties
+        results = self.server.calculate(atoms, ensemble)
         virial = results.pop('virial')
         if self.atoms.number_of_lattice_vectors == 3 and any(self.atoms.pbc):
             from ase.constraints import full_3x3_to_voigt_6_stress
