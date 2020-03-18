@@ -1,9 +1,11 @@
 import os
 import numpy as np
+import h5py
 
 from ase.units import Hartree, Bohr
 from ase.io.votca import write_votca
 from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
+
 
 
 class votca(FileIOCalculator):
@@ -71,15 +73,9 @@ class votca(FileIOCalculator):
 
     def read_energy(self):
         """Read Energy from VOTCA-XTP log file."""
-        text = open('dftgwbse.log', 'r', encoding='utf-8').read()
-        lines = iter(text.split('\n'))
-        # Energy:
-        estring = 'Final Single'
-        for line in lines:
-            if estring in line:
-                energy = float(line.split()[-2])
-                break
-        self.results['energy'] = energy 
+        orbFile = h5py.File('system.orb', 'r')
+        orb = orbFile['QMdata']
+        self.results['energy'] = orb.attrs['qm_energy']
 
     def read_forces(self):
         """Read Forces from VOTCA logfile."""
@@ -105,7 +101,6 @@ class votca(FileIOCalculator):
                     energy = float(line.split()[-2])
             if 'Saving' in line:
                 getgrad = "no"
-        self.results['energy'] = energy
         self.results['forces'] = -np.array(gradients) * Hartree / Bohr
 
     def embed(self, mmcharges=None, **parameters):
