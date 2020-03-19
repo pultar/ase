@@ -713,6 +713,15 @@ class Atoms(object):
         if self._calc is None:
             raise RuntimeError('Atoms object has no calculator.')
         return self._calc.get_potential_energies(self)
+    
+    def get_ensemble_energies(self):
+        """Calculate the ensemble energy.
+
+        Only available if `get_ensemble_energy` is available in the calculator.
+        """
+        if self._calc is None:
+            raise RuntimeError('Atoms object has no calculator.')
+        return self._calc.get_ensemble_energies(self)
 
     def get_kinetic_energy(self):
         """Get the kinetic energy."""
