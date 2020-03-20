@@ -676,7 +676,9 @@ class Calculator(object):
     def get_qp_energies(self, atoms=None):
         energy = self.get_property('qp', atoms)
         return energy
-
+    def get_qp_pert_energies(self, atoms=None):
+        energy = self.get_property('qp_pert', atoms)
+        return energy
     def get_potential_energies(self, atoms=None):
         return self.get_property('energies', atoms)
 

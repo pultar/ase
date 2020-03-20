@@ -9,7 +9,7 @@ from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 
 
 class votca(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks']
+    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks', 'qp_pert']
 
     command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 > tee dftgwbse.log'
 
@@ -79,11 +79,8 @@ class votca(FileIOCalculator):
         self.results['singlets'] =np.array(orb['BSE_singlet']['eigenvalues'][()]).transpose()[0]
         self.results['triplets'] =np.array(orb['BSE_triplet']['eigenvalues'][()]).transpose()[0]
         self.results['ks'] =np.array(orb['RPA_inputenergies'][()]).transpose()[0]
-        qp = np.array(orb['QPdiag']['eigenvalues'][()]).transpose()[0]
-        if (qp.size != 0):
-            self.results['qp'] = qp
-        else:
-            self.results['qp'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
+        self.results['qp'] = np.array(orb['QPdiag']['eigenvalues'][()]).transpose()[0]
+        self.results['qp_pert'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
     def read_forces(self):
         """Read Forces from VOTCA logfile."""
         fil = open('dftgwbse.log', 'r', encoding='utf-8')
