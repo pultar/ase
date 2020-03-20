@@ -340,7 +340,6 @@ class Vibrations:
                     if op.isfile(name+suffixes[i]):
                         f[i] = load(name + suffixes[i], combined_data)
                         
-
                 #if direction != 'forward':  
                 #    f[-1] = load(name + '-.pckl', combined_data)
                 #if direction != 'backward': 
@@ -416,6 +415,13 @@ class Vibrations:
 
         s = 1. / units.invcm
         return s * self.get_energies(method, direction)
+
+    def set_indices(self, indices):
+        self.indices = np.asarray(indices)
+        self.run() # update the cached modes
+    
+    def get_indices(self):
+        return self.indices.copy()
 
     def summary(self, method=None, direction=None, freq=None,
                 log=sys.stdout):
@@ -505,6 +511,37 @@ class Vibrations:
         self.atoms.set_calculator(calc)
         self.atoms.edit()
 
+    def write_mode_as_forces(self, n, filename = None):
+        """write the nth mode as forces to a .traj file"""
+        if filename== None:
+            filename = '%s.%d.maf.traj' % (self.name, n)
+        from ase.io.trajectory import Trajectory
+        from ase.calculators.singlepoint import SinglePointCalculator
+        traj = Trajectory(filename, 'w')
+        vib_energies = self.get_energies()
+        atoms = self.atoms.copy()
+        mode = self.get_mode(n) #* len(vib.hnu) * scale
+        fakec = SinglePointCalculator(atoms, forces=mode, energy=vib_energies[n])
+        atoms.set_calculator(fakec)
+        traj.write(atoms)
+        traj.close()
+
+    def write_all_modes_as_forces(self, filename = None):
+        """write all modes as forces to a .traj file"""
+        if filename== None:
+            filename = '%s.all.maf.traj' % self.name
+        from ase.io.trajectory import Trajectory
+        from ase.calculators.singlepoint import SinglePointCalculator
+        traj = Trajectory(filename, 'w')
+        vib_energies = self.get_energies()
+        atoms = self.atoms.copy()
+        for n in range(len(self.hnu)):
+            mode = self.get_mode(n) #* len(vib.hnu) * scale
+            fakec = SinglePointCalculator(atoms, forces=mode, energy=vib_energies[n])
+            atoms.set_calculator(fakec)
+            traj.write(atoms)
+        traj.close()
+
     def write_jmol(self):
         """Writes file for viewing of the modes with jmol."""
 
@@ -530,15 +567,24 @@ class Vibrations:
                           mode[i, 0], mode[i, 1], mode[i, 2]))
         fd.close()
 
-    def fold(self, frequencies, intensities,
+    def fold(self, frequencies = [], intensities = [],
              start=800.0, end=4000.0, npts=None, width=4.0,
-             type='Gaussian', normalize=False):
+             type='Gaussian', normalize=False, method = None, direction = None):
         """Fold frequencies and intensities within the given range
         and folding method (Gaussian/Lorentzian).
         The energy unit is cm^-1.
         normalize=True ensures the integral over the peaks to give the
         intensity.
         """
+
+        if method == None:
+            method = self.method
+        if direction == None:
+            direction = self.direction
+        if frequencies == []:
+            frequencies = self.get_frequencies(method, direction).real
+        if intensities == []:
+            intensities = np.ones(len(frequencies))
 
         lctype = type.lower()
         assert lctype in ['gaussian', 'lorentzian']
@@ -584,9 +630,9 @@ class Vibrations:
         if direction == None:
             direction = self.direction
 
-        frequencies = self.get_frequencies(method, direction).real
-        intensities = np.ones(len(frequencies))
-        energies, spectrum = self.fold(frequencies, intensities,
+        #frequencies = self.get_frequencies(method, direction).real
+        #intensities = np.ones(len(frequencies))
+        energies, spectrum = self.fold(#frequencies=None, intensities=None,
                                        start, end, npts, width, type)
 
         # Write out spectrum in file.
@@ -605,83 +651,3 @@ class Vibrations:
 
 
 
-def progressive_vibrations_by_index(atoms, sorted_index_list,
-    name = 'vib',
-    finite_displacement = 0.01,
-    clean_empty_files=True,
-    method='standard',
-    direction = 'central' , nfree = 2, write_progession_files = True):
-    
-    import numpy as np
-    import os
-    
-    from ase.vibrations import Vibrations
-
-    def float_list_to_string(fl):
-        s = ''
-        for f in fl:
-            s = s + '%.3e %.3ej  '%(f.real, f.imag)
-        return s +'\n'
-
-    from ase.calculators.singlepoint import SinglePointCalculator
-
-
-    def write_mode_traj( vib, fname='modes.traj'):
-        from ase.io.trajectory import Trajectory
-
-        traj = Trajectory(fname, 'w')
-
-        vib_energies = vib.get_energies()
-
-        atoms = vib.atoms.copy()
-
-        for n in range(len(vib.hnu)):
-            mode = vib.get_mode(n) #* len(vib.hnu) * scale
-            fakec = SinglePointCalculator(atoms, forces=mode, energy=vib_energies[n])
-            atoms.set_calculator(fakec)
-            traj.write(atoms)
-        traj.close()
-
-
-    natoms_inlcuded_list = []
-    
-    if write_progession_files:
-        fid1 = open('rate_convergence.txt','w')
-        fid2 = open('mode_energies.txt','w')
-        fid1.write('# Natoms in Hessian, Nth atom index, prefactor freq (Hz), Kinetic rate for barrier (Hz)\n')
-    
-    #vib   = Vibrations(atoms, delta = finite_displacement,
-    #               method = method, direction = direction, name=name)
-    for natoms_included in range(1,len(sorted_index_list)+1):
-
-        indices_included = sorted_index_list[0:natoms_included]
-
-        print('Computing Hessian for atom %i'    % indices_included[-1])
-        print(natoms_included,'/',len(sorted_index_list), indices_included)
-
-        # re-instantiation works, while updating the list doesn't
-        #vib.indices = np.asarray(indices_included)
-
-        
-        vib   = Vibrations(atoms, indices = indices_included, delta = finite_displacement,
-                       method = method, direction = direction, name=name, nfree=nfree)
-        if clean_empty_files: vib.clean(empty_files=True, combined = False)
-        vib.run()
-        
-        vib_energies = vib.get_energies()
-        natoms_inlcuded_list.append(natoms_included)
-        
-        if write_progession_files:
-            fid1.write('%i %i %e %e\n'%(natoms_included, indices_included[-1], min(vib_energies), max(vib_energies) ))
-            fid1.flush()
-
-            fid2.write(float_list_to_string(vib_energies))
-            fid2.flush()
-        
-        write_mode_traj( vib = vib, fname= '%i_atoms_included.traj'%natoms_included)
-
-    fid1.close()
-    fid2.close()
-
-
-    return vib
