@@ -664,6 +664,18 @@ class Calculator(object):
             return self.results['free_energy']
         else:
             return energy
+    def get_singlet_energies(self, atoms=None):
+        energy = self.get_property('singlets', atoms)
+        return energy
+    def get_triplet_energies(self, atoms=None):
+        energy = self.get_property('triplets', atoms)
+        return energy
+    def get_ks_energies(self, atoms=None):
+        energy = self.get_property('ks', atoms)
+        return energy
+    def get_qp_energies(self, atoms=None):
+        energy = self.get_property('qp', atoms)
+        return energy
 
     def get_potential_energies(self, atoms=None):
         return self.get_property('energies', atoms)

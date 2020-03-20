@@ -9,9 +9,9 @@ from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 
 
 class votca(FileIOCalculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks']
 
-    command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 > dftgwbse.log'
+    command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 > tee dftgwbse.log'
 
     default_parameters = dict(
         charge=0, mult=1,
@@ -76,7 +76,14 @@ class votca(FileIOCalculator):
         orbFile = h5py.File('system.orb', 'r')
         orb = orbFile['QMdata']
         self.results['energy'] = orb.attrs['qm_energy']
-
+        self.results['singlets'] =np.array(orb['BSE_singlet']['eigenvalues'][()]).transpose()[0]
+        self.results['triplets'] =np.array(orb['BSE_triplet']['eigenvalues'][()]).transpose()[0]
+        self.results['ks'] =np.array(orb['RPA_inputenergies'][()]).transpose()[0]
+        qp = np.array(orb['QPdiag']['eigenvalues'][()]).transpose()[0]
+        if (qp.size != 0):
+            self.results['qp'] = qp
+        else:
+            self.results['qp'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
     def read_forces(self):
         """Read Forces from VOTCA logfile."""
         fil = open('dftgwbse.log', 'r', encoding='utf-8')
