@@ -98,7 +98,7 @@ class Vasp2(GenerateVaspInput, Calculator):
     def __init__(self,
                  atoms=None,
                  restart=None,
-                 directory='',
+                 directory='.',
                  label='vasp',
                  ignore_bad_restart_file=False,
                  command=None,
@@ -116,7 +116,7 @@ class Vasp2(GenerateVaspInput, Calculator):
         self._xml_data = None
 
         # Utilize the label.setter
-        label = './'.join((str(directory), label))
+        label = '/'.join((str(directory), label))
 
         if restart is True:
             # We restart in the label directory
