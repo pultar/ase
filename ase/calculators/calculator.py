@@ -521,16 +521,8 @@ class Calculator(object):
 
     @directory.setter
     def directory(self, directory: Union[str, pathlib.PurePath]):
-        if isinstance(directory, pathlib.PurePath):
-            directory = str(directory)
-        if not isinstance(directory, str):
-            msg = (f'directory must be either str or PurePath, got {directory}'
-                   f'of type {type(directory)}')
-            raise ValueError(msg)
-        if directory == '':
-            # Empty string is just current working directory
-            directory = '.'
-        self._directory = directory
+        # Normalize path
+        self._directory = str(pathlib.Path(directory))
 
     @property
     def label(self):
