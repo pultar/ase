@@ -489,11 +489,11 @@ class Calculator(object):
         self.directory = directory
         self.prefix = None
         if label is not None:
-            if directory != '.' and '/' in label:
+            if self.directory != '.' and '/' in label:
                 raise ValueError('Directory redundantly specified though '
                                  'directory="{}" and label="{}".  '
                                  'Please omit "/" in label.'
-                                 .format(directory, label))
+                                 .format(self.directory, label))
             self.label = '/'.join((self.directory, label))
 
         if self.parameters is None:
