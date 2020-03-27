@@ -78,7 +78,7 @@ class votca(FileIOCalculator):
         self.results['energy'] = orb.attrs['qm_energy']
         self.results['singlets'] =np.array(orb['BSE_singlet']['eigenvalues'][()]).transpose()[0]
         self.results['triplets'] =np.array(orb['BSE_triplet']['eigenvalues'][()]).transpose()[0]
-        self.results['ks'] =np.array(orb['RPA_inputenergies'][()]).transpose()[0]
+        self.results['ks'] =np.array(orb['mos']['eigenvalues'][()]).transpose()[0]
         self.results['qp'] = np.array(orb['QPdiag']['eigenvalues'][()]).transpose()[0]
         self.results['qp_pert'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
     def read_forces(self):
