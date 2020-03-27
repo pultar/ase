@@ -65,8 +65,28 @@ def self_energy(atom,show=True,outfile='selfenergy.png'):
         plt.show()
     plt.savefig(outfile)
 
+def gaussian(x, center, fwhm):
+    """ Computes the value of a gaussian with center x and fwhm at position x. """
+    # FWHM = 2*sqrt(2 ln2) sigma = 2.3548 sigma
+    sigma = fwhm / 2.3548
+    return(np.exp(-0.5 * ((x - center) / sigma)**2) / sigma / np.sqrt(2.0 * np.pi))
+def lorentzian(x, center, fwhm):
+    """ Computes the value of a lorentzian with center x and fwhm at position x. """
+    return(fwhm *fwhm / ((x - center)**2 + fwhm * fwhm) / np.pi)
 
-
-
-
-
+def epsilon_2(atom,omega_in=0.1,omega_fin=30,num=300,fwhm=1e-2,axis = 0,outfile='BSEepsilon.png',show=True):
+    hrt2ev = 27.2214
+    singlet = hrt2ev*atom.get_singlet_energies()
+    tdipoles = atom.get_transition_dipoles()[:,axis]
+    w = np.linspace(omega_in,omega_fin,num=num)
+    eps2 = []
+    for x in w:
+        c = 0
+        for a,b in zip(singlet,tdipoles):
+            c += lorentzian(x,a,fwhm)*b**2
+        eps2.append(c)
+    plt.close("all")
+    plt.plot(w,eps2)
+    if (show==True):
+        plt.show()
+    plt.savefig(outfile)

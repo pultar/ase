@@ -7,9 +7,9 @@ from ase.io.votca import write_votca
 from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 
 
-
 class votca(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks', 'qp_pert']
+    implemented_properties = ['energy', 'forces', 'singlets',
+        'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
 
     command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 > tee dftgwbse.log'
 
@@ -39,11 +39,10 @@ class votca(FileIOCalculator):
         p = self.parameters
         p.write(self.label + '.ase')
         p['label'] = self.label
-        #if self.pcpot:  # also write point charge file and add things to input
+        # if self.pcpot:  # also write point charge file and add things to input
         #    p['pcpot'] = self.pcpot
 
         write_votca(atoms, **p)
-
 
     def read(self, label):
         FileIOCalculator.read(self, label)
@@ -71,15 +70,35 @@ class votca(FileIOCalculator):
         if self.parameters.task.find('gradient') > -1:
             self.read_forces()
 
+    def tdipoles_sorter(orb):
+      groupedData = []
+      permutation = []
+      for ind in orb['transition_dipoles'].keys():
+            permutation.append(int(ind[3:]))  # 3: skips over the 'ind' bit
+            groupedData.append(orb['transition_dipoles'][ind][:].transpose()[0])
+      groupedData = np.asarray(groupedData)
+      return(groupedData[np.argsort(permutation)])
+
     def read_energy(self):
         """Read Energy from VOTCA-XTP log file."""
         orbFile = h5py.File('system.orb', 'r')
         orb = orbFile['QMdata']
         self.results['energy'] = orb.attrs['qm_energy']
-        self.results['singlets'] =np.array(orb['BSE_singlet']['eigenvalues'][()]).transpose()[0]
-        self.results['triplets'] =np.array(orb['BSE_triplet']['eigenvalues'][()]).transpose()[0]
-        self.results['ks'] =np.array(orb['mos']['eigenvalues'][()]).transpose()[0]
-        self.results['qp'] = np.array(orb['QPdiag']['eigenvalues'][()]).transpose()[0]
+        self.results['singlets'] = np.array(
+            orb['BSE_singlet']['eigenvalues'][()]).transpose()[0]
+        self.results['triplets'] = np.array(
+            orb['BSE_triplet']['eigenvalues'][()]).transpose()[0]
+        self.results['ks'] = np.array(
+            orb['mos']['eigenvalues'][()]).transpose()[0]
+        self.results['qp'] = np.array(
+            orb['QPdiag']['eigenvalues'][()]).transpose()[0]
+        groupedData = []
+        permutation = []
+        for ind in orb['transition_dipoles'].keys():
+            permutation.append(int(ind[3:])) # 3: skips over the 'ind' bit
+            groupedData.append(orb['transition_dipoles'][ind][:].transpose()[0])
+        groupedData = np.asarray(groupedData)
+        self.results['transition_dipoles'] = groupedData[np.argsort(permutation)]
         self.results['qp_pert'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
     def read_forces(self):
         """Read Forces from VOTCA logfile."""

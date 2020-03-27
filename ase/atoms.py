@@ -733,6 +733,13 @@ class Atoms(object):
         if self._calc is None:
             raise RuntimeError('Atoms object has no calculator.')
         return self._calc.get_qp_energies(self)
+    def get_transition_dipoles(self):
+        """Calculate the transiton dipoles from GW-BSE.
+        Only available in VOTCA-XTP
+        """
+        if self._calc is None:
+            raise RuntimeError('Atoms object has no calculator.')
+        return self._calc.get_transition_dipoles(self)
     def get_qp_pert_energies(self):
         """Calculate the QuasiParticle energies from GW-BSE.
         Only available in VOTCA-XTP
