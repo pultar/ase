@@ -15,7 +15,7 @@ def get_bond_list(atoms, nl, rs):
             d = np.linalg.norm(p - q)
             k = d / (rs[i] + rs[j])
             bonds.append((k, i, j, tuple(offset)))
-    return sorted(bonds)
+    return set(bonds)
 
 
 def next_bond(atoms):
@@ -47,9 +47,11 @@ def next_bond(atoms):
 
         # Get a list of bonds, sorted by k-value.
         bonds = get_bond_list(atoms, nl, rs)
+        new_bonds = bonds - seen
+        if len(new_bonds) == 0:
+            break
 
         # Yield the bonds which we have not previously generated.
-        for b in bonds:
-            if b not in seen:
-                seen.add(b)
-                yield b
+        seen.update(new_bonds)
+        for b in sorted(new_bonds, key=lambda x: x[0]):
+            yield b
