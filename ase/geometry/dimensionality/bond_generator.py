@@ -4,9 +4,8 @@ from ase.data import covalent_radii
 
 
 def get_bond_list(atoms, nl, rs):
-    num_atoms = len(atoms)
     bonds = []
-    for i in range(num_atoms):
+    for i in range(len(atoms)):
         p = atoms.positions[i]
         indices, offsets = nl.get_neighbors(i)
 
