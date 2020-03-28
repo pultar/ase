@@ -28,7 +28,9 @@ def next_bond(atoms):
 
     atoms: ASE atoms object
 
-    Returns:
+    Returns: iterator of bonds
+        A bond is a tuple with the following elements:
+
         k:       float   k-value
         i:       float   index of first atom
         j:       float   index of second atom
