@@ -107,8 +107,8 @@ def compare_atoms(atoms1, atoms2, tol=1e-15, excluded_properties=None):
         # Finally, check all of the non-excluded properties shared by the atoms
         # arrays
         for prop in properties_to_check & arrays1 & arrays2:
-                if not equal(atoms1.arrays[prop], atoms2.arrays[prop], tol):
-                    system_changes.append(prop)
+            if not equal(atoms1.arrays[prop], atoms2.arrays[prop], tol):
+                system_changes.append(prop)
 
     return system_changes
 
@@ -304,6 +304,7 @@ def kpts2sizeandoffsets(size=None, density=None, gamma=None, even=None,
                 offsets[i] = 0.5 / s
 
     return size, offsets
+
 
 @jsonable('kpoints')
 class KPoints:
@@ -677,8 +678,31 @@ class Calculator(object):
         else:
             return energy
 
+    def get_singlet_energies(self, atoms=None):
+        energy = self.get_property('singlets', atoms)
+        return energy
+
+    def get_triplet_energies(self, atoms=None):
+        energy = self.get_property('triplets', atoms)
+        return energy
+
+    def get_ks_energies(self, atoms=None):
+        energy = self.get_property('ks', atoms)
+        return energy
+
+    def get_qp_energies(self, atoms=None):
+        energy = self.get_property('qp', atoms)
+        return energy
+
+    def get_qp_pert_energies(self, atoms=None):
+        energy = self.get_property('qp_pert', atoms)
+        return energy
+
     def get_potential_energies(self, atoms=None):
         return self.get_property('energies', atoms)
+
+    def get_transition_dipoles(self, atoms=None):
+        return self.get_property('transition_dipoles', atoms)
 
     def get_forces(self, atoms=None):
         return self.get_property('forces', atoms)
