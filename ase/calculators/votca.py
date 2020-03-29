@@ -11,7 +11,7 @@ class votca(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'singlets',
         'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
 
-    command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 > tee dftgwbse.log'
+    command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 >  dftgwbse.log'
 
     default_parameters = dict(
         charge=0, mult=1,
