@@ -18,7 +18,8 @@ from ase.utils.forcecurve import fit_images
 class NEB:
     def __init__(self, images, k=0.1, fmax=0.05, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
-                 method='aseneb', dynamic_relaxation=False, scale_fmax=0.):
+                 method='aseneb', dynamic_relaxation=False, scale_fmax=0.,
+                 sym=False, rotations=None):
         """Nudged elastic band.
 
         Paper I:
@@ -80,7 +81,7 @@ class NEB:
             if (img.pbc != images[0].pbc).any():
                 raise ValueError('Images have different boundary conditions')
             if (img.get_atomic_numbers() !=
-                images[0].get_atomic_numbers()).any():
+                    images[0].get_atomic_numbers()).any():
                 raise ValueError('Images have atoms in different orders')
         self.nimages = len(images)
         self.emax = np.nan
@@ -206,6 +207,26 @@ class NEB:
             energies[-1] = images[-1].get_potential_energy()
 
         if not self.parallel:
+            if self.sym:
+                # R-NEB symmetry
+                if self.rotations is None:
+                    msg = 'R-NEB requires rotations'
+                    raise ValueError(msg)
+
+                for i in range(1, self.nimages - 1):
+                    if i <= self.nimages // 2:
+                        energies[i] = images[i].get_potential_energy()
+                        forces[i - 1] = images[i].get_forces()
+                    else:
+                        j = i - (i - self.nimages // 2) * 2
+
+                        forces_temp = np.array([np.dot(self.rotations[0],
+                                                       forces[j - 1][at]) for
+                                                at in self.rotations[2]])
+
+                        forces[i - 1] = forces_temp
+                        energies[i] = energies[j]
+
             # Do all images - one at a time:
             for i in range(1, self.nimages - 1):
                 energies[i] = images[i].get_potential_energy()
