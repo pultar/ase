@@ -74,6 +74,8 @@ class NEB:
         self.images = images
         self.climb = climb
         self.parallel = parallel
+        self.sym = sym
+        self.rotations = rotations
         self.natoms = len(images[0])
         for img in images:
             if len(img) != self.natoms:
