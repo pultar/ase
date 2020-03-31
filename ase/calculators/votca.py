@@ -1,43 +1,51 @@
-import os
-import numpy as np
-import h5py
+"""Votca calculator interface.
 
-from ase.units import Hartree, Bohr
-from ase.io.votca import write_votca
-from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
+API
+---
+.. autoclass:: votca
+
+"""
+import os
+
+import h5py
+import numpy as np
+
+from ..io.votca import write_votca
+from ..units import Bohr, Hartree
+from .calculator import FileIOCalculator, Parameters, ReadError
 
 
 class votca(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'singlets',
-        'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
+    """ASE interface to VOTCA-XTP Only supports energies for now."""
 
-    command = 'xtp_tools -e dftgwbse -o dftgwbse.xml -t 4 >  dftgwbse.log'
+    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
 
-    default_parameters = dict(
-        charge=0, mult=1,
-        task='gradient',
-        orcasimpleinput='tightscf PBE def2-SVP',
-        orcablocks='%scf maxiter 200 end')
+    command = f"xtp_tools -e dftgwbse -o dftgwbse.xml -t {os.cpu_count()} >  dftgwbse.log"
+
+    default_parameters = {
+        "charge": 0, "mult": 1, "task": "gradient",
+        "orcasimpleinput": "tightscf PBE def2-SVP",
+        "orcablocks": "%scf maxiter 200 end"}
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label='orca', atoms=None, **kwargs):
-        """ ASE interface to VOTCA-XTP
-        Only supports energies for now.
-        """
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, **kwargs)
 
         self.pcpot = None
 
+
     def set(self, **kwargs):
+        """ """
         changed_parameters = FileIOCalculator.set(self, **kwargs)
         if changed_parameters:
             self.reset()
 
     def write_input(self, atoms, properties=None, system_changes=None):
+        """Write Input file for Orca."""
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
         p = self.parameters
-        p.write(self.label + '.ase')
+        p.write(f'{self.label}.ase')
         p['label'] = self.label
         # if self.pcpot:  # also write point charge file and add things to input
         #    p['pcpot'] = self.pcpot
@@ -46,10 +54,10 @@ class votca(FileIOCalculator):
 
     def read(self, label):
         FileIOCalculator.read(self, label)
-        if not os.path.isfile(self.label + '.out'):
+        if not os.path.isfile(f"{self.label}.out"):
             raise ReadError
 
-        with open(self.label + '.inp') as f:
+        with open(f'{self.label}.inp') as f:
             for line in f:
                 if line.startswith('geometry'):
                     break
@@ -71,13 +79,13 @@ class votca(FileIOCalculator):
             self.read_forces()
 
     def tdipoles_sorter(orb):
-      groupedData = []
-      permutation = []
-      for ind in orb['transition_dipoles'].keys():
+        groupedData = []
+        permutation = []
+        for ind in orb['transition_dipoles'].keys():
             permutation.append(int(ind[3:]))  # 3: skips over the 'ind' bit
             groupedData.append(orb['transition_dipoles'][ind][:].transpose()[0])
-      groupedData = np.asarray(groupedData)
-      return(groupedData[np.argsort(permutation)])
+        groupedData = np.asarray(groupedData)
+        return(groupedData[np.argsort(permutation)])
 
     def read_energy(self):
         """Read Energy from VOTCA-XTP log file."""
@@ -95,24 +103,27 @@ class votca(FileIOCalculator):
         groupedData = []
         permutation = []
         for ind in orb['transition_dipoles'].keys():
-            permutation.append(int(ind[3:])) # 3: skips over the 'ind' bit
+            permutation.append(int(ind[3:]))  # 3: skips over the 'ind' bit
             groupedData.append(orb['transition_dipoles'][ind][:].transpose()[0])
         groupedData = np.asarray(groupedData)
-        self.results['transition_dipoles'] = groupedData[np.argsort(permutation)]
-        self.results['qp_pert'] =  np.array(orb['QPpert_energies'][()]).transpose()[0]
+        self.results['transition_dipoles'] = groupedData[np.argsort(
+            permutation)]
+        self.results['qp_pert'] = np.array(
+            orb['QPpert_energies'][()]).transpose()[0]
+
     def read_forces(self):
         """Read Forces from VOTCA logfile."""
-        fil = open('dftgwbse.log', 'r', encoding='utf-8')
-        lines = fil.readlines()
-        fil.close()
-        getgrad = "no"
+        with open('dftgwbse.log', 'r', encoding='utf-8') as fil:
+            lines = fil.readlines()
+
+        getgrad = False
         for i, line in enumerate(lines):
             if line.find('ENGRAD') >= 0:
-                getgrad = "yes"
+                getgrad = True
                 gradients = []
                 tempgrad = []
                 continue
-            if getgrad == "yes" and "Saving" not in line:
+            if getgrad and "Saving" not in line:
                 if "Total" not in line:
                     grad = line.split()
                     tempgrad.append(float(grad[3]))
@@ -131,5 +142,3 @@ class votca(FileIOCalculator):
         """
         self.pcpot = PointChargePotential(mmcharges, label=self.label)
         return self.pcpot
-
-

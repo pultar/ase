@@ -30,3 +30,6 @@ ase/gui/po/ag.pot
 coverage-html
 
 .mypy_cache
+
+# Visual code
+.vscode
