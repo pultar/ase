@@ -15,7 +15,7 @@ from ..units import Bohr, Hartree
 from .calculator import FileIOCalculator, Parameters, ReadError
 
 
-class votca(FileIOCalculator):
+class VOTCA(FileIOCalculator):
     """ASE interface to VOTCA-XTP Only supports energies for now."""
 
     implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']

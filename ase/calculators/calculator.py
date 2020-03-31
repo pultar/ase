@@ -152,14 +152,15 @@ special = {'cp2k': 'CP2K',
            'orca': 'ORCA',
            'qchem': 'QChem',
            'tip3p': 'TIP3P',
-           'tip4p': 'TIP4P'}
+           'tip4p': 'TIP4P',
+           'votca': 'VOTCA'}
 
 
 external_calculators = {}
 
 
 def register_calculator_class(name, cls):
-    """ Add the class into the database. """
+    """Add the class into the database. """
     assert name not in external_calculators
     external_calculators[name] = cls
     names.append(name)

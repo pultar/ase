@@ -7,9 +7,10 @@ API
 """
 
 from ..io import xyz
+from ..atoms import Atoms
 
 
-def write_votca(atoms, **params):
+def write_votca(atoms: Atoms, **params) -> None:
     """Write VOTCA input file(s)."""
     # geometry to votca.xyz
     xyz.write_xyz('votca.xyz', atoms)
@@ -22,7 +23,7 @@ def write_votca(atoms, **params):
         f.write(inp)
 
 
-def format_atoms(atoms: list) -> str:
+def format_atoms(atoms: Atoms) -> str:
     """Print the atoms in xyz format."""
     inp = ""
     for atom in atoms:
