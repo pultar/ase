@@ -917,7 +917,8 @@ class FileIOCalculator(Calculator):
         """Write input file(s).
 
         Call this method first in subclasses so that directories are
-        created automatically."""
+        created automatically.
+        """
 
         absdir = os.path.abspath(self.directory)
         if absdir != os.curdir and not os.path.isdir(self.directory):

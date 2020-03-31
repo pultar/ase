@@ -9,6 +9,7 @@ import os
 
 import h5py
 import numpy as np
+import re
 
 from ..io.votca import write_votca
 from ..units import Bohr, Hartree
@@ -18,12 +19,13 @@ from .calculator import FileIOCalculator, Parameters, ReadError
 class VOTCA(FileIOCalculator):
     """ASE interface to VOTCA-XTP Only supports energies for now."""
 
-    implemented_properties = ['energy', 'forces', 'singlets', 'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
+    implemented_properties = ['energy', 'forces', 'singlets',
+                              'triplets', 'qp', 'ks', 'qp_pert', 'transition_dipoles']
 
     command = f"xtp_tools -e dftgwbse -o dftgwbse.xml -t {os.cpu_count()} >  dftgwbse.log"
 
     default_parameters = {
-        "charge": 0, "mult": 1, "task": "gradient",
+        "charge": 0, "mult": 1, "task": "forces",
         "orcasimpleinput": "tightscf PBE def2-SVP",
         "orcablocks": "%scf maxiter 200 end"}
 
@@ -33,7 +35,6 @@ class VOTCA(FileIOCalculator):
                                   label, atoms, **kwargs)
 
         self.pcpot = None
-
 
     def set(self, **kwargs):
         changed_parameters = FileIOCalculator.set(self, **kwargs)
@@ -74,7 +75,7 @@ class VOTCA(FileIOCalculator):
 
     def read_results(self):
         self.read_energy()
-        if self.parameters.task.find('gradient') > -1:
+        if self.parameters.task.find('forces') > -1:
             self.read_forces()
 
     def tdipoles_sorter(orb):
@@ -110,34 +111,41 @@ class VOTCA(FileIOCalculator):
         self.results['qp_pert'] = np.array(
             orb['QPpert_energies'][()]).transpose()[0]
 
-    def read_forces(self):
-        """Read Forces from VOTCA logfile."""
-        with open('dftgwbse.log', 'r', encoding='utf-8') as fil:
-            lines = fil.readlines()
+    def read_forces(self) -> None:
+        """Read Forces from VOTCA logfile.
 
-        getgrad = False
-        for i, line in enumerate(lines):
-            if line.find('ENGRAD') >= 0:
-                getgrad = True
-                gradients = []
-                tempgrad = []
-                continue
-            if getgrad and "Saving" not in line:
-                if "Total" not in line:
-                    grad = line.split()
-                    tempgrad.append(float(grad[3]))
-                    tempgrad.append(float(grad[4]))
-                    tempgrad.append(float(grad[5]))
-                    gradients.append(tempgrad)
-                    tempgrad = []
-                else:
-                    energy = float(line.split()[-2])
-            if 'Saving' in line:
-                getgrad = "no"
-        self.results['forces'] = -np.array(gradients) * Hartree / Bohr
+        The Votca-XTP Engrad output looks like:
+
+        ... ... =========== ENGRAD SUMMARY =================================
+        ... ...    Total energy:     -112.90643941 Hartree
+        ... ...    0    -0.0000  -0.0000  -0.1626
+        ... ...    1    +0.0000  +0.0000  +0.1626
+        ... ... Saving data to system.orb
+        ... ... Writing output to dftgwbse.out.xml
+        """
+        with open('dftgwbse.log', 'r') as f:
+            raw_data = f.read()
+
+        # Search for gradient
+        start = re.search(r"ENGRAD SUMMARY", raw_data)
+        lines = raw_data[start.start():].splitlines()
+
+        # the second line containings the energy
+        # energy = float(lines[1].split()[4])
+
+        # read the gradient
+        number_of_atoms = len(self.atoms.symbols)
+        end_of_lines = 2 + number_of_atoms
+        gradients = np.hstack(
+            list(
+                map(lambda x: np.array(x.split()[3:], np.float),
+                    lines[2:end_of_lines]))).reshape(3, number_of_atoms)
+
+        # Read the gradient
+        self.results['forces'] = -gradients * Hartree / Bohr
+
 
     def embed(self, mmcharges=None, **parameters):
-        """Embed atoms in point-charges (mmcharges)
-        """
+        """Embed atoms in point-charges (mmcharges)."""
         self.pcpot = PointChargePotential(mmcharges, label=self.label)
         return self.pcpot
