@@ -54,7 +54,8 @@ class RNEB:
         self.log.warning("Creating final image:")
         self.log.warning("  Input parameters:")
         self.log.warning("    Tolerance: {}".format(self.tol))
-        spacegroup = spg.get_spacegroup(orig, symprec=self.tol)
+        spacegroup = spg.get_spacegroup(get_spglib_tuple(orig),
+                                        symprec=self.tol)
         self.log.warning("\n  The pristine structure belongs to spacegroup: "
                          "{}".format(spacegroup))
         # wrap atoms outside unit cell into the unit cell
@@ -105,7 +106,8 @@ class RNEB:
         cell = init_temp.get_cell()
         orig_temp = orig.copy()
         orig_temp = orig_temp.repeat(supercell)
-        sym = spg.get_symmetry(orig_temp, symprec=self.tol)
+        spg_tuple = get_spglib_tuple(orig_temp)
+        sym = spg.get_symmetry(spg_tuple, symprec=self.tol)
         R = sym['rotations']
         T = sym['translations']
         pos_temp = np.empty((len(pos), 3))
@@ -275,7 +277,8 @@ class RNEB:
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
         # get the symmetry information for the pristine structure
-        symmetry_super_cell = spg.get_symmetry(orig_super_cell,
+        spglib_tuple = get_spglib_tuple(orig_super_cell)
+        symmetry_super_cell = spg.get_symmetry(spglib_tuple,
                                                symprec=self.tol)
         equiv_atoms = symmetry_super_cell['equivalent_atoms']
         # get unique elements in equiv_atoms to be used as reference for
@@ -393,3 +396,15 @@ class RNEB:
                          .format(x[1][0], x[1][1], x[1][2]))
         self.log.warning("          {:2d} {:2d} {:2d}"
                          .format(x[2][0], x[2][1], x[2][2]))
+
+def get_spglib_tuple(atoms):
+    lattice = atoms.get_cell()
+    positions = atoms.get_scaled_positions()
+    numbers = atoms.get_atomic_numbers()
+    try:
+        magmoms = atoms.get_magnetic_moments()
+    except RuntimeError:
+        magmoms = atoms.get_initial_magnetic_moments()
+    
+    return (lattice, positions, numbers, magmoms)
+    
