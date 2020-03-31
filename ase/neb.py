@@ -229,10 +229,11 @@ class NEB:
                         forces[i - 1] = forces_temp
                         energies[i] = energies[j]
 
-            # Do all images - one at a time:
-            for i in range(1, self.nimages - 1):
-                energies[i] = images[i].get_potential_energy()
-                forces[i - 1] = images[i].get_forces()
+            else:
+                # Do all images - one at a time:
+                for i in range(1, self.nimages - 1):
+                    energies[i] = images[i].get_potential_energy()
+                    forces[i - 1] = images[i].get_forces()
         elif self.world.size == 1:
             def run(image, energies, forces):
                 energies[:] = image.get_potential_energy()
