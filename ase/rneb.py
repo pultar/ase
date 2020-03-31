@@ -40,10 +40,9 @@ class RNEB:
 
     """
 
-    def __init__(self, tol=1e-3, logname=None):
+    def __init__(self, tol=1e-3, logfile='-'):
         self.tol = tol  # tolerance on atomic positions
-        self.logname = logname
-        self.log = self.setup_log()
+        self.log = self.setup_log(logfile)
 
     def get_final_image(self, orig, init, init_relaxed, final,
                         log_atomic_idx=False, return_ops=False,
@@ -373,9 +372,11 @@ class RNEB:
                 return True
         return False
 
-    def setup_log(self):
+    def setup_log(self, logfile):
         log = logging.getLogger(__name__)
-        if self.logname is None:
+        if logfile is None:
+            f_handler = logging.NullHandler()
+        elif logfile == '-':
             f_handler = logging.StreamHandler()
         else:
             f_handler = logging.FileHandler(self.logname, 'a')
