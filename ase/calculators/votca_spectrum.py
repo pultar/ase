@@ -8,7 +8,7 @@ from typing import Callable, NamedTuple
 from ..atoms import Atoms
 
 
-class DictLabeLEnergies(NamedTuple):
+class LabeLEnergies(NamedTuple):
     """Namedtuple containing the labels and energies."""
 
     label: str
@@ -25,16 +25,19 @@ def show_and_save(handle, show: True, outfile: str) -> None:
 def spectrum(
         atoms: Atoms, kind: str = 'ks', show: bool = True, outfile: str = 'spectrum.png') -> None:
     """Create a 'band' plot for a give kind of energies (ks,qp,singlet and triplet).
-    It is possible to visualise it on the run (default True)
-    It is possible to save the plot (put name in outfile)
+
+    show:
+        visualize the graph
+    outputfile:
+        path to store the graph.
     """
-    dict_kinds = {"ks": DictLabeLEnergies(
+    dict_kinds = {"ks": LabeLEnergies(
         'Kohn-Sham Energies', atoms.get_ks_energies),
-        "kp": DictLabeLEnergies(
+        "kp": LabeLEnergies(
             'Quasiparticle Energies', atoms.get_qp_energies),
-        "singlet": DictLabeLEnergies(
+        "singlet": LabeLEnergies(
             'Singlet Energies', atoms.get_singlet_energies),
-        "triplet": DictLabeLEnergies(
+        "triplet": LabeLEnergies(
             'Triple Energies', atoms.get_triplet_energies)
     }
 
@@ -54,8 +57,13 @@ def GWspectrum(
         atoms: Atoms, show: bool = True, outfile: str = 'GWspectrum.png') -> None:
     """Create a 'band' plot for GW spectrum (KS vs. QP_pert vs. QP).
 
-    It is possible to visualise it on the run (default True)
-    It is possible to save the plot (put name in outfile)
+    Parameters
+    ----------
+    show
+        visualize the graph
+    outputfile
+        path to store the graph.
+
     """
     plt.close("all")
     hrt2ev = 27.2214
@@ -70,8 +78,18 @@ def GWspectrum(
     show_and_save(plt, show, outfile)
 
 
-def self_energy(atoms, show=True, outfile='selfenergy.png'):
-    """Sketch the self-energy correction  respect to the Kohn-Sham energies."""
+def self_energy(atoms: Atoms, show: bool = True, outfile: str = 'selfenergy.png') -> None:
+    """Sketch the self-energy correction  respect to the Kohn-Sham energies.
+
+    Parameters
+    ----------
+    show
+        visualize the graph
+    outputfile
+        path to store the graph.
+
+
+    """
     plt.close("all")
     ks = atoms.get_ks_energies()
     qp = atoms.get_qp_energies()
@@ -83,7 +101,7 @@ def self_energy(atoms, show=True, outfile='selfenergy.png'):
 
 
 def gaussian(x: np.ndarray, center: float, fwhm: float) -> np.ndarray:
-    """Compute the value of a gaussian with center x and fwhm at position x. """
+    """Compute the value of a gaussian with center x and fwhm at position x."""
     # FWHM = 2*sqrt(2 ln2) sigma = 2.3548 sigma
     sigma = fwhm / 2.3548
     return(np.exp(-0.5 * ((x - center) / sigma)**2) / sigma / np.sqrt(2.0 * np.pi))
