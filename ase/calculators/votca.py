@@ -13,7 +13,7 @@ import re
 
 from ..io.votca import write_votca
 from ..units import Bohr, Hartree
-from .calculator import FileIOCalculator, Parameters, ReadError
+from .calculator import FileIOCalculator
 
 
 class VOTCA(FileIOCalculator):
@@ -24,22 +24,26 @@ class VOTCA(FileIOCalculator):
 
     command = f"xtp_tools -e dftgwbse -o dftgwbse.xml -t {os.cpu_count()} >  dftgwbse.log"
 
-    default_parameters = {
-        "charge": 0, "mult": 1, "task": "forces",
-        "orcasimpleinput": "tightscf PBE def2-SVP",
-        "orcablocks": "%scf maxiter 200 end"}
+    default_parameters = {"charge": 0, "mult": 1, "task": "forces"}
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
-                 label='orca', atoms=None, **kwargs):
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+                 label='votca', atoms=None, **kwargs):
+        super().__init__(self, restart, ignore_bad_restart_file,
+                         label, atoms, **kwargs)
 
         self.pcpot = None
 
     def set(self, **kwargs):
-        changed_parameters = FileIOCalculator.set(self, **kwargs)
+        """Set parameters like set(key1=value1, key2=value2, ...).
+
+        A dictionary containing the parameters that have been changed
+        is returned.
+        For the VOTCA class, if any parameter has been changed, all
+        the paremeters are reset.
+        """
+        changed_parameters = super().set(self, **kwargs)
         if changed_parameters:
-            self.reset()
+            super().reset()
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """Write Input file for Orca."""
@@ -52,33 +56,14 @@ class VOTCA(FileIOCalculator):
 
         write_votca(atoms, **p)
 
-    def read(self, label):
-        FileIOCalculator.read(self, label)
-        if not os.path.isfile(f"{self.label}.out"):
-            raise ReadError
-
-        with open(f'{self.label}.inp') as f:
-            for line in f:
-                if line.startswith('geometry'):
-                    break
-            symbols = []
-            positions = []
-            for line in f:
-                if line.startswith('end'):
-                    break
-                words = line.split()
-                symbols.append(words[0])
-                positions.append([float(word) for word in words[1:]])
-
-        self.parameters = Parameters.read(self.label + '.ase')
-        self.read_results(self)
-
     def read_results(self):
+        """Read the results from the output files."""
         self.read_energy()
         if self.parameters.task.find('forces') > -1:
             self.read_forces()
 
     def tdipoles_sorter(orb):
+        """Read the transition dipoles."""
         groupedData = []
         permutation = []
         for ind in orb['transition_dipoles'].keys():
@@ -116,12 +101,12 @@ class VOTCA(FileIOCalculator):
 
         The Votca-XTP Engrad output looks like:
 
-        ... ... =========== ENGRAD SUMMARY =================================
-        ... ...    Total energy:     -112.90643941 Hartree
-        ... ...    0    -0.0000  -0.0000  -0.1626
-        ... ...    1    +0.0000  +0.0000  +0.1626
-        ... ... Saving data to system.orb
-        ... ... Writing output to dftgwbse.out.xml
+            ... ... =========== ENGRAD SUMMARY =================================
+            ... ...    Total energy:     -112.90643941 Hartree
+            ... ...    0    -0.0000  -0.0000  -0.1626
+            ... ...    1    +0.0000  +0.0000  +0.1626
+            ... ... Saving data to system.orb
+            ... ... Writing output to dftgwbse.out.xml
         """
         with open('dftgwbse.log', 'r') as f:
             raw_data = f.read()
@@ -143,7 +128,6 @@ class VOTCA(FileIOCalculator):
 
         # Read the gradient
         self.results['forces'] = -gradients * Hartree / Bohr
-
 
     def embed(self, mmcharges=None, **parameters):
         """Embed atoms in point-charges (mmcharges)."""
