@@ -45,7 +45,6 @@ def test_slab_rneb():
     neb = NEB(images)
     neb.interpolate(images)
     sym_ops = rneb.reflect_path(images, sym=sym_ops)
-    print(sym_ops)
 
     # Obtain the final relaxed structure with RNEB
     final_relaxed = rneb.get_final_image(slab, initial_unrelaxed,
