@@ -36,7 +36,7 @@ def test_slab_rneb():
 
     # Final state:
     final_unrelaxed = slab.copy()
-    final_unrelaxed.pop
+    final_unrelaxed.pop(-2)
 
     # RNEB symmetry identification
     sym_ops = rneb.find_symmetries(slab, initial_unrelaxed, final_unrelaxed)
