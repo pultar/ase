@@ -5,12 +5,6 @@
 Release notes
 =============
 
-Git master branch
-=================
-
-:git:`master <>`.
-
-* No changes yet
 
 
 Version 3.19.1
@@ -18,7 +12,7 @@ Version 3.19.1
 
 4 April 2020: :git:`3.19.1 <../3.19.1>`
 
-* No changes yet
+* Update png writer to be compatible with matplotlib 3.2.
 
 
 Version 3.19.0
