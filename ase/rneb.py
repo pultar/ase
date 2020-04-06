@@ -4,6 +4,7 @@ from ase.io import read, write
 from ase.visualize import view
 from ase.parallel import paropen, parprint
 from ase.geometry import get_distances, find_mic
+from ase.geometry import wrap_positions
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.calculators.calculator import PropertyNotImplementedError, \
                                        PropertyNotPresent
@@ -114,17 +115,14 @@ class RNEB:
         S = []
 
         for i, r in enumerate(R):
-            if self.is_rotation(r):
-                t_temp = T[i]
-                for j, p in enumerate(pos):
-                    pos_temp[j] = np.dot(r, p)
-                init_temp.set_scaled_positions(pos_temp + t_temp)
-                init_temp.wrap()
-                pos_init = init_temp.get_positions()
+            if is_rotation(r):
+                pos_init_scaled = np.inner(pos, r) + T[i]
+                pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
+                pos_init = wrap_positions(pos_init_cartesian, cell)
                 res = self.compare_translations(pos_final,
                                                 pos_init, cell)
                 if res[0]:
-                    S.append([r.astype(int), t_temp, res[1]])
+                    S.append([r.astype(int), T[i], res[1]])
         if len(S) > 0:
             for i, s in enumerate(S):
                 U = s[0]
@@ -324,18 +322,24 @@ class RNEB:
                  matches is the index, j, of the corresponding atom in
                  structure 2.
         """
-        matches = list(range(len(pos)))
-        dists = get_distances(pos, pos_final, cell=cell, pbc=[1, 1, 1])[0]
-        for i, dist in enumerate(dists):
-            match = False
-            for j, d in enumerate(dist):
-                d = np.linalg.norm(d)
-                if d < self.tol:
-                    match = True
-                    matches[j] = i
-            if match is False:
-                return [False, matches]
-        return [True, matches]
+        n = len(pos)
+        matches = list(range(n))
+        dists_all = get_distances(pos, pos_final, cell=cell, pbc=[1, 1, 1])
+        final_to_init = np.nonzero(np.isclose(dists_all[1], 0))[1]
+        if len(final_to_init) == n:
+            return [True, np.argsort(final_to_init)]
+        return [False, np.argsort(final_to_init)]
+        # dists = dists_all[0]
+        # for i, dist in enumerate(dists):
+        #     match = False
+        #     for j, d in enumerate(dist):
+        #         d = np.linalg.norm(d)
+        #         if d < self.tol:
+        #             match = True
+        #             matches[j] = i
+        #     if match is False:
+        #         return [False, matches]
+        # return [True, matches]
 
     def reflect_movement(self, vec_init, vec_final, sym=None):
         reflections = []
@@ -343,37 +347,13 @@ class RNEB:
             U = S[0]
             idx = S[2]
             vec_init_temp = np.empty((len(vec_init), 3))
-            if self.is_reflect_op(U):
+            if is_reflect_op(U):
                 for at2, at in enumerate(idx):
                     vec_init_temp[at2] = np.dot(U, vec_init[at])
                 if np.allclose(vec_init_temp, vec_final, atol=2*self.tol):
                     reflections.append(S)
         return reflections
 
-    def is_rotation(self, R):
-        I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        Q = np.dot(np.transpose(R), R)
-        if np.array_equal(Q, I):
-            det = abs(np.linalg.det(R))
-            if det == 1:
-                return True
-        return False
-
-    def is_reflect_op(self, R):
-        I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        Q = np.dot(np.transpose(R), R)
-        if np.array_equal(Q, I):
-            eig_values = np.sort(np.linalg.eig(R)[0])
-            plane = np.array([-1, 1, 1])
-            line = np.array([-1, -1, 1])
-            point = np.array([-1, -1, -1])
-            if np.array_equal(eig_values, plane):
-                return True
-            elif np.array_equal(eig_values, line):
-                return True
-            elif np.array_equal(eig_values, point):
-                return True
-        return False
 
     def setup_log(self, logfile):
         log = logging.getLogger(__name__)
@@ -399,6 +379,31 @@ class RNEB:
                          .format(x[1][0], x[1][1], x[1][2]))
         self.log.warning("          {:2d} {:2d} {:2d}"
                          .format(x[2][0], x[2][1], x[2][2]))
+
+def is_rotation(R):
+    I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    Q = np.dot(np.transpose(R), R)
+    if np.array_equal(Q, I):
+        det = abs(np.linalg.det(R))
+        if det == 1:
+            return True
+    return False
+
+def is_reflect_op(R):
+    I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    Q = np.dot(np.transpose(R), R)
+    if np.array_equal(Q, I):
+        eig_values = np.sort(np.linalg.eig(R)[0])
+        plane = np.array([-1, 1, 1])
+        line = np.array([-1, -1, 1])
+        point = np.array([-1, -1, -1])
+        if np.array_equal(eig_values, plane):
+            return True
+        elif np.array_equal(eig_values, line):
+            return True
+        elif np.array_equal(eig_values, point):
+            return True
+    return False
 
 def get_spglib_tuple(atoms):
     lattice = atoms.get_cell()
