@@ -36,7 +36,7 @@ class RNEB:
 
     Parameters:
         tol: Tolerance on atomic distances
-        logname: filename for the log output
+        logfile: filename for the log output
 
     """
 
