@@ -377,12 +377,15 @@ class RNEB:
 
     def setup_log(self, logfile):
         log = logging.getLogger(__name__)
+        # This removes previous log handlers
+        if log.hasHandlers():
+            log.removeHandler(log.handlers[-1])
         if logfile is None:
             f_handler = logging.NullHandler()
         elif logfile == '-':
             f_handler = logging.StreamHandler()
         else:
-            f_handler = logging.FileHandler(self.logname, 'a')
+            f_handler = logging.FileHandler(logfile, 'a')
         f_handler.setLevel(logging.INFO)
         f_format = logging.Formatter('%(message)s')
         f_handler.setFormatter(f_format)
