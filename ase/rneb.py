@@ -155,7 +155,7 @@ class RNEB:
         for i, im in enumerate(images[:n_half-1]):
             self.log.warning("   Matching vector i_{} - i_{} and i_{} - i_{}:"
                              .format(i+1, i, n-i-2, n-i-1))
-            pos_ip1 = images[i+1].get_scaled_positions()
+            pos_ip1 = images[i + 1].get_scaled_positions()
             pos_i = images[i].get_scaled_positions()
             vecf = []
             for x, p in enumerate(pos_ip1):

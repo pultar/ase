@@ -83,40 +83,49 @@ def create_path(init, final):
     images.append(final)
     return images
 
+
 def test_is_reflective():
     """ Test to check paths separately for reflection symmetry """
     from ase.build import fcc111
-    
-    atoms = fcc111('Cu', [2,2,1], 4, periodic=True)
-    atoms = atoms.repeat([2,2,1])
-    
+
+    atoms = fcc111('Cu', [2, 2, 1], 4, periodic=True)
+    atoms = atoms.repeat([2, 2, 1])
+
     # give path to look at as path=(init_indice, final_indice)
-    get_num_sym_operators(atoms, path=(1, 2)) # here i get 4
-    get_num_sym_operators(atoms, path=(0, 1)) # here i get only 2!?
+    print('Trying path 0 -> 1')
+    get_num_sym_operators(atoms, path=(0, 1))  # here i get only 2!?
+    print('Trying path 1 -> 2')
+    get_num_sym_operators(atoms, path=(1, 2))  # here i get 4
+
 
 def get_num_sym_operators(atoms, path):
     from ase.neb import NEB
-    
+
     from ase.rneb import RNEB
     # deleting ions will change inidices
     initial_unrelaxed = atoms.copy()
     del initial_unrelaxed[path[0]]
-    
+
     final_unrelaxed = atoms.copy()
     del final_unrelaxed[path[1]]
-    
+
     # aling indices
     final_unrelaxed = align_indices(initial_unrelaxed, final_unrelaxed)
     images = create_path(initial_unrelaxed, final_unrelaxed)
     neb = NEB(images)
     neb.interpolate()
-    
-    rneb = RNEB(logfile=None)
-    sym = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
-    sym = rneb.reflect_path(images, sym=sym)
-    print(f"Allowed reflective operations for {path[0]}->{path[1]}: {len(sym)}")
-    assert sym is not None # otherwise not reflective
-    
+    # from ase.visualize import view
+    # view([initial_unrelaxed, final_unrelaxed])
+
+    rneb = RNEB(logfile='-')
+    S = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
+
+    sym = rneb.reflect_path(images, sym=S)
+    print(
+        f"Allowed reflective operations for {path[0]}->{path[1]}: {len(sym)}")
+    assert sym is not None  # otherwise not reflective
+
+
 def align_indices(initial, final):
     """
     move the atoms in final such that the indices match with initial.
@@ -132,11 +141,12 @@ def align_indices(initial, final):
     ASE-atoms object
     """
 
-    sort_list = match_atoms(initial, final)    
+    sort_list = match_atoms(initial, final)
     final_sorted = final.copy()
     final_sorted = final_sorted[sort_list]
 
     return final_sorted
+
 
 def match_atoms(initial, final):
     """
@@ -167,18 +177,18 @@ def match_atoms(initial, final):
     for idx_final, state in enumerate(zip(pos_final, symb_final)):
         pf, sf = state
         idx_initial = find_atom(pos_initial, symb_initial, pf, sf,
-                                  critical=False)
+                                critical=False)
         if idx_initial is False:
             no_match.append(idx_final)
-        else:        
+        else:
             sort_list[idx_initial] = idx_final
-    missing = np.where(sort_list == -1)  
+    missing = np.where(sort_list == -1)
     if len(missing) != len(no_match):
         if missing[0] != no_match[0]:
             msg = ("different number of atoms have moved "
                    "in the initial and final structures")
             raise RuntimeError(msg)
-    
+
     if len(no_match) > 1:
         msg = ("Found more than one moving atom. "
                "Please give information about where "
@@ -186,6 +196,7 @@ def match_atoms(initial, final):
         raise RuntimeError(msg)
     sort_list[missing[0]] = no_match[0]
     return sort_list
+
 
 def find_atom(pos, symb, pos_d, symb_d, critical=True, tol=1e-3):
     """
@@ -226,4 +237,3 @@ def find_atom(pos, symb, pos_d, symb_d, critical=True, tol=1e-3):
         raise RuntimeError(msg)
     else:
         return False
-
