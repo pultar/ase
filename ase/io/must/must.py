@@ -1,7 +1,6 @@
 """ This module defines io functions for MuST calculator"""
 
 from ase import Atoms
-import numpy as np
 from ase.units import Bohr, Rydberg
 from ase.io.must.default_params import defaults
 
@@ -101,8 +100,8 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc, lma
 def write_input_parameters_file(atoms, parameters):
     energy_params = ['etol', 'ptol', 'ftol',
                      'offset_energy_pt', 'em_switch']  # Parameters with units of energy
-    distance_params = ['liz_cutoff', 'max_core_radius',
-                       'max_mt_radius', 'core_radius', 'mt_radius']  # Parameters with units of length
+    spatial_params = ['liz_cutoff', 'max_core_radius',
+                      'max_mt_radius', 'core_radius', 'mt_radius']  # Parameters with units of length
     vector_params = ['uniform_grid', 'grid_origin', 'grid_1', 'grid_2', 'grid_3', 'grid_pts', 'kpts',
                      'moment_direction', 'constrain_field', 'liz_shell_lmax', 'em_mix_param']  # vector parameters
     # Header
@@ -124,25 +123,24 @@ def write_input_parameters_file(atoms, parameters):
         for entry in header:
             filehandle.write('%s\n' % entry)
 
-    species = np.unique(atoms.get_chemical_symbols())
-    pot_files = ''
-    for element in species:
-        pot_files += str(element) + '_ss_pot '
-
-    contents = ['Default Potential Input File Name  ::  ' + pot_files]
-
     # Rest of the parameters:
+    contents = []
+
     for key in parameters.keys():
         if key in energy_params:
             parameters[key] = parameters[key] / Rydberg
 
-        if key in distance_params:
+        if key in spatial_params:
             parameters[key] = parameters[key] / Bohr
 
         if key in vector_params:
             parameters[key] = str(parameters[key])[1:-1]
 
-        contents.append(defaults[key] + '  ::  ' + str(parameters[key]))
+        if key == 'default_in_pot':
+            for index in parameters['default_in_pot'].keys():
+                contents.append(defaults[key] + '  ::  ' + index + ' ' + parameters['default_in_pot'][index])
+        else:
+            contents.append(defaults[key] + '  ::  ' + str(parameters[key]))
 
     with open('i_new', 'a') as filehandle:
         for entry in contents:

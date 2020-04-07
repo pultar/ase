@@ -1,4 +1,7 @@
 defaults = {
+    "default_in_pot": "Default Potential Input File Name",
+    "in_pot": "Potential Input File Name",
+    "default_out_pot": "Default Potential Output File Name",
     "nscf": "No. Iterations (> 0)",
     "method": "Method of SCF Calculation",
     "out_to_scr": "Output to Screen (y/n)",
