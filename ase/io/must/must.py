@@ -138,7 +138,7 @@ def write_input_parameters_file(atoms, parameters):
 
         if key == 'in_pot':
             for index in parameters['in_pot'].keys():
-                contents.append(defaults[key] + '  ::  ' + index + ' ' + parameters['default_in_pot'][index])
+                contents.append(defaults[key] + '  ::  ' + index + ' ' + parameters['in_pot'][index])
         else:
             contents.append(defaults[key] + '  ::  ' + str(parameters[key]))
 
