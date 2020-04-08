@@ -136,8 +136,8 @@ def write_input_parameters_file(atoms, parameters):
         if key in vector_params:
             parameters[key] = str(parameters[key])[1:-1]
 
-        if key == 'default_in_pot':
-            for index in parameters['default_in_pot'].keys():
+        if key == 'in_pot':
+            for index in parameters['in_pot'].keys():
                 contents.append(defaults[key] + '  ::  ' + index + ' ' + parameters['default_in_pot'][index])
         else:
             contents.append(defaults[key] + '  ::  ' + str(parameters[key]))
