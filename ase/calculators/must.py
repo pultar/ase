@@ -13,7 +13,7 @@ import warnings
 
 def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc=1, lmax=3,
                                  print_level=1, ncomp=1, conc=1., mt_radius=0., ws_radius=0,
-                                 egrid=(10, -0.4, 0.3), ef=0.7, niter=50, mp=0.1):
+                                 egrid=(10, -0.4, 0.3), ef=9.5, niter=50, mp=0.1):
     species = np.unique(atoms.get_chemical_symbols())
 
     for symbol in species:
