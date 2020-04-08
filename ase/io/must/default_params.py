@@ -80,7 +80,7 @@ defaults = {
     "read_kmesh": "Read K-mesh from kmeshs.inp",
     "k_scheme": "Scheme to Generate K (>=0)",
     "n_kmesh": "No. K Meshs in IBZ (> 0)",
-    "kpts": "Kx Ky Kz Division (> 0)",
+    "kpts": "Kx, Ky, Kz Division (> 0)",
     "bzsym": "Symmetrize BZ Integration",
     "large_sphere_radius": "Large sphere radius (a.u.)",
     "pot_in_form": "Default Potential Input File Form",
