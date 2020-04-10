@@ -21,7 +21,7 @@ def write_positions_input(atoms, method):
 
         if method == 3:
 
-            for site in atoms.cpa_sites:
+            for site in atoms.info['CPA']:
                 sitestring = 'CPA  %s' % str(atoms[site['index']].position / Bohr)[1:-1]
 
                 for key in site.keys():
@@ -174,7 +174,7 @@ def write_input_parameters_file(atoms, parameters):
     # Get number of atoms from CPA sites if self.parameters['method'] == 3
     if 'method' in parameters.keys():
         if parameters['method'] == 3:
-            header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms.cpa_sites)), hline, separator, hline]
+            header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms.info['CPA'])), hline, separator, hline]
         else:
             header += ['No. Atoms in System (> 0)  ::  ' + str(len(atoms)), hline, separator, hline]
     else:

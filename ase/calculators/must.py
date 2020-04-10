@@ -1,4 +1,4 @@
-"""ASE interface for MST implemented in MuST package available at
+"""ASE interface for MST module implemented in MuST package available at
  https://github.com/mstsuite/MuST"""
 
 import numpy as np
