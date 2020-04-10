@@ -10,6 +10,8 @@ magmoms = {'Fe': 2.1,
 
 
 def write_positions_input(atoms, method):
+    """ Function that writes the positions data input file based on
+    atoms object and selected calculation method"""
     with open('position.dat', 'w') as filehandle:
         filehandle.write(str(1.0) + '\n\n')
 
@@ -36,6 +38,23 @@ def write_positions_input(atoms, method):
 
 
 def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
+    """
+    Function to write input file for generating atomic potential using 'newa' command
+    Parameters
+    ----------
+    symbol: str
+        Chemical symbol of the element.
+    nspins: int
+        Number of spins.
+    moment: float
+        Magnetic moment.
+    xc: int
+        ex-cor type (1=vb-hedin,2=vosko).
+    niter: int
+        Maximum number of SCF iterations.
+    mp: float
+        SCF mixing parameter
+    """
     title = str(symbol) + ' Atomic Potential'
     output_file = str(symbol) + '_a_out'
     pot_file = str(symbol) + '_a_pot'
@@ -60,6 +79,46 @@ def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
 
 def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc, lmax, print_level, ncomp,
                                 conc, mt_radius, ws_radius, egrid, ef, niter, mp):
+    """
+    Function to write input file for generating single site potential using 'newss' command
+    Parameters
+    ----------
+
+    symbol: str
+        Chemical symbol of the element
+    crystal_type: int
+                1 for FCC, 2 for BCC.
+    a: float
+        The lattice constant.
+    nspins: int
+        number of spins.
+    moment: float
+        Magnetic moment. If nspins = 2 and moment = 0 during input,
+        moment will be changed to values from this dictionary: {Fe': 2.1, 'Co': 1.4, 'Ni': 0.6}
+    xc: int
+        ex-cor type (1=vb-hedin,2=vosko).
+    lmax: int
+        angular momentum quantum number cutoff value.
+    print_level: int
+        Print level.
+    ncomp: int
+        Number of components.
+    conc: float
+        Concentrations.
+    mt_radius: float
+            mt_radius.
+    ws_radius: float
+        ws_radius.
+    egrid: vector
+        e-grid vector of form (ndiv(=#div/0.1Ryd), bott, eimag).
+    ef: float
+        Estomate of fermi energy.
+    niter: int
+        Maximum number of SCF iterations.
+    mp: float
+        Mixing parameter for SCF iterations.
+    """
+
     title = str(symbol) + ' Single Site Potential'
     output_file = str(symbol) + '_ss_out'
     input_file = str(symbol) + '_a_pot'
@@ -98,6 +157,8 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc, lma
 
 
 def write_input_parameters_file(atoms, parameters):
+    """Write the main input file for 'mst2' command. This file contains all
+    essential input parameters required for calculation"""
     energy_params = ['etol', 'ptol', 'ftol',
                      'offset_energy_pt', 'em_switch']  # Parameters with units of energy
     spatial_params = ['liz_cutoff', 'max_core_radius',

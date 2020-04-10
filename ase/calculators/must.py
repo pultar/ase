@@ -14,6 +14,46 @@ import warnings
 def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc=1, lmax=3,
                                  print_level=1, ncomp=1, conc=1., mt_radius=0., ws_radius=0,
                                  egrid=(10, -0.4, 0.3), ef=9.5, niter=50, mp=0.1):
+    """
+    Function to generate single site starting potentials for all elements in an atoms object
+
+    Parameters
+    ----------
+
+    atoms: The Atoms object to generate starting potentials.
+    crystal_type: int
+                1 for FCC, 2 for BCC.
+    a: float
+        The lattice constant.
+    nspins: int (default:1)
+        number of spins.
+    moment: float (default: 0.)
+        Magnetic moment. If nspins = 2 and moment = 0 during input,
+        moment will be changed to valus from this dictionary: {Fe': 2.1, 'Co': 1.4, 'Ni': 0.6}
+    xc: int (default: 1=vb-hedin)
+        ex-cor type (1=vb-hedin,2=vosko).
+    lmax: int (default: 3)
+        angular momentum quantum number cutoff value.
+    print_level: int (default: 1)
+        Print level.
+    ncomp: int (default: 1)
+        Number of components.
+    conc: float (default: 1.)
+        Concentrations.
+    mt_radius: float (default: 0.)
+        mt_radius.
+    ws_radius: float (default: 0.)
+        ws_radius.
+    egrid: vector (default: (10, -0.4, 0.3))
+        e-grid vector of form (ndiv(=#div/0.1Ryd), bott, eimag).
+    ef: float (default: 9.5)
+        Estomate of fermi energy.
+    niter: int ( default: 50)
+        Maximum number of SCF iterations.
+    mp: float (default: 0.1)
+        Mixing parameter for SCF iterations.
+    """
+
     species = np.unique(atoms.get_chemical_symbols())
 
     for symbol in species:
@@ -63,7 +103,8 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
 
 class MuST(FileIOCalculator):
     """
-    Multiple Scattering Theory based ab-initio calculator
+    Multiple Scattering Theory based ab-initio calculator.
+    Capable of performing LSMS, KKR and KKR-CPA calculations.
     """
 
     implemented_properties = ['energy']
@@ -75,8 +116,9 @@ class MuST(FileIOCalculator):
                                   label, atoms, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
-        FileIOCalculator.write_input(self, atoms, properties=None, system_changes=None)
+        """ Write input files"""
 
+        FileIOCalculator.write_input(self, atoms, properties=None, system_changes=None)
         # Write positions using CPA sites if self.parameters['method'] == 3
         if 'method' in self.parameters.keys():
             if self.parameters['method'] == 3:
@@ -90,6 +132,7 @@ class MuST(FileIOCalculator):
         io.write_input_parameters_file(atoms=atoms, parameters=self.parameters)
 
     def read_results(self):
+        """ Read results from output files"""
         outfile = glob.glob('k_n00000_*')[0]
         with open(outfile, 'r') as file:
             lines = file.readlines()
