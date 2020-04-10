@@ -11,7 +11,7 @@ import glob
 import warnings
 
 
-def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc=1, lmax=3,
+def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1, moment=0., xc=1, lmax=3,
                                  print_level=1, ncomp=1, conc=1., mt_radius=0., ws_radius=0,
                                  egrid=(10, -0.4, 0.3), ef=9.5, niter=50, mp=0.1):
     """
@@ -25,6 +25,8 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
                 1 for FCC, 2 for BCC.
     a: float
         The lattice constant.
+    cpa: bool (default:False)
+        If True, use atoms.info['CPA'] to generate starting potentials for all elements in CPA formalism
     nspins: int (default:1)
         number of spins.
     moment: float (default: 0.)
@@ -53,8 +55,17 @@ def generate_starting_potentials(atoms, crystal_type, a, nspins=1, moment=0., xc
     mp: float (default: 0.1)
         Mixing parameter for SCF iterations.
     """
-
-    species = np.unique(atoms.get_chemical_symbols())
+    if cpa:
+        species = []
+        for site in atoms.info['CPA']:
+            for element in site.keys():
+                if element == 'index':
+                    pass
+                else:
+                    species.append(element)
+        species = np.unique(species)
+    else:
+        species = np.unique(atoms.get_chemical_symbols())
 
     for symbol in species:
         # Generate atomic potential
