@@ -570,10 +570,7 @@ class Calculator(object):
         * label='abc': (directory='.', prefix='abc')
         * label='dir1/abc': (directory='dir1', prefix='abc')
         * label=None: (directory='.', prefix=None)
-
-        Calculators that must write results to files with fixed names
-        can override this method so that the directory is set to all
-        of label."""
+        """
         self.label = label
 
     def get_default_parameters(self):
