@@ -525,8 +525,6 @@ class Calculator(object):
     @directory.setter
     def directory(self, directory: Union[str, pathlib.PurePath]):
         self._directory = str(pathlib.Path(directory))  # Normalize path.
-        if not os.path.isdir(self._directory):
-            os.makedirs(self._directory)
 
     @property
     def label(self):
@@ -774,11 +772,14 @@ class Calculator(object):
                             'magmoms': np.zeros(len(atoms))}
 
         The subclass implementation should first call this
-        implementation to set the atoms attribute.
+        implementation to set the atoms attribute and create any missing
+        directories.
         """
 
         if atoms is not None:
             self.atoms = atoms.copy()
+        if not os.path.isdir(self._directory):
+            os.makedirs(self._directory)
 
     def calculate_numerical_forces(self, atoms, d=0.001):
         """Calculate numerical forces using finite difference.
