@@ -19,40 +19,39 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1, mo
 
     Parameters
     ----------
-
     atoms: The Atoms object to generate starting potentials.
     crystal_type: int
-                1 for FCC, 2 for BCC.
+        1 for FCC, 2 for BCC.
     a: float
         The lattice constant.
-    cpa: bool (default:False)
+    cpa: bool
         If True, use atoms.info['CPA'] to generate starting potentials for all elements in CPA formalism
-    nspins: int (default:1)
+    nspins: int
         number of spins.
-    moment: float (default: 0.)
+    moment: float
         Magnetic moment. If nspins = 2 and moment = 0 during input,
-        moment will be changed to valus from this dictionary: {Fe': 2.1, 'Co': 1.4, 'Ni': 0.6}
-    xc: int (default: 1=vb-hedin)
+        moment will be changed to values from this dictionary: {Fe': 2.1, 'Co': 1.4, 'Ni': 0.6}
+    xc: int
         ex-cor type (1=vb-hedin,2=vosko).
-    lmax: int (default: 3)
+    lmax: int
         angular momentum quantum number cutoff value.
-    print_level: int (default: 1)
+    print_level: int
         Print level.
-    ncomp: int (default: 1)
+    ncomp: int
         Number of components.
-    conc: float (default: 1.)
+    conc: float
         Concentrations.
-    mt_radius: float (default: 0.)
+    mt_radius: float
         mt_radius.
-    ws_radius: float (default: 0.)
+    ws_radius: float
         ws_radius.
-    egrid: vector (default: (10, -0.4, 0.3))
+    egrid: vector
         e-grid vector of form (ndiv(=#div/0.1Ryd), bott, eimag).
-    ef: float (default: 9.5)
+    ef: float
         Estomate of fermi energy.
-    niter: int ( default: 50)
+    niter: int
         Maximum number of SCF iterations.
-    mp: float (default: 0.1)
+    mp: float
         Mixing parameter for SCF iterations.
     """
     if cpa:
