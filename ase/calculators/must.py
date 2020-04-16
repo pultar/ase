@@ -143,7 +143,7 @@ class MuST(FileIOCalculator):
 
     def read_results(self):
         """ Read results from output files"""
-        outfile = glob.glob('k_n00000_*')[0]
+        outfile = glob.glob('k_n00000_D')[0]
         with open(outfile, 'r') as file:
             lines = file.readlines()
 
@@ -154,7 +154,7 @@ class MuST(FileIOCalculator):
 
         convergence = False
 
-        outfile = glob.glob('o_n00000_*')[0]
+        outfile = glob.glob('o_n00000_D')[0]
         with open(outfile, 'r') as file:
             lines = file.readlines()
 
