@@ -12,22 +12,23 @@ from re import compile
 
 __all__ = ['read_sys', 'write_sys']
 
+
 def read_sys(fileobj):
     """
     Function to read a qb@ll sys file.
     fileobj: file (object) to read from.
     """
-    lin = fileobj.readline().split()
+    a1, a2, a3, b1, b2, b3, c1, c2, c3 = fileobj.readline().split()[2:11]
     cell = []
-    cell.append([float(lin[2])*Bohr, float(lin[3])*Bohr, float(lin[4])*Bohr])
-    cell.append([float(lin[5])*Bohr, float(lin[6])*Bohr, float(lin[7])*Bohr])
-    cell.append([float(lin[8])*Bohr, float(lin[9])*Bohr, float(lin[10])*Bohr])
+    cell.append([float(a1) * Bohr, float(a2) * Bohr, float(a3) * Bohr])
+    cell.append([float(b1) * Bohr, float(b2) * Bohr, float(b3) * Bohr])
+    cell.append([float(c1) * Bohr, float(c2) * Bohr, float(c3) * Bohr])
     while True:
-        inp = fileobj.tell() # if there is a better way to skip these lines?
+        inp = fileobj.tell()  # Is there a better way to skip these lines?
         line = fileobj.readline()
         if 'species' not in line:
             break
-    fileobj.seek(inp) # to re-read the first no-species line. 
+    fileobj.seek(inp)  # to re-read the first no-species line.
     positions = []
     symbols = []
     reg = compile(r'(\d+|\s+)')
@@ -37,11 +38,12 @@ def read_sys(fileobj):
             break
         # The units column is ignored.
         a, symLabel, spec, x, y, z = line.split()[0:6]
-        positions.append([float(x)*Bohr,float(y)*Bohr,float(z)*Bohr])
+        positions.append([float(x) * Bohr, float(y) * Bohr, float(z) * Bohr])
         sym = reg.split(str(symLabel))
         symbols.append(sym[0])
     atoms = Atoms(symbols=symbols, cell=cell, positions=positions)
     return atoms
+
 
 def write_sys(fileobj, atoms):
     """
@@ -53,17 +55,18 @@ def write_sys(fileobj, atoms):
     """
     fileobj.write('set cell')
     for i in range(3):
-        d = atoms.cell[i]/Bohr
+        d = atoms.cell[i] / Bohr
         fileobj.write((' {:6f}  {:6f}  {:6f}').format(*d))
     fileobj.write('  bohr\n')
 
     ch_sym = atoms.get_chemical_symbols()
     atm_nm = atoms.numbers
-    a_pos  = atoms.positions
-    an     = list(set(atm_nm))
+    a_pos = atoms.positions
+    an = list(set(atm_nm))
 
     for i, s in enumerate(set(ch_sym)):
-        fileobj.write(('species {}{} {}.xml \n').format(s,an[i],s))
+        fileobj.write(('species {}{} {}.xml \n').format(s, an[i], s))
     for i, (S, Z, (x, y, z)) in enumerate(zip(ch_sym, atm_nm, a_pos)):
         fileobj.write(('atom {0:5} {1:5}  {2:12.6f}{3:12.6f}{4:12.6f}\
-        bohr\n').format(S+str(i+1),S+str(Z), x/Bohr, y/Bohr, z/Bohr))
+        bohr\n').format(S + str(i + 1), S + str(Z), x / Bohr, y / Bohr,
+                        z / Bohr))
