@@ -86,16 +86,31 @@ def create_path(init, final):
 
 def test_is_reflective():
     """ Test to check paths separately for reflection symmetry """
-    from ase.build import fcc111
+    from ase.build import fcc111, graphene_nanoribbon
+    import numpy as np
 
-    atoms = fcc111('Cu', [2, 2, 1], 4, periodic=True)
-    atoms = atoms.repeat([2, 2, 1])
+    #atoms = fcc111('Cu', [2, 2, 1], 4, periodic=True)
+    #atoms = atoms.repeat([2, 2, 1])
 
     # give path to look at as path=(init_indice, final_indice)
-    print('Trying path 0 -> 1')
-    get_num_sym_operators(atoms, path=(0, 1))  # here i get only 2!?
-    print('Trying path 1 -> 2')
-    get_num_sym_operators(atoms, path=(1, 2))  # here i get 4
+    #print('Trying path 0 -> 1')
+    #get_num_sym_operators(atoms, path=(0, 1))  # here i get only 2!?
+    #print('Trying path 1 -> 2')
+    #get_num_sym_operators(atoms, path=(1, 2))  # here i get 4
+    
+    # test from the paper with graphene nanoribbon
+    atoms = graphene_nanoribbon(3,3, vacuum=.7)
+    atoms.pbc = True
+    get_num_sym_operators(atoms, path=(0, 1)) # here i get 0
+
+    # reflect on mirror plane
+    U = np.array([[-1, 0, 0],
+                  [ 0, 1, 0],
+                  [ 0, 0, 1]])
+    atoms = graphene_nanoribbon(3,3, vacuum=.7)
+    atoms.set_positions([np.matmul(U, p) for p in atoms.get_positions()])
+    atoms.set_cell(np.matmul(U, atoms.get_cell()))  # or call atoms.wrap()
+    get_num_sym_operators(atoms, path=(11, 6)) # here i get 2
 
 
 def get_num_sym_operators(atoms, path):
