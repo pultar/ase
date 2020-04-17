@@ -8,30 +8,29 @@ Contributed by Rafi Ullah <rraffiu@gmail.com>
 from ase.atoms import Atoms
 from ase.units import Bohr
 
-import re
+from re import compile
 
 __all__ = ['read_sys', 'write_sys']
 
 def read_sys(fileobj):
     """
     Function to read a qb@ll sys file.
-    fileobj: file object
-        File to read from.
+    fileobj: file (object) to read from.
     """
-    line = fileobj.readline().split()
+    lin = fileobj.readline().split()
     cell = []
-    cell.append([float(line[2])*Bohr, float(line[3])*Bohr, float(line[4])*Bohr])
-    cell.append([float(line[5])*Bohr, float(line[6])*Bohr, float(line[7])*Bohr])
-    cell.append([float(line[8])*Bohr, float(line[9])*Bohr, float(line[10])*Bohr])
+    cell.append([float(lin[2])*Bohr, float(lin[3])*Bohr, float(lin[4])*Bohr])
+    cell.append([float(lin[5])*Bohr, float(lin[6])*Bohr, float(lin[7])*Bohr])
+    cell.append([float(lin[8])*Bohr, float(lin[9])*Bohr, float(lin[10])*Bohr])
     while True:
-        inp = fileobj.tell() # Not sure if there is a better way to skip these lines.
+        inp = fileobj.tell() # if there is a better way to skip these lines?
         line = fileobj.readline()
         if 'species' not in line:
             break
-    fileobj.seek(inp)
+    fileobj.seek(inp) # to re-read the first no-species line. 
     positions = []
     symbols = []
-    reg = re.compile(r'(\d+|\s+)')
+    reg = compile(r'(\d+|\s+)')
     while True:
         line = fileobj.readline()
         if not line:
@@ -66,5 +65,5 @@ def write_sys(fileobj, atoms):
     for i, s in enumerate(set(ch_sym)):
         fileobj.write(('species {}{} {}.xml \n').format(s,an[i],s))
     for i, (S, Z, (x, y, z)) in enumerate(zip(ch_sym, atm_nm, a_pos)):
-        fileobj.write(('atom {0:5} {1:5}  {2:12.6f}{3:12.6f}{4:12.6f} bohr\n').\
-        format(S+str(i+1),S+str(Z), x/Bohr, y/Bohr, z/Bohr))
+        fileobj.write(('atom {0:5} {1:5}  {2:12.6f}{3:12.6f}{4:12.6f}\
+        bohr\n').format(S+str(i+1),S+str(Z), x/Bohr, y/Bohr, z/Bohr))
