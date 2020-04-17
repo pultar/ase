@@ -1,6 +1,6 @@
 """
 IO support for the qb@ll sys format.
-The positions and cell dimensions are Bohrs.
+The positions and cell dimensions are in Bohrs.
 
 Contributed by Rafi Ullah <rraffiu@gmail.com>
 """
@@ -36,7 +36,8 @@ def read_sys(fileobj):
         line = fileobj.readline()
         if not line:
             break
-        a, symLabel, spec, x, y, z, unit = line.split()
+        # The units column is ignored.
+        a, symLabel, spec, x, y, z = line.split()[0:6]
         positions.append([float(x)*Bohr,float(y)*Bohr,float(z)*Bohr])
         sym = reg.split(str(symLabel))
         symbols.append(sym[0])
