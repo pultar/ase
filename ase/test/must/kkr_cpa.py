@@ -37,9 +37,11 @@ def kkr():
 
 def kkr_cpa():
     atoms = bulk('Al', 'bcc', a=2.861, cubic=False)
-    atoms.info['CPA'] = [{'index': 0, 'Al': 0.2, 'Cr': 0.2, 'Fe': 0.2, 'Co': 0.2, 'Ni': 0.2}]
+    atoms.info['CPA'] = [{'index': 0, 'Al': 0.2, 'Cr': 0.2,
+                          'Fe': 0.2, 'Co': 0.2, 'Ni': 0.2}]
     generate_starting_potentials(atoms, crystal_type=2, a=2.861, cpa=True)
-    calc = MuST(default_in_pot='Al_ss_pot Cr_ss_pot Fe_ss_pot Co_ss_pot Ni_ss_pot',
+    calc = MuST(default_in_pot='Al_ss_pot Cr_ss_pot Fe_ss_pot' +
+                               'Co_ss_pot Ni_ss_pot',
                 default_out_pot='AlCrFeCoNi',
                 pot_in_form=0,
                 pot_out_form=1,
@@ -69,6 +71,7 @@ def kkr_cpa():
                 os.remove(f)
 
     os.remove('AlCrFeCoNi')
+
 
 kkr()
 kkr_cpa()
