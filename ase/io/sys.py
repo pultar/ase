@@ -1,5 +1,6 @@
 """
 IO support for the qb@ll sys format.
+
 The positions and cell dimensions are in Bohrs.
 
 Contributed by Rafi Ullah <rraffiu@gmail.com>
@@ -16,6 +17,7 @@ __all__ = ['read_sys', 'write_sys']
 def read_sys(fileobj):
     """
     Function to read a qb@ll sys file.
+
     fileobj: file (object) to read from.
     """
     a1, a2, a3, b1, b2, b3, c1, c2, c3 = fileobj.readline().split()[2:11]
@@ -48,6 +50,7 @@ def read_sys(fileobj):
 def write_sys(fileobj, atoms):
     """
     Function to write a sys file.
+
     fileobj: file object
         File to which output is written.
     atoms: Atoms object
