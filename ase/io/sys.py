@@ -28,17 +28,17 @@ def read_sys(fileobj):
     positions = []
     symbols = []
     reg = compile(r'(\d+|\s+)')
-    while True:
+    line = fileobj.readline()
+    while 'species' in line:
         line = fileobj.readline()
-        if 'species' not in line:
-            if not line:
-                break
-            # The units column is ignored.
-            a, symlabel, spec, x, y, z = line.split()[0:6]
-            positions.append([float(x) * Bohr, float(y) * Bohr,
-                             float(z) * Bohr])
-            sym = reg.split(str(symlabel))
-            symbols.append(sym[0])
+    while line:
+        # The units column is ignored.
+        a, symlabel, spec, x, y, z = line.split()[0:6]
+        positions.append([float(x) * Bohr, float(y) * Bohr,
+                         float(z) * Bohr])
+        sym = reg.split(str(symlabel))
+        symbols.append(sym[0])
+        line = fileobj.readline()
     atoms = Atoms(symbols=symbols, cell=cell, positions=positions)
     return atoms
 
