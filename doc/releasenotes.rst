@@ -10,6 +10,7 @@ Git master branch
 
 :git:`master <>`.
 
+* Read and write support for qball sys file format.
 * Standardize optimizers maximum step variable name to maxstep and default value to 0.2 for all optimizers.
 * The tangent estimates used to make the nudged elastic band (NEB) plots are
   slightly improved to use center, rather than forward differences. This does
