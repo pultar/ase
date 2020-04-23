@@ -1,3 +1,5 @@
+.. module:: ase.calculators.must
+
 .. module:: ase
    :noindex:
 
