@@ -9,6 +9,7 @@ The "latin-1" encoding is required by the IUCR specification.
 import re
 import shlex
 import warnings
+from typing import Dict
 
 import numpy as np
 from ase import Atoms
@@ -592,7 +593,7 @@ def write_cif(fileobj, images, format='default',
         except KeyError:
             pass
 
-        no = {}
+        no: Dict[str, int] = {}
 
         for symbol, pos, occ in zip(symbols, coords, occupancies):
             if symbol in no:

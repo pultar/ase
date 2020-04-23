@@ -1,3 +1,4 @@
+# type: ignore
 import re
 import sys
 from collections import namedtuple
@@ -130,10 +131,13 @@ class Label(Widget):
     def __init__(self, text='', color=None):
         self.creator = partial(tk.Label, text=text, fg=color)
 
+    @property
+    def text(self):
+        return self.widget['text']
+
+    @text.setter
     def text(self, new):
         self.widget.config(text=new)
-
-    text = property(None, text)
 
 
 class Text(Widget):

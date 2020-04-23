@@ -15,7 +15,7 @@ from ase.geometry import cellpar_to_cell, cell_to_cellpar
 from ase.parallel import paropen
 
 
-def read_eon(fileobj, index = -1):
+def read_eon(fileobj, index=-1):
     """Reads an EON reactant.con file.  If *fileobj* is the name of a
     "states" directory created by EON, all the structures will be read."""
     if isinstance(fileobj, str):
@@ -68,11 +68,9 @@ def read_eon(fileobj, index = -1):
 
         images.append(atoms)
 
-
         first_line = f.readline()
         if first_line == '':
             more_images_to_read = False
-
 
     if isinstance(fileobj, str):
         f.close()
