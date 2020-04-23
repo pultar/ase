@@ -1,6 +1,5 @@
 .. module:: ase
-
-.. _
+   :noindex:
 
 ==================
 MuST
