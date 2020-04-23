@@ -16,9 +16,8 @@ Locally Self-consistent Multiple Scattering (LSMS) methods.
 
 Environment variables
 ---------------------
-.. envvar:: PATH
 
-    Just add the path to ``/bin`` folder of your MuST installation to your PATH variable.
+Just add the path to ``/bin`` folder of your MuST installation to your PATH variable.
 
 Generating Starting Potentials
 ------------------------------
