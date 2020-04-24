@@ -1,14 +1,6 @@
 def test_slab_rneb():
     from ase.build import fcc100, add_adsorbate
     from ase.constraints import FixAtoms
-    from ase.calculators.emt import EMT
-    from ase.neb import NEB
-    from ase.optimize import BFGS
-    import numpy as np
-
-    from ase.rneb import RNEB
-
-    rneb = RNEB(logfile=None)
 
     # 3x3-Al(001) surface with 3 layers and an
     # Au atom adsorbed in a hollow site:
@@ -22,53 +14,8 @@ def test_slab_rneb():
 
     add_adsorbate(slab, 'Au', 1.7, 'hollow')
     add_adsorbate(slab, 'Au', 1.7, 'hollow', offset=(1, 0))
-    initial_unrelaxed = slab.copy()
-    initial_unrelaxed.pop(-1)
 
-    # Use EMT potential:
-    slab.set_calculator(EMT())
-
-    # Initial state:
-    initial_relaxed = initial_unrelaxed.copy()
-    initial_relaxed.set_calculator(EMT())
-    qn = BFGS(initial_relaxed, logfile=None)
-    qn.run(fmax=0.05)
-
-    # Final state:
-    final_unrelaxed = slab.copy()
-    final_unrelaxed.pop(-2)
-
-    # RNEB symmetry identification
-    sym_ops = rneb.find_symmetries(slab, initial_unrelaxed, final_unrelaxed)
-    # check that path has reflection symmetry for each images
-    images = create_path(initial_unrelaxed, final_unrelaxed)
-    neb = NEB(images)
-    neb.interpolate(images)
-    sym_ops = rneb.reflect_path(images, sym=sym_ops)
-
-    # Obtain the final relaxed structure with RNEB
-    final_relaxed = rneb.get_final_image(slab, initial_unrelaxed,
-                                         initial_relaxed, final_unrelaxed)
-
-    images = create_path(initial_relaxed, final_relaxed)
-
-    neb = NEB(images, sym=True, rotations=sym_ops[0])
-    neb.interpolate()
-    qn = BFGS(neb, logfile=None)
-    qn.run(fmax=0.05)
-
-    sym_image_energy = images[-2].get_potential_energy()
-
-    # Do a normal NEB
-    neb_images = create_path(initial_relaxed, final_relaxed)
-    normal_neb = NEB(neb_images)
-    normal_neb.interpolate()
-    qn = BFGS(normal_neb, logfile=None)
-    qn.run(fmax=0.05)
-
-    normal_image_energy = neb_images[-2].get_potential_energy()
-
-    assert np.isclose(sym_image_energy, normal_image_energy)
+    compare_rneb_w_normal_neb(slab, (-1, -2))
 
 
 def create_path(init, final):
@@ -84,12 +31,153 @@ def create_path(init, final):
     return images
 
 
-def test_is_reflective():
-    """ Test to check paths separately for reflection symmetry """
+def test_Al_bulk():
+    from ase.build import bulk
+
+    atoms = bulk('Al', crystalstructure='fcc', a=4.05)
+    atoms = atoms.repeat([2, 2, 1])
+    for path in [(0, 1), (1, 2)]:
+        compare_rneb_w_normal_neb(atoms, path)
+
+
+def test_Al_hexagonal():
     from ase.build import fcc111
 
-    atoms = fcc111('Cu', [2, 2, 1], 4, periodic=True)
-    atoms = atoms.repeat([2, 2, 1])
+    atoms = fcc111('Al', [2, 2, 1], 4.05, periodic=True)
+    for path in [(0, 1), (1, 2)]:
+        compare_rneb_w_normal_neb(atoms, path)
+
+
+def compare_rneb_w_normal_neb(atoms, vacancy_path):
+    from ase.rneb import RNEB
+    from ase.calculators.emt import EMT
+    from ase.optimize import BFGS
+    from ase.neb import NEB
+    import numpy as np
+
+    # Only for debugging
+    import inspect
+
+    rneb = RNEB(logfile=None)
+
+    # deleting ions will change indices
+    initial_unrelaxed = atoms.copy()
+    del initial_unrelaxed[vacancy_path[0]]
+
+    final_unrelaxed = atoms.copy()
+    del final_unrelaxed[vacancy_path[1]]
+
+    # align indices
+    final_unrelaxed = align_indices(initial_unrelaxed, final_unrelaxed)
+
+    # RNEB symmetry identification
+    sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed,
+                                   final_unrelaxed)
+    # We check here if any symmetry operations relate the initial and
+    # final structures, if not then there is no point in continuing.
+    # We could also do this with the SymmetryEquivalenceCheck but that
+    # does not guarantee that any symmetry operations could be
+    # used for path
+    assert len(sym_ops) > 0
+
+    initial_relaxed = initial_unrelaxed.copy()
+    initial_relaxed.calc = EMT()
+    qn = BFGS(initial_relaxed, logfile=None)
+    qn.run(fmax=0.01)
+
+    final_relaxed_n = final_unrelaxed.copy()
+    final_relaxed_n.calc = EMT()
+    qn = BFGS(final_relaxed_n, logfile=None)
+    qn.run(fmax=0.01)
+
+    final_relaxed_s = rneb.get_final_image(atoms, initial_unrelaxed,
+                                           initial_relaxed,
+                                           final_unrelaxed)
+
+    ef_n = final_relaxed_n.get_potential_energy()
+    ef_s = final_relaxed_s.get_potential_energy()
+    try:
+        assert np.isclose(ef_n, ef_s, atol=1e-3)
+    except AssertionError:
+        print(inspect.stack()[1].function)
+        print(vacancy_path)
+        print('e final really relaxed: ', ef_n)
+        print('e final symmetry:       ', ef_s)
+
+    # Create path for symmetry detection
+    images = create_path(initial_unrelaxed, final_unrelaxed)
+    neb = NEB(images)
+    neb.interpolate()
+
+    # check that path has reflection symmetry for each image pair
+    sym_ops = rneb.reflect_path(images, sym=sym_ops)
+    # Also assert that the entire path has reflection symmetry
+    # otherwise the rest is pointless
+    try:
+        assert len(sym_ops) > 0
+    except AssertionError:
+        print(inspect.stack()[1].function)
+        print(f'Path {vacancy_path} is not reflective')
+        return
+
+    for method in ['aseneb', 'improvedtangent', 'eb']:
+        # Create path for normal NEB
+        images = create_path(initial_relaxed, final_relaxed_n)
+        neb = NEB(images, method=method)
+        neb.interpolate()
+
+        qn = BFGS(neb, logfile=None)
+        qn.run(fmax=0.05)
+
+        # Normal NEB
+        eip1 = images[1].get_potential_energy()  # e initial plus 1
+        efm1 = images[-2].get_potential_energy()  # e final minus 1
+        try:
+            assert np.isclose(eip1, efm1, atol=1e-3)
+        except AssertionError:
+            print(inspect.stack()[1].function)
+            print(vacancy_path)
+            print(f'Normal NEB (method {method}):')
+            print(eip1)
+            print(efm1)
+            print(f'dE = {eip1 - efm1}')
+
+        for S in sym_ops:
+            images = create_path(initial_relaxed, final_relaxed_s)
+            # images = create_path(initial_unrelaxed, final_unrelaxed)
+            neb = NEB(images, sym=True, rotations=S, method=method)
+            neb.interpolate()
+            qn = BFGS(neb, logfile=None)
+            qn.run(fmax=0.05)
+
+            eip1 = images[1].get_potential_energy()
+            efm1 = images[-2].get_potential_energy()
+            try:
+                assert np.isclose(eip1, efm1, atol=1e-3)
+            except AssertionError:
+                print(inspect.stack()[1].function)
+                print(vacancy_path)
+                print(S, 'not ok')
+                print(f'Reflective NEB (method {method}):')
+                print(eip1)
+                print(efm1)
+                print(f'dE = {eip1 - efm1}')
+
+
+def test_is_reflective():
+    """ Test to check paths separately for reflection symmetry """
+    from ase.build import fcc111, bulk
+    import numpy as np
+    from ase.build.tools import niggli_reduce
+
+    atoms = fcc111('Al', [2, 2, 1], 4.05, periodic=True)
+    nxy = np.sum(atoms.cell, axis=0) / 6
+    nxy[2] = atoms.cell[2][2]
+    atoms.cell[2] = nxy
+    # atoms = bulk('Al', crystalstructure='fcc', a=4.05)
+    # atoms = atoms.repeat([2, 2, 1])
+    # niggli_reduce(atoms)
+    # print(len(atoms))
 
     # give path to look at as path=(init_indice, final_indice)
     print('Trying path 0 -> 1')
