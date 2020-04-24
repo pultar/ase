@@ -222,11 +222,14 @@ class NEB:
                     else:
                         j = i - (i - self.nimages // 2) * 2
 
-                        forces_temp = np.array([np.dot(self.rotations[0],
-                                                       forces[j - 1][at]) for
-                                                at in self.rotations[2]])
-
-                        forces[i - 1] = forces_temp
+                        # Use the symmetry operation on forces in scaled coordinates
+                        cell = images[i].cell
+                        scaled_forces = cell.scaled_positions(forces[j - 1])
+                        rot_forces = np.inner(scaled_forces[self.rotations[2]],
+                                              self.rotations[0])
+                        
+                        tf = cell.cartesian_positions(rot_forces)
+                        forces[i - 1] = cell.cartesian_positions(rot_forces)
                         energies[i] = energies[j]
 
             else:
