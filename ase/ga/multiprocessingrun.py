@@ -1,9 +1,8 @@
 """ Class for handling several simultaneous jobs.
 The class has been tested on Niflheim-opteron4.
 """
-import time
 from multiprocessing import Pool
-
+import time
 from ase.io import write, read
 
 

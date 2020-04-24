@@ -2,6 +2,7 @@ import os
 import sys
 
 import numpy as np
+
 from ase.db.core import Database, ops, lock, now
 from ase.db.row import AtomsRow
 from ase.io.jsonio import encode, decode

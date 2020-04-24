@@ -1,10 +1,10 @@
 """ Implementation of a population for maintaining a GA population and
 proposing structures to pair. """
+from random import randrange, random
 from math import tanh, sqrt, exp
 from operator import itemgetter
-from random import randrange, random
-
 import numpy as np
+
 from ase.db.core import now
 from ase.ga import get_raw_score
 

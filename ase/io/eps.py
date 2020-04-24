@@ -1,6 +1,5 @@
 import time
 from distutils.version import LooseVersion
-
 from ase.io.utils import PlottingVariables, make_patch_list
 
 

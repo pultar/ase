@@ -1,15 +1,15 @@
-import json
 import sys
-from copy import deepcopy
-
-import ase.io.jsonio
 import numpy as np
-from ase.db.postgresql import remove_nan_and_inf, insert_nan_and_inf
-from ase.db.sqlite import SQLite3Database
-from ase.db.sqlite import VERSION
-from ase.db.sqlite import init_statements
 from pymysql import connect
 from pymysql.err import ProgrammingError
+from copy import deepcopy
+
+from ase.db.sqlite import SQLite3Database
+from ase.db.sqlite import init_statements
+from ase.db.sqlite import VERSION
+from ase.db.postgresql import remove_nan_and_inf, insert_nan_and_inf
+import ase.io.jsonio
+import json
 
 
 class Connection(object):

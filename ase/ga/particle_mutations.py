@@ -1,10 +1,10 @@
 import random
+import numpy as np
 from operator import itemgetter
 
-import numpy as np
-from ase import Atoms
 from ase.ga.offspring_creator import OffspringCreator
 from ase.ga.utilities import get_distance_matrix, get_nndist
+from ase import Atoms
 
 
 class Mutation(OffspringCreator):

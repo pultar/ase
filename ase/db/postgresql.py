@@ -1,12 +1,13 @@
 import json
 
 import numpy as np
+from psycopg2 import connect
+from psycopg2.extras import execute_values
+
 from ase.db.sqlite import (init_statements, index_statements, VERSION,
                            SQLite3Database)
 from ase.io.jsonio import (encode as ase_encode,
                            create_ase_object, create_ndarray)
-from psycopg2 import connect
-from psycopg2.extras import execute_values
 
 jsonb_indices = [
     'CREATE INDEX idxkeys ON systems USING GIN (key_value_pairs);',

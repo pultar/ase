@@ -1,9 +1,9 @@
 """Adsorbate operators that adds an adsorbate to the surface
 of a particle or given structure, using a supplied list of sites."""
+import numpy as np
 import random
 from itertools import chain
 
-import numpy as np
 from ase import Atoms, Atom
 from ase.build import molecule
 from ase.ga.offspring_creator import OffspringCreator
