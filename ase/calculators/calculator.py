@@ -457,11 +457,9 @@ class Calculator(object):
                  atoms=None, directory='.', **kwargs):
         """Basic calculator implementation.
 
-        restart: str or bool
-            Prefix for restart file.  May contain a directory.
-            If restart is True, then use the directory path.
-
-            Default is None: don't restart.
+        restart: str
+            Prefix for restart file.  May contain a directory. Default
+            is None: don't restart.
         ignore_bad_restart_file: bool
             Ignore broken or missing restart file.  By default, it is an
             error if the restart file is missing or broken.
@@ -483,9 +481,6 @@ class Calculator(object):
         self._directory = None  # Initialize
 
         if restart is not None:
-            if restart is True:
-                self._parse_directory_and_label(directory, label)
-                restart = self.label
             try:
                 self.read(restart)  # read parameters, atoms and results
             except ReadError:
@@ -494,7 +489,16 @@ class Calculator(object):
                 else:
                     raise
 
-        self._parse_directory_and_label(directory, label)
+        self.directory = directory
+        self.prefix = None
+        if label is not None:
+            if self.directory != '.' and '/' in label:
+                raise ValueError('Directory redundantly specified though '
+                                 'directory="{}" and label="{}".  '
+                                 'Please omit "/" in label.'
+                                 .format(self.directory, label))
+            self.label = '/'.join((self.directory, label))
+
         if self.parameters is None:
             # Use default parameters if they were not read from file:
             self.parameters = self.get_default_parameters()
@@ -513,17 +517,6 @@ class Calculator(object):
 
         if not hasattr(self, 'name'):
             self.name = self.__class__.__name__.lower()
-
-    def _parse_directory_and_label(self, directory, label):
-        self.directory = directory
-        self.prefix = None
-        if label is not None:
-            if self.directory != '.' and '/' in label:
-                raise ValueError('Directory redundantly specified though '
-                                 'directory="{}" and label="{}".  '
-                                 'Please omit "/" in label.'
-                                 .format(self.directory, label))
-            self.label = '/'.join((self.directory, label))
 
     @property
     def directory(self) -> str:
