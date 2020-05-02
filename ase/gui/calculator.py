@@ -4,7 +4,6 @@
 from ase.gui.i18n import _
 
 import ase.gui.ui as ui
-from ase.gui.ui import Window
 import numpy as np
 from copy import copy, deepcopy
 
@@ -136,7 +135,7 @@ method for handling the core regions.
 """)
 
 
-class SetCalculator(Window):
+class SetCalculator:
     ''' Window for selecting a calculator. '''
 
     # List the names of the radio button attributes
@@ -161,29 +160,29 @@ class SetCalculator(Window):
     classname = 'SetCalculator'
 
     def __init__(self, gui):
-        super().__init__(title='Simulation')
+        self.win = ui.Window(title='Simulation')
         self.gui = gui
-        self.add(ui.Text(introtext))
-        self.add(ui.Label(_('Calculator:')))
+        self.win.add(ui.Text(introtext))
+        self.win.add(ui.Label(_('Calculator:')))
 
         self.radiobuttons = ui.RadioButtons(
             self.captions, vertical=False,
             callback=self.radio_button_selected)
-        self.add(self.radiobuttons)
+        self.win.add(self.radiobuttons)
 
         self.longcaption = ui.Label(text='')
-        self.add(self.longcaption)
+        self.win.add(self.longcaption)
 
         self.button_setup = ui.Button(_('Setup'),
             callback=self.button_setup_clicked)
         self.button_info = ui.Button(_('Info'),
             callback=self.button_info_clicked)
-        self.add([self.button_setup, self.button_info])
+        self.win.add([self.button_setup, self.button_info])
 
         self.radio_button_selected()
 
-        self.add([  # pybutton(_('Python'), _('TODO')),
-                 ui.Button(_('Cancel'), self.close),
+        self.win.add([  # pybutton(_('Python'), _('TODO')),
+                 ui.Button(_('Cancel'), self.win.close),
                  ui.Button(_('Apply'), self.apply),
                  ui.Button(_('Ok'), self.ok)])
 
@@ -249,7 +248,7 @@ class SetCalculator(Window):
         if not images.get_dynamic(self.atoms).all():
             from ase.constraints import FixAtoms
             self.atoms.set_constraint(
-                FixAtoms(mask=1-images.get_dynamic(self.atoms)))
+                FixAtoms(mask=1 - images.get_dynamic(self.atoms)))
         return True
 
     def apply(self, *widget):
@@ -296,7 +295,7 @@ class SetCalculator(Window):
 
     def ok(self, *widget):
         if self.apply():
-            self.close()
+            self.win.close()
 
     def save_state(self):
         state = {}
@@ -513,11 +512,11 @@ class SetCalculator(Window):
         return True
 
 
-class LJ_Window(Window):
+class LJ_Window:
     ''' Window for configuring Lennard-Jones parameters '''
 
     def __init__(self, owner, param, attrname):
-        super().__init__(title=_('Lennard-Jones parameters'))
+        self.win = ui.Window(title=_('Lennard-Jones parameters'))
         self.owner = owner
         self.attrname = attrname
         atoms = owner.atoms
@@ -528,24 +527,24 @@ class LJ_Window(Window):
         self.present = list(found.keys())
         self.present.sort()  # Sorted list of atomic numbers
         nelem = len(self.present)
-        self.add(ui.Label(_('Specify the Lennard-Jones parameters here')))
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(_('Specify the Lennard-Jones parameters here')))
+        self.win.add(ui.Label(''))
 
-        self.add(ui.Label(_('Epsilon (eV):')))
+        self.win.add(ui.Label(_('Epsilon (eV):')))
         self.epsilon_adj = self.makematrix(self.present)
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
-        self.add(ui.Label(_(u"Sigma (Å):")))
+        self.win.add(ui.Label(_(u"Sigma (Å):")))
         self.sigma_adj = self.makematrix(self.present)
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
         # TRANSLATORS: Shift roughly means adjust (about a potential)
         self.modif = ui.CheckButton(_('Shift potential to zero at cutoff'))
-        self.add(self.modif)
+        self.win.add(self.modif)
         self.modif.value = True
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
-        self.add([ui.Button(_('Cancel'), self.close),
+        self.win.add([ui.Button(_('Cancel'), self.win.close),
                   ui.Button(_('Ok'), self.ok)])
 
         # restore from param
@@ -561,13 +560,13 @@ class LJ_Window(Window):
         s = 8 * ' '
         for i in range(nelem):  # header
             s += '  %s    ' % chemical_symbols[present[i]]
-        self.add(ui.Label(s))
+        self.win.add(ui.Label(s))
         for i in range(nelem):  # entries
             row = [ui.Label(' %s ' % chemical_symbols[present[i]])]
             for j in range(i + 1):
                 adjdict[(i, j)] = ui.Entry(value='1.0', width=5)
                 row.append(adjdict[(i, j)])
-            self.add(row)
+            self.win.add(row)
         return adjdict
 
     def set_param(self, adj, params, n):
@@ -595,10 +594,10 @@ class LJ_Window(Window):
         params['modified'] = self.modif.value
         print(params)
         setattr(self.owner, self.attrname, params)
-        self.close()
+        self.win.close()
 
 
-class EMT_Window(Window):
+class EMT_Window:
     ''' Window for selection EMT(ASAP) parameters '''
 
     emt_parameters = (
@@ -608,19 +607,19 @@ class EMT_Window(Window):
         (_('CuMg and CuZr metallic glass'), 'EMTMetalGlassParameters'))
 
     def __init__(self, owner, param, attrname):
-        super().__init__(title=_('asap3.EMT parameters'))
+        self.win = ui.Window(title=_('asap3.EMT parameters'))
         self.owner = owner
         self.attrname = attrname
 
-        self.add(ui.Label(_('Select appropriate EMT paramseters set')))
+        self.win.add(ui.Label(_('Select appropriate EMT paramseters set')))
         items = [item[0] for item in self.emt_parameters]
         self.emt_setup = ui.ComboBox(labels=items)
-        self.add(self.emt_setup)
+        self.win.add(self.emt_setup)
 
         if param:
             self.emt_setup.value = self.emt_parameters[param['index']][0]
 
-        self.add([ui.Button(_('Cancel'), self.close),
+        self.win.add([ui.Button(_('Cancel'), self.win.close),
                   ui.Button(_('Ok'), self.ok)])
 
     def ok(self):
@@ -628,27 +627,27 @@ class EMT_Window(Window):
         params['index'] = self.emt_setup.value
         print(params)
         setattr(self.owner, self.attrname, params)
-        self.close()
+        self.win.close()
 
 
-class EAM_Window(Window):
+class EAM_Window:
     ''' Window for selection EAM(ASAP) potential file '''
 
     def __init__(self, owner, param, attrname):
-        super().__init__(title='EAM parameters')
+        self.win = ui.Window(title='EAM parameters')
         self.owner = owner
         self.attrname = attrname
         atoms = owner.atoms
         self.natoms = len(atoms)
 
-        self.add(ui.Label(_('Select *.alloy or *.adp file')))
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(_('Select *.alloy or *.adp file')))
+        self.win.add(ui.Label(''))
         self.filename_entry = ui.Entry()
         self.import_potential_but = ui.Button(_('Import Potential'),
                                               self.import_potential)
-        self.add([self.filename_entry, self.import_potential_but])
+        self.win.add([self.filename_entry, self.import_potential_but])
 
-        self.add([ui.Button(_('Cancel'), self.close),
+        self.win.add([ui.Button(_('Cancel'), self.win.close),
                   ui.Button(_('Ok'), self.ok)])
 
         if param:  # sync with provided data
@@ -659,7 +658,7 @@ class EAM_Window(Window):
         if not hasattr(self.owner, 'eam_parameters'):
             ui.error(_('You need to import the potential file'))
 
-        self.close()
+        self.win.close()
 
     def import_potential(self, *args):
         filename = 'Al99.eam.alloy'
@@ -672,7 +671,7 @@ class EAM_Window(Window):
             setattr(self.owner, self.attrname, param)
 
 
-class GPAW_Window(Window):
+class GPAW_Window:
     ''' Window for configuring GPAW parameter '''
 
     gpaw_xc_list = ('LDA', 'PBE', 'RPBE', 'revPBE', 'GLLBSC')
@@ -688,7 +687,7 @@ class GPAW_Window(Window):
     gpaw_mixers = ('Mixer', 'MixerSum', 'MixerDif')
 
     def __init__(self, owner, param, attrname):
-        super().__init__(title=_('GPAW parameters'))
+        self.win = ui.Window(title=_('GPAW parameters'))
         self.owner = owner
         self.attrname = attrname
         atoms = owner.atoms
@@ -698,7 +697,7 @@ class GPAW_Window(Window):
         self.orthogonal = self.ucell.orthorhombic
         self.natoms = len(atoms)
 
-        # self.add(ui.Label(_('Configure GPAW parameters')))
+        # self.win.add(ui.Label(_('Configure GPAW parameters')))
 
         # Print some info
         txt = _('System of %i atoms with\n') % self.natoms
@@ -708,19 +707,20 @@ class GPAW_Window(Window):
         else:
             txt += _('non-orthogonal unit cell:') + '\n'
             txt += str(self.ucell)
-        self.add(ui.Label(txt))
+        self.win.add(ui.Label(txt))
 
         # XC potential
         self.xc = ui.ComboBox(labels=self.gpaw_xc_list, width=10)
-        self.add(ui.Label(_('')))
-        self.add([ui.Label(_('Exchange-correlation functional: ')), self.xc])
+        self.win.add(ui.Label(_('')))
+        self.win.add([ui.Label(_('Exchange-correlation functional: ')),
+                     self.xc])
         self.xc.value = self.gpaw_xc_list[1]  # PBE
 
         # Mode
         self.mode = ui.ComboBox(labels=self.gpaw_modes, width=40,
                                 callback=self.mode_changed)
-        self.add(ui.Label(_('')))
-        self.add([ui.Label(_('Mode: ')), self.mode])
+        self.win.add(ui.Label(_('')))
+        self.win.add([ui.Label(_('Mode: ')), self.mode])
 
         # Grid spacing
         self.radio_h = ui.RadioButtons(
@@ -728,8 +728,8 @@ class GPAW_Window(Window):
             vertical=False, callback=self.radio_h_toggled)
         self.h = ui.SpinBox(value=0.18, start=0.0, end=1.0, step=0.01,
                             callback=self.h_changed)
-        self.add(self.radio_h)
-        self.add([ui.Label(' h = '), self.h, ui.Label(' Å')])
+        self.win.add(self.radio_h)
+        self.win.add([ui.Label(' h = '), self.h, ui.Label(' Å')])
         self.gpts = []
         for i in range(3):
             g = ui.SpinBox(value=4, start=4, end=1000, step=4,
@@ -737,18 +737,18 @@ class GPAW_Window(Window):
             self.gpts.append(g)
         self.gpts_hlabel = ui.Label('')
         self.gpts_hlabel_format = _('h_eff = (%.3f, %.3f, %.3f) Å')
-        self.add([ui.Label(' gpts = ('), self.gpts[0],
+        self.win.add([ui.Label(' gpts = ('), self.gpts[0],
                   ui.Label(', '), self.gpts[1], ui.Label(', '),
                   self.gpts[2], ui.Label(')  '), self.gpts_hlabel])
 
         # LCAO basis functions
         self.basis = ui.ComboBox(labels=self.gpaw_basises, width=30)
-        self.add([ui.Label(_('Basis functions: ')), self.basis])
+        self.win.add([ui.Label(_('Basis functions: ')), self.basis])
         self.basis.value = self.gpaw_basises[2]  # dzp
 
         # PW cutoff
         self.pwcutoff = ui.SpinBox(value=350, start=50, end=3500, step=50)
-        self.add([ui.Label(_('Plane wave cutoff energy: ')),
+        self.win.add([ui.Label(_('Plane wave cutoff energy: ')),
                   self.pwcutoff, ui.Label(_('eV'))])
 
         # K-points
@@ -761,41 +761,41 @@ class GPAW_Window(Window):
             g = ui.SpinBox(value=default, start=1, end=100, step=1,
                            callback=self.k_changed)
             self.kpts.append(g)
-        self.add(ui.Label(_('')))
-        self.add([ui.Label(_('k-points grid k = (')), self.kpts[0],
+        self.win.add(ui.Label(_('')))
+        self.win.add([ui.Label(_('k-points grid k = (')), self.kpts[0],
                   ui.Label(', '), self.kpts[1], ui.Label(', '),
                   self.kpts[2], ui.Label(')')])
         for i in range(3):
             self.kpts[i].active = not self.pbc[i]
         self.kpts_label = ui.Label('')
         self.kpts_label_format = _('k-points x size:  (%.1f, %.1f, %.1f) Å')
-        self.add(self.kpts_label)
+        self.win.add(self.kpts_label)
 
         # Spin polarization
-        self.add(ui.Label(_('')))
+        self.win.add(ui.Label(_('')))
         self.spinpol = ui.CheckButton(_('Spin polarized'),
                                       callback=self.mixer_changed)
-        self.add(self.spinpol)
+        self.win.add(self.spinpol)
 
         # Mixer
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
         self.use_mixer = ui.CheckButton(_('Customize mixer parameters'),
                                         callback=self.mixer_changed)
-        self.add(self.use_mixer)
+        self.win.add(self.use_mixer)
         self.radio_mixer = ui.RadioButtons(labels=self.gpaw_mixers,
                                            vertical=False,
                                            callback=self.mixer_changed)
-        self.add(self.radio_mixer)
+        self.win.add(self.radio_mixer)
         self.beta = ui.SpinBox(value=0.25, start=0.0, end=1.0, step=0.05)
         self.nmaxold = ui.SpinBox(value=3, start=1, end=10, step=1)
         self.weight = ui.SpinBox(value=50, start=1, end=500, step=1)
-        self.add([ui.Label('  beta      = '), self.beta,
+        self.win.add([ui.Label('  beta      = '), self.beta,
                   ui.Label('  nmaxold      = '), self.nmaxold,
                   ui.Label('  weight      = '), self.weight])
         self.beta_m = ui.SpinBox(value=0.70, start=0.0, end=1.0, step=0.05)
         self.nmaxold_m = ui.SpinBox(value=2, start=1, end=10, step=1)
         self.weight_m = ui.SpinBox(value=10, start=1, end=500, step=1)
-        self.add([ui.Label('  beta_m = '), self.beta_m,
+        self.win.add([ui.Label('  beta_m = '), self.beta_m,
                   ui.Label('  nmaxold_m = '), self.nmaxold_m,
                   ui.Label('  weight_m = '), self.weight_m])
 
@@ -803,8 +803,8 @@ class GPAW_Window(Window):
         # Poisson-solver
 
         # Buttons at the bottom
-        self.add(ui.Label(''))
-        self.add([ui.Button(_('Cancel'), self.close),
+        self.win.add(ui.Label(''))
+        self.win.add([ui.Button(_('Cancel'), self.win.close),
                   ui.Button(_('Ok'), self.ok)])
 
         # restore from parameters
@@ -935,4 +935,4 @@ class GPAW_Window(Window):
             param[t] = getattr(self, t).value
         setattr(self.owner, self.attrname, param)
         print(param)
-        self.close()
+        self.win.close()

@@ -1,37 +1,36 @@
 """Base class for simulation windows
 """
 import ase.gui.ui as ui
-from ase.gui.ui import Window
 from ase.gui.i18n import _
 
 
-class Simulation(Window):
+class Simulation:
     """  Base calss for EnergyForces and Minimize windows """
 
     def __init__(self, gui):
-        super().__init__(title='Simulation')
+        self.win = ui.Window(title='Simulation')
         self.gui = gui
         self.gui.register_vulnerable(self)
 
     def close(self):
         self.gui.unregister_vulnerable(self)
-        super().close()
+        self.win.close()
 
     def packimageselection(self):
         """ Elements for selection of starting configuration """
-        self.add(ui.Label(_('Select starting configuration')))
+        self.win.add(ui.Label(_('Select starting configuration')))
         self.numconfig_format = _('of %i frames:')
         self.numconfig_label = ui.Label('')
-        self.add(self.numconfig_label)
+        self.win.add(self.numconfig_label)
 
         self.scale = ui.Scale(value=self.gui.frame, start=1,
                               end=len(self.gui.images), callback=None)
-        self.add(self.scale)
+        self.win.add(self.scale)
 
         self.firstcurrlast = [ui.Button(_('First'), self.first_click),
                               ui.Button(_('Current'), self.current_click),
                               ui.Button(_('Last'), self.last_click)]
-        self.add(self.firstcurrlast)
+        self.win.add(self.firstcurrlast)
         self.setupimageselection()
 
     def setupimageselection(self):
@@ -60,12 +59,12 @@ class Simulation(Window):
     def makebutbox(self, helptext=None):
         """ Add buttons Run/Close/Help"""
         self.runbut = ui.Button(_('Run'), self.run)
-        self.closebut = ui.Button('Close', self.close)
+        self.closebut = ui.Button('Close', self.win.close)
         if helptext:
             self.helpbut = ui.helpbutton(helptext)
-            self.add([self.runbut, self.closebut, self.helpbut])
+            self.win.add([self.runbut, self.closebut, self.helpbut])
         else:
-            self.add([self.runbut, self.closebut])
+            self.win.add([self.runbut, self.closebut])
 
     def setup_atoms(self):
         self.atoms = self.get_atoms()

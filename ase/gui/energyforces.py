@@ -5,21 +5,23 @@ from ase.gui.i18n import _
 import ase.gui.ui as ui
 from ase.gui.simulation import Simulation
 
+
 class EnergyForces(Simulation):
     def __init__(self, gui):
         super().__init__(gui)
         self.title = _('Potential energy and forces')
-        self.add(ui.Label(_('Calculate potential energy and forces on atoms')))
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(
+            _('Calculate potential energy and forces on atoms')))
+        self.win.add(ui.Label(''))
         self.packimageselection()
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
         self.forces = ui.CheckButton(_('Calculate forces'))
-        self.add(self.forces)
-        self.add(ui.Label(''))
-        self.output = ui.Text(9*'\n')
+        self.win.add(self.forces)
+        self.win.add(ui.Label(''))
+        self.output = ui.Text(9 * '\n')
         self.savebutton = ui.Button('Save', self.saveoutput)
-        self.add(ui.Label(_('Output:')))
-        self.add([self.output, self.savebutton])
+        self.win.add(ui.Label(_('Output:')))
+        self.win.add([self.output, self.savebutton])
         self.savebutton.active = False
         self.makebutbox()
 

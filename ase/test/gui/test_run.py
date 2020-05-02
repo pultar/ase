@@ -192,7 +192,7 @@ def test_simulation_window(gui, atoms):
     sim.last_click()
     sim.current_click()
     assert sim.getimagenumber() == 0
-    sim.close()
+    sim.win.close()
 
 
 def test_calculator_ase(gui):
@@ -235,7 +235,7 @@ def test_calculator_asap(gui):
     clc.radio_button_selected()
     assert clc.button_setup.active
     win = clc.button_setup_clicked()
-    win.close()
+    win.win.close()
 
     atoms.set_chemical_symbols(2 * ['C'])
     clc.gui.new_atoms(atoms)
@@ -281,7 +281,7 @@ def test_energyforces(gui):
     enf = gui.energy_window()
     enf.run()
     assert '4.39' in enf.output.text[0].split('\n')[1]
-    enf.close()
+    enf.win.close()
 
 
 def test_minimize(gui):
@@ -294,7 +294,7 @@ def test_minimize(gui):
     mmz.algo.value = 'MDMin'
     mmz.min_algo_specific()
     mmz.run()
-    mmz.close()
+    mmz.win.close()
 
 
 def test_quickinfo(gui, atoms):

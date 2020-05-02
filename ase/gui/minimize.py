@@ -19,36 +19,36 @@ class Minimize(Simulation):
     def __init__(self, gui):
         super().__init__(gui)
         self.title = _('Energy minimization')
-        self.add(ui.Label(
+        self.win.add(ui.Label(
             _('Find configuration with minimal potential energy.')))
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
         self.packimageselection()
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
         self.make_minimize_gui()
-        self.add(ui.Label(''))
+        self.win.add(ui.Label(''))
 
         self.status_label = ui.Label('')
-        self.add(self.status_label)
+        self.win.add(self.status_label)
 
         self.makebutbox()
 
     def make_minimize_gui(self):
         self.algo = ui.ComboBox(labels=self.minimizers,
                                 callback=self.min_algo_specific)
-        self.add([ui.Label(_('Algorithm: ')), self.algo])
+        self.win.add([ui.Label(_('Algorithm: ')), self.algo])
         lbl = ui.Label(_('Convergence criterion: Fmax < '))
         self.fmax_spin = ui.SpinBox(value=0.010, start=0.000,
                                     end=10.0, step=0.005)
-        self.add([lbl, self.fmax_spin])
+        self.win.add([lbl, self.fmax_spin])
         self.steps_spin = ui.SpinBox(value=100, start=1, end=1e6, step=10)
-        self.add([ui.Label(_('Max. number of steps: ')), self.steps_spin])
+        self.win.add([ui.Label(_('Max. number of steps: ')), self.steps_spin])
 
         # Special stuff for MDMin
         self.mdmin_widgets = [ui.Label(_('Pseudo time step: ')),
             ui.SpinBox(value=0.05, start=0.0, end=10.0, step=0.01)]
-        self.add(self.mdmin_widgets)
+        self.win.add(self.mdmin_widgets)
 
         self.min_algo_specific()
 
@@ -77,7 +77,7 @@ class Minimize(Simulation):
         # Display status message
         self.status_label.text = _('Running while fmax > %.3f for %i max. steps') \
                                  % (fmax, steps)
-        self.update()
+        self.win.update()
 
         self.prepare_store_atoms()
         if mininame == 'MDMin':
@@ -117,7 +117,7 @@ class Minimize(Simulation):
         fmax = (forces**2).sum(axis=1).max()
         self.status_label.text = _('Current maximal force: %.3f eV/Å') \
                                  % (fmax**0.5)
-        self.update()
+        self.win.update()
 
         self.store_atoms()
 
