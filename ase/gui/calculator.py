@@ -274,14 +274,20 @@ class SetCalculator(ui.Window):
             if self.eam_check():
                 self.choose_eam()
                 return True
+            else:
+                return False
         elif scalc == 'brenner':
             if self.brenner_check():
                 self.choose_brenner()
                 return True
+            else:
+                return False
         elif scalc == 'gpaw':
             if self.gpaw_check():
                 self.choose_gpaw()
                 return True
+            else:
+                return False
         else:
             print('Unknown calculator name')
             return False
