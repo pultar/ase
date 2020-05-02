@@ -239,7 +239,7 @@ class SetCalculator(ui.Window):
         frame = self.gui.frame
         try:
             atoms = images[frame]
-        except:
+        except IndexError:
             ui.error(_('No atoms present'))
             return False
         if len(atoms) < 1:
@@ -248,8 +248,7 @@ class SetCalculator(ui.Window):
         if not images.get_dynamic(self.atoms).all():
             from ase.constraints import FixAtoms
             self.atoms.set_constraint(
-                FixAtoms(mask = 1 - images.get_dynamic(self.atoms))
-            )
+                FixAtoms(mask=1-images.get_dynamic(self.atoms)))
         return True
 
     def apply(self, *widget):
@@ -376,8 +375,8 @@ class SetCalculator(ui.Window):
         elif provider == 'EMThcpParameters':
             return self.element_check('EMT Ru', ['Ru'])
         elif provider == 'EMTMetalGlassParameters':
-            return self.element_check('EMT CuMg', ['Cu', 'Mg']) or \
-                   self.element_check('EMT CuZr', ['Cu', 'Zr'])
+            return (self.element_check('EMT CuMg', ['Cu', 'Mg']) or
+                    self.element_check('EMT CuZr', ['Cu', 'Zr']))
         else:
             return False
 
@@ -783,20 +782,21 @@ class GPAW_Window(ui.Window):
                                         callback=self.mixer_changed)
         self.add(self.use_mixer)
         self.radio_mixer = ui.RadioButtons(labels=self.gpaw_mixers,
-                vertical=False, callback=self.mixer_changed)
+                                           vertical=False,
+                                           callback=self.mixer_changed)
         self.add(self.radio_mixer)
-        self.beta    = ui.SpinBox(value=0.25, start=0.0, end=1.0, step=0.05)
-        self.nmaxold = ui.SpinBox(value=3,    start=1,   end=10,  step=1)
-        self.weight  = ui.SpinBox(value=50,   start=1,   end=500, step=1)
-        self.add([ui.Label('  beta      = '),      self.beta,
+        self.beta = ui.SpinBox(value=0.25, start=0.0, end=1.0, step=0.05)
+        self.nmaxold = ui.SpinBox(value=3, start=1, end=10, step=1)
+        self.weight = ui.SpinBox(value=50, start=1, end=500, step=1)
+        self.add([ui.Label('  beta      = '), self.beta,
                   ui.Label('  nmaxold      = '), self.nmaxold,
-                  ui.Label('  weight      = '),  self.weight])
-        self.beta_m    = ui.SpinBox(value=0.70, start=0.0, end=1.0, step=0.05)
-        self.nmaxold_m = ui.SpinBox(value=2,    start=1,   end=10,  step=1)
-        self.weight_m  = ui.SpinBox(value=10,   start=1,   end=500, step=1)
-        self.add([ui.Label('  beta_m = '),      self.beta_m,
+                  ui.Label('  weight      = '), self.weight])
+        self.beta_m = ui.SpinBox(value=0.70, start=0.0, end=1.0, step=0.05)
+        self.nmaxold_m = ui.SpinBox(value=2, start=1, end=10, step=1)
+        self.weight_m = ui.SpinBox(value=10, start=1, end=500, step=1)
+        self.add([ui.Label('  beta_m = '), self.beta_m,
                   ui.Label('  nmaxold_m = '), self.nmaxold_m,
-                  ui.Label('  weight_m = '),    self.weight_m])
+                  ui.Label('  weight_m = '), self.weight_m])
 
         # Eigensolver
         # Poisson-solver
@@ -889,7 +889,7 @@ class GPAW_Window(ui.Window):
         size = []
         for i in range(3):
             size.append(self.kpts[i].value *
-                np.sqrt(np.vdot(self.ucell[i], self.ucell[i])))
+                        np.sqrt(np.vdot(self.ucell[i], self.ucell[i])))
         self.kpts_label.text = self.kpts_label_format % tuple(size)
 
     def mixer_changed(self, *args):
