@@ -171,6 +171,118 @@ def test_constrain(gui, atoms):
     assert sorted(atoms.constraints[0].index) == list(range(len(atoms)))
 
 
+def test_calculator_ase(gui):
+    clc = gui.calculator_window()
+    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    clc.gui.new_atoms(atoms)
+
+    clc.radiobuttons.value = 3  # ASEEMT
+    clc.radio_button_selected()
+    assert not clc.button_setup.active
+    assert clc.apply()
+
+    clc.ok()
+
+
+def test_calculator_asap(gui):
+    pytest.importorskip('asap3')
+
+    clc = gui.calculator_window()
+    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    clc.gui.new_atoms(atoms)
+
+    clc.radiobuttons.value = 1  # LJ
+    clc.radio_button_selected()
+    assert clc.button_setup.active
+    win = clc.button_setup_clicked()
+    win.ok()
+    assert clc.apply()
+
+    clc.radiobuttons.value = 2  # EMT
+    clc.radio_button_selected()
+    assert clc.button_setup.active
+    win = clc.button_setup_clicked()
+    win.ok()
+    assert clc.apply()
+
+    clc.radiobuttons.value = 4  # EAM
+    clc.radio_button_selected()
+    assert clc.button_setup.active
+    win = clc.button_setup_clicked()
+    win.close()
+
+    atoms.set_chemical_symbols(2*['C'])
+    clc.gui.new_atoms(atoms)
+    clc.radiobuttons.value = 5  # Brenner
+    clc.radio_button_selected()
+    assert not clc.button_setup.active
+    assert clc.apply()
+
+    clc.ok()
+
+
+def test_calculator_ase(gui):
+    pytest.importorskip('gpaw')
+
+    clc = gui.calculator_window()
+    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    clc.gui.new_atoms(atoms)
+
+    clc.radiobuttons.value = 6  # GPAW
+    clc.radio_button_selected()
+    assert clc.button_setup.active
+    # ~ assert clc.apply()
+    win = clc.button_setup_clicked()
+    win.ok()
+    assert clc.apply()
+    win = clc.button_setup_clicked()
+    win.xc.value = 'LDA'
+    win.mode.widget.current(1)  # LCAO
+    win.ok()
+    assert clc.apply()
+    win = clc.button_setup_clicked()
+    win.mode.widget.current(2)  # PW
+    win.ok()
+    assert clc.apply()
+
+    clc.ok()
+
+
+def test_energyforces(gui):
+    from ase.calculators.emt import EMT
+    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    gui.new_atoms(atoms)
+    gui.simulation = {'calc': EMT}
+    enf = gui.energy_window()
+    enf.run()
+    assert '4.39' in enf.output.text[0].split('\n')[1]
+    enf.close()
+
+
+def test_minimize(gui):
+    from ase.calculators.emt import EMT
+    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    gui.new_atoms(atoms)
+    gui.simulation = {'calc': EMT}
+    mmz = gui.energy_minimize_window()
+    mmz.algo.value = 'MDMin'  # not index (value), but text in edit box
+    mmz.min_algo_specific()
+    mmz.run()
+    mmz.close()
+
+    mmz = gui.energy_minimize_window()
+    mmz.last_click()
+    assert mmz.scale.value > 1
+    mmz.current_click()
+    assert mmz.scale.value == gui.frame + 1
+    mmz.first_click()
+    assert mmz.scale.value == 1
+    mmz.run()
+    mmz.last_click()
+    assert mmz.scale.value == len(gui.images)
+    mmz.close()
+
+
 def test_quickinfo(gui, atoms):
     from ase.gui.quickinfo import info
     from ase.gui.i18n import _
