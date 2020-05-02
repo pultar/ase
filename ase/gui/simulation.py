@@ -1,10 +1,13 @@
 """Base class for simulation windows
 """
 import ase.gui.ui as ui
+from ase.gui.ui import Window
 from ase.gui.i18n import _
 
 
-class Simulation(ui.Window):
+class Simulation(Window):
+    """  Base calss for EnergyForces and Minimize windows """
+
     def __init__(self, gui):
         super().__init__(title='Simulation')
         self.gui = gui
@@ -15,7 +18,7 @@ class Simulation(ui.Window):
         super().close()
 
     def packimageselection(self):
-        """Selection of starting configuration"""
+        """ Elements for selection of starting configuration """
         self.add(ui.Label(_('Select starting configuration')))
         self.numconfig_format = _('of %i frames:')
         self.numconfig_label = ui.Label('')
@@ -25,9 +28,9 @@ class Simulation(ui.Window):
                               end=len(self.gui.images), callback=None)
         self.add(self.scale)
 
-        self.firstcurrlast = [ui.Button(_('First'),   self.first_click),
+        self.firstcurrlast = [ui.Button(_('First'), self.first_click),
                               ui.Button(_('Current'), self.current_click),
-                              ui.Button(_('Last'),    self.last_click)]
+                              ui.Button(_('Last'), self.last_click)]
         self.add(self.firstcurrlast)
         self.setupimageselection()
 
@@ -98,10 +101,13 @@ class Simulation(ui.Window):
         """Informs the gui that the next configuration should be the first."""
         iframe = self.getimagenumber()
         if iframe + 1 < len(self.gui.images):
-            self.gui.images.delete(slice(iframe+1, len(self.gui.images)))
+            self.gui.images.delete(slice(iframe + 1, len(self.gui.images)))
         self.count_steps = 0
 
     def store_atoms(self):
         """Observes the minimization and stores the atoms in the gui."""
         self.gui.images.append(self.atoms)
         self.count_steps += 1
+
+    def run(self):
+        pass  # implement in childs

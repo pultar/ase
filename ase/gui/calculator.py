@@ -4,6 +4,7 @@
 from ase.gui.i18n import _
 
 import ase.gui.ui as ui
+from ase.gui.ui import Window
 import numpy as np
 from copy import copy, deepcopy
 
@@ -135,7 +136,7 @@ method for handling the core regions.
 """)
 
 
-class SetCalculator(ui.Window):
+class SetCalculator(Window):
     ''' Window for selecting a calculator. '''
 
     # List the names of the radio button attributes
@@ -512,7 +513,7 @@ class SetCalculator(ui.Window):
         return True
 
 
-class LJ_Window(ui.Window):
+class LJ_Window(Window):
     ''' Window for configuring Lennard-Jones parameters '''
 
     def __init__(self, owner, param, attrname):
@@ -597,7 +598,7 @@ class LJ_Window(ui.Window):
         self.close()
 
 
-class EMT_Window(ui.Window):
+class EMT_Window(Window):
     ''' Window for selection EMT(ASAP) parameters '''
 
     emt_parameters = (
@@ -630,7 +631,7 @@ class EMT_Window(ui.Window):
         self.close()
 
 
-class EAM_Window(ui.Window):
+class EAM_Window(Window):
     ''' Window for selection EAM(ASAP) potential file '''
 
     def __init__(self, owner, param, attrname):
@@ -671,7 +672,7 @@ class EAM_Window(ui.Window):
             setattr(self.owner, self.attrname, param)
 
 
-class GPAW_Window(ui.Window):
+class GPAW_Window(Window):
     ''' Window for configuring GPAW parameter '''
 
     gpaw_xc_list = ('LDA', 'PBE', 'RPBE', 'revPBE', 'GLLBSC')

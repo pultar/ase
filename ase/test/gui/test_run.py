@@ -172,6 +172,29 @@ def test_constrain(gui, atoms):
     assert sorted(atoms.constraints[0].index) == list(range(len(atoms)))
 
 
+def test_simulation_window(gui, atoms):
+    from ase.gui.simulation import Simulation
+    sim = Simulation(gui)
+    sim.packimageselection()
+    sim.setupimageselection()
+    sim.makebutbox()
+    assert sim.getimagenumber() == 0
+    sim.prepare_store_atoms()
+    atoms = sim.get_atoms()
+    atoms[0].position[0] += 1.0
+    sim.atoms = atoms
+    sim.store_atoms()
+    sim.notify_atoms_changed()
+    sim.last_click()
+    assert sim.getimagenumber() == 1
+    sim.first_click()
+    assert sim.getimagenumber() == 0
+    sim.last_click()
+    sim.current_click()
+    assert sim.getimagenumber() == 0
+    sim.close()
+
+
 def test_calculator_ase(gui):
     clc = gui.calculator_window()
     atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
@@ -224,13 +247,10 @@ def test_calculator_asap(gui):
     clc.ok()
 
 
-def test_calculator_gpaw(gui):
+def test_calculator_gpaw(gui, atoms):
     pytest.importorskip('gpaw')
 
     clc = gui.calculator_window()
-    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
-                  cell=[5, 5, 5])
-    clc.gui.new_atoms(atoms)
 
     clc.radiobuttons.value = 6  # GPAW
     clc.radio_button_selected()
@@ -271,21 +291,9 @@ def test_minimize(gui):
     gui.new_atoms(atoms)
     gui.simulation = {'calc': EMT}
     mmz = gui.energy_minimize_window()
-    mmz.algo.value = 'MDMin'  # not index (value), but text in edit box
+    mmz.algo.value = 'MDMin'
     mmz.min_algo_specific()
     mmz.run()
-    mmz.close()
-
-    mmz = gui.energy_minimize_window()
-    mmz.last_click()
-    assert mmz.scale.value > 1
-    mmz.current_click()
-    assert mmz.scale.value == gui.frame + 1
-    mmz.first_click()
-    assert mmz.scale.value == 1
-    mmz.run()
-    mmz.last_click()
-    assert mmz.scale.value == len(gui.images)
     mmz.close()
 
 
