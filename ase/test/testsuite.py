@@ -42,7 +42,7 @@ def all_test_modules_and_groups():
 def disable_calculators(names):
     import pytest
     for name in names:
-        if name in ['emt', 'lj', 'eam', 'morse', 'tip3p', 'asap', 'gpaw']:
+        if name in ['emt', 'lj', 'eam', 'morse', 'tip3p']:
             continue
         try:
             cls = get_calculator_class(name)
