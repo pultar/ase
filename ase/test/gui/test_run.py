@@ -132,6 +132,7 @@ def test_add_atoms(gui):
     dia.add()
     assert str(gui.atoms.symbols) == str(molecule('CH3CH2OH').symbols)
 
+
 def test_cell_editor(gui):
     au = bulk('Au')
     gui.new_atoms(au.copy())
@@ -173,7 +174,8 @@ def test_constrain(gui, atoms):
 
 def test_calculator_ase(gui):
     clc = gui.calculator_window()
-    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
+                  cell=[5, 5, 5])
     clc.gui.new_atoms(atoms)
 
     clc.radiobuttons.value = 3  # ASEEMT
@@ -188,7 +190,8 @@ def test_calculator_asap(gui):
     pytest.importorskip('asap3')
 
     clc = gui.calculator_window()
-    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
+                  cell=[5, 5, 5])
     clc.gui.new_atoms(atoms)
 
     clc.radiobuttons.value = 1  # LJ
@@ -211,7 +214,7 @@ def test_calculator_asap(gui):
     win = clc.button_setup_clicked()
     win.close()
 
-    atoms.set_chemical_symbols(2*['C'])
+    atoms.set_chemical_symbols(2 * ['C'])
     clc.gui.new_atoms(atoms)
     clc.radiobuttons.value = 5  # Brenner
     clc.radio_button_selected()
@@ -225,7 +228,8 @@ def test_calculator_gpaw(gui):
     pytest.importorskip('gpaw')
 
     clc = gui.calculator_window()
-    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
+                  cell=[5, 5, 5])
     clc.gui.new_atoms(atoms)
 
     clc.radiobuttons.value = 6  # GPAW
@@ -250,7 +254,8 @@ def test_calculator_gpaw(gui):
 
 def test_energyforces(gui):
     from ase.calculators.emt import EMT
-    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
+                  cell=[5, 5, 5])
     gui.new_atoms(atoms)
     gui.simulation = {'calc': EMT}
     enf = gui.energy_window()
@@ -261,7 +266,8 @@ def test_energyforces(gui):
 
 def test_minimize(gui):
     from ase.calculators.emt import EMT
-    atoms = Atoms('PtCu', positions=[[0,0,0],[2.5,0,0]], cell=[5,5,5])
+    atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
+                  cell=[5, 5, 5])
     gui.new_atoms(atoms)
     gui.simulation = {'calc': EMT}
     mmz = gui.energy_minimize_window()
@@ -296,6 +302,7 @@ def test_quickinfo(gui, atoms):
     # This is a bit weird and invasive ...
     txt = dia.things[0].text
     assert refstring in txt
+
 
 def window():
 
