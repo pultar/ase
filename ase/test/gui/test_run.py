@@ -221,7 +221,7 @@ def test_calculator_asap(gui):
     clc.ok()
 
 
-def test_calculator_ase(gui):
+def test_calculator_gpaw(gui):
     pytest.importorskip('gpaw')
 
     clc = gui.calculator_window()
