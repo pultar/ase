@@ -327,7 +327,7 @@ class SetCalculator(ui.Window):
             ui.error(_('You must set up the Lennard-Jones parameters'))
             return False
         try:
-            self.atoms.set_calculator(asap3.LennardJones(**self.lj_parameters))
+            self.atoms.calc = asap3.LennardJones(**self.lj_parameters)
         except (asap3.AsapError, TypeError, ValueError) as e:
             ui.error(
                 _('Could not attach Lennard-Jones calculator.\n\n%s') % str(e))
@@ -360,9 +360,9 @@ class SetCalculator(ui.Window):
             return False
         try:
             if provider is not None:
-                self.atoms.set_calculator(emt(provider()))
+                self.atoms.calc = emt(provider())
             else:
-                self.atoms.set_calculator(emt())
+                self.atoms.calc = emt()
         except (asap3.AsapError, TypeError, ValueError) as e:
             ui.error(
                 _('Could not attach EMT calculator to the atoms.\n\n%s')
@@ -409,7 +409,7 @@ class SetCalculator(ui.Window):
             ui.error(_('EAM parameters not ready'))
             return False
 
-        self.atoms.set_calculator(EAM(**self.eam_parameters))
+        self.atoms.calc = EAM(**self.eam_parameters)
         return self.element_check('EAM', self.atoms.get_calculator().elements)
 
     def choose_eam(self):
