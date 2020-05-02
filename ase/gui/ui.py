@@ -80,6 +80,9 @@ class BaseWindow(object):
         stuff.pack(self.win, anchor=anchor)
         self.things.append(stuff)
 
+    def update(self):
+        self.win.update_idletasks()
+
 
 class Window(BaseWindow):
     def __init__(self, title, close=None):
@@ -143,8 +146,11 @@ class Label(Widget):
 class Text(Widget):
     def __init__(self, text):
         self.creator = partial(tk.Text, height=text.count('\n') + 1)
+        self._parsetext(text)
+
+    def _parsetext(self, text):
         s = re.split('<(.*?)>', text)
-        self.text = [(s[0], ())]
+        self._text = [(s[0], ())]
         i = 1
         tags = []
         while i < len(s):
@@ -153,7 +159,7 @@ class Text(Widget):
                 tags.append(tag)
             else:
                 tags.pop()
-            self.text.append((s[i + 1], tuple(tags)))
+            self._text.append((s[i+1], tuple(tags)))
             i += 2
 
     def create(self, parent):
@@ -161,11 +167,27 @@ class Text(Widget):
         widget.tag_configure('sub', offset=-6)
         widget.tag_configure('sup', offset=6)
         widget.tag_configure('c', foreground='blue')
-        for text, tags in self.text:
-            widget.insert('insert', text, tags)
+        for line, tags in self._text:
+            widget.insert('insert', line, tags)
         widget.configure(state='disabled', background=parent['bg'])
-        widget.bind("<1>", lambda event: widget.focus_set())
+        widget.bind('<1>', lambda event: widget.focus_set())
         return widget
+
+    @property
+    def text(self):
+        lines = []
+        for line, tags in self._text:
+            lines.append(line)
+        return lines
+
+    @text.setter
+    def text(self, new):
+        self._parsetext(new)
+        self.widget.config(state='normal')
+        self.widget.delete(1.0, 'end')
+        for line, tags in self._text:   # copied from create()
+            self.widget.insert('insert', line, tags)
+        self.widget.config(state='disabled')
 
 
 class Button(Widget):
@@ -190,6 +212,10 @@ class CheckButton(Widget):
     @property
     def value(self):
         return self.var.get()
+
+    @value.setter
+    def value(self, x):
+        self.var.set(x)
 
 
 class SpinBox(Widget):
@@ -267,12 +293,14 @@ class Entry(Widget):
 class Scale(Widget):
     def __init__(self, value, start, end, callback):
         def command(val):
-            callback(int(val))
+            if callback:
+                callback(int(val))
 
         self.creator = partial(tk.Scale,
                                from_=start,
                                to=end,
                                orient='horizontal',
+                               length=300,
                                command=command)
         self.initial = value
 
@@ -288,6 +316,12 @@ class Scale(Widget):
     @value.setter
     def value(self, x):
         self.scale.set(x)
+
+    def set_start(self, x):
+        self.scale.config(from_=x)
+
+    def set_end(self, x):
+        self.scale.config(to=x)
 
 
 class RadioButtons(Widget):
@@ -323,6 +357,18 @@ class RadioButtons(Widget):
     def __getitem__(self, value):
         return self.buttons[self.values.index(value)]
 
+    @property
+    def active(self):
+        result = True
+        for button in self.buttons:
+            result = result and button.active
+        return result
+
+    @active.setter
+    def active(self, value):
+        for button in self.buttons:
+            button.active = value
+
 
 class RadioButton(Widget):
     def __init__(self, label, i, var, callback):
@@ -335,11 +381,11 @@ class RadioButton(Widget):
 
 if ttk is not None:
     class ComboBox(Widget):
-        def __init__(self, labels, values=None, callback=None):
+        def __init__(self, labels, values=None, callback=None, width=30):
             self.values = values or list(range(len(labels)))
             self.callback = callback
             self.creator = partial(ttk.Combobox,
-                                   values=labels)
+                                   values=labels, width=width)
 
         def create(self, parent):
             widget = Widget.create(self, parent)
@@ -652,7 +698,6 @@ class ASEGUIWindow(MainWindow):
                                 fill=color,
                                 outline=outline,
                                 width=width)
-
 
     def line(self, bbox, width=1):
         self.canvas.create_line(*tuple(int(x) for x in bbox), width=width)

@@ -351,6 +351,18 @@ class GUI(View, Status):
     def nanotube_window(self):
         return SetupNanotube(self)
 
+    def calculator_window(self):
+        from ase.gui.calculator import SetCalculator
+        return SetCalculator(self)
+
+    def energy_window(self):
+        from ase.gui.energyforces import EnergyForces
+        return EnergyForces(self)
+
+    def energy_minimize_window(self):
+        from ase.gui.minimize import Minimize
+        return Minimize(self)
+
     def new_atoms(self, atoms):
         "Set a new atoms object."
         rpt = getattr(self.images, 'repeat', None)
@@ -383,6 +395,13 @@ class GUI(View, Status):
         and be closed when that happens.
         """
         self.vulnerable_windows.append(weakref.ref(obj))
+
+    def unregister_vulnerable(self, obj):
+        """Remove object from vulnerable windows list
+        """
+        for i, ref in enumerate(self.vulnerable_windows):
+            if obj is ref():
+                self.vulnerable_windows.pop(i)
 
     def exit(self, event=None):
         for process in self.subprocesses:
@@ -506,11 +525,11 @@ class GUI(View, Status):
                 self.nanoparticle_window),
               M(_('Nano_tube'), self.nanotube_window)]),
 
-            # (_('_Calculate'),
-            # [M(_('Set _Calculator'), self.calculator_window, disabled=True),
-            #  M(_('_Energy and Forces'), self.energy_window, disabled=True),
-            #  M(_('Energy Minimization'), self.energy_minimize_window,
-            #    disabled=True)]),
+            (_('_Calculate'),
+             [M(_('Set _Calculator'), self.calculator_window, disabled=False),
+              M(_('_Energy and Forces'), self.energy_window, disabled=False),
+              M(_('Energy Minimization'), self.energy_minimize_window,
+                disabled=False)]),
 
             (_('_Help'),
              [M(_('_About'), partial(ui.about, 'ASE-GUI',

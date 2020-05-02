@@ -67,7 +67,12 @@ class CellEditor:
         win.add([ui.Button(_('Center'), self.apply_center),
                  ui.Button(_('Wrap'), self.apply_wrap),
                  _('Vacuum:'), self.vacuum,
-                 ui.Button(_('Apply Vacuum'), self.apply_vacuum)])
+                 ui.Button(_('Apply Vacuum'), self.apply_vacuum),
+                 ui.Button(_('Close'), self.close)])
+
+    def close(self):
+        self.gui.unregister_vulnerable(self)
+        self.win.close()
 
     def apply_center(self, *args):
         atoms = self.gui.atoms.copy()

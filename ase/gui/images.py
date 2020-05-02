@@ -424,7 +424,22 @@ class Images:
         atoms.calc = SinglePointCalculator(atoms, energy=E, forces=F)
         return atoms
 
-    def delete(self, i):
-        self.images.pop(i)
-        self.filenames.pop(i)
-        self.initialize(self.images, self.filenames)
+    def delete(self, slice):
+        del self._images[slice]
+        del self.filenames[slice]
+        self.initialize(self._images, self.filenames)
+
+    def append(self, atoms, filename=None):
+        try:
+            E = atoms.get_potential_energy()
+        except RuntimeError:
+            E = None
+        try:
+            F = atoms.get_forces()
+        except RuntimeError:
+            F = None
+        atoms = atoms.copy()
+        atoms.calc = SinglePointCalculator(atoms, energy=E, forces=F)
+        self._images.append(atoms)
+        self.filenames.append(filename)
+        self.initialize(self._images, self.filenames)
