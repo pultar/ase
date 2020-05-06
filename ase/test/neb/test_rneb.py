@@ -174,6 +174,7 @@ def test_is_reflective():
     nxy = np.sum(atoms.cell, axis=0) / 6
     nxy[2] = atoms.cell[2][2]
     atoms.cell[2] = nxy
+
     # atoms = bulk('Al', crystalstructure='fcc', a=4.05)
     # atoms = atoms.repeat([2, 2, 1])
     # niggli_reduce(atoms)
@@ -181,9 +182,13 @@ def test_is_reflective():
 
     # give path to look at as path=(init_indice, final_indice)
     print('Trying path 0 -> 1')
-    get_num_sym_operators(atoms, path=(0, 1))  # here i get only 2!?
+    sym = get_num_sym_operators(atoms, path=(0, 1))
+    assert len(sym) == 1
+    
     print('Trying path 1 -> 2')
-    get_num_sym_operators(atoms, path=(1, 2))  # here i get 4
+    sym = get_num_sym_operators(atoms, path=(1, 2))
+    assert len(sym) == 2
+    
 
 
 def get_num_sym_operators(atoms, path):
@@ -205,14 +210,15 @@ def get_num_sym_operators(atoms, path):
     # from ase.visualize import view
     # view([initial_unrelaxed, final_unrelaxed])
 
-    rneb = RNEB(logfile='-')
+    rneb = RNEB(logfile=None)
     S = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
 
     sym = rneb.reflect_path(images, sym=S)
     print(
         f"Allowed reflective operations for {path[0]}->{path[1]}: {len(sym)}")
     assert sym is not None  # otherwise not reflective
-
+    
+    return sym
 
 def align_indices(initial, final):
     """
