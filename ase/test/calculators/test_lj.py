@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from ase import Atoms
@@ -25,3 +26,19 @@ def test_minimum_energy(atoms):
 def test_system_changes(atoms):
     atoms.calc.calculate(atoms, system_changes=["positions"])
     assert atoms.get_potential_energy() == potential_energy_reference
+
+
+def test_forces(atoms):
+    forces = atoms.get_forces()
+
+    r = 2 ** (1.0 / 6.0)
+
+    analytical_f_10 = (
+        -24
+        * atoms.calc.parameters.epsilon
+        * (2 * atoms.calc.parameters.sigma ** 12 / r ** 14 - atoms.calc.parameters.sigma ** 6 / r ** 8)
+        * np.array([0.0, 0.0, -r])
+    )
+
+    np.testing.assert_array_almost_equal(forces[0], -analytical_f_10)
+    np.testing.assert_array_almost_equal(forces[1], analytical_f_10)
