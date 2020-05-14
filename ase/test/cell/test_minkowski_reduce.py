@@ -51,8 +51,8 @@ class TestKnownUnimodularMatrix(object):
         assert np.linalg.det(unimodular) == 1
         self.lcell = unimodular.T @ cell
 
-    @pytest.mark.parametrize("pbc", for pbc in [1, True, (1, 1, 1)])
-    def test_pbc(self):
+    @pytest.mark.parametrize("pbc", [1, True, (1, 1, 1)])
+    def test_pbc(self, pbc):
         lcell = self.lcell
         rcell, op = minkowski_reduce(lcell, pbc=pbc)
         assert np.linalg.det(rcell) == 1
