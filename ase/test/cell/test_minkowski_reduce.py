@@ -10,9 +10,10 @@ seterr(all='raise')
 
 
 def test_issue():
-    cell = Cell([[8.972058879514716, 0.0009788104586639142, 0.0005932485724084841],
-                 [4.485181755775297, 7.770520334862034, 0.00043663339838788054],
-                 [4.484671994095723, 2.5902066679984634, 16.25695615743613]])
+    x = [[8.972058879514716, 0.0009788104586639142, 0.0005932485724084841],
+         [4.485181755775297, 7.770520334862034, 0.00043663339838788054],
+         [4.484671994095723, 2.5902066679984634, 16.25695615743613]]
+    cell = Cell(x)
     cell.minkowski_reduce()
 
 
@@ -50,15 +51,15 @@ class TestKnownUnimodularMatrix(object):
         assert np.linalg.det(unimodular) == 1
         self.lcell = unimodular.T @ cell
 
-    def test_3d(self):
+    @pytest.mark.parametrize("pbc", for pbc in [1, True, (1, 1, 1)])
+    def test_pbc(self):
         lcell = self.lcell
-        rcell, op = minkowski_reduce(lcell)
+        rcell, op = minkowski_reduce(lcell, pbc=pbc)
         assert np.linalg.det(rcell) == 1
 
-        for pbc in [1, True, (1, 1, 1)]:
-            rcell, op = minkowski_reduce(lcell, pbc=pbc)
-            assert np.linalg.det(rcell) == 1
-            assert np.sign(np.linalg.det(rcell)) == np.sign(np.linalg.det(lcell))
+        rdet = np.linalg.det(rcell)
+        ldet = np.linalg.det(lcell)
+        assert np.sign(ldet) == np.sign(rdet)
 
     def test_0d(self):
         lcell = self.lcell
@@ -88,3 +89,8 @@ class TestKnownUnimodularMatrix(object):
         rzcell, _ = Cell(zcell).minkowski_reduce()
         rcell[axis] = 0
         assert np.allclose(rzcell, rcell, atol=TOL)
+
+    def test_3d(self):
+        lcell = self.lcell
+        rcell, op = minkowski_reduce(lcell)
+        assert np.linalg.det(rcell) == 1
