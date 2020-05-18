@@ -2,7 +2,7 @@
 Check the many ways of reading KPOINTS
 """
 import os
-import unittest
+import pytest
 from numpy.testing import assert_array_almost_equal
 from ase.calculators.vasp.create_input import GenerateVaspInput
 
@@ -77,11 +77,13 @@ interp_points = [[0., 0., 0.], [0.5, 0., 0.], [1., 0., 0.],
                  [0., 1., 0.], [0., 0.5, 0.], [0., 0., 0.]]
 
 
-class TestReadKpoints(unittest.TestCase):
-    def setUp(self):
+class TestReadKpoints:
+    @classmethod
+    def setup_class(self):
         self.outfile = 'KPOINTS'
 
-    def tearDown(self):
+    @classmethod
+    def teardown_class(self):
         if os.path.isfile(self.outfile):
             os.remove(self.outfile)
 
@@ -93,7 +95,7 @@ class TestReadKpoints(unittest.TestCase):
         vaspinput.read_kpoints(self.outfile)
 
         assert_array_almost_equal(vaspinput.input_params['kpts'], [4, 4, 4])
-        self.assertFalse(vaspinput.input_params['gamma'])
+        assert not vaspinput.input_params['gamma']
 
     def test_read_gamma_grid(self):
         with open(self.outfile, 'w') as fd:
@@ -103,7 +105,7 @@ class TestReadKpoints(unittest.TestCase):
         vaspinput.read_kpoints(self.outfile)
 
         assert_array_almost_equal(vaspinput.input_params['kpts'], [2, 2, 2])
-        self.assertTrue(vaspinput.input_params['gamma'])
+        assert vaspinput.input_params['gamma']
 
     def test_read_auto_grid(self):
         with open(self.outfile, 'w') as fd:
@@ -113,7 +115,7 @@ class TestReadKpoints(unittest.TestCase):
         vaspinput.read_kpoints(self.outfile)
 
         assert_array_almost_equal(vaspinput.input_params['kpts'], [20])
-        self.assertFalse(vaspinput.input_params['gamma'])
+        assert not vaspinput.input_params['gamma']
 
     def test_read_recip_list(self):
         with open(self.outfile, 'w') as fd:
@@ -122,14 +124,14 @@ class TestReadKpoints(unittest.TestCase):
         vaspinput = GenerateVaspInput()
         vaspinput.read_kpoints(self.outfile)
 
-        self.assertEqual(len(vaspinput.input_params['kpts']), 5)
+        assert len(vaspinput.input_params['kpts']) == 5
         assert_array_almost_equal(vaspinput.input_params['kpts'],
                                   [[0., 0., 0.],
                                    [0.1, 0., 0.],
                                    [0.2, 0., 0.],
                                    [0.5, 0., 0.5],
                                    [0., 0., 0.5]])
-        self.assertTrue(vaspinput.input_params['reciprocal'])
+        assert vaspinput.input_params['reciprocal']
 
     def test_read_cart_list(self):
         with open(self.outfile, 'w') as fd:
@@ -143,7 +145,7 @@ class TestReadKpoints(unittest.TestCase):
                                    [0.2, 0., 0.],
                                    [0.5, 0., 0.5],
                                    [0., 0., 0.5]])
-        self.assertFalse(vaspinput.input_params['reciprocal'])
+        assert not vaspinput.input_params['reciprocal']
 
     def test_read_cart_lines(self):
         with open(self.outfile, 'w') as fd:
@@ -155,7 +157,7 @@ class TestReadKpoints(unittest.TestCase):
         assert_array_almost_equal(vaspinput.input_params['kpts'],
                                   interp_points)
 
-        self.assertFalse(vaspinput.input_params['reciprocal'])
+        assert not vaspinput.input_params['reciprocal']
 
     def test_read_recip_lines(self):
         with open(self.outfile, 'w') as fd:
@@ -167,4 +169,4 @@ class TestReadKpoints(unittest.TestCase):
         assert_array_almost_equal(vaspinput.input_params['kpts'],
                                   interp_points)
 
-        self.assertTrue(vaspinput.input_params['reciprocal'])
+        assert vaspinput.input_params['reciprocal']
