@@ -1,23 +1,8 @@
 import pytest
 
 
-def test_slab_rneb():
-    from ase.build import fcc100, add_adsorbate
-    from ase.constraints import FixAtoms
-
-    # 3x3-Al(001) surface with 3 layers and an
-    # Au atom adsorbed in a hollow site:
-    slab = fcc100('Al', size=(3, 3, 3))
-    slab.center(axis=2, vacuum=4.0)
-
-    # Fix second and third layers:
-    mask = [atom.tag > 1 for atom in slab]
-    constraint = FixAtoms(mask=mask)
-    slab.set_constraint(constraint)
-
-    add_adsorbate(slab, 'Au', 1.7, 'hollow')
-    add_adsorbate(slab, 'Au', 1.7, 'hollow', offset=(1, 0))
-
+def test_slab_rneb(initial_Al_fcc100_slab):
+    slab = initial_Al_fcc100_slab
     compare_rneb_w_normal_neb(slab, (-1, -2))
 
 
@@ -168,6 +153,27 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
 
 @pytest.fixture(scope="module")  # reuse the same object for the whole script
+def initial_Al_fcc100_slab():
+    from ase.build import fcc100, add_adsorbate
+    from ase.constraints import FixAtoms
+
+    # 3x3-Al(001) surface with 3 layers and an
+    # Au atom adsorbed in a hollow site:
+    slab = fcc100('Al', size=(3, 3, 3))
+    slab.center(axis=2, vacuum=4.0)
+
+    # Fix second and third layers:
+    mask = [atom.tag > 1 for atom in slab]
+    constraint = FixAtoms(mask=mask)
+    slab.set_constraint(constraint)
+
+    add_adsorbate(slab, 'Au', 1.7, 'hollow')
+    add_adsorbate(slab, 'Au', 1.7, 'hollow', offset=(1, 0))
+
+    return slab
+
+
+@pytest.fixture(scope="module")  # reuse the same object for the whole script
 def initial_structures_fcc111_al():
     from ase.build import fcc111, bulk
     import numpy as np
@@ -216,6 +222,47 @@ def initial_structures_fcc111_al():
 
     return (atoms, final_unrelaxed, initial_unrelaxed,
             initial_relaxed, final_relaxed_n, images_n)
+
+
+def test_rmi_rneb_slab(initial_Al_fcc100_slab):
+    from ase.rneb import RNEB
+    from ase.neb import NEB
+    from ase.optimize import BFGS
+    from ase.calculators.emt import EMT
+    atoms = initial_Al_fcc100_slab
+
+    # deleting ions will change indices
+    initial_unrelaxed = atoms.copy()
+    del initial_unrelaxed[-1]
+
+    final_unrelaxed = atoms.copy()
+    del final_unrelaxed[-2]
+
+    # RMI-NEB workflow
+    # RNEB symmetry identification
+    rneb = RNEB(logfile=None)
+    sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
+    # check path is reflective
+    assert len(sym_ops) > 0
+
+    initial_relaxed = initial_unrelaxed.copy()
+    initial_relaxed.calc = EMT()
+    qn = BFGS(initial_relaxed, logfile=None)
+    qn.run(fmax=0.01)
+
+    # get final relaxed image from initial relaxed
+    final_relaxed_rneb = rneb.get_final_image(atoms, initial_unrelaxed,
+                                              initial_relaxed,
+                                              final_unrelaxed)
+    images_rmi = create_path(initial_relaxed, final_relaxed_rneb)
+    # only three images
+    images_rmi = [images_rmi[0], images_rmi[2], images_rmi[-1]]
+    neb = NEB(images_rmi, method='aseneb')
+    neb.interpolate()
+
+    # run RMI-NEB
+    qn = BFGS(neb, logfile=None)
+    qn.run(fmax=0.01)
 
 
 def test_rmi_rneb(initial_structures_fcc111_al):
