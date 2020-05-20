@@ -42,7 +42,7 @@ def test_Al_bulk():
     for path in [(0, 1), (1, 2)]:
         compare_rneb_w_normal_neb(atoms, path)
 
-    
+
 def test_Al_hexagonal():
     from ase.build import fcc111
 
@@ -180,7 +180,7 @@ def initial_structures_fcc111_al():
     nxy = np.sum(atoms.cell, axis=0) / 6
     nxy[2] = atoms.cell[2][2]
     atoms.cell[2] = nxy
-    
+
     atoms.calc = EMT()
     qn = BFGS(atoms, logfile=None)
     qn.run(fmax=0.01)
@@ -205,7 +205,7 @@ def initial_structures_fcc111_al():
     final_relaxed_n.calc = EMT()
     qn = BFGS(final_relaxed_n, logfile=None)
     qn.run(fmax=0.01)
-    
+
     # also the reference NEB
     images_n = create_path(initial_relaxed, final_relaxed_n)
     neb = NEB(images_n, method='aseneb')
@@ -213,10 +213,9 @@ def initial_structures_fcc111_al():
 
     qn = BFGS(neb, logfile=None)
     qn.run(fmax=0.01)
-    
-    return (atoms, final_unrelaxed, initial_unrelaxed, 
-            initial_relaxed, final_relaxed_n, images_n)
 
+    return (atoms, final_unrelaxed, initial_unrelaxed,
+            initial_relaxed, final_relaxed_n, images_n)
 
 
 def test_rmi_rneb(initial_structures_fcc111_al):
@@ -229,10 +228,10 @@ def test_rmi_rneb(initial_structures_fcc111_al):
     from ase.optimize import BFGS
     # accepted energy difference between normal and reflective NEB
     dft_tol = 1e-3  # 1 meV
-    
-    (atoms, final_unrelaxed, initial_unrelaxed, initial_relaxed, 
+
+    (atoms, final_unrelaxed, initial_unrelaxed, initial_relaxed,
      final_relaxed_n, images_n) = initial_structures_fcc111_al
-    
+
     # RMI-NEB workflow
     # RNEB symmetry identification
     rneb = RNEB(logfile=None)
@@ -241,33 +240,33 @@ def test_rmi_rneb(initial_structures_fcc111_al):
     assert len(sym_ops) > 0
     # get final relaxed image from initial relaxed
     final_relaxed_rneb = rneb.get_final_image(atoms, initial_unrelaxed,
-                                               initial_relaxed,
-                                               final_unrelaxed)
+                                              initial_relaxed,
+                                              final_unrelaxed)
     images_rmi = create_path(initial_relaxed, final_relaxed_rneb)
     # only three images
     images_rmi = [images_rmi[0], images_rmi[2], images_rmi[-1]]
     neb = NEB(images_rmi, method='aseneb')
     neb.interpolate()
-    
+
     # run RMI-NEB
     qn = BFGS(neb, logfile=None)
     qn.run(fmax=0.01)
-    
+
     # are energies comaparable to normal NEB?
     e_m_n = images_n[2].get_potential_energy()
     e_m_rmi = images_rmi[1].get_potential_energy()
     assert abs(e_m_n - e_m_rmi) < dft_tol
-    
+
     # now the NEB on half the path
     images_half = create_path(initial_relaxed, images_rmi[1])
     images_half = [images_half[0], images_half[2], images_half[-1]]
     neb = NEB(images_half, method='aseneb')
     neb.interpolate()
-    
+
     # run RMI-NEB
     qn = BFGS(neb, logfile=None)
     qn.run(fmax=0.01)
-    
+
     # are energies comparable to normal NEB?
     e_first_n = images_n[1].get_potential_energy()
     e_third_n = images_n[3].get_potential_energy()
@@ -289,11 +288,10 @@ def test_number_reflection_operators(initial_structures_fcc111_al):
     print('Trying path 0 -> 1')
     sym = get_num_sym_operators(atoms, path=(0, 1))
     assert len(sym) == 1
-    
+
     print('Trying path 1 -> 2')
     sym = get_num_sym_operators(atoms, path=(1, 2))
     assert len(sym) == 2
-    
 
 
 def get_num_sym_operators(atoms, path):
@@ -322,8 +320,9 @@ def get_num_sym_operators(atoms, path):
     print(
         f"Allowed reflective operations for {path[0]}->{path[1]}: {len(sym)}")
     assert sym is not None  # otherwise not reflective
-    
+
     return sym
+
 
 def align_indices(initial, final):
     """
