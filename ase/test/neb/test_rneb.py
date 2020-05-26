@@ -230,6 +230,7 @@ def test_rmi_rneb_slab(initial_Al_fcc100_slab):
     from ase.optimize import BFGS
     from ase.calculators.emt import EMT
     atoms = initial_Al_fcc100_slab
+    dft_tol = 1e-3  # 1 meV
 
     # deleting ions will change indices
     initial_unrelaxed = atoms.copy()
@@ -263,6 +264,48 @@ def test_rmi_rneb_slab(initial_Al_fcc100_slab):
     # run RMI-NEB
     qn = BFGS(neb, logfile=None)
     qn.run(fmax=0.01)
+
+    # Normal NEB
+    final_relaxed_n = final_unrelaxed.copy()
+    final_relaxed_n.calc = EMT()
+    qn = BFGS(final_relaxed_n, logfile=None)
+    qn.run(fmax=0.01)
+
+    # also the reference NEB
+    images_n = create_path(initial_relaxed, final_relaxed_n)
+    neb = NEB(images_n, method='aseneb')
+    neb.interpolate()
+
+    qn = BFGS(neb, logfile=None)
+    qn.run(fmax=0.01)
+
+    # are energies comaparable to normal NEB?
+    e_m_n = images_n[2].get_potential_energy()
+    e_m_rmi = images_rmi[1].get_potential_energy()
+    assert abs(e_m_n - e_m_rmi) < dft_tol
+
+    # now the NEB on half the path
+    images_half = create_path(initial_relaxed, images_rmi[1])
+    # images_half = create_path(initial_relaxed, images_n[2])
+    # images_half = create_path(initial_relaxed, final_relaxed_n)
+    images_half = [images_half[0], images_half[2], images_half[-1]]
+    # images_half = [images_half[0], images_half[1], images_n[2]]
+    # images_half[-1].calc = None
+    neb = NEB(images_half, method='aseneb')
+    neb.interpolate()
+
+    # run RMI-NEB
+    qn = BFGS(neb, logfile=None)
+    qn.run(fmax=0.01)
+
+    # are energies comparable to normal NEB?
+    e_first_n = images_n[1].get_potential_energy()
+    e_third_n = images_n[3].get_potential_energy()
+    import numpy as np
+    assert np.isclose(e_first_n, e_third_n, atol=dft_tol)
+    e_first_half = images_half[1].get_potential_energy()
+    assert abs(e_first_half - e_first_n) < dft_tol
+    assert abs(e_first_half - e_third_n) < dft_tol
 
 
 def test_rmi_rneb(initial_structures_fcc111_al):
