@@ -2,6 +2,7 @@ import numpy as np
 
 from ase.neighborlist import NeighborList
 from ase.calculators.calculator import Calculator, all_changes
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.constraints import full_3x3_to_voigt_6_stress
 
 
@@ -106,11 +107,17 @@ class LennardJones(Calculator):
 
         self.nl = None
 
-    def calculate(
-        self, atoms=None, properties=None, system_changes=all_changes,
-    ):
+    def calculate(self, atoms=None, properties=None, system_changes=None):
         if properties is None:
             properties = self.implemented_properties
+        if system_changes is None:
+            system_changes = all_changes
+        # sanity check the requested properties
+        not_implemented_properties = [
+            p for p in properties if p not in self.implemented_properties
+        ]
+        if len(not_implemented_properties) > 0:
+            raise PropertyNotImplementedError(not_implemented_properties)
 
         Calculator.calculate(self, atoms, properties, system_changes)
 
