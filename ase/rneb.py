@@ -45,7 +45,7 @@ class RNEB:
         self.tol = tol  # tolerance on atomic positions
         self.log = self.setup_log(logfile)
 
-    def get_final_image(self, orig, init, init_relaxed, final,
+    def get_final_image(self, orig, init, init_relaxed, final, supercell=[1, 1, 1], 
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False, filename=None):
         """Find the symmetry operations that map init->final
@@ -63,7 +63,7 @@ class RNEB:
         init.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
         # check for simple translations
-        trans = self.find_translations(orig, init, final)
+        trans = self.find_translations(orig, init, final, supercell=supercell)
         # if translations were found
         if trans is not None and not rot_only:
             # create the final relaxed image
