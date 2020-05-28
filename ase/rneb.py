@@ -79,7 +79,7 @@ class RNEB:
                 return final_relaxed
         else:
             # if no translations were found, look for rotations
-            rot = self.find_symmetries(orig, init, final,
+            rot = self.find_symmetries(orig, init, final, supercell=supercell,
                                        log_atomic_idx=log_atomic_idx)
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
                                                    final, rot=rot,
