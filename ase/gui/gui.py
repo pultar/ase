@@ -248,6 +248,7 @@ class GUI(View, Status):
     def plot_graphs(self, key=None, expr=None, ignore_if_nan=False):
         from ase.gui.graphs import Graphs
         g = Graphs(self)
+        self.graph = g
         if expr is not None:
             g.plot(expr=expr, ignore_if_nan=ignore_if_nan)
 
@@ -385,6 +386,10 @@ class GUI(View, Status):
         self.vulnerable_windows.append(weakref.ref(obj))
 
     def exit(self, event=None):
+        if self.movie_window is not None:
+             self.movie_window.close()
+        if self.graph is not None:
+            self.graph.win.close()
         for process in self.subprocesses:
             process.terminate()
         self.window.close()
