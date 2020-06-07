@@ -62,7 +62,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
     if cpa:
         species = []
         for site in atoms.info['CPA']:
-            for element in site.keys():
+            for element in site:
                 if element == 'index':
                     pass
                 else:
@@ -153,14 +153,14 @@ class MuST(FileIOCalculator):
         # Write positions using CPA sites if self.parameters['method'] == 3
         if 'method' in self.parameters.keys():
             if self.parameters['method'] == 3:
-                io.write_positions_input(atoms,
-                                         method=self.parameters['method'])
+                method=self.parameters['method']
             else:
-                io.write_positions_input(atoms, method=None)
+                method=None
 
         else:
-            io.write_positions_input(atoms, method=None)
+            method=None
 
+        io.write_positions_input(atoms, method=method)
         io.write_input_parameters_file(atoms=atoms, parameters=self.parameters)
 
     def read_results(self):

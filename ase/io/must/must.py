@@ -59,17 +59,17 @@ def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
     mp: float
         SCF mixing parameter
     """
-    title = str(symbol) + ' Atomic Potential'
-    output_file = str(symbol) + '_a_out'
-    pot_file = str(symbol) + '_a_pot'
+    title = symbol + ' Atomic Potential'
+    output_file = symbol + '_a_out'
+    pot_file = symbol + '_a_pot'
     z = int(Atoms(symbol).get_atomic_numbers())
 
     if moment == 0. and nspins == 2 and symbol in ['Fe', 'Co', 'Ni']:
         moment = magmoms[symbol]
 
     space = '                    '
-    contents = ['Title:' + str(title),
-                str(output_file) + space +
+    contents = ['Title:' + title,
+                output_file + space +
                 'Output file name. If blank, data will show on screen',
                 str(z) + space + 'Atomic number', str(moment) + space
                 + 'Magnetic moment',
@@ -80,7 +80,7 @@ def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
                 str(mp) + space + 'Mixing parameter',
                 str(pot_file) + space + 'Output potential file']
 
-    with open(str(symbol) + '_a_in', 'w') as filehandle:
+    with open(symbol + '_a_in', 'w') as filehandle:
         for entry in contents:
             filehandle.write('%s\n' % entry)
 
@@ -130,11 +130,11 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc,
         Mixing parameter for SCF iterations.
     """
 
-    title = str(symbol) + ' Single Site Potential'
-    output_file = str(symbol) + '_ss_out'
-    input_file = str(symbol) + '_a_pot'
-    pot_file = str(symbol) + '_ss_pot'
-    keep_file = str(symbol) + '_ss_k'
+    title = symbol + ' Single Site Potential'
+    output_file = symbol + '_ss_out'
+    input_file = symbol + '_a_pot'
+    pot_file = symbol + '_ss_pot'
+    keep_file = symbol + '_ss_k'
 
     z = int(Atoms(symbol).get_atomic_numbers())
     a = a / Bohr
@@ -143,12 +143,9 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc,
         if nspins == 2:
             if symbol in ['Fe', 'Co', 'Ni']:
                 moment = magmoms[symbol]
-            else:
-                moment = 0.
-        else:
-            moment = 0.
+
     space = '                    '
-    contents = [str(title), str(output_file) + space +
+    contents = [title, output_file + space +
                 'Output file name. If blank, data will show on screen',
                 str(print_level) + space + 'Print level', str(crystal_type) +
                 space + 'Crystal type (1=FCC,2=BCC)',
