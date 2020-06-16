@@ -498,7 +498,7 @@ class Calculator(object):
 
         if restart is not None:
             try:
-                self.read(restart)  # read parameters, atoms and results
+                self.read(label)  # read parameters, atoms and results
             except ReadError:
                 if ignore_bad_restart_file:
                     self.reset()
