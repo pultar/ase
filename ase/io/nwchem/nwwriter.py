@@ -6,7 +6,7 @@ from ase.calculators.calculator import KPoints, kpts2kpts
 
 _special_kws = ['center', 'autosym', 'autoz', 'theory', 'basis', 'xc', 'task',
                 'set', 'symmetry', 'label', 'geompar', 'basispar', 'kpts',
-                'bandpath']
+                'bandpath', 'restart']
 
 _system_type = {1: 'polymer', 2: 'surface', 3: 'crystal'}
 
@@ -295,10 +295,13 @@ def write_nwchem_in(fd, atoms, properties=None, **params):
     label = params.get('label', 'nwchem')
     perm = os.path.abspath(params.pop('perm', label))
     scratch = os.path.abspath(params.pop('scratch', label))
+    restart_prefix = ''
+    if params.get('restart', '') is True:
+        restart_prefix = 're'
     out = ['title "{}"'.format(label),
            'permanent_dir {}'.format(perm),
            'scratch_dir {}'.format(scratch),
-           'start {}'.format(label),
+           '{}start {}'.format(restart_prefix, label),
            '\n'.join(_get_geom(atoms, **params)),
            '\n'.join(_get_basis(**params)),
            '\n'.join(_get_other(**params)),
