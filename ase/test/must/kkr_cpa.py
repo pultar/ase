@@ -21,8 +21,8 @@ def test_kkr():
 
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()
-    ref = -6582.117008139085
-    assert (energy - ref) / ref < 1e-10
+    ref = -6582.121702103174
+    assert (energy - ref) / ref < 1e-4
     print('Passed KKR test')
 
 
@@ -45,6 +45,6 @@ def test_kkr_cpa():
                 bzsym=1)
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()
-    ref = -29585.112262706632
-    assert (energy - ref) / ref < 1e-10
+    ref = -29585.111596027673
+    assert (energy - ref) / ref < 1e-4
     print('Passed KKR-CPA test')
