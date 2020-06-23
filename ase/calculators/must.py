@@ -3,7 +3,7 @@
 
 import numpy as np
 from ase.units import Rydberg
-from ase.calculators.calculator import FileIOCalculator
+from ase.calculators.calculator import FileIOCalculator, SCFError
 import ase.io.must.must as io
 import os
 import subprocess
@@ -187,6 +187,6 @@ class MuST(FileIOCalculator):
                 break
 
         if convergence is False:
-            warnings.warn('SCF Convergence not reached', UserWarning)
-
-        self.results['energy'] = read_energy * Rydberg
+            raise SCFError()
+        else:
+            self.results['energy'] = read_energy * Rydberg
