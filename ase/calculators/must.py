@@ -8,8 +8,14 @@ import ase.io.must.must as io
 import os
 import subprocess
 import glob
-import warnings
 
+
+class StartingPotFailedError(Exception):
+    def __init__(self, msg):
+        self.message = msg
+
+    def __str__(self):
+        return self.message
 
 def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
                                  moment=0., xc=1, lmax=3, print_level=1,
@@ -89,8 +95,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
             path = os.path.abspath('.')
             msg = ('newa failed with command "{}" failed in '
                    '{} with error code {}'.format(newa, path, errorcode))
-            print(msg)
-            break
+            raise StartingPotFailedError(msg)
 
         # Generate single site potential
         io.write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
@@ -114,8 +119,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
             path = os.path.abspath('.')
             msg = ('newss failed with command "{}" failed in '
                    '{} with error code {}'.format(newss, path, errorcode))
-            print(msg)
-            break
+            raise StartingPotFailedError(msg)
 
 
 class MuST(FileIOCalculator):
