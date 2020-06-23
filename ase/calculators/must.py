@@ -6,6 +6,7 @@ from ase.units import Rydberg
 from ase.calculators.calculator import FileIOCalculator, SCFError
 import ase.io.must.must as io
 import os
+from pathlib import Path
 import subprocess
 import glob
 
@@ -16,6 +17,7 @@ class StartingPotFailedError(Exception):
 
     def __str__(self):
         return self.message
+
 
 def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
                                  moment=0., xc=1, lmax=3, print_level=1,
@@ -92,7 +94,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         errorcode = proc.wait()
 
         if errorcode:
-            path = os.path.abspath('.')
+            path = Path.cwd()
             msg = ('newa failed with command "{}" failed in '
                    '{} with error code {}'.format(newa, path, errorcode))
             raise StartingPotFailedError(msg)
@@ -116,7 +118,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         errorcode = proc.wait()
 
         if errorcode:
-            path = os.path.abspath('.')
+            path = Path.cwd()
             msg = ('newss failed with command "{}" failed in '
                    '{} with error code {}'.format(newss, path, errorcode))
             raise StartingPotFailedError(msg)
