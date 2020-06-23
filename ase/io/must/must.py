@@ -195,17 +195,16 @@ def write_input_parameters_file(atoms, parameters):
               hline, separator, hline,
               '{:^80}'.format('System Related Parameters'), hline]
 
+    natoms = ['No. Atoms in System (> 0)  ::  '
+                       + str(len(atoms)), hline, separator, hline]
+
     # Get number of atoms from CPA sites if self.parameters['method'] == 3
     if 'method' in parameters.keys():
         if parameters['method'] == 3:
-            header += ['No. Atoms in System (> 0)  ::  '
+            natoms = ['No. Atoms in System (> 0)  ::  '
                        + str(len(atoms.info['CPA'])), hline, separator, hline]
-        else:
-            header += ['No. Atoms in System (> 0)  ::  '
-                       + str(len(atoms)), hline, separator, hline]
-    else:
-        header += ['No. Atoms in System (> 0)  ::  ' +
-                   str(len(atoms)), hline, separator, hline]
+
+     header += natoms
 
     with open('i_new', 'w') as filehandle:
         for entry in header:
