@@ -4,7 +4,7 @@ from ase.build import bulk
 import os
 
 
-def kkr():
+def test_kkr():
     require('must')
     atoms = bulk('Al', a=4.05, cubic=False)
     generate_starting_potentials(atoms, crystal_type=1, a=4.05)
@@ -26,16 +26,8 @@ def kkr():
     assert (energy - ref) / ref < 1e-10
     print('Passed KKR test')
 
-    # Clean up
-    calc.clean()
 
-    files = ['Al_a_in', 'Al_a_out', 'Al_a_pot', 'Al_ss_in',
-             'Al_ss_out', 'Al_ss_k', 'Al_ss_pot', 'Al_0001x1']
-    for f in files:
-        os.remove(f)
-
-
-def kkr_cpa():
+def test_kkr_cpa():
     atoms = bulk('Al', 'bcc', a=2.861, cubic=False)
     atoms.info['CPA'] = [{'index': 0, 'Al': 0.2, 'Cr': 0.2,
                           'Fe': 0.2, 'Co': 0.2, 'Ni': 0.2}]
@@ -57,21 +49,3 @@ def kkr_cpa():
     ref = -29585.112262706632
     assert (energy - ref) / ref < 1e-10
     print('Passed KKR-CPA test')
-
-    # Clean up
-    calc.clean()
-
-    for el in atoms.info['CPA'][0].keys():
-        if el == 'index':
-            pass
-        else:
-            files = [el + '_a_in', el + '_a_out', el + '_a_pot', el + '_ss_in',
-                     el + '_ss_out', el + '_ss_k', el + '_ss_pot', ]
-            for f in files:
-                os.remove(f)
-
-    os.remove('AlCrFeCoNi')
-
-
-kkr()
-kkr_cpa()
