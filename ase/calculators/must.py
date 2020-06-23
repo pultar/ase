@@ -192,7 +192,7 @@ class MuST(FileIOCalculator):
                 convergence = True
                 break
 
-        if convergence is False:
+        if not convergence:
             raise SCFError()
         else:
             self.results['energy'] = read_energy * Rydberg

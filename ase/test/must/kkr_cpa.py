@@ -1,7 +1,6 @@
 from ase.test import require
 from ase.calculators.must import MuST, generate_starting_potentials
 from ase.build import bulk
-import os
 
 
 def test_kkr():
@@ -17,7 +16,7 @@ def test_kkr():
                 potential_type=0,
                 xc='GGA_X_PBE_SOL+GGA_C_PBE_SOL',
                 spin=1,
-                kpts=(12, 12, 12),
+                kpts=(8, 8, 8),
                 bzsym=1)
 
     atoms.set_calculator(calc)
@@ -42,7 +41,7 @@ def test_kkr_cpa():
                 potential_type=0,
                 xc='GGA_X_PBE_SOL+GGA_C_PBE_SOL',
                 spin=1,
-                kpts=(12, 12, 12),
+                kpts=(8, 8, 8),
                 bzsym=1)
     atoms.set_calculator(calc)
     energy = atoms.get_potential_energy()

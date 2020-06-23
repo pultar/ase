@@ -63,7 +63,7 @@ def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
     title = symbol + ' Atomic Potential'
     output_file = symbol + '_a_out'
     pot_file = symbol + '_a_pot'
-    z = atomic_numbers(symbol)
+    z = atomic_numbers[symbol]
 
     if moment == 0. and nspins == 2 and symbol in ['Fe', 'Co', 'Ni']:
         moment = magmoms[symbol]
@@ -137,7 +137,7 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc,
     pot_file = symbol + '_ss_pot'
     keep_file = symbol + '_ss_k'
 
-    z = atomic_numbers(symbol)
+    z = atomic_numbers[symbol]
     a = a / Bohr
 
     if moment == 0.:
