@@ -84,7 +84,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
 
         newa = 'newa < ' + str(symbol) + '_a_in'
         try:
-            proc = subprocess.Popen(newa, shell=True, cwd='.')
+            proc = subprocess.Popen(newa)
         except OSError as err:
             msg = 'Failed to execute "{}"'.format(newa)
             raise EnvironmentError(msg) from err
@@ -108,7 +108,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
 
         newss = 'newss < ' + str(symbol) + '_ss_in'
         try:
-            proc = subprocess.Popen(newss, shell=True, cwd='.')
+            proc = subprocess.Popen(newss)
         except OSError as err:
             msg = 'Failed to execute "{}"'.format(newss)
             raise EnvironmentError(msg) from err
