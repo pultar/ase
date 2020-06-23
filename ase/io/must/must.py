@@ -1,6 +1,5 @@
 """ This module defines io functions for MuST calculator"""
 
-from ase import Atoms
 from ase.units import Bohr, Rydberg
 from ase.io.must.default_params import defaults
 from ase.data import atomic_numbers
@@ -68,22 +67,21 @@ def write_atomic_pot_input(symbol, nspins, moment, xc, niter, mp):
     if moment == 0. and nspins == 2 and symbol in ['Fe', 'Co', 'Ni']:
         moment = magmoms[symbol]
 
-    space = '                    '
-    contents = ['Title:' + title,
-                output_file + space +
-                'Output file name. If blank, data will show on screen',
-                str(z) + space + 'Atomic number', str(moment) + space
-                + 'Magnetic moment',
-                str(nspins) + space + 'Number of spins',
-                str(xc) + space +
-                'Exchange-correlation type (1=vb-hedin,2=vosko)',
-                str(niter) + space + 'Number of Iterations',
-                str(mp) + space + 'Mixing parameter',
-                str(pot_file) + space + 'Output potential file']
+    space = 20 * ' '
+    contents = [('Title', title),
+                (output_file,
+                 'Output file name. If blank, data will show on screen'),
+                (z, 'Atomic number'),
+                (moment, 'Magnetic moment'),
+                (nspins, 'Number of spins'),
+                (xc, 'Exchange-correlation type (1=vb-hedin,2=vosko)'),
+                (niter, 'Number of Iterations'),
+                (mp, 'Mixing parameter'),
+                (pot_file, 'Output potential file')]
 
     with open(symbol + '_a_in', 'w') as filehandle:
         for entry in contents:
-            filehandle.write('%s\n' % entry)
+            filehandle.write('%s %s %s\n' % (entry[0], space, entry[1]))
 
 
 def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc,
@@ -146,33 +144,35 @@ def write_single_site_pot_input(symbol, crystal_type, a, nspins, moment, xc,
                 moment = magmoms[symbol]
 
     space = '                    '
-    contents = [title, output_file + space +
-                'Output file name. If blank, data will show on screen',
-                str(print_level) + space + 'Print level', str(crystal_type) +
-                space + 'Crystal type (1=FCC,2=BCC)',
-                str(lmax) + space + 'lmax', str(a) + space +
-                'Lattice constant',
-                str(nspins) + space + 'Number of spins',
-                str(xc) + space +
-                'Exchange Correlation type (1=vb-hedin,2=vosko)',
-                str(ncomp) + space + 'Number of components', str(z) + '  ' +
-                str(moment) + space + 'Atomic number, Magnetic moment',
-                str(conc) + space + 'Concentrations',
-                str(mt_radius / Bohr) + '  ' + str(ws_radius / Bohr) +
-                space + 'mt radius, ws radius',
-                str(input_file) + space + 'Input potential file',
-                str(pot_file) + space + 'Output potential file',
-                str(keep_file) + space + 'Keep file',
-                str(egrid[0]) + ' ' + str(egrid[1]) + ' ' + str(egrid[2]) +
-                space + 'e-grid: ndiv(=#div/0.1Ryd), bott, eimag',
-                str(ef / Rydberg) + ' ' + str(ef / Rydberg) +
-                space + 'Fermi energy (estimate)',
-                str(niter) + ' ' + str(mp) + space +
-                'Number of scf iterations, Mixing parameter']
+    contents = [('Title', title),
+                (output_file,
+                 'Output file name. If blank, data will show on screen'),
+                (print_level, 'Print level'),
+                (crystal_type, 'Crystal type (1=FCC,2=BCC)'),
+                (lmax, 'lmax'),
+                (round(a, 3), 'Lattice constant'),
+                (nspins, 'Number of spins'),
+                (xc, 'Exchange Correlation type (1=vb-hedin,2=vosko)'),
+                (ncomp, 'Number of components'),
+                (str(z) + '  ' + str(moment),
+                 'Atomic number, Magnetic moment'),
+                (conc, 'Concentrations'),
+                (str(mt_radius / Bohr) + '  ' + str(ws_radius / Bohr),
+                 'mt radius, ws radius'),
+                (input_file, 'Input potential file'),
+                (pot_file, 'Output potential file'),
+                (keep_file, 'Keep file'),
+                (str(egrid[0]) + ' ' + str(egrid[1]) + ' ' + str(egrid[2]),
+                'e-grid: ndiv(=#div/0.1Ryd), bott, eimag'),
+                (str(round(ef / Rydberg, 3)) + ' '
+                 + str(round(ef / Rydberg, 3)),
+                 'Fermi energy (estimate)'),
+                (str(niter) + ' ' + str(mp),
+                 'Number of scf iterations, Mixing parameter')]
 
     with open(str(symbol) + '_ss_in', 'w') as filehandle:
         for entry in contents:
-            filehandle.write('%s\n' % entry)
+            filehandle.write('%s %s %s\n' % (entry[0], space, entry[1]))
 
 
 def write_input_parameters_file(atoms, parameters):
@@ -196,13 +196,13 @@ def write_input_parameters_file(atoms, parameters):
               '{:^80}'.format('System Related Parameters'), hline]
 
     natoms = ['No. Atoms in System (> 0)  ::  '
-                       + str(len(atoms)), hline, separator, hline]
+              + str(len(atoms)), hline, separator, hline]
 
     # Get number of atoms from CPA sites if self.parameters['method'] == 3
     if 'method' in parameters.keys():
         if parameters['method'] == 3:
             natoms = ['No. Atoms in System (> 0)  ::  '
-                       + str(len(atoms.info['CPA'])), hline, separator, hline]
+                      + str(len(atoms.info['CPA'])), hline, separator, hline]
 
     header += natoms
 

@@ -159,12 +159,12 @@ class MuST(FileIOCalculator):
         # Write positions using CPA sites if self.parameters['method'] == 3
         if 'method' in self.parameters.keys():
             if self.parameters['method'] == 3:
-                method=self.parameters['method']
+                method = self.parameters['method']
             else:
-                method=None
+                method = None
 
         else:
-            method=None
+            method = None
 
         io.write_positions_input(atoms, method=method)
         io.write_input_parameters_file(atoms=atoms, parameters=self.parameters)
