@@ -204,7 +204,7 @@ def write_input_parameters_file(atoms, parameters):
             natoms = ['No. Atoms in System (> 0)  ::  '
                        + str(len(atoms.info['CPA'])), hline, separator, hline]
 
-     header += natoms
+    header += natoms
 
     with open('i_new', 'w') as filehandle:
         for entry in header:
