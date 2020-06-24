@@ -84,11 +84,10 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         io.write_atomic_pot_input(symbol, nspins=nspins, moment=moment,
                                   xc=xc, niter=niter, mp=mp)
 
-        newa = 'newa < ' + str(symbol) + '_a_in'
         try:
-            proc = subprocess.Popen(newa, shell=True)
+            proc = subprocess.Popen('newa', stdin=open(symbol + '_a_in'))
         except OSError as err:
-            msg = 'Failed to execute "{}"'.format(newa)
+            msg = 'Failed to execute "{}"'.format('newa < ' + symbol + '_a_in')
             raise EnvironmentError(msg) from err
 
         errorcode = proc.wait()
@@ -96,7 +95,8 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         if errorcode:
             path = Path.cwd()
             msg = ('newa failed with command "{}" failed in '
-                   '{} with error code {}'.format(newa, path, errorcode))
+                   '{} with error code {}'
+                   .format('newa < ' + symbol + '_a_in', path, errorcode))
             raise StartingPotFailedError(msg)
 
         # Generate single site potential
@@ -108,11 +108,11 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
                                        ws_radius=ws_radius,
                                        egrid=egrid, ef=ef, niter=niter, mp=mp)
 
-        newss = 'newss < ' + str(symbol) + '_ss_in'
         try:
-            proc = subprocess.Popen(newss, shell=True)
+            proc = subprocess.Popen('newss', stdin=open(symbol + '_ss_in'))
         except OSError as err:
-            msg = 'Failed to execute "{}"'.format(newss)
+            msg = 'Failed to execute "{}"'\
+                .format('newss < ' + symbol + '_ss_in')
             raise EnvironmentError(msg) from err
 
         errorcode = proc.wait()
@@ -120,7 +120,8 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         if errorcode:
             path = Path.cwd()
             msg = ('newss failed with command "{}" failed in '
-                   '{} with error code {}'.format(newss, path, errorcode))
+                   '{} with error code {}'
+                   .format('newss < ' + symbol + '_ss_in', path, errorcode))
             raise StartingPotFailedError(msg)
 
 
