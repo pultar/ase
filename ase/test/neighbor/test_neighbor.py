@@ -23,7 +23,7 @@ def count(nl, atoms):
 # scipy sparse uses matrix subclass internally
 @pytest.mark.filterwarnings('ignore:the matrix subclass')
 @pytest.mark.slow
-def test_neighbor():
+def test_supercell():
     atoms = Atoms(numbers=range(10),
                   cell=[(0.2, 1.2, 1.4),
                         (1.4, 0.1, 1.6),
@@ -50,6 +50,7 @@ def test_neighbor():
                     assert abs(dd) < 1e-10
                     assert not (c2 - c).any()
 
+def test_H2():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
     nl = NeighborList([0.5, 0.5], skin=0.1, sorted=True, self_interaction=False)
     nl2 = NeighborList([0.5, 0.5], skin=0.1, sorted=True, self_interaction=False, primitive=NewPrimitiveNeighborList)
@@ -72,12 +73,14 @@ def test_neighbor():
     assert (nl.get_neighbors(0)[0] == []).all()
     assert nl.nupdates == 2
 
+def test_H2_shape_and_type():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
     nl = NeighborList([0.1, 0.1], skin=0.1, bothways=True, self_interaction=False)
     assert nl.update(h2)
     assert nl.get_neighbors(0)[1].shape == (0, 3)
     assert nl.get_neighbors(0)[1].dtype == int
 
+def test_fcc():
     x = bulk('X', 'fcc', a=2**0.5)
 
     nl = NeighborList([0.5], skin=0.01, bothways=True, self_interaction=False)
@@ -107,12 +110,14 @@ def test_neighbor():
         assert (np.all(n0 == [0]) and np.all(d0 == [0, 0, 1])) != \
             (np.all(n1 == [1]) and np.all(d1 == [0, 0, -1]))
 
+def test_empty_neighbor_list():
     # Test empty neighbor list
     nl = PrimitiveNeighborList([])
     nl.update([True, True, True],
               np.eye(3) * 7.56,
               np.zeros((0, 3)))
 
+def test_hexagonal_cell_and_large_cutoff():
     # Test hexagonal cell and large cutoff
     pbc_c = np.array([True, True, True])
     cutoff_a = np.array([8.0, 8.0])
@@ -166,7 +171,7 @@ def test_neighbor():
     assert np.all(b[i] == b2[i2])
     assert np.allclose(d[i], d2[i2])
 
-def test_small_cell_large_cutoff():
+def test_small_cell_and_large_cutoff():
     # See: https://gitlab.com/ase/ase/-/issues/441
     cutoff = 50
 
