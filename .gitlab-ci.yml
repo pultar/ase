@@ -67,6 +67,12 @@ main:
       - coverage-html/
     expire_in: 1 week
 
+auto-explore:
+  extends: main
+  before_script:
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/gitlab-org/secure/vulnerability-research/pytest-autoexplore.git
+    - pip install pytest-autoexplore
+
 
 # Plan: Test as many calculators as possible as well as possible.
 # Obviously this is kind of expensive so the job is manually activated.
