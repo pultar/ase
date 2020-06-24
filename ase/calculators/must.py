@@ -6,7 +6,6 @@ from ase.units import Rydberg
 from ase.calculators.calculator import FileIOCalculator, SCFError
 import ase.io.must.must as io
 import os
-from pathlib import Path
 import subprocess
 import glob
 
