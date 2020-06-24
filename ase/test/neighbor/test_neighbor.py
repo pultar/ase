@@ -165,3 +165,28 @@ def test_neighbor():
     assert np.all(a[i] == a2[i2])
     assert np.all(b[i] == b2[i2])
     assert np.allclose(d[i], d2[i2])
+
+def test_small_cell_large_cutoff():
+    # See: https://gitlab.com/ase/ase/-/issues/441
+    cutoff = 50
+
+    atoms = bulk('Cu', 'fcc', a=3.6)
+    atoms *= (2, 2, 2)
+    atoms.set_pbc(False)
+    radii = cutoff*np.ones(len(atoms.get_atomic_numbers()))
+
+    neighborhood_new = NeighborList(
+        radii, skin=0.0, self_interaction=False, bothways=True, primitive=NewPrimitiveNeighborList
+    )
+    neighborhood_old = NeighborList(
+        radii, skin=0.0, self_interaction=False, bothways=True, primitive=PrimitiveNeighborList
+    )
+
+    neighborhood_new.update(atoms)
+    neighborhood_old.update(atoms)
+
+    n0, d0 = neighborhood_new.get_neighbors(0)
+    n1, d1 = neighborhood_old.get_neighbors(0)
+
+    assert np.all(n0 == n1)
+    assert np.all(d0 == d1)
