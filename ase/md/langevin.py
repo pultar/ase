@@ -14,7 +14,7 @@ class Langevin(MolecularDynamics):
     atoms
         The list of atoms.
 
-    dt
+    timestep
         The time step.
 
     temperature
@@ -92,9 +92,6 @@ class Langevin(MolecularDynamics):
         self.c3 = np.sqrt(dt) * sigma / 2. - dt**1.5 * fr * sigma / 8.
         self.c5 = dt**1.5 * sigma / (2 * np.sqrt(3))
         self.c4 = fr / 2. * self.c5
-
-        # Works in parallel Asap, #GLOBAL number of atoms:
-        self.natoms = self.atoms.get_number_of_atoms()
 
     def step(self, f=None):
         atoms = self.atoms
