@@ -6,6 +6,7 @@ from ase.neighborlist import (NeighborList, PrimitiveNeighborList,
                               NewPrimitiveNeighborList)
 from ase.build import bulk
 
+
 def count(nl, atoms):
     c = np.zeros(len(atoms), int)
     R = atoms.get_positions()
@@ -50,19 +51,23 @@ def test_supercell():
                     assert abs(dd) < 1e-10
                     assert not (c2 - c).any()
 
+
 def test_H2():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
     nl = NeighborList([0.5, 0.5], skin=0.1, sorted=True, self_interaction=False)
-    nl2 = NeighborList([0.5, 0.5], skin=0.1, sorted=True, self_interaction=False, primitive=NewPrimitiveNeighborList)
+    nl2 = NeighborList([0.5, 0.5], skin=0.1, sorted=True,
+                       self_interaction=False,
+                       primitive=NewPrimitiveNeighborList)
     assert nl2.update(h2)
     assert nl.update(h2)
     assert not nl.update(h2)
     assert (nl.get_neighbors(0)[0] == [1]).all()
-    m = np.zeros((2,2))
-    m[0,1] = 1
+    m = np.zeros((2, 2))
+    m[0, 1] = 1
     assert np.array_equal(nl.get_connectivity_matrix(sparse=False), m)
     assert np.array_equal(nl.get_connectivity_matrix(sparse=True).todense(), m)
-    assert np.array_equal(nl.get_connectivity_matrix().todense(), nl2.get_connectivity_matrix().todense())
+    assert np.array_equal(nl.get_connectivity_matrix().todense(),
+                          nl2.get_connectivity_matrix().todense())
 
     h2[1].z += 0.09
     assert not nl.update(h2)
@@ -73,12 +78,15 @@ def test_H2():
     assert (nl.get_neighbors(0)[0] == []).all()
     assert nl.nupdates == 2
 
+
 def test_H2_shape_and_type():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
-    nl = NeighborList([0.1, 0.1], skin=0.1, bothways=True, self_interaction=False)
+    nl = NeighborList([0.1, 0.1], skin=0.1, bothways=True,
+                      self_interaction=False)
     assert nl.update(h2)
     assert nl.get_neighbors(0)[1].shape == (0, 3)
     assert nl.get_neighbors(0)[1].dtype == int
+
 
 def test_fcc():
     x = bulk('X', 'fcc', a=2**0.5)
@@ -87,7 +95,8 @@ def test_fcc():
     nl.update(x)
     assert len(nl.get_neighbors(0)[0]) == 12
 
-    nl = NeighborList([0.5] * 27, skin=0.01, bothways=True, self_interaction=False)
+    nl = NeighborList([0.5] * 27, skin=0.01, bothways=True,
+                      self_interaction=False)
     nl.update(x * (3, 3, 3))
     for a in range(27):
         assert len(nl.get_neighbors(a)[0]) == 12
@@ -110,12 +119,14 @@ def test_fcc():
         assert (np.all(n0 == [0]) and np.all(d0 == [0, 0, 1])) != \
             (np.all(n1 == [1]) and np.all(d1 == [0, 0, -1]))
 
+
 def test_empty_neighbor_list():
     # Test empty neighbor list
     nl = PrimitiveNeighborList([])
     nl.update([True, True, True],
               np.eye(3) * 7.56,
               np.zeros((0, 3)))
+
 
 def test_hexagonal_cell_and_large_cutoff():
     # Test hexagonal cell and large cutoff
@@ -127,8 +138,10 @@ def test_hexagonal_cell_and_large_cutoff():
     spos_ac = np.array([[0., 0., 0.],
                         [0.25, 0.25, 0.25]])
 
-    nl = PrimitiveNeighborList(cutoff_a, skin=0.0, sorted=True, use_scaled_positions=True)
-    nl2 = NewPrimitiveNeighborList(cutoff_a, skin=0.0, sorted=True, use_scaled_positions=True)
+    nl = PrimitiveNeighborList(cutoff_a, skin=0.0, sorted=True,
+                               use_scaled_positions=True)
+    nl2 = NewPrimitiveNeighborList(cutoff_a, skin=0.0, sorted=True,
+                                   use_scaled_positions=True)
     nl.update(pbc_c, cell_cv, spos_ac)
     nl2.update(pbc_c, cell_cv, spos_ac)
 
@@ -164,12 +177,13 @@ def test_hexagonal_cell_and_large_cutoff():
     b2 = _b2
     d2 = np.concatenate([d2, -d2])
 
-    i = np.argsort(d[:, 0]+d[:, 1]*1e2+d[:, 2]*1e4+a*1e6)
-    i2 = np.argsort(d2[:, 0]+d2[:, 1]*1e2+d2[:, 2]*1e4+a2*1e6)
+    i = np.argsort(d[:, 0] + d[:, 1] * 1e2 + d[:, 2] * 1e4 + a * 1e6)
+    i2 = np.argsort(d2[:, 0] + d2[:, 1] * 1e2 + d2[:, 2] * 1e4 + a2 * 1e6)
 
     assert np.all(a[i] == a2[i2])
     assert np.all(b[i] == b2[i2])
     assert np.allclose(d[i], d2[i2])
+
 
 def test_small_cell_and_large_cutoff():
     # See: https://gitlab.com/ase/ase/-/issues/441
@@ -178,13 +192,15 @@ def test_small_cell_and_large_cutoff():
     atoms = bulk('Cu', 'fcc', a=3.6)
     atoms *= (2, 2, 2)
     atoms.set_pbc(False)
-    radii = cutoff*np.ones(len(atoms.get_atomic_numbers()))
+    radii = cutoff * np.ones(len(atoms.get_atomic_numbers()))
 
     neighborhood_new = NeighborList(
-        radii, skin=0.0, self_interaction=False, bothways=True, primitive=NewPrimitiveNeighborList
+        radii, skin=0.0, self_interaction=False, bothways=True,
+        primitive=NewPrimitiveNeighborList
     )
     neighborhood_old = NeighborList(
-        radii, skin=0.0, self_interaction=False, bothways=True, primitive=PrimitiveNeighborList
+        radii, skin=0.0, self_interaction=False, bothways=True,
+        primitive=PrimitiveNeighborList
     )
 
     neighborhood_new.update(atoms)
