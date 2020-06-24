@@ -11,14 +11,6 @@ import subprocess
 import glob
 
 
-class StartingPotFailedError(Exception):
-    def __init__(self, msg):
-        self.message = msg
-
-    def __str__(self):
-        return self.message
-
-
 def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
                                  moment=0., xc=1, lmax=3, print_level=1,
                                  ncomp=1, conc=1., mt_radius=0., ws_radius=0,
@@ -84,20 +76,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
         io.write_atomic_pot_input(symbol, nspins=nspins, moment=moment,
                                   xc=xc, niter=niter, mp=mp)
 
-        try:
-            proc = subprocess.Popen('newa', stdin=open(symbol + '_a_in'))
-        except OSError as err:
-            msg = 'Failed to execute "{}"'.format('newa < ' + symbol + '_a_in')
-            raise EnvironmentError(msg) from err
-
-        errorcode = proc.wait()
-
-        if errorcode:
-            path = Path.cwd()
-            msg = ('newa failed with command "{}" failed in '
-                   '{} with error code {}'
-                   .format('newa < ' + symbol + '_a_in', path, errorcode))
-            raise StartingPotFailedError(msg)
+        subprocess.run('newa', stdin=open(symbol + '_a_in'), check=True)
 
         # Generate single site potential
         io.write_single_site_pot_input(symbol=symbol, crystal_type=crystal_type,
@@ -108,21 +87,7 @@ def generate_starting_potentials(atoms, crystal_type, a, cpa=False, nspins=1,
                                        ws_radius=ws_radius,
                                        egrid=egrid, ef=ef, niter=niter, mp=mp)
 
-        try:
-            proc = subprocess.Popen('newss', stdin=open(symbol + '_ss_in'))
-        except OSError as err:
-            msg = 'Failed to execute "{}"'\
-                .format('newss < ' + symbol + '_ss_in')
-            raise EnvironmentError(msg) from err
-
-        errorcode = proc.wait()
-
-        if errorcode:
-            path = Path.cwd()
-            msg = ('newss failed with command "{}" failed in '
-                   '{} with error code {}'
-                   .format('newss < ' + symbol + '_ss_in', path, errorcode))
-            raise StartingPotFailedError(msg)
+        subprocess.run('newss', stdin=open(symbol + '_ss_in'), check=True)
 
 
 class MuST(FileIOCalculator):
