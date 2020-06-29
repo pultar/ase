@@ -153,7 +153,6 @@ keys_with_units = {
 
 def write_abinit_in(fd, atoms, param=None, species=None):
     import copy
-    from ase.calculators.calculator import kpts2mp
     from ase.calculators.abinit import Abinit
 
     if param is None:
