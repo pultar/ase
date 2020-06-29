@@ -672,7 +672,7 @@ class EAM_Window:
 
 
 class GPAW_Window:
-    ''' Window for configuring GPAW parameter '''
+    ''' Window for configuring GPAW parameters '''
 
     gpaw_xc_list = ('LDA', 'PBE', 'RPBE', 'revPBE', 'GLLBSC')
 
@@ -766,7 +766,7 @@ class GPAW_Window:
                   ui.Label(', '), self.kpts[1], ui.Label(', '),
                   self.kpts[2], ui.Label(')')])
         for i in range(3):
-            self.kpts[i].active = not self.pbc[i]
+            self.kpts[i].active = self.pbc[i]
         self.kpts_label = ui.Label('')
         self.kpts_label_format = _('k-points x size:  (%.1f, %.1f, %.1f) Å')
         self.win.add(self.kpts_label)
