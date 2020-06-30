@@ -2,16 +2,14 @@
 Calculate
 =========
 
-(currently disabled)
 
 Set calculator
 --------------
 
 Allows :mod:`ase.gui` to choose a calculator for internal computations (see
-below). Different density functional codes and force fields, as well
-as the EMT calculator are available. For the FHI-aims and VASP
-calculators, it is also possible to export an entire set of input
-files.
+below). Currently available the GPAW density functional backend and 
+several force fields (LJ, EMT, EAM, Brenner). 
+For some of the choices a Python code can be generated for use in scripts.
 
 
 Energy and forces
