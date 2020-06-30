@@ -177,6 +177,18 @@ class EMT_Setup(CalculatorSetup):
 
         return emt_factory
 
+    def get_pytext(self):
+        emt, provider, asap3 = self._emt_get()
+        if provider is None:
+            return 'import asap3\n' \
+                '...\n' \
+                'atoms.calc = asap3.EMT()\n'
+        else:
+            return 'import asap3\n' \
+                '...\n' \
+                'atoms.calc = asap3.EMT(asap3.%s())\n' \
+                % provider
+
 
 class ASEEMT_Setup(CalculatorSetup):
     ''' ASE EMT calculator setups '''
@@ -209,11 +221,9 @@ class ASEEMT_Setup(CalculatorSetup):
         return ase.calculators.emt.EMT
 
     def get_pytext(self):
-        return '''
-        from ase.calculators.emt import EMT
-        ...
-        atoms.calc = EMT()
-        '''
+        return 'from ase.calculators.emt import EMT\n' \
+            '...\n' \
+            'atoms.calc = EMT()\n'
 
 
 class EAM_Setup(CalculatorSetup):
@@ -253,6 +263,7 @@ class EAM_Setup(CalculatorSetup):
         return EAM_Window(owner=self, atoms=atoms)
 
     def check(self, atoms):
+        super().check(atoms)
         from ase.calculators.eam import EAM
         atoms.calc = EAM(**self.paramdict)
         return self.element_check('EAM', atoms.calc.elements, atoms)
@@ -265,6 +276,12 @@ class EAM_Setup(CalculatorSetup):
             return calc
 
         return eam_factory
+
+    def get_pytext(self):
+        return 'from ase.calculators.eam import EAM\n' \
+            '...\n' \
+            'atoms.calc = EAM(potential=\'%s\')\n' \
+            % self.paramdict['potential']
 
 
 class BrennerSetup(CalculatorSetup):
@@ -293,6 +310,7 @@ class BrennerSetup(CalculatorSetup):
     ''')
 
     def check(self, atoms):
+        super().check(atoms)
         try:
             import asap3
             asap3  # silence pyflakes
@@ -304,6 +322,11 @@ class BrennerSetup(CalculatorSetup):
     def get_calc_factory(self):
         import asap3
         return asap3.BrennerPotential
+
+    def get_pytext(self):
+        return 'import asap3\n' \
+            '...\n' \
+            'atoms.calc = asap3.BrennerPotential()\n'
 
 
 class GPAW_Setup(CalculatorSetup):
@@ -338,7 +361,7 @@ class GPAW_Setup(CalculatorSetup):
         p = self.paramdict
         use = ['xc', 'kpts', 'mode']
         if p['mode'] == 'fd':
-            if p['use_h'] == 0:
+            if p['use_h']:
                 use.append('h')
             else:
                 use.append('gpts')
@@ -371,6 +394,31 @@ class GPAW_Setup(CalculatorSetup):
             return calc
 
         return gpaw_factory
+
+    def get_pytext(self):
+        p = self.paramdict
+        if p['mode'] == 'pw':
+            res = 'from gpaw import GPAW, PW\n'
+        else:
+            res = 'from gpaw import GPAW\n'
+        res += '...\n'
+        res += 'atoms = GPAW(\n'
+        if p['mode'] == 'fd':
+            res += '    mode=\'fd\',\n'
+            if p['use_h']:
+                res += '    h=%.3f,\n' % p['h']
+            else:
+                res += '    gpts=(%i,%i,%i),\n' % tuple(p['gpts'])
+        elif p['mode'] == 'lcao':
+            res += '    mode=\'lcao\',\n'
+            res += '    basis=\'%s\',\n' % p['basis']
+        elif p['mode'] == 'pw':
+            res += '    mode=PW(%.1f),\n' % p['pwcutoff']
+        res += '    xc=\'%s\',\n' % p['xc']
+        res += '    kpts=(%i,%i,%i)\n' % tuple(p['kpts'])
+        res += ')\n'
+        return res
+
 
 #
 # Windows for configurable calculators
