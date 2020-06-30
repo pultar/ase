@@ -62,6 +62,10 @@ class Abinit(FileIOCalculator):
         >>> e = h.get_potential_energy()
 
         """
+        if "kpts" in kwargs.keys():
+            raise ValueError(
+                """The 'kpts' keyword is disabled for Abinit calculators. Use the
+                native abinit input variables to define k-points grids instead.""")
 
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, **kwargs)

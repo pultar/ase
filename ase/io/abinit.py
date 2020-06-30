@@ -153,7 +153,6 @@ keys_with_units = {
 
 def write_abinit_in(fd, atoms, param=None, species=None):
     import copy
-    from ase.calculators.calculator import kpts2mp
     from ase.calculators.abinit import Abinit
 
     if param is None:
@@ -204,6 +203,36 @@ def write_abinit_in(fd, atoms, param=None, species=None):
     else:
         inp['nsppol'] = 1
 
+    # k-points treatment
+    abi_kpts_opt = [
+        "kptopt",
+        "nkpt",
+        "kpt",
+        "kptnrm",
+        "wtk",
+        "ngkpt",
+        "kptrlatt",
+        "nshiftk",
+        "shiftk",
+        "kptrlen",
+    ]
+    if any(key in inp for key in abi_kpts_opt):
+        fd.write("#Definition of the k-points sampling\n")
+        for key in abi_kpts_opt:
+            if key in inp:
+                if isinstance(inp[key], list):
+                    if isinstance(inp[key][0], list):
+                        fd.write("{}\n".format(key))
+                        for dim in inp[key]:
+                            write_list(fd, dim)
+                    else:
+                        fd.write("{}\n".format(key))
+                        write_list(fd, inp[key])
+                else:
+                    fd.write("{} {}\n".format(key, inp[key]))
+                del inp[key]
+
+    fd.write("#Other input variables\n")
     for key in sorted(inp):
         value = inp[key]
         unit = keys_with_units.get(key)
@@ -261,18 +290,13 @@ def write_abinit_in(fd, atoms, param=None, species=None):
     for pos in atoms.positions:
         fd.write('%.14f %.14f %.14f\n' % tuple(pos))
 
-    if 'kptopt' not in param:
-        # XXX This processing should probably happen higher up
-        mp = kpts2mp(atoms, param['kpts'])
-        fd.write('kptopt 1\n')
-        fd.write('ngkpt %d %d %d\n' % tuple(mp))
-        fd.write('nshiftk 1\n')
-        fd.write('shiftk\n')
-        fd.write('%.1f %.1f %.1f\n' % tuple((np.array(mp) + 1) % 2 * 0.5))
-
     fd.write('chkexit 1 # abinit.exit file in the running '
              'directory terminates after the current SCF\n')
 
+def write_list(fd, l):
+    for element in l:
+        fd.write("{} ".format(element))
+    fd.write("\n")
 
 def read_stress(fd):
     # sigma(1 1)=  4.02063464E-04  sigma(3 2)=  0.00000000E+00
