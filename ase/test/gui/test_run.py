@@ -200,7 +200,6 @@ def test_calculator_ase(gui):
     atoms = Atoms('PtCu', positions=[[0, 0, 0], [2.5, 0, 0]],
                   cell=[5, 5, 5])
     clc.gui.new_atoms(atoms)
-
     clc.radiobuttons.value = 3  # ASEEMT
     clc.radio_button_selected()
     assert not clc.button_setup.active
@@ -255,8 +254,8 @@ def test_calculator_gpaw(gui, atoms):
     clc.radiobuttons.value = 6  # GPAW
     clc.radio_button_selected()
     assert clc.button_setup.active
-    # ~ assert clc.apply()
     win = clc.button_setup_clicked()
+    assert clc.get_atoms().pbc[0] == win.kpts[0].active
     win.ok()
     assert clc.apply()
     win = clc.button_setup_clicked()

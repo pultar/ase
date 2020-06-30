@@ -8,8 +8,9 @@ from ase.gui.widgets import pybutton
 import numpy as np
 from copy import copy, deepcopy
 
-# ~ import ase
 from ase.data import chemical_symbols
+
+from typing import Dict, Any
 
 # Asap and GPAW may be imported if selected.
 
@@ -23,7 +24,7 @@ class CalculatorSetup:
     is_configurable = False  # has adjustable parameters
     longcaption = _('Emtpy Calculator')
     info_txt = ''
-    paramdict = {}
+    paramdict = {}  # type: Dict[str, Any]
 
     def get_window(self, atoms):
         return None
@@ -820,7 +821,7 @@ class GPAW_Window:
         params = {}
         params['xc'] = self.gpaw_xc_list[self.xc.value]
         params['mode'] = self.gpaw_modes[self.mode.value].split()[0].lower()
-        params['use_h'] = not bool(self.radio_h.value)
+        params['use_h'] = self.radio_h.value == 0
         params['h'] = self.h.value
         params['gpts'] = [int(g.value) for g in self.gpts]
         params['basis'] = self.gpaw_basises[self.basis.value].split()[0].lower()
