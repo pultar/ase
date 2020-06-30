@@ -72,7 +72,7 @@ class Simulation:
             return False
         try:
             self.calculator = self.gui.simulation['calc']
-        except KeyError:
+        except (KeyError, TypeError):
             ui.error(_('No calculator: Use Set Calculator first.'))
             return False
         self.atoms.calc = self.calculator()
