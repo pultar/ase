@@ -6,6 +6,7 @@ import re
 from ase import Atoms
 import ase.lattice.hexagonal
 from ase.neighborlist import NeighborList
+from ase.build.tools import stack as stack_pbc
 import numpy as np
 
 def graphene_flake(radius, C_C = 1.42, vacuum = None, prune = True):
@@ -53,14 +54,15 @@ def graphene_flake(radius, C_C = 1.42, vacuum = None, prune = True):
                 atoms_remove[iatom] = True
         del atoms[atoms_remove]
 
+    atoms.set_cell((1, 1, 1))
     if vacuum is not None:
         atoms.center(vacuum)
     else:
-        atoms.center(3.5 / 2.)
+        atoms.center(3.5 / 2)
 
     return atoms
 
-def layered_assembly(notation, blocks = None, vacuum = None):
+def layered_assembly(notation, blocks, centers = None, vacuum = None):
     """Create a layered assembly.
 
     Creates a layered assembly in the z-direction.
@@ -82,33 +84,60 @@ def layered_assembly(notation, blocks = None, vacuum = None):
     blocks: dictionary
          Symbols describing the building blocks (case-insesitive).
          Non-alphanumeric characters will be stripped.
-         Default: 'G' for a circular graphene nanoflake with
-         radius of 20 Angstrom.
+
+    centers: dictionary
+         If specified center the building blocks at 2D point,
+         or 'COM' to select the center of mass,
+         or 'COP' to select center of positions.
 
     vacuum: float
          If specified adjust the amount of vacuum when centering.
          Default: No vacuum.
     """
 
+    def has_pbc():
+        pbc = [np.sum(atoms.get_pbc()[:-1]) > 0 for atoms in blocks.values()]
+
+        return np.all(pbc)
+
     def Build(m):
-        m = blocks[m].copy()
-        return m
+        atoms = blocks[m].copy()
+        if centers is not None:
+            if centers[m] is None:
+                center = (0, 0, 0)
+            elif centers[m].upper() == 'COM':
+                center = atoms.get_center_of_mass()
+            elif centers[m].upper() == 'COP':
+                center = atoms.get_center_of_positions()
 
-    def Rotate(m, a):
-        m.rotate(a, 'z')
-        return m
+            if len(center) == 2:
+                center = (center[0], center[1], 0)
+            else:
+                center[2] = 0
 
-    def Stack(m1, m2):
-        z1, z2 = m1.get_cell()[2][2], m2.get_cell()[2][2]
-        m2.positions += (0, 0, z1)
-        m = m1 + m2
-        m.set_cell((0,0, z1 + z2))
-        return m
+            atoms.translate(-center)
 
-    if blocks is None:
-        G = graphene_flake(20)
-        G.translate(-G.get_center_of_mass())
-        blocks = {'G': G}
+        return atoms
+
+    def Rotate(atoms, theta):
+        if has_pbc():
+            raise IncompatibleCellError('Rotating periodic blocks is not supported.')
+
+        atoms.rotate(theta, 'z')
+
+        return atoms
+
+    def Stack(atoms1, atoms2):
+        if has_pbc():
+            atoms = stack_pbc(atoms1, atoms2, maxstrain = 1)
+        else:
+            c1, c2 = atoms1.get_cell(), atoms2.get_cell()
+            z1, z2 = c1[2][2], c2[2][2]
+            atoms2.positions += (0, 0, z1)
+            atoms = atoms1 + atoms2
+            atoms.set_cell((0, 0, z1 + z2))
+
+        return atoms
 
     #sanitize input parameters
     notation = notation.upper()
@@ -124,6 +153,7 @@ def layered_assembly(notation, blocks = None, vacuum = None):
     for symbol in blocks:
         NAMES[symbol] = 'Build("%s")' % symbol
 
+
     OPERATORS = {
         ast.Mult: lambda a,r: f'Rotate({a}, {r})', #higher precedence, use parenthesis to override
         ast.Add: lambda a,b: f'Stack({a}, {b})',
@@ -137,10 +167,15 @@ def layered_assembly(notation, blocks = None, vacuum = None):
     operations = s.eval(notation)
     atoms = eval(operations, {'Build':Build, 'Rotate':Rotate, 'Stack':Stack})
 
-    atoms.set_pbc(False)
-    if vacuum is not None:
-        atoms.center(vacuum)
+    if vacuum is None:
+        vacuum = 0.0
+    if has_pbc():
+        atoms.center(vacuum, axis = 2)
     else:
-        atoms.center(0)
+        atoms.center(vacuum)
 
     return atoms
+
+class IncompatibleCellError(ValueError):
+    """Exception raised if rotating fails due to periodic cell"""
+    pass
