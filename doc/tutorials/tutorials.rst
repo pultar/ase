@@ -88,13 +88,19 @@ Molecular Dynamics
    tipnp_equil/tipnp_equil
    acn_equil/acn_equil
 
+QM/MM Simulations
+^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :maxdepth: 1
+   qmmm/qmmm
+   qmmm/fecn4_water.rst
+
 Uncategorized
 ^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 1
 
    defects/defects
-   qmmm/qmmm
    dimensionality/dimensionality
    deltacodesdft/deltacodesdft
    wannier/wannier
