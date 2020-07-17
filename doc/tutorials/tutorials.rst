@@ -92,8 +92,9 @@ QM/MM Simulations
 ^^^^^^^^^^^^^^^^^^
 .. toctree::
    :maxdepth: 1
+
    qmmm/qmmm
-   qmmm/fecn4_water.rst
+   qmmm/fecn4_water
 
 Uncategorized
 ^^^^^^^^^^^^^
