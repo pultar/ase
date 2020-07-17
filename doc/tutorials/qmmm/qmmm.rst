@@ -8,7 +8,7 @@ QM/MM Simulations couple two (or, in principle, more) descriptions to get total 
 and forces for the entire system in an efficient manner. 
 ASE has a native Explicit Interaction calculator, :class:`~ase.calculators.qmmm.EIQMMM`, that uses an electrostatic embedding
 model to couple the subsystems explicitly. See
-`the method paper for more info. <https://doi.org/10.1021/acs.jctc.7b00621>`__,
+`the method paper for more info. <https://doi.org/10.1021/acs.jctc.7b00621>`__.
 
 Examples of what this code has been used for can be seen
 `here <https://doi.org/10.1021/jz500850s>`__,
