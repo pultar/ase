@@ -72,6 +72,10 @@ class DevNull:
 
     def close(self):
         pass
+    
+    @property
+    def closed(self):
+        return True
 
     def isatty(self):
         return False
