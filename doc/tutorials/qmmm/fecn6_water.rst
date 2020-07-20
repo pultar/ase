@@ -6,7 +6,7 @@ QM/MM BOMD of Iron Hexacyanide in Water
 
 This tutorial shows one example of how to build the transition-metal complex iron(II) 
 hexacyanide, :mol:`[Fe(II)CN_6]`\ :sup:`4-`, solvate and charge-neutralize the system in water with MM counterions, 
-and equilibrate the entire system. The QM code used here is ORCA.
+and equilibrate the entire system using Born-Oppenheimer MD. The QM code used here is ORCA.
 
 This tutorial assumes you have already gotten an overview of using :ref:`qmmm`, and have carried out the 
 necessary benchmarks on basis sets sizes/plane wave cutoffs/grid spacing, density functionals, etc. 
@@ -15,6 +15,8 @@ New users should seek more info on what QM/MM coupling entails, and how to ensur
 through `this tutorial review <http://dx.doi.org/10.1002/qua.26343>`__, which this
 tutorial is built upon. 
 
+.. note:: QM/MM BOMD is generally expensive, and the final simulation is meant to be submitted 
+          to a cluster with an expected walltime of several days.
 
 Building the Complex
 --------------------
@@ -42,7 +44,7 @@ make a simulation cell of water molecules:
 
 A method generating a constraints-object is imported from a separate file because it will 
 also be used later, so make sure if you do the same that the file containing this method
-is in your PYTHONPATH:
+is in your PYTHONPATH, or in the same directory as the script above.
 
 .. literalinclude:: rigid_water.py
 
@@ -62,7 +64,7 @@ The script is invoked by writing::
 
 It centers the last frame of the relaxed trajectory ``FeCN6_opt.traj`` in the last frame of the 
 equilibrated water box ``tip4p_2744mol_equil.traj``. ``3`` is the number of atoms per molecule in water, 
-``2.5`` is the minimum radius between solute and solvent, and `1` tells the script to enforce wrapping 
+``2.5`` is the minimum radius between solute and solvent, and ``1`` tells the script to enforce wrapping 
 of the water box before solvating the solute, since .xyz files do not contain information about periodic boundary conditions. 
 
 
@@ -114,3 +116,11 @@ and the LJ interaction potential. The rest of the script runs the dynamics, just
 
   .. literalinclude:: qmmm_md_paper.py 
       :linenos:
+
+This script should be submitted to a cluster and will most likely take a couple of days to complete. If all
+has gone well, you should be able to plot energies and temperature from your BOMD simulation and see that they
+stabilize:
+ 
+.. figure:: final.png
+   :scale: 50 %
+   :alt: QM/MM BOMD Equilibration of the complex.

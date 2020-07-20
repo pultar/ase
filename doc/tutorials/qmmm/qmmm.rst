@@ -47,7 +47,8 @@ The tutorial on :ref:`tipnp water box equilibration` could be relevant to
 have a look at. For acetonitrile, have a look at :ref:`acetonitrile_md_box_equilibration`.
 
 Some MD codes have more advanced solvators, such as AMBER_, and stand-alone
-programs such as PACKMOL_ might also come in handy.
+programs such as PACKMOL_ might also come in handy. Alternatively, we will
+show you how it can be done using only ASE in the next tutorial on :ref:`fecn6_water`.
 
 .. _AMBER: https://ambermd.org/AmberTools.php
 .. _PACKMOL: http://m3g.iqm.unicamp.br/packmol/home.shtml
@@ -55,6 +56,11 @@ programs such as PACKMOL_ might also come in handy.
 
 Electrostatic Embedding QM/MM
 -----------------------------
+New users should familiarize themselves with the methodology e.g. through
+`this tutorial review <http://dx.doi.org/10.1002/qua.26343>`__, and references
+therein. 
+
+
 The total energy expression for the full QM/MM system is:
 
 .. math::  E_\mathrm{TOT} = E_\mathrm{QM} + E_\mathrm{I} + E_\mathrm{MM}.
