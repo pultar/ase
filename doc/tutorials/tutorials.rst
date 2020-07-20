@@ -94,7 +94,7 @@ QM/MM Simulations
    :maxdepth: 1
 
    qmmm/qmmm
-   qmmm/fecn4_water
+   qmmm/fecn6_water
 
 Uncategorized
 ^^^^^^^^^^^^^
