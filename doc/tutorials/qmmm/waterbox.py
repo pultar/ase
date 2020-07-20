@@ -2,7 +2,6 @@ from ase import Atoms
 from ase.calculators.tip4p import TIP4P, rOH, angleHOH
 from ase.md import Langevin
 import ase.units as units
-from ase.io.trajectory import Trajectory
 import numpy as np
 from rigid_water import rigid
 
