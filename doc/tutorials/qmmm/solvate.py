@@ -2,20 +2,13 @@ import numpy as np
 from sys import argv
 from ase.io import read, write
 from ase.visualize import view
+from ase.geometry.geometry import wrap_positions as wrap
 
 qmfile = argv[1]  # Name of QM structure file
 mmfile = argv[2]  # Name of MM structure file
 apm = int(argv[3])  # Number of atoms per solvent molecule
 radius = float(argv[4])  # Cutout radius around each solute atom
 enforce_wrap=bool(argv[5])  # (1,0): Wrap MM regardless of previous MM PBC choices
-
-def wrap(D, cell, pbc):
-    """Wrap distances to nearest neighbor (minimum image convention)."""
-    for i, periodic in enumerate(pbc):
-        if periodic:
-            d = D[:, i]
-            L = cell[i]
-            d[:] = (d + L / 2) % L - L / 2  # modify D inplace
 
 def molwrap(atoms, n, idx=0):
     ''' Wrap to cell without breaking molecules
@@ -29,7 +22,7 @@ def molwrap(atoms, n, idx=0):
     positions = atoms.positions.reshape((-1, n, 3))
     distances = positions[:, idx] - center
     old_distances = distances.copy()
-    wrap(distances, atoms.cell.diagonal(), atoms.pbc)
+    distances = wrap(distances, atoms.cell, atoms.pbc, center=(0, 0, 0))
     offsets = distances - old_distances
     positions += offsets[:, None]
     atoms.set_positions(positions.reshape((-1, 3)))
