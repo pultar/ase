@@ -52,9 +52,9 @@ epsilonN_qm = 0.069 * units.kcal / units.mol
 sigmaN_qm = 3.260
 epsilonC_qm = 0.105 * units.kcal / units.mol
 sigmaC_qm = 3.431
-ljparams_qm = {('Fe'): (epsilonFe, sigmaFe),
-               ('N'): (epsilonN_qm, sigmaN_qm),
-               ('C'): (epsilonC_qm, sigmaC_qm)}
+ljparams_qm = {'Fe': (epsilonFe, sigmaFe),
+               'N': (epsilonN_qm, sigmaN_qm),
+               'C': (epsilonC_qm, sigmaC_qm)}
 
 # Make numpy arrays with 1 value per QM atom:
 epsilon_qm = np.array([ljparams_qm[a.symbol][0] 
