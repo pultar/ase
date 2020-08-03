@@ -116,6 +116,9 @@ class MPI4PY:
     def size(self):
         return self.comm.size
 
+    def py2f(self):
+        return self.comm.py2f()
+
     def _returnval(self, a, b):
         """Behave correctly when working on scalars/arrays.
 
