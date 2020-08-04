@@ -329,6 +329,7 @@ class RNEB:
                                               atol=self.tol))[1]
         if len(final_to_init) == n:
             return [True, np.argsort(final_to_init)]
+        return [False, np.argsort(final_to_init)]
 
     def reflect_movement(self, vec_init, vec_final, sym=None):
         reflections = []
