@@ -317,7 +317,7 @@ class RNEB:
         """
         pos, pos_final: atomic positions of structures to be compared
 
-        returns: [boolean, matches]
+        returns: [boolean, matches] 
             True for a match and a list with the matches
             matches: i is the index an atom in structure 1 and at index i in
             matches is the index, j, of the corresponding atom in
@@ -329,7 +329,6 @@ class RNEB:
                                               atol=self.tol))[1]
         if len(final_to_init) == n:
             return [True, np.argsort(final_to_init)]
-        return [False, np.argsort(final_to_init)]
 
     def reflect_movement(self, vec_init, vec_final, sym=None):
         reflections = []
