@@ -221,6 +221,12 @@ convergence scaling is controlled by the keyword ``scale_fmax``.
   A low scaling factor (``scale_fmax=1-3``) is often enough to significantly
   reduce the number of force calls needed for convergence.
 
+
+Reflective NEB
+==============
+
+Make use of symmetry in the NEB path. See a :ref:`full tutorial <rneb tutorial>`
+  
 Parallelization over images
 ===========================
 
