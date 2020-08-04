@@ -222,15 +222,21 @@ class NEB:
                     else:
                         j = i - (i - self.nimages // 2) * 2
 
-                        # Use the symmetry operation on forces in scaled coordinates
+                        # Use symmetry operation on forces in scaled coordinates
                         cell = images[i].cell
                         scaled_forces = cell.scaled_positions(forces[j - 1])
                         rot_forces = np.inner(scaled_forces[self.rotations[2]],
                                               self.rotations[0])
-                        
-                        tf = cell.cartesian_positions(rot_forces)
+
                         forces[i - 1] = cell.cartesian_positions(rot_forces)
                         energies[i] = energies[j]
+                        magmoms = self.images[j].get_magnetic_moments()
+                        # manually add calculator to image
+                        newcalc = SinglePointCalculator(self.images[i],
+                                                        energy=energies[i],
+                                                        forces=forces[i - 1],
+                                                        magmoms=magmoms)
+                        self.images[i].calc = newcalc
 
             else:
                 # Do all images - one at a time:
@@ -412,6 +418,7 @@ class NEB:
                 atoms.calc = SinglePointCalculator(energy=self.energies[i],
                                                    forces=self.real_forces[i],
                                                    atoms=atoms)
+
                 yield atoms
 
 
