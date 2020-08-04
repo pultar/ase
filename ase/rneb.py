@@ -317,29 +317,19 @@ class RNEB:
         """
         pos, pos_final: atomic positions of structures to be compared
 
-        returns: True for a match and a list with the matches
-        mathces: i is the index an atom in structure 1 and at index i in
-                 matches is the index, j, of the corresponding atom in
-                 structure 2.
+        returns: [boolean, matches] 
+            True for a match and a list with the matches
+            matches: i is the index an atom in structure 1 and at index i in
+            matches is the index, j, of the corresponding atom in
+            structure 2.
         """
         n = len(pos)
-        matches = list(range(n))
         dists_all = get_distances(pos, pos_final, cell=cell, pbc=[1, 1, 1])
-        final_to_init = np.nonzero(np.isclose(dists_all[1], 0))[1]
+        final_to_init = np.nonzero(np.isclose(dists_all[1], 0,
+                                              atol=self.tol))[1]
         if len(final_to_init) == n:
             return [True, np.argsort(final_to_init)]
         return [False, np.argsort(final_to_init)]
-        # dists = dists_all[0]
-        # for i, dist in enumerate(dists):
-        #     match = False
-        #     for j, d in enumerate(dist):
-        #         d = np.linalg.norm(d)
-        #         if d < self.tol:
-        #             match = True
-        #             matches[j] = i
-        #     if match is False:
-        #         return [False, matches]
-        # return [True, matches]
 
     def reflect_movement(self, vec_init, vec_final, sym=None):
         reflections = []
@@ -446,10 +436,11 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
 
 
     """
+    final_s = final.copy()
     ml = min_neb_path_length
     cell = init.cell
     p1 = init.positions
-    p2 = final.positions.copy()
+    p2 = final_s.positions.copy()
 
     _, D = get_distances(p1, p2, cell=cell, pbc=True)
     final_idx = []
@@ -458,7 +449,7 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
             # Shuffled indices we need to shuffle back
             if D[j, c] < ml:  # assuming neb path length is above ml
                 # this is not the correct atom moving, i.e. we shuffle
-                final.positions[j] = p2[c]
+                final_s.positions[j] = p2[c]
             else:
                 final_idx.append(c)
     # We need to get the atom in final furthest away from init as well
@@ -468,6 +459,6 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
             if D[c, j] > ml:
                 init_idx.append(c)
     assert len(final_idx) == len(init_idx)
-    final.positions[np.array(init_idx)] = p2[np.array(final_idx)]
+    final_s.positions[np.array(init_idx)] = p2[np.array(final_idx)]
 
-    return final
+    return final_s
