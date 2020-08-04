@@ -225,7 +225,45 @@ convergence scaling is controlled by the keyword ``scale_fmax``.
 Reflective NEB
 ==============
 
-Make use of symmetry in the NEB path. See a :ref:`full tutorial <rneb tutorial>`
+Make use of symmetry in the NEB path. For an exhaustive tutorial see
+the :ref:`full tutorial <rneb tutorial>`.
+
+.. note::
+
+   The Python package spglib_ is a requirement for using RNEB.
+
+First we need to obtain the symmetry operations that are relevant for our system::
+  
+  from ase.rneb import RNEB
+  rneb = RNEB()
+
+  # The supercell is a structure with the diffusing species present
+  # in the initial and final position.
+  supercell = io.read('combined_AB.traj')
+  
+  sym_ops = rneb.find_symmetries(supercell, initial, final)
+
+If we find any valid symmetry operations we can use them to create the
+final relaxed image from the initial relaxed image, without doing the
+relaxation on the final image::
+
+  final_relaxed = rneb.get_final_image(supercell, initial_unrelaxed,
+                                       initial_relaxed,
+                                       final_unrelaxed)
+
+Then we create the path by interpolation as in `The NEB class`_. Check
+that the path has reflection symmetry for each image pair, and finally
+run the NEB utilizing the symmetry operations to assign energies and
+forces to each symmetric image pair::
+
+  sym_ops = rneb.reflect_path(images, sym=sym_ops)
+  
+  neb = NEB(images, sym=True, rotations=sym_ops[0])
+  qn = BFGS(neb, logfile=None)
+  qn.run(fmax=0.05)
+
+  
+.. _spglib: https://spglib.github.io/spglib/
   
 Parallelization over images
 ===========================

@@ -62,6 +62,7 @@ Calculating diffusion/dissociation properties
    dissociation
    neb/idpp
    selfdiffusion/al110
+   neb/rneb
 
 ASE database
 ^^^^^^^^^^^^
