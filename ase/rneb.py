@@ -416,3 +416,58 @@ def get_spglib_tuple(atoms):
     
     return (lattice, positions, numbers, magmoms)
     
+def reshuffle_positions(init, final, min_neb_path_length=1.2):
+    """Oh no! Vacancies!
+
+    You want to calculate the NEB barrier between two vacancies, but
+    by creating vacancies the indices have been shuffled so everything
+    seems to move when creating the initial NEB path. This function
+    shuffles them back by checking distances between individual atoms
+    in the initial and final structures.
+
+    Parameters
+    ----------
+    init: Atoms object
+        Initial structure
+
+    final: Atoms object
+        Final structure. The atoms in this structure
+        are rearranged to fit with init.
+
+    min_neb_path_length: float
+        Atoms that are detected to have moved more than
+        min_neb_path_length are considered to be a part of the desired
+        NEB path.
+        Default: 1.2 Å
+
+    Returns
+    -------
+    Final structure as an Atoms object with shuffled positions.
+
+
+    """
+    ml = min_neb_path_length
+    cell = init.cell
+    p1 = init.positions
+    p2 = final.positions.copy()
+
+    _, D = get_distances(p1, p2, cell=cell, pbc=True)
+    final_idx = []
+    for c, j in enumerate(np.argmin(D, axis=0)):
+        if j != c:
+            # Shuffled indices we need to shuffle back
+            if D[j, c] < ml:  # assuming neb path length is above ml
+                # this is not the correct atom moving, i.e. we shuffle
+                final.positions[j] = p2[c]
+            else:
+                final_idx.append(c)
+    # We need to get the atom in final furthest away from init as well
+    init_idx = []
+    for c, j in enumerate(np.argmin(D, axis=1)):
+        if j != c:
+            if D[c, j] > ml:
+                init_idx.append(c)
+    assert len(final_idx) == len(init_idx)
+    final.positions[np.array(init_idx)] = p2[np.array(final_idx)]
+
+    return final
