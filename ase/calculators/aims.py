@@ -931,12 +931,17 @@ class AimsLibrary(Aims):
     '''Instance of an Aims Library Calculator, which interfaces with a 
        precompiled shared-library'''
     def __init__(self, comm=None, **kwargs):
-        ''' Check if mpi4py exists: this is necessary as we use the py2f() 
+        ''' Check if mpi4py works: this is necessary as we use the py2f() 
             functionality. If successfully loaded, also load the ase.parallel 
             environment, initialising as an MPI4PY() class '''
-        if comm is None:
-            import mpi4py
+        if not comm:
+            # mpi4py MUST be loaded before ase.parallel.world
+            from mpi4py import MPI
             from ase.parallel import world as comm
+            # The assert is a bit superfluous, but otherwise the CI tests fail
+            # as mpi4py is unused. I don't really want to remove the mpi4py
+            # import though, as this helps users. Thoughts welcomed.
+            assert(comm.size == MPI.COMM_WORLD.Get_size())
         self.comm = comm
         super(AimsLibrary, self).__init__(**kwargs)
 
