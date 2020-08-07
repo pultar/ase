@@ -18,10 +18,8 @@ from ase.data import atomic_numbers
 from ase.calculators.calculator import FileIOCalculator, Parameters, kpts2mp, \
     ReadError, PropertyNotImplementedError
 
-''' The following are used in AimsLibrary, but cannot be imported there '''
+''' The following are used in AimsLibrary but cannot be imported there '''
 from ase.calculators.calculator import all_changes #, Calculator
-
-''' Specific ctypes variables necessary for interfacing to shared library '''
 from ctypes import cdll
 from ctypes import POINTER, byref, c_int, c_bool, c_char_p
 
@@ -222,7 +220,10 @@ class Aims(FileIOCalculator):
         if run_command:
             # this warning is debatable... in my eyes it is more consistent to
             # use 'command'
-            warnings.warn('Argument "run_command" is deprecated and will be replaced with "command". Alternatively, use "aims_command" and "outfile". See documentation for more details.')
+            warnings.warn('Argument "run_command" is deprecated and will be '+
+                          'replaced with "command". Alternatively, use '+
+                          '"aims_command" and "outfile". '+
+                          'See documentation for more details.')
             if command:
                 warnings.warn('Caution! Argument "command" overwrites "run_command.')
             else:
@@ -230,9 +231,9 @@ class Aims(FileIOCalculator):
 
         # this is the fallback to the default value for empty init
         if np.all([i is None for i in (command, aims_command, outfilename)]):
-            # we go for the FileIOCalculator default way (env variable) with the former default as fallback
+            # we go for the FileIOCalculator default way (env variable) with
+            # the former default as fallback
             command = os.environ.get('ASE_AIMS_COMMAND', Aims.__command_default)
-
 
         # filter the command and set the member variables "aims_command" and "outfilename"
         self.__init_command(command=command,
@@ -927,32 +928,33 @@ class Aims(FileIOCalculator):
         return np.array(values)
 
 class AimsLibrary(Aims):
-    '''Instance of an Aims Library Calculator, which interfaces with a precompiled shared-library'''
+    '''Instance of an Aims Library Calculator, which interfaces with a 
+       precompiled shared-library'''
     def __init__(self, comm=None, **kwargs):
-        ''' Check if mpi4py exists: this is necessary as we use the py2f() functionality.
-            If successfully loaded, also load the ase.parallel environment, initialising as an MPI4PY() class '''
+        ''' Check if mpi4py exists: this is necessary as we use the py2f() 
+            functionality. If successfully loaded, also load the ase.parallel 
+            environment, initialising as an MPI4PY() class '''
         if comm is None:
-            try:
-                import mpi4py
-            except:
-                raise Exception("mpi4py cannot be imported but is essential. Please check this module is correctly installed.")
+            import mpi4py
             from ase.parallel import world as comm
-
         self.comm = comm
         super(AimsLibrary, self).__init__(**kwargs)
 
-    def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
-        '''Calculation instance - in essence this is just FileIOCalculator minus a system call
+    def calculate(self, atoms=None, properties=['energy'], 
+                  system_changes=all_changes):
+        '''Essentially this is FileIOCalculator.calculate minus a system call
 
            We don't call FileIOCalculator.calculate here, because that method
            calls subprocess.call(..., shell=True), which we don't want to do.
            So, we reproduce some content from that method.
 
-           Ask commented that this isn't ideal to be using a base class functionality
-           in this manner; however, I don't want to duplicate the content of this class either. '''
+           Ask commented that this isn't ideal to be using a base class 
+           functionality in this manner; however, I don't want to duplicate 
+           the content of this class either. '''
 
         # Calculator.calculate(self, atoms, properties, system_changes)
-        super(FileIOCalculator, self).calculate(atoms, properties, system_changes)
+        super(FileIOCalculator, self).calculate(atoms, properties, 
+                                                system_changes)
 
         if self.comm.rank == 0:
             self.write_input(self.atoms, properties, system_changes)
@@ -971,14 +973,15 @@ class AimsLibrary(Aims):
         c_mpi  = c_bool(mpi)
         c_filename = filename.encode('UTF-8')
 
-        ''' Interface: aims_interface(mpi_comm_input,in_unit,mpi_switch,output_filename)
+        ''' Interface: aims_interface(mpi_comm_input,in_unit,mpi_switch,
+                                      output_filename)
+
             FHI-aims library version input variables:
             integer,intent(in) :: mpi_comm_input
             integer,intent(in) :: in_unit
             logical,intent(in) :: mpi_switch
             char(len=*), intent(in): output_filename '''
 
-        ''' Running FHI-aims '''
         aims.aims_interface_.restype = None
         aims.aims_interface_.argtypes = [ POINTER(c_int),
                                           POINTER(c_int),
