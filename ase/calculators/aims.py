@@ -20,7 +20,6 @@ from ase.calculators.calculator import FileIOCalculator, Parameters, kpts2mp, \
 
 # The following are used in AimsLibrary, but cannot be imported there
 from ase.calculators.calculator import all_changes #, Calculator
-from ase.parallel import world
 
 # Specific ctypes variables necessary for interfacing to shared library
 from ctypes import cdll
@@ -929,11 +928,23 @@ class Aims(FileIOCalculator):
 
 class AimsLibrary(Aims):
     '''Instance of an Aims Library Calculator, which interfaces with a precompiled shared-library'''
-    def __init__(self, comm=world, **kwargs):
+    def __init__(self, comm=None, **kwargs):
+        if comm is None:
+            # Check if mpi4py exists: this is necessary as we use the py2f() functionality
+            try:
+                import mpi4py
+            except:
+                raise Exception("mpi4py cannot be imported but is essential. Please check this module is correctly installed.")
+            # Importing the parallel environment here then means we initialise an MPI4PY() ASE instance
+            from ase.parallel import world as comm
+
+        # Store the communicator and proceed as per a normal FHI-aims calculation
         self.comm = comm
         super(AimsLibrary, self).__init__(**kwargs)
 
     def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
+        '''Calculation instance - in essence this is just FileIOCalculator minus a system call'''
+
         # We don't call FileIOCalculator.calculate here, because that method
         # calls subprocess.call(..., shell=True), which we don't want to do.
         # So, we reproduce some content from that method.
