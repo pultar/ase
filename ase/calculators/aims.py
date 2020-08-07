@@ -17,9 +17,12 @@ from ase.io.aims import write_aims, read_aims
 from ase.data import atomic_numbers
 from ase.calculators.calculator import FileIOCalculator, Parameters, kpts2mp, \
     ReadError, PropertyNotImplementedError
-from ase.calculators.calculator import Calculator, all_changes
+
+# The following are used in AimsLibrary, but cannot be imported there
+from ase.calculators.calculator import all_changes #, Calculator
 from ase.parallel import world
 
+# Specific ctypes variables necessary for interfacing to shared library
 from ctypes import cdll
 from ctypes import POINTER, byref, c_int, c_bool, c_char_p
 
@@ -134,7 +137,7 @@ class Aims(FileIOCalculator):
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label=os.curdir, atoms=None, cubes=None, radmul=None,
-                 tier=None, aims_command=None, comm=world,
+                 tier=None, aims_command=None,
                  outfilename=None, **kwargs):
         """Construct the FHI-aims calculator.
 
@@ -246,8 +249,6 @@ class Aims(FileIOCalculator):
         self.cubes = cubes
         self.radmul = radmul
         self.tier = tier
-        
-        self.comm = comm
 
     # handling the filtering for dynamical commands with properties,
     @property  # type: ignore
@@ -403,19 +404,17 @@ class Aims(FileIOCalculator):
             raise RuntimeError('Found lattice vectors but no k-grid!')
         if not have_lattice_vectors and have_k_grid:
             raise RuntimeError('Found k-grid but no lattice vectors!')
-
-        if self.comm.rank == 0:
-            write_aims(
-                os.path.join(self.directory, 'geometry.in'),
-                atoms,
-                scaled,
-                geo_constrain,
-                velocities=velocities,
-                ghosts=ghosts
-            )
-            self.write_control(atoms, os.path.join(self.directory, 'control.in'))
-            self.write_species(atoms, os.path.join(self.directory, 'control.in'))
-            self.parameters.write(os.path.join(self.directory, 'parameters.ase'))
+        write_aims(
+            os.path.join(self.directory, 'geometry.in'),
+            atoms,
+            scaled,
+            geo_constrain,
+            velocities=velocities,
+            ghosts=ghosts
+        )
+        self.write_control(atoms, os.path.join(self.directory, 'control.in'))
+        self.write_species(atoms, os.path.join(self.directory, 'control.in'))
+        self.parameters.write(os.path.join(self.directory, 'parameters.ase'))
 
     def prepare_input_files(self):
         """
@@ -455,6 +454,8 @@ class Aims(FileIOCalculator):
                 output.write('%-35s%f %f %f\n' % (('k_offset',) + tuple(dk)))
             elif key == 'species_dir' or key == 'run_command':
                 continue
+            # Necessary for the AimsLibrary class. This is not ideal but I don't want to duplicate
+            # this entire function just to add this one exception
             elif key == 'comm':
                 continue
             elif key == 'plus_u':
@@ -504,9 +505,7 @@ class Aims(FileIOCalculator):
                                                        'parameters.ase'))
         if symmetry_block:
             self.parameters["symmetry_block"] = symmetry_block
-
-        if self.comm.rank == 0:
-            self.read_results()
+        self.read_results()
 
     def read_results(self):
         converged = self.read_convergence()
@@ -928,28 +927,26 @@ class Aims(FileIOCalculator):
             values = None
         return np.array(values)
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes):
-        if self.comm.size == 1:
-            FileIOCalculator.calculate(self, atoms, properties,
-                                       system_changes)
-        else:
-            self._execute_library(atoms, properties, system_changes)
+class AimsLibrary(Aims):
+    '''Instance of an Aims Library Calculator, which interfaces with a precompiled shared-library'''
+    def __init__(self, comm=world, **kwargs):
+        self.comm = comm
+        super(AimsLibrary, self).__init__(**kwargs)
 
-    def _execute_library(self, atoms=None, properties=['energy'],
-                         system_changes=all_changes):
+    def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
         # We don't call FileIOCalculator.calculate here, because that method
         # calls subprocess.call(..., shell=True), which we don't want to do.
-        # So, we reproduce some content from that method here.
-        Calculator.calculate(self, atoms, properties, system_changes)
+        # So, we reproduce some content from that method.
+
+        # Ask commented that this isn't ideal to be using a base class functionality
+        # in this manner; however, I don't want to duplicate the content of this class either.
+        # Calculator.calculate(self, atoms, properties, system_changes)
+        super(FileIOCalculator, self).calculate(atoms, properties, system_changes)
 
         # Write control and geometry files 
-        self.write_input(self.atoms, properties, system_changes)
+        if self.comm.rank == 0:
+            self.write_input(self.atoms, properties, system_changes)
 
-        # Moved these imports to the top of the class definition
-        #from ctypes import cdll
-        #from ctypes import POINTER, byref, c_int, c_bool, c_char_p
-        
         # Load the FHI-aims library
         lib = self.aims_command
         aims = cdll.LoadLibrary(lib)
@@ -958,7 +955,7 @@ class Aims(FileIOCalculator):
         mpi = True
 
         # Set output file details 
-        filename = self.outfilename 
+        filename = self.outfilename
         unit = 10
 
         # Set c variables for calling FHI-aims
@@ -976,16 +973,16 @@ class Aims(FileIOCalculator):
 
         # Running FHI-aims
         aims.aims_interface_.restype = None
-        aims.aims_interface_.argtypes = [ POINTER(c_int), 
-                                          POINTER(c_int), 
-                                          POINTER(c_bool),  
-                                          c_char_p, 
+        aims.aims_interface_.argtypes = [ POINTER(c_int),
+                                          POINTER(c_int),
+                                          POINTER(c_bool),
+                                          c_char_p,
                                           c_int ]
 
-        aims.aims_interface_(byref(c_comm), 
-                             byref(c_unit), 
-                             byref(c_mpi), 
-                             c_filename,  
+        aims.aims_interface_(byref(c_comm),
+                             byref(c_unit),
+                             byref(c_mpi),
+                             c_filename,
                              len(filename))
 
         self.read_results()
@@ -1064,4 +1061,3 @@ class AimsCube:
         if self.ncubes() > 1:
             for i in range(self.ncubes() - 1):
                 file.write('output cube ' + self.plots[i + 1] + '\n')
-
