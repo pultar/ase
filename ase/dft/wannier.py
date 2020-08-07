@@ -284,6 +284,74 @@ def init_orbitals(atoms, ntot, rng=np.random):
     return orbs
 
 
+class WannierData:
+    def __init__(self, calc, spin):
+        if calc is not None:
+            self.calc = calc
+            self.atoms = calc.get_atoms()
+            self.kpt_kc = calc.get_bz_k_points()
+            self.ibz_kpt_kc = calc.get_ibz_k_points()
+            self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
+            self.Nb = calc.get_number_of_bands()
+            self.fermi_level = calc.get_fermi_level()
+            self.homo_lumo = calc.get_homo_lumo()
+            self.spin = spin
+            self.eig_kn = np.array([calc.get_eigenvalues(k, self.spin)
+                                    for k in range(len(self.kpt_kc))])
+            self.pseudo_wf_kn = np.array([[calc.get_pseudo_wave_function(
+                band=n, kpt=k, spin=self.spin, pad=True)
+                for n in range(self.Nb)]
+                for k in range(len(self.kpt_kc))])
+
+    def get_atoms(self):
+        return self.atoms
+
+    def get_bz_k_points(self):
+        return self.kpt_kc
+
+    def get_ibz_k_points(self):
+        return self.ibz_kpt_kc
+
+    def get_kptgrid(self):
+        return self.kptgrid
+
+    def get_number_of_bands(self):
+        return self.Nb
+
+    def get_fermi_level(self):
+        return self.fermi_level
+
+    def get_homo_lumo(self):
+        return self.homo_lumo
+
+    def get_eigenvalues(self, kpt):
+        return self.eig_kn[kpt]
+
+    def get_pseudo_wave_function(self, band, kpt):
+        return self.pseudo_wf_kn[kpt, band]
+
+    def get_number_of_grid_points(self):
+        return self.calc.get_number_of_grid_points().ravel()
+
+    def get_wannier_localization_matrix(self, Gdir_dc, kklst_dk, k0_dkc):
+        Z_dknn = np.empty((len(Gdir_dc), len(self.kpt_kc),
+                          self.Nb, self.Nb), dtype=complex)
+        for d, dirG in enumerate(Gdir_dc):
+            for k in range(len(self.kpt_kc)):
+                k1 = kklst_dk[d, k]
+                k0_c = k0_dkc[d, k]
+                Z_dknn[d, k] = self.calc.get_wannier_localization_matrix(
+                    nbands=self.Nb, dirG=dirG, kpoint=k, nextkpoint=k1,
+                    G_I=k0_c, spin=self.spin)
+        return Z_dknn
+
+    def initial_wannier(self, initialwannier, fixedstates_k, edf_k):
+        C_kul, U_kww = self.calc.initial_wannier(
+            initialwannier, self.kptgrid, fixedstates_k,
+            edf_k, self.spin, self.Nb)
+        return C_kul, U_kww
+
+
 class Wannier:
     """Maximally localized Wannier Functions
 
@@ -292,7 +360,9 @@ class Wannier:
     12847).
     """
 
-    def __init__(self, nwannier, calc,
+    def __init__(self, nwannier,
+                 calc=None,
+                 wannier_data=None,
                  file=None,
                  nbands=None,
                  fixedenergy=None,
@@ -340,7 +410,7 @@ class Wannier:
             randomized, 'orbitals' to start from atom-centered d-orbitals and
             randomly placed gaussian centers (see init_orbitals()),
             'scdm' to start from localized state selected with SCDM
-            or a list passed to calc.get_initial_wannier.
+            or a list passed to calc.initial_wannier.
 
           ``functional``: The functional used to measure the localization.
             Can be 'std' for the standard quadratic functional from the PRB
@@ -356,19 +426,22 @@ class Wannier:
         sign = -1
 
         self.verbose = verbose
-        self.calc = calc
         self.spin = spin
+        if wannier_data is None and calc is not None:
+            self.wd = WannierData(calc, self.spin)
+        elif wannier_data is not None:
+            self.wd = wannier_data
         self.functional = functional
         self.initialwannier = initialwannier
         if self.verbose:
             print('Using functional:', functional)
-        self.kpt_kc = calc.get_bz_k_points()
-        assert len(calc.get_ibz_k_points()) == len(self.kpt_kc)
-        self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
+        self.kpt_kc = self.wd.get_bz_k_points()
+        assert len(self.wd.get_ibz_k_points()) == len(self.kpt_kc)
+        self.kptgrid = self.wd.get_kptgrid()
         self.kpt_kc *= sign
 
         self.Nk = len(self.kpt_kc)
-        self.unitcell_cc = calc.get_atoms().get_cell()
+        self.unitcell_cc = self.wd.get_atoms().get_cell()
         self.largeunitcell_cc = (self.unitcell_cc.T * self.kptgrid).T
         self.weight_d, self.Gdir_dc = calculate_weights(self.largeunitcell_cc)
         self.Ndir = len(self.weight_d)  # Number of directions
@@ -376,7 +449,7 @@ class Wannier:
         if nbands is not None:
             self.nbands = nbands
         else:
-            self.nbands = calc.get_number_of_bands()
+            self.nbands = self.wd.get_number_of_bands()
 
         if fixedenergy is None and fixedstates is not None:
             if isinstance(fixedstates, int):
@@ -388,12 +461,12 @@ class Wannier:
             # The reference energy is Ef for metals and CBM for insulators.
             if (bandgap(calc=calc, output=None)[0] < 0.01
                     or fixedenergy < 0.01):
-                cutoff = fixedenergy + calc.get_fermi_level()
+                cutoff = fixedenergy + self.wd.get_fermi_level()
             else:
-                cutoff = fixedenergy + calc.get_homo_lumo()[1]
+                cutoff = fixedenergy + self.wd.get_homo_lumo()[1]
 
             self.fixedstates_k = np.array(
-                [calc.get_eigenvalues(k, spin).searchsorted(cutoff)
+                [self.wd.get_eigenvalues(k).searchsorted(cutoff)
                  for k in range(self.Nk)], int)
         elif fixedenergy is not None and fixedstates is not None:
             raise RuntimeError(
@@ -406,8 +479,8 @@ class Wannier:
         elif nwannier == 'auto':
             if fixedenergy is None and fixedstates is None:
                 self.fixedstates_k = np.array(
-                    [calc.get_eigenvalues(k, spin).searchsorted(
-                        calc.get_fermi_level())
+                    [self.wd.get_eigenvalues(k).searchsorted(
+                        self.wd.get_fermi_level())
                         for k in range(self.Nk)], int)
             self.nwannier = np.max(self.fixedstates_k)
             if fixedstates is None and fixedenergy is None:
@@ -467,14 +540,8 @@ class Wannier:
         self.Z_dkww = np.empty((self.Ndir, self.Nk, Nw, Nw), complex)
         self.V_knw = np.zeros((self.Nk, Nb, Nw), complex)
         if file is None:
-            self.Z_dknn = np.empty((self.Ndir, self.Nk, Nb, Nb), complex)
-            for d, dirG in enumerate(self.Gdir_dc):
-                for k in range(self.Nk):
-                    k1 = self.kklst_dk[d, k]
-                    k0_c = k0_dkc[d, k]
-                    self.Z_dknn[d, k] = calc.get_wannier_localization_matrix(
-                        nbands=Nb, dirG=dirG, kpoint=k, nextkpoint=k1,
-                        G_I=k0_c, spin=self.spin)
+            self.Z_dknn = self.wd.get_wannier_localization_matrix(
+                self.Gdir_dc, self.kklst_dk, k0_dkc)
         self.initialize(file=file, initialwannier=initialwannier, rng=rng)
 
     def initialize(self, file=None, initialwannier='random', rng=np.random):
@@ -510,31 +577,25 @@ class Wannier:
                 else:
                     self.C_kul.append(np.array([]))
         elif initialwannier == 'orbitals':
-            self.C_kul, self.U_kww = self.calc.initial_wannier(
-                init_orbitals(self.calc.get_atoms(), self.nwannier, rng),
-                self.kptgrid, self.fixedstates_k,
-                self.edf_k, self.spin, self.nbands)
+            self.C_kul, self.U_kww = self.wd.initial_wannier(
+                init_orbitals(self.wd.get_atoms(), self.nwannier, rng),
+                self.fixedstates_k, self.edf_k)
         elif initialwannier == 'scdm':
-            # get the size of the grid and check if there are Nw bands
-            ps = self.calc.get_pseudo_wave_function(band=self.nwannier,
-                                                    kpt=0, spin=0)
-            Ng = ps.size
+            Ng = np.prod(self.wd.get_number_of_grid_points())
             pseudo_nkG = np.zeros((self.nbands, self.Nk, Ng),
                                   dtype=np.complex128)
             for k in range(self.Nk):
                 for n in range(self.nbands):
                     pseudo_nkG[n, k] = \
-                        self.calc.get_pseudo_wave_function(
-                            band=n, kpt=k, spin=self.spin).ravel()
+                        self.wd.get_pseudo_wave_function(band=n, kpt=k).ravel()
             self.C_kul, self.U_kww = scdm(pseudo_nkG,
                                           kpts=self.kpt_kc,
                                           fixed_k=self.fixedstates_k,
                                           Nw=self.nwannier)
         else:
             # Use initial guess to determine U and C
-            self.C_kul, self.U_kww = self.calc.initial_wannier(
-                initialwannier, self.kptgrid, self.fixedstates_k,
-                self.edf_k, self.spin, self.nbands)
+            self.C_kul, self.U_kww = self.wd.initial_wannier(
+                initialwannier, self.fixedstates_k, self.edf_k)
         self.update()
 
     def save(self, file):
@@ -600,7 +661,7 @@ class Wannier:
             # Define once with the fastest 'initialwannier',
             # then initialize with random seeds in the for loop
             wan = Wannier(nwannier=int(Nw),
-                          calc=self.calc,
+                          wannier_data=self.wd,
                           nbands=self.nbands,
                           spin=self.spin,
                           functional=self.functional,
@@ -682,7 +743,7 @@ class Wannier:
         spec_kn = self.get_spectral_weight(w)
         dos = np.zeros(len(energies))
         for k, spec_n in enumerate(spec_kn):
-            eig_n = self.calc.get_eigenvalues(kpt=k, spin=self.spin)
+            eig_n = self.wd.get_eigenvalues(kpt=k)
             for weight, eig in zip(spec_n, eig_n):
                 # Add gaussian centered at the eigenvalue
                 x = ((energies - eig) / width)**2
@@ -792,7 +853,7 @@ class Wannier:
           H(k) = V    diag(eps )  V
                   k           k    k
         """
-        eps_n = self.calc.get_eigenvalues(kpt=k, spin=self.spin)[:self.nbands]
+        eps_n = self.wd.get_eigenvalues(kpt=k)[:self.nbands]
         return np.dot(dag(self.V_knw[k]) * eps_n, self.V_knw[k])
 
     def get_hamiltonian_kpoint(self, kpt_c):
@@ -845,7 +906,7 @@ class Wannier:
             repeat = self.kptgrid
         N1, N2, N3 = repeat
 
-        dim = self.calc.get_number_of_grid_points()
+        dim = self.wd.get_number_of_grid_points()
         largedim = dim * [N1, N2, N3]
 
         wanniergrid = np.zeros(largedim, dtype=complex)
@@ -858,8 +919,7 @@ class Wannier:
 
             wan_G = np.zeros(dim, complex)
             for n, coeff in enumerate(vec_n):
-                wan_G += coeff * self.calc.get_pseudo_wave_function(
-                    n, k, self.spin, pad=True)
+                wan_G += coeff * self.wd.get_pseudo_wave_function(n, k)
 
             # Distribute the small wavefunction over large cell:
             for n1 in range(N1):
@@ -883,7 +943,7 @@ class Wannier:
             repeat = self.kptgrid
 
         # Remove constraints, some are not compatible with repeat()
-        atoms = self.calc.get_atoms()
+        atoms = self.wd.get_atoms()
         atoms.set_constraint()
         atoms = atoms * repeat
         func = self.get_function(index, repeat)
