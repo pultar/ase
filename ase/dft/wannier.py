@@ -285,7 +285,7 @@ def init_orbitals(atoms, ntot, rng=np.random):
 
 
 class WannierData:
-    def __init__(self, calc, spin):
+    def __init__(self, calc, nbands, spin):
         if calc is not None:
             # Bloch phase sign convention.
             # May require special cases depending on which code is used.
@@ -296,7 +296,10 @@ class WannierData:
             self.ibz_kpt_kc = calc.get_ibz_k_points()
             self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
             self.kpt_kc *= sign
-            self.Nb = calc.get_number_of_bands()
+            if nbands is not None:
+                self.Nb = nbands
+            else:
+                self.Nb = calc.get_number_of_bands()
             self.fermi_level = calc.get_fermi_level()
             self.homo_lumo = calc.get_homo_lumo()
             self.spin = spin
@@ -448,11 +451,7 @@ class Wannier:
         self.largeunitcell_cc = (self.unitcell_cc.T * self.kptgrid).T
         self.weight_d, self.Gdir_dc = calculate_weights(self.largeunitcell_cc)
         self.Ndir = len(self.weight_d)  # Number of directions
-
-        if nbands is not None:
-            self.nbands = nbands
-        else:
-            self.nbands = self.wd.get_number_of_bands()
+        self.nbands = self.wd.get_number_of_bands()
 
         if fixedenergy is None and fixedstates is not None:
             if isinstance(fixedstates, int):
@@ -676,7 +675,8 @@ class Wannier:
 
             max_spreads = np.zeros(random_reps)
             for i in range(random_reps):
-                wan.initialize(initialwannier=self.initialwannier, rng=np.random)
+                wan.initialize(initialwannier=self.initialwannier,
+                               rng=np.random)
                 wan.localize(tolerance=tolerance)
                 max_spreads[i] = np.max(wan.get_spreads())
 
