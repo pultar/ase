@@ -287,11 +287,15 @@ def init_orbitals(atoms, ntot, rng=np.random):
 class WannierData:
     def __init__(self, calc, spin):
         if calc is not None:
+            # Bloch phase sign convention.
+            # May require special cases depending on which code is used.
+            sign = -1
             self.calc = calc
             self.atoms = calc.get_atoms()
             self.kpt_kc = calc.get_bz_k_points()
             self.ibz_kpt_kc = calc.get_ibz_k_points()
             self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
+            self.kpt_kc *= sign
             self.Nb = calc.get_number_of_bands()
             self.fermi_level = calc.get_fermi_level()
             self.homo_lumo = calc.get_homo_lumo()
@@ -421,16 +425,16 @@ class Wannier:
 
           ``verbose``: True / False level of verbosity.
           """
-        # Bloch phase sign convention.
-        # May require special cases depending on which code is used.
-        sign = -1
 
-        self.verbose = verbose
         self.spin = spin
         if wannier_data is None and calc is not None:
             self.wd = WannierData(calc, self.spin)
         elif wannier_data is not None:
             self.wd = wannier_data
+        else:
+            raise RuntimeError('Missing calculator or WannierData object.')
+
+        self.verbose = verbose
         self.functional = functional
         self.initialwannier = initialwannier
         if self.verbose:
@@ -438,7 +442,6 @@ class Wannier:
         self.kpt_kc = self.wd.get_bz_k_points()
         assert len(self.wd.get_ibz_k_points()) == len(self.kpt_kc)
         self.kptgrid = self.wd.get_kptgrid()
-        self.kpt_kc *= sign
 
         self.Nk = len(self.kpt_kc)
         self.unitcell_cc = self.wd.get_atoms().get_cell()
@@ -490,10 +493,6 @@ class Wannier:
 
         self.edf_k = self.nwannier - self.fixedstates_k
 
-        if verbose:
-            print('Wannier: Fixed states            : %s' % self.fixedstates_k)
-            print('Wannier: Extra degrees of freedom: %s' % self.edf_k)
-
         # Set the list of neighboring k-points k1, and the "wrapping" k0,
         # such that k1 - k - G + k0 = 0
         #
@@ -544,13 +543,17 @@ class Wannier:
                 self.Gdir_dc, self.kklst_dk, k0_dkc)
         self.initialize(file=file, initialwannier=initialwannier, rng=rng)
 
-    def initialize(self, file=None, initialwannier='random', rng=np.random):
+    def initialize(self, file=None, initialwannier='orbitals', rng=np.random):
         """Re-initialize current rotation matrix.
 
         Keywords are identical to those of the constructor.
         """
         Nw = self.nwannier
         Nb = self.nbands
+
+        if self.verbose:
+            print('Wannier: Fixed states            : %s' % self.fixedstates_k)
+            print('Wannier: Extra degrees of freedom: %s' % self.edf_k)
 
         if file is not None:
             self.Z_dknn, self.U_kww, self.C_kul = load(paropen(file, 'rb'))
@@ -667,13 +670,13 @@ class Wannier:
                           functional=self.functional,
                           initialwannier='bloch',
                           verbose=self.verbose,
-                          rng=np.random)
+                          rng=np.random.RandomState(0))
             wan.fixedstates_k = self.fixedstates_k
             wan.edf_k = wan.nwannier - wan.fixedstates_k
 
             max_spreads = np.zeros(random_reps)
             for i in range(random_reps):
-                wan.initialize(initialwannier=self.initialwannier)
+                wan.initialize(initialwannier=self.initialwannier, rng=np.random.RandomState(0))
                 wan.localize(tolerance=tolerance)
                 max_spreads[i] = np.max(wan.get_spreads())
 
