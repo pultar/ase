@@ -670,13 +670,13 @@ class Wannier:
                           functional=self.functional,
                           initialwannier='bloch',
                           verbose=self.verbose,
-                          rng=np.random.RandomState(0))
+                          rng=np.random)
             wan.fixedstates_k = self.fixedstates_k
             wan.edf_k = wan.nwannier - wan.fixedstates_k
 
             max_spreads = np.zeros(random_reps)
             for i in range(random_reps):
-                wan.initialize(initialwannier=self.initialwannier, rng=np.random.RandomState(0))
+                wan.initialize(initialwannier=self.initialwannier, rng=np.random)
                 wan.localize(tolerance=tolerance)
                 max_spreads[i] = np.max(wan.get_spreads())
 
@@ -908,8 +908,6 @@ class Wannier:
         if repeat is None:
             repeat = self.kptgrid
         N1, N2, N3 = repeat
-
-        dim = self.wd.get_number_of_grid_points()
         largedim = dim * [N1, N2, N3]
 
         wanniergrid = np.zeros(largedim, dtype=complex)
