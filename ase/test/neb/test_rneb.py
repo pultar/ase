@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 
 def test_slab_rneb(initial_Al_fcc100_slab):
@@ -41,7 +42,6 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
     from ase.calculators.emt import EMT
     from ase.optimize import BFGS
     from ase.neb import NEB
-    import numpy as np
 
     # Only for debugging
     import inspect
