@@ -431,7 +431,7 @@ class Wannier:
 
         self.spin = spin
         if wannier_data is None and calc is not None:
-            self.wd = WannierData(calc, self.spin)
+            self.wd = WannierData(calc, nbands=nbands, spin=self.spin)
         elif wannier_data is not None:
             self.wd = wannier_data
         else:
@@ -583,7 +583,7 @@ class Wannier:
                 init_orbitals(self.wd.get_atoms(), self.nwannier, rng),
                 self.fixedstates_k, self.edf_k)
         elif initialwannier == 'scdm':
-            Ng = np.prod(self.wd.get_number_of_grid_points())
+            Ng = self.wd.get_number_of_grid_points().prod()
             pseudo_nkG = np.zeros((self.nbands, self.Nk, Ng),
                                   dtype=np.complex128)
             for k in range(self.Nk):
@@ -622,6 +622,9 @@ class Wannier:
 
         # Update the new Z matrix
         self.Z_dww = self.Z_dkww.sum(axis=1) / self.Nk
+
+    def get_wannier_data(self):
+        return self.wd
 
     def get_optimal_nwannier(self, nwrange=5, random_reps=5, tolerance=1e-6):
         """The optimal value for 'nwannier', maybe
@@ -908,6 +911,7 @@ class Wannier:
         if repeat is None:
             repeat = self.kptgrid
         N1, N2, N3 = repeat
+        dim = self.wd.get_number_of_grid_points()
         largedim = dim * [N1, N2, N3]
 
         wanniergrid = np.zeros(largedim, dtype=complex)

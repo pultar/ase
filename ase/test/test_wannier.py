@@ -85,24 +85,26 @@ def wan(rng, std_calculator):
     def _wan(gpts=(8, 8, 8),
              atoms=None,
              calc=None,
+             wannier_data=None,
              nwannier=2,
              fixedstates=None,
              fixedenergy=None,
              initialwannier='bloch',
              functional='std',
              kpts=(1, 1, 1),
+             nbands=None,
              file=None,
              rng=rng,
              full_calc=False,
              std_calc=True,
              verbose=False):
-        if std_calc and calc is None:
+        if std_calc and calc is None and wannier_data is None:
             calc = std_calculator
             if atoms is not None:
                 atoms.calc = calc
                 calc.atoms = atoms
                 atoms.get_potential_energy()
-        else:
+        elif wannier_data is None:
             if calc is None:
                 gpaw = pytest.importorskip('gpaw')
                 calc = gpaw.GPAW(gpts=gpts, nbands=nwannier, kpts=kpts,
@@ -118,10 +120,12 @@ def wan(rng, std_calculator):
                        fixedstates=fixedstates,
                        fixedenergy=fixedenergy,
                        calc=calc,
+                       wannier_data=wannier_data,
                        initialwannier=initialwannier,
-                       file=None,
+                       file=file,
                        functional=functional,
                        rng=rng,
+                       nbands=nbands,
                        verbose=verbose)
     return _wan
 
@@ -624,3 +628,10 @@ def test_get_optimal_nwannier(wan, gaas_calculator):
                nwannier='auto', fixedenergy=0)
     opt_nw = wanf.get_optimal_nwannier()
     assert opt_nw == 4
+
+
+def test_nbands(wan):
+    # dummy test on accepting 'nbands' as argument
+    wanf = wan(initialwannier='bloch', std_calc=True,
+               nwannier=2, nbands=3)
+    assert wanf.get_functional_value() > 0
