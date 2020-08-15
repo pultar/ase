@@ -42,29 +42,69 @@ class DOS:
                 raise ValueError(msg)
         self.info = np.asarray(info)  # Make info np array for slicing purposes
 
-    def delta(self, x, x0, width, smearing='Gauss'):
+    def delta(self, x: np.ndarray, x0: np.ndarray, width: float,
+              smearing='Gauss'):
         """Return a delta-function centered at 'x0'."""
         if smearing.lower() == 'gauss':
             x1 = -((x - x0) / width)**2
             return np.exp(x1) / (np.sqrt(np.pi) * width)
+        elif smearing.lower() == 'lorentz':
+            return -((1.0 / (x - x0 + 1j * width)).imag)/np.pi
         else:
-            msg = 'Requested smearing type not recognized. Got {}'.format(
-                smearing)
-            raise ValueError(msg)
+            raise ValueError('Requested smearing type not recognized. '
+                            f'Got {smearing}')
 
-    def smear(self, energy_grid, width=0.1, smearing='Gauss'):
+    def smear0(self, energy_grid: np.ndarray, width=0.1,
+              smearing='Gauss') -> np.ndarray:
         """Add Gaussian smearing, to all weights onto an energy grid.
-        Disabled for width=0.0"""
-        if width == 0.0:
-            msg = 'Cannot add 0 width smearing'
-            raise ValueError(msg)
+           Recompute self.weights and self.energies on a given energy grid,
+           with a given smearing.
+        Arguments:
+            energy_grid: array of energy values to resample the self.weights
+            
+            width: full-width at half maximum, in units of self.energy
+               Disabled for width <= 0.0
+            
+            smearing: type of broadening (smearing) of the weights.
+        Return:
+            new weights
+        """
+        if width <= 0.0:
+            raise ValueError('Cannot add 0 width smearing')
 
         en0 = self.energy[:, np.newaxis]  # Add axis to use NumPy broadcasting
-        weights_grid = np.dot(self.weights,
-                              self.delta(energy_grid, en0, width,
-                                         smearing=smearing))
+        delta = self.delta(energy_grid, en0, width, smearing=smearing)
+        weights_grid = np.dot(self.weights, delta)
+        return weights_grid
+
+
+    def smear(self, energy_grid: np.ndarray, width=0.1,
+              smearing='Gauss') -> np.ndarray:
+        """Add a smearing, to all weights onto an energy grid.
+           Recompute self.weights and self.energies on a given energy grid,
+           with a given smearing.
+        Arguments:
+            energy_grid: array of energy values to resample the self.weights
+            
+            width: full-width at half maximum, in units of self.energy
+               Disabled for width <= 0.0
+            
+            smearing: type of broadening (smearing) of the weights.
+        Return:
+            new weights
+        """
+        if width <= 0.0:
+            raise ValueError('Cannot add 0 width smearing')
+
+        en0 = self.energy[:, np.newaxis]  # Add axis to use NumPy broadcasting
+        wshape = tuple([1] + list(energy_grid.shape))
+        weights_grid = np.zeros(wshape)
+        for ienergy, energy in enumerate(energy_grid):
+            delta = self.delta(energy, en0, width, smearing=smearing)
+            weights_grid[..., ienergy] = np.dot(self.weights, delta)
 
         return weights_grid
+
 
     def sample(self, grid, width=0.1, smearing='Gauss', gridtype='general'):
         """Sample this DOS on a grid, returning result as a new DOS."""
@@ -76,9 +116,7 @@ class DOS:
                     'type': gridtype}
 
         weights_grid = self.smear(grid, width=width, smearing=smearing)
-
-        dos_new = DOS(grid, weights_grid,
-                      info=self.info, sampling=sampling)
+        dos_new = DOS(grid, weights_grid, info=self.info, sampling=sampling)
         return dos_new
 
     def sample_grid(self, spacing=None, npts=None, width=0.1,
@@ -99,9 +137,10 @@ class DOS:
 
         grid_uniform = DOS._make_uniform_grid(emin, emax, spacing=spacing,
                                               npts=npts, width=width)
-
-        return self.sample(grid_uniform, width=width,
-                           smearing=smearing, gridtype='uniform')
+        
+        dos_new = self.sample(grid_uniform, width=width, smearing=smearing,
+            gridtype='uniform')
+        return dos_new
 
     @staticmethod
     def sample_many(doslist, grid, width=0.1, smearing='Gauss',
