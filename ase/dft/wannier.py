@@ -104,15 +104,16 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
             else:
                 Nb_s.append(1)
         prev_d = d
+    Nb_s = np.array(Nb_s, dtype=np.uint8)
 
     # Split arrays based on shells
-    b_mill_sbc = np.empty((len(Nb_s), max(Nb_s), 3))
-    b_cart_sbc = np.empty((len(Nb_s), max(Nb_s), 3))
-    b_dist_s = np.empty(len(Nb_s))
+    b_mill_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=np.int8)
+    b_cart_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=float)
+    b_dist_s = np.empty(len(Nb_s), dtype=float)
     tot = 0
     for s, Nb in enumerate(Nb_s):
-        b_mill_sbc[s][:Nb] = b_mill_pc[tot:tot + Nb]
-        b_cart_sbc[s][:Nb] = b_cart_pc[tot:tot + Nb]
+        b_mill_sbc[s, :Nb] = b_mill_pc[tot:tot + Nb]
+        b_cart_sbc[s, :Nb] = b_cart_pc[tot:tot + Nb]
         b_dist_s[s] = b_dist_p[tot]
         tot += Nb
 
@@ -176,43 +177,62 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
             break
 
     Nb_s = Nb_s[:Ns]
+    Nb = np.sum([n for n in Nb_s]).astype(np.uint8)
     if verbose:
         print('Number of neighbors in each shell:', Nb_s)
         print('Distances:', b_dist_s[:Ns])
 
-    b_frac_sbc = b_mill_sbc.copy().astype(float)[:Ns]
-    b_frac_sbc[:, :] /= kgrid
+    # Split couples in two separate arrays
+    Nd = (Nb / 2).astype(np.uint8)
+    Nd_s = (Nb_s / 2).astype(np.uint8)
+    b_mill_sdc = np.empty((Ns, Nd, 3))
+    for s in range(Ns):
+        tot = 0
+        for i1 in range(Nb_s[s]):
+            b1 = b_mill_sbc[s, i1]
+            for b2 in b_mill_sbc[s, :i1]:
+                if (b1 == - b2).all():
+                    b_mill_sdc[s, tot] = b1
+                    tot += 1
 
-    Nb = np.sum([n for n in Nb_s])
-    nnk_kb = np.empty((Nk, Nb), dtype=np.int8)
-    G_kbc = np.empty((Nk, Nb, 3), dtype=np.int8)
-    w_b = np.empty(Nb, dtype=float)
+    b_frac_sdc = b_mill_sdc.copy().astype(float)[:Ns]
+    b_frac_sdc[:, :] /= kgrid
+
+    nnk_kd = np.empty((Nk, Nd), dtype=np.uint8)
+    G_kdc = np.empty((Nk, Nd, 3), dtype=np.int8)
+    w_d = np.empty(Nd, dtype=float)
     for i, k in enumerate(kpt_frac):
         tot = 0
         for s in range(Ns):
-            for j in range(Nb_s[s]):
-                w_b[s] = Nb_s[s]
-                b = b_frac_sbc[s, j]
+            for j in range(Nd_s[s]):
+                w_d[s] = Nd_s[s]
+                b = b_frac_sdc[s, j]
                 diff = [d.all() for d in
                         np.abs(kpt_frac - k - b) < atol]
                 if True in diff:
-                    nnk_kb[i, tot + j] = diff.index(True)
-                    G_kbc[i, tot + j] = [0, 0, 0]
+                    nnk_kd[i, tot + j] = diff.index(True)
+                    G_kdc[i, tot + j] = [0, 0, 0]
                 else:
                     for g in b_mill_pc:
                         diff = [d.all() for d in
                                 np.abs(kpt_frac - k - b - g) < atol]
                         if True in diff:
-                            nnk_kb[i, tot + j] = diff.index(True)
-                            G_kbc[i, tot + j] = g
+                            nnk_kd[i, tot + j] = diff.index(True)
+                            G_kdc[i, tot + j] = g
                             break
-            tot += Nb_s[s]
+            tot += Nd_s[s]
+
+    # Set the inverse list of neighboring k-points
+    invnnk_kd = np.empty((Nk, Nd), dtype=np.uint8)
+    for k1 in range(Nk):
+        for d in range(Nd):
+            invnnk_kd[k1, d] = nnk_kd[:, d].tolist().index(k1)
 
     if verbose:
         t += time()
         print(f'Neighbors and weights computed in {t:.1f}s')
 
-    return nnk_kb, G_kbc, w_b
+    return nnk_kd, invnnk_kd, G_kdc, w_d
 
 
 def neighbor_k_search(k_c, G_c, kpt_kc, tol=1e-4):
@@ -424,11 +444,11 @@ class Wannier:
 
         # Get list of neighbors and G vectors for each k-point, number of
         # directions and weight for each shell.
-        self.kklst_kd, self.G_kdc, self.weight_d = \
+        self.kklst_kd, self.invkklst_kd, self.G_kdc, self.weight_d = \
             neighbors_and_weights(
                 kpt_kc=self.kpt_kc,
                 recip_v=self.calc.get_atoms().get_cell().reciprocal(),
-                verbose=self.verbose)
+                verbose=True)
         self.Ndir = self.kklst_kd.shape[1]
 
         self.kpt_kc *= sign
@@ -460,13 +480,6 @@ class Wannier:
         if verbose:
             print('Wannier: Fixed states            : %s' % self.fixedstates_k)
             print('Wannier: Extra degrees of freedom: %s' % self.edf_k)
-
-        # Set the inverse list of neighboring k-points
-        self.invkklst_kd = np.empty((self.Nk, self.Ndir), int)
-        for d in range(self.Ndir):
-            for k1 in range(self.Nk):
-                self.invkklst_kd[k1, d] = \
-                    self.kklst_kd[:, d].tolist().index(k1)
 
         dummy = 0  # XXX: GPAW expects this argument but it does not use it
         Nw = self.nwannier
