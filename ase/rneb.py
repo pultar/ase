@@ -246,7 +246,7 @@ class RNEB:
         pos = final_temp.get_positions()
         final_temp.set_positions(pos + dpos_rotated)
         newcalc = SinglePointCalculator(final_temp, **results)
-        final_temp.set_calculator(newcalc)
+        final_temp.calc = newcalc
 
         if filename:
             write(filename, final_temp)

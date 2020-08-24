@@ -21,7 +21,7 @@ def create_path(init, final):
     images = [init]
     for i in range(3):
         image = init.copy()
-        image.set_calculator(EMT())
+        image.calc = EMT()
         images.append(image)
 
     images.append(final)
