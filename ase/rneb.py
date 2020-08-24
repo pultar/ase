@@ -42,7 +42,7 @@ class RNEB:
 
     def __init__(self, tol=1e-3, logfile='-'):
         self.tol = tol  # tolerance on atomic positions
-        self.log = self.setup_log(logfile)
+        self.log = self._setup_log(logfile)
 
     def get_final_image(self, orig, init, init_relaxed, final,
                         supercell=[1, 1, 1],
@@ -53,13 +53,13 @@ class RNEB:
         first check for translations then for rotations
         when an operation is found create final image
         """
-        self.log.warning("Creating final image:")
-        self.log.warning("  Input parameters:")
-        self.log.warning("    Tolerance: {}".format(self.tol))
+        self.log.info("Creating final image:")
+        self.log.info("  Input parameters:")
+        self.log.info("    Tolerance: {}".format(self.tol))
         spacegroup = spg.get_spacegroup(get_spglib_tuple(orig),
                                         symprec=self.tol)
-        self.log.warning("\n  The pristine structure belongs to spacegroup: "
-                         "{}".format(spacegroup))
+        self.log.info("\n  The pristine structure belongs to spacegroup: "
+                      "{}".format(spacegroup))
         # wrap atoms outside unit cell into the unit cell
         init.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
@@ -89,7 +89,8 @@ class RNEB:
 
     def find_symmetries(self, orig, init, final, supercell=[1, 1, 1],
                         log_atomic_idx=False):
-        self.log.warning("\n  Looking for rotations:")
+        print(self.log.getEffectiveLevel())
+        self.log.info("\n  Looking for rotations:")
         init_temp = init.copy()
         final_temp = final.copy()
         init_temp.wrap()
@@ -119,29 +120,29 @@ class RNEB:
             for i, s in enumerate(S):
                 U = s[0]
                 T = s[1]
-                self.log.warning("\n      Symmetry {}:".format(i))
-                self.log.warning("        U:")
+                self.log.info("\n      Symmetry {}:".format(i))
+                self.log.info("        U:")
                 self.write_3x3_matrix_to_log(U)
-                self.log.warning("        T: {:2.2f} {:2.2f} {:2.2f}"
-                                 .format(T[0], T[1], T[2]))
+                self.log.info("        T: {:2.2f} {:2.2f} {:2.2f}"
+                              .format(T[0], T[1], T[2]))
                 if log_atomic_idx:
                     idxs = s[2]
-                    self.log.warning("        Equivalent atoms:")
+                    self.log.info("        Equivalent atoms:")
                     for j, idx in enumerate(idxs):
-                        self.log.warning("          {} -> {}".format(idx, j))
+                        self.log.info("          {} -> {}".format(idx, j))
         else:
             self.log.warning("    No rotations found")
 
         return S
 
     def reflect_path(self, images, sym=None):
-        self.log.warning("Get valid reflections of the path:")
+        self.log.info("Get valid reflections of the path:")
         n = len(images)
         n_half = int(np.ceil(n / 2))
         path_flat = []
         for i, im in enumerate(images[:n_half - 1]):
-            self.log.warning("   Matching vector i_{} - i_{} and i_{} - i_{}:"
-                             .format(i + 1, i, n - i - 2, n - i - 1))
+            self.log.info("   Matching vector i_{} - i_{} and i_{} - i_{}:"
+                          .format(i + 1, i, n - i - 2, n - i - 1))
             pos_ip1 = images[i + 1].get_scaled_positions()
             pos_i = images[i].get_scaled_positions()
             vecf = []
@@ -168,10 +169,10 @@ class RNEB:
             if len(sym) == 0:
                 return sym
             else:
-                self.log.warning("      Found {} valid reflections:"
-                                 .format(len(sym)))
+                self.log.info("      Found {} valid reflections:"
+                              .format(len(sym)))
                 for j, S in enumerate(sym):
-                    self.log.warning("\n        U_{}:".format(j))
+                    self.log.info("\n        U_{}:".format(j))
                     self.write_3x3_matrix_to_log(S[0])
                     S_flat = np.concatenate((S[0], S[1], S[2]), axis=None)
                     path_flat.append(S_flat)
@@ -185,10 +186,10 @@ class RNEB:
             idx = S[12:]
             sym.append([U, T, idx.astype(int)])
 
-        self.log.warning("\n  Found {} valid reflections valid for all of the"
-                         " path:".format(len(sym)))
+        self.log.info("\n  Found {} valid reflections valid for all of the"
+                      " path:".format(len(sym)))
         for i, S in enumerate(sym):
-            self.log.warning("\n        U_{}:".format(i))
+            self.log.info("\n        U_{}:".format(i))
             self.write_3x3_matrix_to_log(S[0])
         return sym
 
@@ -253,13 +254,13 @@ class RNEB:
 
         if filename:
             write(filename, final_temp)
-            self.log.warning("    Created final relaxed image as {}"
-                             .format(filename))
+            self.log.info("    Created final relaxed image as {}"
+                          .format(filename))
         return final_temp
 
     def find_translations(self, orig, init, final, supercell=[1, 1, 1],
                           return_vec=False):
-        self.log.warning("\n  Looking for translations:")
+        self.log.info("\n  Looking for translations:")
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
         # get the symmetry information for the pristine structure
@@ -284,10 +285,10 @@ class RNEB:
                 res, matches = self.compare_translations(pos_final,
                                                          pos, cell)
                 if res:
-                    self.log.warning("    {} -> {} match found!"
-                                     .format(u, eq))
-                    self.log.warning("    T: {:2.2f} {:2.2f} {:2.2f}"
-                                     .format(dpos[0], dpos[1], dpos[2]))
+                    self.log.info("    {} -> {} match found!"
+                                  .format(u, eq))
+                    self.log.info("    T: {:2.2f} {:2.2f} {:2.2f}"
+                                  .format(dpos[0], dpos[1], dpos[2]))
                     if return_vec:
                         return dpos
                     return matches
@@ -297,8 +298,7 @@ class RNEB:
         return None
 
     def compare_translations(self, pos_final, pos, cell):
-        """
-        pos, pos_final: atomic positions of structures to be compared
+        """pos, pos_final: atomic positions of structures to be compared
 
         returns: [boolean, matches]
             True for a match and a list with the matches
@@ -327,30 +327,28 @@ class RNEB:
                     reflections.append(S)
         return reflections
 
-    def setup_log(self, logfile):
-        log = logging.getLogger(__name__)
-        # This removes previous log handlers
-        if log.handlers:
-            log.removeHandler(log.handlers[-1])
+    def _setup_log(self, logfile):
+        # Define a per-instance log
+        log = logging.getLogger('{}.{}'.format(__name__, id(self)))
         if logfile is None:
             f_handler = logging.NullHandler()
         elif logfile == '-':
             f_handler = logging.StreamHandler()
         else:
             f_handler = logging.FileHandler(logfile, 'a')
-        f_handler.setLevel(logging.INFO)
         f_format = logging.Formatter('%(message)s')
         f_handler.setFormatter(f_format)
         log.addHandler(f_handler)
+        log.setLevel(logging.INFO)
         return log
 
     def write_3x3_matrix_to_log(self, x):
-        self.log.warning("          {:2d} {:2d} {:2d}"
-                         .format(x[0][0], x[0][1], x[0][2]))
-        self.log.warning("          {:2d} {:2d} {:2d}"
-                         .format(x[1][0], x[1][1], x[1][2]))
-        self.log.warning("          {:2d} {:2d} {:2d}"
-                         .format(x[2][0], x[2][1], x[2][2]))
+        self.log.info("          {:2d} {:2d} {:2d}"
+                      .format(x[0][0], x[0][1], x[0][2]))
+        self.log.info("          {:2d} {:2d} {:2d}"
+                      .format(x[1][0], x[1][1], x[1][2]))
+        self.log.info("          {:2d} {:2d} {:2d}"
+                      .format(x[2][0], x[2][1], x[2][2]))
 
 
 def is_rotation(R):
