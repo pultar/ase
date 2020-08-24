@@ -89,7 +89,6 @@ class RNEB:
 
     def find_symmetries(self, orig, init, final, supercell=[1, 1, 1],
                         log_atomic_idx=False):
-        print(self.log.getEffectiveLevel())
         self.log.info("\n  Looking for rotations:")
         init_temp = init.copy()
         final_temp = final.copy()
