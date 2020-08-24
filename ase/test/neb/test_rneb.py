@@ -1,14 +1,15 @@
-import pytest
-import numpy as np
-from ase.calculators.emt import EMT
-from ase.build import bulk, fcc111, fcc100, add_adsorbate
-from ase.neb import NEB
-from ase.optimize import BFGS
-from ase.constraints import FixAtoms
-from ase.rneb import RNEB, reshuffle_positions
-
 # Only for debugging
 import inspect
+
+import numpy as np
+import pytest
+
+from ase.build import add_adsorbate, bulk, fcc100, fcc111
+from ase.calculators.emt import EMT
+from ase.constraints import FixAtoms
+from ase.neb import NEB
+from ase.optimize import BFGS
+from ase.rneb import RNEB, reshuffle_positions
 
 
 def test_slab_rneb(initial_Al_fcc100_slab):
@@ -356,6 +357,7 @@ def get_num_sym_operators(atoms, path):
 
     return sym
 
+
 def align_indices(initial, final):
     """
     move the atoms in final such that the indices match with initial.
@@ -402,7 +404,7 @@ def match_atoms(initial, final):
     pos_final = final.get_positions()
     symb_initial = initial.get_chemical_symbols()
     symb_final = final.get_chemical_symbols()
-    sort_list = np.ones(len(initial)).astype(int)*-1
+    sort_list = np.ones(len(initial)).astype(int) * -1
     no_match = []
     for idx_final, state in enumerate(zip(pos_final, symb_final)):
         pf, sf = state
@@ -458,7 +460,7 @@ def find_atom(pos, symb, pos_d, symb_d, critical=True, tol=1e-3):
     for i, state in enumerate(zip(pos, symb)):
         p, s = state
         if s == symb_d:
-            dist = np.linalg.norm(p-pos_d)
+            dist = np.linalg.norm(p - pos_d)
             if dist < tol:
                 return i
     if critical:
