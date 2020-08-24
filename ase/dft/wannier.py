@@ -213,7 +213,7 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                 else:
                     for g in b_mill_pc:
                         diff = [d.all() for d in
-                                np.abs(kpt_frac + g - k - b) < atol]
+                                np.abs(kpt_frac - g - k - b) < atol]
                         if True in diff:
                             nnk_kd[i, tot + j] = diff.index(True)
                             G_kdc[i, tot + j] = g
