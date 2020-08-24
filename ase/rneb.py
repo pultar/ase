@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 
 import numpy as np
 import spglib as spg
@@ -54,7 +53,6 @@ class RNEB:
         first check for translations then for rotations
         when an operation is found create final image
         """
-        t1 = time.time()
         self.log.warning("Creating final image:")
         self.log.warning("  Input parameters:")
         self.log.warning("    Tolerance: {}".format(self.tol))
@@ -73,9 +71,6 @@ class RNEB:
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
                                                    final, trans=trans,
                                                    filename=filename)
-            t2 = time.time()
-            self.log.warning("    Time (create final image): {}"
-                             .format(t2 - t1))
             if return_ops:
                 return [final_relaxed, trans]
             else:
@@ -87,9 +82,6 @@ class RNEB:
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
                                                    final, rot=rot,
                                                    filename=filename)
-            t2 = time.time()
-            self.log.warning("    Time (create final image): {:.3f}"
-                             .format(t2 - t1))
             if return_ops:
                 return [final_relaxed, rot]
             else:
@@ -97,7 +89,6 @@ class RNEB:
 
     def find_symmetries(self, orig, init, final, supercell=[1, 1, 1],
                         log_atomic_idx=False):
-        t1 = time.time()
         self.log.warning("\n  Looking for rotations:")
         init_temp = init.copy()
         final_temp = final.copy()
@@ -141,12 +132,9 @@ class RNEB:
         else:
             self.log.warning("    No rotations found")
 
-        t2 = time.time()
-        self.log.warning("\n    Time (rotation): {:.3f}".format(t2 - t1))
         return S
 
     def reflect_path(self, images, sym=None):
-        t1 = time.time()
         self.log.warning("Get valid reflections of the path:")
         n = len(images)
         n_half = int(np.ceil(n / 2))
@@ -202,8 +190,6 @@ class RNEB:
         for i, S in enumerate(sym):
             self.log.warning("\n        U_{}:".format(i))
             self.write_3x3_matrix_to_log(S[0])
-        t2 = time.time()
-        self.log.warning("\n  Time (map of path): {}".format(t2 - t1))
         return sym
 
     def get_relaxed_final(self, init, init_relaxed, final,
@@ -273,7 +259,6 @@ class RNEB:
 
     def find_translations(self, orig, init, final, supercell=[1, 1, 1],
                           return_vec=False):
-        t1 = time.time()
         self.log.warning("\n  Looking for translations:")
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
@@ -303,17 +288,12 @@ class RNEB:
                                      .format(u, eq))
                     self.log.warning("    T: {:2.2f} {:2.2f} {:2.2f}"
                                      .format(dpos[0], dpos[1], dpos[2]))
-                    t2 = time.time()
-                    self.log.warning("    Time (translation): {:.3f}"
-                                     .format(t2 - t1))
                     if return_vec:
                         return dpos
                     return matches
                 else:
                     self.log.warning("    {} -> {} no match".format(u, eq))
         self.log.warning("    No translations found")
-        t2 = time.time()
-        self.log.warning("    Time (translation): {:.3f}".format(t2 - t1))
         return None
 
     def compare_translations(self, pos_final, pos, cell):
