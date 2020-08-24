@@ -32,10 +32,11 @@ class RNEB:
     operations can be given to the main NEB class to perform
 
 
-    Parameters
-    ----------
-        tol: Tolerance on atomic distances
-        logfile: filename for the log output
+    Parameters:
+        tol (float): Tolerance on atomic distances in Å
+        logfile (str or None): filename for the log output
+            If None then no output is made. Default is '-' for standard
+            stream output.
 
     """
 
@@ -88,6 +89,18 @@ class RNEB:
 
     def find_symmetries(self, orig, init, final, supercell=[1, 1, 1],
                         log_atomic_idx=False):
+        """Find the relevant symmetry operations relating init and final.
+
+        Args:
+            orig (Atoms): Original structure from which all symmetry
+                operations are found using spglib.
+            init (Atoms): Initial structure in the NEB path
+            final (Atoms): Final structure in the NEB path
+            supercell (list): repeat the original structure.
+                Default [1, 1, 1] (no repetitions)
+            log_atomic_idx (bool): Specify if qquivalent indices in init and
+                final should be logged.
+        """
         self.log.info("\n  Looking for rotations:")
         init_temp = init.copy()
         final_temp = final.copy()
@@ -192,6 +205,9 @@ class RNEB:
 
     def get_relaxed_final(self, init, init_relaxed, final,
                           trans=None, rot=None, filename=None):
+        """Obtain a relaxed final structure from a relaxed initial structure.
+
+        """
         if trans is not None and rot is not None:
             msg = ('Cannot specify both trans and rot. '
                    'Got {} and {} respectively.').format(trans, rot)
