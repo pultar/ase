@@ -37,7 +37,7 @@ def lowdin(U, S=None):
     U[:] = np.dot(U, rot)
 
 
-def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
+def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
     """Compute nearest neighbors and weights
 
        Returns a list of neighbors for each k-point, the G vectors to move
@@ -62,7 +62,6 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
         Np = len(perm)
         b_cart_pc = np.empty((Np, 3), dtype=np.float)
         b_dist_p = np.empty(Np, dtype=np.float)
-        kgrid = get_monkhorst_pack_size_and_offset(kpt_frac)[0]
         for i, p in enumerate(perm):
             b_cart_pc[i] = np.sum([p[l] * 2 * np.pi * recip_v[l] / kgrid[l]
                                   for l in range(len(kgrid))], axis=0)
@@ -73,7 +72,6 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
         t = - time()
 
     kpt_frac = kpt_kc
-    kgrid = get_monkhorst_pack_size_and_offset(kpt_frac)[0]
     kpt_cart = np.empty(kpt_frac.shape, dtype=float)
     Nk = len(kpt_frac)
     for i, k in enumerate(kpt_frac):
@@ -205,7 +203,7 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
         tot = 0
         for s in range(Ns):
             for j in range(Nd_s[s]):
-                w_d[s] = Nd_s[s]
+                w_d[tot + j] = 2 * w_s[s]
                 b = b_frac_sdc[s, j]
                 diff = [d.all() for d in
                         np.abs(kpt_frac - k - b) < atol]
@@ -215,7 +213,7 @@ def neighbors_and_weights(kpt_kc, recip_v, atol=1e-6, verbose=False):
                 else:
                     for g in b_mill_pc:
                         diff = [d.all() for d in
-                                np.abs(kpt_frac - k - b - g) < atol]
+                                np.abs(kpt_frac + g - k - b) < atol]
                         if True in diff:
                             nnk_kd[i, tot + j] = diff.index(True)
                             G_kdc[i, tot + j] = g
@@ -441,6 +439,7 @@ class Wannier:
         self.kpt_kc = calc.get_bz_k_points()
         assert len(calc.get_ibz_k_points()) == len(self.kpt_kc)
         self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
+        self.kpt_kc *= sign
 
         # Get list of neighbors and G vectors for each k-point, number of
         # directions and weight for each shell.
@@ -448,10 +447,9 @@ class Wannier:
             neighbors_and_weights(
                 kpt_kc=self.kpt_kc,
                 recip_v=self.calc.get_atoms().get_cell().reciprocal(),
+                kgrid=self.kptgrid,
                 verbose=True)
         self.Ndir = self.kklst_kd.shape[1]
-
-        self.kpt_kc *= sign
 
         self.Nk = len(self.kpt_kc)
         self.unitcell_cc = calc.get_atoms().get_cell()
