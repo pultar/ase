@@ -1,23 +1,24 @@
-import spglib as spg
-import numpy as np
-from ase.io import read, write
-from ase.visualize import view
-from ase.parallel import paropen, parprint
-from ase.geometry import get_distances, find_mic
-from ase.geometry import wrap_positions
-from ase.calculators.singlepoint import SinglePointCalculator
-from ase.calculators.calculator import PropertyNotImplementedError, \
-                                       PropertyNotPresent
+import logging
 import os
 import time
-import logging
+
+import numpy as np
+import spglib as spg
+
+from ase.calculators.calculator import (PropertyNotImplementedError,
+                                        PropertyNotPresent)
+from ase.calculators.singlepoint import SinglePointCalculator
+from ase.geometry import find_mic, get_distances, wrap_positions
+from ase.io import read, write
+from ase.parallel import paropen, parprint
+from ase.visualize import view
 
 
 class RNEB:
-
     """
-    This class is the implementation of the R-NEB method described in:
+    This class is the implementation of the R-NEB method.
 
+    The method is described in:
     Nicolai Rask Mathiesen, Hannes Jónsson, Tejs Vegge,
     and Juan Maria García Lastra, J. Chem. Theory Comput., 2019, 15 (5),
     pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229)
@@ -45,7 +46,8 @@ class RNEB:
         self.tol = tol  # tolerance on atomic positions
         self.log = self.setup_log(logfile)
 
-    def get_final_image(self, orig, init, init_relaxed, final, supercell=[1, 1, 1], 
+    def get_final_image(self, orig, init, init_relaxed, final,
+                        supercell=[1, 1, 1],
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False, filename=None):
         """Find the symmetry operations that map init->final
@@ -101,9 +103,7 @@ class RNEB:
         init_temp.wrap()
         final_temp.wrap()
         pos = init_temp.get_scaled_positions()
-        #init_symb = init_temp.get_chemical_symbols()
         pos_final = final_temp.get_positions()
-        #final_symb = final_temp.get_chemical_symbols()
         cell = init_temp.get_cell()
         orig_temp = orig.copy()
         orig_temp = orig_temp.repeat(supercell)
@@ -150,29 +150,31 @@ class RNEB:
         n = len(images)
         n_half = int(np.ceil(n / 2))
         path_flat = []
-        for i, im in enumerate(images[:n_half-1]):
+        for i, im in enumerate(images[:n_half - 1]):
             self.log.warning("   Matching vector i_{} - i_{} and i_{} - i_{}:"
-                             .format(i+1, i, n-i-2, n-i-1))
+                             .format(i + 1, i, n - i - 2, n - i - 1))
             pos_ip1 = images[i + 1].get_scaled_positions()
             pos_i = images[i].get_scaled_positions()
             vecf = []
             for x, p in enumerate(pos_ip1):
                 d = get_distances([p], [pos_i[x]],
-                                  cell=np.array([[1,0,0],[0,1,0],[0,0,1]]),
-                                  pbc=np.array([1,1,1]))
+                                  cell=np.array(
+                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  pbc=np.array([1, 1, 1]))
                 vecf.append(d[0][0][0])
             #vecf = images[i+1].get_scaled_positions() - images[i].get_scaled_positions()
-            #vecb = images[n-i-2].get_scaled_positions() \
+            # vecb = images[n-i-2].get_scaled_positions() \
             #    - images[n-i-1].get_scaled_positions()
-            pos_nim2 = images[n-i-2].get_scaled_positions()
-            pos_nim1 = images[n-i-1].get_scaled_positions()
+            pos_nim2 = images[n - i - 2].get_scaled_positions()
+            pos_nim1 = images[n - i - 1].get_scaled_positions()
             vecb = []
             for x, p in enumerate(pos_nim2):
                 d = get_distances([p], [pos_nim1[x]],
-                                  cell=np.array([[1,0,0],[0,1,0],[0,0,1]]),
-                                  pbc=np.array([1,1,1]))
+                                  cell=np.array(
+                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  pbc=np.array([1, 1, 1]))
                 vecb.append(d[0][0][0])
-            
+
             sym = self.reflect_movement(vecf, vecb, sym=sym)
             if len(sym) == 0:
                 return sym
@@ -186,7 +188,7 @@ class RNEB:
                     path_flat.append(S_flat)
 
         sym_flat, counts = np.unique(path_flat, axis=0, return_counts=True)
-        sym_flat[np.where(counts == n_half-1)]
+        sym_flat[np.where(counts == n_half - 1)]
         sym = []
         for S in sym_flat:
             U = np.reshape(S[:9], (3, 3)).astype(int)
@@ -224,7 +226,7 @@ class RNEB:
 
             def f(x):
                 return x
-       
+
         final_temp = final.copy()
         dpos = init_relaxed.get_positions() - init.get_positions()
         cell = init.get_cell()
@@ -261,7 +263,7 @@ class RNEB:
         final_temp.set_positions(pos + dpos_rotated)
         newcalc = SinglePointCalculator(final_temp, **results)
         final_temp.set_calculator(newcalc)
-        
+
         if filename:
             write(filename, final_temp)
             self.log.warning("    Created final relaxed image as {}"
@@ -317,7 +319,7 @@ class RNEB:
         """
         pos, pos_final: atomic positions of structures to be compared
 
-        returns: [boolean, matches] 
+        returns: [boolean, matches]
             True for a match and a list with the matches
             matches: i is the index an atom in structure 1 and at index i in
             matches is the index, j, of the corresponding atom in
@@ -340,10 +342,9 @@ class RNEB:
             if is_reflect_op(U):
                 for at2, at in enumerate(idx):
                     vec_init_temp[at2] = np.dot(U, vec_init[at])
-                if np.allclose(vec_init_temp, vec_final, atol=2*self.tol):
+                if np.allclose(vec_init_temp, vec_final, atol=2 * self.tol):
                     reflections.append(S)
         return reflections
-
 
     def setup_log(self, logfile):
         log = logging.getLogger(__name__)
@@ -370,6 +371,7 @@ class RNEB:
         self.log.warning("          {:2d} {:2d} {:2d}"
                          .format(x[2][0], x[2][1], x[2][2]))
 
+
 def is_rotation(R):
     I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     Q = np.dot(np.transpose(R), R)
@@ -378,6 +380,7 @@ def is_rotation(R):
         if det == 1:
             return True
     return False
+
 
 def is_reflect_op(R):
     I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -395,6 +398,7 @@ def is_reflect_op(R):
             return True
     return False
 
+
 def get_spglib_tuple(atoms):
     lattice = atoms.get_cell()
     positions = atoms.get_scaled_positions()
@@ -403,9 +407,10 @@ def get_spglib_tuple(atoms):
         magmoms = atoms.get_magnetic_moments()
     except RuntimeError:
         magmoms = atoms.get_initial_magnetic_moments()
-    
+
     return (lattice, positions, numbers, magmoms)
-    
+
+
 def reshuffle_positions(init, final, min_neb_path_length=1.2):
     """Oh no! Vacancies!
 
@@ -452,13 +457,13 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
                 final_s.positions[j] = p2[c]
             else:
                 final_idx.append(c)
-    # We need to get the atom in final furthest away from init as well
-    init_idx = []
-    for c, j in enumerate(np.argmin(D, axis=1)):
-        if j != c:
+    if len(final_idx) > 0:
+        init_idx = []
+        # We need to get the atom in final furthest away from init as well
+        for c, j in enumerate(np.argmin(D, axis=1)):
             if D[c, j] > ml:
                 init_idx.append(c)
-    assert len(final_idx) == len(init_idx)
-    final_s.positions[np.array(init_idx)] = p2[np.array(final_idx)]
+        assert len(final_idx) == len(init_idx)
+        final_s.positions[np.array(init_idx)] = p2[np.array(final_idx)]
 
     return final_s
