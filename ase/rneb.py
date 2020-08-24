@@ -51,8 +51,9 @@ class RNEB:
                         rot_only=False, filename=None):
         """Find the symmetry operations that map init->final.
 
-           first check for translations then for rotations
-           when an operation is found create final image"""
+        first check for translations then for rotations
+        when an operation is found create final image
+        """
         t1 = time.time()
         self.log.warning("Creating final image:")
         self.log.warning("  Input parameters:")
