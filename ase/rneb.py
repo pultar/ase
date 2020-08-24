@@ -15,8 +15,7 @@ from ase.visualize import view
 
 
 class RNEB:
-    """
-    This class is the implementation of the R-NEB method.
+    """The ASE implementation of the R-NEB method.
 
     The method is described in:
     Nicolai Rask Mathiesen, Hannes Jónsson, Tejs Vegge,
@@ -35,8 +34,8 @@ class RNEB:
     operations can be given to the main NEB class to perform
 
 
-
-    Parameters:
+    Parameters
+    ----------
         tol: Tolerance on atomic distances
         logfile: filename for the log output
 
@@ -50,7 +49,8 @@ class RNEB:
                         supercell=[1, 1, 1],
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False, filename=None):
-        """Find the symmetry operations that map init->final
+        """Find the symmetry operations that map init->final.
+
            first check for translations then for rotations
            when an operation is found create final image"""
         t1 = time.time()
