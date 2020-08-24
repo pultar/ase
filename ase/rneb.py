@@ -8,6 +8,7 @@ from ase.calculators.calculator import (PropertyNotImplementedError,
                                         PropertyNotPresent)
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
+from ase.utils import atoms_to_spglib_cell
 from ase.io import write
 
 
@@ -54,7 +55,7 @@ class RNEB:
         self.log.info("Creating final image:")
         self.log.info("  Input parameters:")
         self.log.info("    Tolerance: {}".format(self.tol))
-        spacegroup = spg.get_spacegroup(get_spglib_tuple(orig),
+        spacegroup = spg.get_spacegroup(atoms_to_spglib_cell(orig),
                                         symprec=self.tol)
         self.log.info("\n  The pristine structure belongs to spacegroup: "
                       "{}".format(spacegroup))
@@ -97,7 +98,7 @@ class RNEB:
         cell = init_temp.get_cell()
         orig_temp = orig.copy()
         orig_temp = orig_temp.repeat(supercell)
-        spg_tuple = get_spglib_tuple(orig_temp)
+        spg_tuple = atoms_to_spglib_cell(orig_temp)
         sym = spg.get_symmetry(spg_tuple, symprec=self.tol)
         R = sym['rotations']
         T = sym['translations']
@@ -260,7 +261,7 @@ class RNEB:
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
         # get the symmetry information for the pristine structure
-        spglib_tuple = get_spglib_tuple(orig_super_cell)
+        spglib_tuple = atoms_to_spglib_cell(orig_super_cell)
         symmetry_super_cell = spg.get_symmetry(spglib_tuple,
                                                symprec=self.tol)
         equiv_atoms = symmetry_super_cell['equivalent_atoms']
@@ -362,18 +363,6 @@ def is_reflect_op(R):
         elif np.array_equal(eig_values, point):
             return True
     return False
-
-
-def get_spglib_tuple(atoms):
-    lattice = atoms.get_cell()
-    positions = atoms.get_scaled_positions()
-    numbers = atoms.get_atomic_numbers()
-    try:
-        magmoms = atoms.get_magnetic_moments()
-    except RuntimeError:
-        magmoms = atoms.get_initial_magnetic_moments()
-
-    return (lattice, positions, numbers, magmoms)
 
 
 def reshuffle_positions(init, final, min_neb_path_length=1.2):
