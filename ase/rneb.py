@@ -1,5 +1,5 @@
+"""The reflective NEB class."""
 import logging
-import os
 
 import numpy as np
 import spglib as spg
@@ -8,9 +8,7 @@ from ase.calculators.calculator import (PropertyNotImplementedError,
                                         PropertyNotPresent)
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
-from ase.io import read, write
-from ase.parallel import paropen, parprint
-from ase.visualize import view
+from ase.io import write
 
 
 class RNEB:
@@ -50,8 +48,8 @@ class RNEB:
                         rot_only=False, filename=None):
         """Find the symmetry operations that map init->final.
 
-        first check for translations then for rotations
-        when an operation is found create final image
+        First translations then subsequently rotations are checked,
+        when a valid symmetry operation is found the final image is created.
         """
         self.log.info("Creating final image:")
         self.log.info("  Input parameters:")
@@ -107,14 +105,13 @@ class RNEB:
         S = []
 
         for i, r in enumerate(R):
-            if is_rotation(r):
-                pos_init_scaled = np.inner(pos, r) + T[i]
-                pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
-                pos_init = wrap_positions(pos_init_cartesian, cell)
-                res = self.compare_translations(pos_final,
-                                                pos_init, cell)
-                if res[0]:
-                    S.append([r.astype(int), T[i], res[1]])
+            pos_init_scaled = np.inner(pos, r) + T[i]
+            pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
+            pos_init = wrap_positions(pos_init_cartesian, cell)
+            res = self.compare_translations(pos_final,
+                                            pos_init, cell)
+            if res[0]:
+                S.append([r.astype(int), T[i], res[1]])
         if len(S) > 0:
             for i, s in enumerate(S):
                 U = s[0]
@@ -348,16 +345,6 @@ class RNEB:
                       .format(x[1][0], x[1][1], x[1][2]))
         self.log.info("          {:2d} {:2d} {:2d}"
                       .format(x[2][0], x[2][1], x[2][2]))
-
-
-def is_rotation(R):
-    I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    Q = np.dot(np.transpose(R), R)
-    if np.array_equal(Q, I):
-        det = abs(np.linalg.det(R))
-        if det == 1:
-            return True
-    return False
 
 
 def is_reflect_op(R):
