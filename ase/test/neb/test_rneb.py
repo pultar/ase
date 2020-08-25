@@ -121,7 +121,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
         for S in sym_ops:
             images = create_path(initial_relaxed, final_relaxed_s)
             # images = create_path(initial_unrelaxed, final_unrelaxed)
-            neb = NEB(images, sym=True, rotations=S, method=method)
+            neb = NEB(images, reflect_ops=S, method=method)
             neb.interpolate()
             qn = BFGS(neb, logfile=None)
             qn.run(fmax=0.05)
