@@ -19,7 +19,7 @@ class NEB:
     def __init__(self, images, k=0.1, fmax=0.05, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
                  method='aseneb', dynamic_relaxation=False, scale_fmax=0.,
-                 sym=False, rotations=None):
+                 reflect_ops=None):
         """Nudged elastic band.
 
         Paper I:
@@ -74,8 +74,7 @@ class NEB:
         self.images = images
         self.climb = climb
         self.parallel = parallel
-        self.sym = sym
-        self.rotations = rotations
+        self.reflect_ops = reflect_ops
         self.natoms = len(images[0])
         for img in images:
             if len(img) != self.natoms:
@@ -209,12 +208,8 @@ class NEB:
             energies[-1] = images[-1].get_potential_energy()
 
         if not self.parallel:
-            if self.sym:
+            if self.reflect_ops is not None:
                 # R-NEB symmetry
-                if self.rotations is None:
-                    msg = 'R-NEB requires rotations'
-                    raise ValueError(msg)
-
                 for i in range(1, self.nimages - 1):
                     if i <= self.nimages // 2:
                         energies[i] = images[i].get_potential_energy()
@@ -225,8 +220,8 @@ class NEB:
                         # Use symmetry operation on forces in scaled coordinates
                         cell = images[i].cell
                         scaled_forces = cell.scaled_positions(forces[j - 1])
-                        rot_forces = np.inner(scaled_forces[self.rotations[2]],
-                                              self.rotations[0])
+                        rot_forces = np.inner(scaled_forces[self.reflect_ops[2]],
+                                              self.reflect_ops[0])
 
                         forces[i - 1] = cell.cartesian_positions(rot_forces)
                         energies[i] = energies[j]
