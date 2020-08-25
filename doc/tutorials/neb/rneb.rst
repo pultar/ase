@@ -13,21 +13,23 @@ the eye, so here we use the functionality in the RNEB class.
 Using symmetry considerations, the reflective Nudged Elastic Band method allows
 to reduce the number of images to be considered in a path by reflecting symmetry
 equivalent images onto each other. For instance, a path with 5 intermediate 
-images possessing reflection symmetry has two images than can be reflected onto
+images possessing reflection symmetry has two images which can be reflected onto
 each other by the use of unit cell dependent symmetry operations. The R-NEB 
 class implemented helps to identify paths that possess reflection symmetry. It 
 will then return appropriate symmetry operators that are used to run ASEs NEB
 method.
 
 In this tutorial we will look at the surface diffusion of Cu on a fcc100 
-surface. Due to the high symmetry of the crystal structure, there exist only one
+surface. Due to the high symmetry of the crystal structure, there exists only one
 symmetry equivalent path. Additionally, this path is reflective, meaning 
 intermediate images can be reflected onto each other.
+
+|initial| |final|
 
 Example 1: Bulk diffusion in Cu 
 ================================
 
-.. literalinclude:: rneb_tutorial_reflective.py
+.. literalinclude:: rneb_reflective.py
 
 The barrier is obtained by not calculating, but reflecting the last two 
 intermediate images. When visualizing the path, the calculator on these images
@@ -43,7 +45,7 @@ Another way of accelerating the NEB can be done by using only a single
 intermediate image if the path is reflective (reflective middle image NEB or 
 RMI-NEB). That way only the energy of the image at half of the path
 length is probed. This can come in handy, if only the magnitude of the barrier
-is of interest, but not the exact topology of the full path.
+is of interest, but not the energies of all intermediate images.
 Here we start by creating a path using only one intermediate image. The final
 image is created by symmetry operations using the ``get_final_image`` function
 from the RNEB class. Using the relaxed initial image and appropriate symmetry
@@ -57,9 +59,9 @@ half of the intermediate images. Note that for running a reflective NEB
 calculation on the full path, we would also have to calculate the intermediate
 image again (Example 1) which we assume to be already in its relaxed state.
 
-.. literalinclude:: rneb_tutorial_rmineb.py
+.. literalinclude:: rneb_rmineb.py
 
-|rmineb| |rneb_half|
+|rmineb|
 
 * Are the energy barriers comparable to the example above?
 
@@ -80,4 +82,5 @@ materials for intercalation electrodes. Batteries & Supercaps.
 
 .. |rneb| image:: reflective_path.png
 .. |rmineb| image:: rmineb.png
-.. |rneb_half| image:: rneb_half.png
+.. |initial| image:: rneb-I.png
+.. |final| image:: rneb-F.png

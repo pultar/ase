@@ -5,9 +5,9 @@ from ase.neb import NEB
 from ase.build import fcc100, add_adsorbate
 import numpy as np
 from ase.neb import NEBTools
+import matplotlib.pyplot as plt
 
-# Now run everything with symmetry operations
-# create a bulk Al structure
+# again create the Cu slab
 slab = fcc100('Cu', [3, 3, 3], vacuum=5)
 slab.calc = EMT()
 qn = BFGS(slab, logfile=None)
@@ -37,12 +37,11 @@ final_relaxed = rneb.get_final_image(
     init_relaxed=initial_relaxed,
     final=final_unrelaxed)
 
-# create the path
+# create the path by adding a single intermediate image
 images = [initial_relaxed]
-for i in range(1):
-    image = initial_relaxed.copy()
-    image.set_calculator(EMT())
-    images.append(image)
+image = initial_relaxed.copy()
+image.set_calculator(EMT())
+images.append(image)
 images.append(final_relaxed)
 
 neb = NEB(images)
@@ -53,8 +52,11 @@ qn = BFGS(neb, logfile=None)
 qn.run(fmax=0.01)
 middle_image = images[1]
 
+# plot the RMI-NEB barrier
+fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True)
 nebtools = NEBTools(images)
-print("RMI-NEB Barrier is {:5.3f} eV".format(nebtools.get_barrier()[0]))
+nebtools.plot_band(ax=ax1)
+ax1.set_title('RMI-NEB')
 
 # subsequently a NEB on half of the path
 images = [initial_relaxed]
@@ -62,17 +64,17 @@ for i in range(2):
     image = initial_relaxed.copy()
     image.set_calculator(EMT())
     images.append(image)
-images.append(middle_image)  # now the middle image is the final image
+# now the middle image is the final image
+images.append(middle_image)
 
 neb = NEB(images)
 neb.interpolate()
 qn = BFGS(neb, logfile=None)
 qn.run(fmax=0.01)
 
+# finally plot the CIR-NEB barrier
 nebtools = NEBTools(images)
-print("NEB Barrier on half of the path is {:5.3f} eV".format(
-    nebtools.get_barrier()[0]))
-
-from ase.visualize import view
-view(images)
-
+nebtools.plot_band(ax=ax2)
+ax2.set_ylabel('')
+ax2.set_title('CIR-NEB')
+fig.savefig('rmineb.png')
