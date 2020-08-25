@@ -12,6 +12,7 @@ slab.calc = EMT()
 qn = BFGS(slab, logfile=None)
 qn.run(fmax=0.01)
 
+# create and relax initial/final image
 initial = slab.copy()
 add_adsorbate(initial, 'Cu', 1.7, 'hollow')
 final = slab.copy()
@@ -28,6 +29,7 @@ final.calc = EMT()
 qn = BFGS(final, logfile=None)
 qn.run(fmax=0.01)
 
+# Use the RNEB class to find symmetry operations
 rneb = RNEB(logfile=None)
 all_sym_ops = rneb.find_symmetries(slab, initial, final)
 
@@ -39,17 +41,20 @@ for i in range(5):
 images.append(final)
 neb = NEB(images)
 neb.interpolate()
-# check that path has reflection symmetry for each image pair
+
+# check if symmetry operations are also reflection operations
+# this is necessary as otherwise the RNEB is not applicable
 refl_sym_ops = rneb.reflect_path(images, sym=all_sym_ops)
 
 print(f"{len(refl_sym_ops)}/{len(all_sym_ops)} are reflection operations")
 
-neb = NEB(images, sym=True, rotations=refl_sym_ops[1])
-qn = BFGS(neb, logfile=None)
+refl_sym_op = refl_sym_ops[1]  # choose any valid operation
+neb = NEB(images, sym=True, rotations=refl_sym_op)
+qn = BFGS(neb, logfile=None, trajectory='neb.traj')
 qn.run(fmax=0.05)
 
+# Create a figure like that coming from ASE-GUI.
 nebtools = NEBTools(images)
-print("NEB Barrier is {:5.3f} eV".format(nebtools.get_barrier()[0]))
+fig = nebtools.plot_band()
+fig.savefig('reflective_path.png')
 
-from ase.visualize import view
-view(images)
