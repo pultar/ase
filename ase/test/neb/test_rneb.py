@@ -75,6 +75,10 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
         print(vacancy_path)
         print('e final really relaxed: ', ef_n)
         print('e final symmetry:       ', ef_s)
+        
+    f_n = final_relaxed_n.get_forces()
+    f_s = final_relaxed_s.get_forces()
+    assert np.allclose(f_n, f_s, atol=1e-3)
 
     # Create path for symmetry detection
     images = create_path(initial_unrelaxed, final_unrelaxed)
