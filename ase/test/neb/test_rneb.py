@@ -12,11 +12,6 @@ from ase.optimize import BFGS
 from ase.rneb import RNEB, reshuffle_positions
 
 
-def test_slab_rneb(initial_Al_fcc100_slab):
-    slab = initial_Al_fcc100_slab
-    compare_rneb_w_normal_neb(slab, (-1, -2))
-
-
 def create_path(init, final):
     images = [init]
     for i in range(3):
@@ -26,13 +21,6 @@ def create_path(init, final):
 
     images.append(final)
     return images
-
-
-def test_Al_bulk():
-    atoms = bulk('Al', crystalstructure='fcc', a=4.05)
-    atoms = atoms.repeat([2, 2, 1])
-    for path in [(0, 1), (1, 2)]:
-        compare_rneb_w_normal_neb(atoms, path)
 
 
 def test_Al_hexagonal():
