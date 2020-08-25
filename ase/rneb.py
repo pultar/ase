@@ -64,15 +64,16 @@ class RNEB:
         init.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
         # check for simple translations
-        trans = self.find_translations(orig, init, final, supercell=supercell)
+        index_swaps = self.find_translations(orig, init, final,
+                                             supercell=supercell)
         # if translations were found
-        if trans is not None and not rot_only:
+        if index_swaps is not None and not rot_only:
             # create the final relaxed image
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
-                                                   final, trans=trans,
+                                                   final, trans=index_swaps,
                                                    filename=filename)
             if return_ops:
-                return [final_relaxed, trans]
+                return [final_relaxed, index_swaps]
             else:
                 return final_relaxed
         else:
@@ -123,7 +124,7 @@ class RNEB:
             pos_init_scaled = np.inner(pos, r) + T[i]
             pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
             pos_init = wrap_positions(pos_init_cartesian, cell)
-            res = self.compare_translations(pos_final,
+            res = self.compare_positions(pos_final,
                                             pos_init, cell)
             if res[0]:
                 S.append([r.astype(int), T[i], res[1]])
@@ -275,7 +276,7 @@ class RNEB:
         return final_temp
 
     def find_translations(self, orig, init, final, supercell=[1, 1, 1],
-                          return_vec=False):
+                          return_translations_vec=False):
         self.log.info("\n  Looking for translations:")
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
@@ -298,14 +299,14 @@ class RNEB:
                 init_temp.set_positions(pos_init + dpos)
                 init_temp.wrap(eps=self.tol)
                 pos = init_temp.get_positions()
-                res, matches = self.compare_translations(pos_final,
-                                                         pos, cell)
+                res, matches = self.compare_positions(pos_final,
+                                                      pos, cell)
                 if res:
                     self.log.info("    {} -> {} match found!"
                                   .format(u, eq))
                     self.log.info("    T: {:2.2f} {:2.2f} {:2.2f}"
                                   .format(dpos[0], dpos[1], dpos[2]))
-                    if return_vec:
+                    if return_translations_vec:
                         return dpos
                     return matches
                 else:
@@ -313,8 +314,8 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-    def compare_translations(self, pos_final, pos, cell):
-        """pos, pos_final: atomic positions of structures to be compared
+    def compare_positions(self, pos_final, pos, cell):
+        """pos, pos_final: atomic positions of structures to be compared.
 
         returns: [boolean, matches]
             True for a match and a list with the matches
