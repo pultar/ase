@@ -47,7 +47,7 @@ class RNEB:
     def get_final_image(self, orig, init, init_relaxed, final,
                         supercell=[1, 1, 1],
                         log_atomic_idx=False, return_ops=False,
-                        rot_only=False, filename=None):
+                        rot_only=False):
         """Find the symmetry operations that map init->final.
 
         First translations then subsequently rotations are checked,
@@ -70,8 +70,7 @@ class RNEB:
         if index_swaps is not None and not rot_only:
             # create the final relaxed image
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
-                                                   final, trans=index_swaps,
-                                                   filename=filename)
+                                                   final, trans=index_swaps)
             if return_ops:
                 return [final_relaxed, index_swaps]
             else:
@@ -82,8 +81,7 @@ class RNEB:
                                        supercell=supercell,
                                        log_atomic_idx=log_atomic_idx)
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
-                                                   final, rot=rot,
-                                                   filename=filename)
+                                                   final, rot=rot)
             if return_ops:
                 return [final_relaxed, rot]
             else:
