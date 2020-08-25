@@ -235,31 +235,30 @@ class RNEB:
         dpos = init_relaxed.get_positions() - init.get_positions()
         cell = init.get_cell()
         dpos = find_mic(dpos, cell)[0]
-        magmoms = np.zeros(len(init_relaxed))
-        en = None
-        forces = None
         forces_rotated = None
         # Why don't we use scaled forces here
         if init_relaxed.calc:
-            try:
-                en = init_relaxed.get_potential_energy()
-                forces = init_relaxed.get_forces()
-                forces_rotated = np.zeros((len(dpos), 3))
-                magmoms = init_relaxed.get_magnetic_moments()
-            except (PropertyNotImplementedError, PropertyNotPresent):
-                pass
+            init_results = {'energy': None, 'forces': None,
+                            'magmoms': np.zeros(len(init_relaxed))}
+            for prop in init_results.keys():
+                res = init_relaxed.calc.get_property(prop,
+                                                     allow_calculation=False)
+                if res is not None:
+                    init_results[prop] = res
 
+        if init_results['forces'] is not None:
+            forces_rotated = np.zeros((len(dpos), 3))
         dpos_rotated = np.zeros((len(dpos), 3))
         magmom_rotated = np.zeros(len(dpos))
 
         for i, at in enumerate(symop):
             dpos_rotated[i] = f(dpos[at])
-            magmom_rotated[i] = magmoms[at]
-            if forces is not None:
-                forces_rotated[i] = f(forces[at])
+            magmom_rotated[i] = init_results['magmoms'][at]
+            if init_results['forces'] is not None:
+                forces_rotated[i] = f(init_results['forces'][at])
 
         results = {'forces': forces_rotated,
-                   'energy': en,
+                   'energy': init_results['energy'],
                    'magmoms': magmom_rotated}
 
         final_temp.set_initial_magnetic_moments(magmom_rotated)
