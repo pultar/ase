@@ -78,6 +78,7 @@ class RNEB:
         else:
             # if no translations were found, look for rotations
             rot = self.find_symmetries(orig, init, final,
+                                       supercell=supercell,
                                        log_atomic_idx=log_atomic_idx)
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
                                                    final, rot=rot,
@@ -153,6 +154,8 @@ class RNEB:
         for i, im in enumerate(images[:n_half - 1]):
             self.log.info("   Matching vector i_{} - i_{} and i_{} - i_{}:"
                           .format(i + 1, i, n - i - 2, n - i - 1))
+            
+            # Building vector from image i to images i + 1
             pos_ip1 = images[i + 1].get_scaled_positions()
             pos_i = images[i].get_scaled_positions()
             vecf = []
@@ -162,9 +165,8 @@ class RNEB:
                                       [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
                                   pbc=np.array([1, 1, 1]))
                 vecf.append(d[0][0][0])
-            #vecf = images[i+1].get_scaled_positions() - images[i].get_scaled_positions()
-            # vecb = images[n-i-2].get_scaled_positions() \
-            #    - images[n-i-1].get_scaled_positions()
+                
+            # Building vector from image n - 1 to n - 2
             pos_nim2 = images[n - i - 2].get_scaled_positions()
             pos_nim1 = images[n - i - 1].get_scaled_positions()
             vecb = []
@@ -236,6 +238,7 @@ class RNEB:
         en = None
         forces = None
         forces_rotated = None
+        # Why don't we use scaled forces here
         if init_relaxed.calc:
             try:
                 en = init_relaxed.get_potential_energy()
