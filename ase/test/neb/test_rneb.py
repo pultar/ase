@@ -64,7 +64,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
     final_relaxed_s = rneb.get_final_image(atoms, initial_unrelaxed,
                                            initial_relaxed,
-                                           final_unrelaxed)
+                                           final_unrelaxed, rot_only=True)
 
     ef_n = final_relaxed_n.get_potential_energy()
     ef_s = final_relaxed_s.get_potential_energy()
