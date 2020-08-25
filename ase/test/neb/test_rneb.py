@@ -44,7 +44,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
     # RNEB symmetry identification
     sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed,
-                                   final_unrelaxed)
+                                   final_unrelaxed, log_atomic_idx=True)
     # We check here if any symmetry operations relate the initial and
     # final structures, if not then there is no point in continuing.
     # We could also do this with the SymmetryEquivalenceCheck but that
@@ -138,6 +138,8 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
                 print(eip1)
                 print(efm1)
                 print(f'dE = {eip1 - efm1}')
+                
+            # Also assert that forces are present and agree
 
 
 @pytest.fixture(scope="module")  # reuse the same object for the whole script
