@@ -100,7 +100,7 @@ class RNEB:
             final (Atoms): Final structure in the NEB path
             supercell (list): repeat the original structure.
                 Default [1, 1, 1] (no repetitions)
-            log_atomic_idx (bool): Specify if qquivalent indices in init and
+            log_atomic_idx (bool): Specify if equivalent indices in init and
                 final should be logged.
         """
         self.log.info("\n  Looking for rotations:")
@@ -125,7 +125,7 @@ class RNEB:
             pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
             pos_init = wrap_positions(pos_init_cartesian, cell)
             res = self.compare_positions(pos_final,
-                                            pos_init, cell)
+                                         pos_init, cell)
             if res[0]:
                 S.append([r.astype(int), T[i], res[1]])
         if len(S) > 0:
