@@ -207,7 +207,7 @@ class RNEB:
         return sym
 
     def get_relaxed_final(self, init, init_relaxed, final,
-                          trans=None, rot=None, filename=None):
+                          trans=None, rot=None):
         """Obtain a relaxed final structure from a relaxed initial structure.
 
         """
@@ -269,10 +269,6 @@ class RNEB:
         newcalc = SinglePointCalculator(final_temp, **results)
         final_temp.calc = newcalc
 
-        if filename:
-            write(filename, final_temp)
-            self.log.info("    Created final relaxed image as {}"
-                          .format(filename))
         return final_temp
 
     def find_translations(self, orig, init, final, supercell=[1, 1, 1],
