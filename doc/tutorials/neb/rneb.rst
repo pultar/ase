@@ -3,21 +3,29 @@
 =============================================
  Reflective Nudged Elastic Band method (RNEB)
 =============================================
-Reference: Mathiesen, N. R., Jonsson, H., Vegge, T., & García Lastra, J. M. 
-(2019). R-neb: Accelerated nudged elastic band calculations by use of 
-reflection symmetry. Journal of chemical theory and computation, 15(5),
-3215-3222.
 
-In a bulk system diffusion paths can be symmetric, this is not always obvious to 
-the eye, so here we use the functionality in the RNEB class.
-Using symmetry considerations, the reflective Nudged Elastic Band method allows
-to reduce the number of images to be considered in a path by reflecting symmetry
-equivalent images onto each other. For instance, a path with 5 intermediate 
-images possessing reflection symmetry has two images which can be reflected onto
-each other by the use of unit cell dependent symmetry operations. The R-NEB 
-class implemented helps to identify paths that possess reflection symmetry. It 
-will then return appropriate symmetry operators that are used to run ASEs NEB
-method.
+The :class:`RNEB <ase.rneb.RNEB>` can take advantage of symmetry in the
+diffusion path to limit the computational cost of a NEB calculation.
+
+The implementation is based on:
+
+   | Mathiesen, N. R., Jonsson, H., Vegge, T., & García Lastra, J. M.
+   | `R-NEB: Accelerated Nudged Elastic Band Calculations by Use of Reflection Symmetry`__
+   | J. Chem. Theory Comput. 2019, 15(5), 3215-3222.
+   
+   __ https://doi.org/10.1021/acs.jctc.8b01229
+
+In a bulk or slab system the diffusion paths can be symmetric, this is
+not always obvious to the eye, so here we use the functionality in the
+RNEB class.  Using symmetry considerations, the reflective Nudged
+Elastic Band method reduce the number of images to be considered in a
+path by reflecting symmetry equivalent images onto each other. For
+instance, a path with 5 intermediate images possessing reflection
+symmetry has two images which can be reflected onto each other by the
+use of unit cell dependent symmetry operations. The implemented R-NEB
+class helps to identify paths that possess reflection symmetry. It
+will then return appropriate symmetry operators that are used to run
+ASEs NEB method.
 
 In this tutorial we will look at the surface diffusion of Cu on a fcc100 
 surface. Due to the high symmetry of the crystal structure, there exists only one
@@ -31,11 +39,12 @@ Example 1: Bulk diffusion in Cu
 
 .. literalinclude:: rneb_reflective.py
 
-The barrier is obtained by not calculating, but reflecting the last two 
-intermediate images. When visualizing the path, the calculator on these images
-is not `emt` (when opening the info ``Ctrl + I``), but `unknwon` since these 
-images have been assigned the energy values of the corresponding images from the
-first half of the path.
+The barrier is obtained by not calculating, but reflecting the last
+two intermediate images. When visualizing the path, the calculator on
+these images is not :mod:`EMT <ase.calculators.emt>` (when opening the
+info ``Ctrl + I``), but ``unknown`` since these images have been
+assigned the energy values of the corresponding images from the first
+half of the path.
 
 |rneb|
 
@@ -69,9 +78,13 @@ In this case it was obviously enough to only use a single intermediate image
 to find the transition state as the barrier is "bell-shaped". Further examples
 on how to use the RNEB tools for bulk materials can for example be found in
 
-Reference: Bölle, F. T., Mathiesen, N. R., Nielsen, A. J., Vegge, 
-T., Garcia‐Lastra, J. M., & Castelli, I. E. (2020). Autonomous discovery of 
-materials for intercalation electrodes. Batteries & Supercaps.
+Reference:
+
+   | Bölle, F. T., Mathiesen, N. R., Nielsen, A. J., Vegge, T., Garcia‐Lastra, J. M., & Castelli, I. E.
+   | `Autonomous discovery of materials for intercalation electrodes`__
+   | Batteries & Supercaps, 2020, 3, 488-498.
+   
+   __ https://doi.org/10.1002/batt.201900152
 
 .. hint::
 
@@ -84,3 +97,6 @@ materials for intercalation electrodes. Batteries & Supercaps.
 .. |rmineb| image:: rmineb.png
 .. |initial| image:: rneb-I.png
 .. |final| image:: rneb-F.png
+
+.. autoclass:: ase.rneb.RNEB
+   :members: find_symmetries, get_final_image, reflect_path
