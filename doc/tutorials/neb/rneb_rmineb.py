@@ -1,11 +1,12 @@
+"""Run the RMI-NEB example on the website."""
+import matplotlib.pyplot as plt
+import numpy as np
+
+from ase.build import add_adsorbate, fcc100
 from ase.calculators.emt import EMT
+from ase.neb import NEB, NEBTools
 from ase.optimize import BFGS
 from ase.rneb import RNEB
-from ase.neb import NEB
-from ase.build import fcc100, add_adsorbate
-import numpy as np
-from ase.neb import NEBTools
-import matplotlib.pyplot as plt
 
 # again create the Cu slab
 slab = fcc100('Cu', [3, 3, 3], vacuum=5)
@@ -18,7 +19,7 @@ add_adsorbate(initial_unrelaxed, 'Cu', 1.7, 'hollow')
 final_unrelaxed = slab.copy()
 add_adsorbate(final_unrelaxed, 'Cu', 1.7, 'hollow')
 ps = final_unrelaxed.get_positions()
-ps[-1] = ps[-1] + np.array([np.linalg.norm(slab.cell[0, :])/3, 0, 0])
+ps[-1] = ps[-1] + np.array([np.linalg.norm(slab.cell[0, :]) / 3, 0, 0])
 final_unrelaxed.set_positions(ps)
 
 initial_relaxed = initial_unrelaxed.copy()

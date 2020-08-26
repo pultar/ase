@@ -258,9 +258,9 @@ class`_. Check that the path has reflection symmetry for each image
 pair, and finally run the NEB utilizing the symmetry operations to
 assign energies and forces to each symmetric image pair::
 
-  reflective_sym_ops = rneb.reflect_path(images, sym=all_sym_ops)
+  reflective_ops = rneb.reflect_path(images, sym=all_sym_ops)
   
-  neb = NEB(images, sym=True, rotations=reflective_sym_ops[0])
+  neb = NEB(images, reflect_ops=reflective_ops[0])
   qn = BFGS(neb, logfile=None)
   qn.run(fmax=0.05)
 

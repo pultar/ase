@@ -49,7 +49,7 @@ refl_sym_ops = rneb.reflect_path(images, sym=all_sym_ops)
 print(f"{len(refl_sym_ops)}/{len(all_sym_ops)} are reflection operations")
 
 refl_sym_op = refl_sym_ops[1]  # choose any valid operation
-neb = NEB(images, sym=True, rotations=refl_sym_op)
+neb = NEB(images, reflect_ops=refl_sym_op)
 qn = BFGS(neb, logfile=None, trajectory='neb.traj')
 qn.run(fmax=0.05)
 
