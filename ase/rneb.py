@@ -143,6 +143,16 @@ class RNEB:
         return S
 
     def reflect_path(self, images, sym=None):
+        """Get the reflection operations valid for the entire path.
+
+        Args:
+            images (list of Atoms): The path as a list of Atoms
+                objects. This is typically the output of `NEB.interpolate()`.
+            sym (list of symmetry operations): A list of symmetry operations
+                to test for their validity as reflection operators for the
+                path. They are typically obtained from RNEB.find_symmetries().
+
+        """
         self.log.info("Get valid reflections of the path:")
         n = len(images)
         n_half = int(np.ceil(n / 2))
