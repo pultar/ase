@@ -4,12 +4,9 @@ import logging
 import numpy as np
 import spglib as spg
 
-from ase.calculators.calculator import (PropertyNotImplementedError,
-                                        PropertyNotPresent)
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
 from ase.utils import atoms_to_spglib_cell
-from ase.io import write
 
 
 class RNEB:
