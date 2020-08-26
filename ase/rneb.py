@@ -17,17 +17,18 @@ class RNEB:
     and Juan Maria García Lastra, J. Chem. Theory Comput., 2019, 15 (5),
     pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229)
 
-    Symmetry equivalent structures can be identified and produce the final
-    relaxed structure given the initial unrelaxed, initial relaxed,
-    and final unrelaxed images. (get_final_image)
+    :func:`find_symmetries` returns the symmetry operators relating
+    the initial and final structures.
 
-    Symmetry operators relating the initial and final
-    images can be given. (find_symmetries)
+    :func:`get_final_image` Given two symmetry equivalent structures
+    (e.g. ``init`` and ``final``) and a relaxed version of one of them
+    (``init_relaxed``) the relaxed version of the other structure
+    (``final_relaxed``) is produced.
 
-    It can further test whether a path is reflection symmetric
-    and return the valid reflection. (reflect_path). The obtained symmetry
-    operations can be given to the main NEB class to perform
-
+    :func:`reflect_path` checks if the full path has reflection
+    symmetry by testing the given symmetry operations. Returns the
+    valid reflection operations. The obtained symmetry operations can
+    be given to the main NEB class to utilize.
 
     Parameters:
         tol (float): Tolerance on atomic distances in Å
