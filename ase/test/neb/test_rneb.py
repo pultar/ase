@@ -5,9 +5,8 @@ from math import sqrt
 import numpy as np
 import pytest
 
-from ase.build import add_adsorbate, fcc100, fcc111
+from ase.build import fcc111
 from ase.calculators.emt import EMT
-from ase.constraints import FixAtoms
 from ase.geometry import distance, find_mic
 from ase.neb import NEB
 from ase.optimize import BFGS
@@ -41,8 +40,8 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
     final_unrelaxed = atoms.copy()
     del final_unrelaxed[vacancy_path[1]]
 
-    # align indices
-    final_unrelaxed = reshuffle_positions(initial_unrelaxed, final_unrelaxed)
+    # # align indices
+    # final_unrelaxed = reshuffle_positions(initial_unrelaxed, final_unrelaxed)
 
     # RNEB symmetry identification
     sym_ops = rneb.find_symmetries(initial_unrelaxed,
@@ -145,24 +144,6 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
 
 @pytest.fixture(scope="module")  # reuse the same object for the whole script
-def initial_Al_fcc100_slab():
-    # 3x3-Al(001) surface with 3 layers and an
-    # Au atom adsorbed in a hollow site:
-    slab = fcc100('Al', size=(3, 3, 3))
-    slab.center(axis=2, vacuum=4.0)
-
-    # Fix second and third layers:
-    mask = [atom.tag > 1 for atom in slab]
-    constraint = FixAtoms(mask=mask)
-    slab.set_constraint(constraint)
-
-    add_adsorbate(slab, 'Au', 1.7, 'hollow')
-    add_adsorbate(slab, 'Au', 1.7, 'hollow', offset=(1, 0))
-
-    return slab
-
-
-@pytest.fixture(scope="module")  # reuse the same object for the whole script
 def initial_structures_fcc111_al():
     atoms = fcc111('Al', [2, 2, 1], 4.05, periodic=True)
     nxy = np.sum(atoms.cell, axis=0) / 6
@@ -204,63 +185,6 @@ def initial_structures_fcc111_al():
 
     return (atoms, final_unrelaxed, initial_unrelaxed,
             initial_relaxed, final_relaxed_n, images_n)
-
-# # Superfluous test; the same (and more) is covered by test_rmi_rneb
-# def test_rmi_rneb_slab(initial_Al_fcc100_slab):
-#     atoms = initial_Al_fcc100_slab
-#     dft_tol = 1e-3  # 1 meV
-
-#     # deleting ions will change indices
-#     initial_unrelaxed = atoms.copy()
-#     del initial_unrelaxed[-1]
-
-#     final_unrelaxed = atoms.copy()
-#     del final_unrelaxed[-2]
-
-#     # RMI-NEB workflow
-#     # RNEB symmetry identification
-#     rneb = RNEB(logfile=None)
-#     sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
-#     # check path is reflective
-#     assert len(sym_ops) > 0
-
-#     initial_relaxed = initial_unrelaxed.copy()
-#     initial_relaxed.calc = EMT()
-#     qn = BFGS(initial_relaxed, logfile=None)
-#     qn.run(fmax=0.01)
-
-#     # get final relaxed image from initial relaxed
-#     final_relaxed_rneb = rneb.get_final_image(atoms, initial_unrelaxed,
-#                                               initial_relaxed,
-#                                               final_unrelaxed)
-#     images_rmi = create_path(initial_relaxed, final_relaxed_rneb)
-#     # only three images
-#     images_rmi = [images_rmi[0], images_rmi[2], images_rmi[-1]]
-#     neb = NEB(images_rmi, method='aseneb')
-#     neb.interpolate()
-
-#     # run RMI-NEB
-#     qn = BFGS(neb, logfile=None)
-#     qn.run(fmax=0.01)
-
-#     # Normal NEB
-#     final_relaxed_n = final_unrelaxed.copy()
-#     final_relaxed_n.calc = EMT()
-#     qn = BFGS(final_relaxed_n, logfile=None)
-#     qn.run(fmax=0.01)
-
-#     # also the reference NEB
-#     images_n = create_path(initial_relaxed, final_relaxed_n)
-#     neb = NEB(images_n, method='aseneb')
-#     neb.interpolate()
-
-#     qn = BFGS(neb, logfile=None)
-#     qn.run(fmax=0.01)
-
-#     # are energies/transition state comaparable to normal NEB?
-#     e_m_n = images_n[2].get_potential_energy()
-#     e_m_rmi = images_rmi[1].get_potential_energy()
-#     assert abs(e_m_n - e_m_rmi) < dft_tol
 
 
 def test_rmi_rneb(initial_structures_fcc111_al):
@@ -336,9 +260,6 @@ def get_num_sym_operators(atoms, path):
     final_unrelaxed = atoms.copy()
     del final_unrelaxed[path[1]]
 
-    # aling indices
-    final_unrelaxed = reshuffle_positions(initial_unrelaxed,
-                                          final_unrelaxed)
     images = create_path(initial_unrelaxed, final_unrelaxed)
     neb = NEB(images)
     neb.interpolate()
