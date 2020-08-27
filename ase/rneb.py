@@ -90,27 +90,34 @@ class RNEB:
         init.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
 
-        # check for simple translations
-        index_swaps = self.find_translations(init, final)
-        # if translations were found
-        if index_swaps is not None and not rot_only:
-            # create the final relaxed image
-            final_relaxed = self.get_relaxed_final(init, init_relaxed,
-                                                   final, trans=index_swaps)
-            if return_ops:
-                return [final_relaxed, index_swaps]
-            else:
-                return final_relaxed
+        if not rot_only:
+            # check for simple translations
+            index_swaps = self.find_translations(init, final)
+
+            # if translations were found use them
+            if index_swaps is not None:
+                # create the final relaxed image
+                final_relaxed = get_relaxed_final(init, init_relaxed,
+                                                  final,
+                                                  trans=index_swaps)
+                if return_ops:
+                    return [final_relaxed, index_swaps]
+                else:
+                    return final_relaxed
+
+        # if no translations were found, look for rotations
+        all_sym_ops = self.find_symmetries(init, final,
+                                           log_atomic_idx=log_atomic_idx)
+        # Check if the rot matrix is [[1, 0, 0], [0, 1, 0], [0, 0,
+        # 1]] and rot_only is True. Then that is a pure translation.
+        if rot_only:
+            all_sym_ops = _purge_pure_tranlation_ops(all_sym_ops)
+        final_relaxed = get_relaxed_final(init, init_relaxed,
+                                          final, rot=all_sym_ops)
+        if return_ops:
+            return [final_relaxed, all_sym_ops]
         else:
-            # if no translations were found, look for rotations
-            rot = self.find_symmetries(init, final,
-                                       log_atomic_idx=log_atomic_idx)
-            final_relaxed = self.get_relaxed_final(init, init_relaxed,
-                                                   final, rot=rot)
-            if return_ops:
-                return [final_relaxed, rot]
-            else:
-                return final_relaxed
+            return final_relaxed
 
     def find_symmetries(self, init, final,
                         log_atomic_idx=False):
