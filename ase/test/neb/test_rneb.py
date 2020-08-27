@@ -12,6 +12,8 @@ from ase.neb import NEB
 from ase.optimize import BFGS
 from ase.rneb import RNEB, reshuffle_positions
 
+pytest.importorskip('spglib')
+
 
 def create_path(init, final):
     images = [init]
@@ -39,9 +41,6 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
     final_unrelaxed = atoms.copy()
     del final_unrelaxed[vacancy_path[1]]
-
-    # # align indices
-    # final_unrelaxed = reshuffle_positions(initial_unrelaxed, final_unrelaxed)
 
     # RNEB symmetry identification
     sym_ops = rneb.find_symmetries(initial_unrelaxed,
