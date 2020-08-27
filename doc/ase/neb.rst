@@ -236,20 +236,20 @@ calculations. For an exhaustive tutorial see the :ref:`full tutorial
 
 First we need to obtain the symmetry operations that are relevant for our system::
   
-  from ase.rneb import RNEB
-  rneb = RNEB()
-
   # The supercell is a structure with the diffusing species present
   # in the initial and final position.
   supercell = io.read('combined_AB.traj')
   
-  all_sym_ops = rneb.find_symmetries(supercell, initial, final)
+  from ase.rneb import RNEB
+  rneb = RNEB(supercell)
+
+  all_sym_ops = rneb.find_symmetries(initial, final)
 
 If we find any valid symmetry operations we can use them to create the
 final relaxed image from the initial relaxed image, without doing the
 relaxation on the final image::
 
-  final_relaxed = rneb.get_final_image(supercell, initial_unrelaxed,
+  final_relaxed = rneb.get_final_image(initial_unrelaxed,
                                        initial_relaxed,
                                        final_unrelaxed)
 
