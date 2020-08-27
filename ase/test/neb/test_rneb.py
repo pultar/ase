@@ -1,5 +1,3 @@
-# Only for debugging
-import inspect
 from math import sqrt
 
 import numpy as np
@@ -68,13 +66,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
     ef_n = final_relaxed_n.get_potential_energy()
     ef_s = final_relaxed_s.get_potential_energy()
-    try:
-        assert np.isclose(ef_n, ef_s, atol=1e-3)
-    except AssertionError:
-        print(inspect.stack()[1].function)
-        print(vacancy_path)
-        print('e final really relaxed: ', ef_n)
-        print('e final symmetry:       ', ef_s)
+    assert np.isclose(ef_n, ef_s, atol=1e-3)
 
     f_n = final_relaxed_n.get_forces()
     f_s = final_relaxed_s.get_forces()
@@ -89,12 +81,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
     sym_ops = rneb.reflect_path(images, sym=sym_ops)
     # Also assert that the entire path has reflection symmetry
     # otherwise the rest is pointless
-    try:
-        assert len(sym_ops) > 0
-    except AssertionError:
-        print(inspect.stack()[1].function)
-        print(f'Path {vacancy_path} is not reflective')
-        return
+    assert len(sym_ops) > 0
 
     for method in ['aseneb', 'improvedtangent', 'eb']:
         # Create path for normal NEB
@@ -108,15 +95,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
         # Normal NEB
         eip1 = images[1].get_potential_energy()  # e initial plus 1
         efm1 = images[-2].get_potential_energy()  # e final minus 1
-        try:
-            assert np.isclose(eip1, efm1, atol=1e-3)
-        except AssertionError:
-            print(inspect.stack()[1].function)
-            print(vacancy_path)
-            print(f'Normal NEB (method {method}):')
-            print(eip1)
-            print(efm1)
-            print(f'dE = {eip1 - efm1}')
+        assert np.isclose(eip1, efm1, atol=1e-3)
 
         for S in sym_ops:
             images = create_path(initial_relaxed, final_relaxed_s)
@@ -128,16 +107,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
             eip1 = images[1].get_potential_energy()
             efm1 = images[-2].get_potential_energy()
-            try:
-                assert np.isclose(eip1, efm1, atol=1e-3)
-            except AssertionError:
-                print(inspect.stack()[1].function)
-                print(vacancy_path)
-                print(S, 'not ok')
-                print(f'Reflective NEB (method {method}):')
-                print(eip1)
-                print(efm1)
-                print(f'dE = {eip1 - efm1}')
+            assert np.isclose(eip1, efm1, atol=1e-3)
 
             # Also assert that forces are present and agree
 
