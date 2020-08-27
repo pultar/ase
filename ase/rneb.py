@@ -1,4 +1,9 @@
-"""The reflective NEB class."""
+"""The reflective NEB class.
+
+The method is described in: Nicolai Rask Mathiesen, Hannes Jónsson,
+Tejs Vegge, and Juan Maria García Lastra, J. Chem. Theory Comput.,
+2019, 15 (5), pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229).
+"""
 import logging
 
 import numpy as np
@@ -12,10 +17,12 @@ from ase.utils import atoms_to_spglib_cell
 class RNEB:
     """The ASE implementation of the R-NEB method.
 
-    The method is described in:
-    Nicolai Rask Mathiesen, Hannes Jónsson, Tejs Vegge,
-    and Juan Maria García Lastra, J. Chem. Theory Comput., 2019, 15 (5),
-    pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229)
+    Supply the original cell when instantiating the RNEB class. The
+    size of the original cell should be equal to the size of the
+    initial and final structures. The original cell is used for
+    detecting the symmetry operations using spglib. After
+    instantiation of the RNEB class the following functions are
+    available:
 
     :func:`find_symmetries` returns the symmetry operators relating
     the initial and final structures.
@@ -30,10 +37,12 @@ class RNEB:
     valid reflection operations. The obtained symmetry operations can
     be given to the main NEB class to utilize.
 
-    Parameters:
+    Args:
+        orig (Atoms): Original cell without defects, the symmetry operations
+            are found using this cell.
         tol (float): Tolerance on atomic distances in Å
         logfile (str or None): filename for the log output
-            If None then no output is made. Default is '-' for standard
+            If ``None`` then no output is made. Default is ``'-'`` for standard
             stream output.
 
     """
@@ -46,10 +55,20 @@ class RNEB:
                         supercell=[1, 1, 1],
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False):
-        """Find the symmetry operations that map init->final.
+        """Obtain a relaxed final structure from the initial relaxed.
 
-        First translations then subsequently rotations are checked,
+        First translations then subsequently rotations operations are checked,
         when a valid symmetry operation is found the final image is created.
+
+        Args:
+            init (Atoms): The initial structure (unrelaxed)
+            init_relaxed (Atoms): The relaxed version of init
+            final (Atoms): The final structure (unrelaxed)
+            log_atomic_idx (bool): Specify if equivalent indices in init and
+                final should be logged.
+            return_ops (bool): Return the symmetry operations used for
+                creating the final relaxed structure.
+            rot_only (bool): Disregard pure translation operations.
         """
         self.log.info("Creating final image:")
         self.log.info("  Input parameters:")
@@ -90,14 +109,18 @@ class RNEB:
         """Find the relevant symmetry operations relating init and final.
 
         Args:
-            orig (Atoms): Original structure from which all symmetry
-                operations are found using spglib.
             init (Atoms): Initial structure in the NEB path
             final (Atoms): Final structure in the NEB path
-            supercell (list): repeat the original structure.
-                Default [1, 1, 1] (no repetitions)
             log_atomic_idx (bool): Specify if equivalent indices in init and
                 final should be logged.
+
+        Returns:
+            sym (list): The valid symmetry operations mapping init onto
+                final. The returned list has the following form:
+                [[R, T, eq_idx], ...], where R is a rotation matrix, T is the
+                corresponding translation and eq_idx is a list of indices that
+                maps init onto final.
+
         """
         self.log.info("\n  Looking for rotations:")
         init_temp = init.copy()
@@ -153,15 +176,22 @@ class RNEB:
                 to test for their validity as reflection operators for the
                 path. They are typically obtained from RNEB.find_symmetries().
 
+        Returns:
+            sym (list): Valid reflection operations for the path. The returned
+                list has the following form: [[R, T, eq_idx], ...], where R is
+                a rotation matrix, T is the corresponding translation and
+                eq_idx is a list of indices that maps the image on the first
+                part of the path with its symmetric image in the final part.
         """
         self.log.info("Get valid reflections of the path:")
+        # Go through each pair of images
         n = len(images)
         n_half = int(np.ceil(n / 2))
         path_flat = []
         for i, im in enumerate(images[:n_half - 1]):
             self.log.info("   Matching vector i_{} - i_{} and i_{} - i_{}:"
                           .format(i + 1, i, n - i - 2, n - i - 1))
-            
+
             # Building vector from image i to images i + 1
             pos_ip1 = images[i + 1].get_scaled_positions()
             pos_i = images[i].get_scaled_positions()
@@ -172,8 +202,8 @@ class RNEB:
                                       [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
                                   pbc=np.array([1, 1, 1]))
                 vecf.append(d[0][0][0])
-                
-            # Building vector from image n - 1 to n - 2
+
+            # Building vector from image n - i - 1 to n - i - 2
             pos_nim2 = images[n - i - 2].get_scaled_positions()
             pos_nim1 = images[n - i - 1].get_scaled_positions()
             vecb = []
@@ -278,6 +308,19 @@ class RNEB:
 
     def find_translations(self, orig, init, final, supercell=[1, 1, 1],
                           return_translations_vec=False):
+        """Find a translation that maps init onto final.
+
+        Args:
+            init (Atoms): The initial structure
+            final (Atoms): The final structure
+            return_translation_vec (bool): If True the translation vector is
+                returned. Default: False.
+
+        Returns:
+            matches (list): List of indices that maps init onto final.
+            *or*
+            dpos (np.array): Vector that translates init to final.
+        """
         self.log.info("\n  Looking for translations:")
         init_temp = init.copy()
         orig_super_cell = orig.repeat(supercell)
