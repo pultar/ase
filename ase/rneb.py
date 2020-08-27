@@ -156,8 +156,7 @@ class RNEB:
                 U = S[0]
                 T = S[1]
                 self.log.info("\n      Symmetry {}:".format(i))
-                self.log.info("        U:")
-                self.write_3x3_matrix_to_log(U)
+                self._write_3x3_matrix_to_log(U, i)
                 self.log.info("        T: {:2.2f} {:2.2f} {:2.2f}"
                               .format(T[0], T[1], T[2]))
                 if log_atomic_idx:
@@ -225,8 +224,7 @@ class RNEB:
                 self.log.info("      Found {} valid reflections:"
                               .format(len(sym)))
                 for j, S in enumerate(sym):
-                    self.log.info("\n        U_{}:".format(j))
-                    self.write_3x3_matrix_to_log(S[0])
+                    self._write_3x3_matrix_to_log(S[0], j)
                     S_flat = np.concatenate((S[0], S[1], S[2]), axis=None)
                     path_flat.append(S_flat)
 
@@ -242,8 +240,7 @@ class RNEB:
         self.log.info("\n  Found {} valid reflections valid for all of the"
                       " path:".format(len(sym)))
         for i, S in enumerate(sym):
-            self.log.info("\n        U_{}:".format(i))
-            self.write_3x3_matrix_to_log(S[0])
+            self._write_3x3_matrix_to_log(S[0], i)
         return sym
 
     def get_relaxed_final(self, init, init_relaxed, final,
@@ -389,7 +386,8 @@ class RNEB:
         log.setLevel(logging.INFO)
         return log
 
-    def write_3x3_matrix_to_log(self, x):
+    def _write_3x3_matrix_to_log(self, x, i=0):
+        self.log.info("\n        U_{}:".format(i))
         self.log.info("          {:2d} {:2d} {:2d}"
                       .format(x[0][0], x[0][1], x[0][2]))
         self.log.info("          {:2d} {:2d} {:2d}"
