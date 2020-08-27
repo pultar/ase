@@ -4,7 +4,7 @@ import inspect
 import numpy as np
 import pytest
 
-from ase.build import add_adsorbate, bulk, fcc100, fcc111
+from ase.build import add_adsorbate, fcc100, fcc111
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
 from ase.neb import NEB
@@ -30,7 +30,7 @@ def test_Al_hexagonal():
 
 
 def compare_rneb_w_normal_neb(atoms, vacancy_path):
-    rneb = RNEB(logfile=None)
+    rneb = RNEB(atoms, logfile=None)
 
     # deleting ions will change indices
     initial_unrelaxed = atoms.copy()
@@ -43,7 +43,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
     final_unrelaxed = reshuffle_positions(initial_unrelaxed, final_unrelaxed)
 
     # RNEB symmetry identification
-    sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed,
+    sym_ops = rneb.find_symmetries(initial_unrelaxed,
                                    final_unrelaxed, log_atomic_idx=True)
     # We check here if any symmetry operations relate the initial and
     # final structures, if not then there is no point in continuing.
@@ -62,7 +62,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
     qn = BFGS(final_relaxed_n, logfile=None)
     qn.run(fmax=0.01)
 
-    final_relaxed_s = rneb.get_final_image(atoms, initial_unrelaxed,
+    final_relaxed_s = rneb.get_final_image(initial_unrelaxed,
                                            initial_relaxed,
                                            final_unrelaxed, rot_only=True)
 
@@ -271,12 +271,12 @@ def test_rmi_rneb(initial_structures_fcc111_al):
 
     # RMI-NEB workflow
     # RNEB symmetry identification
-    rneb = RNEB(logfile=None)
-    sym_ops = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
+    rneb = RNEB(atoms, logfile=None)
+    sym_ops = rneb.find_symmetries(initial_unrelaxed, final_unrelaxed)
     # check path is reflective
     assert len(sym_ops) > 0
     # get final relaxed image from initial relaxed
-    final_relaxed_rneb = rneb.get_final_image(atoms, initial_unrelaxed,
+    final_relaxed_rneb = rneb.get_final_image(initial_unrelaxed,
                                               initial_relaxed,
                                               final_unrelaxed)
     images_rmi = create_path(initial_relaxed, final_relaxed_rneb)
@@ -341,11 +341,10 @@ def get_num_sym_operators(atoms, path):
     neb = NEB(images)
     neb.interpolate()
 
-    rneb = RNEB(logfile=None)
-    S = rneb.find_symmetries(atoms, initial_unrelaxed, final_unrelaxed)
+    rneb = RNEB(atoms, logfile=None)
+    S = rneb.find_symmetries(initial_unrelaxed, final_unrelaxed)
 
     sym = rneb.reflect_path(images, sym=S)
     assert sym is not None  # otherwise not reflective
 
     return sym
-
