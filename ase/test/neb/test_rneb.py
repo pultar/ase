@@ -1,5 +1,6 @@
 # Only for debugging
 import inspect
+from math import sqrt
 
 import numpy as np
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from ase.build import add_adsorbate, fcc100, fcc111
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
+from ase.geometry import distance, find_mic
 from ase.neb import NEB
 from ase.optimize import BFGS
 from ase.rneb import RNEB, reshuffle_positions
@@ -75,7 +77,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
         print(vacancy_path)
         print('e final really relaxed: ', ef_n)
         print('e final symmetry:       ', ef_s)
-        
+
     f_n = final_relaxed_n.get_forces()
     f_s = final_relaxed_s.get_forces()
     assert np.allclose(f_n, f_s, atol=1e-3)
@@ -138,7 +140,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
                 print(eip1)
                 print(efm1)
                 print(f'dE = {eip1 - efm1}')
-                
+
             # Also assert that forces are present and agree
 
 
@@ -348,3 +350,29 @@ def get_num_sym_operators(atoms, path):
     assert sym is not None  # otherwise not reflective
 
     return sym
+
+
+def get_path_length(init, final):
+    dR, _ = find_mic(final.positions - init.positions, init.cell, init.pbc)
+    return sqrt((dR**2).sum())
+
+
+def test_reshuffling_atoms():
+    # Create two structures
+    slab = fcc111('Al', size=(3, 3, 2), a=2)
+    slab.center(vacuum=5, axis=2)
+    init = slab.copy()
+    final = slab.copy()
+    # Make vacancies
+    init.pop(7)
+    final.pop(16)
+    fc = final.copy()
+
+    eps = 1e-8
+
+    final = reshuffle_positions(init, final)
+    assert distance(final, fc) < eps
+
+    assert get_path_length(init, fc) >= get_path_length(init, final)
+
+    assert get_path_length(init, final) - sqrt(2) < eps
