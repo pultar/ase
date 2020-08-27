@@ -1,10 +1,10 @@
+import numpy as np
+
+from ase.build import add_adsorbate, fcc100
 from ase.calculators.emt import EMT
+from ase.neb import NEB, NEBTools
 from ase.optimize import BFGS
 from ase.rneb import RNEB
-from ase.neb import NEB
-from ase.build import fcc100, add_adsorbate
-import numpy as np
-from ase.neb import NEBTools
 
 # create a Cu slab
 slab = fcc100('Cu', [3, 3, 3], vacuum=5)
@@ -18,7 +18,7 @@ add_adsorbate(initial, 'Cu', 1.7, 'hollow')
 final = slab.copy()
 add_adsorbate(final, 'Cu', 1.7, 'hollow')
 ps = final.get_positions()
-ps[-1] = ps[-1] + np.array([np.linalg.norm(slab.cell[0, :])/3, 0, 0])
+ps[-1] = ps[-1] + np.array([np.linalg.norm(slab.cell[0, :]) / 3, 0, 0])
 final.set_positions(ps)
 
 initial.calc = EMT()
@@ -30,8 +30,8 @@ qn = BFGS(final, logfile=None)
 qn.run(fmax=0.01)
 
 # Use the RNEB class to find symmetry operations
-rneb = RNEB(logfile=None)
-all_sym_ops = rneb.find_symmetries(slab, initial, final)
+rneb = RNEB(slab, logfile=None)
+all_sym_ops = rneb.find_symmetries(initial, final)
 
 images = [initial]
 for i in range(5):
@@ -57,4 +57,3 @@ qn.run(fmax=0.05)
 nebtools = NEBTools(images)
 fig = nebtools.plot_band()
 fig.savefig('reflective_path.png')
-

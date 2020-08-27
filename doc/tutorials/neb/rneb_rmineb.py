@@ -1,4 +1,3 @@
-"""Run the RMI-NEB example on the website."""
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -31,9 +30,8 @@ qn.run(fmax=0.01)
 # Otherwise we could have used rneb.reflect_path() to check this
 
 # get the final image by symmetry operations
-rneb = RNEB(logfile=None)
+rneb = RNEB(slab, logfile=None)
 final_relaxed = rneb.get_final_image(
-    orig=slab,
     init=initial_unrelaxed,
     init_relaxed=initial_relaxed,
     final=final_unrelaxed)
