@@ -148,8 +148,7 @@ class RNEB:
             pos_init_scaled = np.inner(pos, r) + T[i]
             pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
             pos_init = wrap_positions(pos_init_cartesian, cell)
-            res = self.compare_positions(pos_final,
-                                         pos_init, cell)
+            res = compare_positions(pos_final, pos_init, cell, tol=self.tol)
             if res[0]:
                 sym.append([r.astype(int), T[i], res[1]])
         if len(sym) > 0:
@@ -346,14 +345,14 @@ class RNEB:
                 init_temp.set_positions(pos_init + dpos)
                 init_temp.wrap(eps=self.tol)
                 pos = init_temp.get_positions()
-                res, matches = self.compare_positions(pos_final,
-                                                      pos, cell)
+                res, matches = compare_positions(pos_final,
+                                                 pos, cell, tol=self.tol)
                 if res:
                     self.log.info("    {} -> {} match found!"
                                   .format(u, eq))
                     self.log.info("    T: {:2.2f} {:2.2f} {:2.2f}"
                                   .format(dpos[0], dpos[1], dpos[2]))
-                    if return_translations_vec:
+                    if return_translation_vec:
                         return dpos
                     return matches
                 else:
@@ -361,22 +360,6 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-    def compare_positions(self, pos_final, pos, cell):
-        """pos, pos_final: atomic positions of structures to be compared.
-
-        returns: [boolean, matches]
-            True for a match and a list with the matches
-            matches: i is the index an atom in structure 1 and at index i in
-            matches is the index, j, of the corresponding atom in
-            structure 2.
-        """
-        n = len(pos)
-        dists_all = get_distances(pos, pos_final, cell=cell, pbc=[1, 1, 1])
-        final_to_init = np.nonzero(np.isclose(dists_all[1], 0,
-                                              atol=self.tol))[1]
-        if len(final_to_init) == n:
-            return [True, np.argsort(final_to_init)]
-        return [False, np.argsort(final_to_init)]
 
     def reflect_movement(self, vec_init, vec_final, sym=None):
         reflections = []
@@ -415,10 +398,42 @@ class RNEB:
                       .format(x[2][0], x[2][1], x[2][2]))
 
 
+def compare_positions(p1, p2, cell, tol=1e-3):
+    """Check whether two arrays contain the same positions.
+
+    The positions need not be in the same order. A mapping for p1 to p2 is
+    also returned.
+
+    Args:
+        p1, p2 (list or np.array): atomic positions of structures to
+            be compared.
+
+    Returns:
+        (boolean, matches): True for a match and a list with the matches
+        matches: i is the index an atom in structure 1 and at index i in
+        matches is the index, j, of the corresponding atom in
+        structure 2.
+    """
+    n = len(p2)
+    dists_all = get_distances(p2, p1, cell=cell, pbc=[1, 1, 1])
+    final_to_init = np.nonzero(np.isclose(dists_all[1], 0,
+                                          atol=tol))[1]
+    if len(final_to_init) == n:
+        return True, np.argsort(final_to_init)
+    return False, np.argsort(final_to_init)
+
+
 def is_reflect_op(R):
-    I = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    """Check whether a matrix R is a reflection operation.
+
+    Three types of reflections are possible: Reflection with respect
+    to a plane, line or point.
+
+    """
+    # First test if the matrix is involutory (i.e. its own inverse)
     Q = np.dot(np.transpose(R), R)
-    if np.array_equal(Q, I):
+    if np.array_equal(Q, np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])):
+        # Then check the eigenvalues for the type of reflection
         eig_values = np.sort(np.linalg.eig(R)[0])
         plane = np.array([-1, 1, 1])
         line = np.array([-1, -1, 1])
