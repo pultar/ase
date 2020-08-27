@@ -217,7 +217,8 @@ class RNEB:
                                   pbc=np.array([1, 1, 1]))
                 vecb.append(d[0][0][0])
 
-            sym = self.reflect_movement(vecf, vecb, sym=sym)
+            # Check which symmetry operation map vecf onto vecb
+            sym = self._get_valid_reflections(vecf, vecb, sym=sym)
             if len(sym) == 0:
                 return sym
             else:
@@ -228,6 +229,7 @@ class RNEB:
                     S_flat = np.concatenate((S[0], S[1], S[2]), axis=None)
                     path_flat.append(S_flat)
 
+        # Use only symmetry operations valid for all image pairs
         sym_flat, counts = np.unique(path_flat, axis=0, return_counts=True)
         sym_flat[np.where(counts == n_half - 1)]
         sym = []
@@ -357,17 +359,14 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-
-    def reflect_movement(self, vec_init, vec_final, sym=None):
+    def _get_valid_reflections(self, vec_init, vec_final, sym=None):
         reflections = []
         for S in sym:
             U = S[0]
             idx = S[2]
-            vec_init_temp = np.empty((len(vec_init), 3))
             if is_reflect_op(U):
-                for at2, at in enumerate(idx):
-                    vec_init_temp[at2] = np.dot(U, vec_init[at])
-                if np.allclose(vec_init_temp, vec_final, atol=2 * self.tol):
+                if np.allclose(np.inner(vec_init, U)[idx],
+                               vec_final, atol=2 * self.tol):
                     reflections.append(S)
         return reflections
 
