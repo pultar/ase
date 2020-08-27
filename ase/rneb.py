@@ -81,6 +81,10 @@ class RNEB:
             return_ops (bool): Return the symmetry operations used for
                 creating the final relaxed structure.
             rot_only (bool): Disregard pure translation operations.
+
+        Returns:
+            Atoms:
+                The final structure (relaxed)
         """
         self.log.info("Creating final image:")
         self.log.info("  Input parameters:")
@@ -130,7 +134,8 @@ class RNEB:
                 final should be logged.
 
         Returns:
-            sym (list): The valid symmetry operations mapping init onto
+            list:
+                The valid symmetry operations mapping init onto
                 final. The returned list has the following form:
                 [[R, T, eq_idx], ...], where R is a rotation matrix, T is the
                 corresponding translation and eq_idx is a list of indices that
@@ -151,6 +156,8 @@ class RNEB:
         T = sym['translations']
         sym = []
 
+        # Apply symmetry operations to pos_init and test if the
+        # positions match pos_final
         for i, r in enumerate(R):
             pos_init_scaled = np.inner(pos, r) + T[i]
             pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
@@ -158,6 +165,8 @@ class RNEB:
             res = compare_positions(pos_final, pos_init, cell, tol=self.tol)
             if res[0]:
                 sym.append([r.astype(int), T[i], res[1]])
+
+        # Write to log
         if len(sym) > 0:
             for i, S in enumerate(sym):
                 U = S[0]
@@ -181,13 +190,15 @@ class RNEB:
 
         Args:
             images (list of Atoms): The path as a list of Atoms
-                objects. This is typically the output of `NEB.interpolate()`.
+                objects. This is typically the output of
+                :func:`ase.neb.interpolate`.
             sym (list of symmetry operations): A list of symmetry operations
                 to test for their validity as reflection operators for the
-                path. They are typically obtained from RNEB.find_symmetries().
+                path. They are typically obtained from :func:`find_symmetries`.
 
         Returns:
-            sym (list): Valid reflection operations for the path. The returned
+            list:
+                Valid reflection operations for the path. The returned
                 list has the following form: [[R, T, eq_idx], ...], where R is
                 a rotation matrix, T is the corresponding translation and
                 eq_idx is a list of indices that maps the image on the first
@@ -327,9 +338,11 @@ class RNEB:
                 returned. Default: False.
 
         Returns:
-            matches (list): List of indices that maps init onto final.
+            list:
+                List of indices that maps init onto final.
             *or*
-            dpos (np.array): Vector that translates init to final.
+            np.array:
+                Vector that translates init to final.
         """
         self.log.info("\n  Looking for translations:")
         init_temp = init.copy()
@@ -413,10 +426,11 @@ def compare_positions(p1, p2, cell, tol=1e-3):
             be compared.
 
     Returns:
-        (boolean, matches): True for a match and a list with the matches
-        matches: i is the index an atom in structure 1 and at index i in
-        matches is the index, j, of the corresponding atom in
-        structure 2.
+        (boolean, matches):
+            True for a match and a list with the matches
+            matches: i is the index an atom in structure 1 and at index i in
+            matches is the index, j, of the corresponding atom in
+            structure 2.
     """
     n = len(p2)
     dists_all = get_distances(p2, p1, cell=cell, pbc=[1, 1, 1])
@@ -460,26 +474,17 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
     shuffles them back by checking distances between individual atoms
     in the initial and final structures.
 
-    Parameters
-    ----------
-    init: Atoms object
-        Initial structure
+    Args:
+        init (Atoms): Initial structure
+        final (Atoms): Final structure. The atoms in this structure
+            are rearranged to fit with init.
+        min_neb_path_length (float): Atoms that are detected to have moved
+            more than min_neb_path_length are considered to be a part of the
+            desired NEB path. Default: 1.2 Å
 
-    final: Atoms object
-        Final structure. The atoms in this structure
-        are rearranged to fit with init.
-
-    min_neb_path_length: float
-        Atoms that are detected to have moved more than
-        min_neb_path_length are considered to be a part of the desired
-        NEB path.
-        Default: 1.2 Å
-
-    Returns
-    -------
-    Final structure as an Atoms object with shuffled positions.
-
-
+    Returns:
+        Atoms:
+            Final structure as an Atoms object with shuffled positions.
     """
     final_s = final.copy()
     ml = min_neb_path_length
