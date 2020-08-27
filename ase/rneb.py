@@ -263,70 +263,6 @@ class RNEB:
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
 
-    def get_relaxed_final(self, init, init_relaxed, final,
-                          trans=None, rot=None):
-        """Obtain a relaxed final structure from a relaxed initial structure.
-
-        """
-        if trans is not None and rot is not None:
-            msg = ('Cannot specify both trans and rot. '
-                   'Got {} and {} respectively.').format(trans, rot)
-            raise ValueError(msg)
-        elif trans is None and rot is None:
-            msg = 'Must specify either \'trans\' or \'rot\''
-            raise ValueError(msg)
-        elif rot is not None:
-            # Apply rotational operator
-            symop = rot[0][2]
-
-            def f(x):
-                return np.dot(rot[0][0], x)
-        else:
-            # Apply translational operator
-            symop = trans
-
-            def f(x):
-                return x
-
-        final_temp = final.copy()
-        dpos = init_relaxed.get_positions() - init.get_positions()
-        cell = init.get_cell()
-        dpos = find_mic(dpos, cell)[0]
-        forces_rotated = None
-        # Why don't we use scaled forces here
-        if init_relaxed.calc:
-            init_results = {'energy': None, 'forces': None,
-                            'magmoms': np.zeros(len(init_relaxed))}
-            for prop in init_results.keys():
-                res = init_relaxed.calc.get_property(prop,
-                                                     allow_calculation=False)
-                if res is not None:
-                    init_results[prop] = res
-
-        if init_results['forces'] is not None:
-            forces_rotated = np.zeros((len(dpos), 3))
-        dpos_rotated = np.zeros((len(dpos), 3))
-        magmom_rotated = np.zeros(len(dpos))
-
-        for i, at in enumerate(symop):
-            dpos_rotated[i] = f(dpos[at])
-            magmom_rotated[i] = init_results['magmoms'][at]
-            if init_results['forces'] is not None:
-                forces_rotated[i] = f(init_results['forces'][at])
-
-        results = {'forces': forces_rotated,
-                   'energy': init_results['energy'],
-                   'magmoms': magmom_rotated}
-
-        final_temp.set_initial_magnetic_moments(magmom_rotated)
-
-        pos = final_temp.get_positions()
-        final_temp.set_positions(pos + dpos_rotated)
-        newcalc = SinglePointCalculator(final_temp, **results)
-        final_temp.calc = newcalc
-
-        return final_temp
-
     def find_translations(self, init, final,
                           return_translation_vec=False):
         """Find a translation that maps init onto final.
@@ -413,6 +349,95 @@ class RNEB:
                       .format(x[1][0], x[1][1], x[1][2]))
         self.log.info("          {:2d} {:2d} {:2d}"
                       .format(x[2][0], x[2][1], x[2][2]))
+
+
+def get_relaxed_final(init, init_relaxed, final,
+                      trans=None, rot=None):
+    """Obtain a relaxed final structure from a relaxed initial structure.
+
+    Supply symmetry operations **either** pure translations by index
+    swapping in ``trans`` **or** rotations in ``rot``.
+
+    Args:
+        init (Atoms): The initial structure (unrelaxed)
+        init_relaxed (Atoms): A relaxed version of init
+        final (Atoms): The final structure (unrelaxed)
+
+    Returns:
+        Atoms:
+            The final structure in the relaxed geometry.
+
+    """
+    if trans is not None and rot is not None:
+        msg = ('Cannot specify both trans and rot. '
+               'Got {} and {} respectively.').format(trans, rot)
+        raise ValueError(msg)
+    elif trans is None and rot is None:
+        msg = 'Must specify either \'trans\' or \'rot\''
+        raise ValueError(msg)
+    elif rot is not None:
+        # Apply rotational operator
+        symop = rot[0][2]
+
+        def f(x):
+            return np.dot(rot[0][0], x)
+    else:
+        # Apply translational operator
+        symop = trans
+
+        def f(x):
+            return x
+
+    final_temp = final.copy()
+    dpos = init_relaxed.get_positions() - init.get_positions()
+    cell = init.get_cell()
+    dpos = find_mic(dpos, cell)[0]
+    forces_rotated = None
+
+    init_results = {'energy': None, 'forces': None,
+                    'magmoms': np.zeros(len(init_relaxed))}
+    if init_relaxed.calc:
+        for prop in init_results.keys():
+            res = init_relaxed.calc.get_property(prop,
+                                                 allow_calculation=False)
+            if res is not None:
+                init_results[prop] = res
+
+    if init_results['forces'] is not None:
+        forces_rotated = np.zeros((len(dpos), 3))
+    dpos_rotated = np.zeros((len(dpos), 3))
+    magmom_rotated = np.zeros(len(dpos))
+
+    for i, at in enumerate(symop):
+        dpos_rotated[i] = f(dpos[at])
+        magmom_rotated[i] = init_results['magmoms'][at]
+        if init_results['forces'] is not None:
+            # Why don't we use scaled forces here?
+            forces_rotated[i] = f(init_results['forces'][at])
+
+    results = {'forces': forces_rotated,
+               'energy': init_results['energy'],
+               'magmoms': magmom_rotated}
+
+    final_temp.set_initial_magnetic_moments(magmom_rotated)
+
+    pos = final_temp.get_positions()
+    final_temp.set_positions(pos + dpos_rotated)
+    newcalc = SinglePointCalculator(final_temp, **results)
+    final_temp.calc = newcalc
+
+    return final_temp
+
+
+def _purge_pure_tranlation_ops(sym_ops):
+    purged_ops = []
+    for op in sym_ops:
+        if not np.array_equal(op[0],
+                              np.array([[1, 0, 0],
+                                        [0, 1, 0],
+                                        [0, 0, 1]])):
+            purged_ops.append(op)
+    return purged_ops
 
 
 def compare_positions(p1, p2, cell, tol=1e-3):
