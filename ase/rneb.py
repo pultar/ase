@@ -47,12 +47,24 @@ class RNEB:
 
     """
 
-    def __init__(self, tol=1e-3, logfile='-'):
+    def __init__(self, orig, tol=1e-3, logfile='-'):
         self.tol = tol  # tolerance on atomic positions
         self.log = self._setup_log(logfile)
 
-    def get_final_image(self, orig, init, init_relaxed, final,
-                        supercell=[1, 1, 1],
+        self.orig = orig
+        self.all_sym_ops = self._get_symmetry(orig)
+
+    def _get_symmetry(self, orig):
+        # Get symmetry information of orig from spglib
+        self.log.info("    Tolerance: {}".format(self.tol))
+        spacegroup = spg.get_spacegroup(atoms_to_spglib_cell(orig),
+                                        symprec=self.tol)
+        self.log.info("\n  The pristine structure belongs to spacegroup: "
+                      "{}".format(spacegroup))
+        spg_tuple = atoms_to_spglib_cell(orig)
+        return spg.get_symmetry(spg_tuple, symprec=self.tol)
+
+    def get_final_image(self, init, init_relaxed, final,
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False):
         """Obtain a relaxed final structure from the initial relaxed.
@@ -73,16 +85,13 @@ class RNEB:
         self.log.info("Creating final image:")
         self.log.info("  Input parameters:")
         self.log.info("    Tolerance: {}".format(self.tol))
-        spacegroup = spg.get_spacegroup(atoms_to_spglib_cell(orig),
-                                        symprec=self.tol)
-        self.log.info("\n  The pristine structure belongs to spacegroup: "
-                      "{}".format(spacegroup))
+
         # wrap atoms outside unit cell into the unit cell
         init.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
+
         # check for simple translations
-        index_swaps = self.find_translations(orig, init, final,
-                                             supercell=supercell)
+        index_swaps = self.find_translations(init, final)
         # if translations were found
         if index_swaps is not None and not rot_only:
             # create the final relaxed image
@@ -94,8 +103,7 @@ class RNEB:
                 return final_relaxed
         else:
             # if no translations were found, look for rotations
-            rot = self.find_symmetries(orig, init, final,
-                                       supercell=supercell,
+            rot = self.find_symmetries(init, final,
                                        log_atomic_idx=log_atomic_idx)
             final_relaxed = self.get_relaxed_final(init, init_relaxed,
                                                    final, rot=rot)
@@ -104,7 +112,7 @@ class RNEB:
             else:
                 return final_relaxed
 
-    def find_symmetries(self, orig, init, final, supercell=[1, 1, 1],
+    def find_symmetries(self, init, final,
                         log_atomic_idx=False):
         """Find the relevant symmetry operations relating init and final.
 
@@ -130,14 +138,11 @@ class RNEB:
         pos = init_temp.get_scaled_positions()
         pos_final = final_temp.get_positions()
         cell = init_temp.get_cell()
-        orig_temp = orig.copy()
-        orig_temp = orig_temp.repeat(supercell)
-        spg_tuple = atoms_to_spglib_cell(orig_temp)
-        sym = spg.get_symmetry(spg_tuple, symprec=self.tol)
+        sym = self.all_sym_ops
+
         R = sym['rotations']
         T = sym['translations']
-        pos_temp = np.empty((len(pos), 3))
-        S = []
+        sym = []
 
         for i, r in enumerate(R):
             pos_init_scaled = np.inner(pos, r) + T[i]
@@ -146,25 +151,25 @@ class RNEB:
             res = self.compare_positions(pos_final,
                                          pos_init, cell)
             if res[0]:
-                S.append([r.astype(int), T[i], res[1]])
-        if len(S) > 0:
-            for i, s in enumerate(S):
-                U = s[0]
-                T = s[1]
+                sym.append([r.astype(int), T[i], res[1]])
+        if len(sym) > 0:
+            for i, S in enumerate(sym):
+                U = S[0]
+                T = S[1]
                 self.log.info("\n      Symmetry {}:".format(i))
                 self.log.info("        U:")
                 self.write_3x3_matrix_to_log(U)
                 self.log.info("        T: {:2.2f} {:2.2f} {:2.2f}"
                               .format(T[0], T[1], T[2]))
                 if log_atomic_idx:
-                    idxs = s[2]
+                    idxs = S[2]
                     self.log.info("        Equivalent atoms:")
                     for j, idx in enumerate(idxs):
                         self.log.info("          {} -> {}".format(idx, j))
         else:
             self.log.warning("    No rotations found")
 
-        return S
+        return sym
 
     def reflect_path(self, images, sym=None):
         """Get the reflection operations valid for the entire path.
@@ -306,8 +311,8 @@ class RNEB:
 
         return final_temp
 
-    def find_translations(self, orig, init, final, supercell=[1, 1, 1],
-                          return_translations_vec=False):
+    def find_translations(self, init, final,
+                          return_translation_vec=False):
         """Find a translation that maps init onto final.
 
         Args:
@@ -323,18 +328,16 @@ class RNEB:
         """
         self.log.info("\n  Looking for translations:")
         init_temp = init.copy()
-        orig_super_cell = orig.repeat(supercell)
-        # get the symmetry information for the pristine structure
-        spglib_tuple = atoms_to_spglib_cell(orig_super_cell)
-        symmetry_super_cell = spg.get_symmetry(spglib_tuple,
-                                               symprec=self.tol)
-        equiv_atoms = symmetry_super_cell['equivalent_atoms']
+        # get the equivalent atoms information
+        equiv_atoms = self.all_sym_ops['equivalent_atoms']
+
         # get unique elements in equiv_atoms to be used as reference for
         # translations
         unq = np.unique(equiv_atoms)
+
         pos_init = init_temp.get_positions()
         pos_final = final.get_positions()
-        pos_sc = orig_super_cell.get_positions()
+        pos_sc = self.orig.get_positions()
         cell = init_temp.get_cell()
         for u in unq:
             equiv_list = np.where(equiv_atoms == u)[0]
