@@ -51,6 +51,8 @@ Global optimization
    ga/ga_optimize
    ga/ga_fcc_alloys
    ga/ga_convex_hull
+   ga/ga_bulk
+   ga/ga_molecular_crystal
 
 Calculating diffusion/dissociation properties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,6 +64,7 @@ Calculating diffusion/dissociation properties
    dissociation
    neb/idpp
    selfdiffusion/al110
+   neb/rneb
 
 ASE database
 ^^^^^^^^^^^^

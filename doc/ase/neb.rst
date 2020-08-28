@@ -31,6 +31,10 @@ Relevant literature References:
    S. Smidstrup, A. Pedersen, K. Stokbro and H. Jonsson,
    J. Chem. Phys. 140, 214106 (2014)
 
+5. 'Scaled and Dynamic Optimizations of Nudged Elastic Bands',
+   P. Lindgren, G. Kastlunger and A. A. Peterson,
+   J. Chem. Theory Comput. 15, 11, 5787-5793 (2019)
+
 
 The NEB class
 =============
@@ -57,7 +61,7 @@ saved in A.traj and B.traj::
   neb.interpolate()
   # Set calculators:
   for image in images[1:4]:
-      image.set_calculator(MyCalculator(...))
+      image.calc = MyCalculator(...)
   # Optimize:
   optimizer = MDMin(neb, trajectory='A2B.traj')
   optimizer.run(fmax=0.04)
@@ -70,10 +74,11 @@ the original atoms object.
 Notice the use of the :meth:`~NEB.interpolate` method to obtain an
 initial guess for the path from A to B.
 
+
 Interpolation
 =============
 
-.. method:: NEB.interpolate()
+``NEB.interpolate()``
 
    Interpolate path linearly from initial to final state.
 
@@ -83,7 +88,7 @@ Interpolation
    function can be used independently of the NEB class, but is functionally
    identical.
 
-.. method:: NEB.interpolate(method='idpp')
+``NEB.interpolate(method='idpp')``
 
    Create an improved path from initial to final state using the IDPP approach
    [4]. This will start from an initial guess of a linear interpolation.
@@ -191,18 +196,25 @@ To use the climbing image NEB method, instantiate the NEB object like this::
 Scaled and dynamic optimizations
 ================================
 
+.. autoclass:: ase.dyneb.DyNEB
+
 The convergence of images is often non-uniform, and a large fraction of
 computational resources can be spent calculating images that are below
 the convergence criterion. This can be avoided with a dynamic optimization
-method, where the convergence of each image is carefully monitored.
-Dynamic optimization is implemented as a keyword in the NEB class::
+method that monitors the convergence of each image. Dynamic optimization
+is implemented as a subclass of the NEB method::
 
-  neb = NEB(images, dynamic_relaxation=True)
+    from ase.dyneb import DyNEB
+    neb = DyNEB(images, fmax=0.05, dynamic_relaxation=True)
+
+>>>>>>> refs/remotes/origin/split-neb-methods
+where ``fmax`` must be identical to the ``fmax`` of the optimizer.
 
 .. note::
 
-  Dynamic optimization only works efficiently in series, and will not result
-  in reduced computational time when resources are parallelized over images.
+    Dynamic optimization only works efficiently in series, and will not result
+    in reduced computational time when resources are parallelized over images.
+    ``dynamic_relaxation=False`` reverts to the default NEB implementation.
 
 The saddle point is the important result of an NEB calculation, and the other
 interior images are typically not used in subsequent analyses. The
@@ -210,7 +222,7 @@ convergence criteria can be scaled to focus on the saddle point and increase
 the tolerance in other regions of the PES. Convergence scaling is implemented
 as::
 
-  neb = NEB(images, dynamic_relaxation=True, scale_fmax=1.)
+  neb = DyNEB(images, fmax=0.05, dynamic_relaxation=True, scale_fmax=1.)
 
 where the convergence criterion of each image is scaled based on the position
 of the image relative to the highest point in the band. The rate (slope) of
@@ -219,8 +231,53 @@ convergence scaling is controlled by the keyword ``scale_fmax``.
 .. note::
 
   A low scaling factor (``scale_fmax=1-3``) is often enough to significantly
-  reduce the number of force calls needed for convergence.
+  reduce the number of force calls required for convergence.
 
+
+Reflective NEB
+==============
+
+Make use of symmetry in the NEB path to reduce the number of required
+calculations. For an exhaustive tutorial see the :ref:`full tutorial
+<rneb tutorial>`.
+
+.. note::
+
+   The Python package spglib_ is a requirement for using RNEB.
+
+First we need to obtain the symmetry operations that are relevant for our system::
+  
+  # The supercell is a structure with the diffusing species present
+  # in the initial and final position.
+  supercell = io.read('combined_AB.traj')
+  
+  from ase.rneb import RNEB
+  rneb = RNEB(supercell)
+
+  all_sym_ops = rneb.find_symmetries(initial, final)
+
+If we find any valid symmetry operations we can use them to create the
+final relaxed image from the initial relaxed image, without doing the
+relaxation on the final image::
+
+  final_relaxed = rneb.get_final_image(initial_unrelaxed,
+                                       initial_relaxed,
+                                       final_unrelaxed)
+
+Then we create the path by interpolation as in the example in `The NEB
+class`_. Check that the path has reflection symmetry for each image
+pair, and finally run the NEB utilizing the symmetry operations to
+assign energies and forces to each symmetric image pair::
+
+  reflective_ops = rneb.reflect_path(images, sym=all_sym_ops)
+  
+  neb = NEB(images, reflect_ops=reflective_ops[0])
+  qn = BFGS(neb, logfile=None)
+  qn.run(fmax=0.05)
+
+  
+.. _spglib: https://spglib.github.io/spglib/
+  
 Parallelization over images
 ===========================
 
@@ -236,7 +293,7 @@ only some of them have a calculator attached::
   j = world.rank * n // world.size
   for i, image in enumerate(images[1:-1]):
       if i == j:
-          image.set_calculator(EMT())
+          image.calc = EMT()
 
 Create the NEB object with ``NEB(images, parallel=True)``.
 For a complete example using GPAW_, see here_.
