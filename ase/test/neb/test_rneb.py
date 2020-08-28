@@ -8,7 +8,6 @@ from ase.calculators.emt import EMT
 from ase.geometry import distance, find_mic
 from ase.neb import NEB
 from ase.optimize import BFGS
-from ase.rneb import RNEB, reshuffle_positions
 
 pytest.importorskip('spglib')
 
@@ -31,6 +30,7 @@ def test_Al_hexagonal():
 
 
 def compare_rneb_w_normal_neb(atoms, vacancy_path):
+    from ase.rneb import RNEB
     rneb = RNEB(atoms, logfile=None)
 
     # deleting ions will change indices
@@ -114,6 +114,7 @@ def compare_rneb_w_normal_neb(atoms, vacancy_path):
 
 @pytest.fixture(scope="module")  # reuse the same object for the whole script
 def initial_structures_fcc111_al():
+    from ase.rneb import reshuffle_positions
     atoms = fcc111('Al', [2, 2, 1], 4.05, periodic=True)
     nxy = np.sum(atoms.cell, axis=0) / 6
     nxy[2] = atoms.cell[2][2]
@@ -158,6 +159,8 @@ def initial_structures_fcc111_al():
 
 def test_rmi_rneb(initial_structures_fcc111_al):
     """ running RMI-NEB followed by reflective NEB on half the path """
+    from ase.rneb import RNEB
+
     # accepted energy difference between normal and reflective NEB
     dft_tol = 1e-3  # 1 meV
 
@@ -222,7 +225,9 @@ def test_number_reflection_operators(initial_structures_fcc111_al):
 
 
 def get_num_sym_operators(atoms, path):
-    # deleting ions will change inidices
+    from ase.rneb import RNEB
+
+    # deleting ions will change indices
     initial_unrelaxed = atoms.copy()
     del initial_unrelaxed[path[0]]
 
@@ -248,6 +253,8 @@ def get_path_length(init, final):
 
 
 def test_reshuffling_atoms():
+    from ase.rneb import reshuffle_positions
+
     # Create two structures
     slab = fcc111('Al', size=(3, 3, 2), a=2)
     slab.center(vacuum=5, axis=2)
