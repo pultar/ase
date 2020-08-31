@@ -196,7 +196,7 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
     b_frac_sdc = b_mill_sdc.copy().astype(float)[:Ns]
     b_frac_sdc[:, :] /= kgrid
 
-    nnk_kd = np.empty((Nk, Nd), dtype=np.uint)
+    nnk_kd = np.empty((Nk, Nd), dtype=np.uint32)
     G_kdc = np.empty((Nk, Nd, 3), dtype=np.int8)
     w_d = np.empty(Nd, dtype=float)
     for i, k in enumerate(kpt_frac):
@@ -221,7 +221,7 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
             tot += Nd_s[s]
 
     # Set the inverse list of neighboring k-points
-    invnnk_kd = np.empty((Nk, Nd), dtype=np.uint8)
+    invnnk_kd = np.empty((Nk, Nd), dtype=np.uint32)
     for k1 in range(Nk):
         for d in range(Nd):
             invnnk_kd[k1, d] = nnk_kd[:, d].tolist().index(k1)
@@ -449,6 +449,15 @@ class Wannier:
                 kgrid=self.kptgrid,
                 verbose=True)
         self.Ndir = self.kklst_kd.shape[1]
+
+        # Compute the directions to reach the neighboring k-points
+        self.bvec_dc = np.empty((self.Ndir, 3), dtype=float)
+        for d in range(self.Ndir):
+            self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]] - self.kpt_kc[0]
+                               - self.G_kdc[0, d])
+
+        # Apply sign convention, everything related to neighboring k-points
+        # must be completed before this change
         self.kpt_kc *= sign
 
         self.Nk = len(self.kpt_kc)
@@ -564,9 +573,16 @@ class Wannier:
 
           pos =  L / 2pi * phase(diag(Z))
         """
-        coord_wc = np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T / (2 * pi) % 1
-        if not scaled:
-            coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
+        ImlnZ_dw = np.log(self.Z_dkww.diagonal(axis1=2,
+            axis2=3)).imag.sum(axis=1)
+        coord_wc = np.zeros((self.nwannier, 3), dtype=float)
+        for d in range(self.Ndir):
+            for w in range(self.nwannier):
+                coord_wc[w] += - (self.weight_d[d] * ImlnZ_dw[d, w]
+                                  * self.bvec_dc[d] / self.Nk)
+        # TODO: scale the coordinates to the cell vectors
+        # if not scaled:
+        #     coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
         return coord_wc
 
     def get_radii(self):
