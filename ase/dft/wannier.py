@@ -60,8 +60,8 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
         perm = np.stack(np.meshgrid(g, g, g), axis=-1).reshape(-1, 3)
         perm = perm[np.any(perm != [0, 0, 0], axis=1)]
         Np = len(perm)
-        b_cart_pc = np.empty((Np, 3), dtype=np.float)
-        b_dist_p = np.empty(Np, dtype=np.float)
+        b_cart_pc = np.empty((Np, 3), dtype=float)
+        b_dist_p = np.empty(Np, dtype=float)
         for i, p in enumerate(perm):
             b_cart_pc[i] = np.sum([p[l] * 2 * np.pi * recip_v[l] / kgrid[l]
                                   for l in range(len(kgrid))], axis=0)
@@ -183,7 +183,7 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
     # Split couples in two separate arrays
     Nd = (Nb / 2).astype(np.uint8)
     Nd_s = (Nb_s / 2).astype(np.uint8)
-    b_mill_sdc = np.empty((Ns, Nd, 3))
+    b_mill_sdc = np.empty((Ns, Nd, 3), dtype=np.int8)
     for s in range(Ns):
         tot = 0
         for i1 in range(Nb_s[s]):
@@ -196,7 +196,7 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
     b_frac_sdc = b_mill_sdc.copy().astype(float)[:Ns]
     b_frac_sdc[:, :] /= kgrid
 
-    nnk_kd = np.empty((Nk, Nd), dtype=np.uint8)
+    nnk_kd = np.empty((Nk, Nd), dtype=np.uint)
     G_kdc = np.empty((Nk, Nd, 3), dtype=np.int8)
     w_d = np.empty(Nd, dtype=float)
     for i, k in enumerate(kpt_frac):
@@ -439,7 +439,6 @@ class Wannier:
         self.kpt_kc = calc.get_bz_k_points()
         assert len(calc.get_ibz_k_points()) == len(self.kpt_kc)
         self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
-        self.kpt_kc *= sign
 
         # Get list of neighbors and G vectors for each k-point, number of
         # directions and weight for each shell.
@@ -450,6 +449,7 @@ class Wannier:
                 kgrid=self.kptgrid,
                 verbose=True)
         self.Ndir = self.kklst_kd.shape[1]
+        self.kpt_kc *= sign
 
         self.Nk = len(self.kpt_kc)
         self.unitcell_cc = calc.get_atoms().get_cell()
