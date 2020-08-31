@@ -7,7 +7,6 @@ Tejs Vegge, and Juan Maria García Lastra, J. Chem. Theory Comput.,
 import logging
 
 import numpy as np
-import spglib as spg
 
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
@@ -55,6 +54,8 @@ class RNEB:
         self.all_sym_ops = self._get_symmetry(orig)
 
     def _get_symmetry(self, orig):
+        import spglib as spg
+
         # Get symmetry information of orig from spglib
         self.log.info("    Tolerance: {}".format(self.tol))
         spacegroup = spg.get_spacegroup(atoms_to_spglib_cell(orig),
