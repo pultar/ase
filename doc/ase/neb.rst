@@ -234,6 +234,8 @@ convergence scaling is controlled by the keyword ``scale_fmax``.
   reduce the number of force calls required for convergence.
 
 
+.. _reflective-neb-in-neb:
+  
 Reflective NEB
 ==============
 
