@@ -557,18 +557,24 @@ class Wannier:
     def get_centers(self, scaled=False):
         """Calculate the Wannier centers
 
+           Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
         ::
-
-          pos =  L / 2pi * phase(diag(Z))
+                  1   --
+          pos = - --  >  wb * b * phase(diag(Z(k,b)))
+                  Nk  --
+                      k,b
         """
         phZ_dw = np.angle(self.Z_dkww.diagonal(axis1=2, axis2=3)).sum(axis=1)
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
-        for d in range(self.Ndir):
-            for w in range(self.nwannier):
+        for w in range(self.nwannier):
+            for d in range(self.Ndir):
                 coord_wc[w] += - (self.weight_d[d] * phZ_dw[d, w]
-                                  * self.bvec_dc[d] / self.Nk)
+                                  * self.bvec_dc[d])
+        coord_wc /= self.Nk
+
         if not scaled:
-            coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
+            coord_wc = coord_wc @ self.largeunitcell_cc
+
         return coord_wc
 
     def get_radii(self):
