@@ -43,14 +43,16 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
        Returns a list of neighbors for each k-point, the G vectors to move
        across PBC and the weights.
 
-       Relation with neighbors: nnk + b + G = k
+       Relation with neighbors: nnk = k + b + G
 
        Reference: Wannier90 review
                   (http://dx.doi.org/10.1016/j.cpc.2007.11.016)
+                  Note: the G vector here has the opposite sign
+
 
        Nk (k): number of k-points
        Ns (s): number of shells of neighbors
-       Nb (b): number of b vectors (directions to neighbors)
+       Nb (b): number of b vectors (connecting neighbors)
     """
     # In the following code there are several vectors with Miller (mill)
     # notation, fractional coordinates relative to the base vectors (frac)
@@ -180,57 +182,38 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
         print('Number of neighbors in each shell:', Nb_s)
         print('Distances:', b_dist_s[:Ns])
 
-    # Split couples in two separate arrays
-    Nd = (Nb / 2).astype(np.uint8)
-    Nd_s = (Nb_s / 2).astype(np.uint8)
-    b_mill_sdc = np.empty((Ns, Nd, 3), dtype=np.int8)
-    for s in range(Ns):
-        tot = 0
-        for i1 in range(Nb_s[s]):
-            b1 = b_mill_sbc[s, i1]
-            for b2 in b_mill_sbc[s, :i1]:
-                if (b1 == - b2).all():
-                    b_mill_sdc[s, tot] = b1
-                    tot += 1
+    b_frac_sbc = b_mill_sbc.copy().astype(float)[:Ns]
+    b_frac_sbc[:, :] /= kgrid
 
-    b_frac_sdc = b_mill_sdc.copy().astype(float)[:Ns]
-    b_frac_sdc[:, :] /= kgrid
-
-    nnk_kd = np.empty((Nk, Nd), dtype=np.uint32)
-    G_kdc = np.empty((Nk, Nd, 3), dtype=np.int8)
-    w_d = np.empty(Nd, dtype=float)
+    nnk_kb = np.empty((Nk, Nb), dtype=np.uint32)
+    G_kbc = np.empty((Nk, Nb, 3), dtype=np.int8)
+    w_b = np.empty(Nb, dtype=float)
     for i, k in enumerate(kpt_frac):
         tot = 0
         for s in range(Ns):
-            for j in range(Nd_s[s]):
-                w_d[tot + j] = 2 * w_s[s]
-                b = b_frac_sdc[s, j]
+            for j in range(Nb_s[s]):
+                w_b[tot + j] = w_s[s]
+                b = b_frac_sbc[s, j]
                 diff = [d.all() for d in
                         np.abs(kpt_frac - k - b) < atol]
                 if True in diff:
-                    nnk_kd[i, tot + j] = diff.index(True)
-                    G_kdc[i, tot + j] = [0, 0, 0]
+                    nnk_kb[i, tot + j] = diff.index(True)
+                    G_kbc[i, tot + j] = [0, 0, 0]
                 else:
                     for g in b_mill_pc:
                         diff = [d.all() for d in
                                 np.abs(kpt_frac - g - k - b) < atol]
                         if True in diff:
-                            nnk_kd[i, tot + j] = diff.index(True)
-                            G_kdc[i, tot + j] = g
+                            nnk_kb[i, tot + j] = diff.index(True)
+                            G_kbc[i, tot + j] = g
                             break
-            tot += Nd_s[s]
-
-    # Set the inverse list of neighboring k-points
-    invnnk_kd = np.empty((Nk, Nd), dtype=np.uint32)
-    for k1 in range(Nk):
-        for d in range(Nd):
-            invnnk_kd[k1, d] = nnk_kd[:, d].tolist().index(k1)
+            tot += Nb_s[s]
 
     if verbose:
         t += time()
         print(f'Neighbors and weights computed in {t:.1f}s')
 
-    return nnk_kd, invnnk_kd, G_kdc, w_d
+    return nnk_kb, G_kbc, w_b
 
 
 def neighbor_k_search(k_c, G_c, kpt_kc, tol=1e-4):
@@ -439,10 +422,13 @@ class Wannier:
         self.kpt_kc = calc.get_bz_k_points()
         assert len(calc.get_ibz_k_points()) == len(self.kpt_kc)
         self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
+        self.Nk = len(self.kpt_kc)
+        self.unitcell_cc = calc.get_atoms().get_cell()
+        self.largeunitcell_cc = (self.unitcell_cc.T * self.kptgrid).T
 
         # Get list of neighbors and G vectors for each k-point, number of
         # directions and weight for each shell.
-        self.kklst_kd, self.invkklst_kd, self.G_kdc, self.weight_d = \
+        self.kklst_kd, self.G_kdc, self.weight_d = \
             neighbors_and_weights(
                 kpt_kc=self.kpt_kc,
                 recip_v=self.calc.get_atoms().get_cell().reciprocal(),
@@ -453,16 +439,18 @@ class Wannier:
         # Compute the directions to reach the neighboring k-points
         self.bvec_dc = np.empty((self.Ndir, 3), dtype=float)
         for d in range(self.Ndir):
-            self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]] - self.kpt_kc[0]
-                               - self.G_kdc[0, d])
+            self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]]
+                               - self.kpt_kc[0] - self.G_kdc[0, d])
+
+        # Set the inverse list of neighboring k-points
+        self.invkklst_kd = np.empty((self.Nk, self.Ndir), dtype=np.uint32)
+        for k1 in range(self.Nk):
+            for d in range(self.Ndir):
+                self.invkklst_kd[k1, d] = self.kklst_kd[:, d].tolist().index(k1)
 
         # Apply sign convention, everything related to neighboring k-points
         # must be completed before this change
         self.kpt_kc *= sign
-
-        self.Nk = len(self.kpt_kc)
-        self.unitcell_cc = calc.get_atoms().get_cell()
-        self.largeunitcell_cc = (self.unitcell_cc.T * self.kptgrid).T
 
         if nbands is not None:
             self.nbands = nbands
@@ -573,16 +561,14 @@ class Wannier:
 
           pos =  L / 2pi * phase(diag(Z))
         """
-        ImlnZ_dw = np.log(self.Z_dkww.diagonal(axis1=2,
-            axis2=3)).imag.sum(axis=1)
+        phZ_dw = np.angle(self.Z_dkww.diagonal(axis1=2, axis2=3)).sum(axis=1)
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
         for d in range(self.Ndir):
             for w in range(self.nwannier):
-                coord_wc[w] += - (self.weight_d[d] * ImlnZ_dw[d, w]
+                coord_wc[w] += - (self.weight_d[d] * phZ_dw[d, w]
                                   * self.bvec_dc[d] / self.Nk)
-        # TODO: scale the coordinates to the cell vectors
-        # if not scaled:
-        #     coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
+        if not scaled:
+            coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
         return coord_wc
 
     def get_radii(self):
@@ -631,7 +617,8 @@ class Wannier:
 
     def translate_to_cell(self, w, cell):
         """Translate the w'th Wannier function to specified cell"""
-        scaled_c = np.angle(self.Z_dww[:3, w, w]) * self.kptgrid / (2 * pi)
+        # scaled_c = np.angle(self.Z_dww[:3, w, w]) * self.kptgrid / (2 * pi)
+        scaled_c = self.get_centers(scaled=True)[w]
         trans = np.array(cell) - np.floor(scaled_c)
         self.translate(w, trans)
 
@@ -652,8 +639,9 @@ class Wannier:
         the orbitals to the cell [2,2,2].  In this way the pbc
         boundary conditions will not be noticed.
         """
-        scaled_wc = (np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T *
-                     self.kptgrid / (2 * pi))
+        # scaled_wc = (np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T *
+        #              self.kptgrid / (2 * pi))
+        scaled_wc = self.get_centers(scaled=True)
         trans_wc = np.array(cell)[None] - np.floor(scaled_wc)
         for kpt_c, U_ww in zip(self.kpt_kc, self.U_kww):
             U_ww *= np.exp(2.j * pi * np.dot(trans_wc, kpt_c))
