@@ -724,8 +724,12 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                 # ! added to get 'true' free energy when PSTRESS keyword is
                 # ! present, not enthalpy
                 elif elem.tag == 'incar':
-                    pstress = elem.find('i[@name="PSTRESS"]').text
-
+                    try:
+                        elem.find('i[@name="PSTRESS"]').text
+                    except AttributeError:
+                        pstress = False
+                    else:
+                        pstress = True
 
             elif event == 'start' and elem.tag == 'calculation':
                 calculation.append(elem)
