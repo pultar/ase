@@ -34,7 +34,7 @@ mm = read(mmfile)
 # Check PBCs and box dimensions of MM box
 assert not (mm.cell.diagonal() == 0).any(),\
         'mm atoms have no cell'
-assert (mm.cell == np.diag(mm.cell.diagonal())).all(),\
+assert (mm.cell.rank == 3) and mm.cell.orthorhombic,\
         'mm cell not orthorhombic'
 if not mm.pbc.all() and enforce_wrap:
     print('Warning: All MM PBCs not on,',
