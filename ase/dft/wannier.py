@@ -37,67 +37,51 @@ def lowdin(U, S=None):
     U[:] = np.dot(U, rot)
 
 
-def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
-    """Compute nearest neighbors and weights
+def search_shells(max_index, basis_c, mpgrid):
+    """Compute possible combinations of vectors
 
-       Returns a list of neighbors for each k-point, the G vectors to move
-       across PBC and the weights.
+       The returned array should represent direction from one k-point to every
+       possible neighboring k-point, we compute this in cartesian coordinates
+       as well and we evaluate the distance.
 
-       Relation with neighbors: nnk = k + b + G
+       Given an index 'Mi' for each basis component computes every possible
+       combination, with repetition. The only exception is (0,0,0) that is
+       removed from the list. All the arrays are sorted in order of increasing
+       distance.
 
-       Reference: Wannier90 review
-                  (http://dx.doi.org/10.1016/j.cpc.2007.11.016)
-                  Note: the G vector here has the opposite sign
+       EX: Mi = 1 -> (-1,-1,-1), (-1,1,0), (1,0,-1) etc.
 
-
-       Nk (k): number of k-points
-       Ns (s): number of shells of neighbors
-       Nb (b): number of b vectors (connecting neighbors)
+       max_index: maximum index for the combinations
+       basis_c: list of basis vectors (should contain three 3D vectors)
+       mpgrid: Monkhorst-Pack grid size (Nx, Ny, Nz)
     """
-    # In the following code there are several vectors with Miller (mill)
-    # notation, fractional coordinates relative to the base vectors (frac)
-    # and cartesian coordinates (cart).
+    comb = np.stack(np.meshgrid(max_index, max_index, max_index),
+                    axis=-1).reshape(-1, len(mpgrid))
+    comb = comb[np.any(comb != [0, 0, 0], axis=1)]
 
-    def search_shells(g):
-        perm = np.stack(np.meshgrid(g, g, g), axis=-1).reshape(-1, 3)
-        perm = perm[np.any(perm != [0, 0, 0], axis=1)]
-        Np = len(perm)
-        b_cart_pc = np.empty((Np, 3), dtype=float)
-        b_dist_p = np.empty(Np, dtype=float)
-        for i, p in enumerate(perm):
-            b_cart_pc[i] = np.sum([p[l] * 2 * np.pi * recip_v[l] / kgrid[l]
-                                  for l in range(len(kgrid))], axis=0)
-            b_dist_p[i] = np.linalg.norm(b_cart_pc[i])
-        return perm, b_cart_pc, b_dist_p
-
-    if verbose:
-        t = - time()
-
-    kpt_frac = kpt_kc
-    kpt_cart = np.empty(kpt_frac.shape, dtype=float)
-    Nk = len(kpt_frac)
-    for i, k in enumerate(kpt_frac):
-        kpt_cart[i] = np.sum([k[j] * recip_v[j] for j in range(len(recip_v))],
-                             axis=0)
-
-    # Check all common directions and list shells and distances
-    g = [-1, 0, 1]
-    _, _, b_dist_p = search_shells(g)
-
-    # Increase the range of search if the distances in some directions are
-    # smaller, this is not efficient but prevent problems with elongated cells
-    ratio = np.ceil(max(b_dist_p) / min(b_dist_p))
-    g = np.arange(- ratio, ratio + 1, dtype=np.int8)
-    b_mill_pc, b_cart_pc, b_dist_p = search_shells(g)
+    # Compute cartesian coordinates and distance from the center
+    b_cart_pc = np.empty((len(comb), len(basis_c)), dtype=float)
+    b_dist_p = np.empty(len(comb), dtype=float)
+    for i, p in enumerate(comb):
+        b_cart_pc[i] = np.sum([p[l] * 2 * np.pi * basis_c[l] / mpgrid[l]
+                              for l in range(len(basis_c))], axis=0)
+        b_dist_p[i] = np.linalg.norm(b_cart_pc[i])
     sort = np.argsort(b_dist_p)
-    b_mill_pc = b_mill_pc[sort]
+    comb = comb[sort]
     b_cart_pc = b_cart_pc[sort]
     b_dist_p = b_dist_p[sort]
+    return comb, b_cart_pc, b_dist_p
 
-    # Count shells and neighbors in each
+
+def count_shells(dist_p, atol):
+    """Count the equal-distance shells and the elements in each
+
+       dist_p: list of distances
+       atol: absolute tolerance for equality
+    """
     Nb_s = [1]
     prev_d = 0.
-    for i, d in enumerate(b_dist_p):
+    for i, d in enumerate(dist_p):
         if i > 0:
             if np.abs(prev_d - d) < atol:
                 Nb_s[-1] = Nb_s[-1] + 1
@@ -105,19 +89,19 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                 Nb_s.append(1)
         prev_d = d
     Nb_s = np.array(Nb_s, dtype=np.uint8)
+    return Nb_s
 
-    # Split arrays based on shells
-    b_mill_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=np.int8)
-    b_cart_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=float)
-    b_dist_s = np.empty(len(Nb_s), dtype=float)
-    tot = 0
-    for s, Nb in enumerate(Nb_s):
-        b_mill_sbc[s, :Nb] = b_mill_pc[tot:tot + Nb]
-        b_cart_sbc[s, :Nb] = b_cart_pc[tot:tot + Nb]
-        b_dist_s[s] = b_dist_p[tot]
-        tot += Nb
 
-    # Compute weights and number of shells to satisfy the completeness relation
+def neighbors_complete_set(b_cart_sbc, Nb_s, atol, verbose):
+    """Returns the list of needed shells for a complete set
+
+       Returns the indices of Nb_s that correspond to a complete set of shells.
+
+       b_cart_sbc: list of vectors in each shell, in cartesian coordinates
+       Nb_s: list of number of vectors in each shell
+       atol: absolute tolerance for (in)equality
+    """
+    ids = np.arange(0, len(Nb_s)).astype(np.uint8)
     rm = 0
     for n in range(0, len(Nb_s)):
         n -= rm
@@ -131,10 +115,10 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                 for b_in in range(Nb_s[n]):
                     if parallel:
                         continue
-                    inn_prod = np.dot(b_cart_sbc[s, b_out],
-                                      b_cart_sbc[n, b_in])
-                    norm_prod = (np.linalg.norm(b_cart_sbc[s, b_out]) *
-                                 np.linalg.norm(b_cart_sbc[n, b_in]))
+                    inn_prod = np.dot(b_cart_sbc[ids][s, b_out],
+                                      b_cart_sbc[ids][n, b_in])
+                    norm_prod = (np.linalg.norm(b_cart_sbc[ids][s, b_out]) *
+                                 np.linalg.norm(b_cart_sbc[ids][n, b_in]))
                     if np.abs(inn_prod - norm_prod) < atol:
                         parallel = True
             tot += Nb
@@ -144,16 +128,14 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
             A = np.zeros((6, len(Nb_s[:n + 1])), dtype=float)
             for s, Nb in enumerate(Nb_s[:n + 1]):
                 for b in range(Nb):
-                    A[0:3, s] = (A[0:3, s] + b_cart_sbc[s, b, 0:3] *
-                                 b_cart_sbc[s, b, 0:3])
-                    A[3:6, s] = (A[3:6, s] + b_cart_sbc[s, b, 0:3] *
-                                 b_cart_sbc[s, b, [1, 2, 0]])
+                    A[0:3, s] = (A[0:3, s] + b_cart_sbc[ids][s, b, 0:3] *
+                                 b_cart_sbc[ids][s, b, 0:3])
+                    A[3:6, s] = (A[3:6, s] + b_cart_sbc[ids][s, b, 0:3] *
+                                 b_cart_sbc[ids][s, b, [1, 2, 0]])
             U, sv, Vt = np.linalg.svd(A, full_matrices=False)
 
         if (np.abs(sv) < atol).any() or parallel:
-            b_mill_sbc = np.delete(b_mill_sbc, n, axis=0)
-            b_cart_sbc = np.delete(b_cart_sbc, n, axis=0)
-            b_dist_s = np.delete(b_dist_s, n, axis=0)
+            ids = np.delete(ids, n, axis=0)
             Nb_s = np.delete(Nb_s, n, axis=0)
             rm += 1
             if verbose:
@@ -174,9 +156,74 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                       n + 1, 'shell(s)')
                 print('Weights:', w_s)
             Ns = n + 1
+            ids = ids[:Ns]
             break
 
-    Nb_s = Nb_s[:Ns]
+    return ids, w_s
+
+
+def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
+    """Compute nearest neighbors, weights and G vectors
+
+       Returns a list of neighbors for each k-point, the G vectors to move
+       across PBC and the weights.
+
+       Relation with neighbors: nnk = k + b + G
+
+       Reference: Wannier90 review
+                  (http://dx.doi.org/10.1016/j.cpc.2007.11.016)
+                  Note: the G vector here has the opposite sign
+
+       Nk (k): number of k-points
+       Ns (s): number of shells of neighbors
+       Nb (b): number of b vectors (connecting neighbors)
+    """
+    # In the following code there are several vectors with Miller (mill)
+    # notation, fractional coordinates relative to the base vectors (frac)
+    # and cartesian coordinates (cart).
+
+    if verbose:
+        t = - time()
+
+    kpt_frac = kpt_kc
+    kpt_cart = np.empty(kpt_frac.shape, dtype=float)
+    Nk = len(kpt_frac)
+    for i, k in enumerate(kpt_frac):
+        kpt_cart[i] = np.sum([k[j] * recip_v[j] for j in range(len(recip_v))],
+                             axis=0)
+
+    # Check all common directions and list distances
+    g = [-1, 0, 1]
+    _, _, b_dist_p = search_shells(g, recip_v, kgrid)
+
+    # Increase the range of search if the distances in some directions are
+    # smaller, it should prevent problems with elongated cells
+    ratio = np.ceil(max(b_dist_p) / min(b_dist_p))
+    g = np.arange(- ratio, ratio + 1, dtype=np.int8)
+    b_mill_pc, b_cart_pc, b_dist_p = search_shells(g, recip_v, kgrid)
+
+    # Count shells of neighbors and elements in each
+    Nb_s = count_shells(b_dist_p, atol)
+
+    # Split arrays based on shells
+    b_mill_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=np.int8)
+    b_cart_sbc = np.empty((len(Nb_s), max(Nb_s), 3), dtype=float)
+    b_dist_s = np.empty(len(Nb_s), dtype=float)
+    tot = 0
+    for s, Nb in enumerate(Nb_s):
+        b_mill_sbc[s, :Nb] = b_mill_pc[tot:tot + Nb]
+        b_cart_sbc[s, :Nb] = b_cart_pc[tot:tot + Nb]
+        b_dist_s[s] = b_dist_p[tot]
+        tot += Nb
+
+    # Compute weights and number of shells to satisfy the completeness relation
+    ids, w_s = neighbors_complete_set(b_cart_sbc, Nb_s, atol, verbose)
+    b_mill_sbc = b_mill_sbc[ids]
+    b_cart_sbc = b_cart_sbc[ids]
+    b_dist_s = b_dist_s[ids]
+    Nb_s = Nb_s[ids]
+    Ns = len(ids)
+
     Nb = np.sum([n for n in Nb_s]).astype(np.uint8)
     if verbose:
         print('Number of neighbors in each shell:', Nb_s)
