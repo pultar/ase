@@ -442,7 +442,7 @@ class Parameters(dict):
         file.close()
 
 
-class Calculator(object):
+class Calculator:
     """Base-class for all ASE calculators.
 
     A calculator must raise PropertyNotImplementedError if asked for a
@@ -508,12 +508,18 @@ class Calculator(object):
         self.directory = directory
         self.prefix = None
         if label is not None:
-            if self.directory != '.' and '/' in label:
+            if self.directory == '.' and '/' in label:
+                # We specified directory in label, and nothing in the diretory key
+                self.label = label
+            elif '/' not in label:
+                # We specified our directory in the directory keyword
+                # or not at all
+                self.label = '/'.join((self.directory, label))
+            else:
                 raise ValueError('Directory redundantly specified though '
                                  'directory="{}" and label="{}".  '
                                  'Please omit "/" in label.'
                                  .format(self.directory, label))
-            self.label = '/'.join((self.directory, label))
 
         if self.parameters is None:
             # Use default parameters if they were not read from file:
