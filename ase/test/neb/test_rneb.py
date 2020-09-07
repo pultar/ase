@@ -9,7 +9,10 @@ from ase.geometry import distance, find_mic
 from ase.neb import NEB
 from ase.optimize import BFGS
 
-pytest.importorskip('spglib')
+
+@pytest.fixture
+def spglib():
+    return pytest.importorskip('spglib')
 
 
 def create_path(init, final):

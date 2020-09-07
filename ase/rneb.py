@@ -113,8 +113,8 @@ class RNEB:
         # if no translations were found, look for rotations
         all_sym_ops = self.find_symmetries(init, final,
                                            log_atomic_idx=log_atomic_idx)
-        # Check if the rot matrix is [[1, 0, 0], [0, 1, 0], [0, 0,
-        # 1]] and rot_only is True. Then that is a pure translation.
+        # Check if the rot matrix is the identity matrix and rot_only
+        # is True. Then that is a pure translation.
         if rot_only:
             all_sym_ops = _purge_pure_tranlation_ops(all_sym_ops)
         final_relaxed = get_relaxed_final(init, init_relaxed,
@@ -220,8 +220,7 @@ class RNEB:
             vecf = []
             for x, p in enumerate(pos_ip1):
                 d = get_distances([p], [pos_i[x]],
-                                  cell=np.array(
-                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  cell=np.identity(3),
                                   pbc=np.array([1, 1, 1]))
                 vecf.append(d[0][0][0])
 
@@ -231,8 +230,7 @@ class RNEB:
             vecb = []
             for x, p in enumerate(pos_nim2):
                 d = get_distances([p], [pos_nim1[x]],
-                                  cell=np.array(
-                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  cell=np.identity(3),
                                   pbc=np.array([1, 1, 1]))
                 vecb.append(d[0][0][0])
 
@@ -433,22 +431,19 @@ def get_relaxed_final(init, init_relaxed, final,
 def _purge_pure_tranlation_ops(sym_ops):
     purged_ops = []
     for op in sym_ops:
-        if not np.array_equal(op[0],
-                              np.array([[1, 0, 0],
-                                        [0, 1, 0],
-                                        [0, 0, 1]])):
+        if not np.array_equal(op[0], np.identity(3)):
             purged_ops.append(op)
     return purged_ops
 
 
-def compare_positions(p1, p2, cell, tol=1e-3):
+def compare_positions(pos1, pos2, cell, tol=1e-3):
     """Check whether two arrays contain the same positions.
 
-    The positions need not be in the same order. A mapping for p1 to p2 is
+    The positions need not be in the same order. A mapping for pos1 to pos2 is
     also returned.
 
     Args:
-        p1, p2 (list or np.array): atomic positions of structures to
+        pos1, pos2 (list or np.array): atomic positions of structures to
             be compared.
 
     Returns:
@@ -458,13 +453,12 @@ def compare_positions(p1, p2, cell, tol=1e-3):
             matches is the index, j, of the corresponding atom in
             structure 2.
     """
-    n = len(p2)
-    dists_all = get_distances(p2, p1, cell=cell, pbc=[1, 1, 1])
+    n = len(pos2)
+    dists_all = get_distances(pos2, pos1, cell=cell, pbc=[1, 1, 1])
     final_to_init = np.nonzero(np.isclose(dists_all[1], 0,
                                           atol=tol))[1]
-    if len(final_to_init) == n:
-        return True, np.argsort(final_to_init)
-    return False, np.argsort(final_to_init)
+    match = len(final_to_init) == n
+    return match, np.argsort(final_to_init)
 
 
 def is_reflect_op(R):
@@ -475,8 +469,8 @@ def is_reflect_op(R):
 
     """
     # First test if the matrix is involutory (i.e. its own inverse)
-    Q = np.dot(np.transpose(R), R)
-    if np.array_equal(Q, np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])):
+    Q = R.T @ R
+    if np.array_equal(Q, np.identity(3)):
         # Then check the eigenvalues for the type of reflection
         eig_values = np.sort(np.linalg.eig(R)[0])
         plane = np.array([-1, 1, 1])
