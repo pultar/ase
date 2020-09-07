@@ -37,25 +37,26 @@ def lowdin(U, S=None):
     U[:] = np.dot(U, rot)
 
 
-def search_shells(max_index, basis_c, mpgrid):
+def search_shells(g_max, basis_c, mpgrid):
     """Compute possible combinations of vectors
 
-       The returned array should represent direction from one k-point to every
+       The returned array should represent directions from one k-point to every
        possible neighboring k-point, we compute this in cartesian coordinates
        as well and we evaluate the distance.
 
-       Given an index 'Mi' for each basis component computes every possible
+       Given a g_max integer delimiting the range, it computes every possible
        combination, with repetition. The only exception is (0,0,0) that is
        removed from the list. All the arrays are sorted in order of increasing
        distance.
 
-       EX: Mi = 1 -> (-1,-1,-1), (-1,1,0), (1,0,-1) etc.
+       EX: g_max = 1  -> (-1,-1,-1), (-1,1,0), (1,0,-1), (0,0,1), etc.
 
-       max_index: maximum index for the combinations
+       g_max: max value delimiting the range to use for the combinations
        basis_c: list of basis vectors (should contain three 3D vectors)
        mpgrid: Monkhorst-Pack grid size (Nx, Ny, Nz)
     """
-    comb = np.stack(np.meshgrid(max_index, max_index, max_index),
+    g_range = np.arange(- g_max, g_max + 1, dtype=np.int8)
+    comb = np.stack(np.meshgrid(g_range, g_range, g_range),
                     axis=-1).reshape(-1, len(mpgrid))
     comb = comb[np.any(comb != [0, 0, 0], axis=1)]
 
@@ -76,7 +77,7 @@ def search_shells(max_index, basis_c, mpgrid):
 def count_shells(dist_p, atol):
     """Count the equal-distance shells and the elements in each
 
-       dist_p: list of distances
+       dist_p: sorted list of distances
        atol: absolute tolerance for equality
     """
     Nb_s = [1]
@@ -92,61 +93,87 @@ def count_shells(dist_p, atol):
     return Nb_s
 
 
-def neighbors_complete_set(b_cart_sbc, Nb_s, atol, verbose):
-    """Returns the list of needed shells for a complete set
+def check_parallel(vector1, vector2, atol=1e-6):
+    """Check if two vectors are parallel to each other
 
-       Returns the indices of Nb_s that correspond to a complete set of shells.
+       atol: absolute tolerance for equality
+    """
+    inn_prod = np.dot(vector1, vector2)
+    norm_prod = (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+    return np.abs(inn_prod - norm_prod) < atol
 
-       b_cart_sbc: list of vectors in each shell, in cartesian coordinates
-       Nb_s: list of number of vectors in each shell
+
+def neighbors_complete_set(vectors_sbc, vectors_per_shell,
+                           atol=1e-6, verbose=False):
+    """Returns the list of shells and weights for a complete set of neighbors
+
+       Returns the indices of vector_per_shell that correspond to a complete
+       set of neighbors, i.e. the weights and the 'b' vectors that satisfy
+       the following completeness equation:
+
+       sum_s(w_s * sum_b(bs_i * bs_j)) = delta(i, j)
+
+       Ref: https://doi.org/10.1016/j.cpc.2007.11.016
+
+       vectors_sbc: list of 'b' vectors in each shell, in cartesian coordinates
+       vectors_per_shell: list of number of 'b' vectors in each shell
        atol: absolute tolerance for (in)equality
     """
-    ids = np.arange(0, len(Nb_s)).astype(np.uint8)
+    ids = np.arange(0, len(vectors_per_shell)).astype(np.uint8)
     rm = 0
-    for n in range(0, len(Nb_s)):
+    for n in range(0, len(vectors_per_shell)):
+        # update index, some shells have been removed from the list
         n -= rm
 
         # Reject shell if two vectors are parallel, usually this also causes
         # small singular values, but sometimes the two are not correlated
         tot = 0
         parallel = False
-        for s, Nb in enumerate(Nb_s[:n]):
+        for s, Nb in enumerate(vectors_per_shell[:n]):
             for b_out in range(Nb):
-                for b_in in range(Nb_s[n]):
+                for b_in in range(vectors_per_shell[n]):
                     if parallel:
+                        # we already found one, skip the rest
                         continue
-                    inn_prod = np.dot(b_cart_sbc[ids][s, b_out],
-                                      b_cart_sbc[ids][n, b_in])
-                    norm_prod = (np.linalg.norm(b_cart_sbc[ids][s, b_out]) *
-                                 np.linalg.norm(b_cart_sbc[ids][n, b_in]))
-                    if np.abs(inn_prod - norm_prod) < atol:
+                    if check_parallel(vectors_sbc[ids][s, b_out],
+                                      vectors_sbc[ids][n, b_in], atol):
                         parallel = True
             tot += Nb
 
-        if not parallel:
-            q = np.array([1, 1, 1, 0, 0, 0], dtype=float)
-            A = np.zeros((6, len(Nb_s[:n + 1])), dtype=float)
-            for s, Nb in enumerate(Nb_s[:n + 1]):
-                for b in range(Nb):
-                    A[0:3, s] = (A[0:3, s] + b_cart_sbc[ids][s, b, 0:3] *
-                                 b_cart_sbc[ids][s, b, 0:3])
-                    A[3:6, s] = (A[3:6, s] + b_cart_sbc[ids][s, b, 0:3] *
-                                 b_cart_sbc[ids][s, b, [1, 2, 0]])
-            U, sv, Vt = np.linalg.svd(A, full_matrices=False)
-
-        if (np.abs(sv) < atol).any() or parallel:
+        if parallel:
             ids = np.delete(ids, n, axis=0)
-            Nb_s = np.delete(Nb_s, n, axis=0)
+            vectors_per_shell = np.delete(vectors_per_shell, n, axis=0)
             rm += 1
             if verbose:
-                print('Found a very small singular value or a vector',
-                      'parallel to a previous shell, skipping this shell.')
+                print('Found a vector parallel to a previous shell,',
+                      'skipping this shell.')
             continue
 
-        w_s = Vt.T @ np.diag(1 / sv) @ U.T @ q
+        # Express completeness relation in a computationally convenient way
+        # (Ad @ w_s = qd) and solve the equation with SVD, same ref. as above
+        qd = np.array([1, 1, 1, 0, 0, 0], dtype=float)
+        Ad = np.zeros((6, len(vectors_per_shell[:n + 1])), dtype=float)
+        for s, Nb in enumerate(vectors_per_shell[:n + 1]):
+            for b in range(Nb):
+                Ad[0:3, s] = (Ad[0:3, s] + vectors_sbc[ids][s, b, 0:3] *
+                              vectors_sbc[ids][s, b, 0:3])
+                Ad[3:6, s] = (Ad[3:6, s] + vectors_sbc[ids][s, b, 0:3] *
+                              vectors_sbc[ids][s, b, [1, 2, 0]])
+        Ud, sv, Vt = np.linalg.svd(Ad, full_matrices=False)
+
+        if (np.abs(sv) < atol).any():
+            ids = np.delete(ids, n, axis=0)
+            vectors_per_shell = np.delete(vectors_per_shell, n, axis=0)
+            rm += 1
+            if verbose:
+                print('Found a very small singular value,',
+                      'skipping this shell.')
+            continue
+
+        w_s = Vt.T @ np.diag(1 / sv) @ Ud.T @ qd
 
         # Manually check if the relation is satisfied
-        if not (np.abs(A @ w_s - q) < atol).all():
+        if not (np.abs(Ad @ w_s - qd) < atol).all():
             if verbose:
                 print('Completeness relation not satisfied with',
                       n + 1, 'shell(s)')
@@ -174,13 +201,21 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                   (http://dx.doi.org/10.1016/j.cpc.2007.11.016)
                   Note: the G vector here has the opposite sign
 
-       Nk (k): number of k-points
-       Ns (s): number of shells of neighbors
-       Nb (b): number of b vectors (connecting neighbors)
+       kpt_kc:  list of k-points
+       recip_v: reciprocal lattice vectors
+       kgrid :  size of the uniform Monkhorst-Pack grid
+       atol:    absolute tolerance for (in)equalities
+       Nk (k):  number of k-points
+       Ns (s):  number of shells of neighbors
+       Nb (b):  number of b vectors (connecting neighbors)
     """
     # In the following code there are several vectors with Miller (mill)
     # notation, fractional coordinates relative to the base vectors (frac)
     # and cartesian coordinates (cart).
+
+    # NB: even if the arrays have the size, for each shell there is a varying
+    #     number of neighbors and vectors pointing to them, this number is
+    #     saved in Nb_s.
 
     if verbose:
         t = - time()
@@ -193,14 +228,13 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
                              axis=0)
 
     # Check all common directions and list distances
-    g = [-1, 0, 1]
-    _, _, b_dist_p = search_shells(g, recip_v, kgrid)
+    g_max = 1
+    _, _, b_dist_p = search_shells(g_max, recip_v, kgrid)
 
     # Increase the range of search if the distances in some directions are
     # smaller, it should prevent problems with elongated cells
-    ratio = np.ceil(max(b_dist_p) / min(b_dist_p))
-    g = np.arange(- ratio, ratio + 1, dtype=np.int8)
-    b_mill_pc, b_cart_pc, b_dist_p = search_shells(g, recip_v, kgrid)
+    g_max = np.ceil(max(b_dist_p) / min(b_dist_p))
+    b_mill_pc, b_cart_pc, b_dist_p = search_shells(g_max, recip_v, kgrid)
 
     # Count shells of neighbors and elements in each
     Nb_s = count_shells(b_dist_p, atol)
@@ -219,19 +253,18 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
     # Compute weights and number of shells to satisfy the completeness relation
     ids, w_s = neighbors_complete_set(b_cart_sbc, Nb_s, atol, verbose)
     b_mill_sbc = b_mill_sbc[ids]
-    b_cart_sbc = b_cart_sbc[ids]
-    b_dist_s = b_dist_s[ids]
     Nb_s = Nb_s[ids]
     Ns = len(ids)
 
     Nb = np.sum([n for n in Nb_s]).astype(np.uint8)
     if verbose:
         print('Number of neighbors in each shell:', Nb_s)
-        print('Distances:', b_dist_s[:Ns])
+        print('Distances:', b_dist_s[ids])
 
-    b_frac_sbc = b_mill_sbc.copy().astype(float)[:Ns]
+    b_frac_sbc = b_mill_sbc.copy().astype(float)
     b_frac_sbc[:, :] /= kgrid
 
+    # Compute the list of neighbors and the G vectors
     nnk_kb = np.empty((Nk, Nb), dtype=np.uint32)
     G_kbc = np.empty((Nk, Nb, 3), dtype=np.int8)
     w_b = np.empty(Nb, dtype=float)
@@ -261,47 +294,6 @@ def neighbors_and_weights(kpt_kc, recip_v, kgrid, atol=1e-6, verbose=False):
         print(f'Neighbors and weights computed in {t:.1f}s')
 
     return nnk_kb, G_kbc, w_b
-
-
-def neighbor_k_search(k_c, G_c, kpt_kc, tol=1e-4):
-    # search for k1 (in kpt_kc) and k0 (in alldir), such that
-    # k1 - k - G + k0 = 0
-    alldir_dc = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1],
-                          [1, 1, 0], [1, 0, 1], [0, 1, 1]], dtype=int)
-    for k0_c in alldir_dc:
-        for k1, k1_c in enumerate(kpt_kc):
-            if np.linalg.norm(k1_c - k_c - G_c + k0_c) < tol:
-                return k1, k0_c
-
-    print('Wannier: Did not find matching kpoint for kpt=', k_c)
-    print('Probably non-uniform k-point grid')
-    raise NotImplementedError
-
-
-def calculate_weights(cell_cc, normalize=True):
-    """ Weights are used for non-cubic cells, see PRB **61**, 10040"""
-    alldirs_dc = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],
-                           [1, 1, 0], [1, 0, 1], [0, 1, 1]], dtype=int)
-    g = np.dot(cell_cc, cell_cc.T)
-    # NOTE: Only first 3 of following 6 weights are presently used:
-    w = np.zeros(6)
-    w[0] = g[0, 0] - g[0, 1] - g[0, 2]
-    w[1] = g[1, 1] - g[0, 1] - g[1, 2]
-    w[2] = g[2, 2] - g[0, 2] - g[1, 2]
-    w[3] = g[0, 1]
-    w[4] = g[0, 2]
-    w[5] = g[1, 2]
-    # Make sure that first 3 Gdir vectors are included -
-    # these are used to calculate Wanniercenters.
-    Gdir_dc = alldirs_dc[:3]
-    weight_d = w[:3]
-    for d in range(3, 6):
-        if abs(w[d]) > 1e-5:
-            Gdir_dc = np.concatenate((Gdir_dc, alldirs_dc[d:d + 1]))
-            weight_d = np.concatenate((weight_d, w[d:d + 1]))
-    if normalize:
-        weight_d /= max(abs(weight_d))
-    return weight_d, Gdir_dc
 
 
 def random_orthogonal_matrix(dim, rng=np.random, real=False):
@@ -480,7 +472,7 @@ class Wannier:
                 kpt_kc=self.kpt_kc,
                 recip_v=self.calc.get_atoms().get_cell().reciprocal(),
                 kgrid=self.kptgrid,
-                verbose=True)
+                verbose=self.verbose)
         self.Ndir = self.kklst_kd.shape[1]
 
         # Compute the directions to reach the neighboring k-points
@@ -605,6 +597,7 @@ class Wannier:
         """Calculate the Wannier centers
 
            Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
+
         ::
                   1   --
           pos = - --  >  wb * b * phase(diag(Z(k,b)))

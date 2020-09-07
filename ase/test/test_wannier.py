@@ -7,8 +7,9 @@ from ase.io.cube import read_cube
 from ase.lattice import CUB, FCC, BCC, TET, BCT, ORC, ORCF, ORCI, ORCC, HEX, \
     RHL, MCL, MCLC, TRI, OBL, HEX2D, RECT, CRECT, SQR, LINE
 from ase.dft.wannier import gram_schmidt, lowdin, random_orthogonal_matrix, \
-    neighbor_k_search, calculate_weights, steepest_descent, md_min, \
-    rotation_from_projection, Wannier
+    steepest_descent, md_min, rotation_from_projection, Wannier, \
+    check_parallel, search_shells, count_shells, neighbors_complete_set, \
+    neighbors_and_weights
 
 
 @pytest.fixture(scope='module')
@@ -138,33 +139,6 @@ def test_random_orthogonal_matrix(rng):
     matrix = random_orthogonal_matrix(dim, rng=rng, real=False)
     assert matrix.shape[0] == matrix.shape[1]
     assert orthonormality_error(matrix) < 1e-12
-
-
-def test_neighbor_k_search():
-    kpt_kc = monkhorst_pack((4, 4, 4))
-    Gdir_dc = [[1, 0, 0], [0, 1, 0], [0, 0, 1],
-               [1, 1, 0], [1, 0, 1], [0, 1, 1]]
-    tol = 1e-4
-    for d, Gdir_c in enumerate(Gdir_dc):
-        for k, k_c in enumerate(kpt_kc):
-            kk, k0 = neighbor_k_search(k_c, Gdir_c, kpt_kc, tol=tol)
-            assert np.linalg.norm(kpt_kc[kk] - k_c - Gdir_c + k0) < tol
-
-
-@pytest.mark.parametrize('lat', bravais_lattices())
-def test_calculate_weights(lat):
-    # Equation from Berghold et al. PRB v61 n15 (2000)
-    tol = 1e-5
-    cell = lat.tocell()
-    g = cell @ cell.T
-    w, G = calculate_weights(cell, normalize=False)
-
-    errors = []
-    for i in range(3):
-        for j in range(3):
-            errors.append(np.abs((w * G[:, i] @ G[:, j]) - g[i, j]))
-
-    assert np.max(errors) < tol
 
 
 def test_steepest_descent():
@@ -462,3 +436,87 @@ def test_get_gradients(wan, rng):
     f2 = wanf.get_functional_value()
     assert (np.abs((f2 - f1) / step).ravel() -
             np.abs(wanf.get_gradients())).max() < 1e-4
+
+
+def test_check_parallel(rng):
+    v1 = rng.random(3)
+    v2 = v1 * 3
+    assert check_parallel(v1, v2)
+    v2 = v1 + np.array([0., 1., 2.])
+    assert not check_parallel(v1, v2)
+
+
+def test_search_shells():
+    max_index = 1
+    basis_c = FCC(4.0).tocell()
+    mpgrid = (3, 3, 3)
+    comb_p, cart_pc, dist_p = search_shells(max_index, basis_c, mpgrid)
+
+    # check sorting
+    for i in range(1, len(dist_p)):
+        assert dist_p[i] >= dist_p[i - 1]
+
+    # check that the distance is computed right
+    for i, dist in enumerate(dist_p):
+        d_tmp = np.sum([comb_p[i, l] * 2 * np.pi * basis_c[l] / mpgrid[l]
+                       for l in range(len(basis_c))], axis=0)
+        d_tmp = np.linalg.norm(d_tmp)
+        assert d_tmp == pytest.approx(dist)
+
+
+def test_count_shells():
+    distances = [1] * 2 + [2] * 4 + [3] * 6 + [4] * 8
+    distances = np.array(distances)
+    elements_per_shell = count_shells(distances, atol=1e-6)
+    assert (elements_per_shell == [2, 4, 6, 8]).all()
+
+
+def test_neighbors_complete_set():
+    # XXX: is there a good way to automatically test many use cases?
+    vectors_sbc = np.array([[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                            [[2, 0, 0], [0, 2, 0], [0, 0, 2]]])
+    vectors_per_shell = [3, 3]
+    ids, w_s = neighbors_complete_set(vectors_sbc, vectors_per_shell,
+                                      atol=1e-6, verbose=False)
+    assert ids == 0
+    assert w_s == 1
+
+
+@pytest.mark.parametrize('lat', bravais_lattices())
+def test_neighbors_and_weights(lat):
+    # Test completeness relation for the shells from
+    # http://dx.doi.org/10.1016/j.cpc.2007.11.016
+    recip_v = lat.tocell().reciprocal()
+    mpgrid = [3, 3, 3]
+    for i, l in enumerate(recip_v):
+        if (l == 0).all():
+            pytest.skip("lower dimnesional lattices not supported, yet")
+    kpt_kc = monkhorst_pack(mpgrid)
+    nnk_kb, G_kbc, w_b = neighbors_and_weights(kpt_kc, recip_v, mpgrid,
+                                               atol=1e-6, verbose=False)
+    bvec_bc = np.empty((len(w_b), 3), dtype=float)
+    for b in range(len(w_b)):
+        bvec_bc[b] = (kpt_kc[nnk_kb[0, b]]
+                      - kpt_kc[0] - G_kbc[0, b])
+        bvec_bc[b] = np.sum([bvec_bc[b, l] * 2 * np.pi * recip_v[l]
+                             for l in range(len(recip_v))], axis=0)
+
+    Nb_s = [1]
+    w_s = [w_b[0]]
+    for b in range(1, len(w_b)):
+        if abs(w_b[b] - w_b[b - 1]) < 1e-6:
+            Nb_s[-1] += 1
+        else:
+            w_s.append(w_b[b])
+            Nb_s.append(1)
+
+    qd = np.array([1, 1, 1, 0, 0, 0], dtype=float)
+    Ad = np.zeros((6, len(w_s)), dtype=float)
+    s = 0
+    for b in range(len(w_b)):
+        if b >= sum(Nb_s[:s + 1]):
+            s += 1
+        Ad[0:3, s] = (Ad[0:3, s] + bvec_bc[b, 0:3] * bvec_bc[b, 0:3])
+        Ad[3:6, s] = (Ad[3:6, s] + bvec_bc[b, 0:3] * bvec_bc[b, [1, 2, 0]])
+
+    assert pytest.approx(Ad @ w_s) == qd
