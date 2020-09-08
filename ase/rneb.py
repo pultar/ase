@@ -361,6 +361,10 @@ def get_relaxed_final(initial, initial_relaxed, final,
         initial (Atoms): The initial structure (unrelaxed)
         initial_relaxed (Atoms): A relaxed version of initial
         final (Atoms): The final structure (unrelaxed)
+        trans (list): Index swaps that signifies a translation symmetry
+            operation. Obtained from :func:`find_symmetries`.
+        rot (list): Symmetry operation as returned from
+            :func:`find_symmetries`.
 
     Returns:
         Atoms:
