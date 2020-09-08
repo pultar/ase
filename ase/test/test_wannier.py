@@ -9,7 +9,7 @@ from ase.lattice import CUB, FCC, BCC, TET, BCT, ORC, ORCF, ORCI, ORCC, HEX, \
 from ase.dft.wannier import gram_schmidt, lowdin, random_orthogonal_matrix, \
     steepest_descent, md_min, rotation_from_projection, Wannier, \
     check_parallel, search_shells, count_shells, neighbors_complete_set, \
-    neighbors_and_weights
+    neighbors_and_weights, compute_neighbors_and_G_vectors
 
 
 @pytest.fixture(scope='module')
@@ -482,6 +482,26 @@ def test_neighbors_complete_set():
     assert w_s == 1
 
 
+def test_compute_neighbors_and_G_vectors():
+    mp = 2
+    mpgrid = [mp, mp, mp]
+    kpt_kc = monkhorst_pack(mpgrid)
+    dir_per_shell = np.array([[[1/mp, 0, 0], [0, 1/mp, 0], [0, 0, 1/mp]]] * 2)
+    neighbors_per_shell = [3] * 2
+    g_range = [-1, 0, 1]
+    possible_G_vectors = np.stack(np.meshgrid(g_range, g_range, g_range),
+                    axis=-1).reshape(-1, len(mpgrid))
+    possible_G_vectors = possible_G_vectors[
+        np.any(possible_G_vectors != [0, 0, 0], axis=1)]
+    nnk_kb, G_kbc = compute_neighbors_and_G_vectors(kpt_kc,
+                                                 dir_per_shell,
+                                                 neighbors_per_shell,
+                                                 possible_G_vectors,
+                                                 atol=1e-6)
+    assert (nnk_kb[0] == [4, 2, 1, 4, 2, 1]).all()
+    assert (G_kbc[0] == 0).all()
+
+
 @pytest.mark.parametrize('lat', bravais_lattices())
 def test_neighbors_and_weights(lat):
     # Test completeness relation for the shells from
@@ -492,7 +512,7 @@ def test_neighbors_and_weights(lat):
         if (l == 0).all():
             pytest.skip("lower dimnesional lattices not supported, yet")
     kpt_kc = monkhorst_pack(mpgrid)
-    nnk_kb, G_kbc, w_b = neighbors_and_weights(kpt_kc, recip_v, mpgrid,
+    nnk_kb, G_kbc, w_b = neighbors_and_weights(kpt_kc, recip_v,
                                                atol=1e-6, verbose=False)
     bvec_bc = np.empty((len(w_b), 3), dtype=float)
     for b in range(len(w_b)):
