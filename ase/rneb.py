@@ -492,7 +492,8 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     by creating vacancies the indices have been shuffled so everything
     seems to move when creating the initial NEB path. This function
     shuffles them back by checking distances between individual atoms
-    in the initial and final structures.
+    in the initial and final structures. It is required that the unit
+    cells are equal.
 
     Args:
         initial (Atoms): Initial structure
@@ -505,10 +506,14 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     Returns:
         Atoms:
             Final structure as an Atoms object with shuffled positions.
+
     """
     final_s = final.copy()
     ml = min_neb_path_length
+    
     cell = initial.cell
+    assert np.array_equal(cell, final.cell), 'Unit cells are not equal!'
+    
     pos1 = initial.positions
     pos2 = final_s.positions.copy()
 
