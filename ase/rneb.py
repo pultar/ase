@@ -261,6 +261,9 @@ class RNEB:
         for i, S in enumerate(sym):
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
+    
+    def get_reflective_path(self, images):
+        pass
 
     def find_translations(self, initial, final,
                           return_translation_vec=False):
