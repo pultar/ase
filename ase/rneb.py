@@ -186,7 +186,7 @@ class RNEB:
 
         return sym
 
-    def reflect_path(self, images, sym=None):
+    def reflect_path(self, images, sym):
         """Get the reflection operations valid for the entire path.
 
         Args:
@@ -317,7 +317,7 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-    def _get_valid_reflections(self, vec_initial, vec_final, sym=None):
+    def _get_valid_reflections(self, vec_initial, vec_final, sym):
         reflections = []
         for S in sym:
             U = S[0]
