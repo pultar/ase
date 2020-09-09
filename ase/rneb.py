@@ -7,7 +7,6 @@ Tejs Vegge, and Juan Maria García Lastra, J. Chem. Theory Comput.,
 import logging
 
 import numpy as np
-import spglib as spg
 
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
@@ -28,8 +27,8 @@ class RNEB:
     the initial and final structures.
 
     :func:`get_final_image` Given two symmetry equivalent structures
-    (e.g. ``init`` and ``final``) and a relaxed version of one of them
-    (``init_relaxed``) the relaxed version of the other structure
+    (e.g. ``initial`` and ``final``) and a relaxed version of one of them
+    (``initial_relaxed``) the relaxed version of the other structure
     (``final_relaxed``) is produced.
 
     :func:`reflect_path` checks if the full path has reflection
@@ -55,6 +54,8 @@ class RNEB:
         self.all_sym_ops = self._get_symmetry(orig)
 
     def _get_symmetry(self, orig):
+        import spglib as spg
+
         # Get symmetry information of orig from spglib
         self.log.info("    Tolerance: {}".format(self.tol))
         spacegroup = spg.get_spacegroup(atoms_to_spglib_cell(orig),
@@ -64,7 +65,7 @@ class RNEB:
         spg_tuple = atoms_to_spglib_cell(orig)
         return spg.get_symmetry(spg_tuple, symprec=self.tol)
 
-    def get_final_image(self, init, init_relaxed, final,
+    def get_final_image(self, initial, initial_relaxed, final,
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False):
         """Obtain a relaxed final structure from the initial relaxed.
@@ -73,10 +74,10 @@ class RNEB:
         when a valid symmetry operation is found the final image is created.
 
         Args:
-            init (Atoms): The initial structure (unrelaxed)
-            init_relaxed (Atoms): The relaxed version of init
+            initial (Atoms): The initial structure (unrelaxed)
+            initial_relaxed (Atoms): The relaxed version of initial
             final (Atoms): The final structure (unrelaxed)
-            log_atomic_idx (bool): Specify if equivalent indices in init and
+            log_atomic_idx (bool): Specify if equivalent indices in initial and
                 final should be logged.
             return_ops (bool): Return the symmetry operations used for
                 creating the final relaxed structure.
@@ -91,17 +92,17 @@ class RNEB:
         self.log.info("    Tolerance: {}".format(self.tol))
 
         # wrap atoms outside unit cell into the unit cell
-        init.wrap(eps=self.tol)
+        initial.wrap(eps=self.tol)
         final.wrap(eps=self.tol)
 
         if not rot_only:
             # check for simple translations
-            index_swaps = self.find_translations(init, final)
+            index_swaps = self.find_translations(initial, final)
 
             # if translations were found use them
             if index_swaps is not None:
                 # create the final relaxed image
-                final_relaxed = get_relaxed_final(init, init_relaxed,
+                final_relaxed = get_relaxed_final(initial, initial_relaxed,
                                                   final,
                                                   trans=index_swaps)
                 if return_ops:
@@ -110,59 +111,59 @@ class RNEB:
                     return final_relaxed
 
         # if no translations were found, look for rotations
-        all_sym_ops = self.find_symmetries(init, final,
+        all_sym_ops = self.find_symmetries(initial, final,
                                            log_atomic_idx=log_atomic_idx)
-        # Check if the rot matrix is [[1, 0, 0], [0, 1, 0], [0, 0,
-        # 1]] and rot_only is True. Then that is a pure translation.
+        # Check if the rot matrix is the identity matrix and rot_only
+        # is True. Then that is a pure translation.
         if rot_only:
             all_sym_ops = _purge_pure_tranlation_ops(all_sym_ops)
-        final_relaxed = get_relaxed_final(init, init_relaxed,
+        final_relaxed = get_relaxed_final(initial, initial_relaxed,
                                           final, rot=all_sym_ops)
         if return_ops:
             return [final_relaxed, all_sym_ops]
         else:
             return final_relaxed
 
-    def find_symmetries(self, init, final,
+    def find_symmetries(self, initial, final,
                         log_atomic_idx=False):
-        """Find the relevant symmetry operations relating init and final.
+        """Find the relevant symmetry operations relating initial and final.
 
         Args:
-            init (Atoms): Initial structure in the NEB path
+            initial (Atoms): Initial structure in the NEB path
             final (Atoms): Final structure in the NEB path
-            log_atomic_idx (bool): Specify if equivalent indices in init and
+            log_atomic_idx (bool): Specify if equivalent indices in initial and
                 final should be logged.
 
         Returns:
             list:
-                The valid symmetry operations mapping init onto
+                The valid symmetry operations mapping initial onto
                 final. The returned list has the following form:
                 [[R, T, eq_idx], ...], where R is a rotation matrix, T is the
                 corresponding translation and eq_idx is a list of indices that
-                maps init onto final.
+                maps initial onto final.
 
         """
         self.log.info("\n  Looking for rotations:")
-        init_temp = init.copy()
+        initial_temp = initial.copy()
         final_temp = final.copy()
-        init_temp.wrap()
+        initial_temp.wrap()
         final_temp.wrap()
-        pos = init_temp.get_scaled_positions()
+        pos = initial_temp.get_scaled_positions()
         pos_final = final_temp.get_positions()
-        cell = init_temp.get_cell()
+        cell = initial_temp.get_cell()
         sym = self.all_sym_ops
 
         R = sym['rotations']
         T = sym['translations']
         sym = []
 
-        # Apply symmetry operations to pos_init and test if the
+        # Apply symmetry operations to pos_initial and test if the
         # positions match pos_final
         for i, r in enumerate(R):
-            pos_init_scaled = np.inner(pos, r) + T[i]
-            pos_init_cartesian = cell.cartesian_positions(pos_init_scaled)
-            pos_init = wrap_positions(pos_init_cartesian, cell)
-            res = compare_positions(pos_final, pos_init, cell, tol=self.tol)
+            pos_initial_scaled = np.inner(pos, r) + T[i]
+            pos_initial_cartesian = cell.cartesian_positions(pos_initial_scaled)
+            pos_initial = wrap_positions(pos_initial_cartesian, cell)
+            res = compare_positions(pos_final, pos_initial, cell, tol=self.tol)
             if res[0]:
                 sym.append([r.astype(int), T[i], res[1]])
 
@@ -219,8 +220,7 @@ class RNEB:
             vecf = []
             for x, p in enumerate(pos_ip1):
                 d = get_distances([p], [pos_i[x]],
-                                  cell=np.array(
-                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  cell=np.identity(3),
                                   pbc=np.array([1, 1, 1]))
                 vecf.append(d[0][0][0])
 
@@ -230,8 +230,7 @@ class RNEB:
             vecb = []
             for x, p in enumerate(pos_nim2):
                 d = get_distances([p], [pos_nim1[x]],
-                                  cell=np.array(
-                                      [[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+                                  cell=np.identity(3),
                                   pbc=np.array([1, 1, 1]))
                 vecb.append(d[0][0][0])
 
@@ -263,25 +262,25 @@ class RNEB:
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
 
-    def find_translations(self, init, final,
+    def find_translations(self, initial, final,
                           return_translation_vec=False):
-        """Find a translation that maps init onto final.
+        """Find a translation that maps initial onto final.
 
         Args:
-            init (Atoms): The initial structure
+            initial (Atoms): The initial structure
             final (Atoms): The final structure
             return_translation_vec (bool): If True the translation vector is
                 returned. Default: False.
 
         Returns:
             list:
-                List of indices that maps init onto final.
+                List of indices that maps initial onto final.
             *or*
             np.array:
-                Vector that translates init to final.
+                Vector that translates initial to final.
         """
         self.log.info("\n  Looking for translations:")
-        init_temp = init.copy()
+        initial_temp = initial.copy()
         # get the equivalent atoms information
         equiv_atoms = self.all_sym_ops['equivalent_atoms']
 
@@ -289,17 +288,17 @@ class RNEB:
         # translations
         unq = np.unique(equiv_atoms)
 
-        pos_init = init_temp.get_positions()
+        pos_initial = initial_temp.get_positions()
         pos_final = final.get_positions()
         pos_sc = self.orig.get_positions()
-        cell = init_temp.get_cell()
+        cell = initial_temp.get_cell()
         for u in unq:
             equiv_list = np.where(equiv_atoms == u)[0]
             for eq in equiv_list:
                 dpos = pos_sc[eq] - pos_sc[u]
-                init_temp.set_positions(pos_init + dpos)
-                init_temp.wrap(eps=self.tol)
-                pos = init_temp.get_positions()
+                initial_temp.set_positions(pos_initial + dpos)
+                initial_temp.wrap(eps=self.tol)
+                pos = initial_temp.get_positions()
                 res, matches = compare_positions(pos_final,
                                                  pos, cell, tol=self.tol)
                 if res:
@@ -315,13 +314,13 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-    def _get_valid_reflections(self, vec_init, vec_final, sym=None):
+    def _get_valid_reflections(self, vec_initial, vec_final, sym=None):
         reflections = []
         for S in sym:
             U = S[0]
             idx = S[2]
             if is_reflect_op(U):
-                if np.allclose(np.inner(vec_init, U)[idx],
+                if np.allclose(np.inner(vec_initial, U)[idx],
                                vec_final, atol=2 * self.tol):
                     reflections.append(S)
         return reflections
@@ -351,7 +350,7 @@ class RNEB:
                       .format(x[2][0], x[2][1], x[2][2]))
 
 
-def get_relaxed_final(init, init_relaxed, final,
+def get_relaxed_final(initial, initial_relaxed, final,
                       trans=None, rot=None):
     """Obtain a relaxed final structure from a relaxed initial structure.
 
@@ -359,8 +358,8 @@ def get_relaxed_final(init, init_relaxed, final,
     swapping in ``trans`` **or** rotations in ``rot``.
 
     Args:
-        init (Atoms): The initial structure (unrelaxed)
-        init_relaxed (Atoms): A relaxed version of init
+        initial (Atoms): The initial structure (unrelaxed)
+        initial_relaxed (Atoms): A relaxed version of initial
         final (Atoms): The final structure (unrelaxed)
 
     Returns:
@@ -389,34 +388,34 @@ def get_relaxed_final(init, init_relaxed, final,
             return x
 
     final_temp = final.copy()
-    dpos = init_relaxed.get_positions() - init.get_positions()
-    cell = init.get_cell()
+    dpos = initial_relaxed.get_positions() - initial.get_positions()
+    cell = initial.get_cell()
     dpos = find_mic(dpos, cell)[0]
     forces_rotated = None
 
-    init_results = {'energy': None, 'forces': None,
-                    'magmoms': np.zeros(len(init_relaxed))}
-    if init_relaxed.calc:
-        for prop in init_results.keys():
-            res = init_relaxed.calc.get_property(prop,
+    initial_results = {'energy': None, 'forces': None,
+                    'magmoms': np.zeros(len(initial_relaxed))}
+    if initial_relaxed.calc:
+        for prop in initial_results.keys():
+            res = initial_relaxed.calc.get_property(prop,
                                                  allow_calculation=False)
             if res is not None:
-                init_results[prop] = res
+                initial_results[prop] = res
 
-    if init_results['forces'] is not None:
+    if initial_results['forces'] is not None:
         forces_rotated = np.zeros((len(dpos), 3))
     dpos_rotated = np.zeros((len(dpos), 3))
     magmom_rotated = np.zeros(len(dpos))
 
     for i, at in enumerate(symop):
         dpos_rotated[i] = f(dpos[at])
-        magmom_rotated[i] = init_results['magmoms'][at]
-        if init_results['forces'] is not None:
+        magmom_rotated[i] = initial_results['magmoms'][at]
+        if initial_results['forces'] is not None:
             # Why don't we use scaled forces here?
-            forces_rotated[i] = f(init_results['forces'][at])
+            forces_rotated[i] = f(initial_results['forces'][at])
 
     results = {'forces': forces_rotated,
-               'energy': init_results['energy'],
+               'energy': initial_results['energy'],
                'magmoms': magmom_rotated}
 
     final_temp.set_initial_magnetic_moments(magmom_rotated)
@@ -432,22 +431,19 @@ def get_relaxed_final(init, init_relaxed, final,
 def _purge_pure_tranlation_ops(sym_ops):
     purged_ops = []
     for op in sym_ops:
-        if not np.array_equal(op[0],
-                              np.array([[1, 0, 0],
-                                        [0, 1, 0],
-                                        [0, 0, 1]])):
+        if not np.array_equal(op[0], np.identity(3)):
             purged_ops.append(op)
     return purged_ops
 
 
-def compare_positions(p1, p2, cell, tol=1e-3):
+def compare_positions(pos1, pos2, cell, tol=1e-3):
     """Check whether two arrays contain the same positions.
 
-    The positions need not be in the same order. A mapping for p1 to p2 is
+    The positions need not be in the same order. A mapping for pos1 to pos2 is
     also returned.
 
     Args:
-        p1, p2 (list or np.array): atomic positions of structures to
+        pos1, pos2 (list or np.array): atomic positions of structures to
             be compared.
 
     Returns:
@@ -457,13 +453,12 @@ def compare_positions(p1, p2, cell, tol=1e-3):
             matches is the index, j, of the corresponding atom in
             structure 2.
     """
-    n = len(p2)
-    dists_all = get_distances(p2, p1, cell=cell, pbc=[1, 1, 1])
-    final_to_init = np.nonzero(np.isclose(dists_all[1], 0,
+    n = len(pos2)
+    dists_all = get_distances(pos2, pos1, cell=cell, pbc=[1, 1, 1])
+    final_to_initial = np.nonzero(np.isclose(dists_all[1], 0,
                                           atol=tol))[1]
-    if len(final_to_init) == n:
-        return True, np.argsort(final_to_init)
-    return False, np.argsort(final_to_init)
+    match = len(final_to_initial) == n
+    return match, np.argsort(final_to_initial)
 
 
 def is_reflect_op(R):
@@ -474,8 +469,8 @@ def is_reflect_op(R):
 
     """
     # First test if the matrix is involutory (i.e. its own inverse)
-    Q = np.dot(np.transpose(R), R)
-    if np.array_equal(Q, np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])):
+    Q = R.T @ R
+    if np.array_equal(Q, np.identity(3)):
         # Then check the eigenvalues for the type of reflection
         eig_values = np.sort(np.linalg.eig(R)[0])
         plane = np.array([-1, 1, 1])
@@ -490,19 +485,20 @@ def is_reflect_op(R):
     return False
 
 
-def reshuffle_positions(init, final, min_neb_path_length=1.2):
+def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     """Oh no! Vacancies!
 
     You want to calculate the NEB barrier between two vacancies, but
     by creating vacancies the indices have been shuffled so everything
     seems to move when creating the initial NEB path. This function
     shuffles them back by checking distances between individual atoms
-    in the initial and final structures.
+    in the initial and final structures. It is required that the unit
+    cells are equal.
 
     Args:
-        init (Atoms): Initial structure
+        initial (Atoms): Initial structure
         final (Atoms): Final structure. The atoms in this structure
-            are rearranged to fit with init.
+            are rearranged to fit with initial.
         min_neb_path_length (float): Atoms that are detected to have moved
             more than min_neb_path_length are considered to be a part of the
             desired NEB path. Default: 1.2 Å
@@ -510,30 +506,34 @@ def reshuffle_positions(init, final, min_neb_path_length=1.2):
     Returns:
         Atoms:
             Final structure as an Atoms object with shuffled positions.
+
     """
     final_s = final.copy()
     ml = min_neb_path_length
-    cell = init.cell
-    p1 = init.positions
-    p2 = final_s.positions.copy()
+    
+    cell = initial.cell
+    assert np.array_equal(cell, final.cell), 'Unit cells are not equal!'
+    
+    pos1 = initial.positions
+    pos2 = final_s.positions.copy()
 
-    _, D = get_distances(p1, p2, cell=cell, pbc=True)
+    _, D = get_distances(pos1, pos2, cell=cell, pbc=True)
     final_idx = []
     for c, j in enumerate(np.argmin(D, axis=0)):
         if j != c:
             # Shuffled indices we need to shuffle back
             if D[j, c] < ml:  # assuming neb path length is above ml
                 # this is not the correct atom moving, i.e. we shuffle
-                final_s.positions[j] = p2[c]
+                final_s.positions[j] = pos2[c]
             else:
                 final_idx.append(c)
     if len(final_idx) > 0:
-        init_idx = []
-        # We need to get the atom in final furthest away from init as well
+        initial_idx = []
+        # We need to get the atom in final furthest away from initial as well
         for c, j in enumerate(np.argmin(D, axis=1)):
             if D[c, j] > ml:
-                init_idx.append(c)
-        assert len(final_idx) == len(init_idx)
-        final_s.positions[np.array(init_idx)] = p2[np.array(final_idx)]
+                initial_idx.append(c)
+        assert len(final_idx) == len(initial_idx)
+        final_s.positions[np.array(initial_idx)] = pos2[np.array(final_idx)]
 
     return final_s

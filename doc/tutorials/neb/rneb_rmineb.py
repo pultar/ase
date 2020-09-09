@@ -32,8 +32,8 @@ qn.run(fmax=0.01)
 # get the final image by symmetry operations
 rneb = RNEB(slab, logfile=None)
 final_relaxed = rneb.get_final_image(
-    init=initial_unrelaxed,
-    init_relaxed=initial_relaxed,
+    initial=initial_unrelaxed,
+    initial_relaxed=initial_relaxed,
     final=final_unrelaxed)
 
 # create the path by adding a single intermediate image

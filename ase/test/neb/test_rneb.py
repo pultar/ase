@@ -9,13 +9,14 @@ from ase.geometry import distance, find_mic
 from ase.neb import NEB
 from ase.optimize import BFGS
 
+
 pytest.importorskip('spglib')
 
 
-def create_path(init, final):
-    images = [init]
+def create_path(initial, final):
+    images = [initial]
     for i in range(3):
-        image = init.copy()
+        image = initial.copy()
         image.calc = EMT()
         images.append(image)
 
@@ -247,8 +248,9 @@ def get_num_sym_operators(atoms, path):
     return sym
 
 
-def get_path_length(init, final):
-    dR, _ = find_mic(final.positions - init.positions, init.cell, init.pbc)
+def get_path_length(initial, final):
+    dR, _ = find_mic(final.positions - initial.positions,
+                     initial.cell, initial.pbc)
     return sqrt((dR**2).sum())
 
 
@@ -258,18 +260,18 @@ def test_reshuffling_atoms():
     # Create two structures
     slab = fcc111('Al', size=(3, 3, 2), a=2)
     slab.center(vacuum=5, axis=2)
-    init = slab.copy()
+    initial = slab.copy()
     final = slab.copy()
     # Make vacancies
-    init.pop(7)
+    initial.pop(7)
     final.pop(16)
     fc = final.copy()
 
     eps = 1e-8
 
-    final = reshuffle_positions(init, final)
+    final = reshuffle_positions(initial, final)
     assert distance(final, fc) < eps
 
-    assert get_path_length(init, fc) >= get_path_length(init, final)
+    assert get_path_length(initial, fc) >= get_path_length(initial, final)
 
-    assert get_path_length(init, final) - sqrt(2) < eps
+    assert get_path_length(initial, final) - sqrt(2) < eps

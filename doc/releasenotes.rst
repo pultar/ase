@@ -10,7 +10,7 @@ Git master branch
 
 :git:`master <>`.
 
-* No changes yet
+ * The :ref:`reflective-neb-in-neb` method has been implemented.
 
 
 Version 3.20.1
