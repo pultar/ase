@@ -275,3 +275,89 @@ def test_reshuffling_atoms():
     assert get_path_length(initial, fc) >= get_path_length(initial, final)
 
     assert get_path_length(initial, final) - sqrt(2) < eps
+
+
+def test_reflective_images():
+    from ase.rneb import reshuffle_positions, RNEB
+    atoms = fcc111('Al', [2, 2, 1], 4.05, periodic=True)
+    nxy = np.sum(atoms.cell, axis=0) / 6
+    nxy[2] = atoms.cell[2][2]
+    atoms.cell[2] = nxy
+
+    atoms.calc = EMT()
+    qn = BFGS(atoms, logfile=None)
+    qn.run(fmax=0.01)
+
+    vacancy_path = [0, 1]
+    # deleting ions will change indices
+    initial_unrelaxed = atoms.copy()
+    del initial_unrelaxed[vacancy_path[0]]
+
+    final_unrelaxed = atoms.copy()
+    del final_unrelaxed[vacancy_path[1]]
+
+    # align indices
+    final_unrelaxed = reshuffle_positions(initial_unrelaxed, final_unrelaxed)
+
+    images = create_path(initial_unrelaxed, final_unrelaxed)
+    NEB(images).interpolate()
+
+    rneb = RNEB(atoms, logfile=None)
+    S = rneb.find_symmetries(initial_unrelaxed, final_unrelaxed)
+    sym_ops = rneb.reflect_path(images, sym=S)
+
+    from ase.rneb import ReflectiveImages
+
+    initial_relaxed = initial_unrelaxed.copy()
+    initial_relaxed.calc = EMT()
+    qn = BFGS(initial_relaxed, logfile=None)
+    qn.run(fmax=0.01)
+
+    final_relaxed_n = final_unrelaxed.copy()
+    final_relaxed_n.calc = EMT()
+    qn = BFGS(final_relaxed_n, logfile=None)
+    qn.run(fmax=0.01)
+
+    final_relaxed_s = rneb.get_final_image(initial_unrelaxed,
+                                           initial_relaxed,
+                                           final_unrelaxed, rot_only=True)
+
+    ef_n = final_relaxed_n.get_potential_energy()
+    ef_s = final_relaxed_s.get_potential_energy()
+    assert np.isclose(ef_n, ef_s, atol=1e-3)
+
+    f_n = final_relaxed_n.get_forces()
+    f_s = final_relaxed_s.get_forces()
+    assert np.allclose(f_n, f_s, atol=1e-3)
+
+    for method in ['aseneb', 'improvedtangent', 'eb']:
+        # Create path for normal NEB
+        images = create_path(initial_relaxed, final_relaxed_n)
+        neb = NEB(images, method=method)
+        neb.interpolate()
+
+        qn = BFGS(neb, logfile=None)
+        qn.run(fmax=0.05)
+
+        # Normal NEB
+        eip1 = images[1].get_potential_energy()  # e initial plus 1
+        efm1 = images[-2].get_potential_energy()  # e final minus 1
+        assert np.isclose(eip1, efm1, atol=1e-3)
+
+        for S in sym_ops:
+            images = create_path(initial_relaxed, final_relaxed_s)
+            NEB(images).interpolate()
+            refl_images = ReflectiveImages(sym_ops[0], images)
+            s = refl_images[1:4]
+            print([im.calc for im in s])
+            # images = create_path(initial_unrelaxed, final_unrelaxed)
+            neb = NEB(refl_images, method=method)
+
+            qn = BFGS(neb, logfile=None)
+            qn.run(fmax=0.05)
+
+            eip1 = refl_images[1].get_potential_energy()
+            efm1 = refl_images[-2].get_potential_energy()
+            assert np.isclose(eip1, efm1, atol=1e-3)
+    
+    

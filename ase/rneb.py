@@ -349,6 +349,42 @@ class RNEB:
         self.log.info("          {:2d} {:2d} {:2d}"
                       .format(x[2][0], x[2][1], x[2][2]))
 
+class ReflectiveImages(list):
+    def __init__(self, reflect_ops, iterable=(), /):
+        super(ReflectiveImages, self).__init__(iterable)
+        self.reflect_ops = reflect_ops
+        
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return [self[j] for j in range(*i.indices(len(self)))]
+        atoms = super(ReflectiveImages, self).__getitem__(i)
+        if i <= len(self) // 2:
+            return atoms
+        else:
+            # i is over half way of the path, j is the corresponding
+            # reflective image from the first half of the path
+            j = i - (i - len(self) // 2) * 2
+
+            # Use symmetry operation on forces in scaled
+            # coordinates
+            cell = self[j].cell
+            sforces = cell.scaled_positions(self[j].get_forces())
+            rot_forces = np.inner(sforces[self.reflect_ops[2]],
+                                  self.reflect_ops[0])
+
+            forces = cell.cartesian_positions(rot_forces)
+            energy = self[j].get_potential_energy()
+            magmoms = self[j].get_magnetic_moments()
+            
+            # Create the atoms using the symmetry operations
+            newcalc = SinglePointCalculator(atoms=atoms,
+                                            energy=energy,
+                                            forces=forces,
+                                            magmoms=magmoms)
+            atoms.calc = newcalc
+            
+            return atoms
+            
 
 def get_relaxed_final(initial, initial_relaxed, final,
                       trans=None, rot=None):
