@@ -439,7 +439,7 @@ def test_get_gradients(wan, rng):
 
 
 def test_check_parallel(rng):
-    v1 = rng.random(3)
+    v1 = rng.rand(3)
     v2 = v1 * 3
     assert check_parallel(v1, v2)
     v2 = v1 + np.array([0., 1., 2.])

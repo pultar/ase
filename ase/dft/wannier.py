@@ -616,7 +616,9 @@ class Wannier:
     def get_centers(self, scaled=False):
         """Calculate the Wannier centers
 
-           Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
+        Centers positions can be scaled with respect to the original unit cell.
+
+        Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
 
         ::
                   1   --
@@ -624,15 +626,16 @@ class Wannier:
                   Nk  --
                       k,b
         """
-        phZ_dw = np.angle(self.Z_dkww.diagonal(axis1=2, axis2=3)).sum(axis=1)
+        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2))
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
         for w in range(self.nwannier):
             for d in range(self.Ndir):
                 coord_wc[w] += - (self.weight_d[d] * phZ_dw[d, w]
                                   * self.bvec_dc[d])
-        coord_wc /= self.Nk
-
-        if not scaled:
+        if scaled:
+            # convert from large cell to unit cell
+            coord_wc = (coord_wc * self.kptgrid) % 1
+        else:
             coord_wc = coord_wc @ self.largeunitcell_cc
 
         return coord_wc
