@@ -248,9 +248,8 @@ class RNEB:
 
         # Use only symmetry operations valid for all image pairs
         sym_flat, counts = np.unique(path_flat, axis=0, return_counts=True)
-        sym_flat[np.where(counts == n_half - 1)]
         sym = []
-        for S in sym_flat:
+        for S in sym_flat[np.where(counts == n_half - 1)]:
             U = np.reshape(S[:9], (3, 3)).astype(int)
             T = S[9:12]
             idx = S[12:]
@@ -262,8 +261,9 @@ class RNEB:
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
     
-    def get_reflective_path(self, images):
-        pass
+    def get_reflective_path(self, images, sym_ops):
+        refl_sym_ops = self.reflect_path(images, sym_ops)
+        return ReflectiveImages(refl_sym_ops[0], images)
 
     def find_translations(self, initial, final,
                           return_translation_vec=False):
@@ -371,11 +371,12 @@ class ReflectiveImages(list):
             # Use symmetry operation on forces in scaled
             # coordinates
             cell = self[j].cell
-            sforces = cell.scaled_positions(self[j].get_forces())
-            rot_forces = np.inner(sforces[self.reflect_ops[2]],
-                                  self.reflect_ops[0])
+            forces = np.inner(self[j].get_forces()[self.reflect_ops[2]], self.reflect_ops[0])
+            # sforces = cell.scaled_positions(self[j].get_forces())
+            # rot_forces = np.inner(sforces[self.reflect_ops[2]],
+            #                       self.reflect_ops[0])
 
-            forces = cell.cartesian_positions(rot_forces)
+            # forces = cell.cartesian_positions(rot_forces)
             energy = self[j].get_potential_energy()
             magmoms = self[j].get_magnetic_moments()
             

@@ -304,9 +304,6 @@ def test_reflective_images():
 
     rneb = RNEB(atoms, logfile=None)
     S = rneb.find_symmetries(initial_unrelaxed, final_unrelaxed)
-    sym_ops = rneb.reflect_path(images, sym=S)
-
-    from ase.rneb import ReflectiveImages
 
     initial_relaxed = initial_unrelaxed.copy()
     initial_relaxed.calc = EMT()
@@ -343,21 +340,47 @@ def test_reflective_images():
         eip1 = images[1].get_potential_energy()  # e initial plus 1
         efm1 = images[-2].get_potential_energy()  # e final minus 1
         assert np.isclose(eip1, efm1, atol=1e-3)
+        
+        images = create_path(initial_relaxed, final_relaxed_s)
+        NEB(images).interpolate()
+        refl_images = rneb.get_reflective_path(images, S)
+        print(refl_images[1].get_potential_energy())
 
-        for S in sym_ops:
-            images = create_path(initial_relaxed, final_relaxed_s)
-            NEB(images).interpolate()
-            refl_images = ReflectiveImages(sym_ops[0], images)
-            s = refl_images[1:4]
-            print([im.calc for im in s])
-            # images = create_path(initial_unrelaxed, final_unrelaxed)
-            neb = NEB(refl_images, method=method)
+        neb = NEB(refl_images, method=method)
 
-            qn = BFGS(neb, logfile=None)
-            qn.run(fmax=0.05)
+        pe = PrintEnergies(refl_images)
+        qn = BFGS(neb, logfile=None)
+        qn.attach(pe.call, 1)
+        qn.run(fmax=0.05)
+        
+        # from ase.utils.structure_comparator import SymmetryEquivalenceCheck
+        # sc = SymmetryEquivalenceCheck()
+        # print('sym equiv??', sc.compare(refl_images[1], refl_images[-2]))
+        p1 = refl_images[1].copy()
+        p1.calc = EMT()
+        print(p1.get_potential_energy(), refl_images[1].get_potential_energy())
 
-            eip1 = refl_images[1].get_potential_energy()
-            efm1 = refl_images[-2].get_potential_energy()
-            assert np.isclose(eip1, efm1, atol=1e-3)
+        eip1 = refl_images[1].get_potential_energy()
+        
+        m2 = refl_images[-2].copy()
+        m2.calc = EMT()
+        efm2 = m2.get_potential_energy()
+        
+        assert np.isclose(eip1, efm2, atol=1e-3)
+        
+        
+## Check magnitude of rotated forces
     
+class PrintEnergies:
+    def __init__(self, images):
+        self.images = images
+        
+    def call(self):
+        energies = []
+        for atoms in self.images:
+            ac = atoms.copy()
+            ac.calc = EMT()
+            energies.append(ac.get_potential_energy())
+        diff = energies[1] - energies[-2]
+        print(energies, diff)
     
