@@ -113,6 +113,7 @@ class RNEB:
         # if no translations were found, look for rotations
         all_sym_ops = self.find_symmetries(initial, final,
                                            log_atomic_idx=log_atomic_idx)
+
         # Check if the rot matrix is the identity matrix and rot_only
         # is True. Then that is a pure translation.
         if rot_only:
@@ -383,7 +384,8 @@ def get_relaxed_final(initial, initial_relaxed, final,
         symop = rot[0][2]
 
         def f(x):
-            return np.dot(rot[0][0], x)
+            # return np.dot(rot[0][0], x)
+            return np.inner(x, rot[0][0])
     else:
         # Apply translational operator
         symop = trans
@@ -411,12 +413,22 @@ def get_relaxed_final(initial, initial_relaxed, final,
     dpos_rotated = np.zeros((len(dpos), 3))
     magmom_rotated = np.zeros(len(dpos))
 
-    for i, at in enumerate(symop):
-        dpos_rotated[i] = f(dpos[at])
-        magmom_rotated[i] = initial_results['magmoms'][at]
-        if initial_results['forces'] is not None:
-            # Why don't we use scaled forces here?
-            forces_rotated[i] = f(initial_results['forces'][at])
+    dpos_rotated = perform_symmetry_operation(dpos[symop], cell, f)
+    magmom_rotated = initial_results['magmoms'][symop]
+    if initial_results['forces'] is not None:
+        tmp_forces = initial_results['forces'][symop]
+        forces_rotated = perform_symmetry_operation(tmp_forces, cell, f)
+
+    # for i, at in enumerate(symop):
+    #     sdpos = cell.scaled_positions(dpos[at])
+    #     dpos_rotated[i] = cell.cartesian_positions(f(sdpos))
+    #     # dpos_rotated[i] = f(dpos[at])
+    #     magmom_rotated[i] = initial_results['magmoms'][at]
+    #     if initial_results['forces'] is not None:
+    #         # Why don't we use scaled forces here?
+    #         sforces = cell.scaled_positions(initial_results['forces'][at])
+    #         forces_rotated[i] = cell.cartesian_positions(f(sforces))
+    #         # forces_rotated[i] = f(initial_results['forces'][at])
 
     results = {'forces': forces_rotated,
                'energy': initial_results['energy'],
@@ -430,6 +442,11 @@ def get_relaxed_final(initial, initial_relaxed, final,
     final_temp.calc = newcalc
 
     return final_temp
+
+
+def perform_symmetry_operation(vectors, cell, sym_func):
+    scaled_vectors = cell.scaled_positions(vectors)
+    return cell.cartesian_positions(sym_func(scaled_vectors))
 
 
 def _purge_pure_tranlation_ops(sym_ops):
