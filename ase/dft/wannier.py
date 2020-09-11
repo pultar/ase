@@ -500,6 +500,8 @@ class Wannier:
         for d in range(self.Ndir):
             self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]]
                                - self.kpt_kc[0] - self.G_kdc[0, d])
+        self.bvec_dc = self.bvec_dc @ \
+                self.calc.get_atoms().get_cell().reciprocal() * 2 * np.pi
 
         # Set the inverse list of neighboring k-points
         self.invkklst_kd = np.empty((self.Nk, self.Ndir), dtype=np.uint32)
@@ -626,15 +628,18 @@ class Wannier:
                   Nk  --
                       k,b
         """
-        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2))
+        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2)) / (2 * np.pi)
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
         for w in range(self.nwannier):
             for d in range(self.Ndir):
-                coord_wc[w] += - (self.weight_d[d] * phZ_dw[d, w]
-                                  * self.bvec_dc[d])
+                coord_wc[w] -= (self.weight_d[d] * phZ_dw[d, w]
+                                * self.bvec_dc[d])
+        coord_wc = coord_wc @ (1 / \
+                   (self.calc.get_atoms().get_cell().reciprocal()\
+                   * 2 * np.pi)) * self.kptgrid / sum(self.weight_d)
         if scaled:
             # convert from large cell to unit cell
-            coord_wc = (coord_wc * self.kptgrid) % 1
+            coord_wc *= self.kptgrid
         else:
             coord_wc = coord_wc @ self.largeunitcell_cc
 
