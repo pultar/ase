@@ -491,7 +491,7 @@ class Wannier:
         self.kklst_kd, self.G_kdc, self.weight_d = \
             neighbors_and_weights(
                 kpt_frac=self.kpt_kc,
-                recip_cell=self.calc.get_atoms().get_cell().reciprocal(),
+                recip_cell=self.unitcell_cc.reciprocal(),
                 verbose=self.verbose)
         self.Ndir = self.kklst_kd.shape[1]
 
@@ -500,8 +500,9 @@ class Wannier:
         for d in range(self.Ndir):
             self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]]
                                - self.kpt_kc[0] - self.G_kdc[0, d])
+        # convert to cartesian coordinates
         self.bvec_dc = self.bvec_dc @ \
-                self.calc.get_atoms().get_cell().reciprocal() * 2 * np.pi
+                self.unitcell_cc.reciprocal() * 2 * np.pi
 
         # Set the inverse list of neighboring k-points
         self.invkklst_kd = np.empty((self.Nk, self.Ndir), dtype=np.uint32)
@@ -632,15 +633,14 @@ class Wannier:
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
         for w in range(self.nwannier):
             for d in range(self.Ndir):
-                coord_wc[w] -= (self.weight_d[d] * phZ_dw[d, w]
+                coord_wc[w] += (self.weight_d[d] * phZ_dw[d, w]
                                 * self.bvec_dc[d])
-        coord_wc = coord_wc @ (1 / \
-                   (self.calc.get_atoms().get_cell().reciprocal()\
-                   * 2 * np.pi)) * self.kptgrid / sum(self.weight_d)
+        coord_wc = - coord_wc / sum(self.weight_d)
         if scaled:
-            # convert from large cell to unit cell
+            # convert from repeated cell to unit cell
             coord_wc *= self.kptgrid
         else:
+            # cartesian coordinates
             coord_wc = coord_wc @ self.largeunitcell_cc
 
         return coord_wc
