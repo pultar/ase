@@ -163,7 +163,8 @@ class RNEB:
         # positions match pos_final
         for i, r in enumerate(R):
             pos_initial_scaled = np.inner(pos, r) + T[i]
-            pos_initial_cartesian = cell.cartesian_positions(pos_initial_scaled)
+            pos_initial_cartesian = cell.cartesian_positions(
+                pos_initial_scaled)
             pos_initial = wrap_positions(pos_initial_cartesian, cell)
             res = compare_positions(pos_final, pos_initial, cell, tol=self.tol)
             if res[0]:
@@ -262,7 +263,7 @@ class RNEB:
         for i, S in enumerate(sym):
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
-    
+
     def get_reflective_path(self, images, sym_ops):
         refl_sym_ops = self.reflect_path(images, sym_ops)
         return ReflectiveImages(refl_sym_ops[0], images)
@@ -354,11 +355,12 @@ class RNEB:
         self.log.info("          {:2d} {:2d} {:2d}"
                       .format(x[2][0], x[2][1], x[2][2]))
 
+
 class ReflectiveImages(list):
     def __init__(self, reflect_ops, iterable=(), /):
         super(ReflectiveImages, self).__init__(iterable)
         self.reflect_ops = reflect_ops
-        
+
     def __getitem__(self, i):
         if isinstance(i, slice):
             return [self[j] for j in range(*i.indices(len(self)))]
@@ -521,7 +523,7 @@ def compare_positions(pos1, pos2, cell, tol=1e-3):
     n = len(pos2)
     dists_all = get_distances(pos2, pos1, cell=cell, pbc=[1, 1, 1])
     final_to_initial = np.nonzero(np.isclose(dists_all[1], 0,
-                                          atol=tol))[1]
+                                             atol=tol))[1]
     match = len(final_to_initial) == n
     return match, np.argsort(final_to_initial)
 
@@ -575,10 +577,10 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     """
     final_s = final.copy()
     ml = min_neb_path_length
-    
+
     cell = initial.cell
     assert np.array_equal(cell, final.cell), 'Unit cells are not equal!'
-    
+
     pos1 = initial.positions
     pos2 = final_s.positions.copy()
 
