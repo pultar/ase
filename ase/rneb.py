@@ -8,6 +8,7 @@ import logging
 
 import numpy as np
 
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
 from ase.utils import atoms_to_spglib_cell
@@ -369,27 +370,22 @@ class ReflectiveImages(list):
             # reflective image from the first half of the path
             j = i - (i - len(self) // 2) * 2
 
-            # Use symmetry operation on forces in scaled
-            # coordinates
-            cell = self[j].cell
-            forces = np.inner(self[j].get_forces()[self.reflect_ops[2]], self.reflect_ops[0])
-            # sforces = cell.scaled_positions(self[j].get_forces())
-            # rot_forces = np.inner(sforces[self.reflect_ops[2]],
-            #                       self.reflect_ops[0])
+            results = get_results_dict(self[j])
 
-            # forces = cell.cartesian_positions(rot_forces)
-            energy = self[j].get_potential_energy()
-            magmoms = self[j].get_magnetic_moments()
-            
-            # Create the atoms using the symmetry operations
-            newcalc = SinglePointCalculator(atoms=atoms,
-                                            energy=energy,
-                                            forces=forces,
-                                            magmoms=magmoms)
+            # Use symmetry operation on forces in scaled coordinates
+            cell = self[j].cell
+            sforces = cell.scaled_positions(results['forces'])
+            rot_forces = np.inner(sforces[self.reflect_ops[2]],
+                                  self.reflect_ops[0])
+
+            # Set the rotated forces in the results dictionary. Energy
+            # and magmoms are identical to the symmetric image
+            results['forces'] = cell.cartesian_positions(rot_forces)
+            newcalc = SinglePointCalculator(atoms=atoms, **results)
             atoms.calc = newcalc
-            
+
             return atoms
-            
+
 
 def get_relaxed_final(initial, initial_relaxed, final,
                       trans=None, rot=None):
@@ -439,14 +435,7 @@ def get_relaxed_final(initial, initial_relaxed, final,
     dpos = find_mic(dpos, cell)[0]
     forces_rotated = None
 
-    initial_results = {'energy': None, 'forces': None,
-                    'magmoms': np.zeros(len(initial_relaxed))}
-    if initial_relaxed.calc:
-        for prop in initial_results.keys():
-            res = initial_relaxed.calc.get_property(prop,
-                                                 allow_calculation=False)
-            if res is not None:
-                initial_results[prop] = res
+    initial_results = get_results_dict(initial_relaxed)
 
     if initial_results['forces'] is not None:
         forces_rotated = np.zeros((len(dpos), 3))
@@ -482,6 +471,21 @@ def get_relaxed_final(initial, initial_relaxed, final,
     final_temp.calc = newcalc
 
     return final_temp
+
+
+def get_results_dict(atoms):
+    results = {'energy': None, 'forces': None,
+               'magmoms': np.zeros(len(atoms))}
+    if atoms.calc:
+        for prop in results.keys():
+            try:
+                res = atoms.calc.get_property(prop,
+                                              allow_calculation=False)
+            except PropertyNotImplementedError:
+                res = None
+            if res is not None:
+                results[prop] = res
+    return results
 
 
 def perform_symmetry_operation(vectors, cell, sym_func):
