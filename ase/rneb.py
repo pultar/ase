@@ -32,10 +32,13 @@ class RNEB:
     (``initial_relaxed``) the relaxed version of the other structure
     (``final_relaxed``) is produced.
 
+    Given an list of images interpolated between initial and final
+    :func:`get_reflective_path` returns a list of reflective images
+    that can be given to the main NEB class to utilize.
+
     :func:`reflect_path` checks if the full path has reflection
     symmetry by testing the given symmetry operations. Returns the
-    valid reflection operations. The obtained symmetry operations can
-    be given to the main NEB class to utilize.
+    valid reflection operations.
 
     Args:
         orig (Atoms): Original cell without defects, the symmetry operations
