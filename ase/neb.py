@@ -293,37 +293,10 @@ class BaseNEB:
             energies[-1] = images[-1].get_potential_energy()
 
         if not self.parallel:
-            if self.reflect_ops is not None:
-                # R-NEB symmetry
-                for i in range(1, self.nimages - 1):
-                    if i <= self.nimages // 2:
-                        energies[i] = images[i].get_potential_energy()
-                        forces[i - 1] = images[i].get_forces()
-                    else:
-                        j = i - (i - self.nimages // 2) * 2
-
-                        # Use symmetry operation on forces in scaled
-                        # coordinates
-                        cell = images[i].cell
-                        sforces = cell.scaled_positions(forces[j - 1])
-                        rot_forces = np.inner(sforces[self.reflect_ops[2]],
-                                              self.reflect_ops[0])
-
-                        forces[i - 1] = cell.cartesian_positions(rot_forces)
-                        energies[i] = energies[j]
-                        magmoms = self.images[j].get_magnetic_moments()
-                        # manually add calculator to image
-                        newcalc = SinglePointCalculator(self.images[i],
-                                                        energy=energies[i],
-                                                        forces=forces[i - 1],
-                                                        magmoms=magmoms)
-                        self.images[i].calc = newcalc
-
-            else:
-                # Do all images - one at a time:
-                for i in range(1, self.nimages - 1):
-                    energies[i] = images[i].get_potential_energy()
-                    forces[i - 1] = images[i].get_forces()
+            # Do all images - one at a time:
+            for i in range(1, self.nimages - 1):
+                energies[i] = images[i].get_potential_energy()
+                forces[i - 1] = images[i].get_forces()
         elif self.world.size == 1:
             def run(image, energies, forces):
                 energies[:] = image.get_potential_energy()
