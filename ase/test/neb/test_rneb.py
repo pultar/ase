@@ -278,14 +278,39 @@ def test_reshuffling_atoms():
     assert get_path_length(initial, final) - sqrt(2) < eps
 
 
-def test_reflective_images():
-    from ase.calculators.lj import LennardJones
-    from ase.rneb import reshuffle_positions, RNEB
+def test_non_reflective_path():
+    from ase.rneb import RNEB
 
-    def relax(atoms):
-        atoms.calc = LennardJones()
-        dyn = BFGS(atoms, logfile=None)
-        dyn.run(fmax=0.01)
+    # Make alpha-Al2S3 in which we have equivalent positions with no
+    # reflective path between
+    atoms = crystal(['S', 'S', 'S', 'Al', 'Al'],
+                    basis=[[0.00003, 0.33469, 0],
+                           [0.3343, 1.01191, 0.00395],
+                           [0.66198, 0.66843, -.00085],
+                           [0.34487, 0.35791, 0.04327],
+                           [-.01134, 0.32257, -.12815]],
+                    cellpar=[6.430, 6.430, 17.880, 90, 90, 120],
+                    spacegroup=169)
+
+    rneb = RNEB(atoms, logfile=None)
+
+    initial = atoms.copy()
+    initial.pop(-1)
+
+    final = atoms.copy()
+    final.pop(-2)
+
+    all_sym_ops = rneb.find_symmetries(initial, final)
+    assert len(all_sym_ops) > 0
+
+    images = [initial.copy() for _ in range(4)] + [final]
+    interpolate(images)
+    assert len(rneb.reflect_path(images, all_sym_ops)) == 0
+    assert rneb.get_reflective_path(images, all_sym_ops) == images
+
+
+def test_reflective_images():
+    from ase.rneb import RNEB
 
     both = Atoms('H8',
                  positions=[(0, 0, 0),

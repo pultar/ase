@@ -266,6 +266,8 @@ class RNEB:
 
     def get_reflective_path(self, images, sym_ops):
         refl_sym_ops = self.reflect_path(images, sym_ops)
+        if len(refl_sym_ops) == 0:
+            return images
         return ReflectiveImages(refl_sym_ops[0], images)
 
     def find_translations(self, initial, final,
@@ -387,6 +389,16 @@ class ReflectiveImages(list):
             atoms.calc = newcalc
 
             return atoms
+
+    def __eq__(self, other):
+        if not isinstance(other, ReflectiveImages):
+            return False
+        return super(ReflectiveImages, self).__eq__(other)
+
+    def __ne__(self, other):
+        if isinstance(other, ReflectiveImages):
+            return super(ReflectiveImages, self).__eq__(other)
+        return True
 
 
 def get_relaxed_final(initial, initial_relaxed, final,
