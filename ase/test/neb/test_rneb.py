@@ -3,16 +3,16 @@ from math import sqrt
 import numpy as np
 import pytest
 
-from ase.build import fcc111
 from ase import Atoms
+from ase.build import fcc111
 from ase.calculators.emt import EMT
 from ase.calculators.lj import LennardJones
 from ase.calculators.singlepoint import SinglePointCalculator
+from ase.constraints import FixAtoms
 from ase.geometry import distance, find_mic
 from ase.neb import NEB, interpolate
 from ase.optimize import BFGS
 from ase.spacegroup import crystal
-from ase.constraints import FixAtoms
 
 pytest.importorskip('spglib')
 
@@ -295,7 +295,7 @@ def test_reflective_images():
         neb = NEB(refl_images, method=method)
 
         optimize(neb)
-        
+
         eip1 = refl_images[1].get_potential_energy()
         fip1_abs = np.abs(refl_images[1].get_forces())
 
