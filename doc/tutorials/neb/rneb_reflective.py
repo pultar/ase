@@ -42,14 +42,15 @@ images.append(final)
 neb = NEB(images)
 neb.interpolate()
 
-# check if symmetry operations are also reflection operations
-# this is necessary as otherwise the RNEB is not applicable
+# There are different types of symmetry operations. For them to be
+# applicable in the NEB path, they have to be reflection operations.
 refl_sym_ops = rneb.reflect_path(images, sym=all_sym_ops)
-
 print(f"{len(refl_sym_ops)}/{len(all_sym_ops)} are reflection operations")
 
-refl_sym_op = refl_sym_ops[1]  # choose any valid operation
-neb = NEB(images, reflect_ops=refl_sym_op)
+# Now we obtain the reflective images that will be fed to NEB so that
+# symmetry will be used.
+refl_images = rneb.get_reflective_path(images, all_sym_ops)
+neb = NEB(images)
 qn = BFGS(neb, logfile=None, trajectory='neb.traj')
 qn.run(fmax=0.05)
 
