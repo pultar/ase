@@ -362,7 +362,7 @@ class RNEB:
 
 
 class ReflectiveImages(list):
-    def __init__(self, reflect_ops, iterable=(), /):
+    def __init__(self, reflect_ops, iterable=()):
         super(ReflectiveImages, self).__init__(iterable)
         self.reflect_ops = reflect_ops
 
