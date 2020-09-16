@@ -267,13 +267,13 @@ relaxation on the final image::
                                        final_unrelaxed)
 
 Then we create the path by interpolation as in the example in `The NEB
-class`_. Check that the path has reflection symmetry for each image
-pair, and finally run the NEB utilizing the symmetry operations to
-assign energies and forces to each symmetric image pair::
+class`_. Those images are turned into reflective images so the NEB
+class can take advantage of the symmetry operations to assign energies
+and forces to each symmetric image pair::
 
-  reflective_ops = rneb.reflect_path(images, sym=all_sym_ops)
+  reflective_images = rneb.get_reflective_path(images, sym=all_sym_ops)
   
-  neb = NEB(images, reflect_ops=reflective_ops[0])
+  neb = NEB(reflective_images)
   qn = BFGS(neb, logfile=None)
   qn.run(fmax=0.05)
 

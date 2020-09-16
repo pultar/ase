@@ -8,6 +8,7 @@ import logging
 
 import numpy as np
 
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
 from ase.utils import atoms_to_spglib_cell
@@ -31,10 +32,13 @@ class RNEB:
     (``initial_relaxed``) the relaxed version of the other structure
     (``final_relaxed``) is produced.
 
+    Given an list of images interpolated between initial and final
+    :func:`get_reflective_path` returns a list of reflective images
+    that can be given to the main NEB class to utilize.
+
     :func:`reflect_path` checks if the full path has reflection
     symmetry by testing the given symmetry operations. Returns the
-    valid reflection operations. The obtained symmetry operations can
-    be given to the main NEB class to utilize.
+    valid reflection operations.
 
     Args:
         orig (Atoms): Original cell without defects, the symmetry operations
@@ -113,6 +117,7 @@ class RNEB:
         # if no translations were found, look for rotations
         all_sym_ops = self.find_symmetries(initial, final,
                                            log_atomic_idx=log_atomic_idx)
+
         # Check if the rot matrix is the identity matrix and rot_only
         # is True. Then that is a pure translation.
         if rot_only:
@@ -161,7 +166,8 @@ class RNEB:
         # positions match pos_final
         for i, r in enumerate(R):
             pos_initial_scaled = np.inner(pos, r) + T[i]
-            pos_initial_cartesian = cell.cartesian_positions(pos_initial_scaled)
+            pos_initial_cartesian = cell.cartesian_positions(
+                pos_initial_scaled)
             pos_initial = wrap_positions(pos_initial_cartesian, cell)
             res = compare_positions(pos_final, pos_initial, cell, tol=self.tol)
             if res[0]:
@@ -186,7 +192,7 @@ class RNEB:
 
         return sym
 
-    def reflect_path(self, images, sym=None):
+    def reflect_path(self, images, sym):
         """Get the reflection operations valid for the entire path.
 
         Args:
@@ -248,9 +254,8 @@ class RNEB:
 
         # Use only symmetry operations valid for all image pairs
         sym_flat, counts = np.unique(path_flat, axis=0, return_counts=True)
-        sym_flat[np.where(counts == n_half - 1)]
         sym = []
-        for S in sym_flat:
+        for S in sym_flat[np.where(counts == n_half - 1)]:
             U = np.reshape(S[:9], (3, 3)).astype(int)
             T = S[9:12]
             idx = S[12:]
@@ -261,6 +266,12 @@ class RNEB:
         for i, S in enumerate(sym):
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
+
+    def get_reflective_path(self, images, sym_ops):
+        refl_sym_ops = self.reflect_path(images, sym_ops)
+        if len(refl_sym_ops) == 0:
+            return images
+        return ReflectiveImages(refl_sym_ops[0], images)
 
     def find_translations(self, initial, final,
                           return_translation_vec=False):
@@ -314,7 +325,7 @@ class RNEB:
         self.log.warning("    No translations found")
         return None
 
-    def _get_valid_reflections(self, vec_initial, vec_final, sym=None):
+    def _get_valid_reflections(self, vec_initial, vec_final, sym):
         reflections = []
         for S in sym:
             U = S[0]
@@ -350,6 +361,49 @@ class RNEB:
                       .format(x[2][0], x[2][1], x[2][2]))
 
 
+class ReflectiveImages(list):
+    def __init__(self, reflect_ops, iterable=()):
+        super(ReflectiveImages, self).__init__(iterable)
+        self.reflect_ops = reflect_ops
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return [self[j] for j in range(*i.indices(len(self)))]
+        atoms = super(ReflectiveImages, self).__getitem__(i)
+        if i <= len(self) // 2:
+            return atoms
+        else:
+            # i is over half way of the path, j is the corresponding
+            # reflective image from the first half of the path
+            j = i - (i - len(self) // 2) * 2
+
+            results = get_results_dict(self[j])
+
+            # Use symmetry operation on forces in scaled coordinates
+            cell = self[j].cell
+            sforces = cell.scaled_positions(results['forces'])
+            rot_forces = np.inner(sforces[self.reflect_ops[2]],
+                                  self.reflect_ops[0])
+
+            # Set the rotated forces in the results dictionary. Energy
+            # and magmoms are identical to the symmetric image
+            results['forces'] = cell.cartesian_positions(rot_forces)
+            newcalc = SinglePointCalculator(atoms=atoms, **results)
+            atoms.calc = newcalc
+
+            return atoms
+
+    def __eq__(self, other):
+        if not isinstance(other, ReflectiveImages):
+            return False
+        return super(ReflectiveImages, self).__eq__(other)
+
+    def __ne__(self, other):
+        if isinstance(other, ReflectiveImages):
+            return super(ReflectiveImages, self).__eq__(other)
+        return True
+
+
 def get_relaxed_final(initial, initial_relaxed, final,
                       trans=None, rot=None):
     """Obtain a relaxed final structure from a relaxed initial structure.
@@ -361,6 +415,10 @@ def get_relaxed_final(initial, initial_relaxed, final,
         initial (Atoms): The initial structure (unrelaxed)
         initial_relaxed (Atoms): A relaxed version of initial
         final (Atoms): The final structure (unrelaxed)
+        trans (list): Index swaps that signifies a translation symmetry
+            operation. Obtained from :func:`find_symmetries`.
+        rot (list): Symmetry operation as returned from
+            :func:`find_symmetries`.
 
     Returns:
         Atoms:
@@ -379,7 +437,8 @@ def get_relaxed_final(initial, initial_relaxed, final,
         symop = rot[0][2]
 
         def f(x):
-            return np.dot(rot[0][0], x)
+            # return np.dot(rot[0][0], x)
+            return np.inner(x, rot[0][0])
     else:
         # Apply translational operator
         symop = trans
@@ -393,26 +452,29 @@ def get_relaxed_final(initial, initial_relaxed, final,
     dpos = find_mic(dpos, cell)[0]
     forces_rotated = None
 
-    initial_results = {'energy': None, 'forces': None,
-                    'magmoms': np.zeros(len(initial_relaxed))}
-    if initial_relaxed.calc:
-        for prop in initial_results.keys():
-            res = initial_relaxed.calc.get_property(prop,
-                                                 allow_calculation=False)
-            if res is not None:
-                initial_results[prop] = res
+    initial_results = get_results_dict(initial_relaxed)
 
     if initial_results['forces'] is not None:
         forces_rotated = np.zeros((len(dpos), 3))
     dpos_rotated = np.zeros((len(dpos), 3))
     magmom_rotated = np.zeros(len(dpos))
 
-    for i, at in enumerate(symop):
-        dpos_rotated[i] = f(dpos[at])
-        magmom_rotated[i] = initial_results['magmoms'][at]
-        if initial_results['forces'] is not None:
-            # Why don't we use scaled forces here?
-            forces_rotated[i] = f(initial_results['forces'][at])
+    dpos_rotated = perform_symmetry_operation(dpos[symop], cell, f)
+    magmom_rotated = initial_results['magmoms'][symop]
+    if initial_results['forces'] is not None:
+        tmp_forces = initial_results['forces'][symop]
+        forces_rotated = perform_symmetry_operation(tmp_forces, cell, f)
+
+    # for i, at in enumerate(symop):
+    #     sdpos = cell.scaled_positions(dpos[at])
+    #     dpos_rotated[i] = cell.cartesian_positions(f(sdpos))
+    #     # dpos_rotated[i] = f(dpos[at])
+    #     magmom_rotated[i] = initial_results['magmoms'][at]
+    #     if initial_results['forces'] is not None:
+    #         # Why don't we use scaled forces here?
+    #         sforces = cell.scaled_positions(initial_results['forces'][at])
+    #         forces_rotated[i] = cell.cartesian_positions(f(sforces))
+    #         # forces_rotated[i] = f(initial_results['forces'][at])
 
     results = {'forces': forces_rotated,
                'energy': initial_results['energy'],
@@ -426,6 +488,26 @@ def get_relaxed_final(initial, initial_relaxed, final,
     final_temp.calc = newcalc
 
     return final_temp
+
+
+def get_results_dict(atoms):
+    results = {'energy': None, 'forces': None,
+               'magmoms': np.zeros(len(atoms))}
+    if atoms.calc:
+        for prop in results.keys():
+            try:
+                res = atoms.calc.get_property(prop,
+                                              allow_calculation=False)
+            except PropertyNotImplementedError:
+                res = None
+            if res is not None:
+                results[prop] = res
+    return results
+
+
+def perform_symmetry_operation(vectors, cell, sym_func):
+    scaled_vectors = cell.scaled_positions(vectors)
+    return cell.cartesian_positions(sym_func(scaled_vectors))
 
 
 def _purge_pure_tranlation_ops(sym_ops):
@@ -456,7 +538,7 @@ def compare_positions(pos1, pos2, cell, tol=1e-3):
     n = len(pos2)
     dists_all = get_distances(pos2, pos1, cell=cell, pbc=[1, 1, 1])
     final_to_initial = np.nonzero(np.isclose(dists_all[1], 0,
-                                          atol=tol))[1]
+                                             atol=tol))[1]
     match = len(final_to_initial) == n
     return match, np.argsort(final_to_initial)
 
@@ -510,10 +592,10 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     """
     final_s = final.copy()
     ml = min_neb_path_length
-    
+
     cell = initial.cell
     assert np.array_equal(cell, final.cell), 'Unit cells are not equal!'
-    
+
     pos1 = initial.positions
     pos2 = final_s.positions.copy()
 
