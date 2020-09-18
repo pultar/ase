@@ -624,6 +624,7 @@ class Wannier:
         Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
 
         ::
+
                   1   --
           pos = - --  >  wb * b * phase(diag(Z(k,b)))
                   Nk  --
