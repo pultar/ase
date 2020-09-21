@@ -69,6 +69,35 @@ class RNEB:
         spg_tuple = atoms_to_spglib_cell(orig)
         return spg.get_symmetry(spg_tuple, symprec=self.tol)
 
+    def get_all_equivalent_images(self, atoms):
+        """Get a list of all symmetry equivalent structures.
+
+        All symmetry operations are applied to the provided
+        structure. This creates all symmetry equivalent structures,
+        which are returned.
+
+        Args:
+            atoms (Atoms): The structure with a defect.
+
+        Returns:
+            list:
+                A list of symmetry equivalent structures.
+        """
+
+        equiv_structs = []
+        spos = atoms.get_scaled_positions()
+        cell = atoms.cell
+        for R, T in zip(self.all_sym_ops['rotations'],
+                        self.all_sym_ops['translations']):
+            rot_spos = np.inner(spos, R) + T
+            rot_pos = cell.cartesian_positions(rot_spos)
+            pos = wrap_positions(rot_pos, cell)
+            ac = atoms.copy()
+            ac.positions = pos
+            reshuffle_positions(atoms, ac)
+            equiv_structs.append(ac)
+        return equiv_structs
+
     def get_final_image(self, initial, initial_relaxed, final,
                         log_atomic_idx=False, return_ops=False,
                         rot_only=False):
