@@ -74,7 +74,11 @@ class RNEB:
 
         All symmetry operations are applied to the provided
         structure. This creates all symmetry equivalent structures,
-        which are returned.
+        which are returned. *Note* that for vacancies this is only a
+        convenience function, as it should be just as easy to pop the
+        equivalent atoms as provided by spglib one at a time. For
+        interstitial defects however this method shouldb be the
+        easiest to use.
 
         Args:
             atoms (Atoms): The structure with a defect.
@@ -82,6 +86,7 @@ class RNEB:
         Returns:
             list:
                 A list of symmetry equivalent structures.
+
         """
 
         equiv_structs = []
