@@ -9,7 +9,7 @@ from ase.calculators.emt import EMT
 from ase.calculators.lj import LennardJones
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms
-from ase.geometry import distance, find_mic
+from ase.geometry import distance, find_mic, get_distances
 from ase.neb import NEB, interpolate
 from ase.optimize import BFGS
 from ase.spacegroup import crystal
@@ -190,9 +190,8 @@ def test_reshuffling_atoms():
     assert get_path_length(initial, final) - sqrt(2) < eps
 
 
-def test_non_reflective_path():
-    from ase.rneb import RNEB
-
+@pytest.fixture(scope="module")
+def al2s3():
     # Make alpha-Al2S3 in which we have equivalent positions with no
     # reflective path between
     atoms = crystal(['S', 'S', 'S', 'Al', 'Al'],
@@ -203,13 +202,44 @@ def test_non_reflective_path():
                            [-.01134, 0.32257, -.12815]],
                     cellpar=[6.430, 6.430, 17.880, 90, 90, 120],
                     spacegroup=169)
+    return atoms
 
-    rneb = RNEB(atoms, logfile=None)
 
-    initial = atoms.copy()
+def test_all_equivalent_structures(al2s3):
+    from ase.rneb import RNEB
+
+    rneb = RNEB(al2s3, logfile=None)
+
+    initial = al2s3.copy()
     initial.pop(-1)
 
-    final = atoms.copy()
+    images = rneb.get_all_equivalent_images(initial)
+
+    # Get the equivalent index of the popped atom
+    equivalent_indices = rneb.all_sym_ops['equivalent_atoms']
+    eq_idx = equivalent_indices[-1]
+    indices = np.nonzero(equivalent_indices == eq_idx)[0]
+    equivalent_positions = al2s3.positions[indices]
+
+    # The structures in images should each cover all equivalent
+    # positions but one
+    for image in images:
+        gd = get_distances(equivalent_positions, image.positions,
+                           cell=al2s3.cell, pbc=True)[1]
+        sorted_dists = np.sort(np.min(gd, axis=1))
+        assert np.allclose(sorted_dists[:-1], np.zeros(len(sorted_dists) - 1))
+        assert sorted_dists[-1] > 1e-3
+
+
+def test_non_reflective_path(al2s3):
+    from ase.rneb import RNEB
+
+    rneb = RNEB(al2s3, logfile=None)
+
+    initial = al2s3.copy()
+    initial.pop(-1)
+
+    final = al2s3.copy()
     final.pop(-2)
 
     all_sym_ops = rneb.find_symmetries(initial, final)
