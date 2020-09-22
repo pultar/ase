@@ -99,8 +99,7 @@ class RNEB:
             pos = wrap_positions(rot_pos, cell)
             ac = atoms.copy()
             ac.positions = pos
-            reshuffle_positions(atoms, ac)
-            equiv_structs.append(ac)
+            equiv_structs.append(reshuffle_positions(atoms, ac, .1))
         return equiv_structs
 
     def get_final_image(self, initial, initial_relaxed, final,
