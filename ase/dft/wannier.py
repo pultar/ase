@@ -630,20 +630,17 @@ class Wannier:
                   Nk  --
                       k,b
         """
-        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2)) / (2 * np.pi)
+        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2))
         coord_wc = np.zeros((self.nwannier, 3), dtype=float)
         for w in range(self.nwannier):
             for d in range(self.Ndir):
                 coord_wc[w] += (self.weight_d[d] * phZ_dw[d, w]
                                 * self.bvec_dc[d])
-        coord_wc = - coord_wc / sum(self.weight_d)
+        coord_wc = - coord_wc @ np.linalg.inv(self.largeunitcell_cc) % 1
         if scaled:
-            # convert from repeated cell to unit cell
             coord_wc *= self.kptgrid
         else:
-            # cartesian coordinates
             coord_wc = coord_wc @ self.largeunitcell_cc
-
         return coord_wc
 
     def get_radii(self):
