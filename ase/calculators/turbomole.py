@@ -1007,9 +1007,6 @@ class Turbomole(FileIOCalculator):
 
     def _interactive_define(self):
         from reasonablypacedmole import single_linear_define
-        if self.define_str is not None:
-            raise NotImplementedError('define_str not yet implemented '\
-                                      'for interactive define')
         if self.parameters['initial guess'] not in [None, 'eht']:
             raise NotImplementedError('initial_guess not yet implemented '\
                                       'for interactive define')
@@ -1023,6 +1020,7 @@ class Turbomole(FileIOCalculator):
             if params.get('use dft') is None:
                 params['use dft'] = True
             single_linear_define(params, log=logfile,
+                                 define_str=self.define_str,
                                  timeout=self.interactive_define_timeout)
 
     def calculation_required(self, atoms, properties):

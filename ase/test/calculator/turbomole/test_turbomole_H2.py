@@ -1,11 +1,6 @@
 import pytest
 
-@pytest.mark.parametrize('define_handler', [
-    None,
-    pytest.param('interactive', marks=pytest.mark.xfail(
-        reason="define_str yet not implemented", strict=True)
-    )
-])
+@pytest.mark.parametrize('define_handler', [ None, 'interactive' ])
 def test_turbomole_H2(define_handler):
     from ase import Atoms
     from ase.calculators.turbomole import Turbomole
