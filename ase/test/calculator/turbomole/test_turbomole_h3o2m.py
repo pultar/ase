@@ -1,4 +1,12 @@
-def test_turbomole_h3o2m():
+import pytest
+
+@pytest.mark.parametrize('define_handler', [
+    None,
+    pytest.param('interactive', marks=pytest.mark.xfail(
+        reason="define_str yet not implemented", strict=True)
+    )
+])
+def test_turbomole_h3o2m(define_handler):
     from math import radians, sin, cos
 
     from ase import Atoms
@@ -48,7 +56,8 @@ def test_turbomole_h3o2m():
     constraint = FixAtoms(indices=[1, 3])  # fix OO BUG No.1: fixes atom 0 and 1
     # constraint = FixAtoms(mask=[0,1,0,1,0]) # fix OO    #Works without patch
     for image in images:
-        image.calc = Turbomole(define_str=define_str)
+        image.calc = Turbomole(define_str=define_str,
+                               define_handler=define_handler)
         image.set_constraint(constraint)
 
     # Relax initial and final states:

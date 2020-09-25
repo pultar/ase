@@ -1,4 +1,7 @@
-def test_turbomole_2h2o():
+import pytest
+
+@pytest.mark.parametrize('define_handler', [None, 'interactive'])
+def test_turbomole_2h2o(define_handler):
     """Water dimer calculation in which each molecule is calculated quantum
     mechanically and the interaction between the molecules is electrostatic.
     The process is repeated until self consitence. """
@@ -23,7 +26,8 @@ def test_turbomole_2h2o():
         return properties
 
 
-    params = {'esp fit': 'kollman', 'multiplicity': 1}
+    params = {'esp fit': 'kollman', 'multiplicity': 1,
+              'define_handler': define_handler}
     dimer = s22['Water_dimer']
 
     # system partitioning

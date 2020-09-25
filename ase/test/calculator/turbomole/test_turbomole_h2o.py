@@ -1,4 +1,7 @@
-def test_turbomole_h2o():
+import pytest
+
+@pytest.mark.parametrize('define_handler', [None, 'interactive'])
+def test_turbomole_h2o(define_handler):
     from ase.calculators.turbomole import Turbomole
     from ase.build import molecule
 
@@ -20,7 +23,7 @@ def test_turbomole_h2o():
         'scf iterations': 100
     }
 
-    calc = Turbomole(**params)
+    calc = Turbomole(**params, define_handler=define_handler)
     mol.calc = calc
     calc.calculate(mol)
     assert calc.converged
@@ -45,7 +48,7 @@ def test_turbomole_h2o():
         'density convergence': 1.0e-7
     })
 
-    calc = Turbomole(**params)
+    calc = Turbomole(**params, define_handler=define_handler)
     mol.calc = calc
     calc.calculate(mol)
 

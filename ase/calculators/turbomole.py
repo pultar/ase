@@ -588,7 +588,8 @@ class Turbomole(FileIOCalculator):
     def __init__(self, label=None, calculate_energy='dscf',
                  calculate_forces='grad', post_HF=False, atoms=None,
                  restart=False, define_str=None, control_kdg=None,
-                 control_input=None, **kwargs):
+                 control_input=None, define_handler=None,
+                 interactive_define_timeout=5, **kwargs):
 
         FileIOCalculator.__init__(self)
 
@@ -600,6 +601,8 @@ class Turbomole(FileIOCalculator):
         self.define_str = define_str
         self.control_kdg = control_kdg
         self.control_input = control_input
+        self.define_handler = define_handler
+        self.interactive_define_timeout = interactive_define_timeout
 
         # construct flat dictionaries with parameter attributes
         for p in self.parameter_spec:
@@ -963,6 +966,17 @@ class Turbomole(FileIOCalculator):
         if not os.path.isfile('coord'):
             raise IOError('file coord not found')
 
+        if not self.define_handler:
+            self._static_define()
+        elif self.define_handler == "interactive":
+            self._interactive_define()
+
+        self._set_post_define()
+
+        self.initialized = True
+        self.converged = False
+
+    def _static_define(self):
         if self.define_str is not None:
             define_str = self.define_str
         else:
@@ -991,10 +1005,25 @@ class Turbomole(FileIOCalculator):
                 delete_data_group('scfmo')
                 add_data_group('scfmo', 'none file=mos')
 
-        self._set_post_define()
-
-        self.initialized = True
-        self.converged = False
+    def _interactive_define(self):
+        from reasonablypacedmole import single_linear_define
+        if self.define_str is not None:
+            raise NotImplementedError('define_str not yet implemented '\
+                                      'for interactive define')
+        if self.parameters['initial guess'] not in [None, 'eht']:
+            raise NotImplementedError('initial_guess not yet implemented '\
+                                      'for interactive define')
+        with open('ASE.TM.define.log', "wb") as logfile:
+            params = self.parameters.copy()
+            if params.get('scf energy convergence') is not None:
+                spec = self.parameter_spec['scf energy convergence']
+                mapping_func = spec['mapping']['to_control']
+                value = params['scf energy convergence']
+                params['scf energy convergence'] = mapping_func(value)
+            if params.get('use dft') is None:
+                params['use dft'] = True
+            single_linear_define(params, log=logfile,
+                                 timeout=self.interactive_define_timeout)
 
     def calculation_required(self, atoms, properties):
         if self.atoms != atoms:

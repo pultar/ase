@@ -1,4 +1,7 @@
-def test_turbomole_au13():
+import pytest
+
+@pytest.mark.parametrize('define_handler', [None, 'interactive'])
+def test_turbomole_au13(define_handler):
     from ase.cluster.cubic import FaceCenteredCubic
     from ase.calculators.turbomole import Turbomole
 
@@ -26,7 +29,7 @@ def test_turbomole_au13():
         'scf iterations': 250
     }
 
-    calc = Turbomole(**params)
+    calc = Turbomole(**params, define_handler=define_handler)
     atoms.calc = calc
     calc.calculate(atoms)
 
@@ -41,7 +44,7 @@ def test_turbomole_au13():
         'scf energy convergence': 1.e-6
     }
 
-    calc = Turbomole(restart=True, **params)
+    calc = Turbomole(restart=True, **params, define_handler=define_handler)
     assert calc.converged
     calc.calculate()
 
