@@ -58,13 +58,23 @@ def test_h2_title(tmpdir_cwd_with_h2_coord, define_handler):
   pytest.param(None, marks=pytest.mark.xfail(reason=UNSPEC_MULT_XFAIL)),
   "interactive"
 ])
-def test_h2_empty_except_coords(tmpdir_cwd_with_h2_coord, define_handler):
+def test_h2_guess_mult_otherwise_empty(tmpdir_cwd_with_h2_coord, define_handler):
   ase_tm_define({
+    "multiplicity": "guess",
     "define_handler": define_handler,
   })
-  # some random checks: DFT off, def-SV(P) chosen as default basis
+
+@pytest.mark.parametrize("define_handler", [ None, "interactive" ])
+def test_h2_defaults(tmpdir_cwd_with_h2_coord, define_handler):
+  # XXX kind of the same test as test_h2_explicit_multiplicity below except for
+  # checks...
+  ase_tm_define({
+    "multiplicity": 1,
+    "define_handler": define_handler,
+  })
+  # some random checks: DFT on, def-SV(P) chosen as default basis
   control_re = file_re("control")
-  assert control_re.search("dft") is None, "DFT should be off by default"
+  assert control_re.search("dft") is not None, "DFT should be on by default"
   assert control_re.find_one(r'\s*basis =[^\n]*def-SV\(P\)')
 
 @pytest.mark.parametrize("define_handler", [ None, "interactive" ])
@@ -106,8 +116,9 @@ def test_h2_charged(tmpdir_cwd_with_h2_coord, define_handler):
   pytest.param(None, marks=pytest.mark.xfail(reason=UNSPEC_MULT_XFAIL)),
   "interactive"
 ])
-def test_h2_uhf_unspec_mult(tmpdir_cwd_with_h2_coord, define_handler):
+def test_h2_uhf_guess_mult(tmpdir_cwd_with_h2_coord, define_handler):
   ase_tm_define({
+    "multiplicity": "guess",
     "uhf": True,
     "define_handler": define_handler,
   })
@@ -287,7 +298,11 @@ def test_h2_dft_ri_mem(tmpdir_cwd_with_h2_coord, define_handler):
 @pytest.mark.parametrize("define_handler", [ None, "interactive" ])
 def test_h2_fails_with_invalid_basis_set(tmpdir_cwd_with_h2_coord,
 define_handler):
-  with pytest.raises(BasisSetNotFound):
+  if define_handler == "interactive":
+    expected_exception = BasisSetNotFound
+  else:
+    expected_exception = Exception
+  with pytest.raises(expected_exception):
     ase_tm_define({
       "multiplicity": 1,
       "basis set name": "defgarbage-SVgarbage",
@@ -338,8 +353,9 @@ def tmpdir_cwd_with_au13_coord(tmpdir):
   pytest.param(None, marks=pytest.mark.xfail(reason="static define doesn't check this")),
   "interactive"
   ])
-def test_au13_mult_unspecified(tmpdir_cwd_with_au13_coord, define_handler):
+def test_au13_guess_mult(tmpdir_cwd_with_au13_coord, define_handler):
   ase_tm_define({
+    "multiplicity": "guess",
     "define_handler": define_handler,
   })
   # default mult is 6

@@ -1019,6 +1019,8 @@ class Turbomole(FileIOCalculator):
                 params['scf energy convergence'] = mapping_func(value)
             if params.get('use dft') is None:
                 params['use dft'] = True
+            if params.get('multiplicity') == 'guess':
+                del params['multiplicity']
             single_linear_define(params, log=logfile,
                                  define_str=self.define_str,
                                  timeout=self.interactive_define_timeout)
