@@ -1,5 +1,8 @@
 import pytest
 
+REFERENCE_ENERGY = -48044.56719492441
+REFERENCE_DIPOLE = [-2.03999981, -2.03999981, -2.0399998]
+
 @pytest.mark.parametrize('define_handler', [None, 'interactive'])
 def test_turbomole_au13(define_handler):
     from ase.cluster.cubic import FaceCenteredCubic
@@ -34,8 +37,8 @@ def test_turbomole_au13(define_handler):
     calc.calculate(atoms)
 
     # use the get_property() method
-    print(calc.get_property('energy'))
-    print(calc.get_property('dipole'))
+    assert calc.get_property('energy') == pytest.approx(REFERENCE_ENERGY)
+    assert calc.get_property('dipole') == pytest.approx(REFERENCE_DIPOLE)
 
     # test restart
 
@@ -48,6 +51,7 @@ def test_turbomole_au13(define_handler):
     assert calc.converged
     calc.calculate()
 
-    print(calc.get_property('energy'))
+    assert calc.get_property('energy') == pytest.approx(REFERENCE_ENERGY)
+    assert calc.get_property('dipole') == pytest.approx(REFERENCE_DIPOLE)
+    # just check that they are present
     print(calc.get_property('forces'))
-    print(calc.get_property('dipole'))

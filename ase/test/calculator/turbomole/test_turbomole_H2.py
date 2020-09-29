@@ -1,5 +1,7 @@
 import pytest
 
+REFERENCE_ENERGY = -28.205659279578953
+
 @pytest.mark.parametrize('define_handler', [ None, 'interactive' ])
 def test_turbomole_H2(define_handler):
     from ase import Atoms
@@ -14,4 +16,4 @@ def test_turbomole_H2(define_handler):
                            define_handler=define_handler)
 
     # Run turbomole
-    atoms.get_potential_energy()
+    assert atoms.get_potential_energy() == pytest.approx(REFERENCE_ENERGY)
