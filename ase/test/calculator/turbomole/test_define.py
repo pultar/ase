@@ -6,6 +6,7 @@ from functools import partial
 import os
 import pytest
 import re
+import shutil
 
 def ase_tm_define(params):
   a = ase.io.read("coord")
@@ -325,6 +326,40 @@ define_handler):
     "define_handler": define_handler,
     "define_str": define_str,
   })
+
+@pytest.mark.parametrize("define_handler", [ None, "interactive" ])
+def test_h2_hcore_guess(tmpdir_cwd_with_h2_coord, define_handler):
+  ase_tm_define({
+    "multiplicity": 1,
+    "initial guess": "hcore",
+    "define_handler": define_handler,
+  })
+  assert file_re("control").find_one(r'\$scfmo none')
+  assert file_re("control").find_one(r'\$dft\n') # extra check
+
+@pytest.mark.parametrize("define_handler", [ None, "interactive" ])
+def test_h2_use_guess(tmpdir_cwd_with_h2_coord, define_handler):
+  # first, define calculation with standard EHT guess but non-default mult
+  ase_tm_define({
+    "multiplicity": 3,
+    "uhf": True,
+    "define_handler": define_handler,
+  })
+  # move to separate directory
+  os.mkdir("previous")
+  for x in ["control", "alpha", "beta", "basis"]:
+    shutil.move(x, "previous")
+  # now define new calculation using the previous one as starting guess
+  ase_tm_define({
+    "multiplicity": 1,
+    "uhf": True,
+    "initial guess": { "use": "previous/control" },
+    "define_handler": define_handler,
+  })
+  # check that multiplicity is 3, as defined by the previous one
+  assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-2\s')
+  assert file_re("control").search(r'\$beta shells\n a[ ]+0\s') is None
+  assert file_re("control").find_one(r'\$dft\n') # extra check
 
 au13_coords_contents = """\
 $coord
