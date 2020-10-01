@@ -339,26 +339,28 @@ def test_h2_hcore_guess(tmpdir_cwd_with_h2_coord, define_handler):
 
 @pytest.mark.parametrize("define_handler", [ None, "interactive" ])
 def test_h2_use_guess(tmpdir_cwd_with_h2_coord, define_handler):
-  # first, define calculation with standard EHT guess but non-default mult
+  # first, define calculation with standard EHT guess but non-default occ
   ase_tm_define({
-    "multiplicity": 3,
+    "total charge": -1,
+    "multiplicity": 2,
     "uhf": True,
     "define_handler": define_handler,
   })
-  # move to separate directory
+  # move this to separate directory
   os.mkdir("previous")
   for x in ["control", "alpha", "beta", "basis"]:
     shutil.move(x, "previous")
-  # now define new calculation using the previous one as starting guess
+  # now define new calculation with different occ but previous one as starting
+  # guess
   ase_tm_define({
-    "multiplicity": 1,
+    "multiplicity": 3,
     "uhf": True,
     "initial guess": { "use": "previous/control" },
     "define_handler": define_handler,
   })
-  # check that multiplicity is 3, as defined by the previous one
+  # check that occupation matches the one from the starting guess
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-2\s')
-  assert file_re("control").search(r'\$beta shells\n a[ ]+0\s') is None
+  assert file_re("control").find_one(r'\$beta shells\n a[ ]+1\s')
   assert file_re("control").find_one(r'\$dft\n') # extra check
 
 au13_coords_contents = """\
