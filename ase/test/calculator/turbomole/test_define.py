@@ -1,4 +1,6 @@
-# adapted from reasonablypacedmole tests
+# most of these test for DFT being enabled in the control file, as a common
+# consequence of failures during define is that defaults such as this won't be
+# set, cf. #735
 from ase.calculators.turbomole import Turbomole
 from reasonablypacedmole import InvalidOccupation, BasisSetNotFound
 import ase.io
@@ -105,6 +107,7 @@ def test_h2_ired(tmpdir_cwd_with_h2_coord, ase_tm):
     "use redundant internals": True,
     "multiplicity": 1,
   })
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -114,6 +117,7 @@ def test_h2_explicit_basis_set(tmpdir_cwd_with_h2_coord, ase_tm):
     "multiplicity": 1,
   })
   assert file_re("control").find_one(r'\s*basis =[^\n]*def2-TZVP')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -122,6 +126,7 @@ def test_h2_explicit_multiplicity(tmpdir_cwd_with_h2_coord, ase_tm):
     "multiplicity": 1,
   })
   assert file_re("control").find_one(r'\$closed shells\n a[ ]+1\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -132,6 +137,7 @@ def test_h2_charged(tmpdir_cwd_with_h2_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-2\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [
   pytest.param("static_define", marks=pytest.mark.xfail(reason=UNSPEC_MULT_XFAIL)),
@@ -144,6 +150,7 @@ def test_h2_uhf_guess_mult(tmpdir_cwd_with_h2_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -154,6 +161,7 @@ def test_h2_uhf(tmpdir_cwd_with_h2_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -163,6 +171,7 @@ def test_h2_triplet(tmpdir_cwd_with_h2_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-2\s')
   assert file_re("control").search(r'\$beta shells\n a[ ]+0\s') is None
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [
   pytest.param("static_define", marks=pytest.mark.xfail(reason="static define doesn't support this")),
@@ -174,6 +183,7 @@ def test_h2_triplet_rohf(tmpdir_cwd_with_h2_coord, ase_tm):
     "uhf": False,
   })
   assert file_re("control").find_one(r'\$open shells type=1\n a[ ]+1-2\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [
   pytest.param("static_define", marks=pytest.mark.xfail(reason="static define doesn't check this")),
@@ -184,6 +194,7 @@ def test_h2_uncharged_doublet_that_cant_work(tmpdir_cwd_with_h2_coord, ase_tm):
     ase_tm.define({
       "multiplicity": 2,
     })
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -198,6 +209,7 @@ def test_h2_damp(tmpdir_cwd_with_h2_coord, ase_tm):
   assert float(match.group(1)) == pytest.approx(1.0)
   assert float(match.group(2)) == pytest.approx(2.0)
   assert float(match.group(3)) == pytest.approx(3.0)
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -212,6 +224,7 @@ def test_h2_scfiter(tmpdir_cwd_with_h2_coord, ase_tm):
         if line.split()[1] == "300":
           return
     assert False, "no scfiterlimit found in control file!"
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -226,6 +239,7 @@ def test_h2_scfconv(tmpdir_cwd_with_h2_coord, ase_tm):
         if line.split()[1] == "6": # XXX this is what it does, but why not 5?
           return
     assert False, "no scfconv found in control file!"
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -252,6 +266,7 @@ def test_h2_fermi(tmpdir_cwd_with_h2_coord, ase_tm):
     assert d["tmfac"] == 0.9
     assert d["hlcrt"] == 0.08
     assert d["stop"] == 0.004
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -410,6 +425,7 @@ def test_au13_guess_mult(tmpdir_cwd_with_au13_coord, ase_tm):
   # default mult is 6
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-126\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-121\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -420,6 +436,7 @@ def test_au13_mult6_same_as_default(tmpdir_cwd_with_au13_coord, ase_tm):
   # just check that it's unchanged
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-126\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-121\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -429,6 +446,7 @@ def test_au13_mult4(tmpdir_cwd_with_au13_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-125\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-122\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -439,6 +457,7 @@ def test_au13_chargedm1_mult5_same_as_default(tmpdir_cwd_with_au13_coord, ase_tm
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-126\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-122\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -449,6 +468,7 @@ def test_au13_chargedm1_mult1_rohf(tmpdir_cwd_with_au13_coord, ase_tm):
     "uhf": False,
   })
   assert file_re("control").find_one(r'\$closed shells\n a[ ]+1-124\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -459,6 +479,7 @@ def test_au13_chargedm1_mult3(tmpdir_cwd_with_au13_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-125\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-123\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -469,14 +490,18 @@ def test_au13_chargedm1_mult7(tmpdir_cwd_with_au13_coord, ase_tm):
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-127\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-121\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.xfail(reason="roothan parameter thing - don't know what to do")
+@pytest.mark.skip(reason="no point testing this until correct result known")
 def test_au13_chargedm1_mult7_rohf(tmpdir_cwd_with_au13_coord, ase_tm):
   ase_tm.define({
     "total charge": -1,
     "multiplicity": 7,
     "uhf": False,
   })
+  assert file_re("control").find_one(r'\$dft\n')
+  # TODO add actual checks here
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
@@ -487,13 +512,17 @@ def test_au13_chargedp1_mult5_same_as_default(tmpdir_cwd_with_au13_coord, ase_tm
   })
   assert file_re("control").find_one(r'\$alpha shells\n a[ ]+1-125\s')
   assert file_re("control").find_one(r'\$beta shells\n a[ ]+1-121\s')
+  assert file_re("control").find_one(r'\$dft\n')
 
 @pytest.mark.parametrize("ase_tm", [ "static_define", "interactive_define" ],
   indirect=True)
 @pytest.mark.xfail(reason="roothan parameter thing - don't know what to do")
+@pytest.mark.skip(reason="no point testing this until correct result known")
 def test_au13_chargedp1_mult5_rohf(tmpdir_cwd_with_au13_coord, ase_tm):
   ase_tm.define({
     "total charge": 1,
     "multiplicity": 5,
     "uhf": False,
   })
+  assert file_re("control").find_one(r'\$dft\n')
+  # TODO add actual checks here
