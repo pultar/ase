@@ -628,7 +628,7 @@ class CIFLoop:
         self.arrays.append(array)
         if len(self.arrays[0]) != len(self.arrays[-1]):
             raise ValueError(f'Loop data "{name}" has {len(array)} '
-                             'elements, expected {len(self.arrays[0])}')
+                             f'elements, expected {len(self.arrays[0])}')
 
     def tostring(self):
         lines = []
@@ -726,10 +726,12 @@ class BadOccupancies(ValueError):
     pass
 
 
-def expand_kinds(atoms, coords):
+def expand_kinds(atoms, coords, extra_data=[]):
     # try to fetch occupancies // spacegroup_kinds - occupancy mapping
     symbols = list(atoms.symbols)
     coords = list(coords)
+    for data_i in range(len(extra_data)):
+        extra_data[data_i] = list(extra_data[data_i])
     occupancies = [1] * len(symbols)
     occ_info = atoms.info.get('occupancy')
     kinds = atoms.arrays.get('spacegroup_kinds')
@@ -748,7 +750,9 @@ def expand_kinds(atoms, coords):
                     symbols.append(sym)
                     coords.append(coords[i])
                     occupancies.append(occ)
-    return symbols, coords, occupancies
+                    for data_i in range(len(extra_data)):
+                        extra_data[data_i].append(extra_data[data_i][i])
+    return symbols, coords, occupancies, extra_data
 
 
 def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
@@ -760,7 +764,12 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         coords = atoms.get_positions(wrap).tolist()
 
     try:
-        symbols, coords, occupancies = expand_kinds(atoms, coords)
+        magmoms = atoms.get_magnetic_moments()
+        extra_data = [magmoms]
+    except RuntimeError:
+        extra_data = []
+    try:
+        symbols, coords, occupancies, extra_data = expand_kinds(atoms, coords, extra_data)
     except BadOccupancies as err:
         warnings.warn(str(err))
         occupancies = [1] * len(atoms)
@@ -790,8 +799,10 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         values = [loop_keys[key][i] for i in range(len(symbols))]
         loopdata['_' + key] = (values, '{}')
 
-    try:
-        magmoms = atoms.get_magnetic_moments()
+    output_data_headers = [ (loopdata, coord_headers) ]
+
+    if len(extra_data) >= 1:
+        magmoms = np.asarray(extra_data[0])
 
         mag_headers = ['_atom_site_moment.label']
         mag_loopdata = { '_atom_site_moment.label' : loopdata['_atom_site_label']}
@@ -799,8 +810,8 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         if len(magmoms.shape) == 1 or (len(magmoms.shape) == 2 and magmoms.shape[1] == 1):
             # scalar, orientation meaningless, do || crystal z
             mag_headers.extend([f'_atom_site_moment.crystalaxis_{axisname}' for axisname in 'xyz'])
-            mag_loopdata['_atom_site_moment.crystalaxis_x'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
-            mag_loopdata['_atom_site_moment.crystalaxis_y'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
+            mag_loopdata['_atom_site_moment.crystalaxis_x'] = (np.array([0.0] * len(magmoms)), '{:7.3f}')
+            mag_loopdata['_atom_site_moment.crystalaxis_y'] = (np.array([0.0] * len(magmoms)), '{:7.3f}')
             mag_loopdata['_atom_site_moment.crystalaxis_z'] = (magmoms, '{:7.3f}')
         elif (len(magmoms.shape) == 2 and magmoms.shape[1] == 3):
             mag_headers.extend([f'_atom_site_moment.Cartn_{axisname}' for axisname in 'xyz'])
@@ -810,13 +821,9 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         else:
             raise IndexError('Cannot handle magmoms shape {}, neither scalar nor 3-vector'.
                              format(magmoms.shape))
+        output_data_headers.append((mag_loopdata, mag_headers))
 
-    except RuntimeError:
-        # no calculator or a calculator that has no magnetic_moments both appear to give
-        # RuntimeError
-        pass
-
-    return [(loopdata, coord_headers), (mag_loopdata, mag_headers)]
+    return output_data_headers
 
 
 def write_cif_image(blockname, atoms, fd, *, wrap,

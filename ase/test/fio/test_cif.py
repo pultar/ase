@@ -5,6 +5,7 @@ import pytest
 
 from ase.io import read, write
 from ase.io.cif import CIFLoop, parse_loop, NoStructureData, parse_cif
+from ase.calculators.singlepoint import SinglePointCalculator
 
 
 def check_fractional_occupancies(atoms):
@@ -357,6 +358,9 @@ def atoms():
     cif_file = io.StringIO(content)
     return read(cif_file, format='cif')
 
+def test_cif_write_mag(atoms):
+    atoms.calc = SinglePointCalculator(atoms, magmoms=np.array([1.0] * len(atoms)))
+    atoms.write('testfile.cif')
 
 def test_cif_loop_keys(atoms):
     data = {}
