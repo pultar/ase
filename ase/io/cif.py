@@ -790,7 +790,22 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         values = [loop_keys[key][i] for i in range(len(symbols))]
         loopdata['_' + key] = (values, '{}')
 
-    return loopdata, coord_headers
+    try:
+        magmoms = atoms.get_magnetic_moments()
+
+        mag_headers = ['_atom_site_moment.label']
+        mag_headers.extend([f'_atom_site_moment.crystalaxis_{axisname}' for axisname in 'xyz'])
+
+        mag_loopdata = { '_atom_site_moment.label' : loopdata['_atom_site_label']}
+        mag_loopdata['_atom_site_moment.crystalaxis_x'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
+        mag_loopdata['_atom_site_moment.crystalaxis_y'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
+        mag_loopdata['_atom_site_moment.crystalaxis_z'] = (magmoms, '{:7.3f}')
+    except RuntimeError:
+        # no calculator or a calculator that has not magnetic_moments both appear to give
+        # RuntimeError
+        pass
+
+    return [(loopdata, coord_headers), (mag_loopdata, mag_headers)]
 
 
 def write_cif_image(blockname, atoms, fd, *, wrap,
@@ -804,8 +819,9 @@ def write_cif_image(blockname, atoms, fd, *, wrap,
         fd.write(format_generic_spacegroup_info())
         fd.write('\n')
 
-    loopdata, coord_headers = atoms_to_loop_data(atoms, wrap, labels,
-                                                 loop_keys)
+    all_data = atoms_to_loop_data(atoms, wrap, labels, loop_keys)
+
+    loopdata, coord_headers = all_data[0]
 
     headers = [
         '_atom_site_type_symbol',
@@ -823,3 +839,14 @@ def write_cif_image(blockname, atoms, fd, *, wrap,
         loop.add(header, array, fmt)
 
     fd.write(loop.tostring())
+
+    # write other loops
+    for loopdata, headers in all_data[1:]:
+
+        fd.write('\n')
+        loop = CIFLoop()
+        for header in headers:
+            array, fmt = loopdata[header]
+            loop.add(header, array, fmt)
+
+        fd.write(loop.tostring())
