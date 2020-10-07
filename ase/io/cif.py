@@ -794,14 +794,25 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         magmoms = atoms.get_magnetic_moments()
 
         mag_headers = ['_atom_site_moment.label']
-        mag_headers.extend([f'_atom_site_moment.crystalaxis_{axisname}' for axisname in 'xyz'])
-
         mag_loopdata = { '_atom_site_moment.label' : loopdata['_atom_site_label']}
-        mag_loopdata['_atom_site_moment.crystalaxis_x'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
-        mag_loopdata['_atom_site_moment.crystalaxis_y'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
-        mag_loopdata['_atom_site_moment.crystalaxis_z'] = (magmoms, '{:7.3f}')
+
+        if len(magmoms.shape) == 1 or (len(magmoms.shape) == 2 and magmoms.shape[1] == 1):
+            # scalar, orientation meaningless, do || crystal z
+            mag_headers.extend([f'_atom_site_moment.crystalaxis_{axisname}' for axisname in 'xyz'])
+            mag_loopdata['_atom_site_moment.crystalaxis_x'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
+            mag_loopdata['_atom_site_moment.crystalaxis_y'] = (np.array([0.0] * len(atoms)), '{:7.3f}')
+            mag_loopdata['_atom_site_moment.crystalaxis_z'] = (magmoms, '{:7.3f}')
+        elif (len(magmoms.shape) == 2 and magmoms.shape[1] == 3):
+            mag_headers.extend([f'_atom_site_moment.Cartn_{axisname}' for axisname in 'xyz'])
+            mag_loopdata['_atom_site_moment.Cartn_x'] = (magmoms[:,0], '{:7.3f}')
+            mag_loopdata['_atom_site_moment.Cartn_y'] = (magmoms[:,1], '{:7.3f}')
+            mag_loopdata['_atom_site_moment.Cartn_z'] = (magmoms[:,2], '{:7.3f}')
+        else:
+            raise IndexError('Cannot handle magmoms shape {}, neither scalar nor 3-vector'.
+                             format(magmoms.shape))
+
     except RuntimeError:
-        # no calculator or a calculator that has not magnetic_moments both appear to give
+        # no calculator or a calculator that has no magnetic_moments both appear to give
         # RuntimeError
         pass
 
