@@ -799,13 +799,13 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         values = [loop_keys[key][i] for i in range(len(symbols))]
         loopdata['_' + key] = (values, '{}')
 
-    output_data_headers = [ (loopdata, coord_headers) ]
+    output_data_headers = [(loopdata, coord_headers)]
 
     if len(extra_data) >= 1:
         magmoms = np.asarray(extra_data[0])
 
         mag_headers = ['_atom_site_moment.label']
-        mag_loopdata = { '_atom_site_moment.label' : loopdata['_atom_site_label']}
+        mag_loopdata = {'_atom_site_moment.label': loopdata['_atom_site_label']}
 
         if len(magmoms.shape) == 1 or (len(magmoms.shape) == 2 and magmoms.shape[1] == 1):
             # scalar, orientation meaningless, do || crystal z
