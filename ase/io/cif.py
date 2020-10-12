@@ -763,11 +763,10 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         coord_type = 'Cartn'
         coords = atoms.get_positions(wrap).tolist()
 
-    try:
-        magmoms = atoms.get_magnetic_moments()
-        extra_data = [magmoms]
-    except RuntimeError:
-        extra_data = []
+    extra_data = []
+    if atoms.has('initial_magmoms'):
+        extra_data.append(atoms.get_initial_magnetic_moments())
+
     try:
         symbols, coords, occupancies, extra_data = expand_kinds(atoms, coords, extra_data)
     except BadOccupancies as err:
@@ -801,7 +800,7 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
 
     output_data_headers = [(loopdata, coord_headers)]
 
-    if len(extra_data) >= 1:
+    if len(extra_data) > 0:
         magmoms = np.asarray(extra_data[0])
 
         mag_headers = ['_atom_site_moment.label']
