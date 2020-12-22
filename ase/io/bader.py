@@ -19,7 +19,7 @@ def attach_charges(atoms, fileobj='ACF.dat', displacement=1e-4):
     if path.exists('POTCAR'):
         with open('POTCAR') as potcar_obj:
             potcar_charges = read_potcar_numbers_of_electrons(potcar_obj)
-        atomic_numbers = {elm:charge for elm,charge in potcar_charges}
+        atomic_numbers.update({elm:charge for elm,charge in potcar_charges})
 
     sep = '---------------'
     i = 0  # Counter for the lines
