@@ -543,7 +543,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                 atoms_sorted = read(self._indir('CONTCAR'))
                 atoms.positions = atoms_sorted[self.resort].positions
                 atoms.cell = atoms_sorted.cell
-
+        if not atoms.pbc.all():
+            atoms.pbc = True  # VASP PBC is always [True, True, True]
         self.atoms = atoms  # Creates a copy
 
     def check_cell(self, atoms=None):
