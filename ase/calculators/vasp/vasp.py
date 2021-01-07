@@ -120,9 +120,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         # Set directory and label
         self.directory = directory
         if '/' in label:
-            warn(
-                'Specifying directory in "label" is deprecated, use "directory" instead.',
-                np.VisibleDeprecationWarning)
+            warn(('Specifying directory in "label" is deprecated, '
+                  'use "directory" instead.'), np.VisibleDeprecationWarning)
             if self.directory != '.':
                 raise ValueError('Directory redundantly specified though '
                                  'directory="{}" and label="{}".  '
@@ -311,7 +310,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if atoms is not None:
             self.atoms = atoms.copy()
 
-        self.check_cell()  # Check for zero-length lattice vectors
+        # Check for zero-length lattice vectors and PBC
+        check_atoms(atoms)
 
         command = self.make_command(self.command)
         self.write_input(self.atoms, properties, system_changes)
@@ -543,18 +543,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                 atoms_sorted = read(self._indir('CONTCAR'))
                 atoms.positions = atoms_sorted[self.resort].positions
                 atoms.cell = atoms_sorted.cell
-        if not atoms.pbc.all():
-            atoms.pbc = True  # VASP PBC is always [True, True, True]
-        self.atoms = atoms  # Creates a copy
 
-    def check_cell(self, atoms=None):
-        """Check if there is a zero unit cell"""
-        if not atoms:
-            atoms = self.atoms
-        if not atoms.cell.any():
-            raise ValueError("The lattice vectors are zero! "
-                             "This is the default value - please specify a "
-                             "unit cell.")
+        self.atoms = atoms  # Creates a copy
 
     def read_results(self):
         """Read the results from VASP output files"""
@@ -1195,3 +1185,40 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
             xc = np.append(xc, l_)
         assert len(xc) == 32
         return xc
+
+
+#####################################
+# Below defines helper functions
+# for the VASP calculator
+#####################################
+
+
+def check_cell(atoms) -> None:
+    """Check if there is a zero unit cell.
+    Raises CalculatorSetupError if the cell is wrong.
+    """
+    if not atoms.cell.any():
+        raise calculator.CalculatorSetupError(
+            "The lattice vectors are zero! "
+            "This is the default value - please specify a "
+            "unit cell.")
+
+
+def check_pbc(atoms) -> None:
+    """Check if any boundaries are not PBC, as VASP
+    cannot handle non-PBC.
+    Raises CalculatorSetupError.
+    """
+    if not atoms.pbc.all():
+        raise calculator.CalculatorSetupError(
+            "Vasp cannot handle non-periodic boundaries. "
+            "Please enable all PBC, e.g. atoms.pbc=True")
+
+
+def check_atoms(atoms) -> None:
+    """Perform checks on the atoms object, to verify that
+    it can be run by VASP.
+    A CalculatorSetupError error is raised if the atoms are not supported.
+    """
+    check_cell(atoms)
+    check_pbc(atoms)
