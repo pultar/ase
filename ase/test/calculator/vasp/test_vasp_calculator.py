@@ -5,14 +5,12 @@ import pytest
 from ase.build import molecule
 from ase.calculators.calculator import CalculatorSetupError
 from ase.calculators.vasp import Vasp
-from ase.calculators.vasp.vasp import check_atoms, check_pbc, check_cell
+from ase.calculators.vasp.vasp import check_atoms, check_pbc, check_cell, check_atoms_type
 
 
 @pytest.fixture
 def atoms():
-    _atoms = molecule('H2', vacuum=5)
-    _atoms.pbc = True
-    return _atoms
+    return molecule('H2', vacuum=5, pbc=True)
 
 
 def test_check_atoms(atoms, mock_vasp_calculate):
@@ -32,6 +30,8 @@ def test_check_atoms(atoms, mock_vasp_calculate):
     ])
 def test_not_atoms(bad_atoms, mock_vasp_calculate):
 
+    with pytest.raises(CalculatorSetupError):
+        check_atoms_type(bad_atoms)
     with pytest.raises(CalculatorSetupError):
         check_atoms(bad_atoms)
 

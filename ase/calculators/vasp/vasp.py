@@ -1193,6 +1193,17 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
 #####################################
 
 
+def check_atoms(atoms: ase.Atoms) -> None:
+    """Perform checks on the atoms object, to verify that
+    it can be run by VASP.
+    A CalculatorSetupError error is raised if the atoms are not supported.
+    """
+
+    check_atoms_type(atoms)
+    check_cell(atoms)
+    check_pbc(atoms)
+
+
 def check_cell(atoms: ase.Atoms) -> None:
     """Check if there is a zero unit cell.
     Raises CalculatorSetupError if the cell is wrong.
@@ -1215,14 +1226,8 @@ def check_pbc(atoms: ase.Atoms) -> None:
             "Please enable all PBC, e.g. atoms.pbc=True")
 
 
-def check_atoms(atoms: ase.Atoms) -> None:
-    """Perform checks on the atoms object, to verify that
-    it can be run by VASP.
-    A CalculatorSetupError error is raised if the atoms are not supported.
-    """
+def check_atoms_type(atoms: ase.Atoms) -> None:
     if not isinstance(atoms, ase.Atoms):
         raise calculator.CalculatorSetupError(
             ('Expected an Atoms object, '
              'instead got object of type {}'.format(type(atoms))))
-    check_cell(atoms)
-    check_pbc(atoms)
