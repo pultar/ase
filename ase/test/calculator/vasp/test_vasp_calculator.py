@@ -13,6 +13,24 @@ def atoms():
     return molecule('H2', vacuum=5)
 
 
+@pytest.mark.parametrize(
+    'bad_atoms',
+    [
+        None,
+        'a_string',
+        # We cannot handle lists of atoms either
+        [molecule('H2', vacuum=5)],
+    ])
+def test_not_atoms(bad_atoms, mock_vasp_calculate):
+
+    with pytest.raises(CalculatorSetupError):
+        check_atoms(bad_atoms)
+
+    calc = Vasp()
+    with pytest.raises(CalculatorSetupError):
+        calc.calculate(atoms=bad_atoms)
+
+
 @pytest.mark.parametrize('pbc', [
     3 * [False],
     [True, False, True],
