@@ -1193,7 +1193,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
 #####################################
 
 
-def check_cell(atoms) -> None:
+def check_cell(atoms: ase.Atoms) -> None:
     """Check if there is a zero unit cell.
     Raises CalculatorSetupError if the cell is wrong.
     """
@@ -1204,7 +1204,7 @@ def check_cell(atoms) -> None:
             "unit cell.")
 
 
-def check_pbc(atoms) -> None:
+def check_pbc(atoms: ase.Atoms) -> None:
     """Check if any boundaries are not PBC, as VASP
     cannot handle non-PBC.
     Raises CalculatorSetupError.
@@ -1215,7 +1215,7 @@ def check_pbc(atoms) -> None:
             "Please enable all PBC, e.g. atoms.pbc=True")
 
 
-def check_atoms(atoms) -> None:
+def check_atoms(atoms: ase.Atoms) -> None:
     """Perform checks on the atoms object, to verify that
     it can be run by VASP.
     A CalculatorSetupError error is raised if the atoms are not supported.
