@@ -10,7 +10,15 @@ from ase.calculators.vasp.vasp import check_atoms, check_pbc, check_cell
 
 @pytest.fixture
 def atoms():
-    return molecule('H2', vacuum=5)
+    _atoms = molecule('H2', vacuum=5)
+    _atoms.pbc = True
+    return _atoms
+
+
+def test_check_atoms(atoms, mock_vasp_calculate):
+    check_atoms(atoms)
+    check_pbc(atoms)
+    check_cell(atoms)
 
 
 @pytest.mark.parametrize(
@@ -36,7 +44,7 @@ def test_not_atoms(bad_atoms, mock_vasp_calculate):
     [True, False, True],
     [False, True, False],
 ])
-def test_pbc(atoms, pbc, mock_vasp_calculate):
+def test_bad_pbc(atoms, pbc, mock_vasp_calculate):
     """Test handling of PBC"""
     atoms.pbc = pbc
 
