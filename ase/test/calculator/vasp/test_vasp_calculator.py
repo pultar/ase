@@ -29,12 +29,16 @@ def test_check_atoms(atoms, mock_vasp_calculate):
         [molecule('H2', vacuum=5)],
     ])
 def test_not_atoms(bad_atoms, mock_vasp_calculate):
+    """Check that passing in objects which are not
+    actually Atoms objects raises a setup error """
 
     with pytest.raises(CalculatorSetupError):
         check_atoms_type(bad_atoms)
     with pytest.raises(CalculatorSetupError):
         check_atoms(bad_atoms)
 
+    # Test that error is also raised properly when launching
+    # from calculator
     calc = Vasp()
     with pytest.raises(CalculatorSetupError):
         calc.calculate(atoms=bad_atoms)
