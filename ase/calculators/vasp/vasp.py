@@ -1199,9 +1199,9 @@ def check_atoms(atoms: ase.Atoms) -> None:
     A CalculatorSetupError error is raised if the atoms are not supported.
     """
 
-    check_atoms_type(atoms)
-    check_cell(atoms)
-    check_pbc(atoms)
+    # Loop through all check functions
+    for check in (check_atoms_type, check_cell, check_pbc):
+        check(atoms)
 
 
 def check_cell(atoms: ase.Atoms) -> None:
@@ -1227,6 +1227,9 @@ def check_pbc(atoms: ase.Atoms) -> None:
 
 
 def check_atoms_type(atoms: ase.Atoms) -> None:
+    """Check that the passed atoms object is in fact an Atoms object.
+    Raises CalculatorSetupError.
+    """
     if not isinstance(atoms, ase.Atoms):
         raise calculator.CalculatorSetupError(
             ('Expected an Atoms object, '
