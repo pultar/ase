@@ -16,6 +16,7 @@ def atoms():
 
 
 def test_check_atoms(atoms, mock_vasp_calculate):
+    """Test checking atoms passes for a good atoms object"""
     check_atoms(atoms)
     check_pbc(atoms)
     check_cell(atoms)
@@ -65,9 +66,7 @@ def test_bad_pbc(atoms, pbc, mock_vasp_calculate):
 
 
 def test_vasp_no_cell(mock_vasp_calculate):
-    """
-    Check VASP input handling.
-    """
+    """Check missing cell handling."""
     # Molecules come with no unit cell
     atoms = molecule('CH4')
     # We should not have a cell
