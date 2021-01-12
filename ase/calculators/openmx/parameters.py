@@ -129,6 +129,7 @@ matrix_keys = [
     'Atoms.SpeciesAndCoordinates',
     'Atoms.UnitVectors',
     'Hubbard.U.values',
+    'Hubbard.J.values',
     'Atoms.Cont.Orbitals',
     'MD.Fixed.XYZ',
     'MD.TempControl',
@@ -140,6 +141,7 @@ matrix_keys = [
 ]
 unit_dat_keywords = {
     'Hubbard.U.Values': 'eV',
+    'Hubbard.J.Values': 'eV',
     'scf.Constraint.NC.Spin.v': 'eV',
     'scf.ElectronicTemperature': 'K',
     'scf.energycutoff': 'Ry',
@@ -243,6 +245,7 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     atoms_speciesandcoordinates=None,
     atoms_unitvectors=None,
     hubbard_u_values=None,
+    hubbard_j_values=None,
     atoms_cont_orbitals=None,
     md_fixed_xyz=None,
     md_tempcontrol=None,
@@ -269,7 +272,8 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     debug=False,
     nohup=True,
     dft_data_dict=None,  # dft_data_year : Pseudo potential generated year
-    dft_data_year=None)  # writting in 'Definition.Of.Atomic.Species'. 13 or 19
+    dft_data_year=None,  # writting in 'Definition.Of.Atomic.Species'. 13 or 19
+    orbital_polarization=None)
 
 
 class OpenMXParameters(Parameters):
