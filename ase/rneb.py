@@ -467,11 +467,11 @@ def get_relaxed_final(initial, initial_relaxed, final,
         raise ValueError(msg)
     elif rot is not None:
         # Apply rotational operator
-        symop = rot[0][2]
+        symop = rot[2]
 
         def f(x):
             # return np.dot(rot[0][0], x)
-            return np.inner(x, rot[0][0])
+            return np.inner(x, rot[0])
     else:
         # Apply translational operator
         symop = trans
