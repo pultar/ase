@@ -164,7 +164,7 @@ I/O:
 * Vasp output formats return atoms with fully periodic boundary conditions
   as appropriate.
 
-* Vasp POSCAR/CONTCAR writer will now write in the Vasp5 format by default.
+* Vasp POSCAR/CONTCAR writer will now use the Vasp5 format by default.
 
 Development:
 
