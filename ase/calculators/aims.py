@@ -771,12 +771,33 @@ class Aims(FileIOCalculator):
         return self.read_number_of_bands()
 
     def read_number_of_bands(self):
+        """Read the number minimum of either basis fxns or KS states.
+        
+        This method goes through line by line in the aims.out file
+        to look for the number of Kohn-Sham states. It also goes line
+        by line to find the maximum number of basis functions. When
+        using the minimal basis set, the number of KS states
+        could appear greater than the maximum number of basis functions.
+        This caused the read_eigenvalues() method to fail. We now
+        return the minimum of the number of basis functions or KS
+        states to circumvent this issue.
+
+        Returns:
+        num_bands: (int) specifiying the minimum between the
+            maximum number of basis functions and the number
+            of Kohn-Sham states.
+        """
         nband = None
         lines = open(self.out, 'r').readlines()
         for n, line in enumerate(lines):
             if line.rfind('Number of Kohn-Sham states') > -1:
-                nband = int(line.split(':')[-1].strip())
-        return nband
+                num_KS_states = int(line.split(':')[-1].strip())               
+            if line.rfind('Maximum number of basis functions') > -1:
+                num_basis_fxns = int(line.split(':')[-1].strip())
+        # We return the minimum of either the # of basis functions
+        # or the number of KS states.
+        num_bands = min(num_KS_states, num_basis_fxns)
+        return num_bands
 
     def get_k_point_weights(self):
         return self.read_kpts(mode='k_point_weights')
