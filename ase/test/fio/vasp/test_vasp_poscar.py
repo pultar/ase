@@ -1,6 +1,7 @@
 import pytest
 from ase.io import read, write
 from ase.build import bulk
+from ase.calculators.calculator import compare_atoms
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def test_read_write_roundtrip(atoms, vasp5, filename):
     write(filename, atoms, vasp5=vasp5)
     atoms_loaded = read(filename)
 
-    assert atoms == atoms_loaded
+    assert len(compare_atoms(atoms, atoms_loaded)) == 0
 
 
 @pytest.mark.parametrize('filename', ['POSCAR', 'CONTCAR'])
