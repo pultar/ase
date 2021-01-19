@@ -315,7 +315,8 @@ def get_cutoff_radius_and_orbital(element=None, orbital=None):
     default_dictionary = default_settings.default_dictionary
     orbital_numbers = default_dictionary[element]['orbitals used']
     cutoff_radius = default_dictionary[element]['cutoff radius']
-    orbital += "%.1f" % float(cutoff_radius) + '-'
+    orbital_suffix = default_dictionary[element]['pseudo-potential suffix']
+    orbital += "%.1f" % float(cutoff_radius) + orbital_suffix + '-'
     for i, orbital_number in enumerate(orbital_numbers):
         orbital += orbital_letters[i] + str(orbital_number)
     return orbital
@@ -396,9 +397,10 @@ def get_atoms_speciesandcoordinates(atoms, parameters):
     for i, noncollinear_switch in enumerate(noncollinear_switches):
         atoms_speciesandcoordinates[i].extend(noncollinear_switch)
     # Appending orbital_enhancement_switch
-    lda_u_switches = get_lda_u_switches()
-    for i, lda_u_switch in enumerate(lda_u_switches):
-        atoms_speciesandcoordinates[i].extend(lda_u_switch)
+    atom_count = atoms.get_positions().shape[0]
+    orbital_pol_switches = get_orbital_pol_switches(atom_count, parameters)
+    for i, orbital_pol_switch in enumerate(orbital_pol_switches):
+        atoms_speciesandcoordinates[i].extend([orbital_pol_switch])
     return atoms_speciesandcoordinates
 
 
@@ -434,11 +436,12 @@ def get_noncollinear_switches():
     return noncolinear_switches
 
 
-def get_lda_u_switches():
-    lda_u_switches = []
-    # print("Not Implemented Yet")
-    return lda_u_switches
-
+def get_orbital_pol_switches(atomcount, parameters):
+    pol_switches = parameters.get('orbital_polarization')
+    if pol_switches:
+        return pol_switches
+    else:
+        return [*(atomcount*['off'])]
 
 def get_spinpol(atoms, parameters):
     ''' Judgeds the keyword 'scf.SpinPolarization'
@@ -476,8 +479,52 @@ def get_atoms_unitvectors(atoms, parameters):
 
 
 def get_hubbard_u_values(atoms, parameters):
-    return parameters.get('hubbard_u_values', [])
+    orbitals = get_definition_of_atomic_species(atoms, parameters)
+    hub_total = []
+    for orbital in orbitals:
+        atom = orbital[0]
+        basis = orbital[1].split('-')[1]
+        hub = []
+        hub.append(atom)
+        for multiplicity, orb_name in zip(basis[1::2], basis[::2]):
+            multiplicity = int(multiplicity)
+            for j in range(multiplicity):
+                hub.append(f'{j+1}{orb_name}')
+                hub.append('0.0')
+        hub_total.append(hub) 
 
+    hub_inputs = parameters.get('hubbard_u_values')
+    if hub_inputs:
+        for hub_input in hub_inputs:
+            atom, orbital, value = hub_input
+            idx_row = [hub_total.index(row) for row in hub_total if atom in row][0]
+            idx_col = hub_total[idx_row].index(orbital)
+            hub_total[idx_row][idx_col+1] = float(value)
+    return hub_total
+
+def get_hubbard_j_values(atoms, parameters):
+    orbitals = get_definition_of_atomic_species(atoms, parameters)
+    hub_total = []
+    for orbital in orbitals:
+        atom = orbital[0]
+        basis = orbital[1].split('-')[1]
+        hub = []
+        hub.append(atom)
+        for multiplicity, orb_name in zip(basis[1::2], basis[::2]):
+            multiplicity = int(multiplicity)
+            for j in range(multiplicity):
+                hub.append(f'{j+1}{orb_name}')
+                hub.append('0.0')
+        hub_total.append(hub) 
+
+    hub_inputs = parameters.get('hubbard_j_values')
+    if hub_inputs:
+        for hub_input in hub_inputs:
+            atom, orbital, value = hub_input
+            idx_row = [hub_total.index(row) for row in hub_total if atom in row][0]
+            idx_col = hub_total[idx_row].index(orbital)
+            hub_total[idx_row][idx_col+1] = float(value)
+    return hub_total
 
 def get_atoms_cont_orbitals(atoms, parameters):
     return parameters.get('atoms_cont_orbitals', [])
@@ -648,6 +695,7 @@ def write_list_bool(f, key, value):
 
 def write_list_float(f, key, value):
     f.write("".join(key) + ' ' + "     ".join(map(str, value)))
+    f.write("\n")
 
 
 def write_matrix(f, key, value):
