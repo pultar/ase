@@ -90,13 +90,17 @@ def test_vasp_no_cell(mock_vasp_calculate):
         atoms.get_total_energy()
 
 
+def test_vasp_name(mock_vasp_calculate):
+    """Test the calculator class has the expected name"""
+    expected = 'vasp'
+    assert Vasp.name == expected  # Test class attribute
+    assert Vasp().name == expected  # Ensure instance attribute hasn't changed
+
+
 def test_vasp_get_calculator(mock_vasp_calculate):
     cls_ = get_calculator_class('vasp')
 
     assert cls_ == Vasp
 
-
-def test_vasp_name(mock_vasp_calculate):
-    expected = 'Vasp'
-    assert Vasp.name == expected  # Test class attribute
-    assert Vasp().name == expected  # Ensure instance attribute hasn't changed
+    # Test we get the correct calculator when loading from name
+    assert get_calculator_class(Vasp.name) == cls_

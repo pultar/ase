@@ -83,7 +83,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                 Custom instructions on how to execute VASP. Has priority over
                 environment variables.
     """
-    name = 'Vasp'
+    name = 'vasp'
     ase_objtype = 'vasp_calculator'  # For JSON storage
 
     # Environment commands
