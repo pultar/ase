@@ -22,7 +22,9 @@ def always_mock_calculate(mock_vasp_calculate):
 
 
 def test_verify_no_run():
-    """Verify that we get an error if we try and execute the calculator"""
+    """Verify that we get an error if we try and execute the calculator,
+    due to the fixture.
+    """
     calc = Vasp()
     with pytest.raises(AssertionError):
         calc._run()
@@ -123,6 +125,7 @@ def test_vasp_get_calculator():
 
 @pytest.mark.parametrize('envvar', Vasp.env_commands)
 def test_make_command_envvar(envvar, monkeypatch, clear_vasp_envvar):
+    """Test making a command based on the environment variables"""
     # Environment should be cleared by the "clear_vasp_envvar" fixture
     assert envvar not in os.environ
     cmd_str = 'my command'
@@ -140,6 +143,7 @@ def test_make_command_envvar(envvar, monkeypatch, clear_vasp_envvar):
 
 
 def test_make_command_no_envvar(monkeypatch, clear_vasp_envvar):
+    """Test we raise when making a command with not enough information"""
     # Environment should be cleared by the "clear_vasp_envvar" fixture
     calc = Vasp()
     with pytest.raises(CalculatorSetupError):
