@@ -773,30 +773,21 @@ class Aims(FileIOCalculator):
     def read_number_of_bands(self):
         """Return the smaller of either # of basis fxns or KS states.
         
-        This method goes through line by line in the aims.out file
-        to look for the number of Kohn-Sham states. It also goes line
-        by line to find the maximum number of basis functions. When
-        using aims' minimal basis set, the number of KS states
-        could appear greater than the maximum number of basis functions.
-        This can cause the read_eigenvalues() method to fail. We now
-        return the minimum of the number of basis functions or KS
-        states to circumvent this issue.
+        This method parses the aims.out file to find the total number
+        of Kohn-Sham states used in the calculation and returns this
+        value.
 
         Returns:
-        num_bands: (int) specifiying the minimum between the
-            maximum number of basis functions and the number
-            of Kohn-Sham states.
+        num_bands: (int) specifies the number of eigenvalues to use
+            in our energy calculation. It is the number of Kohn-Sham
+            states used in the calculation
         """
         lines = open(self.out, 'r').readlines()
         for n, line in enumerate(lines):
-            if line.rfind('Number of Kohn-Sham states') > -1:
-                num_KS_states = int(line.split(':')[-1].strip())               
-            if line.rfind('Maximum number of basis functions') > -1:
-                num_basis_fxns = int(line.split(':')[-1].strip())
-        # We return the minimum of either the # of basis functions
-        # or the number of KS states.
-        num_bands = min(num_KS_states, num_basis_fxns)
-        return num_bands
+            if line.rfind(
+                'Reducing total number of  Kohn-Sham states to') > -1:
+                num_KS_states = int(line.split(':')[-1].strip())
+        return num_KS_states
 
     def get_k_point_weights(self):
         return self.read_kpts(mode='k_point_weights')
