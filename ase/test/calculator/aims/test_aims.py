@@ -4,9 +4,10 @@ The class if found here: ase/calculators/aims.py."""
 
 import ase.calculators.aims
 
+
 def setup_test_aims_calc(outfilename):
     """Setup an aims calc object for tests."""
-    run_command='mpiexec -np 4 aims.x >' + outfilename
+    run_command = 'mpiexec -np 4 aims.x >' + outfilename
     return ase.calculators.aims.Aims(
         run_command=run_command)
 
@@ -34,7 +35,3 @@ def test_read_number_of_bands():
         outfilename=test_file)
     nbands = ase_io_obj.read_number_of_bands()
     assert nbands == 180
-
-
-if __name__ == "__main__":
-    test_read_number_of_bands()
