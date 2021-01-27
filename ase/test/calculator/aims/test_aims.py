@@ -33,9 +33,7 @@ def test_read_number_of_bands():
     ase_io_obj = setup_test_aims_calc(
         outfilename=test_file)
     nbands = ase_io_obj.read_number_of_bands()
-    print(nbands)
     assert nbands == 180
-    print('working')
 
 
 if __name__ == "__main__":
