@@ -150,7 +150,8 @@ class FixAtoms(FixConstraint):
         if self.index.ndim != 1:
             raise ValueError('Wrong argument to FixAtoms class!')
 
-        self.removed_dof = 3 * len(self.index)
+    def get_removed_dof(self):
+        return 3 * len(self.index)
 
     def adjust_positions(self, atoms, new):
         new[self.index] = atoms.positions[self.index]
@@ -219,9 +220,8 @@ class FixCom(FixConstraint):
 
     """
 
-    def __init__(self):
-
-        self.removed_dof = 3
+    def get_removed_dof(self):
+        return 3
 
     def adjust_positions(self, atoms, new):
         masses = atoms.get_masses()
@@ -259,7 +259,8 @@ class FixBondLengths(FixConstraint):
         self.tolerance = tolerance
         self.bondlengths = bondlengths
 
-        self.removed_dof = len(pairs)
+    def get_removed_dof(self):
+        return len(self.pairs)
 
     def adjust_positions(self, atoms, new):
         old = atoms.positions
@@ -388,7 +389,8 @@ class FixLinearTriatomic(FixConstraint):
             raise ValueError('"triples" has wrong size')
         self.bondlengths = None
 
-        self.removed_dof = 4 * len(triples)
+    def get_removed_dof(self):
+        return 4 * len(self.triples)
 
     @property
     def n_ind(self):
@@ -612,21 +614,17 @@ class FixedMode(FixConstraint):
 
     def __init__(self, mode):
         self.mode = (np.asarray(mode) / np.sqrt((mode**2).sum())).reshape(-1)
-        self.removed_dof = None
 
-    def initialize(self, atoms):
-        if self.removed_dof is None:
-            self.removed_dof = len(atoms)
+    def get_removed_dof(self, atoms):
+        return len(atoms)
 
     def adjust_positions(self, atoms, newpositions):
-        self.initialize(atoms)
         newpositions = newpositions.ravel()
         oldpositions = atoms.positions.ravel()
         step = newpositions - oldpositions
         newpositions -= self.mode * np.dot(step, self.mode)
 
     def adjust_forces(self, atoms, forces):
-        self.initialize(atoms)
         forces = forces.ravel()
         forces -= self.mode * np.dot(forces, self.mode)
 
@@ -659,11 +657,12 @@ class FixedPlane(FixConstraintSingle):
 
     The plane is defined by its normal vector *direction*."""
 
-    removed_dof = 1
-
     def __init__(self, a, direction):
         self.a = a
         self.dir = np.asarray(direction) / sqrt(np.dot(direction, direction))
+
+    def get_removed_dof(self):
+        return 1
 
     def adjust_positions(self, atoms, newpositions):
         step = newpositions[self.a] - atoms.positions[self.a]
@@ -685,11 +684,12 @@ class FixedLine(FixConstraintSingle):
 
     The line is defined by its vector *direction*."""
 
-    removed_dof = 2
-
     def __init__(self, a, direction):
         self.a = a
         self.dir = np.asarray(direction) / sqrt(np.dot(direction, direction))
+
+    def get_removed_dof(self):
+        return 2
 
     def adjust_positions(self, atoms, newpositions):
         step = newpositions[self.a] - atoms.positions[self.a]
@@ -713,7 +713,9 @@ class FixCartesian(FixConstraintSingle):
     def __init__(self, a, mask=(1, 1, 1)):
         self.a = a
         self.mask = ~np.asarray(mask, bool)
-        self.removed_dof = 3 - self.mask.sum()
+
+    def get_removed_dof(self):
+        return 3 - self.mask.sum()
 
     def adjust_positions(self, atoms, new):
         step = new[self.a] - atoms.positions[self.a]
@@ -739,7 +741,9 @@ class FixScaled(FixConstraintSingle):
         self.cell = np.asarray(cell)
         self.a = a
         self.mask = np.array(mask, bool)
-        self.removed_dof = self.mask.sum()
+
+    def get_removed_dof(self):
+        return self.mask.sum()
 
     def adjust_positions(self, atoms, new):
         scaled_old = atoms.cell.scaled_positions(atoms.positions)
@@ -813,7 +817,9 @@ class FixInternals(FixConstraint):
         self.epsilon = epsilon
 
         self.initialized = False
-        self.removed_dof = self.n
+
+    def get_removed_dof(self):
+        return self.n
 
     def initialize(self, atoms):
         if self.initialized:
@@ -1578,8 +1584,6 @@ class Hookean(FixConstraint):
     """Applies a Hookean restorative force between a pair of atoms, an atom
     and a point, or an atom and a plane."""
 
-    removed_dof = 0
-
     def __init__(self, a1, a2, k, rt=None):
         """Forces two atoms to stay close together by applying no force if
         they are below a threshold length, rt, and applying a Hookean
@@ -1625,6 +1629,9 @@ class Hookean(FixConstraint):
             raise RuntimeError('Unknown type for a2')
         self.threshold = rt
         self.spring = k
+
+    def get_removed_dof(self):
+        return 0
 
     def todict(self):
         dct = {'name': 'Hookean'}
@@ -1755,11 +1762,12 @@ class ExternalForce(FixConstraint):
 
     see ase/test/external_force.py"""
 
-    removed_dof = 0
-
     def __init__(self, a1, a2, f_ext):
         self.indices = [a1, a2]
         self.external_force = f_ext
+
+    def get_removed_dof(self):
+        return 0
 
     def adjust_positions(self, atoms, new):
         pass
