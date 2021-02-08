@@ -150,7 +150,7 @@ class FixAtoms(FixConstraint):
         if self.index.ndim != 1:
             raise ValueError('Wrong argument to FixAtoms class!')
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 3 * len(self.index)
 
     def adjust_positions(self, atoms, new):
@@ -220,7 +220,7 @@ class FixCom(FixConstraint):
 
     """
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 3
 
     def adjust_positions(self, atoms, new):
@@ -259,7 +259,7 @@ class FixBondLengths(FixConstraint):
         self.tolerance = tolerance
         self.bondlengths = bondlengths
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return len(self.pairs)
 
     def adjust_positions(self, atoms, new):
@@ -389,7 +389,7 @@ class FixLinearTriatomic(FixConstraint):
             raise ValueError('"triples" has wrong size')
         self.bondlengths = None
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 4 * len(self.triples)
 
     @property
@@ -661,7 +661,7 @@ class FixedPlane(FixConstraintSingle):
         self.a = a
         self.dir = np.asarray(direction) / sqrt(np.dot(direction, direction))
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 1
 
     def adjust_positions(self, atoms, newpositions):
@@ -688,7 +688,7 @@ class FixedLine(FixConstraintSingle):
         self.a = a
         self.dir = np.asarray(direction) / sqrt(np.dot(direction, direction))
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 2
 
     def adjust_positions(self, atoms, newpositions):
@@ -714,7 +714,7 @@ class FixCartesian(FixConstraintSingle):
         self.a = a
         self.mask = ~np.asarray(mask, bool)
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 3 - self.mask.sum()
 
     def adjust_positions(self, atoms, new):
@@ -742,7 +742,7 @@ class FixScaled(FixConstraintSingle):
         self.a = a
         self.mask = np.array(mask, bool)
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return self.mask.sum()
 
     def adjust_positions(self, atoms, new):
@@ -818,7 +818,7 @@ class FixInternals(FixConstraint):
 
         self.initialized = False
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return self.n
 
     def initialize(self, atoms):
@@ -1630,7 +1630,7 @@ class Hookean(FixConstraint):
         self.threshold = rt
         self.spring = k
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 0
 
     def todict(self):
@@ -1766,7 +1766,7 @@ class ExternalForce(FixConstraint):
         self.indices = [a1, a2]
         self.external_force = f_ext
 
-    def get_removed_dof(self):
+    def get_removed_dof(self, atoms):
         return 0
 
     def adjust_positions(self, atoms, new):
