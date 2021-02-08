@@ -612,14 +612,21 @@ class FixedMode(FixConstraint):
 
     def __init__(self, mode):
         self.mode = (np.asarray(mode) / np.sqrt((mode**2).sum())).reshape(-1)
+        self.removed_dof = None
+
+    def initialize(self, atoms):
+        if self.removed_dof is None:
+            self.removed_dof = len(atoms)
 
     def adjust_positions(self, atoms, newpositions):
+        self.initialize(atoms)
         newpositions = newpositions.ravel()
         oldpositions = atoms.positions.ravel()
         step = newpositions - oldpositions
         newpositions -= self.mode * np.dot(step, self.mode)
 
     def adjust_forces(self, atoms, forces):
+        self.initialize(atoms)
         forces = forces.ravel()
         forces -= self.mode * np.dot(forces, self.mode)
 
@@ -1571,6 +1578,8 @@ class Hookean(FixConstraint):
     """Applies a Hookean restorative force between a pair of atoms, an atom
     and a point, or an atom and a plane."""
 
+    removed_dof = 0
+
     def __init__(self, a1, a2, k, rt=None):
         """Forces two atoms to stay close together by applying no force if
         they are below a threshold length, rt, and applying a Hookean
@@ -1745,6 +1754,8 @@ class ExternalForce(FixConstraint):
     >>> atoms.set_constraint([con1, con2])
 
     see ase/test/external_force.py"""
+
+    removed_dof = 0
 
     def __init__(self, a1, a2, f_ext):
         self.indices = [a1, a2]
