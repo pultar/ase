@@ -810,12 +810,14 @@ class FixInternals(FixConstraint):
         self.anglecombos = anglecombos or []
         self.dihedralcombos = dihedralcombos or []
         self.mic = mic
-
-        # Initialize these at run-time:
-        self.n = 0
-        self.constraints = []
         self.epsilon = epsilon
 
+        self.n = (len(self.bonds) + len(self.angles) + len(self.dihedrals)
+                  + len(self.bondcombos) + len(self.anglecombos)
+                  + len(self.dihedralcombos))
+
+        # Initialize these at run-time:
+        self.constraints = []
         self.initialized = False
 
     def get_removed_dof(self, atoms):
@@ -825,9 +827,6 @@ class FixInternals(FixConstraint):
         if self.initialized:
             return
         masses = np.repeat(atoms.get_masses(), 3)
-        self.n = (len(self.bonds) + len(self.angles) + len(self.dihedrals)
-                  + len(self.bondcombos) + len(self.anglecombos)
-                  + len(self.dihedralcombos))
         cell = None
         pbc = None
         if self.mic:
