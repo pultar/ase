@@ -26,6 +26,7 @@ from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.dft.kpoints import kpoint_convert
 from ase.constraints import FixAtoms, FixCartesian
 from ase.data import chemical_symbols, atomic_numbers
+from ase.data.hubbard import Hubbard_U
 from ase.units import create_units
 from ase.utils import iofunction
 
@@ -1617,6 +1618,8 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     atomic_positions_str = []
 
     nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
+    dft_plus_u = input_parameters['system'].get('lda_plus_u')
+
     if any(atoms.get_initial_magnetic_moments()):
         if nspin == 1:
             # Force spin on
@@ -1636,6 +1639,9 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
                 # Add magnetization to the input file
                 mag_str = 'starting_magnetization({0})'.format(sidx)
+                if dft_plus_u:
+                    hubbard_str = 'Hubbard_U({0})'.format(sidx)
+                    input_parameters['system'][hubbard_str] = Hubbard_U[atomic_numbers[atom.symbol]] 
                 input_parameters['system'][mag_str] = fspin
                 atomic_species_str.append(
                     '{species}{tidx} {mass} {pseudo}\n'.format(
