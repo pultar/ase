@@ -1182,7 +1182,7 @@ KEYS = Namelist((
         'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
         'exx_fraction', 'screening_parameter', 'exxdiv_treatment',
         'x_gamma_extrapolation', 'ecutvcut', 'nqx1', 'nqx2', 'nqx3',
-        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_U', 'Hubbard_J0',
+        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_J0',
         'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
         'starting_ns_eigenvalue', 'U_projection_type', 'edir',
         'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
@@ -1641,10 +1641,10 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 mag_str = 'starting_magnetization({0})'.format(sidx)
                 if dft_plus_u:
                     if ((dft_plus_u_kind == 0) or (dft_plus_u_kind == 1)):
-                        if not ('dft_Hubbard_U' in kwargs):
+                        if not ('Hubbard_U' in kwargs):
                             exit("Please include a dft_Hubbard_U array for each atomic type in calculator")
                         hubbard_u_str = 'Hubbard_U({0})'.format(sidx)
-                        input_parameters['system'][hubbard_u_str] = kwargs.get('dft_Hubbard_U')[sidx-1] 
+                        input_parameters['system'][hubbard_u_str] = kwargs.get('Hubbard_U')[sidx-1] 
                 input_parameters['system'][mag_str] = fspin
                 atomic_species_str.append(
                     '{species}{tidx} {mass} {pseudo}\n'.format(
