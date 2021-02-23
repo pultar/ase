@@ -150,12 +150,22 @@ class SpeciesTypes(SimpleVaspHeaderParser):
 
     Example line:
     "POSCAR: Mg Al"
+    or
+    "POSCAR: Ir2 O4"
     """
     LINE_DELIMITER = 'POSCAR:'
 
     def parse(self, cursor: _CURSOR, lines: _CHUNK) -> _RESULT:
         line = lines[cursor].strip()
         species = line.split()[1:]
+
+        for ii, specie in enumerate(species):
+            # We may need to strip numbers from the species, we determine
+            # the number of species later
+            # e.g. in the case of "Ir2 O4"
+            specie = ''.join(c for c in specie if not c.isnumeric())
+            species[ii] = specie
+
         return {'species': species}
 
 
