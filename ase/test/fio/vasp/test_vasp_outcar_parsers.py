@@ -419,3 +419,19 @@ def test_parse_symbols(line, expected, do_test_header_parser):
     parser = vop.SpeciesTypes()
     expected = {'species': expected}
     do_test_header_parser(cursor, lines, parser, expected)
+
+
+@pytest.mark.parametrize(
+    'line, expected',
+    [
+        ('   ions per type =              32  31   2', (32, 31, 2)),
+        ('   ions per type =               2   4', (2, 4)),
+    ],
+    # Add ID, as the line is a little long, looks quite verbose
+    ids=['ions1', 'ions2'])
+def test_ions_per_species(line, expected, do_test_header_parser):
+    cursor = 0  # single line, cursor always starts at 0
+    lines = [line]
+    parser = vop.IonsPerSpecies()
+    expected = {'ion_types': expected}
+    do_test_header_parser(cursor, lines, parser, expected)
