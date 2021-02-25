@@ -88,20 +88,25 @@ class OPLSff:
             data = self.data[name]
 
             def add_line():
-                line = fileobj.readline().strip()
-                if not len(line):  # end of the block
-                    return False
-                line = line.split('#')[0]  # get rid of comments
-                if len(line) > symlen:
-                    symbol = line[:symlen]
-                    words = line[symlen:].split()
-                    if len(words) >= nvalues:
-                        if nvalues == 1:
-                            data[symbol] = float(words[0])
-                        else:
-                            data[symbol] = [float(word)
-                                            for word in words[:nvalues]]
-                return True
+                try:
+                    line = fileobj.readline().strip()
+                    if not len(line):  # end of the block
+                        return False
+                    line = line.split('#')[0]  # get rid of comments
+                    if len(line) > symlen:
+                        symbol = line[:symlen]
+                        words = line[symlen:].split()
+                        if len(words) >= nvalues:
+                            if nvalues == 1:
+                                data[symbol] = float(words[0])
+                            else:
+                                data[symbol] = [float(word)
+                                                for word in words[:nvalues]]
+                            
+                    return True
+                except Exception as e:
+                    print(f'error reading block {name}:')
+                    raise e
 
             while add_line():
                 pass
