@@ -363,6 +363,27 @@ potentials)
             b_str = " ".join(["fp"[int(x)] for x in self.atoms.get_pbc()])
             self.parameters.boundary = b_str
 
+    def _write_lammps_data(self, label, tempdir):
+        lammps_data_fd = NamedTemporaryFile(
+            prefix="data_" + label,
+            dir=tempdir,
+            delete=(not self.parameters.keep_tmp_files),
+            mode='w',
+            encoding='ascii'
+        )
+        write_lammps_data(
+            lammps_data_fd,
+            self.atoms,
+            specorder=self.parameters.specorder,
+            force_skew=self.parameters.always_triclinic,
+            velocities=self.parameters.write_velocities,
+            prismobj=self.prism,
+            units=self.parameters.units,
+            atom_style=self.parameters.atom_style
+        )
+        lammps_data_fd.flush()
+        return lammps_data_fd
+
     def run(self, set_atoms=False):
         # !TODO: split this function
         """Method which explicitly runs LAMMPS."""
@@ -407,25 +428,9 @@ potentials)
         if self.parameters.no_data_file:
             lammps_data = None
         else:
-            lammps_data_fd = NamedTemporaryFile(
-                prefix="data_" + label,
-                dir=tempdir,
-                delete=(not self.parameters.keep_tmp_files),
-                mode='w',
-                encoding='ascii'
-            )
-            write_lammps_data(
-                lammps_data_fd,
-                self.atoms,
-                specorder=self.parameters.specorder,
-                force_skew=self.parameters.always_triclinic,
-                velocities=self.parameters.write_velocities,
-                prismobj=self.prism,
-                units=self.parameters.units,
-                atom_style=self.parameters.atom_style
-            )
+            lammps_data_fd = \
+                self._write_lammps_data(label, tempdir)
             lammps_data = lammps_data_fd.name
-            lammps_data_fd.flush()
 
         # see to it that LAMMPS is started
         if not self._lmp_alive():
