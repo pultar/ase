@@ -19,7 +19,7 @@ CT-C -O     80.0      120.40
 HC-CT-HC    35.0      109.50
 CT-C -H1    70.0      117.00
 
-# dihedrals  
+# dihedrals
 O -C -CT-HC      0.00000 6.02496E-01   -3  0
 
 # cutoffs
