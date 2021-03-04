@@ -138,7 +138,7 @@ class OPLSff:
             self.write_lammps_definitions(atoms, btypes, atypes, dtypes)
             self.write_lammps_in()
 
-        self.write_lammps_atoms(atoms, connectivities)
+        return self.write_lammps_atoms(atoms, connectivities)
 
     def write_lammps_in(self):
         with open(self.prefix + '_in', 'w') as fileobj:
@@ -178,6 +178,7 @@ minimize        1.0e-14 1.0e-5 100000 100000
         """Write atoms input for LAMMPS"""
         with open(self.prefix + '_atoms', 'w') as fileobj:
             self._write_lammps_atoms(fileobj, atoms, connectivities)
+        return fileobj
 
     def _write_lammps_atoms(self, fileobj, atoms, connectivities):
         # header
