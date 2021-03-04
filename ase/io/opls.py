@@ -457,9 +457,13 @@ minimize        1.0e-14 1.0e-5 100000 100000
     def _write_lammps_definitions(self, fileobj, atoms, btypes, atypes,
                                   dtypes):
         fileobj.write('# OPLS potential\n')
-        fileobj.write('# write_lammps' +
+        fileobj.write('# write_lammps ' +
                       str(time.asctime(time.localtime(time.time()))))
-
+        fileobj.write('''\n
+kspace_style pppm 1e-5
+kspace_modify gewald 1e-5
+\n''')
+        
         # bonds
         if len(btypes):
             fileobj.write('\n# bonds\n')
