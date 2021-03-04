@@ -25,6 +25,5 @@ class OPLSlmp(LAMMPS):
     def _write_lammps_data(self, label, tempdir):
         prefix = str(Path(tempdir) / label)
         self.parameters.update({
-            'kspace_modify': 'gewald',
             'interactions_file': prefix + '_opls'})
         return self.oplsff.write_lammps(self.atoms, prefix=prefix)
