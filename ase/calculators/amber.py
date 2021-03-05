@@ -203,7 +203,7 @@ class Amber(FileIOCalculator):
            if all_coordinates.ndim == 3:
               get_last_frame = True
         elif hasattr(all_coordinates,'shape'):
-           if len(all_coordinates.shape)==3:
+           if len(all_coordinates.shape) == 3:
               get_last_frame = True
         if get_last_frame:
            all_coordinates = all_coordinates[-1]
