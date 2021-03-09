@@ -71,6 +71,20 @@ def _self_getter(getf):
     return decor_getf
 
 
+def _make_coord_block(atoms, scaled=False):
+
+    text_block = '' if scaled else 'ang\n'
+    positions = (atoms.get_scaled_positions() if scaled else
+                 atoms.get_positions())
+    for elem, pos in zip(atoms.get_chemical_symbols(), positions):
+        text_block += ('    %4s %9.6f %9.6f %9.6f\n' % (elem,
+                                                        pos[0],
+                                                        pos[1],
+                                                        pos[2]))
+
+    return text_block
+
+
 class Castep(Calculator):
     r"""
 CASTEP Interface Documentation
@@ -894,7 +908,8 @@ End CASTEP Interface Documentation
         record_start, record_end, end_found, _\
             = self._castep_find_last_record(out)
         if not end_found:
-            warnings.warn('No regular end found in %s file. %s' % (castep_file, self._error))
+            warnings.warn('No regular end found in %s file. %s' %
+                          (castep_file, self._error))
             if _close:
                 out.close()
             return
@@ -1393,7 +1408,7 @@ End CASTEP Interface Documentation
                                        atoms_assigned) if not assigned]
                 warnings.warn('%s atoms not assigned. '
                               ' DEBUGINFO: The following atoms where not assigned: %s' %
-                               (atoms_assigned.count(False), not_assigned))
+                              (atoms_assigned.count(False), not_assigned))
             else:
                 self.atoms.set_scaled_positions(positions_frac_atoms)
 
@@ -1469,7 +1484,8 @@ End CASTEP Interface Documentation
 
         if isinstance(castep_castep, str):
             if not os.path.isfile(castep_castep):
-                warnings.warn('Warning: CASTEP file %s not found!' % castep_castep)
+                warnings.warn('Warning: CASTEP file %s not found!' %
+                              castep_castep)
             f = paropen(castep_castep, 'r')
             _close = True
         else:
@@ -2222,7 +2238,8 @@ End CASTEP Interface Documentation
         if m:
             self._kpoints = int(m.group(1))
         else:
-            warnings.warn('Couldn\'t fetch number of kpoints from dryrun CASTEP file')
+            warnings.warn(
+                'Couldn\'t fetch number of kpoints from dryrun CASTEP file')
 
         err_file = os.path.join(temp_dir, '%s.0001.err' % seed)
         if match is None and os.path.exists(err_file):
@@ -2318,9 +2335,10 @@ End CASTEP Interface Documentation
                     else:
                         if self._pedantic:
                             warnings.warn('Warning: PP files have neither been '
-                                'linked nor copied to the working directory. Make '
-                                'sure to set the evironment variable PSPOT_DIR '
-                                'accordingly!')
+                                          'linked nor copied to the working directory. Make '
+                                          'sure to set the evironment variable PSPOT_DIR '
+                                          'accordingly!')
+
 
 def get_castep_version(castep_command):
     """This returns the version number as printed in the CASTEP banner.
@@ -2868,7 +2886,7 @@ class CastepCell(CastepInputFile):
         {'optics_kpoint_mp_grid', 'optics_kpoint_mp_spacing', 'optics_kpoint_list',
          'optics_kpoint_path'},
         {'supercell_kpoint_mp_grid', 'supercell_kpoint_mp_spacing', 'supercell_kpoint_list',
-         'supercell_kpoint_path'},]
+         'supercell_kpoint_path'}, ]
 
     def __init__(self, castep_keywords, keyword_tolerance=1):
         self._castep_version = castep_keywords.castep_version
@@ -2929,35 +2947,29 @@ class CastepCell(CastepInputFile):
         if not isinstance(value, ase.atoms.Atoms):
             raise TypeError('castep.cell.positions_abs_intermediate/product '
                             'expect Atoms object')
-
-        text_block = 'ang\n'
-        for elem, pos in zip(value.get_chemical_symbols(),
-                             value.get_positions()):
-            text_block += ('    %4s %9.6f %9.6f %9.6f\n' % (elem,
-                                                            pos[0],
-                                                            pos[1],
-                                                            pos[2]))
+        text_block = _make_coord_block(value)
         return text_block
 
     def _parse_positions_abs_product(self, value):
-        return self._positions_abs_intermediate(self, value)
+        if not isinstance(value, ase.atoms.Atoms):
+            raise TypeError('castep.cell.positions_abs_intermediate/product '
+                            'expect Atoms object')
+        text_block = _make_coord_block(value)
+        return text_block
 
     def _parse_positions_frac_intermediate(self, value):
         if not isinstance(value, ase.atoms.Atoms):
             raise TypeError('castep.cell.positions_frac_intermediate/product '
                             'expect Atoms object')
-
-        text_block = 'ang\n'
-        for elem, pos in zip(value.get_chemical_symbols(),
-                             value.get_scaled_positions()):
-            text_block += ('    %4s %9.6f %9.6f %9.6f\n' % (elem,
-                                                            pos[0],
-                                                            pos[1],
-                                                            pos[2]))
+        text_block = _make_coord_block(value, scaled=True)
         return text_block
 
     def _parse_positions_frac_product(self, value):
-        return self._positions_frac_intermediate(self, value)
+        if not isinstance(value, ase.atoms.Atoms):
+            raise TypeError('castep.cell.positions_frac_intermediate/product '
+                            'expect Atoms object')
+        text_block = _make_coord_block(value, scaled=True)
+        return text_block
 
 
 CastepKeywords = namedtuple('CastepKeywords',
@@ -3125,6 +3137,7 @@ if __name__ == '__main__':
             with open('castep_keywords.json') as f:
                 json.load(f)
         except Exception as e:
-            warnings.warn('%s Ooops, something went wrong with the CASTEP keywords' % e)
+            warnings.warn(
+                '%s Ooops, something went wrong with the CASTEP keywords' % e)
         else:
             warnings.warn('Import works. Looking good!')
