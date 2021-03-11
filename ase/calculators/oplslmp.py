@@ -23,6 +23,10 @@ class OPLSlmp(LAMMPS):
         ))
         
     def _write_lammps_data(self, label, tempdir):
+        self.parameters.specorder = [
+            self.atoms.split_symbol(typ)[0]
+            for typ in self.atoms.arrays['types']]
+
         prefix = str(Path(tempdir) / label)
         self.parameters.update({
             'interactions_file': prefix + '_opls'})
