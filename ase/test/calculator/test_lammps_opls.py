@@ -45,5 +45,11 @@ HH-HH 2
 
 @pytest.mark.calculator_lite
 @pytest.mark.calculator('lammpsrun')
-def test_H2_lj(factory):
-    pass
+def test_C6H12O2(factory, datadir):
+    atoms = OPLSStructure(datadir / 'C6H12O2_opls.extxyz')
+    atoms.calc = OPLSlmp(datadir / 'C6H12O2_opls.par')
+
+    opt = BFGS(atoms)
+    opt.run(fmax=0.1)
+
+    assert atoms.get_distance(3, 19) == pytest.approx(0.95807, 1e-3)

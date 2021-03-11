@@ -1,0 +1,62 @@
+#one body LJ	epsilon(eV)	Sigma(Angstroms)	charge (e)	atom type	Ref	
+C2	0.004553115	3.75	0.52	#C2	{Jorgesen 1996}	
+CT	0.002861958	3.5	-0.12	#CT	{Jorgesen 1996}	
+HC	0.00130089	2.5	0.06	#HC	{Jorgesen 1996}	
+HO	0	0	0.45	#HO	{Jorgesen 1996}	
+O2	0.00910623	2.96	-0.44	#O2	{Jorgesen 1996}	
+OH	0.00737171	3	-0.53	#OH	{Jorgesen 1996}	
+                        
+# bonds kr(eV/A^2)  Distance (Angstroms)        bond type   Ref 
+C2-CT   13.746071   1.522       #C2-CT  {Doherty,2017}  
+C2-O2   28.446128   1.25        #C2-O2  {Doherty,2017}  
+C2-OH   19.51335    1.364       #C2-OH  {Weiner,1983}   
+CT-CT   11.621284   1.53        #CT-CT  {Doherty,2017}  
+CT-HC   14.74342    1.087       #CT-HC  {Doherty,2017}  
+HO-OH   23.979739   0.96        #HO-OH  {Weiner,1983}   
+                        
+# angles    ktheta(eV/rad^2)    theta (degrees)     angle type  Ref 
+C2-CT-CT    2.731869    111.1       #C2-CT-CT   {Doherty,2017}  
+C2-CT-HC    1.517705    109.5       #C2-CT-HC   {Doherty,2017}  
+C2-OH-HO    1.517705    113     #C2-OH-HO   {Weiner,1983}   
+CT-C2-O2    3.03541 117     #CT-C2-O2   {Doherty,2017}  
+CT-C2-OH    3.46904 120.4       #CT-C2-OH   {Doherty,2017}  
+CT-CT-CT    2.53023105  112.3       #CT-CT-CT   {Doherty,2017}  
+CT-CT-HC    1.6261125   109.6       #CT-CT-HC   {Doherty,2017}  
+HC-CT-HC    1.430979    106.7       #HC-CT-HC   {Doherty,2017}  
+O2-C2-OH    3.46904 126     #O2-C2-OH   {Weiner,1983}   
+                        
+# dihedrals V1  V2  V3  V4 (in eV)  type    Ref
+C2-CT-CT-CT -0.138111155    -0.035774475    0.021377959 0   #C2-CT-CT-CT    {Jorgesen 1996}
+C2-CT-CT-HC 0   0   -0.009756675    0   #C2-CT-CT-HC    {Jorgesen 1996}
+CT-C2-OH-HO 0   0.20944329  0 0 #CT-C2-OH-HO    {Jorgesen 1996}
+CT-CT-CT-CT 0.07545162  -0.006807991    0.012098277 0   #CT-CT-CT-CT    {Jorgesen 1996}
+CT-CT-CT-HC 0   0   0.015870858  0  #CT-CT-CT-HC    {Jorgesen 1996}
+HC-CT-CT-HC 0   0   0.013789434  0  #HC-CT-CT-HC    {Jorgesen 1996}
+O2-C2-CT-CT 0   0.03555766  0   0   #O2-C2-CT-CT    {Jorgesen 1996}
+O2-C2-CT-HC 0   0   0   0   #O2-C2-CT-HC    {Jorgesen 1996}
+O2-C2-OH-HO 0   0.20944329  0   0   #O2-C2-OH-HO    {Jorgesen 1996}
+OH-C2-CT-CT 0   0.03555766  0   0   #OH-C2-CT-CT    {Jorgesen 1996}
+OH-C2-CT-HC 0   0   0   0   #OH-C2-CT-HC    {Jorgesen 1996}
+
+# cutoffs
+C2-C2 1.6
+C2-CT 1.6
+C2-O2 1.8
+C2-OH 1.8
+C2-HC 1.4
+C2-HO 1.4
+CT-CT 1.6
+CT-O2 1.8
+CT-OH 1.8
+CT-HC 1.4
+CT-HO 1.4
+O2-O2 0
+O2-OH 0
+O2-HC 0
+O2-HO 0
+OH-OH 0
+OH-HC 0
+OH-HO 2.0
+HC-HC 0
+HC-HO 0
+HO-HO 0
