@@ -25,6 +25,7 @@ def test_vasp_out(outcar):
     tol = 1e-6
 
     a1 = read(outcar, index=-1)
+    assert all(a1.pbc)
     assert isinstance(a1, Atoms)
     assert np.isclose(a1.get_potential_energy(force_consistent=True),
                       -68.22868532,
