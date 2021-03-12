@@ -11,7 +11,7 @@ def H2():
     with open(structure, 'w') as f:
         f.write("""2
 Lattice="6.0 0.0 0.0 0.0 6.0 0.0 0.0 0.0 6.0" Properties=species:S:1:pos:R:3:molid:I:1:type:S:1 pbc="T T T"
-H 1.5 0 0 1 HH
+H 0.5 0 0 1 HH
 H 0 0 0 1 HH
 """)
     return OPLSStructure(structure)
@@ -33,7 +33,7 @@ HH-HH 4401.21 0.74144
 # Dihedrals
 
 # Cutoffs
-HH-HH 2
+HH-HH 0.8  # force "bond breaking" during relaxation
 """)
 
     H2.calc = OPLSlmp(params)

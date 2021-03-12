@@ -21,6 +21,11 @@ class OPLSlmp(LAMMPS):
         self.parameters.update(dict(
             atom_style='full',
         ))
+
+    def calculate(self, atoms=None, properties=None, system_changes=None):
+        if atoms is not None:
+            self.oplsff.write_lammps(atoms)
+        super().calculate(atoms, properties, system_changes)
         
     def _write_lammps_data(self, label, tempdir):
         self.parameters.specorder = [

@@ -123,6 +123,9 @@ class OPLSff:
 
         if hasattr(atoms, 'connectivities'):
             connectivities = atoms.connectivities
+            btypes = connectivities['bond types']
+            atypes = connectivities['angle types']
+            dtypes = connectivities['dihedral types']
         else:
             btypes, blist = self.get_bonds(atoms)
             atypes, alist = self.get_angles()
@@ -134,9 +137,10 @@ class OPLSff:
                 'angle types': atypes,
                 'dihedrals': dlist,
                 'dihedral types': dtypes}
+            atoms.connectivities = connectivities
 
-            self.write_lammps_definitions(atoms, btypes, atypes, dtypes)
-            self.write_lammps_in()
+        self.write_lammps_definitions(atoms, btypes, atypes, dtypes)
+        self.write_lammps_in()
 
         return self.write_lammps_atoms(atoms, connectivities)
 
@@ -543,6 +547,12 @@ class OPLSStructure(Atoms):
     def append(self, atom):
         """Append atom to end."""
         self.extend(Atoms([atom]))
+
+    def copy(self):
+        atoms = super().copy()
+        if hasattr(self, 'connectivities'):
+            atoms.connectivities = self.connectivities
+        return atoms
 
     def read_extended_xyz(self, fileobj, map={}):
         """Read extended xyz file with labeled atoms."""
