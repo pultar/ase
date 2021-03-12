@@ -24,7 +24,8 @@ class OPLSlmp(LAMMPS):
 
     def calculate(self, atoms=None, properties=None, system_changes=None):
         if atoms is not None:
-            self.oplsff.write_lammps(atoms)
+            # set topology
+            self.oplsff.topology(atoms)
         super().calculate(atoms, properties, system_changes)
         
     def _write_lammps_data(self, label, tempdir):
