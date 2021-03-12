@@ -1,6 +1,6 @@
 import numpy as np
 
-from ase.calculators.calculator import Calculator, all_properties
+from ase.calculators.calculator import Calculator
 from ase.calculators.calculator import PropertyNotImplementedError
 
 
@@ -19,7 +19,6 @@ class SinglePointCalculator(Calculator):
         Calculator.__init__(self)
         self.results = {}
         for property, value in results.items():
-            assert property in all_properties
             if value is None:
                 continue
             if property in ['energy', 'magmom', 'free_energy']:

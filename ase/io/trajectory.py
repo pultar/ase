@@ -4,7 +4,8 @@ from typing import Tuple
 import numpy as np
 
 from ase import __version__
-from ase.calculators.singlepoint import SinglePointCalculator, all_properties
+from ase.calculators.singlepoint import SinglePointCalculator
+from ase.calculators.calculator import all_properties
 from ase.constraints import dict2constraint
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.atoms import Atoms
@@ -73,9 +74,8 @@ class TrajectoryWriter:
             The Atoms object to be written in write or append mode.
         properties: list of str
             If specified, these calculator properties are saved in the
-            trajectory.  If not specified, all supported quantities are
-            saved.  Possible values: energy, forces, stress, dipole,
-            charges, magmom and magmoms.
+            trajectory.  If not specified, all implemented properties (in
+            `atoms.calc.implemented_properties`) are saved.
         master: bool
             Controls which process does the actual writing. The
             default is that process number 0 does this.  If this
@@ -167,23 +167,23 @@ class TrajectoryWriter:
             c.write(name=calc.name)
             if hasattr(calc, 'todict'):
                 c.write(parameters=calc.todict())
-            for prop in all_properties:
+
+            properties = self.properties
+            if properties is None:
+                try:
+                    properties = calc.implemented_properties
+                except AttributeError:
+                    properties = all_properties
+
+            for prop in properties:
                 if prop in kwargs:
                     x = kwargs[prop]
                 else:
-                    if self.properties is not None:
-                        if prop in self.properties:
-                            x = calc.get_property(prop, atoms)
-                        else:
-                            x = None
-                    else:
-                        try:
-                            x = calc.get_property(prop, atoms,
-                                                  allow_calculation=False)
-                        except (PropertyNotImplementedError, KeyError):
-                            # KeyError is needed for Jacapo.
-                            # XXX We can perhaps remove this.
-                            x = None
+                    try:
+                        x = calc.get_property(prop, atoms,
+                                              allow_calculation=False)
+                    except PropertyNotImplementedError:
+                        x = None
                 if x is not None:
                     if prop in ['stress', 'dipole']:
                         x = x.tolist()
@@ -269,17 +269,17 @@ class TrajectoryReader:
         if 'calculator' in b:
             results = {}
             implemented_properties = []
-            c = b.calculator
-            for prop in all_properties:
-                if prop in c:
-                    results[prop] = c.get(prop)
-                    implemented_properties.append(prop)
+            properties = [key for key in b.calculator.keys()
+                          if key not in ('name', 'parameters')]
+            for prop in properties:
+                results[prop] = b.calculator.get(prop)
+                implemented_properties.append(prop)
             calc = SinglePointCalculator(atoms, **results)
             calc.name = b.calculator.name
             calc.implemented_properties = implemented_properties
 
-            if 'parameters' in c:
-                calc.parameters.update(c.parameters)
+            if 'parameters' in b.calculator:
+                calc.parameters.update(b.calculator.parameters)
             atoms.calc = calc
 
         return atoms
