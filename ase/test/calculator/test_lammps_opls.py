@@ -36,7 +36,8 @@ HH-HH 4401.21 0.74144
 HH-HH 0.8  # force "bond breaking" during relaxation
 """)
 
-    H2.calc = OPLSlmp(params)
+    cmd = factory.calc().parameters.get('command')
+    H2.calc = OPLSlmp(params, command=cmd)
     opt = BFGS(H2)
     opt.run(fmax=0.01)
 
@@ -47,7 +48,8 @@ HH-HH 0.8  # force "bond breaking" during relaxation
 @pytest.mark.calculator('lammpsrun')
 def test_C6H12O2(factory, datadir):
     atoms = OPLSStructure(datadir / 'C6H12O2_opls.extxyz')
-    atoms.calc = OPLSlmp(datadir / 'C6H12O2_opls.par')
+    cmd = factory.calc().parameters.get('command')
+    atoms.calc = OPLSlmp(datadir / 'C6H12O2_opls.par', command=cmd)
 
     opt = BFGS(atoms)
     opt.run(fmax=0.1)
