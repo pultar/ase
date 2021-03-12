@@ -117,16 +117,14 @@ class OPLSff:
         self.dihedrals = DihedralsData(self.data['dihedrals'])
         self.cutoffs = CutoffList(self.data['cutoffs'])
 
-    def write_lammps(self, atoms, prefix='lammps'):
-        """Write input for a LAMMPS calculation."""
-        self.prefix = prefix
+    def topology(self, atoms):
+        """Create or extract topology for atoms accoring to your parameters
 
-        if hasattr(atoms, 'connectivities'):
-            connectivities = atoms.connectivities
-            btypes = connectivities['bond types']
-            atypes = connectivities['angle types']
-            dtypes = connectivities['dihedral types']
-        else:
+        Returns
+
+        connectivity: dict
+        """
+        if not hasattr(atoms, 'connectivities'):
             btypes, blist = self.get_bonds(atoms)
             atypes, alist = self.get_angles()
             dtypes, dlist = self.get_dihedrals(alist, atypes)
@@ -139,7 +137,15 @@ class OPLSff:
                 'dihedral types': dtypes}
             atoms.connectivities = connectivities
 
-        self.write_lammps_definitions(atoms, btypes, atypes, dtypes)
+        return atoms.connectivities
+
+    def write_lammps(self, atoms, prefix='lammps'):
+        """Write input for a LAMMPS calculation."""
+        self.prefix = prefix
+
+        connectivities = self.topology(atoms)
+
+        self.write_lammps_definitions(atoms)
         self.write_lammps_in()
 
         return self.write_lammps_atoms(atoms, connectivities)
@@ -453,13 +459,18 @@ minimize        1.0e-14 1.0e-5 100000 100000
 
         return dih_types, dih_list
 
-    def write_lammps_definitions(self, atoms, btypes, atypes, dtypes):
+    def write_lammps_definitions(self, atoms):
         """Write force field definitions for LAMMPS."""
         with open(self.prefix + '_opls', 'w') as fd:
-            self._write_lammps_definitions(fd, atoms, btypes, atypes, dtypes)
+            self._write_lammps_definitions(fd, atoms)
 
-    def _write_lammps_definitions(self, fileobj, atoms, btypes, atypes,
-                                  dtypes):
+    def _write_lammps_definitions(self, fileobj, atoms):
+
+        connectivities = self.topology(atoms)
+        btypes = connectivities['bond types']
+        atypes = connectivities['angle types']
+        dtypes = connectivities['dihedral types']
+
         fileobj.write('# OPLS potential\n')
         fileobj.write('# write_lammps ' +
                       str(time.asctime(time.localtime(time.time()))))
