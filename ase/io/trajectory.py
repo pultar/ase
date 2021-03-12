@@ -37,9 +37,7 @@ def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
         The Atoms object to be written in write or append mode.
     properties: list of str
         If specified, these calculator properties are saved in the
-        trajectory.  If not specified, all supported quantities are
-        saved.  Possible values: energy, forces, stress, dipole,
-        charges, magmom and magmoms.
+        trajectory.  If not specified, all calculator results are saved.
     master: bool
         Controls which process does the actual writing. The
         default is that process number 0 does this.  If this
@@ -53,10 +51,7 @@ def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
 
 
 class TrajectoryWriter:
-    """Writes Atoms objects to a .traj file."""
-    def __init__(self, filename, mode='w', atoms=None, properties=None,
-                 extra=[], master=None):
-        """A Trajectory writer, in write or append mode.
+    """Writes Atoms objects to a .traj file, in write or append mode.
 
         Parameters:
 
@@ -74,13 +69,14 @@ class TrajectoryWriter:
             The Atoms object to be written in write or append mode.
         properties: list of str
             If specified, these calculator properties are saved in the
-            trajectory.  If not specified, all implemented properties (in
-            `atoms.calc.implemented_properties`) are saved.
+            trajectory.  If not specified, all calculator results are saved.
         master: bool
             Controls which process does the actual writing. The
             default is that process number 0 does this.  If this
             argument is given, processes where it is True will write.
         """
+    def __init__(self, filename, mode='w', atoms=None, properties=None,
+                 extra=[], master=None):
         if master is None:
             master = (world.rank == 0)
         self.master = master
@@ -171,9 +167,10 @@ class TrajectoryWriter:
             properties = self.properties
             if properties is None:
                 try:
-                    properties = calc.implemented_properties
+                    properties = list(calc.results.keys())
                 except AttributeError:
                     properties = all_properties
+            properties.extend([k for k in kwargs if k not in properties])
 
             for prop in properties:
                 if prop in kwargs:
