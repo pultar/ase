@@ -242,12 +242,18 @@ keyword                 type      default value description
                                                 coordinates will be written in.
 ======================= ========= ============= =====================================
 
+Siesta Calculator Class
+=======================
+
+.. autoclass:: ase.calculators.siesta.siesta.Siesta
+
+
 Excited states calculations
 ===========================
 
-The `PyNAO <https://mbarbry.website.fr.to/pynao/doc/html/>`_ code can be used
+The `PyNAO <https://mbarbrywebsite.ddns.net/pynao/doc/html/>`_ code can be used
 to access excited state properties after having obtained the ground state
-properties with SIESTA. PyNAO allows to run
+properties with SIESTA. PyNAO allows to perform
 
 * Time Dependent Density Functional Theory (TDDFT) calculations
 * GW approximation calculations
@@ -276,7 +282,7 @@ Example of code to calculate polarizability of CH4 molecule,::
   plt.show()
 
 Raman Calculations with SIESTA and PyNAO
-============================================
+========================================
 
 It is possible to calculate the Raman spectra with SIESTA and PyNAO using the
 Raman function of the vibration module::
@@ -313,7 +319,12 @@ Further Examples
 See also ``ase/test/calculators/siesta/lrtddft`` for further examples
 on how the calculator can be used.
 
-Siesta Calculator Class
-=======================
+Siesta lrtddft Class
+====================
 
-.. autoclass:: ase.calculators.siesta.siesta.Siesta
+.. autoclass:: ase.calculators.siesta.siesta_lrtddft.SiestaLRTDDFT
+
+Siesta RamanCalculatorInterface Calculator Class
+================================================
+
+.. autoclass:: ase.calculators.siesta.siesta_lrtddft.RamanCalculatorInterface
