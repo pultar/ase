@@ -3,10 +3,10 @@ import ase.units as un
 
 class SiestaLRTDDFT:
     """Interface for linear response TDDFT for Siesta via
-    [PyNAO](https://mbarbrywebsite.ddns.net/pynao/doc/html/)
+    `PyNAO <https://mbarbrywebsite.ddns.net/pynao/doc/html>`_
 
-    When using PyNAO please cite the papers indicated at in the PyNAO
-    [documentation](https://mbarbrywebsite.ddns.net/pynao/doc/html/references.html)
+    When using PyNAO please cite the papers indicated in the PyNAO
+    `documentation <https://mbarbrywebsite.ddns.net/pynao/doc/html/references.html>`_
     """
     def __init__(self, initialize=False, **kw):
         """
