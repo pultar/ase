@@ -1,9 +1,5 @@
 import numpy as np
 import ase.units as un
-#    """Interface for linear response TDDFT for Siesta via
-#    `PyNAO <https://mbarbrywebsite.ddns.net/pynao/doc/html>`_
-#
-#    """
 
 class SiestaLRTDDFT:
     """Interface for linear response TDDFT for Siesta via `PyNAO`_
