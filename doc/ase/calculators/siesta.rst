@@ -259,7 +259,7 @@ properties with SIESTA. PyNAO allows to perform
 * GW approximation calculations
 * Bethe-Salpeter equation (BSE) calculations.
 
-Example of code to calculate polarizability of CH4 molecule,::
+Example of code to calculate polarizability of CH4 molecule::
 
   from ase.calculators.siesta.siesta_lrtddft import SiestaLRTDDFT
   from ase.build import molecule
