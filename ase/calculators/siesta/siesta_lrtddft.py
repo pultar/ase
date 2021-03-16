@@ -1,11 +1,14 @@
 import numpy as np
 import ase.units as un
+#    """Interface for linear response TDDFT for Siesta via
+#    `PyNAO <https://mbarbrywebsite.ddns.net/pynao/doc/html>`_
+#
+#    """
 
 class SiestaLRTDDFT:
-    """Interface for linear response TDDFT for Siesta via
-    `PyNAO <https://mbarbrywebsite.ddns.net/pynao/doc/html>`_
+    """Interface for linear response TDDFT for Siesta via `PyNAO`_
 
-    When using PyNAO please cite the papers indicated in the PyNAO
+    When using PyNAO please cite the papers indicated in the
     `documentation <https://mbarbrywebsite.ddns.net/pynao/doc/html/references.html>`_
     """
     def __init__(self, initialize=False, **kw):
