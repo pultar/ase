@@ -521,9 +521,9 @@ def read_eigenvalues(line, f, debug=False):
     However, if the calculation was conducted only on the gamma point, it will
     raise the 'gamma_flag' as true and it will returns the original samples.
     """
-    def prind(line):
+    def prind(*line, end='\n'):
         if debug:
-            print(line)
+            print(*line, end=end)
     if 'Hartree' in line:
         return None
     prind("Read eigenvalue output")
@@ -560,11 +560,14 @@ def read_eigenvalues(line, f, debug=False):
             eigenvalues[0][i].append(float(rn(line, 2)))
             eigenvalues[1][i].append(float(rn(line, 1)))
             line = f.readline()
-            prind(line)
-        i += 1
-        f.readline()
-        f.readline()
+            prind(line, end='')
         line = f.readline()
+        if "*****" in line:
+            prind(line)
+            break
+        i += 1
+        line = f.readline()
+        f.readline()
         prind(line)
     if gamma_flag:
         return np.asarray(eigenvalues)
