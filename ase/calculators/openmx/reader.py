@@ -553,7 +553,8 @@ def read_eigenvalues(line, f, debug=False):
     i = 0
     while True:
         # Go to eigenvalues line
-        while (line := f.readline()) != '':
+        while line != '':
+            line = f.readline()
             prind(line)
             ll = line.split()
             if line.isspace():
