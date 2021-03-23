@@ -1,7 +1,10 @@
 import numpy as np
 
+from os import path
+
 from ase.units import Bohr
 from ase.data import atomic_numbers
+from ase.calculators.vasp.create_input import read_potcar_numbers_of_electrons
 
 
 def attach_charges(atoms, fileobj='ACF.dat', displacement=1e-4):
@@ -11,6 +14,12 @@ def attach_charges(atoms, fileobj='ACF.dat', displacement=1e-4):
             lines = fd.readlines()
     else:
         lines = fileobj
+    
+    # if it is a VASP calculation, get the number of electrons from POTCAR
+    if path.exists('POTCAR'):
+        with open('POTCAR') as potcar_obj:
+            potcar_charges = read_potcar_numbers_of_electrons(potcar_obj)
+        atomic_numbers.update({elm:charge for elm,charge in potcar_charges})
 
     sep = '---------------'
     i = 0  # Counter for the lines
@@ -44,6 +53,7 @@ def attach_charges(atoms, fileobj='ACF.dat', displacement=1e-4):
                                   'Check that Bader program version >= 0.25')
 
             atom = atoms[int(words[0]) - 1]
+            
             atom.charge = atomic_numbers[atom.symbol] - float(words[j])
             if displacement is not None:  # check if the atom positions match
                 xyz = np.array([float(w) for w in words[1:4]])
