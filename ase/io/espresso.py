@@ -291,7 +291,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
             if image_index < hubbard_index < next_index:
                 while True:
                     L = pwo_lines[hubbard_index].replace('-', ' -').split()
-                    if L == 0:
+                    if len(L) == 0:
                         pass
                     else:
                         break        
