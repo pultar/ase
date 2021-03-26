@@ -1,14 +1,15 @@
 import gzip
 import struct
-from os.path import splitext
 from collections import deque
+from os.path import splitext
+
 import numpy as np
 
 from ase.atoms import Atoms
-from ase.quaternions import Quaternions
+from ase.calculators.lammps import convert
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
-from ase.calculators.lammps import convert
+from ase.quaternions import Quaternions
 
 
 def read_lammps_dump(infileobj, **kwargs):
@@ -384,8 +385,8 @@ def read_lammps_dump_binary(
 
                 # The next `magic_string_len` bytes will hold a string
                 # indicating the format of the dump file
-                magic_string = b''.join(read_variables("=" +
-                    str(magic_string_len) + "c"))
+                magic_string = b''.join(read_variables(
+                    "=" + str(magic_string_len) + "c"))
 
                 # Read endianness (integer). For now, we'll disregard the value
                 # and simply use the host machine's endianness (via '='
@@ -421,8 +422,8 @@ def read_lammps_dump_binary(
 
                 if units_str_len > 0:
                     # Read lammps units style
-                    _ = b''.join(read_variables("=" + str(units_str_len) +
-                        "c"))
+                    _ = b''.join(
+                        read_variables("=" + str(units_str_len) + "c"))
 
                 flag, = read_variables("=c")
                 if flag != b'\x00':
