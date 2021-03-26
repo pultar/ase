@@ -123,18 +123,24 @@ def lammps_data_to_ase_atoms(
         except ValueError:
             return None
 
-    # slice data block into columns
-    # + perform necessary conversions to ASE units
-    xpositions = get_quantity(["xu", "yu", "zu"], "distance")
-    positions = get_quantity(["x", "y", "z"], "distance")
+    # Positions
+    positions = None
+    scaled_positions = None
+    if "x" in colnames:
+        # doc: x, y, z = unscaled atom coordinates
+        positions = get_quantity(["x", "y", "z"], "distance")
+    elif "xs" in colnames:
+        # doc: xs,ys,zs = scaled atom coordinates
+        scaled_positions = get_quantity(["xs", "ys", "zs"])
+    elif "xu" in colnames:
+        # doc: xu,yu,zu = unwrapped atom coordinates
+        positions = get_quantity(["xu", "yu", "zu"], "distance")
+    elif "xsu" in colnames:
+        # xsu,ysu,zsu = scaled unwrapped atom coordinates
+        scaled_positions = get_quantity(["xsu", "ysu", "zsu"])
+    else:
+        raise ValueError("No atomic positions found in LAMMPS output")
 
-    if positions is None:
-        # Useful info on lammps-dump positions:
-        #  https://lammps.sandia.gov/doc/dump.html
-        # There's at least one more kind of position which we should support.
-        positions = xpositions
-
-    scaled_positions = get_quantity(["xs", "ys", "zs"])
     velocities = get_quantity(["vx", "vy", "vz"], "velocity")
     charges = get_quantity(["q"], "charge")
     forces = get_quantity(["fx", "fy", "fz"], "force")
