@@ -565,7 +565,7 @@ class OPLSStructure(Atoms):
             atoms.connectivities = self.connectivities
         return atoms
 
-    def read_extended_xyz(self, fileobj, map={}):
+    def read_extended_xyz(self, fileobj):
         """Read extended xyz file with labeled atoms."""
         atoms = read(fileobj)
         self.set_cell(atoms.get_cell())
