@@ -229,8 +229,7 @@ potentials)
     def get_lammps_command(self):
         cmd = self.parameters.get('command')
         if cmd is None:
-            envvar = 'ASE_{}_COMMAND'.format(self.name.upper())
-            cmd = os.environ.get(envvar)
+            cmd = os.environ.get('ASE_LAMMPSRUN_COMMAND')
 
         if cmd is None:
             cmd = 'lammps'
