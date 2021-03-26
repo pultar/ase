@@ -1,5 +1,6 @@
 import pytest
 
+from ase.io import Trajectory
 from ase.io.opls import OPLSStructure
 from ase.calculators.oplslmp import OPLSlmp
 from ase.optimize import BFGS
@@ -17,9 +18,8 @@ H 0 0 0 1 HH
     return OPLSStructure(structure)
 
 
-@pytest.mark.calculator_lite
-@pytest.mark.calculator('lammpsrun')
-def test_H2_opls(factory, H2):
+@pytest.fixture
+def H2relaxed(factory, H2):
     params = 'params.par'
     with open(params, 'w') as f:
         f.write("""# one body
@@ -40,18 +40,44 @@ HH-HH 0.8  # force "bond breaking" during relaxation
     H2.calc = OPLSlmp(params, command=cmd)
     opt = BFGS(H2)
     opt.run(fmax=0.01)
-
-    assert H2.get_distance(0, 1) == pytest.approx(0.74144, 1e-4)
+    return H2
 
 
 @pytest.mark.calculator_lite
 @pytest.mark.calculator('lammpsrun')
-def test_C6H12O2(factory, datadir):
+def test_H2(H2relaxed):
+    assert H2relaxed.get_distance(0, 1) == pytest.approx(0.74144, 1e-4)
+
+
+@pytest.fixture
+def C6H12O2(factory, datadir):
     atoms = OPLSStructure(datadir / 'C6H12O2_opls.extxyz')
     cmd = factory.calc().parameters.get('command')
     atoms.calc = OPLSlmp(datadir / 'C6H12O2_opls.par', command=cmd)
 
     opt = BFGS(atoms)
     opt.run(fmax=0.1)
+  
+    return atoms
 
-    assert atoms.get_distance(3, 19) == pytest.approx(0.95807, 1e-3)
+
+@pytest.mark.calculator_lite
+@pytest.mark.calculator('lammpsrun')
+def test_C6H12O2(C6H12O2):
+    assert C6H12O2.get_distance(3, 19) == pytest.approx(0.95807, 1e-3)
+
+
+@pytest.mark.calculator_lite
+@pytest.mark.calculator('lammpsrun')
+def test_C6H12O2_io(factory, datadir, C6H12O2):
+    """Read from trajectory and recalculate"""
+    energy = C6H12O2.get_potential_energy()
+    trajname = 'C6H12O2.traj'
+    with Trajectory(trajname, 'w') as traj:
+        traj.write(C6H12O2)
+
+    with Trajectory(trajname) as traj:
+        atoms = OPLSStructure.reconstruct(traj[0])
+        cmd = factory.calc().parameters.get('command')
+        atoms.calc = OPLSlmp(datadir / 'C6H12O2_opls.par', command=cmd)
+        assert atoms.get_potential_energy() == energy

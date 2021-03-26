@@ -548,12 +548,13 @@ class OPLSStructure(Atoms):
         Atoms.__init__(self, *args, **kwargs)
         if filename:
             self.read_extended_xyz(filename)
-        else:
-            self.arrays['types'] = []
-            for atom in self:
-                if atom.symbol not in self.arrays['types']:
-                    self.arrays['types'].append(atom.symbol)
-                atom.tag = self.arrays['types'].index(atom.symbol)
+
+    @classmethod
+    def reconstruct(cls, atoms):
+        assert atoms.calc.name == 'OPLSlmp'
+        struct = cls(None, atoms)
+        struct.arrays['types'] = atoms.calc.parameters['types']
+        return struct
 
     def append(self, atom):
         """Append atom to end."""

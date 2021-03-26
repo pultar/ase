@@ -4,6 +4,7 @@ from ase.calculators.lammpsrun import LAMMPS
 
 
 class OPLSlmp(LAMMPS):
+    name = 'OPLSlmp'
     implemented_properties = ['energy', 'energies', 'forces']
 
     def __init__(self, parfile, **kwargs):
@@ -26,6 +27,7 @@ class OPLSlmp(LAMMPS):
         if atoms is not None:
             # set topology
             self.oplsff.topology(atoms)
+            self.parameters['types'] = atoms.arrays['types']
         super().calculate(atoms, properties, system_changes)
         
     def _write_lammps_data(self, label, tempdir):
