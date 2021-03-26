@@ -76,7 +76,8 @@ def lammps_data_to_ase_atoms(
     :param celldisp: origin shift
     :param pbc: periodic boundaries
     :param atomsobj: function to create ase-Atoms object
-    :param order: sort atoms by id. Might be faster to turn off
+    :param order: sort atoms by id. Might be faster to turn off.
+    Disregarded in case `id` column is not given in file.
     :param specorder: list of species to map lammps types to ase-species
     (usually .dump files to not contain type to species mapping)
     :param prismobj: Coordinate transformation between lammps and ase
@@ -86,24 +87,37 @@ def lammps_data_to_ase_atoms(
     :rtype: Atoms
 
     """
-    # data array of doubles
-    ids = data[:, colnames.index("id")].astype(int)
-    types = data[:, colnames.index("type")].astype(int)
-    if order:
-        sort_order = np.argsort(ids)
-        ids = ids[sort_order]
-        data = data[sort_order, :]
-        types = types[sort_order]
 
-    # reconstruct types from given specorder
-    if specorder:
-        types = [specorder[t - 1] for t in types]
+    # read IDs if given and order if needed
+    if "id" in colnames:
+        ids = data[:, colnames.index("id")].astype(int)
+        if order:
+            sort_order = np.argsort(ids)
+            data = data[sort_order, :]
+
+    # determine the elements
+    if "element" in colnames:
+        # priority to elements written in file
+        elements = data[:, colnames.index("element")]
+    elif "type" in colnames:
+        # fall back to `types` otherwise
+        elements = data[:, colnames.index("type")].astype(int)
+
+        # reconstruct types from given specorder
+        if specorder:
+            elements = [specorder[t - 1] for t in elements]
+    else:
+        # todo: what if specorder give but no types?
+        # in principle the masses could work for atoms, but that needs
+        # lots of cases and new code I guess
+        raise ValueError("Cannot determine atom types form ")
 
     def get_quantity(labels, quantity=None):
         try:
             cols = [colnames.index(label) for label in labels]
             if quantity:
-                return convert(data[:, cols], quantity, units, "ASE")
+                return convert(data[:, cols].astype(float), quantity,
+                               units, "ASE")
 
             return data[:, cols]
         except ValueError:
@@ -136,7 +150,7 @@ def lammps_data_to_ase_atoms(
 
     if quaternions:
         out_atoms = Quaternions(
-            symbols=types,
+            symbols=elements,
             positions=positions,
             cell=cell,
             celldisp=celldisp,
@@ -150,7 +164,7 @@ def lammps_data_to_ase_atoms(
             positions = prismobj.vector_to_ase(positions, wrap=True)
 
         out_atoms = atomsobj(
-            symbols=types,
+            symbols=elements,
             positions=positions,
             pbc=pbc,
             celldisp=celldisp,
@@ -158,7 +172,7 @@ def lammps_data_to_ase_atoms(
         )
     elif scaled_positions is not None:
         out_atoms = atomsobj(
-            symbols=types,
+            symbols=elements,
             scaled_positions=scaled_positions,
             pbc=pbc,
             celldisp=celldisp,
@@ -177,7 +191,8 @@ def lammps_data_to_ase_atoms(
         # !TODO: use another calculator if available (or move forces
         #        to atoms.property) (other problem: synchronizing
         #        parallel runs)
-        calculator = SinglePointCalculator(out_atoms, energy=0.0, forces=forces)
+        calculator = SinglePointCalculator(out_atoms, energy=0.0,
+                                           forces=forces)
         out_atoms.calc = calculator
 
     # process the extra columns of fixes, variables and computes
@@ -186,7 +201,8 @@ def lammps_data_to_ase_atoms(
         # determine if it is a compute or fix (but not the quaternian)
         if (colname.startswith('f_') or colname.startswith('v_') or
                 (colname.startswith('c_') and not colname.startswith('c_q['))):
-            out_atoms.new_array(colname, get_quantity([colname]), dtype='float')
+            out_atoms.new_array(colname, get_quantity([colname]),
+                                dtype='float')
 
     return out_atoms
 
@@ -238,6 +254,9 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     n_atoms = 0
     images = []
 
+    # avoid references before assignment in case of incorrect file structure
+    cell, celldisp, pbc = None, None, False
+
     while len(lines) > n_atoms:
         line = lines.popleft()
 
@@ -285,7 +304,7 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]
             datarows = [lines.popleft() for _ in range(n_atoms)]
-            data = np.loadtxt(datarows)
+            data = np.loadtxt(datarows, dtype=str)
             out_atoms = lammps_data_to_ase_atoms(
                 data=data,
                 colnames=colnames,
