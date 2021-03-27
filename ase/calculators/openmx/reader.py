@@ -24,6 +24,8 @@ import struct
 import warnings
 import numpy as np
 from ase.units import Ha, Bohr, Debye
+from ase.io import ParseError
+
 
 
 def read_openmx(filename=None, debug=False):
@@ -544,8 +546,8 @@ def read_eigenvalues(line, f, debug=False):
     else:
         prind('Gamma point calculation')
         gamma_flag = True
-    f.readline()
-    f.readline()
+    line = f.readline()
+    line = f.readline()
 
     eigenvalues = []
     eigenvalues.append([])
@@ -579,9 +581,7 @@ def read_eigenvalues(line, f, debug=False):
             assert len(ll) == 3
             float(ll[1]); float(ll[2])
         except (AssertionError, ValueError):
-            warnings.warn("Cannot read eigenvalues")
-            eigenvalues = np.zeros(2, 1, 1)
-            break
+            raise ParseError("Cannot read eigenvalues")
 
         # Read eigenvalues
         eigenvalues[0].append([])
