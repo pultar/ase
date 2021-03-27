@@ -101,7 +101,7 @@ coordinates.forces>
 def test_openmx_out():
     with open('openmx_fio_test.out', 'w') as f:
         f.write(openmx_out_sample)
-    atoms = read_openmx('openmx_fio_test', debug=True)
+    atoms = read_openmx('openmx_fio_test')
     tol = 1e-2
 
     # Expected values
