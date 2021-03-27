@@ -120,7 +120,7 @@ def lammps_data_to_ase_atoms(
                 return convert(data[:, cols].astype(float), quantity,
                                units, "ASE")
 
-            return data[:, cols]
+            return data[:, cols].astype(float)
         except ValueError:
             return None
 

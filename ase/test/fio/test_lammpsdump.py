@@ -97,3 +97,34 @@ def test_lammpsdump_errors():
     with pytest.raises(ValueError,
                        match="No atomic positions found in LAMMPS output"):
         _ = fmt.parse_atoms(buf.replace("xu yu zu", "dummy_x dummy_y dummy_z"))
+
+
+@pytest.mark.parametrize("transform", [True, False])
+def test_lammpsdump_scaled_positions(transform):
+    # Test lammpsdump with elements column given
+    buf = """\
+ITEM: TIMESTEP
+0
+ITEM: NUMBER OF ATOMS
+3
+ITEM: BOX BOUNDS pp pp pp
+0.0e+00 4e+00
+0.0e+00 5.0e+00
+0.0e+00 2.0e+01
+ITEM: ATOMS element xs ys zs
+H 0.5 0.6 0.7
+H 0.6 0.1 1.9
+He 0.45 0.32 0.67
+"""
+
+    ref_positions = np.array([4, 5, 20]).T * np.array([[0.5, 0.6, 0.7],
+                                                       [0.6, 0.1, 1.9],
+                                                       [0.45, 0.32, 0.67]])
+    if transform:
+        buf = buf.replace("xs ys zs", "xsu ysu zsu")
+
+    fmt = ioformats['lammps-dump-text']
+    atoms = fmt.parse_atoms(buf)
+
+    assert pytest.approx(atoms.cell.lengths()) == [4., 5., 20.]
+    assert pytest.approx(atoms.positions) == ref_positions
