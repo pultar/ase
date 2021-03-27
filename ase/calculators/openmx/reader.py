@@ -21,7 +21,6 @@ functional theories.
 #  from ase.calculators import SinglePointDFTCalculator
 import os
 import struct
-import warnings
 import numpy as np
 from ase.units import Ha, Bohr, Debye
 from ase.io import ParseError
