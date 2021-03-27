@@ -280,7 +280,6 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         if "ITEM: BOX BOUNDS" in line:
             # save labels behind "ITEM: BOX BOUNDS" in triclinic case
             # (>=lammps-7Jul09)
-            # !TODO: handle periodic boundary conditions in tilt_items
             tilt_items = line.split()[3:]
             celldatarows = [lines.popleft() for _ in range(3)]
             celldata = np.loadtxt(celldatarows)
@@ -303,10 +302,13 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
             cell, celldisp = construct_cell(diagdisp, offdiag)
 
             # Handle pbc conditions
-            if len(tilt_items) > 3:
-                pbc = ["p" in d.lower() for d in tilt_items[3:]]
+            if len(tilt_items) == 3:
+                pbc_items = tilt_items
+            elif len(tilt_items) > 3:
+                pbc_items = tilt_items[3:6]
             else:
-                pbc = (False,) * 3
+                pbc_items = ["f", "f", "f"]
+            pbc = ["p" in d.lower() for d in pbc_items]
 
         if "ITEM: ATOMS" in line:
             colnames = line.split()[2:]

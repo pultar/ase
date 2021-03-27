@@ -3,6 +3,21 @@ import pytest
 
 from ase.io.formats import ioformats, match_magic
 
+# some of the possible bound parameters
+bounds_parameters = [
+    ("pp pp pp", (True, True, True)),
+
+    ("ss mm ff", (False, False, False)),
+    ("fs sm mf", (False, False, False)),
+    ("sf ms ff", (False, False, False)),
+
+    ("pp ms ff", (True, False, False)),
+    ("ff pp ff", (False, True, False)),
+    ("ff mm pp", (False, False, True)),
+
+    ("pp ff pp", (True, False, True)),
+]
+
 
 def lammpsdump_headers():
     actual_magic = 'ITEM: TIMESTEP'
@@ -128,3 +143,27 @@ He 0.45 0.32 0.67
 
     assert pytest.approx(atoms.cell.lengths()) == [4., 5., 20.]
     assert pytest.approx(atoms.positions) == ref_positions
+
+
+@pytest.mark.parametrize("bounds,expected", bounds_parameters)
+def test_lammpsdump_bounds(bounds, expected):
+    # Test lammpsdump with all possible boundaries
+    buf = """\
+    ITEM: TIMESTEP
+    0
+    ITEM: NUMBER OF ATOMS
+    3
+    ITEM: BOX BOUNDS bounds
+    0.0e+00 4e+00
+    0.0e+00 5.0e+00
+    0.0e+00 2.0e+01
+    ITEM: ATOMS element xs ys zs
+    H 0.5 0.6 0.7
+    H 0.6 0.1 1.9
+    He 0.45 0.32 0.67
+    """
+
+    fmt = ioformats['lammps-dump-text']
+    atoms = fmt.parse_atoms(buf.replace("bounds", bounds))
+
+    assert np.all(atoms.get_pbc() == expected)
