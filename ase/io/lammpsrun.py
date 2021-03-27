@@ -111,7 +111,7 @@ def lammps_data_to_ase_atoms(
         # todo: what if specorder give but no types?
         # in principle the masses could work for atoms, but that needs
         # lots of cases and new code I guess
-        raise ValueError("Cannot determine atom types form ")
+        raise ValueError("Cannot determine atom types form LAMMPS dump file")
 
     def get_quantity(labels, quantity=None):
         try:

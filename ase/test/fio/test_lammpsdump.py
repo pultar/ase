@@ -68,3 +68,32 @@ He 1 3.4 3.5 3.6
     atoms = fmt.parse_atoms(buf)
 
     assert np.all(atoms.get_atomic_numbers() == np.array([1, 1, 2]))
+
+
+def test_lammpsdump_errors():
+    buf = """\
+    ITEM: TIMESTEP
+    0
+    ITEM: NUMBER OF ATOMS
+    3
+    ITEM: BOX BOUNDS pp pp pp
+    0.0e+00 4e+00
+    0.0e+00 5.0e+00
+    0.0e+00 2.0e+01
+    ITEM: ATOMS element type xu yu zu
+    H 1 1.2 1.3 1.4
+    H 1 2.3 2.4 2.5
+    He 1 3.4 3.5 3.6
+    """
+
+    fmt = ioformats['lammps-dump-text']
+
+    # elements not given
+    with pytest.raises(ValueError,
+                       match="Cannot determine atom types.*"):
+        _ = fmt.parse_atoms(buf.replace("element type", "unknown0 unknown1"))
+
+    # positions not given
+    with pytest.raises(ValueError,
+                       match="No atomic positions found in LAMMPS output"):
+        _ = fmt.parse_atoms(buf.replace("xu yu zu", "dummy_x dummy_y dummy_z"))
