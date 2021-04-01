@@ -559,7 +559,7 @@ class AutoNEB:
         nneb = min(nneb, n_cur - self.n_simul - 2)
         nneb = min(nneb, first_missing - 1)
         nneb = max(nneb + self.n_simul, last_missing) - self.n_simul
-        to_use = range(nneb, nneb + self.n_simul + 2)
+        to_use = list(range(nneb, nneb + self.n_simul + 2))
 
         while self.get_energies_one_image(self.all_images[to_use[0]]) != \
                 self.get_energies_one_image(self.all_images[to_use[0]]):
