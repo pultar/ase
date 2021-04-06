@@ -321,8 +321,7 @@ def read_gaussian_out(fd, index=-1):
         if not orientation_line:
             if line in _orientation_lines:
                 orientation_line = line
-
-        if (orientation_line and line == orientation_line):
+        elif line == orientation_line:
             if atoms is not None:
                 atoms.calc = SinglePointCalculator(
                     atoms, energy=energy, dipole=dipole, forces=forces,
