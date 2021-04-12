@@ -18,7 +18,7 @@ def test_dftb(factory):
     fixed = 0
     atoms.set_constraint(FixAtoms([fixed]))
 
-    atoms.calc = Dftb(atoms=atoms, label='h2o')
+    atoms.calc = Dftb(label='h2o')
     
     fmax = 0.7
     dyn = Internal(atoms)
