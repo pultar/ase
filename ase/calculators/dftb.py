@@ -20,7 +20,8 @@ class Dftb(FileIOCalculator):
     else:
         command = 'dftb+ > PREFIX.out'
 
-    implemented_properties = ['energy', 'forces', 'charges', 'stress']
+    implemented_properties = ['energy', 'forces', 'charges',
+                              'stress', 'dipole']
     discard_results_on_any_change = True
 
     def __init__(self, restart=None,
@@ -299,10 +300,12 @@ class Dftb(FileIOCalculator):
             self.lines = fd.readlines()
 
         self.atoms = self.atoms_input
-        charges, energy = self.read_charges_and_energy()
+        charges, energy, dipole = self.read_charges_energy_dipole()
         if charges is not None:
             self.results['charges'] = charges
         self.results['energy'] = energy
+        if dipole is not None:
+            self.results['dipole'] = dipole
         if self.do_forces:
             forces = self.read_forces()
             self.results['forces'] = forces
@@ -363,7 +366,7 @@ class Dftb(FileIOCalculator):
 
         return np.array(gradients) * Hartree / Bohr
 
-    def read_charges_and_energy(self):
+    def read_charges_energy_dipole(self):
         """Get partial charges on atoms
             in case we cannot find charges they are set to None
         """
@@ -383,13 +386,20 @@ class Dftb(FileIOCalculator):
         else:
             # print('Warning: did not find DFTB-charges')
             # print('This is ok if flag SCC=No')
-            return None, energy
+            return None, energy, None
 
         lines1 = lines[chargestart:(chargestart + len(self.atoms))]
         for line in lines1:
             qm_charges.append(float(line.split()[-1]))
 
-        return np.array(qm_charges), energy
+        dipole = None
+        for line in lines:
+            if 'Dipole moment:' in line and 'au' in line:
+                words = line.split()
+                dipole = np.array(
+                    [float(w) for w in words[-4:-1]]) * Bohr
+
+        return np.array(qm_charges), energy, dipole
 
     def get_charges(self, atoms):
         """ Get the calculated charges
