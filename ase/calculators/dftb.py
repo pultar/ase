@@ -12,6 +12,7 @@ from ase.io import read
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
 from ase.units import Hartree, Bohr
+from ase.constraints import FixAtoms
 
 
 class Dftb(FileIOCalculator):
@@ -491,11 +492,36 @@ class Dftb(FileIOCalculator):
         if steps:
             params.update({'Driver_MaxSteps': steps})
         self.parameters.update(params)
+        self.parameters.update(params_constraints(atoms))
 
         atoms.get_potential_energy()
 
         relaxed_positions = read('geo_end.gen').positions
         self.atoms.set_positions(relaxed_positions, apply_constraint=False)
+
+
+def params_constraints(atoms):
+    """Translate constraint objects into parameters"""
+    params = {}
+    for constraint in atoms.constraints:
+        if isinstance(constraint, FixAtoms):
+            indices = constraint.get_indices()
+            ranges = []
+            start = False
+            for i, a in enumerate(atoms):
+                if i in indices:
+                    if start:
+                        ranges.append(':'.join([start, str(i)]))
+                        start = False
+                else:
+                    if not start:
+                        start = str(i + 1)
+            if start:
+                ranges.append(':'.join([start, str(i + 1)]))
+            params['Driver_MovedAtoms'] = ' '.join(ranges)
+        else:
+            assert 0, 'Can not translate constraint {}'.format(constraint)
+    return params
 
 
 class PointChargePotential:
