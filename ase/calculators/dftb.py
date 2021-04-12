@@ -8,6 +8,7 @@ Initial development: markus.kaukonen@iki.fi
 
 import os
 import numpy as np
+from ase.io import read
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
 from ase.units import Hartree, Bohr
@@ -92,14 +93,14 @@ class Dftb(FileIOCalculator):
         self.slako_dir = slako_dir
 
         self.default_parameters = dict(
-                Hamiltonian_='DFTB',
-                Hamiltonian_SlaterKosterFiles_='Type2FileNames',
-                Hamiltonian_SlaterKosterFiles_Prefix=self.slako_dir,
-                Hamiltonian_SlaterKosterFiles_Separator='"-"',
-                Hamiltonian_SlaterKosterFiles_Suffix='".skf"',
-                Hamiltonian_MaxAngularMomentum_='',
-                Options_='',
-                Options_WriteResultsTag='Yes')
+            Hamiltonian_='DFTB',
+            Hamiltonian_SlaterKosterFiles_='Type2FileNames',
+            Hamiltonian_SlaterKosterFiles_Prefix=self.slako_dir,
+            Hamiltonian_SlaterKosterFiles_Separator='"-"',
+            Hamiltonian_SlaterKosterFiles_Suffix='".skf"',
+            Hamiltonian_MaxAngularMomentum_='',
+            Options_='',
+            Options_WriteResultsTag='Yes')
 
         self.pcpot = None
         self.lines = None
@@ -280,7 +281,8 @@ class Dftb(FileIOCalculator):
             self, atoms, properties, system_changes)
         with open(os.path.join(self.directory, 'dftb_in.hsd'), 'w') as fd:
             self.write_dftb_in(fd)
-        write(os.path.join(self.directory, 'geo_end.gen'), atoms, parallel=False)
+        write(os.path.join(self.directory, 'geo_end.gen'), atoms,
+              parallel=False)
         # self.atoms is none until results are read out,
         # then it is set to the ones at writing input
         self.atoms_input = atoms
@@ -472,6 +474,18 @@ class Dftb(FileIOCalculator):
         """
         self.pcpot = PointChargePotential(mmcharges, self.directory)
         return self.pcpot
+
+    def relax(self, atoms, fmax, steps):
+        params = {'Driver_': 'LBFGS',
+                  'Driver_MaxForceComponent': fmax * Bohr / Hartree}
+        if steps:
+            params.update({'Driver_MaxSteps': steps})
+        self.parameters.update(params)
+
+        atoms.get_potential_energy()
+
+        relaxed_positions = read('geo_end.gen').positions
+        self.atoms.set_positions(relaxed_positions, apply_constraint=False)
 
 
 class PointChargePotential:
