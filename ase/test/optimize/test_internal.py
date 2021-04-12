@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 
-from ase.calculators.dftb import Dftb
 from ase.build import molecule
 from ase.constraints import FixAtoms
 from ase.optimize.internal import Internal
@@ -17,7 +16,7 @@ def test_dftb(factory):
     fixed = 0
     atoms.set_constraint(FixAtoms([fixed]))
 
-    atoms.calc = Dftb(label='h2o')
+    atoms.calc = factory.calc(label='h2o/main')
     
     fmax = 0.7
     dyn = Internal(atoms)

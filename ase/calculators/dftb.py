@@ -7,11 +7,13 @@ Initial development: markus.kaukonen@iki.fi
 """
 
 import os
+from pathlib import Path
 import numpy as np
 from ase.io import read
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
-from ase.units import Hartree, Bohr
+from ase.calculators.singlepoint import SinglePointCalculator
+from ase.units import Hartree, Bohr, fs
 from ase.constraints import FixAtoms
 
 
@@ -487,6 +489,8 @@ class Dftb(FileIOCalculator):
         return self.pcpot
 
     def relax(self, atoms, fmax, steps):
+        """Relax internally with dftb
+        """
         params = {'Driver_': 'LBFGS',
                   'Driver_MaxForceComponent': fmax * Bohr / Hartree}
         if steps:
@@ -494,10 +498,56 @@ class Dftb(FileIOCalculator):
         self.parameters.update(params)
         self.parameters.update(params_constraints(atoms))
 
+        # runs relaxation
         atoms.get_potential_energy()
 
-        relaxed_positions = read('geo_end.gen').positions
+        relaxed_positions = read(Path(self.directory)
+                                 .joinpath('geo_end.gen')).positions
         self.atoms.set_positions(relaxed_positions, apply_constraint=False)
+
+    def md(self, atoms, timestep, temperature, trajectory, steps):
+        """Internal MD propagation"""
+        params = {
+            'Driver_Steps': steps - 1,
+            'Driver_TimeStep': 41.3413733 * timestep / fs,
+            'Driver_Thermostat_InitialTemperature': temperature / Hartree}
+        params['Driver_'] = self.parameters.get('Driver_', 'VelocityVerlet')
+        params['Driver_Thermostat_'] = self.parameters.get(
+            'Driver_Thermostat_', 'None')
+        self.parameters.update(params)
+        self.parameters.update(params_constraints(atoms))
+
+        # runs md
+        atoms.get_potential_energy()
+
+        direc = Path(self.directory)
+        structures = read(direc.joinpath('geo_end.xyz'), ':')
+        with open(direc.joinpath('md.out')) as out:
+            lines = out.readlines()
+
+        for i, structure in enumerate(structures):
+            imd = int(lines.pop(0).split()[-1])
+            assert i == imd
+
+            results = {}
+            lines.pop(0)  # Potential Energy
+            lines.pop(0)  # MD Kinetic Energy
+            results['energy'] = float(lines.pop(0).split()[5])
+            lines.pop(0)  # MD Temperature
+            
+            # Dipole moment
+            line = lines.pop(0).replace('au', '')
+            dipole = [float(w) for w in line.split()[-3:]]
+            results['dipole'] = np.array(dipole) * Bohr
+            
+            lines.pop(0)  # Dipole moment Debye
+            
+            structure.calc = SinglePointCalculator(structure, **results)
+            structure.calc.name = self.name
+            params = self.parameters.copy()
+            params['timestep'] = timestep
+            structure.calc.parameters = params
+            trajectory.write(structure)
 
 
 def params_constraints(atoms):
