@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from ase.units import fs, kB
 from ase.build import molecule
@@ -38,3 +39,4 @@ def test_dftb(factory):
         assert atoms.calc.name == 'dftb'
         assert atoms[fixed].position == pytest.approx(
             initial_positions[fixed], 1e-6)
+        assert np.linalg.norm(atoms.get_dipole_moment()) != 0
