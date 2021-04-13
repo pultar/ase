@@ -29,6 +29,7 @@ def test_dftb(factory):
     traj = Trajectory('h2o.traj')
     assert len(traj) == steps0
 
+    # second run should concatenate
     steps1 = 3
     dyn.run(steps1)
 
