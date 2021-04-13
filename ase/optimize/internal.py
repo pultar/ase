@@ -16,6 +16,6 @@ class Internal(Optimizer):
         if steps:
             self.max_steps = steps
 
-        self.atoms.calc.relax(self.atoms, fmax, steps)
+        self.atoms.calc.optimize(self.atoms, fmax, steps)
         self.atoms.set_positions(self.atoms.calc.atoms.get_positions(),
                                  apply_constraint=False)

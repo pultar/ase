@@ -488,8 +488,12 @@ class Dftb(FileIOCalculator):
         self.pcpot = PointChargePotential(mmcharges, self.directory)
         return self.pcpot
 
-    def relax(self, atoms, fmax, steps):
+    def optimize(self, atoms, fmax, steps=None):
         """Relax internally with dftb
+
+        atoms: atoms object
+        fmax: maximal force
+        steps: maximal number of relaxation steps
         """
         params = {'Driver_': 'LBFGS',
                   'Driver_MaxForceComponent': fmax * Bohr / Hartree}
@@ -506,7 +510,14 @@ class Dftb(FileIOCalculator):
         self.atoms.set_positions(relaxed_positions, apply_constraint=False)
 
     def md(self, atoms, timestep, temperature, trajectory, steps):
-        """Internal MD propagation"""
+        """Internal MD propagation
+
+        atoms: atoms object
+        timestep: time step in ase units
+        temperature: initial temperature
+        trajectory: Trajectory object open for writing
+        steps: numer of steps to propagate
+        """
         params = {
             'Driver_Steps': steps - 1,
             'Driver_TimeStep': 41.3413733 * timestep / fs,
