@@ -290,3 +290,21 @@ def test_castep_interface():
     assert len(kpt_list) == 10
     assert list(map(float, kpt_list[0].split())) == [0., 0., 0.]
     assert list(map(float, kpt_list[-1].split())) == [0.5, 0.0, 0.5]
+
+    # Test setting and parsing intermediate/final structures for TSS
+    atoms0 = ase.build.bulk('Si')
+    atoms1 = atoms0.copy()
+    atoms1.set_positions([[0,0,0], [1,1,1]])
+
+    calc = Castep()
+    atoms0.set_calculator(calc)
+    atoms0.calc.cell.positions_abs_product = atoms1
+
+    v = atoms0.calc.cell.positions_abs_product.value
+    vlines = [l.strip() for l in v.split('\n')]
+
+    # Check that it's correct
+    assert vlines[0] == 'ang'
+    assert vlines[1] == 'Si 0.000 0.000 0.000'
+    assert vlines[2] == 'Si 1.000 1.000 1.000'
+
