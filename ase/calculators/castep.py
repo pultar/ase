@@ -2980,10 +2980,10 @@ class CastepCell(CastepInputFile):
         return _parse_tss_block(value)
 
     def _parse_positions_frac_intermediate(self, value):
-        return _parse_tss_block(value)
+        return _parse_tss_block(value, True)
 
     def _parse_positions_frac_product(self, value):
-        return _parse_tss_block(value)
+        return _parse_tss_block(value, True)
 
 
 CastepKeywords = namedtuple('CastepKeywords',

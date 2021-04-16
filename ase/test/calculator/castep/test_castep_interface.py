@@ -197,10 +197,54 @@ He He_test.usp"""
     assert np.isclose(fblock[4:7], R[1]).all()
     assert np.isclose(fblock[7], T[1]).all()
 
-    # # 3. transition state blocks (postponed until fix is merged)
-    # a = ase.Atoms('H', positions=[[0, 0, 1]])
+    # 3. transition state blocks (postponed until fix is merged)
+    a = ase.Atoms('H', positions=[[0, 0, 1]], cell=np.eye(3) * 2)
 
-    # ccell.positions_abs_product = a
+    ccell.positions_abs_product = a
+    ccell.positions_abs_intermediate = a
+
+    def parse_posblock(pblock, has_units=False):
+
+        lines = pblock.split('\n')
+
+        units = None
+        if has_units:
+            units = lines.pop(0).strip()
+
+        pos_lines = []
+        while len(lines) > 0:
+            l = lines.pop(0).strip()
+            if l == '':
+                continue
+            el, x, y, z = l.split()
+            xyz = np.array(list(map(float, [x,y,z])))
+            pos_lines.append((el, xyz))
+
+        return units, pos_lines
+
+    pap = parse_posblock(ccell.positions_abs_product.value, True)
+    pai = parse_posblock(ccell.positions_abs_intermediate.value, True)
+
+    assert pap[0] == 'ang'
+    assert pap[1][0][0] == 'H'
+    assert np.isclose(pap[1][0][1], a.get_positions()[0]).all()
+
+    assert pai[0] == 'ang'
+    assert pai[1][0][0] == 'H'
+    assert np.isclose(pai[1][0][1], a.get_positions()[0]).all()
+
+    ccell.positions_frac_product = a
+    ccell.positions_frac_intermediate = a
+
+    pfp = parse_posblock(ccell.positions_frac_product.value)
+    pfi = parse_posblock(ccell.positions_frac_intermediate.value)
+
+    assert pfp[1][0][0] == 'H'
+    assert np.isclose(pfp[1][0][1], a.get_scaled_positions()[0]).all()
+
+    assert pfi[1][0][0] == 'H'
+    assert np.isclose(pfi[1][0][1], a.get_scaled_positions()[0]).all()
+
 
     # Test example conflict
     ccell.kpoint_mp_grid = '3 3 3'
@@ -305,21 +349,3 @@ def test_band_structure_setup(testing_calculator):
     assert len(kpt_list) == 10
     assert list(map(float, kpt_list[0].split())) == [0., 0., 0.]
     assert list(map(float, kpt_list[-1].split())) == [0.5, 0.0, 0.5]
-
-    # Test setting and parsing intermediate/final structures for TSS
-    atoms0 = ase.build.bulk('Si')
-    atoms1 = atoms0.copy()
-    atoms1.set_positions([[0,0,0], [1,1,1]])
-
-    calc = Castep()
-    atoms0.set_calculator(calc)
-    atoms0.calc.cell.positions_abs_product = atoms1
-
-    v = atoms0.calc.cell.positions_abs_product.value
-    vlines = [l.strip() for l in v.split('\n')]
-
-    # Check that it's correct
-    assert vlines[0] == 'ang'
-    assert vlines[1] == 'Si 0.000 0.000 0.000'
-    assert vlines[2] == 'Si 1.000 1.000 1.000'
-
