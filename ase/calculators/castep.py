@@ -224,6 +224,10 @@ Keyword                    Description
 
                            3 = no attempt is made to look for
                            castep_keywords.json at all
+``castep_keywords``        Can be used to pass a CastepKeywords object that is
+                           then used with no attempt to actually load a 
+                           castep_keywords.json file. Most useful for debugging
+                           and testing purposes.
 
 =========================  ====================================================
 
@@ -481,7 +485,7 @@ End CASTEP Interface Documentation
     def __init__(self, directory='CASTEP', label='castep',
                  castep_command=None, check_castep_version=False,
                  castep_pp_path=None, find_pspots=False, keyword_tolerance=1,
-                 **kwargs):
+                 castep_keywords=None, **kwargs):
 
         self.__name__ = 'Castep'
 
@@ -491,19 +495,20 @@ End CASTEP Interface Documentation
         from ase.io.castep import write_cell
         self._write_cell = write_cell
 
-        castep_keywords = CastepKeywords(make_param_dict(),
-                                         make_cell_dict(),
-                                         [],
-                                         [],
-                                         0)
-        if keyword_tolerance < 3:
-            try:
-                castep_keywords = import_castep_keywords(castep_command)
-            except CastepVersionError as e:
-                if keyword_tolerance == 0:
-                    raise e
-                else:
-                    warnings.warn(str(e))
+        if castep_keywords is None:
+            castep_keywords = CastepKeywords(make_param_dict(),
+                                             make_cell_dict(),
+                                             [],
+                                             [],
+                                             0)
+            if keyword_tolerance < 3:
+                try:
+                    castep_keywords = import_castep_keywords(castep_command)
+                except CastepVersionError as e:
+                    if keyword_tolerance == 0:
+                        raise e
+                    else:
+                        warnings.warn(str(e))
 
         self._kw_tol = keyword_tolerance
         keyword_tolerance = max(keyword_tolerance, 2)  # 3 not accepted below
@@ -2360,7 +2365,12 @@ def get_castep_version(castep_command):
        For newer CASTEP versions ( > 6.1) the --version command line option
        has been added; this will be attempted first.
     """
-    temp_dir = tempfile.mkdtemp()
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+        return _get_castep_version(castep_command, temp_dir)
+
+
+def _get_castep_version(castep_command, temp_dir):
     jname = 'dummy_jobname'
     stdout, stderr = '', ''
     fallback_version = 16.  # CASTEP 16.0 and 16.1 report version wrongly
@@ -2395,7 +2405,7 @@ def get_castep_version(castep_command):
         output_txt = output.readlines()
         output.close()
         version_re = re.compile(r'(?<=CASTEP version )[0-9.]*')
-    shutil.rmtree(temp_dir)
+    # shutil.rmtree(temp_dir)
     for line in output_txt:
         if 'CASTEP version' in line:
             try:
@@ -2797,15 +2807,16 @@ class CastepInputFile:
         # If it is, use the appropriate parser, unless a custom one is defined
         attrparse = '_parse_%s' % attr.lower()
 
-        # Check for any conflicts
-        cset = self._conflict_dict.get(attr.lower(), {})
-        for c in cset:
-            if (c in self._options and self._options[c].value):
-                warnings.warn(
-                    'option "{attr}" conflicts with "{conflict}" in '
-                    'calculator. Setting "{conflict}" to '
-                    'None.'.format(attr=attr, conflict=c))
-                self._options[c].value = None
+        # Check for any conflicts if the value is not None
+        if not (value is None):
+            cset = self._conflict_dict.get(attr.lower(), {})
+            for c in cset:
+                if (c in self._options and self._options[c].value):
+                    warnings.warn(
+                        'option "{attr}" conflicts with "{conflict}" in '
+                        'calculator. Setting "{conflict}" to '
+                        'None.'.format(attr=attr, conflict=c))
+                    self._options[c].value = None
 
         if hasattr(self, attrparse):
             self._options[attr].value = self.__getattribute__(attrparse)(value)
@@ -2851,6 +2862,8 @@ class CastepParam(CastepInputFile):
 
     # .param specific parsers
     def _parse_reuse(self, value):
+        if value is None:
+            return None # Reset the value
         try:
             if self._options['continuation'].value:
                 warnings.warn('Cannot set reuse if continuation is set, and '
@@ -2862,6 +2875,8 @@ class CastepParam(CastepInputFile):
         return 'default' if (value is True) else str(value)
 
     def _parse_continuation(self, value):
+        if value is None:
+            return None # Reset the value
         try:
             if self._options['reuse'].value:
                 warnings.warn('Cannot set reuse if continuation is set, and '

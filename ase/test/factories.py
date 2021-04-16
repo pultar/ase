@@ -164,6 +164,24 @@ class CP2KFactory:
         return CP2KFactory(config.executables['cp2k'])
 
 
+@factory('castep')
+class CastepFactory:
+    def __init__(self, executable):
+        self.executable = executable
+
+    def version(self):
+        from ase.calculators.castep import get_castep_version
+        return get_castep_version(self.executable)
+
+    def calc(self, **kwargs):
+        from ase.calculators.castep import Castep
+        return Castep(castep_command=self.executable, **kwargs)
+
+    @classmethod
+    def fromconfig(cls, config):
+        return cls(config.executables['castep'])
+
+
 @factory('dftb')
 class DFTBFactory:
     def __init__(self, executable):
@@ -538,7 +556,6 @@ class Factories:
         'ace',
         'aims',
         'amber',
-        'castep',
         'crystal',
         'demon',
         'demonnano',
@@ -689,6 +706,14 @@ class CalculatorInputs:
             parameters = {}
         self.parameters = parameters
         self.factory = factory
+
+    def require_version(self, version):
+        from ase.utils import tokenize_version
+        installed_version = self.factory.version()
+        old = tokenize_version(installed_version) < tokenize_version(version)
+        if old:
+            pytest.skip('Version too old: Requires {}; got {}'
+                        .format(version, installed_version))
 
     @property
     def name(self):
