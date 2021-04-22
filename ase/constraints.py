@@ -785,7 +785,7 @@ class FixInternals(FixConstraint):
     """
     def __init__(self, bonds=None, angles=None, dihedrals=None,
                  angles_deg=None, dihedrals_deg=None,
-                 bondcombos=None, anglecombos=None, dihedralcombos=None,
+                 bondcombos=None,
                  mic=False, epsilon=1.e-7):
 
         # deprecate public API using radians; degrees is preferred
@@ -809,14 +809,11 @@ class FixInternals(FixConstraint):
         self.angles = angles or []
         self.dihedrals = dihedrals or []
         self.bondcombos = bondcombos or []
-        self.anglecombos = anglecombos or []
-        self.dihedralcombos = dihedralcombos or []
         self.mic = mic
         self.epsilon = epsilon
 
         self.n = (len(self.bonds) + len(self.angles) + len(self.dihedrals)
-                  + len(self.bondcombos) + len(self.anglecombos)
-                  + len(self.dihedralcombos))
+                  + len(self.bondcombos))
 
         # Initialize these at run-time:
         self.constraints = []
@@ -838,9 +835,7 @@ class FixInternals(FixConstraint):
         for data, make_constr in [(self.bonds, self.FixBondLengthAlt),
                                   (self.angles, self.FixAngle),
                                   (self.dihedrals, self.FixDihedral),
-                                  (self.bondcombos, self.FixBondCombo),
-                                  (self.anglecombos, self.FixAngleCombo),
-                                  (self.dihedralcombos, self.FixDihedralCombo)]:
+                                  (self.bondcombos, self.FixBondCombo)]:
             for datum in data:
                 constr = make_constr(datum[0], datum[1], masses, cell, pbc)
                 self.constraints.append(constr)
@@ -889,9 +884,6 @@ class FixInternals(FixConstraint):
         self.angles = self.shuffle_definitions(shuffle_dic, self.angles)
         self.dihedrals = self.shuffle_definitions(shuffle_dic, self.dihedrals)
         self.bondcombos = self.shuffle_combos(shuffle_dic, self.bondcombos)
-        self.anglecombos = self.shuffle_combos(shuffle_dic, self.anglecombos)
-        self.dihedralcombos = self.shuffle_combos(shuffle_dic,
-                                                  self.dihedralcombos)
         self.initialized = False
         self.initialize(atoms)
         if len(self.constraints) == 0:
@@ -901,7 +893,7 @@ class FixInternals(FixConstraint):
         cons = []
         for dfn in self.bonds + self.dihedrals + self.angles:
             cons.extend(dfn[1])
-        for dfn in self.bondcombos + self.anglecombos + self.dihedralcombos:
+        for dfn in self.bondcombos:
             for partial_dfn in dfn[1]:
                 cons.extend(partial_dfn[0:-1])  # last index is the coefficient
         return list(set(cons))
@@ -912,8 +904,6 @@ class FixInternals(FixConstraint):
                            'angles_deg': self.angles,
                            'dihedrals_deg': self.dihedrals,
                            'bondcombos': self.bondcombos,
-                           'anglecombos': self.anglecombos,
-                           'dihedralcombos': self.dihedralcombos,
                            'mic': self.mic,
                            'epsilon': self.epsilon}}
 
@@ -1045,7 +1035,7 @@ class FixInternals(FixConstraint):
             (_, ), (dists, ) = conditional_find_mic([bondvectors],
                                                     cell=self.cell,
                                                     pbc=self.pbc)
-            value = np.dot(self.coefs, dists)
+            value = self.coefs @ dists
             self.sigma = value - self.targetvalue
             self.finalize_positions(newpos)
 
@@ -1064,12 +1054,18 @@ class FixInternals(FixConstraint):
             return 'FixBondLengthAlt({}, {})'.format(self.targetvalue,
                                                      *self.indices)
 
-    class FixAngleCombo(FixInternalsBase):
-        """Constraint subobject for fixing linear combination of angles
-        within FixInternals.
+    class FixAngle(FixInternalsBase):
+        """Constraint object for fixing an angle within
+        FixInternals using the SHAKE algorithm.
 
-        sum_i( coef_i * angle_i ) = constant
+        SHAKE convergence is potentially problematic for angles very close to
+        0 or 180 degrees as there is a singularity in the Cartesian derivative.
         """
+        def __init__(self, targetvalue, indices, masses, cell, pbc):
+            """Fix atom movement to construct a constant angle."""
+            indices = [list(indices) + [1.]]  # angle definition with coef 1.
+            super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
+
         def gather_vectors(self, pos):
             v0 = [pos[h] - pos[k] for h, k, l in self.indices]
             v1 = [pos[l] - pos[k] for h, k, l in self.indices]
@@ -1084,35 +1080,24 @@ class FixInternals(FixConstraint):
         def adjust_positions(self, oldpos, newpos):
             v0, v1 = self.gather_vectors(newpos)
             value = get_angles(v0, v1, cell=self.cell, pbc=self.pbc)
-            value = np.dot(self.coefs, value)
             self.sigma = value - self.targetvalue
             self.finalize_positions(newpos)
 
         def __repr__(self):
-            return 'FixAngleCombo({}, {}, {})'.format(self.targetvalue,
-                                                      self.indices, self.coefs)
-
-    class FixAngle(FixAngleCombo):
-        """Constraint object for fixing an angle within
-        FixInternals using the SHAKE algorithm.
-
-        SHAKE convergence is potentially problematic for angles very close to
-        0 or 180 degrees as there is a singularity in the Cartesian derivative.
-        """
-        def __init__(self, targetvalue, indices, masses, cell, pbc):
-            """Fix atom movement to construct a constant angle."""
-            indices = [list(indices) + [1.]]  # angle definition with coef 1.
-            super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
-
-        def __repr__(self):
             return 'FixAngle({}, {})'.format(self.targetvalue, *self.indices)
 
-    class FixDihedralCombo(FixInternalsBase):
-        """Constraint subobject for fixing linear combination of dihedrals
-        within FixInternals.
+    class FixDihedral(FixInternalsBase):
+        """Constraint object for fixing a dihedral angle using
+        the SHAKE algorithm. This one allows also other constraints.
 
-        sum_i( coef_i * dihedral_i ) = constant
+        SHAKE convergence is potentially problematic for near-undefined
+        dihedral angles (i.e. when one of the two angles a012 or a123
+        approaches 0 or 180 degrees).
         """
+        def __init__(self, targetvalue, indices, masses, cell, pbc):
+            indices = [list(indices) + [1.]]  # dihedral def. with coef 1.
+            super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
+
         def gather_vectors(self, pos):
             v0 = [pos[k] - pos[h] for h, k, l, m in self.indices]
             v1 = [pos[l] - pos[k] for h, k, l, m in self.indices]
@@ -1124,30 +1109,6 @@ class FixInternals(FixConstraint):
             derivs = get_dihedrals_derivatives(v0, v1, v2, cell=self.cell,
                                                pbc=self.pbc)
             self.finalize_jacobian(pos, len(v0), 4, derivs)
-
-        def adjust_positions(self, oldpos, newpos):
-            v0, v1, v2 = self.gather_vectors(newpos)
-            value = get_dihedrals(v0, v1, v2, cell=self.cell, pbc=self.pbc)
-            value = np.dot(self.coefs, value)
-            self.sigma = value - self.targetvalue
-            self.finalize_positions(newpos)
-
-        def __repr__(self):
-            return 'FixDihedralCombo({}, {}, {})'.format(self.targetvalue,
-                                                         self.indices,
-                                                         self.coefs)
-
-    class FixDihedral(FixDihedralCombo):
-        """Constraint object for fixing a dihedral angle using
-        the SHAKE algorithm. This one allows also other constraints.
-
-        SHAKE convergence is potentially problematic for near-undefined
-        dihedral angles (i.e. when one of the two angles a012 or a123
-        approaches 0 or 180 degrees).
-        """
-        def __init__(self, targetvalue, indices, masses, cell, pbc):
-            indices = [list(indices) + [1.]]  # dihedral def. with coef 1.
-            super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
 
         def adjust_positions(self, oldpos, newpos):
             v0, v1, v2 = self.gather_vectors(newpos)
