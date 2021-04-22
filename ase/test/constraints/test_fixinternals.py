@@ -27,6 +27,7 @@ def setup_atoms():
     atoms.rattle(stdev=0.3)
     return atoms
 
+
 def setup_fixinternals():
     atoms = setup_atoms()
 
@@ -127,7 +128,9 @@ def setup_combos():
             target_anglecombo, dihedralcombo_def, target_dihedralcombo)
 
 
+@pytest.mark.xfail
 def test_combos():
+    # XXX https://gitlab.com/ase/ase/-/issues/868
     (atoms, constr, bondcombo_def, target_bondcombo, anglecombo_def,
      target_anglecombo, dihedralcombo_def,
      target_dihedralcombo) = setup_combos()
