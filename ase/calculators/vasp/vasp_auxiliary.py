@@ -233,6 +233,100 @@ class VaspChargeDensity:
                 if format == 'chg' and len(self.chg) > 1:
                     fd.write('\n')
 
+class VaspLocpot:
+    """Class for reading the Locpot VASP file.
+
+    Filename is normally LOCPOT.
+
+    Coding is borrowed from the VaspChargeDensity class and altered to work for LOCPOT."""
+    def __init__(self, filename):
+        # Instance variables
+        self.atoms = []  # List of Atoms objects
+        self.pot = []  # Local potential or spin up potential if spin polarized calculation
+        self.spin_down_pot = []  # Spin down potential
+
+        # Note that the augmentation charge is not a list, since they
+        # are needed only for CHGCAR files which store only a single
+        # image.
+        if filename is not None:
+            self.read(filename)
+
+    def is_spin_polarized(self):
+        if len(self.spin_down_pot) > 0:
+            return True
+        return False
+ 
+    def _read_pot(self, fobj, pot):
+        """Read potential from file object
+
+        Utility method for reading the actual potential from a file object. 
+        On input, the file object must be at the beginning of the charge block, on
+        output the file position will be left at the end of the
+        block. The pot array must be of the correct dimensions.
+
+        """
+        # VASP writes charge density as
+        # WRITE(IU,FORM) (((C(NX,NY,NZ),NX=1,NGXC),NY=1,NGYZ),NZ=1,NGZC)
+        # Fortran nested implied do loops; innermost index fastest
+        # First, just read it in
+        for zz in range(pot.shape[2]):
+            for yy in range(pot.shape[1]):
+                pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
+
+    def read(self, filename):
+        """Read LOCPOT file.
+
+        LOCPOT contains local potential.
+
+        Currently will check for a spin-up and spin-down component but has not been
+        configured for a noncollinear calculation.
+
+        """
+        import ase.io.vasp as aiv
+        f = open(filename)
+        self.atoms = []
+        self.pot = []
+        self.spin_down_pot = []
+        while True:
+            try:
+                atoms = aiv.read_vasp(f)
+            except (IOError, ValueError, IndexError):
+                # Probably an empty line, or we tried to read the
+                # augmentation occupancies in CHGCAR
+                break
+            f.readline()
+            ngr = f.readline().split()
+            ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
+            chg = np.empty(ng)
+            self._read_chg(f, chg)
+            self.chg.append(chg)
+            self.atoms.append(atoms)
+            # Check if the file has a spin-polarized local potential, and
+            # if so, read it in.
+            fl = f.tell()
+            one_center = np.fromfile(f, count=len(atoms), sep=' ')
+            # Check to see if there is more information
+            line1 = f.readline()
+            if line1 == '':
+                break
+            # Check to see if the next line equals the previous grid settings
+            elif line1.split() == ngr:
+                spin_down_pot = np.empty(ng)
+                self._read_pot(f, spin_down_pot)
+                self.spin_down_pot.append(spin_down_pot)
+            elif line1.split() != ngr:
+                f.seek(fl)
+                one_center = np.fromfile(f, count=len(atoms), sep=' ')
+                line1 = f.readline()
+                if line1.split() == ngr:
+                    spin_down_pot = np.empty(ng)
+                    self._read_pot(f, spin_down_pot)
+                    self.spin_down_pot.append(spin_down_pot)
+                else:
+                    f.seek(fl)
+            else:
+                f.seek(fl)
+        f.close()
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
