@@ -287,6 +287,7 @@ class VaspLocpot:
         self.atoms = []
         self.pot = []
         self.spin_down_pot = []
+        self.one_center = ''
         while True:
             try:
                 atoms = aiv.read_vasp(f)
@@ -297,14 +298,13 @@ class VaspLocpot:
             f.readline()
             ngr = f.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
-            chg = np.empty(ng)
-            self._read_chg(f, chg)
-            self.chg.append(chg)
+            pot = np.empty(ng)
+            self._read_pot(f, pot)
+            self.pot.append(pot)
             self.atoms.append(atoms)
             # Check if the file has a spin-polarized local potential, and
             # if so, read it in.
             fl = f.tell()
-            one_center = np.fromfile(f, count=len(atoms), sep=' ')
             # Check to see if there is more information
             line1 = f.readline()
             if line1 == '':
@@ -319,6 +319,7 @@ class VaspLocpot:
                 one_center = np.fromfile(f, count=len(atoms), sep=' ')
                 line1 = f.readline()
                 if line1.split() == ngr:
+                    self.one_center = one_center
                     spin_down_pot = np.empty(ng)
                     self._read_pot(f, spin_down_pot)
                     self.spin_down_pot.append(spin_down_pot)
