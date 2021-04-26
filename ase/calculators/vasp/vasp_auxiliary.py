@@ -300,7 +300,7 @@ class VaspLocpot:
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
             pot = np.empty(ng)
             self._read_pot(f, pot)
-            self.pot.append(pot)
+            self.pot = pot
             self.atoms.append(atoms)
             # Check if the file has a spin-polarized local potential, and
             # if so, read it in.
@@ -322,12 +322,48 @@ class VaspLocpot:
                     self.one_center = one_center
                     spin_down_pot = np.empty(ng)
                     self._read_pot(f, spin_down_pot)
-                    self.spin_down_pot.append(spin_down_pot)
+                    self.spin_down_pot = spin_down_pot
                 else:
                     f.seek(fl)
             else:
                 f.seek(fl)
         f.close()
+
+    def get_average_along_axis(self,axis=2,spin_down=False):
+        """
+        Returns the average potential along the specified axis (0,1,2).
+
+        axis: Which axis to average long
+        spin_down: Whether to use the spin_down_pot instead of pot
+        """
+        if axis not in [0,1,2]:
+            print('Must provide an integer value of 0, 1, or 2.')
+            return
+        average = []
+        if spin_down:
+            pot = self.spin_down_pot
+        else:
+            pot = self.pot
+        if axis == 0:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[i,:,:]))
+        elif axis == 1:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[:,i,:]))
+        elif axis == 2:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[:,:,i]))
+        return average
+
+    def distance_along_axis(self,axis=2):
+        """
+        Returns the scalar distance along axis (from 0 to 1).
+        """
+        if axis in [0,1,2]:
+            self.axis = axis
+        else:
+            print('Must provide an integer value of 0, 1, or 2.')
+        return np.linspace(0,1,self.pot.shape[self.axis],endpoint=False)
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
