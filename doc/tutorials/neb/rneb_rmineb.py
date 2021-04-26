@@ -71,9 +71,9 @@ neb.interpolate()
 qn = BFGS(neb, logfile=None)
 qn.run(fmax=0.01)
 
-# finally plot the CIR-NEB barrier
+# finally plot the NEB barrier
 nebtools = NEBTools(images)
 nebtools.plot_band(ax=ax2)
 ax2.set_ylabel('')
-ax2.set_title('CIR-NEB')
+ax2.set_title('NEB')
 fig.savefig('rmineb.png')
