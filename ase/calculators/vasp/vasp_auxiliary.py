@@ -316,10 +316,10 @@ class VaspLocpot:
                 self.spin_down_pot.append(spin_down_pot)
             elif line1.split() != ngr:
                 f.seek(fl)
-                one_center = np.fromfile(f, count=len(atoms), sep=' ')
+                magmom = np.fromfile(f, count=len(atoms), sep=' ')
                 line1 = f.readline()
                 if line1.split() == ngr:
-                    self.one_center = one_center
+                    self.magmom = magmom
                     spin_down_pot = np.empty(ng)
                     self._read_pot(f, spin_down_pot)
                     self.spin_down_pot = spin_down_pot
