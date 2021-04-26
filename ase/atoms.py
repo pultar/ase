@@ -664,7 +664,7 @@ class Atoms:
         if charges is None:
             self.set_array('initial_charges', None)
         else:
-            self.set_array('initial_charges', charges, float, ())
+            self.set_array('initial_charges', charges, float, charges.shape[1:])
 
     def get_initial_charges(self):
         """Get array of initial charges."""
