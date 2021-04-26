@@ -287,7 +287,7 @@ class VaspLocpot:
         self.atoms = []
         self.pot = []
         self.spin_down_pot = []
-        self.one_center = ''
+        self.magmom = ''
         while True:
             try:
                 atoms = aiv.read_vasp(f)
