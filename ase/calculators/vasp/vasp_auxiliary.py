@@ -241,9 +241,9 @@ class VaspLocpot:
     Filename is normally LOCPOT.
 
     Coding is borrowed from the VaspChargeDensity class and altered to work for LOCPOT."""
-    def __init__(self, atoms: Atoms, pot: np.array, 
-                 spin_down_pot: Optional[np.array] = None,
-                 magmom: Optional[np.array] = None) -> None:
+    def __init__(self, atoms: Atoms, pot: np.ndarray, 
+                 spin_down_pot: Optional[np.ndarray] = None,
+                 magmom: Optional[np.ndarray] = None) -> None:
         self.atoms = atoms
         self.pot = pot
         self.spin_down_pot = spin_down_pot
