@@ -282,7 +282,6 @@ class VaspLocpot:
         with open(filename,'r') as fd:
             try:
                 atoms = aiv.read_vasp(fd)
-                cls.atoms = atoms
             except (IOError, ValueError, IndexError):
                 # Probably an empty line, or we tried to read the
                 # augmentation occupancies in CHGCAR
@@ -292,7 +291,6 @@ class VaspLocpot:
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
             pot = np.empty(ng)
             cls._read_pot(fd, pot)
-            cls.pot = pot
             # Check if the file has a spin-polarized local potential, and
             # if so, read it in.
             fl = fd.tell()
@@ -304,16 +302,13 @@ class VaspLocpot:
             elif line1.split() == ngr:
                 spin_down_pot = np.empty(ng)
                 cls._read_pot(fd, spin_down_pot)
-                cls.spin_down_pot = spin_down_pot
             elif line1.split() != ngr:
                 fd.seek(fl)
                 magmom = np.fromfile(fd, count=len(atoms), sep=' ')
-                cls.magmom = magmom
                 line1 = fd.readline()
                 if line1.split() == ngr:
                     spin_down_pot = np.empty(ng)
                     cls._read_pot(fd, spin_down_pot)
-                    cls.spin_down_pot = spin_down_pot
         fd.close()
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
