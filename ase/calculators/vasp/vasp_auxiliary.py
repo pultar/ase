@@ -2,8 +2,10 @@ import re
 import os
 import numpy as np
 import ase
+from ase import Atoms
 from .vasp import Vasp
 from ase.calculators.singlepoint import SinglePointCalculator
+from typing import Optional
 
 
 def get_vasp_version(string):
@@ -239,24 +241,13 @@ class VaspLocpot:
     Filename is normally LOCPOT.
 
     Coding is borrowed from the VaspChargeDensity class and altered to work for LOCPOT."""
-    def __init__(self, filename):
-        # Instance variables
-        self.atoms = []  # List of Atoms objects
-        self.pot = []  # Local potential or spin up potential if spin polarized calculation
-        self.spin_down_pot = []  # Spin down potential
+    def __init__(self, atoms: Atoms, pot: np.array, 
+                 spin_down_pot: Optional[np.array] = None,
+                 magmom: Optional[np.array] = None) -> None:
+        return
 
-        # Note that the augmentation charge is not a list, since they
-        # are needed only for CHGCAR files which store only a single
-        # image.
-        if filename is not None:
-            self.read(filename)
-
-    def is_spin_polarized(self):
-        if len(self.spin_down_pot) > 0:
-            return True
-        return False
- 
-    def _read_pot(self, fobj, pot):
+    @staticmethod
+    def _read_pot(fobj, pot):
         """Read potential from file object
 
         Utility method for reading the actual potential from a file object. 
@@ -273,7 +264,8 @@ class VaspLocpot:
             for yy in range(pot.shape[1]):
                 pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
 
-    def read(self, filename):
+    @classmethod
+    def from_file(cls, filename='LOCPOT'):
         """Read LOCPOT file.
 
         LOCPOT contains local potential.
@@ -283,51 +275,43 @@ class VaspLocpot:
 
         """
         import ase.io.vasp as aiv
-        f = open(filename)
-        self.atoms = []
-        self.pot = []
-        self.spin_down_pot = []
-        self.magmom = ''
-        while True:
+        with open(filename,'r') as fd:
             try:
-                atoms = aiv.read_vasp(f)
+                atoms = aiv.read_vasp(fd)
+                cls.atoms = atoms
             except (IOError, ValueError, IndexError):
                 # Probably an empty line, or we tried to read the
                 # augmentation occupancies in CHGCAR
-                break
-            f.readline()
-            ngr = f.readline().split()
+                return 'Error reading in initial atomic structure.'
+            fd.readline()
+            ngr = fd.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
             pot = np.empty(ng)
-            self._read_pot(f, pot)
-            self.pot = pot
-            self.atoms.append(atoms)
+            cls._read_pot(fd, pot)
+            cls.pot = pot
             # Check if the file has a spin-polarized local potential, and
             # if so, read it in.
-            fl = f.tell()
+            fl = fd.tell()
             # Check to see if there is more information
-            line1 = f.readline()
+            line1 = fd.readline()
             if line1 == '':
-                break
+                return cls(atoms,pot)
             # Check to see if the next line equals the previous grid settings
             elif line1.split() == ngr:
                 spin_down_pot = np.empty(ng)
-                self._read_pot(f, spin_down_pot)
-                self.spin_down_pot.append(spin_down_pot)
+                cls._read_pot(fd, spin_down_pot)
+                cls.spin_down_pot = spin_down_pot
             elif line1.split() != ngr:
-                f.seek(fl)
-                magmom = np.fromfile(f, count=len(atoms), sep=' ')
-                line1 = f.readline()
+                fd.seek(fl)
+                magmom = np.fromfile(fd, count=len(atoms), sep=' ')
+                cls.magmom = magmom
+                line1 = fd.readline()
                 if line1.split() == ngr:
-                    self.magmom = magmom
                     spin_down_pot = np.empty(ng)
-                    self._read_pot(f, spin_down_pot)
-                    self.spin_down_pot = spin_down_pot
-                else:
-                    f.seek(fl)
-            else:
-                f.seek(fl)
-        f.close()
+                    cls._read_pot(fd, spin_down_pot)
+                    cls.spin_down_pot = spin_down_pot
+        fd.close()
+        return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
     def get_average_along_axis(self,axis=2,spin_down=False):
         """
@@ -337,8 +321,7 @@ class VaspLocpot:
         spin_down: Whether to use the spin_down_pot instead of pot
         """
         if axis not in [0,1,2]:
-            print('Must provide an integer value of 0, 1, or 2.')
-            return
+            return print('Must provide an integer value of 0, 1, or 2.')
         average = []
         if spin_down:
             pot = self.spin_down_pot
@@ -360,10 +343,11 @@ class VaspLocpot:
         Returns the scalar distance along axis (from 0 to 1).
         """
         if axis in [0,1,2]:
-            self.axis = axis
-        else:
-            print('Must provide an integer value of 0, 1, or 2.')
+            return print('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0,1,self.pot.shape[self.axis],endpoint=False)
+
+    def is_spin_polarized(self):
+        return bool(self.spin_down_pot.any())
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
@@ -608,3 +592,4 @@ class xdat2traj:
         self.out.write(self.atoms)
 
         self.out.close()
+
