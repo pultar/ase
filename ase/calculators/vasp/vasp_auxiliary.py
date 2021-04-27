@@ -244,6 +244,10 @@ class VaspLocpot:
     def __init__(self, atoms: Atoms, pot: np.array, 
                  spin_down_pot: Optional[np.array] = None,
                  magmom: Optional[np.array] = None) -> None:
+        self.atoms = atoms
+        self.pot = pot
+        self.spin_down_pot = spin_down_pot
+        self.magmom = magmom
         return
 
     @staticmethod
@@ -347,7 +351,10 @@ class VaspLocpot:
         return np.linspace(0,1,self.pot.shape[self.axis],endpoint=False)
 
     def is_spin_polarized(self):
-        return bool(self.spin_down_pot.any())
+        if type(self.spin_down_pot) == np.ndarray and self.spin_down_pot.size > 0:
+            return True
+        else:
+            return False
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
