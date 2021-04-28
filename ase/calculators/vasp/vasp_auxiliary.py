@@ -282,9 +282,7 @@ class VaspLocpot:
             try:
                 atoms = aiv.read_vasp(fd)
             except (IOError, ValueError, IndexError):
-                # Probably an empty line, or we tried to read the
-                # augmentation occupancies in CHGCAR
-                return 'Error reading in initial atomic structure.'
+                return print('Error reading in initial atomic structure.')
             fd.readline()
             ngr = fd.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
@@ -342,7 +340,7 @@ class VaspLocpot:
         """
         if axis in [0,1,2]:
             return print('Must provide an integer value of 0, 1, or 2.')
-        return np.linspace(0,1,self.pot.shape[self.axis],endpoint=False)
+        return np.linspace(0,1,self.pot.shape[axis],endpoint=False)
 
     def is_spin_polarized(self):
         return (self.spin_down_pot is not None)
