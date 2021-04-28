@@ -248,7 +248,6 @@ class VaspLocpot:
         self.pot = pot
         self.spin_down_pot = spin_down_pot
         self.magmom = magmom
-        return
 
     @staticmethod
     def _read_pot(fobj, pot):
@@ -269,7 +268,7 @@ class VaspLocpot:
                 pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
 
     @classmethod
-    def from_file(cls, filename='LOCPOT'):
+    def from_file(cls, filename='LOCPOT') -> 'VaspLocpot':
         """Read LOCPOT file.
 
         LOCPOT contains local potential.
@@ -346,10 +345,7 @@ class VaspLocpot:
         return np.linspace(0,1,self.pot.shape[self.axis],endpoint=False)
 
     def is_spin_polarized(self):
-        if type(self.spin_down_pot) == np.ndarray and self.spin_down_pot.size > 0:
-            return True
-        else:
-            return False
+        return (self.spin_down_pot is not None)
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
