@@ -268,7 +268,7 @@ class VaspLocpot:
                 pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
 
     @classmethod
-    def from_file(cls, filename='LOCPOT') -> 'VaspLocpot':
+    def from_file(cls, filename='LOCPOT'):
         """Read LOCPOT file.
 
         LOCPOT contains local potential.
