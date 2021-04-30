@@ -213,12 +213,25 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 pwo_lines[image_index:image_index + n_atoms + 1],
                 n_atoms=n_atoms, cell=cell, alat=cell_alat)
 
+            # Check to see if there are constraints
+            constraints = []
+            indices = []
+            for i,p in enumerate(positions_card):
+                if p[2] is not None:
+                    p = np.array(p[2])
+                    if p.any() and not p.all():
+                        constraints.append(FixCartesian(cell,i,p))
+                    else:
+                        indices.append(i)
+            if indices:
+                constraints.append(FixAtoms(indices=indices))
+
             # convert to Atoms object
             symbols = [label_to_symbol(position[0]) for position in
                        positions_card]
             positions = [position[1] for position in positions_card]
             structure = Atoms(symbols=symbols, positions=positions, cell=cell,
-                              pbc=True)
+                              pbc=True, constraint=constraints)
 
         # Extract calculation results
         # Energy
@@ -323,6 +336,40 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
 
                 if pwo_lines[bands_index].strip() == kpoints_warning:
                     continue
+                elif 'LDA+U' in pwo_lines[bands_index]:
+                    U_bool = True
+                    U_atom, U_trace, U_eval, U_evec, U_occ = [], [], [], [], []
+                    read_U_info = True
+                    while read_U_info:
+                        L = pwo_lines[bands_index].replace('-', ' -')
+                        if 'exit write_ns' in L:
+                            bands_index += 2
+                            read_U_info = False
+                        elif 'atom' in L:
+                            U_atom.append(L.split()[1])
+                            U_trace.append(L.split()[-1])
+                        elif 'eigenvalues' in L:
+                            bands_index += 1
+                            U_eval.append(pwo_lines[bands_index].replace('-', ' -').split())
+                        elif 'eigenvectors' in L:
+                            bands_index += 1
+                            vectors = []
+                            for eig in range(bands_index, bands_index+len(U_eval[0])):
+                                vectors.append(pwo_lines[eig].replace('-', ' -').split())
+                            U_evec.append(vectors)
+                        elif 'occupations' in L:
+                            bands_index += 1
+                            occ = []
+                            for o in range(bands_index, bands_index+len(U_eval[0])):
+                                occ.append(pwo_lines[eig].replace('-', ' -').split())
+                            U_occ.append(occ)
+                        bands_index += 1
+                    class HubbardU(object):
+                        atom_indices = U_atom
+                        trace = U_trace
+                        eigenvalues = U_eval
+                        eigenvectors = U_evec
+                        occupations = U_occ
 
                 assert ibzkpts is not None
                 spin, bands, eigenvalues = 0, [], [[], []]
@@ -369,6 +416,8 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                                         magmoms=magmoms, efermi=efermi,
                                         ibzkpts=ibzkpts)
         calc.kpts = kpts
+        if U_bool:
+            calc.hubbard_u = HubbardU
         structure.calc = calc
 
         yield structure
@@ -547,6 +596,10 @@ def read_espresso_in(fileobj):
     # e.g magmom, forces.
     atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True,
                   magmoms=magmoms)
+    # Attach calculator to set input parameters
+    calc = SinglePointDFTCalculator(atoms)
+    atoms.calc = calc
+    atoms.calc.parameters = data
 
     return atoms
 
