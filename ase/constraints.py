@@ -911,7 +911,7 @@ class FixInternals(FixConstraint):
     def adjust_positions(self, atoms, newpos):
         self.initialize(atoms)
         for constraint in self.constraints:
-            constraint.prepare_jacobian(atoms.positions)
+            constraint.setup_jacobian(atoms.positions)
         for j in range(50):
             maxerr = 0.0
             for constraint in self.constraints:
@@ -952,7 +952,7 @@ class FixInternals(FixConstraint):
 
         # Add all angle, etc. constraint vectors
         for constraint in self.constraints:
-            constraint.prepare_jacobian(positions)
+            constraint.setup_jacobian(positions)
             constraint.adjust_forces(positions, forces)
             list_constraints.insert(0, constraint.jacobian)
         # QR DECOMPOSITION - GRAM SCHMIDT
@@ -1007,7 +1007,7 @@ class FixInternals(FixConstraint):
                 for j in range(n):
                     jacobian[i, idx[j]] = derivs[i, j]
             jacobian = jacobian.reshape((n_internals, 3 * len(pos)))
-            self.jacobian = self.coefs @ jacobian
+            return self.coefs @ jacobian
 
         def finalize_positions(self, newpos):
             jacobian = self.jacobian / self.masses
@@ -1025,11 +1025,14 @@ class FixInternals(FixConstraint):
 
         sum_i( coef_i * bond_length_i ) = constant
         """
-        def prepare_jacobian(self, pos):
+        def get_jacobian(self, pos):
             bondvectors = [pos[k] - pos[h] for h, k in self.indices]
             derivs = get_distances_derivatives(bondvectors, cell=self.cell,
                                                pbc=self.pbc)
-            self.finalize_jacobian(pos, len(bondvectors), 2, derivs)
+            return self.finalize_jacobian(pos, len(bondvectors), 2, derivs)
+
+        def setup_jacobian(self, pos):
+            self.jacobian = self.get_jacobian(pos)
 
         def adjust_positions(self, oldpos, newpos):
             bondvectors = [newpos[k] - newpos[h] for h, k in self.indices]
@@ -1072,11 +1075,14 @@ class FixInternals(FixConstraint):
             v1 = [pos[l] - pos[k] for h, k, l in self.indices]
             return v0, v1
 
-        def prepare_jacobian(self, pos):
+        def get_jacobian(self, pos):
             v0, v1 = self.gather_vectors(pos)
             derivs = get_angles_derivatives(v0, v1, cell=self.cell,
                                             pbc=self.pbc)
-            self.finalize_jacobian(pos, len(v0), 3, derivs)
+            return self.finalize_jacobian(pos, len(v0), 3, derivs)
+
+        def setup_jacobian(self, pos):
+            self.jacobian = self.get_jacobian(pos)
 
         def adjust_positions(self, oldpos, newpos):
             v0, v1 = self.gather_vectors(newpos)
@@ -1103,11 +1109,14 @@ class FixInternals(FixConstraint):
             v2 = [pos[m] - pos[l] for h, k, l, m in self.indices]
             return v0, v1, v2
 
-        def prepare_jacobian(self, pos):
+        def get_jacobian(self, pos):
             v0, v1, v2 = self.gather_vectors(pos)
             derivs = get_dihedrals_derivatives(v0, v1, v2, cell=self.cell,
                                                pbc=self.pbc)
-            self.finalize_jacobian(pos, len(v0), 4, derivs)
+            return self.finalize_jacobian(pos, len(v0), 4, derivs)
+
+        def prepare_jacobian(self, pos):
+            self.jacobian = get_jacobian(pos)
 
         def adjust_positions(self, oldpos, newpos):
             v0, v1, v2 = self.gather_vectors(newpos)
