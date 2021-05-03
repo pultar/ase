@@ -214,17 +214,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 n_atoms=n_atoms, cell=cell, alat=cell_alat)
 
             # Check to see if there are constraints
-            constraints = []
-            indices = []
-            for i,p in enumerate(positions_card):
-                if p[2] is not None:
-                    p = np.array(p[2])
-                    if p.any() and not p.all():
-                        constraints.append(FixCartesian(cell,i,p))
-                    else:
-                        indices.append(i)
-            if indices:
-                constraints.append(FixAtoms(indices=indices))
+            constraints = get_constraints_from_positions_card(positions_card)
 
             # convert to Atoms object
             symbols = [label_to_symbol(position[0]) for position in
@@ -596,6 +586,8 @@ def read_espresso_in(fileobj):
 
     positions_card = get_atomic_positions(
         card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
+    # Check to see if there are constraints
+    constraints = get_constraints_from_positions_card(positions_card)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
@@ -604,7 +596,7 @@ def read_espresso_in(fileobj):
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
     atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True,
-                  magmoms=magmoms)
+                  magmoms=magmoms, constraint=constraints)
     # Attach calculator to set input parameters
     calc = SinglePointDFTCalculator(atoms)
     atoms.calc = calc
@@ -756,6 +748,33 @@ def ibrav_to_cell(system):
 
     return alat, cell
 
+def get_constraints_from_positions_card(positions_card):
+    """
+    Check for constraints from positions card when reading input/output.
+
+    Parameters
+    ----------
+    positions_card: list[tuple]
+        Contains type, positions, and constraints (or None)
+
+    Returns
+    -------
+    constraints: ase.constraints
+        List of ase constraints (either FixCartesian or FixAtoms)
+    """
+    constraints = []
+    indices = []
+    for i,p in enumerate(positions_card):
+        if p[2] is not None:
+            p = np.array(p[2])
+            if p.any() and not p.all():
+                constraints.append(FixCartesian(cell,i,p))
+            else:
+                indices.append(i)
+    if indices:
+        constraints.append(FixAtoms(indices=indices))
+
+    return constraints
 
 def get_pseudo_dirs(data):
     """Guess a list of possible locations for pseudopotential files.
