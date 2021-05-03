@@ -214,7 +214,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 n_atoms=n_atoms, cell=cell, alat=cell_alat)
 
             # Check to see if there are constraints
-            constraints = get_constraints_from_positions_card(positions_card)
+            constraints = get_constraints_from_positions_card(positions_card, cell)
 
             # convert to Atoms object
             symbols = [label_to_symbol(position[0]) for position in
@@ -587,7 +587,7 @@ def read_espresso_in(fileobj):
     positions_card = get_atomic_positions(
         card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
     # Check to see if there are constraints
-    constraints = get_constraints_from_positions_card(positions_card)
+    constraints = get_constraints_from_positions_card(positions_card, cell)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
@@ -748,7 +748,7 @@ def ibrav_to_cell(system):
 
     return alat, cell
 
-def get_constraints_from_positions_card(positions_card):
+def get_constraints_from_positions_card(positions_card, cell):
     """
     Check for constraints from positions card when reading input/output.
 
