@@ -233,6 +233,7 @@ class VaspChargeDensity:
                 if format == 'chg' and len(self.chg) > 1:
                     f.write('\n')
 
+
 class VaspDos:
     """Class for representing density-of-states produced by VASP
 
