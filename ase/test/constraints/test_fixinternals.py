@@ -149,7 +149,7 @@ def test_combo_index_shuffle():
     atoms, constr, bondcombo_def, target_bondcombo = setup_combos()
 
     # test no change, test constr.get_indices()
-    answer = (0, 1, 2, 3)
+    answer = (1, 2, 3)
     assert all(a == b for a, b in zip(constr.get_indices(), answer))
     constr.index_shuffle(atoms, range(len(atoms)))
     assert all(a == b for a, b in zip(constr.get_indices(), answer))
