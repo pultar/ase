@@ -330,14 +330,21 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         kpoints_warning = "Number of k-points >= 100: " + \
                           "set verbosity='high' to print the bands."
 
+        U_bool = False
         for bands_index in indexes[_PW_BANDS] + indexes[_PW_BANDSTRUCTURE]:
             if image_index < bands_index < next_index:
                 bands_index += 2
+                U_bool = False
 
                 if pwo_lines[bands_index].strip() == kpoints_warning:
                     continue
                 elif 'LDA+U' in pwo_lines[bands_index]:
+                    U_bool = True
                     U_atom, U_trace, U_eval, U_evec, U_occ = [], [], [], [], []
+                    bands_index += 1
+                    U_eff = pwo_lines[bands_index].split()[-1]
+                    bands_index += 1
+                    U_alpha = pwo_lines[bands_index].split()[-1]
                     read_U_info = True
                     while read_U_info:
                         L = pwo_lines[bands_index].replace('-', ' -')
@@ -363,6 +370,15 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                                 occ.append(pwo_lines[eig].replace('-', ' -').split())
                             U_occ.append(occ)
                         bands_index += 1
+
+                    class HubbardU(object):
+                        u_effective = U_eff
+                        alpha = U_alpha
+                        atom_indices = U_atom
+                        trace = U_trace
+                        eigenvalues = U_eval
+                        eigenvectors = U_evec
+                        occupations = U_occ
 
                 assert ibzkpts is not None
                 spin, bands, eigenvalues = 0, [], [[], []]
@@ -409,6 +425,8 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                                         magmoms=magmoms, efermi=efermi,
                                         ibzkpts=ibzkpts)
         calc.kpts = kpts
+        if U_bool:
+            calc.hubbard_u = HubbardU
         structure.calc = calc
 
         yield structure
