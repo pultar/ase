@@ -1011,7 +1011,7 @@ class FixInternals(FixConstraint):
 
         def finalize_positions(self, newpos):
             jacobian = self.jacobian / self.masses
-            lamda = -self.sigma / np.dot(jacobian, self.jacobian)
+            lamda = -self.sigma / np.dot(jacobian, self.get_jacobian(newpos))
             dnewpos = lamda * jacobian
             newpos += dnewpos.reshape(newpos.shape)
 
@@ -1115,8 +1115,8 @@ class FixInternals(FixConstraint):
                                                pbc=self.pbc)
             return self.finalize_jacobian(pos, len(v0), 4, derivs)
 
-        def prepare_jacobian(self, pos):
-            self.jacobian = get_jacobian(pos)
+        def setup_jacobian(self, pos):
+            self.jacobian = self.get_jacobian(pos)
 
         def adjust_positions(self, oldpos, newpos):
             v0, v1, v2 = self.gather_vectors(newpos)
