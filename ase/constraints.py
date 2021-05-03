@@ -1068,6 +1068,10 @@ class FixInternals(FixConstraint):
         def __init__(self, targetvalue, indices, masses, cell, pbc):
             """Fix atom movement to construct a constant angle."""
             indices = [list(indices) + [1.]]  # angle definition with coef 1.
+            if (targetvalue > 179.).any():
+                warn_msg = ('FixInternals: Fixed angle is almost planar. '
+                            + 'The algorithm may be unstable.')
+                warn(RuntimeWarning(warn_msg))
             super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
 
         def gather_vectors(self, pos):
