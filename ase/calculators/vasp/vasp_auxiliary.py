@@ -2,10 +2,8 @@ import re
 import os
 import numpy as np
 import ase
-from ase import Atoms
 from .vasp import Vasp
 from ase.calculators.singlepoint import SinglePointCalculator
-from typing import Optional
 
 
 def get_vasp_version(string):
