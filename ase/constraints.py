@@ -780,7 +780,7 @@ class FixInternals(FixConstraint):
     """Constraint object for fixing multiple internal coordinates.
 
     Allows fixing bonds, angles, and dihedrals as well as linear combinations
-    of bond lengths (bondcombos)..
+    of bond lengths (bondcombos).
     Please provide angular units in degrees using angles_deg and
     dihedrals_deg.
     """

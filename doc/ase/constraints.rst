@@ -264,7 +264,8 @@ The FixInternals class
 ======================
 
 This class allows to fix an arbitrary number of bond lengths, angles
-and dihedral angles as well as linear combinations of bond lengths.
+and dihedral angles as well as linear combinations of bond lengths
+('bondcombos').
 A fixed linear combination of bond lengths fulfils
 :math:`\sum_i \text{coef}_i \times \text{bond_length}_i 
 = \text{constant}`.
@@ -279,8 +280,8 @@ indices is a list of bond definitions with coeficients
 ([[a1, a2, coef],[a3, a4, coef],]).
 The usage of mic is supported by providing the keyword argument `mic=True`.
 Using mic slows the algorithm and is probably not necessary in most cases.
-The epsilon value
-specifies the accuracy to which the constraints are fulfilled.
+The epsilon value specifies the accuracy to which the constraints are
+fulfilled.
 Please specify angles and dihedrals in degrees using the keywords angles_deg
 and dihedrals_deg.
 

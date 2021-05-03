@@ -119,7 +119,6 @@ def test_combos():
     err_bondcombo = new_bondcombo - ref_bondcombo
 
     print('error in bondcombo:', repr(err_bondcombo))
-
     assert abs(err_bondcombo) < 1e-11
 
 
