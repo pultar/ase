@@ -330,9 +330,9 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         kpoints_warning = "Number of k-points >= 100: " + \
                           "set verbosity='high' to print the bands."
 
+        U_bool = False
         for bands_index in indexes[_PW_BANDS] + indexes[_PW_BANDSTRUCTURE]:
             if image_index < bands_index < next_index:
-                U_bool = False
                 bands_index += 2
 
                 if pwo_lines[bands_index].strip() == kpoints_warning:
@@ -365,6 +365,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                                 occ.append(pwo_lines[eig].replace('-', ' -').split())
                             U_occ.append(occ)
                         bands_index += 1
+                    U_bool = False
 
                     class HubbardU(object):
                         atom_indices = U_atom
