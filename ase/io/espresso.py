@@ -334,7 +334,8 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                     bands_index += 1
                     U_eff = pwo_lines[bands_index].split()[-1]
                     bands_index += 1
-                    U_alpha = pwo_lines[bands_index].split()[-1]
+                    if 'alpha' in line:
+                        U_alpha = pwo_lines[bands_index].split()[-1]
                     read_U_info = True
                     while read_U_info:
                         L = pwo_lines[bands_index].replace('-', ' -')
