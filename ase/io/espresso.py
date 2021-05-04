@@ -331,6 +331,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 elif 'LDA+U' in pwo_lines[bands_index]:
                     U_bool = True
                     U_atom, U_trace, U_eval, U_evec, U_occ = [], [], [], [], []
+                    U_eff, U_alpha = None, None
                     bands_index += 1
                     U_eff = pwo_lines[bands_index].split()[-1]
                     bands_index += 1
