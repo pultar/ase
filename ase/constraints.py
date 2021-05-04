@@ -783,6 +783,7 @@ class FixInternals(FixConstraint):
     of bond lengths (bondcombos).
     Please provide angular units in degrees using angles_deg and
     dihedrals_deg.
+    Fixing planar angles is not supported at the moment.
     """
     def __init__(self, bonds=None, angles=None, dihedrals=None,
                  angles_deg=None, dihedrals_deg=None,
@@ -919,7 +920,14 @@ class FixInternals(FixConstraint):
                 maxerr = max(abs(constraint.sigma), maxerr)
             if maxerr < self.epsilon:
                 return
-        raise ValueError('FixInternals.adjust_positions did not converge.')
+        msg = 'FixInternals.adjust_positions did not converge.'
+        if any([constr.targetvalue > 175. or constr.targetvalue < 5. for constr
+                in self.constraints if type(constr) is self.FixAngle]):
+            msg += ' This may be caused by an almost planar angle.'
+            msg += ' Support for planar angles would require the'
+            msg += ' implementation of ghost, i.e. dummy, atoms.'
+            msg += ' See issue #868.'
+        raise ValueError(msg)
 
     def adjust_forces(self, atoms, forces):
         """Project out translations and rotations and all other constraints"""
@@ -1068,10 +1076,6 @@ class FixInternals(FixConstraint):
         def __init__(self, targetvalue, indices, masses, cell, pbc):
             """Fix atom movement to construct a constant angle."""
             indices = [list(indices) + [1.]]  # angle definition with coef 1.
-            if (targetvalue > 179.).any():
-                warn_msg = ('FixInternals: Fixed angle is almost planar. '
-                            + 'The algorithm may be unstable.')
-                warn(RuntimeWarning(warn_msg))
             super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
 
         def gather_vectors(self, pos):
