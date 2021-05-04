@@ -1132,6 +1132,7 @@ class FixInternals(FixConstraint):
         def __repr__(self):
             return 'FixDihedral({}, {})'.format(self.targetvalue, *self.indices)
 
+
 class FixParametricRelations(FixConstraint):
 
     def __init__(
