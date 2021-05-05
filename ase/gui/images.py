@@ -404,23 +404,22 @@ class Images:
         else:
             write(filename, images, **kwargs)
 
-    def get_atoms(self, frame, remove_hidden=False):
+    def get_atoms(self, frame: int, remove_hidden=False) -> Atoms:
         atoms = self[frame]
-        try:
-            E = atoms.get_potential_energy()
-        except RuntimeError:
-            E = None
-        try:
-            F = atoms.get_forces()
-        except RuntimeError:
-            F = None
+
+        results = {}
+        if atoms.calc is not None:
+            if not atoms.calc.check_state(atoms):
+                results = atoms.calc.results.copy()
 
         # Remove hidden atoms if applicable
         if remove_hidden:
             atoms = atoms[self.visible]
-            if F is not None:
-                F = F[self.visible]
-        atoms.calc = SinglePointCalculator(atoms, energy=E, forces=F)
+            if 'forces' in results:
+                results['forces'] = results['forces'][self.visible]
+
+        atoms.calc = SinglePointCalculator(atoms)
+        atoms.calc.results = results
         return atoms
 
     def delete(self, i):
