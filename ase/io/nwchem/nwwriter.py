@@ -322,15 +322,15 @@ def write_nwchem_in(fd, atoms, properties=None, echo=False, **params):
         out = ['echo']
     else:
         out = []
-    out.extend('title "{}"'.format(short_label),
-               'permanent_dir {}'.format(perm),
-               'scratch_dir {}'.format(scratch),
-               '{} {}'.format(restart_kw, short_label),
-               '\n'.join(_get_geom(atoms, **params)),
-               '\n'.join(_get_basis(**params)),
-               '\n'.join(_get_other(**params)),
-               '\n'.join(_get_set(**params.get('set', dict()))),
-               'task {} {}'.format(theory, task),
-               '\n'.join(_get_bandpath(params.get('bandpath', None)))])
+    out.extend(['title "{}"'.format(short_label),
+                'permanent_dir {}'.format(perm),
+                'scratch_dir {}'.format(scratch),
+                '{} {}'.format(restart_kw, short_label),
+                '\n'.join(_get_geom(atoms, **params)),
+                '\n'.join(_get_basis(**params)),
+                '\n'.join(_get_other(**params)),
+                '\n'.join(_get_set(**params.get('set', dict()))),
+                'task {} {}'.format(theory, task),
+                '\n'.join(_get_bandpath(params.get('bandpath', None)))])
 
     fd.write('\n\n'.join(out))
