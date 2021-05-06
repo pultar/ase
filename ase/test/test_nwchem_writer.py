@@ -14,10 +14,10 @@ def atomic_configuration():
 
 @pytest.fixture
 def calculator_parameters():
-    params = dict(memory = '1024 mb',
-                  dft = dict(xc='b3lyp',
-                             mult=1,
-                             maxiter=300),
+    params = dict(memory='1024 mb',
+                  dft=dict(xc='b3lyp',
+                           mult=1,
+                           maxiter=300),
                   basis='6-311G*')
     return params
 
@@ -55,6 +55,3 @@ def test_params(atomic_configuration, calculator_parameters, tmpdir):
         elif isinstance(value, (int, float)):
             assert len(flds[1:]) == 1
             assert np.isclose(value, float(flds[1]))
-            
-        
-
