@@ -338,7 +338,7 @@ class VaspLocpot:
         """
         Returns the scalar distance along axis (from 0 to 1).
         """
-        if axis in [0,1,2]:
+        if axis not in [0,1,2]:
             return print('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0,1,self.pot.shape[axis],endpoint=False)
 
