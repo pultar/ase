@@ -426,7 +426,7 @@ Please remove them and recalculate or run \
             with paropen(log, 'a') as log_file:
                 log_file.write('\n'.join(summary_lines) + '\n')
 
-        elif log is not None:
+        else:
             for line in summary_lines:
                 print(line, file=log)
 
