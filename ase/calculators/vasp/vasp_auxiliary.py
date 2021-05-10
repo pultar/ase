@@ -3,6 +3,7 @@ import os
 import numpy as np
 import ase
 from ase import Atoms
+from ase.io import read
 from .vasp import Vasp
 from ase.calculators.singlepoint import SinglePointCalculator
 from typing import Optional
@@ -361,7 +362,6 @@ class VaspLocpot:
         Checks for an OUTCAR and will plot the Fermi energy.
         """
         import matplotlib.pyplot as plt
-        from ase.io import read
         if axis not in [0, 1, 2]:
             return print('Must provide an integer value of 0, 1, or 2')
         pot = self.get_average_along_axis(axis, spin)
@@ -371,7 +371,7 @@ class VaspLocpot:
         try:
             outcar = read('OUTCAR')
             eFermi = outcar.calc.eFermi
-        except:
+        except FileNotFoundError:
             pass
         if eFermi:
             plt.axhline(y=eFermi, linestyle='--', label='Fermi energy')
@@ -379,6 +379,28 @@ class VaspLocpot:
         plt.ylabel('Local potential (eV)')
         plt.legend()
         return plt
+
+    def calculate_workfunction(self, axis=2, spin='up', eFermi=None):
+        """
+        Calculate the workfunction from the LOCPOT file.
+        Will attempt to read the OUTCAR file in the same location to extract the Fermi energy 
+        if eFermi is not set.
+        """
+        if axis not in [0, 1, 2]:
+            return print('Must provide an integer value of 0, 1, or 2')
+        if not eFermi:
+            try:
+                outcar = read('OUTCAR')
+                eFermi = outcar.calc.eFermi
+            except FileNotFoundError:
+                return print('Could not read the Fermi energy from the OUTCAR. ' \
+                             'Check that there is an OUTCAR and it contains a Fermi energy value.')
+        average = self.get_average_along_axis(axis, spin)
+        polyfit = np.polyfit(range(10),average[:10],deg=1)
+        if polyfit[0] >= 0.1:
+            print('WARNING: There appears to be a slope in your vacuum potential. ' \
+                  'You might need to apply a dipole correction. ')
+        return average[0] - eFermi
 
     def is_spin_polarized(self):
         return (self.spin_down_pot is not None)
