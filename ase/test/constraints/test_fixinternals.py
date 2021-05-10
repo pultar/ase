@@ -154,6 +154,8 @@ def test_combo_index_shuffle():
 
 
 def test_zero_distance_error():
+    """Zero distances cannot be fixed due to a singularity in the derivative.
+    """
     atoms = setup_atoms()
     constr = FixInternals(bonds=[(0.0, [1, 2])])
     atoms.calc = EMT()
