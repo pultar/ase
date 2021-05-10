@@ -392,12 +392,12 @@ class VaspLocpot:
                 outcar = read('OUTCAR')
                 eFermi = outcar.calc.eFermi
             except FileNotFoundError:
-                return print('Could not read the Fermi energy from the OUTCAR. ' \
+                return print('Could not read the Fermi energy from the OUTCAR. ' 
                              'Check that there is an OUTCAR and it contains a Fermi energy value.')
         average = self.get_average_along_axis(axis, spin)
         polyfit = np.polyfit(range(10),average[:10],deg=1)
         if polyfit[0] >= 0.1:
-            print('WARNING: There appears to be a slope in your vacuum potential. ' \
+            print('WARNING: There appears to be a slope in your vacuum potential. ' 
                   'You might need to apply a dipole correction. ')
         return average[0] - eFermi
 
