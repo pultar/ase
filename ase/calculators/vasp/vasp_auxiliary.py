@@ -314,20 +314,24 @@ class VaspLocpot:
         fd.close()
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
-    def get_average_along_axis(self, axis=2, spin_down=False):
+    def get_average_along_axis(self, axis=2, spin='up'):
         """
         Returns the average potential along the specified axis (0,1,2).
 
-        axis: Which axis to average long
-        spin_down: Whether to use the spin_down_pot instead of pot
+        axis: Which axis to average long (0,1,2)
+        spin: May specify 'up'/'down'/'average'
         """
         if axis not in [0,1,2]:
             return print('Must provide an integer value of 0, 1, or 2.')
         average = []
-        if spin_down:
-            pot = self.spin_down_pot
-        else:
+        if spin.lower() == 'up':
             pot = self.pot
+        elif spin.lower() == 'down':
+            pot = self.spin_down_pot
+        elif spin.lower() == 'average':
+            pot = (self.pot + self.spin_down_pot)/2
+        else:
+            return print("Must specify only 'up'/'down'/'average'.")
         if axis == 0:
             for i in range(pot.shape[axis]):
                 average.append(np.average(pot[i,:,:]))
@@ -346,7 +350,7 @@ class VaspLocpot:
         """
         if axis not in [0,1,2]:
             return print('Must provide an integer value of 0, 1, or 2.')
-        return np.linspace(0,1,self.pot.shape[axis],endpoint=False)
+        return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
     def is_spin_polarized(self):
         return (self.spin_down_pot is not None)
