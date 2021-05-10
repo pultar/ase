@@ -172,6 +172,21 @@ def test_planar_angle_error():
     constr = FixInternals(angles_deg=[(180, [6, 0, 1])])
     atoms.calc = EMT()
     atoms.set_constraint(constr)
-    opt= BFGS(atoms)
+    opt = BFGS(atoms)
+    with pytest.raises(ZeroDivisionError):
+        opt.run()
+
+
+def test_undefined_dihedral_error():
+    atoms = setup_atoms()
+    pos = atoms.get_positions()
+    pos[0:3] = [[8, 5, 5], [7, 5, 5], [6, 5, 5]]
+    atoms.set_positions(pos)  # with undefined dihedral
+    with pytest.raises(ZeroDivisionError):
+        atoms.get_dihedral(6, 0, 1, 2)
+    constr = FixInternals(dihedrals_deg=[(20., [6, 0, 1, 2])])
+    atoms.calc = EMT()
+    atoms.set_constraint(constr)
+    opt = BFGS(atoms)
     with pytest.raises(ZeroDivisionError):
         opt.run()
