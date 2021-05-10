@@ -241,7 +241,7 @@ class VaspLocpot:
 
     This will usually be instantiated with the .from_file() classmethod, e.g.::
     
-        locpot = VaspLocpot()
+        locpot = VaspLocpot.from_file('LOCPOT')
 
     Non-spin-polarized data is stored in locpot.pot; for spin-polarized data, the 
     spin-up potential is stored in locpot.pot while spin-down data is stored in locpot.spin_down_pot.
