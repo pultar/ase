@@ -153,15 +153,23 @@ def test_combo_index_shuffle():
     assert all(a == b for a, b in zip(constr.get_indices(), answer))
 
 
-@pytest.mark.xfail()
-def test_fix_planar_angle():
-    "Planar angles cannot be fixed with the current version of FixInternals. See issue #868"
+def test_zero_distance_error():
     atoms = setup_atoms()
-    angle_def = [6, 0, 1]
-    target_angle = 180
-    constr = FixInternals(angles_deg=[(target_angle, angle_def)], epsilon=1e-10)
+    constr = FixInternals(bonds=[(0.0, [1, 2])])
     atoms.calc = EMT()
     atoms.set_constraint(constr)
     opt = BFGS(atoms)
-    opt.run(fmax=0.01)
-    assert np.allclose(atoms.get_angle(*angle_def), 180)
+    with pytest.raises(ZeroDivisionError):
+        opt.run()
+
+
+def test_planar_angle_error():
+    """Support for planar angles could be added in the future using
+       dummy/ghost atoms. See issue #868."""
+    atoms = setup_atoms()
+    constr = FixInternals(angles_deg=[(180, [6, 0, 1])])
+    atoms.calc = EMT()
+    atoms.set_constraint(constr)
+    opt= BFGS(atoms)
+    with pytest.raises(ZeroDivisionError):
+        opt.run()

@@ -1059,6 +1059,8 @@ class FixInternals(FixConstraint):
         """Constraint subobject for fixing bond length within FixInternals.
         Fix distance between atoms with indices a1, a2."""
         def __init__(self, targetvalue, indices, masses, cell, pbc):
+            if targetvalue <= 0.: 
+                raise ZeroDivisionError('Invalid targetvalue for fixed bond')
             indices = [list(indices) + [1.]]  # bond definition with coef 1.
             super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
 
@@ -1075,6 +1077,8 @@ class FixInternals(FixConstraint):
         """
         def __init__(self, targetvalue, indices, masses, cell, pbc):
             """Fix atom movement to construct a constant angle."""
+            if targetvalue <= 0. or targetvalue >= 180.: 
+                raise ZeroDivisionError('Invalid targetvalue for fixed angle')
             indices = [list(indices) + [1.]]  # angle definition with coef 1.
             super().__init__(targetvalue, indices, masses, cell=cell, pbc=pbc)
 
