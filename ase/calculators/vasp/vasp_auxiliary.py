@@ -318,7 +318,7 @@ class VaspLocpot:
         """
         Returns the average potential along the specified axis (0,1,2).
 
-        axis: Which axis to average long (0,1,2)
+        axis: Which axis to take the planar average along (0,1,2)
         spin: May specify 'up'/'down'/'average' where 'average' returns the average of the first two.
         """
         if axis not in [0,1,2]:
