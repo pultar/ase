@@ -326,10 +326,13 @@ class VaspLocpot:
         average = []
         if spin.lower() == 'up':
             pot = self.pot
-        elif spin.lower() == 'down':
-            pot = self.spin_down_pot
-        elif spin.lower() == 'average':
-            pot = (self.pot + self.spin_down_pot)/2
+        elif self.is_spin_polarized and spin in ['down', 'average']:
+            if spin.lower() == 'down':
+                pot = self.spin_down_pot
+            elif spin.lower() == 'average':
+                pot = (self.pot + self.spin_down_pot)/2
+        elif not self.is_spin_polarized and spin in ['down', 'average']:
+            return print("This file appears to come from a calculation with no spin-polarization.")
         else:
             return print("Must specify only 'up'/'down'/'average'.")
         if axis == 0:
