@@ -382,9 +382,8 @@ class VaspLocpot:
 
     def calculate_workfunction(self, axis=2, spin='up', eFermi=None):
         """
-        Calculate the workfunction from the LOCPOT file.
-        Will attempt to read the OUTCAR file in the same location to extract the Fermi energy 
-        if eFermi is not set.
+        Calculate the workfunction from the LOCPOT file. Will attempt to read the OUTCAR file 
+        in the same location to extract the Fermi energy if eFermi is not set.
         """
         if axis not in [0, 1, 2]:
             return print('Must provide an integer value of 0, 1, or 2')
