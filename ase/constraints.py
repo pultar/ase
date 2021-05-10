@@ -923,10 +923,10 @@ class FixInternals(FixConstraint):
         msg = 'FixInternals.adjust_positions did not converge.'
         if any([constr.targetvalue > 175. or constr.targetvalue < 5. for constr
                 in self.constraints if type(constr) is self.FixAngle]):
-            msg += ' This may be caused by an almost planar angle.'
-            msg += ' Support for planar angles would require the'
-            msg += ' implementation of ghost, i.e. dummy, atoms.'
-            msg += ' See issue #868.'
+            msg += (' This may be caused by an almost planar angle.'
+                    ' Support for planar angles would require the'
+                    ' implementation of ghost, i.e. dummy, atoms.'
+                    ' See issue #868.')
         raise ValueError(msg)
 
     def adjust_forces(self, atoms, forces):

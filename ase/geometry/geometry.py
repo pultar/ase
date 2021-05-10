@@ -345,7 +345,7 @@ def get_dihedrals_derivatives(v0, v1, v2, cell=None, pbc=None):
     sin_psi12 = np.sin(np.arccos(cos_psi12))
     if (sin_psi01 == 0.).any() or (sin_psi12 == 0.).any():
         msg = ('Undefined derivative for undefined dihedral with planar inner '
-               + 'angle')
+               'angle')
         raise ZeroDivisionError(msg)
 
     deriv_d0 = -normal_v01 / (nv0 * sin_psi01**2)[:, np.newaxis]  # by atom 0
