@@ -314,7 +314,7 @@ class VaspLocpot:
         fd.close()
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
-    def get_average_along_axis(self,axis=2,spin_down=False):
+    def get_average_along_axis(self, axis=2, spin_down=False):
         """
         Returns the average potential along the specified axis (0,1,2).
 
@@ -339,9 +339,10 @@ class VaspLocpot:
                 average.append(np.average(pot[:,:,i]))
         return average
 
-    def distance_along_axis(self,axis=2):
+    def distance_along_axis(self, axis=2):
         """
-        Returns the scalar distance along axis (from 0 to 1).
+        Returns an array of the fractional distance along the specified axis (from 0 to 1).
+        This corresponds to the size of the mesh in the Locpot file.
         """
         if axis not in [0,1,2]:
             return print('Must provide an integer value of 0, 1, or 2.')
