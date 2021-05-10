@@ -321,7 +321,7 @@ class VaspLocpot:
         axis: Which axis to take the planar average along (0,1,2)
         spin: May specify 'up'/'down'/'average' where 'average' returns the average of the first two.
         """
-        if axis not in [0,1,2]:
+        if axis not in [0, 1, 2]:
             return print('Must provide an integer value of 0, 1, or 2.')
         average = []
         if spin.lower() == 'up':
@@ -351,9 +351,34 @@ class VaspLocpot:
         Returns an array of the fractional distance along the specified axis (from 0 to 1).
         This corresponds to the size of the mesh in the Locpot file.
         """
-        if axis not in [0,1,2]:
+        if axis not in [0, 1, 2]:
             return print('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
+
+    def plot_planar_average(self, axis=2, spin='up'):
+        """
+        Returns a matplotlib object with the planar average along the specified axis.
+        Checks for an OUTCAR and will plot the Fermi energy.
+        """
+        import matplotlib.pyplot as plt
+        from ase.io import read
+        if axis not in [0, 1, 2]:
+            return print('Must provide an integer value of 0, 1, or 2')
+        pot = self.get_average_along_axis(axis, spin)
+        dist = self.distance_along_axis(axis)
+        plt.plot(dist, pot, label='Planar average of axis {}'.format(axis))
+        eFermi = None
+        try:
+            outcar = read('OUTCAR')
+            eFermi = outcar.calc.eFermi
+        except:
+            pass
+        if eFermi:
+            plt.axhline(y=eFermi, linestyle='--', label='Fermi energy')
+        plt.xlabel('Fractional distance along axis {}'.format(axis))
+        plt.ylabel('Local potential (eV)')
+        plt.legend()
+        return plt
 
     def is_spin_polarized(self):
         return (self.spin_down_pot is not None)
