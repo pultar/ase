@@ -236,11 +236,16 @@ class VaspChargeDensity:
                     fd.write('\n')
 
 class VaspLocpot:
-    """Class for reading the Locpot VASP file.
+    """
+    Class for VASP Locpot data
 
-    Filename is normally LOCPOT.
+    This will usually be instantiated with the .from_file() classmethod, e.g.::
+    
+        locpot = VaspLocpot()
 
-    Coding is borrowed from the VaspChargeDensity class and altered to work for LOCPOT."""
+    Non-spin-polarized data is stored in locpot.pot; for spin-polarized data, the 
+    spin-up potential is stored in locpot.pot while spin-down data is stored in locpot.spin_down_pot.
+    """
     def __init__(self, atoms: Atoms, pot: np.ndarray, 
                  spin_down_pot: Optional[np.ndarray] = None,
                  magmom: Optional[np.ndarray] = None) -> None:
