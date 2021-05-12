@@ -740,7 +740,7 @@ def get_valence_electrons(symbol, data, pseudo=None):
             valence = grep_valence(path.join(pseudo_dir, pseudo))
             break
     else:  # not found in a file
-        valence = SSSP_VALENCE[atomic_numbers[''.join(i for i in symbo if not i.isdigit())]]
+        valence = SSSP_VALENCE[atomic_numbers[''.join(i for i in symbol if not i.isdigit())]]
     return valence
 
 
