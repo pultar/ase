@@ -1723,7 +1723,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             if atom.tag > 0:
                 atomic_positions_str.append(
                     '{atom.symbol}{atom.tag} '
-                    '{atom.x:.10f} {atom.y:.10f} {atom.z:.10f} '
+                    '{coords[0]:.10f} {coords[1]:.10f} {coords[2]:.10f} '
                     '{mask}\n'.format(atom=atom, coords=coords, mask=mask))
 
             else:
