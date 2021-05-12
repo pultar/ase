@@ -1630,15 +1630,13 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         else:
             warnings.warn('Ignored unknown constraint {}'.format(constraint))
 
-    pseudo_dirs = get_pseudo_dirs(input_parameters)
-
     # Species info holds the information on the pseudopotential and
     # associated for each element
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
     tagged_species = set("".join(x) for x in zip(atoms.get_chemical_symbols(),
-                                                [str(j) if j>0 else "" for j in atoms.get_tags()]))
+                                                [str(j) if j > 0 else "" for j in atoms.get_tags()]))
     #for species in set(atoms.get_chemical_symbols()):
     for species in tagged_species:
         # Look in all possible locations for the pseudos and try to figure
@@ -1700,14 +1698,14 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     else:
         # Do nothing about magnetisation
         for atom in atoms:
-            tagged_symbol = "%s%d"%(atom.symbol, atom.tag) if atom.tag>0 else atom.symbol
+            tagged_symbol = "%s%d"%(atom.symbol, atom.tag) if atom.tag > 0 else atom.symbol
             if tagged_symbol not in atomic_species:
             # if atom.symbol not in atomic_species:
                 atomic_species[tagged_symbol] = True  # just a placeholder
                 atomic_species_str.append(
                     '{species} {mass} {pseudo}\n'.format(
-                        species=tagged_symbol,  mass=atom.mass,
-                        pseudo=species_info[tagged_symbol]['pseudo']))
+                        species = tagged_symbol,  mass = atom.mass,
+                        pseudo = species_info[tagged_symbol]['pseudo']))
 
             # only inclued mask if something is fixed
             if not all(constraint_mask[atom.index]):
