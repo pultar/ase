@@ -396,7 +396,7 @@ class VaspLocpot:
                              'Check that there is an OUTCAR and it contains a Fermi energy value.')
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2)*np.linalg.norm(self.atoms.cell[axis])
-        polyfit = np.polyfit(distance[:10],average[:10],deg=1)
+        polyfit = np.polyfit(distance[:10], average[:10], deg=1)
         if polyfit[0] >= 1e-3:
             print('WARNING: There appears to be a slope in your vacuum potential. ' 
                   'You might need to apply a dipole correction. ')
