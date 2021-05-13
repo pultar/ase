@@ -2,7 +2,7 @@ import re
 import os
 import numpy as np
 import ase
-import warning
+import warnings
 from ase import Atoms
 from ase.io import read
 from .vasp import Vasp
