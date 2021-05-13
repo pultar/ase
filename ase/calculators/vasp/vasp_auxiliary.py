@@ -395,7 +395,7 @@ class VaspLocpot:
         ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', eFermi=None, tol=1e-3):
+    def calculate_workfunction(self, axis=2, spin='up', eFermi=None, filename='OUTCAR', tol=1e-3):
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read the OUTCAR file 
         in the same location to extract the Fermi energy if eFermi is not set. It is assumed that the
@@ -403,10 +403,11 @@ class VaspLocpot:
 
         Parameters
         ----------
-        axis: Axis to calculate the workfunction
-        spin: Which spin to plot ('up'/'down'/'average')
-        eFermi: Provide a Fermi energy value for calculating the workfunciton
-        tol: Tolerance for determining if there is a slope in the local potential region in vacuum
+        axis: Axis to calculate the workfunction.
+        spin: Which spin to plot ('up'/'down'/'average').
+        eFermi: Provide a Fermi energy value for calculating the workfunciton.
+        filename: Location of the OUTCAR file. Default assumes the file is in the same folder.
+        tol: Tolerance for determining if there is a slope in the local potential region in vacuum.
 
         Return
         ------
@@ -415,11 +416,7 @@ class VaspLocpot:
         if axis not in [0, 1, 2]:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         if not eFermi:
-            try:
-                outcar = read('OUTCAR')
-            except FileNotFoundError:
-                raise FileNotFoundError('Could not read the Fermi energy from the OUTCAR. ' 
-                    'Check that there is an OUTCAR and it contains a Fermi energy value.')
+            outcar = read(filename)
             eFermi = outcar.calc.eFermi
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2)*np.linalg.norm(self.atoms.cell[axis])
