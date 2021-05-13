@@ -283,10 +283,10 @@ class VaspLocpot:
         configured for a noncollinear calculation.
 
         """
-        import ase.io.vasp as aiv
+        from ase.io.vasp import read_vasp
         with open(filename,'r') as fd:
             try:
-                atoms = aiv.read_vasp(fd)
+                atoms = read_vasp(fd)
             except (IOError, ValueError, IndexError):
                 return print('Error reading in initial atomic structure.')
             fd.readline()
