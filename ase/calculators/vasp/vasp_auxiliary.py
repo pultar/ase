@@ -355,16 +355,23 @@ class VaspLocpot:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
-    def plot_planar_average(self, axis=2, spin='up'):
+    def plot_planar_average(self, axis=2, spin='up', show=False, filename=None, ax=None):
         """
         Returns a matplotlib object with the planar average along the specified axis.
         Checks for an OUTCAR and will plot the Fermi energy.
+
+        axis: Axis to plot the planar average
+        spin: Which spin to plot ('up'/'down'/'average')
+        show: Whether to show the plot
+        filename: Name for the saved figure
+        ax: May pass a preformated ax value from matplotlib
         """
-        import matplotlib.pyplot as plt
+        from ase.utils.plotting import SimplePlottingAxes
         if axis not in [0, 1, 2]:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         pot = self.get_average_along_axis(axis, spin)
         dist = self.distance_along_axis(axis)
+        with SimplePlottingAxes(ax
         plt.plot(dist, pot, label='Planar average of axis {}'.format(axis))
         eFermi = None
         try:
