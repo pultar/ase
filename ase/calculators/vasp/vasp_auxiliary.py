@@ -355,13 +355,15 @@ class VaspLocpot:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
-    def plot_planar_average(self, axis=2, spin='up', show=False, filename=None, ax=None):
+    def plot_planar_average(self, axis=2, spin='up', eFermi=None, 
+                            show=False, filename=None, ax=None):
         """
         Returns a matplotlib object with the planar average along the specified axis.
         Checks for an OUTCAR and will plot the Fermi energy.
 
         axis: Axis to plot the planar average
         spin: Which spin to plot ('up'/'down'/'average')
+        eFermi: Fermi energy for structure. If not provided, will search for OUTCAR file.
         show: Whether to show the plot
         filename: Name for the saved figure
         ax: May pass a preformated ax value from matplotlib
@@ -371,20 +373,20 @@ class VaspLocpot:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         pot = self.get_average_along_axis(axis, spin)
         dist = self.distance_along_axis(axis)
-        with SimplePlottingAxes(ax
-        plt.plot(dist, pot, label='Planar average of axis {}'.format(axis))
-        eFermi = None
-        try:
-            outcar = read('OUTCAR')
-        except FileNotFoundError:
-            pass
-        eFermi = outcar.calc.eFermi
+        with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
+            ax.plot(dist, pot, label='Planar average of axis {}'.format(axis))
+        if not eFermi:
+            try:
+                outcar = read('OUTCAR')
+            except FileNotFoundError:
+                pass
+            eFermi = outcar.calc.eFermi
         if eFermi:
-            plt.axhline(y=eFermi, linestyle='--', label='Fermi energy')
-        plt.xlabel('Fractional distance along axis {}'.format(axis))
-        plt.ylabel('Local potential (eV)')
-        plt.legend()
-        return plt
+            ax.axhline(y=eFermi, linestyle='--', label='Fermi energy')
+        ax.xlabel('Fractional distance along axis {}'.format(axis))
+        ax.ylabel('Local potential (eV)')
+        ax.legend()
+        return ax
 
     def calculate_workfunction(self, axis=2, spin='up', eFermi=None):
         """
