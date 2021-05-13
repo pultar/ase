@@ -2,6 +2,7 @@ import re
 import os
 import numpy as np
 import ase
+import warning
 from ase import Atoms
 from ase.io import read
 from .vasp import Vasp
@@ -424,7 +425,7 @@ class VaspLocpot:
         distance = self.distance_along_axis(axis=2)*np.linalg.norm(self.atoms.cell[axis])
         polyfit = np.polyfit(distance[:10], average[:10], deg=1)
         if polyfit[0] >= tol:
-            print('WARNING: There appears to be a slope in your vacuum potential. ' 
+            warnings.warn('There appears to be a slope in your vacuum potential. ' 
                   'You might need to apply a dipole correction. ')
         if not eFermi:
             raise ValueError('Either no Fermi energy value was provided, there is no OUTCAR '
