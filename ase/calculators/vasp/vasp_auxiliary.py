@@ -394,10 +394,22 @@ class VaspLocpot:
         ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', eFermi=None):
+    def calculate_workfunction(self, axis=2, spin='up', eFermi=None, tol=1e-3):
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read the OUTCAR file 
-        in the same location to extract the Fermi energy if eFermi is not set.
+        in the same location to extract the Fermi energy if eFermi is not set. It is assumed that the
+        atoms are centered in the middle of the cell and the vacuum resides at the periodic boundaries.
+
+        Parameters
+        ----------
+        axis: Axis to calculate the workfunction
+        spin: Which spin to plot ('up'/'down'/'average')
+        eFermi: Provide a Fermi energy value for calculating the workfunciton
+        tol: Tolerance for determining if there is a slope in the local potential region in vacuum
+
+        Return
+        ------
+        workfunction: The calculated workfunction 
         """
         if axis not in [0, 1, 2]:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
@@ -411,9 +423,12 @@ class VaspLocpot:
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2)*np.linalg.norm(self.atoms.cell[axis])
         polyfit = np.polyfit(distance[:10], average[:10], deg=1)
-        if polyfit[0] >= 1e-3:
+        if polyfit[0] >= tol:
             print('WARNING: There appears to be a slope in your vacuum potential. ' 
                   'You might need to apply a dipole correction. ')
+        if not eFermi:
+            raise ValueError('Either no Fermi energy value was provided, there is no OUTCAR '
+                'file in this folder or it could not be found in the OUTCAR file.')
         return average[0] - eFermi
 
     def is_spin_polarized(self):
