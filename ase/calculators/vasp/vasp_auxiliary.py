@@ -285,11 +285,8 @@ class VaspLocpot:
 
         """
         from ase.io.vasp import read_vasp
-        with open(filename,'r') as fd:
-            try:
-                atoms = read_vasp(fd)
-            except (IOError, ValueError, IndexError):
-                raise IOError('Error reading in initial atomic structure.')
+        with open(filename, 'r') as fd:
+            atoms = read_vasp(fd)
             fd.readline()
             ngr = fd.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
@@ -333,9 +330,9 @@ class VaspLocpot:
             elif spin.lower() == 'average':
                 pot = (self.pot + self.spin_down_pot)/2
         elif not self.is_spin_polarized and spin in ['down', 'average']:
-            return print("This file appears to come from a calculation with no spin-polarization.")
+            raise ValueError("This file appears to come from a calculation with no spin-polarization.")
         else:
-            return print("Must specify only 'up'/'down'/'average'.")
+            raise ValueError("Must specify only 'up'/'down'/'average'.")
         if axis == 0:
             for i in range(pot.shape[axis]):
                 average.append(np.average(pot[i,:,:]))
@@ -383,10 +380,7 @@ class VaspLocpot:
         with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
             ax.plot(dist, pot, label='Planar average of axis {}'.format(axis))
         if not eFermi:
-            try:
-                outcar = read('OUTCAR')
-            except FileNotFoundError:
-                pass
+            outcar = read('OUTCAR')
             eFermi = outcar.calc.eFermi
         if eFermi:
             ax.axhline(y=eFermi, linestyle='--', label='Fermi energy')
