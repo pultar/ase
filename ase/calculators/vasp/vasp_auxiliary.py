@@ -288,7 +288,7 @@ class VaspLocpot:
             try:
                 atoms = read_vasp(fd)
             except (IOError, ValueError, IndexError):
-                return print('Error reading in initial atomic structure.')
+                raise IOError('Error reading in initial atomic structure.')
             fd.readline()
             ngr = fd.readline().split()
             ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
@@ -322,7 +322,7 @@ class VaspLocpot:
         spin: May specify 'up'/'down'/'average' where 'average' returns the average of the first two.
         """
         if axis not in [0, 1, 2]:
-            return print('Must provide an integer value of 0, 1, or 2.')
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
         average = []
         if spin.lower() == 'up':
             pot = self.pot
@@ -352,7 +352,7 @@ class VaspLocpot:
         This corresponds to the size of the mesh in the Locpot file.
         """
         if axis not in [0, 1, 2]:
-            return print('Must provide an integer value of 0, 1, or 2.')
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
     def plot_planar_average(self, axis=2, spin='up'):
@@ -362,16 +362,16 @@ class VaspLocpot:
         """
         import matplotlib.pyplot as plt
         if axis not in [0, 1, 2]:
-            return print('Must provide an integer value of 0, 1, or 2')
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
         pot = self.get_average_along_axis(axis, spin)
         dist = self.distance_along_axis(axis)
         plt.plot(dist, pot, label='Planar average of axis {}'.format(axis))
         eFermi = None
         try:
             outcar = read('OUTCAR')
-            eFermi = outcar.calc.eFermi
         except FileNotFoundError:
             pass
+        eFermi = outcar.calc.eFermi
         if eFermi:
             plt.axhline(y=eFermi, linestyle='--', label='Fermi energy')
         plt.xlabel('Fractional distance along axis {}'.format(axis))
@@ -385,14 +385,14 @@ class VaspLocpot:
         in the same location to extract the Fermi energy if eFermi is not set.
         """
         if axis not in [0, 1, 2]:
-            return print('Must provide an integer value of 0, 1, or 2')
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
         if not eFermi:
             try:
                 outcar = read('OUTCAR')
-                eFermi = outcar.calc.eFermi
             except FileNotFoundError:
-                return print('Could not read the Fermi energy from the OUTCAR. ' 
-                             'Check that there is an OUTCAR and it contains a Fermi energy value.')
+                raise FileNotFoundError('Could not read the Fermi energy from the OUTCAR. ' 
+                    'Check that there is an OUTCAR and it contains a Fermi energy value.')
+            eFermi = outcar.calc.eFermi
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2)*np.linalg.norm(self.atoms.cell[axis])
         polyfit = np.polyfit(distance[:10], average[:10], deg=1)
