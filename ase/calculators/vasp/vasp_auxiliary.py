@@ -361,12 +361,18 @@ class VaspLocpot:
         Returns a matplotlib object with the planar average along the specified axis.
         Checks for an OUTCAR and will plot the Fermi energy.
 
+        Parameters
+        ----------
         axis: Axis to plot the planar average
         spin: Which spin to plot ('up'/'down'/'average')
         eFermi: Fermi energy for structure. If not provided, will search for OUTCAR file.
         show: Whether to show the plot
         filename: Name for the saved figure
         ax: May pass a preformated ax value from matplotlib
+
+        Return
+        ------
+        ax: ax object from matplotlib
         """
         from ase.utils.plotting import SimplePlottingAxes
         if axis not in [0, 1, 2]:
@@ -383,8 +389,8 @@ class VaspLocpot:
             eFermi = outcar.calc.eFermi
         if eFermi:
             ax.axhline(y=eFermi, linestyle='--', label='Fermi energy')
-        ax.xlabel('Fractional distance along axis {}'.format(axis))
-        ax.ylabel('Local potential (eV)')
+        ax.set_xlabel('Fractional distance along axis {}'.format(axis))
+        ax.set_ylabel('Local potential (eV)')
         ax.legend()
         return ax
 
