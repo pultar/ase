@@ -433,7 +433,7 @@ class VaspLocpot:
         return average[0] - eFermi
 
     def is_spin_polarized(self):
-        return (self.spin_down_pot is not None)
+        return self.spin_down_pot is not None
 
 class VaspDos:
     """Class for representing density-of-states produced by VASP
