@@ -312,7 +312,6 @@ class VaspLocpot:
                 if line1.split() == ngr:
                     spin_down_pot = np.empty(ng)
                     cls._read_pot(fd, spin_down_pot)
-        fd.close()
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
     def get_average_along_axis(self, axis=2, spin='up'):
