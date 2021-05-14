@@ -394,7 +394,7 @@ class VaspLocpot:
         return ax
 
     def calculate_workfunction(self, axis=2, spin='up', efermi=None,
-                               filename='OUTCAR', tol=1e-3):
+                               outcar_location='OUTCAR', tol=1e-3):
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
         the OUTCAR file in the same location to extract the Fermi energy if
@@ -406,8 +406,8 @@ class VaspLocpot:
         axis: Axis to calculate the workfunction.
         spin: Which spin to plot ('up'/'down'/'average').
         efermi: Provide a Fermi energy value for calculating the workfunciton.
-        filename: Location of the OUTCAR file. Default assumes the file is in
-                  the same folder.
+        outcar_location: Location of the OUTCAR file. Default assumes the file
+                  is in the same folder.
         tol: Tolerance for determining if there is a slope in the local
              potential region in vacuum.
 
@@ -418,7 +418,7 @@ class VaspLocpot:
         if axis not in [0, 1, 2]:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         if not efermi:
-            outcar = read(filename)
+            outcar = read(outcar_location)
             efermi = outcar.calc.eFermi
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2) * \
