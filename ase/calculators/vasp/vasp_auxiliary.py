@@ -288,9 +288,9 @@ class VaspLocpot:
         with open(filename, 'r') as fd:
             atoms = read_vasp(fd)
             fd.readline()
-            ngr = fd.readline().split()
-            ng = (int(ngr[0]), int(ngr[1]), int(ngr[2]))
-            pot = np.empty(ng)
+            grid_size = fd.readline()
+            grid = tuple(map(int,grid_size.split()))
+            pot = np.empty(grid)
             cls._read_pot(fd, pot)
             # Check if the file has a spin-polarized local potential, and
             # if so, read it in.
@@ -300,15 +300,15 @@ class VaspLocpot:
             if line1 == '':
                 return cls(atoms,pot)
             # Check to see if the next line equals the previous grid settings
-            elif line1.split() == ngr:
-                spin_down_pot = np.empty(ng)
+            elif line1 == grid_size:
+                spin_down_pot = np.empty(grid)
                 cls._read_pot(fd, spin_down_pot)
-            elif line1.split() != ngr:
+            elif line1 != grid_size:
                 fd.seek(fl)
                 magmom = np.fromfile(fd, count=len(atoms), sep=' ')
                 line1 = fd.readline()
-                if line1.split() == ngr:
-                    spin_down_pot = np.empty(ng)
+                if line1 == grid_size:
+                    spin_down_pot = np.empty(grid)
                     cls._read_pot(fd, spin_down_pot)
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
