@@ -393,7 +393,7 @@ class VaspLocpot:
         ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', efermi=None,
+    def calculate_workfunction(self, axis=2, spin='up', efermi=0,
                                outcar_location='OUTCAR', tol=1e-3):
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
