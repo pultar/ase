@@ -275,7 +275,7 @@ class VaspLocpot:
                 pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
 
     @classmethod
-    def from_file(cls, filename='LOCPOT'):
+    def from_file(cls, filename='LOCPOT') -> 'VaspLocpot':
         """Read LOCPOT file.
 
         LOCPOT contains local potential.
@@ -284,6 +284,8 @@ class VaspLocpot:
         been configured for a noncollinear calculation.
         """
         from ase.io.vasp import read_vasp
+        spin_down_pot = None
+        magmom = None
         with open(filename, 'r') as fd:
             atoms = read_vasp(fd)
             fd.readline()
@@ -311,7 +313,7 @@ class VaspLocpot:
                     cls._read_pot(fd, spin_down_pot)
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
-    def get_average_along_axis(self, axis=2, spin='up'):
+    def get_average_along_axis(self, axis=2, spin='up') -> np.ndarray:
         """
         Returns the average potential along the specified axis (0,1,2).
 
@@ -343,9 +345,9 @@ class VaspLocpot:
         elif axis == 2:
             for i in range(pot.shape[axis]):
                 average.append(np.average(pot[:, :, i]))
-        return average
+        return np.array(average)
 
-    def distance_along_axis(self, axis=2):
+    def distance_along_axis(self, axis=2) -> np.ndarray:
         """
         Returns an array of the fractional distance along the specified axis
         (from 0 to 1). This corresponds to the size of the mesh in the Locpot
@@ -393,8 +395,8 @@ class VaspLocpot:
             ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', reference=0,
-                               tol=1e-3):
+    def calculate_workfunction(self, axis=2, spin='up', reference=0.0,
+                               tol=1e-3) -> float:
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
         the OUTCAR file in the same location to extract the Fermi energy if
