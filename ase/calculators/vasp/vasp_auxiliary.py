@@ -4,7 +4,6 @@ import numpy as np
 import ase
 import warnings
 from ase import Atoms
-from ase.io import read
 from .vasp import Vasp
 from ase.calculators.singlepoint import SinglePointCalculator
 from typing import Optional
@@ -356,7 +355,7 @@ class VaspLocpot:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
-    def plot_planar_average(self, axis=2, spin='up', efermi=None,
+    def plot_planar_average(self, axis=2, spin='up', reference=0,
                             show=False, filename=None, ax=None):
         """
         Returns a matplotlib object with the planar average along the specified
@@ -364,13 +363,14 @@ class VaspLocpot:
 
         Parameters
         ----------
-        axis: Axis to plot the planar average
-        spin: Which spin to plot ('up'/'down'/'average')
-        efermi: Fermi energy for structure. If not provided, will search for
-                OUTCAR file.
-        show: Whether to show the plot
-        filename: Name for the saved figure
-        ax: May pass a preformated ax value from matplotlib
+        axis: Axis to plot the planar average.
+        spin: Which spin to plot ('up'/'down'/'average').
+        reference: Reference point for local potential which is normally the
+                   Fermi energy. The Fermi energy can be read in with:
+                   ef = read('OUTCAR').get_fermi_energy().
+        show: Whether to show the plot.
+        filename: Name for the figure.
+        ax: May pass a preformated ax object from matplotlib.
 
         Return
         ------
@@ -383,18 +383,18 @@ class VaspLocpot:
         dist = self.distance_along_axis(axis)
         with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
             ax.plot(dist, pot, label='Planar average of axis {}'.format(axis))
-        if not efermi:
-            outcar = read('OUTCAR')
-            efermi = outcar.calc.eFermi
-        if efermi:
-            ax.axhline(y=efermi, linestyle='--', label='Fermi energy')
-        ax.set_xlabel('Fractional distance along axis {}'.format(axis))
-        ax.set_ylabel('Local potential (eV)')
-        ax.legend()
+            if reference:
+                ref_label = 'Fermi energy'
+            else:
+                ref_label = 'Reference'
+            ax.axhline(y=reference, linestyle='--', label=ref_label)
+            ax.set_xlabel('Fractional distance along axis {}'.format(axis))
+            ax.set_ylabel('Local potential (eV)')
+            ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', efermi=0,
-                               outcar_location='OUTCAR', tol=1e-3):
+    def calculate_workfunction(self, axis=2, spin='up', reference=0,
+                               tol=1e-3):
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
         the OUTCAR file in the same location to extract the Fermi energy if
@@ -405,11 +405,12 @@ class VaspLocpot:
         ----------
         axis: Axis to calculate the workfunction.
         spin: Which spin to plot ('up'/'down'/'average').
-        efermi: Provide a Fermi energy value for calculating the workfunciton.
-        outcar_location: Location of the OUTCAR file. Default assumes the file
-                  is in the same folder.
-        tol: Tolerance for determining if there is a slope in the local
-             potential region in vacuum.
+        reference: Provide a reference energy value (typically the Fermi
+                   energy) for calculating the workfunciton. The Fermi energy
+                   can be accessed with:
+                   ef = read('OUTCAR'.get_fermi_energy()
+        tol: Tolerance for determining if there is a slope in the vacuum region
+             of the local potential.
 
         Return
         ------
@@ -417,9 +418,6 @@ class VaspLocpot:
         """
         if axis not in [0, 1, 2]:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
-        if not efermi:
-            outcar = read(outcar_location)
-            efermi = outcar.calc.eFermi
         average = self.get_average_along_axis(axis, spin)
         distance = self.distance_along_axis(axis=2) * \
             np.linalg.norm(self.atoms.cell[axis])
@@ -428,11 +426,7 @@ class VaspLocpot:
             warnings.warn('There appears to be a slope in your vacuum '
                           'potential. You might need to apply a dipole '
                           'correction. ')
-        if not efermi:
-            raise ValueError('Either no Fermi energy value was provided, there'
-                             ' is no OUTCAR file in this folder or it could not'
-                             ' be found in the OUTCAR file.')
-        return average[0] - efermi
+        return average[0] - reference
 
     def is_spin_polarized(self):
         return self.spin_down_pot is not None
