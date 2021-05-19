@@ -385,11 +385,7 @@ class VaspLocpot:
         dist = self.distance_along_axis(axis)
         with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
             ax.plot(dist, pot, label='Planar average of axis {}'.format(axis))
-            if reference:
-                ref_label = 'Fermi energy'
-            else:
-                ref_label = 'Reference'
-            ax.axhline(y=reference, linestyle='--', label=ref_label)
+            ax.axhline(y=reference, linestyle='--', label='Reference')
             ax.set_xlabel('Fractional distance along axis {}'.format(axis))
             ax.set_ylabel('Local potential (eV)')
             ax.legend()
