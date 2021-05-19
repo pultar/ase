@@ -428,6 +428,11 @@ class VaspLocpot:
             warnings.warn('There appears to be a slope in your vacuum '
                           'potential. You might need to apply a dipole '
                           'correction. ')
+        if reference == 0:
+            warnings.warn('The returned value is simply the local potential '
+                          'without the Fermi energy subtracted. Set the '
+                          'reference to the Fermi energy to get the '
+                          'workfunction.')
         return average[0] - reference
 
     def is_spin_polarized(self):
