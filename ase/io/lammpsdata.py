@@ -149,7 +149,8 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
             fields = line.split()
             if section == "Atoms":  # id *
                 id = int(fields[0])
-                if style == "full" and (len(fields) == 7 or len(fields) == 10):
+                if style == "full" and (
+                        len(fields) == 7 or len(fields) == 10):
                     # id mol-id type q x y z [tx ty tz]
                     pos_in[id] = (
                         int(fields[2]),
@@ -428,9 +429,9 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     """Write atomic structure data to a LAMMPS data file."""
 
     # FIXME: We should add a check here that the encoding of the file object
-    #        is actually ascii once the 'encoding' attribute of IOFormat objects
-    #        starts functioning in implementation (currently it doesn't do
-    #         anything).
+    #        is actually ascii once the 'encoding' attribute of IOFormat
+    #        objects starts functioning in implementation (currently it
+    #        doesn't do  anything).
 
     if isinstance(atoms, list):
         if len(atoms) > 1:
@@ -524,8 +525,8 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         else:
             # Assigning each atom to a distinct molecule id would seem
             # preferable above assigning all atoms to a single molecule id per
-            # default, as done within ase <= v 3.19.1. I.e.,
-            # molecules = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
+            # default, as done within ase <= v 3.19.1. I.e., molecules =
+            # = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
             # However, according to LAMMPS default behavior,
             molecules = np.zeros(len(atoms), dtype=int)
             # which is what happens if one creates new atoms within LAMMPS
@@ -534,8 +535,8 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
             #    The molecule ID is a 2nd identifier attached to an atom.
             #    Normally, it is a number from 1 to N, identifying which
             #    molecule the atom belongs to. It can be 0 if it is a
-            #    non-bonded atom or if you don't care to keep track of molecule
-            #    assignments.
+            #    non-bonded atom or if you don't care to keep track of
+            #    molecule assignments.
 
         for i, (m, q, r) in enumerate(zip(molecules, charges, pos)):
             # Convert position and charge from ASE units to LAMMPS units
@@ -543,7 +544,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
             q = convert(q, "charge", "ASE", units)
             s = species.index(symbols[i]) + 1
             fd.write("{0:>6} {1:>3} {2:>3} {3:>5} {4:23.17g} {5:23.17g} "
-                    "{6:23.17g}\n".format(*(i + 1, m, s, q) + tuple(r)))
+                     "{6:23.17g}\n".format(*(i + 1, m, s, q) + tuple(r)))
     elif atom_style == 'molecular':
         # Atom_style 'molecular' is identical to 'full', but has no charges.
         # The label 'mol-id' has apparently been introduced in read earlier,
@@ -563,8 +564,8 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         else:
             # Assigning each atom to a distinct molecule id would seem
             # preferable above assigning all atoms to a single molecule id per
-            # default, as done within ase <= v 3.19.1. I.e.,
-            # molecules = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
+            # default, as done within ase <= v 3.19.1. I.e., molecules =
+            # = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
             # However, according to LAMMPS default behavior,
             molecules = np.zeros(len(atoms), dtype=int)
             # which is what happens if one creates new atoms within LAMMPS
@@ -573,15 +574,15 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
             #    The molecule ID is a 2nd identifier attached to an atom.
             #    Normally, it is a number from 1 to N, identifying which
             #    molecule the atom belongs to. It can be 0 if it is a
-            #    non-bonded atom or if you don't care to keep track of molecule
-            #    assignments.
+            #    non-bonded atom or if you don't care to keep track of
+            #    molecule assignments.
 
         for i, (m, r) in enumerate(zip(molecules, pos)):
             # Convert position from ASE units to LAMMPS units
             r = convert(r, "distance", "ASE", units)
             s = species.index(symbols[i]) + 1
             fd.write("{0:>6} {1:>3} {2:>3} {3:23.17g} {4:23.17g} "
-                    "{5:23.17g}\n".format(*(i + 1, m, s) + tuple(r)))
+                     "{5:23.17g}\n".format(*(i + 1, m, s) + tuple(r)))
     else:
         raise NotImplementedError
 
