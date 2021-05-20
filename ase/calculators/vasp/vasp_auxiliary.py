@@ -369,7 +369,7 @@ class VaspLocpot:
         spin: Which spin to plot ('up'/'down'/'average').
         reference: Reference point for local potential which is normally the
                    Fermi energy. The Fermi energy can be read in with:
-                   ef = read('OUTCAR').get_fermi_energy().
+                   ef = read('OUTCAR').calc.get_fermi_level().
         show: Whether to show the plot.
         filename: Name for the figure.
         ax: May pass a preformated ax object from matplotlib.
@@ -406,7 +406,7 @@ class VaspLocpot:
         reference: Provide a reference energy value (typically the Fermi
                    energy) for calculating the workfunciton. The Fermi energy
                    can be accessed with:
-                   ef = read('OUTCAR'.get_fermi_energy()
+                   ef = read('OUTCAR').calc.get_fermi_level()
         tol: Tolerance for determining if there is a slope in the vacuum region
              of the local potential.
 
