@@ -165,6 +165,25 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[8]),
                             int(fields[9]),
                         )
+                elif style == "molecular" and (
+                        len(fields) == 6 or len(fields) == 9):
+                    # id mol-id type x y z [tx ty tz]
+                    pos_in[id] = (
+                        int(fields[2]),
+                        float(fields[3]),
+                        float(fields[4]),
+                        float(fields[5]),
+                    )
+                    mol_id_in[id] = int(fields[1])
+                    # Since style -- 'molecular' has no charges, we attribute
+                    # zero to minimize the impact of this logic.
+                    charge_in[id] = 0
+                    if len(fields) == 9:
+                        travel_in[id] = (
+                            int(fields[6]),
+                            int(fields[7]),
+                            int(fields[8]),
+                        )
                 elif style == "atomic" and (
                         len(fields) == 5 or len(fields) == 8
                 ):
@@ -488,7 +507,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                      .format(*(i + 1, s, q) + tuple(r)))
     elif atom_style == 'full':
         charges = atoms.get_initial_charges()
-        # The label 'mol-id' has apparenlty been introduced in read earlier,
+        # The label 'mol-id' has apparently been introduced in read earlier,
         # but so far not implemented here. Wouldn't a 'underscored' label
         # be better, i.e. 'mol_id' or 'molecule_id'?
         if atoms.has('mol-id'):
@@ -504,7 +523,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                     " each atom must have exactly one mol-id."))
         else:
             # Assigning each atom to a distinct molecule id would seem
-            # preferableabove assigning all atoms to a single molecule id per
+            # preferable above assigning all atoms to a single molecule id per
             # default, as done within ase <= v 3.19.1. I.e.,
             # molecules = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
             # However, according to LAMMPS default behavior,
@@ -527,7 +546,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                     "{6:23.17g}\n".format(*(i + 1, m, s, q) + tuple(r)))
     elif atom_style == 'molecular':
         # Atom_style 'molecular' is identical to 'full', but has no charges.
-        # The label 'mol-id' has apparenlty been introduced in read earlier,
+        # The label 'mol-id' has apparently been introduced in read earlier,
         # but so far not implemented here. Wouldn't a 'underscored' label
         # be better, i.e. 'mol_id' or 'molecule_id'?
         if atoms.has('mol-id'):
@@ -543,7 +562,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                     " each atom must have exactly one mol-id."))
         else:
             # Assigning each atom to a distinct molecule id would seem
-            # preferableabove assigning all atoms to a single molecule id per
+            # preferable above assigning all atoms to a single molecule id per
             # default, as done within ase <= v 3.19.1. I.e.,
             # molecules = np.arange(start=1, stop=len(atoms)+1, step=1, dtype=int)
             # However, according to LAMMPS default behavior,
