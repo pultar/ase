@@ -13,6 +13,7 @@ ESPRESSO.
 
 import os
 import operator as op
+import re
 import warnings
 from collections import OrderedDict
 from os import path
@@ -424,12 +425,14 @@ def parse_pwo_start(lines, index=0):
                 [float(x) for x in lines[idx + 2].split()[3:6]],
                 [float(x) for x in lines[idx + 3].split()[3:6]]])
         elif 'positions (alat units)' in line:
-            info['symbols'] = [
-                label_to_symbol(at_line.split()[1])
-                for at_line in lines[idx + 1:idx + 1 + info['nat']]]
-            info['positions'] = [
-                [float(x) * info['celldm(1)'] for x in at_line.split()[6:9]]
-                for at_line in lines[idx + 1:idx + 1 + info['nat']]]
+            info['symbols'], info['positions'] = [], []
+
+            for at_line in lines[idx + 1:idx + 1 + info['nat']]:
+                sym, x, y, z = parse_position_line(at_line)
+                info['symbols'].append(label_to_symbol(sym))
+                info['positions'].append([x * info['celldm(1)'],
+                                          y * info['celldm(1)'],
+                                          z * info['celldm(1)']])
             # This should be the end of interesting info.
             # Break here to avoid dealing with large lists of kpoints.
             # Will need to be extended for DFTCalculator info.
@@ -441,6 +444,38 @@ def parse_pwo_start(lines, index=0):
                           cell=info['cell'], pbc=True)
 
     return info
+
+
+def parse_position_line(line):
+    """Parse a single line from a pw.x output file.
+
+    The line must contain information about the atomic symbol and the position,
+    e.g.
+
+    995           Sb  tau( 995) = (   1.4212023   0.7037863   0.1242640  )
+
+    Parameters
+    ----------
+    line : str
+        Line to be parsed.
+
+    Returns
+    -------
+    sym : str
+        Atomic symbol.
+    x : float
+        x-position.
+    y : float
+        y-position.
+    z : float
+        z-position.
+    """
+    pat = re.compile(r'\s*\d+\s*(\S+)\s*tau\(\s*\d+\)\s*='
+                     r'\s*\(\s*(\S+)\s+(\S+)\s+(\S+)\s*\)')
+    match = pat.match(line)
+    assert match is not None
+    sym, x, y, z = match.group(1, 2, 3, 4)
+    return sym, float(x), float(y), float(z)
 
 
 @iofunction('rU')
@@ -1595,25 +1630,20 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         else:
             warnings.warn('Ignored unknown constraint {}'.format(constraint))
 
-
-    ## modified
-    #pseudo_dirs = get_pseudo_dirs(input_parameters)
     # Species info holds the information on the pseudopotential and
     # associated for each element
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
-    ## modified
-    tagged_species = set("".join(x) for x in zip(atoms.get_chemical_symbols(),
-                                                [str(j) if j>0 else "" for j in atoms.get_tags()]))
-    # for species in set(atoms.get_chemical_symbols()):
+    tagged_species = set("".join(x) for x in zip(atoms.get_chemical_symbols(), [str(j) if j > 0 else "" for j in atoms.get_tags()]))
+    #for species in set(atoms.get_chemical_symbols()):
     for species in tagged_species:
         # Look in all possible locations for the pseudos and try to figure
         # out the number of valence electrons
         pseudo = pseudopotentials.get(species, None)
         valence = get_valence_electrons(species, input_parameters, pseudo)
-        species_info[species] = {'pseudo': pseudo,
-                                 'valence': valence}
+        species_info[species] = {'pseudo': pseudo, 'valence': valence}
+
     # Convert atoms into species.
     # Each different magnetic moment needs to be a separate type even with
     # the same pseudopotential (e.g. an up and a down for AFM).
@@ -1667,15 +1697,14 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     else:
         # Do nothing about magnetisation
         for atom in atoms:
-            tagged_symbol = "%s%d"%(atom.symbol, atom.tag) if atom.tag>0 else atom.symbol
+            tagged_symbol = "%s%d" % (atom.symbol, atom.tag) if atom.tag > 0 else atom.symbol
             if tagged_symbol not in atomic_species:
-            # if atom.symbol not in atomic_species:
                 atomic_species[tagged_symbol] = True  # just a placeholder
                 atomic_species_str.append(
                     '{species} {mass} {pseudo}\n'.format(
-                        species=tagged_symbol,  mass=atom.mass,
+                        species=tagged_symbol, mass=atom.mass,
                         pseudo=species_info[tagged_symbol]['pseudo']))
-
+                    
             # only inclued mask if something is fixed
             if not all(constraint_mask[atom.index]):
                 mask = ' {mask[0]} {mask[1]} {mask[2]}'.format(
@@ -1687,7 +1716,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 coords = [atom.a, atom.b, atom.c]
             else:
                 coords = atom.position
-            ## modified
             if atom.tag > 0:
                 specname = '{atom.symbol}{atom.tag} '.format(atom=atom)
             else:
@@ -1696,7 +1724,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 '{specname} '
                 '{coords[0]:.10f} {coords[1]:.10f} {coords[2]:.10f} '
                 '{mask}\n'.format(specname=specname, coords=coords, mask=mask))
-
     # Add computed parameters
     # different magnetisms means different types
     input_parameters['system']['ntyp'] = len(atomic_species)
