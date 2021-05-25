@@ -166,25 +166,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[8]),
                             int(fields[9]),
                         )
-                elif style == "molecular" and (
-                        len(fields) == 6 or len(fields) == 9):
-                    # id mol-id type x y z [tx ty tz]
-                    pos_in[id] = (
-                        int(fields[2]),
-                        float(fields[3]),
-                        float(fields[4]),
-                        float(fields[5]),
-                    )
-                    mol_id_in[id] = int(fields[1])
-                    # Since style -- 'molecular' has no charges, we attribute
-                    # zero to minimize the impact of this logic.
-                    charge_in[id] = 0
-                    if len(fields) == 9:
-                        travel_in[id] = (
-                            int(fields[6]),
-                            int(fields[7]),
-                            int(fields[8]),
-                        )
                 elif style == "atomic" and (
                         len(fields) == 5 or len(fields) == 8
                 ):
@@ -545,11 +526,11 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
             s = species.index(symbols[i]) + 1
             fd.write("{0:>6} {1:>3} {2:>3} {3:>5} {4:23.17g} {5:23.17g} "
                      "{6:23.17g}\n".format(*(i + 1, m, s, q) + tuple(r)))
-    elif atom_style == 'molecular':
-        # Atom_style 'molecular' is identical to 'full', but has no charges.
-        # The label 'mol-id' has apparently been introduced in read earlier,
-        # but so far not implemented here. Wouldn't a 'underscored' label
-        # be better, i.e. 'mol_id' or 'molecule_id'?
+    elif atom_style in ("angle", "bond", "molecular"):
+        # Atom_styles 'angle', 'bond' and 'molecular' is identical to 'full',
+        # with no charges. The label 'mol-id' has apparently been introduced
+        # in read earlier, but so far not implemented here. Wouldn't a
+        # 'underscored' label be better, i.e. 'mol_id' or 'molecule_id'?
         if atoms.has('mol-id'):
             molecules = atoms.get_array('mol-id')
             if not np.issubdtype(molecules.dtype, np.integer):
