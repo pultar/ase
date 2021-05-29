@@ -796,18 +796,17 @@ class Aims(FileIOCalculator):
         lines = open(self.out, 'r').readlines()
         # Run through each line in the aims.out file.
         for line in lines:
-            # First look for the Number of Kohn-Sham states
-            # specified in 'Structure-dependent array size
-            # parameters'
-            if line.rfind(
-                    'Number of Kohn-Sham states') > -1:
+            # First look for the Number of Kohn-Sham states specified
+            # in `Structure-dependent array size parameters`
+            if line.rfind('Number of Kohn-Sham states') > -1:
                 num_KS_states = int(line.split(':')[-1].strip())
             # Check if the total number of Kohn-Sham states has
-            # been reduced.
+            # been reduced. If yes, split the line along white spaces
+            # and remove the period behind the number of basis sets.
             if line.rfind(
                     'Reducing total number of  Kohn-Sham states to') > -1:
                 reduced_num_KS_states = int(
-                    line.split(':')[-1].strip())
+                    line.split()[-1].strip('.'))
                 break
         # If the number of Kohn-Sham states has been reduced before
         # starting computation return the reduced number since this
