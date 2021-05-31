@@ -2,7 +2,6 @@
 
 The class is found here: ase/calculators/aims.py."""
 
-import pytest  # noqa: F401; pylint: disable=unused-variable
 import ase.calculators.aims
 
 
