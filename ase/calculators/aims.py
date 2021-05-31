@@ -770,7 +770,7 @@ class Aims(FileIOCalculator):
     def get_number_of_bands(self):
         return self.read_number_of_bands()
 
-    def read_number_of_bands(self):
+    def read_number_of_bands(self) -> int:
         """Return the smaller of either # of basis fxns or KS states.
         
         This method parses the aims.out file to find the total number
@@ -783,8 +783,8 @@ class Aims(FileIOCalculator):
         number is reduced by the program before computation starts.
 
         Returns:
-        num_KS_states: (int) specifies the number of Kohn-Sham
-            states used in the calculation.
+        num_KS_states: Specifies the number of Kohn-Sham states used in
+            the calculation.
         """
         # We're not sure if the number of KS states will be reduced
         # before running the program so we set this var to None
