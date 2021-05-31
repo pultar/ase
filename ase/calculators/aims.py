@@ -796,25 +796,24 @@ class Aims(FileIOCalculator):
         # defined after trying to parse information from aims.out.
         reduced_num_KS_states = None
         # Open the aims.out file, read the lines.
-        print(self.out)
-        lines = open(self.out, 'r').readlines()
-        # Run through each line in the aims.out file.
-        for line in lines:
-            # First look for the Number of Kohn-Sham states specified
-            # in `Structure-dependent array size parameters`
-            if line.rfind('Number of Kohn-Sham states') > -1:
-                num_KS_states = int(line.split(':')[-1].strip())
-            # Check if the total number of Kohn-Sham states has
-            # been reduced. If yes, split the line along white spaces
-            # and remove the period behind the number of basis sets.
-            if line.rfind(
-                    'Reducing total number of  Kohn-Sham states to') > -1:
-                reduced_num_KS_states = int(
-                    line.split()[-1].strip('.'))
-                break
+        with open(self.out, 'r') as fd:
+            # Run through each line in the aims.out file.
+            for line in fd.readlines():
+                # First look for the Number of Kohn-Sham states specified
+                # in `Structure-dependent array size parameters`.
+                if line.rfind('Number of Kohn-Sham states') > -1:
+                    num_KS_states = int(line.split(':')[-1].strip())
+                # Check if the total number of Kohn-Sham states has
+                # been reduced. If yes, split the line along white spaces
+                # and remove the period behind the number of basis sets.
+                if line.rfind(
+                        'Reducing total number of  Kohn-Sham states to') > -1:
+                    reduced_num_KS_states = int(
+                        line.split()[-1].strip('.'))
+                    break
         # If the number of Kohn-Sham states has been reduced before
         # starting computation return the reduced number since this
-        # is the nubmer used by the program during compuation.
+        # is the number used by the program during compuation.
         if reduced_num_KS_states is not None:
             num_KS_states = reduced_num_KS_states
         return num_KS_states
