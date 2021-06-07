@@ -1886,7 +1886,6 @@ class GenerateVaspInput:
 
         return np.array(kpts)
 
-
     def read_potcar(self, filename):
         """ Read the pseudopotential XC functional from POTCAR file.
         """
