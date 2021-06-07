@@ -385,6 +385,21 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
 
             if event == 'end':
                 if elem.tag == 'kpoints':
+                    generation_block = list(elem.iter(tag='generation'))
+                    # This block can also be 'listgenerated', in which case we
+                    # don't try to read it: the format is different.
+                    if (generation_block
+                        and generation_block[0]
+                            .attrib['param'] == 'Monkhorst-Pack'):
+                        for subelem in generation_block:
+                            kpts_params = OrderedDict()
+                            parameters['kpoints_generation'] = kpts_params
+                            for par in subelem.iter():
+                                if par.tag in ['v', 'i']:
+                                    parname = par.attrib['name'].lower()
+                                    kpts_params[parname] = \
+                                      __get_xml_parameter(par)
+
                     kpts = elem.findall("varray[@name='kpointlist']/v")
                     ibz_kpts = np.zeros((len(kpts), 3))
 
