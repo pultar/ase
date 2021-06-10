@@ -734,9 +734,9 @@ class Phonons(Displacement):
 
         raw_dos_by_k = DOSCollection(
             [RawDOSData(omega_kl[k], weights[i, :, k],
-                        info={'index': self.indices[i],
+                        info={'index': str(self.indices[i]),
                               'symbol': self.atoms[i].symbol,
-                              'kpt': k})
+                              'kpt': str(k)})
              for (i, k) in product(range(len(self.indices)),
                                    range(len(kpts_kc)))])
         return raw_dos_by_k.sum_by('index')
