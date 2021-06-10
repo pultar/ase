@@ -724,7 +724,6 @@ class Phonons(Displacement):
         """
         from ase.calculators.calculator import kpts2sizeandoffsets
         mp_size, mp_offsets = kpts2sizeandoffsets(atoms=self.atoms, **kpts)
-        raise Exception(mp_size, mp_offsets)
         kpts_kc = monkhorst_pack(mp_size) + mp_offsets
 
         omega_kl, u_kl = self.band_structure(kpts_kc, modes=True)
