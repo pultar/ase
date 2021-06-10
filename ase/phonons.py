@@ -1,8 +1,9 @@
 """Module for calculating phonons of periodic systems."""
 
+from itertools import product
 from math import pi, sqrt
-import warnings
 from pathlib import Path
+import warnings
 
 import numpy as np
 import numpy.linalg as la
@@ -14,6 +15,9 @@ from ase.parallel import world
 from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils.filecache import MultiFileJSONCache
+
+from ase.spectrum.dosdata import RawDOSData
+from ase.spectrum.doscollection import DOSCollection
 
 
 class Displacement:
@@ -697,9 +701,49 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
+    def get_pdos(self, kpts: dict = {'density': 8}) -> DOSCollection:
+        """Calculate atom-projected phonon DOS
+
+        This returns a DOSCollection of unbroadened RawDOSData objects, tagged
+        with their atom index and symbol in DOSData.info. To plot a typical
+        element-wise phonon DOS with broadening::
+
+          pdos = phonon.get_pdos()
+          ax = pdos.sum_by('symbol').plot(width=5e-3, show=True)
+
+        (The energy units are eV. The total over all contributions should sum
+        to 3N.)
+
+        args:
+            kpts: Monkhorst-Pack grid specification for DOS sampling. This is
+                provided to ase.calculators.calculator.kpts2sizeandoffsets;
+                the keys 'size', 'density', 'gamma' and 'even' may be set. E.g.
+                for a non-gamma-centered 4x4x8 Monkhorst-Pack mesh,
+                kpts={'size': (4, 4, 8), 'gamma': False}. The default value
+                uses 'density' to generate a moderate uniform sampling mesh.
+        """
+        from ase.calculators.calculator import kpts2sizeandoffsets
+        mp_size, mp_offsets = kpts2sizeandoffsets(atoms=self.atoms, **kpts)
+        raise Exception(mp_size, mp_offsets)
+        kpts_kc = monkhorst_pack(mp_size) + mp_offsets
+
+        omega_kl, u_kl = self.band_structure(kpts_kc, modes=True)
+        masses = self.atoms.get_masses()[self.indices][np.newaxis,
+                                                       :, np.newaxis]
+        vectors = u_kl / masses**-0.5
+        weights = (np.linalg.norm(vectors, axis=-1)**2).T / len(kpts_kc)
+
+        raw_dos_by_k = DOSCollection(
+            [RawDOSData(omega_kl[k], weights[i, :, k],
+                        info={'index': self.indices[i],
+                              'symbol': self.atoms[i].symbol,
+                              'kpt': k})
+             for (i, k) in product(range(len(self.indices)),
+                                   range(len(kpts_kc)))])
+        return raw_dos_by_k.sum_by('index')
+
+    def get_dos(self, kpts=(10, 10, 10)) -> RawDOSData:
         from ase.spectrum.dosdata import RawDOSData
-        # dos = self.dos(kpts, npts, delta, indices)
         kpts_kc = monkhorst_pack(kpts)
         omega_w = self.band_structure(kpts_kc).ravel()
         dos = RawDOSData(omega_w, np.ones_like(omega_w))
