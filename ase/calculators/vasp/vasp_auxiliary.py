@@ -276,7 +276,7 @@ class VaspLocpot:
                 pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
 
     @classmethod
-    def from_file(cls, filename='LOCPOT') -> 'VaspLocpot':
+    def from_file(cls, filename: str = 'LOCPOT') -> 'VaspLocpot':
         """Read LOCPOT file.
 
         LOCPOT contains local potential.
@@ -314,7 +314,8 @@ class VaspLocpot:
                     cls._read_pot(fd, spin_down_pot)
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
 
-    def get_average_along_axis(self, axis=2, spin='up') -> np.ndarray:
+    def get_average_along_axis(self, axis: int = 2,
+                               spin: str = 'up') -> np.ndarray:
         """
         Returns the average potential along the specified axis (0,1,2).
 
@@ -348,7 +349,7 @@ class VaspLocpot:
                 average.append(np.average(pot[:, :, i]))
         return np.array(average)
 
-    def distance_along_axis(self, axis=2) -> np.ndarray:
+    def distance_along_axis(self, axis: int = 2) -> np.ndarray:
         """
         Returns an array of the fractional distance along the specified axis
         (from 0 to 1). This corresponds to the size of the mesh in the Locpot
@@ -396,8 +397,9 @@ class VaspLocpot:
             ax.legend()
         return ax
 
-    def calculate_workfunction(self, axis=2, spin='up', reference=0.0,
-                               tol=1e-3) -> float:
+    def calculate_workfunction(self, axis: int = 2, spin: str = 'up',
+                               reference: Optional[float] = 0.0,
+                               tol: float = 1e-3) -> float:
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
         the OUTCAR file in the same location to extract the Fermi energy if
@@ -429,14 +431,16 @@ class VaspLocpot:
             warnings.warn('There appears to be a slope in your vacuum '
                           'potential. You might need to apply a dipole '
                           'correction. ')
-        if reference == 0:
-            warnings.warn('The returned value is simply the local potential '
-                          'without the Fermi energy subtracted. Set the '
-                          'reference to the Fermi energy to get the '
-                          'workfunction.')
+        if reference is None:
+            warnings.warn("No reference energy was set (reference=None); the "
+                          "returned value is the local potential. To obtain "
+                          "the correct workfunction, set 'reference' to the "
+                          "Fermi energy, e.g. calculate_workfunction(reference"
+                          "=ase.io.read('OUTCAR').calc.get_fermi_level()).")
+            return average[0]
         return average[0] - reference
 
-    def is_spin_polarized(self):
+    def is_spin_polarized(self) -> bool:
         return self.spin_down_pot is not None
 
 
