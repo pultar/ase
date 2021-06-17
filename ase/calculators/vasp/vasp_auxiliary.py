@@ -6,6 +6,7 @@ import warnings
 from ase import Atoms
 from .vasp import Vasp
 from ase.calculators.singlepoint import SinglePointCalculator
+import matplotlib
 from typing import Optional
 
 
@@ -357,8 +358,10 @@ class VaspLocpot:
             raise ValueError('Must provide an integer value of 0, 1, or 2.')
         return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
 
-    def plot_planar_average(self, axis=2, spin='up', reference=0,
-                            show=False, filename=None, ax=None):
+    def plot_planar_average(self, axis: int = 2, spin: str = 'up',
+                            reference: Optional[float] = None,
+                            show: bool = False, filename: Optional[str] = None,
+                            ax: Optional['matplotlib.axes.Axes'] = None):
         """
         Returns a matplotlib object with the planar average along the specified
         axis. Checks for an OUTCAR and will plot the Fermi energy.
@@ -384,8 +387,10 @@ class VaspLocpot:
         pot = self.get_average_along_axis(axis, spin)
         dist = self.distance_along_axis(axis)
         with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
-            ax.plot(dist, pot, label='Planar average of axis {}'.format(axis))
-            ax.axhline(y=reference, linestyle='--', label='Reference')
+            if reference is not None:
+                pot -= reference
+                ax.axhline(y=0, linestyle='--')
+            ax.plot(dist, pot)
             ax.set_xlabel('Fractional distance along axis {}'.format(axis))
             ax.set_ylabel('Local potential (eV)')
             ax.legend()
