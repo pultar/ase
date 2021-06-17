@@ -800,6 +800,9 @@ class GenerateVaspInput:
         'scan': {
             'metagga': 'SCAN'
         },
+        'r2scan': {
+            'metagga': 'R2SCAN'
+        },
         'scan-rvv10': {
             'metagga': 'SCAN',
             'luse_vdw': True,
