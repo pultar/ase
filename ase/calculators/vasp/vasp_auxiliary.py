@@ -444,6 +444,212 @@ class VaspLocpot:
         return self.spin_down_pot is not None
 
 
+class VaspLocpot:
+    """
+    Class for VASP Locpot data
+
+    This will usually be instantiated with the .from_file() classmethod, e.g.::
+    
+        locpot = VaspLocpot.from_file('LOCPOT')
+
+    Non-spin-polarized data is stored in locpot.pot; for spin-polarized data,
+    the spin-up potential is stored in locpot.pot while spin-down data is stored
+    in locpot.spin_down_pot.
+    """
+    def __init__(self, atoms: Atoms, pot: np.ndarray,
+                 spin_down_pot: Optional[np.ndarray] = None,
+                 magmom: Optional[np.ndarray] = None) -> None:
+        self.atoms = atoms
+        self.pot = pot
+        self.spin_down_pot = spin_down_pot
+        self.magmom = magmom
+
+    @staticmethod
+    def _read_pot(fobj, pot):
+        """Read potential from file object
+
+        Utility method for reading the actual potential from a file object.
+        On input, the file object must be at the beginning of the charge block,
+        on output the file position will be left at the end of the block.
+        The pot array must be of the correct dimensions.
+        """
+        # VASP writes charge density as
+        # WRITE(IU,FORM) (((C(NX,NY,NZ),NX=1,NGXC),NY=1,NGYZ),NZ=1,NGZC)
+        # Fortran nested implied do loops; innermost index fastest
+        # First, just read it in
+        for zz in range(pot.shape[2]):
+            for yy in range(pot.shape[1]):
+                pot[:, yy, zz] = np.fromfile(fobj, count=pot.shape[0], sep=' ')
+
+    @classmethod
+    def from_file(cls, filename: str = 'LOCPOT') -> 'VaspLocpot':
+        """Read LOCPOT file.
+
+        LOCPOT contains local potential.
+
+        Currently will check for a spin-up and spin-down component but has not
+        been configured for a noncollinear calculation.
+        """
+        from ase.io.vasp import read_vasp
+        spin_down_pot = None
+        magmom = None
+        with open(filename, 'r') as fd:
+            atoms = read_vasp(fd)
+            fd.readline()
+            grid_size = fd.readline()
+            grid = tuple(map(int, grid_size.split()))
+            pot = np.empty(grid)
+            cls._read_pot(fd, pot)
+            # Check if the file has a spin-polarized local potential, and
+            # if so, read it in.
+            fl = fd.tell()
+            # Check to see if there is more information
+            line1 = fd.readline()
+            if line1 == '':
+                return cls(atoms, pot)
+            # Check to see if the next line equals the previous grid settings
+            elif line1 == grid_size:
+                spin_down_pot = np.empty(grid)
+                cls._read_pot(fd, spin_down_pot)
+            elif line1 != grid_size:
+                fd.seek(fl)
+                magmom = np.fromfile(fd, count=len(atoms), sep=' ')
+                line1 = fd.readline()
+                if line1 == grid_size:
+                    spin_down_pot = np.empty(grid)
+                    cls._read_pot(fd, spin_down_pot)
+        return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
+
+    def get_average_along_axis(self, axis: int = 2,
+                               spin: str = 'up') -> np.ndarray:
+        """
+        Returns the average potential along the specified axis (0,1,2).
+
+        axis: Which axis to take the planar average along (0,1,2)
+        spin: May specify 'up'/'down'/'average' where 'average' returns the
+              average of the first two.
+        """
+        if axis not in [0, 1, 2]:
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
+        average = []
+        if spin.lower() == 'up':
+            pot = self.pot
+        elif self.is_spin_polarized and spin in ['down', 'average']:
+            if spin.lower() == 'down':
+                pot = self.spin_down_pot
+            elif spin.lower() == 'average':
+                pot = (self.pot + self.spin_down_pot) / 2
+        elif not self.is_spin_polarized and spin in ['down', 'average']:
+            raise ValueError("This file appears to come from a calculation"
+                             " with no spin-polarization.")
+        else:
+            raise ValueError("Must specify only 'up'/'down'/'average'.")
+        if axis == 0:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[i, :, :]))
+        elif axis == 1:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[:, i, :]))
+        elif axis == 2:
+            for i in range(pot.shape[axis]):
+                average.append(np.average(pot[:, :, i]))
+        return np.array(average)
+
+    def distance_along_axis(self, axis: int = 2) -> np.ndarray:
+        """
+        Returns an array of the fractional distance along the specified axis
+        (from 0 to 1). This corresponds to the size of the mesh in the Locpot
+        file.
+        """
+        if axis not in [0, 1, 2]:
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
+        return np.linspace(0, 1, self.pot.shape[axis], endpoint=False)
+
+    def plot_planar_average(self, axis: int = 2, spin: str = 'up',
+                            reference: Optional[float] = None,
+                            show: bool = False, filename: Optional[str] = None,
+                            ax: Optional['matplotlib.axes.Axes'] = None):
+        """
+        Returns a matplotlib object with the planar average along the specified
+        axis. Checks for an OUTCAR and will plot the Fermi energy.
+
+        Parameters
+        ----------
+        axis: Axis to plot the planar average.
+        spin: Which spin to plot ('up'/'down'/'average').
+        reference: Reference point for local potential which is normally the
+                   Fermi energy. The Fermi energy can be read in with:
+                   ef = read('OUTCAR').calc.get_fermi_level().
+        show: Whether to show the plot.
+        filename: Name for the figure.
+        ax: May pass a preformated ax object from matplotlib.
+
+        Return
+        ------
+        ax: ax object from matplotlib
+        """
+        from ase.utils.plotting import SimplePlottingAxes
+        if axis not in [0, 1, 2]:
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
+        pot = self.get_average_along_axis(axis, spin)
+        dist = self.distance_along_axis(axis)
+        with SimplePlottingAxes(ax=ax, show=show, filename=filename) as ax:
+            if reference is not None:
+                pot -= reference
+                ax.axhline(y=0, linestyle='--')
+            ax.plot(dist, pot)
+            ax.set_xlabel('Fractional distance along axis {}'.format(axis))
+            ax.set_ylabel('Local potential (eV)')
+            ax.legend()
+        return ax
+
+    def calculate_workfunction(self, axis: int = 2, spin: str = 'up',
+                               reference: Optional[float] = 0.0,
+                               tol: float = 1e-3) -> float:
+        """
+        Calculate the workfunction from the LOCPOT file. Will attempt to read
+        the OUTCAR file in the same location to extract the Fermi energy if
+        efermi is not set. It is assumed that the atoms are centered in the
+        middle of the cell and the vacuum resides at the periodic boundaries.
+
+        Parameters
+        ----------
+        axis: Axis to calculate the workfunction.
+        spin: Which spin to plot ('up'/'down'/'average').
+        reference: Provide a reference energy value (typically the Fermi
+                   energy) for calculating the workfunciton. The Fermi energy
+                   can be accessed with:
+                   ef = read('OUTCAR').calc.get_fermi_level()
+        tol: Tolerance for determining if there is a slope in the vacuum region
+             of the local potential.
+
+        Return
+        ------
+        workfunction: The calculated workfunction
+        """
+        if axis not in [0, 1, 2]:
+            raise ValueError('Must provide an integer value of 0, 1, or 2.')
+        average = self.get_average_along_axis(axis, spin)
+        distance = self.distance_along_axis(axis=2) * \
+            np.linalg.norm(self.atoms.cell[axis])
+        polyfit = np.polyfit(distance[:10], average[:10], deg=1)
+        if polyfit[0] >= tol:
+            warnings.warn('There appears to be a slope in your vacuum '
+                          'potential. You might need to apply a dipole '
+                          'correction. ')
+        if reference is None:
+            warnings.warn("No reference energy was set (reference=None); the "
+                          "returned value is the local potential. To obtain "
+                          "the correct workfunction, set 'reference' to the "
+                          "Fermi energy, e.g. calculate_workfunction(reference"
+                          "=ase.io.read('OUTCAR').calc.get_fermi_level()).")
+            return average[0]
+        return average[0] - reference
+
+    def is_spin_polarized(self) -> bool:
+        return self.spin_down_pot is not None
+
+
 class VaspDos:
     """Class for representing density-of-states produced by VASP
 
