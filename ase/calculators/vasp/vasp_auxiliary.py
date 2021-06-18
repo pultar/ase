@@ -398,7 +398,7 @@ class VaspLocpot:
         return ax
 
     def calculate_workfunction(self, axis: int = 2, spin: str = 'up',
-                               reference: Optional[float] = 0.0,
+                               reference: Optional[float] = None,
                                tol: float = 1e-3) -> float:
         """
         Calculate the workfunction from the LOCPOT file. Will attempt to read
