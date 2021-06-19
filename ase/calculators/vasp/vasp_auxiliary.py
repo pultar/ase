@@ -281,8 +281,7 @@ class VaspLocpot:
 
         LOCPOT contains local potential.
 
-        Currently will check for a spin-up and spin-down component but has not
-        been configured for a noncollinear calculation.
+        Currently will check for a spin-up and spin-down component.
         """
         from ase.io.vasp import read_vasp
         spin_down_pot = None
