@@ -174,7 +174,7 @@ class Formula:
             return dict2str(dict(result))
 
         if fmt == 'abc':
-            _, f, N = self.stoichiometry()
+            f, _, N = self.stoichiometry()
             return dict2str({symb: n * N for symb, n in f._count.items()})
 
         if fmt == 'reduce':
