@@ -44,6 +44,8 @@ class Formula:
         'H$_{2}$O'
         >>> w.format('latex')
         'H$_{2}$O'
+        >>> w.format('abc')
+        'AB2'
         >>> divmod(6 * w + 'Cu', w)
         (6, Formula('Cu'))
 
