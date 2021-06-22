@@ -67,6 +67,8 @@ I/O:
 * Parsing an OUTCAR file will now produce an Atoms object
   with periodic boundary conditions.
 
+* Vasp KPOINTS and vasprun.xml files using "line-mode" can now be read to a list of interpolated k-points for band-structure plotting.
+
 Breaking change:
 
 * For security, ASE no longer uses pickle for any kind of file I/O.

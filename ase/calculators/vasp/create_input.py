@@ -1199,7 +1199,7 @@ class GenerateVaspInput:
                         LDA:  $VASP_PP_PATH/potpaw/
                         PBE:  $VASP_PP_PATH/potpaw_PBE/
                         PW91: $VASP_PP_PATH/potpaw_GGA/
-                        
+
                         No pseudopotential for {}!""".format(potcar, symbol))
                 raise RuntimeError(msg)
         return ppp_list
@@ -1801,21 +1801,90 @@ class GenerateVaspInput:
 
         ktype = lines[2].split()[0].lower()[0]
         if ktype in ['g', 'm', 'a']:
-            if ktype == 'g':
+            if ktype == 'g':  # Gamma-centered mesh (N x N x N)
                 self.set(gamma=True)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(3)])
-            elif ktype == 'a':
+            elif ktype == 'a':  # Auto (single value sets density)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(1)])
-            elif ktype == 'm':
+            elif ktype == 'm':  # Monkhorst-pack mesh (N x N x N)
                 kpts = np.array([int(lines[3].split()[i]) for i in range(3)])
-        else:
+        elif ktype == 'l':  # Line-mode (List of line segments)
+            units = lines[3].split()[0].lower()[0]
+            if units in ['c', 'k']:
+                self.set(reciprocal=False)
+            elif units == 'r':
+                self.set(reciprocal=True)
+            else:
+                raise IOError('Line-mode detected, but k-point coordinate '
+                              'system not recognized.')
+
+            pts_per_branch = int(lines[1].split()[0])
+            kpts = self._read_line_mode_kpts(lines[4:], pts_per_branch)
+
+        else:  # List of points
             if ktype in ['c', 'k']:
                 self.set(reciprocal=False)
             else:
                 self.set(reciprocal=True)
-            kpts = np.array(
-                [list(map(float, line.split())) for line in lines[3:]])
+
+            # filter(None, iter) removes the empty lines - [] is "false-y"
+            kpts = np.array(list(filter(None, (list(map(float, line.split()))
+                                               for line in lines[3:]))))
         self.set(kpts=kpts)
+
+    @staticmethod
+    def _read_line_mode_kpts(lines, pts_per_branch):
+        """Convert band data from KPOINTS file in line mode to list of points
+
+        Typical format for this data would be e.g.
+
+        0.0 0.0 0.0     G
+        0.5 0.5 0.5     L
+        0.5 0.5 0.5     L
+        0.5 0.25 0.75   W
+        0.0 0.0 0.0     G
+        0.5 0.0 0.5     X
+
+        For a path G -> L -> W | G -> X ; points are repeated if the path would
+        continue without a discontinuity. There should always be an even number
+        of points.
+
+        Args:
+            lines (list): List of text lines from KPOINTS file
+            pts_per_branch (int):
+                Number of points per branch (from second line of KPOINTS file).
+                A list of explicit points will be linearly interpolated. Note
+                that line-mode uses a constant number of points for all
+                branches between special points, rather than distribute points
+                evenly in reciprocal space.
+
+        Returns: (np.ndarray)
+            Nx3 array of kpoints interpolated along branches, including
+            repeated values at turning points.
+        """
+        iterlines = filter(None, (line.split() for line in lines))
+
+        numpy_can_linspace_vectors = np.version.short_version > '1.16.6'
+
+        kpts = []
+        for branch_start in iterlines:
+            branch_end = next(iterlines)
+
+            branch_start, branch_end = [list(map(float, line[:3]))
+                                        for line in (branch_start, branch_end)]
+
+            if numpy_can_linspace_vectors:
+                branch_kpts = np.linspace(branch_start,
+                                          branch_end,
+                                          pts_per_branch).tolist()
+            else:
+                branch_kpts = list(
+                    zip(*[np.linspace(start, end, pts_per_branch)
+                          for start, end in zip(branch_start, branch_end)]))
+
+            kpts = kpts + branch_kpts
+
+        return np.array(kpts)
 
     def read_potcar(self, filename):
         """ Read the pseudopotential XC functional from POTCAR file.
@@ -1938,11 +2007,11 @@ def read_potcar_numbers_of_electrons(file_obj):
 
 def count_symbols(atoms, exclude=()):
     """Count symbols in atoms object, excluding a set of indices
-    
+
     Parameters:
         atoms: Atoms object to be grouped
         exclude: List of indices to be excluded from the counting
-    
+
     Returns:
         Tuple of (symbols, symbolcount)
         symbols: The unique symbols in the included list
