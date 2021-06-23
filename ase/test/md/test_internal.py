@@ -10,7 +10,7 @@ from ase.io import Trajectory
 
 @pytest.mark.calculator_lite
 @pytest.mark.calculator('dftb')
-def test_dftb(factory):
+def test_dftb(factory, testdir):
     atoms = molecule('H2O')
     initial_positions = atoms.get_positions().copy()
     
@@ -26,18 +26,18 @@ def test_dftb(factory):
     steps0 = 5
     dyn.run(steps0)
 
-    traj = Trajectory('h2o.traj')
-    assert len(traj) == steps0
+    with Trajectory('h2o.traj') as traj:
+        assert len(traj) == steps0
 
     # second run should concatenate
     steps1 = 3
     dyn.run(steps1)
 
-    traj = Trajectory('h2o.traj')
-    assert len(traj) == steps0 + steps1
+    with Trajectory('h2o.traj') as traj:
+        assert len(traj) == steps0 + steps1
 
-    for atoms in traj:
-        assert atoms.calc.name == 'dftb'
-        assert atoms[fixed].position == pytest.approx(
-            initial_positions[fixed], 1e-6)
-        assert np.linalg.norm(atoms.get_dipole_moment()) != 0
+        for atoms in traj:
+            assert atoms.calc.name == 'dftb'
+            assert atoms[fixed].position == pytest.approx(
+                initial_positions[fixed], 1e-6)
+            assert np.linalg.norm(atoms.get_dipole_moment()) != 0

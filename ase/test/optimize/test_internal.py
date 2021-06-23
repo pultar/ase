@@ -8,7 +8,7 @@ from ase.optimize.internal import Internal
 
 @pytest.mark.calculator_lite
 @pytest.mark.calculator('dftb')
-def test_dftb(factory):
+def test_dftb(factory, testdir):
     atoms = molecule('H2O')
     atoms[0].position[0] -= 0.5
     initial_positions = atoms.get_positions().copy()
