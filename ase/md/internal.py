@@ -19,3 +19,6 @@ class Internal(MolecularDynamics):
                            self.temperature,
                            self.trajectory,
                            steps)
+    def __del__(self):
+        if self.trajectory is not None:
+            self.trajectory.close()
