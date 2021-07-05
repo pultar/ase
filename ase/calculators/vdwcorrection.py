@@ -377,3 +377,24 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         x = RAB * scale
         chi = np.exp(-d * (x - 1.0))
         return 1.0 / (1.0 + chi), d * scale * chi / (1.0 + chi)**2
+
+
+class TS09Polarizability:
+    def calculate(self, atoms):
+        calc = atoms.calc
+        assert isinstance(calc, vdWTkatchenko09prl)
+
+        volume_ratios = calc.hirshfeld.get_effective_volume_ratios()
+
+        na = len(atoms)
+        alpha_a = np.empty((na))
+        alpha_eff_a = np.empty((na))
+        for a, atom in enumerate(atoms):
+            # free atom values
+            alpha_a[a], _ = calc.vdWDB_alphaC6[atom.symbol]
+            # effective polarizability assuming linear combination
+            # of atomic polarizability from ts09
+            alpha_eff_a[a] = volume_ratios[a] * alpha_a[a]
+
+        alpha = np.sum(alpha_eff_a)
+        return np.diag([alpha] * 3)
