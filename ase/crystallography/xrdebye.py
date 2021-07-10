@@ -12,10 +12,36 @@ import warnings
 
 import numpy as np
 
-from xrayfunctions import initialize_atomic_form_factor_splines, pdist_in_chunks, cdist_in_chunks
+from ase.crystallography.xrayfunctions import initialize_atomic_form_factor_splines, pdist_in_chunks, cdist_in_chunks
+
+from scipy.interpolate.fitpack2 import InterpolatedUnivariateSpline
 
 
-def one_species_contribution(positions, form_factor_spline, s) -> np.ndarray:
+def one_species_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray) -> np.ndarray:
+    r"""Calculates the contributions to the scattered intensity where both form factors belong to the same atomic species.
+
+    This function calculates the distances between all points on the same array using scipy.spatial.distance.pdist. This does not calculate the diagonal elements of the distance matrix, which are all zero. The term corresponding to the zero distances is explicitly added as n_atoms \times f_i ^2 where f_i is the atomic form factor.
+
+    The evaluated expression is:
+
+    N f_i^2 + 2 \sum_{i,j>i}^N f_i^2 sinc(2 s r_{ij})
+
+    Only the strictly upper right half of the distance matrix for the given positions is ever calculated. The 0-terms are in the N f_i^2 term (sinc(0) = 1) and the sum over nontrivial scatterings is multiplied by two to account for the strictly lower left half of the distance matrix.
+
+    Parameters
+    ----------
+    positions : np.ndarray
+        [description]
+    form_factor_spline : InterpolateUnivariateSpline
+        [description]
+    s : np.ndarray
+        [description]
+
+    Returns
+    -------
+    np.ndarray
+        [description]
+    """
     
     contribution = np.zeros_like(s)
     n_atoms = positions.shape[0]
@@ -29,7 +55,26 @@ def one_species_contribution(positions, form_factor_spline, s) -> np.ndarray:
     return contribution
 
 
-def one_species_hist_contribution(positions, form_factor_spline, s, bin_width=1e-3) -> np.ndarray:
+def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float=1e-3) -> np.ndarray:
+    """[summary]
+
+    Parameters
+    ----------
+    positions : np.ndarray
+        [description]
+    form_factor_spline : InterpolatedUnivariateSpline
+        [description]
+    s : np.ndarray
+        [description]
+    bin_width : [type], optional
+        [description], by default 1e-3
+
+    Returns
+    -------
+    np.ndarray
+        [description]
+    """
+
     n_atoms: int = positions.shape[0]
     contribution: np.ndarray = np.zeros_like(s)
 
@@ -57,8 +102,38 @@ def one_species_hist_contribution(positions, form_factor_spline, s, bin_width=1e
 
 
 def two_species_contribution(
-    positions1, positions2, form_factor_spline1, form_factor_spline2, s
+    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray
 ) -> np.ndarray:
+    r"""Calculates the contributions to the scattered intensity where the form factors belong to different atomic species.
+
+    This function calculates the distances between all points on two different arrays using scipy.spatial.distance.cdist. The corresponding (in general rectangular) distance matrix will have no nonzero entries unless two atoms of different species have the exact same position (unphysical inputs).
+
+    The evaluated expression is:
+
+    2 \sum_i^N \sum_j^N f_i f_j sinc(2 s r_{ij})
+
+    The entire distance matrix is actually an off-diagonal block of the full distance matrix for the entire system. There is a corresponding off-diagonal block in the other half of the symmetric distance matrix. The multiplication by 2 accounts for the second identical block.
+
+    Parameters
+    ----------
+    positions1 : np.ndarray
+        [description]
+    positions2 : np.ndarray
+        [description]
+    form_factor_spline1 : InterolatedUnivariateSpline
+        [description]
+    form_factor_spline2 : [type]
+        [description]
+    s : [type]
+        [description]
+    bin_width : [type], optional
+        [description], by default 1e-2
+
+    Returns
+    -------
+    np.ndarray
+        [description]
+    """
     contribution = np.zeros_like(s)
 
     for distances in cdist_in_chunks(positions1, positions2):
@@ -74,8 +149,31 @@ def two_species_contribution(
 
 
 def two_species_hist_contribution(
-    positions1, positions2, form_factor_spline1, form_factor_spline2, s, bin_width=1e-2
+    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float=1e-3
 ) -> np.ndarray:
+    """[summary]
+
+    Parameters
+    ----------
+    positions1 : np.ndarray
+        [description]
+    positions2 : np.ndarray
+        [description]
+    form_factor_spline1 : InterpolatedUnivariateSpline
+        [description]
+    form_factor_spline2 : InterpolatedUnivariateSpline
+        [description]
+    s : np.ndarray
+        [description]
+    bin_width : float, optional
+        [description], by default 1e-3
+
+    Returns
+    -------
+    np.ndarray
+        [description]
+    """
+
     contribution = np.zeros_like(s)
 
     for distances in cdist_in_chunks(positions1, positions2):
@@ -96,10 +194,6 @@ def two_species_hist_contribution(
             )
 
     return contribution
-
-
-# End support
-
 
 class XRDData:
     mode = "XRD"
@@ -184,7 +278,7 @@ class XrayDebye:
             and constant atomic factors (`f_a(q) = Z_a`)
         alpha : float, optional
             parameter for angular damping of scattering intensity.
-            Close to 1.0 for unplorized beam, by default 1.01
+            Close to 1.0 for unpolarized beam, by default 1.01
         histogram_approximation : bool, optional
             [description], by default True
         """
@@ -197,10 +291,6 @@ class XrayDebye:
         self.damping = damping
         self.atoms = atoms
 
-        self.x2q = {
-            "XRD": lambda x: 2 * np.sin(x * np.pi / 180 / 2.0) / self.wavelength,
-            "SAXS": lambda x: x,
-        }
         self.atomic_form_factor_dict = initialize_atomic_form_factor_splines(
             set(self.atoms.symbols), np.linspace(0, 6, 500)
         )
@@ -309,17 +399,15 @@ class XrayDebye:
         self._xrddata = cls.calculate(self, x)
         return self._xrddata.intensities
 
-        # if mode == 'XRD':
-        # elif mode == 'SAXS':
-        #    return SAXSData.calculate(self)
-        # intensity_list = np.array(result)
-        # xrd = XRDebyeData(mode, twotheta_list, q_list, intensity_list)
-        # self._xrddata = xrd
-        # return xrd
 
     @property
     def mode(self):
-        return self._xrddata.mode
+        # In calc_pattern hasn't been called, self._xrddata doesn't exist yet.
+        if self._xrddata == None:
+            return None
+        else:
+            return self._xrddata.mode
+
 
     def write_pattern(self, filename):
         """Save calculated data to file specified by ``filename`` string."""
