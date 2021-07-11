@@ -50,7 +50,8 @@ def test_formfactor_correctness(xrd):
 
 
 def test_contributions_correctness():
-    random_positions = np.random.rand(2, 3)
+    rng = np.random.default_rng(42)
+    random_positions = rng.random((2, 3))
 
     form_factor = construct_atomic_form_factor_spline('Au', np.linspace(0, 1, 100))
     x = np.array([0.1])
@@ -70,6 +71,4 @@ def test_histogram_approximation(xrd_tuple):
 
     pattern_with_histogram = xrd2.calc_pattern(two_theta)
 
-    assert np.isclose(np.linalg.norm(pattern_without_histogram - pattern_with_histogram) / np.linalg.norm(pattern_without_histogram), 0, atol = 0.005)
-
-    assert np.isclose(np.max(np.abs(pattern_without_histogram - pattern_with_histogram) / pattern_without_histogram), 0, atol = 0.04)
+    assert pattern_without_histogram == pytest.approx(pattern_with_histogram, rel=5e-2)
