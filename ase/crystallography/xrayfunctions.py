@@ -32,13 +32,13 @@ def construct_atomic_form_factor_spline(symbol: str, s: np.ndarray):
     return UnivariateSpline(x=s, y=ff, s=0, k=5)
 
 
-def pdist_in_chunks(arr1, chunksize = 5000):
-    arr1len = arr1.shape[0]
+def pdist_in_chunks(arr1, chunksize: int = 5000):
+    arr1len = len(arr1)
     
     i = 0
     while (i * chunksize) < arr1len:
         j = i
-        while (j * chunksize)< arr1len:
+        while (j * chunksize) < arr1len:
             if i == j:
                 yield pdist(arr1[i * chunksize: (i + 1) * chunksize])
             else:
@@ -47,9 +47,9 @@ def pdist_in_chunks(arr1, chunksize = 5000):
             j += 1
         i += 1
 
-def cdist_in_chunks(arr1, arr2, chunksize = 5000):
-    arr1len = arr1.shape[0]
-    arr2len = arr2.shape[0]
+def cdist_in_chunks(arr1, arr2, chunksize: int = 5000):
+    arr1len = len(arr1)
+    arr2len = len(arr2)
     
     i = 0
     while (i * chunksize) < arr1len:

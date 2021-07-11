@@ -7,12 +7,12 @@ using Debye formula.
 
 
 from itertools import combinations
+from functools import partial
 
 import numpy as np
+from scipy.interpolate.fitpack2 import InterpolatedUnivariateSpline
 
 from ase.crystallography.xrayfunctions import initialize_atomic_form_factor_splines, pdist_in_chunks, cdist_in_chunks
-
-from scipy.interpolate.fitpack2 import InterpolatedUnivariateSpline
 
 
 def one_species_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray) -> np.ndarray:
@@ -283,7 +283,6 @@ class XrayDebye:
         histogram_approximation : bool, optional
             [description], by default True
         """
-        # XXX deprecate warn
 
         self.wavelength = wavelength
         self.method = method
@@ -296,11 +295,14 @@ class XrayDebye:
             set(self.atoms.symbols), np.linspace(0, 6, 500)
         )
 
-        self.hist_approx = histogram_approximation
-        self.bin_width = bin_width
-        self.hist_order = hist_order
+        if histogram_approximation:
+            self.one_species_contribution = partial(one_species_hist_contribution, bin_width=bin_width, hist_order=hist_order)
+            self.two_species_contribution = partial(two_species_hist_contribution, bin_width=bin_width, hist_order=hist_order)
+        else:
+            self.one_species_contribution = one_species_contribution
+            self.two_species_contribution = two_species_contribution
 
-    def get(self, s):
+    def get(self, s_vect):
         r"""Get the powder x-ray (XRD) scattering intensity
         using the Debye-Formula at single point.
 
@@ -313,17 +315,17 @@ class XrayDebye:
             Intensity at given scattering vector `s`.
         """
 
-        pre = np.exp(-self.damping * s ** 2 / 2)
+        pre = np.exp(-self.damping * s_vect ** 2 / 2)
 
         if self.method == "Iwasa":
-            sinth = self.wavelength * s / 2.0
+            sinth = self.wavelength * s_vect / 2.0
             positive = 1.0 - sinth ** 2
             positive[positive < 0] = 0
             costh = np.sqrt(positive)
             cos2th = np.cos(2.0 * np.arccos(costh))
             pre *= costh / (1.0 + self.alpha * cos2th ** 2)
 
-        I = np.zeros_like(s)
+        I = np.zeros_like(s_vect)
         symbols = set(self.atoms.symbols)
         positions = self.atoms.positions
         indices = self.atoms.symbols.indices()
@@ -331,43 +333,27 @@ class XrayDebye:
         # Calculate contribution from pairs of same atomic species
 
         for symbol in symbols:
-            if not self.hist_approx:
-                I[:] += one_species_contribution(
-                    positions[indices[symbol]],
-                    self.atomic_form_factor_dict[symbol],
-                    s,
-                )
-            else:
-                I[:] += one_species_hist_contribution(
-                    positions[indices[symbol]],
-                    self.atomic_form_factor_dict[symbol],
-                    s,
-                    bin_width=self.bin_width,
-                    hist_order=self.hist_order)
+            I[:] += self.one_species_contribution(
+                positions[indices[symbol]],
+                self.atomic_form_factor_dict[symbol],
+                s_vect,
+            )
 
         # Calculation contribution from pairs of different atomic species
         symbols_pairs = combinations(symbols, 2)
 
         for symbols_pair in symbols_pairs:
             symbol1, symbol2 = symbols_pair
-            if not self.hist_approx:
-                I[:] += two_species_contribution(
-                    positions[indices[symbol1]],
-                    positions[indices[symbol2]],
-                    self.atomic_form_factor_dict[symbol1],
-                    self.atomic_form_factor_dict[symbol2],
-                    s,
-                )
 
-            else:
-                I[:] += two_species_hist_contribution(
-                    positions[indices[symbol1]],
-                    positions[indices[symbol2]], self.atomic_form_factor_dict[symbol1],
-                    self.atomic_form_factor_dict[symbol2], 
-                    s,
-                    bin_width=self.bin_width)
+            I[:] += self.two_species_contribution(
+                positions[indices[symbol1]],
+                positions[indices[symbol2]],
+                self.atomic_form_factor_dict[symbol1],
+                self.atomic_form_factor_dict[symbol2],
+                s_vect,
+            )
 
-        lin_zhigilei_factor = [len(self.atoms.symbols == x) * self.atomic_form_factor_dict[x](s) ** 2 for x in symbols]
+        lin_zhigilei_factor = [len(self.atoms.symbols == x) * self.atomic_form_factor_dict[x](s_vect) ** 2 for x in symbols]
 
         return pre * I  # / np.sum(lin_zhigilei_factor, axis=0)
 
