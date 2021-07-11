@@ -10,12 +10,12 @@ from itertools import combinations
 from functools import partial
 
 import numpy as np
-from scipy.interpolate.fitpack2 import InterpolatedUnivariateSpline
+from scipy.interpolate import InterpolatedUnivariateSpline
 
 from ase.crystallography.xrayfunctions import initialize_atomic_form_factor_splines, pdist_in_chunks, cdist_in_chunks
 
 
-def one_species_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray) -> np.ndarray:
+def one_species_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s_vect: np.ndarray) -> np.ndarray:
     r"""Calculates the contributions to the scattered intensity where both form factors belong to the same atomic species.
 
     This function calculates the distances between all points on the same array using scipy.spatial.distance.pdist. This does not calculate the diagonal elements of the distance matrix, which are all zero. The term corresponding to the zero distances is explicitly added as n_atoms \times f_i ^2 where f_i is the atomic form factor.
@@ -32,7 +32,7 @@ def one_species_contribution(positions: np.ndarray, form_factor_spline: Interpol
         [description]
     form_factor_spline : InterpolateUnivariateSpline
         [description]
-    s : np.ndarray
+    s_vect : np.ndarray
         [description]
 
     Returns
@@ -41,13 +41,13 @@ def one_species_contribution(positions: np.ndarray, form_factor_spline: Interpol
         [description]
     """
 
-    contribution = np.zeros_like(s)
+    contribution = np.zeros_like(s_vect)
     n_atoms = positions.shape[0]
 
     for distances in pdist_in_chunks(positions):
-        for i in range(s.shape[0]):
-            contribution[i] += form_factor_spline(s[i]) ** 2 * (
-                n_atoms + 2 * np.sum(np.sinc(distances * s[i] * 2))
+        for i in range(s_vect.shape[0]):
+            contribution[i] += form_factor_spline(s_vect[i]) ** 2 * (
+                n_atoms + 2 * np.sum(np.sinc(distances * s_vect[i] * 2))
             )
 
     return contribution

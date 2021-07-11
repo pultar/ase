@@ -6,7 +6,7 @@ X-ray wavelength dict.
 """
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.spatial.distance import cdist, pdist
 
 from ase.crystallography.xrddata import waasmaier
@@ -29,7 +29,7 @@ def construct_atomic_form_factor_spline(symbol: str, s: np.ndarray):
         )
         + coeffs[-1]
     )
-    return UnivariateSpline(x=s, y=ff, s=0, k=5)
+    return InterpolatedUnivariateSpline(x=s, y=ff, k=5)
 
 
 def pdist_in_chunks(arr1, chunksize: int = 5000):
