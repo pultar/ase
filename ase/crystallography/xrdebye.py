@@ -1,4 +1,3 @@
-# flake8: noqa
 """Definition of the XrayDebye class.
 
 This module defines the XrayDebye class for calculation
@@ -8,7 +7,6 @@ using Debye formula.
 
 
 from itertools import combinations
-import warnings
 
 import numpy as np
 
@@ -42,7 +40,7 @@ def one_species_contribution(positions: np.ndarray, form_factor_spline: Interpol
     np.ndarray
         [description]
     """
-    
+
     contribution = np.zeros_like(s)
     n_atoms = positions.shape[0]
 
@@ -55,7 +53,7 @@ def one_species_contribution(positions: np.ndarray, form_factor_spline: Interpol
     return contribution
 
 
-def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float=1e-3) -> np.ndarray:
+def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float = 1e-3, hist_order=0) -> np.ndarray:
     """[summary]
 
     Parameters
@@ -81,17 +79,17 @@ def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: Int
     if positions.shape[0] == 1:
         return form_factor_spline(s) ** 2 * n_atoms
 
-
     for distances in pdist_in_chunks(positions):
         nbins = int(np.ceil(np.ptp(distances) / bin_width)) + 1
 
-        dist_hist, bin_edges = np.histogram(distances, bins=nbins)
-        nontrivial_bins = np.nonzero(dist_hist)
+        if hist_order == 0:
+            dist_hist, bin_edges = np.histogram(distances, bins=nbins)
+            nontrivial_bins = np.nonzero(dist_hist)
 
-        dist_hist, bin_edges = (
-            dist_hist[nontrivial_bins],
-            bin_edges[nontrivial_bins] + (bin_edges[1] - bin_edges[0]) / 2,
-        )
+            dist_hist, bin_edges = (
+                dist_hist[nontrivial_bins],
+                bin_edges[nontrivial_bins] + (bin_edges[1] - bin_edges[0]) / 2,
+            )
 
         for i in range(s.shape[0]):
             contribution[i] += form_factor_spline(s[i]) ** 2 * (
@@ -149,7 +147,7 @@ def two_species_contribution(
 
 
 def two_species_hist_contribution(
-    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float=1e-3
+    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float = 1e-3
 ) -> np.ndarray:
     """[summary]
 
@@ -194,6 +192,7 @@ def two_species_hist_contribution(
             )
 
     return contribution
+
 
 class XRDData:
     mode = "XRD"
@@ -253,10 +252,12 @@ class XrayDebye:
         self,
         atoms: "ase.Atoms",
         wavelength: float,
-        damping: float=0.04,
-        method: str="Iwasa",
-        alpha: float=1.01,
-        histogram_approximation: bool=True
+        damping: float = 0.04,
+        method: str = "Iwasa",
+        alpha: float = 1.01,
+        histogram_approximation: bool = True,
+        bin_width=1e-3,
+        hist_order=0
     ):
         """[summary]
 
@@ -296,13 +297,8 @@ class XrayDebye:
         )
 
         self.hist_approx = histogram_approximation
-
-        self._xrddata = None
-        # TODO: setup atomic form factors if method != 'Iwasa'
-
-    def set_damping(self, damping):
-        """set B-factor for thermal damping"""
-        self.damping = damping
+        self.bin_width = bin_width
+        self.hist_order = hist_order
 
     def get(self, s):
         r"""Get the powder x-ray (XRD) scattering intensity
@@ -319,7 +315,6 @@ class XrayDebye:
 
         pre = np.exp(-self.damping * s ** 2 / 2)
 
-
         if self.method == "Iwasa":
             sinth = self.wavelength * s / 2.0
             positive = 1.0 - sinth ** 2
@@ -329,33 +324,36 @@ class XrayDebye:
             pre *= costh / (1.0 + self.alpha * cos2th ** 2)
 
         I = np.zeros_like(s)
+        symbols = set(self.atoms.symbols)
+        positions = self.atoms.positions
+        indices = self.atoms.symbols.indices()
 
         # Calculate contribution from pairs of same atomic species
-        symbols = set(self.atoms.symbols)
 
         for symbol in symbols:
-            print(f"Calculating on-diagonal {symbol} block")
             if not self.hist_approx:
                 I[:] += one_species_contribution(
-                    self.atoms[self.atoms.symbols == symbol].positions,
+                    positions[indices[symbol]],
                     self.atomic_form_factor_dict[symbol],
                     s,
                 )
             else:
                 I[:] += one_species_hist_contribution(
-                self.atoms[self.atoms.symbols == symbol].positions, self.atomic_form_factor_dict[symbol],
-                s)
+                    positions[indices[symbol]],
+                    self.atomic_form_factor_dict[symbol],
+                    s,
+                    bin_width=self.bin_width,
+                    hist_order=self.hist_order)
 
         # Calculation contribution from pairs of different atomic species
         symbols_pairs = combinations(symbols, 2)
 
         for symbols_pair in symbols_pairs:
             symbol1, symbol2 = symbols_pair
-            print(f"Calculating off-diagonal {symbol1}+{symbol2} blocks")
             if not self.hist_approx:
                 I[:] += two_species_contribution(
-                    self.atoms[self.atoms.symbols == symbol1].positions,
-                    self.atoms[self.atoms.symbols == symbol2].positions,
+                    positions[indices[symbol1]],
+                    positions[indices[symbol2]],
                     self.atomic_form_factor_dict[symbol1],
                     self.atomic_form_factor_dict[symbol2],
                     s,
@@ -363,13 +361,15 @@ class XrayDebye:
 
             else:
                 I[:] += two_species_hist_contribution(
-                self.atoms[self.atoms.symbols == symbol1].positions, self.atoms[self.atoms.symbols == symbol2].positions, self.atomic_form_factor_dict[symbol1],
-                self.atomic_form_factor_dict[symbol2],s)
-
+                    positions[indices[symbol1]],
+                    positions[indices[symbol2]], self.atomic_form_factor_dict[symbol1],
+                    self.atomic_form_factor_dict[symbol2], 
+                    s,
+                    bin_width=self.bin_width)
 
         lin_zhigilei_factor = [len(self.atoms.symbols == x) * self.atomic_form_factor_dict[x](s) ** 2 for x in symbols]
 
-        return pre * I # / np.sum(lin_zhigilei_factor, axis=0)
+        return pre * I  # / np.sum(lin_zhigilei_factor, axis=0)
 
     def calc_pattern(self, x=None, mode="XRD"):
         r"""
@@ -396,18 +396,8 @@ class XrayDebye:
 
         cls = output_data_class[mode]
 
-        self._xrddata = cls.calculate(self, x)
-        return self._xrddata.intensities
-
-
-    @property
-    def mode(self):
-        # In calc_pattern hasn't been called, self._xrddata doesn't exist yet.
-        if self._xrddata == None:
-            return None
-        else:
-            return self._xrddata.mode
-
+        _xrddata = cls.calculate(self, x)
+        return _xrddata.intensities
 
     def write_pattern(self, filename):
         """Save calculated data to file specified by ``filename`` string."""
