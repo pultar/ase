@@ -3,6 +3,7 @@
 from itertools import product
 from math import pi, sqrt
 from pathlib import Path
+from typing import Any, Union, Sequence
 import warnings
 
 import numpy as np
@@ -16,6 +17,7 @@ from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils.filecache import MultiFileJSONCache
 
+from ase.calculators.calculator import kpts2kpts, KPoints
 from ase.spectrum.dosdata import RawDOSData
 from ase.spectrum.doscollection import DOSCollection
 
@@ -701,7 +703,9 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_pdos(self, kpts: dict = {'density': 8}) -> DOSCollection:
+    def get_pdos(self, kpts: Union[Sequence[int],
+                                   dict[str, Any],
+                                   KPoints]) -> DOSCollection:
         """Calculate atom-projected phonon DOS
 
         This returns a DOSCollection of unbroadened RawDOSData objects, tagged
@@ -716,15 +720,21 @@ class Phonons(Displacement):
 
         args:
             kpts: Monkhorst-Pack grid specification for DOS sampling. This is
-                provided to ase.calculators.calculator.kpts2sizeandoffsets;
-                the keys 'size', 'density', 'gamma' and 'even' may be set. E.g.
+                provided to ase.calculators.calculator.kpts2kpts; a dict the
+                keys 'size', 'density', 'gamma' and/or 'even' may be set. E.g.
                 for a non-gamma-centered 4x4x8 Monkhorst-Pack mesh,
                 kpts={'size': (4, 4, 8), 'gamma': False}. The default value
                 uses 'density' to generate a moderate uniform sampling mesh.
+                Simple meshes can also be given as a 3-tuple or list
+                e.g. (4, 4, 4). For more elaborate sampling, use the KPoints
+                class.
         """
-        from ase.calculators.calculator import kpts2sizeandoffsets
-        mp_size, mp_offsets = kpts2sizeandoffsets(atoms=self.atoms, **kpts)
-        kpts_kc = monkhorst_pack(mp_size) + mp_offsets
+
+        # The usual "default" k-point sampling of Gamma-point-only is far too
+        # sparse for a decent phonon DOS so a default density is set.
+        if kpts is None:
+            kpts = {'density': 8}
+        kpts_kc = kpts2kpts(kpts, atoms=self.atoms).kpts
 
         omega_kl, u_kl = self.band_structure(kpts_kc, modes=True)
         masses = self.atoms.get_masses()[self.indices][np.newaxis,
