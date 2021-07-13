@@ -60,7 +60,7 @@ class MOPAC(FileIOCalculator):
         >>> atoms = molecule('H2')
         >>> atoms.calc = MOPAC(label='H2', task='GRADIENTS')
         >>> atoms.get_potential_energy()
-        >>> atoms.get_opt_structure()
+        >>> atoms.calc.get_final_heat_of_formation()
 
         Read in and start from output file:
 
