@@ -218,7 +218,7 @@ class XrDebye:
 
         pos = self.atoms.get_positions()  # positions of atoms
         fa = np.array(fa)  # atomic factors array
-
+        
         for i in range(len(self.atoms)):
             vr = pos - pos[i]
             I += np.sum(fa[i] * fa * np.sinc(2 * s * np.sqrt(np.sum(vr * vr, axis=1))))
@@ -300,8 +300,9 @@ class XrDebye:
             plt.clf()  # clear figure
             ax = plt.gca()
 
+        data = self._xrddata
         if self.mode == 'XRD':
-            x, y = np.array(self.twotheta_list), np.array(self.intensity_list)
+            x, y = np.array(data.twotheta), np.array(data.intensities)
             ax.plot(x, y / np.max(y), '.-')
             ax.set_xlabel('2$\\theta$')
             ax.set_ylabel('Intensity')
