@@ -15,6 +15,18 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from ase.crystallography.xrayfunctions import initialize_atomic_form_factor_splines, pdist_in_chunks, cdist_in_chunks
 
 
+def _bin_distances(distances, bin_width):
+    nbins = int(np.ceil(np.ptp(distances) / bin_width)) + 1
+    dist_hist, bin_edges = np.histogram(distances, bins=nbins)
+    nontrivial_bins = np.nonzero(dist_hist)
+
+    dist_hist, bin_edges = (
+        dist_hist[nontrivial_bins],
+        bin_edges[nontrivial_bins] + (bin_edges[1] - bin_edges[0]) / 2,
+    )
+
+    return dist_hist, bin_edges
+
 def one_species_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s_vect: np.ndarray) -> np.ndarray:
     r"""Calculates the contributions to the scattered intensity where both form factors belong to the same atomic species.
 
@@ -53,54 +65,29 @@ def one_species_contribution(positions: np.ndarray, form_factor_spline: Interpol
     return contribution
 
 
-def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float = 1e-3, hist_order=0) -> np.ndarray:
+def one_species_hist_contribution(positions: np.ndarray, form_factor_spline: InterpolatedUnivariateSpline, s_vect: np.ndarray, bin_width: float = 1e-3) -> np.ndarray:
     """[summary]
-
-    Parameters
-    ----------
-    positions : np.ndarray
-        [description]
-    form_factor_spline : InterpolatedUnivariateSpline
-        [description]
-    s : np.ndarray
-        [description]
-    bin_width : [type], optional
-        [description], by default 1e-3
-
-    Returns
-    -------
-    np.ndarray
-        [description]
     """
 
     n_atoms: int = positions.shape[0]
-    contribution: np.ndarray = np.zeros_like(s)
+    contribution: np.ndarray = np.zeros_like(s_vect)
 
     if positions.shape[0] == 1:
-        return form_factor_spline(s) ** 2 * n_atoms
+        return form_factor_spline(s_vect) ** 2 * n_atoms
 
     for distances in pdist_in_chunks(positions):
-        nbins = int(np.ceil(np.ptp(distances) / bin_width)) + 1
+        dist_hist, bin_edges = _bin_distances(distances, bin_width)
 
-        if hist_order == 0:
-            dist_hist, bin_edges = np.histogram(distances, bins=nbins)
-            nontrivial_bins = np.nonzero(dist_hist)
-
-            dist_hist, bin_edges = (
-                dist_hist[nontrivial_bins],
-                bin_edges[nontrivial_bins] + (bin_edges[1] - bin_edges[0]) / 2,
-            )
-
-        for i in range(s.shape[0]):
-            contribution[i] += form_factor_spline(s[i]) ** 2 * (
-                n_atoms + 2 * np.sum(dist_hist * np.sinc(bin_edges * s[i] * 2))
+        for i in range(s_vect.shape[0]):
+            contribution[i] += form_factor_spline(s_vect[i]) ** 2 * (
+                n_atoms + 2 * np.sum(dist_hist * np.sinc(bin_edges * s_vect[i] * 2))
             )
 
     return contribution
 
 
 def two_species_contribution(
-    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray
+    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s_vect: np.ndarray
 ) -> np.ndarray:
     r"""Calculates the contributions to the scattered intensity where the form factors belong to different atomic species.
 
@@ -132,63 +119,38 @@ def two_species_contribution(
     np.ndarray
         [description]
     """
-    contribution = np.zeros_like(s)
+    contribution = np.zeros_like(s_vect)
 
     for distances in cdist_in_chunks(positions1, positions2):
-        for i in range(s.shape[0]):
+        for i in range(s_vect.shape[0]):
             contribution[i] += (
                 2.0
-                * form_factor_spline1(s[i])
-                * form_factor_spline2(s[i])
-                * np.sum(np.sinc(distances * s[i] * 2))
+                * form_factor_spline1(s_vect[i])
+                * form_factor_spline2(s_vect[i])
+                * np.sum(np.sinc(distances * s_vect[i] * 2))
             )
 
     return contribution
 
 
 def two_species_hist_contribution(
-    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s: np.ndarray, bin_width: float = 1e-3
+    positions1: np.ndarray, positions2: np.ndarray, form_factor_spline1: InterpolatedUnivariateSpline, form_factor_spline2: InterpolatedUnivariateSpline, s_vect: np.ndarray, bin_width: float = 1e-3
 ) -> np.ndarray:
     """[summary]
 
-    Parameters
-    ----------
-    positions1 : np.ndarray
-        [description]
-    positions2 : np.ndarray
-        [description]
-    form_factor_spline1 : InterpolatedUnivariateSpline
-        [description]
-    form_factor_spline2 : InterpolatedUnivariateSpline
-        [description]
-    s : np.ndarray
-        [description]
-    bin_width : float, optional
-        [description], by default 1e-3
-
-    Returns
-    -------
-    np.ndarray
-        [description]
     """
 
-    contribution = np.zeros_like(s)
+    contribution = np.zeros_like(s_vect)
 
     for distances in cdist_in_chunks(positions1, positions2):
-        nbins = int(np.ceil(np.ptp(distances) / bin_width)) + 1
+        dist_hist, bin_edges = _bin_distances(distances, bin_width)
 
-        dist_hist, bin_edges = np.histogram(distances, bins=nbins)
-        nontrivial_bins = np.nonzero(dist_hist)
-        dist_hist, bin_edges = (
-            dist_hist[nontrivial_bins],
-            bin_edges[nontrivial_bins] + (bin_edges[1] - bin_edges[0]) / 2,
-        )
-        for i in range(s.shape[0]):
+        for i in range(s_vect.shape[0]):
             contribution[i] += (
                 2.0
-                * form_factor_spline1(s[i])
-                * form_factor_spline2(s[i])
-                * np.sum(dist_hist * np.sinc(bin_edges * s[i] * 2))
+                * form_factor_spline1(s_vect[i])
+                * form_factor_spline2(s_vect[i])
+                * np.sum(dist_hist * np.sinc(bin_edges * s_vect[i] * 2))
             )
 
     return contribution
@@ -257,7 +219,6 @@ class XrayDebye:
         alpha: float = 1.01,
         histogram_approximation: bool = True,
         bin_width=1e-3,
-        hist_order=0
     ):
         """[summary]
 
@@ -296,8 +257,8 @@ class XrayDebye:
         )
 
         if histogram_approximation:
-            self.one_species_contribution = partial(one_species_hist_contribution, bin_width=bin_width, hist_order=hist_order)
-            self.two_species_contribution = partial(two_species_hist_contribution, bin_width=bin_width, hist_order=hist_order)
+            self.one_species_contribution = partial(one_species_hist_contribution, bin_width=bin_width)
+            self.two_species_contribution = partial(two_species_hist_contribution, bin_width=bin_width)
         else:
             self.one_species_contribution = one_species_contribution
             self.two_species_contribution = two_species_contribution

@@ -12,24 +12,24 @@ from scipy.spatial.distance import cdist, pdist
 from ase.crystallography.xrddata import waasmaier
 
 
-def initialize_atomic_form_factor_splines(symbols_list, s) -> dict:
+def initialize_atomic_form_factor_splines(symbols_list, s_vect) -> dict:
 
     atomic_form_factor_dict: dict = {}
     for symbol in set(symbols_list):
-        atomic_form_factor_dict[symbol] = construct_atomic_form_factor_spline(symbol, s)
+        atomic_form_factor_dict[symbol] = construct_atomic_form_factor_spline(symbol, s_vect)
 
     return atomic_form_factor_dict
 
 
-def construct_atomic_form_factor_spline(symbol: str, s: np.ndarray):
+def construct_atomic_form_factor_spline(symbol: str, s_vect: np.ndarray):
     coeffs = waasmaier[symbol]
     ff = (
         np.sum(
-            coeffs[:-1:2] * np.exp(-s[:, None] * s[:, None] * coeffs[1:-1:2]), axis=1
+            coeffs[:-1:2] * np.exp(-s_vect[:, None] ** 2 * coeffs[1:-1:2]), axis=1
         )
         + coeffs[-1]
     )
-    return InterpolatedUnivariateSpline(x=s, y=ff, k=5)
+    return InterpolatedUnivariateSpline(x=s_vect, y=ff, k=5)
 
 
 def pdist_in_chunks(arr1, chunksize: int = 5000):
