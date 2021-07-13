@@ -3,7 +3,7 @@
 from itertools import product
 from math import pi, sqrt
 from pathlib import Path
-from typing import Any, Union, Sequence
+from typing import Any, Dict, Optional, Union, Sequence
 import warnings
 
 import numpy as np
@@ -703,9 +703,9 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_pdos(self, kpts: Union[Sequence[int],
-                                   dict[str, Any],
-                                   KPoints]) -> DOSCollection:
+    def get_pdos(self, kpts: Optional[Union[Sequence[int],
+                                            Dict[str, Any],
+                                            KPoints]] = None) -> DOSCollection:
         """Calculate atom-projected phonon DOS
 
         This returns a DOSCollection of unbroadened RawDOSData objects, tagged
