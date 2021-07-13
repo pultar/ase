@@ -1,6 +1,5 @@
 """Module for calculating phonons of periodic systems."""
 
-from itertools import product
 from math import pi, sqrt
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, Sequence
@@ -743,12 +742,10 @@ class Phonons(Displacement):
         weights = (np.linalg.norm(vectors, axis=-1)**2).T / len(kpts_kc)
 
         raw_dos_by_k = DOSCollection(
-            [RawDOSData(omega_kl[k], weights[i, :, k],
+            [RawDOSData(omega_kl.ravel(), weights[i].ravel(order='F'),
                         info={'index': str(self.indices[i]),
-                              'symbol': self.atoms[i].symbol,
-                              'kpt': str(k)})
-             for (i, k) in product(range(len(self.indices)),
-                                   range(len(kpts_kc)))])
+                              'symbol': self.atoms[i].symbol})
+             for i in range(len(self.indices))])
         return raw_dos_by_k.sum_by('index')
 
     def get_dos(self, kpts=(10, 10, 10)) -> RawDOSData:
