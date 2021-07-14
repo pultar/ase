@@ -7,8 +7,8 @@ import pytest
 
 from ase.utils.xrdebye import XrDebye
 from ase.crystallography import XrayDebye
-from ase.crystallography.xrddata import wavelengths, waasmaier
-from ase.crystallography.xrayfunctions import construct_atomic_form_factor_spline
+from ase.crystallography.xrddata import wavelengths, waasmaier, read_waasmaier_coeffs
+from ase.crystallography.xrayfunctions import waasmaier_atomic_form_factor_spline
 from ase.crystallography.xrdebye import one_species_contribution, two_species_contribution
 from ase import Atoms
 from ase.cluster import Icosahedron
@@ -41,7 +41,8 @@ def test_formfactor_correctness(xrd):
     x = np.linspace(0, 1, 10)
 
     xrddata = xrd.calc_pattern(x[:1])
-    formfactor = construct_atomic_form_factor_spline('Au', x)
+    ff_dict = read_waasmaier_coeffs(set(xrd.atoms.symbols))
+    formfactor = waasmaier_atomic_form_factor_spline(ff_dict['Au'], x)
     evaluated_formfactor = formfactor(np.array([0]))
 
     # The extra factor of 2 is because method='Iwasa' introduces
@@ -53,7 +54,7 @@ def test_contributions_correctness():
     rng = np.random.default_rng(42)
     random_positions = rng.random((2, 3))
 
-    form_factor = construct_atomic_form_factor_spline('Au', np.linspace(0, 1, 100))
+    form_factor = waasmaier_atomic_form_factor_spline(read_waasmaier_coeffs(['Au'])['Au'], np.linspace(0, 1, 100))
     x = np.array([0.1])
 
     c1 = one_species_contribution(random_positions, form_factor, x)
