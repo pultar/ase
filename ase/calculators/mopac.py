@@ -206,12 +206,12 @@ class MOPAC(FileIOCalculator):
             elif line.find('FINAL  POINT  AND  DERIVATIVES') != -1:
                 forces = [-float(line.split()[6])
                           for line in lines[i + 3:i + 3 + 3 * len(self.atoms)]]
-                new_structure= [-float(line.split()[5])
+                opt_positions= [-float(line.split()[5])
                           for line in lines[i + 3:i + 3 + 3 * len(self.atoms)]]
                 self.results['forces'] = np.array(
                     forces).reshape((-1, 3)) * kcal / mol
-                self.results['new_structure'] = np.array(
-                    new_structure).reshape((-1, 3))
+                self.results['opt_positions'] = np.array(
+                    opt_positions).reshape((-1, 3))
             elif line.find('EIGENVALUES') != -1:
                 if line.find('ALPHA') != -1:
                     j = i + 1
@@ -274,7 +274,7 @@ class MOPAC(FileIOCalculator):
         """
         return self.final_hof
     
-    def get_opt_structure(self):
+    def get_opt_positions(self):
         """return optimized structure from output file
         """
-        return self.results['new_structure']
+        return self.results['opt_positions']
