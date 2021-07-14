@@ -206,7 +206,7 @@ class MOPAC(FileIOCalculator):
             elif line.find('FINAL  POINT  AND  DERIVATIVES') != -1:
                 forces = [-float(line.split()[6])
                           for line in lines[i + 3:i + 3 + 3 * len(self.atoms)]]
-                opt_positions= [-float(line.split()[5])
+                opt_positions= [float(line.split()[5])
                           for line in lines[i + 3:i + 3 + 3 * len(self.atoms)]]
                 self.results['forces'] = np.array(
                     forces).reshape((-1, 3)) * kcal / mol
