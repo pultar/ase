@@ -13,6 +13,7 @@ See https://runner.pages.gwdg.de/runner/reference/files/#inputdata
 import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
+from ase.calculators.calculator import PropertyNotImplementedError
 
 
 class FileFormatError(Exception):
@@ -277,8 +278,11 @@ def write_runner(fileobj, images, comment='', fmt='%22.12f'):
             )
         
         fileobj.write('energy %s\n' % (fmt % atoms.get_potential_energy()))
-        fileobj.write('charge %s\n' % (fmt % atoms.calc.get_property('totalcharge')))
-        fileobj.write('end\n')
-        natoms = len(atoms)
 
-        
+        # Exception handling is necessary as long as totalcharge property is not
+        # finalized.
+        try:    
+            fileobj.write('charge %s\n' % (fmt % atoms.calc.get_property('totalcharge')))
+        except PropertyNotImplementedError:
+            fileobj.write('charge %s\n' % (fmt % 0.0))        
+        fileobj.write('end\n')
