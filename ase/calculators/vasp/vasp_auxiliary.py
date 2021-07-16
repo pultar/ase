@@ -301,14 +301,14 @@ class VaspLocpot:
             if line1 == '':
                 return cls(atoms, pot)
             # Check to see if the next line equals the previous grid settings
-            elif line1 == grid_size:
+            elif line1.split() == grid_size.split():
                 spin_down_pot = np.empty(grid)
                 cls._read_pot(fd, spin_down_pot)
-            elif line1 != grid_size:
+            elif line1.split() != grid_size.split():
                 fd.seek(fl)
                 magmom = np.fromfile(fd, count=len(atoms), sep=' ')
                 line1 = fd.readline()
-                if line1 == grid_size:
+                if line1.split() == grid_size.split():
                     spin_down_pot = np.empty(grid)
                     cls._read_pot(fd, spin_down_pot)
         return cls(atoms, pot, spin_down_pot=spin_down_pot, magmom=magmom)
