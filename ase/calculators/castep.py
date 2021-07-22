@@ -1997,20 +1997,20 @@ End CASTEP Interface Documentation
         # write out the input file
 
         with open(self._abs_path('%s.cell' % self._seed), 'w') as file:
-            
             #if polarised, use new write_castep_cell method that can read in the initial_magnetic_moments
             #should the spins not be specified, get_initial_magnetic_moments() gives an array of 0s
-
             if self.param.spin_polarized.value == 'TRUE':
-
-                self._write_cell(file, self.atoms, castep_cell=self.cell,
-                                force_write=force_write, magnetic_moments='initial')
-
+                self._write_cell(file,
+                                 self.atoms,
+                                 castep_cell=self.cell,
+                                 force_write=force_write,
+                                 magnetic_moments='initial')
             #if non polarised, do it not write magnetic moments to cell, as it crashes the calculation
             else:
-                self._write_cell(file, self.atoms, castep_cell=self.cell,
-                                force_write=force_write)
-                                    
+                self._write_cell(file,
+                                 self.atoms,
+                                 castep_cell=self.cell,
+                                 force_write=force_write)
 
         if self._export_settings:
             interface_options = self._opt
@@ -2245,14 +2245,14 @@ End CASTEP Interface Documentation
         seed = 'dryrun'
 
         # write out the input file
-
         with open(os.path.join(temp_dir, '%s.cell' % seed), 'w') as file:
-            
             #if polarised, use new write_castep_cell method that can read in the initial_magnetic_moments
             #should the spins not be specified, get_initial_magnetic_moments() gives an array of 0s
             if self.param.spin_polarized.value == 'TRUE':
-                self._write_cell(file, self.atoms, castep_cell=self.cell, magnetic_moments='initial')
-
+                self._write_cell(file,
+                                 self.atoms,
+                                 castep_cell=self.cell,
+                                 magnetic_moments='initial')
             #if non polarised, do it not write magnetic moments to cell, as it crashes the calculation
             else:
                 self._write_cell(file, self.atoms, castep_cell=self.cell)
