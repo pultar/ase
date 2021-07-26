@@ -207,10 +207,7 @@ def read_runner(fileobj, index):
                 atoms,
                 energy=totalenergy[0],
                 forces=forces,
-                # The total charge can only be stored in a SinglePointCalculator
-                # by modifying ase.calculators.calculator.all_properties
-                # so this line does not work on its own.
-                #totalcharge=totalcharge[0]
+                totalcharge=totalcharge[0]
             )
 
             # Finally, append the structure to the list of all structures.
