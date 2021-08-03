@@ -1,11 +1,112 @@
 import warnings
 
 import numpy as np
+from ase.optimize.optimize import Optimizer
 from numpy.linalg import eigh
 
-from ase.optimize.optimize import Optimizer
+
+def update_hessian(
+    iterate: np.ndarray,
+    iterate_previous: np.ndarray,
+    gradient: np.ndarray,
+    gradient_previous: np.ndarray,
+    hessian: np.ndarray,
+) -> np.ndarray:
+    """Update hessian by BFGS algorithm
+
+    REMARK: `gradient` currently means negative gradient, i.e., force
+
+    Args:
+        iterate: current state (e.g. positions)
+        tterate_previous: state before last update (e.g. prev. positions)
+        gradient: current gradient (e.g. forces)
+        gradient_previous: last gradient
+        hessian: current hessian
+
+    Returns:
+        new_hessian: update hessian
+    """
+    dx = iterate - iterate_previous
+    df = gradient - gradient_previous
+
+    a = np.dot(dx, df)
+    dg = np.dot(hessian, dx)
+    b = np.dot(dx, dg)
+    new_hessian = hessian - np.outer(df, df) / a + np.outer(dg, dg) / b
+
+    return new_hessian
 
 
+class BFGSState:
+    """dataclass handling the state of an BFGS algorithm incl. initial cond."""
+
+    def __init__(
+        self, iterate: np.ndarray, gradient: np.ndarray, hessian: np.ndarray,
+    ) -> None:
+        """initialize with a iterate (e.g. positions), gradient (e.g. forces),
+           optionally hessian
+        """
+        self.iterate = iterate
+        self.gradient = gradient
+        self.hessian = hessian
+        self._initial_state = self.todict()
+
+    def todict(self) -> dict:
+        d = {k: getattr(self, k) for k in ("iterate", "gradient", "hessian")}
+        return d
+
+    @property
+    def initial_state(self):
+        return self._initial_state.copy()
+
+
+class BFGSOptimizer:
+    default_configuration = {"alpha": 70.0}
+
+    def __init__(
+        self,
+        iterate: np.ndarray,
+        gradient: np.ndarray,
+        alpha: float = None,
+        hessian: np.ndarray = None,
+    ) -> None:
+        """initialize with a iterate (e.g. positions), gradient (e.g. forces),
+           optionally hessian
+        """
+        ndim = np.size(iterate)
+        if hessian is not None:
+            assert np.shape(hessian) == (ndim, ndim), (np.shape(hessian), ndim)
+        elif alpha is not None:
+            hessian = np.eye(ndim) / alpha
+        else:
+            hessian = np.eye(ndim) / self.default_configuration["alpha"]
+
+        # initialize state
+        self.state = BFGSState(
+            iterate=iterate, gradient=gradient, hessian=hessian
+        )
+
+    def get_step_and_update(self, iterate, gradient) -> np.ndarray:
+        """Take iterate and gradient, update state, return predicted step"""
+        # update hessian
+        self.state.hessian = update_hessian(
+            iterate=iterate,
+            iterate_previous=self.state.iterate,
+            gradient=gradient,
+            gradient_previous=self.state.gradient,
+            hessian=self.state.hessian,
+        )
+        # predict new iterate and update internal state
+        omega, V = eigh(self.state.hessian)
+        dx = np.dot(V, np.dot(gradient, V) / np.fabs(omega)).reshape((-1, 3))
+        # update state
+        self.state.iterate = iterate
+        self.state.gradient = gradient
+
+        return dx
+
+
+# fmt: off
 class BFGS(Optimizer):
     # default parameters
     defaults = {**Optimizer.defaults, 'alpha': 70.0}
