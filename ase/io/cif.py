@@ -10,23 +10,22 @@ import io
 import re
 import shlex
 import warnings
-from typing import Dict, List, Tuple, Optional, Union, Iterator, Any
+from typing import Dict, List, Tuple, Optional, Union, Iterator, Any, Sequence
 import collections.abc
 
 import numpy as np
 
 from ase import Atoms
 from ase.cell import Cell
-from ase.parallel import paropen
 from ase.spacegroup import crystal
 from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
 from ase.io.cif_unicode import format_unicode, handle_subscripts
+from ase.utils import iofunction
 
 
 rhombohedral_spacegroups = {146, 148, 155, 160, 161, 166, 167}
 
 
-# Old conventions:
 old_spacegroup_names = {'Abm2': 'Aem2',
                         'Aba2': 'Aea2',
                         'Cmca': 'Cmce',
@@ -88,76 +87,98 @@ def parse_singletag(lines: List[str], line: str) -> Tuple[str, CIFDataValue]:
     return key, convert_value(value)
 
 
+def parse_cif_loop_headers(lines: List[str]) -> Iterator[str]:
+    header_pattern = r'\s*(_\S*)'
+
+    while lines:
+        line = lines.pop()
+        match = re.match(header_pattern, line)
+
+        if match:
+            header = match.group(1).lower()
+            yield header
+        elif re.match(r'\s*#', line):
+            # XXX we should filter comments out already.
+            continue
+        else:
+            lines.append(line)  # 'undo' pop
+            return
+
+
+def parse_cif_loop_data(lines: List[str],
+                        ncolumns: int) -> List[List[CIFDataValue]]:
+    columns: List[List[CIFDataValue]] = [[] for _ in range(ncolumns)]
+
+    tokens = []
+    while lines:
+        line = lines.pop().strip()
+        lowerline = line.lower()
+        if (not line or
+              line.startswith('_') or
+              lowerline.startswith('data_') or
+              lowerline.startswith('loop_')):
+            lines.append(line)
+            break
+
+        if line.startswith('#'):
+            continue
+
+        if line.startswith(';'):
+            moretokens = [parse_multiline_string(lines, line)]
+        else:
+            if ncolumns == 1:
+                moretokens = [line]
+            else:
+                moretokens = shlex.split(line, posix=False)
+
+        tokens += moretokens
+        if len(tokens) < ncolumns:
+            continue
+        if len(tokens) == ncolumns:
+            for i, token in enumerate(tokens):
+                columns[i].append(convert_value(token))
+        else:
+            warnings.warn('Wrong number {} of tokens, expected {}: {}'
+                          .format(len(tokens), ncolumns, tokens))
+
+        # (Due to continue statements we cannot move this to start of loop)
+        tokens = []
+
+    if tokens:
+        assert len(tokens) < ncolumns
+        raise RuntimeError('CIF loop ended unexpectedly with incomplete row')
+
+    return columns
+
+
 def parse_loop(lines: List[str]) -> Dict[str, List[CIFDataValue]]:
     """Parse a CIF loop. Returns a dict with column tag names as keys
     and a lists of the column content as values."""
-    headers: List[str] = []
-    line = lines.pop().strip()
-    while line.startswith('_'):
-        tokens = line.split()
-        headers.append(tokens[0].lower())
-        if len(tokens) == 1:
-            line = lines.pop().strip()
-        else:
-            line = ' '.join(tokens[1:])
-            break
-    columns: Dict[str, List[CIFDataValue]] = dict([(header, [])
-                                                   for header in headers])
-    if len(columns) != len(headers):
-        seen = set()
-        duplicates = []
-        for header in headers:
-            if headers in seen:
-                duplicates.append(header)
-            else:
-                seen.add(header)
-        warnings.warn('Duplicated loop tags: {0}'.format(duplicates))
 
-    tokens = []
-    while True:
-        lowerline = line.lower()
-        if (not line or
-            line.startswith('_') or
-            lowerline.startswith('data_') or
-            lowerline.startswith('loop_')):
-            break
-        if line.startswith('#'):
-            line = lines.pop().strip()
-            continue
-        if line.startswith(';'):
-            t = [parse_multiline_string(lines, line)]
-        else:
-            if len(headers) == 1:
-                t = [line]
-            else:
-                t = shlex.split(line, posix=False)
+    headers = list(parse_cif_loop_headers(lines))
+    # Dict would be better.  But there can be repeated headers.
 
-        line = lines.pop().strip()
+    columns = parse_cif_loop_data(lines, len(headers))
 
-        tokens.extend(t)
-        if len(tokens) < len(columns):
-            continue
-        if len(tokens) == len(headers):
-            for header, token in zip(headers, tokens):
-                columns[header].append(convert_value(token))
+    columns_dict = {}
+    for i, header in enumerate(headers):
+        if header in columns_dict:
+            warnings.warn('Duplicated loop tags: {0}'.format(header))
         else:
-            warnings.warn('Wrong number of tokens: {0}'.format(tokens))
-        tokens = []
-    if line:
-        lines.append(line)
-    return columns
+            columns_dict[header] = columns[i]
+    return columns_dict
 
 
 def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
     """Parse a CIF data items and return a dict with all tags."""
     tags: Dict[str, CIFData] = {}
+
     while True:
         if not lines:
             break
-        line = lines.pop()
+        line = lines.pop().strip()
         if not line:
-            break
-        line = line.strip()
+            continue
         lowerline = line.lower()
         if not line or line.startswith('#'):
             continue
@@ -175,6 +196,10 @@ def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
         else:
             raise ValueError('Unexpected CIF file entry: "{0}"'.format(line))
     return tags
+
+
+class NoStructureData(RuntimeError):
+    pass
 
 
 class CIFBlock(collections.abc.Mapping):
@@ -221,6 +246,8 @@ class CIFBlock(collections.abc.Mapping):
         coords = [self.get(name) for name in ['_atom_site_fract_x',
                                               '_atom_site_fract_y',
                                               '_atom_site_fract_z']]
+        # XXX Shall we try to handle mixed coordinates?
+        # (Some scaled vs others fractional)
         if None in coords:
             return None
         return np.array(coords).T
@@ -233,22 +260,29 @@ class CIFBlock(collections.abc.Mapping):
             return None
         return np.array(coords).T
 
-    def get_scaled_positions(self):
-        scaled_positions = self._raw_scaled_positions()
-        if scaled_positions is None:
-            positions = self._raw_positions()
-            if positions is None:
-                raise RuntimeError('No positions found in structure')
-            cell = self.get_cell()
-            scaled_positions = cell.scaled_positions(positions)
-        return scaled_positions
+    def _get_site_coordinates(self):
+        scaled = self._raw_scaled_positions()
+
+        if scaled is not None:
+            return 'scaled', scaled
+
+        cartesian = self._raw_positions()
+
+        if cartesian is None:
+            raise NoStructureData('No positions found in structure')
+
+        return 'cartesian', cartesian
 
     def _get_symbols_with_deuterium(self):
         labels = self._get_any(['_atom_site_type_symbol',
                                 '_atom_site_label'])
-        assert labels is not None
+        if labels is None:
+            raise NoStructureData('No symbols')
+
         symbols = []
         for label in labels:
+            if label == '.' or label == '?':
+                raise NoStructureData('Symbols are undetermined')
             # Strip off additional labeling on chemical symbols
             match = re.search(r'([A-Z][a-z]?)', label)
             symbol = match.group(0)
@@ -289,10 +323,10 @@ class CIFBlock(collections.abc.Mapping):
                               '_symmetry_int_tables_number'])
 
     def _get_spacegroup_name(self):
-        hm_symbol = self._get_any(['_space_group.Patterson_name_h-m',
-                                   '_space_group.patterson_name_h-m',
+        hm_symbol = self._get_any(['_space_group_name_h-m_alt',
                                    '_symmetry_space_group_name_h-m',
-                                   '_space_group_name_h-m_alt'])
+                                   '_space_group.Patterson_name_h-m',
+                                   '_space_group.patterson_name_h-m'])
 
         hm_symbol = old_spacegroup_names.get(hm_symbol, hm_symbol)
         return hm_symbol
@@ -369,17 +403,43 @@ class CIFBlock(collections.abc.Mapping):
                     'This may result in wrong setting!' % (
                         setting_name, spacegroup))
 
-        spg = Spacegroup(spacegroup)
+        spg = Spacegroup(spacegroup, setting)
         if no is not None:
             assert int(spg) == no, (int(spg), no)
-        assert spg.setting == setting, (spg.setting, setting)
         return spg
 
     def get_unsymmetrized_structure(self) -> Atoms:
-        return Atoms(symbols=self.get_symbols(),
-                     cell=self.get_cell(),
-                     masses=self._get_masses(),
-                     scaled_positions=self.get_scaled_positions())
+        """Return Atoms without symmetrizing coordinates.
+
+        This returns a (normally) unphysical Atoms object
+        corresponding only to those coordinates included
+        in the CIF file, useful for e.g. debugging.
+
+        This method may change behaviour in the future."""
+        symbols = self.get_symbols()
+        coordtype, coords = self._get_site_coordinates()
+
+        atoms = Atoms(symbols=symbols,
+                      cell=self.get_cell(),
+                      masses=self._get_masses())
+
+        if coordtype == 'scaled':
+            atoms.set_scaled_positions(coords)
+        else:
+            assert coordtype == 'cartesian'
+            atoms.positions[:] = coords
+
+        return atoms
+
+    def has_structure(self):
+        """Whether this CIF block has an atomic configuration."""
+        try:
+            self.get_symbols()
+            self._get_site_coordinates()
+        except NoStructureData:
+            return False
+        else:
+            return True
 
     def get_atoms(self, store_tags=False, primitive_cell=False,
                   subtrans_included=True, fractional_occupancies=True) -> Atoms:
@@ -428,7 +488,7 @@ class CIFBlock(collections.abc.Mapping):
                 # Compile an occupancies dictionary
                 occ_dict = {}
                 for i, sym in enumerate(atoms.symbols):
-                    occ_dict[i] = {sym: occupancies[i]}
+                    occ_dict[str(i)] = {sym: occupancies[i]}
                 atoms.info['occupancy'] = occ_dict
 
         return atoms
@@ -528,9 +588,12 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     cell.
 
     If *fractional_occupancies* is true, the resulting atoms object will be
-    tagged equipped with an array `occupancy`. Also, in case of mixed
-    occupancies, the atom's chemical symbol will be that of the most dominant
-    species.
+    tagged equipped with a dictionary `occupancy`. The keys of this dictionary
+    will be integers converted to strings. The conversion to string is done
+    in order to avoid troubles with JSON encoding/decoding of the dictionaries
+    with non-string keys.
+    Also, in case of mixed occupancies, the atom's chemical symbol will be
+    that of the most dominant species.
 
     String *reader* is used to select CIF reader. Value `ase` selects
     built-in CIF reader (default), while `pycodcif` selects CIF reader based
@@ -539,21 +602,17 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     # Find all CIF blocks with valid crystal data
     images = []
     for block in parse_cif(fileobj, reader):
+        if not block.has_structure():
+            continue
+
         atoms = block.get_atoms(
             store_tags, primitive_cell,
             subtrans_included,
             fractional_occupancies=fractional_occupancies)
         images.append(atoms)
+
     for atoms in images[index]:
         yield atoms
-
-
-def split_chem_form(comp_name):
-    """Returns e.g. AB2  as ['A', '1', 'B', '2']"""
-    split_form = re.findall(r'[A-Z][a-z]*|\d+',
-                            re.sub(r'[A-Z][a-z]*(?![\da-z])',
-                                   r'\g<0>1', comp_name))
-    return split_form
 
 
 def format_cell(cell: Cell) -> str:
@@ -569,17 +628,52 @@ def format_cell(cell: Cell) -> str:
 def format_generic_spacegroup_info() -> str:
     # We assume no symmetry whatsoever
     return '\n'.join([
-        '_symmetry_space_group_name_H-M    "P 1"',
-        '_symmetry_int_tables_number       1',
+        '_space_group_name_H-M_alt    "P 1"',
+        '_space_group_IT_number       1',
         '',
         'loop_',
-        '  _symmetry_equiv_pos_as_xyz',
+        '  _space_group_symop_operation_xyz',
         "  'x, y, z'",
         '',
     ])
 
 
-def write_cif(fd, images, cif_format='default',
+class CIFLoop:
+    def __init__(self):
+        self.names = []
+        self.formats = []
+        self.arrays = []
+
+    def add(self, name, array, fmt):
+        assert name.startswith('_')
+        self.names.append(name)
+        self.formats.append(fmt)
+        self.arrays.append(array)
+        if len(self.arrays[0]) != len(self.arrays[-1]):
+            raise ValueError(f'Loop data "{name}" has {len(array)} '
+                             'elements, expected {len(self.arrays[0])}')
+
+    def tostring(self):
+        lines = []
+        append = lines.append
+        append('loop_')
+        for name in self.names:
+            append(f'  {name}')
+
+        template = '  ' + '  '.join(self.formats)
+
+        ncolumns = len(self.arrays)
+        nrows = len(self.arrays[0]) if ncolumns > 0 else 0
+        for row in range(nrows):
+            arraydata = [array[row] for array in self.arrays]
+            line = template.format(*arraydata)
+            append(line)
+        append('')
+        return '\n'.join(lines)
+
+
+@iofunction('wb')
+def write_cif(fd, images, cif_format=None,
               wrap=True, labels=None, loop_keys=None) -> None:
     """Write *images* to CIF file.
 
@@ -602,126 +696,156 @@ def write_cif(fd, images, cif_format='default',
 
     """
 
+    if cif_format is not None:
+        warnings.warn('The cif_format argument is deprecated and may be '
+                      'removed in the future.  Use loop_keys to customize '
+                      'data written in loop.', FutureWarning)
+
     if loop_keys is None:
         loop_keys = {}
-
-    if isinstance(fd, str):
-        fd = paropen(fd, 'wb')
-
-    fd = io.TextIOWrapper(fd, encoding='latin-1')
 
     if hasattr(images, 'get_positions'):
         images = [images]
 
-    for i_frame, atoms in enumerate(images):
-        fd.write('data_image%d\n' % i_frame)
+    fd = io.TextIOWrapper(fd, encoding='latin-1')
+    try:
+        for i, atoms in enumerate(images):
+            blockname = f'data_image{i}\n'
+            image_loop_keys = {key: loop_keys[key][i] for key in loop_keys}
 
-        if cif_format == 'mp':
-            comp_name = atoms.get_chemical_formula(mode='reduce')
-            sf = split_chem_form(comp_name)
-            formula_sum = ''
-            ii = 0
-            while ii < len(sf):
-                formula_sum = formula_sum + ' ' + sf[ii] + sf[ii + 1]
-                ii = ii + 2
+            write_cif_image(blockname, atoms, fd,
+                            wrap=wrap,
+                            labels=None if labels is None else labels[i],
+                            loop_keys=image_loop_keys)
 
-            formula_sum = str(formula_sum)
-            fd.write('_chemical_formula_structural       %s\n' %
-                     atoms.get_chemical_formula(mode='reduce'))
-            fd.write('_chemical_formula_sum      "%s"\n' %
-                     formula_sum)
+    finally:
+        # Using the TextIOWrapper somehow causes the file to close
+        # when this function returns.
+        # Detach in order to circumvent this highly illogical problem:
+        fd.detach()
 
-        # Do this only if there's three non-zero lattice vectors
-        if atoms.cell.rank == 3:
-            fd.write(format_cell(atoms.cell))
-            fd.write('\n')
-            fd.write(format_generic_spacegroup_info())
-            fd.write('\n')
 
-        fd.write('loop_\n')
-
-        # Is it a periodic system?
-        coord_type = 'fract' if atoms.pbc.all() else 'Cartn'
-
-        if cif_format == 'mp':
-            fd.write('  _atom_site_type_symbol\n')
-            fd.write('  _atom_site_label\n')
-            fd.write('  _atom_site_symmetry_multiplicity\n')
-            fd.write('  _atom_site_{0}_x\n'.format(coord_type))
-            fd.write('  _atom_site_{0}_y\n'.format(coord_type))
-            fd.write('  _atom_site_{0}_z\n'.format(coord_type))
-            fd.write('  _atom_site_occupancy\n')
+def autolabel(symbols: Sequence[str]) -> List[str]:
+    no: Dict[str, int] = {}
+    labels = []
+    for symbol in symbols:
+        if symbol in no:
+            no[symbol] += 1
         else:
-            fd.write('  _atom_site_label\n')
-            fd.write('  _atom_site_occupancy\n')
-            fd.write('  _atom_site_{0}_x\n'.format(coord_type))
-            fd.write('  _atom_site_{0}_y\n'.format(coord_type))
-            fd.write('  _atom_site_{0}_z\n'.format(coord_type))
-            fd.write('  _atom_site_thermal_displace_type\n')
-            fd.write('  _atom_site_B_iso_or_equiv\n')
-            fd.write('  _atom_site_type_symbol\n')
+            no[symbol] = 1
+        labels.append('%s%d' % (symbol, no[symbol]))
+    return labels
 
-        if coord_type == 'fract':
-            coords = atoms.get_scaled_positions(wrap).tolist()
-        else:
-            coords = atoms.get_positions(wrap).tolist()
-        symbols = atoms.get_chemical_symbols()
-        occupancies = [1 for i in range(len(symbols))]
 
-        # try to fetch occupancies // spacegroup_kinds - occupancy mapping
-        try:
-            occ_info = atoms.info['occupancy']
-            kinds = atoms.arrays['spacegroup_kinds']
-        except KeyError:
-            pass
-        else:
-            for i, kind in enumerate(kinds):
-                occupancies[i] = occ_info[kind][symbols[i]]
-                # extend the positions array in case of mixed occupancy
-                for sym, occ in occ_info[kind].items():
-                    if sym != symbols[i]:
-                        symbols.append(sym)
-                        coords.append(coords[i])
-                        occupancies.append(occ)
+def chemical_formula_header(atoms):
+    counts = atoms.symbols.formula.count()
+    formula_sum = ' '.join(f'{sym}{count}' for sym, count
+                           in counts.items())
+    return (f'_chemical_formula_structural       {atoms.symbols}\n'
+            f'_chemical_formula_sum              "{formula_sum}"\n')
 
-        # Can only do it now since length of atoms is not always equal to the
-        # number of entries.
-        # Do not move this up!
-        extra_data = ["" for i in range(len(symbols))]
-        for key in loop_keys:
-            extra_data = ["{}  {}".format(
-                extra_data[i], loop_keys[key][i_frame][i])
-                for i in range(len(symbols))]
-            fd.write("  _{}\n".format(key))
 
-        if labels:
-            included_labels = labels[i_frame]
-        else:
-            no: Dict[str, int] = {}
-            included_labels = []
-            for symbol in symbols:
-                if symbol in no:
-                    no[symbol] += 1
-                else:
-                    no[symbol] = 1
-                included_labels.append('%s%d' % (symbol, no[symbol]))
+class BadOccupancies(ValueError):
+    pass
 
-        assert len(symbols) == len(coords) == len(
-            occupancies) == len(included_labels) == len(extra_data)
 
-        for symbol, pos, occ, label, ext in zip(
-                symbols, coords, occupancies, included_labels, extra_data):
-            if cif_format == 'mp':
-                fd.write('  %-2s  %4s  %4s  %7.5f  %7.5f  %7.5f  %6.1f%s\n' %
-                         (symbol, label, 1,
-                          pos[0], pos[1], pos[2], occ, ext))
-            else:
-                fd.write(
-                    '  %-8s %6.4f %7.5f  %7.5f  %7.5f  %4s  %6.3f  %-2s%s\n'
-                    % (label, occ, pos[0], pos[1], pos[2],
-                       'Biso', 1.0, symbol, ext))
+def expand_kinds(atoms, coords):
+    # try to fetch occupancies // spacegroup_kinds - occupancy mapping
+    symbols = list(atoms.symbols)
+    coords = list(coords)
+    occupancies = [1] * len(symbols)
+    occ_info = atoms.info.get('occupancy')
+    kinds = atoms.arrays.get('spacegroup_kinds')
+    if occ_info is not None and kinds is not None:
+        for i, kind in enumerate(kinds):
+            occ_info_kind = occ_info[str(kind)]
+            symbol = symbols[i]
+            if symbol not in occ_info_kind:
+                raise BadOccupancies('Occupancies present but no occupancy '
+                                     'info for "{symbol}"')
+            occupancies[i] = occ_info_kind[symbol]
+            # extend the positions array in case of mixed occupancy
+            for sym, occ in occ_info[str(kind)].items():
+                if sym != symbols[i]:
+                    symbols.append(sym)
+                    coords.append(coords[i])
+                    occupancies.append(occ)
+    return symbols, coords, occupancies
 
-    # Using the TextIOWrapper somehow causes the file to close
-    # when this function returns.
-    # Detach in order to circumvent this highly illogical problem:
-    fd.detach()
+
+def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
+    if atoms.cell.rank == 3:
+        coord_type = 'fract'
+        coords = atoms.get_scaled_positions(wrap).tolist()
+    else:
+        coord_type = 'Cartn'
+        coords = atoms.get_positions(wrap).tolist()
+
+    try:
+        symbols, coords, occupancies = expand_kinds(atoms, coords)
+    except BadOccupancies as err:
+        warnings.warn(str(err))
+        occupancies = [1] * len(atoms)
+        symbols = list(atoms.symbols)
+
+    if labels is None:
+        labels = autolabel(symbols)
+
+    coord_headers = [f'_atom_site_{coord_type}_{axisname}'
+                     for axisname in 'xyz']
+
+    loopdata = {}
+    loopdata['_atom_site_label'] = (labels, '{:<8s}')
+    loopdata['_atom_site_occupancy'] = (occupancies, '{:6.4f}')
+
+    _coords = np.array(coords)
+    for i, key in enumerate(coord_headers):
+        loopdata[key] = (_coords[:, i], '{:7.6f}')
+
+    loopdata['_atom_site_type_symbol'] = (symbols, '{:<2s}')
+    loopdata['_atom_site_symmetry_multiplicity'] = (
+        [1.0] * len(symbols), '{}')
+
+    for key in loop_keys:
+        # Should expand the loop_keys like we expand the occupancy stuff.
+        # Otherwise user will never figure out how to do this.
+        values = [loop_keys[key][i] for i in range(len(symbols))]
+        loopdata['_' + key] = (values, '{}')
+
+    return loopdata, coord_headers
+
+
+def write_cif_image(blockname, atoms, fd, *, wrap,
+                    labels, loop_keys):
+    fd.write(blockname)
+    fd.write(chemical_formula_header(atoms))
+
+    rank = atoms.cell.rank
+    if rank == 3:
+        fd.write(format_cell(atoms.cell))
+        fd.write('\n')
+        fd.write(format_generic_spacegroup_info())
+        fd.write('\n')
+    elif rank != 0:
+        raise ValueError('CIF format can only represent systems with '
+                         f'0 or 3 lattice vectors.  Got {rank}.')
+
+    loopdata, coord_headers = atoms_to_loop_data(atoms, wrap, labels,
+                                                 loop_keys)
+
+    headers = [
+        '_atom_site_type_symbol',
+        '_atom_site_label',
+        '_atom_site_symmetry_multiplicity',
+        *coord_headers,
+        '_atom_site_occupancy',
+    ]
+
+    headers += ['_' + key for key in loop_keys]
+
+    loop = CIFLoop()
+    for header in headers:
+        array, fmt = loopdata[header]
+        loop.add(header, array, fmt)
+
+    fd.write(loop.tostring())

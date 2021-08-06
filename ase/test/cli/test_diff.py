@@ -4,10 +4,11 @@ from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 import re
 import pytest
-from ase.cli.template import prec_round, sort2rank, slice_split, \
+from ase.cli.template import prec_round, slice_split, \
     MapFormatter, sym2num, \
     Table, TableFormat
 from ase.io import read
+
 
 @pytest.fixture(scope="module")
 def traj(tmp_path_factory):
@@ -22,8 +23,8 @@ def traj(tmp_path_factory):
 
     temp_path = tmp_path_factory.mktemp("data")
     trajectory = temp_path / 'AlAu.traj'
-    qn = QuasiNewton(slab, trajectory=str(trajectory))
-    qn.run(fmax=0.02)
+    with QuasiNewton(slab, trajectory=str(trajectory)) as qn:
+        qn.run(fmax=0.02)
     return str(trajectory)
 
 
@@ -43,7 +44,7 @@ def test_singleFile_falseCalc_multipleImages(cli, traj):
 
 
 def test_singleFile_trueCalc_multipleImages(cli, traj):
-    cli.ase('diff', traj,  '-c')
+    cli.ase('diff', traj, '-c')
 
 
 def test_twoFiles_falseCalc_singleImage(cli, traj):
@@ -97,9 +98,6 @@ def test_template_functions():
     num = 1.55749
     rnum = [prec_round(num, i) for i in range(1, 6)]
     assert rnum == [1.6, 1.56, 1.557, 1.5575, 1.55749]
-    blarray = [4, 3, 1, 0, 2] == sort2rank(
-        [3, 2, 4, 1, 0])  # sort2rank outputs numpy array
-    assert blarray.all()
     assert slice_split('a@1:3:1') == ('a', slice(1, 3, 1))
 
     sym = 'H'
