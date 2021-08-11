@@ -156,7 +156,7 @@ class RNEB:
         if rot_only:
             all_sym_ops = _purge_pure_tranlation_ops(all_sym_ops)
         final_relaxed = get_relaxed_final(initial, initial_relaxed,
-                                          final, rot=all_sym_ops)
+                                          final, rot=all_sym_ops[0])
         if return_ops:
             return [final_relaxed, all_sym_ops]
         else:
