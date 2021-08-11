@@ -5,6 +5,7 @@ Tejs Vegge, and Juan Maria García Lastra, J. Chem. Theory Comput.,
 2019, 15 (5), pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229).
 """
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -104,7 +105,7 @@ class RNEB:
 
     def get_final_image(self, initial, initial_relaxed, final,
                         log_atomic_idx=False, return_ops=False,
-                        rot_only=False):
+                        rot_only=False) -> Any:
         """Obtain a relaxed final structure from the initial relaxed.
 
         First translations then subsequently rotations operations are checked,

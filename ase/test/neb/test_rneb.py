@@ -287,9 +287,9 @@ def test_reflective_images():
     # used for path
     assert len(all_sym_ops) > 0
 
-    final_relaxed_s = rneb.get_final_image(initial_unrelaxed,
-                                           initial_relaxed,
-                                           final_unrelaxed, rot_only=True)
+    final_relaxed_s: Atoms = rneb.get_final_image(initial_unrelaxed,
+                                                  initial_relaxed,
+                                                  final_unrelaxed, rot_only=True)
 
     # Check that the final image created by symmetry operations has
     # the same energy and forces as final_relaxed
