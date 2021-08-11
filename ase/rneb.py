@@ -5,10 +5,11 @@ Tejs Vegge, and Juan Maria García Lastra, J. Chem. Theory Comput.,
 2019, 15 (5), pp 3215–3222, (doi: 10.1021/acs.jctc.8b01229).
 """
 import logging
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 
+from ase import Atoms
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.geometry import find_mic, get_distances, wrap_positions
@@ -301,7 +302,7 @@ class RNEB:
             self._write_3x3_matrix_to_log(S[0], i)
         return sym
 
-    def get_reflective_path(self, images, sym_ops):
+    def get_reflective_path(self, images, sym_ops) -> List[Atoms]:
         refl_sym_ops = self.reflect_path(images, sym_ops)
         if len(refl_sym_ops) == 0:
             return images
