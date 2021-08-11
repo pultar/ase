@@ -342,3 +342,15 @@ def test_reflective_images():
         ffm2_abs = np.abs(m2.get_forces())
         assert np.isclose(eip1, efm2, atol=1e-3)
         assert np.allclose(fip1_abs, ffm2_abs, atol=1e-3)
+
+def test_reflective_images_equality():
+    from ase.rneb import ReflectiveImages
+    
+    images = [Atoms('H2', positions=[[.25, .25, .25], [.25 + i * .1, .75, .75]]) for i in range(5)]
+    images2 = [Atoms('H2', positions=[[.5, .5, .5], [.25 + i * .1, .75, .75]]) for i in range(5)]
+    r1 = ReflectiveImages([np.eye(3), np.array([.5, .5, .5]), np.arange(5)], images)
+    r2 = ReflectiveImages([2 * np.eye(3), np.array([.75, .75, .75]), np.arange(5)], images2)
+    
+    assert r1 != r2
+    assert r1 == r1
+    

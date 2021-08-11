@@ -429,13 +429,14 @@ class ReflectiveImages(list):
             return atoms
 
     def __eq__(self, other):
+        # Only testing the images, i.e. not the symmetry operations
         if not isinstance(other, ReflectiveImages):
             return False
         return super(ReflectiveImages, self).__eq__(other)
 
     def __ne__(self, other):
         if isinstance(other, ReflectiveImages):
-            return super(ReflectiveImages, self).__eq__(other)
+            return not super(ReflectiveImages, self).__eq__(other)
         return True
 
 
