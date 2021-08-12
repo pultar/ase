@@ -19,7 +19,7 @@ pytest.importorskip('spglib')
 
 def create_path(initial, final, calc=EMT):
     images = [initial]
-    for i in range(3):
+    for _ in range(3):
         image = initial.copy()
         image.calc = calc()
         images.append(image)

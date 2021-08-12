@@ -414,17 +414,15 @@ class ReflectiveImages(list):
 
             results = get_results_dict(self[j])
 
-            # Use symmetry operation on forces in scaled coordinates
-            cell = self[j].cell
-            sforces = cell.scaled_positions(results['forces'])
-            rot_forces = np.inner(sforces[self.reflect_ops[2]],
-                                  self.reflect_ops[0])
+            rot_func = get_rotation_function(self.reflect_ops[0])
+            rot_forces = perform_symmetry_operation(results['forces'],
+                                                    self[j].cell,
+                                                    rot_func)
 
             # Set the rotated forces in the results dictionary. Energy
             # and magmoms are identical to the symmetric image
-            results['forces'] = cell.cartesian_positions(rot_forces)
-            newcalc = SinglePointCalculator(atoms=atoms, **results)
-            atoms.calc = newcalc
+            results['forces'] = rot_forces
+            atoms.calc = SinglePointCalculator(atoms=atoms, **results)
 
             return atoms
 
@@ -472,9 +470,10 @@ def get_relaxed_final(initial, initial_relaxed, final,
         # Apply rotational operator
         symop = rot[2]
 
-        def f(x):
-            # return np.dot(rot[0][0], x)
-            return np.inner(x, rot[0])
+        f = get_rotation_function(rot[0])
+        # def f(x):
+        #     # return np.dot(rot[0][0], x)
+        #     return np.inner(x, rot[0])
     else:
         # Apply translational operator
         symop = trans
@@ -541,7 +540,14 @@ def get_results_dict(atoms):
     return results
 
 
+def get_rotation_function(rotation_matrix):
+    def f(x):
+        return np.inner(x, rotation_matrix)
+    return f
+
+
 def perform_symmetry_operation(vectors, cell, sym_func):
+    # Use symmetry operation on forces in scaled coordinates    
     scaled_vectors = cell.scaled_positions(vectors)
     return cell.cartesian_positions(sym_func(scaled_vectors))
 
