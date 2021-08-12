@@ -343,6 +343,7 @@ def test_reflective_images():
         assert np.isclose(eip1, efm2, atol=1e-3)
         assert np.allclose(fip1_abs, ffm2_abs, atol=1e-3)
 
+
 def test_reflective_images_equality():
     from ase.rneb import ReflectiveImages
     
@@ -353,4 +354,3 @@ def test_reflective_images_equality():
     
     assert r1 != r2
     assert r1 == r1
-    
