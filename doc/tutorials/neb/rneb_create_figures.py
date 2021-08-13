@@ -1,5 +1,5 @@
 # creates: reflective_path.png, rmineb.png
-# creates: rneb_I.png, rneb_F.png
+# creates: rneb-I.png, rneb-F.png
 from ase.io import write, read
 import runpy
 
@@ -12,5 +12,6 @@ for name, a in zip('IF', images[::len(images) - 1]):
     del a.constraints
     a = a * (2, 2, 1)
     a.set_cell(cell)
-    write('rneb-%s.pov' % name, a,
-          povray_settings={'transparent': False, 'display': False})
+    renderer = write('rneb-%s.pov' % name, a,
+                     povray_settings={'transparent': False, 'display': False})
+    renderer.render()
