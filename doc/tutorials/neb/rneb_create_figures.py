@@ -13,4 +13,4 @@ for name, a in zip('IF', images[::len(images)-1]):
     a = a * (2, 2, 1)
     a.set_cell(cell)
     write('rneb-%s.pov' % name, a,
-          transparent=False, display=False, run_povray=True)
+          povray_settings={'transparent':False, 'display':False})
