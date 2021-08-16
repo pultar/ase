@@ -1,5 +1,6 @@
 """Module for calculating phonons of periodic systems."""
 
+import abc
 from math import pi, sqrt
 import warnings
 from pathlib import Path
@@ -17,7 +18,7 @@ from ase.utils.filecache import MultiFileJSONCache
 from ase.utils import deprecated
 
 
-class Displacement:
+class Displacement(abc.ABC):
     """Abstract base class for phonon and el-ph supercell calculations.
 
     Both phonons and the electron-phonon interaction in periodic systems can be
@@ -39,9 +40,10 @@ class Displacement:
         Parameters:
 
         atoms: Atoms object
-            The atoms to work on.
+            The unit cell of atoms to work on. Its calculator will be ignored.
         calc: Calculator
-            Calculator for the supercell calculation.
+            Calculator to use on supercells. This can be ``None`` when reading
+            files.
         supercell: tuple
             Size of supercell given by the number of repetitions (l, m, n) of
             the small unit cell in each direction.
@@ -83,7 +85,7 @@ class Displacement:
         return self.offset
 
     @property  # type: ignore
-    @ase.utils.deprecated('Please use phonons.supercell instead of .N_c')
+    @deprecated('Please use phonons.supercell instead of .N_c')
     def N_c(self):
         return self._supercell
 
@@ -98,13 +100,13 @@ class Displacement:
         self.define_offset()
         self._lattice_vectors_array = self.compute_lattice_vectors()
 
-    @ase.utils.deprecated('Please use phonons.compute_lattice_vectors()'
-                          ' instead of .lattice_vectors()')
+    @deprecated('Please use phonons.compute_lattice_vectors()'
+                ' instead of .lattice_vectors()')
     def lattice_vectors(self):
         return self.compute_lattice_vectors()
 
     def compute_lattice_vectors(self):
-        """Return lattice vectors for cells in the supercell."""
+        """Return the integer coordinates for all cells in the supercell."""
         # Lattice vectors -- ordered as illustrated in class docstring
 
         # Lattice vectors relevative to the reference cell
@@ -116,10 +118,15 @@ class Displacement:
         R_cN -= N_c // 2
         return R_cN
 
-    def __call__(self, *args, **kwargs):
+    @abc.abstractmethod
+    def calculate(self, atoms, disp):
         """Member function called in the ``run`` function."""
 
-        raise NotImplementedError("Implement in derived classes!.")
+        raise NotImplementedError("Implement in derived classes!")
+
+    @deprecated("use the 'calculate' method")
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError("Implement in derived classes!")
 
     def set_atoms(self, atoms):
         """Set the atoms to vibrate.
@@ -464,7 +471,8 @@ class Phonons(Displacement):
             D *= M_inv
 
     def symmetrize(self, C_N):
-        """Symmetrize force constant matrix."""
+        """Impose matrix symmetry (M = M.T) on a force constants matrix,
+        returning a new array."""
 
         # Number of atoms
         natoms = len(self.indices)
@@ -514,7 +522,7 @@ class Phonons(Displacement):
         Parameters:
 
         D_N: ndarray
-            Dynamical/force constant matrix.
+            Dynamical/force constant matrix. Modified in-place.
         r_c: float
             Cutoff in Angstrom.
 
