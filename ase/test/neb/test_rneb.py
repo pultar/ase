@@ -250,10 +250,9 @@ def test_non_reflective_path(al2s3):
     assert len(rneb.reflect_path(images, all_sym_ops)) == 0
     assert rneb.get_reflective_path(images, all_sym_ops) == images
 
-
-def test_reflective_images():
-    from ase.rneb import RNEB
-
+    
+@pytest.fixture(scope="module")
+def h_structure():
     both = Atoms('H8',
                  positions=[(0, 0, 0),
                             (1, 0, 0),
@@ -275,10 +274,20 @@ def test_reflective_images():
 
     for atoms in [both, initial_relaxed, final_relaxed]:
         optimize(atoms, calc=LennardJones)
+    
+    return (both, initial_unrelaxed, initial_relaxed,
+            final_unrelaxed, final_relaxed)
+
+    
+def test_reflective_images(h_structure):
+    from ase.rneb import RNEB
+
+    # iu = initial_unrelaxed, ir = initial_relaxed and so on
+    both, iu, ir, fu, fr = h_structure
 
     # RNEB symmetry identification
     rneb = RNEB(both, logfile=None)
-    all_sym_ops = rneb.find_symmetries(initial_unrelaxed, final_unrelaxed,
+    all_sym_ops = rneb.find_symmetries(iu, fu,
                                        log_atomic_idx=True)
     # We check here if any symmetry operations relate the initial and
     # final structures, if not then there is no point in continuing.
@@ -287,23 +296,21 @@ def test_reflective_images():
     # used for path
     assert len(all_sym_ops) > 0
 
-    final_relaxed_s: Atoms = rneb.get_final_image(initial_unrelaxed,
-                                                  initial_relaxed,
-                                                  final_unrelaxed, rot_only=True)
+    fr_s: Atoms = rneb.get_final_image(iu, ir, fu, rot_only=True)
 
     # Check that the final image created by symmetry operations has
-    # the same energy and forces as final_relaxed
-    ef_n = final_relaxed.get_potential_energy()
-    ef_s = final_relaxed_s.get_potential_energy()
+    # the same energy and forces as fr
+    ef_n = fr.get_potential_energy()
+    ef_s = fr_s.get_potential_energy()
     assert np.isclose(ef_n, ef_s, atol=1e-3)
 
-    f_n = final_relaxed.get_forces()
-    f_s = final_relaxed_s.get_forces()
+    f_n = fr.get_forces()
+    f_s = fr_s.get_forces()
     assert np.allclose(f_n, f_s, atol=1e-3)
 
     for method in ['aseneb', 'improvedtangent', 'eb']:
         # Create path for normal NEB
-        images = create_path(initial_relaxed, final_relaxed, LennardJones)
+        images = create_path(ir, fr, LennardJones)
         neb = NEB(images, method=method)
         neb.interpolate()
 
@@ -317,7 +324,7 @@ def test_reflective_images():
 
         # Create the reflective path in order to run a NEB while
         # taking advantage of the symmetry
-        images = create_path(initial_relaxed, final_relaxed_s, LennardJones)
+        images = create_path(ir, fr_s, LennardJones)
         interpolate(images)
         refl_images = rneb.get_reflective_path(images, all_sym_ops)
         assert refl_images != images
