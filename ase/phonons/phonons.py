@@ -6,16 +6,14 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-import numpy.linalg as la
 import numpy.fft as fft
 
-import ase
 import ase.units as units
 from ase.parallel import world
-from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils.filecache import MultiFileJSONCache
 from ase.utils import deprecated
+from .data import PhononsData
 
 
 class Displacement(abc.ABC):
@@ -105,6 +103,7 @@ class Displacement(abc.ABC):
     def lattice_vectors(self):
         return self.compute_lattice_vectors()
 
+    # XXX copypasta
     def compute_lattice_vectors(self):
         """Return the integer coordinates for all cells in the supercell."""
         # Lattice vectors -- ordered as illustrated in class docstring
@@ -304,6 +303,8 @@ class Phonons(Displacement):
         # Attributes for force constants and dynamical matrix in real space
         self.C_N = None  # in units of eV / Ang**2
         self.D_N = None  # in units of eV / Ang**2 / amu
+        self._phonons = None  # cache
+        self._phonons_metadata = None  # used to invalidate the cache
 
         # Attributes for born charges and static dielectric tensor
         self.Z_avv = None
@@ -461,12 +462,15 @@ class Phonons(Displacement):
 
         # Store force constants and dynamical matrix
         self.C_N = C_N
-        self.D_N = C_N.copy()
+        self._phonons_metadata = None  # @@@@ TODO @@@@
 
         # Add mass prefactor
         m_a = self.atoms.get_masses()
-        self.m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
-        M_inv = np.outer(self.m_inv_x, self.m_inv_x)
+        m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
+        M_inv = np.outer(m_inv_x, m_inv_x)
+
+        # no longer used internally, but stored for backwards compatability
+        self.D_N = C_N.copy()
         for D in self.D_N:
             D *= M_inv
 
@@ -556,6 +560,37 @@ class Phonons(Displacement):
                 # Zero elements
                 D_Navav[n, i, :, i_a, :] = 0.0
 
+    def get_phonons(self, read_cache=True, **kw):
+        """Get phonons as PhononsData object
+
+        If read() has not yet been called, this will be called to assemble data
+        from the outputs of run(). Most of the arguments to this function are
+        options to be passed to read() in this case.
+
+        Args:
+            read_cache (bool): The PhononsData object will be cached for
+                quick access. Set False to force regeneration of the cache with
+                the current atoms/force constants/indices data.
+            **kw: Any remaining keyword arguments are passed to read()
+
+        Returns:
+            PhononsData
+
+        """
+        if read_cache and (self._phonons is not None):
+            return self._phonons
+
+        else:
+            metadata = object()  # for now, always invalidate  @@@@ TODO @@@@
+            if (self._phonons is None or self._phonons_metadata != metadata):
+                self.read(**kw)
+
+            return PhononsData.from_3d(
+                self.atoms, self.C_N,
+                indices=self.indices, supercell=self.supercell,
+                center_refcell=self.center_refcell,
+            )
+
     def get_force_constant(self):
         """Return matrix of force constants."""
 
@@ -563,14 +598,7 @@ class Phonons(Displacement):
         return self.C_N
 
     def get_band_structure(self, path, modes=False, born=False, verbose=True):
-        omega_kl = self.band_structure(path.kpts, modes, born, verbose)
-        if modes:
-            assert 0
-            omega_kl, modes = omega_kl
-
-        from ase.spectrum.band_structure import BandStructure
-        bs = BandStructure(path, energies=omega_kl[None])
-        return bs
+        return self.get_phonons(born=born).get_band_structure(path, modes=modes, born=born, verbose=verbose)
 
     def compute_dynamical_matrix(self, q_scaled: np.ndarray, D_N: np.ndarray):
         """ Computation of the dynamical matrix in momentum space D_ab(q).
@@ -588,11 +616,7 @@ class Phonons(Displacement):
             D(q): two-dimensional, complex-valued array of
                   shape=(3 * natoms, 3 * natoms).
         """
-        # Evaluate fourier sum
-        R_cN = self._lattice_vectors_array
-        phase_N = np.exp(-2.j * pi * np.dot(q_scaled, R_cN))
-        D_q = np.sum(phase_N[:, np.newaxis, np.newaxis] * D_N, axis=0)
-        return D_q
+        return self.get_phonons().compute_dynamical_matrix(q_scaled=q_scaled, D_N=D_N)
 
     def band_structure(self, path_kc, modes=False, born=False, verbose=True):
         """Calculate phonon dispersion along a path in the Brillouin zone.
@@ -622,95 +646,10 @@ class Phonons(Displacement):
             Print warnings when imaginary frequncies are detected.
 
         """
-
-        assert self.D_N is not None
-        if born:
-            assert self.Z_avv is not None
-            assert self.eps_vv is not None
-
-        # Dynamical matrix in real-space
-        D_N = self.D_N
-
-        # Lists for frequencies and modes along path
-        omega_kl = []
-        u_kl = []
-
-        # Reciprocal basis vectors for use in non-analytic contribution
-        reci_vc = 2 * pi * la.inv(self.atoms.cell)
-        # Unit cell volume in Bohr^3
-        vol = abs(la.det(self.atoms.cell)) / units.Bohr**3
-
-        for q_c in path_kc:
-
-            # Add non-analytic part
-            if born:
-                # q-vector in cartesian coordinates
-                q_v = np.dot(reci_vc, q_c)
-                # Non-analytic contribution to force constants in atomic units
-                qdotZ_av = np.dot(q_v, self.Z_avv).ravel()
-                C_na = (4 * pi * np.outer(qdotZ_av, qdotZ_av) /
-                        np.dot(q_v, np.dot(self.eps_vv, q_v)) / vol)
-                self.C_na = C_na / units.Bohr**2 * units.Hartree
-                # Add mass prefactor and convert to eV / (Ang^2 * amu)
-                M_inv = np.outer(self.m_inv_x, self.m_inv_x)
-                D_na = C_na * M_inv / units.Bohr**2 * units.Hartree
-                self.D_na = D_na
-                D_N = self.D_N + D_na / np.prod(self.supercell)
-
-            # if np.prod(self.N_c) == 1:
-            #
-            #     q_av = np.tile(q_v, len(self.indices))
-            #     q_xx = np.vstack([q_av]*len(self.indices)*3)
-            #     D_m += q_xx
-
-            # Evaluate fourier sum
-            D_q = self.compute_dynamical_matrix(q_c, D_N)
-
-            if modes:
-                omega2_l, u_xl = la.eigh(D_q, UPLO='U')
-                # Sort eigenmodes according to eigenvalues (see below) and
-                # multiply with mass prefactor
-                u_lx = (self.m_inv_x[:, np.newaxis] *
-                        u_xl[:, omega2_l.argsort()]).T.copy()
-                u_kl.append(u_lx.reshape((-1, len(self.indices), 3)))
-            else:
-                omega2_l = la.eigvalsh(D_q, UPLO='U')
-
-            # Sort eigenvalues in increasing order
-            omega2_l.sort()
-            # Use dtype=complex to handle negative eigenvalues
-            omega_l = np.sqrt(omega2_l.astype(complex))
-
-            # Take care of imaginary frequencies
-            if not np.all(omega2_l >= 0.):
-                indices = np.where(omega2_l < 0)[0]
-
-                if verbose:
-                    print('WARNING, %i imaginary frequencies at '
-                          'q = (% 5.2f, % 5.2f, % 5.2f) ; (omega_q =% 5.3e*i)'
-                          % (len(indices), q_c[0], q_c[1], q_c[2],
-                             omega_l[indices][0].imag))
-
-                omega_l[indices] = -1 * np.sqrt(np.abs(omega2_l[indices].real))
-
-            omega_kl.append(omega_l.real)
-
-        # Conversion factor: sqrt(eV / Ang^2 / amu) -> eV
-        s = units._hbar * 1e10 / sqrt(units._e * units._amu)
-        omega_kl = s * np.asarray(omega_kl)
-
-        if modes:
-            return omega_kl, np.asarray(u_kl)
-
-        return omega_kl
+        return self.get_phonons().band_structure(path_kc=path_kc, modes=modes, born=born, verbose=verbose)
 
     def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
-        from ase.spectrum.dosdata import RawDOSData
-        # dos = self.dos(kpts, npts, delta, indices)
-        kpts_kc = monkhorst_pack(kpts)
-        omega_w = self.band_structure(kpts_kc).ravel()
-        dos = RawDOSData(omega_w, np.ones_like(omega_w))
-        return dos
+        return self.get_phonons().get_dos(kpts=kpts, npts=npts, delta=delta, indices=indices)
 
     def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
         """Calculate phonon dos as a function of energy.
@@ -728,25 +667,7 @@ class Phonons(Displacement):
             atoms will be calculated.
 
         """
-
-        # Monkhorst-Pack grid
-        kpts_kc = monkhorst_pack(kpts)
-        N = np.prod(kpts)
-        # Get frequencies
-        omega_kl = self.band_structure(kpts_kc)
-        # Energy axis and dos
-        omega_e = np.linspace(0., np.amax(omega_kl) + 5e-3, num=npts)
-        dos_e = np.zeros_like(omega_e)
-
-        # Sum up contribution from all q-points and branches
-        for omega_l in omega_kl:
-            diff_el = (omega_e[:, np.newaxis] - omega_l[np.newaxis, :])**2
-            dos_el = 1. / (diff_el + (0.5 * delta)**2)
-            dos_e += dos_el.sum(axis=1)
-
-        dos_e *= 1. / (N * pi) * 0.5 * delta
-
-        return omega_e, dos_e
+        return self.get_phonons().dos(kpts=kpts, npts=npts, delta=delta, indices=indices)
 
     def write_modes(self, q_c, branches=0, kT=units.kB * 300, born=False,
                     repeat=(1, 1, 1), nimages=30, center=False):

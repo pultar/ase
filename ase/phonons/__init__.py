@@ -1,3 +1,4 @@
 from .phonons import Displacement, Phonons
+from .data import PhononsData
 
-__all__ = ['Displacement', 'Phonons']
+__all__ = ['Displacement', 'PhononsData', 'Phonons']
