@@ -121,26 +121,13 @@ class PhononsData:
                              "{} numpy array.".format(ref_shape_txt))
 
     # XXX: TEMPORARY COPYPASTA
-    @property
-    def offset(self):        # Reference cell offset
-        if not self._center_refcell:
-            # Corner cell
-            return 0
-        else:
-            # Center cell
-            N_c = self._supercell
-            return (N_c[0] // 2 * (N_c[1] * N_c[2]) +
-                    N_c[1] // 2 * N_c[2] +
-                    N_c[2] // 2)
-
-    # XXX: TEMPORARY COPYPASTA
     @lazyproperty
     def lattice_vectors(self):
         """Return the integer coordinates for all cells in the supercell."""
         # Lattice vectors relevative to the reference cell
         R_cN = np.indices(self._supercell).reshape(3, -1)
         N_c = np.array(self._supercell)[:, np.newaxis]
-        if self.offset == 0:
+        if not self._center_refcell:
             R_cN += N_c // 2
             R_cN %= N_c
         R_cN -= N_c // 2

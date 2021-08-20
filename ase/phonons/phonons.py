@@ -105,13 +105,13 @@ class Displacement(abc.ABC):
 
     # XXX copypasta
     def compute_lattice_vectors(self):
-        """Return the integer coordinates for all cells in the supercell."""
+        """Return the integer coordinates for all cells in the supercell as column vectors."""
         # Lattice vectors -- ordered as illustrated in class docstring
 
         # Lattice vectors relevative to the reference cell
         R_cN = np.indices(self.supercell).reshape(3, -1)
         N_c = np.array(self.supercell)[:, np.newaxis]
-        if self.offset == 0:
+        if not self.center_refcell:
             R_cN += N_c // 2
             R_cN %= N_c
         R_cN -= N_c // 2
@@ -487,7 +487,7 @@ class Phonons(Displacement):
         C_lmn = C_N.reshape(self.supercell + (3 * natoms, 3 * natoms))
 
         # Shift reference cell to center index
-        if self.offset == 0:
+        if not self.center_refcell:
             C_lmn = fft.fftshift(C_lmn, axes=(0, 1, 2)).copy()
         # Make force constants symmetric in indices -- in case of an even
         # number of unit cells don't include the first cell
@@ -495,7 +495,7 @@ class Phonons(Displacement):
         C_lmn[i:, j:, k:] *= 0.5
         C_lmn[i:, j:, k:] += \
             C_lmn[i:, j:, k:][::-1, ::-1, ::-1].transpose(0, 1, 2, 4, 3).copy()
-        if self.offset == 0:
+        if not self.center_refcell:
             C_lmn = fft.ifftshift(C_lmn, axes=(0, 1, 2)).copy()
 
         # Change to single unit cell index shape

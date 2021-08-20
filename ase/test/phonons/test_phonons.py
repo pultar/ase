@@ -134,6 +134,51 @@ class TestPhonons:
         # same bands (up to degeneracy, which was already accounted for).
         assert X_traj[1].get_positions() == pytest.approx(X2_traj[1].get_positions())
 
+    @pytest.mark.parametrize('supercell,expected_ranges', [
+        ((1, 1, 1), ([0, 1], [0, 1], [0, 1])),
+        ((3, 4, 5), ([-1, 2], [-2, 2], [-2, 3])),
+    ])
+    def test_lattice_vectors_points(self, supercell, expected_ranges):
+        (lo0, hi0), (lo1, hi1), (lo2, hi2) = expected_ranges
+        expected_points = np.mgrid[lo0:hi0, lo1:hi1, lo2:hi2].reshape(3, -1)
+
+        atoms = bulk('Al')
+        phonons = Phonons(atoms, supercell=supercell)
+
+        # lexically sort to not depend on order
+        sort_columns = lambda arr: sorted(arr.T.tolist())
+        assert sort_columns(phonons.compute_lattice_vectors()) == sort_columns(expected_points)
+
+        # center_refcell should have same set of vectors
+        phonons = Phonons(atoms, supercell=supercell, center_refcell=True)
+        assert sort_columns(phonons.compute_lattice_vectors()) == sort_columns(expected_points)
+
+    @pytest.mark.parametrize('supercell', [(1, 1, 1), (3, 4, 5)])
+    def test_lattice_vectors_refcell(self, supercell):
+        atoms = bulk('Al')
+
+        # center_refcell=False:  first lattice point should be 0
+        phonons = Phonons(atoms, supercell=supercell, center_refcell=False)
+        latts = phonons.compute_lattice_vectors().T
+        assert latts[0].tolist() == [0, 0, 0]
+
+        # center_refcell=True:  a lattice point of 0 should exist *somewhere*
+        phonons = Phonons(atoms, supercell=supercell, center_refcell=True)
+        latts = phonons.compute_lattice_vectors().T
+        assert [0, 0, 0] in latts.tolist()
+
+    def test_legacy_methods(self):
+        phonons = self.al_phonons()
+
+        # just testing that these don't raise exceptions...
+        phonons.get_dos()
+        phonons.dos()
+
+        path = phonons.atoms.cell.bandpath('GX', npoints=10)
+        _bands = phonons.band_structure(path.kpts)
+        _bands, _vectors = phonons.band_structure(path.kpts, modes=True)
+        phonons.get_band_structure(path)
+
 
 class TestPhononsData:
     @pytest.fixture
