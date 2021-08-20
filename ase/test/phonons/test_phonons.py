@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
+from pathlib import Path
 
+import ase.io
 from ase.atoms import Atoms
 from ase.build import bulk, molecule
 from ase.phonons import Phonons, PhononsData
@@ -8,53 +10,129 @@ from ase.calculators.emt import EMT
 from ase import units
 
 
-def check_set_atoms(atoms, set_atoms, expected_atoms):
-    """ Perform a test that .set_atoms() only displaces the expected atoms. """
-    atoms.calc = EMT()
-    phonons = Phonons(atoms, EMT())
-    phonons.set_atoms(set_atoms)
+@pytest.mark.usefixtures("testdir")
+class TestPhonons:
+    def check_set_atoms(self, atoms, set_atoms, expected_atoms):
+        """ Perform a test that .set_atoms() only displaces the expected atoms. """
+        phonons = Phonons(atoms, EMT())
+        phonons.set_atoms(set_atoms)
 
-    # TODO: For now, because there is no public API to iterate over/inspect
-    #       displacements, we run and check the number of files in the cache.
-    #       Later when the requisite API exists, we should use it both to
-    #       check the actual atom indices and to avoid computation.
-    phonons.run()
-    assert len(phonons.cache) == 6 * len(expected_atoms) + 1
+        # TODO: For now, because there is no public API to iterate over/inspect
+        #       displacements, we run and check the number of files in the cache.
+        #       Later when the requisite API exists, we should use it both to
+        #       check the actual atom indices and to avoid computation.
+        phonons.run()
+        assert len(phonons.cache) == 6 * len(expected_atoms) + 1
 
+    def test_set_atoms_indices(self):
+        self.check_set_atoms(molecule('CO2'), set_atoms=[0, 1], expected_atoms=[0, 1])
 
-def test_set_atoms_indices(testdir):
-    check_set_atoms(molecule('CO2'), set_atoms=[0, 1], expected_atoms=[0, 1])
+    def test_set_atoms_symbol(self):
+        self.check_set_atoms(molecule('CO2'), set_atoms=['O'], expected_atoms=[1, 2])
 
+    def test_check_eq_forces(self):
+        phonons = self.diamond_sc_phonons()
+        fmin, fmax, _i_min, _i_max = phonons.check_eq_forces()
+        assert fmin < fmax
 
-def test_set_atoms_symbol(testdir):
-    check_set_atoms(molecule('CO2'), set_atoms=['O'], expected_atoms=[1, 2])
+    def h2_phonons(self):
+        atoms = molecule('H2')
+        phonons = Phonons(atoms, EMT())
+        phonons.run()
+        return phonons
 
+    def al_phonons(self):
+        """The cheapest computation possible, with only one atom.  Can only handle gamma point."""
+        atoms = bulk('Al')
+        phonons = Phonons(atoms, EMT())
+        phonons.run()
+        return phonons
 
-def test_check_eq_forces(testdir):
-    atoms = bulk('C')
-    atoms.calc = EMT()
+    def al_sc_phonons(self):
+        """The cheapest supercell computation possible, with only one atom.  Can only handle GX."""
+        atoms = bulk('Al')
+        phonons = Phonons(atoms, EMT(), supercell=(2, 1, 1))
+        phonons.run()
+        return phonons
 
-    phonons = Phonons(atoms, EMT(), supercell=(1, 2, 1))
-    phonons.run()
-    fmin, fmax, _i_min, _i_max = phonons.check_eq_forces()
-    assert fmin < fmax
+    def diamond_sc_phonons(self):
+        """A very small supercell of diamond only suitable for phonons along the GX direction."""
+        atoms = bulk('C')
+        phonons = Phonons(atoms, EMT(), supercell=(2, 1, 1))
+        phonons.run()
+        return phonons
 
+    # For testing that methods work even if calc=None.
+    # (which should be true for most methods, once the computation has been run)
+    def reread_without_calc(self, phonons):
+        return Phonons(atoms=phonons.atoms, name=phonons.name, delta=phonons.delta,
+                       center_refcell=phonons.center_refcell, supercell=phonons.supercell,
+                       calc=None)
 
-# Regression test for #953;  data stored for eq should resemble data for displacements
-def test_check_consistent_format(testdir):
-    atoms = molecule('H2')
-    atoms.calc = EMT()
+    # Regression test for #953;  data stored for eq should resemble data for displacements
+    def test_check_consistent_format(self):
+        phonons = self.h2_phonons()
+        # Check that the data stored for `eq` is shaped like the data stored for displacements.
+        eq_data = phonons.cache['eq']
+        disp_data = phonons.cache['0x-']
+        assert isinstance(eq_data, dict) and isinstance(disp_data, dict)
+        assert set(eq_data) == set(disp_data), "dict keys mismatch"
+        for array_key in eq_data:
+            assert eq_data[array_key].shape == disp_data[array_key].shape, array_key
 
-    phonons = Phonons(atoms, EMT())
-    phonons.run()
+    def test_calc_none_in_get_phonons(self):
+        phonons = self.reread_without_calc(self.h2_phonons())
+        # Test that this does not throw
+        phonons.get_phonons()
 
-    # Check that the data stored for `eq` is shaped like the data stored for displacements.
-    eq_data = phonons.cache['eq']
-    disp_data = phonons.cache['0x-']
-    assert isinstance(eq_data, dict) and isinstance(disp_data, dict)
-    assert set(eq_data) == set(disp_data), "dict keys mismatch"
-    for array_key in eq_data:
-        assert eq_data[array_key].shape == disp_data[array_key].shape, array_key
+    def test_write_modes_basic_properties(self):
+        phonons = self.reread_without_calc(self.al_sc_phonons())
+        X = phonons.atoms.cell.bandpath().special_points['X']
+
+        phonons.write_modes(X, branches=1, nimages=5)
+        for i in range(3):
+            assert Path(f'phonon.mode.{i}.traj').is_file() == (i == 1)
+
+        traj = ase.io.read('phonon.mode.1.traj', index=':')
+        assert len(traj) == 5
+
+        # negative branch
+        phonons.write_modes(X, branches=-1, nimages=5)
+        for i in range(3):
+            assert Path(f'phonon.mode.{i}.traj').is_file() == (i in [1, 2])
+
+        # write all
+        phonons.write_modes(X, branches=range(3), nimages=5)
+        for i in range(3):
+            assert Path(f'phonon.mode.{i}.traj').is_file()
+
+    def test_write_modes_positions(self):
+        phonons = self.reread_without_calc(self.diamond_sc_phonons())
+
+        branch = 5  # this mode is non-degenerate along GX, leading to more reliable tests
+        X = phonons.atoms.cell.bandpath().special_points['X']
+        X2 = X - [1, 0, 0]
+        phonons.write_modes([0, 0, 0], branches=branch, nimages=5, name='phonon.G')
+        phonons.write_modes(X, branches=branch, nimages=5, name='phonon.X')
+        phonons.write_modes(X2, branches=branch, nimages=5, name='phonon.X2')
+        for i in range(6):
+            assert Path(f'phonon.G.mode.{i}.traj').is_file() == (i == 5)
+
+        G_traj = ase.io.read(f'phonon.G.mode.{branch}.traj', index=':')
+        X_traj = ase.io.read(f'phonon.X.mode.{branch}.traj', index=':')
+        X2_traj = ase.io.read(f'phonon.X2.mode.{branch}.traj', index=':')
+
+        # check for common bug where first frame == last frame in a looping animation
+        assert G_traj[0].get_positions() != pytest.approx(G_traj[-1].get_positions())
+
+        # different Q should give different modes
+        assert G_traj[1].get_positions() != pytest.approx(X_traj[1].get_positions())
+
+        # Ensure that the above != tests did not succeed solely due to poor tolerances.
+        #
+        # For this, we look at a Q point that is equivalent to X, which should have the
+        # same bands (up to degeneracy, which was already accounted for).
+        assert X_traj[1].get_positions() == pytest.approx(X2_traj[1].get_positions())
 
 
 class TestPhononsData:

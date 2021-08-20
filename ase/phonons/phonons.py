@@ -670,7 +670,7 @@ class Phonons(Displacement):
         return self.get_phonons().dos(kpts=kpts, npts=npts, delta=delta, indices=indices)
 
     def write_modes(self, q_c, branches=0, kT=units.kB * 300, born=False,
-                    repeat=(1, 1, 1), nimages=30, center=False):
+                    repeat=(1, 1, 1), nimages=30, center=False, name=None):
         """Write modes to trajectory file.
 
         Parameters:
@@ -695,6 +695,9 @@ class Phonons(Displacement):
 
         """
 
+        if name is None:
+            name = self.name
+
         if isinstance(branches, int):
             branch_l = [branches]
         else:
@@ -707,6 +710,9 @@ class Phonons(Displacement):
         # Center
         if center:
             atoms.center()
+
+        # Allow negative indices
+        branch_l = np.array(branch_l, dtype=int) % len(omega_l[0])
 
         # Here ``Na`` refers to a composite unit cell/atom dimension
         pos_Nav = atoms.get_positions()
@@ -733,7 +739,7 @@ class Phonons(Displacement):
             # Repeat and multiply by Bloch phase factor
             mode_Nav = np.vstack(N * [mode_av]) * phase_Na[:, np.newaxis]
 
-            with Trajectory('%s.mode.%d.traj' % (self.name, l), 'w') as traj:
+            with Trajectory('%s.mode.%d.traj' % (name, l), 'w') as traj:
                 for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
                     atoms.set_positions((pos_Nav + np.exp(1.j * x) *
                                          mode_Nav).real)

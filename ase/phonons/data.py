@@ -263,8 +263,8 @@ class PhononsData:
 
             # if np.prod(self.N_c) == 1:
             #
-            #     q_av = np.tile(q_v, len(self.indices))
-            #     q_xx = np.vstack([q_av]*len(self.indices)*3)
+            #     q_av = np.tile(q_v, len(self._indices))
+            #     q_xx = np.vstack([q_av]*len(self._indices)*3)
             #     D_m += q_xx
 
             # Evaluate fourier sum
@@ -276,7 +276,7 @@ class PhononsData:
                 # multiply with mass prefactor
                 u_lx = (m_inv_x[:, np.newaxis] *
                         u_xl[:, omega2_l.argsort()]).T.copy()
-                u_kl.append(u_lx.reshape((-1, len(self.indices), 3)))
+                u_kl.append(u_lx.reshape((-1, len(self._indices), 3)))
             else:
                 omega2_l = la.eigvalsh(D_q, UPLO='U')
 
