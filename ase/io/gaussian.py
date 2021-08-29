@@ -64,8 +64,16 @@ _xc_to_method = dict(
     revtpss='revtpssrevtpss',
 )
 
+
 _nuclear_prop_names = ['spin', 'zeff', 'qmom', 'nmagm', 'znuc',
                        'radnuclear', 'iso']
+
+
+_orientation_lines = [
+    'Input orientation:',
+    'Z-Matrix orientation:',
+    'Standard orientation:'
+]
 
 
 def _get_molecule_spec(atoms, nuclear_props):
@@ -1229,14 +1237,18 @@ def read_gaussian_out(fd, index=-1):
     energy = None
     dipole = None
     forces = None
+    orientation_line = ''
     for line in fd:
         line = line.strip()
         if line.startswith(r'1\1\GINC'):
             # We've reached the "archive" block at the bottom, stop parsing
             break
 
-        if (line == 'Input orientation:'
-                or line == 'Z-Matrix orientation:'):
+        # We select the first orientation that is encountered
+        if not orientation_line:
+            if line in _orientation_lines:
+                orientation_line = line
+        elif line == orientation_line:
             if atoms is not None:
                 atoms.calc = SinglePointCalculator(
                     atoms, energy=energy, dipole=dipole, forces=forces,
