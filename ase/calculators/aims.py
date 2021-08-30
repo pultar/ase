@@ -19,6 +19,10 @@ from ase.data import atomic_numbers
 from ase.calculators.calculator import FileIOCalculator, Parameters, kpts2mp, \
     ReadError, PropertyNotImplementedError
 
+''' The following are used in AimsLibrary but cannot be imported there '''
+from ase.calculators.calculator import all_changes #, Calculator
+from ctypes import cdll
+from ctypes import POINTER, byref, c_int, c_bool, c_char_p
 
 def get_aims_version(string):
     match = re.search(r'\s*FHI-aims version\s*:\s*(\S+)', string, re.M)
@@ -224,7 +228,10 @@ class Aims(FileIOCalculator):
         if run_command:
             # this warning is debatable... in my eyes it is more consistent to
             # use 'command'
-            warnings.warn('Argument "run_command" is deprecated and will be replaced with "command". Alternatively, use "aims_command" and "outfile". See documentation for more details.')
+            warnings.warn('Argument "run_command" is deprecated and will be '+
+                          'replaced with "command". Alternatively, use '+
+                          '"aims_command" and "outfile". '+
+                          'See documentation for more details.')
             if command:
                 warnings.warn('Caution! Argument "command" overwrites "run_command.')
             else:
@@ -232,7 +239,8 @@ class Aims(FileIOCalculator):
 
         # this is the fallback to the default value for empty init
         if np.all([i is None for i in (command, aims_command, outfilename)]):
-            # we go for the FileIOCalculator default way (env variable) with the former default as fallback
+            # we go for the FileIOCalculator default way (env variable) with
+            # the former default as fallback
             command = os.environ.get('ASE_AIMS_COMMAND', Aims.__command_default)
 
         # filter the command and set the member variables "aims_command" and "outfilename"
@@ -452,6 +460,10 @@ class Aims(FileIOCalculator):
                 dk = 0.5 - 0.5 / np.array(mp)
                 output.write('%-35s%f %f %f\n' % (('k_offset',) + tuple(dk)))
             elif key == 'species_dir' or key == 'run_command':
+                continue
+            # Necessary for the AimsLibrary class. This is not ideal but I don't want to duplicate
+            # this entire function just to add this one exception
+            elif key == 'comm':
                 continue
             elif key == 'plus_u':
                 continue
@@ -922,6 +934,80 @@ class Aims(FileIOCalculator):
             values = None
         return np.array(values)
 
+class AimsLibrary(Aims):
+    '''Instance of an Aims Library Calculator, which interfaces with a 
+       precompiled shared-library'''
+    def __init__(self, comm=None, **kwargs):
+        ''' Check if mpi4py works: this is necessary as we use the py2f() 
+            functionality. If successfully loaded, also load the ase.parallel 
+            environment, initialising as an MPI4PY() class '''
+        if not comm:
+            # mpi4py MUST be loaded before ase.parallel.world
+            from mpi4py import MPI
+            from ase.parallel import world as comm
+            # The assert is a bit superfluous, but otherwise the CI tests fail
+            # as mpi4py is unused. I don't really want to remove the mpi4py
+            # import though, as this helps users. Thoughts welcomed.
+            assert(comm.size == MPI.COMM_WORLD.Get_size())
+        self.comm = comm
+        super(AimsLibrary, self).__init__(**kwargs)
+
+    def calculate(self, atoms=None, properties=['energy'], 
+                  system_changes=all_changes):
+        '''Essentially this is FileIOCalculator.calculate minus a system call
+
+           We don't call FileIOCalculator.calculate here, because that method
+           calls subprocess.call(..., shell=True), which we don't want to do.
+           So, we reproduce some content from that method.
+
+           Ask commented that this isn't ideal to be using a base class 
+           functionality in this manner; however, I don't want to duplicate 
+           the content of this class either. '''
+
+        # Calculator.calculate(self, atoms, properties, system_changes)
+        super(FileIOCalculator, self).calculate(atoms, properties, 
+                                                system_changes)
+
+        if self.comm.rank == 0:
+            self.write_input(self.atoms, properties, system_changes)
+
+        ''' Load the FHI-aims library and set variables'''
+        lib = self.aims_command
+        aims = cdll.LoadLibrary(lib)
+
+        filename = self.outfilename
+        unit = 10
+        mpi = True
+
+        ''' Set c variables for calling FHI-aims '''
+        c_comm = c_int(self.comm.py2f())
+        c_unit = c_int(unit)
+        c_mpi  = c_bool(mpi)
+        c_filename = filename.encode('UTF-8')
+
+        ''' Interface: aims_interface(mpi_comm_input,in_unit,mpi_switch,
+                                      output_filename)
+
+            FHI-aims library version input variables:
+            integer,intent(in) :: mpi_comm_input
+            integer,intent(in) :: in_unit
+            logical,intent(in) :: mpi_switch
+            char(len=*), intent(in): output_filename '''
+
+        aims.aims_interface_.restype = None
+        aims.aims_interface_.argtypes = [ POINTER(c_int),
+                                          POINTER(c_int),
+                                          POINTER(c_bool),
+                                          c_char_p,
+                                          c_int ]
+
+        aims.aims_interface_(byref(c_comm),
+                             byref(c_unit),
+                             byref(c_mpi),
+                             c_filename,
+                             len(filename))
+
+        self.read_results()
 
 class AimsCube:
     "Object to ensure the output of cube files, can be attached to Aims object"
