@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import typing as tp
 from pathlib import Path
 
 import ase.io
@@ -146,7 +147,9 @@ class TestPhonons:
         phonons = Phonons(atoms, supercell=supercell)
 
         # lexically sort to not depend on order
-        sort_columns = lambda arr: sorted(arr.T.tolist())
+        def sort_columns(arr):
+            return sorted(arr.T.tolist())
+
         assert sort_columns(phonons.compute_lattice_vectors()) == sort_columns(expected_points)
 
         # center_refcell should have same set of vectors
@@ -170,7 +173,7 @@ class TestPhonons:
     def test_legacy_methods(self):
         phonons = self.al_phonons()
 
-        # just testing that these don't raise exceptions...
+        # test that they don't raise exceptions...
         phonons.get_dos()
         phonons.dos()
 
@@ -179,21 +182,41 @@ class TestPhonons:
         _bands, _vectors = phonons.band_structure(path.kpts, modes=True)
         phonons.get_band_structure(path)
 
+        # some have unused keyword arguments
+        with pytest.warns(UserWarning, match="no effect"):
+            phonons.get_dos(npts=500)
+
+        with pytest.warns(UserWarning, match="no effect"):
+            phonons.get_dos(delta=1e-2)
+
+        with pytest.warns(UserWarning, match="no effect"):
+            phonons.get_dos(indices=[0])
+
+        with pytest.warns(UserWarning, match="no effect"):
+            phonons.dos(indices=[0])
+
 
 class TestPhononsData:
+    class CaseData(tp.NamedTuple):
+        atoms: Atoms
+        center_refcell: bool
+        supercell: tp.Tuple[int, int, int]
+        force_constants: np.ndarray
+        ref_frequencies: tp.Dict[str, np.ndarray]
+
     @pytest.fixture
     def cumulene_data(self):
-        return {
+        return type(self).CaseData(
             # Cumulene
-            'atoms': Atoms(
+            atoms=Atoms(
                 symbols='C',
                 positions=np.array([[0.63496908, 5, 5]]),
                 cell=np.diag([1.2699381536373493, 10, 10]),
             ),
-            'center_refcell': False,
+            center_refcell=False,
             # A supercell of even dimension is necessary to see the instability.
-            'supercell': (4, 1, 1),
-            'force_constants': np.array(
+            supercell=(4, 1, 1),
+            force_constants=np.array(
                 [[[1.61519168e+01, 5.66053683e-05, -7.02876989e-06],
                   [8.76248824e-05, 2.46606042e+00, 8.40593921e-05],
                   [-2.79993898e-06, 8.61532247e-05, 2.46600294e+00]],
@@ -207,38 +230,58 @@ class TestPhononsData:
                   [-1.12466350e-05, -1.30729155e+00, -4.20296833e-05],
                   [1.23304509e-05, -4.20297104e-05, -1.30732920e+00]]],
             ).reshape(4, 1, 3, 1, 3),
-            'ref_frequencies': {
+            ref_frequencies={
                 # The G modes are all acoustic.  Their actual numerical magnitude is the arbitrary
                 # result of catastrophic cancelation and should be ignored.
                 'G': np.array([0.0, 0.0, 0.0]),  # 0 to force tests to use an absolute tolerance
                 # At Z there is an imaginary mode (a manifestation of Peierls distortion)
                 'Z': np.array([-2360.46142, 344.074268, 344.086389]),
             },
-        }
+        )
 
-    def phdata_from_data(self, data):
-        return PhononsData(atoms=data['atoms'], supercell=data['supercell'], force_constants=data['force_constants'],
-                           center_refcell=data['center_refcell'])
+    def phdata_from_data(self, data: CaseData):
+        return PhononsData(atoms=data.atoms, supercell=data.supercell, force_constants=data.force_constants,
+                           center_refcell=data.center_refcell)
 
     @pytest.fixture
-    def cumulene_phdata(self, cumulene_data):
+    def cumulene_phdata(self, cumulene_data: CaseData):
         return self.phdata_from_data(cumulene_data)
 
-    def test_init(self, cumulene_data):
+    def test_init(self, cumulene_data: CaseData):
         # Check that init runs without error; properties are checked in other
         # methods using the (identical) cumulene_phdata fixture
-        PhononsData(cumulene_data['atoms'], cumulene_data['force_constants'],
-                    supercell=cumulene_data['supercell'], center_refcell=cumulene_data['center_refcell'])
+        PhononsData(cumulene_data.atoms, cumulene_data.force_constants,
+                    supercell=cumulene_data.supercell, center_refcell=cumulene_data.center_refcell)
 
-    def test_energies_and_modes(self, cumulene_data, cumulene_phdata):
+    def test_energies_and_modes(self, cumulene_data: CaseData, cumulene_phdata: PhononsData):
         data, phdata = cumulene_data, cumulene_phdata
 
-        atoms = data['atoms']
-        path = atoms.cell.bandpath('GZ', npoints=2)
+        path = data.atoms.cell.bandpath('GZ', npoints=2)
         bs = phdata.get_band_structure(path)
         computed_frequencies = {
             'G': bs.energies[0][0] / units.invcm,
             'Z': bs.energies[0][1] / units.invcm,
         }
-        assert computed_frequencies['G'] == pytest.approx(data['ref_frequencies']['G'], abs=1e-1)
-        assert computed_frequencies['Z'] == pytest.approx(data['ref_frequencies']['Z'], rel=1e-5)
+        assert computed_frequencies['G'] == pytest.approx(data.ref_frequencies['G'], abs=1e-1)
+        assert computed_frequencies['Z'] == pytest.approx(data.ref_frequencies['Z'], rel=1e-5)
+
+    def test_get_dos(self, cumulene_data: CaseData, cumulene_phdata: PhononsData):
+        data, phdata = cumulene_data, cumulene_phdata
+        path = data.atoms.cell.bandpath('GZ', npoints=15)
+
+        dos = phdata.get_dos(path.kpts)
+        assert len(dos.get_energies()) == 15 * 3  # 1 atom so each point has 3 modes
+        assert len(dos.get_weights()) == 15 * 3
+
+        # If we only sample one point, then the DOS should have local maxima near the modes of that point.
+        #
+        # Try looking at regions of the DOS plot just before or after the top frequency to verify this.
+        Z = data.atoms.cell.bandpath().special_points['Z']
+        dos = phdata.get_dos([Z])
+        peak_energy = data.ref_frequencies['Z'][-1] * units.invcm
+
+        h = 30 * units.invcm
+        values_below = dos.sample_grid(10, width=h, xmin=peak_energy - 0.25 * h, xmax=peak_energy).get_weights()
+        values_above = dos.sample_grid(10, width=h, xmin=peak_energy, xmax=peak_energy + 0.25 * h).get_weights()
+        assert values_below.argmax() == len(values_below) - 1
+        assert values_above.argmax() == 0

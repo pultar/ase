@@ -9,16 +9,14 @@ import ase.units as units
 from ase.atoms import Atoms
 from ase.dft import monkhorst_pack
 from ase.utils import lazyproperty
-
-
-RealSequence5D = Sequence[Sequence[Sequence[Sequence[Sequence[Real]]]]]
-RealSequence3D = Sequence[Sequence[Sequence[Real]]]
+from ase.utils.types import Sequence3D, Sequence5D
+from ase.calculators.calculator import kpts2kpts, KPointsInput
 
 
 class PhononsData:
     def __init__(self,
                  atoms: Atoms,
-                 force_constants: Union[RealSequence5D, np.ndarray],
+                 force_constants: Union[Sequence5D[Real], np.ndarray],
                  supercell: Sequence[int],
                  center_refcell: bool,
                  indices: Union[Sequence[int], np.ndarray] = None,
@@ -42,7 +40,7 @@ class PhononsData:
 
     @classmethod
     def from_3d(cls, atoms: Atoms,
-                force_constants: Union[RealSequence3D, np.ndarray],
+                force_constants: Union[Sequence3D[Real], np.ndarray],
                 supercell: Sequence[int],
                 center_refcell: bool,
                 indices: Union[Sequence[int], np.ndarray] = None) -> 'PhononsData':
@@ -144,7 +142,7 @@ class PhononsData:
         return self._force_constants_3d.copy()
 
     def get_band_structure(self, path, modes=False, born=False, verbose=True):
-        omega_kl = self.band_structure(path.kpts, modes, born, verbose)
+        omega_kl = self._band_structure(path.kpts, modes, born, verbose)
         if modes:
             # XXX this comes from commit b13de72e208990a263967
             assert 0
@@ -183,7 +181,7 @@ class PhononsData:
         D_N = self._force_constants_3d.copy() * M_inv[np.newaxis, :, :]
         return D_N
 
-    def band_structure(self, path_kc, modes=False, born=False, verbose=True):
+    def _band_structure(self, path_kc, modes=False, born=False, verbose=True):
         """Calculate phonon dispersion along a path in the Brillouin zone.
 
         The dynamical matrix at arbitrary q-vectors is obtained by Fourier
@@ -295,36 +293,29 @@ class PhononsData:
 
         return omega_kl
 
-    def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
-        from ase.spectrum.dosdata import RawDOSData
-        # dos = self.dos(kpts, npts, delta, indices)
-        kpts_kc = monkhorst_pack(kpts)
-        omega_w = self.band_structure(kpts_kc).ravel()
-        dos = RawDOSData(omega_w, np.ones_like(omega_w))
-        return dos
-
-    def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
-        """Calculate phonon dos as a function of energy.
+    def get_dos(self, qpoints: KPointsInput):
+        """Calculate phonon density of states.
 
         Parameters:
 
-        qpts: tuple
-            Shape of Monkhorst-Pack grid for sampling the Brillouin zone.
-        npts: int
-            Number of energy points.
-        delta: float
-            Broadening of Lorentzian line-shape in eV.
-        indices: list
-            If indices is not None, the atomic-partial dos for the specified
-            atoms will be calculated.
+        qpoints:
+            Specification of Q points to be sampled.  Any argument
+            accepted by ``kpts2kpts`` is allowed.
 
         """
+        from ase.spectrum.dosdata import RawDOSData
+        kpts = kpts2kpts(qpoints, atoms=self._atoms)
+        omega_w = self._band_structure(kpts.kpts).ravel()
+        dos = RawDOSData(omega_w, np.ones_like(omega_w))
+        return dos
 
+    # implementation of Phonons.dos
+    def _legacy_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3):
         # Monkhorst-Pack grid
         kpts_kc = monkhorst_pack(kpts)
         N = np.prod(kpts)
         # Get frequencies
-        omega_kl = self.band_structure(kpts_kc)
+        omega_kl = self._band_structure(kpts_kc)
         # Energy axis and dos
         omega_e = np.linspace(0., np.amax(omega_kl) + 5e-3, num=npts)
         dos_e = np.zeros_like(omega_e)

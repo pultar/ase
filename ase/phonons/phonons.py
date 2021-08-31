@@ -10,6 +10,7 @@ import numpy.fft as fft
 
 import ase.units as units
 from ase.parallel import world
+from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils.filecache import MultiFileJSONCache
 from ase.utils import deprecated
@@ -646,10 +647,21 @@ class Phonons(Displacement):
             Print warnings when imaginary frequncies are detected.
 
         """
-        return self.get_phonons().band_structure(path_kc=path_kc, modes=modes, born=born, verbose=verbose)
+        return self.get_phonons()._band_structure(path_kc=path_kc, modes=modes, born=born, verbose=verbose)
 
-    def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
-        return self.get_phonons().get_dos(kpts=kpts, npts=npts, delta=delta, indices=indices)
+    def get_dos(self, kpts=(10, 10, 10), npts=None, delta=None, indices=None):
+        for (kw_name, kw_value) in [('npts', npts), ('delta', delta)]:
+            if kw_value is not None:
+                warnings.warn(f'Keyword {kw_name} of Phonons.get_dos has no effect. '
+                               'Please supply the argument when calling .sample_grid '
+                               'on the returned object insted.', UserWarning)
+
+        if indices is not None:
+            warnings.warn('Keyword indices of Phonons.get_dos has no effect; '
+                          'PDOS is not implemented.', UserWarning)
+
+        qpoints = monkhorst_pack(kpts)
+        return self.get_phonons().get_dos(qpoints=qpoints)
 
     def dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
         """Calculate phonon dos as a function of energy.
@@ -667,7 +679,11 @@ class Phonons(Displacement):
             atoms will be calculated.
 
         """
-        return self.get_phonons().dos(kpts=kpts, npts=npts, delta=delta, indices=indices)
+        if indices is not None:
+            warnings.warn('Keyword indices of Phonons.get_dos has no effect; '
+                          'PDOS is not implemented.', UserWarning)
+
+        return self.get_phonons()._legacy_dos(kpts=kpts, npts=npts, delta=delta)
 
     def write_modes(self, q_c, branches=0, kT=units.kB * 300, born=False,
                     repeat=(1, 1, 1), nimages=30, center=False, name=None):

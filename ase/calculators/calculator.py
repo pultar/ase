@@ -1,9 +1,11 @@
+from ase.dft.kpoints import BandPath
 import os
 import copy
 import subprocess
+from numbers import Real
 from math import pi, sqrt
 from pathlib import Path
-from typing import Union, Optional, List, Set, Dict, Any
+from typing import Union, Optional, Sequence, List, Set, Dict, Any
 import warnings
 from abc import abstractmethod
 
@@ -12,6 +14,7 @@ import numpy as np
 from ase.cell import Cell
 from ase.outputs import Properties, all_outputs
 from ase.utils import jsonable
+from ase.utils.types import Sequence2D
 from ase.calculators.abc import GetPropertiesMixin
 
 
@@ -336,14 +339,35 @@ class KPoints:
         return vars(self)
 
 
-def kpts2kpts(kpts, atoms=None):
+KPointsInput = Union[KPoints, BandPath, dict, Sequence[int], Sequence2D[Real], np.ndarray, None]
+
+
+def kpts2kpts(kpts: KPointsInput, atoms=None) -> Union[KPoints, BandPath]:
+    """ Convert a variety of datatypes to KPoints.
+
+    Accepts:
+    - An existing KPoints.
+    - An existing BandPath.
+    - None, which samples just the gamma point.
+    - A 2D array of the points to be sampled, in scaled coordinates.
+    - A sequence of three integers, defining the dimensions of a
+      monkhorst-pack grid with an offset of ``0.5`` times the grid spacing
+      on each axis.
+    - A dict with the key ``'kpts'``, supplying a 2D array of the scaled
+      coordinates to be sampled.
+    - A dict of keyword arguments to ``Cell.bandpath``, which must
+      include ``'path'``.
+    - A dict of keyword arguments to ``kpts2sizeandoffsets``, to define
+      a regular grid meeting certain constraints.
+    """
     from ase.dft.kpoints import monkhorst_pack
 
     if kpts is None:
         return KPoints()
 
     if hasattr(kpts, 'kpts'):
-        return kpts
+        return kpts  # type: ignore
+    assert not isinstance(kpts, (KPoints, BandPath))
 
     if isinstance(kpts, dict):
         if 'kpts' in kpts:
