@@ -253,7 +253,7 @@ class TestPhononsData:
         PhononsData(cumulene_data.atoms, cumulene_data.force_constants,
                     supercell=cumulene_data.supercell, center_refcell=cumulene_data.center_refcell)
 
-    def test_energies_and_modes(self, cumulene_data: CaseData, cumulene_phdata: PhononsData):
+    def test_get_band_structure(self, cumulene_data: CaseData, cumulene_phdata: PhononsData):
         data, phdata = cumulene_data, cumulene_phdata
 
         path = data.atoms.cell.bandpath('GZ', npoints=2)

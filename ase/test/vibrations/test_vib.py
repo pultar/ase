@@ -6,9 +6,50 @@ from numpy.testing import assert_array_almost_equal
 
 from ase import units, Atoms
 import ase.io
+from ase.calculators.calculator import Calculator
 from ase.calculators.qmmm import ForceConstantCalculator
 from ase.vibrations import Vibrations, VibrationsData
 from ase.thermochemistry import IdealGasThermo
+
+
+class AsymmetricForceConstantCalculator(Calculator):
+    """
+    An unusual variant of ForceConstantCalculator designed to allow
+    each setting of ``(method, direction)`` for ``read`` to produce
+    numerically distinct results.
+
+    This makes it possible to test things like the caching behavior.
+    """
+    implemented_properties = ['forces', 'energy']
+
+    def __init__(self, D, ref, f0):
+        assert D.shape[0] == D.shape[1]
+        assert D.shape[0] // 3 == len(ref)
+        self.D = D
+        self.ref = ref
+        self.f0 = f0
+        self.size = len(ref)
+        Calculator.__init__(self)
+
+    def calculate(self, atoms, properties, system_changes):
+        u = atoms.positions - self.ref.positions
+        # Here's the funny bit:  Rather than simply dotting D with u, we dot it with
+        # this weird quantity to make the results asymmetric around the reference point.
+        u_eff = 2 * u + np.abs(u)
+
+        f = -self.D.dot(u_eff.reshape(3 * self.size))
+        forces = f.reshape(self.size, 3)
+        self.results['forces'] = forces + self.f0
+        self.results['energy'] = 0.0
+
+    def expected_hessian(self, direction, method):
+        assert method == 'standard'  # frederiksen yields more complicated results...
+        prefactor = {
+            'central': 2,  # (3u - -u)/(2u)
+            'forward': 3,  # (3u - 0)/(u)
+            'backward': 1,  # (0 - -u)/(u)
+        }[direction]
+        return prefactor * self.D
 
 
 class TestHarmonicVibrations:
@@ -17,8 +58,7 @@ class TestHarmonicVibrations:
     def setup(self):
         self.logfile = 'vibrations-log.txt'
 
-    @pytest.fixture
-    def random_dimer(self):
+    def random_dimer(self, calc_class=ForceConstantCalculator):
         rng = np.random.RandomState(42)
 
         d = 1 + 0.5 * rng.rand()
@@ -29,9 +69,7 @@ class TestHarmonicVibrations:
 
         atoms = Atoms(z_values, [[0, 0, 0], [0, 0, d]])
         ref_atoms = atoms.copy()
-        atoms.calc = ForceConstantCalculator(D=hessian,
-                                             ref=ref_atoms,
-                                             f0=np.zeros((2, 3)))
+        atoms.calc = calc_class(D=hessian, ref=ref_atoms, f0=np.zeros((2, 3)))
         return atoms
 
     def test_harmonic_vibrations(self, testdir):
@@ -62,8 +100,9 @@ class TestHarmonicVibrations:
 
         assert np.allclose(vib.get_energies(), expected_energy)
 
-    def test_consistency_with_vibrationsdata(self, testdir, random_dimer):
-        vib = Vibrations(random_dimer, delta=1e-6, nfree=4)
+    def test_consistency_with_vibrationsdata(self, testdir):
+        atoms = self.random_dimer()
+        vib = Vibrations(atoms, delta=1e-6, nfree=4)
         vib.run()
         vib_data = vib.get_vibrations()
 
@@ -75,12 +114,13 @@ class TestHarmonicVibrations:
                                       vib_data.get_modes()[mode_index])
 
         # Hessian should be close to the ForceConstantCalculator input
-        assert_array_almost_equal(random_dimer.calc.D,
+        assert_array_almost_equal(atoms.calc.D,
                                   vib_data.get_hessian_2d(),
                                   decimal=6)
 
-    def test_json_manipulation(self, testdir, random_dimer):
-        vib = Vibrations(random_dimer, name='interrupt')
+    def test_json_manipulation(self, testdir):
+        atoms = self.random_dimer()
+        vib = Vibrations(atoms, name='interrupt')
         vib.run()
 
         disp_file = Path('interrupt/cache.1x-.json')
@@ -119,8 +159,9 @@ class TestHarmonicVibrations:
         assert disp_file.is_file()
         assert not comb_file.is_file()
 
-    def test_vibrations_methods(self, testdir, random_dimer):
-        vib = Vibrations(random_dimer)
+    def test_vibrations_methods(self, testdir):
+        atoms = self.random_dimer()
+        vib = Vibrations(atoms)
         vib.run()
         vib_energies = vib.get_energies()
 
@@ -153,10 +194,10 @@ class TestHarmonicVibrations:
         assert len(mode_traj) == 5
 
         assert_array_almost_equal(mode_traj[0].get_all_distances(),
-                                  random_dimer.get_all_distances())
+                                  atoms.get_all_distances())
         with pytest.raises(AssertionError):
             assert_array_almost_equal(mode_traj[4].get_all_distances(),
-                                      random_dimer.get_all_distances())
+                                      atoms.get_all_distances())
 
         assert vib.clean(empty_files=True) == 0
         assert vib.clean() == 13
@@ -165,21 +206,90 @@ class TestHarmonicVibrations:
         d = dict(vib.iterdisplace(inplace=False))
 
         for name, image in vib.iterdisplace(inplace=True):
-            assert d[name] == random_dimer
+            assert d[name] == atoms
 
-    def test_vibrations_restart_dir(self, testdir, random_dimer):
-        vib = Vibrations(random_dimer)
+    def test_vibrations_restart_dir(self, testdir):
+        atoms = self.random_dimer()
+        vib = Vibrations(atoms)
         vib.run()
         freqs = vib.get_frequencies()
         assert freqs is not None
 
         # write/read the data from another working directory
-        atoms = random_dimer.copy()  # This copy() removes the Calculator
-
         with ase.utils.workdir('run_from_here', mkdir=True):
-            vib = Vibrations(atoms, name=str(Path.cwd().parent / 'vib'))
+            # This copy() removes the Calculator
+            vib = Vibrations(atoms.copy(), name=str(Path.cwd().parent / 'vib'))
             assert_array_almost_equal(freqs, vib.get_frequencies())
             assert vib.clean() == 13
+
+    def test_read_args(self, testdir):
+        atoms = self.random_dimer(calc_class=AsymmetricForceConstantCalculator)
+        vib = Vibrations(atoms)
+        vib.run()
+
+        # Notice: In this test, each time we want to call .read() we
+        #         construct a new Vibrations. This is to ensure that caching
+        #         cannot affect this test. (caching has its own test!)
+        del vib
+        def read_vib_hessian(method, direction):
+            vib = Vibrations(atoms.copy())
+            vib.run()
+            vib.read(method=method, direction=direction)
+            return vib.get_vibrations().get_hessian_2d()
+
+        for direction in ('central', 'forward', 'backward'):
+            kwargs = {'direction': direction, 'method': 'standard'}
+            assert read_vib_hessian(**kwargs) == pytest.approx(atoms.calc.expected_hessian(**kwargs))
+
+        # the calculator used is such that 'standard' and 'frederiksen' should at least
+        # produce results that are *different*, even if difficult to quantify.
+        kwstandard = {'direction': 'central', 'method': 'standard'}
+        kwfred = {'direction': 'central', 'method': 'frederiksen'}
+        assert read_vib_hessian(**kwstandard) != pytest.approx(read_vib_hessian(**kwfred))
+
+    def test_read_cache(self, testdir):
+        """Tests cache invalidation, and usage of read_cache=False."""
+        atoms = self.random_dimer(calc_class=AsymmetricForceConstantCalculator)
+        vib = Vibrations(atoms)
+        vib.run()
+
+        rng = np.random.RandomState(9001)
+
+        def make_an_evil_change_that_affects_hessian():
+            """Do something 'evil' (and not necessarily officially supported by ASE)
+            that produces a detectable change in the Hessian even if the method and
+            direction args do not change.
+
+            Without this, it would be difficult to verify that the caching ever
+            actually occurs."""
+            vib.atoms.set_masses(rng.random((len(atoms),)))
+
+        # check that caching even occurs, period
+        defaulted_1 = vib.get_vibrations()
+        make_an_evil_change_that_affects_hessian()
+        defaulted_2 = vib.get_vibrations()
+        assert defaulted_1.get_hessian() == pytest.approx(defaulted_2.get_hessian())
+
+        # check that each arg is capable of invalidating the cache.
+        std_central = vib.get_vibrations(method='standard', direction='central', read_cache=False)
+        std_forward = vib.get_vibrations(method='standard', direction='forward', read_cache=False)
+        fred_forward = vib.get_vibrations(method='frederiksen', direction='forward', read_cache=False)
+        # the calculator used above guarantees that these hessians should not be approximately equal
+        assert std_central.get_hessian() != pytest.approx(std_forward.get_hessian())
+        assert std_forward.get_hessian() != pytest.approx(fred_forward.get_hessian())
+
+        # check that casing does NOT invalidate the cache.
+        std_central = vib.get_vibrations(method='standard', direction='central', read_cache=False)
+        make_an_evil_change_that_affects_hessian()
+        Std_central = vib.get_vibrations(method='Standard', direction='central', read_cache=False)
+        make_an_evil_change_that_affects_hessian()
+        Std_Central = vib.get_vibrations(method='Standard', direction='Central', read_cache=False)
+        # same with leaving an arg unspecified
+        make_an_evil_change_that_affects_hessian()
+        Std_omitted = vib.get_vibrations(method='Standard', read_cache=False)
+        assert Std_central.get_hessian() == pytest.approx(std_central.get_hessian())
+        assert Std_Central.get_hessian() == pytest.approx(std_central.get_hessian())
+        assert Std_omitted.get_hessian() == pytest.approx(std_central.get_hessian())
 
 
 class TestVibrationsDataStaticMethods:

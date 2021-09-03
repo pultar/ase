@@ -469,6 +469,7 @@ class Phonons(Displacement):
         m_a = self.atoms.get_masses()
         m_inv_x = np.repeat(m_a[self.indices]**-0.5, 3)
         M_inv = np.outer(m_inv_x, m_inv_x)
+        self.m_inv_x = m_inv_x  # used by PlaczekStaticPhonons
 
         # no longer used internally, but stored for backwards compatability
         self.D_N = C_N.copy()

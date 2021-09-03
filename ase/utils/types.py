@@ -1,6 +1,5 @@
 from typing import Sequence, TypeVar
 
-
 __all__ = ['Sequence2D', 'Sequence3D', 'Sequence4D', 'Sequence5D']
 
 
