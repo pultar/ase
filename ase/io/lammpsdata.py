@@ -148,20 +148,20 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         if section is not None:
             fields = line.split()
             if section == "Atoms":  # id *
-                id = int(fields[0])
+                atom_id = int(fields[0])
                 if style == "full" and (
                         len(fields) == 7 or len(fields) == 10):
                     # id mol-id type q x y z [tx ty tz]
-                    pos_in[id] = (
+                    pos_in[atom_id] = (
                         int(fields[2]),
                         float(fields[4]),
                         float(fields[5]),
                         float(fields[6]),
                     )
-                    mol_id_in[id] = int(fields[1])
-                    charge_in[id] = float(fields[3])
+                    mol_id_in[atom_id] = int(fields[1])
+                    charge_in[atom_id] = float(fields[3])
                     if len(fields) == 10:
-                        travel_in[id] = (
+                        travel_in[atom_id] = (
                             int(fields[7]),
                             int(fields[8]),
                             int(fields[9]),
@@ -170,14 +170,14 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                         len(fields) == 5 or len(fields) == 8
                 ):
                     # id type x y z [tx ty tz]
-                    pos_in[id] = (
+                    pos_in[atom_id] = (
                         int(fields[1]),
                         float(fields[2]),
                         float(fields[3]),
                         float(fields[4]),
                     )
                     if len(fields) == 8:
-                        travel_in[id] = (
+                        travel_in[atom_id] = (
                             int(fields[5]),
                             int(fields[6]),
                             int(fields[7]),
@@ -185,15 +185,15 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                 elif (style in ("angle", "bond", "molecular")
                       ) and (len(fields) == 6 or len(fields) == 9):
                     # id mol-id type x y z [tx ty tz]
-                    pos_in[id] = (
+                    pos_in[atom_id] = (
                         int(fields[2]),
                         float(fields[3]),
                         float(fields[4]),
                         float(fields[5]),
                     )
-                    mol_id_in[id] = int(fields[1])
+                    mol_id_in[atom_id] = int(fields[1])
                     if len(fields) == 9:
-                        travel_in[id] = (
+                        travel_in[atom_id] = (
                             int(fields[6]),
                             int(fields[7]),
                             int(fields[8]),
@@ -201,15 +201,15 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                 elif (style == "charge"
                       and (len(fields) == 6 or len(fields) == 9)):
                     # id type q x y z [tx ty tz]
-                    pos_in[id] = (
+                    pos_in[atom_id] = (
                         int(fields[1]),
                         float(fields[3]),
                         float(fields[4]),
                         float(fields[5]),
                     )
-                    charge_in[id] = float(fields[2])
+                    charge_in[atom_id] = float(fields[2])
                     if len(fields) == 9:
-                        travel_in[id] = (
+                        travel_in[atom_id] = (
                             int(fields[6]),
                             int(fields[7]),
                             int(fields[8]),
@@ -304,32 +304,32 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
 
     ind_of_id = {}
     # copy per-atom quantities from read-in values
-    for (i, id) in enumerate(pos_in.keys()):
+    for (i, atom_id) in enumerate(pos_in.keys()):
         # by id
-        ind_of_id[id] = i
+        ind_of_id[atom_id] = i
         if sort_by_id:
-            ind = id - 1
+            ind = atom_id - 1
         else:
             ind = i
-        type = pos_in[id][0]
-        positions[ind, :] = [pos_in[id][1], pos_in[id][2], pos_in[id][3]]
+        atom_type = pos_in[atom_id][0]
+        positions[ind, :] = [pos_in[atom_id][1], pos_in[atom_id][2], pos_in[atom_id][3]]
         if velocities is not None:
-            velocities[ind, :] = [vel_in[id][0], vel_in[id][1], vel_in[id][2]]
+            velocities[ind, :] = [vel_in[atom_id][0], vel_in[atom_id][1], vel_in[atom_id][2]]
         if travel is not None:
-            travel[ind] = travel_in[id]
+            travel[ind] = travel_in[atom_id]
         if mol_id is not None:
-            mol_id[ind] = mol_id_in[id]
+            mol_id[ind] = mol_id_in[atom_id]
         if charge is not None:
-            charge[ind] = charge_in[id]
-        ids[ind] = id
+            charge[ind] = charge_in[atom_id]
+        ids[ind] = atom_id
         # by type
-        types[ind] = type
+        types[ind] = atom_type
         if Z_of_type is None:
-            numbers[ind] = type
+            numbers[ind] = atom_type
         else:
-            numbers[ind] = Z_of_type[type]
+            numbers[ind] = Z_of_type[atom_type]
         if masses is not None:
-            masses[ind] = mass_in[type]
+            masses[ind] = mass_in[atom_type]
     # convert units
     positions = convert(positions, "distance", units, "ASE")
     cell = convert(cell, "distance", units, "ASE")
@@ -360,39 +360,39 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         at.arrays["mmcharges"] = charge.copy()
 
     if bonds is not None:
-        for (type, a1, a2) in bonds_in:
+        for (bond_type, a1, a2) in bonds_in:
             i_a1 = ind_of_id[a1]
             i_a2 = ind_of_id[a2]
             if len(bonds[i_a1]) > 0:
                 bonds[i_a1] += ","
-            bonds[i_a1] += "%d(%d)" % (i_a2, type)
+            bonds[i_a1] += "%d(%d)" % (i_a2, bond_type)
         for i in range(len(bonds)):
             if len(bonds[i]) == 0:
                 bonds[i] = "_"
         at.arrays["bonds"] = np.array(bonds)
 
     if angles is not None:
-        for (type, a1, a2, a3) in angles_in:
+        for (angle_type, a1, a2, a3) in angles_in:
             i_a1 = ind_of_id[a1]
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             if len(angles[i_a2]) > 0:
                 angles[i_a2] += ","
-            angles[i_a2] += "%d-%d(%d)" % (i_a1, i_a3, type)
+            angles[i_a2] += "%d-%d(%d)" % (i_a1, i_a3, angle_type)
         for i in range(len(angles)):
             if len(angles[i]) == 0:
                 angles[i] = "_"
         at.arrays["angles"] = np.array(angles)
 
     if dihedrals is not None:
-        for (type, a1, a2, a3, a4) in dihedrals_in:
+        for (dih_type, a1, a2, a3, a4) in dihedrals_in:
             i_a1 = ind_of_id[a1]
             i_a2 = ind_of_id[a2]
             i_a3 = ind_of_id[a3]
             i_a4 = ind_of_id[a4]
             if len(dihedrals[i_a1]) > 0:
                 dihedrals[i_a1] += ","
-            dihedrals[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, type)
+            dihedrals[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, dih_type)
         for i in range(len(dihedrals)):
             if len(dihedrals[i]) == 0:
                 dihedrals[i] = "_"
