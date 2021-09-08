@@ -13,6 +13,6 @@ class EspressoPhonons:
 
     @classmethod
     def from_scf(cls, scf_dir, phonon_dir, **kwargs):
-        subprocess.run(f"cp -r {scf_dir} {phonon_dir}", cwd="./", shell=True)
+        subprocess.run(f"cp -r '{scf_dir}' '{phonon_dir}'", cwd="./", shell=True)
         # print(subprocess.run(f"ls", cwd="./", shell=True))
         return cls(phonon_dir, **kwargs)

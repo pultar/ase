@@ -116,7 +116,7 @@ def write(directory, infilename: str = 'phonon.in', require_valid_calculation: b
     require_valid_calculation: bool, optional
         If True, throws an error if a valid SCF calculation directory does not exist, by default True
     """
-    inputfile_name: str = directory + "/" + infilename
+    inputfile_name: str = directory / infilename
     if not os.path.exists(directory) and require_valid_calculation:
         raise FileNotFoundError(
             r"The calculation directory does not exist! \
