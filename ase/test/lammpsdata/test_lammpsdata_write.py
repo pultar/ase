@@ -37,3 +37,8 @@ def test_lammpsdata_write(atoms):
     velocities_written = written_values["velocities"]
     velocities_expected = atoms.get_velocities()
     compare_with_pytest_approx(velocities_written, velocities_expected, REL_TOL)
+
+    # Check masses were read in correctly
+    mass_written = written_values["mass"]
+    mass_expected = atoms.get_masses()[0] # Test only support one species
+    compare_with_pytest_approx(mass_written, mass_expected, REL_TOL)

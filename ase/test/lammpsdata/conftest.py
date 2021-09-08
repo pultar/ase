@@ -14,6 +14,7 @@ def atoms():
     CELL_LENGTH = 102.3776
     NATOMS = 3
     MAX_VEL = 0.1
+    MAX_MASS = 32
 
     atoms_attrs = {
         "cell": [CELL_LENGTH] * 3,
@@ -21,6 +22,7 @@ def atoms():
         "charges": [0.0] * NATOMS,
         "velocities": np.random.RandomState(41).rand(NATOMS, 3) * MAX_VEL,
         "numbers": [1] * NATOMS,
+        "masses": np.random.RandomState(23).rand(NATOMS) * MAX_MASS,
         "pbc": [True] * 3,
     }
 

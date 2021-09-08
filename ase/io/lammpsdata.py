@@ -476,13 +476,19 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     fd.write("Masses\n\n")
     for (atom_type, symbol) in enumerate(species):
         fd.write(f"{atom_type + 1} {masses[symbols.index(symbol)]:g}\n")
-    fd.write("\n")
+    fd.write("\n\n")
 
     # TODO Write number of atom types
     # Write (unwrapped) atomic positions.  If wrapping of atoms back into the
     # cell along periodic directions is desired, this should be done manually
     # on the Atoms object itself beforehand.
-    fd.write(f"Atoms # {atom_style} \n\n")
+    fd.write(f"Atoms\n\n")
+
+    # TODO: support atom_style comment after Atoms section header.
+    # Currently the test fails because the regexp in parse_lammps_data_file.py
+    # won't match a section header with a comment.
+    #fd.write(f"Atoms # {atom_style} \n\n")
+
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=False)
 
     if atom_style == 'atomic':
