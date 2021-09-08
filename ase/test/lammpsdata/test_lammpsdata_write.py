@@ -40,5 +40,5 @@ def test_lammpsdata_write(atoms):
 
     # Check masses were read in correctly
     mass_written = written_values["mass"]
-    mass_expected = atoms.get_masses()[0] # Test only support one species
+    mass_expected = atoms.get_masses()[0]  # Test only support one species
     compare_with_pytest_approx(mass_written, mass_expected, REL_TOL)
