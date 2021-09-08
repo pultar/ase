@@ -136,6 +136,9 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                     N = int(val)
                 # elif field == "atom types":
                 #     N_types = int(val)
+
+                # TODO Parse bonds/angles/dihedrals/impropers lines
+
                 elif field == "xlo xhi":
                     (xlo, xhi) = [float(x) for x in val.split()]
                 elif field == "ylo yhi":
@@ -428,7 +431,9 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
 
     symbols = atoms.get_chemical_symbols()
     n_atoms = len(symbols)
-    fd.write("{0} \t atoms \n".format(n_atoms))
+    fd.write("{0} atoms \n".format(n_atoms))
+
+    # TODO Write number of bonds/dihedrals/impropers
 
     if specorder is None:
         # This way it is assured that LAMMPS atom types are always
@@ -440,6 +445,8 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         species = specorder
     n_atom_types = len(species)
     fd.write("{0}  atom types\n".format(n_atom_types))
+
+    # TODO Write number of bond/angle/dihedral types.
 
     if prismobj is None:
         p = Prism(atoms.get_cell())
@@ -462,10 +469,20 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         )
     fd.write("\n\n")
 
+    # TODO print {Bond,Angle,Dihedrals,Impropers}Coeffs sections
+
+    # Print Masses section
+    masses = convert(atoms.get_masses(), "mass", "ASE", units)
+    fd.write("Masses\n\n")
+    for (atom_type, symbol) in enumerate(species):
+        fd.write(f"{atom_type + 1} {masses[symbols.index(symbol)]:g}\n")
+    fd.write("\n")
+
+    # TODO Write number of atom types
     # Write (unwrapped) atomic positions.  If wrapping of atoms back into the
     # cell along periodic directions is desired, this should be done manually
     # on the Atoms object itself beforehand.
-    fd.write("Atoms \n\n")
+    fd.write(f"Atoms # {atom_style} \n\n")
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=False)
 
     if atom_style == 'atomic':
@@ -548,5 +565,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                     *(i + 1,) + tuple(v)
                 )
             )
+
+    # TODO print Bonds, Angles, Dihedrals, impropers sections
 
     fd.flush()
