@@ -1,6 +1,8 @@
+import os
 from ase.atoms import Atoms
 from ase.calculators.calculator import FileIOCalculator
 import numpy as np
+from ase.units import Hartree, Bohr
 
 class QUICK(FileIOCalculator):
     '''
@@ -20,7 +22,8 @@ class QUICK(FileIOCalculator):
         array([-0.3072, -0.0196, -0.4032,  0.2331,  0.0867,  0.0867,  0.0979, 0.1128,  0.1128])
     '''
     implemented_properties = ['energy', 'forces', 'dipole', 'charges']
-    command = 'quick.cuda PREFIX.com' # quick.cuda should be detected and substituted to keyword.
+    # implement error message if $ASE_QUICK_COMMAND is not present. Likely missed sourcing quick.rc
+    command = os.environ['ASE_QUICK'] + ' PREFIX.com'
     discard_results_on_any_change = True
 
     default_parameters = {'charge': 0,
@@ -81,7 +84,7 @@ class QUICK(FileIOCalculator):
             readindex = geom_index + i
         
         # record energy and forces
-        self.results['energy'] = float(lines[energy_index].split()[-1])
-        self.results['forces'] = - grads
+        self.results['energy'] = float(lines[energy_index].split()[-1]) * Hartree 
+        self.results['forces'] = - grads * Hartree / Bohr
         self.results['dipole'] = np.array([float(x) for x in lines[dipole_index].split()[:3]]).reshape([1,3])
         self.results['charges'] = np.array(mulliken)
