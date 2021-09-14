@@ -527,13 +527,13 @@ def read_eigenvalues(line, fd, debug=False):
         if debug:
             print(*line, end=end)
     prind("Read eigenvalues output")
-    current_line = f.tell()
-    f.seek(0)  # Seek for the kgrid information
+    current_line = fd.tell()
+    fd.seek(0)  # Seek for the kgrid information
     while line != '':
         line = fd.readline().lower()
         if 'scf.kgrid' in line:
             break
-    f.seek(current_line)  # Retrun to the original position
+    fd.seek(current_line)  # Retrun to the original position
 
     kgrid = read_tuple_integer(line)
 
@@ -541,7 +541,7 @@ def read_eigenvalues(line, fd, debug=False):
         prind('Non-Gamma point calculation')
         prind('scf.Kgrid is %d, %d, %d' % kgrid)
         gamma_flag = False
-        # f.seek(f.tell()+57)
+        # fd.seek(f.tell()+57)
     else:
         prind('Gamma point calculation')
         gamma_flag = True
