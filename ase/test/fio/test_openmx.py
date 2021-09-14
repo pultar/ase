@@ -213,21 +213,12 @@ def test_openmx_read_eigenvalues():
     tol = 1e-2
     # reader.py -> `def read_file(filename...)` -> patterns
     eigenvalues_pattern = "Eigenvalues (Hartree)"
-<<<<<<< HEAD
-    with io.StringIO(openmx_eigenvalues_gamma_sample) as f:
-        while True:
-            line = f.readline()
-            if eigenvalues_pattern in line:
-                break
-        eigenvalues = read_eigenvalues(line, f)
-=======
     with io.StringIO(openmx_eigenvalues_gamma_sample) as fd:
         while True:
             line = fd.readline()
             if eigenvalues_pattern in line:
                 break
         eigenvalues = read_eigenvalues(line, fd)
->>>>>>> upstream/master
 
     gamma_eigenvalues = np.array([[[-0.96233478518931, -0.96233478518931],
                                   [-0.94189339856450, -0.94189339856450],
@@ -242,21 +233,12 @@ def test_openmx_read_eigenvalues():
 
     assert np.all(np.isclose(eigenvalues, gamma_eigenvalues, atol=tol))
 
-<<<<<<< HEAD
-    with io.StringIO(openmx_eigenvalues_bulk_sample) as f:
-        while True:
-            line = f.readline()
-            if eigenvalues_pattern in line:
-                break
-        eigenvalues = read_eigenvalues(line, f)
-=======
     with io.StringIO(openmx_eigenvalues_bulk_sample) as fd:
         while True:
             line = fd.readline()
             if eigenvalues_pattern in line:
                 break
         eigenvalues = read_eigenvalues(line, fd)
->>>>>>> upstream/master
 
     bulk_eigenvalues = np.array([[[-2.33424746491277, -2.33424746917880],
                                  [-2.33424055817432, -2.33424056243807],
