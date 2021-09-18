@@ -16,8 +16,12 @@ class TurbomoleParameters(dict):
     available_functionals = [
         'slater-dirac-exchange', 's-vwn', 'vwn', 's-vwn_Gaussian', 'pwlda',
         'becke-exchange', 'b-lyp', 'b-vwn', 'lyp', 'b-p', 'pbe', 'tpss',
-        'bh-lyp', 'b3-lyp', 'b3-lyp_Gaussian', 'pbe0', 'tpssh', 'lhf', 'oep',
-        'b97-d', 'b2-plyp'
+        'bh-lyp', 'b3-lyp', 'b3-lyp_Gaussian', 'pbe0', 'tpssh', 'pw6b96',
+        'm06', 'm06-l', 'm096-2x', 'b97-d', 'pbeh-3c', 'b97-3c',
+        'lh07t-svwn', 'lh07s-svwn', 'lh12ct-ssirpw92', 'lh12ct-ssifpw92',
+        'lh14t-calpbe', 'lh20t', 'b2-plyp', 'hse06', 'cam-b3lyp', 'wb97x', 
+        'wb97x-d', 'wb97x-v', 'wb97m-v', 'm11', 'revm11', 'mn12-sx', 'mn15',
+        'm15-l', 'revtpss', 'pkzb', 'r2scan', 'r2scan-3c', 'scan-libxc'
     ]
 
     # nested dictionary with parameters attributes
