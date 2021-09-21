@@ -102,7 +102,16 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': True
         },
-        'energy convergence': {
+        'dispersion correction': {
+            'comment': None,
+            'default': 'off',
+            'group': 'dsp',
+            'key': 'dispersion',
+            'type': str,
+            'units': None,
+            'updateable': True
+       },
+       'energy convergence': {
             'comment': 'jobex -energy <int>',
             'default': None,
             'group': None,
@@ -568,7 +577,7 @@ class TurbomoleParameters(dict):
             '\n__title__\na coord\n__inter__\n'
             'bb all __basis_set__\n*\neht\ny\n__charge_str____occ_str__'
             '__single_atom_str____norb_str____dft_str____ri_str__'
-            '__scfiterlimit____fermi_str____damp_str__q\n'
+            '__scfiterlimit____fermi_str____damp_str____dsp_str__q\n'
         )
 
         params = self
@@ -661,6 +670,10 @@ class TurbomoleParameters(dict):
                 damp_str += par_str + '\n'
             damp_str += '\n'
 
+        dsp_str = ''
+        if params['dispersion correction']:
+            dsp_str = 'dsp\n' + params['dispersion correction'] + '\n*\n'
+
         define_str = define_str_tpl
         define_str = re.sub('__title__', params['title'], define_str)
         define_str = re.sub('__basis_set__', params['basis set name'],
@@ -676,6 +689,7 @@ class TurbomoleParameters(dict):
         define_str = re.sub('__scfiterlimit__', scfiter_str, define_str)
         define_str = re.sub('__fermi_str__', fermi_str, define_str)
         define_str = re.sub('__damp_str__', damp_str, define_str)
+        define_str = re.sub('__dsp_str__', dsp_str, define_str)
 
         return define_str
 
