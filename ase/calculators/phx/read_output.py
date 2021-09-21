@@ -4,23 +4,24 @@ import re
 
 
 def parse_q(fd) -> dict:
-    """[summary]
+    """Parses the qpoint for the given .dyn file.
 
     Parameters
     ----------
-    fd : [type]
+    fd : File handle
         [description]
 
     Returns
     -------
     dict
-        [description]
+        Dict containing the q-point coordinate
     """
 
     current_line = ""
     while 'q =' not in current_line:
         current_line = fd.readline()
 
+    # Strip all of the irrelevant characters
     current_line = current_line.strip('q=() \n').split()
     q = np.array(current_line, dtype=np.float64)
     return {"q": q}
@@ -28,7 +29,7 @@ def parse_q(fd) -> dict:
 
 def parse_dielectric_tensor(fd) -> dict:
     """Parses the dielectric tensor block from dynamical files.
-    It looks like so:
+    The section looks like so:
     
     Dielectric Tensor:
 
@@ -46,8 +47,11 @@ def parse_dielectric_tensor(fd) -> dict:
     [type]
         [description]
     """
-
-    while 'Dielectric Tensor:' not in fd.readline():
+    current_line = ""
+    while 'Dielectric Tensor:' not in current_line:
+        current_line = fd.readline().strip()
+        if "Diagonalizing the dynamical matrix" in current_line:
+            return {"epsilon": None}
         continue
 
     matrix = []
@@ -99,8 +103,9 @@ def parse_effective_charges(fd, natoms: int) -> dict:
     zue_parsed = False
     while not born_charges_parsed:
         current_line = fd.readline()
-        if "Diagonalizing the dynamical matrix" in current_line:
+        if "Diagonalizing the dynamical matrix" in current_line or "q = (" in current_line:
             break
+            
 
         if "E-U" in current_line:
             born_charges_data["zeu"] = parse_z_block(fd, natoms)
@@ -113,7 +118,8 @@ def parse_effective_charges(fd, natoms: int) -> dict:
 
     if zeu_parsed ^ zue_parsed:
         raise Exception("One type of Z parsed but not the other! This should not be happening!")
-    
+    if born_charges_data == {}:
+        born_charges_data = {"zeu": None, "zue": None}
     return born_charges_data
 
 
@@ -176,19 +182,16 @@ def parse_frequencies(fd, natoms: int) -> dict:
     return {"frequencies_and_modes": (frequencies, normal_modes)}
 
 
-def read_output(filename_or_fd):
-    if type(filename_or_fd) == str:
-        fd = open(filename_or_fd)
-    else:
-        fd = filename_or_fd
-
+def read_dynfile(fd):
     for _ in range(2):
         next(fd)
     
     natoms = int(fd.readline().strip().split()[1])
-    
-    yield parse_q(fd)
+    print(natoms)
+    qdict = parse_q(fd)
+    yield qdict
     yield parse_ifc_block(fd, natoms=natoms)
-    yield parse_dielectric_tensor(fd)
-    yield parse_effective_charges(fd, natoms=natoms)
+    if np.allclose(qdict["q"], 0.0):
+        yield parse_dielectric_tensor(fd)
+        yield parse_effective_charges(fd, natoms=natoms)
     yield parse_frequencies(fd, natoms=natoms)

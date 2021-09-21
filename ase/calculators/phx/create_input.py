@@ -102,7 +102,7 @@ def float_to_fortstring(x):
     return f"{x:0.07e}".replace("e", "d")
 
 
-def write(directory, infilename: str = 'phonon.in', require_valid_calculation: bool = True, **kwargs):
+def write_ph_input(directory, infilename: str = 'phonon.in', require_valid_calculation: bool = True, **kwargs):
     """Writes a ph.x input file when using the .write() method.
     All input arguments except STRUCTURE types are supported,
     but the input sanitation/validation is currently weak.
@@ -153,3 +153,37 @@ def write(directory, infilename: str = 'phonon.in', require_valid_calculation: b
                     )
 
         fd.write("/\n")
+        
+def write_q2r_input(directory, infilename: str = 'iq2r.in', require_valid_calculation: bool = True, **kwargs):
+    inputfile_name = directory / infilename
+    print(inputfile_name)
+
+    with open (inputfile_name, "w") as fd:
+        fd.write("&input\n")
+        
+        for key, value in kwargs.items():
+            if type(value) == bool:
+                fd.write("=".join([key, bool_to_fortbool(value)]) + ",\n")
+            
+            if type(value) == str:
+                fd.write(key + "=" + f"'{value}'" + ",\n")
+                
+        fd.write("/\n")
+        
+def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_calculation: bool = True, **kwargs):
+    inputfile_name = directory / infilename
+    print(inputfile_name)
+    
+    qpoints = kwargs["qpoints"]
+    with open (inputfile_name, "w") as fd:
+        fd.write("&input\n")
+        
+        for key, value in kwargs.items():
+            if type(value) == bool:
+                fd.write("=".join([key, bool_to_fortbool(value)]) + ",\n")
+            
+            if type(value) == str:
+                fd.write(key + "=" + f"'{value}'" + ",\n")
+                
+        fd.write("/\n")
+        fd.write("1\n  0.0   0.0   0.0\n")
