@@ -6,6 +6,17 @@ from ase.units import Ha, Bohr
 from ase.calculators.openmx.reader import read_openmx, read_eigenvalues
 
 openmx_out_sample = """
+***********************************************************
+***********************************************************
+
+  This calculation was performed by OpenMX Ver. 3.9.2
+  using 1 MPI processes and 1 OpenMP threads.
+
+  Tue Sep 21 18:00:03 2021
+
+***********************************************************
+***********************************************************
+
 System.CurrentDirectory        ./
 System.Name        ch4
 
