@@ -37,45 +37,284 @@ def lowdin(U, S=None):
     U[:] = np.dot(U, rot)
 
 
-def neighbor_k_search(k_c, G_c, kpt_kc, tol=1e-4):
-    # search for k1 (in kpt_kc) and k0 (in alldir), such that
-    # k1 - k - G + k0 = 0
-    alldir_dc = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1],
-                          [1, 1, 0], [1, 0, 1], [0, 1, 1]], dtype=int)
-    for k0_c in alldir_dc:
-        for k1, k1_c in enumerate(kpt_kc):
-            if np.linalg.norm(k1_c - k_c - G_c + k0_c) < tol:
-                return k1, k0_c
+def search_shells(g_max, basis_c, mpgrid):
+    """Compute possible combinations of vectors
 
-    print('Wannier: Did not find matching kpoint for kpt=', k_c)
-    print('Probably non-uniform k-point grid')
-    raise NotImplementedError
+       The returned array should represent directions from one k-point to every
+       possible neighboring k-point, we compute this in cartesian coordinates
+       as well and we evaluate the distance.
+
+       Given a g_max integer delimiting the range, it computes every possible
+       combination, with repetition. The only exception is (0,0,0) that is
+       removed from the list. All the arrays are sorted in order of increasing
+       distance.
+
+       EX: g_max = 1  -> (-1,-1,-1), (-1,1,0), (1,0,-1), (0,0,1), etc.
+
+       g_max: max value delimiting the range to use for the combinations
+       basis_c: list of basis vectors (should contain three 3D vectors)
+       mpgrid: Monkhorst-Pack grid size (Nx, Ny, Nz)
+    """
+    g_range = np.arange(- g_max, g_max + 1, dtype=int)
+    comb = np.stack(np.meshgrid(g_range, g_range, g_range),
+                    axis=-1).reshape(-1, len(mpgrid))
+    comb = comb[np.any(comb != [0, 0, 0], axis=1)]
+
+    # Compute cartesian coordinates and distance from the center
+    b_cart_pc = np.empty((len(comb), len(basis_c)), dtype=float)
+    b_dist_p = np.empty(len(comb), dtype=float)
+    for i, p in enumerate(comb):
+        b_cart_pc[i] = 2 * np.pi * p @ basis_c / mpgrid
+        b_dist_p[i] = np.linalg.norm(b_cart_pc[i])
+    sort = np.argsort(b_dist_p)
+    comb = comb[sort]
+    b_cart_pc = b_cart_pc[sort]
+    b_dist_p = b_dist_p[sort]
+    return comb, b_cart_pc, b_dist_p
 
 
-def calculate_weights(cell_cc, normalize=True):
-    """ Weights are used for non-cubic cells, see PRB **61**, 10040"""
-    alldirs_dc = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],
-                           [1, 1, 0], [1, 0, 1], [0, 1, 1]], dtype=int)
-    g = np.dot(cell_cc, cell_cc.T)
-    # NOTE: Only first 3 of following 6 weights are presently used:
-    w = np.zeros(6)
-    w[0] = g[0, 0] - g[0, 1] - g[0, 2]
-    w[1] = g[1, 1] - g[0, 1] - g[1, 2]
-    w[2] = g[2, 2] - g[0, 2] - g[1, 2]
-    w[3] = g[0, 1]
-    w[4] = g[0, 2]
-    w[5] = g[1, 2]
-    # Make sure that first 3 Gdir vectors are included -
-    # these are used to calculate Wanniercenters.
-    Gdir_dc = alldirs_dc[:3]
-    weight_d = w[:3]
-    for d in range(3, 6):
-        if abs(w[d]) > 1e-5:
-            Gdir_dc = np.concatenate((Gdir_dc, alldirs_dc[d:d + 1]))
-            weight_d = np.concatenate((weight_d, w[d:d + 1]))
-    if normalize:
-        weight_d /= max(abs(weight_d))
-    return weight_d, Gdir_dc
+def count_shells(dist_p, atol):
+    """Count the equal-distance shells and the elements in each
+
+       dist_p: sorted list of distances
+       atol: absolute tolerance for equality
+    """
+    neighbors_per_shell = [1]
+    prev_d = 0.
+    for i, d in enumerate(dist_p):
+        if i > 0:
+            if np.abs(prev_d - d) < atol:
+                neighbors_per_shell[-1] = neighbors_per_shell[-1] + 1
+            else:
+                neighbors_per_shell.append(1)
+        prev_d = d
+    neighbors_per_shell = np.array(neighbors_per_shell, dtype=int)
+    return neighbors_per_shell
+
+
+def check_parallel(vector1, vector2, atol=1e-6):
+    """Check if two vectors are parallel to each other
+
+       atol: absolute tolerance for equality
+    """
+    inn_prod = np.dot(vector1, vector2)
+    norm_prod = (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+    return np.abs(inn_prod - norm_prod) < atol
+
+
+def neighbors_complete_set(vectors_sbc, vectors_per_shell,
+                           atol=1e-6, verbose=False):
+    """Returns the list of shells and weights for a complete set of neighbors
+
+       Returns the indices of vector_per_shell that correspond to a complete
+       set of neighbors, i.e. the weights and the 'b' vectors that satisfy
+       the following completeness equation:
+
+       sum_s(w_s * sum_b(bs_i * bs_j)) = delta(i, j)
+
+       Ref: https://doi.org/10.1016/j.cpc.2007.11.016
+
+       vectors_sbc: list of 'b' vectors in each shell, in cartesian coordinates
+       vectors_per_shell: list of number of 'b' vectors in each shell
+       atol: absolute tolerance for (in)equality
+    """
+    shells_to_keep = np.arange(0, len(vectors_per_shell)).astype(int)
+    rm = 0
+    for n in range(0, len(vectors_per_shell)):
+        # update index, some shells have been removed from the list
+        n -= rm
+
+        # Reject shell if two vectors are parallel, usually this also causes
+        # small singular values, but sometimes the two are not correlated
+        tot = 0
+        parallel = False
+        for s, Nb in enumerate(vectors_per_shell[:n]):
+            for b_out in range(Nb):
+                for b_in in range(vectors_per_shell[n]):
+                    if parallel:
+                        # we already found one, skip the rest
+                        continue
+                    if check_parallel(vectors_sbc[shells_to_keep][s, b_out],
+                                      vectors_sbc[shells_to_keep][n, b_in],
+                                      atol):
+                        parallel = True
+            tot += Nb
+
+        if parallel:
+            shells_to_keep = np.delete(shells_to_keep, n, axis=0)
+            vectors_per_shell = np.delete(vectors_per_shell, n, axis=0)
+            rm += 1
+            if verbose:
+                print('Found a vector parallel to a previous shell,',
+                      'skipping this shell.')
+            continue
+
+        # Express completeness relation in a computationally convenient way
+        # (Ad @ w_s = qd) and solve the equation with SVD, same ref. as above
+        qd = np.array([1, 1, 1, 0, 0, 0], dtype=float)
+        Ad = np.zeros((6, len(vectors_per_shell[:n + 1])), dtype=float)
+        for s, Nb in enumerate(vectors_per_shell[:n + 1]):
+            for b in range(Nb):
+                Ad[0:3, s] = (Ad[0:3, s] +
+                              vectors_sbc[shells_to_keep][s, b, 0:3] *
+                              vectors_sbc[shells_to_keep][s, b, 0:3])
+                Ad[3:6, s] = (Ad[3:6, s] +
+                              vectors_sbc[shells_to_keep][s, b, 0:3] *
+                              vectors_sbc[shells_to_keep][s, b, [1, 2, 0]])
+        Ud, sv, Vt = np.linalg.svd(Ad, full_matrices=False)
+
+        if (np.abs(sv) < atol).any():
+            shells_to_keep = np.delete(shells_to_keep, n, axis=0)
+            vectors_per_shell = np.delete(vectors_per_shell, n, axis=0)
+            rm += 1
+            if verbose:
+                print('Found a very small singular value,',
+                      'skipping this shell.')
+            continue
+
+        weights_per_shell = Vt.T @ np.diag(1 / sv) @ Ud.T @ qd
+
+        # Manually check if the relation is satisfied
+        if not (np.abs(Ad @ weights_per_shell - qd) < atol).all():
+            if verbose:
+                print('Completeness relation not satisfied with',
+                      n + 1, 'shell(s)')
+        else:
+            if verbose:
+                print('Completeness relation satisfied with',
+                      n + 1, 'shell(s)')
+                print('Weights:', weights_per_shell)
+            number_of_shells = n + 1
+            shells_to_keep = shells_to_keep[:number_of_shells]
+            break
+
+    return shells_to_keep, weights_per_shell
+
+
+def compute_neighbors_and_G_vectors(kpt_frac, dir_per_shell,
+                                    neighbors_per_shell,
+                                    possible_G_vectors, atol=1e-6):
+    """ Compute the list of neighbors and the G vectors
+
+        The relation to satisfy is:  nnk = k + b + G
+        nnk: neighbor
+        k: original k-point
+        b: vector connecting to neighbor
+        G: vector to jump across PBC (3D vectors of int)
+
+        Arguments:
+        kpt_frac: list of k-points in fractional coordinates
+        dir_per_shell: possible directions to neighbors per each shell
+        neighbors_per_shell: obvious
+        b_mill_pc: list of possible G vectors to try
+        atol: absolute tolerance for equalities
+    """
+    nnk_kb = - np.ones((len(kpt_frac), sum(neighbors_per_shell)), dtype=int)
+    G_kbc = np.empty((len(kpt_frac), sum(neighbors_per_shell), 3), dtype=int)
+    for i, k in enumerate(kpt_frac):
+        tot = 0
+        for s in range(len(neighbors_per_shell)):
+            for j in range(neighbors_per_shell[s]):
+                b = dir_per_shell[s, j]
+                diff = [d.all() for d in
+                        np.abs(kpt_frac - k - b) < atol]
+                if True in diff:
+                    nnk_kb[i, tot + j] = diff.index(True)
+                    G_kbc[i, tot + j] = [0, 0, 0]
+                else:
+                    for G in possible_G_vectors:
+                        diff = [d.all() for d in
+                                np.abs(kpt_frac - G - k - b) < atol]
+                        if True in diff:
+                            nnk_kb[i, tot + j] = diff.index(True)
+                            G_kbc[i, tot + j] = G
+                            break
+            tot += neighbors_per_shell[s]
+    if (nnk_kb == -1).any():
+        raise ValueError('Unassigned data in list of neighbors.')
+    return nnk_kb, G_kbc
+
+
+def neighbors_and_weights(kpt_frac, recip_cell, atol=1e-6, verbose=False):
+    """Compute nearest neighbors, weights and G vectors
+
+       Returns a list of neighbors for each k-point, the G vectors to move
+       across PBC and the weights.
+
+       Relation with neighbors: nnk = k + b + G
+
+       Reference: Wannier90 review
+                  (http://dx.doi.org/10.1016/j.cpc.2007.11.016)
+                  Note: the G vector here has the opposite sign
+
+       kpt_frac:  list of k-points in a MP uniform grid in fractional coords
+       recip_cell: reciprocal lattice vectors
+       atol:    absolute tolerance for (in)equalities
+    """
+    # In the following code there are several vectors with Miller (mill)
+    # notation, fractional coordinates relative to the base vectors (frac)
+    # and cartesian coordinates (cart).
+
+    # NB: even if the arrays have the size, for each shell there is a varying
+    #     number of neighbors and vectors pointing to them, this number is
+    #     saved in neighbors_per_shell.
+
+    if verbose:
+        t = - time()
+
+    mpgrid = get_monkhorst_pack_size_and_offset(kpt_frac)[0]
+
+    # Check all common directions and list distances
+    g_max = 1
+    _, _, b_dist_p = search_shells(g_max, recip_cell, mpgrid)
+
+    # Increase the range of search if the distances in some directions are
+    # smaller, it should prevent problems with elongated cells
+    g_max = np.ceil(max(b_dist_p) / min(b_dist_p))
+    b_mill_pc, b_cart_pc, b_dist_p = search_shells(g_max, recip_cell, mpgrid)
+
+    # Count shells of neighbors and elements in each
+    neighbors_per_shell = count_shells(b_dist_p, atol)
+
+    # Split arrays based on shells
+    b_mill_sbc = np.empty((len(neighbors_per_shell),
+                           max(neighbors_per_shell), 3), dtype=int)
+    b_cart_sbc = np.empty((len(neighbors_per_shell),
+                           max(neighbors_per_shell), 3), dtype=float)
+    b_dist_s = np.empty(len(neighbors_per_shell), dtype=float)
+    tot = 0
+    for s, Nb in enumerate(neighbors_per_shell):
+        b_mill_sbc[s, :Nb] = b_mill_pc[tot:tot + Nb]
+        b_cart_sbc[s, :Nb] = b_cart_pc[tot:tot + Nb]
+        b_dist_s[s] = b_dist_p[tot]
+        tot += Nb
+
+    # Compute weights and number of shells to satisfy the completeness relation
+    shells_to_keep, weights_per_shell = \
+        neighbors_complete_set(b_cart_sbc,
+                               neighbors_per_shell,
+                               atol, verbose)
+    b_mill_sbc = b_mill_sbc[shells_to_keep]
+    neighbors_per_shell = neighbors_per_shell[shells_to_keep]
+
+    if verbose:
+        print('Number of neighbors in each shell:', neighbors_per_shell)
+        print('Distances:', b_dist_s[shells_to_keep])
+
+    b_frac_sbc = b_mill_sbc.copy().astype(float)
+    b_frac_sbc[:, :] /= mpgrid
+
+    # Compute the list of neighbors and the G vectors
+    nnk_kb, G_kbc = compute_neighbors_and_G_vectors(kpt_frac, b_frac_sbc,
+                                                    neighbors_per_shell,
+                                                    b_mill_pc, atol)
+    weights_per_neighbor = np.repeat(weights_per_shell, neighbors_per_shell)
+
+    if verbose:
+        t += time()
+        print(f'Neighbors and weights computed in {t:.1f}s')
+
+    return nnk_kb, G_kbc, weights_per_neighbor
 
 
 def random_orthogonal_matrix(dim, rng=np.random, real=False):
@@ -243,13 +482,37 @@ class Wannier:
         self.kpt_kc = calc.get_bz_k_points()
         assert len(calc.get_ibz_k_points()) == len(self.kpt_kc)
         self.kptgrid = get_monkhorst_pack_size_and_offset(self.kpt_kc)[0]
-        self.kpt_kc *= sign
-
         self.Nk = len(self.kpt_kc)
         self.unitcell_cc = calc.get_atoms().get_cell()
         self.largeunitcell_cc = (self.unitcell_cc.T * self.kptgrid).T
-        self.weight_d, self.Gdir_dc = calculate_weights(self.largeunitcell_cc)
-        self.Ndir = len(self.weight_d)  # Number of directions
+
+        # Get list of neighbors and G vectors for each k-point, number of
+        # directions and weight for each shell.
+        self.kklst_kd, self.G_kdc, self.weight_d = \
+            neighbors_and_weights(
+                kpt_frac=self.kpt_kc,
+                recip_cell=self.unitcell_cc.reciprocal(),
+                verbose=self.verbose)
+        self.Ndir = self.kklst_kd.shape[1]
+
+        # Compute the directions to reach the neighboring k-points
+        self.bvec_dc = np.empty((self.Ndir, 3), dtype=float)
+        for d in range(self.Ndir):
+            self.bvec_dc[d] = (self.kpt_kc[self.kklst_kd[0, d]]
+                               - self.kpt_kc[0] - self.G_kdc[0, d])
+        # convert to cartesian coordinates
+        self.bvec_dc = self.bvec_dc @ \
+                self.unitcell_cc.reciprocal() * 2 * np.pi
+
+        # Set the inverse list of neighboring k-points
+        self.invkklst_kd = np.empty((self.Nk, self.Ndir), dtype=np.uint32)
+        for k1 in range(self.Nk):
+            for d in range(self.Ndir):
+                self.invkklst_kd[k1, d] = self.kklst_kd[:, d].tolist().index(k1)
+
+        # Apply sign convention, everything related to neighboring k-points
+        # must be completed before this change
+        self.kpt_kc *= sign
 
         if nbands is not None:
             self.nbands = nbands
@@ -275,60 +538,20 @@ class Wannier:
             print('Wannier: Fixed states            : %s' % self.fixedstates_k)
             print('Wannier: Extra degrees of freedom: %s' % self.edf_k)
 
-        # Set the list of neighboring k-points k1, and the "wrapping" k0,
-        # such that k1 - k - G + k0 = 0
-        #
-        # Example: kpoints = (-0.375,-0.125,0.125,0.375), dir=0
-        # G = [0.25,0,0]
-        # k=0.375, k1= -0.375 : -0.375-0.375-0.25 => k0=[1,0,0]
-        #
-        # For a gamma point calculation k1 = k = 0,  k0 = [1,0,0] for dir=0
-        if self.Nk == 1:
-            self.kklst_dk = np.zeros((self.Ndir, 1), int)
-            k0_dkc = self.Gdir_dc.reshape(-1, 1, 3)
-        else:
-            self.kklst_dk = np.empty((self.Ndir, self.Nk), int)
-            k0_dkc = np.empty((self.Ndir, self.Nk, 3), int)
-
-            # Distance between kpoints
-            kdist_c = np.empty(3)
-            for c in range(3):
-                # make a sorted list of the kpoint values in this direction
-                slist = np.argsort(self.kpt_kc[:, c], kind='mergesort')
-                skpoints_kc = np.take(self.kpt_kc, slist, axis=0)
-                kdist_c[c] = max([skpoints_kc[n + 1, c] - skpoints_kc[n, c]
-                                  for n in range(self.Nk - 1)])
-
-            for d, Gdir_c in enumerate(self.Gdir_dc):
-                for k, k_c in enumerate(self.kpt_kc):
-                    # setup dist vector to next kpoint
-                    G_c = np.where(Gdir_c > 0, kdist_c, 0)
-                    if max(G_c) < 1e-4:
-                        self.kklst_dk[d, k] = k
-                        k0_dkc[d, k] = Gdir_c
-                    else:
-                        self.kklst_dk[d, k], k0_dkc[d, k] = \
-                            neighbor_k_search(k_c, G_c, self.kpt_kc)
-
-        # Set the inverse list of neighboring k-points
-        self.invkklst_dk = np.empty((self.Ndir, self.Nk), int)
-        for d in range(self.Ndir):
-            for k1 in range(self.Nk):
-                self.invkklst_dk[d, k1] = self.kklst_dk[d].tolist().index(k1)
-
+        dummy = 0  # XXX: GPAW expects this argument but it does not use it
         Nw = self.nwannier
         Nb = self.nbands
         self.Z_dkww = np.empty((self.Ndir, self.Nk, Nw, Nw), complex)
         self.V_knw = np.zeros((self.Nk, Nb, Nw), complex)
         if file is None:
             self.Z_dknn = np.empty((self.Ndir, self.Nk, Nb, Nb), complex)
-            for d, dirG in enumerate(self.Gdir_dc):
+            for d in range(self.Ndir):
                 for k in range(self.Nk):
-                    k1 = self.kklst_dk[d, k]
-                    k0_c = k0_dkc[d, k]
+                    k1 = self.kklst_kd[k, d]
+                    G_c = self.G_kdc[k, d]
                     self.Z_dknn[d, k] = calc.get_wannier_localization_matrix(
-                        nbands=Nb, dirG=dirG, kpoint=k, nextkpoint=k1,
-                        G_I=k0_c, spin=self.spin)
+                        nbands=Nb, dirG=dummy, kpoint=k, nextkpoint=k1,
+                        G_I=G_c, spin=self.spin)
         self.initialize(file=file, initialwannier=initialwannier, rng=rng)
 
     def initialize(self, file=None, initialwannier='random', rng=np.random):
@@ -389,7 +612,7 @@ class Wannier:
         # Zk = V^d[k] Zbloch V[k1]
         for d in range(self.Ndir):
             for k in range(self.Nk):
-                k1 = self.kklst_dk[d, k]
+                k1 = self.kklst_kd[k, d]
                 self.Z_dkww[d, k] = np.dot(dag(self.V_knw[k]), np.dot(
                     self.Z_dknn[d, k], self.V_knw[k1]))
 
@@ -399,13 +622,28 @@ class Wannier:
     def get_centers(self, scaled=False):
         """Calculate the Wannier centers
 
+        Centers positions can be scaled with respect to the original unit cell.
+
+        Eq. 13 in https://doi.org/10.1016/j.cpc.2007.11.016
+
         ::
 
-          pos =  L / 2pi * phase(diag(Z))
+                  1   --
+          pos = - --  >  wb * b * phase(diag(Z(k,b)))
+                  Nk  --
+                      k,b
         """
-        coord_wc = np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T / (2 * pi) % 1
-        if not scaled:
-            coord_wc = np.dot(coord_wc, self.largeunitcell_cc)
+        phZ_dw = np.angle(self.Z_dww.diagonal(axis1=1, axis2=2))
+        coord_wc = np.zeros((self.nwannier, 3), dtype=float)
+        for w in range(self.nwannier):
+            for d in range(self.Ndir):
+                coord_wc[w] += (self.weight_d[d] * phZ_dw[d, w]
+                                * self.bvec_dc[d])
+        coord_wc = - coord_wc @ np.linalg.inv(self.largeunitcell_cc) % 1
+        if scaled:
+            coord_wc *= self.kptgrid
+        else:
+            coord_wc = coord_wc @ self.largeunitcell_cc
         return coord_wc
 
     def get_radii(self):
@@ -454,7 +692,8 @@ class Wannier:
 
     def translate_to_cell(self, w, cell):
         """Translate the w'th Wannier function to specified cell"""
-        scaled_c = np.angle(self.Z_dww[:3, w, w]) * self.kptgrid / (2 * pi)
+        # scaled_c = np.angle(self.Z_dww[:3, w, w]) * self.kptgrid / (2 * pi)
+        scaled_c = self.get_centers(scaled=True)[w]
         trans = np.array(cell) - np.floor(scaled_c)
         self.translate(w, trans)
 
@@ -475,8 +714,9 @@ class Wannier:
         the orbitals to the cell [2,2,2].  In this way the pbc
         boundary conditions will not be noticed.
         """
-        scaled_wc = (np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T *
-                     self.kptgrid / (2 * pi))
+        # scaled_wc = (np.angle(self.Z_dww[:3].diagonal(0, 1, 2)).T *
+        #              self.kptgrid / (2 * pi))
+        scaled_wc = self.get_centers(scaled=True)
         trans_wc = np.array(cell)[None] - np.floor(scaled_wc)
         for kpt_c, U_ww in zip(self.kpt_kc, self.U_kww):
             U_ww *= np.exp(2.j * pi * np.dot(trans_wc, kpt_c))
@@ -701,8 +941,8 @@ class Wannier:
                 Z_knn = self.Z_dknn[d]
                 diagZ_w = self.Z_dww[d].diagonal()
                 Zii_ww = np.repeat(diagZ_w, Nw).reshape(Nw, Nw)
-                k1 = self.kklst_dk[d, k]
-                k2 = self.invkklst_dk[d, k]
+                k1 = self.kklst_kd[k, d]
+                k2 = self.invkklst_kd[k, d]
                 V_knw = self.V_knw
                 Z_kww = self.Z_dkww[d]
 
