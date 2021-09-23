@@ -118,10 +118,10 @@ def _store_impropers(imp_in, ind_of_id, N):
         ind_a2 = ind_of_id[a2]
         ind_a3 = ind_of_id[a3]
         ind_a4 = ind_of_id[a4]
-        if imp_type in impropers[ind_a2]:
-            impropers[ind_a2][imp_type].append((ind_a1, ind_a3, ind_a4))
+        if imp_type in impropers[ind_a1]:
+            impropers[ind_a1][imp_type].append((ind_a2, ind_a3, ind_a4))
         else:
-            impropers[ind_a2][imp_type] = [(ind_a1, ind_a3, ind_a4)]
+            impropers[ind_a1][imp_type] = [(ind_a2, ind_a3, ind_a4)]
     return np.array(impropers)
 
 
