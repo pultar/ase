@@ -6,6 +6,125 @@ from ase.calculators.lammps import Prism, convert
 from ase.utils import reader, writer
 
 
+def _store_bonds(bonds_in, ind_of_id, N):
+    """Store the bonds as read in an array to be added to an Atoms object.
+
+    The entry for atom i in the array is a dict with the bond type k as key
+    and a list of all atoms bonded to it with bond type k.
+
+    So the following entry in a LAMMPS datafile Bonds section:
+
+        1 3 17 29
+
+    Will result in:
+
+        bonds[16] = {3: [28]}
+        [...]
+        bonds[28] = {}
+
+    Caveat: Only bonds explicitly defined in the datafile are added and indexed
+    to the first atom of the pair. This means bonds[j] is *not* an exhaustive
+    list of atoms bonded to atom j.
+    """
+    bonds = [{}] * N
+    for bond_type, a1, a2 in bonds_in:
+        ind_a1 = ind_of_id[a1]
+        ind_a2 = ind_of_id[a2]
+        if bond_type in bonds[ind_a1]:
+            bonds[ind_a1][bond_type].append(ind_a2)
+        else:
+            bonds[ind_a1][bond_type] = [ind_a2]
+    return np.array(bonds)
+
+
+def _store_angles(angles_in, ind_of_id, N):
+    """Store the angles as read in an array to be added to an Atoms object.
+
+    The entry for atom j in the array is a dict with the angle type k as key
+    and a list of all atom pairs which form an angle of type k centered on it.
+
+    So the following entry in a LAMMPS datafile Angles section:
+
+        2 2 17 29 430
+
+    Will result in:
+
+        angles[28] = {2: [(17,430)]}
+    """
+    angles = [{}] * N
+    for angle_type, a1, a2, a3 in angles_in:
+        ind_a1 = ind_of_id[a1]
+        ind_a2 = ind_of_id[a2]
+        ind_a3 = ind_of_id[a3]
+        if angle_type in angles[ind_a2]:
+            angles[ind_a2][angle_type].append((ind_a1, ind_a3))
+        else:
+            angles[ind_a2][angle_type] = [(ind_a1, ind_a3)]
+    return np.array(angles)
+
+
+def _store_dihedrals(dih_in, ind_of_id, N):
+    """Store the dihedrals as read in an array to be added to an Atoms object.
+
+    The entry for atom j in the array is a dict with the dihedrals type k as
+    key and a list of all atom trios which form a dihedral of type k, with atom
+    j as second atom.
+
+    So the following entry in a LAMMPS datafile Dihedrals section:
+
+        12 4 17 29 30 21
+
+    Will result in:
+
+        dihedrals[28] = {4: [(16,29,20)]}
+
+    The entry for the i-j-k-l dihedral is stored in dihedrals[j] as (i, k, l).
+    """
+    dihedrals = [{}] * N
+    for dih_type, a1, a2, a3, a4 in dih_in:
+        ind_a1 = ind_of_id[a1]
+        ind_a2 = ind_of_id[a2]
+        ind_a3 = ind_of_id[a3]
+        ind_a4 = ind_of_id[a4]
+        if dih_type in dihedrals[ind_a2]:
+            dihedrals[ind_a2][dih_type].append((ind_a1, ind_a3, ind_a4))
+        else:
+            dihedrals[ind_a2][dih_type] = [(ind_a1, ind_a3, ind_a4)]
+    return np.array(dihedrals)
+
+
+def _store_impropers(imp_in, ind_of_id, N):
+    """Store the impropers as read in an array to be added to an Atoms object.
+
+    The entry for atom i in the array is a dict with the impropers type k as
+    key and a list of all atom trios which form a improper of type k, centered
+    on atom i
+
+    So the following entry in a LAMMPS datafile Dihedrals section:
+
+        12 3 17 29 13 100
+
+    Will result in:
+
+        impropers[16] = {3: [(28,12,99)]}
+
+    The entry for the i-j-k-l improper is stored in impropers[i] as (j, k, l),
+    since usually (except for improper_style class2) atom i is the central
+    atom and its deviation from the j-k-l plane is the improper angle.
+    """
+    impropers = [{}] * N
+    for imp_type, a1, a2, a3, a4 in imp_in:
+        ind_a1 = ind_of_id[a1]
+        ind_a2 = ind_of_id[a2]
+        ind_a3 = ind_of_id[a3]
+        ind_a4 = ind_of_id[a4]
+        if imp_type in impropers[ind_a2]:
+            impropers[ind_a2][imp_type].append((ind_a1, ind_a3, ind_a4))
+        else:
+            impropers[ind_a2][imp_type] = [(ind_a1, ind_a3, ind_a4)]
+    return np.array(impropers)
+
+
 @reader
 def read_lammps_data(fileobj, Z_of_type=None, style="full",
                      sort_by_id=False, units="metal"):
@@ -305,22 +424,6 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         travel = np.zeros((N, 3), int)
     else:
         travel = None
-    if len(bonds_in) > 0:
-        bonds = [""] * N
-    else:
-        bonds = None
-    if len(angles_in) > 0:
-        angles = [""] * N
-    else:
-        angles = None
-    if len(dihedrals_in) > 0:
-        dihedrals = [""] * N
-    else:
-        dihedrals = None
-    if len(impropers_in) > 0:
-        impropers = [""] * N
-    else:
-        impropers = None
 
     ind_of_id = {}
     # copy per-atom quantities from read-in values
@@ -379,57 +482,17 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
 
-    if bonds is not None:
-        for (bond_type, a1, a2) in bonds_in:
-            i_a1 = ind_of_id[a1]
-            i_a2 = ind_of_id[a2]
-            if len(bonds[i_a1]) > 0:
-                bonds[i_a1] += ","
-            bonds[i_a1] += "%d(%d)" % (i_a2, bond_type)
-        for i in range(len(bonds)):
-            if len(bonds[i]) == 0:
-                bonds[i] = "_"
-        at.arrays["bonds"] = np.array(bonds)
+    if len(bonds_in) > 0:
+        at.new_array('bonds', _store_bonds(bonds_in, ind_of_id, N))
 
-    if angles is not None:
-        for (angle_type, a1, a2, a3) in angles_in:
-            i_a1 = ind_of_id[a1]
-            i_a2 = ind_of_id[a2]
-            i_a3 = ind_of_id[a3]
-            if len(angles[i_a2]) > 0:
-                angles[i_a2] += ","
-            angles[i_a2] += "%d-%d(%d)" % (i_a1, i_a3, angle_type)
-        for i in range(len(angles)):
-            if len(angles[i]) == 0:
-                angles[i] = "_"
-        at.arrays["angles"] = np.array(angles)
+    if len(angles_in) > 0:
+        at.new_array('angles', _store_angles(angles_in, ind_of_id, N))
 
-    if dihedrals is not None:
-        for (dih_type, a1, a2, a3, a4) in dihedrals_in:
-            i_a1 = ind_of_id[a1]
-            i_a2 = ind_of_id[a2]
-            i_a3 = ind_of_id[a3]
-            i_a4 = ind_of_id[a4]
-            if len(dihedrals[i_a1]) > 0:
-                dihedrals[i_a1] += ","
-            dihedrals[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, dih_type)
-        for i in range(len(dihedrals)):
-            if len(dihedrals[i]) == 0:
-                dihedrals[i] = "_"
-        at.arrays["dihedrals"] = np.array(dihedrals)
-    if impropers is not None:
-        for (imp_type, a1, a2, a3, a4) in impropers_in:
-            i_a1 = ind_of_id[a1]
-            i_a2 = ind_of_id[a2]
-            i_a3 = ind_of_id[a3]
-            i_a4 = ind_of_id[a4]
-            if len(impropers[i_a1]) > 0:
-                impropers[i_a1] += ","
-            impropers[i_a1] += "%d-%d-%d(%d)" % (i_a2, i_a3, i_a4, imp_type)
-        for i in range(len(impropers)):
-            if len(impropers[i]) == 0:
-                impropers[i] = "_"
-        at.arrays["impropers"] = np.array(impropers)
+    if len(dihedrals_in) > 0:
+        at.new_array('dihedrals', _store_dihedrals(dihedrals_in, ind_of_id, N))
+
+    if len(impropers_in) > 0:
+        at.new_array('impropers', _store_dihedrals(dihedrals_in, ind_of_id, N))
 
     at.info["comment"] = comment
 
