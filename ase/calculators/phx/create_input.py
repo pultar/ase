@@ -174,7 +174,10 @@ def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_ca
     inputfile_name = directory / infilename
     print(inputfile_name)
     
-    qpoints = kwargs["qpoints"]
+    try:
+        qpoints = kwargs["qpoints"]
+    except KeyError:
+        qpoints = np.array([[0.0, 0.0, 0.0]])
     with open (inputfile_name, "w") as fd:
         fd.write("&input\n")
         
@@ -185,5 +188,6 @@ def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_ca
             if type(value) == str:
                 fd.write(key + "=" + f"'{value}'" + ",\n")
                 
-        fd.write("/\n")
-        fd.write("1\n  0.0   0.0   0.0\n")
+        fd.write(f"/\n{len(qpoints)}\n")
+        for q in qpoints:
+            fd.write(f"   {q[0]} {q[1]} {q[2]}\n")
