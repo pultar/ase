@@ -495,7 +495,6 @@ End CASTEP Interface Documentation
 
         # initialize the ase.calculators.general calculator
         Calculator.__init__(self)
-
         
         if castep_keywords is None:
             castep_keywords = CastepKeywords(make_param_dict(),
