@@ -26,7 +26,7 @@ def _store_bonds(bonds_in, ind_of_id, N):
     to the first atom of the pair. This means bonds[j] is *not* an exhaustive
     list of atoms bonded to atom j.
     """
-    bonds = [{}] * N
+    bonds = [{} for _ in range(N)]
     for bond_type, a1, a2 in bonds_in:
         ind_a1 = ind_of_id[a1]
         ind_a2 = ind_of_id[a2]
@@ -51,7 +51,7 @@ def _store_angles(angles_in, ind_of_id, N):
 
         angles[28] = {2: [(17,430)]}
     """
-    angles = [{}] * N
+    angles = [{} for _ in range(N)]
     for angle_type, a1, a2, a3 in angles_in:
         ind_a1 = ind_of_id[a1]
         ind_a2 = ind_of_id[a2]
@@ -80,7 +80,7 @@ def _store_dihedrals(dih_in, ind_of_id, N):
 
     The entry for the i-j-k-l dihedral is stored in dihedrals[j] as (i, k, l).
     """
-    dihedrals = [{}] * N
+    dihedrals = [{} for _ in range(N)]
     for dih_type, a1, a2, a3, a4 in dih_in:
         ind_a1 = ind_of_id[a1]
         ind_a2 = ind_of_id[a2]
@@ -112,7 +112,7 @@ def _store_impropers(imp_in, ind_of_id, N):
     since usually (except for improper_style class2) atom i is the central
     atom and its deviation from the j-k-l plane is the improper angle.
     """
-    impropers = [{}] * N
+    impropers = [{} for _ in range(N)]
     for imp_type, a1, a2, a3, a4 in imp_in:
         ind_a1 = ind_of_id[a1]
         ind_a2 = ind_of_id[a2]
@@ -492,7 +492,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         at.new_array('dihedrals', _store_dihedrals(dihedrals_in, ind_of_id, N))
 
     if len(impropers_in) > 0:
-        at.new_array('impropers', _store_dihedrals(dihedrals_in, ind_of_id, N))
+        at.new_array('impropers', _store_impropers(impropers_in, ind_of_id, N))
 
     at.info["comment"] = comment
 
@@ -525,9 +525,9 @@ def _print_bonded_section(fd, bonds, section_title):
 
     fd.write(f'{section_title}\n\n')
     for bond_id, bond in enumerate(bonds):
-        fd.write(f'{bond_id + 1:5d}')
+        fd.write(f'{bond_id + 1:6d}')
         for atom in bond:
-            fd.write(f' {atom:5d}')
+            fd.write(f' {atom:6d}')
         fd.write('\n')
     fd.write('\n')
 
