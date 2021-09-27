@@ -499,6 +499,89 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
     return at
 
 
+def _prepare_bonds(atoms):
+    """Read bonds in Atoms.arrays[] and prepare for writing to datafile."""
+    if 'bonds' not in atoms.arrays:
+        return None
+
+    bonds = []
+    for at1, atom_bonds in enumerate(atoms.arrays['bonds']):
+        for bond_type in atom_bonds:
+            for at2 in atom_bonds[bond_type]:
+                # ID type at1 at2
+                # ID is list index +1
+                # FIXME: bond IDs are not preserved.
+                bonds.append([bond_type, at1 + 1, at2 + 1])
+    return bonds
+
+
+def _print_bonded_section(fd, bonds, section_title):
+    """Output a properly formatted bonded section to fd."""
+    if section_title not in ['Bonds', 'Angles', 'Dihedrals', 'Impropers']:
+        raise NotImplementedError(f'Unknown section {section_title}.')
+
+    if bonds is None:
+        return
+
+    fd.write(f'{section_title}\n\n')
+    for bond_id, bond in enumerate(bonds):
+        fd.write(f'{bond_id + 1:5d}')
+        for atom in bond:
+            fd.write(f' {atom:5d}')
+        fd.write('\n')
+    fd.write('\n')
+
+
+def _prepare_angles(atoms):
+    """Read angles in Atoms.arrays[] and prepare for writing to datafile."""
+    if 'angles' not in atoms.arrays:
+        return None
+
+    angles = []
+    for at2, atom_angles in enumerate(atoms.arrays['angles']):
+        for angle_type in atom_angles:
+            for at1, at3 in atom_angles[angle_type]:
+                # ID type at1 at2 at3
+                # ID is list index +1
+                # FIXME: angle IDs are not preserved.
+                angles.append([angle_type, at1 + 1, at2 + 1, at3 + 1])
+    return angles
+
+
+def _prepare_dihedrals(atoms):
+    """Read dihedrals in Atoms.arrays[] and prepare for writing to datafile."""
+    if 'dihedrals' not in atoms.arrays:
+        return None
+
+    dihedrals = []
+    for at2, atom_dihedrals in enumerate(atoms.arrays['dihedrals']):
+        for dihedral_type in atom_dihedrals:
+            for at1, at3, at4 in atom_dihedrals[dihedral_type]:
+                # ID type at1 at2 at3
+                # ID is list index +1
+                # FIXME: dihedral IDs are not preserved.
+                dihedrals.append([dihedral_type,
+                                  at1 + 1, at2 + 1, at3 + 1, at4 + 1])
+    return dihedrals
+
+
+def _prepare_impropers(atoms):
+    """Read impropers in Atoms.arrays[] and prepare for writing to datafile."""
+    if 'impropers' not in atoms.arrays:
+        return None
+
+    impropers = []
+    for at1, atom_impropers in enumerate(atoms.arrays['impropers']):
+        for improper_type in atom_impropers:
+            for at2, at3, at4 in atom_impropers[improper_type]:
+                # ID type at1 at2 at3
+                # ID is list index +1
+                # FIXME: improper IDs are not preserved.
+                impropers.append([improper_type,
+                                  at1 + 1, at2 + 1, at3 + 1, at4 + 1])
+    return impropers
+
+
 @writer
 def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                       prismobj=None, velocities=False, units="metal",
@@ -526,7 +609,19 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     n_atoms = len(symbols)
     fd.write("{0} atoms \n".format(n_atoms))
 
-    # TODO Write number of bonds/dihedrals/impropers
+    # TODO Check whether atom_style is compatible with the bonded fields.
+    bonds = _prepare_bonds(atoms)
+    if bonds is not None:
+        fd.write(f"{len(bonds)} bonds\n")
+    angles = _prepare_angles(atoms)
+    if angles is not None:
+        fd.write(f"{len(angles)} angles\n")
+    dihedrals = _prepare_dihedrals(atoms)
+    if dihedrals is not None:
+        fd.write(f"{len(dihedrals)} dihedrals\n")
+    impropers = _prepare_impropers(atoms)
+    if impropers is not None:
+        fd.write(f"{len(impropers)} impropers\n")
 
     if specorder is None:
         # This way it is assured that LAMMPS atom types are always
@@ -571,7 +666,6 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         fd.write(f"{atom_type + 1} {masses[symbols.index(symbol)]:g}\n")
     fd.write("\n\n")
 
-    # TODO Write number of atom types
     # Write (unwrapped) atomic positions.  If wrapping of atoms back into the
     # cell along periodic directions is desired, this should be done manually
     # on the Atoms object itself beforehand.
@@ -580,7 +674,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     # TODO: support atom_style comment after Atoms section header.
     # Currently the test fails because the regexp in parse_lammps_data_file.py
     # won't match a section header with a comment.
-    #fd.write(f"Atoms # {atom_style} \n\n")
+    # fd.write(f"Atoms # {atom_style} \n\n")
 
     pos = p.vector_to_lammps(atoms.get_positions(), wrap=False)
 
@@ -665,6 +759,10 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
                 )
             )
 
-    # TODO print Bonds, Angles, Dihedrals, impropers sections
+    # Print Bonds, Angles, Dihedrals, impropers sections
+    _print_bonded_section(fd, bonds, 'Bonds')
+    _print_bonded_section(fd, angles, 'Angles')
+    _print_bonded_section(fd, dihedrals, 'Dihedrals')
+    _print_bonded_section(fd, impropers, 'Impropers')
 
     fd.flush()
