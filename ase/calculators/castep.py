@@ -2008,7 +2008,7 @@ End CASTEP Interface Documentation
                              self.atoms,
                              castep_cell=self.cell,
                              force_write=force_write,
-                             magnetic_moments='initial')   
+                             magnetic_moments=magnetic_moments)   
             
         if self._export_settings:
             interface_options = self._opt
@@ -2255,7 +2255,7 @@ End CASTEP Interface Documentation
                              self.atoms,
                              castep_cell=self.cell,
                              force_write=force_write,
-                             magnetic_moments='initial')  
+                             magnetic_moments=magnetic_moments)  
 
         # This part needs to be modified now that we rely on the new formats.py
         # interface
