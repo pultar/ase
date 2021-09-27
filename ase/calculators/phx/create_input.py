@@ -153,6 +153,14 @@ def write_ph_input(directory, infilename: str = 'phonon.in', require_valid_calcu
                     )
 
         fd.write("/\n")
+        try:
+            qpoints = kwargs["qpoints"]
+            fd.write(f"{len(qpoints)}\n")
+            for q in qpoints:
+                fd.write(f"   {q[0]} {q[1]} {q[2]}  1\n")
+        except KeyError:
+            pass
+
         
 def write_q2r_input(directory, infilename: str = 'iq2r.in', require_valid_calculation: bool = True, **kwargs):
     inputfile_name = directory / infilename
@@ -169,6 +177,7 @@ def write_q2r_input(directory, infilename: str = 'iq2r.in', require_valid_calcul
                 fd.write(key + "=" + f"'{value}'" + ",\n")
                 
         fd.write("/\n")
+
         
 def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_calculation: bool = True, **kwargs):
     inputfile_name = directory / infilename

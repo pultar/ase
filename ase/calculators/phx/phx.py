@@ -52,15 +52,35 @@ class EspressoPhonons:
         # check_call(f"{self.profile.argv} -in {self.profile.}' '{phonon_dir}'",cwd="./")
         self.profile.run(self.directory, 'ph.in', 'ph.out')
 
-    def final_diagonalize(diagonalize_profile=EspressoPhononsProfile(argv=['ph.x'])):
-        profile.run(self.directory, 'ph.in', 'phdiag.out')
+    def final_diagonalize(self, diagonalize_profile=EspressoPhononsProfile(argv=['ph.x'])):
+        diagonalize_profile.run(self.directory, 'ph.in', 'phdiag.out')
         
 
     @classmethod
     def from_scf(cls, scf_dir, phonon_dir, profile, **kwargs):
+        """Initializes an EspressoPhonons object from scf and phonon
+        and directories and ph.x inputs.
+
+        Parameters
+        ----------
+        scf_dir : str or Path
+            The directory containing the SCF calculation.
+        phonon_dir : str or Path
+            The directory in which the phonons calculation is conducted
+        profile : EspressoPhononsProfile
+            [description]
+
+        Returns
+        -------
+        EspressoPhonons
+            An EspressoPhonons object initialized with the relevant 
+            directories and ph.x inputs.
+        """
+        phonon_dir = Path(phonon_dir)
+        phonon_dir.mkdir(exist_ok=True)
         from subprocess import check_call
-        check_call(f"cp -r '{scf_dir}' '{phonon_dir}'", shell=True, cwd="./")
-        return cls(profile, Path(phonon_dir), **kwargs)
+        check_call(f"cp -r '{str(scf_dir)}/'* '{str(phonon_dir)}/'", shell=True, cwd="./")
+        return cls(profile, phonon_dir, **kwargs)
 
 def q2r(directory, command="q2r.x -in iq2r.in > oq2r.out", **kwargs):
     q2r_dir = Path(directory)
