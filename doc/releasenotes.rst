@@ -30,13 +30,22 @@ Git master branch
   
  * The :ref:`reflective-neb-in-neb` method has been implemented.
 
+* New ``a2b`` and ``periodic`` formats for :class:`~ase.formula.Formula`
+  objects.  See :meth:`ase.formula.Formula.format`.  The ``abc`` format
+  has been renamed to ``ab2``.
+
 Calculators:
+
+* Created new :class:`ase.calculators.plumed.Plumed` that is an interface
+  between ASE and Plumed_ for carrying out enhanced sampling methods and MD
+  postprocessing.
 
 * :class:`ase.calculators.kim.kimmodel.KIMModelCalculator` updated to allow
   users to change the parameters of OpenKIM portable models at run time (see
   https://openkim.org/doc/repository/kim-content/ for an explanation of types
   of OpenKIM models).
 
+.. _Plumed: https://www.plumed.org/
 
 Version 3.22.0
 ==============
@@ -829,9 +838,6 @@ Algorithms:
 I/O:
 
 * Database supports user defined tables
-
-* Preliminary :class:`~ase.formula.Formula` type added.  Collects all
-  formula manipulation functionality in one place.
 
 * Support for reading and writing DL_POLY format.
 
