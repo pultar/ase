@@ -6,8 +6,8 @@ from numpy.linalg import eigh
 
 
 def update_hessian(
-    iterate: np.ndarray,
-    iterate_previous: np.ndarray,
+    coords: np.ndarray,
+    coords_previous: np.ndarray,
     gradient: np.ndarray,
     gradient_previous: np.ndarray,
     hessian: np.ndarray,
@@ -17,8 +17,8 @@ def update_hessian(
     REMARK: `gradient` currently means negative gradient, i.e., force
 
     Args:
-        iterate: current state (e.g. positions)
-        tterate_previous: state before last update (e.g. prev. positions)
+        coords: current state (e.g. positions)
+        coords_previous: state before last update (e.g. prev. positions)
         gradient: current gradient (e.g. forces)
         gradient_previous: last gradient
         hessian: current hessian
@@ -26,12 +26,12 @@ def update_hessian(
     Returns:
         new_hessian: update hessian
     """
-    dx = iterate - iterate_previous
+    dx = coords - coords_previous
     df = gradient - gradient_previous
 
-    a = np.dot(dx, df)
-    dg = np.dot(hessian, dx)
-    b = np.dot(dx, dg)
+    a = dx @ df
+    dg = hessian @ dx
+    b = dx @ dg
     new_hessian = hessian - np.outer(df, df) / a + np.outer(dg, dg) / b
 
     return new_hessian
@@ -41,18 +41,21 @@ class BFGSState:
     """dataclass handling the state of an BFGS algorithm incl. initial cond."""
 
     def __init__(
-        self, iterate: np.ndarray, gradient: np.ndarray, hessian: np.ndarray,
+        self,
+        coords: np.ndarray,
+        gradient: np.ndarray,
+        hessian: np.ndarray,
     ) -> None:
-        """initialize with a iterate (e.g. positions), gradient (e.g. forces),
-           optionally hessian
+        """initialize with coords (e.g. positions), gradient (e.g. forces),
+        optionally hessian
         """
-        self.iterate = iterate
+        self.coords = coords
         self.gradient = gradient
         self.hessian = hessian
         self._initial_state = self.todict()
 
     def todict(self) -> dict:
-        d = {k: getattr(self, k) for k in ("iterate", "gradient", "hessian")}
+        d = {k: getattr(self, k) for k in ("coords", "gradient", "hessian")}
         return d
 
     @property
@@ -65,15 +68,15 @@ class BFGSOptimizer:
 
     def __init__(
         self,
-        iterate: np.ndarray,
+        coords: np.ndarray,
         gradient: np.ndarray,
         alpha: float = None,
         hessian: np.ndarray = None,
     ) -> None:
-        """initialize with a iterate (e.g. positions), gradient (e.g. forces),
-           optionally hessian
+        """initialize with a coords (e.g. positions), gradient (e.g. forces),
+        optionally hessian
         """
-        ndim = np.size(iterate)
+        ndim = np.size(coords)
         if hessian is not None:
             assert np.shape(hessian) == (ndim, ndim), (np.shape(hessian), ndim)
         elif alpha is not None:
@@ -83,24 +86,24 @@ class BFGSOptimizer:
 
         # initialize state
         self.state = BFGSState(
-            iterate=iterate, gradient=gradient, hessian=hessian
+            coords=coords, gradient=gradient, hessian=hessian
         )
 
-    def get_step_and_update(self, iterate, gradient) -> np.ndarray:
-        """Take iterate and gradient, update state, return predicted step"""
+    def get_step_and_update(self, coords, gradient) -> np.ndarray:
+        """Take coords and gradient, update state, return predicted step"""
         # update hessian
         self.state.hessian = update_hessian(
-            iterate=iterate,
-            iterate_previous=self.state.iterate,
+            coords=coords,
+            coords_previous=self.state.coords,
             gradient=gradient,
             gradient_previous=self.state.gradient,
             hessian=self.state.hessian,
         )
-        # predict new iterate and update internal state
+        # predict new coords and update internal state
         omega, V = eigh(self.state.hessian)
-        dx = np.dot(V, np.dot(gradient, V) / np.fabs(omega)).reshape((-1, 3))
+        dx = (V @ (gradient @ V) / np.fabs(omega)).reshape((-1, 3))
         # update state
-        self.state.iterate = iterate
+        self.state.coords = coords
         self.state.gradient = gradient
 
         return dx
@@ -202,7 +205,7 @@ class BFGS(Optimizer):
         #         self.logfile.write(msg)
         #         self.logfile.flush()
 
-        dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
+        dr = (V @ (f @ V) / np.fabs(omega)).reshape((-1, 3))
         steplengths = (dr**2).sum(1)**0.5
         dr = self.determine_step(dr, steplengths)
         atoms.set_positions(r + dr)
@@ -240,9 +243,9 @@ class BFGS(Optimizer):
             return
 
         df = f - f0
-        a = np.dot(dr, df)
-        dg = np.dot(self.H, dr)
-        b = np.dot(dr, dg)
+        a = dr @ df
+        dg = self.H @ dr
+        b = dr @ dg
         self.H -= np.outer(df, df) / a + np.outer(dg, dg) / b
 
     def replay_trajectory(self, traj):
