@@ -34,8 +34,8 @@ intermediate images can be reflected onto each other.
 
 |initial| |final|
 
-Example 1: Bulk diffusion in Cu 
-================================
+Example 1: Diffusion on Cu
+==========================
 
 .. literalinclude:: rneb_reflective.py
 
