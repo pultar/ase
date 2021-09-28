@@ -37,6 +37,19 @@ def update_hessian(
     return new_hessian
 
 
+def predict_step(gradient: np.ndarray, hessian: np.ndarray) -> np.ndarray:
+    """take gradient and hessian to predict step
+
+    Reference:
+        Eq. (8.18) in [1]
+
+    Remark:
+        Line search is omitted, i.e., a_k = 1.
+    """
+    omega, V = eigh(hessian)
+    return (V @ (gradient @ V) / np.fabs(omega)).reshape((-1, 3))
+
+
 class BFGSState:
     """dataclass handling the state of an BFGS algorithm incl. initial cond."""
 
@@ -46,17 +59,30 @@ class BFGSState:
         gradient: np.ndarray,
         hessian: np.ndarray,
     ) -> None:
-        """initialize with coords (e.g. positions), gradient (e.g. forces),
-        optionally hessian
+        """initialize state representing the BFGS step
+
+        Args:
+            coords: coordinates, e.g., positions
+            gradient: the gradient of objective function, e.g.
+            hessian: the Hessian
         """
         self.coords = coords
         self.gradient = gradient
         self.hessian = hessian
-        self._initial_state = self.todict()
+        self.step = None
 
-    def todict(self) -> dict:
-        d = {k: getattr(self, k) for k in ("coords", "gradient", "hessian")}
-        return d
+    def update(self, coords, gradient) -> None:
+        """Update the state using `update_hessian`"""
+        self.hessian = update_hessian(
+            coords=coords,
+            coords_previous=self.coords,
+            gradient=gradient,
+            gradient_previous=self.gradient,
+            hessian=self.hessian,
+        )
+        self.step = predict_step(gradient, self.hessian)
+        self.coords = coords
+        self.gradient = gradient
 
     @property
     def initial_state(self):
@@ -64,6 +90,12 @@ class BFGSState:
 
 
 class BFGSOptimizer:
+    """BFGS optimizer
+
+    Use:
+        Call with .update(coords=..., gradients=...) to update internal BFGS state,
+        use .residual to check residual gradient
+    """
     default_configuration = {"alpha": 70.0}
 
     def __init__(
@@ -72,9 +104,18 @@ class BFGSOptimizer:
         gradient: np.ndarray,
         alpha: float = None,
         hessian: np.ndarray = None,
+        residual: str = "max_atom",
     ) -> None:
         """initialize with a coords (e.g. positions), gradient (e.g. forces),
         optionally hessian
+
+        Args:
+            coords: current state (e.g. positions)
+            coords_previous: state before last update (e.g. prev. positions)
+            gradient: current gradient (e.g. forces)
+            gradient_previous: last gradient
+            hessian: current hessian
+            residual: ('max_atom' or 'norm') of residual gradient
         """
         ndim = np.size(coords)
         if hessian is not None:
@@ -84,29 +125,24 @@ class BFGSOptimizer:
         else:
             hessian = np.eye(ndim) / self.default_configuration["alpha"]
 
-        # initialize state
         self.state = BFGSState(
             coords=coords, gradient=gradient, hessian=hessian
         )
+        self._residual = residual
 
-    def get_step_and_update(self, coords, gradient) -> np.ndarray:
-        """Take coords and gradient, update state, return predicted step"""
-        # update hessian
-        self.state.hessian = update_hessian(
-            coords=coords,
-            coords_previous=self.state.coords,
-            gradient=gradient,
-            gradient_previous=self.state.gradient,
-            hessian=self.state.hessian,
-        )
-        # predict new coords and update internal state
-        omega, V = eigh(self.state.hessian)
-        dx = (V @ (gradient @ V) / np.fabs(omega)).reshape((-1, 3))
-        # update state
-        self.state.coords = coords
-        self.state.gradient = gradient
+    def update(self, coords, gradient) -> None:
+        """Take coords and gradient to update state"""
+        self.state.update(coords=coords, gradient=gradient)
 
-        return dx
+    def residual(self) -> float:
+        """return residual force as norm of gradient"""
+        if self._residual.lower() == "norm":
+            return np.linalg.norm(self.state.gradient)
+        elif self._residual.lower() == "max_atom":
+            return np.linalg.norm(self.state.gradient, axis=1)
+        else:
+            msg = f"residual measure {self._residual} not implemented"
+            raise ValueError(msg)
 
 
 # fmt: off
