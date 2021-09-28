@@ -126,13 +126,13 @@ def _store_impropers(imp_in, ind_of_id, N):
 
 
 @reader
-def read_lammps_data(fileobj, Z_of_type=None, style="full",
+def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
                      sort_by_id=False, units="metal"):
     """Method which reads a LAMMPS data file.
 
     sort_by_id: Order the particles according to their id. Might be faster to
     switch it off.
-    Units are set by default to the style=metal setting in LAMMPS.
+    Units are set by default to the units=metal setting in LAMMPS.
     """
     # load everything into memory
     lines = fileobj.readlines()
@@ -272,7 +272,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
             fields = line.split()
             if section == "Atoms":  # id *
                 atom_id = int(fields[0])
-                if style == "full" and (
+                if atom_style == "full" and (
                         len(fields) == 7 or len(fields) == 10):
                     # id mol-id type q x y z [tx ty tz]
                     pos_in[atom_id] = (
@@ -289,7 +289,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[8]),
                             int(fields[9]),
                         )
-                elif style == "atomic" and (
+                elif atom_style == "atomic" and (
                         len(fields) == 5 or len(fields) == 8
                 ):
                     # id type x y z [tx ty tz]
@@ -305,7 +305,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[6]),
                             int(fields[7]),
                         )
-                elif (style in ("angle", "bond", "molecular")
+                elif (atom_style in ("angle", "bond", "molecular")
                       ) and (len(fields) == 6 or len(fields) == 9):
                     # id mol-id type x y z [tx ty tz]
                     pos_in[atom_id] = (
@@ -321,7 +321,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                             int(fields[7]),
                             int(fields[8]),
                         )
-                elif (style == "charge"
+                elif (atom_style == "charge"
                       and (len(fields) == 6 or len(fields) == 9)):
                     # id type q x y z [tx ty tz]
                     pos_in[atom_id] = (
@@ -341,7 +341,7 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
                     raise RuntimeError(
                         "Style '{}' not supported or invalid "
                         "number of fields {}"
-                        "".format(style, len(fields))
+                        "".format(atom_style, len(fields))
                     )
             elif section == "Velocities":  # id vx vy vz
                 vel_in[int(fields[0])] = (
@@ -435,9 +435,13 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         else:
             ind = i
         atom_type = pos_in[atom_id][0]
-        positions[ind, :] = [pos_in[atom_id][1], pos_in[atom_id][2], pos_in[atom_id][3]]
+        positions[ind, :] = [pos_in[atom_id][1],
+                             pos_in[atom_id][2],
+                             pos_in[atom_id][3]]
         if velocities is not None:
-            velocities[ind, :] = [vel_in[atom_id][0], vel_in[atom_id][1], vel_in[atom_id][2]]
+            velocities[ind, :] = [vel_in[atom_id][0],
+                                  vel_in[atom_id][1],
+                                  vel_in[atom_id][2]]
         if travel is not None:
             travel[ind] = travel_in[atom_id]
         if mol_id is not None:
@@ -482,16 +486,17 @@ def read_lammps_data(fileobj, Z_of_type=None, style="full",
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
 
-    if len(bonds_in) > 0:
+    if len(bonds_in) > 0 and atom_style in ["bonds", "angles",
+                                            "molecular", "full"]:
         at.new_array('bonds', _store_bonds(bonds_in, ind_of_id, N))
 
-    if len(angles_in) > 0:
+    if len(angles_in) > 0 and atom_style in ["angles", "molecular", "full"]:
         at.new_array('angles', _store_angles(angles_in, ind_of_id, N))
 
-    if len(dihedrals_in) > 0:
+    if len(dihedrals_in) > 0 and atom_style in ["molecular", "full"]:
         at.new_array('dihedrals', _store_dihedrals(dihedrals_in, ind_of_id, N))
 
-    if len(impropers_in) > 0:
+    if len(impropers_in) > 0 and atom_style in ["molecular", "full"]:
         at.new_array('impropers', _store_impropers(impropers_in, ind_of_id, N))
 
     at.info["comment"] = comment
@@ -611,16 +616,17 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
 
     # TODO Check whether atom_style is compatible with the bonded fields.
     bonds = _prepare_bonds(atoms)
-    if bonds is not None:
+    if bonds is not None and atom_style in ["bonds", "angles",
+                                            "molecular", "full"]:
         fd.write(f"{len(bonds)} bonds\n")
     angles = _prepare_angles(atoms)
-    if angles is not None:
+    if angles is not None and atom_style in ["angles", "molecular", "full"]:
         fd.write(f"{len(angles)} angles\n")
     dihedrals = _prepare_dihedrals(atoms)
-    if dihedrals is not None:
+    if dihedrals is not None and atom_style in ["molecular", "full"]:
         fd.write(f"{len(dihedrals)} dihedrals\n")
     impropers = _prepare_impropers(atoms)
-    if impropers is not None:
+    if impropers is not None and atom_style in ["molecular", "full"]:
         fd.write(f"{len(impropers)} impropers\n")
 
     if specorder is None:
@@ -760,9 +766,12 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
             )
 
     # Print Bonds, Angles, Dihedrals, impropers sections
-    _print_bonded_section(fd, bonds, 'Bonds')
-    _print_bonded_section(fd, angles, 'Angles')
-    _print_bonded_section(fd, dihedrals, 'Dihedrals')
-    _print_bonded_section(fd, impropers, 'Impropers')
+    if atom_style in ["bonds", "angles", "molecular", "full"]:
+        _print_bonded_section(fd, bonds, 'Bonds')
+        if atom_style != "bonds":
+            _print_bonded_section(fd, angles, 'Angles')
+            if atom_style != "angle":
+                _print_bonded_section(fd, dihedrals, 'Dihedrals')
+                _print_bonded_section(fd, impropers, 'Impropers')
 
     fd.flush()
