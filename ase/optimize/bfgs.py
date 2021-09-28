@@ -1,8 +1,16 @@
+"""References:
+    [1] J. Nocedal and S. J. Wright, Numerical Optimization (Springer, New York, 1999).
+"""
+
 import warnings
+from copy import deepcopy
+from typing import TypeVar
 
 import numpy as np
 from ase.optimize.optimize import Optimizer
 from numpy.linalg import eigh
+
+B = TypeVar("B", bound="BFGSState")
 
 
 def update_hessian(
@@ -25,6 +33,9 @@ def update_hessian(
 
     Returns:
         new_hessian: update hessian
+
+    Reference:
+        Eq. (8.19) in [1]
     """
     dx = coords - coords_previous
     df = gradient - gradient_previous
@@ -84,9 +95,9 @@ class BFGSState:
         self.coords = coords
         self.gradient = gradient
 
-    @property
-    def initial_state(self):
-        return self._initial_state.copy()
+    def copy(self) -> B:
+        """return a (deep) copy of the object"""
+        return deepcopy(self)
 
 
 class BFGSOptimizer:
