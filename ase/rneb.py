@@ -251,7 +251,7 @@ class RNEB:
         n = len(images)
         n_half = int(np.ceil(n / 2))
         path_flat = []
-        for i, im in enumerate(images[:n_half - 1]):
+        for i in range(len(images[:n_half - 1])):
             self.log.info("   Matching vector i_{} - i_{} and i_{} - i_{}:"
                           .format(i + 1, i, n - i - 2, n - i - 1))
 
@@ -468,15 +468,12 @@ def get_relaxed_final(initial, initial_relaxed, final,
         raise ValueError(msg)
     elif rot is not None:
         # Apply rotational operator
-        symop = rot[2]
+        index_symop = rot[2]
 
         f = get_rotation_function(rot[0])
-        # def f(x):
-        #     # return np.dot(rot[0][0], x)
-        #     return np.inner(x, rot[0])
     else:
         # Apply translational operator
-        symop = trans
+        index_symop = trans
 
         def f(x):
             return x
@@ -494,22 +491,11 @@ def get_relaxed_final(initial, initial_relaxed, final,
     dpos_rotated = np.zeros((len(dpos), 3))
     magmom_rotated = np.zeros(len(dpos))
 
-    dpos_rotated = perform_symmetry_operation(dpos[symop], cell, f)
-    magmom_rotated = initial_results['magmoms'][symop]
+    dpos_rotated = perform_symmetry_operation(dpos[index_symop], cell, f)
+    magmom_rotated = initial_results['magmoms'][index_symop]
     if initial_results['forces'] is not None:
-        tmp_forces = initial_results['forces'][symop]
+        tmp_forces = initial_results['forces'][index_symop]
         forces_rotated = perform_symmetry_operation(tmp_forces, cell, f)
-
-    # for i, at in enumerate(symop):
-    #     sdpos = cell.scaled_positions(dpos[at])
-    #     dpos_rotated[i] = cell.cartesian_positions(f(sdpos))
-    #     # dpos_rotated[i] = f(dpos[at])
-    #     magmom_rotated[i] = initial_results['magmoms'][at]
-    #     if initial_results['forces'] is not None:
-    #         # Why don't we use scaled forces here?
-    #         sforces = cell.scaled_positions(initial_results['forces'][at])
-    #         forces_rotated[i] = cell.cartesian_positions(f(sforces))
-    #         # forces_rotated[i] = f(initial_results['forces'][at])
 
     results = {'forces': forces_rotated,
                'energy': initial_results['energy'],
