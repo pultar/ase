@@ -162,8 +162,8 @@ def write_ph_input(directory, infilename: str = 'phonon.in', require_valid_calcu
             pass
 
         
-def write_q2r_input(directory, infilename: str = 'iq2r.in', require_valid_calculation: bool = True, **kwargs):
-    inputfile_name = directory / infilename
+def write_q2r_input(directory, inputname: str = 'iq2r.in', **kwargs):
+    inputfile_name = directory / inputname
     print(inputfile_name)
 
     with open (inputfile_name, "w") as fd:
@@ -179,8 +179,8 @@ def write_q2r_input(directory, infilename: str = 'iq2r.in', require_valid_calcul
         fd.write("/\n")
 
         
-def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_calculation: bool = True, **kwargs):
-    inputfile_name = directory / infilename
+def write_matdyn_input(directory, inputname: str = 'imdyn.in', **kwargs):
+    inputfile_name = directory / inputname
     print(inputfile_name)
     
     try:
@@ -200,3 +200,24 @@ def write_matdyn_input(directory, infilename: str = 'imdyn.in', require_valid_ca
         fd.write(f"/\n{len(qpoints)}\n")
         for q in qpoints:
             fd.write(f"   {q[0]} {q[1]} {q[2]}\n")
+            
+def write_zg_input(directory, inputname: str = 'izg.in', **kwargs):
+    inputfile_name = directory / inputname
+    print(inputfile_name)
+    with open (inputfile_name, "w") as fd:
+        fd.write("&input\n")
+        
+        for key, value in kwargs.items():
+            if type(value) == bool:
+                fd.write("=".join([key, bool_to_fortbool(value)]) + ",\n")
+                
+            if type(value) == int:
+                fd.write("=".join([key, str(value)]) + ",\n")
+            
+            if type(value) == str:
+                fd.write(key + "=" + f"'{value}'" + ",\n")
+            if type(value) == list:
+                for i, element in enumerate(value):
+                    fd.write(key + f"({i + 1})=" + f"'{element}'" + ",\n")
+                
+        fd.write(f"/\n")

@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 
-from ase.calculators.phx.create_input import write_ph_input, write_q2r_input, write_matdyn_input
+from ase.calculators.phx.create_input import write_ph_input, write_q2r_input, write_matdyn_input, write_zg_input
 
 class EspressoPhononsProfile:
     def __init__(self, argv):
@@ -78,23 +78,25 @@ class EspressoPhonons:
         """
         phonon_dir = Path(phonon_dir)
         phonon_dir.mkdir(exist_ok=True)
-        from subprocess import check_call
-        check_call(f"cp -r '{str(scf_dir)}/'* '{str(phonon_dir)}/'", shell=True, cwd="./")
+        initialized_file_marker = phonon_dir / "SCFINIT"
+        if not initialized_file_marker.exists():
+            from subprocess import check_call
+            check_call(f"cp -r '{str(scf_dir)}/'* '{str(phonon_dir)}/'", shell=True, cwd="./")
+            initialized_file_marker.touch()
         return cls(profile, phonon_dir, **kwargs)
 
-def q2r(directory, command="q2r.x -in iq2r.in > oq2r.out", **kwargs):
-    q2r_dir = Path(directory)
-    q2r_dir.mkdir(exist_ok=True)
-    print("q2r directory", q2r_dir)
-    write_q2r_input(directory=q2r_dir, **kwargs)
-    subprocess.run(command, shell=True, cwd=q2r_dir)
-
-def q2r2(directory, inputname, outputname, command, **kwargs):
-    pass
     
-def matdyn( directory, command="matdyn.x -in imdyn.in > omdyn.out", **kwargs):
-    matdyn_dir = Path(directory)
-    matdyn_dir.mkdir(exist_ok=True)
-    print("matdyn directory", matdyn_dir)
-    write_matdyn_input(directory=matdyn_dir, **kwargs)
-    subprocess.run(command, shell=True, cwd=matdyn_dir)
+postprocess_input_writers = {"q2r": write_q2r_input,
+                            "matdyn": write_matdyn_input,
+                            "ZG": write_zg_input}
+
+def ph_postprocess(directory, mode, executable, inputname, outputname, **kwargs):
+    input_writer = postprocess_input_writers[mode]
+    command = f"{executable} -in {inputname}"
+    
+    directory = Path(directory)
+    directory.mkdir(exist_ok=True)
+    input_writer(directory=directory, inputname=inputname, **kwargs)
+    with open(directory / outputname, "w") as fd:
+        from subprocess import check_call
+        check_call(command, shell=True, cwd=directory, stdout=fd)
