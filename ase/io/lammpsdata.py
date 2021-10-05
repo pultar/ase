@@ -543,13 +543,13 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
             and atom_style in ["bonds", "angles", "molecular", "full"]):
         at.info['types'] = {}
 
-        if bond_types !=0:
+        if bond_types != 0:
             at.info['types']['bond'] = bond_types
-        if angle_types !=0 and atom_style != 'bonds':
+        if angle_types != 0 and atom_style != 'bonds':
             at.info['types']['angle'] = angle_types
-        if dihedral_types !=0 and atom_style not in ['bonds', 'angles']:
+        if dihedral_types != 0 and atom_style not in ['bonds', 'angles']:
             at.info['types']['dihedral'] = dihedral_types
-        if improper_types !=0 and atom_style not in ['bonds', 'angles']:
+        if improper_types != 0 and atom_style not in ['bonds', 'angles']:
             at.info['types']['improper'] = improper_types
 
         at.info['coeffs'] = coeffs
