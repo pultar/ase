@@ -544,13 +544,13 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
         at.info['types'] = {}
 
         if bond_types !=0:
-            at.info['types'] = bond_types
+            at.info['types']['bond'] = bond_types
         if angle_types !=0 and atom_style != 'bonds':
-            at.info['types'] = angle_types
+            at.info['types']['angle'] = angle_types
         if dihedral_types !=0 and atom_style not in ['bonds', 'angles']:
-            at.info['types'] = dihedral_types
+            at.info['types']['dihedral'] = dihedral_types
         if improper_types !=0 and atom_style not in ['bonds', 'angles']:
-            at.info['types'] = improper_types
+            at.info['types']['improper'] = improper_types
 
         at.info['coeffs'] = coeffs
 
@@ -587,6 +587,22 @@ def _print_bonded_section(fd, bonds, section_title):
         for atom in bond:
             fd.write(f' {atom:6d}')
         fd.write('\n')
+
+
+def _print_coeff_section(fd, coeffs, section_title):
+    """Output a Coeffs section to fd."""
+    if section_title not in ['Pair', 'Bond', 'Angle', 'Dihedral', 'Improper']:
+        raise NotImplementedError(f'Unknown section {section_title} Coeffs.')
+
+    fd.write(f'\n{section_title} Coeffs\n\n')
+    # TODO: support {Pair,Bond,Angle,Dihedral,Improper}_style comment:
+    # https://docs.lammps.org/read_data.html#format-of-the-body-of-a-data-file
+
+    for coeff in coeffs:
+        fd.write(' '.join(coeff))
+        fd.write('\n')
+
+    fd.write('\n')
 
 
 def _prepare_angles(atoms):
@@ -666,7 +682,6 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     n_atoms = len(symbols)
     fd.write("{0} atoms\n".format(n_atoms))
 
-    # TODO Check whether atom_style is compatible with the bonded fields.
     bonds = _prepare_bonds(atoms)
     if bonds is not None and atom_style in ["bonds", "angles",
                                             "molecular", "full"]:
@@ -692,7 +707,10 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     n_atom_types = len(species)
     fd.write("{0}  atom types\n".format(n_atom_types))
 
-    # TODO Write number of bond/angle/dihedral types.
+    if 'types' in atoms.info and atom_style in ["bonds", "angles",
+                                                "molecular", "full"]:
+        for item in atoms.info['types']:
+            fd.write(f"{atoms.info['types'][item]} {item} types\n")
 
     if prismobj is None:
         p = Prism(atoms.get_cell())
@@ -715,7 +733,13 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         )
     fd.write("\n\n")
 
-    # TODO print {Bond,Angle,Dihedrals,Impropers}Coeffs sections
+    # Print {Bond,Angle,Dihedrals,Impropers}Coeffs sections
+    if 'types' in atoms.info and atom_style in ["bonds", "angles",
+                                                "molecular", "full"]:
+        for coeff_name in atoms.info['coeffs']:
+            _print_coeff_section(fd,
+                                 atoms.info['coeffs'][coeff_name],
+                                 coeff_name)
 
     # Print Masses section
     masses = convert(atoms.get_masses(), "mass", "ASE", units)
@@ -730,6 +754,7 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     fd.write("Atoms\n\n")
 
     # TODO: support atom_style comment after Atoms section header.
+    # https://docs.lammps.org/read_data.html#format-of-the-body-of-a-data-file
     # Currently the test fails because the regexp in parse_lammps_data_file.py
     # won't match a section header with a comment.
     # fd.write(f"Atoms # {atom_style} \n\n")
