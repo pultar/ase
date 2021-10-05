@@ -606,13 +606,13 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
         atoms = atoms[0]
 
     if hasattr(fd, "name"):
-        fd.write("{0} (written by ASE) \n\n".format(fd.name))
+        fd.write("{0} (written by ASE)\n\n".format(fd.name))
     else:
-        fd.write("(written by ASE) \n\n")
+        fd.write("(written by ASE)\n\n")
 
     symbols = atoms.get_chemical_symbols()
     n_atoms = len(symbols)
-    fd.write("{0} atoms \n".format(n_atoms))
+    fd.write("{0} atoms\n".format(n_atoms))
 
     # TODO Check whether atom_style is compatible with the bonded fields.
     bonds = _prepare_bonds(atoms)
