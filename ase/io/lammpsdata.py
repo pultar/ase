@@ -528,13 +528,12 @@ def _print_bonded_section(fd, bonds, section_title):
     if bonds is None:
         return
 
-    fd.write(f'{section_title}\n\n')
+    fd.write(f'\n\n{section_title}\n\n')
     for bond_id, bond in enumerate(bonds):
         fd.write(f'{bond_id + 1:6d}')
         for atom in bond:
             fd.write(f' {atom:6d}')
         fd.write('\n')
-    fd.write('\n')
 
 
 def _prepare_angles(atoms):
