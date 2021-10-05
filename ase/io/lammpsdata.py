@@ -160,6 +160,11 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
     angles_in = []
     dihedrals_in = []
     impropers_in = []
+    bond_types = 0
+    angle_types = 0
+    dihedral_types = 0
+    improper_types = 0
+    coeffs = {}
 
     sections = [
         "Atoms",
@@ -257,7 +262,14 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
                 # elif field == "atom types":
                 #     N_types = int(val)
 
-                # TODO Parse bonds/angles/dihedrals/impropers lines
+                elif field == 'bond types':
+                    bond_types = int(val)
+                elif field == 'angle types':
+                    angle_types = int(val)
+                elif field == 'dihedral types':
+                    dihedral_types = int(val)
+                elif field == 'improper types':
+                    improper_types = int(val)
 
                 elif field == "xlo xhi":
                     (xlo, xhi) = [float(x) for x in val.split()]
@@ -384,8 +396,34 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
                         int(fields[5]),
                     )
                 )
-            # TODO parse {Bond,Angle,Dihedrals,Impropers}Coeffs sections
-            # And store them in at.info
+            elif section == "Pair Coeffs":
+                if 'Pair' in coeffs:
+                    coeffs['Pair'].append(fields)
+                else:
+                    coeffs['Pair'] = [fields]
+                    # All Coeffs are stored as strings because lengths and
+                    # datatypes depend on the corresponding style and asterisks
+                    # and ranges are valid inputs.
+            elif section == "Bond Coeffs":
+                if 'Bond' in coeffs:
+                    coeffs['Bond'].append(fields)
+                else:
+                    coeffs['Bond'] = [fields]
+            elif section == "Angle Coeffs":
+                if 'Angle' in coeffs:
+                    coeffs['Angle'].append(fields)
+                else:
+                    coeffs['Angle'] = [fields]
+            elif section == "Dihedral Coeffs":
+                if 'Dihedral' in coeffs:
+                    coeffs['Dihedral'].append(fields)
+                else:
+                    coeffs['Dihedral'] = [fields]
+            elif section == "Improper Coeffs":
+                if 'Improper' in coeffs:
+                    coeffs['Improper'].append(fields)
+                else:
+                    coeffs['Improper'] = [fields]
 
     # set cell
     cell = np.zeros((3, 3))
@@ -499,7 +537,22 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
     if len(impropers_in) > 0 and atom_style in ["molecular", "full"]:
         at.new_array('impropers', _store_impropers(impropers_in, ind_of_id, N))
 
-    at.info["comment"] = comment
+    at.info['comment'] = comment
+
+    if (bond_types + angle_types + dihedral_types + improper_types != 0
+            and atom_style in ["bonds", "angles", "molecular", "full"]):
+        at.info['types'] = {}
+
+        if bond_types !=0:
+            at.info['types'] = bond_types
+        if angle_types !=0 and atom_style != 'bonds':
+            at.info['types'] = angle_types
+        if dihedral_types !=0 and atom_style not in ['bonds', 'angles']:
+            at.info['types'] = dihedral_types
+        if improper_types !=0 and atom_style not in ['bonds', 'angles']:
+            at.info['types'] = improper_types
+
+        at.info['coeffs'] = coeffs
 
     return at
 
