@@ -296,7 +296,7 @@ class BandPath:
         # if they change lengths, volume etc.
         special_points = {}
         for name, value in self.special_points.items():
-            special_points[name] = value @ op
+            special_points[name] = op @ value
 
         return BandPath(op.T @ self.cell, kpts=self.kpts @ op,
                         special_points=special_points,
