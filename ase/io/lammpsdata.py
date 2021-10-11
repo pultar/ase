@@ -524,35 +524,29 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style="full",
         at.arrays["initial_charges"] = charge
         at.arrays["mmcharges"] = charge.copy()
 
-    if len(bonds_in) > 0 and atom_style in ["bonds", "angles",
-                                            "molecular", "full"]:
-        at.new_array('bonds', _store_bonds(bonds_in, ind_of_id, N))
-
-    if len(angles_in) > 0 and atom_style in ["angles", "molecular", "full"]:
-        at.new_array('angles', _store_angles(angles_in, ind_of_id, N))
-
-    if len(dihedrals_in) > 0 and atom_style in ["molecular", "full"]:
-        at.new_array('dihedrals', _store_dihedrals(dihedrals_in, ind_of_id, N))
-
-    if len(impropers_in) > 0 and atom_style in ["molecular", "full"]:
-        at.new_array('impropers', _store_impropers(impropers_in, ind_of_id, N))
-
-    at.info['comment'] = comment
-
     if (bond_types + angle_types + dihedral_types + improper_types != 0
             and atom_style in ["bonds", "angles", "molecular", "full"]):
         at.info['types'] = {}
-
-        if bond_types != 0:
-            at.info['types']['bond'] = bond_types
-        if angle_types != 0 and atom_style != 'bonds':
-            at.info['types']['angle'] = angle_types
-        if dihedral_types != 0 and atom_style not in ['bonds', 'angles']:
-            at.info['types']['dihedral'] = dihedral_types
-        if improper_types != 0 and atom_style not in ['bonds', 'angles']:
-            at.info['types']['improper'] = improper_types
-
         at.info['coeffs'] = coeffs
+
+    if len(bonds_in) > 0 and atom_style in ["bonds", "angles",
+                                            "molecular", "full"]:
+        at.new_array('bonds', _store_bonds(bonds_in, ind_of_id, N))
+        at.info['types']['bond'] = bond_types
+
+    if len(angles_in) > 0 and atom_style in ["angles", "molecular", "full"]:
+        at.new_array('angles', _store_angles(angles_in, ind_of_id, N))
+        at.info['types']['angle'] = angle_types
+
+    if len(dihedrals_in) > 0 and atom_style in ["molecular", "full"]:
+        at.new_array('dihedrals', _store_dihedrals(dihedrals_in, ind_of_id, N))
+        at.info['types']['dihedral'] = dihedral_types
+
+    if len(impropers_in) > 0 and atom_style in ["molecular", "full"]:
+        at.new_array('impropers', _store_impropers(impropers_in, ind_of_id, N))
+        at.info['types']['improper'] = improper_types
+
+    at.info['comment'] = comment
 
     return at
 
