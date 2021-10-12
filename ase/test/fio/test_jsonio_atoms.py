@@ -45,10 +45,10 @@ def test_jsonio_cartesian():
     from ase.constraints import FixCartesian
 
     atoms = bulk('Ag', cubic=True)
-    indices = [0, 1]
+    a = [0, 1]
     mask = [[False, False, True], [False, False, True]]
 
-    atoms.constraints = FixCartesian(indices, mask=mask)
+    atoms.constraints = FixCartesian(a, mask=mask)
     new_atoms = decode(encode(atoms))
     c1 = atoms.constraints
     c2 = new_atoms.constraints

@@ -818,7 +818,7 @@ class FixCartesian(IndexedConstraint):
 
     def todict(self):
         return {'name': 'FixCartesian',
-                'kwargs': {'a': self.index.tolist(),
+                'kwargs': {'indices': self.index.tolist(),
                            'mask': (~self.mask).tolist()}}
 
 
