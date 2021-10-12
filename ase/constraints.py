@@ -1071,9 +1071,16 @@ class FixInternals(FixConstraint):
         forces[:, :] -= np.dot(T, np.row_stack(ff)).reshape(-1, 3)
 
     def __repr__(self):
-        constraints = repr(self.constraints)
-        return 'FixInternals(_copy_init=%s, epsilon=%s)' % (constraints,
-                                                            self.epsilon)
+        kw_dict = self.todict()['kwargs']
+        used_items = []
+        for key0 in kw_dict.keys():
+            key = key0
+            if kw_dict[key0]:
+                if key0 in ['angles', 'dihedrals']:
+                    key += '_deg'
+                used_items.append(f'{key}={kw_dict[key0]}')
+        stringout = 'FixInternals('+','.join(used_items)+')'
+        return stringout
 
     def __str__(self):
         return '\n'.join([repr(c) for c in self.constraints])
