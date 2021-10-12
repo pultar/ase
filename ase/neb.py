@@ -256,14 +256,12 @@ def get_neb_method(neb, method):
 class BaseNEB:
     def __init__(self, images, k=0.1, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
-                 method='aseneb', allow_shared_calculator=False, precon=None,
-                 reflect_ops=None):
+                 method='aseneb', allow_shared_calculator=False, precon=None):
         
         self.images = images
         self.climb = climb
         self.parallel = parallel
         self.allow_shared_calculator = allow_shared_calculator
-        self.reflect_ops = reflect_ops
 
         for img in images:
             if len(img) != self.natoms:
@@ -621,7 +619,7 @@ class DyNEB(BaseNEB):
     def __init__(self, images, k=0.1, fmax=0.05, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
                  dynamic_relaxation=True, scale_fmax=0., method='aseneb',
-                 allow_shared_calculator=False, precon=None, reflect_ops=None):
+                 allow_shared_calculator=False, precon=None):
         """
         Subclass of NEB that allows for scaled and dynamic optimizations of
         images. This method, which only works in series, does not perform
@@ -652,8 +650,7 @@ class DyNEB(BaseNEB):
             images, k=k, climb=climb, parallel=parallel,
             remove_rotation_and_translation=remove_rotation_and_translation,
             world=world, method=method,
-            allow_shared_calculator=allow_shared_calculator, precon=precon,
-            reflect_ops=reflect_ops)
+            allow_shared_calculator=allow_shared_calculator, precon=precon)
         self.fmax = fmax
         self.dynamic_relaxation = dynamic_relaxation
         self.scale_fmax = scale_fmax
@@ -735,7 +732,7 @@ class NEB(DyNEB):
     def __init__(self, images, k=0.1, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
                  method='aseneb', allow_shared_calculator=False,
-                 precon=None, reflect_ops=None, **kwargs):
+                 precon=None, **kwargs):
         """Nudged elastic band.
 
         Paper I:
@@ -809,8 +806,7 @@ class NEB(DyNEB):
             remove_rotation_and_translation=remove_rotation_and_translation,
             world=world, method=method,
             allow_shared_calculator=allow_shared_calculator,
-            precon=precon, reflect_ops=reflect_ops,
-            **defaults)
+            precon=precon, **defaults)
 
 
 class NEBOptimizer(Optimizer):
