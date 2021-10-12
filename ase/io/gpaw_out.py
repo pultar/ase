@@ -55,6 +55,7 @@ def read_constraints_from_preamble(lines) -> List:
         con_name = con.split(':')[0].lstrip('  ')
         kwargs_str = con.lstrip(f'  {con_name}: ')
         kwargs_str = kwargs_str.rstrip('\n').replace('\'', '\"')
+        kwargs_str = kwargs_str.replace('True', '1').replace('False', '0')
         if kwargs_str[-1] == ')':
             kwargs_str = kwargs_str[:-3]
         constraints.append(dict2constraint({'name': con_name,
