@@ -662,7 +662,7 @@ class FixedMode(FixConstraint):
                 'kwargs': {'mode': self.mode.tolist()}}
 
     def __repr__(self):
-        return 'FixedMode(%s)' % self.mode.tolist()
+        return f'FixedMode({self.mode.tolist()})'
 
 
 def _normalize(direction):
@@ -1834,9 +1834,9 @@ class Hookean(FixConstraint):
         if self._type == 'two atoms':
             stringout = f'Hookean({self.indices[0]}, {self.indices[1]}, '
         elif self._type == 'point':
-            stringout = f'Hookean({self.index}, {self.origin}, '
+            stringout = f'Hookean({self.index}, {self.origin.tolist()}, '
         else:
-            stringout = 'Hookean({self.index}, {self.plane}, '
+            stringout = f'Hookean({self.index}, {self.plane}, '
         stringout += f'k={self.spring}, rt={self.threshold})'
         return stringout
 
