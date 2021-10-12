@@ -5,7 +5,6 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
-import json
 
 
 def index_startswith(lines: List[str], string: str) -> int:
@@ -50,16 +49,12 @@ def read_constraints_from_preamble(lines) -> List:
         if line == 'ASE contraints:\n':
             record = True
 
-    from ase.constraints import dict2constraint
+    from ase.constraints import str2constraint
     for con in constraint_str:
-        con_name = con.split(':')[0].lstrip('  ')
-        kwargs_str = con.lstrip(f'  {con_name}: ')
-        kwargs_str = kwargs_str.rstrip('\n').replace('\'', '\"')
-        kwargs_str = kwargs_str.replace('True', '1').replace('False', '0')
-        if kwargs_str[-1] == ')':
-            kwargs_str = kwargs_str[:-3]
-        constraints.append(dict2constraint({'name': con_name,
-                                            'kwargs': json.loads(kwargs_str)}))
+        con_str = con.rstrip('\n')[2:]
+        if con_str[-3] == '(':
+            con_str = con_str[:-3]
+        constraints.append(str2constraint(con_str))
     return constraints
 
 
