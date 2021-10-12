@@ -1079,11 +1079,7 @@ class FixInternals(FixConstraint):
                 if key0 in ['angles', 'dihedrals']:
                     key += '_deg'
                 used_items.append(f'{key}={kw_dict[key0]}')
-        stringout = 'FixInternals('+','.join(used_items)+')'
-        return stringout
-
-    def __str__(self):
-        return '\n'.join([repr(c) for c in self.constraints])
+        return 'FixInternals('+','.join(used_items)+')'
 
     # Classes for internal use in FixInternals
     class FixInternalsBase:
