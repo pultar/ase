@@ -797,8 +797,8 @@ class FixedLine(IndexedConstraint):
 class FixCartesian(IndexedConstraint):
     'Fix an atom index *a* in the directions of the cartesian coordinates.'
 
-    def __init__(self, indices, mask=(1, 1, 1)):
-        super().__init__(indices=indices)
+    def __init__(self, a, mask=(1, 1, 1)):
+        super().__init__(indices=a)
         self.mask = ~np.asarray(mask, bool)
 
     def get_removed_dof(self, atoms):
@@ -813,12 +813,12 @@ class FixCartesian(IndexedConstraint):
         forces[self.index] *= self.mask[None, :]
 
     def __repr__(self):
-        return f'FixCartesian(indices={self.index.tolist()}, '\
+        return f'FixCartesian(a={self.index.tolist()}, '\
             f'mask={list(self.mask)})'
 
     def todict(self):
         return {'name': 'FixCartesian',
-                'kwargs': {'indices': self.index.tolist(),
+                'kwargs': {'a': self.index.tolist(),
                            'mask': (~self.mask).tolist()}}
 
 
