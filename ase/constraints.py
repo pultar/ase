@@ -778,7 +778,7 @@ class FixCartesian(IndexedConstraint):
 
     def __init__(self, a, mask=(1, 1, 1)):
         super().__init__(indices=a)
-        self.mask = ~np.asarray(mask, bool)
+        self.mask = ~np.asarray(mask)
 
     def get_removed_dof(self, atoms):
         return (3 - self.mask.sum()) * len(self.index)
@@ -808,7 +808,7 @@ class FixScaled(IndexedConstraint):
         # XXX The unused cell keyword is there for compatibility
         # with old trajectory files.
         super().__init__(a)
-        self.mask = np.array(mask, bool)
+        self.mask = np.array(mask)
 
     def get_removed_dof(self, atoms):
         return self.mask.sum() * len(self.index)
