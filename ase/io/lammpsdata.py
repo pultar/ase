@@ -741,12 +741,27 @@ def write_lammps_data(fd, atoms, specorder=None, force_skew=False,
     fd.write("\n\n")
 
     # Print {Bond,Angle,Dihedrals,Impropers}Coeffs sections
-    if 'types' in atoms.info and atom_style in [ASTYLE_BOND, ASTYLE_ANGLE,
-                                                ASTYLE_MOLECULAR, ASTYLE_FULL]:
-        for coeff_name in atoms.info['coeffs']:
-            _print_coeff_section(fd,
-                                 atoms.info['coeffs'][coeff_name],
-                                 coeff_name)
+    if 'coeffs' in atoms.info:
+        if 'Pair' in atoms.info['coeffs']:
+            _print_coeff_section(fd, atoms.info['coeffs']['Pair'], 'Pair')
+
+        if atom_style in [ASTYLE_BOND, ASTYLE_ANGLE, ASTYLE_MOLECULAR,
+                          ASTYLE_FULL]:
+            if 'Bond' in atoms.info['coeffs']:
+                _print_coeff_section(fd, atoms.info['coeffs']['Bond'], 'Bond')
+            if atom_style != ASTYLE_BOND:
+                if 'Angle' in atoms.info['coeffs']:
+                    _print_coeff_section(fd, atoms.info['coeffs']['Angle'],
+                                         'Angle')
+                if atom_style != ASTYLE_ANGLE:
+                    if 'Dihedral' in atoms.info['coeffs']:
+                        _print_coeff_section(fd,
+                                             atoms.info['coeffs']['Dihedral'],
+                                             'Dihedral')
+                    if 'Improper' in atoms.info['coeffs']:
+                        _print_coeff_section(fd,
+                                             atoms.info['coeffs']['Improper'],
+                                             'Improper')
 
     # Print Masses section
     masses = convert(atoms.get_masses(), "mass", "ASE", units)
