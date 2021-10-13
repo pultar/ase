@@ -108,6 +108,120 @@ class RamanBase(AtomicDisplacements, IOContext):
         self.comm = comm
 
 
+def _m2(z):
+    return (z * z.conj()).real
+
+def _map_to_modes(V_rcc, im_r, modes_Qq):
+    V_qcc = (V_rcc.T * im_r).T  # units Angstrom^2 / sqrt(amu)
+    V_Qcc = np.dot(V_qcc.T, modes_Qq.T).T
+    return V_Qcc
+
+def _me_Qcc(
+        elme_Qcc,  # Angstrom^2 / sqrt(amu)
+        vib01_Q,
+        ):
+    """Full matrix element
+
+    Returns
+    -------
+    Matrix element in e^2 Angstrom^2 / eV
+    """
+    assert False  # XXX TEST COVERAGE
+    temp_Qcc = elme_Qcc / (u.Hartree * u.Bohr)  # e^2 Angstrom / eV / sqrt(amu)
+    return elme_Qcc * vib01_Q[:, None, None]
+
+def _get_absolute_intensities(
+        elme_Qcc,
+        delta):
+    """Absolute Raman intensity or Raman scattering factor
+
+    Parameter
+    ---------
+    elme_Qcc: float
+        electronic matrix element, Angstrom^2 / sqrt(amu)
+    delta: float
+        pre-factor for asymmetric anisotropy, default 0
+
+    References
+    ----------
+    Porezag and Pederson, PRB 54 (1996) 7830-7836 (delta=0)
+    Baiardi and Barone, JCTC 11 (2015) 3267-3280 (delta=5)
+
+    Returns
+    -------
+    raman intensity, unit Ang**4/amu
+    """
+    alpha2_r, gamma2_r, delta2_r = _invariants(elme_Qcc)
+    return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
+
+def _intensity(alpha_Qcc, observation):
+    """Raman intensity
+
+    Returns
+    -------
+    unit e^4 Angstrom^4 / eV^2
+    """
+
+    m2 = Raman.m2
+    # XXX enable when appropriate
+    #        if observation['orientation'].lower() != 'random':
+    #            raise NotImplementedError('not yet')
+
+    # random orientation of the molecular frame
+    # Woodward & Long,
+    # Guthmuller, J. J. Chem. Phys. 2016, 144 (6), 64106
+    alpha2_r, gamma2_r, delta2_r = _invariants(alpha_Qcc)
+
+    if observation['geometry'] == '-Z(XX)Z':  # Porto's notation
+        return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.
+    elif observation['geometry'] == '-Z(XY)Z':  # Porto's notation
+        return gamma2_r / 15.
+    elif observation['scattered'] == 'Z':
+        # scattered light in direction of incoming light
+        return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+    elif observation['scattered'] == 'parallel':
+        # scattered light perendicular and
+        # polarization in plane
+        return 6 * gamma2_r / 45.
+    elif observation['scattered'] == 'perpendicular':
+        # scattered light perendicular and
+        # polarization out of plane
+        return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+    else:
+        raise NotImplementedError
+
+def _invariants(alpha_Qcc):
+    """Raman invariants
+
+    Parameter
+    ---------
+    alpha_Qcc: array
+        Matrix element or polarizability tensor
+
+    Reference
+    ---------
+    Derek A. Long, The Raman Effect, ISBN 0-471-49028-8
+
+    Returns
+    -------
+    mean polarizability, anisotropy, asymmetric anisotropy
+    """
+    m2 = _m2
+    alpha2_r = m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] +
+                    alpha_Qcc[:, 2, 2]) / 9.
+    delta2_r = 3 / 4. * (
+        m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0]) +
+        m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0]) +
+        m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1]))
+    gamma2_r = (3 / 4. * (m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0]) +
+                            m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0]) +
+                            m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])) +
+                (m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1]) +
+                    m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
+                    m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
+    return alpha2_r, gamma2_r, delta2_r
+
+
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
     def __init__(self, atoms,  # XXX do we need atoms at this stage ?
@@ -157,11 +271,11 @@ class RamanData(RamanBase):
 
     @staticmethod
     def m2(z):
-        return (z * z.conj()).real
+        return _m2(z)
 
     def map_to_modes(self, V_rcc):
-        V_qcc = (V_rcc.T * self.im_r).T  # units Angstrom^2 / sqrt(amu)
-        V_Qcc = np.dot(V_qcc.T, self.modes_Qq.T).T
+        # XXX ML - what does this do ???  is it supposed to be public?
+        V_Qcc = _map_to_modes(V_rcc=V_rcc, im_r=self.im_r, modes_Qq=self.modes_Qq)
         return V_Qcc
 
     def me_Qcc(self, *args, **kwargs):
@@ -171,11 +285,9 @@ class RamanData(RamanBase):
         -------
         Matrix element in e^2 Angstrom^2 / eV
         """
-        # Angstrom^2 / sqrt(amu)
+        assert False  # XXX TEST COVERAGE
         elme_Qcc = self.electronic_me_Qcc(*args, **kwargs)
-        # Angstrom^3 -> e^2 Angstrom^2 / eV
-        elme_Qcc /= u.Hartree * u.Bohr  # e^2 Angstrom / eV / sqrt(amu)
-        return elme_Qcc * self.vib01_Q[:, None, None]
+        return _me_Qcc(elme_Qcc=elme_Qcc, vib01_Q=vib01_Q)
 
     def get_absolute_intensities(self, delta=0, **kwargs):
         """Absolute Raman intensity or Raman scattering factor
@@ -194,9 +306,7 @@ class RamanData(RamanBase):
         -------
         raman intensity, unit Ang**4/amu
         """
-        alpha2_r, gamma2_r, delta2_r = self._invariants(
-            self.electronic_me_Qcc(**kwargs))
-        return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
+        return _get_absolute_intensities(elme_Qcc=self.electronic_me_Qcc(**kwargs), delta=delta)
 
     def intensity(self, *args, **kwargs):
         """Raman intensity
@@ -206,38 +316,15 @@ class RamanData(RamanBase):
         unit e^4 Angstrom^4 / eV^2
         """
         self.calculate_energies_and_modes()
-        
-        m2 = Raman.m2
+
+        m2 = _m2
         alpha_Qcc = self.me_Qcc(*args, **kwargs)
         if not self.observation:  # XXXX remove
+            assert False  # XXX TEST COVERAGE
             """Simple sum, maybe too simple"""
-            return m2(alpha_Qcc).sum(axis=1).sum(axis=1)
-        # XXX enable when appropriate
-        #        if self.observation['orientation'].lower() != 'random':
-        #            raise NotImplementedError('not yet')
+            return _m2(alpha_Qcc).sum(axis=1).sum(axis=1)
 
-        # random orientation of the molecular frame
-        # Woodward & Long,
-        # Guthmuller, J. J. Chem. Phys. 2016, 144 (6), 64106
-        alpha2_r, gamma2_r, delta2_r = self._invariants(alpha_Qcc)
-
-        if self.observation['geometry'] == '-Z(XX)Z':  # Porto's notation
-            return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.
-        elif self.observation['geometry'] == '-Z(XY)Z':  # Porto's notation
-            return gamma2_r / 15.
-        elif self.observation['scattered'] == 'Z':
-            # scattered light in direction of incoming light
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
-        elif self.observation['scattered'] == 'parallel':
-            # scattered light perendicular and
-            # polarization in plane
-            return 6 * gamma2_r / 45.
-        elif self.observation['scattered'] == 'perpendicular':
-            # scattered light perendicular and
-            # polarization out of plane
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
-        else:
-            raise NotImplementedError
+        return _intensity(alpha_Qcc=alpha_Qcc, observation=self.observation)
 
     def _invariants(self, alpha_Qcc):
         """Raman invariants
@@ -255,20 +342,7 @@ class RamanData(RamanBase):
         -------
         mean polarizability, anisotropy, asymmetric anisotropy
         """
-        m2 = Raman.m2
-        alpha2_r = m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] +
-                      alpha_Qcc[:, 2, 2]) / 9.
-        delta2_r = 3 / 4. * (
-            m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0]) +
-            m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0]) +
-            m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1]))
-        gamma2_r = (3 / 4. * (m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0]) +
-                              m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0]) +
-                              m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])) +
-                    (m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1]) +
-                     m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
-                     m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
-        return alpha2_r, gamma2_r, delta2_r
+        return _invariants(alpha_Qcc)
 
     def summary(self, log='-'):
         """Print summary for given omega [eV]"""
@@ -318,14 +392,14 @@ class Raman(RamanData):
             kwargs.pop(key, None)
         kwargs['name'] = kwargs.get('name', self.name)
         self.vibrations = Vibrations(atoms, *args, **kwargs)
-        
+
         self.delta = self.vibrations.delta
         self.indices = self.vibrations.indices
 
     def calculate_energies_and_modes(self):
         if hasattr(self, 'im_r'):
             return
-        
+
         self.read()
 
         self.im_r = self.vibrations.im
