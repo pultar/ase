@@ -11,11 +11,11 @@ def test_gpaw_constraints_from_log():
     parent = str(Path(__file__).parent)
     gpaw_logfile = parent + '/log_for_constraint_reading.txt'
 
-    try:
-        atoms = read(gpaw_logfile)
-    except IOError:
-        raise IOError('gpaw logfile could not be read. This could have multiple '
-                      'reasons')
+    # try:
+    atoms = read(gpaw_logfile)
+    # except IOError:
+    # raise IOError('gpaw logfile could not be read. This could have multiple '
+    #               'reasons')
 
     assert len(atoms.constraints) == 16
 
@@ -39,7 +39,9 @@ def test_gpaw_constraints_from_log():
     # Read the positions table to compare whether the labels have been
     # set correctly.
 
-    lines = open(gpaw_logfile).readlines()
+    infile = open(gpaw_logfile)
+    lines = infile.readlines()
+    infile.close()
 
     i1 = 0
     for i2, line in enumerate(lines):
