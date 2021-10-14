@@ -57,7 +57,7 @@ def read_constraints_from_preamble(lines) -> List:
             con_str = con_str[:-3]
         try:
             constraints.append(str2constraint(con_str))
-        except:
+        except (NameError, TypeError):
             parprint(f'Warning: Constraint {con_str} could not be read! '
                      'For a custom constraint make sure the __repr__() '
                      'function produces a string that can can be used with '
