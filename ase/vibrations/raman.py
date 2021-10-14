@@ -4,6 +4,7 @@ import ase.units as u
 from ase.parallel import world
 from ase.phonons import Phonons
 from ase.vibrations.vibrations import Vibrations, AtomicDisplacements
+from ase.vibrations.data import VibrationsData
 from ase.dft import monkhorst_pack
 from ase.utils import IOContext
 
@@ -116,6 +117,7 @@ def _map_to_modes(V_rcc, im_r, modes_Qq):
     V_Qcc = np.dot(V_qcc.T, modes_Qq.T).T
     return V_Qcc
 
+# FIXME: Name should include e.g. an author name or something to distinguish from albrecht
 def _me_Qcc(
         elme_Qcc,  # Angstrom^2 / sqrt(amu)
         vib01_Q,
@@ -126,6 +128,7 @@ def _me_Qcc(
     -------
     Matrix element in e^2 Angstrom^2 / eV
     """
+    # XXX ML - This is unused
     assert False  # XXX TEST COVERAGE
     temp_Qcc = elme_Qcc / (u.Hartree * u.Bohr)  # e^2 Angstrom / eV / sqrt(amu)
     return elme_Qcc * vib01_Q[:, None, None]
@@ -221,7 +224,47 @@ def _invariants(alpha_Qcc):
                     m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
     return alpha2_r, gamma2_r, delta2_r
 
+def _summary(log, hnu, intensities):
+    te = int(np.log10(intensities.max())) - 2
+    scale = 10**(-te)
 
+    if not te:
+        ts = ''
+    elif te > -2 and te < 3:
+        ts = str(10**te)
+    else:
+        ts = '10^{0}'.format(te)
+
+    print('-------------------------------------', file=log)
+    print(' Mode    Frequency        Intensity', file=log)
+    print('  #    meV     cm^-1      [{0}A^4/amu]'.format(ts), file=log)
+    print('-------------------------------------', file=log)
+    for n, e in enumerate(hnu):
+        if e.imag != 0:
+            c = 'i'
+            e = e.imag
+        else:
+            c = ' '
+            e = e.real
+        print('%3d %6.1f%s  %7.1f%s  %9.2f' %
+                (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
+                file=log)
+    print('-------------------------------------', file=log)
+    # XXX enable this in phonons
+    # parprint('Zero-point energy: %.3f eV' %
+    #         self.vibrations.get_zero_point_energy(),
+    #         file=log)
+
+
+# PURPOSE:  Provided common functionality to both Raman and RamanPhonons.
+# STATUS: Old, only for backwards compatibility.
+#
+#         Currently NOT implemented in terms of RamanOutput because the current behavior
+#         is too fragile and influenced far too much by information outside of each function
+#         body for any of them to be safely refactored.
+#
+#         Instead, the important stuff has been pulled out into free functions which are
+#         reused by the new classes RamanOutput.
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
     def __init__(self, atoms,  # XXX do we need atoms at this stage ?
@@ -348,42 +391,11 @@ class RamanData(RamanBase):
         """Print summary for given omega [eV]"""
         with IOContext() as io:
             log = io.openfile(log, comm=self.comm, mode='a')
-            return self._summary(log)
-
-    def _summary(self, log):
-        hnu = self.get_energies()
-        intensities = self.get_absolute_intensities()
-        te = int(np.log10(intensities.max())) - 2
-        scale = 10**(-te)
-
-        if not te:
-            ts = ''
-        elif te > -2 and te < 3:
-            ts = str(10**te)
-        else:
-            ts = '10^{0}'.format(te)
-
-        print('-------------------------------------', file=log)
-        print(' Mode    Frequency        Intensity', file=log)
-        print('  #    meV     cm^-1      [{0}A^4/amu]'.format(ts), file=log)
-        print('-------------------------------------', file=log)
-        for n, e in enumerate(hnu):
-            if e.imag != 0:
-                c = 'i'
-                e = e.imag
-            else:
-                c = ' '
-                e = e.real
-            print('%3d %6.1f%s  %7.1f%s  %9.2f' %
-                  (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
-                  file=log)
-        print('-------------------------------------', file=log)
-        # XXX enable this in phonons
-        # parprint('Zero-point energy: %.3f eV' %
-        #         self.vibrations.get_zero_point_energy(),
-        #         file=log)
+            return _summary(log=log, hnu=self.get_energies(), intensities=self.get_absolute_intensities())
 
 
+# STATUS: Old, kept for backwards compatibility
+# PURPOSE: Adapts RamanData to the Vibrations class (contrast with Phonons)
 class Raman(RamanData):
     def __init__(self, atoms, *args, **kwargs):
         super().__init__(atoms, *args, **kwargs)
@@ -414,6 +426,8 @@ class Raman(RamanData):
         self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr
 
 
+# STATUS: Old, kept for backwards compatibility
+# PURPOSE: Adapts RamanData to the Phonons class
 class RamanPhonons(RamanData):
     def __init__(self, atoms, *args, **kwargs):
         RamanData.__init__(self, atoms, *args, **kwargs)
@@ -463,3 +477,88 @@ class RamanPhonons(RamanData):
                     self.om_Q > 0, 1. / np.sqrt(2 * self.om_Q), 0)
             # -> sqrt(amu) * Angstrom
             self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr
+
+
+# XXX FIXME NAME  (RamanData took the name we want)
+class RamanOutput:
+    """Class containing matrix elements from a Raman computation.
+
+    From this, the Raman intensities of modes can be computed."""
+    def __init__(self,
+                 vibrations: VibrationsData,
+                 elme_Qcc: np.ndarray,
+                 me_Qcc: np.ndarray,
+                 ):
+        """
+        Parameters
+        ----------
+        vibrations: VibrationsData object
+        elme_Qcc: Electronic matrix elements
+        me_Qcc: Full matrix elements
+        """
+        self.vibrations = vibrations
+        self._electronic_me_Qcc = elme_Qcc
+        self._me_Qcc = me_Qcc
+
+    @property
+    def modes(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self.vibrations.modes
+
+    @property
+    def matrix_elements(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self._me_Qcc
+
+    @property
+    def electronic_matrix_elements(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self._electronic_me_Qcc
+
+    def get_absolute_intensities(self, delta=0):
+        """Absolute Raman intensity or Raman scattering factor
+
+        Parameters
+        ----------
+        delta: float
+           pre-factor for asymmetric anisotropy, default 0
+
+        References
+        ----------
+        Porezag and Pederson, PRB 54 (1996) 7830-7836 (delta=0)
+        Baiardi and Barone, JCTC 11 (2015) 3267-3280 (delta=5)
+
+        Returns
+        -------
+        raman intensity, unit Ang**4/amu
+        """
+        assert False  # XXX TEST COVERAGE
+        return _get_absolute_intensities(elme_Qcc=self._elme_Qcc, delta=delta)
+
+    def intensity(self, observation=None):
+        """Raman intensity
+
+        Returns
+        -------
+        unit e^4 Angstrom^4 / eV^2
+        """
+        assert False  # XXX TEST COVERAGE
+        alpha_Qcc = self._me_Qcc
+        if observation is None:
+            observation = {'geometry': '-Z(XX)Z'}
+        if not observation:  # XXXX remove - triggers on empty dict
+            assert False  # XXX TEST COVERAGE
+            """Simple sum, maybe too simple"""
+            return _m2(alpha_Qcc).sum(axis=1).sum(axis=1)
+
+        return _intensity(alpha_Qcc=alpha_Qcc, observation=observation)
+
+    def summary(self, log='-'):
+        """Print summary for given omega [eV]"""
+        assert False  # FIXME:  no MPI communicator here, might need to take one as argument or disallow filepaths? :/
+        with IOContext() as io:
+            log = io.openfile(log, comm=comm, mode='a')
+            return _summary(log=log, hnu=self.get_energies(), intensities=self.get_absolute_intensities())
