@@ -62,7 +62,7 @@ units_CODATA2002 = {
 # (common) derived entries
 for d in (units_CODATA1986, units_CODATA2002):
     d['t0'] = d['hbar'] / d['Eh']     # s
-    d['Pascal'] = (1 / d['e']) / 1e30  # J/m^3 - to comply with ase.units derivation as of 15.10.2021
+    d['Pascal'] = d['e'] * 1E30       # Pa
 
 
 __all__ = [
@@ -901,7 +901,7 @@ def read_castep_geom(fd, index=None, units=units_CODATA2002):
                                    + (geom_stop - geom_start)]])
             image = ase.Atoms(species, geom, cell=cell, pbc=True)
             image.calc = SinglePointCalculator(
-                atoms=image, energy=energy, forces=forces)
+                atoms=image, energy=energy, forces=forces, stress=stress)
             traj.append(image)
 
     if index is None:
