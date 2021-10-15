@@ -9,9 +9,11 @@ from pathlib import Path
 import ase.units as units
 import ase.io
 from ase.parallel import world, paropen
+from ase.atoms import Atoms
 
 from ase.utils.filecache import get_json_cache
 from .data import VibrationsData
+from .displacements import Displacements as NewDisplacements, Displacement as NewDisplacement
 
 from collections import namedtuple
 
@@ -87,7 +89,54 @@ class Displacement(namedtuple('Displacement', ['a', 'i', 'sign', 'ndisp',
         exlist.write(str(self._exname))
 
 
-class Vibrations(AtomicDisplacements):
+class CacheMixin:
+    """Provides public helper functions for a computation with a cache."""
+
+    def __init__(self, name):
+        self._cache = get_json_cache(name)
+
+    def clean(self, empty_files=False, combined=True):
+        """Remove json-files.
+
+        Use empty_files=True to remove only empty files and
+        combined=False to not remove the combined file.
+
+        """
+
+        if world.rank != 0:
+            return 0
+
+        if empty_files:
+            return self._cache.strip_empties()  # XXX Fails on combined cache
+
+        nfiles = self._cache.filecount()
+        self._cache.clear()
+        return nfiles
+
+    def combine(self):
+        """Combine json-files to one file ending with '.all.json'.
+
+        The other json-files will be removed in order to have only one sort
+        of data structure at a time.
+
+        """
+        nelements_before = self._cache.filecount()
+        self._cache = self._cache.combine()
+        return nelements_before
+
+    def split(self):
+        """Split combined json-file.
+
+        The combined json-file will be removed in order to have only one
+        sort of data structure at a time.
+
+        """
+        count = self._cache.filecount()
+        self._cache = self._cache.split()
+        return count
+
+
+class Vibrations(AtomicDisplacements, CacheMixin):
     """Class for calculating vibrational modes using finite difference.
 
     The vibrational modes are calculated from a finite difference
@@ -147,6 +196,8 @@ class Vibrations(AtomicDisplacements):
     """
 
     def __init__(self, atoms, indices=None, name='vib', delta=0.01, nfree=2):
+        CacheMixin.__init__(self, name=name)
+
         assert nfree in [2, 4]
         self.atoms = atoms
         self.calc = atoms.calc
@@ -163,7 +214,9 @@ class Vibrations(AtomicDisplacements):
         self.ir = None
         self._vibrations = None
 
-        self.cache = get_json_cache(name)
+    @property
+    def cache(self):
+        return self._cache
 
     @property
     def name(self):
@@ -268,46 +321,6 @@ Please remove them and recalculate or run \
 
         return results
 
-    def clean(self, empty_files=False, combined=True):
-        """Remove json-files.
-
-        Use empty_files=True to remove only empty files and
-        combined=False to not remove the combined file.
-
-        """
-
-        if world.rank != 0:
-            return 0
-
-        if empty_files:
-            return self.cache.strip_empties()  # XXX Fails on combined cache
-
-        nfiles = self.cache.filecount()
-        self.cache.clear()
-        return nfiles
-
-    def combine(self):
-        """Combine json-files to one file ending with '.all.json'.
-
-        The other json-files will be removed in order to have only one sort
-        of data structure at a time.
-
-        """
-        nelements_before = self.cache.filecount()
-        self.cache = self.cache.combine()
-        return nelements_before
-
-    def split(self):
-        """Split combined json-file.
-
-        The combined json-file will be removed in order to have only one
-        sort of data structure at a time.
-
-        """
-        count = self.cache.filecount()
-        self.cache = self.cache.split()
-        return count
-
     def read(self, method='standard', direction='central'):
         self.method = method.lower()
         self.direction = direction.lower()
@@ -352,7 +365,7 @@ Please remove them and recalculate or run \
             else:
                 assert self.direction == 'backward'
                 H[r] = (fminus - feq)[self.indices].ravel()
-            H[r] /= 2 * self.delta
+            H[r] /= 2 * self.delta  # N.B. the 2 here is from the H += H.T, NOT from the central difference
             r += 1
         H += H.copy().T
         self.H = H
@@ -557,3 +570,108 @@ Please remove them and recalculate or run \
             for row in outdata:
                 fd.write('%.3f  %15.5e\n' %
                          (row[0], row[1]))
+
+
+class VibrationsRunner(CacheMixin):
+    """FIXME DOC"""
+
+    def __init__(self, atoms: Atoms, indices=None, name='vib', displacements: NewDisplacements = None):
+        CacheMixin.__init__(self, name=name)
+
+        self._atoms = atoms
+
+        if displacements is None:
+            displacements = AxisAlignedDisplacements(delta=1e-2)
+
+        if indices is None:
+            indices = range(len(atoms))
+        elif len(indices) != len(set(indices)):
+            raise ValueError(
+                'one (or more) indices included more than once')
+        indices = np.asarray(indices)
+
+        self._displacements = displacements.for_atom_indices(indices)
+        self._indices = np.asarray(indices)
+
+    @property
+    def displacements(self):
+        return self._displacements
+
+    @property
+    def name(self):
+        return str(self._cache.directory)
+
+    # --------------
+    # The meaty bits
+
+    def handle_disp(self, atoms: Atoms, disp: NewDisplacement):
+        with self.cache.lock(disp.name) as handle:
+            if handle is None:
+                return
+            handle.save({'forces': atoms.get_forces()})
+
+    def _get_hessian(self, force_dac, method):
+        """ Compute the hessian given the forces at displacements. """
+        method = method.lower()
+        assert method in ['standard', 'frederiksen']
+
+        if method == 'frederiksen':
+            for d, disp in enumerate(self.displacements):
+                # subtract drift force from the displaced atom
+                force_dac[d, d.atom, :] -= force_dac[d].sum(axis=0)
+
+        assert force_dac.ndim == 3
+        natom = force_dac.shape[1]
+
+        H_acac = -1.0 * self.displacements.compute_cartesian_derivatives(force_dac)
+        H_acac = H_acac[self.indices, :, self.indices, :]
+        H_rr = H_acac.reshape(3 * natom, 3 * natom)
+        H_rr += H_rr.T
+        H_rr /= 2
+        return H_rr
+
+    # XXX FIXME rename 'method' argument
+    def get_vibrations(self, method='standard'):
+        """Compute the Hessian and obtain information about vibrations as a VibrationsData object.
+        Args:
+            method (str): 'standard' or 'frederiksen'
+
+        Returns:
+            VibrationsData
+
+        """
+        self.run()
+        force_dac = np.array([self._cache[disp.name] for disp in self.displacements])
+        H_rr = self._get_hessian(force_dac=force_dac, method=method)
+
+        return VibrationsData.from_2d(self._atoms, H_rr, indices=self._indices)
+
+    def run(self):
+        """Run any remaining vibration calculations.
+
+        This will ensure that forces have been computed for all displacements,
+        typically 6 displacements per atom (+/-x, +/-y, +/-z) plus one more
+        computation at equilibrium.
+
+        Only those calculations that are not already done will be started.
+        Be aware that an interrupted calculation may produce an empty
+        file (ending with .json), which must be deleted before restarting the
+        job. Otherwise the forces will not be calculated for that
+        displacement.
+
+        Note that the calculations for the different displacements can be done
+        simultaneously by several independent processes. This feature relies
+        on the existence of files and the subsequent creation of the file in
+        case it is not found.
+        """
+        if all(disp in self._cache for disp in self.displacements):
+            return
+
+        if not self._cache.writable:
+            raise RuntimeError(
+                'Cannot run calculation.  '
+                'Cache must be removed or split in order '
+                'to have only one sort of data structure at a time.')
+
+        for disp, atoms in self.displacements.iter_with_atoms(self.atoms, inplace=True):
+            self.handle_disp(disp)
