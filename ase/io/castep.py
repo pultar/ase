@@ -868,7 +868,6 @@ def read_castep_geom(fd, index=None, units=units_CODATA2002):
 
     Hartree = units['Eh']
     Bohr = units['a0']
-    GPa = units['Pa'] * 1e9 
 
     # Yeah, we know that...
     # print('N.B.: Energy in .geom file is not 0K extrapolated.')
@@ -887,7 +886,7 @@ def read_castep_geom(fd, index=None, units=units_CODATA2002):
                 if line.find('<-- F') > 0:
                     geom_stop = i + geom_start
                     break
-            stress = np.array([[float(col) * GPa for col in
+            stress = np.array([[float(col) * Hartree/Bohr**3 for col in
                     line.split()[:3]] for line in
                     txt[stress_start:geom_start]])
             species = [line.split()[0] for line in
