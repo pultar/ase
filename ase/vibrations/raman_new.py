@@ -7,20 +7,24 @@ from ase.calculators.calculator import Calculator
 from ase.calculators.polarizability import StaticPolarizabilityCalculator
 from ase.calculators.excitation_list import ExcitationList, ExcitationListCalculator
 from ase.parallel import world, paropen, parprint
-from ase.vibrations.vibrations import VibrationsRunner
+from ase.vibrations.vibrations import DisplacementHandler, VibrationsRunner, DisplacementsRunner
 from ase.vibrations.displacements import Displacement
 from ase.vibrations.resonant_raman import _copy_atoms_calc
 
 
-class ResonantRamanRunner:
+class ResonantRamanRunner(DisplacementHandler):
     """TODO DOC"""
     def __init__(self,
+                 disp_runner: DisplacementsRunner,
                  vibrations: VibrationsRunner,
                  excalc: ExcitationListCalculator,
-                 exname=str,
+                 *,
+                 exname='ex',
                  exext='.ex.gz',
                  overlap: tp.Optional[tp.Callable[[Calculator, Calculator], np.ndarray]]=None,
                  ):
+        super().__init__(runner=disp_runner)
+        self._runner = disp_runner
         self._atoms = vibrations.atoms
         self._vibrations = vibrations
         self._excalc = excalc
@@ -51,7 +55,11 @@ class ResonantRamanRunner:
         return returnvalue
 
     def run(self):
-        self._vibrations.run()
+        """Make computations run at all displacements if they haven't yet.
+
+        This is usually called automatically when needed, so the only time you
+        have to call it manually is when just saving files for future analysis."""
+        self._runner.run()
 
     def _exlist_filename(self, disp: Displacement):
         return Path(self._exname) / f'ex.{disp.name}{self._exext}'
@@ -78,32 +86,39 @@ class ResonantRamanRunner:
         return np.load(self._ov_nn_filename(disp))
 
 
-class StaticPolarizabilityRamanRunner:
+class StaticPolarizabilityRamanRunner(DisplacementHandler):
     """FIXME TODO"""
     def __init__(self,
+                 disp_runner: DisplacementsRunner,
                  vibrations: VibrationsRunner,
                  polcalc: StaticPolarizabilityCalculator,
+                 *,
                  polname=str,
                  polext='.pol.gz',
                  ):
+        super().__init__(runner=disp_runner)
+        self._runner = disp_runner
         self._vibrations = vibrations
         self._polcalc = polcalc
         self._polname = polname
         self._polext = polext
 
     def calculate(self, atoms: Atoms, disp: Displacement):
-        returnvalue = self._vibrations.calculate(atoms, disp)
-        pol_tensor = self.compute_static_polarizability(atoms)
+        pol_tensor = self._compute_static_polarizability(atoms)
         self.save_static_polarizability(pol_tensor, disp)
-        return returnvalue
+        return {}
 
     def run(self):
-        self._vibrations.run()
+        """Make computations run at all displacements if they haven't yet.
+
+        This is usually called automatically when needed, so the only time you
+        have to call it manually is when just saving files for future analysis."""
+        self._runner.run()
 
     def _static_polarizability_filename(self, disp: Displacement):
         return Path(self._polname) / f'pol.{disp.name}{self._polext}'
 
-    def compute_static_polarizability(self, atoms: Atoms) -> np.ndarray:
+    def _compute_static_polarizability(self, atoms: Atoms) -> np.ndarray:
         pol_tensor = self._polcalc(atoms)
         return pol_tensor
 

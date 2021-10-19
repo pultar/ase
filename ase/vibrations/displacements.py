@@ -200,7 +200,7 @@ class AxisAlignedDisplacements(Displacements):
     }
 
     def __init__(self, atoms, *,
-                 indices: tp.Sequence[int],
+                 indices: tp.Optional[tp.Sequence[int]] = None,
                  nfree: int = 2,
                  direction: str = 'central',
                  delta: float = DEFAULT_DELTA):
@@ -241,7 +241,7 @@ class AxisAlignedDisplacements(Displacements):
             return AxisAlignedDisplacement(atom=atom, axis=axis, step=step)
 
     def compute_cartesian_derivatives(self, data: np.ndarray):
-        disp_indices = {disp: i for (i, disp) in enumerate(self)}
+        disp_indices = {disp.name: i for (i, disp) in enumerate(self)}
         if len(disp_indices) != len(data):
             raise ValueError(f"data has wrong size for outermost dimension (expected {len(disp_indices)}, got {len(data)})")
 
@@ -252,7 +252,7 @@ class AxisAlignedDisplacements(Displacements):
         for atom in self._indices:
             for axis in range(3):
                 derivs[atom][axis] = sum(
-                    coeff * data[disp_indices[self._get_disp(atom=atom, axis=axis, step=step)]]
+                    coeff * data[disp_indices[self._get_disp(atom=atom, axis=axis, step=step).name]]
                     for (coeff, step) in zip(coeffs, steps)
                 ) / self._stencil['divisor']
 

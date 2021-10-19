@@ -2,6 +2,8 @@
 
 from math import pi, sqrt, log
 import sys
+import warnings
+import typing as tp
 
 import numpy as np
 from pathlib import Path
@@ -572,14 +574,63 @@ Please remove them and recalculate or run \
                          (row[0], row[1]))
 
 
+class DisplacementHandler:
+    """Base class for computations of one property (or a small number of
+    properties) about a displaced set of atoms."""
+
+    def __init__(self, runner: 'DisplacementsRunner'):
+        runner.register(self)
+
+    def calculate(self, atoms: Atoms, disp: NewDisplacement) -> tp.Dict[str, tp.Any]:
+        """Compute information about a displaced atoms and returns a
+        dictionary of JSON-serializable data to be cached.
+
+        This function may also save other files, using ``disp.name`` to
+        create unique filenames.
+
+        DisplacementsRunner will call this function on all of its
+        registered DisplacementHandlers and then save the union of
+        the returned dicts."""
+        raise NotImplementedError
+
+
 class DisplacementsRunner(CacheMixin):
+    """Class that orchestrates computations at finite displacements.
+
+    This class maintains a filecache and makes care of @@@@@
+
+    Other classes like VibrationRunner """
+
     displacements: NewDisplacements
 
-    """Class for running computations at finite displacements."""
-    def __init__(self, name: str, displacements: NewDisplacements):
+    def __init__(self, atoms: Atoms, name: str, displacements: NewDisplacements):
         CacheMixin.__init__(self, name=name)
 
         self.displacements = displacements
+        self._atoms = atoms
+        self._handlers: tp.List[DisplacementHandler] = []
+
+        # this is here only to detect misuse
+        self._has_run = False
+
+    def register(self, handler: DisplacementHandler):
+        """Add a DisplacementHandler to the list of handlers to be
+        run on each displacement.
+
+        If the same object is added twice it will be ignored.
+
+        Users do not need to call this directly; DisplacementHandlers
+        will call it by themselves during initialization."""
+        if any(x is handler for x in self._handlers):
+            # added twice.
+            # don't warn, this could easily happen in diamond dependency trees
+            return
+
+        if self._has_run:
+            warnings.warn(f"{type(handler).__name__} was registered after displacements "
+                          "have already run, so its data will be unavailable!")
+
+        self._handlers.append(handler)
 
     def run(self):
         """Run any remaining vibration calculations.
@@ -598,9 +649,11 @@ class DisplacementsRunner(CacheMixin):
         simultaneously by several independent processes. This feature relies
         on the existence of files and the subsequent creation of the file in
         case it is not found.
+        (however, when doing this, beware that a completed call to ``run`` does
+        not mean that all computations are finished!)
         """
-        if all(disp in self._cache for disp in self.displacements):
-            return
+        if all(disp.name in self._cache for disp in self.displacements):
+            return  # don't require writability in this case
 
         if not self._cache.writable:
             raise RuntimeError(
@@ -608,16 +661,55 @@ class DisplacementsRunner(CacheMixin):
                 'Cache must be removed or split in order '
                 'to have only one sort of data structure at a time.')
 
-        for disp, atoms in self.displacements.iter_with_atoms(self.atoms, inplace=True):
-            self.handle_disp(disp, atoms)
+        for disp, atoms in self.displacements.iter_with_atoms(self._atoms, inplace=True):
+            with self._cache.lock(disp.name) as handle:
+                if handle is None:
+                    continue
+
+                result = self._do_computations_at_disp(atoms, disp)
+                handle.save(result)
+
+        self._has_run = True
+
+    def iter_disps_and_data(self) -> tp.Iterator[tp.Tuple[NewDisplacement, tp.Dict[str, tp.Any]]]:
+        """Iterate over all displacements and their computed dicts.
+        This will automatically call ``run``.
+
+        This is in the same order as ``Displacements``, so the first will be the
+        equilibrium displacement."""
+
+        self.run()
+
+        # FIXME: What if some results are still running/locked?
+        #        do we want to scan ahead and throw exceptions ahead of time?
+        for disp in self.displacements:
+            yield (disp, self._cache[disp.name])
+
+    def _do_computations_at_disp(self, atoms: Atoms, disp: NewDisplacement):
+        all_output: dict = {}
+        for handler in self._handlers:
+            new_output = handler.calculate(atoms, disp)
+            all_output = self._merge_handler_outputs(all_output, new_output)
+        return all_output
+
+    def _merge_handler_outputs(self, aggregated: dict, new_output: dict):
+        for key in new_output:
+            if key in aggregated:
+                warnings.warn("Multiple displacement handlers are writing the output "
+                              f"key {repr(key)}, it is possible that multiple distinct "
+                              "instances of a class were created.")
+
+        aggregated.update(new_output)
+        return aggregated
 
 
-class VibrationsRunner:
+class VibrationsRunner(DisplacementHandler):
     """FIXME DOC"""
 
-    displacements: NewDisplacements
+    def __init__(self, disp_runner: DisplacementsRunner, atoms: Atoms, *, indices=None):
+        super().__init__(runner=disp_runner)
 
-    def __init__(self, atoms: Atoms, disp_runner: DisplacementsRunner, indices=None):
+        self._runner = disp_runner
         self._atoms = atoms
 
         if indices is None:
@@ -628,9 +720,8 @@ class VibrationsRunner:
         indices = np.asarray(indices)
 
         # XXX restriction on indices is low priority, just keep it in mind for now...
-        # self._disp_runner = self.displacements.for_atom_indices(indices)
-        self._disp_runner = disp_runner
-        self._indices = np.asarray(indices)
+        # self.displacements = self.displacements.for_atom_indices(indices)
+        self._indices = indices
 
     @property
     def atoms(self):
@@ -642,26 +733,6 @@ class VibrationsRunner:
     def calculate(self, atoms: Atoms, disp: NewDisplacement):
         return {'forces': atoms.get_forces()}
 
-    def _get_hessian(self, force_dac, method):
-        """ Compute the hessian given the forces at displacements. """
-        method = method.lower()
-        assert method in ['standard', 'frederiksen']
-
-        if method == 'frederiksen':
-            for d, disp in enumerate(self.displacements):
-                # subtract drift force from the displaced atom
-                force_dac[d, disp.atom, :] -= force_dac[d].sum(axis=0)
-
-        assert force_dac.ndim == 3
-        natom = force_dac.shape[1]
-
-        H_acac = -1.0 * self.displacements.compute_cartesian_derivatives(force_dac)
-        H_acac = H_acac[self.indices, :, self.indices, :]
-        H_rr = H_acac.reshape(3 * natom, 3 * natom)
-        H_rr += H_rr.T
-        H_rr /= 2
-        return H_rr
-
     # XXX FIXME rename 'method' argument
     def get_vibrations(self, method='standard'):
         """Compute the Hessian and obtain information about vibrations as a VibrationsData object.
@@ -672,9 +743,29 @@ class VibrationsRunner:
             VibrationsData
 
         """
-        self.run()
-        force_dac = np.array([self._cache[disp.name] for disp in self.displacements])
-        H_rr = self._get_hessian(force_dac=force_dac, method=method)
+        force_dac = np.array([data['forces'] for (_, data) in self._runner.iter_disps_and_data()])
+        H_rr = self._hessian_from_forces(force_dac, method=method)
 
         return VibrationsData.from_2d(self._atoms, H_rr, indices=self._indices)
 
+    def _hessian_from_forces(self, force_dac: np.ndarray, method: str):
+        """ Compute the hessian given the forces at displacements. """
+        method = method.lower()
+        assert method in ['standard', 'frederiksen']
+
+        displacements = self._runner.displacements
+
+        if method == 'frederiksen':
+            for d, disp in enumerate(displacements):
+                # subtract drift force from the displaced atom
+                force_dac[d, disp.atom, :] -= force_dac[d].sum(axis=0)
+
+        assert force_dac.ndim == 3
+        natom = force_dac.shape[1]
+
+        H_acac = -1.0 * displacements.compute_cartesian_derivatives(force_dac)
+        H_acac = H_acac[self._indices, :, :, :][:, :, self._indices, :]
+        H_rr = H_acac.reshape(3 * natom, 3 * natom)
+        H_rr += H_rr.T
+        H_rr /= 2
+        return H_rr
