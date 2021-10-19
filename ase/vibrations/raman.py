@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import numpy as np
 
 import ase.units as u
@@ -545,7 +546,7 @@ class RamanOutput:
         -------
         unit e^4 Angstrom^4 / eV^2
         """
-        assert False  # XXX TEST COVERAGE
+        # assert False  # XXX TEST COVERAGE
         alpha_Qcc = self._me_Qcc
         if observation is None:
             observation = {'geometry': '-Z(XX)Z'}

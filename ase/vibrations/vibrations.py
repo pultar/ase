@@ -572,80 +572,8 @@ Please remove them and recalculate or run \
                          (row[0], row[1]))
 
 
-class VibrationsRunner(CacheMixin):
-    """FIXME DOC"""
-
-    def __init__(self, atoms: Atoms, indices=None, name='vib', displacements: NewDisplacements = None):
-        CacheMixin.__init__(self, name=name)
-
-        self._atoms = atoms
-
-        if displacements is None:
-            displacements = AxisAlignedDisplacements(delta=1e-2)
-
-        if indices is None:
-            indices = range(len(atoms))
-        elif len(indices) != len(set(indices)):
-            raise ValueError(
-                'one (or more) indices included more than once')
-        indices = np.asarray(indices)
-
-        self._displacements = displacements.for_atom_indices(indices)
-        self._indices = np.asarray(indices)
-
-    @property
-    def displacements(self):
-        return self._displacements
-
-    @property
-    def name(self):
-        return str(self._cache.directory)
-
-    # --------------
-    # The meaty bits
-
-    def handle_disp(self, atoms: Atoms, disp: NewDisplacement):
-        with self.cache.lock(disp.name) as handle:
-            if handle is None:
-                return
-            handle.save({'forces': atoms.get_forces()})
-
-    def _get_hessian(self, force_dac, method):
-        """ Compute the hessian given the forces at displacements. """
-        method = method.lower()
-        assert method in ['standard', 'frederiksen']
-
-        if method == 'frederiksen':
-            for d, disp in enumerate(self.displacements):
-                # subtract drift force from the displaced atom
-                force_dac[d, d.atom, :] -= force_dac[d].sum(axis=0)
-
-        assert force_dac.ndim == 3
-        natom = force_dac.shape[1]
-
-        H_acac = -1.0 * self.displacements.compute_cartesian_derivatives(force_dac)
-        H_acac = H_acac[self.indices, :, self.indices, :]
-        H_rr = H_acac.reshape(3 * natom, 3 * natom)
-        H_rr += H_rr.T
-        H_rr /= 2
-        return H_rr
-
-    # XXX FIXME rename 'method' argument
-    def get_vibrations(self, method='standard'):
-        """Compute the Hessian and obtain information about vibrations as a VibrationsData object.
-        Args:
-            method (str): 'standard' or 'frederiksen'
-
-        Returns:
-            VibrationsData
-
-        """
-        self.run()
-        force_dac = np.array([self._cache[disp.name] for disp in self.displacements])
-        H_rr = self._get_hessian(force_dac=force_dac, method=method)
-
-        return VibrationsData.from_2d(self._atoms, H_rr, indices=self._indices)
-
+class DisplacementsRunner(CacheMixin):
+    def __init__(self, displacements, name)
     def run(self):
         """Run any remaining vibration calculations.
 
@@ -674,4 +602,81 @@ class VibrationsRunner(CacheMixin):
                 'to have only one sort of data structure at a time.')
 
         for disp, atoms in self.displacements.iter_with_atoms(self.atoms, inplace=True):
-            self.handle_disp(disp)
+            self.handle_disp(disp, atoms)
+
+
+class VibrationsRunner(DisplacementsRunner):
+    """FIXME DOC"""
+
+    def __init__(self, atoms: Atoms, indices=None, name='vib', displacements: NewDisplacements = None):
+        CacheMixin.__init__(self, name=name)
+
+        self._atoms = atoms
+
+        if displacements is None:
+            displacements = AxisAlignedDisplacements(delta=1e-2)
+
+        if indices is None:
+            indices = range(len(atoms))
+        elif len(indices) != len(set(indices)):
+            raise ValueError(
+                'one (or more) indices included more than once')
+        indices = np.asarray(indices)
+
+        self._displacements = displacements.for_atom_indices(indices)
+        self._indices = np.asarray(indices)
+
+    @property
+    def displacements(self):
+        return self._displacements
+
+    @property
+    def name(self):
+        return str(self._cache.directory)
+
+    @property
+    def atoms(self):
+        return self._atoms
+
+    # --------------
+    # The meaty bits
+
+    def calculate(self, atoms: Atoms, disp: NewDisplacement):
+        return {'forces': atoms.get_forces()}
+
+    def _get_hessian(self, force_dac, method):
+        """ Compute the hessian given the forces at displacements. """
+        method = method.lower()
+        assert method in ['standard', 'frederiksen']
+
+        if method == 'frederiksen':
+            for d, disp in enumerate(self.displacements):
+                # subtract drift force from the displaced atom
+                force_dac[d, disp.atom, :] -= force_dac[d].sum(axis=0)
+
+        assert force_dac.ndim == 3
+        natom = force_dac.shape[1]
+
+        H_acac = -1.0 * self.displacements.compute_cartesian_derivatives(force_dac)
+        H_acac = H_acac[self.indices, :, self.indices, :]
+        H_rr = H_acac.reshape(3 * natom, 3 * natom)
+        H_rr += H_rr.T
+        H_rr /= 2
+        return H_rr
+
+    # XXX FIXME rename 'method' argument
+    def get_vibrations(self, method='standard'):
+        """Compute the Hessian and obtain information about vibrations as a VibrationsData object.
+        Args:
+            method (str): 'standard' or 'frederiksen'
+
+        Returns:
+            VibrationsData
+
+        """
+        self.run()
+        force_dac = np.array([self._cache[disp.name] for disp in self.displacements])
+        H_rr = self._get_hessian(force_dac=force_dac, method=method)
+
+        return VibrationsData.from_2d(self._atoms, H_rr, indices=self._indices)
+

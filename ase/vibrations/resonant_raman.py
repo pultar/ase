@@ -1,12 +1,17 @@
 """Resonant Raman intensities"""
 
+from abc import abstractmethod
 import sys
 from pathlib import Path
 import numpy as np
+import typing as tp
 
 import ase.units as u
+from ase.calculators import Calculator
+from ase.calculators.excitation_list import ExcitationList, ExcitationListCalculator
 from ase.parallel import world, paropen, parprint
-from ase.vibrations import Vibrations
+from ase.vibrations.displacements import Displacement
+from ase.vibrations.vibrations import Vibrations, Displacement as OldDisplacement
 from ase.vibrations.raman import Raman, RamanCalculatorBase
 
 
@@ -584,3 +589,22 @@ class LrResonantRaman(ResonantRaman):
         self.exF_rp = np.array(self.exF_rp) * eu / 2 / self.delta
         self.exmm_rpc = np.array(exmm_rpc) * u.Bohr
         self.expm_rpc = np.array(expm_rpc) * u.Bohr
+
+def _copy_atoms_calc(atoms):
+    # XXXX stupid way to make a copy
+    import tempfile
+    import shutil
+    atoms.get_potential_energy()
+
+    tempdir = Path(tempfile.mkdtemp())
+    fname = tempdir / 'tmp.gpw'
+    atoms.calc.write(fname, 'all')
+    copied = atoms.calc.__class__(restart=fname)
+    shutil.rmtree(tempdir)
+    try:
+        # XXX GPAW specific
+        copied.converge_wave_functions()
+    except AttributeError:
+        pass
+
+    return copied
