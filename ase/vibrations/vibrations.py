@@ -573,7 +573,14 @@ Please remove them and recalculate or run \
 
 
 class DisplacementsRunner(CacheMixin):
-    def __init__(self, displacements, name)
+    displacements: NewDisplacements
+
+    """Class for running computations at finite displacements."""
+    def __init__(self, name: str, displacements: NewDisplacements):
+        CacheMixin.__init__(self, name=name)
+
+        self.displacements = displacements
+
     def run(self):
         """Run any remaining vibration calculations.
 
@@ -605,16 +612,13 @@ class DisplacementsRunner(CacheMixin):
             self.handle_disp(disp, atoms)
 
 
-class VibrationsRunner(DisplacementsRunner):
+class VibrationsRunner:
     """FIXME DOC"""
 
-    def __init__(self, atoms: Atoms, indices=None, name='vib', displacements: NewDisplacements = None):
-        CacheMixin.__init__(self, name=name)
+    displacements: NewDisplacements
 
+    def __init__(self, atoms: Atoms, disp_runner: DisplacementsRunner, indices=None):
         self._atoms = atoms
-
-        if displacements is None:
-            displacements = AxisAlignedDisplacements(delta=1e-2)
 
         if indices is None:
             indices = range(len(atoms))
@@ -623,16 +627,10 @@ class VibrationsRunner(DisplacementsRunner):
                 'one (or more) indices included more than once')
         indices = np.asarray(indices)
 
-        self._displacements = displacements.for_atom_indices(indices)
+        # XXX restriction on indices is low priority, just keep it in mind for now...
+        # self._disp_runner = self.displacements.for_atom_indices(indices)
+        self._disp_runner = disp_runner
         self._indices = np.asarray(indices)
-
-    @property
-    def displacements(self):
-        return self._displacements
-
-    @property
-    def name(self):
-        return str(self._cache.directory)
 
     @property
     def atoms(self):
