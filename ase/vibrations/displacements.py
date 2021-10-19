@@ -4,6 +4,9 @@ import numpy as np
 from ase.atoms import Atoms
 
 
+DEFAULT_DELTA = 1e-2
+
+
 class Displacement(tp.Protocol):
     """API for a displacement.
 
@@ -44,10 +47,6 @@ class EqDisplacement:
 
     def vector(self, delta: float) -> np.ndarray:
         return np.zeros((3,), dtype=float)
-
-# Possible implementations:
-#  - AxisAlignedDisplacements
-#  - SymmetryReducedDisplacements
 
 
 class Displacements(abc.ABC):
@@ -160,7 +159,6 @@ class AxisAlignedDisplacementBase(tp.NamedTuple):
     atom: int
     axis: int
     step: int
-    # No additional data; this uses __eq__ and __hash__ from namedtuple.
 
 
 class AxisAlignedDisplacement(AxisAlignedDisplacementBase):
@@ -170,11 +168,6 @@ class AxisAlignedDisplacement(AxisAlignedDisplacementBase):
         multiple = '' if abs(self.step) == 1 else str(self.step)
         return f'{self.atom}{"xyz"[self.axis]}{sign}{multiple}'
 
-    @property
-    def atom(self) -> int:
-        return self.atom
-
-    @property
     def vector(self, delta: float) -> np.ndarray:
         direction = np.zeros((3,), dtype=float)
         direction[self.axis] = 1
@@ -206,7 +199,13 @@ class AxisAlignedDisplacements(Displacements):
         ('central', 4): {'points': [2, 1, -1, -2], 'coeffs': [-1, 8, -8, 1], 'divisor': 12},
     }
 
-    def __init__(self, atoms, *, indices: tp.Sequence[int], nfree: int = 2, direction: str = 'central'):
+    def __init__(self, atoms, *,
+                 indices: tp.Sequence[int],
+                 nfree: int = 2,
+                 direction: str = 'central',
+                 delta: float = DEFAULT_DELTA):
+        super().__init__(delta=delta)
+
         direction = direction.lower()
         assert nfree in [2, 4]
         assert direction in ['central', 'backward', 'forward']
@@ -217,7 +216,7 @@ class AxisAlignedDisplacements(Displacements):
             raise ValueError(
                 'one (or more) indices included more than once')
 
-        if (direction, nfree) not in self.STENCIL_COEFFS:
+        if (direction, nfree) not in self.STENCIL_DATA:
             raise RuntimeError(
                 f'stencil for direction={repr(direction)}, nfree={nfree} not implemented')
 
@@ -225,7 +224,7 @@ class AxisAlignedDisplacements(Displacements):
         self._indices = indices
         self._nfree = nfree
         self._direction = direction
-        self._stencil = self.STENCIL_COEFFS[self._direction, self._nfree]
+        self._stencil = self.STENCIL_DATA[self._direction, self._nfree]
 
     def nontrivial_disps(self):
         steps = [x for x in self._stencil['points'] if x != 0]
@@ -242,7 +241,7 @@ class AxisAlignedDisplacements(Displacements):
             return AxisAlignedDisplacement(atom=atom, axis=axis, step=step)
 
     def compute_cartesian_derivatives(self, data: np.ndarray):
-        disp_indices = {disp: i for (i, disp) in enumerate(self.iterdisps())}
+        disp_indices = {disp: i for (i, disp) in enumerate(self)}
         if len(disp_indices) != len(data):
             raise ValueError(f"data has wrong size for outermost dimension (expected {len(disp_indices)}, got {len(data)})")
 
