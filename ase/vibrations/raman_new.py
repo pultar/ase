@@ -11,9 +11,6 @@ from ase.vibrations.vibrations import VibrationsRunner
 from ase.vibrations.displacements import Displacement
 from ase.vibrations.resonant_raman import _copy_atoms_calc
 
-EC = tp.TypeVar('EC', bound='ExcitationListCalculator')
-PC = tp.TypeVar('PC', bound='StaticPolarizabilityCalculator')
-
 class ResonantRamanRunner:
     """Base class for resonant Raman calculators using finite differences.
 
@@ -21,10 +18,8 @@ class ResonantRamanRunner:
     ----------
     vibrations: VibrationsRunner
         The VibrationsRunner object
-    ExcitationsCalculator: object
+    excalc: ExcitationListCalculator
         Calculator for excited states
-    exkwargs: dict
-        Arguments given to the ExcitationsCalculator object
     exext: string
         Extension for filenames of Excitation lists (results of
         the ExcitationsCalculator).
@@ -48,17 +43,15 @@ class ResonantRamanRunner:
     """
     def __init__(self,
                  vibrations: VibrationsRunner,
-                 ExcitationsCalculator: tp.Type[EC],
-                 exkwargs=None,
+                 excalc: ExcitationListCalculator,
                  exname=str,
                  exext='.ex.gz',
                  overlap: tp.Optional[tp.Callable[[Calculator, Calculator], np.ndarray]]=None,
                  ):
         self._atoms = vibrations.atoms
         self._vibrations = vibrations
-        self._ExListCalc = ExcitationsCalculator
+        self._excalc = excalc
         self._exname = exname
-        self._exkwargs = exkwargs or {}
         self._overlap = overlap
         self._exext = exext
 
@@ -81,7 +74,7 @@ class ResonantRamanRunner:
                                   self._eq_calculator)
             self.save_ov_nn(ov_nn, disp)
 
-        exlist = self.compute_exlist(atoms)
+        exlist = self._compute_exlist(atoms)
         self.save_exlist(exlist, disp)
         return returnvalue
 
@@ -91,9 +84,8 @@ class ResonantRamanRunner:
     def _exlist_filename(self, disp: Displacement):
         return Path(self._exname) / f'pol.{disp.name}{self._exext}'
 
-    def compute_exlist(self, atoms: Atoms):
-        excalc = self._ExListCalc(**self._exkwargs)  # type: ignore
-        return excalc.calculate(atoms)
+    def _compute_exlist(self, atoms: Atoms):
+        return self._excalc.calculate(atoms)
 
     def save_exlist(self, exlist: ExcitationList, disp: Displacement):
         # XXX each exobj should allow for self._exname as Path
@@ -101,8 +93,7 @@ class ResonantRamanRunner:
 
     def load_exlist(self, disp: Displacement) -> ExcitationList:
         # XXX each exobj should allow for self._exname as Path
-        excalc = self._ExListCalc(**self._exkwargs)  # type: ignore
-        return excalc.read(str(self._exlist_filename(disp)), **self._exkwargs)
+        return self._excalc.read(str(self._exlist_filename(disp)), **self._exkwargs)
 
     def _ov_nn_filename(self, disp: Displacement):
         return Path(self._exname) / (disp.name + '.ov')
@@ -119,15 +110,13 @@ class StaticPolarizabilityRamanRunner:
     """FIXME TODO"""
     def __init__(self,
                  vibrations: VibrationsRunner,
-                 PolarizabilityCalculator: tp.Type[PC],
-                 polkwargs=None,
+                 polcalc: StaticPolarizabilityCalculator,
                  polname=str,
                  polext='.pol.gz',
                  ):
         self._vibrations = vibrations
-        self._polobj = PolarizabilityCalculator
+        self._polcalc = polcalc
         self._polname = polname
-        self._polkwargs = polkwargs or {}
         self._polext = polext
 
     def calculate(self, atoms: Atoms, disp: Displacement):
@@ -143,8 +132,7 @@ class StaticPolarizabilityRamanRunner:
         return Path(self._polname) / f'pol.{disp.name}{self._polext}'
 
     def compute_static_polarizability(self, atoms: Atoms) -> np.ndarray:
-        polobj = self._PolCalc(**self._polkwargs)  # type: ignore
-        pol_tensor = polobj(atoms)
+        pol_tensor = self._polcalc(atoms)
         return pol_tensor
 
     def save_static_polarizability(self, pol_tensor: np.ndarray, disp: Displacement):

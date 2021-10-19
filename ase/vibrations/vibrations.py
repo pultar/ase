@@ -13,7 +13,7 @@ from ase.atoms import Atoms
 
 from ase.utils.filecache import get_json_cache
 from .data import VibrationsData
-from .displacements import Displacements as NewDisplacements, Displacement as NewDisplacement
+from .displacements import Displacements as NewDisplacements, Displacement as NewDisplacement, AxisAlignedDisplacements
 
 from collections import namedtuple
 
