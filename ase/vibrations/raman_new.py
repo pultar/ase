@@ -11,36 +11,9 @@ from ase.vibrations.vibrations import VibrationsRunner
 from ase.vibrations.displacements import Displacement
 from ase.vibrations.resonant_raman import _copy_atoms_calc
 
+
 class ResonantRamanRunner:
-    """Base class for resonant Raman calculators using finite differences.
-
-    Parameters
-    ----------
-    vibrations: VibrationsRunner
-        The VibrationsRunner object
-    excalc: ExcitationListCalculator
-        Calculator for excited states
-    exext: string
-        Extension for filenames of Excitation lists (results of
-        the ExcitationsCalculator).
-    overlap : function or False
-        Function to calculate overlaps between excitation at
-        equilibrium and at a displaced position. Calculators are
-        given as first and second argument, respectively.
-
-    Example
-    -------
-
-    >>> from ase.calculators.h2morse import (H2Morse,
-    ...                                      H2MorseExcitedStatesCalculator)
-    >>> from ase.vibrations.resonant_raman import ResonantRamanCalculator
-    >>>
-    >>> atoms = H2Morse()
-    >>> rmc = ResonantRamanCalculator(atoms, H2MorseExcitedStatesCalculator)
-    >>> rmc.run()
-
-    This produces all necessary data for further analysis.
-    """
+    """TODO DOC"""
     def __init__(self,
                  vibrations: VibrationsRunner,
                  excalc: ExcitationListCalculator,
@@ -66,10 +39,9 @@ class ResonantRamanRunner:
         returnvalue = self._vibrations.calculate(atoms, disp)
 
         if self._overlap:
-            """Overlap is determined as
-
-            ov_ij = int dr displaced*_i(r) eqilibrium_j(r)
-            """
+            # Overlap is determined as
+            #
+            # ov_ij = int dr displaced*_i(r) eqilibrium_j(r)
             ov_nn = self._overlap(self._atoms.calc,
                                   self._eq_calculator)
             self.save_ov_nn(ov_nn, disp)
@@ -82,7 +54,7 @@ class ResonantRamanRunner:
         self._vibrations.run()
 
     def _exlist_filename(self, disp: Displacement):
-        return Path(self._exname) / f'pol.{disp.name}{self._exext}'
+        return Path(self._exname) / f'ex.{disp.name}{self._exext}'
 
     def _compute_exlist(self, atoms: Atoms):
         return self._excalc.calculate(atoms)
@@ -93,7 +65,7 @@ class ResonantRamanRunner:
 
     def load_exlist(self, disp: Displacement) -> ExcitationList:
         # XXX each exobj should allow for self._exname as Path
-        return self._excalc.read(str(self._exlist_filename(disp)), **self._exkwargs)
+        return self._excalc.read(str(self._exlist_filename(disp)))
 
     def _ov_nn_filename(self, disp: Displacement):
         return Path(self._exname) / (disp.name + '.ov')
@@ -141,3 +113,6 @@ class StaticPolarizabilityRamanRunner:
 
     def load_static_polarizability(self, disp: Displacement):
         return np.loadtxt(self._static_polarizability_filename(disp))
+
+# TODO: need something Plazcek related to get RamanOutput from StaticPolarizabilityRamanRunner
+#
