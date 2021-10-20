@@ -128,7 +128,7 @@ class Displacements(abc.ABC):
         for disp in displacements:
             if not inplace:
                 atoms = initial_atoms.copy()
-            pos0 = atoms.positions[disp.atom]
+            pos0 = atoms.positions[disp.atom].copy()
             atoms.positions[disp.atom] += disp.vector(self.delta)
             yield disp, atoms
 
@@ -172,6 +172,9 @@ class AxisAlignedDisplacement(AxisAlignedDisplacementBase):
         direction = np.zeros((3,), dtype=float)
         direction[self.axis] = 1
         return direction * delta * self.step
+
+    def __hash__(self):
+        raise TypeError(f'{type(self).__name__} is not hashable, please use disp.name')
 
 
 # TODO: tests that each stencil is accurate up to expected error
@@ -236,7 +239,7 @@ class AxisAlignedDisplacements(Displacements):
 
     def _get_disp(self, atom, axis, step):
         if step == 0:
-            return self.eq_disp
+            return self.eq_disp()
         else:
             return AxisAlignedDisplacement(atom=atom, axis=axis, step=step)
 
@@ -254,6 +257,6 @@ class AxisAlignedDisplacements(Displacements):
                 derivs[atom][axis] = sum(
                     coeff * data[disp_indices[self._get_disp(atom=atom, axis=axis, step=step).name]]
                     for (coeff, step) in zip(coeffs, steps)
-                ) / self._stencil['divisor']
+                ) / (self._stencil['divisor'] * self.delta)
 
         return derivs

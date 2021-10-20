@@ -347,6 +347,7 @@ Please remove them and recalculate or run \
             if self.method == 'frederiksen':
                 fminus[a] -= fminus.sum(0)
                 fplus[a] -= fplus.sum(0)
+
             if self.nfree == 4:
                 fminusminus = self._disp(a, i, -2).forces()
                 fplusplus = self._disp(a, i, 2).forces()
@@ -766,6 +767,6 @@ class VibrationsRunner(DisplacementHandler):
         H_acac = -1.0 * displacements.compute_cartesian_derivatives(force_dac)
         H_acac = H_acac[self._indices, :, :, :][:, :, self._indices, :]
         H_rr = H_acac.reshape(3 * natom, 3 * natom)
-        H_rr += H_rr.T
+        H_rr += H_rr.copy().T
         H_rr /= 2
         return H_rr
