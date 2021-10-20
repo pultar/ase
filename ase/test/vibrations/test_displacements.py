@@ -88,18 +88,17 @@ def test_axis_aligned_stencil_approximations():
     natom = 4
     atoms = Atoms(symbols=f'H{natom}', positions=np.ones((natom, 3)))
 
-    for _ in range(10000):
-        for case in test_cases:
-            # typical case: a small step to compute something for which
-            #               our approximation is inexact
-            poly = AxisAlignedPolynomial.random(rng, atoms, order=case.exact_order + 1)
-            actual_derivs = compute_deriv_via_displacements(poly, case, step=1e-3)
-            expected_derivs = poly.derivative(atoms)
-            assert pytest.approx(actual_derivs, rel=case.e3_reltol) == expected_derivs, case
+    for case in test_cases:
+        # typical case: a small step to compute something for which
+        #               our approximation is inexact
+        poly = AxisAlignedPolynomial.random(rng, atoms, order=case.exact_order + 1)
+        actual_derivs = compute_deriv_via_displacements(poly, case, step=1e-3)
+        expected_derivs = poly.derivative(atoms)
+        assert pytest.approx(actual_derivs, rel=case.e3_reltol) == expected_derivs, case
 
-            # error test: demand high precision for a polynomial where
-            #             our approximation is exact
-            poly = AxisAlignedPolynomial.random(rng, atoms, order=case.exact_order)
-            actual_derivs = compute_deriv_via_displacements(poly, case, step=1e0)
-            expected_derivs = poly.derivative(atoms)
-            assert pytest.approx(actual_derivs, rel=1e-9) == expected_derivs
+        # error test: demand high precision for a polynomial where
+        #             our approximation is exact
+        poly = AxisAlignedPolynomial.random(rng, atoms, order=case.exact_order)
+        actual_derivs = compute_deriv_via_displacements(poly, case, step=1e0)
+        expected_derivs = poly.derivative(atoms)
+        assert pytest.approx(actual_derivs, rel=1e-9) == expected_derivs

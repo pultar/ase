@@ -104,8 +104,8 @@ class ExcitationList(list, abc.ABC):
         # set default energy scale to get eV
         self.energy_to_eV_scale = 1.
 
-    @abc.abstractmethod
     @classmethod
+    @abc.abstractmethod
     def read(cls: tp.Type[EXL], filename, **kwargs) -> EXL:
         """Read from a filepath."""
         raise NotImplementedError
