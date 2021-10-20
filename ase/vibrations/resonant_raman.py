@@ -7,17 +7,15 @@ import numpy as np
 import typing as tp
 
 import ase.units as u
-from ase.calculators import Calculator
-from ase.calculators.excitation_list import ExcitationList, ExcitationListCalculator
 from ase.parallel import world, paropen, parprint
-from ase.vibrations.displacements import Displacement
-from ase.vibrations.vibrations import Vibrations, Displacement as OldDisplacement
+from ase.vibrations.vibrations import Vibrations
 from ase.vibrations.raman import Raman, RamanCalculatorBase
 
 
 class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
     """Base class for resonant Raman calculators using finite differences.
     """
+
     def __init__(self, atoms, ExcitationsCalculator, *args,
                  exkwargs=None, exext='.ex.gz', overlap=False,
                  **kwargs):
@@ -102,6 +100,7 @@ class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
 class ResonantRaman(Raman):
     """Base Class for resonant Raman intensities using finite differences.
     """
+
     def __init__(self, atoms, Excitations, *args,
                  observation=None,
                  form='v',         # form of the dipole operator
@@ -589,6 +588,7 @@ class LrResonantRaman(ResonantRaman):
         self.exF_rp = np.array(self.exF_rp) * eu / 2 / self.delta
         self.exmm_rpc = np.array(exmm_rpc) * u.Bohr
         self.expm_rpc = np.array(expm_rpc) * u.Bohr
+
 
 def _copy_atoms_calc(atoms):
     # XXXX stupid way to make a copy

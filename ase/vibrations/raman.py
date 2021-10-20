@@ -48,6 +48,7 @@ class RamanCalculatorBase(IOContext):
 class StaticRamanCalculatorBase(RamanCalculatorBase):
     """Base class for Raman intensities derived from
     static polarizabilities"""
+
     def __init__(self, atoms, exobj, exkwargs=None, *args, **kwargs):
         self.exobj = exobj
         if exkwargs is None:
@@ -113,16 +114,19 @@ class RamanBase(AtomicDisplacements, IOContext):
 def _m2(z):
     return (z * z.conj()).real
 
+
 def _map_to_modes(V_rcc, im_r, modes_Qq):
     V_qcc = (V_rcc.T * im_r).T  # units Angstrom^2 / sqrt(amu)
     V_Qcc = np.dot(V_qcc.T, modes_Qq.T).T
     return V_Qcc
 
 # FIXME: Name should include e.g. an author name or something to distinguish from albrecht
+
+
 def _me_Qcc(
         elme_Qcc,  # Angstrom^2 / sqrt(amu)
         vib01_Q,
-        ):
+):
     """Full matrix element
 
     Returns
@@ -133,6 +137,7 @@ def _me_Qcc(
     assert False  # XXX TEST COVERAGE
     temp_Qcc = elme_Qcc / (u.Hartree * u.Bohr)  # e^2 Angstrom / eV / sqrt(amu)
     return elme_Qcc * vib01_Q[:, None, None]
+
 
 def _get_absolute_intensities(
         elme_Qcc,
@@ -157,6 +162,7 @@ def _get_absolute_intensities(
     """
     alpha2_r, gamma2_r, delta2_r = _invariants(elme_Qcc)
     return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
+
 
 def _intensity(alpha_Qcc, observation):
     """Raman intensity
@@ -194,6 +200,7 @@ def _intensity(alpha_Qcc, observation):
     else:
         raise NotImplementedError
 
+
 def _invariants(alpha_Qcc):
     """Raman invariants
 
@@ -224,6 +231,7 @@ def _invariants(alpha_Qcc):
                     m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
                     m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
     return alpha2_r, gamma2_r, delta2_r
+
 
 def _summary(log, hnu, intensities):
     te = int(np.log10(intensities.max())) - 2
@@ -268,6 +276,7 @@ def _summary(log, hnu, intensities):
 #         reused by the new classes RamanOutput.
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
+
     def __init__(self, atoms,  # XXX do we need atoms at this stage ?
                  *args,
                  exname=None,      # name for excited state calculations
@@ -485,6 +494,7 @@ class RamanOutput:
     """Class containing matrix elements from a Raman computation.
 
     From this, the Raman intensities of modes can be computed."""
+
     def __init__(self,
                  vibrations: VibrationsData,
                  elme_Qcc: np.ndarray,
