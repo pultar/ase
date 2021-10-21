@@ -226,9 +226,6 @@ class GULP(FileIOCalculator):
                     for k in range(3):
                         lattice_vectors[j-s][k] = float(temp[k])
                 self.atoms.set_cell(lattice_vectors)
-                if self.fractional_coordinates is not None:
-                    self.fractional_coordinates = np.array(self.fractional_coordinates)
-                    self.atoms.set_scaled_positions(self.fractional_coordinates)
 
             elif line.find('Final fractional coordinates of atoms') != -1:
                 s = i + 5
@@ -244,6 +241,9 @@ class GULP(FileIOCalculator):
                     scaled_positions.append(XYZ)
                 self.fractional_coordinates = scaled_positions
 
+        if self.fractional_coordinates is not None:
+            self.fractional_coordinates = np.array(self.fractional_coordinates)
+            self.atoms.set_scaled_positions(self.fractional_coordinates)
         self.steps = cycles
 
     def get_opt_state(self):
