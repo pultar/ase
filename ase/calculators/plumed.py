@@ -32,7 +32,7 @@ def restart_from_trajectory(prev_traj, *args, prev_steps=None, atoms=None, **kwa
 
 
 class Plumed(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'forces','stress','free_energy']
     
     def __init__(self, calc, input, timestep, atoms=None, kT=1., log='', 
                  restart=False, use_charge=False, update_charge=False):
@@ -131,11 +131,15 @@ class Plumed(Calculator):
                 self.plumed.cmd("readInputLine", line)
         self.atoms = atoms
 
-    def calculate(self, atoms=None, properties=['energy', 'forces'], system_changes=all_changes):
+    def calculate(self, atoms=None, properties=['energy', 'forces','stress','free_energy'], system_changes=all_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
         energy, forces = self.compute_energy_and_forces(self.atoms.get_positions(), self.istep)
-        self.istep += 1
+
         self.results['energy'], self. results['forces'] = energy, forces
+        self.results['free_energy'] = energy
+        if 'stress' in properties:
+            self.results['stress'] = self.calc.get_stress() + self.calculate_stress_bias(atoms, d=1e-06, voigt=True)
+        self.istep += 1
 
     def compute_energy_and_forces(self, pos, istep):
         unbiased_energy = self.calc.get_potential_energy(self.atoms)
@@ -179,6 +183,53 @@ class Plumed(Calculator):
         self.plumed.cmd("getBias", energy_bias)
         return [energy_bias, forces_bias]
     
+    def calculate_stress_bias(self,atoms, d=1e-06, voigt=True):
+        '''
+
+        calculate stress due to plumed bias, 
+        code adapted from calculator/calculate_numerical_stress
+
+        '''
+
+        unbiased_energy = self.calc.get_potential_energy(self.atoms)
+        stress = np.zeros((3, 3), dtype=float)
+
+        cell = atoms.cell.copy()
+        V = atoms.get_volume()
+        for i in range(3):
+            x = np.eye(3)
+            x[i, i] += d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+
+            x[i, i] -= 2 * d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            stress[i, i] = (eplus - eminus) / (2 * d * V)
+            x[i, i] += d
+
+            j = i - 2
+            x[i, j] = d
+            x[j, i] = d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            x[i, j] = -d
+            x[j, i] = -d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            stress[i, j] = (eplus - eminus) / (4 * d * V)
+            stress[j, i] = stress[i, j]
+        atoms.set_cell(cell, scale_atoms=True)
+
+        if voigt:
+            return stress.flat[[0, 4, 8, 5, 2, 1]]
+        else:
+            return stress
+
     def write_plumed_files(self, images):
         """ This function computes what is required in
         plumed input for some trajectory.
