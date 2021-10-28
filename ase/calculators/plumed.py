@@ -120,15 +120,20 @@ class Plumed(Calculator):
             self.plumed.cmd("setMDChargeUnits", 1.)      # ASE and plumed - charge unit is in e units
             self.plumed.cmd("setMDMassUnits", 1.)        # ASE and plumed - mass unit is in e units
 
+            #self.plumed.cmd("setPlumedDat", self.fn)
+
             self.plumed.cmd("setNatoms", natoms)
             self.plumed.cmd("setMDEngine", "ASE")
             self.plumed.cmd("setLogFile", log)
+
             self.plumed.cmd("setTimestep", float(timestep))
             self.plumed.cmd("setRestart", restart)
-            self.plumed.cmd("setKbT", float(kT))
+
+            #self.plumed.cmd("setKbT", float(kT)) #niet in yaff
             self.plumed.cmd("init")
             for line in input:
                 self.plumed.cmd("readInputLine", line)
+                
         self.atoms = atoms
 
     def calculate(self, atoms=None, properties=['energy', 'forces','stress','free_energy'], system_changes=all_changes):
@@ -171,16 +176,29 @@ class Plumed(Calculator):
             self.plumed.cmd("setCharges", charges)
         
         self.plumed.cmd("setPositions", pos)
-        self.plumed.cmd("setEnergy", unbiased_energy)
+        #self.plumed.cmd("setEnergy", unbiased_energy)  #not in yaff
         self.plumed.cmd("setMasses", self.atoms.get_masses())
+
+
+        # cell = self.atoms.get_cell()
+        # print(cell[:])
+        self.plumed.cmd("setBox", cell[:] )
+
         forces_bias = np.zeros((self.atoms.get_positions()).shape)
         self.plumed.cmd("setForces", forces_bias)
         virial = np.zeros((3, 3))
         self.plumed.cmd("setVirial", virial)
         self.plumed.cmd("prepareCalc")
-        self.plumed.cmd("performCalc")
+        self.plumed.cmd("performCalcNoUpdate")
         energy_bias = np.zeros((1,))
         self.plumed.cmd("getBias", energy_bias)
+
+        self.plumed.cmd("update")
+
+
+        # print("bias forces") 
+        # print(forces_bias) 
+
         return [energy_bias, forces_bias]
     
     def calculate_stress_bias(self,atoms, d=1e-06, voigt=True):
