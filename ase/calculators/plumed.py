@@ -15,7 +15,7 @@ def restart_from_trajectory(prev_traj, *args, prev_steps=None, atoms=None, **kwa
         ----------  
         calc: Calculator object
             It  computes the unbiased forces
-    
+
     .. note:: As alternative for restarting a plumed simulation, the user
             has to fix the positions, momenta and Plumed.istep
     """
@@ -32,14 +32,14 @@ def restart_from_trajectory(prev_traj, *args, prev_steps=None, atoms=None, **kwa
 
 
 class Plumed(Calculator):
-    implemented_properties = ['energy', 'forces']
-    
+    implemented_properties = ['energy', 'forces', 'stress', 'free_energy']
+
     def __init__(self, calc, input, timestep, atoms=None, kT=1., log='', 
                  restart=False, use_charge=False, update_charge=False):
         """
         Plumed calculator is used for simulations of enhanced sampling methods
         with the open-source code PLUMED (plumed.org).
-        
+
         [1] The PLUMED consortium, Nat. Methods 16, 670 (2019)
         [2] Tribello, Bonomi, Branduardi, Camilloni, and Bussi, 
         Comput. Phys. Commun. 185, 604 (2014)
@@ -48,13 +48,13 @@ class Plumed(Calculator):
         ----------  
         calc: Calculator object
             It  computes the unbiased forces
-        
+
         input: List of strings
             It contains the setup of plumed actions
 
         timestep: float
             Timestep of the simulated dynamics
-        
+
         atoms: Atoms
             Atoms object to be attached
 
@@ -67,10 +67,10 @@ class Plumed(Calculator):
         kT: float. Default 1.
             Value of the thermal energy in eV units. It is important for
             some of the methods of plumed like Well-Tempered Metadynamics.
-        
+
         log: string
             Log file of the plumed calculations
-        
+
         restart: boolean. Default False
             True if the simulation is restarted.
 
@@ -89,14 +89,14 @@ class Plumed(Calculator):
             to the last coniguration in the previous simulation, while Plumed.istep 
             is the number of timesteps performed previously. This can be done 
             using ase.calculators.plumed.restart_from_trajectory.
-        
+
         """
 
         from plumed import Plumed as pl
 
         if atoms is None:
             raise TypeError('plumed calculator has to be defined with the object atoms inside.')
-        
+
         self.istep = 0
         Calculator.__init__(self, atoms=atoms)
 
@@ -105,11 +105,11 @@ class Plumed(Calculator):
         self.use_charge = use_charge
         self.update_charge = update_charge
         self.name = '{}+Plumed'.format(self.calc.name)
-        
+
         if world.rank == 0:
             natoms = len(atoms.get_positions())
             self.plumed = pl()
-            
+
             # Units setup
             # warning: outputs from plumed will still be in plumed units.
 
@@ -120,22 +120,31 @@ class Plumed(Calculator):
             self.plumed.cmd("setMDChargeUnits", 1.)      # ASE and plumed - charge unit is in e units
             self.plumed.cmd("setMDMassUnits", 1.)        # ASE and plumed - mass unit is in e units
 
+            #self.plumed.cmd("setPlumedDat", self.fn)
+
             self.plumed.cmd("setNatoms", natoms)
             self.plumed.cmd("setMDEngine", "ASE")
             self.plumed.cmd("setLogFile", log)
+
             self.plumed.cmd("setTimestep", float(timestep))
             self.plumed.cmd("setRestart", restart)
-            self.plumed.cmd("setKbT", float(kT))
+
+            #self.plumed.cmd("setKbT", float(kT)) #niet in yaff
             self.plumed.cmd("init")
             for line in input:
                 self.plumed.cmd("readInputLine", line)
+
         self.atoms = atoms
 
-    def calculate(self, atoms=None, properties=['energy', 'forces'], system_changes=all_changes):
+    def calculate(self, atoms=None, properties=['energy', 'forces', 'stress', 'free_energy'], system_changes=all_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
         energy, forces = self.compute_energy_and_forces(self.atoms.get_positions(), self.istep)
-        self.istep += 1
+
         self.results['energy'], self. results['forces'] = energy, forces
+        self.results['free_energy'] = energy
+        if 'stress' in properties:
+            self.results['stress'] = self.calc.get_stress() + self.calculate_stress_bias(atoms, d=1e-06, voigt=True)
+        self.istep += 1
 
     def compute_energy_and_forces(self, pos, istep):
         unbiased_energy = self.calc.get_potential_energy(self.atoms)
@@ -165,24 +174,81 @@ class Plumed(Calculator):
                 assert self.update_charge, "Not initial charges in Atoms"
 
             self.plumed.cmd("setCharges", charges)
-        
+
         self.plumed.cmd("setPositions", pos)
-        self.plumed.cmd("setEnergy", unbiased_energy)
+        #self.plumed.cmd("setEnergy", unbiased_energy)  #not in yaff
         self.plumed.cmd("setMasses", self.atoms.get_masses())
+
+        cell = self.atoms.get_cell()
+        # print(cell[:])
+        self.plumed.cmd("setBox", cell[:])
+
         forces_bias = np.zeros((self.atoms.get_positions()).shape)
         self.plumed.cmd("setForces", forces_bias)
         virial = np.zeros((3, 3))
         self.plumed.cmd("setVirial", virial)
         self.plumed.cmd("prepareCalc")
-        self.plumed.cmd("performCalc")
+        self.plumed.cmd("performCalcNoUpdate")
         energy_bias = np.zeros((1,))
         self.plumed.cmd("getBias", energy_bias)
+
+        self.plumed.cmd("update")
+
+        # print("bias forces") 
+        # print(forces_bias) 
+
         return [energy_bias, forces_bias]
-    
+
+    def calculate_stress_bias(self, atoms, d=1e-06, voigt=True):
+        '''
+
+        calculate stress due to plumed bias, 
+        code adapted from calculator/calculate_numerical_stress
+
+        '''
+
+        unbiased_energy = self.calc.get_potential_energy(self.atoms)
+        stress = np.zeros((3, 3), dtype=float)
+
+        cell = atoms.cell.copy()
+        V = atoms.get_volume()
+        for i in range(3):
+            x = np.eye(3)
+            x[i, i] += d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            x[i, i] -= 2 * d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            stress[i, i] = (eplus - eminus) / (2 * d * V)
+            x[i, i] += d
+
+            j = i - 2
+            x[i, j] = d
+            x[j, i] = d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eplus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            x[i, j] = -d
+            x[j, i] = -d
+            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
+            eminus = self.compute_bias(self.atoms.get_positions(), self.istep, unbiased_energy)[0]
+
+            stress[i, j] = (eplus - eminus) / (4 * d * V)
+            stress[j, i] = stress[i, j]
+        atoms.set_cell(cell, scale_atoms=True)
+
+        if voigt:
+            return stress.flat[[0, 4, 8, 5, 2, 1]]
+        else:
+            return stress
+
     def write_plumed_files(self, images):
         """ This function computes what is required in
         plumed input for some trajectory.
-        
+
         The outputs are saved in the typical files of
         plumed such as COLVAR, HILLS """
         for i, image in enumerate(images):
@@ -204,7 +270,7 @@ class Plumed(Calculator):
                     else:
                         file_name = line[ini+5:end]
                     read_files[file_name] = np.loadtxt(file_name, unpack=True)
-    
+
             if len(read_files) == 0:
                 if exists('COLVAR'):
                     read_files['COLVAR'] = np.loadtxt('COLVAR', unpack=True)
