@@ -529,7 +529,7 @@ class Aims(GenericFileIOCalculator):
                 kptsstart = n  # last occurrence of (
         assert kpts is not None
         assert kptsstart is not None
-        text = lines[kptsstart + 1 :]
+        text = lines[kptsstart + 1:]
         values = []
         for line in text[:kpts]:
             if mode == "ibz_k_points":
@@ -569,7 +569,7 @@ class Aims(GenericFileIOCalculator):
                 eigvalstart = n
                 break
         assert eigvalstart is not None
-        text = lines[eigvalstart + 1 :]  # remove first 1 line
+        text = lines[eigvalstart + 1:]  # remove first 1 line
         # find the requested k-point
         nbands = self.read_number_of_bands()
         sppol = self.get_spin_polarized()
