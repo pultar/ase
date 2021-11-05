@@ -128,15 +128,15 @@ class Harmonic(Calculator):
             Absolute eigenvalues of the reference Hessian matrix
             below this threshold are set to zero (numerical noise).
         """
-        Calculator.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def set(self, **kwargs):
-        changed_parameters = Calculator.set(self, **kwargs)
+        changed_parameters = super().set(**kwargs)
         changes = ['ref_atoms', 'hessian_x', 'hessian_limit', 'get_q_from_x',
                    'get_jacobian', 'variable_orientation', 'constrained_q',
                    'rcond', 'zero_thresh']  # almost any change -> self.update()
         if [change for change in changes if change in changed_parameters]:
-            self.update()  # should be called during Calculator.__init__(...)
+            self.update()  # should be called during super().__init__(...)
         return changed_parameters
 
     def update(self):
@@ -243,7 +243,7 @@ class Harmonic(Calculator):
 
     def calculate(self, atoms=None, properties=['energy', 'forces'],
                   system_changes=['positions', 'numbers', 'cell', 'pbc']):
-        Calculator.calculate(self, atoms, properties, system_changes)
+        super().calculate(atoms, properties, system_changes)
 
         if self.calculation_required(atoms, properties):
             q = self.get_q_from_x(atoms).ravel()
@@ -340,7 +340,7 @@ class Harmonic(Calculator):
         return Harmonic(**self.parameters)
 
     def todict(self):
-        d = Calculator.todict(self)  # when self.parameters is serialized, ...
+        d = super().todict()  # when self.parameters is serialized, ...
         d.update(get_q_from_x=repr(self.parameters.get_q_from_x))  # functions
         d.update(get_jacobian=repr(self.parameters.get_jacobian))  # raise errs
         return d
