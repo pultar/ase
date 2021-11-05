@@ -2,11 +2,12 @@ import numpy as np
 from ase import Atoms
 from ase.calculators.harmonic import Harmonic
 from ase.optimize import BFGS
+from ase.geometry.geometry import get_distances_derivatives
 import pytest
 
-pos = np.asarray([[8.7161, 7.96276, 8.48206], [8.60594, 8.04985, 9.44464],
+ref_pos = np.asarray([[8.7161, 7.96276, 8.48206], [8.60594, 8.04985, 9.44464],
                       [8.0154, 8.52264, 8.10545]])
-ref_atoms = Atoms('OH2', positions=pos)  # relaxed water molecule
+ref_atoms = Atoms('OH2', positions=ref_pos)  # relaxed water molecule
 ref_energy = -14.222189  # y shift of the 'parabola' (harmonic potential)
 
 # example Hessian matrix as obtained from central finite differences
@@ -86,12 +87,12 @@ def test_constraints_with_cartesians():
     def test_forces(calc):
         atoms = ref_atoms.copy()
         atoms.calc = calc
-        newpos = pos.copy()
-        newpos[0, 0] *= 2
-        atoms.set_positions(newpos)
+        pos = ref_pos.copy()
+        pos[0, 0] *= 2
+        atoms.set_positions(pos)
         run_optimize(atoms)  # (no) restoring force along distorted x-component
-        xdiff = atoms.get_positions() - pos
-        return all(xdiff[xdiff != 0] == newpos[0, 0] / 2)
+        xdiff = atoms.get_positions() - ref_pos
+        return all(xdiff[xdiff != 0] == pos[0, 0] / 2)
 
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
     calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
@@ -100,3 +101,59 @@ def test_constraints_with_cartesians():
 
     calc.set(constrained_q=[0])  # project out the coordinate with index 0
     assert test_forces(calc)  # no restoring force along distorted x-component
+
+
+dist_defs = [[0, 1], [1, 2], [2, 0]]  # define three distances by atom indices
+
+
+def setup_water(calc):
+    atoms = ref_atoms.copy()
+    atoms.calc = calc
+    assert_water_is_relaxed(atoms)
+    atoms.rattle(0.3)
+    atoms.rotate(160, 'x')
+    assert not np.allclose(ref_energy, atoms.get_potential_energy())
+    return atoms
+
+
+def water_get_q_from_x(atoms):
+    """Simple internal coordinates to describe water with only distances."""
+    q_vec = [atoms.get_distance(i, j) for i, j in dist_defs]
+    return np.asarray(q_vec)
+
+
+def water_get_jacobian(atoms):
+    pos = atoms.get_positions()
+    dist_vecs = [pos[j] - pos[i] for i, j in dist_defs]
+    derivs = get_distances_derivatives(dist_vecs)
+    jac = []
+    for i, defin in enumerate(dist_defs):
+        dqi_dxj = np.zeros(ref_pos.shape)
+        for j, deriv in enumerate(derivs[i]):
+            dqi_dxj[defin[j]] = deriv
+        jac.append(dqi_dxj.flatten())
+    jac = np.asarray(jac)
+    return np.asarray(jac)
+
+
+def test_internals():
+    calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                    hessian_x=hessian_x,
+                    get_q_from_x=water_get_q_from_x,
+                    get_jacobian=water_get_jacobian,
+                    cartesian=False)  # calculation in internal coordinates
+    atoms = setup_water(calc)  # distorted copy of ref_atoms
+    run_optimize(atoms)        # recover original configuration
+    assert_water_is_relaxed(atoms)
+
+    calc.set(cartesian=True)   # calculation in Cartesian Coordinates
+    atoms = setup_water(calc)  # 'variable_orientation' not set to True!
+    run_optimize(atoms)        # but water has rotational degrees of freedom
+    with pytest.raises(AssertionError):  # hence forces were incorrect
+        assert_water_is_relaxed(atoms)   # original configuration not recovered
+
+    calc.set(variable_orientation=True)
+    atoms = setup_water(calc)
+    run_optimize(atoms)
+    assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
+
