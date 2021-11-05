@@ -7,16 +7,13 @@ from ase import units
 from ase.calculators.calculator import Calculator, all_changes
 
 
-class Harmonic(Calculator):
-    """Class for calculations with a harmonic force-field
 
-    The Harmonic Approximation of the potential energy surface (PES) at a
-    local reference configuration is commonly applied in atomistic simulations
-    to estimate entropy/free energy.
-    The term 'harmonic' refers to a second order Taylor series of the PES in
-    Cartesian coordinates which can also be expressed as a Hessian matrix.
+class Harmonic(Calculator):
+    """Class for calculations with a Hessian-based harmonic force-field
+       ================================================================
+
     Energy and forces of this calculator are based on the Cartesian Hessian
-    for the local reference configuration, i.e. if desired, on the Hessian
+    for a local reference configuration, i.e. if desired, on the Hessian
     matrix transformed to a user-defined coordinate system.
     The required Hessian has to be passed as an argument, e.g. predetermined
     numerically via central finite differences in Cartesian coordinates.
@@ -33,11 +30,6 @@ class Harmonic(Calculator):
 
     The :class:`Harmonic` calculator can be used to compute Anharmonic
     Corrections to the Harmonic Approximation. [1]_
-
-    .. [1] Amsler, J. et al. Anharmonic Correction to Adsorption Free Energy
-           from DFT-Based MD Using Thermodynamic Integration.
-           J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
-           https://doi.org/10.1021/acs.jctc.0c01022.
     """
 
     implemented_properties = ['energy', 'forces']

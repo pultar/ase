@@ -1,7 +1,31 @@
 .. module:: ase.calculators.harmonic
 
+.. _harmonic:
+
+===================
 Harmonic calculator
 ===================
+
+Introduction
+============
+
+The local Harmonic Approximation of the potential energy surface (PES) is
+commonly applied in atomistic simulations to estimate entropy, i.e. free
+energy, at elevated temperatures (e.g. in ASE via :mod:`~ase.thermochemistry`).
+The term 'harmonic' refers to a second order Taylor series of the PES for a
+local reference configuration in Cartesian coordinates expressed in a Hessian
+matrix. With the Hessian matrix (e.g. computed numerically in ASE via
+:mod:`~ase.vibrations`) normal modes and harmonic vibrational frequencies can
+be obtained.
+
+The following :class:`Harmonic` calculator can be used to compute energy and
+forces with a Hessian-based harmonic force-field. Moreover, it can be used to
+compute Anharmonic Corrections to the Harmonic Approximation. [1]_
+
+.. [1] J. Amsler et al., Anharmonic Correction to Adsorption Free Energy
+       from DFT-Based MD Using Thermodynamic Integration,
+       J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
+       https://doi.org/10.1021/acs.jctc.0c01022.
 
 .. autoclass:: Harmonic
 
@@ -13,12 +37,12 @@ Harmonic calculator
    attributes ``hessian_x`` and ``hessian_q``.
 
 Examples
-========
+--------
 Prerequisites: :class:`~ase.Atoms` object (``ref_atoms``),
 its energy (``ref_energy``) and Hessian (``hessian_x``).
 
 Example 1: Cartesian coordinatates
-----------------------------------
+``````````````````````````````````
 In Cartesian coordinates, forces and energy are not invariant with respect
 to rotations and translations of the system.
 >>> from ase.calculators.harmonic import Harmonic
@@ -33,12 +57,15 @@ to rotations and translations of the system.
    Forces and energy can be computed via :meth:`~ase.Atoms.get_forces` and
    :meth:`~ase.Atoms.get_potential_energy` for any configuration that does
    not involve rotations with respect to the configuration of ``ref_atoms``.
+
+.. warning::
+
    In case of system rotations, Cartesian coordinates return incorrect values
    and thus cannot be used without an additional suitable coordinate system
    as demonstrated in the Supporting Information of [1]_.
 
 Example 2: Internal Coordinates
--------------------------------
+```````````````````````````````
 To compute forces and energy correctly even for rotated systems,
 a user-defined coordinate system must be provided.
 Within this coordinate system, energy and forces must be invariant with
@@ -77,7 +104,7 @@ The following example deals with the water molecule (H2O).
 >>> atoms.calc = calc_harmonic
 
 Example 3
----------
+`````````
 A transformation of the coordinate system may transform the force
 field. The change in free energy due to this transformation can be computed via
 thermodynamic (`\lambda`-path) integration, see [1]_.
@@ -131,7 +158,7 @@ transformation.
    standard Harmonic Approximation obtained from the unmodified Hessian.
 
 Example 4
----------
+`````````
 Compute the Anharmonic Correction to the Harmonic Approximation.
 
 >>> calc_harmonic = Harmonic(ref_atoms=ref_atoms,
