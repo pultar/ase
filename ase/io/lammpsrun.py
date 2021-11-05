@@ -10,6 +10,7 @@ from ase.calculators.lammps import convert
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.parallel import paropen
 from ase.quaternions import Quaternions
+from ase.data import atomic_masses, chemical_symbols
 
 
 def read_lammps_dump(infileobj, **kwargs):
@@ -57,6 +58,18 @@ def read_lammps_dump(infileobj, **kwargs):
     return out
 
 
+def element_from_mass(mass):
+    """
+    Returns the atomic symbol of the element which has a mass that is closest to
+    the given value.
+
+    :param mass: (float) input mass to find corresponding symbol for.
+    :returns: chemical symbol
+    :rtype: str
+    """
+    return chemical_symbols[np.abs(atomic_masses - mass).argmin()]
+
+
 def lammps_data_to_ase_atoms(
     data,
     colnames,
@@ -100,6 +113,9 @@ def lammps_data_to_ase_atoms(
     if "element" in colnames:
         # priority to elements written in file
         elements = data[:, colnames.index("element")]
+    elif "mass" in colnames:
+        masses = data[:, colnames.index("mass")].astype(float)
+        elements = np.array([element_from_mass(m) for m in masses]).astype(str)
     elif "type" in colnames:
         # fall back to `types` otherwise
         elements = data[:, colnames.index("type")].astype(int)
