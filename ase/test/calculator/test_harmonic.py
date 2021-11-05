@@ -123,6 +123,8 @@ def water_get_q_from_x(atoms):
 
 
 def water_get_jacobian(atoms):
+    """Function to return the Jacobian for the water molecule described by
+    distances."""
     pos = atoms.get_positions()
     dist_vecs = [pos[j] - pos[i] for i, j in dist_defs]
     derivs = get_distances_derivatives(dist_vecs)
@@ -132,7 +134,6 @@ def water_get_jacobian(atoms):
         for j, deriv in enumerate(derivs[i]):
             dqi_dxj[defin[j]] = deriv
         jac.append(dqi_dxj.flatten())
-    jac = np.asarray(jac)
     return np.asarray(jac)
 
 
