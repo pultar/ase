@@ -157,4 +157,3 @@ def test_internals():
     atoms = setup_water(calc)
     run_optimize(atoms)
     assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
-
