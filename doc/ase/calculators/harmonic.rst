@@ -191,8 +191,8 @@ thermodynamic (`\lambda`-path) integration. [1]_
 ...                            get_q_from_x=water_get_q_from_x,
 ...                            get_jacobian=water_get_jacobian,
 ...                            cartesian=True, variable_orientation=True)
->>> calc_harmonic_0 = calc_harmonic_one.copy()
->>> calc.harmonic_0.set('cartesian'=False)
+>>> calc_harmonic_0 = calc_harmonic_1.copy()
+>>> calc_harmonic_0.set(cartesian=False)
 >>> ediffs = {}  # collect energy difference for varying lambda coupling
 >>> for lamb in [0.00, 0.25, 0.50, 0.75, 1.00]:  # integration grid
 ...     ediffs[lamb] = []
@@ -203,16 +203,21 @@ thermodynamic (`\lambda`-path) integration. [1]_
 ...     MaxwellBoltzmannDistribution(atoms, temperature_K=300, force_temp=True)
 ...     Stationary(atoms)
 ...     ZeroRotation(atoms)
-...     dyn = Andersen(atoms, 0.5 * ase.units.fs, temperature_K=300,
-...                    andersen_prob=0.05, fixcm=False)
-...     for _ in dyn.irun(100000):
-...         e0, e1 = calc.get_energy_contributions(atoms)
-...         ediffs[lamb].append(float(e1) - float(e0))
-...     ediffs[lamb] = sum(ediffs[lamb]) / len(ediffs[lamb])  # mean
+...     with Andersen(atoms, 0.5 * fs, temperature_K=300,
+...                   andersen_prob=0.05, fixcm=False) as dyn:
+...         for _ in dyn.irun(100000):
+...             e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
+...             ediffs[lamb].append(float(e1) - float(e0))
+...     ediffs[lamb] = np.mean(ediffs[lamb])
 
 Integration of the mean energy differences ('ediffs') over the integration grid
 (`\lambda` path) leads to the change in free energy due to the coordinate
 transformation.
+
+.. note::
+
+    The coordinate systems in this example are linear dependent, hence the
+    energy differences are zero.
 
 Example 4: Anharmonic Corrections
 ---------------------------------

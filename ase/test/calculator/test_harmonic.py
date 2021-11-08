@@ -6,6 +6,11 @@ from ase.optimize import BFGS
 from ase.geometry.geometry import get_distances_derivatives
 from ase.calculators.emt import EMT
 from ase.vibrations import Vibrations
+from ase.calculators.mixing import MixedCalculator
+from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
+                                         Stationary, ZeroRotation)
+from ase.md.andersen import Andersen
+from ase.units import fs
 import pytest
 
 ref_pos = np.asarray([[8.7161, 7.96276, 8.48206], [8.60594, 8.04985, 9.44464],
@@ -194,3 +199,30 @@ def test_compatible_with_ase_vibrations():
     vib = Vibrations(atoms, nfree=4, delta=1e-5)
     vib.run()  # 3 transl and 3 rot are removed by internal coordinates
     assert_array_almost_equal(energies[-3:], vib.get_energies()[-3:], decimal=2)
+
+def test_thermodynamic_integration():
+    calc_harmonic_1 = Harmonic(ref_atoms=ref_atoms,
+                               ref_energy=ref_energy,
+                               hessian_x=hessian_x,
+                               get_q_from_x=water_get_q_from_x,
+                               get_jacobian=water_get_jacobian,
+                               cartesian=True, variable_orientation=True)
+    calc_harmonic_0 = calc_harmonic_1.copy()
+    calc_harmonic_0.set(cartesian=False)
+    ediffs = {}  # collect energy difference for varying lambda coupling
+    for lamb in [0.00, 0.25, 0.50, 0.75, 1.00]:  # integration grid
+        ediffs[lamb] = []
+        calc_linearCombi = MixedCalculator(calc_harmonic_0, calc_harmonic_1,
+                                           1 - lamb, lamb)
+        atoms = ref_atoms.copy()
+        atoms.calc = calc_linearCombi
+        MaxwellBoltzmannDistribution(atoms, temperature_K=300, force_temp=True)
+        Stationary(atoms)
+        ZeroRotation(atoms)
+        with Andersen(atoms, 0.5 * fs, temperature_K=300, andersen_prob=0.05,
+                      fixcm=False) as dyn:
+            for _ in dyn.irun(100):
+                e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
+                ediffs[lamb].append(float(e1) - float(e0))
+            ediffs[lamb] = np.mean(ediffs[lamb])
+            assert ediffs[lamb] == 0.0
