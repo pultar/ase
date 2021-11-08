@@ -233,5 +233,5 @@ e.g. :mod:`~ase.calculators.vasp`.
     >>> from ase.vibrations import Vibrations
     >>> atoms = ref_atoms.copy()
     >>> atoms.calc = calc_harmonic_0  # Harmonic with cartesian=True
-    >>> vib = Vibrations(atoms, nfree=2, delta=1e-8)
+    >>> vib = Vibrations(atoms, nfree=4, delta=1e-5)
     >>> vib.run()

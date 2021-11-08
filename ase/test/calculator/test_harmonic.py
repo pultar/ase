@@ -1,6 +1,6 @@
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 from ase import Atoms
-from ase.cluster import Icosahedron
 from ase.calculators.harmonic import Harmonic
 from ase.optimize import BFGS
 from ase.geometry.geometry import get_distances_derivatives
@@ -164,33 +164,33 @@ def test_internals():
 
 
 def test_compatible_with_ase_vibrations():
-    atoms = Icosahedron('Au', 2)
-    calc = EMT()
-    atoms.calc = calc
+    atoms = ref_atoms.copy()
+    atoms.calc = EMT()
     run_optimize(atoms)
     opt_atoms = atoms.copy()
     opt_energy = atoms.get_potential_energy()
-    vib = Vibrations(opt_atoms.copy(), nfree=2)
+    vib = Vibrations(atoms, nfree=2)
     vib.run()
     energies = vib.get_energies()
     vib_data = vib.get_vibrations()
     hessian_2d = vib_data.get_hessian_2d()
     vib.clean()
-    calc_harmonic = Harmonic(ref_atoms=opt_atoms, ref_energy=opt_energy,
-                             hessian_x=hessian_2d)
-    #assert np.allclose(hessian_2d, calc_harmonic.hessian_x)
-    atoms = opt_atoms.copy()
-    atoms.calc = calc_harmonic
-    vib = Vibrations(atoms.copy(), nfree=4, delta=1e-8)
-    vib.run()
-    print(energies.real)
-    print(vib.get_energies().real)
-    assert np.allclose(energies.real, vib.get_energies().real)
 
+    calc_harmonic = Harmonic(ref_atoms=opt_atoms, ref_energy=opt_energy,
+                             hessian_x=hessian_2d, zero_thresh=1e-9)
+    atoms = ref_atoms.copy()
+    atoms.calc = calc_harmonic
+    vib = Vibrations(atoms, nfree=4, delta=1e-5)
+    vib.run()
+    assert np.allclose(energies, vib.get_energies())
+    vib.clean()
     calc_harmonic =  Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                              hessian_x=hessian_x,
+                              hessian_x=hessian_2d,
                               get_q_from_x=water_get_q_from_x,
                               get_jacobian=water_get_jacobian,
                               cartesian=True)
-
-
+    atoms = ref_atoms.copy()
+    atoms.calc = calc_harmonic
+    vib = Vibrations(atoms, nfree=4, delta=1e-5)
+    vib.run()  # 3 transl and 3 rot are removed by internal coordinates
+    assert_array_almost_equal(energies[-3:], vib.get_energies()[-3:], decimal=2)
