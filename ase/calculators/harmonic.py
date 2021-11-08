@@ -7,7 +7,6 @@ from ase import units
 from ase.calculators.calculator import Calculator, all_changes
 
 
-
 class Harmonic(Calculator):
     """Class for calculations with a Hessian-based harmonic force-field
        ================================================================
@@ -24,13 +23,14 @@ class Harmonic(Calculator):
     energy and forces are not rotationally and translationally invariant.
     Systems with variable orientation, require rotationally and translationally
     invariant calculations for which a set of appropriate coordinates has to
-    be defined. This can be a set of internal coordinates (bonds, angles,
-    dihedrals, coordination numbers, ...) or any other user-defined coordinate
-    system.
+    be defined. This can be a set of (redundant) internal coordinates (bonds,
+    angles, dihedrals, coordination numbers, ...) or any other user-defined
+    coordinate system.
 
     The :class:`Harmonic` calculator can be used to compute Anharmonic
     Corrections to the Harmonic Approximation. [1]_
     """
+    # J. Amsler et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
 
     implemented_properties = ['energy', 'forces']
     default_parameters = {
@@ -58,39 +58,41 @@ class Harmonic(Calculator):
             matrix in Cartesian coordinates (``hessian_x``) are provided.
 
         ref_energy: float, optional, default: 0.0
-            Energy of the reference structure ``ref_atoms`` in eV.
+            Energy of the reference structure ``ref_atoms``, typically in `eV`.
 
         hessian_x: numpy array
             Cartesian Hessian matrix for the reference structure ``ref_atoms``.
-            During initiation the calculator applies the ``hessian_limit`` as
-            lower limit to the Hessian eigenvalues while leaving the
-            eigenvectors untouched. If a user-defined coordinate system is
-            provided via ``get_q_from_x`` and ``get_jacobian``, the Cartesian
-            Hessian matrix is transformed to the user-defined coordinate system
-            and back to Cartesian coordinates, thereby eliminating rotational
-            and translational traits from the Hessian. The Hessian matrix
-            obtained after this eigenvalue limitation and double-transformation
-            is then used as reference Hessian to evaluate energy and forces for
+            If a user-defined coordinate system is provided via
+            ``get_q_from_x`` and ``get_jacobian``, the Cartesian Hessian matrix
+            is transformed to the user-defined coordinate system and back to
+            Cartesian coordinates, thereby eliminating rotational and
+            translational traits from the Hessian. The Hessian matrix
+            obtained after this double-transformation is then used as
+            the reference Hessian matrix to evaluate energy and forces for
             ``cartesian = True``. For ``cartesian = False`` the reference
-            Hessian transformed to user-defined coordinates is used to compute
-            energy and forces.
+            Hessian matrix transformed to the user-defined coordinates is used
+            to compute energy and forces.
 
         hessian_limit: float, optional, default: 0.0
-            Set a lower limit for the eigenvalues of the reference Hessian.
-            Very low force constants can result in numerical problems, i.e.
-            unexpected behaviour during dynamic simulations. Unit: `eV/A^2`.
+            Lower limit for the eigenvalues of the reference Hessian, typically
+            in `eV/A^2`. Eigenvalues in the interval [``zero_thresh``,
+            ``hessian_limit``] are set to ``hessian_limit`` while the
+            eigenvectors are left untouched.
+            During dynamic simulations, very low eigenvalues (force constants)
+            can lead to numerical problems, i.e. unexpected behaviour, where
+            increasing this parameter may help.
 
         get_q_from_x: python function, optional, default: None (Cartesians)
             Function that returns a vector of user-defined coordinates **q** for
             a given :class:`~ase.Atoms` object 'atoms'. The signature should be:
-            :meth:`get_q_from_x(atoms)`.
+            :obj:`get_q_from_x(atoms)`.
             If not provided, ``cartesian`` is forcefully set to True.
 
         get_jacobian: python function, optional, default: None (Cartesians)
             Function that returns the geometric Jacobian matrix of the
             user-defined coordinates **q** w.r.t. Cartesian coordinates **x**
             defined as `dq/dx` (Wilson B-matrix) for a given :class:`~ase.Atoms`
-            object 'atoms'. The signature should be: :meth:`get_jacobian(atoms)`.
+            object 'atoms'. The signature should be: :obj:`get_jacobian(atoms)`.
             If not provided, ``cartesian`` is forcefully set to True.
 
         cartesian: bool, optional, default: True
@@ -113,12 +115,12 @@ class Harmonic(Calculator):
 
         rcond: float, optional, default: 1e-7
             Cutoff for singular value decomposition in the computation of the
-            Moore-Penrose pseudo-inverse during transformation of the Hessian.
-            Equivalent to the rcond parameter in scipy.linalg.lstsq.
+            Moore-Penrose pseudo-inverse during transformation of the Hessian
+            matrix. Equivalent to the rcond parameter in scipy.linalg.lstsq.
 
         zero_thresh: float, optional, default: 1e-3
             Absolute eigenvalues of the reference Hessian matrix
-            below this threshold are set to zero (numerical noise).
+            below this threshold are set to zero.
         """
         super().__init__(**kwargs)
 
@@ -132,8 +134,6 @@ class Harmonic(Calculator):
         return changed_parameters
 
     def update(self):
-        self.status = {}  # collection of relevant info generated during setup
-
         coord_fs = [self.parameters.get_q_from_x, self.parameters.get_jacobian]
         if None in coord_fs:
             if not all([func is None for func in coord_fs]):
@@ -314,7 +314,6 @@ class Harmonic(Calculator):
 
     def check_redundancy(self, jac):
         """Compare number of zero eigenvalues of G-matrix to initial value."""
-        return 0
         Gmat = jac.T @ jac
         self.Gmat_eigvals, _ = eigh(Gmat)
         zero_eigvals = len(flatnonzero(absolute(self.Gmat_eigvals) <
