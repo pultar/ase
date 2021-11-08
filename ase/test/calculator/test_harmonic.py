@@ -189,16 +189,17 @@ def test_compatible_with_ase_vibrations():
     vib.run()
     assert np.allclose(energies, vib.get_energies())
     vib.clean()
-    calc_harmonic =  Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                              hessian_x=hessian_2d,
-                              get_q_from_x=water_get_q_from_x,
-                              get_jacobian=water_get_jacobian,
-                              cartesian=True)
+    calc_harmonic = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                             hessian_x=hessian_2d,
+                             get_q_from_x=water_get_q_from_x,
+                             get_jacobian=water_get_jacobian,
+                             cartesian=True)
     atoms = ref_atoms.copy()
     atoms.calc = calc_harmonic
     vib = Vibrations(atoms, nfree=4, delta=1e-5)
     vib.run()  # 3 transl and 3 rot are removed by internal coordinates
     assert_array_almost_equal(energies[-3:], vib.get_energies()[-3:], decimal=2)
+
 
 def test_thermodynamic_integration():
     calc_harmonic_1 = Harmonic(ref_atoms=ref_atoms,
