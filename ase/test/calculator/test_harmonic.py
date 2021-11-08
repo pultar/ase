@@ -221,7 +221,7 @@ def test_thermodynamic_integration():
         ZeroRotation(atoms)
         with Andersen(atoms, 0.5 * fs, temperature_K=300, andersen_prob=0.05,
                       fixcm=False) as dyn:
-            for _ in dyn.irun(100):
+            for _ in dyn.irun(50):  # should be much longer for production runs
                 e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
                 ediffs[lamb].append(float(e1) - float(e0))
             ediffs[lamb] = np.mean(ediffs[lamb])
