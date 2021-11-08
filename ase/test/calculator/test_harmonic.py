@@ -1,8 +1,11 @@
 import numpy as np
 from ase import Atoms
+from ase.cluster import Icosahedron
 from ase.calculators.harmonic import Harmonic
 from ase.optimize import BFGS
 from ase.geometry.geometry import get_distances_derivatives
+from ase.calculators.emt import EMT
+from ase.vibrations import Vibrations
 import pytest
 
 ref_pos = np.asarray([[8.7161, 7.96276, 8.48206], [8.60594, 8.04985, 9.44464],
@@ -62,6 +65,7 @@ def test_cartesians():
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
     calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
                     hessian_x=hessian_x, zero_thresh=zero_thresh)
+    assert np.allclose(calc.hessian_q, calc.hessian_x)
     atoms = ref_atoms.copy()
     atoms.calc = calc
     assert_water_is_relaxed(atoms)  # atoms has not been distorted
@@ -157,3 +161,36 @@ def test_internals():
     atoms = setup_water(calc)
     run_optimize(atoms)
     assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
+
+
+def test_compatible_with_ase_vibrations():
+    atoms = Icosahedron('Au', 2)
+    calc = EMT()
+    atoms.calc = calc
+    run_optimize(atoms)
+    opt_atoms = atoms.copy()
+    opt_energy = atoms.get_potential_energy()
+    vib = Vibrations(opt_atoms.copy(), nfree=2)
+    vib.run()
+    energies = vib.get_energies()
+    vib_data = vib.get_vibrations()
+    hessian_2d = vib_data.get_hessian_2d()
+    vib.clean()
+    calc_harmonic = Harmonic(ref_atoms=opt_atoms, ref_energy=opt_energy,
+                             hessian_x=hessian_2d)
+    #assert np.allclose(hessian_2d, calc_harmonic.hessian_x)
+    atoms = opt_atoms.copy()
+    atoms.calc = calc_harmonic
+    vib = Vibrations(atoms.copy(), nfree=4, delta=1e-8)
+    vib.run()
+    print(energies.real)
+    print(vib.get_energies().real)
+    assert np.allclose(energies.real, vib.get_energies().real)
+
+    calc_harmonic =  Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                              hessian_x=hessian_x,
+                              get_q_from_x=water_get_q_from_x,
+                              get_jacobian=water_get_jacobian,
+                              cartesian=True)
+
+

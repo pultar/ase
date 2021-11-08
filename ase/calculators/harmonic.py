@@ -30,7 +30,7 @@ class Harmonic(Calculator):
     The :class:`Harmonic` calculator can be used to compute Anharmonic
     Corrections to the Harmonic Approximation. [1]_
     """
-    # J. Amsler et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
+    # Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
 
     implemented_properties = ['energy', 'forces']
     default_parameters = {
@@ -313,7 +313,7 @@ class Harmonic(Calculator):
                 matrix[i] = 0.0  # broadcasted to row
 
     def check_redundancy(self, jac):
-        """Compare number of zero eigenvalues of G-matrix to initial value."""
+        """Compare number of zero eigenvalues of G-matrix to initial number."""
         Gmat = jac.T @ jac
         self.Gmat_eigvals, _ = eigh(Gmat)
         zero_eigvals = len(flatnonzero(absolute(self.Gmat_eigvals) <
