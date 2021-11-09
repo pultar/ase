@@ -194,7 +194,8 @@ thermodynamic (`\lambda`-path) integration. [1]_
 >>> calc_harmonic_0 = calc_harmonic_1.copy()
 >>> calc_harmonic_0.set(cartesian=False)
 >>> ediffs = {}  # collect energy difference for varying lambda coupling
->>> for lamb in [0.00, 0.25, 0.50, 0.75, 1.00]:  # integration grid
+>>> lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
+>>> for lamb in lambs:
 ...     ediffs[lamb] = []
 ...     calc_linearCombi = MixedCalculator(calc_harmonic_0, calc_harmonic_1,
 ...                                        1 - lamb, lamb)
@@ -209,6 +210,7 @@ thermodynamic (`\lambda`-path) integration. [1]_
 ...             e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
 ...             ediffs[lamb].append(float(e1) - float(e0))
 ...     ediffs[lamb] = np.mean(ediffs[lamb])
+... dA = np.trapz([ediffs[lamb] for lamb in lambs])  # anharmonic correction
 
 Integration of the mean energy differences ('ediffs') over the integration grid
 (`\lambda` path) leads to the change in free energy due to the coordinate
