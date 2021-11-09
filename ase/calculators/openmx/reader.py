@@ -20,33 +20,54 @@ functional theories.
 """
 #  from ase.calculators import SinglePointDFTCalculator
 import os
+import warnings
 import struct
 import numpy as np
 from ase.units import Ha, Bohr, Debye
 from ase.io import ParseError
+from ase.atoms import Atoms
 
 
+def read_openmx(filename=None, debug=False, version=None) -> Atoms:
+    """
+    Read results from typical OpenMX output files (`.out`, `.log`, `.dat`,
+    `.dat#`, and `.scfout`) and returns the `atoms` object with `OpenMX`
+    calculator attatched to it.
 
-def read_openmx(filename=None, debug=False):
+    Reading begins with checking the version of output file if the keyword
+    `version` is not explicitly given.
+    After reading version, it reads every implementd properties it could get
+    from the output files following sequence.
+
+    * `.log` -> `.dat#` -> `.dat` -> `.out`
+
+    Results stored the latest will overwrites the previous results.
+
+    Reason for the reading '.log' (stdio) is to read missing properties in
+    `.out` file. All the information regarding results should be written in
+    '.out' file. However, in the version 3.8.3, stress tensor are only written
+    in the '.log' file. So... It just reads all the possible output.
+
+    Parameters
+    ==========
+    filename : str
+      `filename` should be given without extension such as `ch4`. Do not give
+      `filename` like `ch4.out`
+
+    debug: bool
+
+    version: str
+
+    """
     from ase.calculators.openmx import OpenMX
-    from ase import Atoms
-    """
-    Read results from typical OpenMX output files and returns the atom object
-    In default mode, it reads every implementd properties we could get from
-    the files. Unlike previous version, we read the information based on file.
-    previous results will be eraised unless previous results are written in the
-    next calculation results.
 
-    Read the 'LABEL.log' file seems redundant. Because all the
-    information should already be written in '.out' file. However, in the
-    version 3.8.3, stress tensor are not written in the '.out' file. It only
-    contained in the '.log' file. So... I implented reading '.log' file method
-    """
+    version = version or read_version(filename, debug=debug)
     log_data = read_file(get_file_name('.log', filename), debug=debug)
     restart_data = read_file(get_file_name('.dat#', filename), debug=debug)
     dat_data = read_file(get_file_name('.dat', filename), debug=debug)
     out_data = read_file(get_file_name('.out', filename), debug=debug)
-    scfout_data = read_scfout_file(get_file_name('.scfout', filename))
+    scfout_data = read_scfout_file(get_file_name('.scfout', filename),
+                                   version=version)
     band_data = read_band_file(get_file_name('.Band', filename))
     # dos_data = read_dos_file(get_file_name('.Dos.val', filename))
     """
@@ -69,6 +90,69 @@ def read_openmx(filename=None, debug=False):
     atoms.calc = OpenMX(**parameters)
     atoms.calc.results = results
     return atoms
+
+
+def read_version(filename, debug=False):
+    """
+    Method for reading version of OpenMX. It reads .out, .log, and .scfout files
+    and returns the string.
+    """
+    version = {}
+    if os.path.exists(filename + ".log"):
+        with open(filename + ".log", "r") as fd:
+            line = fd.readline()
+            while line != "":
+                line = fd.readline()
+                if "Ver." in line:
+                    ver = (line.split("Ver.")[-1]).split()
+                    version[filename + ".log"] = ver[0]
+                    break
+
+    if os.path.exists(filename + ".out"):
+        with open(filename + ".out", "r") as fd:
+            line = fd.readline()
+            while line != "":
+                line = fd.readline()
+                if "Ver." in line:
+                    ver = (line.split("Ver.")[-1]).split()
+                    version[filename + ".out"] = ver[0]
+                    break
+
+    if os.path.exists(filename + ".scfout"):
+        with open(filename + ".scfout", "rb") as fd:
+            atomnum = int.from_bytes(fd.read(4), byteorder='little')
+            ver_x_SpinP_switch = int.from_bytes(fd.read(4), byteorder='little')
+            ver = ver_x_SpinP_switch // 4
+        if ver == 0:
+            if debug:
+                print("3.7, 3.8 or an older distribution")
+        elif ver == 1:
+            if debug:
+                print("3.7.x (for development of HWC)")
+            version[filename + ".scfout"] = "3.7"
+        elif ver == 2:
+            if debug:
+                print("3.7.x (for development of HWF)")
+            version[filename + ".scfout"] = "3.7"
+        elif version == 3:
+            version[filename + ".scfout"] = "3.9"
+
+    version_list = np.array(list(version.values()))
+    if version == {}:
+        msg = "No version info found, assume version is 3.9"
+        warnings.warn(msg)
+        return "3.9"
+    elif len(version_list) == 0:
+        msg = "No version info found, assume version is 3.9"
+        warnings.warn(msg)
+        return "3.9"
+    elif np.all(version_list == version_list[0]):
+        return version_list[0]
+    else:
+        msg = "Version conflict! \n" + "\n".join(
+            ["In '" + k[0]+ "': Ver. " + k[1] for k in version.items()])
+        warnings.warn(msg)
+        return version_list[0]
 
 
 def read_file(filename, debug=False):
@@ -163,7 +247,74 @@ def read_file(filename, debug=False):
     return out_data
 
 
-def read_scfout_file(filename=None):
+def read_scfout_file(filename=None, version='3.9'):
+    if '3.8' in version or '3.7' in version:
+        return read_scfout_file_38(filename=filename)
+    elif '3.9' in version:
+        return read_scfout_file_39(filename=filename)
+    else:
+        return read_scfout_file_39(filename=filename)
+
+
+def easyReader(byte, data_type, shape):
+    data_size = {'d': 8, 'i': 4}
+    data_struct = {'d': float, 'i': int}
+    dt = data_type
+    ds = data_size[data_type]
+    unpack = struct.unpack
+    if len(byte) == ds:
+        if dt == 'i':
+            return data_struct[dt].from_bytes(byte, byteorder='little')
+        elif dt == 'd':
+            return np.array(unpack(dt*(len(byte)//ds), byte))[0]
+    elif shape is not None:
+        return np.array(unpack(dt*(len(byte)//ds), byte)).reshape(shape)
+    else:
+        return np.array(unpack(dt*(len(byte)//ds), byte))
+
+
+def inte(byte, shape=None):
+    return easyReader(byte, 'i', shape)
+
+
+def floa(byte, shape=None):
+    return easyReader(byte, 'd', shape)
+
+
+def readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd):
+        myOLP = []
+        myOLP.append([])
+        for ct_AN in range(1, atomnum + 1):
+            myOLP.append([])
+            TNO1 = Total_NumOrbs[ct_AN]
+            for h_AN in range(FNAN[ct_AN] + 1):
+                myOLP[ct_AN].append([])
+                Gh_AN = natn[ct_AN][h_AN]
+                TNO2 = Total_NumOrbs[Gh_AN]
+                for i in range(TNO1):
+                    myOLP[ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
+        return myOLP
+
+
+def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd):
+    Hks = []
+    for spin in range(SpinP_switch + 1):
+        Hks.append([])
+        Hks[spin].append([np.zeros(FNAN[0] + 1)])
+        for ct_AN in range(1, atomnum + 1):
+            Hks[spin].append([])
+            TNO1 = Total_NumOrbs[ct_AN]
+            for h_AN in range(FNAN[ct_AN] + 1):
+                Hks[spin][ct_AN].append([])
+                Gh_AN = natn[ct_AN][h_AN]
+                TNO2 = Total_NumOrbs[Gh_AN]
+                for i in range(TNO1):
+                    Hks[spin][ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
+    return Hks
+
+
+
+def read_scfout_file_38(filename=None):
     """
     Read the Developer output '.scfout' files. It Behaves like read_scfout.c,
     OpenMX module, but written in python. Note that some array are begin with
@@ -251,58 +402,6 @@ def read_scfout_file(filename=None):
     if not os.path.isfile(filename):
         return {}
 
-    def easyReader(byte, data_type, shape):
-        data_size = {'d': 8, 'i': 4}
-        data_struct = {'d': float, 'i': int}
-        dt = data_type
-        ds = data_size[data_type]
-        unpack = struct.unpack
-        if len(byte) == ds:
-            if dt == 'i':
-                return data_struct[dt].from_bytes(byte, byteorder='little')
-            elif dt == 'd':
-                return np.array(unpack(dt*(len(byte)//ds), byte))[0]
-        elif shape is not None:
-            return np.array(unpack(dt*(len(byte)//ds), byte)).reshape(shape)
-        else:
-            return np.array(unpack(dt*(len(byte)//ds), byte))
-
-    def inte(byte, shape=None):
-        return easyReader(byte, 'i', shape)
-
-    def floa(byte, shape=None):
-        return easyReader(byte, 'd', shape)
-
-    def readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd):
-            myOLP = []
-            myOLP.append([])
-            for ct_AN in range(1, atomnum + 1):
-                myOLP.append([])
-                TNO1 = Total_NumOrbs[ct_AN]
-                for h_AN in range(FNAN[ct_AN] + 1):
-                    myOLP[ct_AN].append([])
-                    Gh_AN = natn[ct_AN][h_AN]
-                    TNO2 = Total_NumOrbs[Gh_AN]
-                    for i in range(TNO1):
-                        myOLP[ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
-            return myOLP
-
-    def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd):
-        Hks = []
-        for spin in range(SpinP_switch + 1):
-            Hks.append([])
-            Hks[spin].append([np.zeros(FNAN[0] + 1)])
-            for ct_AN in range(1, atomnum + 1):
-                Hks[spin].append([])
-                TNO1 = Total_NumOrbs[ct_AN]
-                for h_AN in range(FNAN[ct_AN] + 1):
-                    Hks[spin][ct_AN].append([])
-                    Gh_AN = natn[ct_AN][h_AN]
-                    TNO2 = Total_NumOrbs[Gh_AN]
-                    for i in range(TNO1):
-                        Hks[spin][ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
-        return Hks
-
     fd = open(filename, mode='rb')
     atomnum, SpinP_switch = inte(fd.read(8))
     Catomnum, Latomnum, Ratomnum, TCpyCell = inte(fd.read(16))
@@ -347,6 +446,66 @@ def read_scfout_file(filename=None):
                'Total_SpinS': Total_SpinS, 'DM': DM
                }
     return scf_out
+
+
+def read_scfout_file_39(filename=None):
+    from numpy import insert as ins
+    from numpy import cumsum as cum
+    from numpy import split as spl
+    from numpy import sum, zeros
+    if not os.path.isfile(filename):
+        return {}
+
+    fd = open(filename, mode='rb')
+    atomnum, ver_x_SpinP_switch = inte(fd.read(8))
+    version = ver_x_SpinP_switch // 4
+    SpinP_switch = ver_x_SpinP_switch % 4
+    Catomnum, Latomnum, Ratomnum, TCpyCell = inte(fd.read(16))
+    order_max = inte(fd.read(4))
+    atv = floa(fd.read(8*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
+    atv_ijk = inte(fd.read(4*4*(TCpyCell+1)), shape=(TCpyCell+1, 4))
+    Total_NumOrbs = np.insert(inte(fd.read(4*(atomnum))), 0, 1, axis=0)
+    FNAN = np.insert(inte(fd.read(4*(atomnum))), 0, 0, axis=0)
+    natn = ins(spl(inte(fd.read(4*sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+               0, zeros(FNAN[0] + 1), axis=0)[:-1]
+    ncn = ins(spl(inte(fd.read(4*np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+              0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
+    tv = ins(floa(fd.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
+    rtv = ins(floa(fd.read(8*3*4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0)
+    Gxyz = ins(floa(fd.read(8*(atomnum)*4), shape=(atomnum, 4)), 0,
+               [0., 0., 0., 0.], axis=0)
+    Hks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd)
+    iHks = []
+    if SpinP_switch == 3:
+        iHks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd)
+    OLP = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd)
+    OLPpox = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd)
+    OLPpoy = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd)
+    OLPpoz = readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd)
+    DM = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd)
+    Solver = inte(fd.read(4))
+    ChemP, E_Temp = floa(fd.read(8*2))
+    dipole_moment_core = floa(fd.read(8*3))
+    dipole_moment_background = floa(fd.read(8*3))
+    Valence_Electrons, Total_SpinS = floa(fd.read(8*2))
+
+    fd.close()
+    scf_out = {'atomnum': atomnum, 'SpinP_switch': SpinP_switch,
+               'Catomnum': Catomnum, 'Latomnum': Latomnum, 'Hks': Hks,
+               'Ratomnum': Ratomnum, 'TCpyCell': TCpyCell, 'atv': atv,
+               'Total_NumOrbs': Total_NumOrbs, 'FNAN': FNAN, 'natn': natn,
+               'ncn': ncn, 'tv': tv, 'rtv': rtv, 'Gxyz': Gxyz, 'OLP': OLP,
+               'OLPpox': OLPpox, 'OLPpoy': OLPpoy, 'OLPpoz': OLPpoz,
+               'Solver': Solver, 'ChemP': ChemP, 'E_Temp': E_Temp,
+               'dipole_moment_core': dipole_moment_core, 'iHks': iHks,
+               'dipole_moment_background': dipole_moment_background,
+               'Valence_Electrons': Valence_Electrons, 'atv_ijk': atv_ijk,
+               'Total_SpinS': Total_SpinS, 'DM': DM,
+               "version": version,
+               "order_max": order_max
+               }
+    return scf_out
+
 
 
 def read_band_file(filename=None):
@@ -832,12 +991,14 @@ def get_results(out_data=None, log_data=None, restart_data=None,
                               'forces': Ha/Bohr, 'stress': Ha/Bohr**3,
                               'dipole': Debye, 'chemical_potential': Ha,
                               'magmom': 1, 'magmoms': 1, 'eigenvalues': Ha}
-    data = [out_data, log_data, restart_data, scfout_data, dat_data, band_data]
+    data = [out_data, log_data, restart_data, dat_data]
     for datum in data:
         for key in datum.keys():
             for property in implemented_properties.keys():
                 if key == property:
                     results[key] = arr(datum[key])*implemented_properties[key]
+    results['scfout'] = scfout_data
+    results['band'] = band_data
     return results
 
 
