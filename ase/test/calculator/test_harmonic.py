@@ -64,7 +64,7 @@ def run_optimize(atoms):
 
 def test_cartesians():
     """In Cartesian coordinates the first 6 trash eigenvalues (translations and
-    rotations) can have significant absolute values; hence set them to zero
+    rotations) can be slightly different from zero; hence set them to zero
     using an increased parameter zero_thresh.
     """
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
@@ -182,7 +182,7 @@ def test_compatible_with_ase_vibrations():
     vib.clean()
 
     calc_harmonic = Harmonic(ref_atoms=opt_atoms, ref_energy=opt_energy,
-                             hessian_x=hessian_2d, zero_thresh=1e-9)
+                             hessian_x=hessian_2d)
     atoms = ref_atoms.copy()
     atoms.calc = calc_harmonic
     vib = Vibrations(atoms, nfree=4, delta=1e-5)

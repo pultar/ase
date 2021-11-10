@@ -43,7 +43,7 @@ class Harmonic(Calculator):
             'variable_orientation': False,
             'constrained_q': None,
             'rcond': 1e-7,
-            'zero_thresh': 1e-3,
+            'zero_thresh': 0.0,
     }
     nolabel = True
     discard_results_on_any_change = True
@@ -73,13 +73,10 @@ class Harmonic(Calculator):
             to compute energy and forces.
 
         hessian_limit: float, optional, default: 0.0
-            Lower limit for the eigenvalues of the reference Hessian, typically
-            in `eV/A^2`. Eigenvalues in the interval [``zero_thresh``,
-            ``hessian_limit``] are set to ``hessian_limit`` while the
-            eigenvectors are left untouched.
-            During dynamic simulations, very low eigenvalues (force constants)
-            can lead to numerical problems, i.e. unexpected behaviour, where
-            increasing this parameter may help.
+            Reconstruct the reference Hessian matrix with a lower limit for the
+            eigenvalues, typically in `eV/A^2`. Eigenvalues in the interval
+            [``zero_thresh``, ``hessian_limit``] are set to ``hessian_limit``
+            while the eigenvectors are left untouched.
 
         get_q_from_x: python function, optional, default: None (Cartesians)
             Function that returns a vector of user-defined coordinates **q** for
@@ -117,9 +114,9 @@ class Harmonic(Calculator):
             Moore-Penrose pseudo-inverse during transformation of the Hessian
             matrix. Equivalent to the rcond parameter in scipy.linalg.lstsq.
 
-        zero_thresh: float, optional, default: 1e-3
-            Absolute eigenvalues of the reference Hessian matrix
-            below this threshold are set to zero.
+        zero_thresh: float, optional, default: 0.0
+            Reconstruct the reference Hessian matrix with absolute eigenvalues
+            below this threshold set to zero.
         """
         super().__init__(**kwargs)
 
