@@ -108,13 +108,17 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
 
     # Create symbols-to-type map, i.e. integers starting at 0
     if not species:
-        species = sorted(set(atoms.get_chemical_symbols()))
+        symbol_type_map = {}
+        for symbol in atoms.get_chemical_symbols():
+            if symbol not in symbol_type_map:
+                symbol_type_map[symbol] = len(symbol_type_map)
     else:
         if any([sym not in species
                for sym in set(atoms.get_chemical_symbols())]):
             raise ValueError('The species list does not contain all chemical '
                              'species that are present in the atoms object.')
-    symbol_type_map = {symbol: i for i, symbol in enumerate(species)}
+        else:
+            symbol_type_map = {symbol: i for i, symbol in enumerate(species)}
 
     # Add lines for all atoms
     for a, atm in enumerate(atoms):
