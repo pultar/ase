@@ -45,8 +45,8 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
     species : List[str]
         GPUMD uses integers to define atom types. This list allows customized
         such definitions (e.g, ['Pd', 'H'] means Pd is type 0 and H type 1).
-        If None, this list is built by lexicographically sorting all distinct
-        chemical symbols in `atoms`.
+        If None, this list is built by assigning each distinct species to
+        an integer in the order of appearance in `atoms`.
 
     Raises
     ------
