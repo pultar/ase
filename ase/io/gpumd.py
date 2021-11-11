@@ -89,6 +89,7 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
                 maximum_neighbors = max(maximum_neighbors,
                                         len(nl.get_neighbors(atom.index)[0]))
             maximum_neighbors *= 2
+            maximum_neighbors = min(maximum_neighbors, 1024)
 
     # Add header and cell parameters
     lines = []
