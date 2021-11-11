@@ -4,6 +4,7 @@ Implemented:
 * Input file (xyz.in)
 
 """
+import pytest
 
 import numpy as np
 
@@ -12,7 +13,7 @@ from ase.build import bulk
 from ase.io.gpumd import load_xyz_input_gpumd
 
 
-# This file is parsed correctly by GPUMD, since it include
+# This file is parsed correctly by GPUMD, since it is included
 # among the examples distributed with the package, i.e.
 # GPUMD/examples/ex5/xyz.in
 gpumd_input_text = """16 4 1.1 0 1 2
@@ -93,14 +94,31 @@ def test_gpumd_input_write():
     # Test write and read
     atoms.write('xyz.in')
     readback = io.read('xyz.in')
+    assert (np.array(atoms.get_chemical_symbols()) ==
+            np.array(readback.get_chemical_symbols())).all()
     assert np.allclose(atoms.positions, readback.positions)
     assert np.allclose(atoms.cell, readback.cell)
+
+    # Test write and read with custom species definitions
+    atoms.write('xyz.in', species=['O', 'Ni'])
+    readback = io.read('xyz.in', species=['O', 'Ni'])
+    assert (np.array(atoms.get_chemical_symbols()) ==
+            np.array(readback.get_chemical_symbols())).all()
+    assert np.allclose(atoms.positions, readback.positions)
+    assert np.allclose(atoms.cell, readback.cell)
+
+    # Test that writing raises an exception when there is a
+    # mismatch between species and atoms object
+    with pytest.raises(ValueError):
+        atoms.write('xyz.in', species=['O', 'H'])
 
     # Test write and read with triclinic cell
     atoms.write('xyz.in', use_triclinic=True)
     with open('xyz.in', 'r') as fd:
         readback, input_parameters, _ = load_xyz_input_gpumd(fd)
     assert input_parameters['triclinic'] == 1
+    assert (np.array(atoms.get_chemical_symbols()) ==
+            np.array(readback.get_chemical_symbols())).all()
     assert np.allclose(atoms.positions, readback.positions)
     assert np.allclose(atoms.cell, readback.cell)
     assert np.array_equal(atoms.numbers, readback.numbers)
