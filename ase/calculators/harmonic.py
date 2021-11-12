@@ -291,7 +291,7 @@ class Harmonic(Calculator):
             raise CalculationFailed('Suspected coordinate failure: '
                                     f'G-matrix has got {zero_eigvals} '
                                     'zero eigenvalues, but had '
-                                    '{self.zero_eigvals} during setup')
+                                    f'{self.zero_eigvals} during setup')
 
     def copy(self):
         """Create a new instance of the :class:`Harmonic` calculator with the

@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 from ase import Atoms
 from ase.calculators.harmonic import Harmonic
+from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 from ase.optimize import BFGS
 from ase.geometry.geometry import get_distances_derivatives
 from ase.calculators.emt import EMT
@@ -144,6 +145,22 @@ def water_get_jacobian(atoms):
             dqi_dxj[defin[j]] = deriv
         jac.append(dqi_dxj.flatten())
     return np.asarray(jac)
+
+
+def test_raise_Errors():
+    with pytest.raises(CalculatorSetupError):
+        Harmonic(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                 get_q_from_x=lambda x: x)
+    with pytest.raises(CalculatorSetupError):
+        Harmonic(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                 variable_orientation=True)
+    with pytest.raises(CalculationFailed):
+        calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                        hessian_x=hessian_x,
+                        get_q_from_x=water_get_q_from_x,
+                        get_jacobian=lambda x: np.ones((3,9)),
+                        cartesian=True, variable_orientation=True)
+        atoms = setup_water(calc)
 
 
 def test_internals():
