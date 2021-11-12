@@ -162,7 +162,7 @@ def test_raise_Errors():
         calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
                         hessian_x=hessian_x,
                         get_q_from_x=water_get_q_from_x,
-                        get_jacobian=lambda x: np.ones((3,9)),
+                        get_jacobian=lambda x: np.ones((3, 9)),
                         cartesian=True, variable_orientation=True)
         setup_water(calc)
 
