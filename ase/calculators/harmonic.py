@@ -169,7 +169,6 @@ class Harmonic(Calculator):
         * Baker, J. et al. J. Chem. Phys. 1996, 105 (1), 192–212."""
         jac0 = self.get_jacobian(self.parameters.ref_atoms)  # Jacobian (dq/dx)
         jac0 = self.constrain_jac(jac0)  # for reference Cartesian coordinates
-        #jac0 = self.constrain_jac2(jac0)  # for reference Cartesian coordinates
         ijac0 = self.get_ijac(jac0, self.parameters.rcond)
         self.transform2reference_hessians(jac0, ijac0)  # perform projection
 
@@ -185,21 +184,6 @@ class Harmonic(Calculator):
         proj = proj - proj @ Cmat @ pinv(Cmat @ proj @ Cmat) @ Cmat @ proj
         jac = pinv(jac) @ proj  # come back to redundant projector
         return jac.T
-
-    def constrain_jac2(self, jac):
-        """Alternative algorithm to constrain_jac."""
-        constrained_q = self.parameters.constrained_q or []
-        Cmat = zeros(jac.shape)
-        Cmat[constrained_q] = jac[constrained_q]
-        self.orthonormalize(Cmat)
-        ojac = jac @ Cmat.T  # overlap
-        for i in range(len(ojac)):  # set diagonal elements to zero
-            ojac[i][i] = 0.0
-        ojac = ojac @ Cmat
-        jac = jac - ojac  # subtract overlap to obtain jac0 with constraints
-        for i in constrained_q:
-            jac[i] = 0.0  # broadcasted to row
-        return jac
 
     def transform2reference_hessians(self, jac0, ijac0):
         """Transform Cartesian Hessian matrix to user-defined coordinates
