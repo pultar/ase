@@ -47,7 +47,6 @@ class Harmonic(Calculator):
             'zero_thresh': 0.0,
     }
     nolabel = True
-    discard_results_on_any_change = True
 
     def __init__(self, **kwargs):
         """
