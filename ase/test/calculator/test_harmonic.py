@@ -149,11 +149,15 @@ def water_get_jacobian(atoms):
 
 def test_raise_Errors():
     with pytest.raises(CalculatorSetupError):
+        Harmonic()
+    with pytest.raises(CalculatorSetupError):
         Harmonic(ref_atoms=ref_atoms, hessian_x=hessian_x,
                  get_q_from_x=lambda x: x)
     with pytest.raises(CalculatorSetupError):
         Harmonic(ref_atoms=ref_atoms, hessian_x=hessian_x,
                  variable_orientation=True)
+    with pytest.raises(CalculatorSetupError):
+        Harmonic(ref_atoms=ref_atoms, hessian_x=hessian_x, cartesian=False)
     with pytest.raises(CalculationFailed):
         calc = Harmonic(ref_atoms=ref_atoms, ref_energy=ref_energy,
                         hessian_x=hessian_x,

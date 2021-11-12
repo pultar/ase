@@ -122,14 +122,11 @@ class Harmonic(Calculator):
 
     def set(self, **kwargs):
         changed_parameters = super().set(**kwargs)
-        changes = ['ref_atoms', 'hessian_x', 'hessian_limit', 'get_q_from_x',
-                   'get_jacobian', 'variable_orientation', 'constrained_q',
-                   'rcond', 'zero_thresh']  # almost any change -> self.update()
-        if [change for change in changes if change in changed_parameters]:
-            self.update()  # should be called during super().__init__(...)
-        return changed_parameters
 
-    def update(self):
+        if self.parameters.ref_atoms is None:
+            raise CalculatorSetupError('Missing parameter `ref_atoms`.')
+        if self.parameters.hessian_x is None:
+            raise CalculatorSetupError('Missing parameter `hessian_x`.')
         coord_fs = [self.parameters.get_q_from_x, self.parameters.get_jacobian]
         if None in coord_fs:
             if not all([func is None for func in coord_fs]):
@@ -141,14 +138,23 @@ class Harmonic(Calculator):
                        'user-defined, translationally and rotationally '
                        'invariant coordinate system.')
                 raise CalculatorSetupError(msg)
+            if not self.parameters.cartesian:
+                msg = ('A user-defined coordinate system is required for '
+                       'calculations with cartesian=False.')
+                raise CalculatorSetupError(msg)
 
-            # Cartesian coordinates
-            self.parameters.cartesian = True
-            self.get_q_from_x = lambda x: x.get_positions()
-            self.get_jacobian = lambda x: diagflat(ones(3 * len(x)))
-        else:  # user-defined coordinates
-            self.get_q_from_x = self.parameters.get_q_from_x
-            self.get_jacobian = self.parameters.get_jacobian
+        changes = ['ref_atoms', 'hessian_x', 'hessian_limit', 'get_q_from_x',
+                   'get_jacobian', 'variable_orientation', 'constrained_q',
+                   'rcond', 'zero_thresh']  # almost any change -> self.update()
+        if [change for change in changes if change in changed_parameters]:
+            self.update()
+        return changed_parameters
+
+    def update(self):
+        self.get_q_from_x = (self.parameters.get_q_from_x or
+                             (lambda atoms: atoms.get_positions()))
+        self.get_jacobian = (self.parameters.get_jacobian or
+                             (lambda atoms: diagflat(ones(3 * len(atoms)))))
 
         # reference Cartesian coords. x0; reference user-defined coords. q0
         self.x0 = self.parameters.ref_atoms.get_positions().ravel()
