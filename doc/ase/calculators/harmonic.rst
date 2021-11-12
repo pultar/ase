@@ -216,11 +216,6 @@ Integration of the mean energy differences ('ediffs') over the integration grid
 (`\lambda` path) leads to the change in free energy due to the coordinate
 transformation.
 
-.. note::
-
-    The coordinate systems in this example are linear dependent, hence the
-    energy differences are zero.
-
 Example 4: Anharmonic Corrections
 ---------------------------------
 The strategy in Example 3 can be used to compute anharmonic corrections to the

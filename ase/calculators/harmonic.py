@@ -5,6 +5,7 @@ from scipy.linalg import lstsq  # performs better than numpy.linalg.lstsq
 
 from ase import units
 from ase.calculators.calculator import Calculator, all_changes
+from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
 class Harmonic(Calculator):
@@ -133,13 +134,14 @@ class Harmonic(Calculator):
         coord_fs = [self.parameters.get_q_from_x, self.parameters.get_jacobian]
         if None in coord_fs:
             if not all([func is None for func in coord_fs]):
-                msg = ('A user-defined coordinate system requires '
-                       + '`get_q_from_x` and `get_jacobian`.')
-                raise ValueError(msg)
+                msg = ('A user-defined coordinate system requires both '
+                       '`get_q_from_x` and `get_jacobian`.')
+                raise CalculatorSetupError(msg)
             if self.parameters.variable_orientation:
-                msg = ('Define a translationally and rotationally invariant '
-                       + 'coordinate system for `variable_orientation`')
-                raise ValueError(msg)
+                msg = ('The use of `variable_orientation` requires a '
+                       'user-defined, translationally and rotationally '
+                       'invariant coordinate system.')
+                raise CalculatorSetupError(msg)
 
             # Cartesian coordinates (default)
             self.parameters.cartesian = True
@@ -215,9 +217,9 @@ class Harmonic(Calculator):
 
     def calculate(self, atoms=None, properties=['energy', 'forces'],
                   system_changes=['positions', 'numbers', 'cell', 'pbc']):
-        super().calculate(atoms, properties, system_changes)
-
         if self.calculation_required(atoms, properties):
+            super().calculate(atoms, properties, system_changes)
+
             q = self.get_q_from_x(atoms).ravel()
 
             if self.parameters.cartesian:
@@ -267,8 +269,9 @@ class Harmonic(Calculator):
         while err > 1e-7:  # back-transformation tolerance for convergence
             count += 1
             if count > 99:  # maximum number of iterations during back-transf.
-                msg = 'Back-transformation of variable orientation failed'
-                raise ValueError(msg)
+                msg = ('Back-transformation from user-defined to Cartesian '
+                       'coordinates failed.')
+                raise CalculationFailed(msg)
             jac = self.get_jacobian(atoms_copy)
             ijac = self.get_ijac(jac, self.parameters.rcond)
             dx = ijac @ dq
@@ -279,18 +282,6 @@ class Harmonic(Calculator):
             err = abs(dq).max()
         return xk
 
-    @staticmethod
-    def orthonormalize(matrix):
-        """Gram-Schmidt orthonormalization of a (singular) matrix."""
-        basis = []
-        for i, v in enumerate(matrix):
-            w = v - sum((v @ b) * b for b in basis)
-            if (w > 1e-7).any():
-                normed = w / norm(w)
-                basis.append(normed)
-                matrix[i] = normed
-            else:
-                matrix[i] = 0.0  # broadcasted to row
 
     def check_redundancy(self, jac):
         """Compare number of zero eigenvalues of G-matrix to initial number."""

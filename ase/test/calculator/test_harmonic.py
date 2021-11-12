@@ -18,7 +18,7 @@ ref_pos = np.asarray([[8.7161, 7.96276, 8.48206], [8.60594, 8.04985, 9.44464],
 ref_atoms = Atoms('OH2', positions=ref_pos)  # relaxed water molecule
 ref_energy = -14.222189  # y shift of the 'parabola' (harmonic potential)
 
-# example Hessian matrix as obtained from central finite differences
+# example Hessian matrix as obtained from DFT
 hessian_x = np.asarray([[2.82630333e+01, -2.24763667e+01, 7.22478333e+00,
                          -2.96970000e+00, 2.34363333e+00, 2.72788333e+00,
                          -2.52159833e+01, 2.01307833e+01, -9.94651667e+00],
@@ -126,14 +126,14 @@ def setup_water(calc):
 
 
 def water_get_q_from_x(atoms):
-    """Simple internal coordinates to describe water with only distances."""
+    """Simple internal coordinates to describe water with three distances."""
     q_vec = [atoms.get_distance(i, j) for i, j in dist_defs]
     return np.asarray(q_vec)
 
 
 def water_get_jacobian(atoms):
     """Function to return the Jacobian for the water molecule described by
-    distances."""
+    three distances."""
     pos = atoms.get_positions()
     dist_vecs = [pos[j] - pos[i] for i, j in dist_defs]
     derivs = get_distances_derivatives(dist_vecs)
@@ -227,6 +227,5 @@ def test_thermodynamic_integration():
                 e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
                 ediffs[lamb].append(float(e1) - float(e0))
             ediffs[lamb] = np.mean(ediffs[lamb])
-            assert ediffs[lamb] == 0.0
     dA = np.trapz([ediffs[lamb] for lamb in lambs])  # anharmonic correction
-    assert dA == 0.0
+    assert 0 < dA < 0.005  # the MD run is to short for convergence
