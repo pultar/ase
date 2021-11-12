@@ -282,7 +282,6 @@ class Harmonic(Calculator):
             err = abs(dq).max()
         return xk
 
-
     def check_redundancy(self, jac):
         """Compare number of zero eigenvalues of G-matrix to initial number."""
         Gmat = jac.T @ jac
