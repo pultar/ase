@@ -151,6 +151,7 @@ class Harmonic(Calculator):
         return changed_parameters
 
     def update(self):
+        # set up user-defined coordinate system or Cartesian coordinates
         self.get_q_from_x = (self.parameters.get_q_from_x or
                              (lambda atoms: atoms.get_positions()))
         self.get_jacobian = (self.parameters.get_jacobian or
