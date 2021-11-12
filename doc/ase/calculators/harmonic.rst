@@ -19,7 +19,7 @@ matrix. With the Hessian matrix (e.g. computed numerically in ASE via
 be obtained.
 
 The following :class:`Harmonic` calculator can be used to compute energy and
-forces with a Hessian-based harmonic force-field. Moreover, it can be used to
+forces with a Hessian-based harmonic force field. Moreover, it can be used to
 compute Anharmonic Corrections to the Harmonic Approximation. [1]_
 
 .. [1] Amsler, J. et al., Anharmonic Correction to Adsorption Free Energy

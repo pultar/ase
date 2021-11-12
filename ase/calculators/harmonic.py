@@ -9,7 +9,7 @@ from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
 class Harmonic(Calculator):
-    """Class for calculations with a Hessian-based harmonic force-field.
+    """Class for calculations with a Hessian-based harmonic force field.
 
     Energy and forces of this calculator are based on the Cartesian Hessian
     for a local reference configuration, i.e. if desired, on the Hessian
