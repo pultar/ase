@@ -288,11 +288,10 @@ class Harmonic(Calculator):
         zero_eigvals = len(flatnonzero(absolute(self.Gmat_eigvals) <
                                        self.parameters.zero_thresh))
         if zero_eigvals != self.zero_eigvals:
-            raise RuntimeError('Suspected coordinate failure: '
-                               + 'G-matrix has got {} '.format(zero_eigvals)
-                               + 'zero eigenvalues, but had '
-                               + '{} during '.format(self.zero_eigvals)
-                               + 'setup')
+            raise CalculationFailed('Suspected coordinate failure: '
+                                    f'G-matrix has got {zero_eigvals} '
+                                    'zero eigenvalues, but had '
+                                    '{self.zero_eigvals} during setup')
 
     def copy(self):
         """Create a new instance of the :class:`Harmonic` calculator with the
