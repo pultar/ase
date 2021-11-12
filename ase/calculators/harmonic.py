@@ -142,7 +142,7 @@ class Harmonic(Calculator):
                        'invariant coordinate system.')
                 raise CalculatorSetupError(msg)
 
-            # Cartesian coordinates (default)
+            # Cartesian coordinates
             self.parameters.cartesian = True
             self.get_q_from_x = lambda x: x.get_positions()
             self.get_jacobian = lambda x: diagflat(ones(3 * len(x)))
