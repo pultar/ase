@@ -229,7 +229,8 @@ class ContourExploration(Dynamics):
 
     def rand_vect(self):
         '''Returns a random (Natoms,3) vector'''
-        #vect = self.rng.random((len(self.atoms), 3)) - 0.5
+        # Using normally distributed numbers ensures uniform direction sampling
+        # in N-dimensions
         vect = self.rng.standard_normal((len(self.atoms), 3))
         return vect
 
