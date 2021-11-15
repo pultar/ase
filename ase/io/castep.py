@@ -95,11 +95,15 @@ def write_freeform(fd, outputobj):
     options = outputobj._options
 
     # Some keywords, if present, are printed in this order
-    preferred_order = ['lattice_cart', 'lattice_abc',
-                       'positions_frac', 'positions_abs',
-                       'species_pot', 'symmetry_ops',   # CELL file
-                       'task', 'cut_off_energy'         # PARAM file
-                       ]
+    preferred_order = [
+        # CELL file
+        'lattice_cart', 'lattice_abc',
+        'positions_frac', 'positions_abs',
+        'ionic_velocities',
+        'species_pot', 'symmetry_ops',
+        # PARAM file
+        'task', 'cut_off_energy'
+    ]
 
     keys = outputobj.get_attr_dict().keys()
     # This sorts only the ones in preferred_order and leaves the rest
@@ -132,9 +136,16 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
           castep_cell=castep_cell, force_write=force_write)
 
 
-def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
-                      precision=6, magnetic_moments=None,
-                      castep_cell=None):
+def write_castep_cell(
+        fd,
+        atoms: ase.Atoms,
+        positions_frac=False,
+        force_write=False,
+        precision=6,
+        magnetic_moments=None,
+        velocities=False,
+        castep_cell=None,
+        units=units_CODATA2002):
     """
     This CASTEP export function write minimal information to
     a .cell file. If the atoms object is a trajectory, it will
@@ -160,6 +171,8 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
                           get_magnetic_moments() are used.
                           If an array of the same length as the atoms object,
                           its contents will be used as magnetic moments.
+        velocities: write ionic velocities
+        units:
     """
 
     if atoms is None:
@@ -235,6 +248,16 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
         pos_block.append(line)
 
     setattr(cell, pos_keyword, pos_block)
+
+    # ionic velocities
+    if velocities:
+        velo_format = " ".join([f"{{:{precision + 3}.{precision}f}}"] * 3)
+        conversion_factor = np.sqrt(units['me'] / units['Eh'])
+        velocity_scaled = atoms.get_velocities() * conversion_factor
+        velocity_block = []
+        for ion_velo in velocity_scaled:
+            velocity_block.append(velo_format.format(*tuple(ion_velo)))
+        setattr(cell, "ionic_velocities", velocity_block)
 
     constraints = atoms.constraints
     if len(constraints):
