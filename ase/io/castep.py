@@ -6,6 +6,8 @@ attribute.
 import os
 import re
 import warnings
+from typing import List
+
 import numpy as np
 from copy import deepcopy
 
@@ -264,7 +266,7 @@ def write_castep_cell(
         _supported_constraints = (FixAtoms, FixedPlane, FixedLine,
                                   FixCartesian)
 
-        constr_block = []
+        constr_block: List[str] = []
 
         for constr in constraints:
             if not isinstance(constr, _supported_constraints):
