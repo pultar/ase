@@ -19,6 +19,7 @@ def xrd():
     return XrDebye(atoms=atoms, wavelength=wavelengths['CuKa1'], damping=0.04,
                    method='Iwasa', alpha=1.01, warn=True)
 
+
 @pytest.fixture
 def xrd_slow():
     # test system -- cluster of 587 silver atoms
