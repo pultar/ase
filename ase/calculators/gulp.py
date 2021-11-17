@@ -41,7 +41,7 @@ class GULPOptimizer:
 
 
 class GULP(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'stress']
+    implemented_properties = ['energy', 'free_energy', 'forces', 'stress']
     command = 'gulp < PREFIX.gin > PREFIX.got'
     discard_results_on_any_change = True
     default_parameters = dict(
@@ -115,16 +115,16 @@ class GULP(FileIOCalculator):
         if p.options:
             for t in p.options:
                 s += '%s\n' % t
-        with open(self.prefix + '.gin', 'w') as f:
-            f.write(s)
+        with open(self.prefix + '.gin', 'w') as fd:
+            fd.write(s)
 
     def read_results(self):
         FileIOCalculator.read(self, self.label)
         if not os.path.isfile(self.label + '.got'):
             raise ReadError
 
-        with open(self.label + '.got') as f:
-            lines = f.readlines()
+        with open(self.label + '.got') as fd:
+            lines = fd.readlines()
 
         cycles = -1
         self.optimized = None
