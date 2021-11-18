@@ -3,7 +3,7 @@ from numpy.linalg import eigh, norm, pinv
 from scipy.linalg import lstsq  # performs better than numpy.linalg.lstsq
 
 from ase import units
-from ase.calculators.calculator import BaseCalculator, Calculator, all_changes
+from ase.calculators.calculator import Calculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
