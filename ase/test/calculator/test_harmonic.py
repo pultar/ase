@@ -252,4 +252,4 @@ def test_thermodynamic_integration():
                 ediffs[lamb].append(float(e1) - float(e0))
             ediffs[lamb] = np.mean(ediffs[lamb])
     dA = np.trapz([ediffs[lamb] for lamb in lambs])  # anharmonic correction
-    assert 0 < dA < 0.005  # the MD run is to short for convergence
+    assert -0.005 < dA < 0.005  # the MD run is to short for convergence
