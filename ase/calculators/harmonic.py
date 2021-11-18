@@ -166,7 +166,7 @@ class HarmonicBackend:
         # reference Cartesian coords. x0; reference user-defined coords. q0
         self.x0 = self.parameters['ref_atoms'].get_positions().ravel()
         self.q0 = self.get_q_from_x(self.parameters['ref_atoms']).ravel()
-        self.setup_reference_hessians()  # self.hessian_x and self.hessian_q
+        self.setup_reference_hessians()  # self._hessian_x and self._hessian_q
 
         # store number of zero eigenvalues of G-matrix for redundancy check
         jac0 = self.get_jacobian(self.parameters['ref_atoms'])
@@ -216,8 +216,8 @@ class HarmonicBackend:
           (w < self.parameters['hessian_limit'])] = self.parameters['hessian_limit']
         # reconstruct Hessian from new eigenvalues and preserved eigenvectors
         hessian_x = v @ np.diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
-        self.hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
-        self.hessian_q = ijac0.T @ self.hessian_x @ ijac0
+        self._hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
+        self._hessian_q = ijac0.T @ self._hessian_x @ ijac0
 
     @staticmethod
     def get_ijac(jac, rcond):  # jac is the Wilson B-matrix
@@ -233,7 +233,7 @@ class HarmonicBackend:
             if self.parameters['cartesian']:
                 x = atoms.get_positions().ravel()
                 x0 = self.x0
-                hessian_x = self.hessian_x
+                hessian_x = self._hessian_x
 
                 if self.parameters['variable_orientation']:
                     # determine x0 for present orientation
@@ -245,22 +245,21 @@ class HarmonicBackend:
                     jac0 = self.get_jacobian(ref_atoms)
                     self.check_redundancy(jac0)  # check for coordinate failure
                     # determine hessian_x for present orientation
-                    hessian_x = jac0.T @ self.hessian_q @ jac0
+                    hessian_x = jac0.T @ self._hessian_q @ jac0
 
                 xdiff = x - x0
                 forces_x = -hessian_x @ xdiff
-                energy = (self.parameters['ref_energy']
-                          - 0.5 * (forces_x * xdiff).sum())
+                energy = -0.5 * (forces_x * xdiff).sum()
 
             else:
                 jac = self.get_jacobian(atoms)
                 self.check_redundancy(jac)  # check for coordinate failure
                 qdiff = q - self.q0
-                forces_q = -self.hessian_q @ qdiff
+                forces_q = -self._hessian_q @ qdiff
                 forces_x = forces_q @ jac
-                energy = (self.parameters['ref_energy']
-                          - 0.5 * (forces_q * qdiff).sum())
+                energy = -0.5 * (forces_q * qdiff).sum()
 
+            energy += self.parameters['ref_energy']
             forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
             return energy, forces_x
 
@@ -299,6 +298,14 @@ class HarmonicBackend:
                                     f'G-matrix has got {zero_eigvals} '
                                     'zero eigenvalues, but had '
                                     f'{self.zero_eigvals} during setup')
+
+    @property
+    def hessian_x(self):
+        return self._hessian_x
+
+    @property
+    def hessian_q(self):
+        return self._hessian_q
 
 
 class SpringCalculator(Calculator):

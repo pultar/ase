@@ -1,4 +1,4 @@
-#.. module:: ase.calculators.harmonic
+.. module:: ase.calculators.harmonic
 
 .. _harmonic:
 
