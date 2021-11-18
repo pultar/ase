@@ -21,7 +21,7 @@ vibs = read_forces_strict(
 
 vibs.write_json('my_vibrations.json')
 
-
+##############################################################
 ## Batch user
 import ase.io
 from ase.vibrations import write_displacements
@@ -55,7 +55,7 @@ displacements = [ase.io.read(filename, format='aims_out')
 
 vibs = read_forces_strict(displacements, **options)
 
-
+##################################################################
 ## Database user
 import ase.db
 from ase.vibrations import write_displacements_to_db
