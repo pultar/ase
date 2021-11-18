@@ -7,6 +7,14 @@ from ase.calculators.calculator import Calculator, BaseCalculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
+class HarmonicBackend:
+    def __init__(self):
+        pass
+
+    def calculate(self, atoms):
+        pass
+        return energy, forces_x
+
 class HarmonicCalculator(BaseCalculator):
     """Class for calculations with a Hessian-based harmonic force field.
 
@@ -32,7 +40,6 @@ class HarmonicCalculator(BaseCalculator):
     # Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
 
     implemented_properties = ['energy', 'forces']
-    nolabel = True
 
     def __init__(self, ref_atoms, hessian_x, ref_energy=0.0, get_q_from_x=None,
                  get_jacobian=None, cartesian=True, variable_orientation=False,
@@ -258,7 +265,6 @@ class HarmonicCalculator(BaseCalculator):
                           - 0.5 * (forces_q * qdiff).sum())
 
             forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
-
             return energy, forces_x
 
     def back_transform(self, x, q, q0, atoms_copy):
@@ -296,17 +302,6 @@ class HarmonicCalculator(BaseCalculator):
                                     f'G-matrix has got {zero_eigvals} '
                                     'zero eigenvalues, but had '
                                     f'{self.zero_eigvals} during setup')
-
-    def copy(self):
-        """Create a new instance of the :class:`HarmonicCalculator` with the
-        same input parameters."""
-        return HarmonicCalculator(**self.parameters)
-
-    def todict(self):
-        d = super().todict()  # when self.parameters is serialized, ...
-        d.update(get_q_from_x=repr(self.parameters['get_q_from_x']))  # functions
-        d.update(get_jacobian=repr(self.parameters['get_jacobian']))  # raise errs
-        return d
 
 
 class SpringCalculator(Calculator):

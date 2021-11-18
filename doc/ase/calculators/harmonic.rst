@@ -29,8 +29,6 @@ compute Anharmonic Corrections to the Harmonic Approximation. [1]_
 
 .. autoclass:: ase.calculators.harmonic.HarmonicCalculator
 
-   .. automethod:: copy
-
 .. note::
 
    The reference Hessians in **x** and **q** can be inspected on the calculator
@@ -185,14 +183,13 @@ thermodynamic (`\lambda`-path) integration. [1]_
 >>> from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution
 ...                                          Stationary, ZeroRotation)
 >>> from ase.md.andersen import Andersen
->>> calc_harmonic_1 = HarmonicCalculator(ref_atoms=ref_atoms,
-...                                      ref_energy=ref_energy,
-...                                      hessian_x=hessian_x,
-...                                      get_q_from_x=water_get_q_from_x,
-...                                      get_jacobian=water_get_jacobian,
-...                                      cartesian=True, variable_orientation=True)
->>> calc_harmonic_0 = calc_harmonic_1.copy()
->>> calc_harmonic_0.set(cartesian=False)
+>>> parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
+                  'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
+                  'get_jacobian': water_get_jacobian, 'cartesian': True,
+                  'variable_orientation': True}
+>>> calc_harmonic_1 = HarmonicCalculator(**parameters)
+>>> parameters['cartesian'] = False
+>>> calc_harmonic_0 = HarmonicCalculator(**parameters)
 >>> ediffs = {}  # collect energy difference for varying lambda coupling
 >>> lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
 >>> for lamb in lambs:

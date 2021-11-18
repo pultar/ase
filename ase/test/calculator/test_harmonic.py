@@ -150,23 +150,21 @@ def water_get_jacobian(atoms):
 
 
 def test_raise_Errors():
-    with pytest.raises(TypeError):
-        HarmonicCalculator()
     with pytest.raises(CalculatorSetupError):
         HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                 get_q_from_x=lambda x: x)
+                           get_q_from_x=lambda x: x)
     with pytest.raises(CalculatorSetupError):
         HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                 variable_orientation=True)
+                           variable_orientation=True)
     with pytest.raises(CalculatorSetupError):
         HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
                            cartesian=False)
     with pytest.raises(CalculationFailed):
         calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                        hessian_x=hessian_x,
-                        get_q_from_x=water_get_q_from_x,
-                        get_jacobian=lambda x: np.ones((3, 9)),
-                        cartesian=True, variable_orientation=True)
+                                  hessian_x=hessian_x,
+                                  get_q_from_x=water_get_q_from_x,
+                                  get_jacobian=lambda x: np.ones((3, 9)),
+                                  cartesian=True, variable_orientation=True)
         setup_water(calc)
 
 
@@ -217,10 +215,10 @@ def test_compatible_with_ase_vibrations():
     vib.clean()
     calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
                                        ref_energy=ref_energy,
-                             hessian_x=hessian_2d,
-                             get_q_from_x=water_get_q_from_x,
-                             get_jacobian=water_get_jacobian,
-                             cartesian=True)
+                                       hessian_x=hessian_2d,
+                                       get_q_from_x=water_get_q_from_x,
+                                       get_jacobian=water_get_jacobian,
+                                       cartesian=True)
     atoms = ref_atoms.copy()
     atoms.calc = calc_harmonic
     vib = Vibrations(atoms, nfree=4, delta=1e-5)
