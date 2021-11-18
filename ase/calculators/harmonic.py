@@ -7,13 +7,6 @@ from ase.calculators.calculator import Calculator, BaseCalculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
-class HarmonicBackend:
-    def __init__(self):
-        pass
-
-    def calculate(self, atoms):
-        pass
-        return energy, forces_x
 
 class HarmonicCalculator(BaseCalculator):
     """Class for calculations with a Hessian-based harmonic force field.
@@ -129,22 +122,23 @@ class HarmonicCalculator(BaseCalculator):
         }
         super().__init__(parameters=params)
 
-        self.check_input()
+        self.check_input([get_q_from_x, get_jacobian],
+                         variable_orientation, cartesian)
         self.update()
+        self.HarmonicBackend = HarmonicBackend(params)
 
-    def check_input(self):
-        cfs = [self.parameters['get_q_from_x'], self.parameters['get_jacobian']]
-        if None in cfs:
-            if not all([func is None for func in cfs]):
+    def check_input(self, coord_functions, variable_orientation, cartesian):
+        if None in coord_functions:
+            if not all([func is None for func in coord_functions]):
                 msg = ('A user-defined coordinate system requires both '
                        '`get_q_from_x` and `get_jacobian`.')
                 raise CalculatorSetupError(msg)
-            if self.parameters['variable_orientation']:
+            if variable_orientation:
                 msg = ('The use of `variable_orientation` requires a '
                        'user-defined, translationally and rotationally '
                        'invariant coordinate system.')
                 raise CalculatorSetupError(msg)
-            if not self.parameters['cartesian']:
+            if not cartesian:
                 msg = ('A user-defined coordinate system is required for '
                        'calculations with cartesian=False.')
                 raise CalculatorSetupError(msg)
@@ -226,11 +220,160 @@ class HarmonicCalculator(BaseCalculator):
         if self.calculation_required(atoms, properties):
             super().calculate(atoms, properties, system_changes)
 
-        energy, forces_x = self._calculate(atoms)
+        #energy, forces_x = self._calculate(atoms)
+        energy, forces_x = self.HarmonicBackend.get_energy_forces(atoms)
         self.results['energy'] = energy
         self.results['forces'] = forces_x
 
     def _calculate(self, atoms):
+            q = self.get_q_from_x(atoms).ravel()
+
+            if self.parameters['cartesian']:
+                x = atoms.get_positions().ravel()
+                x0 = self.x0
+                hessian_x = self.hessian_x
+
+                if self.parameters['variable_orientation']:
+                    # determine x0 for present orientation
+                    x0 = self.back_transform(x, q, self.q0, atoms.copy())
+                    ref_atoms = atoms.copy()
+                    ref_atoms.set_positions(x0.reshape(int(len(x0) / 3), 3),
+                                         apply_constraint=False)
+                    # determine jac0 for present orientation
+                    jac0 = self.get_jacobian(ref_atoms)
+                    self.check_redundancy(jac0)  # check for coordinate failure
+                    # determine hessian_x for present orientation
+                    hessian_x = jac0.T @ self.hessian_q @ jac0
+
+                xdiff = x - x0
+                forces_x = -hessian_x @ xdiff
+                energy = (self.parameters['ref_energy']
+                          - 0.5 * (forces_x * xdiff).sum())
+
+            else:
+                jac = self.get_jacobian(atoms)
+                self.check_redundancy(jac)  # check for coordinate failure
+                qdiff = q - self.q0
+                forces_q = -self.hessian_q @ qdiff
+                forces_x = forces_q @ jac
+                energy = (self.parameters['ref_energy']
+                          - 0.5 * (forces_q * qdiff).sum())
+
+            forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
+            return energy, forces_x
+
+    def back_transform(self, x, q, q0, atoms_copy):
+        """Find the right orientation in Cartesian reference coordinates."""
+        xk = 1 * x
+        qk = 1 * q
+        dq = qk - q0
+        err = abs(dq).max()
+        count = 0
+        atoms_copy.set_constraint()  # helpful for back-transformation
+        while err > 1e-7:  # back-transformation tolerance for convergence
+            count += 1
+            if count > 99:  # maximum number of iterations during back-transf.
+                msg = ('Back-transformation from user-defined to Cartesian '
+                       'coordinates failed.')
+                raise CalculationFailed(msg)
+            jac = self.get_jacobian(atoms_copy)
+            ijac = self.get_ijac(jac, self.parameters['rcond'])
+            dx = ijac @ dq
+            xk = xk - dx
+            atoms_copy.set_positions(xk.reshape(int(len(xk) / 3), 3))
+            qk = self.get_q_from_x(atoms_copy).ravel()
+            dq = qk - q0
+            err = abs(dq).max()
+        return xk
+
+    def check_redundancy(self, jac):
+        """Compare number of zero eigenvalues of G-matrix to initial number."""
+        Gmat = jac.T @ jac
+        self.Gmat_eigvals, _ = eigh(Gmat)
+        zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
+                                          self.parameters['zero_thresh']))
+        if zero_eigvals != self.zero_eigvals:
+            raise CalculationFailed('Suspected coordinate failure: '
+                                    f'G-matrix has got {zero_eigvals} '
+                                    'zero eigenvalues, but had '
+                                    f'{self.zero_eigvals} during setup')
+
+
+class HarmonicBackend:
+    def __init__(self, params):
+        self.parameters = params
+        # set up user-defined coordinate system or Cartesian coordinates
+        self.get_q_from_x = (self.parameters['get_q_from_x'] or
+                             (lambda atoms: atoms.get_positions()))
+        self.get_jacobian = (self.parameters['get_jacobian'] or
+                             (lambda atoms: np.diagflat(np.ones(3 *
+                                                                len(atoms)))))
+
+        # reference Cartesian coords. x0; reference user-defined coords. q0
+        self.x0 = self.parameters['ref_atoms'].get_positions().ravel()
+        self.q0 = self.get_q_from_x(self.parameters['ref_atoms']).ravel()
+        self.setup_reference_hessians()  # self.hessian_x and self.hessian_q
+
+        # store number of zero eigenvalues of G-matrix for redundancy check
+        jac0 = self.get_jacobian(self.parameters['ref_atoms'])
+        Gmat = jac0.T @ jac0
+        self.Gmat_eigvals, _ = eigh(Gmat)  # stored for inspection purposes
+        self.zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
+                                               self.parameters['zero_thresh']))
+
+    def setup_reference_hessians(self):
+        """Prepare projector to project out constrained user-defined coordinates
+        **q** from Hessian. Then do transformation to user-defined coordinates
+        and back. Relevant literature:
+        * Peng, C. et al. J. Comput. Chem. 1996, 17 (1), 49-56.
+        * Baker, J. et al. J. Chem. Phys. 1996, 105 (1), 192–212."""
+        jac0 = self.get_jacobian(self.parameters['ref_atoms'])  # Jacobian (dq/dx)
+        jac0 = self.constrain_jac(jac0)  # for reference Cartesian coordinates
+        ijac0 = self.get_ijac(jac0, self.parameters['rcond'])
+        self.transform2reference_hessians(jac0, ijac0)  # perform projection
+
+    def constrain_jac(self, jac):
+        """Procedure by Peng, Ayala, Schlegel and Frisch adjusted for redundant
+        coordinates.
+        Peng, C. et al. J. Comput. Chem. 1996, 17 (1), 49–56.
+        """
+        proj = jac @ jac.T  # build non-redundant projector
+        constrained_q = self.parameters['constrained_q'] or []
+        Cmat = np.zeros(proj.shape)  # build projector for constraints
+        Cmat[constrained_q, constrained_q] = 1.0
+        proj = proj - proj @ Cmat @ pinv(Cmat @ proj @ Cmat) @ Cmat @ proj
+        jac = pinv(jac) @ proj  # come back to redundant projector
+        return jac.T
+
+    def transform2reference_hessians(self, jac0, ijac0):
+        """Transform Cartesian Hessian matrix to user-defined coordinates
+        and back to Cartesian coordinates. For suitable coordinate systems
+        (e.g. internals) this removes rotational and translational degrees of
+        freedom. Furthermore, apply the lower limit to the force constants
+        and reconstruct Hessian matrix."""
+        hessian_x = self.parameters['hessian_x']
+        hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
+        hessian_q = ijac0.T @ hessian_x @ ijac0  # forward transformation
+        hessian_x = jac0.T @ hessian_q @ jac0  # backward transformation
+        hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
+        w, v = eigh(hessian_x)  # rot. and trans. degrees of freedom are removed
+        w[np.abs(w) < self.parameters['zero_thresh']] = 0.0  # noise-cancelling
+        w[(0.0 < w) &  # substitute small eigenvalues by lower limit
+          (w < self.parameters['hessian_limit'])] = self.parameters['hessian_limit']
+        # reconstruct Hessian from new eigenvalues and preserved eigenvectors
+        hessian_x = v @ np.diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
+        self.hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
+        self.hessian_q = ijac0.T @ self.hessian_x @ ijac0
+
+    @staticmethod
+    def get_ijac(jac, rcond):  # jac is the Wilson B-matrix
+        """Compute Moore-Penrose pseudo-inverse of Wilson B-matrix."""
+        jac_T = jac.T  # btw. direct Jacobian inversion is slow, hence form Gmat
+        Gmat = jac_T @ jac   # avoid: numpy.linalg.pinv(Gmat, rcond) @ jac_T
+        ijac = lstsq(Gmat, jac_T, rcond, lapack_driver='gelsy')
+        return ijac[0]  # [-1] would be eigenvalues of Gmat
+
+    def get_energy_forces(self, atoms):
             q = self.get_q_from_x(atoms).ravel()
 
             if self.parameters['cartesian']:
