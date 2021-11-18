@@ -49,7 +49,7 @@ interfaces.
    FORTRAN/C/C++ codes are not part of ASE.
 
 3) Pure python implementations included in the ASE package: EMT, EAM,
-   Lennard-Jones, Morse and Harmonic.
+   Lennard-Jones, Morse and HarmonicCalculator.
 
 4) Calculators that wrap others, included in the ASE package:
    :class:`ase.calculators.checkpoint.CheckpointCalculator`,

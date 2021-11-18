@@ -39,8 +39,8 @@ Git master branch
 
 Calculators:
 
-* Created new calculator :class:`ase.calculators.harmonic.Harmonic` for
-  calculations with a Hessian-based harmonic force field. Can be used to
+* Created new calculator :class:`ase.calculators.harmonic.HarmonicCalculator`
+  for calculations with a Hessian-based harmonic force field. Can be used to
   compute Anharmonic Corrections to the Harmonic Approximation.
 
 * Created new :class:`ase.calculators.plumed.Plumed` that is an interface

@@ -8,7 +8,7 @@ from ase.calculators.calculator import Calculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
-class Harmonic(Calculator):
+class HarmonicCalculator(Calculator):
     """Class for calculations with a Hessian-based harmonic force field.
 
     Energy and forces of this calculator are based on the Cartesian Hessian
@@ -27,7 +27,7 @@ class Harmonic(Calculator):
     angles, dihedrals, coordination numbers, ...) or any other user-defined
     coordinate system.
 
-    The :class:`Harmonic` calculator can be used to compute Anharmonic
+    The :class:`HarmonicCalculator` can be used to compute Anharmonic
     Corrections to the Harmonic Approximation. [1]_
     """
     # Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
@@ -301,9 +301,9 @@ class Harmonic(Calculator):
                                     f'{self.zero_eigvals} during setup')
 
     def copy(self):
-        """Create a new instance of the :class:`Harmonic` calculator with the
+        """Create a new instance of the :class:`HarmonicCalculator` with the
         same input parameters."""
-        return Harmonic(**self.parameters)
+        return HarmonicCalculator(**self.parameters)
 
     def todict(self):
         d = super().todict()  # when self.parameters is serialized, ...

@@ -1,4 +1,4 @@
-.. module:: ase.calculators.harmonic
+#.. module:: ase.calculators.harmonic
 
 .. _harmonic:
 
@@ -18,7 +18,7 @@ matrix. With the Hessian matrix (e.g. computed numerically in ASE via
 :mod:`~ase.vibrations`) normal modes and harmonic vibrational frequencies can
 be obtained.
 
-The following :class:`Harmonic` calculator can be used to compute energy and
+The following :class:`HarmonicCalculator` can be used to compute energy and
 forces with a Hessian-based harmonic force field. Moreover, it can be used to
 compute Anharmonic Corrections to the Harmonic Approximation. [1]_
 
@@ -27,7 +27,7 @@ compute Anharmonic Corrections to the Harmonic Approximation. [1]_
        J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
        https://doi.org/10.1021/acs.jctc.0c01022.
 
-.. autoclass:: Harmonic
+.. autoclass:: ase.calculators.harmonic.HarmonicCalculator
 
    .. automethod:: copy
 
@@ -114,10 +114,10 @@ Example 1: Cartesian coordinatates
 In Cartesian coordinates, forces and energy are not invariant with respect
 to rotations and translations of the system.
 
->>> from ase.calculators.harmonic import Harmonic
->>> calc_harmonic = Harmonic(ref_atoms=ref_atoms,
-...                          ref_energy=ref_energy,
-...                          hessian_x=hessian_x)
+>>> from ase.calculators.harmonic import HarmonicCalculator
+>>> calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
+...                                    ref_energy=ref_energy,
+...                                    hessian_x=hessian_x)
 >>> atoms = ref_atoms.copy()
 >>> atoms.calc = calc_harmonic
 
@@ -165,12 +165,12 @@ The following example works on a water molecule (:mol:`H_2O`).
 ...             dqi_dxj[defin[j]] = deriv
 ...         jac.append(dqi_dxj.flatten())
 ...     return np.asarray(jac)  # returns a matrix with Cartesian derivatives
->>> calc_harmonic = Harmonic(ref_atoms=ref_atoms,
-...                          ref_energy=ref_energy,
-...                          hessian_x=hessian_x,
-...                          get_q_from_x=water_get_q_from_x,
-...                          get_jacobian=water_get_jacobian,
-...                          cartesian=False)
+>>> calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
+...                                    ref_energy=ref_energy,
+...                                    hessian_x=hessian_x,
+...                                    get_q_from_x=water_get_q_from_x,
+...                                    get_jacobian=water_get_jacobian,
+...                                    cartesian=False)
 >>> atoms = ref_atoms.copy()
 >>> atoms.calc = calc_harmonic
 
@@ -185,12 +185,12 @@ thermodynamic (`\lambda`-path) integration. [1]_
 >>> from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution
 ...                                          Stationary, ZeroRotation)
 >>> from ase.md.andersen import Andersen
->>> calc_harmonic_1 = Harmonic(ref_atoms=ref_atoms,
-...                            ref_energy=ref_energy,
-...                            hessian_x=hessian_x,
-...                            get_q_from_x=water_get_q_from_x,
-...                            get_jacobian=water_get_jacobian,
-...                            cartesian=True, variable_orientation=True)
+>>> calc_harmonic_1 = HarmonicCalculator(ref_atoms=ref_atoms,
+...                                      ref_energy=ref_energy,
+...                                      hessian_x=hessian_x,
+...                                      get_q_from_x=water_get_q_from_x,
+...                                      get_jacobian=water_get_jacobian,
+...                                      cartesian=True, variable_orientation=True)
 >>> calc_harmonic_0 = calc_harmonic_1.copy()
 >>> calc_harmonic_0.set(cartesian=False)
 >>> ediffs = {}  # collect energy difference for varying lambda coupling
@@ -219,7 +219,7 @@ transformation.
 Example 4: Anharmonic Corrections
 ---------------------------------
 The strategy in Example 3 can be used to compute anharmonic corrections to the
-Harmonic Approximation when the :class:`Harmonic` calculator is coupled with
+Harmonic Approximation when the :class:`HarmonicCalculator` is coupled with
 a calculator that can compute interactions beyond the Harmonic Approximation,
 e.g. :mod:`~ase.calculators.vasp`.
 
@@ -227,13 +227,13 @@ e.g. :mod:`~ase.calculators.vasp`.
 
    The obtained Anharmonic Correction applies to the Harmonic Approximation
    (`A_{0,\mathbf{x}}`) of the reference system with the reference Hessian which
-   is generated during initialization of the :class:`Harmonic` calculator and
+   is generated during initialization of the :class:`HarmonicCalculator` and
    may differ from the standard Harmonic Approximation.
    The vibrations for the reference system can be computed numerically with
    high accuracy.
 
     >>> from ase.vibrations import Vibrations
     >>> atoms = ref_atoms.copy()
-    >>> atoms.calc = calc_harmonic_0  # Harmonic with cartesian=True
+    >>> atoms.calc = calc_harmonic_0  # with cartesian=True
     >>> vib = Vibrations(atoms, nfree=4, delta=1e-5)
     >>> vib.run()
