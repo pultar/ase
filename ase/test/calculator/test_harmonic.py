@@ -105,11 +105,13 @@ def test_constraints_with_cartesians():
         return all(xdiff[xdiff != 0] == pos[0, 0] / 2)
 
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
-    calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                              hessian_x=hessian_x, zero_thresh=zero_thresh)
+    parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
+                  'hessian_x': hessian_x, 'zero_thresh': zero_thresh}
+    calc = HarmonicCalculator(**parameters)
     assert not test_forces(calc)  # restoring force along distorted x-component
 
-    calc.set(constrained_q=[0])  # project out the coordinate with index 0
+    parameters['constrained_q'] = [0]  # project out the coordinate with index 0
+    calc = HarmonicCalculator(**parameters)
     assert test_forces(calc)  # no restoring force along distorted x-component
 
 
@@ -148,7 +150,7 @@ def water_get_jacobian(atoms):
 
 
 def test_raise_Errors():
-    with pytest.raises(CalculatorSetupError):
+    with pytest.raises(TypeError):
         HarmonicCalculator()
     with pytest.raises(CalculatorSetupError):
         HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
@@ -169,22 +171,23 @@ def test_raise_Errors():
 
 
 def test_internals():
-    calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                              hessian_x=hessian_x,
-                              get_q_from_x=water_get_q_from_x,
-                              get_jacobian=water_get_jacobian,
-                              cartesian=False)  # calculation in internals
+    parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
+                  'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
+                  'get_jacobian': water_get_jacobian, 'cartesian': False}
+    calc = HarmonicCalculator(**parameters)  # calculation in internals
     atoms = setup_water(calc)  # distorted copy of ref_atoms
     run_optimize(atoms)        # recover original configuration
     assert_water_is_relaxed(atoms)
 
-    calc.set(cartesian=True)   # calculation in Cartesian Coordinates
-    atoms = setup_water(calc)  # 'variable_orientation' not set to True!
-    run_optimize(atoms)        # but water has rotational degrees of freedom
+    parameters['cartesian'] = True  # calculation in Cartesian Coordinates
+    calc = HarmonicCalculator(**parameters)
+    atoms = setup_water(calc)       # 'variable_orientation' not set to True!
+    run_optimize(atoms)             # but water has rotational degrees of freedom
     with pytest.raises(AssertionError):  # hence forces were incorrect
         assert_water_is_relaxed(atoms)   # original configuration not recovered
 
-    calc.set(variable_orientation=True)
+    parameters['variable_orientation'] = True
+    calc = HarmonicCalculator(**parameters)
     atoms = setup_water(calc)
     run_optimize(atoms)
     assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
@@ -226,15 +229,13 @@ def test_compatible_with_ase_vibrations():
 
 
 def test_thermodynamic_integration():
-    calc_harmonic_1 = HarmonicCalculator(ref_atoms=ref_atoms,
-                                         ref_energy=ref_energy,
-                                         hessian_x=hessian_x,
-                                         get_q_from_x=water_get_q_from_x,
-                                         get_jacobian=water_get_jacobian,
-                                         cartesian=True,
-                                         variable_orientation=True)
-    calc_harmonic_0 = calc_harmonic_1.copy()
-    calc_harmonic_0.set(cartesian=False)
+    parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
+                  'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
+                  'get_jacobian': water_get_jacobian, 'cartesian': True,
+                  'variable_orientation': True}
+    calc_harmonic_1 = HarmonicCalculator(**parameters)
+    parameters['cartesian'] = False
+    calc_harmonic_0 = HarmonicCalculator(**parameters)
     ediffs = {}  # collect energy difference for varying lambda coupling
     lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
     for lamb in lambs:

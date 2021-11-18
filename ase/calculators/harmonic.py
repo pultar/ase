@@ -3,11 +3,11 @@ from numpy.linalg import eigh, norm, pinv
 from scipy.linalg import lstsq  # performs better than numpy.linalg.lstsq
 
 from ase import units
-from ase.calculators.calculator import Calculator, all_changes
+from ase.calculators.calculator import Calculator, BaseCalculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
-class HarmonicCalculator(Calculator):
+class HarmonicCalculator(BaseCalculator):
     """Class for calculations with a Hessian-based harmonic force field.
 
     Energy and forces of this calculator are based on the Cartesian Hessian
@@ -32,22 +32,12 @@ class HarmonicCalculator(Calculator):
     # Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
 
     implemented_properties = ['energy', 'forces']
-    default_parameters = {
-            'ref_atoms': None,
-            'ref_energy': 0.0,
-            'hessian_x': None,
-            'hessian_limit': 0.0,
-            'get_q_from_x': None,
-            'get_jacobian': None,
-            'cartesian': True,
-            'variable_orientation': False,
-            'constrained_q': None,
-            'rcond': 1e-7,
-            'zero_thresh': 0.0,
-    }
     nolabel = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, ref_atoms, hessian_x, ref_energy=0.0, get_q_from_x=None,
+                 get_jacobian=None, cartesian=True, variable_orientation=False,
+                 hessian_limit=0.0, constrained_q=None, rcond=1e-7,
+                 zero_thresh=0.0, **kwargs):
         """
         Parameters
         ----------
@@ -117,57 +107,60 @@ class HarmonicCalculator(Calculator):
             Reconstruct the reference Hessian matrix with absolute eigenvalues
             below this threshold set to zero.
         """
-        super().__init__(**kwargs)
+        params = {
+            'ref_atoms': ref_atoms,
+            'ref_energy': ref_energy,
+            'hessian_x': hessian_x,
+            'hessian_limit': hessian_limit,
+            'get_q_from_x': get_q_from_x,
+            'get_jacobian': get_jacobian,
+            'cartesian': cartesian,
+            'variable_orientation': variable_orientation,
+            'constrained_q': constrained_q,
+            'rcond': rcond,
+            'zero_thresh': zero_thresh,
+        }
+        super().__init__(parameters=params)
 
-    def set(self, **kwargs):
-        changed_parameters = super().set(**kwargs)
+        self.check_input()
+        self.update()
 
-        if self.parameters.ref_atoms is None:
-            raise CalculatorSetupError('Missing parameter `ref_atoms`.')
-        if self.parameters.hessian_x is None:
-            raise CalculatorSetupError('Missing parameter `hessian_x`.')
-        coord_fs = [self.parameters.get_q_from_x, self.parameters.get_jacobian]
-        if None in coord_fs:
-            if not all([func is None for func in coord_fs]):
+    def check_input(self):
+        cfs = [self.parameters['get_q_from_x'], self.parameters['get_jacobian']]
+        if None in cfs:
+            if not all([func is None for func in cfs]):
                 msg = ('A user-defined coordinate system requires both '
                        '`get_q_from_x` and `get_jacobian`.')
                 raise CalculatorSetupError(msg)
-            if self.parameters.variable_orientation:
+            if self.parameters['variable_orientation']:
                 msg = ('The use of `variable_orientation` requires a '
                        'user-defined, translationally and rotationally '
                        'invariant coordinate system.')
                 raise CalculatorSetupError(msg)
-            if not self.parameters.cartesian:
+            if not self.parameters['cartesian']:
                 msg = ('A user-defined coordinate system is required for '
                        'calculations with cartesian=False.')
                 raise CalculatorSetupError(msg)
 
-        changes = ['ref_atoms', 'hessian_x', 'hessian_limit', 'get_q_from_x',
-                   'get_jacobian', 'variable_orientation', 'constrained_q',
-                   'rcond', 'zero_thresh']  # almost any change -> self.update()
-        if [change for change in changes if change in changed_parameters]:
-            self.update()
-        return changed_parameters
-
     def update(self):
         # set up user-defined coordinate system or Cartesian coordinates
-        self.get_q_from_x = (self.parameters.get_q_from_x or
+        self.get_q_from_x = (self.parameters['get_q_from_x'] or
                              (lambda atoms: atoms.get_positions()))
-        self.get_jacobian = (self.parameters.get_jacobian or
+        self.get_jacobian = (self.parameters['get_jacobian'] or
                              (lambda atoms: np.diagflat(np.ones(3 *
                                                                 len(atoms)))))
 
         # reference Cartesian coords. x0; reference user-defined coords. q0
-        self.x0 = self.parameters.ref_atoms.get_positions().ravel()
-        self.q0 = self.get_q_from_x(self.parameters.ref_atoms).ravel()
+        self.x0 = self.parameters['ref_atoms'].get_positions().ravel()
+        self.q0 = self.get_q_from_x(self.parameters['ref_atoms']).ravel()
         self.setup_reference_hessians()  # self.hessian_x and self.hessian_q
 
         # store number of zero eigenvalues of G-matrix for redundancy check
-        jac0 = self.get_jacobian(self.parameters.ref_atoms)
+        jac0 = self.get_jacobian(self.parameters['ref_atoms'])
         Gmat = jac0.T @ jac0
         self.Gmat_eigvals, _ = eigh(Gmat)  # stored for inspection purposes
         self.zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
-                                               self.parameters.zero_thresh))
+                                               self.parameters['zero_thresh']))
 
     def setup_reference_hessians(self):
         """Prepare projector to project out constrained user-defined coordinates
@@ -175,9 +168,9 @@ class HarmonicCalculator(Calculator):
         and back. Relevant literature:
         * Peng, C. et al. J. Comput. Chem. 1996, 17 (1), 49-56.
         * Baker, J. et al. J. Chem. Phys. 1996, 105 (1), 192–212."""
-        jac0 = self.get_jacobian(self.parameters.ref_atoms)  # Jacobian (dq/dx)
+        jac0 = self.get_jacobian(self.parameters['ref_atoms'])  # Jacobian (dq/dx)
         jac0 = self.constrain_jac(jac0)  # for reference Cartesian coordinates
-        ijac0 = self.get_ijac(jac0, self.parameters.rcond)
+        ijac0 = self.get_ijac(jac0, self.parameters['rcond'])
         self.transform2reference_hessians(jac0, ijac0)  # perform projection
 
     def constrain_jac(self, jac):
@@ -186,7 +179,7 @@ class HarmonicCalculator(Calculator):
         Peng, C. et al. J. Comput. Chem. 1996, 17 (1), 49–56.
         """
         proj = jac @ jac.T  # build non-redundant projector
-        constrained_q = self.parameters.constrained_q or []
+        constrained_q = self.parameters['constrained_q'] or []
         Cmat = np.zeros(proj.shape)  # build projector for constraints
         Cmat[constrained_q, constrained_q] = 1.0
         proj = proj - proj @ Cmat @ pinv(Cmat @ proj @ Cmat) @ Cmat @ proj
@@ -199,15 +192,15 @@ class HarmonicCalculator(Calculator):
         (e.g. internals) this removes rotational and translational degrees of
         freedom. Furthermore, apply the lower limit to the force constants
         and reconstruct Hessian matrix."""
-        hessian_x = self.parameters.hessian_x
+        hessian_x = self.parameters['hessian_x']
         hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
         hessian_q = ijac0.T @ hessian_x @ ijac0  # forward transformation
         hessian_x = jac0.T @ hessian_q @ jac0  # backward transformation
         hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
         w, v = eigh(hessian_x)  # rot. and trans. degrees of freedom are removed
-        w[np.abs(w) < self.parameters.zero_thresh] = 0.0  # noise-cancelling
+        w[np.abs(w) < self.parameters['zero_thresh']] = 0.0  # noise-cancelling
         w[(0.0 < w) &  # substitute small eigenvalues by lower limit
-          (w < self.parameters.hessian_limit)] = self.parameters.hessian_limit
+          (w < self.parameters['hessian_limit'])] = self.parameters['hessian_limit']
         # reconstruct Hessian from new eigenvalues and preserved eigenvectors
         hessian_x = v @ np.diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
         self.hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
@@ -221,19 +214,24 @@ class HarmonicCalculator(Calculator):
         ijac = lstsq(Gmat, jac_T, rcond, lapack_driver='gelsy')
         return ijac[0]  # [-1] would be eigenvalues of Gmat
 
-    def calculate(self, atoms=None, properties=['energy', 'forces'],
+    def calculate(self, atoms, properties=['energy', 'forces'],
                   system_changes=['positions', 'numbers', 'cell', 'pbc']):
         if self.calculation_required(atoms, properties):
             super().calculate(atoms, properties, system_changes)
 
+        energy, forces_x = self._calculate(atoms)
+        self.results['energy'] = energy
+        self.results['forces'] = forces_x
+
+    def _calculate(self, atoms):
             q = self.get_q_from_x(atoms).ravel()
 
-            if self.parameters.cartesian:
+            if self.parameters['cartesian']:
                 x = atoms.get_positions().ravel()
                 x0 = self.x0
                 hessian_x = self.hessian_x
 
-                if self.parameters.variable_orientation:
+                if self.parameters['variable_orientation']:
                     # determine x0 for present orientation
                     x0 = self.back_transform(x, q, self.q0, atoms.copy())
                     ref_atoms = atoms.copy()
@@ -247,7 +245,7 @@ class HarmonicCalculator(Calculator):
 
                 xdiff = x - x0
                 forces_x = -hessian_x @ xdiff
-                energy = (self.parameters.ref_energy
+                energy = (self.parameters['ref_energy']
                           - 0.5 * (forces_x * xdiff).sum())
 
             else:
@@ -256,13 +254,12 @@ class HarmonicCalculator(Calculator):
                 qdiff = q - self.q0
                 forces_q = -self.hessian_q @ qdiff
                 forces_x = forces_q @ jac
-                energy = (self.parameters.ref_energy
+                energy = (self.parameters['ref_energy']
                           - 0.5 * (forces_q * qdiff).sum())
 
             forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
 
-            self.results['energy'] = energy
-            self.results['forces'] = forces_x
+            return energy, forces_x
 
     def back_transform(self, x, q, q0, atoms_copy):
         """Find the right orientation in Cartesian reference coordinates."""
@@ -279,7 +276,7 @@ class HarmonicCalculator(Calculator):
                        'coordinates failed.')
                 raise CalculationFailed(msg)
             jac = self.get_jacobian(atoms_copy)
-            ijac = self.get_ijac(jac, self.parameters.rcond)
+            ijac = self.get_ijac(jac, self.parameters['rcond'])
             dx = ijac @ dq
             xk = xk - dx
             atoms_copy.set_positions(xk.reshape(int(len(xk) / 3), 3))
@@ -293,7 +290,7 @@ class HarmonicCalculator(Calculator):
         Gmat = jac.T @ jac
         self.Gmat_eigvals, _ = eigh(Gmat)
         zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
-                                          self.parameters.zero_thresh))
+                                          self.parameters['zero_thresh']))
         if zero_eigvals != self.zero_eigvals:
             raise CalculationFailed('Suspected coordinate failure: '
                                     f'G-matrix has got {zero_eigvals} '
@@ -307,8 +304,8 @@ class HarmonicCalculator(Calculator):
 
     def todict(self):
         d = super().todict()  # when self.parameters is serialized, ...
-        d.update(get_q_from_x=repr(self.parameters.get_q_from_x))  # functions
-        d.update(get_jacobian=repr(self.parameters.get_jacobian))  # raise errs
+        d.update(get_q_from_x=repr(self.parameters['get_q_from_x']))  # functions
+        d.update(get_jacobian=repr(self.parameters['get_jacobian']))  # raise errs
         return d
 
 
