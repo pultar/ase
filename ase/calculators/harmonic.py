@@ -1,10 +1,9 @@
-from numpy import unique, log, sqrt, exp
-from numpy import zeros, ones, absolute, diagflat, flatnonzero
+import numpy as np
 from numpy.linalg import eigh, norm, pinv
 from scipy.linalg import lstsq  # performs better than numpy.linalg.lstsq
 
 from ase import units
-from ase.calculators.calculator import Calculator, all_changes
+from ase.calculators.calculator import BaseCalculator, Calculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
@@ -155,7 +154,8 @@ class HarmonicCalculator(Calculator):
         self.get_q_from_x = (self.parameters.get_q_from_x or
                              (lambda atoms: atoms.get_positions()))
         self.get_jacobian = (self.parameters.get_jacobian or
-                             (lambda atoms: diagflat(ones(3 * len(atoms)))))
+                             (lambda atoms: np.diagflat(np.ones(3 *
+                                                                len(atoms)))))
 
         # reference Cartesian coords. x0; reference user-defined coords. q0
         self.x0 = self.parameters.ref_atoms.get_positions().ravel()
@@ -166,8 +166,8 @@ class HarmonicCalculator(Calculator):
         jac0 = self.get_jacobian(self.parameters.ref_atoms)
         Gmat = jac0.T @ jac0
         self.Gmat_eigvals, _ = eigh(Gmat)  # stored for inspection purposes
-        self.zero_eigvals = len(flatnonzero(absolute(self.Gmat_eigvals) <
-                                            self.parameters.zero_thresh))
+        self.zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
+                                               self.parameters.zero_thresh))
 
     def setup_reference_hessians(self):
         """Prepare projector to project out constrained user-defined coordinates
@@ -187,7 +187,7 @@ class HarmonicCalculator(Calculator):
         """
         proj = jac @ jac.T  # build non-redundant projector
         constrained_q = self.parameters.constrained_q or []
-        Cmat = zeros(proj.shape)  # build projector for constraints
+        Cmat = np.zeros(proj.shape)  # build projector for constraints
         Cmat[constrained_q, constrained_q] = 1.0
         proj = proj - proj @ Cmat @ pinv(Cmat @ proj @ Cmat) @ Cmat @ proj
         jac = pinv(jac) @ proj  # come back to redundant projector
@@ -205,11 +205,11 @@ class HarmonicCalculator(Calculator):
         hessian_x = jac0.T @ hessian_q @ jac0  # backward transformation
         hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
         w, v = eigh(hessian_x)  # rot. and trans. degrees of freedom are removed
-        w[absolute(w) < self.parameters.zero_thresh] = 0.0  # noise-cancelling
+        w[np.abs(w) < self.parameters.zero_thresh] = 0.0  # noise-cancelling
         w[(0.0 < w) &  # substitute small eigenvalues by lower limit
           (w < self.parameters.hessian_limit)] = self.parameters.hessian_limit
         # reconstruct Hessian from new eigenvalues and preserved eigenvectors
-        hessian_x = v @ diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
+        hessian_x = v @ np.diagflat(w) @ v.T  # v.T == inv(v) due to symmetry
         self.hessian_x = 0.5 * (hessian_x + hessian_x.T)  # guarantee symmetry
         self.hessian_q = ijac0.T @ self.hessian_x @ ijac0
 
@@ -292,8 +292,8 @@ class HarmonicCalculator(Calculator):
         """Compare number of zero eigenvalues of G-matrix to initial number."""
         Gmat = jac.T @ jac
         self.Gmat_eigvals, _ = eigh(Gmat)
-        zero_eigvals = len(flatnonzero(absolute(self.Gmat_eigvals) <
-                                       self.parameters.zero_thresh))
+        zero_eigvals = len(np.flatnonzero(np.abs(self.Gmat_eigvals) <
+                                          self.parameters.zero_thresh))
         if zero_eigvals != self.zero_eigvals:
             raise CalculationFailed('Suspected coordinate failure: '
                                     f'G-matrix has got {zero_eigvals} '
@@ -362,7 +362,7 @@ class SpringCalculator(Calculator):
             method for free energy computation; 'classical' or 'QM'.
         """
         F = 0.0
-        masses, counts = unique(self.atoms.get_masses(), return_counts=True)
+        masses, counts = np.unique(self.atoms.get_masses(), return_counts=True)
         for m, c in zip(masses, counts):
             F += c * SpringCalculator.compute_Einstein_solid_free_energy(self.k, m, T, method)
         return F
@@ -396,12 +396,12 @@ class SpringCalculator(Calculator):
         hbar = units._hbar * units.J  # eV/s
         m = m / units.kg              # mass kg
         k = k * units.m**2 / units.J  # spring constant J/m2
-        omega = sqrt(k / m)        # angular frequency 1/s
+        omega = np.sqrt(k / m)        # angular frequency 1/s
 
         if method == 'classical':
-            F_einstein = 3 * units.kB * T * log(hbar * omega / (units.kB * T))
+            F_einstein = 3 * units.kB * T * np.log(hbar * omega / (units.kB * T))
         elif method == 'QM':
-            log_factor = log(1.0 - exp(-hbar * omega / (units.kB * T)))
+            log_factor = np.log(1.0 - np.exp(-hbar * omega / (units.kB * T)))
             F_einstein = 3 * units.kB * T * log_factor + 1.5 * hbar * omega
 
         return F_einstein
