@@ -71,7 +71,7 @@ def test_cartesians():
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
     calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
                               hessian_x=hessian_x, zero_thresh=zero_thresh)
-    assert np.allclose(calc.hessian_q, calc.hessian_x)
+    assert np.allclose(calc.HarmonicBackend.hessian_q, calc.HarmonicBackend.hessian_x)
     atoms = ref_atoms.copy()
     atoms.calc = calc
     assert_water_is_relaxed(atoms)  # atoms has not been distorted

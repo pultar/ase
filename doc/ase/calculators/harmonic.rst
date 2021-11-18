@@ -31,8 +31,9 @@ compute Anharmonic Corrections to the Harmonic Approximation. [1]_
 
 .. note::
 
-   The reference Hessians in **x** and **q** can be inspected on the calculator
-   attributes ``hessian_x`` and ``hessian_q``.
+   The reference Hessians in **x** and **q** can be inspected via
+   ``HarmonicCalculator.HarmonicBackend.hessian_x`` and
+   ``HarmonicCalculator.HarmonicBackend.hessian_q``.
 
 Theory for Anharmonic Correction via Thermodynamic Integration (TI)
 ===================================================================
