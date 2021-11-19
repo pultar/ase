@@ -115,6 +115,7 @@ to rotations and translations of the system.
 
 .. code-block:: python
 
+    import numpy as np
     from ase.calculators.harmonic import harmonic_calculator
     calc_harmonic = harmonic_calculator(ref_atoms=ref_atoms,
                                         ref_energy=ref_energy,
