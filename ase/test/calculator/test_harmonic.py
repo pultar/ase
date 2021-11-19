@@ -1,16 +1,11 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from ase import Atoms
-from ase.calculators.harmonic import HarmonicCalculator
+from ase.calculators.harmonic import harmonic_calculator
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
-from ase.optimize import BFGS
-from ase.geometry.geometry import get_distances_derivatives
 from ase.calculators.emt import EMT
+from ase.optimize import BFGS
 from ase.vibrations import Vibrations
-from ase.calculators.mixing import MixedCalculator
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary, ZeroRotation)
-from ase.md.andersen import Andersen
 from ase.units import fs
 import pytest
 
@@ -69,9 +64,9 @@ def test_cartesians():
     using an increased parameter zero_thresh.
     """
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
-    calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                              hessian_x=hessian_x, zero_thresh=zero_thresh)
-    assert np.allclose(calc.HarmonicBackend.hessian_q, calc.HarmonicBackend.hessian_x)
+    calc = harmonic_calculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                               hessian_x=hessian_x, zero_thresh=zero_thresh)
+    assert np.allclose(calc.harmonicbackend.hessian_q, calc.harmonicbackend.hessian_x)
     atoms = ref_atoms.copy()
     atoms.calc = calc
     assert_water_is_relaxed(atoms)  # atoms has not been distorted
@@ -107,15 +102,14 @@ def test_constraints_with_cartesians():
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
     parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
                   'hessian_x': hessian_x, 'zero_thresh': zero_thresh}
-    calc = HarmonicCalculator(**parameters)
+    calc = harmonic_calculator(**parameters)
     assert not test_forces(calc)  # restoring force along distorted x-component
 
     parameters['constrained_q'] = [0]  # project out the coordinate with index 0
-    calc = HarmonicCalculator(**parameters)
+    calc = harmonic_calculator(**parameters)
     assert test_forces(calc)  # no restoring force along distorted x-component
 
 
-dist_defs = [[0, 1], [1, 2], [2, 0]]  # define three distances by atom indices
 
 
 def setup_water(calc):
@@ -127,6 +121,12 @@ def setup_water(calc):
     assert not np.allclose(ref_energy, atoms.get_potential_energy())
     return atoms
 
+
+# start doc example 3
+import numpy as np
+from ase.geometry.geometry import get_distances_derivatives
+
+dist_defs = [[0, 1], [1, 2], [2, 0]]  # define three distances by atom indices
 
 def water_get_q_from_x(atoms):
     """Simple internal coordinates to describe water with three distances."""
@@ -147,24 +147,25 @@ def water_get_jacobian(atoms):
             dqi_dxj[defin[j]] = deriv
         jac.append(dqi_dxj.flatten())
     return np.asarray(jac)
+# end doc example 3
 
 
 def test_raise_Errors():
     with pytest.raises(CalculatorSetupError):
-        HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                           get_q_from_x=lambda x: x)
+        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                            get_q_from_x=lambda x: x)
     with pytest.raises(CalculatorSetupError):
-        HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                           variable_orientation=True)
+        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                            variable_orientation=True)
     with pytest.raises(CalculatorSetupError):
-        HarmonicCalculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                           cartesian=False)
+        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                            cartesian=False)
     with pytest.raises(CalculationFailed):
-        calc = HarmonicCalculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                                  hessian_x=hessian_x,
-                                  get_q_from_x=water_get_q_from_x,
-                                  get_jacobian=lambda x: np.ones((3, 9)),
-                                  cartesian=True, variable_orientation=True)
+        calc = harmonic_calculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                                   hessian_x=hessian_x,
+                                   get_q_from_x=water_get_q_from_x,
+                                   get_jacobian=lambda x: np.ones((3, 9)),
+                                   cartesian=True, variable_orientation=True)
         setup_water(calc)
 
 
@@ -172,20 +173,20 @@ def test_internals():
     parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
                   'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
                   'get_jacobian': water_get_jacobian, 'cartesian': False}
-    calc = HarmonicCalculator(**parameters)  # calculation in internals
+    calc = harmonic_calculator(**parameters)  # calculation in internals
     atoms = setup_water(calc)  # distorted copy of ref_atoms
     run_optimize(atoms)        # recover original configuration
     assert_water_is_relaxed(atoms)
 
     parameters['cartesian'] = True  # calculation in Cartesian Coordinates
-    calc = HarmonicCalculator(**parameters)
+    calc = harmonic_calculator(**parameters)
     atoms = setup_water(calc)       # 'variable_orientation' not set to True!
     run_optimize(atoms)             # but water has rotational degrees of freedom
     with pytest.raises(AssertionError):  # hence forces were incorrect
         assert_water_is_relaxed(atoms)   # original configuration not recovered
 
     parameters['variable_orientation'] = True
-    calc = HarmonicCalculator(**parameters)
+    calc = harmonic_calculator(**parameters)
     atoms = setup_water(calc)
     run_optimize(atoms)
     assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
@@ -204,7 +205,7 @@ def test_compatible_with_ase_vibrations():
     hessian_2d = vib_data.get_hessian_2d()
     vib.clean()
 
-    calc_harmonic = HarmonicCalculator(ref_atoms=opt_atoms,
+    calc_harmonic = harmonic_calculator(ref_atoms=opt_atoms,
                                        ref_energy=opt_energy,
                                        hessian_x=hessian_2d)
     atoms = ref_atoms.copy()
@@ -213,7 +214,7 @@ def test_compatible_with_ase_vibrations():
     vib.run()
     assert np.allclose(energies, vib.get_energies())
     vib.clean()
-    calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
+    calc_harmonic = harmonic_calculator(ref_atoms=ref_atoms,
                                        ref_energy=ref_energy,
                                        hessian_x=hessian_2d,
                                        get_q_from_x=water_get_q_from_x,
@@ -227,13 +228,17 @@ def test_compatible_with_ase_vibrations():
 
 
 def test_thermodynamic_integration():
+    from ase.calculators.mixing import MixedCalculator
+    from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
+                                             Stationary, ZeroRotation)
+    from ase.md.andersen import Andersen
     parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
                   'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
                   'get_jacobian': water_get_jacobian, 'cartesian': True,
                   'variable_orientation': True}
-    calc_harmonic_1 = HarmonicCalculator(**parameters)
+    calc_harmonic_1 = harmonic_calculator(**parameters)
     parameters['cartesian'] = False
-    calc_harmonic_0 = HarmonicCalculator(**parameters)
+    calc_harmonic_0 = harmonic_calculator(**parameters)
     ediffs = {}  # collect energy difference for varying lambda coupling
     lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
     for lamb in lambs:
@@ -253,3 +258,6 @@ def test_thermodynamic_integration():
             ediffs[lamb] = np.mean(ediffs[lamb])
     dA = np.trapz([ediffs[lamb] for lamb in lambs])  # anharmonic correction
     assert -0.005 < dA < 0.005  # the MD run is to short for convergence
+    if dA == 0.0:
+        raise ValueError('there is most likely something wrong, but it could '
+                         'also be sheer coincidence')

@@ -18,7 +18,7 @@ matrix. With the Hessian matrix (e.g. computed numerically in ASE via
 :mod:`~ase.vibrations`) normal modes and harmonic vibrational frequencies can
 be obtained.
 
-The following :class:`HarmonicCalculator` can be used to compute energy and
+The following herein introduced Calculator can be used to compute energy and
 forces with a Hessian-based harmonic force field. Moreover, it can be used to
 compute Anharmonic Corrections to the Harmonic Approximation. [1]_
 
@@ -27,13 +27,13 @@ compute Anharmonic Corrections to the Harmonic Approximation. [1]_
        J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
        https://doi.org/10.1021/acs.jctc.0c01022.
 
-.. autoclass:: ase.calculators.harmonic.HarmonicCalculator
+.. autofunction:: ase.calculators.harmonic.harmonic_calculator
 
 .. note::
 
-   The reference Hessians in **x** and **q** can be inspected via
-   ``HarmonicCalculator.HarmonicBackend.hessian_x`` and
-   ``HarmonicCalculator.HarmonicBackend.hessian_q``.
+   The reference Hessians in **x** and **q** can be inspected on the
+   returned Calculator object *calc* via
+   ``calc.harmonicbackend.hessian_x`` and ``calc.harmonicbackend.hessian_q``.
 
 Theory for Anharmonic Correction via Thermodynamic Integration (TI)
 ===================================================================
@@ -113,12 +113,14 @@ Example 1: Cartesian coordinatates
 In Cartesian coordinates, forces and energy are not invariant with respect
 to rotations and translations of the system.
 
->>> from ase.calculators.harmonic import HarmonicCalculator
->>> calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
-...                                    ref_energy=ref_energy,
-...                                    hessian_x=hessian_x)
->>> atoms = ref_atoms.copy()
->>> atoms.calc = calc_harmonic
+.. code-block:: python
+
+    from ase.calculators.harmonic import harmonic_calculator
+    calc_harmonic = harmonic_calculator(ref_atoms=ref_atoms,
+                                        ref_energy=ref_energy,
+                                        hessian_x=hessian_x)
+    atoms = ref_atoms.copy()
+    atoms.calc = calc_harmonic
 
 .. note::
 
@@ -140,38 +142,19 @@ Within this coordinate system, energy and forces must be invariant with
 respect to rotations and translations of the system.
 For this purpose internal coordinates (distances, angles, dihedrals,
 coordination numbers and linear combinations thereof, etc.) are widely used.
-The following example works on a water molecule (:mol:`H_2O`).
+The following example works on a water molecule (:mol:`H_2O`) stored in
+``ref_atoms``.
 
->>> import numpy as np
->>> from ase import Atoms
->>> from ase.geometry.geometry import get_distances_derivatives
->>> ref_atoms = Atoms('OH2', positions=...)  # relaxed water molecule
->>> dist_defs = [[0, 1], [1, 2], [2, 0]]  # define three distances by atom indices
->>> def water_get_q_from_x(atoms):
-...     """Simple internal coordinates to describe water with only distances."""
-...     q_vec = [atoms.get_distance(i, j) for i, j in dist_defs]
-...     return np.asarray(q_vec)  # returns a vector with internal coordinates
->>> def water_get_jacobian(atoms):
-...     """Function to return the Jacobian for the water molecule, i.e. the
-...     Cartesian derivatives of the above defined internal coordinates."""
-...     pos = atoms.get_positions()
-...     dist_vecs = [pos[j] - pos[i] for i, j in dist_defs]
-...     derivs = get_distances_derivatives(dist_vecs)
-...     jac = []
-...     for i, defin in enumerate(dist_defs):
-...         dqi_dxj = np.zeros(ref_pos.shape)
-...         for j, deriv in enumerate(derivs[i]):
-...             dqi_dxj[defin[j]] = deriv
-...         jac.append(dqi_dxj.flatten())
-...     return np.asarray(jac)  # returns a matrix with Cartesian derivatives
->>> calc_harmonic = HarmonicCalculator(ref_atoms=ref_atoms,
-...                                    ref_energy=ref_energy,
-...                                    hessian_x=hessian_x,
-...                                    get_q_from_x=water_get_q_from_x,
-...                                    get_jacobian=water_get_jacobian,
-...                                    cartesian=False)
->>> atoms = ref_atoms.copy()
->>> atoms.calc = calc_harmonic
+.. literalinclude:: ../../../ase/test/calculator/test_harmonic.py
+    :language: python
+    :start-after: start doc example 3
+    :end-before: end doc example 3
+
+.. literalinclude:: ../../../ase/test/calculator/test_harmonic.py
+    :language: python
+    :start-after: test_internals():
+    :end-before: atoms = setup_water(calc)  # distorted copy of ref_atoms
+    :dedent: 4
 
 Example 3: Free Energy Change due to Coordinate Transformation
 --------------------------------------------------------------
@@ -180,35 +163,11 @@ The change in free energy due to this transformation
 (`\Delta A_{0,\mathbf{x} \rightarrow 0,\mathbf{q}}`) can be computed via
 thermodynamic (`\lambda`-path) integration. [1]_
 
->>> from ase.calculators.mixing import MixedCalculator
->>> from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution
-...                                          Stationary, ZeroRotation)
->>> from ase.md.andersen import Andersen
->>> parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
-                  'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
-                  'get_jacobian': water_get_jacobian, 'cartesian': True,
-                  'variable_orientation': True}
->>> calc_harmonic_1 = HarmonicCalculator(**parameters)
->>> parameters['cartesian'] = False
->>> calc_harmonic_0 = HarmonicCalculator(**parameters)
->>> ediffs = {}  # collect energy difference for varying lambda coupling
->>> lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
->>> for lamb in lambs:
-...     ediffs[lamb] = []
-...     calc_linearCombi = MixedCalculator(calc_harmonic_0, calc_harmonic_1,
-...                                        1 - lamb, lamb)
-...     atoms = ref_atoms.copy()
-...     atoms.calc = calc_linearCombi
-...     MaxwellBoltzmannDistribution(atoms, temperature_K=300, force_temp=True)
-...     Stationary(atoms)
-...     ZeroRotation(atoms)
-...     with Andersen(atoms, 0.5 * fs, temperature_K=300,
-...                   andersen_prob=0.05, fixcm=False) as dyn:
-...         for _ in dyn.irun(100000):
-...             e0, e1 = calc_linearCombi.get_energy_contributions(atoms)
-...             ediffs[lamb].append(float(e1) - float(e0))
-...     ediffs[lamb] = np.mean(ediffs[lamb])
-... dA = np.trapz([ediffs[lamb] for lamb in lambs])  # anharmonic correction
+.. literalinclude:: ../../../ase/test/calculator/test_harmonic.py
+    :language: python
+    :start-after: test_thermodynamic_integration():
+    :end-before: assert -0.005 < dA < 0.005
+    :dedent: 4
 
 Integration of the mean energy differences ('ediffs') over the integration grid
 (`\lambda` path) leads to the change in free energy due to the coordinate
@@ -225,7 +184,7 @@ e.g. :mod:`~ase.calculators.vasp`.
 
    The obtained Anharmonic Correction applies to the Harmonic Approximation
    (`A_{0,\mathbf{x}}`) of the reference system with the reference Hessian which
-   is generated during initialization of the :class:`HarmonicCalculator` and
+   is generated during initialization of the Calculator and
    may differ from the standard Harmonic Approximation.
    The vibrations for the reference system can be computed numerically with
    high accuracy.
