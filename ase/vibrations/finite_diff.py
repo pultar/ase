@@ -153,4 +153,9 @@ def read_forces_direct(atoms, displacements, method='standard',
 
             hessian[atom_index * 3 + cartesian_index] = hessian_element
 
+    if method == 'frederiksen':
+        print("using frederiksen")
+        for row_index, row in enumerate(hessian):
+            hessian[row_index] -= hessian.sum(axis=0)
+
     return VibrationsData.from_2d(atoms, hessian, indices=indices)
