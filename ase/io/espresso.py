@@ -11,25 +11,23 @@ Units are converted using CODATA 2006, as used internally by Quantum
 ESPRESSO.
 """
 
-import os
 import operator as op
+import os
 import re
 import warnings
 from collections import OrderedDict
 from os import path
 
 import numpy as np
-
 from ase.atoms import Atoms
+from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
-from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
-from ase.dft.kpoints import kpoint_convert
 from ase.constraints import FixAtoms, FixCartesian
-from ase.data import chemical_symbols, atomic_numbers
+from ase.data import atomic_numbers, chemical_symbols
+from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import iofunction
-
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
@@ -1825,3 +1823,54 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # DONE!
     fd.write(''.join(pwi))
+
+
+def prepare_structure_input(atoms: Atoms, cell = None, spin: int=None,crystal_coordinates: bool=None) -> dict:
+#    pass
+#    ...    # another way of passing
+    
+    #ATOMIC‌ POSITIONS
+    
+    atomic_positions_str = []
+    atomic_pos_unit=''
+    if crystal_coordinates:
+        atomic_pos_unit='crystal'
+    else:
+       atomic_pos_unit='angstrom'
+    atomic_pos = {'ATOMIC_POSITIONS':(atomic_pos_unit, atomic_positions_str)} #add unit
+         
+    for atom in atoms:
+        coords=atom.position
+        final_coords=[]         
+        for i in coords:
+            final_coords.append(i)
+        final_coords.insert(0, atom.symbol)
+
+        atomic_positions_str.append(final_coords)
+       
+    
+
+
+    #CELL PARAMETERS
+    
+    cell_unit = ''
+    if crystal_coordinates:
+        cell_unit='crystal'
+    else:
+        cell_unit='angstrom'
+    cell_info={}
+    cell_params=atoms.get_cell().tolist()# if cell is not defined, will return zero
+    # all_zero=np.all(cell_params==0.0)
+    # print(all_zero)
+    for row in cell_params:
+        all_zero=np.all((row==0.0))
+        if all_zero:
+            raise KeyError('cell is not defined')### keyerror??
+        else:
+            cell_info={'CELL_PARAMETERS': (cell_unit, cell_params[:])}
+  
+    final_structure={}
+    for dct in (atomic_pos, cell_info):
+        final_structure.update(dct)
+    return final_structure
+
