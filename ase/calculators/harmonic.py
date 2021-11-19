@@ -218,40 +218,40 @@ class HarmonicBackend:
         return ijac[0]  # [-1] would be eigenvalues of Gmat
 
     def get_energy_forces(self, atoms):
-       q = self.get_q_from_x(atoms).ravel()
-
-       if self.parameters['cartesian']:
-           x = atoms.get_positions().ravel()
-           x0 = self.x0
-           hessian_x = self._hessian_x
-
-           if self.parameters['variable_orientation']:
-               # determine x0 for present orientation
-               x0 = self.back_transform(x, q, self.q0, atoms.copy())
-               ref_atoms = atoms.copy()
-               ref_atoms.set_positions(x0.reshape(int(len(x0) / 3), 3),
-                                       apply_constraint=False)
-               # determine jac0 for present orientation
-               jac0 = self.get_jacobian(ref_atoms)
-               self.check_redundancy(jac0)  # check for coordinate failure
-               # determine hessian_x for present orientation
-               hessian_x = jac0.T @ self._hessian_q @ jac0
-
-           xdiff = x - x0
-           forces_x = -hessian_x @ xdiff
-           energy = -0.5 * (forces_x * xdiff).sum()
-
-       else:
-           jac = self.get_jacobian(atoms)
-           self.check_redundancy(jac)  # check for coordinate failure
-           qdiff = q - self.q0
-           forces_q = -self._hessian_q @ qdiff
-           forces_x = forces_q @ jac
-           energy = -0.5 * (forces_q * qdiff).sum()
-
-       energy += self.parameters['ref_energy']
-       forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
-       return energy, forces_x
+        q = self.get_q_from_x(atoms).ravel()
+ 
+        if self.parameters['cartesian']:
+            x = atoms.get_positions().ravel()
+            x0 = self.x0
+            hessian_x = self._hessian_x
+ 
+            if self.parameters['variable_orientation']:
+                # determine x0 for present orientation
+                x0 = self.back_transform(x, q, self.q0, atoms.copy())
+                ref_atoms = atoms.copy()
+                ref_atoms.set_positions(x0.reshape(int(len(x0) / 3), 3),
+                                        apply_constraint=False)
+                # determine jac0 for present orientation
+                jac0 = self.get_jacobian(ref_atoms)
+                self.check_redundancy(jac0)  # check for coordinate failure
+                # determine hessian_x for present orientation
+                hessian_x = jac0.T @ self._hessian_q @ jac0
+ 
+            xdiff = x - x0
+            forces_x = -hessian_x @ xdiff
+            energy = -0.5 * (forces_x * xdiff).sum()
+ 
+        else:
+            jac = self.get_jacobian(atoms)
+            self.check_redundancy(jac)  # check for coordinate failure
+            qdiff = q - self.q0
+            forces_q = -self._hessian_q @ qdiff
+            forces_x = forces_q @ jac
+            energy = -0.5 * (forces_q * qdiff).sum()
+ 
+        energy += self.parameters['ref_energy']
+        forces_x = forces_x.reshape(int(forces_x.size / 3), 3)
+        return energy, forces_x
 
     def back_transform(self, x, q, q0, atoms_copy):
         """Find the right orientation in Cartesian reference coordinates."""
