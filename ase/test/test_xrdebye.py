@@ -20,6 +20,15 @@ def xrd():
                    method='Iwasa', alpha=1.01, warn=True)
 
 
+@pytest.fixture
+def xrd_slow():
+    # test system -- cluster of 587 silver atoms
+    atoms = FaceCenteredCubic('Ag', [(1, 0, 0), (1, 1, 0), (1, 1, 1)],
+                              [6, 8, 8], 4.09)
+    return XrDebye(atoms=atoms, wavelength=wavelengths['CuKa1'], damping=0.04,
+                   method='Iwasa', alpha=1.01, warn=True, fast_calc_max=0)
+
+
 def test_get(xrd):
     expected = 116850.37344
     obtained = xrd.get(s=0.09)
@@ -46,4 +55,33 @@ def test_saxs_and_files(testdir, figure, xrd):
     assert Path('tmp.txt').exists()
     ax = figure.add_subplot(111)
     xrd.plot_pattern(ax=ax, filename='pattern.png')
+    assert Path('pattern.png').exists()
+
+
+def test_get_slow(xrd_slow):
+    expected = 116850.37344
+    obtained = xrd_slow.get(s=0.09)
+    assert np.abs((obtained - expected) / expected) < tolerance
+
+
+def test_xrd_slow(testdir, xrd_slow):
+    expected = np.array([18549.274677, 52303.116995, 38502.372027])
+    obtained = xrd_slow.calc_pattern(x=np.array([15, 30, 50]), mode='XRD')
+    assert np.allclose(obtained, expected, rtol=tolerance)
+    xrd_slow.write_pattern('tmp.txt')
+    assert Path('tmp.txt').exists()
+
+
+def test_saxs_and_files_slow(testdir, figure, xrd_slow):
+    expected = np.array([372650934.006398, 280252013.563702,
+                         488123.103628])
+    obtained = xrd_slow.calc_pattern(x=np.array([0.021, 0.09, 0.53]),
+                                mode='SAXS')
+    assert np.allclose(obtained, expected, rtol=tolerance)
+
+    # (Admittedly these tests are a little bit toothless)
+    xrd_slow.write_pattern('tmp.txt')
+    assert Path('tmp.txt').exists()
+    ax = figure.add_subplot(111)
+    xrd_slow.plot_pattern(ax=ax, filename='pattern.png')
     assert Path('pattern.png').exists()

@@ -46,7 +46,7 @@ class XrDebye:
     Class for calculation of XRD or SAXS patterns.
     """
     def __init__(self, atoms, wavelength, damping=0.04,
-                 method='Iwasa', alpha=1.01, warn=True):
+                 method='Iwasa', alpha=1.01, warn=True, fast_calc_max=1000):
         """
         Initilize the calculation of X-ray diffraction patterns
 
@@ -76,6 +76,10 @@ class XrDebye:
 
         warn: boolean
             flag to show warning if atomic factor can't be calculated
+
+        fast_calc_max: int
+            number of atoms to switch from faster but O(N^2) memory expression
+            to atom-by-atom and O(N) memory loop
         """
         self.wavelength = wavelength
         self.damping = damping
@@ -90,6 +94,18 @@ class XrDebye:
 
         self.atoms = atoms
         # TODO: setup atomic form factors if method != 'Iwasa'
+
+        self.reset_cached_atomic()
+
+        if len(self.atoms) <= fast_calc_max:
+            self.dvr = self.atoms.positions[:, None, :] - self.atoms.positions
+        else:
+            self.dvr = None
+
+    def reset_cached_atomic(self):
+        self.f = {}
+        self.fa = None
+        self.dfa = None
 
     def set_damping(self, damping):
         """ set B-factor for thermal damping """
@@ -112,36 +128,37 @@ class XrDebye:
 
         if self.method == 'Iwasa':
             sinth = self.wavelength * s / 2.
-            positive = 1. - sinth**2
-            if positive < 0:
-                positive = 0
+            positive = max(1. - sinth**2, 0.0)
             costh = sqrt(positive)
             cos2th = cos(2. * acos(costh))
             pre *= costh / (1. + self.alpha * cos2th**2)
 
-        f = {}
+            # reset because it is s dependent
+            self.reset_cached_atomic()
+
         def atomic(symbol):
             """
             get atomic factor, using cache.
             """
-            if symbol not in f:
+            if symbol not in self.f:
                 if self.method == 'Iwasa':
-                    f[symbol] = self.get_waasmaier(symbol, s)
+                    self.f[symbol] = self.get_waasmaier(symbol, s)
                 else:
-                    f[symbol] = atomic_numbers[symbol]
-            return f[symbol]
+                    self.f[symbol] = atomic_numbers[symbol]
+            return self.f[symbol]
 
         I = 0.
-        fa = []  # atomic factors list
-        for a in self.atoms:
-            fa.append(atomic(a.symbol))
+        if self.fa is None:
+            self.fa = np.asarray([atomic(s) for s in self.atoms.symbols])
 
-        pos = self.atoms.get_positions()  # positions of atoms
-        fa = np.array(fa)  # atomic factors array
-
-        for i in range(len(self.atoms)):
-            vr = pos - pos[i]
-            I += np.sum(fa[i] * fa * np.sinc(2 * s * np.sqrt(np.sum(vr * vr, axis=1))))
+        if self.dvr is None:
+            for i in range(len(self.atoms)):
+                vr = self.atoms.positions - self.atoms.positions[i]
+                I += np.sum(self.fa[i] * self.fa * np.sinc(2 * s * np.sqrt(np.sum(vr * vr, axis=1))))
+        else:
+            if self.dfa is None:
+                self.dfa = np.outer(self.fa, self.fa)
+            I = np.sum(self.dfa * np.sinc(2 * s * np.sqrt(np.sum(self.dvr * self.dvr, axis=2))))
 
         return pre * I
 
