@@ -7,113 +7,123 @@ from ase.calculators.calculator import Calculator, BaseCalculator, all_changes
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 
 
-def harmonic_calculator(ref_atoms, hessian_x, ref_energy=0.0, get_q_from_x=None,
-                        get_jacobian=None, cartesian=True, hessian_limit=0.0,
-                        variable_orientation=False, constrained_q=None,
-                        rcond=1e-7, zero_thresh=0.0):
+class HarmonicCalculator(BaseCalculator):
+    """Class for calculations with a Hessian-based harmonic force field.
+
+    See :class:`HarmonicForceField` and the literature. [1]_
     """
-    Return a Calculator object for calculations with a Hessian-based harmonic
-    force field.
 
-    Energy and forces of the returned calculator are based on the Cartesian Hessian
-    for a local reference configuration, i.e. if desired, on the Hessian
-    matrix transformed to a user-defined coordinate system.
-    The required Hessian has to be passed as an argument, e.g. predetermined
-    numerically via central finite differences in Cartesian coordinates.
-    Note that a potential being harmonic in Cartesian coordinates **x** is not
-    necessarily equivalently harmonic in another coordinate system **q**,
-    e.g. when the transformation between the coordinate systems is non-linear.
-    By default, calculations are performed in Cartesian coordinates in which
-    energy and forces are not rotationally and translationally invariant.
-    Systems with variable orientation, require rotationally and translationally
-    invariant calculations for which a set of appropriate coordinates has to
-    be defined. This can be a set of (redundant) internal coordinates (bonds,
-    angles, dihedrals, coordination numbers, ...) or any other user-defined
-    coordinate system.
+    implemented_properties = ['energy', 'forces']
 
-    The Calculator can be used to compute Anharmonic Corrections to the
-    Harmonic Approximation. [1]_
-    
-    Parameters
-    ----------
-    ref_atoms: :class:`~ase.Atoms` object
-        Reference structure for which energy (``ref_energy``) and Hessian
-        matrix in Cartesian coordinates (``hessian_x``) are provided.
+    def __init__(self, harmonicforcefield):
+        """
+        Parameters
+        ----------
+        harmonicforcefield: :class:`HarmonicForceField`
+            Class for calculations with a Hessian-based harmonic force field.
+        """
+        super().__init__()  # parameters have been passed to the force field
+        self.harmonicforcefield = harmonicforcefield
 
-    hessian_x: numpy array
-        Cartesian Hessian matrix for the reference structure ``ref_atoms``.
-        If a user-defined coordinate system is provided via
-        ``get_q_from_x`` and ``get_jacobian``, the Cartesian Hessian matrix
-        is transformed to the user-defined coordinate system and back to
-        Cartesian coordinates, thereby eliminating rotational and
-        translational traits from the Hessian. The Hessian matrix
-        obtained after this double-transformation is then used as
-        the reference Hessian matrix to evaluate energy and forces for
-        ``cartesian = True``. For ``cartesian = False`` the reference
-        Hessian matrix transformed to the user-defined coordinates is used
-        to compute energy and forces.
-
-    ref_energy: float
-        Energy of the reference structure ``ref_atoms``, typically in `eV`.
-
-    get_q_from_x: python function, default: None (Cartesian coordinates)
-        Function that returns a vector of user-defined coordinates **q** for
-        a given :class:`~ase.Atoms` object 'atoms'. The signature should be:
-        :obj:`get_q_from_x(atoms)`.
-        If not provided, ``cartesian`` is forcefully set to True.
-
-    get_jacobian: python function, default: None (Cartesian coordinates)
-        Function that returns the geometric Jacobian matrix of the
-        user-defined coordinates **q** w.r.t. Cartesian coordinates **x**
-        defined as `dq/dx` (Wilson B-matrix) for a given :class:`~ase.Atoms`
-        object 'atoms'. The signature should be: :obj:`get_jacobian(atoms)`.
-        If not provided, ``cartesian`` is forcefully set to True.
-
-    cartesian: bool
-        Set to True to evaluate energy and forces based on the reference
-        Hessian (system harmonic in Cartesian coordinates).
-        Set to False to evaluate energy and forces based on the reference
-        Hessian transformed to user-defined coordinates (system harmonic in
-        user-defined coordinates).
-
-    hessian_limit: float
-        Reconstruct the reference Hessian matrix with a lower limit for the
-        eigenvalues, typically in `eV/A^2`. Eigenvalues in the interval
-        [``zero_thresh``, ``hessian_limit``] are set to ``hessian_limit``
-        while the eigenvectors are left untouched.
-
-    variable_orientation: bool
-        Set to True if the orientation of the attached :class:`~ase.Atoms`
-        object with respect to ``ref_atoms`` might be different (typically
-        for molecules).
-        Set to False to speed up the calculation when ``cartesian = True``.
-
-    constrained_q: list
-        A list of indices 'i' of constrained coordinates `q_i` to be
-        projected out from the Hessian matrix
-        (e.g. remove forces along imaginary mode of a transition state).
-
-    rcond: float
-        Cutoff for singular value decomposition in the computation of the
-        Moore-Penrose pseudo-inverse during transformation of the Hessian
-        matrix. Equivalent to the rcond parameter in scipy.linalg.lstsq.
-
-    zero_thresh: float
-        Reconstruct the reference Hessian matrix with absolute eigenvalues
-        below this threshold set to zero.
-    """
-    hb = HarmonicBackend(ref_atoms, hessian_x, ref_energy, get_q_from_x,
-                         get_jacobian, cartesian, variable_orientation,
-                         hessian_limit, constrained_q, rcond, zero_thresh)
-    return HarmonicCalculator(hb)
+    def calculate(self, atoms, properties, system_changes):
+        energy, forces_x = self.harmonicforcefield.get_energy_forces(atoms)
+        self.results['energy'] = energy
+        self.results['forces'] = forces_x
 
 
-class HarmonicBackend:
-    def __init__(self, ref_atoms, hessian_x, ref_energy, get_q_from_x,
-                 get_jacobian, cartesian, variable_orientation,
-                 hessian_limit, constrained_q, rcond, zero_thresh):
-        """See helper function `harmonic_calculator` and the theory in
-        Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.   
+class HarmonicForceField:
+    def __init__(self, ref_atoms, hessian_x, ref_energy=0.0, get_q_from_x=None,
+                 get_jacobian=None, cartesian=True, variable_orientation=False,
+                 hessian_limit=0.0, constrained_q=None, rcond=1e-7,
+                 zero_thresh=0.0):
+        """
+        Class that represents a Hessian-based harmonic force field.
+
+        Energy and forces of this force field are based on the Cartesian Hessian
+        for a local reference configuration, i.e. if desired, on the Hessian
+        matrix transformed to a user-defined coordinate system.
+        The required Hessian has to be passed as an argument, e.g. predetermined
+        numerically via central finite differences in Cartesian coordinates.
+        Note that a potential being harmonic in Cartesian coordinates **x** is not
+        necessarily equivalently harmonic in another coordinate system **q**,
+        e.g. when the transformation between the coordinate systems is non-linear.
+        By default, the force field is evaluated in Cartesian coordinates in which
+        energy and forces are not rotationally and translationally invariant.
+        Systems with variable orientation, require rotationally and translationally
+        invariant calculations for which a set of appropriate coordinates has to
+        be defined. This can be a set of (redundant) internal coordinates (bonds,
+        angles, dihedrals, coordination numbers, ...) or any other user-defined
+        coordinate system.
+
+        Together with the :class:`HarmonicCalculator` this
+        :class:`HarmonicForceField` can be used to compute
+        Anharmonic Corrections to the Harmonic Approximation. [1]_
+        
+        Parameters
+        ----------
+        ref_atoms: :class:`~ase.Atoms` object
+            Reference structure for which energy (``ref_energy``) and Hessian
+            matrix in Cartesian coordinates (``hessian_x``) are provided.
+
+        hessian_x: numpy array
+            Cartesian Hessian matrix for the reference structure ``ref_atoms``.
+            If a user-defined coordinate system is provided via
+            ``get_q_from_x`` and ``get_jacobian``, the Cartesian Hessian matrix
+            is transformed to the user-defined coordinate system and back to
+            Cartesian coordinates, thereby eliminating rotational and
+            translational traits from the Hessian. The Hessian matrix
+            obtained after this double-transformation is then used as
+            the reference Hessian matrix to evaluate energy and forces for
+            ``cartesian = True``. For ``cartesian = False`` the reference
+            Hessian matrix transformed to the user-defined coordinates is used
+            to compute energy and forces.
+
+        ref_energy: float
+            Energy of the reference structure ``ref_atoms``, typically in `eV`.
+
+        get_q_from_x: python function, default: None (Cartesian coordinates)
+            Function that returns a vector of user-defined coordinates **q** for
+            a given :class:`~ase.Atoms` object 'atoms'. The signature should be:
+            :obj:`get_q_from_x(atoms)`.
+
+        get_jacobian: python function, default: None (Cartesian coordinates)
+            Function that returns the geometric Jacobian matrix of the
+            user-defined coordinates **q** w.r.t. Cartesian coordinates **x**
+            defined as `dq/dx` (Wilson B-matrix) for a given :class:`~ase.Atoms`
+            object 'atoms'. The signature should be: :obj:`get_jacobian(atoms)`.
+
+        cartesian: bool
+            Set to True to evaluate energy and forces based on the reference
+            Hessian (system harmonic in Cartesian coordinates).
+            Set to False to evaluate energy and forces based on the reference
+            Hessian transformed to user-defined coordinates (system harmonic in
+            user-defined coordinates).
+
+        hessian_limit: float
+            Reconstruct the reference Hessian matrix with a lower limit for the
+            eigenvalues, typically in `eV/A^2`. Eigenvalues in the interval
+            [``zero_thresh``, ``hessian_limit``] are set to ``hessian_limit``
+            while the eigenvectors are left untouched.
+
+        variable_orientation: bool
+            Set to True if the investigated :class:`~ase.Atoms` has got
+            rotational degrees of freedom such that the orientation with respect
+            to ``ref_atoms`` might be different (typically for molecules).
+            Set to False to speed up the calculation when ``cartesian = True``.
+
+        constrained_q: list
+            A list of indices 'i' of constrained coordinates `q_i` to be
+            projected out from the Hessian matrix
+            (e.g. remove forces along imaginary mode of a transition state).
+
+        rcond: float
+            Cutoff for singular value decomposition in the computation of the
+            Moore-Penrose pseudo-inverse during transformation of the Hessian
+            matrix. Equivalent to the rcond parameter in scipy.linalg.lstsq.
+
+        zero_thresh: float
+            Reconstruct the reference Hessian matrix with absolute eigenvalues
+            below this threshold set to zero.
         """
         self.check_input([get_q_from_x, get_jacobian],
                          variable_orientation, cartesian)
@@ -218,6 +228,8 @@ class HarmonicBackend:
         return ijac[0]  # [-1] would be eigenvalues of Gmat
 
     def get_energy_forces(self, atoms):
+        """Return a tuple with energy and forces in Cartesian coordinates for
+        a given :class:`~ase.Atoms` object."""
         q = self.get_q_from_x(atoms).ravel()
  
         if self.parameters['cartesian']:
@@ -296,30 +308,6 @@ class HarmonicBackend:
     @property
     def hessian_q(self):
         return self._hessian_q
-
-
-class HarmonicCalculator(BaseCalculator):
-    """Class for calculations with a Hessian-based harmonic force field.
-    See helper function `harmonic_calculator` and the theory in
-    Amsler, J. et al., J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.   
-    """
-
-    implemented_properties = ['energy', 'forces']
-
-    def __init__(self, harmonicbackend):
-        """
-        Parameters
-        ----------
-        harmonicbackend: :class:`HarmonicBackend`
-            Class for calculations with a Hessian-based harmonic force field.
-        """
-        super().__init__()  # parameters have all been passed to the backend
-        self.harmonicbackend = harmonicbackend
-
-    def calculate(self, atoms, properties, system_changes):
-        energy, forces_x = self.harmonicbackend.get_energy_forces(atoms)
-        self.results['energy'] = energy
-        self.results['forces'] = forces_x
 
 
 class SpringCalculator(Calculator):

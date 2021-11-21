@@ -39,7 +39,8 @@ Git master branch
 
 Calculators:
 
-* Created new module :mod:`ase.calculators.harmonic`
+* Created new module :mod:`ase.calculators.harmonic` with the
+  :class:`ase.calculators.harmonic.HarmonicCalculator`
   for calculations with a Hessian-based harmonic force field. Can be used to
   compute Anharmonic Corrections to the Harmonic Approximation.
 

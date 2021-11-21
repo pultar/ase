@@ -18,22 +18,24 @@ matrix. With the Hessian matrix (e.g. computed numerically in ASE via
 :mod:`~ase.vibrations`) normal modes and harmonic vibrational frequencies can
 be obtained.
 
-The following herein introduced Calculator can be used to compute energy and
-forces with a Hessian-based harmonic force field. Moreover, it can be used to
-compute Anharmonic Corrections to the Harmonic Approximation. [1]_
+The following :class:`HarmonicCalculator` can be used to compute energy and forces
+with a Hessian-based harmonic force field (:class:`HarmonicForceField`).
+Moreover, it can be used to compute Anharmonic Corrections to the
+Harmonic Approximation. [1]_
 
 .. [1] Amsler, J. et al., Anharmonic Correction to Adsorption Free Energy
        from DFT-Based MD Using Thermodynamic Integration,
        J. Chem. Theory Comput. 2021, 17 (2), 1155-1169.
        https://doi.org/10.1021/acs.jctc.0c01022.
 
-.. autofunction:: ase.calculators.harmonic.harmonic_calculator
+.. autoclass:: ase.calculators.harmonic.HarmonicCalculator
+
+.. autoclass:: ase.calculators.harmonic.HarmonicForceField
 
 .. note::
 
-   The reference Hessians in **x** and **q** can be inspected on the
-   returned Calculator object *calc* via
-   ``calc.harmonicbackend.hessian_x`` and ``calc.harmonicbackend.hessian_q``.
+   The reference Hessians in **x** and **q** can be inspected via
+   ``HarmonicForceField.hessian_x`` and ``HarmonicForceField.hessian_q``.
 
 Theory for Anharmonic Correction via Thermodynamic Integration (TI)
 ===================================================================
@@ -116,12 +118,11 @@ to rotations and translations of the system.
 .. code-block:: python
 
     import numpy as np
-    from ase.calculators.harmonic import harmonic_calculator
-    calc_harmonic = harmonic_calculator(ref_atoms=ref_atoms,
-                                        ref_energy=ref_energy,
-                                        hessian_x=hessian_x)
+    from ase.calculators.harmonic import HarmonicForceField, HarmonicCalculator
+    hff = HarmonicForceField(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                             hessian_x=hessian_x)
     atoms = ref_atoms.copy()
-    atoms.calc = calc_harmonic
+    atoms.calc = HarmonicCalculator(hff)
 
 .. note::
 

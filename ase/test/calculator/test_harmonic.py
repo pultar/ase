@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 from ase import Atoms
-from ase.calculators.harmonic import harmonic_calculator
+from ase.calculators.harmonic import HarmonicForceField, HarmonicCalculator
 from ase.calculators.calculator import CalculatorSetupError, CalculationFailed
 from ase.calculators.emt import EMT
 from ase.optimize import BFGS
@@ -64,11 +64,11 @@ def test_cartesians():
     using an increased parameter zero_thresh.
     """
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
-    calc = harmonic_calculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                               hessian_x=hessian_x, zero_thresh=zero_thresh)
-    assert np.allclose(calc.harmonicbackend.hessian_q, calc.harmonicbackend.hessian_x)
+    hff = HarmonicForceField(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                             hessian_x=hessian_x, zero_thresh=zero_thresh)
+    assert np.allclose(hff.hessian_q, hff.hessian_x)
     atoms = ref_atoms.copy()
-    atoms.calc = calc
+    atoms.calc = HarmonicCalculator(hff)
     assert_water_is_relaxed(atoms)  # atoms has not been distorted
     run_optimize(atoms)             # nothing should happen
     assert_water_is_relaxed(atoms)  # atoms should still be relaxed
@@ -102,11 +102,13 @@ def test_constraints_with_cartesians():
     zero_thresh = 0.06  # set eigvals to zero if abs(eigenvalue) < zero_thresh
     parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
                   'hessian_x': hessian_x, 'zero_thresh': zero_thresh}
-    calc = harmonic_calculator(**parameters)
+    hff = HarmonicForceField(**parameters)
+    calc = HarmonicCalculator(hff)
     assert not test_forces(calc)  # restoring force along distorted x-component
 
     parameters['constrained_q'] = [0]  # project out the coordinate with index 0
-    calc = harmonic_calculator(**parameters)
+    hff = HarmonicForceField(**parameters)
+    calc = HarmonicCalculator(hff)
     assert test_forces(calc)  # no restoring force along distorted x-component
 
 
@@ -149,20 +151,21 @@ def water_get_jacobian(atoms):
 
 def test_raise_Errors():
     with pytest.raises(CalculatorSetupError):
-        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                            get_q_from_x=lambda x: x)
+        HarmonicForceField(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                           get_q_from_x=lambda x: x)
     with pytest.raises(CalculatorSetupError):
-        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                            variable_orientation=True)
+        HarmonicForceField(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                           variable_orientation=True)
     with pytest.raises(CalculatorSetupError):
-        harmonic_calculator(ref_atoms=ref_atoms, hessian_x=hessian_x,
-                            cartesian=False)
+        HarmonicForceField(ref_atoms=ref_atoms, hessian_x=hessian_x,
+                           cartesian=False)
     with pytest.raises(CalculationFailed):
-        calc = harmonic_calculator(ref_atoms=ref_atoms, ref_energy=ref_energy,
-                                   hessian_x=hessian_x,
-                                   get_q_from_x=water_get_q_from_x,
-                                   get_jacobian=lambda x: np.ones((3, 9)),
-                                   cartesian=True, variable_orientation=True)
+        hff = HarmonicForceField(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                                 hessian_x=hessian_x,
+                                 get_q_from_x=water_get_q_from_x,
+                                 get_jacobian=lambda x: np.ones((3, 9)),
+                                 cartesian=True, variable_orientation=True)
+        calc = HarmonicCalculator(hff)
         setup_water(calc)
 
 
@@ -170,20 +173,23 @@ def test_internals():
     parameters = {'ref_atoms': ref_atoms, 'ref_energy': ref_energy,
                   'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
                   'get_jacobian': water_get_jacobian, 'cartesian': False}
-    calc = harmonic_calculator(**parameters)  # calculation in internals
+    hff = HarmonicForceField(**parameters)  # calculation in internals
+    calc = HarmonicCalculator(hff)
     atoms = setup_water(calc)  # distorted copy of ref_atoms
     run_optimize(atoms)        # recover original configuration
     assert_water_is_relaxed(atoms)
 
     parameters['cartesian'] = True  # calculation in Cartesian Coordinates
-    calc = harmonic_calculator(**parameters)
+    hff = HarmonicForceField(**parameters)
+    calc = HarmonicCalculator(hff)
     atoms = setup_water(calc)       # 'variable_orientation' not set to True!
     run_optimize(atoms)             # but water has rotational degrees of freedom
     with pytest.raises(AssertionError):  # hence forces were incorrect
         assert_water_is_relaxed(atoms)   # original configuration not recovered
 
     parameters['variable_orientation'] = True
-    calc = harmonic_calculator(**parameters)
+    hff = HarmonicForceField(**parameters)
+    calc = HarmonicCalculator(hff)
     atoms = setup_water(calc)
     run_optimize(atoms)
     assert_water_is_relaxed(atoms)  # relaxation succeeded despite rotation
@@ -202,21 +208,20 @@ def test_compatible_with_ase_vibrations():
     hessian_2d = vib_data.get_hessian_2d()
     vib.clean()
 
-    calc_harmonic = harmonic_calculator(ref_atoms=opt_atoms,
-                                       ref_energy=opt_energy,
-                                       hessian_x=hessian_2d)
+    hff = HarmonicForceField(ref_atoms=opt_atoms, ref_energy=opt_energy,
+                             hessian_x=hessian_2d)
+    calc_harmonic = HarmonicCalculator(hff)
     atoms = ref_atoms.copy()
     atoms.calc = calc_harmonic
     vib = Vibrations(atoms, nfree=4, delta=1e-5)
     vib.run()
     assert np.allclose(energies, vib.get_energies())
     vib.clean()
-    calc_harmonic = harmonic_calculator(ref_atoms=ref_atoms,
-                                       ref_energy=ref_energy,
-                                       hessian_x=hessian_2d,
-                                       get_q_from_x=water_get_q_from_x,
-                                       get_jacobian=water_get_jacobian,
-                                       cartesian=True)
+    hff = HarmonicForceField(ref_atoms=ref_atoms, ref_energy=ref_energy,
+                             hessian_x=hessian_2d,
+                             get_q_from_x=water_get_q_from_x,
+                             get_jacobian=water_get_jacobian, cartesian=True)
+    calc_harmonic = HarmonicCalculator(hff)
     atoms = ref_atoms.copy()
     atoms.calc = calc_harmonic
     vib = Vibrations(atoms, nfree=4, delta=1e-5)
@@ -233,9 +238,11 @@ def test_thermodynamic_integration():
                   'hessian_x': hessian_x, 'get_q_from_x': water_get_q_from_x,
                   'get_jacobian': water_get_jacobian, 'cartesian': True,
                   'variable_orientation': True}
-    calc_harmonic_1 = harmonic_calculator(**parameters)
+    hff_1 = HarmonicForceField(**parameters)
+    calc_harmonic_1 = HarmonicCalculator(hff_1)
     parameters['cartesian'] = False
-    calc_harmonic_0 = harmonic_calculator(**parameters)
+    hff_0 = HarmonicForceField(**parameters)
+    calc_harmonic_0 = HarmonicCalculator(hff_0)
     ediffs = {}  # collect energy difference for varying lambda coupling
     lambs = [0.00, 0.25, 0.50, 0.75, 1.00]  # integration grid
     for lamb in lambs:
