@@ -290,7 +290,7 @@ def write_castep_cell(
                         constr_block += [L]
 
             elif isinstance(constr, FixCartesian):
-                n = constr.a
+                n = constr.index
                 symbol = atoms.get_chemical_symbols()[n]
                 nis = species_indices[n]+1
 
@@ -302,7 +302,7 @@ def write_castep_cell(
                     constr_block += [L]
 
             elif isinstance(constr, FixedPlane):
-                n = constr.a
+                n = constr.index
                 symbol = atoms.get_chemical_symbols()[n]
                 nis = species_indices[n]+1
 
@@ -311,7 +311,7 @@ def write_castep_cell(
                 constr_block += [L]
 
             elif isinstance(constr, FixedLine):
-                n = constr.a
+                n = constr.index
                 symbol = atoms.get_chemical_symbols()[n]
                 nis = species_indices[n]+1
 
