@@ -6,7 +6,7 @@ attribute.
 import os
 import re
 import warnings
-from typing import List, TextIO
+from typing import List, TextIO, Union
 
 import numpy as np
 from copy import deepcopy
@@ -88,11 +88,16 @@ __all__ = [
     'write_param']
 
 
-def _write_block(fd: TextIO, keyword: str, value: str):
+def _write_block(fd: TextIO, keyword: str, value: Union[str, List]):
     """Write castep data block into file"""
+    if isinstance(value, list):
+        value_used = "\n".join(value)
+    else:
+        value_used = value
+
     fd.write(
         "%BLOCK {0}\n{1}\n%ENDBLOCK {0}\n\n".format(
-            keyword.upper(), value.strip("\n")
+            keyword.upper(), value_used.strip("\n")
         )
     )
 
