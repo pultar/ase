@@ -6,7 +6,7 @@ attribute.
 import os
 import re
 import warnings
-from typing import List
+from typing import List, TextIO
 
 import numpy as np
 from copy import deepcopy
@@ -88,6 +88,20 @@ __all__ = [
     'write_param']
 
 
+def _write_block(fd: TextIO, keyword: str, value: str):
+    """Write castep data block into file"""
+    fd.write(
+        "%BLOCK {0}\n{1}\n%ENDBLOCK {0}\n\n".format(
+            keyword.upper(), value.strip("\n")
+        )
+    )
+
+
+def _write_keyword(fd: TextIO, keyword: str, value: str):
+    """Write castep data block into file"""
+    fd.write(f"{keyword.upper()}: {value}\n")
+
+
 def write_freeform(fd, outputobj):
     """
     Prints out to a given file a CastepInputFile or derived class, such as
@@ -116,12 +130,10 @@ def write_freeform(fd, outputobj):
 
     for kw in keys:
         opt = options[kw]
-        if opt.type.lower() == 'block':
-            fd.write('%BLOCK {0}\n{1}\n%ENDBLOCK {0}\n\n'.format(
-                     kw.upper(),
-                     opt.value.strip('\n')))
+        if opt.type.lower() == "block":
+            _write_block(fd, kw, opt.value)
         else:
-            fd.write('{0}: {1}\n'.format(kw.upper(), opt.value))
+            _write_block(fd, kw, opt.value)
 
 
 def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
