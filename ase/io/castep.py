@@ -155,16 +155,190 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
           castep_cell=castep_cell, force_write=force_write)
 
 
-def write_castep_cell(
+def _write_lattice(fd: TextIO, atoms: ase.Atoms, precision: int):
+    line_format = "%{0}.{1}f".format(precision + 3, precision)
+    cell_block_format = " ".join([line_format] * 3)
+
+    _write_block(
         fd,
-        atoms: ase.Atoms,
-        positions_frac=False,
-        force_write=False,
-        precision=6,
-        magnetic_moments=None,
-        velocities=False,
-        castep_cell=None,
-        units=units_CODATA2002):
+        "lattice_cart",
+        [cell_block_format % tuple(line) for line in atoms.get_cell()],
+    )
+
+
+def _write_positions_block(
+    fd: TextIO,
+    atoms: ase.Atoms,
+    positions_frac: bool,
+    magnetic_moments,
+    precision: int,
+):
+    if positions_frac:
+        pos_keyword = "positions_frac"
+        positions = atoms.get_scaled_positions()
+    else:
+        pos_keyword = "positions_abs"
+        positions = atoms.get_positions()
+
+    if atoms.has("castep_custom_species"):
+        elements = atoms.get_array("castep_custom_species")
+    else:
+        elements = atoms.get_chemical_symbols()
+
+    if atoms.has("castep_labels"):
+        labels = atoms.get_array("castep_labels")
+    else:
+        labels = ["NULL"] * len(elements)
+
+    if str(magnetic_moments).lower() == "initial":
+        magmoms = atoms.get_initial_magnetic_moments()
+    elif str(magnetic_moments).lower() == "calculated":
+        magmoms = atoms.get_magnetic_moments()
+    elif np.array(magnetic_moments).shape == (len(elements),):
+        magmoms = np.array(magnetic_moments)
+    else:
+        magmoms = [0] * len(elements)
+
+    pos_block = []
+    line_format = "%{0}.{1}f".format(precision + 3, precision)
+    pos_block_format = "%s " + " ".join([line_format] * 3)
+
+    for i, el in enumerate(elements):
+        xyz = positions[i]
+        line = pos_block_format % tuple([el] + list(xyz))
+        # ADD other keywords if necessary
+        if magmoms[i] != 0:
+            line += " SPIN={0} ".format(magmoms[i])
+        if labels[i].strip() not in ("NULL", ""):
+            line += " LABEL={0} ".format(labels[i])
+        pos_block.append(line)
+
+    # write to file directly
+    _write_block(fd, pos_keyword, pos_block)
+
+
+def _write_velocities(
+    fd: TextIO, atoms: ase.Atoms, precision: int, units: dict
+):
+    velo_format = " ".join([f"{{:{precision + 3}.{precision}f}}"] * 3)
+    conversion_factor = np.sqrt(units["me"] / units["Eh"])
+    velocity_scaled = atoms.get_velocities() * conversion_factor
+
+    velocity_block = []
+    for ion_velo in velocity_scaled:
+        velocity_block.append(velo_format.format(*tuple(ion_velo)))
+
+    _write_block(fd, "ionic_velocities", velocity_block)
+
+
+def _write_constraints(fd: TextIO, atoms: ase.Atoms):
+    constraints = atoms.constraints
+    if len(constraints):
+        _supported_constraints = (
+            FixAtoms,
+            FixedPlane,
+            FixedLine,
+            FixCartesian,
+        )
+
+        constr_block: List[str] = []
+
+        for constr in constraints:
+            if not isinstance(constr, _supported_constraints):
+                warnings.warn(
+                    "Warning: you have constraints in your atoms, that are "
+                    "not supported by the CASTEP ase interface"
+                )
+                break
+            species_indices = atoms.symbols.species_indices()
+            if isinstance(constr, FixAtoms):
+                for i in constr.index:
+                    try:
+                        symbol = atoms.get_chemical_symbols()[i]
+                        nis = species_indices[i] + 1
+                    except KeyError:
+                        raise UserWarning(
+                            "Unrecognized index in" + " constraint %s" % constr
+                        )
+                    for j in range(3):
+                        L = "%6d %3s %3d   " % (
+                            len(constr_block) + 1,
+                            symbol,
+                            nis,
+                        )
+                        L += ["1 0 0", "0 1 0", "0 0 1"][j]
+                        constr_block += [L]
+
+            elif isinstance(constr, FixCartesian):
+                n = constr.index
+                symbol = atoms.get_chemical_symbols()[n]
+                nis = species_indices[n] + 1
+
+                for i, m in enumerate(constr.mask):
+                    if m == 1:
+                        continue
+                    L = "%6d %3s %3d   " % (len(constr_block) + 1, symbol, nis)
+                    L += " ".join(["1" if j == i else "0" for j in range(3)])
+                    constr_block += [L]
+
+            elif isinstance(constr, FixedPlane):
+                n = constr.index
+                symbol = atoms.get_chemical_symbols()[n]
+                nis = species_indices[n] + 1
+
+                L = "%6d %3s %3d   " % (len(constr_block) + 1, symbol, nis)
+                L += " ".join([str(d) for d in constr.dir])
+                constr_block += [L]
+
+            elif isinstance(constr, FixedLine):
+                n = constr.index
+                symbol = atoms.get_chemical_symbols()[n]
+                nis = species_indices[n] + 1
+
+                direction = constr.dir
+                ((i1, v1), (i2, v2)) = sorted(
+                    enumerate(direction), key=lambda x: abs(x[1]), reverse=True
+                )[:2]
+                n1 = np.zeros(3)
+                n1[i2] = v1
+                n1[i1] = -v2
+                n1 = n1 / np.linalg.norm(n1)
+
+                n2 = np.cross(direction, n1)
+
+                l1 = "%6d %3s %3d   %f %f %f" % (
+                    len(constr_block) + 1,
+                    symbol,
+                    nis,
+                    n1[0],
+                    n1[1],
+                    n1[2],
+                )
+                l2 = "%6d %3s %3d   %f %f %f" % (
+                    len(constr_block) + 2,
+                    symbol,
+                    nis,
+                    n2[0],
+                    n2[1],
+                    n2[2],
+                )
+
+                constr_block += [l1, l2]
+
+        _write_block(fd, "ionic_constraints", constr_block)
+
+
+def write_castep_cell(
+    fd,
+    atoms: ase.Atoms,
+    positions_frac=False,
+    force_write=False,
+    precision=6,
+    magnetic_moments=None,
+    velocities=False,
+    castep_cell=None,
+    units=units_CODATA2002,
+):
     """
     This CASTEP export function write minimal information to
     a .cell file. If the atoms object is a trajectory, it will
@@ -195,166 +369,26 @@ def write_castep_cell(
     """
 
     if atoms is None:
-        warnings.warn('Atoms object not initialized')
+        warnings.warn("Atoms object not initialized")
         return False
     if isinstance(atoms, list):
         if len(atoms) > 1:
             atoms = atoms[-1]
 
     # Header
-    fd.write('#######################################################\n')
-    fd.write('#CASTEP cell file: %s\n' % fd.name)
-    fd.write('#Created using the Atomic Simulation Environment (ASE)#\n')
-    fd.write('#######################################################\n\n')
+    fd.write("#######################################################\n")
+    fd.write("#CASTEP cell file: %s\n" % fd.name)
+    fd.write("#Created using the Atomic Simulation Environment (ASE)#\n")
+    fd.write("#######################################################\n\n")
 
-    # To write this we simply use the existing Castep calculator, or create
-    # one
-    from ase.calculators.castep import Castep, CastepCell
-
-    try:
-        has_cell = isinstance(atoms.calc.cell, CastepCell)
-    except AttributeError:
-        has_cell = False
-
-    if has_cell:
-        cell = deepcopy(atoms.calc.cell)
-    else:
-        cell = Castep(keyword_tolerance=2).cell
-
-    # Write lattice
-    fformat = '%{0}.{1}f'.format(precision + 3, precision)
-    cell_block_format = ' '.join([fformat] * 3)
-    cell.lattice_cart = [cell_block_format % tuple(line)
-                         for line in atoms.get_cell()]
-
-    if positions_frac:
-        pos_keyword = 'positions_frac'
-        positions = atoms.get_scaled_positions()
-    else:
-        pos_keyword = 'positions_abs'
-        positions = atoms.get_positions()
-
-    if atoms.has('castep_custom_species'):
-        elems = atoms.get_array('castep_custom_species')
-    else:
-        elems = atoms.get_chemical_symbols()
-
-    if atoms.has('castep_labels'):
-        labels = atoms.get_array('castep_labels')
-    else:
-        labels = ['NULL'] * len(elems)
-
-    if str(magnetic_moments).lower() == 'initial':
-        magmoms = atoms.get_initial_magnetic_moments()
-    elif str(magnetic_moments).lower() == 'calculated':
-        magmoms = atoms.get_magnetic_moments()
-    elif np.array(magnetic_moments).shape == (len(elems),):
-        magmoms = np.array(magnetic_moments)
-    else:
-        magmoms = [0] * len(elems)
-
-    pos_block = []
-    pos_block_format = '%s ' + cell_block_format
-
-    for i, el in enumerate(elems):
-        xyz = positions[i]
-        line = pos_block_format % tuple([el] + list(xyz))
-        # ADD other keywords if necessary
-        if magmoms[i] != 0:
-            line += ' SPIN={0} '.format(magmoms[i])
-        if labels[i].strip() not in ('NULL', ''):
-            line += ' LABEL={0} '.format(labels[i])
-        pos_block.append(line)
-
-    setattr(cell, pos_keyword, pos_block)
-
-    # ionic velocities
+    # Write each part
+    _write_lattice(fd, atoms, precision)
+    _write_positions_block(
+        fd, atoms, positions_frac, magnetic_moments, precision
+    )
     if velocities:
-        velo_format = " ".join([f"{{:{precision + 3}.{precision}f}}"] * 3)
-        conversion_factor = np.sqrt(units['me'] / units['Eh'])
-        velocity_scaled = atoms.get_velocities() * conversion_factor
-        velocity_block = []
-        for ion_velo in velocity_scaled:
-            velocity_block.append(velo_format.format(*tuple(ion_velo)))
-        setattr(cell, "ionic_velocities", velocity_block)
-
-    constraints = atoms.constraints
-    if len(constraints):
-        _supported_constraints = (FixAtoms, FixedPlane, FixedLine,
-                                  FixCartesian)
-
-        constr_block: List[str] = []
-
-        for constr in constraints:
-            if not isinstance(constr, _supported_constraints):
-                warnings.warn('Warning: you have constraints in your atoms, that are '
-                              'not supported by the CASTEP ase interface')
-                break
-            species_indices = atoms.symbols.species_indices()
-            if isinstance(constr, FixAtoms):
-                for i in constr.index:
-                    try:
-                        symbol = atoms.get_chemical_symbols()[i]
-                        nis = species_indices[i]+1
-                    except KeyError:
-                        raise UserWarning('Unrecognized index in'
-                                          + ' constraint %s' % constr)
-                    for j in range(3):
-                        L = '%6d %3s %3d   ' % (len(constr_block) + 1,
-                                                symbol,
-                                                nis)
-                        L += ['1 0 0', '0 1 0', '0 0 1'][j]
-                        constr_block += [L]
-
-            elif isinstance(constr, FixCartesian):
-                n = constr.index
-                symbol = atoms.get_chemical_symbols()[n]
-                nis = species_indices[n]+1
-
-                for i, m in enumerate(constr.mask):
-                    if m == 1:
-                        continue
-                    L = '%6d %3s %3d   ' % (len(constr_block) + 1, symbol, nis)
-                    L += ' '.join(['1' if j == i else '0' for j in range(3)])
-                    constr_block += [L]
-
-            elif isinstance(constr, FixedPlane):
-                n = constr.index
-                symbol = atoms.get_chemical_symbols()[n]
-                nis = species_indices[n]+1
-
-                L = '%6d %3s %3d   ' % (len(constr_block) + 1, symbol, nis)
-                L += ' '.join([str(d) for d in constr.dir])
-                constr_block += [L]
-
-            elif isinstance(constr, FixedLine):
-                n = constr.index
-                symbol = atoms.get_chemical_symbols()[n]
-                nis = species_indices[n]+1
-
-                direction = constr.dir
-                ((i1, v1), (i2, v2)) = sorted(enumerate(direction),
-                                              key=lambda x: abs(x[1]),
-                                              reverse=True)[:2]
-                n1 = np.zeros(3)
-                n1[i2] = v1
-                n1[i1] = -v2
-                n1 = n1 / np.linalg.norm(n1)
-
-                n2 = np.cross(direction, n1)
-
-                l1 = '%6d %3s %3d   %f %f %f' % (len(constr_block) + 1,
-                                                 symbol, nis,
-                                                 n1[0], n1[1], n1[2])
-                l2 = '%6d %3s %3d   %f %f %f' % (len(constr_block) + 2,
-                                                 symbol, nis,
-                                                 n2[0], n2[1], n2[2])
-
-                constr_block += [l1, l2]
-
-        cell.ionic_constraints = constr_block
-
-    write_freeform(fd, cell)
+        _write_velocities(fd, atoms, precision, units)
+    _write_constraints(fd, atoms)
 
     return True
 
