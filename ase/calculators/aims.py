@@ -18,6 +18,8 @@ from ase.data import atomic_numbers
 from ase.calculators.calculator import kpts2mp
 from ase.calculators.genericfileio import (GenericFileIOCalculator,
                                            CalculatorTemplate)
+from ase.constraints import (FixScaledParametricRelations,
+                             FixCartesianParametricRelations)
 
 
 def get_aims_version(string):
@@ -208,7 +210,10 @@ class AimsTemplate(CalculatorTemplate):
         velocities = parameters.pop('velocities', None)
 
         if geo_constrain is None:
-            geo_constrain = 'relax_geometry' in parameters
+            is_param_constraint = [isinstance(constraint, FixCartesianParametricRelations) 
+                                   or isinstance(constraint, FixScaledParametricRelations)
+                                   for constraint in atoms.constraints]
+            geo_constrain = 'relax_geometry' in parameters and any(is_param_constraint)
 
         if scaled is None:
             scaled = np.all(atoms.pbc)
