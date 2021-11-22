@@ -164,3 +164,19 @@ def test_gpumd_write_with_velocities(rocksalt):
         readback, input_parameters, _ = load_xyz_input_gpumd(fd)
     assert input_parameters['has_velocity'] == 1
     assert np.allclose(readback.get_velocities(), rocksalt.get_velocities())
+
+
+def test_gpumd_write_with_custom_species(rocksalt):
+    """Test write and read with custom species definitions."""
+    rocksalt.write('xyz.in', species=['O', 'Ni'])
+    readback = io.read('xyz.in', species=['O', 'Ni'])
+    assert np.allclose(rocksalt.positions, readback.positions)
+    assert np.allclose(rocksalt.cell, readback.cell)
+    assert np.array_equal(rocksalt.numbers, readback.numbers)
+
+
+def test_gpumd_write_raises_exception_on_species_mismatch(rocksalt):
+    """Test that writing raises an exception when there is a
+    mismatch between species and atoms object."""
+    with pytest.raises(ValueError):
+        rocksalt.write('xyz.in', species=['O', 'H'])
