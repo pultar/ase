@@ -23,33 +23,54 @@ def random_dimer():
                                          f0=np.zeros((2, 3)))
     return atoms
 
-@pytest.fixture
 def simple_dimer():
     return Atoms('CuS', positions=[[0., 0., 0.], [1., 0., 0.]])
 
-#        label = f'{atom_index}-{cartesian_index}-{(sign + 1) // 2}'
+def displacements_from_list(ref_atoms, specifications, h=0.01):
+    displacements = []
+    for (atom_index, cartesian_index, direction) in specifications:
+        atoms = ref_atoms.copy()
+        atoms[atom_index].position[cartesian_index] += h * direction
+        displacements.append(atoms)
+    return displacements
 
-dimer_full_displacements = [Atoms('CuS', positions=[[-0.01, 0., 0.], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[ 0.01, 0., 0.], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[0., -0.01, 0.], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[0.,  0.01, 0.], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[0., 0., -0.01], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[0., 0.,  0.01], [1., 0., 0.]]),
-                            Atoms('CuS', positions=[[0., 0., 0.], [0.99, 0., 0.]]), 
-                            Atoms('CuS', positions=[[0., 0., 0.], [1.01, 0., 0.]]), 
-                            Atoms('CuS', positions=[[0., 0., 0.], [1., -0.01, 0.]]),
-                            Atoms('CuS', positions=[[0., 0., 0.], [1.,  0.01, 0.]]),
-                            Atoms('CuS', positions=[[0., 0., 0.], [1., 0., -0.01]]),
-                            Atoms('CuS', positions=[[0., 0., 0.], [1., 0.,  0.01]])]
-dimer_full_labels = [ '0-0-0', '0-0-1', '0-1-0', '0-1-1', '0-2-0', '0-2-1',
-                      '1-0-0', '1-0-1', '1-1-0', '1-1-1', '1-2-0', '1-2-1']
+def labels_from_list(specifications):
+    def dir_to_index(direction: int):
+        if direction == -1:
+            return 0
+        elif direction == 1:
+            return 1
+        else:
+            raise ValueError(f'Could not interpret direction "{direction}"')
+
+    return [f'{atom_index}-{cart_index}-{dir_to_index(direction)}'
+            for atom_index, cart_index, direction in specifications]
+
+# Standard case: two directions, default distance
+full_displacement_spec = [(0,0,-1), (0,0,1), (0,1,-1), (0,1,1), (0,2,-1),
+                         (0,2,1), (1,0,-1), (1,0,1), (1,1,-1), (1,1,1),
+                         (1,2,-1), (1,2,1)]
+dimer_full_displacements = displacements_from_list(simple_dimer(),
+                                                   full_displacement_spec,
+                                                   h=0.01)
+dimer_full_labels = labels_from_list(full_displacement_spec)
+
+# Limit indices to one atom, increase displacement
+indexed_displacement_spec = [(1,0,-1), (1,0,1), (1,1,-1), (1,1,1),
+                                  (1,2,-1), (1,2,1)]
+indexed_displacements = displacements_from_list(
+    simple_dimer(), indexed_displacement_spec, h=0.02)
+indexed_labels = labels_from_list(indexed_displacement_spec)
+
 
 @pytest.mark.parametrize('options, expected_output',
                          [({}, list(zip(dimer_full_displacements,
                                         dimer_full_labels))),
-                          ])
-def test_get_displacements_with_identities(simple_dimer, options, expected_output):
-    output = ase.vibrations.finite_diff.get_displacements_with_identities(simple_dimer, **options)
+                          ({'indices': [1], 'delta': 0.02},
+                           list(zip(indexed_displacements,
+                                    indexed_labels)))])
+def test_get_displacements_with_identities(options, expected_output):
+    output = ase.vibrations.finite_diff.get_displacements_with_identities(simple_dimer(), **options)
 
     for ((atoms, label), (expected_atoms, expected_label)) in zip(output, expected_output):
         assert label == expected_label
@@ -62,29 +83,20 @@ def attach_forces(atoms, forces):
     atoms.calc = SinglePointCalculator(atoms, forces=forces)
     return atoms
 
-full_displacement_set = [(0,0,-1), (0,0,1), (0,1,-1), (0,1,1), (0,2,-1), (0,2,1),
-                         (1,0,-1), (1,0,1), (1,1,-1), (1,1,1), (1,2,-1), (1,2,1)]
 
-def displacements_from_list(ref_atoms, specifications, h=0.01):
-    displacements = []
-    for (atom_index, cartesian_index, direction) in specifications:
-        atoms = ref_atoms.copy()
-        atoms[atom_index].position[cartesian_index] += h * direction
-        displacements.append(atoms)
-    return displacements
-
-def test_read_forces_direct(random_dimer):
+def test_read_axis_aligned_forces(random_dimer):
 
     ref_hessian = random_dimer.calc.D
 
-    displacements = displacements_from_list(random_dimer, full_displacement_set)
+    displacements = displacements_from_list(random_dimer,
+                                            full_displacement_spec)
     for displacement in displacements:
         displacement.calc = ForceConstantCalculator(D=ref_hessian,
                                                     ref=random_dimer,
                                                     f0=np.zeros((2, 3)))
         displacement.get_forces()
 
-    ase.vibrations.finite_diff.read_forces_direct(random_dimer,
-                                                  displacements,
-                                                  method='standard')
+    ase.vibrations.finite_diff.read_axis_aligned_forces(random_dimer,
+                                                        displacements,
+                                                        method='standard')
 
