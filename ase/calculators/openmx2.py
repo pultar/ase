@@ -2,7 +2,7 @@
 The ASE Calculator for OpenMX <http://www.openmx-square.org>: Python interface
 to the software package for nano-scale material simulations based on density
 functional theories.
-    Copyright (C) 2018 JaeHwan Shim and JaeJun Yu
+    Copyright (C) 2021 JaeHwan Shim and JaeJun Yu
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -45,9 +45,9 @@ class OpenmxProfile:
 
 class OpenmxTemplate(CalculatorTemplate):
 
-    def __init__(self):
+    def __init__(self, name='openmx'):
         super().__init__(
-            name='openmx',
+            name=name,
             implemented_properties=['energy', 'free_energy',
                                     'forces', 'stress', 'magmom'])
 
@@ -55,7 +55,7 @@ class OpenmxTemplate(CalculatorTemplate):
         profile.run(directory, (self.name + '.dat'), (self.name + '.log'))
 
     def write_input(self, directory, atoms, parameters, properties):
-        name = parameters.get('system_currentdirectory')
+        self.system_name = parameters.get('system_name', self.name)
         directory.mkdir(exist_ok=True, parents=True)
         dst = directory / (self.name + '.dat')
         io.write_openmx_in(dst, atoms,
@@ -63,8 +63,9 @@ class OpenmxTemplate(CalculatorTemplate):
                            parameters=parameters)
 
     def read_results(self, directory):
-        outfile = directory / (self.name + '.log')
-        return io.read_openmx_log(outfile, read=['results'], index=-1)
+        outfile = directory / (self.system_name + '.out')
+        logfile = directory / (self.name + '.log')
+        return io.read_openmx_results(outfile, logfile)
 
 
 class Openmx2(GenericFileIOCalculator):

@@ -1,4 +1,25 @@
+"""
+The ASE Calculator for OpenMX <http://www.openmx-square.org>: Python interface
+to the software package for nano-scale material simulations based on density
+functional theories.
+    Copyright (C) 2021 JaeHwan Shim and JaeJun Yu
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2.1 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with ASE.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import os
+import re
 import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
@@ -390,7 +411,7 @@ def write_atoms_unitvectors(fd, atoms, parameters, **kwargs):
         raise NotImplementedError("Unit %s not implemented" % unit)
 
 
-def read_openmx_log_cell(txt):
+def parse_openmx_log_cell(txt, version='3.9.2'):
     pattern = 'lattice vectors \((\S+)\)'
     match = re.search(pattern, txt, re.M)
     unit = match.group(1)
@@ -405,11 +426,11 @@ def read_openmx_log_cell(txt):
     cell.append([float(l) for l in C])
     return cell
 
-def read_openmx_log_pbc(txt):
+def parse_openmx_log_pbc(txt, version='3.9.2'):
     return True
 
 
-def read_openmx_log_symbols(txt):
+def parse_openmx_log_symbols(txt, version='3.9.2'):
     pattern = r'<Band_DFT>  DM,'
 
     fp = re.search(pattern, txt).end(0)
@@ -420,7 +441,7 @@ def read_openmx_log_symbols(txt):
     return symbols
 
 
-def read_openmx_log_positions(txt):
+def parse_openmx_log_positions(txt, version='3.9.2'):
     pattern = r'XYZ\((\S+)\) Fxyz\((\S+)\)=(.+)'
     positions = []
     for m in re.finditer(pattern, txt, re.M):
@@ -431,12 +452,12 @@ def read_openmx_log_positions(txt):
         positions.append(position)
     return positions
 
-def read_openmx_log_energy(txt):
+def parse_openmx_log_energy(txt, version='3.9.2'):
     pattern = r'Utot  =\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     return float(match.group(1))
 
-def read_openmx_log_forces(txt):
+def parse_openmx_log_forces(txt, version='3.9.2'):
     pattern = r'Fxyz\((\S+)\)=(.+)'
     forces = []
     for m in re.finditer(pattern, txt, re.M):
@@ -447,7 +468,7 @@ def read_openmx_log_forces(txt):
         forces.append(force)
     return forces
 
-def read_openmx_log_stress(txt):
+def parse_openmx_log_stress(txt, version='3.9.2'):
     pattern = r'Stress tensor \((\S+)\)'
     match = re.search(pattern, txt, re.M)
     unit = match.group(1)
@@ -459,14 +480,13 @@ def read_openmx_log_stress(txt):
         stress = [float(val) for val in txt[fp:ep].split()]
     return stress
 
-def read_openmx_log_version(txt):
-    #pattern = r'This calculation was performed by OpenMX\s+Ver\.\s+(\S+)'
+def parse_openmx_log_version(txt, version='3.9.2'):
     pattern = r'Welcome to OpenMX\s+Ver\.\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     version = match.group(1)
     return version
 
-def read_openmx_log_steps(txt, return_partition=False):
+def parse_openmx_log_steps(txt, return_partition=False, version='3.9.2'):
     #pattern = r"SCF history at MD= \d+"
     #pattern = r'SCF calculation at MD = (\S+)'
     #pattern = r'MD or geometry opt\. at MD = (\S+)'
@@ -491,7 +511,7 @@ def read_openmx_log(filename='openmx.log', index=-1):
     if isinstance(index, int):
         index = [index]
     elif index == ':':
-        index = np._s[:]
+        index = np.s_[:]
     elif isinstance(index, list):
         None
     else:
@@ -500,8 +520,13 @@ def read_openmx_log(filename='openmx.log', index=-1):
     with open(filename, 'r') as fd:
         txt = fd.read()
 
-    version = read_openmx_log_version(txt)
-    steps, partition = read_openmx_log_steps(txt, return_partition=True)
+    version = parse_openmx_log_version(txt)
+    steps, partition = parse_openmx_log_steps(txt, version=version,
+                                              return_partition=True)
+
+    md = False
+    if len(steps) != 1:
+        md = True
 
     images =[]
     idx = np.arange(len(steps))[index]
@@ -509,15 +534,18 @@ def read_openmx_log(filename='openmx.log', index=-1):
     for i in idx:
         text = txt[partition[i]:partition[i+1]]
 
-        cell = read_openmx_log_cell(text)
-        symbols = read_openmx_log_symbols(text)
-        positions = read_openmx_log_positions(text)
+        cell = parse_openmx_log_cell(text, version=version)
+        symbols = parse_openmx_log_symbols(text, version=version)
+        if md:
+            positions = parse_openmx_log_md_positions(text, version=version)
+        else:
+            positions = np.zeros((len(symbols), 3))
 
-        energy = read_openmx_log_energy(text)
-        forces = read_openmx_log_forces(text)
-        stress = read_openmx_log_stress(text)
+        energy = parse_openmx_log_energy(text, version=version)
+        forces = parse_openmx_log_forces(text, version=version)
+        stress = parse_openmx_log_stress(text, version=version)
 
-        pbc = read_openmx_log_pbc(text)
+        pbc = parse_openmx_log_pbc(text, version=version)
 
         results = {'energy': energy, 'forces': forces,
                   'stress': stress}
@@ -530,6 +558,121 @@ def read_openmx_log(filename='openmx.log', index=-1):
         atoms.calc = calc
         atoms.calc.name = 'openmx2'
 
-        images.append(atoms)
+        print('cell', cell)
+        print('symbols', symbols)
+        print('positons', positions)
+        print('E', energy)
+        print('Forces', forces)
+        print('Stress', stress)
 
+        images.append(atoms)
     return images
+
+def parse_openmx_out_cell(txt, version='3.9.2'):
+    pattern = 'lattice vectors \((\S+)\)'
+    match = re.search(pattern, txt, re.M)
+    unit = match.group(1)
+    fp = match.end(0)
+    ep = re.search(r'reciprocal', txt[fp:]).start(0)
+    cell = []
+    A = re.search(r'^A\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
+    B = re.search(r'^B\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
+    C = re.search(r'^C\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
+    cell.append([float(l) for l in A])
+    cell.append([float(l) for l in B])
+    cell.append([float(l) for l in C])
+    return cell
+
+def parse_openmx_out_pbc(txt, version='3.9.2'):
+    return True
+
+
+def parse_openmx_out_symbols(txt, version='3.9.2'):
+    pattern = r'<Band_DFT>  DM,'
+
+    fp = re.search(pattern, txt).end(0)
+    ep = re.search(r'Sum of MulP:', txt[fp:]).end(0)
+    symbols = []
+    for line in txt[fp:fp+ep].split('\n')[1:-1]:
+        symbols.append(line.split()[1])
+    return symbols
+
+
+def parse_openmx_out_positions(txt, version='3.9'):
+    pattern = r'xyz-coordinates \((\S+)\)'
+    unit = re.finditer(pattern, txt, re.M)
+    pattern = r'<coordinates'
+    unit = re.finditer(pattern, txt, re.M)
+    positions = []
+    for m in re.finditer(pattern, txt, re.M):
+        unit = m.group(1)
+        lines = m.group(3).split()[:3]
+        if unit == 'ang':
+            position = [float(l) for l in lines]
+        positions.append(position)
+    return positions
+
+def parse_openmx_out_energy(txt, version='3.9'):
+    pattern = r'Total energy \(\S+\) = (\d+)'
+    match = re.search(pattern, txt, re.M)
+    unit = match.group(1)
+    return float(match.group(2)) * unit
+
+def parse_openmx_out_forces(txt, version='3.9'):
+    pattern = r'and forces \((\S+)\)'
+    unit = re.finditer(pattern, txt, re.M)
+    pattern = r'<coordinates'
+    forces = []
+    for m in re.finditer(pattern, txt, re.M):
+        unit = m.group(1)
+        lines = m.group(3).split()[:3]
+        if unit == 'ang':
+            forces = [float(l) for l in lines]
+        positions.append(position)
+
+
+def parse_openmx_out_version(txt, version='3.9.2'):
+    pattern = r'This calculation was performed by OpenMX\s+Ver\.\s+(\S+)'
+    match = re.search(pattern, txt, re.M)
+    version = match.group(1)
+    return version
+
+def read_openmx_out_results(filename='openmx.out'):
+    """
+    return atoms with results in it
+    """
+
+    with open(filename, 'r') as fd:
+        txt = fd.read()
+
+    version = parse_openmx_out_version(txt)
+
+    cell = parse_openmx_out_cell(txt, version=version)
+    symbols = parse_openmx_out_symbols(txt, version=version)
+    positions = parse_openmx_out_positions(text, version=version)
+
+    energy = parse_openmx_out_energy(text, version=version)
+    forces = parse_openmx_out_forces(text, version=version)
+
+    pbc = parse_openmx_out_pbc(text, version=version)
+
+    results = {'energy': energy, 'forces': forces}
+
+    atoms = Atoms(symbols, positions=positions,
+                  cell=cell, pbc=pbc)
+
+    calc = SinglePointDFTCalculator(
+        atoms, **results)
+    atoms.calc = calc
+    atoms.calc.name = 'openmx2'
+
+    return atoms
+
+def read_openmx_results(outfile, logfile):
+    results = {}
+    version =
+    parse_openmx_out_energy()
+    parse_openmx_out_energy()
+
+def read_openmx_md(filename='openmx.md'):
+    None
