@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Sequence
 
 import numpy as np
 from numpy.linalg import lstsq
@@ -76,7 +76,7 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
                              displacements: Sequence[Atoms],
                              method: str = 'standard',
                              use_equilibrium_forces: bool = None,
-                             indices: Sequence[int] = None
+                             indices: Sequence[int] = None,
                              direction: str = None,
                              threshold: float = 1e-12) -> VibrationsData:
     """Convert a set of atoms objects with displacements to VibrationsData
