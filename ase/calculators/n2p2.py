@@ -4,9 +4,19 @@ from ase.calculators.calculator import all_changes
 from ase.calculators.calculator import FileIOCalculator
 import os
 import shutil
-from io.n2p2 import read_n2p2, write_n2p2
+from ase.io.n2p2 import read_n2p2, write_n2p2
 
 class N2P2Calculator(FileIOCalculator):
+    '''example: 
+        N2P2Calculator( 
+            directory = 'tmp',
+            files = [
+                'input.nn',
+                'scaling.data',
+                'weights.008.data',
+                'weights.001.data'],
+            )
+    '''
     
     command = 'nnp-predict 0'
     'Command used to start calculation'
@@ -35,6 +45,10 @@ class N2P2Calculator(FileIOCalculator):
             'forces' : self.calculate}
         self.results = {}
 
+        ## preparing
+        if self.directory != os.curdir and not os.path.isdir(self.directory):
+            os.makedirs(self.directory)
+        self.write_files()
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """Write input file(s).
@@ -44,8 +58,13 @@ class N2P2Calculator(FileIOCalculator):
 
         if self.directory != os.curdir and not os.path.isdir(self.directory):
             os.makedirs(self.directory)
+            
+        write_n2p2(
+            os.path.join(self.directory, 'input.data'),
+            atoms,
+            with_energy_and_forces = False)
 
-        write_n2p2(os.path.join(self.directory,'input.data'), atoms)
+    def write_files(self): #should this be initialize?
         for filename in self.files:
             src = filename
             basename = os.path.basename(filename)

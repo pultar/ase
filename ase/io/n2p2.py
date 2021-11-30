@@ -18,17 +18,17 @@ def _write_n2p2(fid, atoms, comment='', with_charges=False, with_energy_and_forc
         fid.write(lattice_format.format(*atoms.cell[i]))
 
     # deciding what to do about energies and forces
+    fillzeros = True
     if with_energy_and_forces == True:
         fillzeros = False
-    elif with_energy_and_forces.lower() == 'auto':
-        #if hasattr(atoms, 'calc'):
-        if atoms._calc is not None:
-            fillzeros = False
-        else: 
-            fillzeros = True
-    else:
-        fillzeros = True
-
+        
+    if type(with_energy_and_forces) == str:
+        if with_energy_and_forces.lower() == 'auto':
+            #if hasattr(atoms, 'calc'):
+            if atoms._calc is not None:
+                fillzeros = False
+            else: 
+                fillzeros = True
         
     if fillzeros:
         energy = 0.0
@@ -55,10 +55,14 @@ def _write_n2p2(fid, atoms, comment='', with_charges=False, with_energy_and_forc
     fid.write('end\n')  
 
 
-def write_n2p2(filename='input.data', images=[],
+def write_n2p2(
+    filename,#='input.data', 
+    images,
     comment = '',
     with_charges=False, 
     with_energy_and_forces= 'auto'):
+
+    #filename is typically 'input.data'
 
     fid = open(filename,'w')
     if type(images) is Atoms:
