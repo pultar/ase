@@ -74,7 +74,7 @@ class N2P2Calculator(FileIOCalculator):
     def read_results(self):
 
         res_atoms = read_n2p2(
-                    filename='output.data',
+                    filename= os.path.join(self.directory,'output.data'),
                     index=-1, 
                     with_energy_and_forces = True)
 
