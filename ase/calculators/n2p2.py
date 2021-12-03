@@ -2,11 +2,13 @@ import sys
 import numpy as np
 from ase.calculators.calculator import all_changes
 from ase.calculators.calculator import FileIOCalculator
+#from ase.calculators.genericfileio import GenericFileIOCalculator
 import os
 import shutil
 from ase.io.n2p2 import read_n2p2, write_n2p2
 
 class N2P2Calculator(FileIOCalculator):
+#class N2P2Calculator(GenericFileIOCalculator):
     '''example: 
         N2P2Calculator( 
             directory = 'tmp',
@@ -21,6 +23,8 @@ class N2P2Calculator(FileIOCalculator):
     command = 'nnp-predict 0'
     'Command used to start calculation'
 
+    name = 'n2p2'
+
     def __init__(self, restart=None, ignore_bad_restart_file=False,
                  label=None, atoms=None, command=None, files=[], **kwargs):
         """File-IO calculator.
@@ -33,6 +37,8 @@ class N2P2Calculator(FileIOCalculator):
 
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file, label,
                             atoms, **kwargs)
+        #GenericFileIOCalculator.__init__(self, restart, ignore_bad_restart_file, label,
+        #                    atoms, **kwargs)
 
         if command is not None:
             self.command = command
