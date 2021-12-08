@@ -35,7 +35,7 @@ oldlibs:
   script:
     - pip install --no-deps .
     - >
-      ase test --pytest --color=yes
+      ase test --pytest --color=yes -k test_socket_port0
       -W "ignore:can't resolve package"
       -W ignore::PendingDeprecationWarning
 
@@ -101,7 +101,7 @@ calculators-lite:
   image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
-    - ase test calculator --calculators=auto --coverage --pytest -m calculator_lite --color=yes --durations=20
+    - ase test calculator --calculators=auto --coverage --pytest -m calculator_lite --color=yes --durations=20 -k test_socket_port0
     - mv ase/test/coverage-html coverage-calculators-lite
     - mv ase/test/.coverage coverage-calculators-lite/coverage.dat
   artifacts:
@@ -121,7 +121,7 @@ calculators:
   script:
     - pip install --no-deps --editable .
     - ase info --calculators
-    - ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,nwchem,octopus,siesta --coverage --pytest --color=yes --durations 20
+    - ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,nwchem,octopus,siesta --coverage --pytest --color=yes --durations 20 -k test_socket_port0
     - mv ase/test/coverage-html coverage-calculators
     - mv ase/test/.coverage coverage-calculators/coverage.dat
   when: manual
