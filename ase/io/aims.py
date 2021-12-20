@@ -433,6 +433,7 @@ def _parse_atoms(fd, n_atoms, molecular_dynamics=False):
                 cell += [[float(inp[1]), float(inp[2]), float(inp[3])]]
                 inp = next(fd).split()
             atoms.set_cell(cell)
+            atoms.pbc = True
             inp = next(fd).split()
         atoms.append(Atom(inp[4], (inp[1], inp[2], inp[3])))
         if molecular_dynamics:
@@ -577,7 +578,7 @@ def read_aims_output(fd, index=-1):
 
         if "Total energy corrected" in line:
             e = float(line.split()[5])
-            if pbc:
+            if (not atoms.pbc.any(axis=0) ) and pbc:
                 atoms.set_cell(cell)
                 atoms.pbc = True
             if not found_aims_calculator:
