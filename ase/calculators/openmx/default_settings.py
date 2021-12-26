@@ -28,6 +28,7 @@ default_dictionary = {
     'H': {
            'cutoff radius': 6,
            'orbitals used': [3, 2],
+           'valence_electron': [],
            'pseudo-potential suffix': ''
           },
     'He': {

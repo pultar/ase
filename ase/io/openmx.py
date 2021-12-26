@@ -23,28 +23,30 @@ import re
 import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
+from ase.units import Bohr, Ang, Ha
 
-special_keywords = [# "system_currentdirectory",
-                    # "data_path",
-                    "species_number",
+units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3}
+
+
+special_keywords = ["species_number",
                     "definition_of_atomic_species",
                     "atoms_unitvectors",
                     "atoms_number",
                     "atoms_speciesandcoordinates"]
 
 matrix_keywords = [
-    'Definition.of.Atomic.Species',
-    'Atoms.SpeciesAndCoordinates',
-    'Atoms.UnitVectors',
-    'Hubbard.U.values',
-    'Atoms.Cont.Orbitals',
-    'MD.Fixed.XYZ',
-    'MD.TempControl',
-    'MD.Init.Velocity',
-    'Band.KPath.UnitCell',
-    'Band.kpath',
-    'MO.kpoint',
-    'Wannier.Initial.Projectors'
+    'definition_of_atomic_species',
+    'atoms_speciesandcoordinates',
+    'atoms_unitvectors',
+    'hubbard_u_values',
+    'atoms_cont_orbitals',
+    'md_fixed_xyz',
+    'md_tempcontrol',
+    'md_init_velocity',
+    'band_kpath_unitcell',
+    'band_kpath',
+    'mo_kpoint',
+    'wannier_initial_projectors'
 ]
 
 unit_dat_keywords = {
@@ -68,188 +70,88 @@ unit_dat_keywords = {
 omx_bl = {True: 'On', False: 'Off'}
 
 
-def get_up_down_spin(magmom, element, xc, data_path, year):
-    magmom = np.linalg.norm(magmom)
-    suffix = get_pseudo_potential_suffix(element, xc, year)
-    filename = os.path.join(data_path, 'VPS/' + suffix + '.vps')
-    valence_electron = float(get_electron_valency(filename))
-    return [valence_electron / 2 + magmom / 2, valence_electron / 2 - magmom/2]
-
-
-def get_spin_direction(magmoms):
-    '''
-    From atoms.magmom, returns the spin direction of phi and theta
-    '''
-    if np.array(magmoms).dtype == float or \
-       np.array(magmoms).dtype is np.float64:
-        return []
-    else:
-        magmoms = np.array(magmoms)
-        return magmoms/np.linalg.norm(magmoms, axis=1)
-
-
-def get_electron_valency(filename='H_CA13'):
-    array = []
-    with open(filename, 'r') as fd:
-        array = fd.readlines()
-        fd.close()
-    required_line = ''
-    for line in array:
-        if 'valence.electron' in line:
-            required_line = line
-    return required_line.split()[-1]
-
-
-def get_spinpol(atoms, parameters):
-    ''' Judgeds the keyword 'scf.SpinPolarization'
-     If the keyword is not None, spinpol gets the keyword by following priority
-       1. standard_spinpol
-       2. scf_spinpolarization
-       3. magnetic moments of atoms
-    '''
-    standard_spinpol = parameters.get('spinpol', None)
-    scf_spinpolarization = parameters.get('scf_spinpolarization', None)
-    m = atoms.get_initial_magnetic_moments()
-    syn = {True: 'On', False: None, 'on': 'On', 'off': None,
-           None: None, 'nc': 'NC'}
-    spinpol = np.any(m >= 0.1)
-    if scf_spinpolarization is not None:
-        spinpol = scf_spinpolarization
-    if standard_spinpol is not None:
-        spinpol = standard_spinpol
-    if isinstance(spinpol, str):
-        spinpol = spinpol.lower()
-    return syn[spinpol]
-
-
-def get_cutoff_radius_and_orbital(element=None, orbital=None):
-    """
-    For a given element, retruns the string specifying cutoff radius and
-    orbital using default_settings.py. For example,
-       'Si'   ->   'Si.7.0-s2p2d1'
-    If one wannts to change the atomic radius for a special purpose, one should
-    change the default_settings.py directly.
-    """
-    from ase.calculators.openmx import default_settings
-    orbital = element
-    orbital_letters = ['s', 'p', 'd', 'f', 'g', 'h']
-    default_dictionary = default_settings.default_dictionary
-    orbital_numbers = default_dictionary[element]['orbitals used']
-    cutoff_radius = default_dictionary[element]['cutoff radius']
-    orbital += "%.1f" % float(cutoff_radius) + '-'
-    for i, orbital_number in enumerate(orbital_numbers):
-        orbital += orbital_letters[i] + str(orbital_number)
-    return orbital
-
-
-def get_pseudo_potential_suffix(element=None, xc=None, year='13'):
-    """
-    For a given element, returns the string specifying pseudo potential suffix.
-    For example,
-        'Si'   ->   'Si_CA13'
-    or
-        'Si'   ->   'Si_CA19'
-    depending on pseudo potential generation year
-    """
-    from ase.calculators.openmx import default_settings
-    default_dictionary = default_settings.default_dictionary
-    pseudo_potential_suffix = element
-    vps = get_vps(xc)
-    suffix = default_dictionary[element]['pseudo-potential suffix']
-    pseudo_potential_suffix += '_' + vps + year + suffix
-    return pseudo_potential_suffix
-
-
-def get_vps(xc):
-    if xc in ['GGA-PBE']:
-        return 'PBE'
-    else:
-        return 'CA'
-
-
-def get_dft_data_year(parameters):
-    """
-    It seems there is no version or potential year checker in openmx, thus we
-    implemented one. It parse the pesudo potential path variable such as
-    `~/PATH/TO/OPENMX/openmx3.9/DFT_DATA19/` or `.../openmx3.8/DFT_DATA13/`.
-    By spliting this string, we harness the number of the year that generated
-    such pseudo potential path.
-    """
-    year = parameters.get('data_path').split('/')[-1][-2:]
-
-    if year in ['13', '19']:
-        return year
-    else:
-        raise ValueError('data_path can not be found. Please specify '
-                         '`data_path` as year of pseudo potential relesed')
-
-
-def get_cutoff_radius_and_orbital(element=None, orbital=None):
-    """
-    For a given element, retruns the string specifying cutoff radius and
-    orbital using default_settings.py. For example,
-       'Si'   ->   'Si.7.0-s2p2d1'
-    If one wannts to change the atomic radius for a special purpose, one should
-    change the default_settings.py directly.
-    """
-    from ase.calculators.openmx import default_settings
-    orbital = element
-    orbital_letters = ['s', 'p', 'd', 'f', 'g', 'h']
-    default_dictionary = default_settings.default_dictionary
-    orbital_numbers = default_dictionary[element]['orbitals used']
-    cutoff_radius = default_dictionary[element]['cutoff radius']
-    orbital += "%.1f" % float(cutoff_radius) + '-'
-    for i, orbital_number in enumerate(orbital_numbers):
-        orbital += orbital_letters[i] + str(orbital_number)
-    return orbital
-
-
 def write_openmx_in(dst, atoms, properties=None, parameters=None, **kwargs):
-    omx_keywords = {}
-    # omx_keywords = parameters2keywords(atoms, parameters, **kwargs)
-    # omx_keywords = omx_keywords_beautify(omx_keywords)
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
 
-    with open(dst, 'w') as fd:
-        for keyword, value in parameters.items():
-            print(keyword)
-            # Check if there exists special writing method for that keyword
-            if keyword in special_keywords:
-                write_special_keyword = globals().get('write_' + keyword)
-                write_special_keyword(fd, atoms, parameters, **kwargs)
-            elif keyword in matrix_keywords:
-                write_matrix_keyword(fd, keyword, value, **kwargs)
-            else:
-                write_keyword(fd, keyword, value, **kwargs)
+    if isinstance(dst, (str, os.PathLike)):
+        fd = open(dst, 'w')
+    else:
+        fd = dst
+
+    for keyword, value in parameters.items():
+        # Check if there exists special writing method for that keyword
+        if keyword in special_keywords:
+            write_special_keyword = globals().get('write_' + keyword)
+            write_special_keyword(fd, atoms, parameters, **kwargs)
+        elif keyword in matrix_keywords:
+            write_matrix_keyword(fd, keyword, value, **kwargs)
+        else:
+            write_keyword(fd, keyword, value, **kwargs)
+
+    if isinstance(dst, (str, os.PathLike)):
+        fd.close()
 
 
 def write_keyword(fd, keyword, value):
+    """Write the f'$(keyword)      $(value)' pair at the `fd`
+
+    >>> import sys
+    >>> fd = sys.stdout  # or fd = open('filename')
+
+    None example
+    >>> keyword = 'scf_stress_tensor'
+    >>> value = None
+    >>> write_keyword(fd, keyword, value)
+
+    Boolean example
+    >>> keyword = 'scf_stress_tensor'
+    >>> value = True
+    >>> write_keyword(fd, keyword, value)
+     scf.stress.tensor              On
+    >>> value = False
+    >>> write_keyword(fd, keyword, value)
+     scf.stress.tensor              Off
+
+    Integer / Float / String example
+    >>> keyword = 'scf_energycutoff'
+    >>> value = 300
+    >>> write_keyword(fd, keyword, value)
+     scf.energycutoff               300
+    >>> keyword = 'scf_criterion'
+    >>> value = 0.0001
+    >>> write_keyword(fd, keyword, value)
+     scf.criterion                  0.0001
+    >>> keyword = 'scf_xctype'
+    >>> value = 'gga-pbe'
+    >>> write_keyword(fd, keyword, value)
+     scf.xctype                     gga-pbe
+
+    """
+    if value is None:
+        return None
     keyword = keyword.replace('_', '.')
     if isinstance(value, bool):
         fd.write(" {0:<30} {1}".format(keyword, omx_bl[value]))
     elif isinstance(value, (int, float, str)):
         fd.write(" {0:<30} {1}".format(keyword, value))
     elif isinstance(value, (list, tuple)):
-        N = len(value)
-        if N == 0:
-            raise NotImplementedError("Empty list key", keyword, value)
-        elif isinstance(value[0], bool):
-            onoff = [omx_bl[bl] for bl in value]
-            value = onoff
-            valuestr = ' '.join([f'{{{i}:<5}}' for i in range(N)])
-        elif isinstance(value[0], int):
-            valuestr = ' '.join([f'{{{i}:<5}}' for i in range(N)])
-        elif isinstance(value[0], float):
-            valuestr = ' '.join([f'{{{i}:<8}}' for i in range(N)])
-        elif isinstance(value[0], str):
-            valuestr = ' '.join([f'{{{i}:<8}}' for i in range(N)])
-        elif isinstance(value[0], (list, tuple)):
-            write_matrix_keyword(fd, keyword, value, **kwargs)
-        else:
-            raise NotImplementedError("Unknown value type", keyword, value)
-        formatstr = " {key:<30} " + valuestr
-        fd.write(formatstr.format(*value, key=keyword))
+        valuestr = ''
+        for v in value:
+            if isinstance(v, bool):
+                valuestr += omx_bl[v]
+            elif isinstance(v, int):
+                valuestr += '{0:<5} '.format(v)
+            elif isinstance(v, str):
+                if len(v) < 6:
+                    valuestr += '{0:<6} '.format(v)
+                else:
+                    valuestr += '{0:<10} '.format(v)
+            elif isinstance(v, float):
+                valuestr += '{0:<10} '.format(v)
+            else:
+                raise NotImplementedError("Unknown value type", keyword, value)
+        fd.write(" {0:<30} {1}".format(keyword, valuestr))
     else:
         raise NotImplementedError("Unknown value type", keyword, value)
     fd.write("\n")
@@ -259,21 +161,23 @@ def write_matrix_keyword(fd, keyword, value):
     keyword = keyword.replace('_', '.')
     fd.write('<' + keyword + "\n")
     for val in value:
-        N = len(val)
-        if N == 0:
-            raise NotImplementedError("Empty list inside key", keyword, val)
         fd.write("   ")
-        if isinstance(val[0], bool):
-            onoff = [omx_bl[bl] for bl in value]
-            val = onoff
-            valuestr = ' '.join([f'{{{i}:<5}}' for i in range(N)])
-        elif isinstance(val[0], int):
-            valuestr = ' '.join([f'{{{i}:<5}}' for i in range(N)])
-        elif isinstance(val[0], float):
-            valuestr = ' '.join([f'{{{i}:<8}}' for i in range(N)])
-        elif isinstance(val[0], str):
-            valuestr = ' '.join([f'{{{i}:<8}}' for i in range(N)])
-        fd.write(valuestr.format(*val) + "\n")
+        valuestr = ''
+        for v in val:
+            if isinstance(v, bool):
+                valuestr += omx_bl[v]
+            elif isinstance(v, int):
+                valuestr += '{0:<5} '.format(v)
+            elif isinstance(v, str):
+                if len(v) < 6:
+                    valuestr += '{0:<6} '.format(v)
+                else:
+                    valuestr += '{0:<10} '.format(v)
+            elif isinstance(v, float):
+                valuestr += '{0:<10} '.format(v)
+            else:
+                valuestr += '{0:<10} '.format(v)
+        fd.write(valuestr.strip() + "\n")
     fd.write(keyword + '>')
     fd.write("\n\n")
 
@@ -289,7 +193,12 @@ def write_atoms_speciesandcoordinates(fd, atoms, parameters, **kwargs):
     Atoms.SpeciesAndCoordinates>
     to know more, link <http://www.openmx-square.org/openmx_man3.7/node85.html>
     """
+    # 'atoms_speciesandcoordinates' overrides
     key = 'atoms_speciesandcoordinates'
+    if parameters.get(key) is not None:
+        atoms_speciesandcoordinates = parameters[key].copy()
+        write_matrix_keyword(fd, key, atoms_speciesandcoordinates)
+        return None
 
     unit = parameters.get(key + '_unit', 'ang').lower()
     if unit == 'ang':
@@ -298,142 +207,219 @@ def write_atoms_speciesandcoordinates(fd, atoms, parameters, **kwargs):
         positions = atoms.get_scaled_positions(wrap=False)
     elif unit == 'au':
         positions = atoms.get_positions() / Bohr
-    # `atoms.positions` overrides 'atoms_speciesandcoordinates'
-    if parameters.get(key) is not None:
-        atoms_speciesandcoordinates = parameters[key].copy()
-        for i in range(len(atoms)):
-            atoms_speciesandcoordinates[i][2] = positions[i, 0]
-            atoms_speciesandcoordinates[i][3] = positions[i, 1]
-            atoms_speciesandcoordinates[i][4] = positions[i, 2]
-    else:
-        atoms_speciesandcoordinates = []
-        # Appending number and elemental symbol
-        elements = atoms.get_chemical_symbols()
-        for i, element in enumerate(elements):
-            atoms_speciesandcoordinates.append([str(i + 1), element])
-        # Positions
-        for i, position in enumerate(positions):
-            atoms_speciesandcoordinates[i].extend(position)
 
-        xc = parameters.get('scf_xctype')
-        year = get_dft_data_year(parameters)
-        data_pth = parameters.get('data_path')
+    atoms_speciesandcoordinates = []
+    # Appending number and elemental symbol
+    elements = atoms.get_chemical_symbols()
+    for i, element in enumerate(elements):
+        atoms_speciesandcoordinates.append([str(i + 1), element])
+    # Positions
+    for i, position in enumerate(positions):
+        atoms_speciesandcoordinates[i].extend(position)
 
-        # Mag moment
-        magmoms = atoms.get_initial_magnetic_moments()
-        for i, magmom in enumerate(magmoms):
-            up_down_spin = get_up_down_spin(magmom, elements[i], xc, data_pth, year)
-            atoms_speciesandcoordinates[i].extend(up_down_spin)
-        # Appending magnetic field Spin magnetic moment theta phi
-        spin_directions = get_spin_direction(magmoms)
-        for i, spin_direction in enumerate(spin_directions):
-            atoms_speciesandcoordinates[i].extend(spin_direction)
+    # Valence electron read
+    pattern = r'valence\.electron\s+(\S+)'
+    vps_path = parameters.get('data_path')
+    atomic_species = parameters.get('definition_of_atomic_species')
+    valance_electron = {}
+    for atomic_vps in atomic_species:
+        sym, orb, pp = atomic_vps
+        vpsname = vps_path + '/VPS/' + pp + '.vps'
+        with open(vpsname, 'r') as fd2:
+            vpstxt = fd2.read()
+        match = re.search(pattern, vpstxt, re.M)
+        valance_electron[sym] = float(match.group(1))
+
+    magmoms = atoms.get_initial_magnetic_moments()
+    # Magnetic moments
+    for i, magmom in enumerate(magmoms):
+        up = valance_electron[atoms[i].symbol] / 2.
+        down = up
+        up += magmom / 2
+        down += magmom / 2
+        atoms_speciesandcoordinates[i].extend([up, down])
 
     write_matrix_keyword(fd, key, atoms_speciesandcoordinates)
 
 
 def write_species_number(fd, atoms, parameters, **kwargs):
+    """Write a number of species to `fd`
+
+    >>> import sys
+    >>> from ase.atoms import Atoms
+    >>> write_species_number(sys.stdout, Atoms('CH4'), {})
+     species.number                 2
+    >>> write_species_number(sys.stdout, Atoms('CH4'), {'species_number': 4})
+     species.number                 4
+
+    Parameters:
+            fd:  (FileIO or StdIO):
+                An IO object to write down
+            atoms: :class:`~ase.Atoms` object
+            parameters: dict
+                Dictionary containing OpenMX keywords value pair
+
+    """
     key = 'species_number'
-    if parameters.get(key) is not None:
-        write_keyword(fd, key, parameters[key])
-    else:
-        write_keyword(fd, key, len(set(atoms.symbols)))
+    value = parameters.get(key)
+    if value is None:
+        value = len(set(atoms.symbols))
+    write_keyword(fd, key, value)
 
 
 def write_atoms_number(fd, atoms, parameters, **kwargs):
+    """Write a number of atoms to `fd`
+
+    >>> import sys
+    >>> from ase.atoms import Atoms
+    >>> write_atoms_number(sys.stdout, Atoms('CH4'), {})
+     atoms.number                   5
+    >>> write_atoms_number(sys.stdout, Atoms('CH4'), {'atoms_number': 8})
+     atoms.number                   8
+
+    Parameters:
+            fd:  (FileIO or StdIO):
+                An IO object to write down
+            atoms: :class:`~ase.Atoms` object
+            parameters: dict
+                Dictionary containing OpenMX keywords value pair
+
+    """
     key = 'atoms_number'
-    if parameters.get(key) is not None:
-        write_keyword(fd, key, parameters[key])
-    else:
-        write_keyword(fd, key, len(atoms))
+    value = parameters.get(key)
+    if value is None:
+        value = len(atoms)
+    write_keyword(fd, key, value)
 
 
 def write_definition_of_atomic_species(fd, atoms, parameters, **kwargs):
-    """
-    Using atoms and parameters, Returns the list `definition_of_atomic_species`
-    where matrix of strings contains the information between keywords.
-    For example,
-     definition_of_atomic_species =
-         [['H','H5.0-s1>1p1>1','H_CA13'],
-          ['C','C5.0-s1>1p1>1','C_CA13']]
-    Goes to,
-      <Definition.of.Atomic.Species
-        H   H5.0-s1>1p1>1      H_CA13
-        C   C5.0-s1>1p1>1      C_CA13
-      Definition.of.Atomic.Species>
+    """ Write down `definition_of_atomic_species` to `fd`
+
+    >>> import sys
+    >>> from ase.atoms import Atoms
+    >>> param = {'definition_of_atomic_species':
+    ... [['H','H5.0-s1>1p1>1','H_CA13'],
+    ... ['C','C5.0-s1>1p1>1','C_CA13']]}
+    >>> write_definition_of_atomic_species(sys.stdout, Atoms(), param)
+    <definition.of.atomic.species
+       H      H5.0-s1>1p1>1 H_CA13
+       C      C5.0-s1>1p1>1 C_CA13
+    definition.of.atomic.species>
+    <BLANKLINE>
+
     Further more, you can specify the wannier information here.
     A. Define local functions for projectors
       Since the pseudo-atomic orbitals are used for projectors,
       the specification of them is the same as for the basis functions.
       An example setting, for silicon in diamond structure, is as following:
-   Species.Number          2
-      <Definition.of.Atomic.Species
-        Si       Si7.0-s2p2d1    Si_CA13
-        proj1    Si5.5-s1p1d1f1  Si_CA13
-      Definition.of.Atomic.Species>
+    >>> param = {'definition_of_atomic_species':
+    ... [['Si', 'Si7.0-s2p2d1', 'Si_CA13'],
+    ... ['proj1', 'Si5.5-s1p1d1f1', 'Si_CA13']]}
+    >>> write_definition_of_atomic_species(sys.stdout, Atoms(), param)
+    <definition.of.atomic.species
+       Si     Si7.0-s2p2d1 Si_CA13
+       proj1  Si5.5-s1p1d1f1 Si_CA13
+    definition.of.atomic.species>
+    <BLANKLINE>
+
+    Parameters:
+            fd:  (FileIO or StdIO):
+                An IO object to write down
+            atoms: :class:`~ase.Atoms` object
+            parameters: dict
+                Dictionary containing OpenMX keywords value pair
+
     """
     key = 'definition_of_atomic_species'
-    if parameters.get(key) is not None:
-        write_matrix_keyword(fd, key, parameters[key])
-        return None
-
-    # Maybe it should not give at all
-    definition_of_atomic_species = []
-    year = get_dft_data_year(parameters)
-    xc = parameters.get('scf_xctype')
-
-    species = list(set(atoms.get_chemical_symbols()))
-    for element in species:
-        rad_orb = get_cutoff_radius_and_orbital(element=element)
-        suffix = get_pseudo_potential_suffix(element=element, xc=xc, year=year)
-        definition_of_atomic_species.append([element, rad_orb, suffix])
-    # Put the same orbital and radii with chemical symbol.
-    wannier_projectors = parameters.get('definition_of_wannier_projectors', [])
-    for i, projector in enumerate(wannier_projectors):
-        full_projector = definition_of_atomic_species[i]
-        full_projector[0] = projector
-        definition_of_atomic_species.append(full_projector)
-    return definition_of_atomic_species
+    if parameters[key] is None:
+        raise NotImplementedError("Must specify", key)
+    write_matrix_keyword(fd, key, parameters[key])
 
 
 def write_atoms_unitvectors(fd, atoms, parameters, **kwargs):
+    """ Write down `atoms_unitvectors` to `fd`
+
+    >>> import sys
+    >>> from ase.atoms import Atoms
+    >>> atoms = Atoms('Al', cell=[5, 5, 5])
+    >>> write_atoms_unitvectors(sys.stdout, atoms, {})
+    >>> write_atoms_unitvectors(sys.stdout, atoms,
+    ... {'scf_eigenvaluesolver': 'Band'})
+    <atoms.unitvectors
+       5.0        0.0        0.0
+       0.0        5.0        0.0
+       0.0        0.0        5.0
+    atoms.unitvectors>
+    <BLANKLINE>
+
+    Parameters
+    ----------
+    fd:  (FileIO or StdIO)
+        An IO object to write down
+    atoms: :class:`~ase.Atoms` object
+    parameters: dict
+        Dictionary containing OpenMX keywords value pair
+
+    """
     key = "atoms_unitvectors"
     if parameters.get(key) is not None:
         write_matrix_keyword(fd, key, parameters[key])
         return None
 
+    # Cluster case
+    scf_eigenvaluesolver = parameters.get('scf_eigenvaluesolver')
+    if scf_eigenvaluesolver is None or scf_eigenvaluesolver == 'cluster':
+        return None
+
     unit = parameters.get('atoms_unitvectors_unit', 'ang').lower()
-    if unit == 'ang':
-        write_matrix_keyword(fd, key, atoms.cell)
-    elif unit == 'au':
-        write_matrix_keyword(fd, key, atoms.cell / Bohr)
-    else:
-        raise NotImplementedError("Unit %s not implemented" % unit)
+    write_matrix_keyword(fd, key, atoms.cell / units[unit])
 
 
 def parse_openmx_log_cell(txt, version='3.9.2'):
-    pattern = 'lattice vectors \((\S+)\)'
+    """Parse cell info from the `.log` text
+
+    >>> txt = '''
+    ... lattice vectors (bohr)
+    ... A  = 18.897259885789,  0.000000000000,  0.000000000000
+    ... B  =  0.000000000000, 18.897259885789,  0.000000000000
+    ... C  =  0.000000000000,  0.000000000000, 18.897259885789
+    ... reciprocal lattice vectors (bohr^-1)
+    ... '''
+    >>> parse_openmx_log_cell(txt)
+    [[9.999999273661794, 0.0, 0.0], [0.0, 9.999999273661794, 0.0], [0.0, 0.0, 9.999999273661794]]
+    """
+    pattern = r'lattice vectors \((\S+)\)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1)
+    unit = match.group(1).lower()
     fp = match.end(0)
     ep = re.search(r'reciprocal', txt[fp:]).start(0)
     cell = []
     A = re.search(r'^A\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
     B = re.search(r'^B\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
     C = re.search(r'^C\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
-    cell.append([float(l) for l in A])
-    cell.append([float(l) for l in B])
-    cell.append([float(l) for l in C])
+    cell.append([float(l) * units[unit] for l in A])
+    cell.append([float(l) * units[unit] for l in B])
+    cell.append([float(l) * units[unit] for l in C])
     return cell
 
+
 def parse_openmx_log_pbc(txt, version='3.9.2'):
-    return True
+    pattern = r'<Band_DFT>  DM,'
+    match = re.search(pattern, txt)
+    if match is not None:
+        return True
+    else:
+        False
 
 
 def parse_openmx_log_symbols(txt, version='3.9.2'):
     pattern = r'<Band_DFT>  DM,'
-
-    fp = re.search(pattern, txt).end(0)
+    match = re.search(pattern, txt)
+    if match is not None:
+        fp = match.end(0)
+    else:
+        pattern = r'<Cluster>'
+        fp = re.search(pattern, txt).end(0)
     ep = re.search(r'Sum of MulP:', txt[fp:]).end(0)
     symbols = []
     for line in txt[fp:fp+ep].split('\n')[1:-1]:
@@ -452,10 +438,12 @@ def parse_openmx_log_positions(txt, version='3.9.2'):
         positions.append(position)
     return positions
 
+
 def parse_openmx_log_energy(txt, version='3.9.2'):
     pattern = r'Utot  =\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     return float(match.group(1))
+
 
 def parse_openmx_log_forces(txt, version='3.9.2'):
     pattern = r'Fxyz\((\S+)\)=(.+)'
@@ -468,6 +456,7 @@ def parse_openmx_log_forces(txt, version='3.9.2'):
         forces.append(force)
     return forces
 
+
 def parse_openmx_log_stress(txt, version='3.9.2'):
     pattern = r'Stress tensor \((\S+)\)'
     match = re.search(pattern, txt, re.M)
@@ -475,16 +464,18 @@ def parse_openmx_log_stress(txt, version='3.9.2'):
     fp = match.start(0)
     fp += re.search(r'[\r\n]', txt[fp:]).end(0)
     fp += re.search(r'[\r\n]', txt[fp:]).end(0)
-    ep = fp + re.search('\*', txt[fp:]).start(0)
+    ep = fp + re.search(r'\*', txt[fp:]).start(0)
     if unit == 'Hartree/bohr^3':
         stress = [float(val) for val in txt[fp:ep].split()]
     return stress
+
 
 def parse_openmx_log_version(txt, version='3.9.2'):
     pattern = r'Welcome to OpenMX\s+Ver\.\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     version = match.group(1)
     return version
+
 
 def parse_openmx_log_steps(txt, return_partition=False, version='3.9.2'):
     #pattern = r"SCF history at MD= \d+"
@@ -528,7 +519,7 @@ def read_openmx_log(filename='openmx.log', index=-1):
     if len(steps) != 1:
         md = True
 
-    images =[]
+    images = []
     idx = np.arange(len(steps))[index]
 
     for i in idx:
@@ -537,18 +528,17 @@ def read_openmx_log(filename='openmx.log', index=-1):
         cell = parse_openmx_log_cell(text, version=version)
         symbols = parse_openmx_log_symbols(text, version=version)
         if md:
-            positions = parse_openmx_log_md_positions(text, version=version)
+            positions = parse_openmx_log_positions(text, version=version)
         else:
             positions = np.zeros((len(symbols), 3))
 
         energy = parse_openmx_log_energy(text, version=version)
         forces = parse_openmx_log_forces(text, version=version)
-        stress = parse_openmx_log_stress(text, version=version)
+        # stress = parse_openmx_log_stress(text, version=version)
 
         pbc = parse_openmx_log_pbc(text, version=version)
 
-        results = {'energy': energy, 'forces': forces,
-                  'stress': stress}
+        results = {'energy': energy, 'forces': forces}
 
         atoms = Atoms(symbols, positions=positions,
                       cell=cell, pbc=pbc)
@@ -558,86 +548,168 @@ def read_openmx_log(filename='openmx.log', index=-1):
         atoms.calc = calc
         atoms.calc.name = 'openmx2'
 
-        print('cell', cell)
-        print('symbols', symbols)
-        print('positons', positions)
-        print('E', energy)
-        print('Forces', forces)
-        print('Stress', stress)
-
         images.append(atoms)
     return images
 
-def parse_openmx_out_cell(txt, version='3.9.2'):
-    pattern = 'lattice vectors \((\S+)\)'
+
+def parse_openmx_out_scf_stress_tensor(txt, version='3.9.2'):
+    pattern = r'scf\.stress\.tensor\s+(\S+)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def parse_openmx_out_md_maxiter(txt, version='3.9.2'):
+    """ Return Md.maxiter from given text
+
+    """
+    pattern = r'md\.maxiter\s+(\S+)'
+    match = re.search(pattern, txt, re.M)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def parse_openmx_out_cell(txt, version='3.9.2'):
+    """ Parse the `cell` from the `.out` text
+
+    >>> txt = '''
+    atoms.unitvectors.unit    Ang
+    <atoms.unitvectors
+       10.0     0.0      0.0
+       0.0      10.0     0.0
+       0.0      0.0      10.0
+    atoms.unitvectors>'''
+    >>> parse_openmx_out_cell(txt)
+    [[0.179973903674, 0.0, 0.0],
+     [0.0, 0.179973903674, 0.0],
+     [0.0, 0.0, 0.179973903674]]
+    """
+    pattern = r"atoms\.unitvectors\.unit\s+(\S+)"
+    match = re.search(pattern, txt, re.M)
+
+    if match is None:
+        unit = 1.
+    else:
+        unit = units[match.group(1)]
+
+    pattern1 = r'<atoms\.unitvectors'
+    pattern2 = r'atoms\.unitvectors>'
+    match = re.search(pattern1, txt, re.M)
+    if match is None:
+        return None
     fp = match.end(0)
-    ep = re.search(r'reciprocal', txt[fp:]).start(0)
+    ep = re.search(pattern2, txt[fp:], re.M).start(0)
+
+    lines = txt[fp:fp+ep].split('\n')[1:-1]
     cell = []
-    A = re.search(r'^A\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
-    B = re.search(r'^B\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
-    C = re.search(r'^C\s+=(.+)', txt[fp:fp+ep], re.M).group(1).split(',')
-    cell.append([float(l) for l in A])
-    cell.append([float(l) for l in B])
-    cell.append([float(l) for l in C])
+    cell.append([float(l) / unit for l in lines[0].split()])
+    cell.append([float(l) / unit for l in lines[1].split()])
+    cell.append([float(l) / unit for l in lines[2].split()])
     return cell
 
+
 def parse_openmx_out_pbc(txt, version='3.9.2'):
+    """ Parse the periodic boundary contion from `.out`
+
+
+    """
+    pattern = r'scf\.eigenvaluesolver\s+(\S+)'
+    match = re.search(pattern, txt, re.M)
+    if match is None:
+        return False
+    elif match.group(1).lower() == 'cluster':
+        return False
     return True
 
 
 def parse_openmx_out_symbols(txt, version='3.9.2'):
-    pattern = r'<Band_DFT>  DM,'
+    pattern1 = r'<coordinates\.forces'
+    pattern2 = r'coordinates\.forces>'
+    fp = re.search(pattern1, txt, re.M).end(0)
+    ep = re.search(pattern2, txt[fp:], re.M).start(0)
 
-    fp = re.search(pattern, txt).end(0)
-    ep = re.search(r'Sum of MulP:', txt[fp:]).end(0)
     symbols = []
-    for line in txt[fp:fp+ep].split('\n')[1:-1]:
-        symbols.append(line.split()[1])
+    lines = txt[fp:fp+ep].split('\n')[1:-1]
+    N = int(lines[0])
+    for i in range(N):
+        symbols.append(lines[i+1].split()[1])
     return symbols
 
 
-def parse_openmx_out_positions(txt, version='3.9'):
+def parse_openmx_out_positions(txt, version='3.9.2'):
     pattern = r'xyz-coordinates \((\S+)\)'
-    unit = re.finditer(pattern, txt, re.M)
-    pattern = r'<coordinates'
-    unit = re.finditer(pattern, txt, re.M)
+    match = re.search(pattern, txt, re.M)
+    unit = match.group(1).lower()
+    fp = match.end(0)
+
+    pattern1 = r'<coordinates\.forces'
+    pattern2 = r'coordinates\.forces>'
+    fp += re.search(pattern1, txt[fp:], re.M).end(0)
+    ep = re.search(pattern2, txt[fp:], re.M).start(0)
+
     positions = []
-    for m in re.finditer(pattern, txt, re.M):
-        unit = m.group(1)
-        lines = m.group(3).split()[:3]
-        if unit == 'ang':
-            position = [float(l) for l in lines]
-        positions.append(position)
+    lines = txt[fp:fp+ep].split('\n')[1:-1]
+    N = int(lines[0])
+    for i in range(N):
+        line = lines[i+1].split()
+        positions.append([float(l) / units[unit] for l in line[2:5]])
     return positions
 
-def parse_openmx_out_energy(txt, version='3.9'):
-    pattern = r'Total energy \(\S+\) = (\d+)'
+
+def parse_openmx_out_energy(txt, version='3.9.2'):
+    pattern = r'Total energy \((\S+)\)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1)
-    return float(match.group(2)) * unit
+    unit = match.group(1).lower()
+    fp = match.end(0)
 
-def parse_openmx_out_forces(txt, version='3.9'):
+    pattern = r'Utot\.\s+(\S+)'
+    return float(re.search(pattern, txt[fp:], re.M).group(1)) / units[unit]
+
+
+def parse_openmx_out_forces(txt, version='3.9.2'):
     pattern = r'and forces \((\S+)\)'
-    unit = re.finditer(pattern, txt, re.M)
-    pattern = r'<coordinates'
+    unit = re.search(pattern, txt, re.M).group(1)
+
+    pattern1 = r'<coordinates\.forces'
+    pattern2 = r'coordinates\.forces>'
+    fp = re.search(pattern1, txt, re.M).end(0)
+    ep = re.search(pattern2, txt[fp:], re.M).start(0)
+
     forces = []
-    for m in re.finditer(pattern, txt, re.M):
-        unit = m.group(1)
-        lines = m.group(3).split()[:3]
-        if unit == 'ang':
-            forces = [float(l) for l in lines]
-        positions.append(position)
+    lines = txt[fp:fp+ep].split('\n')[1:-1]
+    N = int(lines[0])
+    for i in range(N):
+        line = lines[i+1].split()
+        forces.append([float(l) / units[unit] for l in line[5:8]])
+    return forces
 
 
-def parse_openmx_out_version(txt, version='3.9.2'):
+def parse_openmx_out_version(txt):
+    """
+    >>> txt = '''
+    ***********************************************************
+    ***********************************************************
+
+      This calculation was performed by OpenMX Ver. 3.9.2
+      using 1 MPI processes and 1 OpenMP threads.
+
+      Wed Nov 24 19:38:35 2021
+
+    ***********************************************************
+    ***********************************************************
+    '''
+    >>> parse_openmx_out_version(txt)
+    3.9.2
+    """
     pattern = r'This calculation was performed by OpenMX\s+Ver\.\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     version = match.group(1)
     return version
 
-def read_openmx_out_results(filename='openmx.out'):
+
+def read_openmx_out(filename='openmx.out'):
     """
     return atoms with results in it
     """
@@ -646,15 +718,13 @@ def read_openmx_out_results(filename='openmx.out'):
         txt = fd.read()
 
     version = parse_openmx_out_version(txt)
-
     cell = parse_openmx_out_cell(txt, version=version)
     symbols = parse_openmx_out_symbols(txt, version=version)
-    positions = parse_openmx_out_positions(text, version=version)
+    positions = parse_openmx_out_positions(txt, version=version)
+    energy = parse_openmx_out_energy(txt, version=version)
+    forces = parse_openmx_out_forces(txt, version=version)
 
-    energy = parse_openmx_out_energy(text, version=version)
-    forces = parse_openmx_out_forces(text, version=version)
-
-    pbc = parse_openmx_out_pbc(text, version=version)
+    pbc = parse_openmx_out_pbc(txt, version=version)
 
     results = {'energy': energy, 'forces': forces}
 
@@ -668,11 +738,17 @@ def read_openmx_out_results(filename='openmx.out'):
 
     return atoms
 
+
 def read_openmx_results(outfile, logfile):
+    """
+    """
     results = {}
-    version =
     parse_openmx_out_energy()
     parse_openmx_out_energy()
 
-def read_openmx_md(filename='openmx.md'):
-    None
+
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
