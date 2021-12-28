@@ -24,7 +24,8 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.units import Bohr, Ang, Ha
-from typing import runtime_checkable
+# from typing import runtime_checkable
+from io import IOBase
 
 units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3,
          'hartree': Ha, 'hartree/bohr': Ha / Bohr}
@@ -71,15 +72,17 @@ unit_dat_keywords = {
 
 omx_bl = {True: 'On', False: 'Off'}
 
-@runtime_checkable
 def write_openmx_in(dst, atoms, properties=None, parameters=None, **kwargs):
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
 
-    if isinstance(dst, (str, os.PathLike)):
-        fd = open(dst, 'w')
-    else:
+    # if isinstance(dst, (str, os.PathLike)):
+    fd_close_flag = False
+    if isinstance(dst, IOBase):
         fd = dst
+    else:
+        fd_close_flag = True
+        fd = open(dst, 'w')
 
     for keyword, value in parameters.items():
         # Check if there exists special writing method for that keyword
@@ -91,7 +94,7 @@ def write_openmx_in(dst, atoms, properties=None, parameters=None, **kwargs):
         else:
             write_keyword(fd, keyword, value, **kwargs)
 
-    if isinstance(dst, (str, os.PathLike)):
+    if fd_close_flag:
         fd.close()
 
 
@@ -685,12 +688,14 @@ def read_openmx_log(filename='openmx.log', index=-1):
     else:
         raise NotImplementedError('Index err', index)
 
-    if isinstance(filename, (str, bytes, os.PathLike)):
-        with open(filename, 'r') as fd:
-            txt = fd.read()
-    else:
+
+    if isinstance(filename, IOBase):
         fd = filename
         txt = fd.read()
+    else:
+        with open(filename, 'r') as fd:
+            txt = fd.read()
+
 
 
     version = parse_openmx_log_version(txt)
@@ -981,12 +986,12 @@ def read_openmx_out(filename='openmx.out'):
     """
     return atoms with results in it
     """
-    if isinstance(filename, (str, bytes, os.PathLike)):
-        with open(filename, 'r') as fd:
-            txt = fd.read()
-    else:
+    if isinstance(filename, IOBase):
         fd = filename
         txt = fd.read()
+    else:
+        with open(filename, 'r') as fd:
+            txt = fd.read()
 
     version = parse_openmx_out_version(txt)
     cell = parse_openmx_out_cell(txt, version=version)
