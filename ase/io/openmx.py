@@ -18,13 +18,11 @@ functional theories.
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import os
 import re
 import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.units import Bohr, Ang, Ha
-# from typing import runtime_checkable
 from io import IOBase
 
 units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3,
@@ -72,11 +70,11 @@ unit_dat_keywords = {
 
 omx_bl = {True: 'On', False: 'Off'}
 
+
 def write_openmx_in(dst, atoms, properties=None, parameters=None, **kwargs):
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
 
-    # if isinstance(dst, (str, os.PathLike)):
     fd_close_flag = False
     if isinstance(dst, IOBase):
         fd = dst
@@ -672,7 +670,6 @@ def parse_openmx_log_steps(txt, return_partition=False, version='3.9.2'):
     return steps
 
 
-
 def read_openmx_log(filename='openmx.log', index=-1):
     """
     return atoms or list of atoms
@@ -688,15 +685,12 @@ def read_openmx_log(filename='openmx.log', index=-1):
     else:
         raise NotImplementedError('Index err', index)
 
-
     if isinstance(filename, IOBase):
         fd = filename
         txt = fd.read()
     else:
         with open(filename, 'r') as fd:
             txt = fd.read()
-
-
 
     version = parse_openmx_log_version(txt)
     steps, partition = parse_openmx_log_steps(txt, version=version,
