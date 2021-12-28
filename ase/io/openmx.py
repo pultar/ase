@@ -24,6 +24,7 @@ import numpy as np
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.units import Bohr, Ang, Ha
+from typing import runtime_checkable
 
 units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3,
          'hartree': Ha, 'hartree/bohr': Ha / Bohr}
@@ -70,7 +71,7 @@ unit_dat_keywords = {
 
 omx_bl = {True: 'On', False: 'Off'}
 
-
+@runtime_checkable
 def write_openmx_in(dst, atoms, properties=None, parameters=None, **kwargs):
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
@@ -666,6 +667,7 @@ def parse_openmx_log_steps(txt, return_partition=False, version='3.9.2'):
     if return_partition:
         return steps, partition
     return steps
+
 
 
 def read_openmx_log(filename='openmx.log', index=-1):
