@@ -25,7 +25,8 @@ from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.units import Bohr, Ang, Ha
 
-units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3}
+units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3,
+         'hartree': Ha, 'hartree/bohr': Ha / Bohr}
 
 
 special_keywords = ["species_number",
@@ -378,6 +379,7 @@ def write_atoms_unitvectors(fd, atoms, parameters, **kwargs):
 def parse_openmx_log_cell(txt, version='3.9.2'):
     """Parse cell info from the `.log` text
 
+    >>> import numpy as np
     >>> txt = '''
     ... lattice vectors (bohr)
     ... A  = 18.897259885789,  0.000000000000,  0.000000000000
@@ -385,8 +387,8 @@ def parse_openmx_log_cell(txt, version='3.9.2'):
     ... C  =  0.000000000000,  0.000000000000, 18.897259885789
     ... reciprocal lattice vectors (bohr^-1)
     ... '''
-    >>> parse_openmx_log_cell(txt)
-    [[9.999999273661794, 0.0, 0.0], [0.0, 9.999999273661794, 0.0], [0.0, 0.0, 9.999999273661794]]
+    >>> np.all(np.isclose(parse_openmx_log_cell(txt), 10. * np.identity(3)))
+    True
     """
     pattern = r'lattice vectors \((\S+)\)'
     match = re.search(pattern, txt, re.M)
@@ -404,15 +406,67 @@ def parse_openmx_log_cell(txt, version='3.9.2'):
 
 
 def parse_openmx_log_pbc(txt, version='3.9.2'):
+    """ Return whether it is periodic boundary (Band) or not (Cluster)
+
+    >>> txt = '''
+    ... <Band_DFT>  DM, time=0.002782
+    ...     1    C  MulP   2.0249  2.0249 sum   4.0499
+    ...     2    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     3    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     4    H  MulP   0.4897  0.4897 sum   0.9794
+    ...     5    H  MulP   0.4897  0.4897 sum   0.9794
+    ...  Sum of MulP: up   =     4.00000 down          =     4.00000
+    ... '''
+    >>> parse_openmx_log_pbc(txt)
+    True
+    >>> txt = '''
+    ... <Cluster> time=0.002782
+    ...     1    C  MulP   2.0249  2.0249 sum   4.0499
+    ...     2    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     3    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     4    H  MulP   0.4897  0.4897 sum   0.9794
+    ...     5    H  MulP   0.4897  0.4897 sum   0.9794
+    ...  Sum of MulP: up   =     4.00000 down          =     4.00000
+    ... '''
+    >>> parse_openmx_log_pbc(txt)
+    False
+
+    """
     pattern = r'<Band_DFT>  DM,'
     match = re.search(pattern, txt)
     if match is not None:
         return True
     else:
-        False
+        return False
 
 
 def parse_openmx_log_symbols(txt, version='3.9.2'):
+    """ Returns chemical symbols from `.log` file
+
+    >>> txt = '''
+    ... <Band_DFT>  DM, time=0.002782
+    ...     1    C  MulP   2.0249  2.0249 sum   4.0499
+    ...     2    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     3    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     4    H  MulP   0.4897  0.4897 sum   0.9794
+    ...     5    H  MulP   0.4897  0.4897 sum   0.9794
+    ...  Sum of MulP: up   =     4.00000 down          =     4.00000
+    ... '''
+    >>> parse_openmx_log_symbols(txt)
+    ['C', 'H', 'H', 'H', 'H']
+    >>> txt = '''
+    ... <Cluster> time=0.002782
+    ...     1    C  MulP   2.0249  2.0249 sum   4.0499
+    ...     2    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     3    H  MulP   0.4978  0.4978 sum   0.9956
+    ...     4    H  MulP   0.4897  0.4897 sum   0.9794
+    ...     5    H  MulP   0.4897  0.4897 sum   0.9794
+    ...  Sum of MulP: up   =     4.00000 down          =     4.00000
+    ... '''
+    >>> parse_openmx_log_symbols(txt)
+    ['C', 'H', 'H', 'H', 'H']
+    """
+
     pattern = r'<Band_DFT>  DM,'
     match = re.search(pattern, txt)
     if match is not None:
@@ -440,37 +494,157 @@ def parse_openmx_log_positions(txt, version='3.9.2'):
 
 
 def parse_openmx_log_energy(txt, version='3.9.2'):
+    """ Parse the energy info from the `.log` file
+
+    >>> txt = '''
+    ... *******************************************************
+    ...                 Total Energy (Hartree) at MD = 1
+    ... *******************************************************
+    ...
+    ...  Uele  =      -3.340914999307
+    ...
+    ...  Ukin  =       5.935026847220
+    ...  UH0   =     -14.382433025217
+    ...  UH1   =       0.031375557056
+    ...  Una   =      -5.140556701686
+    ...  Unl   =      -0.195114690874
+    ...  Uxc0  =      -1.588410771623
+    ...  Uxc1  =      -1.588410771623
+    ...  Ucore =       8.803238883717
+    ...  Uhub  =       0.000000000000
+    ...  Ucs   =       0.000000000000
+    ...  Uzs   =       0.000000000000
+    ...  Uzo   =       0.000000000000
+    ...  Uef   =       0.000000000000
+    ...  UvdW  =       0.000000000000
+    ...  Uch   =       0.000000000000
+    ...  Utot  =      -8.125284673032
+    ...  '''
+    >>> import numpy as np
+    >>> np.isclose(parse_openmx_log_energy(txt), -221.10025779574835)
+    True
+
+    """
+    pattern = r'Total Energy \((\S+)\)'
+    unit = re.search(pattern, txt, re.M).group(1).lower()
     pattern = r'Utot  =\s+(\S+)'
     match = re.search(pattern, txt, re.M)
-    return float(match.group(1))
+    return float(match.group(1)) * units[unit]
 
 
 def parse_openmx_log_forces(txt, version='3.9.2'):
+    """
+    >>> import numpy as np
+    >>> txt= '''
+    ... *******************************************************
+    ...          MD or geometry opt. at MD = 4
+    ... *******************************************************
+    ...
+    ... <Steepest_Descent>  SD_scaling= 1.259817324092
+    ... <Steepest_Descent>  |Maximum force| (Hartree/Bohr) = 0.009143946261
+    ... <Steepest_Descent>  Criterion       (Hartree/Bohr) = 0.000100000000
+    ...
+    ... atom=  1, XYZ(ang) Fxyz(a.u.)=  0.0  0.0  0.0  0.0000  0.0000   0.0024
+    ... atom=  2, XYZ(ang) Fxyz(a.u.)=  0.6  0.6  0.6  0.0059  0.0059   0.0037
+    ... atom=  3, XYZ(ang) Fxyz(a.u.)= -0.6 -0.6  0.6 -0.0059 -0.0059   0.0037
+    ... atom=  4, XYZ(ang) Fxyz(a.u.)= -0.6  0.6 -0.6 -0.0029  0.0029  -0.0049
+    ... atom=  5, XYZ(ang) Fxyz(a.u.)=  0.6 -0.6 -0.6  0.0029 -0.0029  -0.0049
+    ... '''
+    >>> res = np.array(
+    ...     [[0.0, 0.0, 0.12341296101715354],
+    ...     [0.3033901958338358, 0.3033901958338358, 0.1902616482347784],
+    ...     [-0.3033901958338358, -0.3033901958338358, 0.1902616482347784],
+    ...     [-0.14912399456239386, 0.14912399456239386, -0.25196812874335517],
+    ...     [0.14912399456239386, -0.14912399456239386, -0.25196812874335517]])
+    >>> np.all(np.isclose(parse_openmx_log_forces(txt), res))
+    True
+    >>> txt = '''
+    ... *******************************************************
+    ...              MD or geometry opt. at MD = 5
+    ... *******************************************************
+    ...
+    ... <DIIS>  |Maximum force| (Hartree/Bohr) = 0.004207954148
+    ... <DIIS>  Criterion       (Hartree/Bohr) = 0.000100000000
+    ...
+    ...      atom=   1, XYZ(ang) Fxyz(a.u.)=  0.0  0.0  0.0  0.1   0.2   0.3
+    ...      atom=   2, XYZ(ang) Fxyz(a.u.)=  0.6  0.6  0.6  0.1   0.2   0.3
+    ...      atom=   3, XYZ(ang) Fxyz(a.u.)= -0.6 -0.6  0.6 -0.1  -0.2   0.3
+    ...      atom=   4, XYZ(ang) Fxyz(a.u.)= -0.6  0.6 -0.6 -0.1   0.2  -0.3
+    ...      atom=   5, XYZ(ang) Fxyz(a.u.)=  0.6 -0.6 -0.6  0.1  -0.2  -0.3
+    ... '''
+    >>> res = np.array(
+    ... [[5.1422067090480645, 10.284413418096129, 15.426620127144194],
+    ...  [5.1422067090480645, 10.284413418096129, 15.426620127144194],
+    ...  [-5.1422067090480645, -10.284413418096129, 15.426620127144194],
+    ...  [-5.1422067090480645, 10.284413418096129, -15.426620127144194],
+    ...  [5.1422067090480645, -10.284413418096129, -15.426620127144194]])
+
+    >>> np.all(np.isclose(parse_openmx_log_forces(txt), res))
+    True
+
+    """
     pattern = r'Fxyz\((\S+)\)=(.+)'
     forces = []
     for m in re.finditer(pattern, txt, re.M):
-        unit = m.group(1)
+        unit = m.group(1).lower()
         lines = m.group(2).split()[-3:]
         if unit == 'a.u.':
-            force = [float(l) for l in lines]
+            unit = 'hartree/bohr'
+        force = [float(l) * units[unit] for l in lines]
         forces.append(force)
     return forces
 
 
 def parse_openmx_log_stress(txt, version='3.9.2'):
+    """
+    >>> txt = '''
+    ... *******************************************************
+    ...                Stress tensor (Hartree/bohr^3)
+    ... *******************************************************
+    ...
+    ...        0.00000862       -0.00000865        0.00000000
+    ...       -0.00000865        0.00000862        0.00000000
+    ...        0.00000000        0.00000000        0.00001181
+    ...
+    ... *******************************************************
+    ... '''
+    >>> import numpy as np
+    >>> res = np.array([[ 0.0015829 , -0.00158841,  0.        ],
+    ...                 [-0.00158841,  0.0015829 ,  0.        ],
+    ...                 [ 0.        ,  0.        ,  0.00216869]])
+    >>> np.all(np.isclose(parse_openmx_log_stress(txt), res))
+    True
+
+    """
     pattern = r'Stress tensor \((\S+)\)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1)
-    fp = match.start(0)
+    unit = match.group(1).lower()
+    fp = match.end(0)
     fp += re.search(r'[\r\n]', txt[fp:]).end(0)
     fp += re.search(r'[\r\n]', txt[fp:]).end(0)
     ep = fp + re.search(r'\*', txt[fp:]).start(0)
-    if unit == 'Hartree/bohr^3':
-        stress = [float(val) for val in txt[fp:ep].split()]
-    return stress
+    raw = re.split(r'\n', txt[fp:ep])
+    A = [float(val) for val in raw[1].split()]
+    B = [float(val) for val in raw[2].split()]
+    C = [float(val) for val in raw[3].split()]
+    return np.array([A, B, C]) * units[unit]
 
 
 def parse_openmx_log_version(txt, version='3.9.2'):
+    """
+    >>> txt = '''
+    ... *******************************************************
+    ... *******************************************************
+    ...  Welcome to OpenMX   Ver. 3.9.2
+    ...  Copyright (C), 2002-2019, T. Ozaki
+    ...  OpenMX comes with ABSOLUTELY NO WARRANTY.
+    ...  This is free software, and you are welcome to
+    ...  redistribute it under the constitution of the GNU-GPL.
+    ... *******************************************************
+    ... *******************************************************'''
+    >>> parse_openmx_log_version(txt)
+    '3.9.2'
+    """
     pattern = r'Welcome to OpenMX\s+Ver\.\s+(\S+)'
     match = re.search(pattern, txt, re.M)
     version = match.group(1)
@@ -498,18 +672,24 @@ def read_openmx_log(filename='openmx.log', index=-1):
     """
     return atoms or list of atoms
     """
-
+    from ase.io.formats import string2index
     if isinstance(index, int):
         index = [index]
-    elif index == ':':
-        index = np.s_[:]
-    elif isinstance(index, list):
-        None
+    elif isinstance(index, str):
+        # index = np.s_[:]
+        index = string2index(index)
+    elif isinstance(index, (list, slice)):
+        pass
     else:
-        raise NotImplemented('')
+        raise NotImplementedError('Index err', index)
 
-    with open(filename, 'r') as fd:
+    if isinstance(filename, (str, bytes, os.PathLike)):
+        with open(filename, 'r') as fd:
+            txt = fd.read()
+    else:
+        fd = filename
         txt = fd.read()
+
 
     version = parse_openmx_log_version(txt)
     steps, partition = parse_openmx_log_steps(txt, version=version,
@@ -575,16 +755,15 @@ def parse_openmx_out_cell(txt, version='3.9.2'):
     """ Parse the `cell` from the `.out` text
 
     >>> txt = '''
-    atoms.unitvectors.unit    Ang
-    <atoms.unitvectors
-       10.0     0.0      0.0
-       0.0      10.0     0.0
-       0.0      0.0      10.0
-    atoms.unitvectors>'''
+    ... atoms.unitvectors.unit    Ang
+    ... <atoms.unitvectors
+    ...    10.0     0.0      0.0
+    ...    0.0      10.0     0.0
+    ...    0.0      0.0      10.0
+    ... atoms.unitvectors>'''
     >>> parse_openmx_out_cell(txt)
-    [[0.179973903674, 0.0, 0.0],
-     [0.0, 0.179973903674, 0.0],
-     [0.0, 0.0, 0.179973903674]]
+    [[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]]
+
     """
     pattern = r"atoms\.unitvectors\.unit\s+(\S+)"
     match = re.search(pattern, txt, re.M)
@@ -592,7 +771,7 @@ def parse_openmx_out_cell(txt, version='3.9.2'):
     if match is None:
         unit = 1.
     else:
-        unit = units[match.group(1)]
+        unit = units[match.group(1).lower()]
 
     pattern1 = r'<atoms\.unitvectors'
     pattern2 = r'atoms\.unitvectors>'
@@ -600,19 +779,31 @@ def parse_openmx_out_cell(txt, version='3.9.2'):
     if match is None:
         return None
     fp = match.end(0)
-    ep = re.search(pattern2, txt[fp:], re.M).start(0)
+    ep = re.search(pattern2, txt[fp:], flags=re.M | re.I).start(0)
 
     lines = txt[fp:fp+ep].split('\n')[1:-1]
     cell = []
-    cell.append([float(l) / unit for l in lines[0].split()])
-    cell.append([float(l) / unit for l in lines[1].split()])
-    cell.append([float(l) / unit for l in lines[2].split()])
+    cell.append([float(l) * unit for l in lines[0].split()])
+    cell.append([float(l) * unit for l in lines[1].split()])
+    cell.append([float(l) * unit for l in lines[2].split()])
     return cell
 
 
 def parse_openmx_out_pbc(txt, version='3.9.2'):
     """ Parse the periodic boundary contion from `.out`
-
+    >>> txt = ''
+    >>> parse_openmx_out_pbc(txt)
+    False
+    >>> txt = '''
+    ...  scf.eigenvaluesolver           band
+    ... '''
+    >>> parse_openmx_out_pbc(txt)
+    True
+    >>> txt = '''
+    ...  scf.eigenvaluesolver           cluster
+    ... '''
+    >>> parse_openmx_out_pbc(txt)
+    False
 
     """
     pattern = r'scf\.eigenvaluesolver\s+(\S+)'
@@ -625,6 +816,27 @@ def parse_openmx_out_pbc(txt, version='3.9.2'):
 
 
 def parse_openmx_out_symbols(txt, version='3.9.2'):
+    """
+    >>> txt = '''
+    ... ***********************************************************
+    ... ***********************************************************
+    ...        xyz-coordinates (Ang) and forces (Hartree/Bohr)
+    ... ***********************************************************
+    ... ***********************************************************
+    ...
+    ... <coordinates.forces
+    ...   5
+    ...     1     C     0.00000   0.00000   0.10000   0.00000  0.00 -0.077
+    ...     2     H     0.68279   0.68279   0.68279   0.00011  0.00  0.006
+    ...     3     H    -0.68279  -0.68279   0.68279  -0.00011 -0.00  0.006
+    ...     4     H    -0.68279   0.68279  -0.68279   0.02249 -0.02  0.031
+    ...     5     H     0.68279  -0.68279  -0.68279  -0.02249  0.02  0.031
+    ... coordinates.forces>'''
+    >>> parse_openmx_out_symbols(txt)
+    ['C', 'H', 'H', 'H', 'H']
+
+    """
+
     pattern1 = r'<coordinates\.forces'
     pattern2 = r'coordinates\.forces>'
     fp = re.search(pattern1, txt, re.M).end(0)
@@ -639,6 +851,33 @@ def parse_openmx_out_symbols(txt, version='3.9.2'):
 
 
 def parse_openmx_out_positions(txt, version='3.9.2'):
+    """
+    >>> txt = '''
+    ... ***********************************************************
+    ... ***********************************************************
+    ...        xyz-coordinates (Ang) and forces (Hartree/Bohr)
+    ... ***********************************************************
+    ... ***********************************************************
+    ...
+    ... <coordinates.forces
+    ...   5
+    ...     1     C     0.00000   0.00000   0.10000   0.00  0.00 -0.0776
+    ...     2     H     0.68279   0.68279   0.68279   0.00  0.00  0.0068
+    ...     3     H    -0.68279  -0.68279   0.68279  -0.00 -0.00  0.0061
+    ...     4     H    -0.68279   0.68279  -0.68279   0.02 -0.02  0.0312
+    ...     5     H     0.68279  -0.68279  -0.68279  -0.02  0.02  0.0310
+    ... coordinates.forces>'''
+    >>> import numpy as np
+    >>> res = np.array([[0.0, 0.0, 0.1],
+    ...                 [0.68279, 0.68279, 0.68279],
+    ...                 [-0.68279, -0.68279, 0.68279],
+    ...                 [-0.68279, 0.68279, -0.68279],
+    ...                 [0.68279, -0.68279, -0.68279]])
+    >>> np.all(np.isclose(parse_openmx_out_positions(txt), res))
+    True
+
+    """
+
     pattern = r'xyz-coordinates \((\S+)\)'
     match = re.search(pattern, txt, re.M)
     unit = match.group(1).lower()
@@ -654,8 +893,8 @@ def parse_openmx_out_positions(txt, version='3.9.2'):
     N = int(lines[0])
     for i in range(N):
         line = lines[i+1].split()
-        positions.append([float(l) / units[unit] for l in line[2:5]])
-    return positions
+        positions.append([float(l) for l in line[2:5]])
+    return np.array(positions) * units[unit]
 
 
 def parse_openmx_out_energy(txt, version='3.9.2'):
@@ -665,12 +904,39 @@ def parse_openmx_out_energy(txt, version='3.9.2'):
     fp = match.end(0)
 
     pattern = r'Utot\.\s+(\S+)'
-    return float(re.search(pattern, txt[fp:], re.M).group(1)) / units[unit]
+    return float(re.search(pattern, txt[fp:], re.M).group(1)) * units[unit]
 
 
 def parse_openmx_out_forces(txt, version='3.9.2'):
+    """
+    >>> txt = '''
+    ... ***********************************************************
+    ... ***********************************************************
+    ...        xyz-coordinates (Ang) and forces (Hartree/Bohr)
+    ... ***********************************************************
+    ... ***********************************************************
+    ...
+    ... <coordinates.forces
+    ...   5
+    ...     1  C  0.0  0.0  0.1  0.000000491367  0.000000491392 -0.077373306556
+    ...     2  H  0.6  0.6  0.6  0.000114113769  0.000114113769  0.006806503848
+    ...     3  H -0.6 -0.6  0.6 -0.000114706014 -0.000114706027  0.006807122741
+    ...     4  H -0.6  0.6 -0.6  0.022499289495 -0.022499188566  0.031873812162
+    ...     5  H  0.6 -0.6 -0.6 -0.022499188589  0.022499289460  0.031873812150
+    ... coordinates.forces>'''
+    >>> import numpy as np
+    >>> res = np.array(
+    ... [[2.5267106840048202e-05, 2.5268392391725462e-05, -3.978695360734958],
+    ... [0.005867965885465611, 0.005867965885465611, 0.3500044975234707],
+    ... [-0.005898420347589612, -0.005898421016076484, 0.3500363222808385],
+    ... [1.1569599739000365, -1.156954783922227, 1.6390173074237417],
+    ... [-1.1569547851049347, 1.156959972100264, 1.6390173068066771]])
+    >>> np.all(np.isclose(parse_openmx_out_forces(txt), res))
+    True
+
+    """
     pattern = r'and forces \((\S+)\)'
-    unit = re.search(pattern, txt, re.M).group(1)
+    unit = re.search(pattern, txt, re.M).group(1).lower()
 
     pattern1 = r'<coordinates\.forces'
     pattern2 = r'coordinates\.forces>'
@@ -682,26 +948,26 @@ def parse_openmx_out_forces(txt, version='3.9.2'):
     N = int(lines[0])
     for i in range(N):
         line = lines[i+1].split()
-        forces.append([float(l) / units[unit] for l in line[5:8]])
+        forces.append([float(l) * units[unit] for l in line[5:8]])
     return forces
 
 
 def parse_openmx_out_version(txt):
     """
     >>> txt = '''
-    ***********************************************************
-    ***********************************************************
-
-      This calculation was performed by OpenMX Ver. 3.9.2
-      using 1 MPI processes and 1 OpenMP threads.
-
-      Wed Nov 24 19:38:35 2021
-
-    ***********************************************************
-    ***********************************************************
-    '''
+    ... ***********************************************************
+    ... ***********************************************************
+    ...
+    ...   This calculation was performed by OpenMX Ver. 3.9.2
+    ...   using 1 MPI processes and 1 OpenMP threads.
+    ...
+    ...   Wed Nov 24 19:38:35 2021
+    ...
+    ... ***********************************************************
+    ... ***********************************************************
+    ... '''
     >>> parse_openmx_out_version(txt)
-    3.9.2
+    '3.9.2'
     """
     pattern = r'This calculation was performed by OpenMX\s+Ver\.\s+(\S+)'
     match = re.search(pattern, txt, re.M)
@@ -713,8 +979,11 @@ def read_openmx_out(filename='openmx.out'):
     """
     return atoms with results in it
     """
-
-    with open(filename, 'r') as fd:
+    if isinstance(filename, (str, bytes, os.PathLike)):
+        with open(filename, 'r') as fd:
+            txt = fd.read()
+    else:
+        fd = filename
         txt = fd.read()
 
     version = parse_openmx_out_version(txt)
@@ -737,16 +1006,6 @@ def read_openmx_out(filename='openmx.out'):
     atoms.calc.name = 'openmx2'
 
     return atoms
-
-
-def read_openmx_results(outfile, logfile):
-    """
-    """
-    results = {}
-    parse_openmx_out_energy()
-    parse_openmx_out_energy()
-
-
 
 
 if __name__ == "__main__":

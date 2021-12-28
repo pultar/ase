@@ -109,4 +109,11 @@ see the official `OpenMX`_ manual.
 
 .. _OpenMX: http://www.openmx-square.org
 
+Examples
+========
+
+
+.. code-block:: python
+
+
 .. autoclass:: OpenMX
