@@ -73,7 +73,7 @@ class OpenmxTemplate(CalculatorTemplate):
                                     'forces', 'stress', 'magmom'])
 
     def execute(self, directory, profile) -> None:
-        profile.run(directory, (self.name + '.dat'), (self.name + '.log'))
+        profile.run(directory, (self.name + '.dat'), (self.name + '.omxlog'))
 
     def write_input(self, directory, atoms, parameters, properties):
         self.system_name = parameters.get('system_name', self.name)
@@ -91,7 +91,7 @@ class OpenmxTemplate(CalculatorTemplate):
         """
 
         outfile = directory / (self.system_name + '.out')
-        logfile = directory / (self.name + '.log')
+        logfile = directory / (self.name + '.omxlog')
 
         with open(outfile, 'r') as fd:
             outtext = fd.read()
