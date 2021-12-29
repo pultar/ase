@@ -1339,7 +1339,7 @@ def read_band_file(filename=None):
     band_data['eigenvalues'] = eigen_bands
     band_data['band_kpts'] = kpts
 
-    if fd_clos_flag:
+    if fd_close_flag:
         fd.close()
     return band_data
 
