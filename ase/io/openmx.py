@@ -1157,18 +1157,18 @@ def read_scfout_file(filename=None, version='3.9.2'):
         return easyReader(byte, 'd', shape)
 
     def readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd):
-            myOLP = []
+        myOLP = []
+        myOLP.append([])
+        for ct_AN in range(1, atomnum + 1):
             myOLP.append([])
-            for ct_AN in range(1, atomnum + 1):
-                myOLP.append([])
-                TNO1 = Total_NumOrbs[ct_AN]
-                for h_AN in range(FNAN[ct_AN] + 1):
-                    myOLP[ct_AN].append([])
-                    Gh_AN = natn[ct_AN][h_AN]
-                    TNO2 = Total_NumOrbs[Gh_AN]
-                    for i in range(TNO1):
-                        myOLP[ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
-            return myOLP
+            TNO1 = Total_NumOrbs[ct_AN]
+            for h_AN in range(FNAN[ct_AN] + 1):
+                myOLP[ct_AN].append([])
+                Gh_AN = natn[ct_AN][h_AN]
+                TNO2 = Total_NumOrbs[Gh_AN]
+                for i in range(TNO1):
+                    myOLP[ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
+        return myOLP
 
     def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd):
         Hks = []
@@ -1188,7 +1188,7 @@ def read_scfout_file(filename=None, version='3.9.2'):
 
     fd_close_flag = False
     if isinstance(filename, IOBase):
-        fd = filenname
+        fd = filename
     else:
         fd_close_flag = True
         fd = open(filename, mode='rb')
@@ -1196,7 +1196,7 @@ def read_scfout_file(filename=None, version='3.9.2'):
     if '3.8' in version:
         atomnum, SpinP_switch = inte(fd.read(8))
         Catomnum, Latomnum, Ratomnum, TCpyCell = inte(fd.read(16))
-        order_max=None
+        order_max = None
     elif '3.9' in version:
         atomnum, ver_x_SpinP_switch = inte(fd.read(8))
         version = ver_x_SpinP_switch // 4
@@ -1338,6 +1338,9 @@ def read_band_file(filename=None):
             eigen_bands[i, j] = np.array(line.split(), dtype=float)[:]
     band_data['eigenvalues'] = eigen_bands
     band_data['band_kpts'] = kpts
+
+    if fd_clos_flag:
+        fd.close()
     return band_data
 
 
