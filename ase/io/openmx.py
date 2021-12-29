@@ -18,8 +18,10 @@ functional theories.
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import os
 import re
 import numpy as np
+import struct
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.units import Bohr, Ang, Ha
@@ -1132,7 +1134,6 @@ def read_scfout_file(filename=None, version='3.9.2'):
     if not os.path.isfile(filename):
         return {}
 
-
     def easyReader(byte, data_type, shape):
         data_size = {'d': 8, 'i': 4}
         data_struct = {'d': float, 'i': int}
@@ -1149,14 +1150,11 @@ def read_scfout_file(filename=None, version='3.9.2'):
         else:
             return np.array(unpack(dt*(len(byte)//ds), byte))
 
-
     def inte(byte, shape=None):
         return easyReader(byte, 'i', shape)
 
-
     def floa(byte, shape=None):
         return easyReader(byte, 'd', shape)
-
 
     def readOverlap(atomnum, Total_NumOrbs, FNAN, natn, fd):
             myOLP = []
@@ -1171,7 +1169,6 @@ def read_scfout_file(filename=None, version='3.9.2'):
                     for i in range(TNO1):
                         myOLP[ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
             return myOLP
-
 
     def readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd):
         Hks = []
@@ -1189,7 +1186,6 @@ def read_scfout_file(filename=None, version='3.9.2'):
                         Hks[spin][ct_AN][h_AN].append(floa(fd.read(8*TNO2)))
         return Hks
 
-
     fd_close_flag = False
     if isinstance(filename, IOBase):
         fd = filenname
@@ -1200,6 +1196,7 @@ def read_scfout_file(filename=None, version='3.9.2'):
     if '3.8' in version:
         atomnum, SpinP_switch = inte(fd.read(8))
         Catomnum, Latomnum, Ratomnum, TCpyCell = inte(fd.read(16))
+        order_max=None
     elif '3.9' in version:
         atomnum, ver_x_SpinP_switch = inte(fd.read(8))
         version = ver_x_SpinP_switch // 4
@@ -1236,7 +1233,6 @@ def read_scfout_file(filename=None, version='3.9.2'):
     dipole_moment_background = floa(fd.read(8*3))
     Valence_Electrons, Total_SpinS = floa(fd.read(8*2))
 
-    fd.close()
     scf_out = {'atomnum': atomnum, 'SpinP_switch': SpinP_switch,
                'Catomnum': Catomnum, 'Latomnum': Latomnum, 'Hks': Hks,
                'Ratomnum': Ratomnum, 'TCpyCell': TCpyCell, 'atv': atv,
@@ -1247,7 +1243,8 @@ def read_scfout_file(filename=None, version='3.9.2'):
                'dipole_moment_core': dipole_moment_core, 'iHks': iHks,
                'dipole_moment_background': dipole_moment_background,
                'Valence_Electrons': Valence_Electrons, 'atv_ijk': atv_ijk,
-               'Total_SpinS': Total_SpinS, 'DM': DM
+               'Total_SpinS': Total_SpinS, 'DM': DM,
+               'version': version, 'order_max': order_max
                }
     if fd_close_flag:
         fd.close()
