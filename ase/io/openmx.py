@@ -1307,7 +1307,7 @@ def read_band_file(filename=None):
     fd_close_flag = False
     if isinstance(filename, IOBase):
         fd = filename
-    else isinstance(filename, str):
+    else:
         fd_close_flag = True
         fd = open(filename)
 
