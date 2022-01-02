@@ -75,7 +75,7 @@ omx_bl = {True: 'On', False: 'Off'}
 
 def write_openmx_in(dst, atoms, properties=['energy', 'forces'],
                     parameters=None, **kwargs):
-    """
+    """Write `.dat` file. 
     """
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
