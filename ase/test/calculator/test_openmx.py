@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from ase.atoms import Atoms
 
 calc = pytest.mark.calculator
@@ -50,7 +51,8 @@ def test_molecule_static(factory, ch4, common_parameters, md_parameters):
         "scf_eigenvaluesolver": "cluster"
     }
     ch4.calc = factory.calc(**parameters)
-    ch4.get_potential_energy()
+
+    assert np.isclose(ch4.get_potential_energy(), -221.09988689135932)
 
 
 @calc('openmx')
@@ -63,6 +65,8 @@ def test_molecule_md(factory, ch4, common_parameters, md_parameters):
     ch4.calc = factory.calc(**parameters)
     ch4.get_potential_energy()
 
+    assert np.isclose(ch4.get_potential_energy(), -221.40897755480597)
+
 
 @pytest.mark.calculator_lite
 @calc('openmx')
@@ -74,7 +78,7 @@ def test_crystal_static(factory, ch4, common_parameters, md_parameters):
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
-    ch4.get_potential_energy()
+    assert np.isclose(ch4.get_potential_energy(), -221.10025779574835)
 
 
 @pytest.mark.calculator_lite
@@ -87,7 +91,8 @@ def test_crystal_static_stress(factory, ch4, common_parameters, md_parameters):
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
-    ch4.get_stress()
+    ans = np.array([0.0015829, 0.0015829, 0.00216869, 0., 0., -0.00158841])
+    assert np.all(np.isclose(ch4.get_stress(), ans))
 
 
 @calc('openmx')
@@ -99,7 +104,7 @@ def test_crystal_md(factory, ch4, common_parameters, md_parameters):
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
-    ch4.get_potential_energy()
+    assert np.isclose(ch4.get_potential_energy(), -221.40939082558154)
 
 
 @calc('openmx')

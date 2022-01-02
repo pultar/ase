@@ -118,7 +118,7 @@ class OpenmxTemplate(CalculatorTemplate):
         return results
 
 
-class Openmx2(GenericFileIOCalculator):
+class Openmx(GenericFileIOCalculator):
     def __init__(self, *args, profile=None, template=None,
                  directory='.', **kwargs):
 
