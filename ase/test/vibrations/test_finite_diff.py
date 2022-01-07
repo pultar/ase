@@ -108,9 +108,6 @@ def test_frederiksen(random_dimer):
 
     displacements = displacements_from_list(random_dimer,
                                             full_displacement_spec)
-
-    drift = 
-
     for displacement in displacements:
         displacement.calc = ForceConstantCalculator(D=ref_hessian,
                                                     ref=random_dimer,
