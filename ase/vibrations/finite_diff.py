@@ -63,8 +63,7 @@ def get_displacements_with_identities(atoms: Atoms,
 def get_displacements(atoms: Atoms,
                       indices: List[int] = None,
                       direction: str = 'central',
-                      use_equilibrium_forces: bool = None,
-                      delta: float = 0.01) -> Iterator[Atoms]:
+                      delta: float = 0.01) -> List[Atoms]:
     return [displacement for displacement, _ in
             get_displacements_with_identities(atoms,
                                               indices=indices,
@@ -172,7 +171,7 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
             hessian[atom_index * 3 + cartesian_index] = hessian_element
 
     if method.lower() == 'frederiksen':
-        for row_index, row in enumerate(hessian):
-            hessian[row_index] -= hessian.sum(axis=0)
+        # Impose momentum conservation by replacing diagonal elements
+        np.fill_diagonal(hessian, hessian.diagonal() - hessian.sum(axis=1))
 
     return VibrationsData.from_2d(ref_atoms, hessian, indices=indices)
