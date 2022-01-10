@@ -1,13 +1,49 @@
 from itertools import product
-from typing import Iterator, List, Tuple, Sequence
+from typing import Iterator, List, Tuple, Union, Sequence
 
 import numpy as np
 from numpy.linalg import lstsq
 
 from ase.atoms import Atoms
+import ase.db
+from ase.db.core import Database
 from ase.vibrations import VibrationsData
 from ase.calculators.calculator import (PropertyNotImplementedError,
                                         PropertyNotPresent)
+
+
+def _get_displacements_with_identities(atoms: Atoms,
+                                       indices: List[int] = None,
+                                       delta: float = 0.01,
+                                       direction: str = 'central',
+                                       ) -> Iterator[Tuple[Atoms, dict]]:
+    if indices is None:
+        indices = list(range(len(atoms)))
+    directions = (0, 1, 2)
+
+    if direction == 'central':
+        signs = (-1, 1)
+    elif direction == 'forward':
+        signs = (1,)
+    elif direction == 'backward':
+        signs = (-1,)
+    else:
+        raise ValueError(f'Direction scheme "{direction}" is not known.')
+
+    for atom_index, cartesian_index, sign in product(indices,
+                                                     directions,
+                                                     signs):
+        displacement_atoms = atoms.copy()
+        displacement_atoms.positions[atom_index,
+                                     cartesian_index] += (delta * sign)
+
+        identity = {'atom_index': atom_index,
+                    'cartesian_axis': cartesian_index,
+                    'sign': sign,
+                    'delta': delta}
+
+        yield(displacement_atoms, identity)
+
 
 def get_displacements_with_identities(atoms: Atoms,
                                       indices: List[int] = None,
@@ -27,48 +63,94 @@ def get_displacements_with_identities(atoms: Atoms,
         function again with a different delta value.
 
     Returns:
-        Series of displaced Atoms objects
+        Series of pairs: displaced Atoms object with an identifying string
 
     """
-
-    if indices is None:
-        indices = list(range(len(atoms)))
-    directions = (0, 1, 2)
-
-    if direction == 'central':
-        signs = (-1, 1)
-    elif direction == 'forward':
-        signs = (1,)
-    elif direction == 'backward':
-        signs = (-1,)
-    else:
-        raise ValueError(f'Direction scheme "{direction}" is not known.')
+    disp_kwargs = dict(indices=indices, direction=direction, delta=delta)
 
     displacements_labels = []
-
-    for atom_index, cartesian_index, sign in product(indices,
-                                                     directions,
-                                                     signs):
-        displacement_atoms = atoms.copy()
-        displacement_atoms.positions[atom_index,
-                                    cartesian_index] += (delta * sign)
-
-        label = f'{atom_index}-{cartesian_index}-{(sign + 1) // 2}'
-        displacements_labels.append((displacement_atoms, label))
+    for displacement, identity in _get_displacements_with_identities(
+            atoms, **disp_kwargs):
+    
+        identity['direction_index'] = (identity['sign'] + 1) // 2
+        label = ('{atom_index}-{cartesian_axis}-{direction_index}'
+                 .format(**identity))
+        displacements_labels.append((displacement, label))
 
     return displacements_labels
-
 
 
 def get_displacements(atoms: Atoms,
                       indices: List[int] = None,
                       direction: str = 'central',
                       delta: float = 0.01) -> List[Atoms]:
+    """Get displaced atoms with corresponding labels
+
+    Args:
+        atoms: reference structure
+        indices: Atoms to be displaced. (If None, all atoms are included.)
+        delta: Displacement distance.
+        direction: 'forward', 'backward' or 'central' differences.
+
+        NB: Compared to the legacy Vibrations object, there is no "nfree"
+        option. If you would like 4-point central differences, just call this
+        function again with a different delta value.
+
+    Returns:
+        Series of displaced Atoms object
+
+    """
+
     return [displacement for displacement, _ in
             get_displacements_with_identities(atoms,
                                               indices=indices,
                                               direction=direction,
                                               delta=delta)]
+
+
+def write_displacements_to_db(atoms: Atoms,
+                              indices: List[int] = None,
+                              direction: str = 'central',
+                              delta: float = 0.01,
+                              db: Union[Database, str] = 'displacements.db',
+                              metadata: dict = None
+                              ) -> Database:
+    """Get displaced atoms as an ASE database
+
+    This may be convenient for sharing or task-farming displacement
+    calculations.
+
+    Args:
+        atoms: reference structure
+        indices: Atoms to be displaced. (If None, all atoms are included.)
+        direction: 'forward', 'backward' or 'central' differences.
+        delta: Displacement distance.
+        db: An active ASE database, or string for a new database file. If the
+            database already exists, displacements will be appended.
+        metadata:  Additional keys/values to include with the database entries.
+            For example, this might be the name of the conformation in a
+            database containing several species to be calculated in a separate
+            step.
+
+    Returns:
+        ASE Database object including displaced structures for vibrations
+        calculation. These require forces to be calculated before further
+        analysis.
+
+    """
+
+    disp_kwargs = dict(indices=indices, direction=direction, delta=delta)
+
+    metadata = {} if metadata is None else metadata
+
+    if isinstance(db, str):
+        db = ase.db.connect(db, append=True)      # type: Database
+
+    for (displacement, label) in get_displacements_with_identities(
+        atoms, **disp_kwargs):
+        db.write(atoms, label=label, **metadata)
+
+    return db
 
 
 def read_axis_aligned_forces(ref_atoms: Atoms,
@@ -107,7 +189,7 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
     assert method.lower() in ('standard', 'frederiksen')
 
     if use_equilibrium_forces:
-        if atoms.calc is None:
+        if ref_atoms.calc is None:
             raise ValueError("Could not read equilibrium forces, but "
                              "use_equilibrium_forces is True.")
         try:
