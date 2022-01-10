@@ -53,17 +53,17 @@ def labels_from_list(specifications):
 
 
 # Standard case: two directions, default distance
-full_displacement_spec = [(0,0,-1), (0,0,1), (0,1,-1), (0,1,1), (0,2,-1),
-                         (0,2,1), (1,0,-1), (1,0,1), (1,1,-1), (1,1,1),
-                         (1,2,-1), (1,2,1)]
+full_displacement_spec = [(0, 0, -1), (0, 0, 1), (0, 1, -1), (0, 1, 1),
+                          (0, 2, -1), (0, 2, 1), (1, 0, -1), (1, 0, 1),
+                          (1, 1, -1), (1, 1, 1), (1, 2, -1), (1, 2, 1)]
 dimer_full_displacements = displacements_from_list(simple_dimer(),
                                                    full_displacement_spec,
                                                    h=0.01)
 dimer_full_labels = labels_from_list(full_displacement_spec)
 
 # Limit indices to one atom, increase displacement
-indexed_displacement_spec = [(1,0,-1), (1,0,1), (1,1,-1), (1,1,1),
-                                  (1,2,-1), (1,2,1)]
+indexed_displacement_spec = [(1, 0, -1), (1, 0, 1), (1, 1, -1), (1, 1, 1),
+                             (1, 2, -1), (1, 2, 1)]
 indexed_displacements = displacements_from_list(
     simple_dimer(), indexed_displacement_spec, h=0.02)
 indexed_labels = labels_from_list(indexed_displacement_spec)
@@ -114,12 +114,12 @@ def test_frederiksen(random_dimer):
     momentum; use a symmetric array in which each row sums to zero.
 
     """
-    ref_hessian = np.array([[-1.,   0.5,  0.5,   0.,    0.,   0.],
-                            [0.5, -0.75, 0.25,   0.,    0.,   0.],
-                            [0.5,  0.25,   -1, 0.25,    0.,   0.],
-                            [ 0.,    0., 0.25, 0.25,  -0.5,   0.],
-                            [ 0.,    0.,   0., -0.5,    1., -0.5],
-                            [ 0.,    0.,   0.,   0.,  -0.5,  0.5]])
+    ref_hessian = np.array([[-1.0, +0.50, +0.50, +0.00, +0.0, +0.0],
+                            [+0.5, -0.75, +0.25, +0.00, +0.0, +0.0],
+                            [+0.5, +0.25, -1.00, +0.25, +0.0, +0.0],
+                            [+0.0, +0.00, +0.25, +0.25, -0.5, +0.0],
+                            [+0.0, +0.00, +0.00, -0.50, +1.0, -0.5],
+                            [+0.0, +0.00, +0.00, +0.00, -0.5, +0.5]])
 
     displacements = displacements_from_list(random_dimer,
                                             full_displacement_spec)
@@ -134,7 +134,7 @@ def test_frederiksen(random_dimer):
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
     # Should fail for a modified Hessian, as momentum correction changes result
-    mod_hessian = ref_hessian  + np.eye(6)
+    mod_hessian = ref_hessian + np.eye(6)
 
     for displacement in displacements:
         displacement.calc = ForceConstantCalculator(D=mod_hessian,
