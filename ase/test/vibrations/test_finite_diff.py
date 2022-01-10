@@ -7,6 +7,7 @@ from ase.calculators.qmmm import ForceConstantCalculator
 from ase.calculators.singlepoint import SinglePointCalculator
 import ase.vibrations.finite_diff
 
+
 @pytest.fixture
 def random_dimer():
     rng = np.random.RandomState(42)
@@ -24,8 +25,10 @@ def random_dimer():
                                          f0=np.zeros((2, 3)))
     return atoms
 
+
 def simple_dimer():
     return Atoms('CuS', positions=[[0., 0., 0.], [1., 0., 0.]])
+
 
 def displacements_from_list(ref_atoms, specifications, h=0.01):
     displacements = []
@@ -34,6 +37,7 @@ def displacements_from_list(ref_atoms, specifications, h=0.01):
         atoms[atom_index].position[cartesian_index] += h * direction
         displacements.append(atoms)
     return displacements
+
 
 def labels_from_list(specifications):
     def dir_to_index(direction: int):
@@ -46,6 +50,7 @@ def labels_from_list(specifications):
 
     return [f'{atom_index}-{cart_index}-{dir_to_index(direction)}'
             for atom_index, cart_index, direction in specifications]
+
 
 # Standard case: two directions, default distance
 full_displacement_spec = [(0,0,-1), (0,0,1), (0,1,-1), (0,1,1), (0,2,-1),
@@ -77,7 +82,7 @@ def test_get_displacements_with_identities(options, expected_output):
         assert label == expected_label
         assert_array_almost_equal(atoms.positions, expected_atoms.positions)
         assert atoms.get_chemical_symbols() == expected_atoms.get_chemical_symbols()
-        
+
 
 def attach_forces(atoms, forces):
     atoms.calc = SinglePointCalculator(atoms, forces=forces)
@@ -96,15 +101,25 @@ def test_read_axis_aligned_forces(random_dimer):
                                                     ref=random_dimer,
                                                     f0=np.zeros((2, 3)))
 
-    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(        
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
         random_dimer, displacements, method='standard')
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
+
 def test_frederiksen(random_dimer):
     """Check that Hessian is recovered perfectly when using Hessian calculator
+
+    For Frederiksen method this is only the case when Hessian conserves
+    momentum; use a symmetric array in which each row sums to zero.
+
     """
-    ref_hessian = random_dimer.calc.D
+    ref_hessian = np.array([[-1.,   0.5,  0.5,   0.,    0.,   0.],
+                            [0.5, -0.75, 0.25,   0.,    0.,   0.],
+                            [0.5,  0.25,   -1, 0.25,    0.,   0.],
+                            [ 0.,    0., 0.25, 0.25,  -0.5,   0.],
+                            [ 0.,    0.,   0., -0.5,    1., -0.5],
+                            [ 0.,    0.,   0.,   0.,  -0.5,  0.5]])
 
     displacements = displacements_from_list(random_dimer,
                                             full_displacement_spec)
@@ -113,7 +128,21 @@ def test_frederiksen(random_dimer):
                                                     ref=random_dimer,
                                                     f0=np.zeros((2, 3)))
 
-    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(        
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
         random_dimer, displacements, method='frederiksen')
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+    # Should fail for a modified Hessian, as momentum correction changes result
+    mod_hessian = ref_hessian  + np.eye(6)
+
+    for displacement in displacements:
+        displacement.calc = ForceConstantCalculator(D=mod_hessian,
+                                                    ref=random_dimer,
+                                                    f0=np.zeros((2, 3)))
+
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
+        random_dimer, displacements, method='frederiksen')
+
+    with pytest.raises(AssertionError):
+        assert_array_almost_equal(vib_data.get_hessian_2d(), mod_hessian)
