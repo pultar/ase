@@ -748,7 +748,7 @@ def get_valence_electrons(symbol, data, pseudo=None):
             valence = grep_valence(path.join(pseudo_dir, pseudo))
             break
     else:  # not found in a file
-        valence = SSSP_VALENCE[atomic_numbers[symbol]]
+        valence = SSSP_VALENCE[atomic_numbers[''.join(i for i in symbol if not i.isdigit())]]
     return valence
 
 
@@ -1545,7 +1545,9 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
-    for species in set(atoms.get_chemical_symbols()):
+    tagged_species = set("".join(x) for x in zip(atoms.get_chemical_symbols(), [str(j) if j > 0 else "" for j in atoms.get_tags()]))
+    #for species in set(atoms.get_chemical_symbols()):
+    for species in tagged_species:
         # Look in all possible locations for the pseudos and try to figure
         # out the number of valence electrons
         pseudo = pseudopotentials.get(species, None)
@@ -1605,13 +1607,14 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     else:
         # Do nothing about magnetisation
         for atom in atoms:
-            if atom.symbol not in atomic_species:
-                atomic_species[atom.symbol] = True  # just a placeholder
+            tagged_symbol = "%s%d" % (atom.symbol, atom.tag) if atom.tag > 0 else atom.symbol
+            if tagged_symbol not in atomic_species:
+                atomic_species[tagged_symbol] = True  # just a placeholder
                 atomic_species_str.append(
                     '{species} {mass} {pseudo}\n'.format(
-                        species=atom.symbol, mass=atom.mass,
-                        pseudo=species_info[atom.symbol]['pseudo']))
-
+                        species=tagged_symbol, mass=atom.mass,
+                        pseudo=species_info[tagged_symbol]['pseudo']))
+                    
             # only inclued mask if something is fixed
             if not all(constraint_mask[atom.index]):
                 mask = ' {mask[0]} {mask[1]} {mask[2]}'.format(
@@ -1623,11 +1626,14 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 coords = [atom.a, atom.b, atom.c]
             else:
                 coords = atom.position
+            if atom.tag > 0:
+                specname = '{atom.symbol}{atom.tag} '.format(atom=atom)
+            else:
+                specname = '{atom.symbol} '.format(atom=atom)
             atomic_positions_str.append(
-                '{atom.symbol} '
+                '{specname} '
                 '{coords[0]:.10f} {coords[1]:.10f} {coords[2]:.10f} '
-                '{mask}\n'.format(atom=atom, coords=coords, mask=mask))
-
+                '{mask}\n'.format(specname=specname, coords=coords, mask=mask))
     # Add computed parameters
     # different magnetisms means different types
     input_parameters['system']['ntyp'] = len(atomic_species)
