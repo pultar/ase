@@ -479,11 +479,16 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
         # if self.parameters['use_short_nn'] and not restart:
         #     self.set(**self.default_parameters_short)
 
-        self.set_dataset(dataset)
-        self.set_scaling(scaling)
-        self.set_weights(weights)
-        self.set_sfvalues(sfvalues)
-        self.set_splittraintest(splittraintest)
+        if dataset is not None:
+            self.set_dataset(dataset)
+        if scaling is not None:
+            self.set_scaling(scaling)
+        if weights is not None:
+            self.set_weights(weights)
+        if sfvalues is not None:
+            self.set_sfvalues(sfvalues)
+        if splittraintest is not None:
+            self.set_splittraintest(splittraintest)
 
     def set(self, **kwargs):
         """Update `self.parameters` with `kwargs`.
