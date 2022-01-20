@@ -306,16 +306,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         'description': " Hard function: $1$",
                     },
                     1: {
-                        'description': " Cosine function: $\frac{1}{2}[\cos(\pi x)+ 1]$",
+                        'description': r" Cosine function: $\frac{1}{2}[\cos(\pi x)+ 1]$",
                     },
                     2: {
-                        'description': " Hyperbolic tangent function 1: $\tanh^{3} (1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
+                        'description': r" Hyperbolic tangent function 1: $\tanh^{3} (1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
                     },
                     3: {
-                        'description': " Hyperbolic tangent function 2: $(\frac{e+1}{e-1})^3 \tanh^{3}(1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
+                        'description': r" Hyperbolic tangent function 2: $(\frac{e+1}{e-1})^3 \tanh^{3}(1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
                     },
                     4: {
-                        'description': " Exponential function: $\exp(1-\frac{1}{1-x^2})$",
+                        'description': r" Exponential function: $\exp(1-\frac{1}{1-x^2})$",
                     },
                     5: {
                         'description': " Polynomial function 1: $(2x -3)x^2+1$",
@@ -1228,7 +1228,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'find_contradictions': {
-        'description': " This keyword can be used in  runner_mode 2 to test if the symmetry functions are able to distinguish different atomic environments sufficiently. If two atomic environments of a given element are very similar, they will result in very similar symmetry function vectors. Therefore, the length of the difference vector $$ \Delta G = \sqrt{\sum_{i=1}^N (G_{i,1}-G_{i,2})^2} \,,\notag $$ ($N$ runs over all individual symmetry functions) will be close to zero. If the environments are really similar, the absolute forces acting on the atom should be similar as well, which is measured by $$ \begin{align} \Delta F &= |\sqrt{F_{1,x}^2+F_{1,y}^2+F_{1,z}^2}            -\sqrt{F_{2,x}^2+F_{2,y}^2+F_{2,z}^2}|\,,\notag\\          &= |F_1-F_2| \notag\,. \end{align} $$ If the forces are different ($\Delta F >$ `a1`) but the symmetry functions similar ($\Delta G <$ `a0`) for an atom pair, a message will be printed in the output file. The optimal choices for `a0` and `a1` are system dependent and should be selected such that only the most contradictory data is found. It is not recommended to keep this keyword switched on routinely, because it requires substantial CPU time.",
+        'description': r" This keyword can be used in  runner_mode 2 to test if the symmetry functions are able to distinguish different atomic environments sufficiently. If two atomic environments of a given element are very similar, they will result in very similar symmetry function vectors. Therefore, the length of the difference vector $$ \Delta G = \sqrt{\sum_{i=1}^N (G_{i,1}-G_{i,2})^2} \,,\notag $$ ($N$ runs over all individual symmetry functions) will be close to zero. If the environments are really similar, the absolute forces acting on the atom should be similar as well, which is measured by $$ \begin{align} \Delta F &= |\sqrt{F_{1,x}^2+F_{1,y}^2+F_{1,z}^2}            -\sqrt{F_{2,x}^2+F_{2,y}^2+F_{2,z}^2}|\,,\notag\\          &= |F_1-F_2| \notag\,. \end{align} $$ If the forces are different ($\Delta F >$ `a1`) but the symmetry functions similar ($\Delta G <$ `a0`) for an atom pair, a message will be printed in the output file. The optimal choices for `a0` and `a1` are system dependent and should be selected such that only the most contradictory data is found. It is not recommended to keep this keyword switched on routinely, because it requires substantial CPU time.",
         'format': "find_contradictions a0 a1",
         'modes': {
             'mode1': False,
@@ -1237,12 +1237,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Symmetry function threshold $\Delta G$.",
+                'description': r" Symmetry function threshold $\Delta G$.",
                 'type': float,
                 'default_value': 0.0,
             },
             'a1': {
-                'description': " Force threshold $\Delta F$.",
+                'description': r" Force threshold $\Delta F$.",
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1461,28 +1461,28 @@ RUNNERCONFIG_DEFAULTS: dict = {
                 'default_value': [None],
                 'options': {
                     'c': {
-                        'description': " Cosine function: $\cos(x)$",
+                        'description': r" Cosine function: $\cos(x)$",
                     },
                     'e': {
-                        'description': " Exponential function: $\exp(-x)$",
+                        'description': r" Exponential function: $\exp(-x)$",
                     },
                     'g': {
-                        'description': " Gaussian function: $\exp(-\alpha x^2)$",
+                        'description': r" Gaussian function: $\exp(-\alpha x^2)$",
                     },
                     'h': {
-                        'description': " Harmonic function: $x^2$.",
+                        'description': r" Harmonic function: $x^2$.",
                     },
                     'l': {
-                        'description': " Linear function: $x$",
+                        'description': r" Linear function: $x$",
                     },
                     'p': {
-                        'description': " Softplus function: $\ln(1+\exp(x))$",
+                        'description': r" Softplus function: $\ln(1+\exp(x))$",
                     },
                     's': {
-                        'description': " Sigmoid function v1: $(1-\exp(-x))^{-1}$",
+                        'description': r" Sigmoid function v1: $(1-\exp(-x))^{-1}$",
                     },
                     'S': {
-                        'description': " Sigmoid function v2: $1-(1-\exp(-x))^{-1}$",
+                        'description': r" Sigmoid function v2: $1-(1-\exp(-x))^{-1}$",
                     },
                     't': {
                         'description': " Hyperbolic tangent function: $\tanh(x)$",
@@ -1954,7 +1954,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_epsilon': {
-        'description': " Set the initialization parameter for the correlation matrix of the Kalman filter according to $$ P(0)=\epsilon^{-1} \mathcal{I}. $$ $\epsilon$ is often set to the order of $10^{-3}$ to $10^{-2}$.",
+        'description': r" Set the initialization parameter for the correlation matrix of the Kalman filter according to $$ P(0)=\epsilon^{-1} \mathcal{I}. $$ $\epsilon$ is often set to the order of $10^{-3}$ to $10^{-2}$.",
         'format': "kalman_epsilon a0",
         'modes': {
             'mode1': False,
@@ -1963,7 +1963,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\epsilon$.",
+                'description': r" default_value of $\epsilon$.",
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1971,7 +1971,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_lambda_charge': {
-        'description': " Kalman filter parameter $\lambda$ for the electrostatic NN weight updates.",
+        'description': r" Kalman filter parameter $\lambda$ for the electrostatic NN weight updates.",
         'format': "kalman_lambda_charge a0",
         'modes': {
             'mode1': False,
@@ -1980,7 +1980,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\lambda$.",
+                'description': r" default_value of $\lambda$.",
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1988,7 +1988,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_lambda_short': {
-        'description': " Kalman filter parameter $\lambda$ for the short range NN weight updates.",
+        'description': r" Kalman filter parameter $\lambda$ for the short range NN weight updates.",
         'format': "kalman_lambda_short a0",
         'modes': {
             'mode1': False,
@@ -1997,7 +1997,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\lambda$.",
+                'description': r" default_value of $\lambda$.",
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2005,7 +2005,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_nue_charge': {
-        'description': " Kalman filter parameter $\lambda_0$ for the electrostatic NN weight updates.",
+        'description': r" Kalman filter parameter $\lambda_0$ for the electrostatic NN weight updates.",
         'format': "kalman_nue_charge a0",
         'modes': {
             'mode1': False,
@@ -2014,7 +2014,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\lambda_0$.",
+                'description': r" default_value of $\lambda_0$.",
                 'type': float,
                 'default_value': None,
             },
@@ -2022,7 +2022,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_nue_short': {
-        'description': " Kalman filter parameter $\lambda_0$ for the short range weight updates.",
+        'description': r" Kalman filter parameter $\lambda_0$ for the short range weight updates.",
         'format': "kalman_nue_short a0",
         'modes': {
             'mode1': False,
@@ -2031,7 +2031,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\lambda_0$.",
+                'description': r" default_value of $\lambda_0$.",
                 'type': float,
                 'default_value': None,
             },
@@ -2039,7 +2039,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_q0': {
-        'description': " It is possible to add artificial process noise for the Kalman filter in the form of  $$ Q(t) =q(t)\mathcal{I}, $$  with either a fixed $q(t)=q(0)$ or annealing from a higher $q(0)$ to  $q_{\mathrm{min}}$ following a scheme like $$ q(t) = \max(q_{0}e^{-t/\tau_{q}}, q_{\mathrm{min}}). $$ The default_value of $q(0)$ is usually set between $10^{-6}$ and $10^{-2}$. It is recommended for the user to do some test for each new system, altering kalman_q0,  kalman_qmin and  kalman_qtau to obtain the optimal performance for minimizing the root mean square error.",
+        'description': r" It is possible to add artificial process noise for the Kalman filter in the form of  $$ Q(t) =q(t)\mathcal{I}, $$  with either a fixed $q(t)=q(0)$ or annealing from a higher $q(0)$ to  $q_{\mathrm{min}}$ following a scheme like $$ q(t) = \max(q_{0}e^{-t/\tau_{q}}, q_{\mathrm{min}}). $$ The default_value of $q(0)$ is usually set between $10^{-6}$ and $10^{-2}$. It is recommended for the user to do some test for each new system, altering kalman_q0,  kalman_qmin and  kalman_qtau to obtain the optimal performance for minimizing the root mean square error.",
         'format': "kalman_q0 a0",
         'modes': {
             'mode1': False,
@@ -2056,7 +2056,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_qmin': {
-        'description': " Parameter $q_{\mathrm{min}}$ for adding artificial process noise to the Kalman filter noise matrix. See kalman_q0 for a more detailed explanation.",
+        'description': r" Parameter $q_{\mathrm{min}}$ for adding artificial process noise to the Kalman filter noise matrix. See kalman_q0 for a more detailed explanation.",
         'format': "kalman_qmin a0",
         'modes': {
             'mode1': False,
@@ -2065,7 +2065,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $q_{\mathrm{min}}$.",
+                'description': r" default_value of $q_{\mathrm{min}}$.",
                 'type': float,
                 'default_value': 0.0,
             },
@@ -3907,7 +3907,7 @@ RUNNERASE_PARAMS: dict = {
     'elements': None,                   # Will be set by ASE when attaching an atoms object.
     'number_of_elements': None,         # Will be set by ASE when attaching an atoms object.
     'bond_threshold': 0.5,              # Default ok but this has to be changed for every system.
-    'nn_type_short': 1,                 # Most people use atomic NNs.                   
+    'nn_type_short': 1,                 # Most people use atomic NNs.
     'nnp_gen': 2,                       # 2Gs remain the most common use case.
     'use_short_nn': True,               # Short-range fitting is the default.
     'optmode_charge': 1,                # Default ok but should be a visible options.
@@ -3917,9 +3917,9 @@ RUNNERASE_PARAMS: dict = {
     'scale_symmetry_functions': True,   # Scaling is used by almost everyone.
     'cutoff_type': 1,                   # Default ok, but important.
     # Mode 1.
-    'test_fraction': 0.1,               # The RuNNer default is only 1%, more is standard procedure.                
+    'test_fraction': 0.1,               # The RuNNer default is only 1%, more is standard procedure.
     # Mode 1 and 2.
-    'random_seed': 0,                   # The seed will be initialized by np.rand later on, but it is an important information.     
+    'random_seed': 0,                   # The seed will be initialized by np.rand later on, but it is an important information.
     'use_short_forces': True,           # Force fitting is standard procedure.
     # Mode 1 and 3.
     'remove_atom_energies': True,       # Everyone only fits binding energies.
@@ -3929,12 +3929,12 @@ RUNNERASE_PARAMS: dict = {
     'kalman_lambda_short': 0.98000,     # Very typical default value.
     'kalman_nue_short': 0.99870,        # Very typical default value.
     'mix_all_points': True,             # This is a standard option for most.
-    'nguyen_widrow_weights_short': True,# Typically improves the fit.
-    'repeated_energy_update': True,     # Typically improves the fit with force fitting.
-    'short_energy_error_threshold': 0.1,# Only energies with 0.1*RMSE are used.
-    'short_energy_fraction': 1.0,       # All energies are used.
-    'short_force_error_threshold': 1.0, # All forces are used.
-    'short_force_fraction': 0.1,        # 10% of the forces are used.   
+    'nguyen_widrow_weights_short': True,  # Typically improves the fit.
+    'repeated_energy_update': True,       # Typically improves the fit with force fitting.
+    'short_energy_error_threshold': 0.1,  # Only energies with 0.1*RMSE are used.
+    'short_energy_fraction': 1.0,         # All energies are used.
+    'short_force_error_threshold': 1.0,   # All forces are used.
+    'short_force_fraction': 0.1,        # 10% of the forces are used.
     'use_old_weights_charge': False,    # Might be very important for fit restarting.
     'use_old_weights_short': False,     # Might be very important for fit restarting.
     'write_weights_epoch': 5,           # Default is 1, very verbose.
@@ -3944,14 +3944,14 @@ RUNNERASE_PARAMS: dict = {
     # Mode 3.
     'calculate_forces': False,          # Will be set by ASE automatically, but should be visible.
     'calculate_stress': False,          # Will be set by ASE automatically, but should be visible.
-    ### 2G-specific keywords.
+    # ---------- 2G-specific keywords. ----------
     # All modes.
     'symfunction_short': [],
     # Mode 2 and 3.
     'global_activation_short': [None],
     'global_hidden_layers_short': None,
     'global_nodes_short': [None],
-    ### PairNN-specific keywords.
+    # ---------- PairNN-specific keywords. ----------
     # All modes.
     'element_pairsymfunction_short': [None, None, None],
     'global_pairsymfunction_short': [None, None, None],
@@ -3965,12 +3965,12 @@ RUNNERASE_PARAMS: dict = {
     # # 3G-/4G-specific keywords.
     # 'electrostatic_type': 1,            # Default ok, but should be visible.
     # 'use_fixed_charges': False,
-    # 'use_gausswidth': False,    
+    # 'use_gausswidth': False,
     # 'fixed_gausswidth': [None, -99.0],
     # 'element_symfunction_electrostatic': [None, None, None],
     # 'global_symfunction_electrostatic': [None, None, None],
     # 'symfunction_electrostatic': [None, None, None],
-    # 
+    #
     # 'element_activation_electrostatic': [None, None, None, None],
     # 'element_activation_pair': [None, None, None, None],
     # 'element_activation_short': [None, None, None, None],
