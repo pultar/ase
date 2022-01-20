@@ -1,7 +1,5 @@
-import numpy as np
-
 # ---------- The full monty - All RuNNer options with description etc. --------#
-RUNNERCONFIG_DEFAULTS = {
+RUNNERCONFIG_DEFAULTS: dict = {
     'analyze_composition': {
         'type': bool,
         'description': " Print detailed information about the element composition of the data set in  `input.data`.",
@@ -3903,7 +3901,7 @@ RUNNERCONFIG_DEFAULTS = {
 # They are not ordered alphabetically but by category instead.
 # Here, only the keywords independent of the NNP type are given.
 
-RUNNERASE_PARAMS = {
+RUNNERASE_PARAMS: dict = {
     # General for all modes.
     'runner_mode': 1,                   # Default should be starting a new fit.
     'elements': None,                   # Will be set by ASE when attaching an atoms object.

@@ -38,7 +38,7 @@ from ase.data import atomic_numbers
 import ase.io.runner.runner as io
 
 # Sensible default parameters for running RuNNer with ASE.
-DEFAULT_PARAMETERS = {
+DEFAULT_PARAMETERS: dict = {
     # General for all modes.
     'runner_mode': 1,                   # Default should be to start a new fit.
     'elements': None,                   # Auto-set by ASE when attaching Atoms.
