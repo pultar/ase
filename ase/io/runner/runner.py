@@ -572,7 +572,7 @@ def read_runnerconfig(fd):
         else:
             parameters[keyword] = parameter
 
-    return parameters
+    return Parameters(**parameters)
 
 
 def read_scaling(fd):
