@@ -19,9 +19,9 @@ def ch4():
 def ch4_parameters():
     params = {
         "directory": "/home/schinavro/test/ASE_OMX/new_io/",
-        "system_currentdirectory": "/home/schinavro/test/ASE_OMX/new_io/test/",
+        "system_currentdirectory": "/home/schinavro/test/ASE_OMX/new_io/",
         "system_name": "ch4",
-        "data_path": "/appl/openMX/openmx3.9/DFT_DATA19",
+        # "data_path": "/appl/openMX/openmx3.9/DFT_DATA19",
         "scf_energycutoff": 300,
         "scf_criterion": 0.0001,
         "scf_xctype": "gga-pbe",
@@ -45,24 +45,26 @@ def md_parameters():
 
 @pytest.mark.calculator_lite
 @calc('openmx')
-def test_molecule_static(factory, ch4, common_parameters, md_parameters):
+def test_molecule_static(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         "scf_eigenvaluesolver": "cluster"
     }
     ch4.calc = factory.calc(**parameters)
+    print('openmx', 'test_molecule_static', ch4.get_potential_energy())
 
     assert np.isclose(ch4.get_potential_energy(), -221.09988689135932)
 
 
 @calc('openmx')
-def test_molecule_md(factory, ch4, common_parameters, md_parameters):
+def test_molecule_md(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         **md_parameters,
         "scf_eigenvaluesolver": "cluster"
     }
     ch4.calc = factory.calc(**parameters)
+    print('openmx', 'test_molecule_md', ch4.get_potential_energy())
     ch4.get_potential_energy()
 
     assert np.isclose(ch4.get_potential_energy(), -221.40897755480597)
@@ -70,59 +72,63 @@ def test_molecule_md(factory, ch4, common_parameters, md_parameters):
 
 @pytest.mark.calculator_lite
 @calc('openmx')
-def test_crystal_static(factory, ch4, common_parameters, md_parameters):
+def test_crystal_static(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         **md_parameters,
         "scf_eigenvaluesolver": "band"
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
+    print('openmx', 'test_crystal_static', ch4.get_potential_energy())
     assert np.isclose(ch4.get_potential_energy(), -221.10025779574835)
 
 
 @pytest.mark.calculator_lite
 @calc('openmx')
-def test_crystal_static_stress(factory, ch4, common_parameters, md_parameters):
+def test_crystal_static_stress(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         **md_parameters,
         "scf_eigenvaluesolver": "band"
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
     ans = np.array([0.0015829, 0.0015829, 0.00216869, 0., 0., -0.00158841])
+    print('openmx', 'test_crystal_static_stress', ch4.get_stress())
     assert np.all(np.isclose(ch4.get_stress(), ans))
 
 
 @calc('openmx')
-def test_crystal_md(factory, ch4, common_parameters, md_parameters):
+def test_crystal_md(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         **md_parameters,
         "scf_eigenvaluesolver": "band"
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
+    print('openmx', 'test_crystal_md', ch4.get_potential_energy())
     assert np.isclose(ch4.get_potential_energy(), -221.40939082558154)
 
 
 @calc('openmx')
-def test_crystal_md_stress(factory, ch4, common_parameters, md_parameters):
+def test_crystal_md_stress(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         **md_parameters,
         "scf_eigenvaluesolver": "band"
     }
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
     ch4.get_stress()
+    print('openmx', 'test_crystal_md', ch4.get_potential_energy())
 
 
 @calc('openmx')
-def test_band(factory, ch4, common_parameters, md_parameters):
+def test_band(factory, ch4, ch4_parameters, md_parameters):
     parameters = {
-        **common_parameters,
+        **ch4_parameters,
         "scf_eigenvaluesolver": "band",
         "scf_kgrid": (3, 3, 3),
         "band_dispersion": True,

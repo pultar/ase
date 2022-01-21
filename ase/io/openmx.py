@@ -75,7 +75,7 @@ omx_bl = {True: 'On', False: 'Off'}
 
 def write_openmx_in(dst, atoms, properties=['energy', 'forces'],
                     parameters=None, **kwargs):
-    """Write `.dat` file. 
+    """Write `.dat` file.
     """
     for k in special_keywords:
         parameters[k] = parameters.get(k, None)
@@ -909,7 +909,7 @@ def parse_openmx_out_positions(txt, version='3.9.2'):
 def parse_openmx_out_energy(txt, version='3.9.2'):
     """ Parse the forces from `.out` txt
 
-    txt = '''
+    >>> txt = '''
     ... *******************************************************
     ...         Total energy (Hartree) at MD = 5
     ... *******************************************************
