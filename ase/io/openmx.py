@@ -762,15 +762,12 @@ def parse_openmx_out_cell(txt, version='3.9.2'):
     else:
         unit = units[match.group(1).lower()]
 
-    pattern1 = r'<atoms\.unitvectors'
-    pattern2 = r'atoms\.unitvectors>'
-    match = re.search(pattern1, txt, re.M)
+    pattern = r'<atoms\.unitvectors(.+)?atoms\.unitvectors\>'
+    match = re.search(pattern, txt, re.DOTALL)
     if match is None:
         return None
-    fp = match.end(0)
-    ep = re.search(pattern2, txt[fp:], flags=re.M | re.I).start(0)
 
-    lines = txt[fp:fp+ep].split('\n')[1:-1]
+    lines = match.group(1).split('\n')[1:-1]
     cell = []
     cell.append([float(l) * unit for l in lines[0].split()])
     cell.append([float(l) * unit for l in lines[1].split()])
@@ -827,12 +824,9 @@ def parse_openmx_out_symbols(txt, version='3.9.2'):
     """
 
     pattern = r'<coordinates\.forces(.+)?coordinates\.forces\>'
-    lines = re.search(pattern, txt, re.DOTALL).group(1).slit('\n')
+    lines = re.search(pattern, txt, re.DOTALL).group(1).split('\n')[2:-1]
 
-    symbols = []
-    N = int(lines[0])
-    for i in range(N):
-        symbols.append(lines[i+1].split()[1])
+    symbols = [line.split()[1] for line in lines]
     return symbols
 
 
@@ -866,17 +860,15 @@ def parse_openmx_out_positions(txt, version='3.9.2'):
 
     pattern = r'xyz-coordinates \((\S+)\)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1).lower()
+    unit = units[match.group(1).lower()]
 
     pattern = r'<coordinates\.forces(.+)?coordinates\.forces\>'
-    lines = re.search(pattern, txt, re.DOTALL).group(1).slit('\n')
+    lines = re.search(pattern, txt, re.DOTALL).group(1).split('\n')[2:-1]
 
     positions = []
-    N = int(lines[0])
-    for i in range(N):
-        line = lines[i+1].split()
-        positions.append([float(l) for l in line[2:5]])
-    return np.array(positions) * units[unit]
+    for line in lines:
+        positions.append([float(l) for l in line.split()[2:5]])
+    return np.array(positions) * unit
 
 
 def parse_openmx_out_energy(txt, version='3.9.2'):
@@ -911,11 +903,11 @@ def parse_openmx_out_energy(txt, version='3.9.2'):
     """
     pattern = r'Total energy \((\S+)\)'
     match = re.search(pattern, txt, re.M)
-    unit = match.group(1).lower()
+    unit = units[match.group(1).lower()]
     fp = match.end(0)
 
     pattern = r'Utot\.\s+(\S+)'
-    return float(re.search(pattern, txt[fp:], re.M).group(1)) * units[unit]
+    return float(re.search(pattern, txt[fp:], re.M).group(1)) * unit
 
 
 def parse_openmx_out_forces(txt, version='3.9.2'):
@@ -948,16 +940,14 @@ def parse_openmx_out_forces(txt, version='3.9.2'):
 
     """
     pattern = r'and forces \((\S+)\)'
-    unit = re.search(pattern, txt, re.M).group(1).lower()
+    unit = units[re.search(pattern, txt, re.M).group(1).lower()]
 
     pattern = r'<coordinates\.forces(.+)?coordinates\.forces\>'
-    lines = re.search(pattern, txt, re.DOTALL).group(1).split('\n')
+    lines = re.search(pattern, txt, re.DOTALL).group(1).split('\n')[2:-1]
 
     forces = []
-    N = int(lines[0])
-    for i in range(N):
-        line = lines[i+1].split()
-        forces.append([float(l) * units[unit] for l in line[5:8]])
+    for line in lines:
+        forces.append([float(l) * unit for l in line.split()[5:8]])
     return forces
 
 

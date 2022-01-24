@@ -2,14 +2,9 @@ import pytest
 from ase.build import bulk
 
 
-omx_par = {'definition_of_atomic_species': [['Al', 'Al8.0-p1', 'Al_CA13'],
-                                            ['O', 'O6.0-p1', 'O_CA13']]}
-
-
 calc = pytest.mark.calculator
 
 
-@calc('openmx', **omx_par)
 @calc('elk', rgkmax=5.0)
 def test_al(factory):
     name = factory.name
