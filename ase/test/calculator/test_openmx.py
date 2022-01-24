@@ -18,8 +18,8 @@ def ch4():
 @pytest.fixture
 def ch4_parameters():
     params = {
-        "directory": "/home/schinavro/test/ASE_OMX/new_io/",
-        "system_currentdirectory": "/home/schinavro/test/ASE_OMX/new_io/",
+        # "directory": "/home/schinavro/test/ASE_OMX/new_io/",
+        # "system_currentdirectory": "/home/schinavro/test/ASE_OMX/new_io/",
         "system_name": "ch4",
         # "data_path": "/appl/openMX/openmx3.9/DFT_DATA19",
         "scf_energycutoff": 300,
@@ -81,7 +81,7 @@ def test_crystal_static(factory, ch4, ch4_parameters, md_parameters):
     ch4.cell = [10, 10, 10]
     ch4.calc = factory.calc(**parameters)
     print('openmx', 'test_crystal_static', ch4.get_potential_energy())
-    assert np.isclose(ch4.get_potential_energy(), -221.10025779574835)
+    assert np.isclose(ch4.get_potential_energy(), -221.40939082558154)
 
 
 @pytest.mark.calculator_lite

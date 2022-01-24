@@ -18,6 +18,7 @@ functional theories.
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import os
 import re
 import numpy as np
 import struct
@@ -30,7 +31,8 @@ units = {'bohr': Bohr, 'au': Bohr, 'ang': Ang, 'hartree/bohr^3': Ha / Bohr**3,
          'hartree': Ha, 'hartree/bohr': Ha / Bohr}
 
 
-special_keywords = ["species_number",
+special_keywords = ["system_currentdirectory",
+                    "species_number",
                     "definition_of_atomic_species",
                     "atoms_unitvectors",
                     "atoms_number",
@@ -182,6 +184,16 @@ def write_matrix_keyword(fd, keyword, value):
         fd.write(valuestr.strip() + "\n")
     fd.write(keyword + '>')
     fd.write("\n\n")
+
+
+def write_system_currentdirectory(fd, atoms, parameters, **kwargs):
+    """ Write down current directory if `System.currentdirectory` not Given.
+    """
+    key = 'system_currentdirectory'
+    value = parameters[key]
+    if value is None:
+        value = os.getcwd()
+    write_keyword(fd, key, value)
 
 
 def write_atoms_speciesandcoordinates(fd, atoms, parameters, **kwargs):
