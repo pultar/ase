@@ -444,7 +444,7 @@ class LammpsLibFactory:
 
 
 @factory('openmx')
-class OpenmxFactory:
+class OpenMXFactory:
     def __init__(self, executable, data_path):
         self.executable = executable
         self.data_path = data_path
@@ -457,8 +457,8 @@ class OpenmxFactory:
         return parse_openmx_log_version(stdout)
 
     def calc(self, **kwargs):
-        from ase.calculators.openmx import Openmx
-        return Openmx(command=self.executable,
+        from ase.calculators.openmx import OpenMX
+        return OpenMX(command=self.executable,
                       data_path=str(self.data_path),
                       **kwargs)
 

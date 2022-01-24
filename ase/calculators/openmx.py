@@ -52,19 +52,18 @@ default_orbitals = {
 }
 
 
-class OpenmxProfile:
+class OpenMXProfile:
     def __init__(self, argv):
         self.argv = argv
 
     def run(self, directory, inputfile, outputfile):
         from subprocess import check_call
-        with open(outputfile, 'w') as fd:
-            print(self.argv, str(inputfile))
-            check_call(self.argv + [str(inputfile)], stdout=fd,
-                       cwd=directory)
+        argv = list(self.argv) + [str(inputfile)]
+        with open(directory / outputfile, 'w') as fd:
+            check_call(argv, stdout=fd, cwd=directory)
 
 
-class OpenmxTemplate(CalculatorTemplate):
+class OpenMXTemplate(CalculatorTemplate):
 
     def __init__(self, name='openmx'):
         super().__init__(
@@ -113,17 +112,17 @@ class OpenmxTemplate(CalculatorTemplate):
         # Stress
         if scf_stress_tensor is not None:
             stress = io.parse_openmx_log_stress(logtext, version=version)
-            results.update({'stress': stress})
+            results['stress'] = stress
 
         return results
 
 
-class Openmx(GenericFileIOCalculator):
+class OpenMX(GenericFileIOCalculator):
     def __init__(self, *args, profile=None, template=None,
                  directory='.', **kwargs):
 
-        profile = profile or OpenmxProfile(['openmx'])
-        template = template or OpenmxTemplate()
+        profile = profile or OpenMXProfile(['openmx'])
+        template = template or OpenMXTemplate()
         super().__init__(directory=directory,
                          template=template, profile=profile, parameters=kwargs)
 

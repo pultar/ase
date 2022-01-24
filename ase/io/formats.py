@@ -452,9 +452,9 @@ F('nwchem-out', 'NWChem output file', '+F',
 F('octopus-in', 'Octopus input file', '1F',
   module='octopus', glob='inp')
 F('openmx-log', 'OpenMX log file', '+F', module='openmx', glob='*omxlog',
-  magic=b'OpenMX')
+  magic_regex=b'Welcome to OpenMX')
 F('openmx-out', 'OpenMX out file', '1F', module='openmx', glob='*omx.out',
-  magic=b'OpenMX')
+  magic_regex=b'This calculation was performed by OpenMX')
 
 F('proteindatabank', 'Protein Data Bank', '+F',
   ext='pdb')
