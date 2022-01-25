@@ -703,10 +703,10 @@ def write_scaling(fd, scaling):
     """
     # RuNNer lists the scaling data ordered by symmetry functions, which is the
     # transpose format of how it is stored here.
-    scaling['scaling'] = scaling['scaling'].T
+    scalingdata = scaling['scaling'].T
 
     # First, write the scaling data for each symmetry function.
-    np.savetxt(fd, scaling['scaling'], fmt='%4d %5d %18.9f %18.9f %18.9f')
+    np.savetxt(fd, scalingdata, fmt='%4d %5d %18.9f %18.9f %18.9f')
 
     # The last line contains the minimum and maximum of the target property.
     fd.write(f"{scaling['target_min']:18.9f} {scaling['target_max']:18.9f}\n")
