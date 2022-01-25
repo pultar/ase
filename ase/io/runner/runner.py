@@ -20,6 +20,7 @@ import re
 import numpy as np
 from ase.io import read
 from ase.atoms import Atoms
+from ase.utils import reader, writer
 from ase.calculators.calculator import PropertyNotImplementedError, Parameters
 from ase.data import atomic_numbers, chemical_symbols
 
@@ -546,6 +547,7 @@ def _read_keyword(line):
         return arguments
 
 
+@reader
 def read_runnerconfig(fd):
     """Read an input.nn file and store the contained dictionary data."""
     parameters = {}
@@ -575,6 +577,7 @@ def read_runnerconfig(fd):
     return Parameters(**parameters)
 
 
+@reader
 def read_scaling(fd):
     """Read symmetry function scaling data contained in `scaling.data` files.
 
@@ -659,6 +662,7 @@ def read_scaling(fd):
     return scaling
 
 
+@writer
 def write_scaling(fd, scaling):
     """Write symmetry function scaling data.
 
