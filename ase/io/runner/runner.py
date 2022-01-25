@@ -902,8 +902,8 @@ def read_results_mode3(label, directory):
 
     # Read predicted structures from the output.data file.
     predicted_structures = read(directory + '/output.data', ':', format='runnerdata')
-    energy = 0.0
-    forces = 0.0
+    energy = np.array([i.get_potential_energy() for i in predicted_structures])
+    forces = np.array([i.get_forces() for i in predicted_structures])
 
     return predicted_structures, energy, forces
 
