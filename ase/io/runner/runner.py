@@ -98,8 +98,6 @@ def read_runnerdata(fd, index):
     [documentation](https://runner.pages.gwdg.de/runner/reference/files/#inputdata)
 
     """
-    # Read in the file.
-    lines = fd.readlines()
 
     # Container for all images in the file.
     images = []
@@ -108,7 +106,7 @@ def read_runnerdata(fd, index):
     (symbols, positions, cell, charges, magmoms, forces, periodic,
      totalenergy, totalcharge, latticecount) = reset_structure()
 
-    for lineidx, line in enumerate(lines):
+    for lineidx, line in enumerate(fd):
         # Jump over blank lines.
         if line.strip() == "":
             continue
