@@ -37,7 +37,7 @@ class Amber(FileIOCalculator):
                  amber_exe='sander -O ',
                  infile='mm.in', outfile='mm.out',
                  topologyfile='mm.top', incoordfile='mm.crd',
-                 outcoordfile='mm_dummy.crd', mdcoordfile=None, 
+                 outcoordfile='mm_dummy.crd', mdcoordfile=None,
                  energyfile='mden', forcefile='mdfrc',
                  **kwargs):
         """Construct Amber-calculator object.
@@ -72,7 +72,7 @@ class Amber(FileIOCalculator):
             Name of the file containing output energies.
         forcefile: str
             Name of the file containing output forces.
-        
+
         """
 
         self.out = 'mm.log'
@@ -158,10 +158,10 @@ class Amber(FileIOCalculator):
             # Amber's units of time are 1/20.455 ps
             # See: http://ambermd.org/Questions/units.html
             # Apply conversion factor from ps:
-            velocities.scale_factor = 20.455 
+            velocities.scale_factor = units.fs * 1000 / 20.455
             # get_velocities call returns velocities with units sqrt(eV/u)
             # so convert to Ang/ps
-            velocities[:] = atoms.get_velocities()[:]*units.fs*1000/velocities.scale_factor
+            velocities[:] = atoms.get_velocities()[:] * velocities.scale_factor
 
         # title
         cell_angular = fout.createVariable('cell_angular', 'c',
@@ -224,10 +224,10 @@ class Amber(FileIOCalculator):
         atoms.set_positions(all_coordinates)
         if 'velocities' in fin.variables:
             all_velocities = fin.variables['velocities']
-            if hasattr(all_velocities,'units'):
+            if hasattr(all_velocities, 'units'):
                 if all_velocities.units != b'angstrom/picosecond':
                     raise Exception(f'Unrecognised units {all_velocities.units}')
-            if hasattr(all_velocities,'scale_factor'):
+            if hasattr(all_velocities, 'scale_factor'):
                 scale_factor = all_velocities.scale_factor
             else:
                 scale_factor = 1.0
