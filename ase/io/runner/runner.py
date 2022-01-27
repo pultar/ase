@@ -63,7 +63,8 @@ def reset_structure():
             totalenergy, totalcharge, latticecount)
 
 
-def read_runnerdata(fd, index):
+@reader
+def read_runnerdata(fd, index, output_units='si'):
     """Parse all structures within a RuNNer input.data file.
 
     input.data files contain all structural information needed to train a
@@ -327,7 +328,8 @@ def write_all_inputs(atoms, properties, parameters, raise_exception=True,
             write_traintestforces(fd, atoms, splittraintest['testing'])
 
 
-def write_runnerdata(fd, images, comment='', fmt='%22.12f'):
+@writer
+def write_runnerdata(fd, images, comment='', fmt='%22.12f', input_units='si'):
     """Write series of ASE Atoms to a RuNNer input.data file.
 
     Parameters
