@@ -23,6 +23,7 @@ from ase.atoms import Atoms
 from ase.utils import reader, writer
 from ase.calculators.calculator import PropertyNotImplementedError, Parameters
 from ase.data import atomic_numbers, chemical_symbols
+from ase.units import Hartree, Bohr
 
 from ase.calculators.runner.runnersinglepoint import RunnerSinglePointCalculator
 from . import defaultoptions as do
@@ -78,6 +79,8 @@ def read_runnerdata(fd, index, output_units='si'):
         Python file object with the target input.data file.
     index : int
         The slice of structures which should be returned.
+    output_units : str
+        The desired output units. Can be 'si' or 'atomic'.
 
     Returns
     --------
@@ -139,27 +142,41 @@ def read_runnerdata(fd, index, output_units='si'):
         elif keyword == 'atom':
             x, y, z, symbol, charge, magmom, fx, fy, fz = line.split()[1:10]
 
-            # Convert and process.
+            # Convert to SI units and process.
             symbol = symbol.lower().capitalize()
+
+            if output_units == 'si':
+                x = float(x) * Bohr
+                y = float(y) * Bohr
+                z = float(z) * Bohr
+                fx = float(fx) * Hartree / Bohr
+                fy = float(fy) * Hartree / Bohr
+                fz = float(fz) * Hartree / Bohr
 
             # Append to related arrays.
             symbols.append(symbol)
-            positions.append([float(x), float(y), float(z)])
+            positions.append([x, y, z])
             charges.append(float(charge))
-            forces.append([float(fx), float(fy), float(fz)])
+            forces.append([fx, fy, fz])
             magmoms.append(float(magmom))
 
         # Read one cell lattice vector.
         elif keyword == 'lattice':
             lx, ly, lz = line.split()[1:4]
-            cell.append([float(lx), float(ly), float(lz)])
+
+            if output_units == 'si':
+                lx = float(lx) * Bohr
+                ly = float(ly) * Bohr
+                lz = float(lz) * Bohr
+
+            cell.append([lx, ly, lz])
 
             periodic[latticecount] = True
             latticecount += 1
 
         # Read the total energy of the structure.
         elif keyword == 'energy':
-            energy = float(line.split()[1])
+            energy = float(line.split()[1]) * Hartree
             totalenergy.append(energy)
 
         # Read the total charge of the structure.
@@ -260,6 +277,7 @@ def read_runnerase(label):
         A Python-dictionary contain all calculation options.
 
     """
+
     # Get the path to the input.data file.
     directory = ''.join(label.split('/')[:-1])
 
@@ -281,6 +299,7 @@ def write_all_inputs(atoms, properties, parameters, raise_exception=True,
                      label='runner', *, v8_legacy_format=True, scaling=None,
                      weights=None, splittraintest=None, sfvalues=None,
                      directory='.'):
+
     """Write all necessary input files for performing a RuNNer calculation."""
     # Write all parameters to a .ase parameters file.
     parameters.write(label + '.ase')
@@ -361,6 +380,12 @@ def write_runnerdata(fd, images, comment='', fmt='%22.12f', input_units='si'):
         if atoms.get_pbc().any():
             for vector in atoms.cell:
                 lx, ly, lz = vector
+
+                if input_units == 'si':
+                    lx /= Bohr
+                    ly /= Bohr
+                    lz /= Bohr
+
                 fd.write('lattice %s %s %s\n' % (fmt % lx, fmt % ly, fmt % lz))
 
         if atoms.calc is None:
@@ -369,6 +394,7 @@ def write_runnerdata(fd, images, comment='', fmt='%22.12f', input_units='si'):
             forces = np.zeros(atoms.positions.shape)
         else:
             energy = atoms.get_potential_energy()
+            energy /= Hartree
             try:
                 totalcharge = atoms.calc.get_property('totalcharge')
             except PropertyNotImplementedError:
@@ -384,6 +410,15 @@ def write_runnerdata(fd, images, comment='', fmt='%22.12f', input_units='si'):
         )
 
         for s, (x, y, z), q, m, (fx, fy, fz) in atom:
+
+            if input_units == 'si':
+                x = float(x) / Bohr
+                y = float(y) / Bohr
+                z = float(z) / Bohr
+                fx = float(fx) / Hartree * Bohr
+                fy = float(fy) / Hartree * Bohr
+                fz = float(fz) / Hartree * Bohr
+
             fd.write(
                 'atom %s %s %s %-2s %s %s %s %s %s\n'
                 % (fmt % x, fmt % y, fmt % z, s, fmt % q, fmt % m,
@@ -1049,7 +1084,7 @@ def write_functiontestingdata(fd, images, index=':', fmt='22.12f'):
         fd.write(f'{q:{fmt}} {e_tot:{fmt}} {e_short:{fmt}} {e_elec:{fmt}}\n')
 
 
-def write_trainteststruct(fd, images, index=":", fmt='22.12f'):
+def write_trainteststruct(fd, images, index=":", fmt='22.12f', input_units='si'):
     """Write series of ASE Atoms to a RuNNer input.data file.
 
     Parameters
@@ -1078,7 +1113,13 @@ def write_trainteststruct(fd, images, index=":", fmt='22.12f'):
         # Write lattice vectors for periodic structures.
         if atoms.get_pbc().any():
             fd.write('T\n')
-            for (lx, ly, lz) in atoms.cell:
+            for vector in atoms.cell:
+
+                if input_units == 'si':
+                    vector /= Bohr
+
+                lx, ly, lz = vector
+
                 fd.write(f'lattice {lx:{fmt}} {ly:{fmt}} {lz:{fmt}} \n')
         else:
             fd.write('F\n')
@@ -1098,6 +1139,13 @@ def write_trainteststruct(fd, images, index=":", fmt='22.12f'):
         )
 
         for s, (x, y, z), q, m, (fx, fy, fz) in atom:
+            if input_units == 'si':
+                x = float(x) / Bohr
+                y = float(y) / Bohr
+                z = float(z) / Bohr
+                fx = float(fx) / Hartree * Bohr
+                fy = float(fy) / Hartree * Bohr
+                fz = float(fz) / Hartree * Bohr
             fd.write(
                 f'{s:3} {x:{fmt}} {y:{fmt}} {z:{fmt}} {q:{fmt}} {m:{fmt}} '
                 + f'{fx:{fmt}} {fy:{fmt}} {fz:{fmt}}\n'
