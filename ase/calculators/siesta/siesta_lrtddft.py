@@ -148,7 +148,7 @@ class RamanCalculatorInterface(SiestaLRTDDFT, StaticPolarizabilityCalculator):
         self.omega = omega
         super().__init__(**kw)
 
-    def calculate(self, atoms):
+    def __call__(self, atoms):
         """
         Calculate the polarizability for frequency omega
 
