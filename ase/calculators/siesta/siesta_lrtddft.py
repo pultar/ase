@@ -118,10 +118,10 @@ class SiestaLRTDDFT:
 
         freq_cmplx = freq/un.Ha + 1j * self.tddft.eps
         if inter:
-            pmat = -self.tddft.comp_polariz_inter_Edir(freq_cmplx, Eext=Eext)
+            pmat = -self.tddft.comp_polariz_inter_edir(freq_cmplx, eext=Eext)
             self.dn = self.tddft.dn
         else:
-            pmat = -self.tddft.comp_polariz_nonin_Edir(freq_cmplx, Eext=Eext)
+            pmat = -self.tddft.comp_polariz_nonin_edir(freq_cmplx, eext=Eext)
             self.dn = self.tddft.dn0
 
         return pmat
