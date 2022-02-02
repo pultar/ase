@@ -879,9 +879,12 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
             prediction, energy, forces = io.read_results_mode3(self.label,
                                                                self._directory)
 
-            # For just one structure, store the energy as a single float.
-            if isinstance(energy, np.ndarray):
+            # For just one structure, flatten the energy and force arrays.
+            if energy.shape[0] == 1:
                 energy = float(energy[0])
+
+            if forces.shape[0] == 1:
+                forces = forces[0, :, :]
 
             self.set_prediction(prediction)
             self.set_energy(energy)
