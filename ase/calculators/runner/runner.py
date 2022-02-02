@@ -45,7 +45,7 @@ DEFAULT_PARAMETERS: dict = {
     'number_of_elements': None,         # Auto-set by ASE when attaching Atoms.
     'bond_threshold': 0.5,              # Default OK but system-dependent.
     'nn_type_short': 1,                 # Most people use atomic NNs.
-    'nnp_gen': 2,                       # 2Gs remain the most common use case.
+    #'nnp_gen': 2,                       # 2Gs remain the most common use case.
     'use_short_nn': True,               # Short-range fitting is the default.
     'optmode_charge': 1,                # Default OK but option is relevant.
     'optmode_short_energy': 1,          # Default OK but option is relevant.
