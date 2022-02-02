@@ -528,7 +528,13 @@ def _read_arguments(keyword, arguments):
 
         # In all other cases, we only read the value of a single argument and
         # append it to the final list of formatted arguments.
-        argumentvalue = argument_type(arguments[idx + count_parameters])
+        argumentvalue = arguments[idx + count_parameters]
+
+        # Catch legacy float format with Fortran double precision marker.
+        if 'd0' in argumentvalue:
+            argumentvalue = argumentvalue.split('d0')[0]
+
+        argumentvalue = argument_type(argumentvalue)
         arguments_formatted.append(argumentvalue)
 
         # Some keywords can only take predefined options.
