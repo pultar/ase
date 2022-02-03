@@ -79,7 +79,7 @@ DEFAULT_PARAMETERS: dict = {
     'center_symmetry_functions': True,  # This is standard procedure.
     'precondition_weights': True,       # This is standard procedure.
     # Mode 3.
-    'calculate_forces': False,          # Auto-set by ASE but important.
+    'calculate_forces': True,          # Auto-set by ASE but important.
     'calculate_stress': False,          # Auto-set by ASE but important.
     # ---------- 2G-specific keywords. ---------------------------------------#
     # All modes.
@@ -224,7 +224,7 @@ def coefficient_to_symfun(label, coefficient, cutoff):
     elif len(elements) == 3:
         elem1, elem2, elem3 = elements
         lamb, zeta = coefficient
-        symmetryfunction = [elem1, 3, elem2, elem3, 0.0, lamb, zeta, cutoff]
+        symmetryfunction = [elem1, 3, elem2, elem3, 0.0130, lamb, zeta, cutoff]
 
     return symmetryfunction
 
@@ -261,7 +261,7 @@ def calc_radial_symfuns(cutoff, rmin, n_radial, algorithm):
 def calc_angular_symfuns(cutoff, n_angular, algorithm):
     """Calculate the coefficients of angular symmetry functions."""
     # Hard-coded literature values for the zeta parameter.
-    zeta_lit = [1.0, 4.0, 8.0, 16.0, 64.0]
+    zeta_lit = [1.0, 2.0, 4.0, 16.0, 64.0]
     lambdas = [1.0, -1.0]
 
     # Calculate the interval between reference points.
@@ -305,7 +305,7 @@ def get_element_groups(elements, groupsize):
     # Build pairs of elements.
     if groupsize == 2:
         groups = product(elements, repeat=2)
-    
+
     # Build triples of elements.
     elif groupsize == 3:
         groups = combinations_with_replacement(elements, 2)

@@ -951,6 +951,9 @@ def read_results_mode3(label, directory):
     energy = np.array([i.get_potential_energy() for i in predicted_structures])
     forces = np.array([i.get_forces() for i in predicted_structures])
 
+    energy = energy * Hartree
+    forces = forces * Hartree / Bohr
+
     return predicted_structures, energy, forces
 
 
@@ -1195,6 +1198,11 @@ def write_traintestforces(fd, images, index=":", fmt='22.12f'):
             forces = atoms.get_forces()
 
         for (fx, fy, fz) in forces:
+
+            fx = float(fx) / Hartree * Bohr
+            fy = float(fy) / Hartree * Bohr
+            fz = float(fz) / Hartree * Bohr
+
             fd.write(
                 f'{fx:{fmt}} {fy:{fmt}} {fz:{fmt}}\n'
             )
