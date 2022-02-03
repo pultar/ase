@@ -193,18 +193,20 @@ def calc_symfun_coefficients(dataset, elements, cutoff, rmins=None,
         coefficients = calc_radial_symfuns(cutoff, rmins[label],
                                            n_radial, algorithm)
 
-        new_symfun = coefficient_to_symfun(label, coefficients, cutoff)
-
-        symmetryfunctions.append(new_symfun)
+        for coefficient in coefficients:
+            new_symfun = coefficient_to_symfun(label, coefficient, cutoff)
+            symmetryfunctions.append(new_symfun)
 
     # Calculate angular symmetry functions = three-body terms.
     for elements_group in get_element_groups(elements, 3):
         label = '-'.join(elements_group)
-        coefficients = calc_angular_symfuns(cutoff, n_angular, algorithm)
 
-        new_symfun = coefficient_to_symfun(label, coefficients, cutoff)
+        coefficients = calc_angular_symfuns(cutoff, n_angular, 'literature')
 
-        symmetryfunctions.append(new_symfun)
+        for lambd, zetas in coefficients:
+            for zeta in zetas:
+                new_symfun = coefficient_to_symfun(label, (lambd, zeta), cutoff)
+                symmetryfunctions.append(new_symfun)
 
     return symmetryfunctions
 
@@ -216,13 +218,13 @@ def coefficient_to_symfun(label, coefficient, cutoff):
     # Two elements indicates a radial symmetry function.
     if len(elements) == 2:
         elem1, elem2 = elements
-        eta = coefficient[0]
-        symmetryfunction = [elem1, [2, elem2, eta], cutoff]
+        eta = coefficient
+        symmetryfunction = [elem1, 2, elem2, eta, 0.0, cutoff]
 
     elif len(elements) == 3:
         elem1, elem2, elem3 = elements
         lamb, zeta = coefficient
-        symmetryfunction = [elem1, [3, elem2, elem3, lamb, zeta], cutoff]
+        symmetryfunction = [elem1, 3, elem2, elem3, 0.0, lamb, zeta, cutoff]
 
     return symmetryfunction
 
@@ -286,7 +288,7 @@ def calc_angular_symfuns(cutoff, n_angular, algorithm):
                 zeta[i] = 1 + (np.cos(tturn) / np.sin(tturn)**2) * w / lamb
 
             # Literature turning points.
-            elif type == 'literature':
+            elif algorithm == 'literature':
                 if n_angular > 5:
                     raise PropertyNotImplementedError('This')
                 zeta[i] = zeta_lit[i]
@@ -597,7 +599,7 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
                               symmetryfunctions=None,
                               coeff_radial=None, coeff_angular=None,
                               cutoff=12.0, rmins=None,
-                              n_radial=6, n_angular=4, type='half'):
+                              n_radial=6, n_angular=4, type='turn'):
         """Set symmetry function parameters in RuNNer.
 
         This routine offers several different options for setting the
@@ -615,17 +617,24 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
 
         """
         # If the user supplied finished symmetry functions.
-        if symmetryfunctions is not None:
-            for symfun in symmetryfunctions:
-                self.set({'symfunction_short': symfun})
+        if symmetryfunctions is None:
+
+            if self.parameters.elements is None:
+                self.set_elements()
+
+            symmetryfunctions = calc_symfun_coefficients(
+                self.dataset,
+                self.parameters.elements,
+                cutoff
+            )
 
         # FIXME: If the user provided coefficients.
-        elif coeff_radial is not None or coeff_angular is not None:
-            pass
+        # if coeff_radial is not None or coeff_angular is not None:
+        #     pass
 
-        else:
-            calc_symfun_coefficients(self.dataset, self.parameters.elements,
-                                     cutoff)
+        for symfun in symmetryfunctions:
+            self.parameters.symfunction_short.append(symfun)
+            # self.set(**{'symfunction_short': symfun})
 
     def set_sfvalues(self, sfvalues):
         """Store symmetry function values.
