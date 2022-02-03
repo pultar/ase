@@ -1124,12 +1124,14 @@ def write_trainteststruct(fd, images, index=":", fmt='22.12f', input_units='si')
             fd.write('T\n')
             for vector in atoms.cell:
 
-                if input_units == 'si':
-                    vector /= Bohr
-
                 lx, ly, lz = vector
 
-                fd.write(f'lattice {lx:{fmt}} {ly:{fmt}} {lz:{fmt}} \n')
+                if input_units == 'si':
+                    lx /= Bohr
+                    ly /= Bohr
+                    lz /= Bohr
+
+                fd.write(f'{lx:{fmt}} {ly:{fmt}} {lz:{fmt}} \n')
         else:
             fd.write('F\n')
 
