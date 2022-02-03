@@ -115,6 +115,9 @@ def read_runnerdata(fd, index, output_units='si'):
         if line.strip() == "":
             continue
 
+        if line.strip().startswith('#'):
+            continue
+
         # First word of each line must be a valid keyword.
         keyword = line.split()[0]
 
