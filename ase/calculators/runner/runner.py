@@ -547,13 +547,17 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
         # Get the chemical symbol of all elements.
         elements = [i.get_chemical_symbols() for i in atoms]
 
+        # Flatten the list of lists.
+        elements = [element for structure in elements for element in structure]
+
         # Remove repeated elements.
         elements = list(set(elements))
 
         # Sort the elements by atomic number.
         elements.sort(key=lambda i: atomic_numbers[i])
 
-        self.parameters['elements'] = elements
+        self.parameters.elements = elements
+        self.parameters.number_of_elements = len(elements)
 
     def set_scaling(self, scaling):
         """Store symmetry function scaling data.
@@ -783,6 +787,7 @@ class Runner(FileIOCalculator):  # pylint: disable=too-many-ancestors
 
         # Make sure that we run a Mode 1 calculation.
         self.set(runner_mode=1)
+        self.set(random_seed=73)
 
         # Start the calculation by calling the `get_property` method of the
         # parent class. We here ask for the symmetry function values, knowing
