@@ -40,115 +40,47 @@ import ase.io.runner.runner as io
 # Sensible default parameters for running RuNNer with ASE.
 DEFAULT_PARAMETERS: dict = {
     # General for all modes.
-    'runner_mode': 1,                   # Default should be to start a new fit.
-    'elements': None,                   # Auto-set by ASE when attaching Atoms.
-    'number_of_elements': None,         # Auto-set by ASE when attaching Atoms.
-    'bond_threshold': 0.5,              # Default OK but system-dependent.
-    'nn_type_short': 1,                 # Most people use atomic NNs.
-    #'nnp_gen': 2,                       # 2Gs remain the most common use case.
-    'use_short_nn': True,               # Short-range fitting is the default.
-    'optmode_charge': 1,                # Default OK but option is relevant.
-    'optmode_short_energy': 1,          # Default OK but option is relevant.
-    'optmode_short_force': 1,           # Default OK but option is relevant.
-    'points_in_memory': 1000,           # Default value is legacy.
-    'scale_symmetry_functions': True,   # Scaling is used by almost everyone.
-    'cutoff_type': 1,                   # Default OK, but important.
+    'runner_mode': 1,                     # Default is starting a new fit.
+    # All modes.
+    'symfunction_short': [],              # Automatically set if not provided.
+    'elements': None,                     # Auto-set by `set_atoms()`.
+    'bond_threshold': 0.5,                # Default OK but system-dependent.
+    'nn_type_short': 1,                   # Most people use atomic NNs.
+    #'nnp_gen': 2,                        # 2Gs remain the most common use case.
+    'use_short_nn': True,                 # Short-range fitting is the default.
+    'optmode_charge': 1,                  # Default OK but option is relevant.
+    'optmode_short_energy': 1,            # Default OK but option is relevant.
+    'optmode_short_force': 1,             # Default OK but option is relevant.
+    'points_in_memory': 1000,             # Default value is legacy.
+    'scale_symmetry_functions': True,     # Scaling is used by almost everyone.
+    'cutoff_type': 1,                     # Default OK, but important.
     # Mode 1.
-    'test_fraction': 0.1,               # Default too small, more common.
+    'test_fraction': 0.1,                 # Default too small, more common.
     # Mode 1 and 2.
-    'random_seed': 0,                   # Set via utility function set_seed().
-    'use_short_forces': True,           # Force fitting is standard procedure.
+    'use_short_forces': True,             # Force fitting is standard.
     # Mode 1 and 3.
-    'remove_atom_energies': True,       # Everyone only fits binding energies.
-    'atom_energy': [],                  # Dependency of `remove_atom_energies`.
+    'remove_atom_energies': True,         # Standard use case.
+    'atom_energy': [],                    # `remove_atom_energies` dependency.
     # Mode 2.
-    'epochs': 30,                       # Default is 0, 30 is common use case.
-    'kalman_lambda_short': 0.98000,     # Typical use case.
-    'kalman_nue_short': 0.99870,        # Typical use case.
-    'mix_all_points': True,             # This is a standard option for most.
+    'epochs': 30,                         # Default is 0, 30 is common.
+    'kalman_lambda_short': 0.98000,       # No Default, this is sensible value.
+    'kalman_nue_short': 0.99870,          # No Default, this is sensible value.
+    'mix_all_points': True,               # Standard option.
     'nguyen_widrow_weights_short': True,  # Typically improves the fit.
     'repeated_energy_update': True,       # Default is False, but usage common.
     'short_energy_error_threshold': 0.1,  # Use only energies > 0.1*RMSE.
     'short_energy_fraction': 1.0,         # All energies are used.
     'short_force_error_threshold': 1.0,   # All forces are used.
-    'short_force_fraction': 0.1,        # 10% of the forces are used.
-    'use_old_weights_charge': False,    # Relevant for calculation restart.
-    'use_old_weights_short': False,     # Relevant for calculation restart.
-    'write_weights_epoch': 5,           # Default is 1, very verbose.
+    'short_force_fraction': 0.1,          # 10% of the forces are used.
+    'use_old_weights_charge': False,      # Relevant for calculation restart.
+    'use_old_weights_short': False,       # Relevant for calculation restart.
+    'write_weights_epoch': 5,             # Default is 1, very verbose.
     # Mode 2 and 3.
-    'center_symmetry_functions': True,  # This is standard procedure.
-    'precondition_weights': True,       # This is standard procedure.
-    # Mode 3.
-    'calculate_forces': True,          # Auto-set by ASE but important.
-    'calculate_stress': False,          # Auto-set by ASE but important.
-    # ---------- 2G-specific keywords. ---------------------------------------#
-    # All modes.
-    'symfunction_short': [],
-    # Mode 2 and 3.
-    'global_activation_short': [None],
-    'global_hidden_layers_short': None,
-    'global_nodes_short': [None],
-    # ### PairNN-specific keywords.
-    # # All modes.
-    # 'element_pairsymfunction_short': [None, None, None],
-    # 'global_pairsymfunction_short': [None, None, None],
-    # # Mode 2 and 3.
-    # 'element_activation_pair': [None, None, None, None],
-    # 'element_hidden_layers_pair': [None, None],
-    # 'element_nodes_pair': [None, None, 'global_nodes_pair'],
-    # 'global_activation_pair': None,
-    # 'global_hidden_layers_pair': None,
-    # 'global_nodes_pair': None,
-    # # 3G-/4G-specific keywords.
-    # 'electrostatic_type': 1,            # Default ok, but should be visible.
-    # 'use_fixed_charges': False,
-    # 'use_gausswidth': False,
-    # 'fixed_gausswidth': [None, -99.0],
-    # 'element_symfunction_electrostatic': [None, None, None],
-    # 'global_symfunction_electrostatic': [None, None, None],
-    # 'symfunction_electrostatic': [None, None, None],
-    #
-    # 'element_activation_electrostatic': [None, None, None, None],
-    # 'element_activation_pair': [None, None, None, None],
-    # 'element_activation_short': [None, None, None, None],
-    # 'element_hidden_layers_electrostatic': [None, None],
-    # 'element_hidden_layers_pair': [None, None],
-    # 'element_hidden_layers_short': [None, None],
-    # 'element_nodes_electrostatic': [None, None, 'global_nodes_electrostatic'],
-    # 'element_nodes_pair': [None, None, 'global_nodes_pair'],
-    # 'element_nodes_short': [None, None, 'global_nodes_short'],
-    # 'global_activation_electrostatic': None,
-    # 'global_activation_pair': None,
-    # 'global_activation_short': None,
-    # 'global_hidden_layers_electrostatic': None,
-    # 'global_hidden_layers_pair': None,
-    # 'global_hidden_layers_short': None,
-    # 'global_nodes_electrostatic': None,
-    # 'global_nodes_pair': None,
-    # 'global_nodes_short': None,
-    # # Mode 1.
-    # 'enforce_totcharge': 1,
-    # # Mode 2.
-    # 'kalman_lambda_charge': 0.98000,           # Very common choice.
-    # 'kalman_nue_charge': 0.99870,              # Very common choice.
-    # 'charge_error_threshold': 0.0,             # Default is ok, but changed often.
-    # 'charge_fraction': 1.0,                    # Default is 0, must be changed.
-    # 'nguyen_widrow_weights_ewald': True,       # Typically improves the fit.
-    # 'regularize_fit_param': 0.00001,           # Very important for charge fitting.
-    # # Mode 2 and 3.
-    # 'use_electrostatics': False,
-    # 'ewald_alpha': 0.0,
-    # 'ewald_cutoff': 0.0,
-    # 'ewald_kmax': 0,
-    # 'ewald_prec': -1.0,
-    # 'fixed_charge': [None, 0.0],
-    # 'use_atom_charges': True,
-    # 'element_activation_electrostatic': [None, None, None, None],
-    # 'element_hidden_layers_electrostatic': [None, None],
-    # 'element_nodes_electrostatic': [None, None, 'global_nodes_electrostatic'],
-    # 'global_activation_electrostatic': None,
-    # 'global_hidden_layers_electrostatic': None,
-    # 'global_nodes_electrostatic': None
+    'center_symmetry_functions': True,    # This is standard procedure.
+    'precondition_weights': True,         # This is standard procedure.
+    'global_activation_short': ['t', 't', 'l'],  # tanh / linear activ. func.
+    'global_hidden_layers_short': 2,      # 2 hidden layers
+    'global_nodes_short': [15, 15],       # 15 nodes per hidden layer.
 }
 
 
