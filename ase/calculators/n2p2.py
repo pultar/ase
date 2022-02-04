@@ -6,9 +6,7 @@ from ase.calculators.genericfileio import GenericFileIOCalculator
 import os
 import shutil
 from ase.io.n2p2 import read_n2p2, write_n2p2
-
-
-
+from tempfile import mkdtemp#, NamedTemporaryFile, mktemp as uns_mktemp
 
 
 class N2P2Template:
@@ -197,7 +195,8 @@ class N2P2Calculator(FileIOCalculator):
 
     def __init__(self, restart=None, 
                 label=None, atoms=None, command=None,
-                files=[], txt='n2p2.out', **kwargs):
+                files=[], txt='n2p2.out', keep_tmp_files=False,
+                **kwargs):
         """File-IO calculator.
 
         command: str
@@ -219,10 +218,17 @@ class N2P2Calculator(FileIOCalculator):
         self.results = {}
         
         self.txt=txt
+        self.keep_tmp_files = keep_tmp_files
 
         ## preparing
-        if self.directory != os.curdir and not os.path.isdir(self.directory):
-            os.makedirs(self.directory)
+        if self.directory is None:
+            self.directly = mkdtemp(prefix="tmp-")
+        if self.directory != os.curdir: #:and not os.path.isdir(self.directory):
+            os.makedirs(self.directory, exist_ok=True)
+        else:
+            # lets not delete the initial folder so we don't delete a users script
+            self.keep_tmp_files  = True
+            
         self.write_files()
 
     def write_input(self, atoms, properties=None, system_changes=None):
@@ -351,3 +357,8 @@ class N2P2Calculator(FileIOCalculator):
                     with_energy_and_forces = True)
 
         self.results = res_atoms.calc.results
+        
+    def clean(self):
+        if not self.keep_tmp_files:
+            shutil.rmtree(self.directory)
+
