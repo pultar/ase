@@ -85,7 +85,6 @@ class N2P2Template:
                     filename= os.path.join(self.directory,'output.data'),
                     index=-1, 
                     with_energy_and_forces = True)
-
         self.results = res_atoms.calc.results
 
 
@@ -355,7 +354,6 @@ class N2P2Calculator(FileIOCalculator):
                     filename= os.path.join(self.directory,'output.data'),
                     index=-1, 
                     with_energy_and_forces = True)
-
         self.results = res_atoms.calc.results
         
     def clean(self):
