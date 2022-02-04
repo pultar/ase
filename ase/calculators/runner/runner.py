@@ -87,19 +87,14 @@ DEFAULT_PARAMETERS: dict = {
 class DatasetUndefiniedError(Exception):
     """Raise this error if no structure data is available to a calculator."""
 
-    def __init__(self, message=None):
+    def __init__(self, message='No training dataset defined yet.'):
         """Initialize the class.
 
         Optional Arguments:
         -------------------
-        message : string, _default_=`None`
+        message : string
             The error message to be shown to the user.
         """
-        # Define a default message.
-        if message is None:
-            message = 'No training dataset defined yet.'
-
-        # Raise.
         super().__init__(message)
 
 
