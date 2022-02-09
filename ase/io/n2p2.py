@@ -159,8 +159,10 @@ def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' 
                             charges = charges)
                             #charge  = charge)
         images.append(image)
+        # to start the next section
+        line = fd.readline()
 
-    if not index:
+    if index==':' or index is None:
         return images
     else:
         return images[index]
