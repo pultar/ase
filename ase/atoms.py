@@ -1236,7 +1236,7 @@ class Atoms:
         def circular_mean(coords):
             # circular mean of the coordinates, to be used instead of the center of mass
             sinus = np.sin(2 * np.pi * coords).sum(axis=0)
-            cosinus = np.cos(X * 2 * np.pi).sum(axis=0)
+            cosinus = np.cos(2 * np.pi * coords).sum(axis=0)
             return (np.arctan2(-sinus, -cosinus) + np.pi) / (2.0 * np.pi)
 
         # First move the atoms to the center (circular mean) of the cell
