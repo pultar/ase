@@ -48,9 +48,8 @@ class ModifyAtoms:
 
     def switch_indices(self):
         selected = self.selection()
-        indices = np.where(selected == True)[0]
-        selection_len = len([i for i in selected if i])
-        if selection_len != 2:
+        indices = np.where(selected)[0]
+        if len(indices) != 2:
             ui.error(_('Only two atoms must be selected!'))
             return
 
