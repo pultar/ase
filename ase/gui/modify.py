@@ -7,6 +7,7 @@ from ase.gui.widgets import Element
 from ase.gui.utils import get_magmoms
 import numpy as np
 
+
 class ModifyAtoms:
     """Presents a dialog box where the user is able to change the
     atomic type, the magnetic moment and tags of the selected atoms,
