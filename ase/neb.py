@@ -23,7 +23,7 @@ from ase.utils.forcecurve import fit_images
 from ase.optimize.precon import Precon, PreconImages
 from ase.optimize.ode import ode12r
 
-from ase.deprecate import deprecated
+from ase.deprecate import _deprecated
 
 
 class Spring:
@@ -823,7 +823,7 @@ class NEBOptimizer(Optimizer):
     def __init__(self,
                  neb,
                  restart=None, logfile='-', trajectory=None,
-                 master=deprecated(),
+                 master=_deprecated(),
                  comm=world,
                  append_trajectory=False,
                  method='ODE',
