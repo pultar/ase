@@ -628,8 +628,8 @@ class IOContext:
         self._exitstack.close()
 
     def openfile(self, file, comm=None, mode='w'):
-        from ase.parallel import world
         if comm is None:
+            from ase.parallel import world
             comm = world
 
         if hasattr(file, 'close'):
