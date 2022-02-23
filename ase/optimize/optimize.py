@@ -69,7 +69,7 @@ class Dynamics(IOContext):
         if isinstance(trajectory, str):
             mode = "a" if append_trajectory else "w"
             trajectory = self.closelater(Trajectory(
-                trajectory, mode=mode, master=master
+                trajectory, mode=mode, master=master, comm=comm
             ))
         self.attach(trajectory, atoms=atoms)
 
