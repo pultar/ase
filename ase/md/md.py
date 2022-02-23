@@ -7,6 +7,7 @@ from ase.optimize.optimize import Dynamics
 from ase.md.logger import MDLogger
 from ase.io.trajectory import Trajectory
 from ase import units
+from ase.parallel import world
 
 
 def process_temperature(temperature, temperature_K, orig_unit):
@@ -58,7 +59,7 @@ class MolecularDynamics(Dynamics):
     """Base-class for all MD classes."""
 
     def __init__(self, atoms, timestep, trajectory, logfile=None,
-                 loginterval=1, append_trajectory=False):
+                 loginterval=1, append_trajectory=False, comm=world):
         """Molecular Dynamics object.
 
         Parameters:
@@ -87,11 +88,13 @@ class MolecularDynamics(Dynamics):
             overwriten each time the dynamics is restarted from scratch.
             If True, the new structures are appended to the trajectory
             file instead.
+        comm: MPI Communicator
+            Used to restrain the MolecularDynamics process to a MPI subgroup.
         """
         # dt as to be attached _before_ parent class is initialized
         self.dt = timestep
 
-        Dynamics.__init__(self, atoms, logfile=None, trajectory=None)
+        Dynamics.__init__(self, atoms, logfile=None, trajectory=None, comm=comm)
 
         self.masses = self.atoms.get_masses()
         self.max_steps = None
@@ -112,13 +115,13 @@ class MolecularDynamics(Dynamics):
             if isinstance(trajectory, str):
                 mode = "a" if append_trajectory else "w"
                 trajectory = self.closelater(
-                    Trajectory(trajectory, mode=mode, atoms=atoms)
+                    Trajectory(trajectory, mode=mode, atoms=atoms, comm=comm)
                 )
             self.attach(trajectory, interval=loginterval)
 
         if logfile:
             logger = self.closelater(
-                MDLogger(dyn=self, atoms=atoms, logfile=logfile))
+                MDLogger(dyn=self, comm=comm, atoms=atoms, logfile=logfile))
             self.attach(logger, loginterval)
 
     def todict(self):
