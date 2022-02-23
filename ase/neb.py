@@ -10,6 +10,7 @@ from scipy.interpolate import CubicSpline
 from scipy.integrate import cumtrapz
 
 import ase.parallel
+from ase.parallel import world
 from ase.build import minimize_rotation_and_translation
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointCalculator
