@@ -1,11 +1,12 @@
 from ase.optimize.optimize import Optimizer
 from ase.parallel import world
 from ase.units import Ha, Bohr
+from ase.deprecate import deprecated
 
 
 class Berny(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 master=None, dihedral=True, comm=world):
+                 master=deprecated(), dihedral=True, comm=world):
         """Berny optimizer.
 
         This is a light ASE wrapper around the ``Berny`` optimizer from

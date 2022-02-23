@@ -5,6 +5,7 @@ from numpy.linalg import eigh
 
 from ase.optimize.optimize import Optimizer
 from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class BFGS(Optimizer):
@@ -12,7 +13,7 @@ class BFGS(Optimizer):
     defaults = {**Optimizer.defaults, 'alpha': 70.0}
 
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 maxstep=None, master=None, alpha=None, comm=world):
+                 maxstep=None, master=deprecated(), alpha=None, comm=world):
         """BFGS optimizer.
 
         Parameters:

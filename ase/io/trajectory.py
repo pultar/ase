@@ -7,6 +7,7 @@ from ase.atoms import Atoms
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator, all_properties
 from ase.constraints import dict2constraint
+from ase.deprecate import deprecated, warn_if_used
 from ase.io.jsonio import encode, decode
 from ase.io.pickletrajectory import PickleTrajectory
 from ase.parallel import world
@@ -14,19 +15,17 @@ from ase.utils import tokenize_version
 
 __all__ = ['Trajectory', 'PickleTrajectory']
 
-_unused = object()
-
 
 def _warn_master_was_used(master):
-    if master is not _unused:
-        warnings.warn(
-            "The 'master' keyword is deprecated, "
-            "please provide a communicator instead: Trajectory(..., comm=...).",
-            FutureWarning
-        )
+    msg = (
+        "The 'master' keyword is deprecated, "
+        "please provide a communicator instead: Trajectory(..., comm=...)."
+    )
+    warn_if_used(master, msg)
 
 
-def Trajectory(filename, mode='r', atoms=None, properties=None, master=_unused,
+def Trajectory(filename, mode='r', atoms=None, properties=None,
+               master=deprecated(),
                comm=world):
     """A Trajectory can be created in read, write or append mode.
 
@@ -69,7 +68,7 @@ class TrajectoryWriter:
     """Writes Atoms objects to a .traj file."""
 
     def __init__(self, filename, mode='w', atoms=None, properties=None,
-                 extra=[], master=None, comm=world):
+                 extra=[], master=deprecated(), comm=world):
         """A Trajectory writer, in write or append mode.
 
         Parameters:
@@ -102,7 +101,10 @@ class TrajectoryWriter:
 
         _warn_master_was_used(master)
 
-        self._is_dummy_writer = (comm.rank != 0)
+        if (master is deprecated()) or (master is None):
+            master = (comm.rank == 0)
+
+        self._is_dummy_writer = not master
         self.atoms = atoms
         self.properties = properties
 
@@ -117,7 +119,7 @@ class TrajectoryWriter:
         warnings.warn(
             "This attribute is deprecated and won't be provided anymore.",
             FutureWarning)
-        return self._is_dummy_writer
+        return not self._is_dummy_writer
 
     def __enter__(self):
         return self

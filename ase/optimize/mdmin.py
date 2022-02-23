@@ -2,6 +2,7 @@ import numpy as np
 
 from ase.optimize.optimize import Optimizer
 from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class MDMin(Optimizer):
@@ -9,7 +10,7 @@ class MDMin(Optimizer):
     defaults = {**Optimizer.defaults, 'dt': 0.2}
 
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 dt=None, master=None, comm=world):
+                 dt=None, master=deprecated(), comm=world):
         """Parameters:
 
         atoms: Atoms object

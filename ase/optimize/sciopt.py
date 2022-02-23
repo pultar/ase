@@ -1,7 +1,8 @@
 import numpy as np
 import scipy.optimize as opt
 from ase.optimize.optimize import Optimizer
-
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 class Converged(Exception):
     pass
@@ -17,8 +18,8 @@ class SciPyOptimizer(Optimizer):
     Only the call to the optimizer is still needed
     """
     def __init__(self, atoms, logfile='-', trajectory=None,
-                 callback_always=False, alpha=70.0, master=None,
-                 force_consistent=None):
+                 callback_always=False, alpha=70.0, master=deprecated(),
+                 force_consistent=None, comm=world):
         """Initialize object
 
         Parameters:
@@ -43,7 +44,7 @@ class SciPyOptimizer(Optimizer):
             steps to converge might be less if a lower value is used. However,
             a lower value also means risk of instability.
 
-        master: boolean
+        master: boolean (deprecated)
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
 
@@ -52,10 +53,13 @@ class SciPyOptimizer(Optimizer):
             extrapolated to 0 K).  By default (force_consistent=None) uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+
+        comm: MPI Communicator
+            Used to restrict calculation to a subset of MPI ranks.
         """
         restart = None
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+                           master, force_consistent=force_consistent, comm=comm)
         self.force_calls = 0
         self.callback_always = callback_always
         self.H0 = alpha
@@ -182,8 +186,8 @@ class SciPyGradientlessOptimizer(Optimizer):
     XXX: This is still a work in progress
     """
     def __init__(self, atoms, logfile='-', trajectory=None,
-                 callback_always=False, master=None,
-                 force_consistent=None):
+                 callback_always=False, master=deprecated(),
+                 force_consistent=None, comm=world):
         """Initialize object
 
         Parameters:
@@ -220,7 +224,7 @@ class SciPyGradientlessOptimizer(Optimizer):
         """
         restart = None
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+                           master, force_consistent=force_consistent, comm=comm)
         self.function_calls = 0
         self.callback_always = callback_always
 

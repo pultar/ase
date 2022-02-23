@@ -11,6 +11,8 @@ from ase.utils.linesearch import LineSearch
 from ase.utils.linesearcharmijo import LineSearchArmijo
 
 from ase.optimize.precon.precon import make_precon
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class PreconLBFGS(Optimizer):
@@ -38,9 +40,10 @@ class PreconLBFGS(Optimizer):
     # CO : added parameters rigid_units and rotation_factors
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  maxstep=None, memory=100, damping=1.0, alpha=70.0,
-                 master=None, precon='auto', variable_cell=False,
+                 master=deprecated(), precon='auto', variable_cell=False,
                  use_armijo=True, c1=0.23, c2=0.46, a_min=None,
-                 rigid_units=None, rotation_factors=None, Hinv=None):
+                 rigid_units=None, rotation_factors=None, Hinv=None,
+                 comm=world):
         """Parameters:
 
         atoms: Atoms object
@@ -120,10 +123,13 @@ class PreconLBFGS(Optimizer):
         rotation_factors: list of scalars; acceleration factors deteriming
            the rate of rotation as opposed to the rate of stretch in the
            rigid units
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         if variable_cell:
             atoms = UnitCellFilter(atoms)
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
 
         # default preconditioner
         #   TODO: introduce a heuristic for different choices of preconditioners

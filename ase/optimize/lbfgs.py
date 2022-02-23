@@ -3,6 +3,7 @@ import numpy as np
 from ase.optimize.optimize import Optimizer
 from ase.utils.linesearch import LineSearch
 from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class LBFGS(Optimizer):
@@ -15,7 +16,7 @@ class LBFGS(Optimizer):
     """
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  maxstep=None, memory=100, damping=1.0, alpha=70.0,
-                 use_line_search=False, master=None,
+                 use_line_search=False, master=deprecated(),
                  force_consistent=None, comm=world):
         """Parameters:
 

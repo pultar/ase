@@ -14,6 +14,7 @@ from numpy.linalg import eigh
 
 from ase.optimize.optimize import Optimizer
 from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 def f(lamda, Gbar, b, radius):
@@ -103,7 +104,7 @@ class GoodOldQuasiNewton(Optimizer):
                  hessianupdate='BFGS', hessian=None, forcemin=True,
                  verbosity=None, maxradius=None,
                  diagonal=20., radius=None,
-                 transitionstate=False, master=None, comm=world):
+                 transitionstate=False, master=deprecated(), comm=world):
         """Parameters:
 
         atoms: Atoms object

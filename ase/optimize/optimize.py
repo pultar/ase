@@ -11,6 +11,7 @@ from ase.io.jsonio import read_json, write_json
 from ase.io.trajectory import Trajectory
 from ase.parallel import barrier, world
 from ase.utils import IOContext
+from ase.deprecate import deprecated, warn_if_used
 
 
 class RestartError(RuntimeError):
@@ -25,7 +26,7 @@ class Dynamics(IOContext):
 
     def __init__(
             self, atoms, logfile, trajectory, append_trajectory=False,
-            master=_unused, comm=world,
+            master=deprecated(), comm=world,
     ):
         """Dynamics object.
 
@@ -56,13 +57,11 @@ class Dynamics(IOContext):
         comm: MPI communicator
             Defaults to ase.parallel.world.
         """
-
-        if master is not _unused:
-            warnings.warn(
-                "The 'master' keyword is deprecated, "
-                "please provide a communicator instead: Dynamics(..., comm=...).",
-                FutureWarning
-            )
+        warn_if_used(
+            master,
+            "The 'master' keyword is deprecated, "
+            "please provide a communicator instead: Dynamics(..., comm=...)."
+        )
 
         self.atoms = atoms
         self.logfile = self.openfile(logfile, mode='a', comm=comm)
@@ -200,7 +199,7 @@ class Optimizer(Dynamics):
             restart,
             logfile,
             trajectory,
-            master=None,
+            master=deprecated(),
             append_trajectory=False,
             force_consistent=False,
             comm=world,

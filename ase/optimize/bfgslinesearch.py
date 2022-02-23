@@ -11,6 +11,7 @@ from numpy import eye, absolute, sqrt, isinf
 from ase.utils.linesearch import LineSearch
 from ase.optimize.optimize import Optimizer
 from ase.parallel import world
+from ase.deprecate import deprecated
 
 # These have been copied from Numeric's MLab.py
 # I don't think they made the transition to scipy_core
@@ -25,7 +26,7 @@ __version__ = '0.1'
 class BFGSLineSearch(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', maxstep=None,
                  trajectory=None, c1=0.23, c2=0.46, alpha=10.0, stpmax=50.0,
-                 master=None, force_consistent=None, comm=world):
+                 master=deprecated(), force_consistent=None, comm=world):
         """Optimize atomic positions in the BFGSLineSearch algorithm, which
         uses both forces and potential energy information.
 

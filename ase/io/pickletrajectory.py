@@ -25,6 +25,7 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.constraints import FixAtoms
 from ase.parallel import world, barrier
+from ase.deprecate import deprecated
 
 
 class PickleTrajectory:
@@ -38,7 +39,7 @@ class PickleTrajectory:
     write_momenta = True
     write_info = True
 
-    def __init__(self, filename, mode='r', atoms=None, master=None,
+    def __init__(self, filename, mode='r', atoms=None, master=deprecated(),
                  backup=True, _warn=True):
         """A PickleTrajectory can be created in read, write or append mode.
 
