@@ -23,7 +23,7 @@ from ase.utils.forcecurve import fit_images
 from ase.optimize.precon import Precon, PreconImages
 from ase.optimize.ode import ode12r
 
-from ase.deprecate import _deprecated
+from ase.deprecate import deprecated as _deprecated
 
 
 class Spring:
