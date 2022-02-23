@@ -17,9 +17,6 @@ class RestartError(RuntimeError):
     pass
 
 
-_unused = object()
-
-
 class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
