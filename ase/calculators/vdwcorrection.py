@@ -146,7 +146,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
                  Rmax=10.,  # maximal radius for periodic calculations
                  Ldecay=1.,  # decay length for smoothing in periodic calcs
                  vdWDB_alphaC6=vdWDB_alphaC6,
-                 txt=None, sR=None):
+                 txt=None, sR=None, comm=world):
         """Constructor
 
         Parameters
@@ -162,11 +162,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
 
         if txt is None:
             txt = get_logging_file_descriptor(self.calculator)
-        if hasattr(self.calculator, 'world'):
-            myworld = self.calculator.world
-        else:
-            myworld = world  # the best we know
-        self.txt = self.openfile(txt, myworld)
+        self.txt = self.openfile(txt, comm=comm)
 
         self.vdwradii = vdwradii
         self.vdWDB_alphaC6 = vdWDB_alphaC6

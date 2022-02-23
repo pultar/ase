@@ -10,6 +10,7 @@ from ase.calculators.calculator import (Calculator, all_changes,
 import ase.units as units
 from ase.utils import IOContext
 from ase.stress import full_3x3_to_voigt_6_stress
+from ase.parallel import world
 
 
 def actualunixsocketname(name):
@@ -550,7 +551,7 @@ class SocketIOCalculator(Calculator, IOContext):
 
     def __init__(self, calc=None, port=None,
                  unixsocket=None, timeout=None, log=None, *,
-                 launch_client=None):
+                 launch_client=None, comm=world):
         """Initialize socket I/O calculator.
 
         This calculator launches a server which passes atomic
@@ -617,7 +618,7 @@ class SocketIOCalculator(Calculator, IOContext):
         self.timeout = timeout
         self.server = None
 
-        self.log = self.openfile(log)
+        self.log = self.openfile(log, comm=comm)
 
         # We only hold these so we can pass them on to the server.
         # They may both be None as stored here.

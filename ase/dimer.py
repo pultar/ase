@@ -324,9 +324,9 @@ class MinModeControl(IOContext):
         self.counters = {'forcecalls': 0, 'rotcount': 0, 'optcount': 0}
         self.log()
 
-    def initialize_logfiles(self, logfile=None, eigenmode_logfile=None):
-        self.logfile = self.openfile(logfile, comm=world)
-        self.eigenmode_logfile = self.openfile(eigenmode_logfile, comm=world)
+    def initialize_logfiles(self, logfile=None, eigenmode_logfile=None, comm=world):
+        self.logfile = self.openfile(logfile, comm=comm)
+        self.eigenmode_logfile = self.openfile(eigenmode_logfile, comm=comm)
 
     def log(self, parameter=None):
         """Log the parameters of the eigenmode search."""
