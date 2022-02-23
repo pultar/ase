@@ -2,7 +2,6 @@
 
 import collections.abc
 import time
-import warnings
 from math import sqrt
 from os.path import isfile
 
