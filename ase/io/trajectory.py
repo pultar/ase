@@ -16,6 +16,7 @@ __all__ = ['Trajectory', 'PickleTrajectory']
 
 _unused = object()
 
+
 def _warn_master_was_used(master):
     if master is not _unused:
         warnings.warn(
@@ -113,7 +114,9 @@ class TrajectoryWriter:
 
     @property
     def master(self):
-        warnings.warn("This attribute is deprecated and won't be provided anymore.", FutureWarning)
+        warnings.warn(
+            "This attribute is deprecated and won't be provided anymore.",
+            FutureWarning)
         return self._is_dummy_writer
 
     def __enter__(self):

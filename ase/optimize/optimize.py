@@ -1,8 +1,8 @@
 """Structure optimization. """
 
-import warnings
 import collections.abc
 import time
+import warnings
 from math import sqrt
 from os.path import isfile
 
@@ -12,16 +12,19 @@ from ase.io.trajectory import Trajectory
 from ase.parallel import barrier, world
 from ase.utils import IOContext
 
+
 class RestartError(RuntimeError):
     pass
 
+
 _unused = object()
+
 
 class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
     def __init__(
-        self, atoms, logfile, trajectory, append_trajectory=False,
+            self, atoms, logfile, trajectory, append_trajectory=False,
             master=_unused, comm=world,
     ):
         """Dynamics object.
@@ -82,7 +85,7 @@ class Dynamics(IOContext):
         return self.nsteps
 
     def insert_observer(
-        self, function, position=0, interval=1, *args, **kwargs
+            self, function, position=0, interval=1, *args, **kwargs
     ):
         """Insert an observer."""
         if not isinstance(function, collections.abc.Callable):
@@ -144,7 +147,6 @@ class Dynamics(IOContext):
 
         # run the algorithm until converged or max_steps reached
         while not self.converged() and self.nsteps < self.max_steps:
-
             # compute the next step
             self.step()
             self.nsteps += 1
@@ -193,15 +195,15 @@ class Optimizer(Dynamics):
     defaults = {'maxstep': 0.2}
 
     def __init__(
-        self,
-        atoms,
-        restart,
-        logfile,
-        trajectory,
-        master=None,
-        append_trajectory=False,
-        force_consistent=False,
-        comm=world,
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master=None,
+            append_trajectory=False,
+            force_consistent=False,
+            comm=world,
     ):
         """Structure optimizer object.
 
