@@ -20,7 +20,8 @@ class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
     def __init__(
-        self, atoms, logfile, trajectory, append_trajectory=False, master=None
+        self, atoms, logfile, trajectory, append_trajectory=False,
+            master=None, comm=world,
     ):
         """Dynamics object.
 
@@ -45,24 +46,32 @@ class Dynamics(IOContext):
             file instead.
 
         master: boolean
-            Defaults to None, which causes only rank 0 to save files.  If
-            set to true,  this rank will save files.
+            Defaults to None, which causes only rank 0 of passed communicator
+            to save files.  If set to true, this rank will save files.
+
+        comm: MPI communicator
+            Defaults to ase.parallel.world.
         """
 
+        if master is None:
+            master = (comm.rank == 0)
+
         self.atoms = atoms
-        self.logfile = self.openfile(logfile, mode='a', comm=world)
+        self.logfile = self.openfile(logfile, mode='a', comm=comm)
         self.observers = []
         self.nsteps = 0
         # maximum number of steps placeholder with maxint
         self.max_steps = 100000000
 
-        if trajectory is not None:
-            if isinstance(trajectory, str):
-                mode = "a" if append_trajectory else "w"
-                trajectory = self.closelater(Trajectory(
-                    trajectory, mode=mode, master=master
-                ))
-            self.attach(trajectory, atoms=atoms)
+        if trajectory is None:
+            return
+
+        if isinstance(trajectory, str):
+            mode = "a" if append_trajectory else "w"
+            trajectory = self.closelater(Trajectory(
+                trajectory, mode=mode, master=master
+            ))
+        self.attach(trajectory, atoms=atoms)
 
     def get_number_of_steps(self):
         return self.nsteps
