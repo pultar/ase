@@ -978,8 +978,8 @@ class MinModeAtoms:
 
 class MinModeTranslate(Optimizer):
     """An Optimizer specifically tailored to minimum mode following."""
-    def __init__(self, atoms, logfile='-', trajectory=None):
-        Optimizer.__init__(self, atoms, None, logfile, trajectory)
+    def __init__(self, atoms, logfile='-', trajectory=None, comm=world):
+        Optimizer.__init__(self, atoms, None, logfile, trajectory, comm=comm)
 
         self.control = atoms.get_control()
 

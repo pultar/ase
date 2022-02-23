@@ -1,5 +1,6 @@
 import numpy as np
 from ase.optimize.optimize import Dynamics
+from ase.parallel import world
 
 
 def subtract_projection(a, b):
@@ -30,7 +31,7 @@ class ContourExploration(Dynamics):
                  rng=np.random,
                  force_consistent=None,
                  trajectory=None, logfile=None,
-                 append_trajectory=False, loginterval=1):
+                 append_trajectory=False, loginterval=1, comm=world):
         """Contour Exploration object.
 
         Parameters:
@@ -120,6 +121,9 @@ class ContourExploration(Dynamics):
             overwriten each time the dynamics is restarted from scratch.
             If True, the new structures are appended to the trajectory
             file instead.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
 
         if potentiostat_step_scale is None:
@@ -179,6 +183,7 @@ class ContourExploration(Dynamics):
         Dynamics.__init__(self, atoms,
                           logfile, trajectory,  # loginterval,
                           append_trajectory=append_trajectory,
+                          comm=comm
                           )
 
         # we need velocities or NaNs will be produced,

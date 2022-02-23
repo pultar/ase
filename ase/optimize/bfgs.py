@@ -4,6 +4,7 @@ import numpy as np
 from numpy.linalg import eigh
 
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
 
 
 class BFGS(Optimizer):
@@ -11,7 +12,7 @@ class BFGS(Optimizer):
     defaults = {**Optimizer.defaults, 'alpha': 70.0}
 
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 maxstep=None, master=None, alpha=None):
+                 maxstep=None, master=None, alpha=None, comm=world):
         """BFGS optimizer.
 
         Parameters:
@@ -44,6 +45,9 @@ class BFGS(Optimizer):
             conservative value of 70.0 is the default, but number of needed
             steps to converge might be less if a lower value is used. However,
             a lower value also means risk of instability.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         if maxstep is None:
             self.maxstep = self.defaults['maxstep']
@@ -59,7 +63,7 @@ class BFGS(Optimizer):
         else:
             self.alpha = alpha
 
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
 
     def initialize(self):
         # initial hessian

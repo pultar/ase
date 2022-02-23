@@ -821,6 +821,7 @@ class NEBOptimizer(Optimizer):
                  neb,
                  restart=None, logfile='-', trajectory=None,
                  master=None,
+                 comm=world,
                  append_trajectory=False,
                  method='ODE',
                  alpha=0.01,
@@ -833,7 +834,8 @@ class NEBOptimizer(Optimizer):
                          logfile=logfile, trajectory=trajectory,
                          master=master,
                          append_trajectory=append_trajectory,
-                         force_consistent=False)
+                         force_consistent=False,
+                         comm=comm)
         self.neb = neb
 
         method = method.lower()

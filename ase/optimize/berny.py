@@ -1,10 +1,11 @@
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
 from ase.units import Ha, Bohr
 
 
 class Berny(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 master=None, dihedral=True):
+                 master=None, dihedral=True, comm=world):
         """Berny optimizer.
 
         This is a light ASE wrapper around the ``Berny`` optimizer from
@@ -48,7 +49,7 @@ class Berny(Optimizer):
         from berny import Berny as _Berny, Geometry
 
         self._restart_data = None  # Optimizer.__init__() may overwrite
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
         geom = Geometry(atoms.get_chemical_symbols(), atoms.positions)
         self._berny = _Berny(
             geom,
@@ -60,6 +61,7 @@ class Berny(Optimizer):
             stepmax=0.,
             steprms=0.,
             dihedral=dihedral,
+            comm=comm,
         )
 
         # Berny yields the initial geometry the first time because it is

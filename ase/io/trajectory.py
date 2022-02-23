@@ -14,16 +14,18 @@ from ase.utils import tokenize_version
 
 __all__ = ['Trajectory', 'PickleTrajectory']
 
+_unused = object()
 
 def _warn_master_was_used(master):
-    if master is not None:
+    if master is not _unused:
         warnings.warn(
             "The 'master' keyword is deprecated, "
-            "please provide a communicator instead: Trajectory(..., comm=...)."
+            "please provide a communicator instead: Trajectory(..., comm=...).",
+            FutureWarning
         )
 
 
-def Trajectory(filename, mode='r', atoms=None, properties=None, master=None,
+def Trajectory(filename, mode='r', atoms=None, properties=None, master=_unused,
                comm=world):
     """A Trajectory can be created in read, write or append mode.
 
@@ -111,7 +113,7 @@ class TrajectoryWriter:
 
     @property
     def master(self):
-        warnings.warn("This attribute is deprecated and won't be provided anymore.")
+        warnings.warn("This attribute is deprecated and won't be provided anymore.", FutureWarning)
         return self._is_dummy_writer
 
     def __enter__(self):

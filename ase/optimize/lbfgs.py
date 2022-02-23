@@ -2,6 +2,7 @@ import numpy as np
 
 from ase.optimize.optimize import Optimizer
 from ase.utils.linesearch import LineSearch
+from ase.parallel import world
 
 
 class LBFGS(Optimizer):
@@ -15,7 +16,7 @@ class LBFGS(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  maxstep=None, memory=100, damping=1.0, alpha=70.0,
                  use_line_search=False, master=None,
-                 force_consistent=None):
+                 force_consistent=None, comm=world):
         """Parameters:
 
         atoms: Atoms object
@@ -61,9 +62,12 @@ class LBFGS(Optimizer):
             extrapolated to 0 K).  By default (force_consistent=None) uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         Optimizer.__init__(self, atoms, restart, logfile, trajectory, master,
-                           force_consistent=force_consistent)
+                           force_consistent=force_consistent, comm=comm)
 
         if maxstep is not None:
             self.maxstep = maxstep

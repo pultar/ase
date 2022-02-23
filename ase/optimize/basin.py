@@ -26,7 +26,9 @@ class BasinHopping(Dynamics):
                  trajectory='lowest.traj',
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.traj',
-                 adjust_cm=True):
+                 adjust_cm=True,
+                 comm=world
+                 ):
         """Parameters:
 
         atoms: Atoms object
@@ -38,6 +40,9 @@ class BasinHopping(Dynamics):
         logfile: file object or str
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         self.kT = temperature
         self.optimizer = optimizer
@@ -54,7 +59,7 @@ class BasinHopping(Dynamics):
             self.lm_trajectory = self.closelater(
                 Trajectory(local_minima_trajectory, 'w', atoms))
 
-        Dynamics.__init__(self, atoms, logfile, trajectory)
+        Dynamics.__init__(self, atoms, logfile, trajectory, comm=comm)
         self.initialize()
 
     def todict(self):

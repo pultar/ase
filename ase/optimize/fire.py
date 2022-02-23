@@ -2,6 +2,7 @@ import warnings
 import numpy as np
 
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
 
 
 class FIRE(Optimizer):
@@ -9,7 +10,7 @@ class FIRE(Optimizer):
                  dt=0.1, maxstep=None, maxmove=None, dtmax=1.0, Nmin=5,
                  finc=1.1, fdec=0.5,
                  astart=0.1, fa=0.99, a=0.1, master=None, downhill_check=False,
-                 position_reset_callback=None, force_consistent=None):
+                 position_reset_callback=None, force_consistent=None, comm=world):
         """Parameters:
 
         atoms: Atoms object
@@ -52,7 +53,7 @@ class FIRE(Optimizer):
             when downhill_check is True.
         """
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+                           master, force_consistent=force_consistent, comm=comm)
 
         self.dt = dt
 

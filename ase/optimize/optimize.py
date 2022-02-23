@@ -1,5 +1,6 @@
 """Structure optimization. """
 
+import warnings
 import collections.abc
 import time
 from math import sqrt
@@ -11,17 +12,17 @@ from ase.io.trajectory import Trajectory
 from ase.parallel import barrier, world
 from ase.utils import IOContext
 
-
 class RestartError(RuntimeError):
     pass
 
+_unused = object()
 
 class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
     def __init__(
         self, atoms, logfile, trajectory, append_trajectory=False,
-            master=None, comm=world,
+            master=_unused, comm=world,
     ):
         """Dynamics object.
 
@@ -45,7 +46,7 @@ class Dynamics(IOContext):
             If True, the new structures are appended to the trajectory
             file instead.
 
-        master: boolean
+        master: boolean (deprecated)
             Defaults to None, which causes only rank 0 of passed communicator
             to save files.  If set to true, this rank will save files.
 
@@ -53,8 +54,12 @@ class Dynamics(IOContext):
             Defaults to ase.parallel.world.
         """
 
-        if master is None:
-            master = (comm.rank == 0)
+        if master is not _unused:
+            warnings.warn(
+                "The 'master' keyword is deprecated, "
+                "please provide a communicator instead: Dynamics(..., comm=...).",
+                FutureWarning
+            )
 
         self.atoms = atoms
         self.logfile = self.openfile(logfile, mode='a', comm=comm)
@@ -196,6 +201,7 @@ class Optimizer(Dynamics):
         master=None,
         append_trajectory=False,
         force_consistent=False,
+        comm=world,
     ):
         """Structure optimizer object.
 
@@ -216,7 +222,7 @@ class Optimizer(Dynamics):
             Trajectory will be constructed.  Use *None* for no
             trajectory.
 
-        master: boolean
+        master: boolean (deprecated)
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
 
@@ -228,6 +234,9 @@ class Optimizer(Dynamics):
             extrapolated to 0 K).  If force_consistent=None, uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         Dynamics.__init__(
             self,
@@ -236,6 +245,7 @@ class Optimizer(Dynamics):
             trajectory,
             append_trajectory=append_trajectory,
             master=master,
+            comm=comm
         )
 
         self.force_consistent = force_consistent
