@@ -8,5 +8,5 @@ def deprecated():
 
 
 def warn_if_used(value, message, tp=FutureWarning):
-    if value is not unused_paceholder:
+    if value is not _unused_paceholder:
         warnings.warn(message, tp)

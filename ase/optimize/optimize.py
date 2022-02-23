@@ -7,11 +7,11 @@ from math import sqrt
 from os.path import isfile
 
 from ase.calculators.calculator import PropertyNotImplementedError
+from ase.deprecate import deprecated, warn_if_used
 from ase.io.jsonio import read_json, write_json
 from ase.io.trajectory import Trajectory
 from ase.parallel import barrier, world
 from ase.utils import IOContext
-from ase.deprecate import deprecated, warn_if_used
 
 
 class RestartError(RuntimeError):
