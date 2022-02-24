@@ -1,14 +1,14 @@
 """Extension of the SinglePointCalculator class tailored for usage with RuNNer.
 
-The RuNNer Neural Network Energy Representation is a framework for the 
-construction of high-dimensional neural network potentials developed in the 
+The RuNNer Neural Network Energy Representation is a framework for the
+construction of high-dimensional neural network potentials developed in the
 group of Prof. Dr. Jörg Behler at Georg-August-Universität Göttingen.
 
 Contains
 --------
 
-RunnerSinglePointCalculator : SinglePointCalculator 
-    Extension of the SinglePointCalculator class tailored for usage with RuNNer.
+RunnerSinglePointCalculator : SinglePointCalculator
+    Extension of the native ASE SinglePointCalculator class.
 
 Reference
 ---------
@@ -20,6 +20,9 @@ Contributors
 
 """
 
+from typing import Optional
+
+from ase import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 
 
@@ -32,10 +35,10 @@ class RunnerSinglePointCalculator(SinglePointCalculator):
 
     """
 
-    def __init__(self, atoms, **results):
-        """Save energy, forces, stress, ... for the current configuration."""
+    def __init__(self, atoms: Atoms, **results) -> None:
+        """Save energy, forces, ..., and charge for one atomic configuration."""
         # Remove the total charge from the results dictionary.
-        totalcharge = results.pop('totalcharge', None)
+        totalcharge: Optional[float] = results.pop('totalcharge', None)
 
         # Initialize the parent class which will handle everything but the
         # total charge.

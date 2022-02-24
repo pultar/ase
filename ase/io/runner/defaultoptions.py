@@ -1,9 +1,148 @@
-# ---------- The full monty - All RuNNer options with description etc. --------#
-RUNNERCONFIG_DEFAULTS: dict = {
+"""Default dictionaries of RuNNer parameters.
+
+Provides
+--------
+RunnerOptions : TypedDict
+    Type specifications for all dictionaries of RuNNer parameters. This is
+    mainly used for `DEFAULT_PARAMETERS` at the moment and NOT a complete list
+    of all possible parameters as given in `RUNNERCONFIG_DEFAULTS`.
+DEFAULT_PARAMETERS : RunnerOptions
+    A selection of those keywords in `RUNNERCONFIG_DEFAULTS` which are
+        - either mandatory for RuNNer usage,
+        - or very commonly used,
+        - or have a default in RuNNer that is rarely seen in applications.
+    This dictionary is used when initializing a RuNNer calculator object.
+RUNNERDATA_KEYWORDS : list[str]
+    A list of the possible allowed keywords in an input.nn file.
+RUNNERCONFIG_DEFAULTS : nested dict
+    A dictionary of all RuNNer options, complete with
+        - type specification
+        - verbose description
+        - formatting statement
+        - RuNNer mode specification
+        - arguments with description, type specification, and possible options
+        - default value
+        - switch whether the parameter can occur multiple times in input.nn
+
+Reference
+---------
+- [The online documentation of RuNNer](https://theochem.gitlab.io/runner)
+
+Contributors
+------------
+- Author: [Alexander Knoll](mailto:alexander.knoll@chemie.uni-goettingen.de)
+
+"""
+
+from typing import TypedDict, Optional
+from .symmetryfunctions import SymmetryFunctionSet
+
+
+class RunnerOptions(TypedDict, total=False):
+    """Type specifications for RuNNer default options."""
+
+    runner_mode: int
+    symfunction_short: SymmetryFunctionSet
+    elements: Optional[list[str]]
+    number_of_elements: int
+    bond_threshold: float
+    nn_type_short: int
+    use_short_nn: bool
+    optmode_charge: int
+    optmode_short_energy: int
+    optmode_short_force: int
+    points_in_memory: int
+    scale_symmetry_functions: bool
+    cutoff_type: int
+    # Mode 1.
+    test_fraction: float
+    # Mode 1 and 2.
+    use_short_forces: bool
+    # Mode 1 and 3.
+    remove_atom_energies: bool
+    atom_energy: dict[str, float]
+    # Mode 2.
+    epochs: int
+    kalman_lambda_short: float
+    kalman_nue_short: float
+    mix_all_points: bool
+    nguyen_widrow_weights_short: bool
+    repeated_energy_update: bool
+    short_energy_error_threshold: float
+    short_energy_fraction: float
+    short_force_error_threshold: float
+    short_force_fraction: float
+    use_old_weights_charge: bool
+    use_old_weights_short: bool
+    write_weights_epoch: int
+    # Mode 2 and 3.
+    center_symmetry_functions: bool
+    precondition_weights: bool
+    global_activation_short: list[str]
+    global_hidden_layers_short: int
+    global_nodes_short: list[int]
+    # Mode 3.
+    calculate_forces: bool
+    calculate_stress: bool
+
+
+DEFAULT_PARAMETERS: RunnerOptions = {
+    # General for all modes.
+    'runner_mode': 1,                     # Default is starting a new fit.
+    # All modes.
+    'symfunction_short': SymmetryFunctionSet(),  # Auto-set if net provided.
+    'elements': None,                     # Auto-set by `set_atoms()`.
+    'number_of_elements': 0,              # Auto-set by `set_atoms()`.
+    'bond_threshold': 0.5,                # Default OK but system-dependent.
+    'nn_type_short': 1,                   # Most people use atomic NNs.
+    #'nnp_gen': 2,                        # 2Gs remain the most common use case.
+    'use_short_nn': True,                 # Short-range fitting is the default.
+    'optmode_charge': 1,                  # Default OK but option is relevant.
+    'optmode_short_energy': 1,            # Default OK but option is relevant.
+    'optmode_short_force': 1,             # Default OK but option is relevant.
+    'points_in_memory': 1000,             # Default value is legacy.
+    'scale_symmetry_functions': True,     # Scaling is used by almost everyone.
+    'cutoff_type': 1,                     # Default OK, but important.
+    # Mode 1.
+    'test_fraction': 0.1,                 # Default too small, more common.
+    # Mode 1 and 2.
+    'use_short_forces': True,             # Force fitting is standard.
+    # Mode 1 and 3.
+    'remove_atom_energies': True,         # Standard use case.
+    'atom_energy': {},                    # `remove_atom_energies` dependency.
+    # Mode 2.
+    'epochs': 30,                         # Default is 0, 30 is common.
+    'kalman_lambda_short': 0.98000,       # No Default, this is sensible value.
+    'kalman_nue_short': 0.99870,          # No Default, this is sensible value.
+    'mix_all_points': True,               # Standard option.
+    'nguyen_widrow_weights_short': True,  # Typically improves the fit.
+    'repeated_energy_update': True,       # Default is False, but usage common.
+    'short_energy_error_threshold': 0.1,  # Use only energies > 0.1*RMSE.
+    'short_energy_fraction': 1.0,         # All energies are used.
+    'short_force_error_threshold': 1.0,   # All forces are used.
+    'short_force_fraction': 0.1,          # 10% of the forces are used.
+    'use_old_weights_charge': False,      # Relevant for calculation restart.
+    'use_old_weights_short': False,       # Relevant for calculation restart.
+    'write_weights_epoch': 5,             # Default is 1, very verbose.
+    # Mode 2 and 3.
+    'center_symmetry_functions': True,    # This is standard procedure.
+    'precondition_weights': True,         # This is standard procedure.
+    'global_activation_short': ['t', 't', 'l'],  # tanh / linear activ. func.
+    'global_hidden_layers_short': 2,      # 2 hidden layers
+    'global_nodes_short': [15, 15],       # 15 nodes per hidden layer.
+}
+
+
+RUNNERDATA_KEYWORDS: list[str] = ['begin', 'comment', 'lattice', 'atom',
+                                  'charge', 'energy', 'end']
+
+
+RUNNERCONFIG_DEFAULTS = {
     'analyze_composition': {
         'type': bool,
-        'description': " Print detailed information about the element composition of the data set in  `input.data`.",
-        'format': "analyze_composition",
+        'description': r'Print detailed information about the element com'
+                       + r'position of the data set in  `input.data`.',
+        'format': r'analyze_composition',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -14,8 +153,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'analyze_error': {
         'type': bool,
-        'description': " Print detailed information about the training error.",
-        'format': "analyze_error",
+        'description': r'Print detailed information about the training er'
+                       + r'ror.',
+        'format': r'analyze_error',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -25,8 +165,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'analyze_error_charge_step': {
-        'description': " When a detailed analysis of the training error with  analyze_error is performed, this keyword allows for the definition of the interval in which  atoms with the same charge error are grouped together.",
-        'format': "analyze_error_charge_step a0",
+        'description': r'When a detailed analysis of the training error w'
+                       + r'ith analyze_error is performed, this keyword all'
+                       + r'ows for the definition of the interval in which '
+                       + r' atoms with the same charge error are grouped to'
+                       + r'gether.',
+        'format': r'analyze_error_charge_step a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -34,7 +178,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The interval in which atoms with the same charge error are grouped together (unit: electron charge).",
+                'description': r'The interval in which atoms with the sam'
+                               + r'e charge error are grouped together (uni'
+                               + r't: electron charge).',
                 'type': float,
                 'default_value': 0.001,
             },
@@ -42,8 +188,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'analyze_error_energy_step': {
-        'description': " When a detailed analysis of the training error with analyze_error is performed, this keyword allows for the definition of the interval in which  atoms with the same energy error are grouped together.",
-        'format': "analyze_error_energy_step a0",
+        'description': r'When a detailed analysis of the training error w'
+                       + r'ith analyze_error is performed, this keyword all'
+                       + r'ows for the definition of the interval in which '
+                       + r' atoms with the same energy error are grouped to'
+                       + r'gether.',
+        'format': r'analyze_error_energy_step a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -51,7 +201,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The interval in which atoms with the same energy error are grouped together (unit: Hartree).",
+                'description': r'The interval in which atoms with the sam'
+                               + r'e energy error are grouped together (uni'
+                               + r't: Hartree).',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -59,8 +211,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'analyze_error_force_step': {
-        'description': " When a detailed analysis of the training error with analyze_error is performed, this keyword allows for the definition of the interval in which  atoms with the same total force error are grouped together.",
-        'format': "analyze_error_force_step a0",
+        'description': r'When a detailed analysis of the training error w'
+                       + r'ith analyze_error is performed, this keyword all'
+                       + r'ows for the definition of the interval in which '
+                       + r' atoms with the same total force error are group'
+                       + r'ed together.',
+        'format': r'analyze_error_force_step a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -68,7 +224,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The interval in which atoms with the same force error are grouped together (unit: Hartree per Bohr).",
+                'description': r'The interval in which atoms with the sam'
+                               + r'e force error are grouped together (unit'
+                               + r': Hartree per Bohr).',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -76,8 +234,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'atom_energy': {
-        'description': " Specification of the energies of the free atoms. This keyword must be used for each element if the keyword  remove_atom_energies is used.  In runner_mode 1 the atomic energies are removed from the total energies, in  runner_mode 3 the atomic energies are added to the fitted energy to yield the correct total energy. Internally, `RuNNer` always works with binding energies, if  remove_atom_energies is specified.",
-        'format': "atom_energy element energy",
+        'description': r'Specification of the energies of the free atoms.'
+                       + r' This keyword must be used for each element if t'
+                       + r'he keyword  remove_atom_energies is used.  In ru'
+                       + r'nner_mode 1 the atomic energies are removed from'
+                       + r' the total energies, in  runner_mode 3 the atomi'
+                       + r'c energies are added to the fitted energy to yie'
+                       + r'ld the correct total energy. Internally, `RuNNer'
+                       + r'` always works with binding energies, if  remove'
+                       + r'_atom_energies is specified.',
+        'format': r'atom_energy element energy',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -85,12 +251,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " Element symbol.",
+                'description': r'Element symbol.',
                 'type': str,
                 'default_value': None,
             },
             'energy': {
-                'description': " Atomic reference energy in Hartree.",
+                'description': r'Atomic reference energy in Hartree.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -98,8 +264,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'biasweights_max': {
-        'description': " `RuNNer` allows for a separate random initialization of the bias weights at the beginning of  runner_mode 2 through separate_bias_ini_short. In that case the bias weights are randomly initialized on an interval between  biasweights_max  and biasweights_min. ",
-        'format': "biasweights_max a0",
+        'description': r'`RuNNer` allows for a separate random initializa'
+                       + r'tion of the bias weights at the beginning of  ru'
+                       + r'nner_mode 2 through separate_bias_ini_short. In '
+                       + r'that case the bias weights are randomly initiali'
+                       + r'zed on an interval between  biasweights_max  and'
+                       + r' biasweights_min. ',
+        'format': r'biasweights_max a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -107,7 +278,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The maximum default_value that is assigned to bias weights during initialization of the weights.",
+                'description': r'The maximum default_value that is assign'
+                               + r'ed to bias weights during initialization'
+                               + r' of the weights.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -115,8 +288,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'biasweights_min': {
-        'description': " `RuNNer` allows for a separate random initialization of the bias weights at the beginning of  runner_mode 2 through separate_bias_ini_short. In that case the bias weights are randomly initialized on an interval between  biasweights_max  and biasweights_min.",
-        'format': "biasweights_min a0",
+        'description': r'`RuNNer` allows for a separate random initializa'
+                       + r'tion of the bias weights at the beginning of  ru'
+                       + r'nner_mode 2 through separate_bias_ini_short. In '
+                       + r'that case the bias weights are randomly initiali'
+                       + r'zed on an interval between  biasweights_max  and'
+                       + r' biasweights_min.',
+        'format': r'biasweights_min a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -124,7 +302,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The maximum default_value that is assigned to bias weights during initialization of the weights.",
+                'description': r'The maximum default_value that is assign'
+                               + r'ed to bias weights during initialization'
+                               + r' of the weights.',
                 'type': float,
                 'default_value': -1.0,
             },
@@ -132,8 +312,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'bond_threshold': {
-        'description': " Threshold for the shortest bond in the structure in Bohr units. If a shorter bond occurs `RuNNer` will stop with an error message in  runner_mode 2 and 3. In  runner_mode 1 the  structure will be eliminated from the data set.",
-        'format': "bond_threshold a0",
+        'description': r'Threshold for the shortest bond in the structure'
+                       + r' in Bohr units. If a shorter bond occurs `RuNNer'
+                       + r'` will stop with an error message in  runner_mod'
+                       + r'e 2 and 3. In  runner_mode 1 the  structure will'
+                       + r' be eliminated from the data set.',
+        'format': r'bond_threshold a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -141,7 +325,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The minimum bond length between any two atoms in the structure (unit: Bohr).",
+                'description': r'The minimum bond length between any two '
+                               + r'atoms in the structure (unit: Bohr).',
                 'type': float,
                 'default_value': 0.5,
             },
@@ -150,8 +335,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'calculate_final_force': {
         'type': bool,
-        'description': " Print detailed information about the forces in the training and testing set at  the end of the NNP training process. ",
-        'format': "calculate_final_force",
+        'description': r'Print detailed information about the forces in t'
+                       + r'he training and testing set at  the end of the N'
+                       + r'NP training process. ',
+        'format': r'calculate_final_force',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -162,8 +349,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'calculate_forces': {
         'type': bool,
-        'description': " Calculate the atomic forces in  runner_mode 3 and write them to the files  runner.out nnforces.out",
-        'format': "calculate_forces",
+        'description': r'Calculate the atomic forces in  runner_mode 3 an'
+                       + r'd write them to the files  runner.out nnforces.o'
+                       + r'ut',
+        'format': r'calculate_forces',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -174,8 +363,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'calculate_hessian': {
         'type': bool,
-        'description': " Calculate the Hessian matrix in  runner_mode 3.  <!-- The implementation is currently in progress and the keyword is not yet ready for use. -->",
-        'format': "calculate_hessian",
+        'description': r'Calculate the Hessian matrix in  runner_mode 3. '
+                       + r' <!-- The implementation is currently in progres'
+                       + r's and the keyword is not yet ready for use. -->',
+        'format': r'calculate_hessian',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -186,8 +377,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'calculate_stress': {
         'type': bool,
-        'description': " Calculate the stress tensor (only for periodic systems) in  runner_mode 3 and  write it to the files runner.out nnstress.out This is at the moment only implemented for the short range part and for the contributions to the stress tensor through vdW interactions.",
-        'format': "calculate_stress",
+        'description': r'Calculate the stress tensor (only for periodic s'
+                       + r'ystems) in  runner_mode 3 and  write it to the f'
+                       + r'iles runner.out nnstress.out This is at the mome'
+                       + r'nt only implemented for the short range part and'
+                       + r' for the contributions to the stress tensor thro'
+                       + r'ugh vdW interactions.',
+        'format': r'calculate_stress',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -198,8 +394,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'center_symmetry_functions': {
         'type': bool,
-        'description': " Shift the symmetry function default_values individually for each symmetry function such that the average is moved to zero. This may have numerical advantages, because  zero is the center of the non-linear regions of most activation functions.",
-        'format': "center_symmetry_functions",
+        'description': r'Shift the symmetry function default_values indiv'
+                       + r'idually for each symmetry function such that the'
+                       + r' average is moved to zero. This may have numeric'
+                       + r'al advantages, because  zero is the center of th'
+                       + r'e non-linear regions of most activation function'
+                       + r's.',
+        'format': r'center_symmetry_functions',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -209,8 +410,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'charge_error_threshold': {
-        'description': " Threshold default_value for the error of the charges in units of the RMSE of the previous epoch. A default_value of 0.3 means that only charges with an error larger than 0.3RMSE will be used for the weight update. Large default_values (about 1.0) will speed up the first epochs, because only a few points will be used. ",
-        'format': "charge_error_threshold a0",
+        'description': r'Threshold default_value for the error of the cha'
+                       + r'rges in units of the RMSE of the previous epoch.'
+                       + r' A default_value of 0.3 means that only charges '
+                       + r'with an error larger than 0.3RMSE will be used f'
+                       + r'or the weight update. Large default_values (abou'
+                       + r't 1.0) will speed up the first epochs, because o'
+                       + r'nly a few points will be used. ',
+        'format': r'charge_error_threshold a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -218,7 +425,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of charge RMSE that a charge needs to reach to be used in the weight update.",
+                'description': r'Fraction of charge RMSE that a charge ne'
+                               + r'eds to reach to be used in the weight up'
+                               + r'date.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -226,8 +435,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'charge_fraction': {
-        'description': " Defines the random fraction of atomic charges used for fitting the electrostatic weights in  runner_mode 2.",
-        'format': "charge_fraction a0",
+        'description': r'Defines the random fraction of atomic charges us'
+                       + r'ed for fitting the electrostatic weights in  run'
+                       + r'ner_mode 2.',
+        'format': r'charge_fraction a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -235,7 +446,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of atomic charges used for fitting of the electrostatic weights. 100% = 1.0.",
+                'description': r'Fraction of atomic charges used for fitt'
+                               + r'ing of the electrostatic weights. 100% ='
+                               + r' 1.0.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -243,8 +456,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'charge_group': {
-        'description': " Do not update the electrostatic NN weights after the presentation of an  individual atomic charge, but average the derivatives with respect to the  weights over the specified number of charges for each element.",
-        'format': "charge_group i0",
+        'description': r'Do not update the electrostatic NN weights after'
+                       + r' the presentation of an  individual atomic charg'
+                       + r'e, but average the derivatives with respect to t'
+                       + r'he  weights over the specified number of charges'
+                       + r' for each element.',
+        'format': r'charge_group i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -252,7 +469,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of atomic charges per group. The maximum is given by points_in_memory.",
+                'description': r'Number of atomic charges per group. The '
+                               + r'maximum is given by points_in_memory.',
                 'type': int,
                 'default_value': 1,
             },
@@ -261,8 +479,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'check_forces': {
         'type': bool,
-        'description': " This keyword allows to check if the sum of all NN force vectors is zero, It is for debugging purposes only, but does not cost much CPU time.",
-        'format': "check_forces",
+        'description': r'This keyword allows to check if the sum of all N'
+                       + r'N force vectors is zero, It is for debugging pur'
+                       + r'poses only, but does not cost much CPU time.',
+        'format': r'check_forces',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -272,8 +492,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'check_input_forces': {
-        'description': " Check, if the sum of all forces of the training structures is sufficiently close to the zero vector.",
-        'format': "check_input_forces a0",
+        'description': r'Check, if the sum of all forces of the training '
+                       + r'structures is sufficiently close to the zero vec'
+                       + r'tor.',
+        'format': r'check_input_forces a0',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -281,7 +503,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Threshold for the absolute default_value of the sum of all force vectors per atom.",
+                'description': r'Threshold for the absolute default_value'
+                               + r' of the sum of all force vectors per ato'
+                               + r'm.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -289,8 +513,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'cutoff_type': {
-        'description': " This keyword determines the cutoff function to be used for the symmetry functions.",
-        'format': "cutoff_type i0",
+        'description': r'This keyword determines the cutoff function to b'
+                       + r'e used for the symmetry functions.',
+        'format': r'cutoff_type i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -298,36 +523,48 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Threshold for the absolute default_value of the sum of all force vectors per atom.",
+                'description': r'Threshold for the absolute default_value'
+                               + r' of the sum of all force vectors per ato'
+                               + r'm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     0: {
-                        'description': " Hard function: $1$",
+                        'description': r'Hard function: $1$',
                     },
                     1: {
-                        'description': r" Cosine function: $\frac{1}{2}[\cos(\pi x)+ 1]$",
+                        'description': r'Cosine function: $\frac{1}{2}[\c'
+                                       + r'os(\pi x)+ 1]$',
                     },
                     2: {
-                        'description': r" Hyperbolic tangent function 1: $\tanh^{3} (1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
+                        'description': r'Hyperbolic tangent function 1: $'
+                                       + r'\tanh^{3} (1-\frac{R_{ij}}{R_{\m'
+                                       + r'athrm{c}}})$',
                     },
                     3: {
-                        'description': r" Hyperbolic tangent function 2: $(\frac{e+1}{e-1})^3 \tanh^{3}(1-\frac{R_{ij}}{R_{\mathrm{c}}})$",
+                        'description': r'Hyperbolic tangent function 2: $'
+                                       + r'(\frac{e+1}{e-1})^3 \tanh^{3}(1-'
+                                       + r'\frac{R_{ij}}{R_{\mathrm{c}}})$',
                     },
                     4: {
-                        'description': r" Exponential function: $\exp(1-\frac{1}{1-x^2})$",
+                        'description': r'Exponential function: $\exp(1-\f'
+                                       + r'rac{1}{1-x^2})$',
                     },
                     5: {
-                        'description': " Polynomial function 1: $(2x -3)x^2+1$",
+                        'description': r'Polynomial function 1: $(2x -3)x'
+                                       + r'^2+1$',
                     },
                     6: {
-                        'description': " Polynomial function 2: $((15-6x)x-10)x^3+1$",
-                    },
-                    7: {
-                        'description': " Polynomial function 3: $(x(x(20x-70)+84)-35)x^4+1$",
+                        'description': r'Polynomial function 2: $((15-6x)'
+                                       + r'x-10)x^3+1$',
                     },
                     8: {
-                        'description': " Polynomial function 4: $(x(x(x(315-70x)-540)+420)-126)x^5+1$",
+                        'description': r'Polynomial function 3: $(x(x(20x'
+                                       + r'-70)+84)-35)x^4+1$',
+                    },
+                    '8': {
+                        'description': r'Polynomial function 4: $(x(x(x(3'
+                                       + r'15-70x)-540)+420)-126)x^5+1$',
                     },
                 },
             },
@@ -335,8 +572,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'data_clustering': {
-        'description': " Performs an analysis of all symmetry function vectors of all atoms and groups the atomic environments to clusters with a maximum distance of  `a0` between the symmetry function vectors. If  `a1` is larger than 1.0 the assignment of each atom will be  printed.",
-        'format': "data_clustering a0 a1",
+        'description': r'Performs an analysis of all symmetry function ve'
+                       + r'ctors of all atoms and groups the atomic environ'
+                       + r'ments to clusters with a maximum distance of  `a'
+                       + r'0` between the symmetry function vectors. If  `a'
+                       + r'1` is larger than 1.0 the assignment of each ato'
+                       + r'm will be  printed.',
+        'format': r'data_clustering a0 a1',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -344,12 +586,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Maximum distance between the symmetry function vectors of two clusters of atomic environments.",
+                'description': r'Maximum distance between the symmetry fu'
+                               + r'nction vectors of two clusters of atomic'
+                               + r' environments.',
                 'type': float,
                 'default_value': 1.0,
             },
             'a1': {
-                'description': " If `a1 > 1.0`, print the group that each atom has been assigned to.",
+                'description': r'If `a1 > 1.0`, print the group that each'
+                               + r' atom has been assigned to.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -358,8 +603,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'debug_mode': {
         'type': bool,
-        'description': " If switched on, this option can produce a lot of output and is meant for debugging new developments only!!!",
-        'format': "debug_mode",
+        'description': r'If switched on, this option can produce a lot of'
+                       + r' output and is meant for debugging new developme'
+                       + r'nts only!!!',
+        'format': r'debug_mode',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -370,8 +617,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'detailed_timing': {
         'type': bool,
-        'description': " Write detailed timing information for the individual parts of `RuNNer` at the end of the run. This feature has to be used with some care because often the implementation of the time measurement lacks behind in code development.",
-        'format': "detailed_timing",
+        'description': r'Write detailed timing information for the indivi'
+                       + r'dual parts of `RuNNer` at the end of the run. Th'
+                       + r'is feature has to be used with some care because'
+                       + r' often the implementation of the time measuremen'
+                       + r't lacks behind in code development.',
+        'format': r'detailed_timing',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -382,8 +633,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'detailed_timing_epoch': {
         'type': bool,
-        'description': " Write detailed timing information in each epoch in  runner_mode 2.  This feature has to be used with some care because often the implementation of the time measurement lacks behind in code development.",
-        'format': "detailed_timing_epoch",
+        'description': r'Write detailed timing information in each epoch '
+                       + r'in  runner_mode 2.  This feature has to be used '
+                       + r'with some care because often the implementation '
+                       + r'of the time measurement lacks behind in code dev'
+                       + r'elopment.',
+        'format': r'detailed_timing_epoch',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -394,8 +649,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'detect_saturation': {
         'type': bool,
-        'description': " For each training epoch, checks whether the default_value of a node in any hidden layer  exceeds  saturation_threshold and prints a warning.",
-        'format': "detect_saturation",
+        'description': r'For each training epoch, checks whether the defa'
+                       + r'ult_value of a node in any hidden layer  exceeds'
+                       + r'  saturation_threshold and prints a warning.',
+        'format': r'detect_saturation',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -406,8 +663,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'dynamic_force_grouping': {
         'type': bool,
-        'description': " Do not update the short-range NN weights after the presentation of an  individual atomic force vector, but average the derivatives with respect to the  weights over the number of force vectors for each element specified by short_force_group",
-        'format': "dynamic_force_grouping",
+        'description': r'Do not update the short-range NN weights after t'
+                       + r'he presentation of an  individual atomic force v'
+                       + r'ector, but average the derivatives with respect '
+                       + r'to the  weights over the number of force vectors'
+                       + r' for each element specified by short_force_group',
+        'format': r'dynamic_force_grouping',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -417,8 +678,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'electrostatic_type': {
-        'description': " This keyword determines the cutoff function to be used for the symmetry functions.",
-        'format': "electrostatic_type i0",
+        'description': r'This keyword determines the cutoff function to b'
+                       + r'e used for the symmetry functions.',
+        'format': r'electrostatic_type i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -426,21 +688,35 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Threshold for the absolute default_value of the sum of all force vectors per atom.",
+                'description': r'Threshold for the absolute default_value'
+                               + r' of the sum of all force vectors per ato'
+                               + r'm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     1: {
-                        'description': " There is a separate set of atomic NNs to fit the atomic charges as a function of the chemical environment.",
+                        'description': r'There is a separate set of atomi'
+                                       + r'c NNs to fit the atomic charges '
+                                       + r'as a function of the chemical en'
+                                       + r'vironment.',
                     },
                     2: {
-                        'description': " The atomic charges are obtained as a second output node of the short range atomic NNs. **This is not yet implemented.**",
+                        'description': r'The atomic charges are obtained '
+                                       + r'as a second output node of the s'
+                                       + r'hort range atomic NNs. **This is'
+                                       + r' not yet implemented.**',
                     },
                     3: {
-                        'description': " Element-specific fixed charges are used that are specified in the input.nn file by the keyword fixed_charge.",
+                        'description': r'Element-specific fixed charges a'
+                                       + r're used that are specified in th'
+                                       + r'e input.nn file by the keyword f'
+                                       + r'ixed_charge.',
                     },
                     4: {
-                        'description': " The charges are fixed but can be different for each atom in the system. They are specified in the file `charges.in`.",
+                        'description': r'The charges are fixed but can be'
+                                       + r' different for each atom in the '
+                                       + r'system. They are specified in th'
+                                       + r'e file `charges.in`.',
                     },
                 },
             },
@@ -448,8 +724,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'element_activation_electrostatic': {
-        'description': " Set the activation function for a specified node of a specified element in the electrostatic NN. The default is set by the keyword global_activation_electrostatic.",
-        'format': "element_activation_electrostatic element layer node type",
+        'description': r'Set the activation function for a specified node'
+                       + r' of a specified element in the electrostatic NN.'
+                       + r' The default is set by the keyword global_activa'
+                       + r'tion_electrostatic.',
+        'format': r'element_activation_electrostatic element layer node type',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -457,22 +736,28 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element whose atomic NN the activation function shall be applied to.",
+                'description': r'The periodic table symbol of the element'
+                               + r' whose atomic NN the activation function'
+                               + r' shall be applied to.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the layer of the target node.",
+                'description': r'The number of the layer of the target no'
+                               + r'de.',
                 'type': int,
                 'default_value': None,
             },
             'node': {
-                'description': " The number of the target node in layer `layer`.",
+                'description': r'The number of the target node in layer `'
+                               + r'layer`.',
                 'type': int,
                 'default_value': None,
             },
             'type': {
-                'description': " The kind of activation function. Options are listed under global_activation_short.",
+                'description': r'The kind of activation function. Options'
+                               + r' are listed under global_activation_shor'
+                               + r't.',
                 'type': str,
                 'default_value': None,
             },
@@ -480,8 +765,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_activation_pair': {
-        'description': " Set the activation function for a specified node of a specified element pair in  the pairwise NN. The default is set by the keyword global_activation_pair.",
-        'format': "element_activation_pair element element layer node type",
+        'description': r'Set the activation function for a specified node'
+                       + r' of a specified element pair in  the pairwise NN'
+                       + r'. The default is set by the keyword global_activ'
+                       + r'ation_pair.',
+        'format': r'element_activation_pair element element layer node type',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -489,22 +777,29 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the second element in the pair whose short-range pair NN the activation function shall be applied to.",
+                'description': r'The periodic table symbol of the second '
+                               + r'element in the pair whose short-range pa'
+                               + r'ir NN the activation function shall be a'
+                               + r'pplied to.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the layer of the target node.",
+                'description': r'The number of the layer of the target no'
+                               + r'de.',
                 'type': int,
                 'default_value': None,
             },
             'node': {
-                'description': " The number of the target node in layer `layer`.",
+                'description': r'The number of the target node in layer `'
+                               + r'layer`.',
                 'type': int,
                 'default_value': None,
             },
             'type': {
-                'description': " The kind of activation function. Options are listed under global_activation_short.",
+                'description': r'The kind of activation function. Options'
+                               + r' are listed under global_activation_shor'
+                               + r't.',
                 'type': str,
                 'default_value': None,
             },
@@ -512,8 +807,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_activation_short': {
-        'description': " Set the activation function for a specified node of a specified element in the short range NN. The default is set by the keyword global_activation_short.",
-        'format': "element_activation_short element layer node type",
+        'description': r'Set the activation function for a specified node'
+                       + r' of a specified element in the short range NN. T'
+                       + r'he default is set by the keyword global_activati'
+                       + r'on_short.',
+        'format': r'element_activation_short element layer node type',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -521,22 +819,28 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element whose atomic NN the activation function shall be applied to.",
+                'description': r'The periodic table symbol of the element'
+                               + r' whose atomic NN the activation function'
+                               + r' shall be applied to.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the layer of the target node.",
+                'description': r'The number of the layer of the target no'
+                               + r'de.',
                 'type': int,
                 'default_value': None,
             },
             'node': {
-                'description': " The number of the target node in layer `layer`.",
+                'description': r'The number of the target node in layer `'
+                               + r'layer`.',
                 'type': int,
                 'default_value': None,
             },
             'type': {
-                'description': " The kind of activation function. Options are listed under global_activation_short.",
+                'description': r'The kind of activation function. Options'
+                               + r' are listed under global_activation_shor'
+                               + r't.',
                 'type': str,
                 'default_value': None,
             },
@@ -545,8 +849,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'element_decoupled_forces_v2': {
         'type': bool,
-        'description': " This is a more sophisticated version of the element decoupled Kalman filter for force fitting (switched on by the keyword element_decoupled_kalman.",
-        'format': "element_decoupled_forces_v2",
+        'description': r'This is a more sophisticated version of the elem'
+                       + r'ent decoupled Kalman filter for force fitting (s'
+                       + r'witched on by the keyword element_decoupled_kalm'
+                       + r'an.',
+        'format': r'element_decoupled_forces_v2',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -557,8 +864,18 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'element_decoupled_kalman': {
         'type': bool,
-        'description': " Use the element decoupled Kalman filter for the short range energy and force update (if use_short_forces is switched on). This is implemented only for the atomic energy case. A more sophisticated algorithm for the force fitting can be activated by using additionally the keyword  element_decoupled_forces_v2.  One important parameter for force fitting is  force_update_scaling,  which determines the magnitude of the force update compared to the energy update. Usually 1.0 is a good default default_value.",
-        'format': "element_decoupled_kalman",
+        'description': r'Use the element decoupled Kalman filter for the '
+                       + r'short range energy and force update (if use_shor'
+                       + r't_forces is switched on). This is implemented on'
+                       + r'ly for the atomic energy case. A more sophistica'
+                       + r'ted algorithm for the force fitting can be activ'
+                       + r'ated by using additionally the keyword  element_'
+                       + r'decoupled_forces_v2.  One important parameter fo'
+                       + r'r force fitting is  force_update_scaling,  which'
+                       + r' determines the magnitude of the force update co'
+                       + r'mpared to the energy update. Usually 1.0 is a go'
+                       + r'od default default_value.',
+        'format': r'element_decoupled_kalman',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -568,8 +885,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'element_hidden_layers_electrostatic': {
-        'description': " Overwrite the global default number of hidden layers given by global_hidden_layers_electrostatic for a specific element. Just a reduction of the number of hidden layers is possible. .",
-        'format': "element_hidden_layers_electrostatic element layers",
+        'description': r'Overwrite the global default number of hidden la'
+                       + r'yers given by global_hidden_layers_electrostatic'
+                       + r' for a specific element. Just a reduction of the'
+                       + r' number of hidden layers is possible. .',
+        'format': r'element_hidden_layers_electrostatic element layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -577,12 +897,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element whose atomic NN hidden layer number will be set.",
+                'description': r'The periodic table symbol of the element'
+                               + r' whose atomic NN hidden layer number wil'
+                               + r'l be set.',
                 'type': str,
                 'default_value': None,
             },
             'layers': {
-                'description': " The number of hidden layers for this element.",
+                'description': r'The number of hidden layers for this ele'
+                               + r'ment.',
                 'type': int,
                 'default_value': None,
             },
@@ -590,8 +913,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_hidden_layers_pair': {
-        'description': " Overwrite the global default number of hidden layers given by global_hidden_layers_pair for a specific element. Just a reduction of the number of hidden layers is possible. .",
-        'format': "element_hidden_layers_pair element element layers",
+        'description': r'Overwrite the global default number of hidden la'
+                       + r'yers given by global_hidden_layers_pair for a sp'
+                       + r'ecific element. Just a reduction of the number o'
+                       + r'f hidden layers is possible. .',
+        'format': r'element_hidden_layers_pair element element layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -599,17 +925,22 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element1': {
-                'description': " The periodic table symbol of the first pair element whose short-range pair NN hidden layer number will be set.",
+                'description': r'The periodic table symbol of the first p'
+                               + r'air element whose short-range pair NN hi'
+                               + r'dden layer number will be set.',
                 'type': str,
                 'default_value': None,
             },
             'element2': {
-                'description': " The periodic table symbol of the second pair element whose short-range pair NN hidden layer number will be set.",
+                'description': r'The periodic table symbol of the second '
+                               + r'pair element whose short-range pair NN h'
+                               + r'idden layer number will be set.',
                 'type': str,
                 'default_value': None,
             },
             'layers': {
-                'description': " The number of hidden layers for this element pair.",
+                'description': r'The number of hidden layers for this ele'
+                               + r'ment pair.',
                 'type': int,
                 'default_value': None,
             },
@@ -617,8 +948,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_hidden_layers_short': {
-        'description': " Overwrite the global default number of hidden layers given by global_hidden_layers_short for a specific element. Just a reduction of the number of hidden layers is possible.",
-        'format': "element_hidden_layers_short element layers",
+        'description': r'Overwrite the global default number of hidden la'
+                       + r'yers given by global_hidden_layers_short for a s'
+                       + r'pecific element. Just a reduction of the number '
+                       + r'of hidden layers is possible.',
+        'format': r'element_hidden_layers_short element layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -626,12 +960,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element whose atomic NN hidden layer number will be set.",
+                'description': r'The periodic table symbol of the element'
+                               + r' whose atomic NN hidden layer number wil'
+                               + r'l be set.',
                 'type': str,
                 'default_value': None,
             },
             'layers': {
-                'description': " The number of hidden layers for this element.",
+                'description': r'The number of hidden layers for this ele'
+                               + r'ment.',
                 'type': int,
                 'default_value': None,
             },
@@ -639,8 +976,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_nodes_electrostatic': {
-        'description': " Overwrite the global default number of nodes in the specified hidden layer of an elecrostatic NN given by  global_nodes_electrostatic  for a specific element.  Just a reduction of the number of nodes is possible. ",
-        'format': "element_nodes_electrostatic element layer i0",
+        'description': r'Overwrite the global default number of nodes in '
+                       + r'the specified hidden layer of an elecrostatic NN'
+                       + r' given by  global_nodes_electrostatic  for a spe'
+                       + r'cific element.  Just a reduction of the number o'
+                       + r'f nodes is possible. ',
+        'format': r'element_nodes_electrostatic element layer i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -648,26 +989,32 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the hidden layer for which the number of nodes is set.",
+                'description': r'The number of the hidden layer for which'
+                               + r' the number of nodes is set.',
                 'type': int,
                 'default_value': None,
             },
             'i0': {
-                'description': " The number of nodes to be set.",
+                'description': r'The number of nodes to be set.',
                 'type': int,
-                'default_value': "global_nodes_electrostatic",
+                'default_value': r'global_nodes_electrostatic',
             },
         },
         'allow_multiple': True,
     },
     'element_nodes_pair': {
-        'description': " Overwrite the global default number of nodes in the specified hidden layer of a pair NN given by  global_nodes_pair  for a specific element.  Just a reduction of the number of nodes is possible. ",
-        'format': "element_nodes_pair element element layer i0",
+        'description': r'Overwrite the global default number of nodes in '
+                       + r'the specified hidden layer of a pair NN given by'
+                       + r'  global_nodes_pair  for a specific element.  Ju'
+                       + r'st a reduction of the number of nodes is possibl'
+                       + r'e. ',
+        'format': r'element_nodes_pair element element layer i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -675,26 +1022,32 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the second pair element.",
+                'description': r'The periodic table symbol of the second '
+                               + r'pair element.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the hidden layer for which the number of nodes is set.",
+                'description': r'The number of the hidden layer for which'
+                               + r' the number of nodes is set.',
                 'type': int,
                 'default_value': None,
             },
             'i0': {
-                'description': " The number of nodes to be set.",
+                'description': r'The number of nodes to be set.',
                 'type': int,
-                'default_value': "global_nodes_pair",
+                'default_value': r'global_nodes_pair',
             },
         },
         'allow_multiple': True,
     },
     'element_nodes_short': {
-        'description': " Overwrite the global default number of nodes in the specified hidden layer of an short-range atomic NN given by  global_nodes_short  for a specific element.  Just a reduction of the number of nodes is possible. ",
-        'format': "element_nodes_short element layer i0",
+        'description': r'Overwrite the global default number of nodes in '
+                       + r'the specified hidden layer of an short-range ato'
+                       + r'mic NN given by  global_nodes_short  for a speci'
+                       + r'fic element.  Just a reduction of the number of '
+                       + r'nodes is possible. ',
+        'format': r'element_nodes_short element layer i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -702,26 +1055,29 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'layer': {
-                'description': " The number of the hidden layer for which the number of nodes is set.",
+                'description': r'The number of the hidden layer for which'
+                               + r' the number of nodes is set.',
                 'type': int,
                 'default_value': None,
             },
             'i0': {
-                'description': " The number of nodes to be set.",
+                'description': r'The number of nodes to be set.',
                 'type': int,
-                'default_value': "global_nodes_short",
+                'default_value': r'global_nodes_short',
             },
         },
         'allow_multiple': True,
     },
     'element_pairsymfunction_short': {
-        'description': " Set the symmetry functions for one element pair for the short-range pair NN.",
-        'format': "element_pairsymfunction_short element element type [parameters] cutoff",
+        'description': r'Set the symmetry functions for one element pair '
+                       + r'for the short-range pair NN.',
+        'format': r'element_pairsymfunction_short element element type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -729,24 +1085,33 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element1': {
-                'description': " The periodic table symbol of the first pair element.",
+                'description': r'The periodic table symbol of the first p'
+                               + r'air element.',
                 'type': str,
                 'default_value': None,
             },
             'element2': {
-                'description': " The periodic table symbol of the second pair element.",
+                'description': r'The periodic table symbol of the second '
+                               + r'pair element.',
                 'type': str,
                 'default_value': None,
             },
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config element_pairsymfunction_short element element 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config element_pairsymfunctio'
+                                       + r'n_short element element 2 eta rs'
+                                       + r'hift cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -759,7 +1124,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config element_pairsymfunction_short element element 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config element_pa'
+                                       + r'irsymfunction_short element elem'
+                                       + r'ent 3 eta lambda zeta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -768,7 +1137,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -776,11 +1145,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config element_pairsymfunction_short element element 4 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config elem'
+                                       + r'ent_pairsymfunction_short elemen'
+                                       + r't element 4 eta cutoff ```',
                         'parameters': {
                             'element': {
                                 'type': str,
-                                'default_value': None
+                                'default_value': None,
                             },
                             'eta': {
                                 'type': float,
@@ -789,7 +1161,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config element_pairsymfunction_short element element 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig element_pairsymfunction_short'
+                                       + r' element element 5 eta ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -798,13 +1176,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config element_pairsymfunction_short element element 6 cutoff ```",                
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config element_pairsymfunction'
+                                       + r'_short element element 6 cutoff '
+                                       + r'```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config element_pairsymfunction_short element element 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config element_pairsymfun'
+                                       + r'ction_short element element 8 et'
+                                       + r'a rshift cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -813,22 +1199,26 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config element_pairsymfunction_short element element 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'element_pairsymfunction_short el'
+                                       + r'ement element 9 eta cutoff ```.',
                         'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -836,8 +1226,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'elements': {
-        'description': " The element symbols of all elements in the system in arbitrary order.  The number of specified elements must fit to the default_value of the keyword number_of_elements.",
-        'format': "elements element [element...]",
+        'description': r'The element symbols of all elements in the syste'
+                       + r'm in arbitrary order.  The number of specified e'
+                       + r'lements must fit to the default_value of the key'
+                       + r'word number_of_elements.',
+        'format': r'elements element [element...]',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -845,17 +1238,22 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element [element...]': {
-                'description': " The periodic table symbols of all the element in the system.",
+                'description': r'The periodic table symbols of all the el'
+                               + r'ement in the system.',
                 'type': str,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'element_symfunction_electrostatic': {
-        'description': " Set the symmetry functions for one element with all possible neighbor element combinations for the electrostatics NN. The variables are the same as for the  keyword  global_symfunction_electrostatic and are explained in more detail there.",
-        'format': "element_symfunction_electrostatic element type [parameters] cutoff",
+        'description': r'Set the symmetry functions for one element with '
+                       + r'all possible neighbor element combinations for t'
+                       + r'he electrostatics NN. The variables are the same'
+                       + r' as for the  keyword  global_symfunction_electro'
+                       + r'static and are explained in more detail there.',
+        'format': r'element_symfunction_electrostatic element type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -863,19 +1261,27 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config element_symfunction_electrostatic element 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config element_symfunction_el'
+                                       + r'ectrostatic element 2 eta rshift'
+                                       + r' cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -888,7 +1294,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config element_symfunction_electrostatic element 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config element_sy'
+                                       + r'mfunction_electrostatic element '
+                                       + r'3 eta lambda zeta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -897,7 +1307,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -905,7 +1315,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config element_symfunction_electrostatic element 4 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config elem'
+                                       + r'ent_symfunction_electrostatic el'
+                                       + r'ement 4 eta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -914,7 +1327,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config element_symfunction_electrostatic element 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig element_symfunction_electrost'
+                                       + r'atic element 5 eta ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -923,13 +1342,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config element_pairsymfunction_short element 6 cutoff ```",             
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config element_pairsymfunction'
+                                       + r'_short element 6 cutoff ```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config element_pairsymfunction_short element 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config element_pairsymfun'
+                                       + r'ction_short element 8 eta rshift'
+                                       + r' cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -938,22 +1364,26 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config element_pairsymfunction_short element 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'element_pairsymfunction_short el'
+                                       + r'ement 9 eta cutoff ```.',
                         'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -961,8 +1391,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'element_symfunction_short': {
-        'description': " Set the symmetry functions for one element with all possible neighbor element combinations for the short-range NN. The variables are the same as for the  keyword  global_symfunction_short and are explained in more detail there.",
-        'format': "element_symfunction_short element type [parameters] cutoff",
+        'description': r'Set the symmetry functions for one element with '
+                       + r'all possible neighbor element combinations for t'
+                       + r'he short-range NN. The variables are the same as'
+                       + r' for the  keyword  global_symfunction_short and '
+                       + r'are explained in more detail there.',
+        'format': r'element_symfunction_short element type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -970,19 +1404,27 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config element_symfunction_short element 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config element_symfunction_sh'
+                                       + r'ort element 2 eta rshift cutoff '
+                                       + r'```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -995,7 +1437,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config element_symfunction_short element 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config element_sy'
+                                       + r'mfunction_short element 3 eta la'
+                                       + r'mbda zeta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1004,7 +1450,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -1012,7 +1458,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config element_symfunction_short element 4 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config elem'
+                                       + r'ent_symfunction_short element 4 '
+                                       + r'eta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1021,7 +1470,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config element_symfunction_short element 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig element_symfunction_short ele'
+                                       + r'ment 5 eta ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1030,13 +1485,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config element_pairsymfunction_short element 6 cutoff ```",             
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config element_pairsymfunction'
+                                       + r'_short element 6 cutoff ```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config element_pairsymfunction_short element 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config element_pairsymfun'
+                                       + r'ction_short element 8 eta rshift'
+                                       + r' cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1045,32 +1507,37 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config element_pairsymfunction_short element 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'element_pairsymfunction_short el'
+                                       + r'ement 9 eta cutoff ```.',
                         'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
         },
-        'allow_multiple': True
+        'allow_multiple': True,
     },
     'enable_on_the_fly_input': {
         'type': bool,
-        'description': " Read modified input.nn the fitting procedure from a file labeled `input.otf`.",
-        'format': "enable_on_the_fly_input",
+        'description': r'Read modified input.nn the fitting procedure fro'
+                       + r'm a file labeled `input.otf`.',
+        'format': r'enable_on_the_fly_input',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1080,8 +1547,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'energy_threshold': {
-        'description': " Set an energy threshold for fitting data. This keyword is only used in  runner_mode 1 for the decision if a point should be used in the training or  test set or if it should be eliminated because of its high energy.",
-        'format': "energy_threshold a0",
+        'description': r'Set an energy threshold for fitting data. This k'
+                       + r'eyword is only used in  runner_mode 1 for the de'
+                       + r'cision if a point should be used in the training'
+                       + r' or  test set or if it should be eliminated beca'
+                       + r'use of its high energy.',
+        'format': r'energy_threshold a0',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -1089,7 +1560,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Threshold for the total energy of a structure (unit: Hartree per atom).",
+                'description': r'Threshold for the total energy of a stru'
+                               + r'cture (unit: Hartree per atom).',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1097,8 +1569,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'enforce_max_num_neighbors_atomic': {
-        'description': " Set an upper threshold for the number of neighbors an atom can have.",
-        'format': "enforce_max_num_neighbors_atomic i0",
+        'description': r'Set an upper threshold for the number of neighbo'
+                       + r'rs an atom can have.',
+        'format': r'enforce_max_num_neighbors_atomic i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -1106,16 +1579,23 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Maximum number of neighbors for one atom.",
+                'description': r'Maximum number of neighbors for one atom'
+                               + r'.',
                 'type': int,
-                'default_value': "None",
+                'default_value': r'None',
             },
         },
         'allow_multiple': False,
     },
     'enforce_totcharge': {
-        'description': " Rescale the NN atomic charges to get a neutral system. An overall neutral system is required for a correct calculation of the Ewald sum for periodic systems.  The additional error introduced by rescaling the NN charges is typically much smaller than the fitting error, but this should be checked.",
-        'format': "enforce_totcharge i0",
+        'description': r'Rescale the NN atomic charges to get a neutral s'
+                       + r'ystem. An overall neutral system is required for'
+                       + r' a correct calculation of the Ewald sum for peri'
+                       + r'odic systems.  The additional error introduced b'
+                       + r'y rescaling the NN charges is typically much sma'
+                       + r'ller than the fitting error, but this should be '
+                       + r'checked.',
+        'format': r'enforce_totcharge i0',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -1123,7 +1603,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Switch charge rescaling on (`1`) or off (`0`).",
+                'description': r'Switch charge rescaling on (`1`) or off '
+                               + r'(`0`).',
                 'type': int,
                 'default_value': 0,
             },
@@ -1132,8 +1613,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'environment_analysis': {
         'type': bool,
-        'description': " Print a detailed analysis of the atomic environments in  `trainstruct.data` and `teststruct.data`.",
-        'format': "environment_analysis",
+        'description': r'Print a detailed analysis of the atomic environm'
+                       + r'ents in  `trainstruct.data` and `teststruct.data'
+                       + r'`.',
+        'format': r'environment_analysis',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1143,8 +1626,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'epochs': {
-        'description': " The number of epochs for fitting. If `0` is specified, `RuNNer` will calculate the error and terminate without adjusting weights.",
-        'format': "epochs i0",
+        'description': r'The number of epochs for fitting. If `0` is spec'
+                       + r'ified, `RuNNer` will calculate the error and ter'
+                       + r'minate without adjusting weights.',
+        'format': r'epochs i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1152,7 +1637,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of epochs.",
+                'description': r'Number of epochs.',
                 'type': int,
                 'default_value': 0,
             },
@@ -1160,8 +1645,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'ewald_alpha': {
-        'description': " Parameter $\alpha$ for the Ewald summation. Determines the accuracy of the  electrostatic energy and force evaluation for periodic systems together with  ewald_kmax and  ewald_cutoff. Recommended settings are  (ewald_alpha = 0.2 and  ewald_kmax or (ewald_alpha = 0.5 and  ewald_kmax and a  sufficiently large ewald_cutoff.",
-        'format': "ewald_alpha a0",
+        'description': r'Parameter $lpha$ for the Ewald summation. Deter'
+                       + r'mines the accuracy of the  electrostatic energy '
+                       + r'and force evaluation for periodic systems togeth'
+                       + r'er with  ewald_kmax and  ewald_cutoff. Recommend'
+                       + r'ed settings are  (ewald_alpha = 0.2 and  ewald_k'
+                       + r'max or (ewald_alpha = 0.5 and  ewald_kmax and a '
+                       + r' sufficiently large ewald_cutoff.',
+        'format': r'ewald_alpha a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1169,7 +1660,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The default_value of the parameter $\alpha$ for the Ewald summation.",
+                'description': r'The default_value of the parameter $lph'
+                               + r'a$ for the Ewald summation.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1177,8 +1669,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'ewald_cutoff': {
-        'description': " Parameter for the Ewald summation. Determines the accuracy of the  electrostatic energy and force evaluation for periodic systems together with  ewald_kmax and  ewald_alpha. Must be chosen sufficiently large because it determines the number of neighbors taken into account in the real space part of the Ewald summation (e.g. 15.0 Bohr)",
-        'format': "ewald_cutoff a0",
+        'description': r'Parameter for the Ewald summation. Determines th'
+                       + r'e accuracy of the  electrostatic energy and forc'
+                       + r'e evaluation for periodic systems together with '
+                       + r' ewald_kmax and  ewald_alpha. Must be chosen suf'
+                       + r'ficiently large because it determines the number'
+                       + r' of neighbors taken into account in the real spa'
+                       + r'ce part of the Ewald summation (e.g. 15.0 Bohr)',
+        'format': r'ewald_cutoff a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1186,7 +1684,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The cutoff radius if the Ewald summation (unit: Bohr).",
+                'description': r'The cutoff radius if the Ewald summation'
+                               + r' (unit: Bohr).',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1194,8 +1693,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'ewald_kmax': {
-        'description': " Parameter for the reciprocal space part of the Ewald summation. Determines the accuracy of the electrostatic energy and force evaluation for  periodic systems together with  ewald_alpha and  ewald_cutoff. Recommended settings are  (ewald_alpha = 0.2 and  ewald_kmax or (ewald_alpha = 0.5 and  ewald_kmax and a  sufficiently large ewald_cutoff.",
-        'format': "ewald_kmax i0",
+        'description': r'Parameter for the reciprocal space part of the E'
+                       + r'wald summation. Determines the accuracy of the e'
+                       + r'lectrostatic energy and force evaluation for  pe'
+                       + r'riodic systems together with  ewald_alpha and  e'
+                       + r'wald_cutoff. Recommended settings are  (ewald_al'
+                       + r'pha = 0.2 and  ewald_kmax or (ewald_alpha = 0.5 '
+                       + r'and  ewald_kmax and a  sufficiently large ewald_'
+                       + r'cutoff.',
+        'format': r'ewald_kmax i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1203,7 +1709,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " k-space cutoff for the Ewald summation.",
+                'description': r'k-space cutoff for the Ewald summation.',
                 'type': int,
                 'default_value': 0,
             },
@@ -1211,8 +1717,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'ewald_prec': {
-        'description': " This parameter determines the error tolerance in electrostatic energy and force  evaluation for periodic systems when Ewald Summation is used. `RuNNer` will  automatically choose the optimized  ewald_alpha, ewald_kmax, and  ewald_cutoff.",
-        'format': "ewald_prec a0",
+        'description': r'This parameter determines the error tolerance in'
+                       + r' electrostatic energy and force  evaluation for '
+                       + r'periodic systems when Ewald Summation is used. `'
+                       + r'RuNNer` will  automatically choose the optimized'
+                       + r'  ewald_alpha, ewald_kmax, and  ewald_cutoff.',
+        'format': r'ewald_prec a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1220,7 +1730,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The desired precision of the Ewald summation. Recommended default_values are $10^{-5}$ to $10^{-6}$.",
+                'description': r'The desired precision of the Ewald summa'
+                               + r'tion. Recommended default_values are $10'
+                               + r'^{-5}$ to $10^{-6}$.',
                 'type': float,
                 'default_value': -1.0,
             },
@@ -1228,8 +1740,32 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'find_contradictions': {
-        'description': r" This keyword can be used in  runner_mode 2 to test if the symmetry functions are able to distinguish different atomic environments sufficiently. If two atomic environments of a given element are very similar, they will result in very similar symmetry function vectors. Therefore, the length of the difference vector $$ \Delta G = \sqrt{\sum_{i=1}^N (G_{i,1}-G_{i,2})^2} \,,\notag $$ ($N$ runs over all individual symmetry functions) will be close to zero. If the environments are really similar, the absolute forces acting on the atom should be similar as well, which is measured by $$ \begin{align} \Delta F &= |\sqrt{F_{1,x}^2+F_{1,y}^2+F_{1,z}^2}            -\sqrt{F_{2,x}^2+F_{2,y}^2+F_{2,z}^2}|\,,\notag\\          &= |F_1-F_2| \notag\,. \end{align} $$ If the forces are different ($\Delta F >$ `a1`) but the symmetry functions similar ($\Delta G <$ `a0`) for an atom pair, a message will be printed in the output file. The optimal choices for `a0` and `a1` are system dependent and should be selected such that only the most contradictory data is found. It is not recommended to keep this keyword switched on routinely, because it requires substantial CPU time.",
-        'format': "find_contradictions a0 a1",
+        'description': r'This keyword can be used in  runner_mode 2 to te'
+                       + r'st if the symmetry functions are able to disting'
+                       + r'uish different atomic environments sufficiently.'
+                       + r' If two atomic environments of a given element a'
+                       + r're very similar, they will result in very simila'
+                       + r'r symmetry function vectors. Therefore, the leng'
+                       + r'th of the difference vector $$ \Delta G = \sqrt{'
+                       + r'\sum_{i=1}^N (G_{i,1}-G_{i,2})^2} \,,\notag $$ ('
+                       + r'$N$ runs over all individual symmetry functions)'
+                       + r' will be close to zero. If the environments are '
+                       + r'really similar, the absolute forces acting on th'
+                       + r'e atom should be similar as well, which is measu'
+                       + r'red by $$ \begin{align} \Delta F &= |\sqrt{F_{1,'
+                       + r'x}^2+F_{1,y}^2+F_{1,z}^2}            -\sqrt{F_{2'
+                       + r',x}^2+F_{2,y}^2+F_{2,z}^2}|\,,\notag\\          '
+                       + r'&= |F_1-F_2| \notag\,. \end{align} $$ If the for'
+                       + r'ces are different ($\Delta F >$ `a1`) but the sy'
+                       + r'mmetry functions similar ($\Delta G <$ `a0`) for'
+                       + r' an atom pair, a message will be printed in the '
+                       + r'output file. The optimal choices for `a0` and `a'
+                       + r'1` are system dependent and should be selected s'
+                       + r'uch that only the most contradictory data is fou'
+                       + r'nd. It is not recommended to keep this keyword s'
+                       + r'witched on routinely, because it requires substa'
+                       + r'ntial CPU time.',
+        'format': r'find_contradictions a0 a1',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1237,12 +1773,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" Symmetry function threshold $\Delta G$.",
+                'description': r'Symmetry function threshold $\Delta G$.',
                 'type': float,
                 'default_value': 0.0,
             },
             'a1': {
-                'description': r" Force threshold $\Delta F$.",
+                'description': r'Force threshold $\Delta F$.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1250,8 +1786,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'fitting_unit': {
-        'description': "Set the energy unit that is printed to the output files during training in runner_mode 2.",
-        'format': "fitting_unit i0",
+        'description': r'Set the energy unit that is printed to the outpu'
+                       + r't files during training in runner_mode 2.',
+        'format': r'fitting_unit i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1259,15 +1796,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Switch for different energy units.",
+                'description': r'Switch for different energy units.',
                 'type': str,
-                'default_value': 'eV',
+                'default_value': r'eV',
                 'options': {
                     'eV': {
-                        'description': " Unit: `eV`. The energy RMSE and MAD in the output file are given in eV/atom, the force error is given in eV/Bohr.",
+                        'description': r'Unit: `eV`. The energy RMSE and '
+                                       + r'MAD in the output file are given'
+                                       + r' in eV/atom, the force error is '
+                                       + r'given in eV/Bohr.',
                     },
                     'Ha': {
-                        'description': " Unit: `Ha`. The energy RMSE and MAD in the output file are given in Ha/atom, the force error is given in Ha/Bohr.",
+                        'description': r'Unit: `Ha`. The energy RMSE and '
+                                       + r'MAD in the output file are given'
+                                       + r' in Ha/atom, the force error is '
+                                       + r'given in Ha/Bohr.',
                     },
                 },
             },
@@ -1276,8 +1819,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'fix_weights': {
         'type': bool,
-        'description': " Do not optimize all weights, but freeze some weights, which are specified by the keywords  weight_constraint and  weighte_constraint.",
-        'format': "fix_weights",
+        'description': r'Do not optimize all weights, but freeze some wei'
+                       + r'ghts, which are specified by the keywords  weigh'
+                       + r't_constraint and  weighte_constraint.',
+        'format': r'fix_weights',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1287,8 +1832,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'fixed_charge': {
-        'description': " Use a fixed charge for all atoms of the specified element independent of the chemical environment.",
-        'format': "fixed_charge element a0",
+        'description': r'Use a fixed charge for all atoms of the specifie'
+                       + r'd element independent of the chemical environmen'
+                       + r't.',
+        'format': r'fixed_charge element a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1296,12 +1843,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'a0': {
-                'description': " The fixed charge of all atoms of this element (unit: electron charge).",
+                'description': r'The fixed charge of all atoms of this el'
+                               + r'ement (unit: electron charge).',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1309,8 +1858,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'fixed_gausswidth': {
-        'description': " This keyword specifies the Gaussian width for calculating the charges and  electrostatic energy and forces in 4G-HDNNPs. ",
-        'format': "fixed_gausswidth element a0",
+        'description': r'This keyword specifies the Gaussian width for ca'
+                       + r'lculating the charges and  electrostatic energy '
+                       + r'and forces in 4G-HDNNPs. ',
+        'format': r'fixed_gausswidth element a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -1318,12 +1869,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the element.",
+                'description': r'The periodic table symbol of the element'
+                               + r'.',
                 'type': str,
                 'default_value': None,
             },
             'a0': {
-                'description': " The Gaussian width for all atoms of this element (unit: Bohr).",
+                'description': r'The Gaussian width for all atoms of this'
+                               + r' element (unit: Bohr).',
                 'type': float,
                 'default_value': -99.0,
             },
@@ -1331,8 +1884,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'fixed_short_energy_error_threshold': {
-        'description': " Only consider points in the weight update during  runner_mode 2 for which the  absolute error of the total energy is higher than  fixed_short_energy_error_threshold.",
-        'format': "fixed_short_energy_error_threshold a0",
+        'description': r'Only consider points in the weight update during'
+                       + r'  runner_mode 2 for which the  absolute error of'
+                       + r' the total energy is higher than  fixed_short_en'
+                       + r'ergy_error_threshold.',
+        'format': r'fixed_short_energy_error_threshold a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1340,7 +1896,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The lower threshold for the absolute error of the total energy.",
+                'description': r'The lower threshold for the absolute err'
+                               + r'or of the total energy.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1348,8 +1905,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'fixed_short_force_error_threshold': {
-        'description': " Only consider points in the weight update during  runner_mode 2 for which the  absolute error of the total force is higher than  fixed_short_force_error_threshold.",
-        'format': "fixed_short_force_error_threshold a0",
+        'description': r'Only consider points in the weight update during'
+                       + r'  runner_mode 2 for which the  absolute error of'
+                       + r' the total force is higher than  fixed_short_for'
+                       + r'ce_error_threshold.',
+        'format': r'fixed_short_force_error_threshold a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1357,7 +1917,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The lower threshold for the absolute error of the total force.",
+                'description': r'The lower threshold for the absolute err'
+                               + r'or of the total force.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1366,8 +1927,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'force_grouping_by_structure': {
         'type': bool,
-        'description': " Do not update the short-range NN weights after the presentation of an  individual atomic force vector, but average the derivatives with respect to the  weights over the number of force vectors per structure.",
-        'format': "force_grouping_by_structure",
+        'description': r'Do not update the short-range NN weights after t'
+                       + r'he presentation of an  individual atomic force v'
+                       + r'ector, but average the derivatives with respect '
+                       + r'to the  weights over the number of force vectors'
+                       + r' per structure.',
+        'format': r'force_grouping_by_structure',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1377,8 +1942,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'force_threshold': {
-        'description': " Set a force threshold for fitting data. If any force component of a structure in the reference set is larger than `a0` then the point is not used and eliminated from the data set. ",
-        'format': "force_threshold a0",
+        'description': r'Set a force threshold for fitting data. If any f'
+                       + r'orce component of a structure in the reference s'
+                       + r'et is larger than `a0` then the point is not use'
+                       + r'd and eliminated from the data set. ',
+        'format': r'force_threshold a0',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -1386,7 +1954,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The upper threshold for force components (unit: Ha/Bohr)",
+                'description': r'The upper threshold for force components'
+                               + r' (unit: Ha/Bohr)',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -1394,8 +1963,19 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'force_update_scaling': {
-        'description': " Since for a given structure the number of forces is much larger than the number of energies, the force updates can have a dominant influence on the fits. This can result in poor energy errors. Using this option the relative strength of the energy and the forces can be  adjusted. A default_value of 0.1 means that the influence of the energy is 10 times stronger than of a single force. A negative default_value will automatically balance the strength of the energy and of the forces by taking into account the actual number of atoms of each structures.",
-        'format': "force_update_scaling a0",
+        'description': r'Since for a given structure the number of forces'
+                       + r' is much larger than the number of energies, the'
+                       + r' force updates can have a dominant influence on '
+                       + r'the fits. This can result in poor energy errors.'
+                       + r' Using this option the relative strength of the '
+                       + r'energy and the forces can be  adjusted. A defaul'
+                       + r't_value of 0.1 means that the influence of the e'
+                       + r'nergy is 10 times stronger than of a single forc'
+                       + r'e. A negative default_value will automatically b'
+                       + r'alance the strength of the energy and of the for'
+                       + r'ces by taking into account the actual number of '
+                       + r'atoms of each structures.',
+        'format': r'force_update_scaling a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1403,7 +1983,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The relative strength of the energy and forces for a weight update.",
+                'description': r'The relative strength of the energy and '
+                               + r'forces for a weight update.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1411,8 +1992,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_activation_electrostatic': {
-        'description': " Set the default activation function for each hidden layer and the output layer in the electrostatic NNs of all elements. ",
-        'format': "global_activation_electrostatic type [type...]",
+        'description': r'Set the default activation function for each hid'
+                       + r'den layer and the output layer in the electrosta'
+                       + r'tic NNs of all elements. ',
+        'format': r'global_activation_electrostatic type [type...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1420,17 +2003,22 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [type...]': {
-                'description': " The kind of activation function. One `type` has to be given for each layer in the NN. Options are listed under global_activation_short.",
+                'description': r'The kind of activation function. One `ty'
+                               + r'pe` has to be given for each layer in th'
+                               + r'e NN. Options are listed under global_ac'
+                               + r'tivation_short.',
                 'type': str,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'global_activation_pair': {
-        'description': " Set the default activation function for each hidden layer and the output layer in the NNs of all element pairs. ",
-        'format': "global_activation_pair type [type...]",
+        'description': r'Set the default activation function for each hid'
+                       + r'den layer and the output layer in the NNs of all'
+                       + r' element pairs. ',
+        'format': r'global_activation_pair type [type...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1438,17 +2026,22 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [type...]': {
-                'description': " The kind of activation function. One `type` has to be given for each layer in the NN. Options are listed under global_activation_short.",
+                'description': r'The kind of activation function. One `ty'
+                               + r'pe` has to be given for each layer in th'
+                               + r'e NN. Options are listed under global_ac'
+                               + r'tivation_short.',
                 'type': str,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'global_activation_short': {
-        'description': " Set the activation function for each hidden layer and the output layer in the short range NNs of all elements. ",
-        'format': "global_activation_short type [type...]",
+        'description': r'Set the activation function for each hidden laye'
+                       + r'r and the output layer in the short range NNs of'
+                       + r' all elements. ',
+        'format': r'global_activation_short type [type...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1456,46 +2049,56 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [type...]': {
-                'description': " The kind of activation function. One `type` has to be given for each layer in the NN.",
+                'description': r'The kind of activation function. One `ty'
+                               + r'pe` has to be given for each layer in th'
+                               + r'e NN.',
                 'type': str,
                 'default_value': [None],
                 'options': {
                     'c': {
-                        'description': r" Cosine function: $\cos(x)$",
+                        'description': r'Cosine function: $\cos(x)$',
                     },
                     'e': {
-                        'description': r" Exponential function: $\exp(-x)$",
+                        'description': r'Exponential function: $\exp(-x)$',
                     },
                     'g': {
-                        'description': r" Gaussian function: $\exp(-\alpha x^2)$",
+                        'description': r'Gaussian function: $\exp(-\alpha'
+                                       + r' x^2)$',
                     },
                     'h': {
-                        'description': r" Harmonic function: $x^2$.",
+                        'description': r'Harmonic function: $x^2$.',
                     },
                     'l': {
-                        'description': r" Linear function: $x$",
+                        'description': r'Linear function: $x$',
                     },
                     'p': {
-                        'description': r" Softplus function: $\ln(1+\exp(x))$",
+                        'description': r'Softplus function: $\ln(1+\exp(x'
+                                       + r'))$',
                     },
                     's': {
-                        'description': r" Sigmoid function v1: $(1-\exp(-x))^{-1}$",
+                        'description': r'Sigmoid function v1: $(1-\exp(-x'
+                                       + r'))^{-1}$',
                     },
                     'S': {
-                        'description': r" Sigmoid function v2: $1-(1-\exp(-x))^{-1}$",
+                        'description': r'Sigmoid function v2: $1-(1-\exp('
+                                       + r'-x))^{-1}$',
                     },
                     't': {
-                        'description': " Hyperbolic tangent function: $\tanh(x)$",
+                        'description': r'Hyperbolic tangent function: $	a'
+                                       + r'nh(x)$',
                     },
                 },
-                'allow_multiple': True
+                'allow_multiple': True,
             },
         },
         'allow_multiple': False,
     },
     'global_hidden_layers_electrostatic': {
-        'description': " Set the default number of hidden layers in the electrostatic NNs of all  elements. Internally 1 is added to `maxnum_layers_elec`, which also includes  the output layer.",
-        'format': "global_hidden_layers_electrostatic layers",
+        'description': r'Set the default number of hidden layers in the e'
+                       + r'lectrostatic NNs of all  elements. Internally 1 '
+                       + r'is added to `maxnum_layers_elec`, which also inc'
+                       + r'ludes  the output layer.',
+        'format': r'global_hidden_layers_electrostatic layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1503,7 +2106,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'layers': {
-                'description': " The number of hidden layers.",
+                'description': r'The number of hidden layers.',
                 'type': int,
                 'default_value': None,
             },
@@ -1511,8 +2114,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_hidden_layers_pair': {
-        'description': " Set the default number of hidden layers in the NNs of all element pairs.  Internally 1 is added to `maxnum_layers_short_pair`, which also includes  the output layer.",
-        'format': "global_hidden_layers_pair layers",
+        'description': r'Set the default number of hidden layers in the N'
+                       + r'Ns of all element pairs.  Internally 1 is added '
+                       + r'to `maxnum_layers_short_pair`, which also includ'
+                       + r'es  the output layer.',
+        'format': r'global_hidden_layers_pair layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1520,7 +2126,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'layers': {
-                'description': " The number of hidden layers.",
+                'description': r'The number of hidden layers.',
                 'type': int,
                 'default_value': None,
             },
@@ -1528,8 +2134,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_hidden_layers_short': {
-        'description': " Set the default number of hidden layers in the short-range NNs of all  elements. Internally 1 is added to `maxnum_layers_short`, which also includes  the output layer.",
-        'format': "global_hidden_layers_short layers",
+        'description': r'Set the default number of hidden layers in the s'
+                       + r'hort-range NNs of all  elements. Internally 1 is'
+                       + r' added to `maxnum_layers_short`, which also incl'
+                       + r'udes  the output layer.',
+        'format': r'global_hidden_layers_short layers',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1537,7 +2146,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'layers': {
-                'description': " The number of hidden layers.",
+                'description': r'The number of hidden layers.',
                 'type': int,
                 'default_value': None,
             },
@@ -1545,8 +2154,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_nodes_electrostatic': {
-        'description': " Set the default number of nodes in the hidden layers of the electrostatic NNs in case of  electrostatic_type 1. In the array, the entries `1 - (maxnum_layerseelec - 1)` refer to the hidden  layers. The first entry (0) refers to the nodes in the input layer and is  determined automatically from the symmetry functions.",
-        'format': "global_nodes_electrostatic i0 [i1...]",
+        'description': r'Set the default number of nodes in the hidden la'
+                       + r'yers of the electrostatic NNs in case of  electr'
+                       + r'ostatic_type 1. In the array, the entries `1 - ('
+                       + r'maxnum_layerseelec - 1)` refer to the hidden  la'
+                       + r'yers. The first entry (0) refers to the nodes in'
+                       + r' the input layer and is  determined automaticall'
+                       + r'y from the symmetry functions.',
+        'format': r'global_nodes_electrostatic i0 [i1...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1554,17 +2169,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0 [i1...]': {
-                'description': " The number of nodes to be set in each layer.",
+                'description': r'The number of nodes to be set in each la'
+                               + r'yer.',
                 'type': int,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'global_nodes_pair': {
-        'description': " Set the default number of nodes in the hidden layers of the pairwise NNs in case of  nn_type_short 2.",
-        'format': "global_nodes_pair i0 [i1...]",
+        'description': r'Set the default number of nodes in the hidden la'
+                       + r'yers of the pairwise NNs in case of  nn_type_sho'
+                       + r'rt 2.',
+        'format': r'global_nodes_pair i0 [i1...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1572,17 +2190,24 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0 [i1...]': {
-                'description': " The number of nodes to be set in each layer.",
+                'description': r'The number of nodes to be set in each la'
+                               + r'yer.',
                 'type': int,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'global_nodes_short': {
-        'description': " Set the default number of nodes in the hidden layers of the short-range NNs in case of  nn_type_short 1. In the array, the entries `1 - maxnum_layersshort - 1` refer to the hidden  layers. The first entry (0) refers to the nodes in the input layer and is  determined automatically from the symmetry functions.",
-        'format': "global_nodes_short i0 [i1...]",
+        'description': r'Set the default number of nodes in the hidden la'
+                       + r'yers of the short-range NNs in case of  nn_type_'
+                       + r'short 1. In the array, the entries `1 - maxnum_l'
+                       + r'ayersshort - 1` refer to the hidden  layers. The'
+                       + r' first entry (0) refers to the nodes in the inpu'
+                       + r't layer and is  determined automatically from th'
+                       + r'e symmetry functions.',
+        'format': r'global_nodes_short i0 [i1...]',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1590,17 +2215,19 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0 [i1...]': {
-                'description': " The number of nodes to be set in each layer.",
+                'description': r'The number of nodes to be set in each la'
+                               + r'yer.',
                 'type': int,
                 'default_value': [None],
-                'allow_multiple': True
-            }
+                'allow_multiple': True,
+            },
         },
         'allow_multiple': False,
     },
     'global_pairsymfunction_short': {
-        'description': " Specification of the global symmetry functions for all element pairs in the  pairwise NN.",
-        'format': "global_pairsymfunction_short type [parameters] cutoff",
+        'description': r'Specification of the global symmetry functions f'
+                       + r'or all element pairs in the  pairwise NN.',
+        'format': r'global_pairsymfunction_short type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -1608,14 +2235,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config global_pairsymfunction_short 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config global_pairsymfunction'
+                                       + r'_short 2 eta rshift cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1628,7 +2261,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config global_pairsymfunction_short 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config global_pai'
+                                       + r'rsymfunction_short 3 eta lambda '
+                                       + r'zeta cutoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1637,7 +2274,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -1645,7 +2282,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config global_pairsymfunction_short 4 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config glob'
+                                       + r'al_pairsymfunction_short 4 eta c'
+                                       + r'utoff ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1654,7 +2294,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config global_pairsymfunction_short 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig global_pairsymfunction_short '
+                                       + r'5 eta ```',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1663,13 +2309,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config global_pairsymfunction_short 6 cutoff ```",                  
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config global_pairsymfunction_'
+                                       + r'short 6 cutoff ```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config global_pairsymfunction_short 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config global_pairsymfunc'
+                                       + r'tion_short 8 eta rshift cutoff `'
+                                       + r'``',
                         'parameters': {
                             'eta': {
                                 'type': float,
@@ -1678,22 +2331,26 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config global_pairsymfunction_short 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'global_pairsymfunction_short 9 e'
+                                       + r'ta cutoff ```.',
                         'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -1701,8 +2358,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_symfunction_electrostatic': {
-        'description': " Specification of global symmetry functions for all elements and all element  combinations for the electrostatic NN.",
-        'format': "global_symfunction_electrostatic type [parameters] cutoff",
+        'description': r'Specification of global symmetry functions for a'
+                       + r'll elements and all element  combinations for th'
+                       + r'e electrostatic NN.',
+        'format': r'global_symfunction_electrostatic type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -1710,62 +2369,93 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config global_symfunction_electrostatic 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config global_symfunction_ele'
+                                       + r'ctrostatic 2 eta rshift cutoff `'
+                                       + r'``',
                         'parameters': {
                             'eta': 0.0,
-                            'rshift': 0.0
+                            'rshift': 0.0,
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config global_symfunction_electrostatic 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config global_sym'
+                                       + r'function_electrostatic 3 eta lam'
+                                       + r'bda zeta cutoff ```',
                         'parameters': {
                             'eta': 0.0,
                             'lambda': 0.0,
-                            'zeta': 0.0
+                            'zeta': 0.0,
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config global_symfunction_electrostatic 2 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config glob'
+                                       + r'al_symfunction_electrostatic 2 e'
+                                       + r'ta cutoff ```',
                         'parameters': {
                             'eta': 0.0,
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config global_symfunction_electrostatic 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig global_symfunction_electrosta'
+                                       + r'tic 5 eta ```',
                         'parameters': {
                             'eta': 0.0,
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config global_symfunction_electrostatic 6 cutoff ```",
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config global_symfunction_elec'
+                                       + r'trostatic 6 cutoff ```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config global_symfunction_electrostatic 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config global_symfunction'
+                                       + r'_electrostatic 8 eta rshift cuto'
+                                       + r'ff ```',
                         'parameters': {
                             'eta': 0.0,
-                            'rshift': 0.0
+                            'rshift': 0.0,
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config global_symfunction_electrostatic element 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'global_symfunction_electrostatic'
+                                       + r' element 9 eta cutoff ```.',
                         'parameters': {
-                            'eta': 0.0
+                            'eta': 0.0,
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -1773,8 +2463,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'global_symfunction_short': {
-        'description': " Specification of global symmetry functions for all elements and all element  combinations for the short-range atomic NN.",
-        'format': "global_symfunction_short type [parameters] cutoff",
+        'description': r'Specification of global symmetry functions for a'
+                       + r'll elements and all element  combinations for th'
+                       + r'e short-range atomic NN.',
+        'format': r'global_symfunction_short type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -1782,62 +2474,91 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`.",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`.',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires parameters `eta` and `rshift`. ```runner-config global_symfunction_short 2 eta rshift cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ters `eta` and `rshift`. ```runn'
+                                       + r'er-config global_symfunction_sho'
+                                       + r'rt 2 eta rshift cutoff ```',
                         'parameters': {
                             'eta': 0.0,
-                            'rshift': 0.0
+                            'rshift': 0.0,
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires `parameters` `eta`, `lambda`, and `zeta`. ```runner-config global_symfunction_short 3 eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, `lambda`, and `ze'
+                                       + r'ta`. ```runner-config global_sym'
+                                       + r'function_short 3 eta lambda zeta'
+                                       + r' cutoff ```',
                         'parameters': {
                             'eta': 0.0,
                             'lambda': 0.0,
-                            'zeta': 0.0
+                            'zeta': 0.0,
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires parameter `eta`. ```runner-config global_symfunction_short 2 eta cutoff ```",
+                        'description': r'Radial function. Requires parame'
+                                       + r'ter `eta`. ```runner-config glob'
+                                       + r'al_symfunction_short 2 eta cutof'
+                                       + r'f ```',
                         'parameters': {
                             'eta': 0.0,
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config global_symfunction_short 5 eta ```",
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig global_symfunction_short 5 et'
+                                       + r'a ```',
                         'parameters': {
                             'eta': 0.0,
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config global_symfunction_short 6 cutoff ```",
-                    },
-                    7: {
-                        'description': " Not implemented.",
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config global_symfunction_shor'
+                                       + r't 6 cutoff ```',
                     },
                     8: {
-                        'description': " Angular function. Requires `parameters` `eta`, and `rshift`. ```runner-config global_symfunction_short 8 eta rshift cutoff ```",
+                        'description': r'Not implemented.',
+                    },
+                    '8': {
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`, and `rshift`. ```'
+                                       + r'runner-config global_symfunction'
+                                       + r'_short 8 eta rshift cutoff ```',
                         'parameters': {
                             'eta': 0.0,
-                            'rshift': 0.0
+                            'rshift': 0.0,
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires `parameters` `eta`. ```runner-config global_symfunction_short 9 eta cutoff ```.",
+                        'description': r'Angular function. Requires `para'
+                                       + r'meters` `eta`. ```runner-config '
+                                       + r'global_symfunction_short 9 eta c'
+                                       + r'utoff ```.',
                         'parameters': {
-                            'eta': 0.0
+                            'eta': 0.0,
                         },
                     },
                 },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -1845,8 +2566,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'growth_mode': {
-        'description': " If this keyword is used, not the full training set will be used in each epoch.  First, only a few points will be used, and after a specified number of epochs further points will be included and so on. ",
-        'format': "growth_mode i0 i1",
+        'description': r'If this keyword is used, not the full training s'
+                       + r'et will be used in each epoch.  First, only a fe'
+                       + r'w points will be used, and after a specified num'
+                       + r'ber of epochs further points will be included an'
+                       + r'd so on. ',
+        'format': r'growth_mode i0 i1',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1854,12 +2579,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of points that will be added to the training set every `i1` steps.",
+                'description': r'Number of points that will be added to t'
+                               + r'he training set every `i1` steps.',
                 'type': int,
                 'default_value': 0,
             },
             'i1': {
-                'description': " Number of steps to wait before increasing the number of training points.",
+                'description': r'Number of steps to wait before increasin'
+                               + r'g the number of training points.',
                 'type': int,
                 'default_value': 0,
             },
@@ -1868,8 +2595,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'initialization_only': {
         'type': bool,
-        'description': " With this keyword, which is active only in  runner_mode 2, `RuNNer` will stop  after the initialization of the run before epoch 0, i.e. no fit will be done.  This is meant as an automatic stop of the program in case only the analysis carried out in the initialization of  runner_mode 2  is of interest.",
-        'format': "initialization_only",
+        'description': r'With this keyword, which is active only in  runn'
+                       + r'er_mode 2, `RuNNer` will stop  after the initial'
+                       + r'ization of the run before epoch 0, i.e. no fit w'
+                       + r'ill be done.  This is meant as an automatic stop'
+                       + r' of the program in case only the analysis carrie'
+                       + r'd out in the initialization of  runner_mode 2  i'
+                       + r's of interest.',
+        'format': r'initialization_only',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1880,8 +2613,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'ion_forces_only': {
         'type': bool,
-        'description': " If this keyword is set, for structures with a nonzero net charge only the forces will be used for fitting, the energies will be omitted. This keyword is  currently implemented only for the atomic short range part.",
-        'format': "ion_forces_only",
+        'description': r'If this keyword is set, for structures with a no'
+                       + r'nzero net charge only the forces will be used fo'
+                       + r'r fitting, the energies will be omitted. This ke'
+                       + r'yword is  currently implemented only for the ato'
+                       + r'mic short range part.',
+        'format': r'ion_forces_only',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1892,8 +2629,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'joint_energy_force_update': {
         'type': bool,
-        'description': " This is an experimental keyword not fully tested. For each atom only one weight update is done for an averaged set of gradients calculated from the energy and all forces (not yet working well).",
-        'format': "joint_energy_force_update",
+        'description': r'This is an experimental keyword not fully tested'
+                       + r'. For each atom only one weight update is done f'
+                       + r'or an averaged set of gradients calculated from '
+                       + r'the energy and all forces (not yet working well)'
+                       + r'.',
+        'format': r'joint_energy_force_update',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1903,8 +2644,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_damp_charge': {
-        'description': " Reduce the effective RMSE on the charges for the Kalman filter update of the weights in the electrostatic NN.",
-        'format': "kalman_damp_charge a0",
+        'description': r'Reduce the effective RMSE on the charges for the'
+                       + r' Kalman filter update of the weights in the elec'
+                       + r'trostatic NN.',
+        'format': r'kalman_damp_charge a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1912,7 +2655,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of charge RMSE that is considered for the weight update. 100% = 1.0.",
+                'description': r'Fraction of charge RMSE that is consider'
+                               + r'ed for the weight update. 100% = 1.0.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1920,8 +2664,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_damp_force': {
-        'description': " Reduce the effective RMSE on the forces for the Kalman filter update of the weights in the short-range NN.",
-        'format': "kalman_damp_force a0",
+        'description': r'Reduce the effective RMSE on the forces for the '
+                       + r'Kalman filter update of the weights in the short'
+                       + r'-range NN.',
+        'format': r'kalman_damp_force a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1929,7 +2675,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of force RMSE that is considered for the weight update. 100% = 1.0.",
+                'description': r'Fraction of force RMSE that is considere'
+                               + r'd for the weight update. 100% = 1.0.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1937,8 +2684,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_damp_short': {
-        'description': " Reduce the effective RMSE on the energies for the Kalman filter update of the weights in the short-range NN.",
-        'format': "kalman_damp_short a0",
+        'description': r'Reduce the effective RMSE on the energies for th'
+                       + r'e Kalman filter update of the weights in the sho'
+                       + r'rt-range NN.',
+        'format': r'kalman_damp_short a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1946,7 +2695,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of energy RMSE that is considered for the weight update. 100% = 1.0.",
+                'description': r'Fraction of energy RMSE that is consider'
+                               + r'ed for the weight update. 100% = 1.0.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1954,8 +2704,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_epsilon': {
-        'description': r" Set the initialization parameter for the correlation matrix of the Kalman filter according to $$ P(0)=\epsilon^{-1} \mathcal{I}. $$ $\epsilon$ is often set to the order of $10^{-3}$ to $10^{-2}$.",
-        'format': "kalman_epsilon a0",
+        'description': r'Set the initialization parameter for the correla'
+                       + r'tion matrix of the Kalman filter according to $$'
+                       + r' P(0)=\epsilon^{-1} \mathcal{I}. $$ $\epsilon$ i'
+                       + r's often set to the order of $10^{-3}$ to $10^{-2'
+                       + r'}$.',
+        'format': r'kalman_epsilon a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1963,7 +2717,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $\epsilon$.",
+                'description': r'default_value of $\epsilon$.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1971,8 +2725,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_lambda_charge': {
-        'description': r" Kalman filter parameter $\lambda$ for the electrostatic NN weight updates.",
-        'format': "kalman_lambda_charge a0",
+        'description': r'Kalman filter parameter $\lambda$ for the electr'
+                       + r'ostatic NN weight updates.',
+        'format': r'kalman_lambda_charge a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1980,7 +2735,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $\lambda$.",
+                'description': r'default_value of $\lambda$.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -1988,8 +2743,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_lambda_short': {
-        'description': r" Kalman filter parameter $\lambda$ for the short range NN weight updates.",
-        'format': "kalman_lambda_short a0",
+        'description': r'Kalman filter parameter $\lambda$ for the short '
+                       + r'range NN weight updates.',
+        'format': r'kalman_lambda_short a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -1997,7 +2753,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $\lambda$.",
+                'description': r'default_value of $\lambda$.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2005,8 +2761,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_nue_charge': {
-        'description': r" Kalman filter parameter $\lambda_0$ for the electrostatic NN weight updates.",
-        'format': "kalman_nue_charge a0",
+        'description': r'Kalman filter parameter $\lambda_0$ for the elec'
+                       + r'trostatic NN weight updates.',
+        'format': r'kalman_nue_charge a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2014,7 +2771,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $\lambda_0$.",
+                'description': r'default_value of $\lambda_0$.',
                 'type': float,
                 'default_value': None,
             },
@@ -2022,8 +2779,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_nue_short': {
-        'description': r" Kalman filter parameter $\lambda_0$ for the short range weight updates.",
-        'format': "kalman_nue_short a0",
+        'description': r'Kalman filter parameter $\lambda_0$ for the shor'
+                       + r't range weight updates.',
+        'format': r'kalman_nue_short a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2031,7 +2789,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $\lambda_0$.",
+                'description': r'default_value of $\lambda_0$.',
                 'type': float,
                 'default_value': None,
             },
@@ -2039,8 +2797,19 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_q0': {
-        'description': r" It is possible to add artificial process noise for the Kalman filter in the form of  $$ Q(t) =q(t)\mathcal{I}, $$  with either a fixed $q(t)=q(0)$ or annealing from a higher $q(0)$ to  $q_{\mathrm{min}}$ following a scheme like $$ q(t) = \max(q_{0}e^{-t/\tau_{q}}, q_{\mathrm{min}}). $$ The default_value of $q(0)$ is usually set between $10^{-6}$ and $10^{-2}$. It is recommended for the user to do some test for each new system, altering kalman_q0,  kalman_qmin and  kalman_qtau to obtain the optimal performance for minimizing the root mean square error.",
-        'format': "kalman_q0 a0",
+        'description': r'It is possible to add artificial process noise f'
+                       + r'or the Kalman filter in the form of  $$ Q(t) =q('
+                       + r't)\mathcal{I}, $$  with either a fixed $q(t)=q(0'
+                       + r')$ or annealing from a higher $q(0)$ to  $q_{\ma'
+                       + r'thrm{min}}$ following a scheme like $$ q(t) = \m'
+                       + r'ax(q_{0}e^{-t/\tau_{q}}, q_{\mathrm{min}}). $$ T'
+                       + r'he default_value of $q(0)$ is usually set betwee'
+                       + r'n $10^{-6}$ and $10^{-2}$. It is recommended for'
+                       + r' the user to do some test for each new system, a'
+                       + r'ltering kalman_q0,  kalman_qmin and  kalman_qtau'
+                       + r' to obtain the optimal performance for minimizin'
+                       + r'g the root mean square error.',
+        'format': r'kalman_q0 a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2048,7 +2817,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $q(0)$.",
+                'description': r'default_value of $q(0)$.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2056,8 +2825,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_qmin': {
-        'description': r" Parameter $q_{\mathrm{min}}$ for adding artificial process noise to the Kalman filter noise matrix. See kalman_q0 for a more detailed explanation.",
-        'format': "kalman_qmin a0",
+        'description': r'Parameter $q_{\mathrm{min}}$ for adding artifici'
+                       + r'al process noise to the Kalman filter noise matr'
+                       + r'ix. See kalman_q0 for a more detailed explanatio'
+                       + r'n.',
+        'format': r'kalman_qmin a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2065,7 +2837,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': r" default_value of $q_{\mathrm{min}}$.",
+                'description': r'default_value of $q_{\mathrm{min}}$.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2073,8 +2845,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'kalman_qtau': {
-        'description': " Parameter $\tau_q$ for adding artificial process noise to the Kalman filter noise matrix. See kalman_q0 for a more detailed explanation.",
-        'format': "kalman_qtau a0",
+        'description': r'Parameter $	au_q$ for adding artificial process '
+                       + r'noise to the Kalman filter noise matrix. See kal'
+                       + r'man_q0 for a more detailed explanation.',
+        'format': r'kalman_qtau a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2082,7 +2856,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " default_value of $\tau_q$.",
+                'description': r'default_value of $	au_q$.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2090,8 +2864,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'max_energy': {
-        'description': " Set an upper threshold for the consideration of a structure during the weight  update. If the total energy is above  max_energy] the data point will be ignored.",
-        'format': "max_energy a0",
+        'description': r'Set an upper threshold for the consideration of '
+                       + r'a structure during the weight  update. If the to'
+                       + r'tal energy is above  max_energy] the data point '
+                       + r'will be ignored.',
+        'format': r'max_energy a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2099,7 +2876,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Maximum energy of a structure to be considered for the weight update (unit: Hartree).",
+                'description': r'Maximum energy of a structure to be cons'
+                               + r'idered for the weight update (unit: Hart'
+                               + r'ree).',
                 'type': float,
                 'default_value': 10000.0,
             },
@@ -2107,8 +2886,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'max_force': {
-        'description': " Set an upper threshold for the consideration of a structure during the weight  update. If any force component is above  max_force] the data point will be ignored.",
-        'format': "max_force a0",
+        'description': r'Set an upper threshold for the consideration of '
+                       + r'a structure during the weight  update. If any fo'
+                       + r'rce component is above  max_force] the data poin'
+                       + r't will be ignored.',
+        'format': r'max_force a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2116,7 +2898,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Maximum force component of a structure to be considered for the weight update (unit: Hartree/Bohr).",
+                'description': r'Maximum force component of a structure t'
+                               + r'o be considered for the weight update (u'
+                               + r'nit: Hartree/Bohr).',
                 'type': float,
                 'default_value': 10000.0,
             },
@@ -2125,8 +2909,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'md_mode': {
         'type': bool,
-        'description': " The purpose of this keyword is to reduce the output to enable the incorporation of `RuNNer` into a MD code.",
-        'format': "md_mode",
+        'description': r'The purpose of this keyword is to reduce the out'
+                       + r'put to enable the incorporation of `RuNNer` into'
+                       + r' a MD code.',
+        'format': r'md_mode',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -2137,8 +2923,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'mix_all_points': {
         'type': bool,
-        'description': " Randomly reorder the data points in the data set at the beginning of each new epoch.",
-        'format': "mix_all_points",
+        'description': r'Randomly reorder the data points in the data set'
+                       + r' at the beginning of each new epoch.',
+        'format': r'mix_all_points',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2149,8 +2936,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'nguyen_widrow_weights_ewald': {
         'type': bool,
-        'description': " Initialize the elecrostatic NN weights according to the scheme proposed by Nguyen and Widrow. The initial weights and bias default_values in the hidden layer are chosen such that the input space is evenly distributed over the nodes. This may speed up the training process.",
-        'format': "nguyen_widrow_weights_ewald",
+        'description': r'Initialize the elecrostatic NN weights according'
+                       + r' to the scheme proposed by Nguyen and Widrow. Th'
+                       + r'e initial weights and bias default_values in the'
+                       + r' hidden layer are chosen such that the input spa'
+                       + r'ce is evenly distributed over the nodes. This ma'
+                       + r'y speed up the training process.',
+        'format': r'nguyen_widrow_weights_ewald',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2161,8 +2953,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'nguyen_widrow_weights_short': {
         'type': bool,
-        'description': " Initialize the short-range NN weights according to the scheme proposed by Nguyen and Widrow. The initial weights and bias default_values in the hidden layer are chosen such that the input space is evenly distributed over the nodes. This may speed up the training process.",
-        'format': "nguyen_widrow_weights_short",
+        'description': r'Initialize the short-range NN weights according '
+                       + r'to the scheme proposed by Nguyen and Widrow. The'
+                       + r' initial weights and bias default_values in the '
+                       + r'hidden layer are chosen such that the input spac'
+                       + r'e is evenly distributed over the nodes. This may'
+                       + r' speed up the training process.',
+        'format': r'nguyen_widrow_weights_short',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2172,8 +2969,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'nn_type_short': {
-        'description': " Specify the NN type of the short-range part.",
-        'format': "nn_type_short i0",
+        'description': r'Specify the NN type of the short-range part.',
+        'format': r'nn_type_short i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2181,15 +2978,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the short-range NN type.",
+                'description': r'Set the short-range NN type.',
                 'type': int,
                 'default_value': None,
                 'options': {
                     1: {
-                        'description': " Behler-Parrinello atomic NNs. The short range energy is constructed as a sum of environment-dependent atomic energies.",
+                        'description': r'Behler-Parrinello atomic NNs. Th'
+                                       + r'e short range energy is construc'
+                                       + r'ted as a sum of environment-depe'
+                                       + r'ndent atomic energies.',
                     },
                     2: {
-                        'description': " Pair NNs. The short range energy is constructed as a sum of environment-dependent pair energies.",
+                        'description': r'Pair NNs. The short range energy'
+                                       + r' is constructed as a sum of envi'
+                                       + r'ronment-dependent pair energies.',
                     },
                 },
             },
@@ -2197,8 +2999,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'nnp_gen': {
-        'description': " This keyword specifies the generation of HDNNP that will be constructed.",
-        'format': "nnp_gen i0",
+        'description': r'This keyword specifies the generation of HDNNP t'
+                       + r'hat will be constructed.',
+        'format': r'nnp_gen i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2206,18 +3009,40 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the short-range and electrostatics NN type.",
+                'description': r'Set the short-range and electrostatics N'
+                               + r'N type.',
                 'type': int,
                 'default_value': None,
                 'options': {
                     2: {
-                        'description': " 2G-HDNNPs only include the short-range part (Behler-Parrinello atomic NNs). Users should also specify use_short_nn.",
+                        'description': r'2G-HDNNPs only include the short'
+                                       + r'-range part (Behler-Parrinello a'
+                                       + r'tomic NNs). Users should also sp'
+                                       + r'ecify use_short_nn.',
                     },
                     3: {
-                        'description': " 3G-HDNNPs include both the short-range part and the long-range electrostatic part. Users are advised to first construct a representation for the electrostatic part by specifying use_electrostatics and then switch to the short range part by setting both use_short_nn and use_electrostatics.",
+                        'description': r'3G-HDNNPs include both the short'
+                                       + r'-range part and the long-range e'
+                                       + r'lectrostatic part. Users are adv'
+                                       + r'ised to first construct a repres'
+                                       + r'entation for the electrostatic p'
+                                       + r'art by specifying use_electrosta'
+                                       + r'tics and then switch to the shor'
+                                       + r't range part by setting both use'
+                                       + r'_short_nn and use_electrostatics'
+                                       + r'.',
                     },
                     4: {
-                        'description': " 4G-HDNNPs include both the short-range part and the long-range electrostatic part. Users are advised to first construct a representation for the electrostatic part by specifying use_electrostatics and then switch to the short range part by setting both use_short_nn and use_electrostatics.",
+                        'description': r'4G-HDNNPs include both the short'
+                                       + r'-range part and the long-range e'
+                                       + r'lectrostatic part. Users are adv'
+                                       + r'ised to first construct a repres'
+                                       + r'entation for the electrostatic p'
+                                       + r'art by specifying use_electrosta'
+                                       + r'tics and then switch to the shor'
+                                       + r't range part by setting both use'
+                                       + r'_short_nn and use_electrostatics'
+                                       + r'.',
                     },
                 },
             },
@@ -2225,8 +3050,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'noise_charge': {
-        'description': " Introduce artificial noise on the atomic charges in the training process by setting a lower threshold that the absolute charge error of a data point has to  surpass before being considered for the weight update.   ",
-        'format': "noise_charge a0",
+        'description': r'Introduce artificial noise on the atomic charges'
+                       + r' in the training process by setting a lower thre'
+                       + r'shold that the absolute charge error of a data p'
+                       + r'oint has to  surpass before being considered for'
+                       + r' the weight update.   ',
+        'format': r'noise_charge a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2234,7 +3063,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Noise charge threshold (unit: Hartree per atom). Must be positive.",
+                'description': r'Noise charge threshold (unit: Hartree pe'
+                               + r'r atom). Must be positive.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2242,8 +3072,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'noise_energy': {
-        'description': " Introduce artificial noise on the atomic energies in the training process by setting a lower threshold that the absolute energy error of a data point has to  surpass before being considered for the weight update.   ",
-        'format': "noise_energy a0",
+        'description': r'Introduce artificial noise on the atomic energie'
+                       + r's in the training process by setting a lower thr'
+                       + r'eshold that the absolute energy error of a data '
+                       + r'point has to  surpass before being considered fo'
+                       + r'r the weight update.   ',
+        'format': r'noise_energy a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2251,7 +3085,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Noise energy threshold (unit: electron charge). Must be positive.",
+                'description': r'Noise energy threshold (unit: electron c'
+                               + r'harge). Must be positive.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2259,8 +3094,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'noise_force': {
-        'description': " Introduce artificial noise on the atomic forces in the training process by setting a lower threshold that the absolute force error of a data point has to  surpass before being considered for the weight update.   ",
-        'format': "noise_force a0",
+        'description': r'Introduce artificial noise on the atomic forces '
+                       + r'in the training process by setting a lower thres'
+                       + r'hold that the absolute force error of a data poi'
+                       + r'nt has to  surpass before being considered for t'
+                       + r'he weight update.   ',
+        'format': r'noise_force a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2268,7 +3107,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Noise force threshold (unit: Hartree per Bohr). Must be positive.",
+                'description': r'Noise force threshold (unit: Hartree per'
+                               + r' Bohr). Must be positive.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2277,8 +3117,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'normalize_nodes': {
         'type': bool,
-        'description': " Divide the accumulated sum at each node by the number of nodes in the previous layer before the activation function is applied. This may help to activate the activation functions in their non-linear regions.",
-        'format': "normalize_nodes",
+        'description': r'Divide the accumulated sum at each node by the n'
+                       + r'umber of nodes in the previous layer before the '
+                       + r'activation function is applied. This may help to'
+                       + r' activate the activation functions in their non-'
+                       + r'linear regions.',
+        'format': r'normalize_nodes',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2288,8 +3132,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'number_of_elements': {
-        'description': " Specify the number of chemical elements in the system.",
-        'format': "number_of_elements i0",
+        'description': r'Specify the number of chemical elements in the s'
+                       + r'ystem.',
+        'format': r'number_of_elements i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2297,16 +3142,17 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of elements.",
+                'description': r'Number of elements.',
                 'type': int,
-                'default_value': "None",
+                'default_value': r'None',
             },
         },
         'allow_multiple': False,
     },
     'optmode_charge': {
-        'description': " Specify the optimization algorithm for the atomic charges in case of  electrostatic_type 1.",
-        'format': "optmode_charge i0",
+        'description': r'Specify the optimization algorithm for the atomi'
+                       + r'c charges in case of  electrostatic_type 1.',
+        'format': r'optmode_charge i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2314,18 +3160,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the atomic charge optimization algorithm.",
+                'description': r'Set the atomic charge optimization algor'
+                               + r'ithm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     1: {
-                        'description': " Kalman filter.",
+                        'description': r'Kalman filter.',
                     },
                     2: {
-                        'description': " Reserved for conjugate gradient, not implemented.",
+                        'description': r'Reserved for conjugate gradient,'
+                                       + r' not implemented.',
                     },
                     3: {
-                        'description': " Steepest descent. Not recommended.",
+                        'description': r'Steepest descent. Not recommende'
+                                       + r'd.',
                     },
                 },
             },
@@ -2333,8 +3182,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'optmode_short_energy': {
-        'description': " Specify the optimization algorithm for the short-range energy contributions.",
-        'format': "optmode_short_energy i0",
+        'description': r'Specify the optimization algorithm for the short'
+                       + r'-range energy contributions.',
+        'format': r'optmode_short_energy i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2342,18 +3192,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the short-range energy optimization algorithm.",
+                'description': r'Set the short-range energy optimization '
+                               + r'algorithm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     1: {
-                        'description': " Kalman filter.",
+                        'description': r'Kalman filter.',
                     },
                     2: {
-                        'description': " Reserved for conjugate gradient, not implemented.",
+                        'description': r'Reserved for conjugate gradient,'
+                                       + r' not implemented.',
                     },
                     3: {
-                        'description': " Steepest descent. Not recommended.",
+                        'description': r'Steepest descent. Not recommende'
+                                       + r'd.',
                     },
                 },
             },
@@ -2361,8 +3214,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'optmode_short_force': {
-        'description': " Specify the optimization algorithm for the short-range forces.",
-        'format': "optmode_short_force i0",
+        'description': r'Specify the optimization algorithm for the short'
+                       + r'-range forces.',
+        'format': r'optmode_short_force i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2370,18 +3224,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the short-range force optimization algorithm.",
+                'description': r'Set the short-range force optimization a'
+                               + r'lgorithm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     1: {
-                        'description': " Kalman filter.",
+                        'description': r'Kalman filter.',
                     },
                     2: {
-                        'description': " Reserved for conjugate gradient, not implemented.",
+                        'description': r'Reserved for conjugate gradient,'
+                                       + r' not implemented.',
                     },
                     3: {
-                        'description': " Steepest descent. Not recommended.",
+                        'description': r'Steepest descent. Not recommende'
+                                       + r'd.',
                     },
                 },
             },
@@ -2389,8 +3246,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'parallel_mode': {
-        'description': " This flag controls the parallelization of some subroutines. ",
-        'format': "parallel_mode i0",
+        'description': r'This flag controls the parallelization of some s'
+                       + r'ubroutines. ',
+        'format': r'parallel_mode i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2398,15 +3256,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the short-range force optimization algorithm.",
+                'description': r'Set the short-range force optimization a'
+                               + r'lgorithm.',
                 'type': int,
                 'default_value': 1,
                 'options': {
                     1: {
-                        'description': " Serial version.",
+                        'description': r'Serial version.',
                     },
                     2: {
-                        'description': " Parallel version.",
+                        'description': r'Parallel version.',
                     },
                 },
             },
@@ -2414,8 +3273,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'points_in_memory': {
-        'description': " This keyword controls memory consumption and IO and is therefore important to achieve an optimum performance of `RuNNer`. Has a different meaning depending on the current  runner_mode.",
-        'format': "points_in_memory i0",
+        'description': r'This keyword controls memory consumption and IO '
+                       + r'and is therefore important to achieve an optimum'
+                       + r' performance of `RuNNer`. Has a different meanin'
+                       + r'g depending on the current  runner_mode.',
+        'format': r'points_in_memory i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2423,7 +3285,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " In runner_mode 1 this is the maximum number of structures in memory at a time. In runner_mode 3 this is the number of atoms for which the symmetry functions are in memory at once. In parallel runs these atoms are further split between the processes.",
+                'description': r'In runner_mode 1 this is the maximum num'
+                               + r'ber of structures in memory at a time. I'
+                               + r'n runner_mode 3 this is the number of at'
+                               + r'oms for which the symmetry functions are'
+                               + r' in memory at once. In parallel runs the'
+                               + r'se atoms are further split between the p'
+                               + r'rocesses.',
                 'type': int,
                 'default_value': 200,
             },
@@ -2432,8 +3300,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'precondition_weights': {
         'type': bool,
-        'description': " Shift the weights of the atomic NNs right after the initialization so that  the standard deviation of the NN energies is the same as the standard deviation of the reference energies.",
-        'format': "precondition_weights",
+        'description': r'Shift the weights of the atomic NNs right after '
+                       + r'the initialization so that  the standard deviati'
+                       + r'on of the NN energies is the same as the standar'
+                       + r'd deviation of the reference energies.',
+        'format': r'precondition_weights',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2444,8 +3315,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_all_deshortdw': {
         'type': bool,
-        'description': " For debugging only. Prints the derivatives of the short range energy with  respect to the short range NN weight parameters after each update. This derivative array is responsible for the weight update. The derivatives (the array `deshortdw`) are written to the file `debug.out`.",
-        'format': "print_all_deshortdw",
+        'description': r'For debugging only. Prints the derivatives of th'
+                       + r'e short range energy with  respect to the short '
+                       + r'range NN weight parameters after each update. Th'
+                       + r'is derivative array is responsible for the weigh'
+                       + r't update. The derivatives (the array `deshortdw`'
+                       + r') are written to the file `debug.out`.',
+        'format': r'print_all_deshortdw',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2456,8 +3332,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_all_dfshortdw': {
         'type': bool,
-        'description': " For debugging only. Prints the derivatives of the short range forces with respect to the short range NN weight parameters after each update. This derivative array is responsible for the weight update. The derivatives (the array `dfshortdw(maxnum_weightsshort)`) are written to the file `debug.out`.",
-        'format': "print_all_dfshortdw",
+        'description': r'For debugging only. Prints the derivatives of th'
+                       + r'e short range forces with respect to the short r'
+                       + r'ange NN weight parameters after each update. Thi'
+                       + r's derivative array is responsible for the weight'
+                       + r' update. The derivatives (the array `dfshortdw(m'
+                       + r'axnum_weightsshort)`) are written to the file `d'
+                       + r'ebug.out`.',
+        'format': r'print_all_dfshortdw',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2468,8 +3350,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_all_electrostatic_weights': {
         'type': bool,
-        'description': " For debugging only. Print the electrostatic NN weight parameters after each  update, not only once per epoch to a file. The weights (the array  `weights_ewald()`) are written to the file `debug.out`.",
-        'format': "print_all_electrostatic_weights",
+        'description': r'For debugging only. Print the electrostatic NN w'
+                       + r'eight parameters after each  update, not only on'
+                       + r'ce per epoch to a file. The weights (the array  '
+                       + r'`weights_ewald()`) are written to the file `debu'
+                       + r'g.out`.',
+        'format': r'print_all_electrostatic_weights',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2480,8 +3366,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_all_short_weights': {
         'type': bool,
-        'description': " For debugging only. Print the short range NN weight parameters after each  update, not only once per epoch to a file. The weights (the array `weights_short()`) are written to the file `debug.out`. ",
-        'format': "print_all_short_weights",
+        'description': r'For debugging only. Print the short range NN wei'
+                       + r'ght parameters after each  update, not only once'
+                       + r' per epoch to a file. The weights (the array `we'
+                       + r'ights_short()`) are written to the file `debug.o'
+                       + r'ut`. ',
+        'format': r'print_all_short_weights',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2492,8 +3382,19 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_convergence_vector': {
         'type': bool,
-        'description': " During training, print a measure for the convergence of the weight vector. The output is: ```runner-data CONVVEC element epoch C1 C2 wshift wshift2 ``` `C1` and `C2` are two-dimensional coordinates of projections of the weight vectors for plotting qualitatively the convergence of the weights. `wshift` is the length (normalized by the number of weights) of the difference vector of the weights between two epochs. `wshift2` is the length (normalized by the number of weights) of the difference vector between the current weights and the weights two epochs ago.",
-        'format': "print_convergence_vector",
+        'description': r'During training, print a measure for the converg'
+                       + r'ence of the weight vector. The output is: ```run'
+                       + r'ner-data CONVVEC element epoch C1 C2 wshift wshi'
+                       + r'ft2 ``` `C1` and `C2` are two-dimensional coordi'
+                       + r'nates of projections of the weight vectors for p'
+                       + r'lotting qualitatively the convergence of the wei'
+                       + r'ghts. `wshift` is the length (normalized by the '
+                       + r'number of weights) of the difference vector of t'
+                       + r'he weights between two epochs. `wshift2` is the '
+                       + r'length (normalized by the number of weights) of '
+                       + r'the difference vector between the current weight'
+                       + r's and the weights two epochs ago.',
+        'format': r'print_convergence_vector',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2504,8 +3405,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_date_and_time': {
         'type': bool,
-        'description': " Print in each training epoch the date and the real time in an extra line.",
-        'format': "print_date_and_time",
+        'description': r'Print in each training epoch the date and the re'
+                       + r'al time in an extra line.',
+        'format': r'print_date_and_time',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2516,8 +3418,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_force_components': {
         'type': bool,
-        'description': " For debugging only. Prints in  runner_mode 3  the contributions of all atomic energies to the force components of each atom.",
-        'format': "print_force_components",
+        'description': r'For debugging only. Prints in  runner_mode 3  th'
+                       + r'e contributions of all atomic energies to the fo'
+                       + r'rce components of each atom.',
+        'format': r'print_force_components',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -2528,8 +3432,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_mad': {
         'type': bool,
-        'description': " Print a line with the mean absolute deviation as an additional output line next to the RMSE in  runner_mode 2.  Usually the MAD is smaller than the RMSE as outliers do not have such a large  impact.",
-        'format': "print_mad",
+        'description': r'Print a line with the mean absolute deviation as'
+                       + r' an additional output line next to the RMSE in  '
+                       + r'runner_mode 2.  Usually the MAD is smaller than '
+                       + r'the RMSE as outliers do not have such a large  i'
+                       + r'mpact.',
+        'format': r'print_mad',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2540,8 +3448,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'print_sensitivity': {
         'type': bool,
-        'description': " Perform sensitivity analysis on the symmetry functions of the neural network. The  sensitivity is a measure of how much the NN output changes with the symmetry functions, i.e. the derivative. It will be analyzed upon weight initialization and for each training epoch in all short-range, pair, and electrostatic NNs there are. ",
-        'format': "print_sensitivity",
+        'description': r'Perform sensitivity analysis on the symmetry fun'
+                       + r'ctions of the neural network. The  sensitivity i'
+                       + r's a measure of how much the NN output changes wi'
+                       + r'th the symmetry functions, i.e. the derivative. '
+                       + r'It will be analyzed upon weight initialization a'
+                       + r'nd for each training epoch in all short-range, p'
+                       + r'air, and electrostatic NNs there are. ',
+        'format': r'print_sensitivity',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2551,8 +3465,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'random_number_type': {
-        'description': " Specify the type of random number generator used in `RuNNer`. The seed can be given with the keyword  random_seed.",
-        'format': "random_number_type i0",
+        'description': r'Specify the type of random number generator used'
+                       + r' in `RuNNer`. The seed can be given with the key'
+                       + r'word  random_seed.',
+        'format': r'random_number_type i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2560,27 +3476,31 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Set the random number generator type.",
+                'description': r'Set the random number generator type.',
                 'type': int,
                 'default_value': 5,
                 'options': {
                     1: {
-                        'description': " Deprecated.",
+                        'description': r'Deprecated.',
                     },
                     2: {
-                        'description': " Deprecated.",
+                        'description': r'Deprecated.',
                     },
                     3: {
-                        'description': " Deprecated.",
+                        'description': r'Deprecated.',
                     },
                     4: {
-                        'description': " Deprecated.",
+                        'description': r'Deprecated.',
                     },
                     5: {
-                        'description': " Normal distribution of random numbers.",
+                        'description': r'Normal distribution of random nu'
+                                       + r'mbers.',
                     },
                     6: {
-                        'description': " Normal distribution of random numbers with the `xorshift` algorithm. **This is the recommended option.**",
+                        'description': r'Normal distribution of random nu'
+                                       + r'mbers with the `xorshift` algori'
+                                       + r'thm. **This is the recommended o'
+                                       + r'ption.**',
                     },
                 },
             },
@@ -2588,8 +3508,18 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'random_seed': {
-        'description': " Set the integer seed for the random number generator used at many places in  `RuNNer`. In order to ensure that all results are reproducible, the same seed will result in exactly the same output at all times (machine and compiler dependence cannot be excluded). This seed default_value is used for all random number generator in `RuNNer`, but internally for each purpose a local copy is made first to avoid interactions between the different random number generators.  Please see also the keyword  random_number_type.",
-        'format': "random_seed i0",
+        'description': r'Set the integer seed for the random number gener'
+                       + r'ator used at many places in  `RuNNer`. In order '
+                       + r'to ensure that all results are reproducible, the'
+                       + r' same seed will result in exactly the same outpu'
+                       + r't at all times (machine and compiler dependence '
+                       + r'cannot be excluded). This seed default_value is '
+                       + r'used for all random number generator in `RuNNer`'
+                       + r', but internally for each purpose a local copy i'
+                       + r's made first to avoid interactions between the d'
+                       + r'ifferent random number generators.  Please see a'
+                       + r'lso the keyword  random_number_type.',
+        'format': r'random_seed i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2597,7 +3527,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Seed default_value.",
+                'description': r'Seed default_value.',
                 'type': int,
                 'default_value': 200,
             },
@@ -2606,8 +3536,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'read_kalman_matrices': {
         'type': bool,
-        'description': " Restart a fit using old Kalman filter matrices from the files `kalman.short.XXX.data` and `kalman.elec.XXX.data`. `XXX` is the nuclear charge of the respective element. Using old Kalman matrices will reduce the oscillations of the errors when a fit is restarted with the Kalman filter. The Kalman matrices are written to the files using the keyword save_kalman_matrices",
-        'format': "read_kalman_matrices",
+        'description': r'Restart a fit using old Kalman filter matrices f'
+                       + r'rom the files `kalman.short.XXX.data` and `kalma'
+                       + r'n.elec.XXX.data`. `XXX` is the nuclear charge of'
+                       + r' the respective element. Using old Kalman matric'
+                       + r'es will reduce the oscillations of the errors wh'
+                       + r'en a fit is restarted with the Kalman filter. Th'
+                       + r'e Kalman matrices are written to the files using'
+                       + r' the keyword save_kalman_matrices',
+        'format': r'read_kalman_matrices',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2618,8 +3555,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'read_unformatted': {
         'type': bool,
-        'description': " Read old NN weights and/or an old Kalman matrix from an unformatted input file.",
-        'format': "read_unformatted",
+        'description': r'Read old NN weights and/or an old Kalman matrix '
+                       + r'from an unformatted input file.',
+        'format': r'read_unformatted',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2629,8 +3567,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'regularize_fit_param': {
-        'description': " This keyword switches on L2 regularization, mainly for the electrostatic part in 4G-HDNNPs.",
-        'format': "regularize_fit_param a0",
+        'description': r'This keyword switches on L2 regularization, main'
+                       + r'ly for the electrostatic part in 4G-HDNNPs.',
+        'format': r'regularize_fit_param a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2638,7 +3577,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Regularization parameter. Recommended setting is $10^{-6}$.",
+                'description': r'Regularization parameter. Recommended se'
+                               + r'tting is $10^{-6}$.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2647,8 +3587,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'remove_atom_energies': {
         'type': bool,
-        'description': " Remove the energies of the free atoms from the total energies per atom to reduce the absolute default_values of the target energies. This means that when this keyword is used, `RuNNer` will fit binding energies instead of total energies. This is expected to facilitate the fitting process because binding energies are closer to zero. ",
-        'format': "remove_atom_energies",
+        'description': r'Remove the energies of the free atoms from the t'
+                       + r'otal energies per atom to reduce the absolute de'
+                       + r'fault_values of the target energies. This means '
+                       + r'that when this keyword is used, `RuNNer` will fi'
+                       + r't binding energies instead of total energies. Th'
+                       + r'is is expected to facilitate the fitting process'
+                       + r' because binding energies are closer to zero. ',
+        'format': r'remove_atom_energies',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -2659,8 +3605,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'remove_vdw_energies': {
         'type': bool,
-        'description': " Subtract van-der-Waals dispersion energy and forces from the reference data before fitting a neural network potential. ",
-        'format': "remove_vdw_energies",
+        'description': r'Subtract van-der-Waals dispersion energy and for'
+                       + r'ces from the reference data before fitting a neu'
+                       + r'ral network potential. ',
+        'format': r'remove_vdw_energies',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2671,8 +3619,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'repeated_energy_update': {
         'type': bool,
-        'description': " If this keyword is set, the weights of the short-range NN are updated a second time after the force update with respect to the total energies in the data set.  This usually results in a more accurate potential energy fitting at the cost of slightly detiorated forces.",
-        'format': "repeated_energy_update",
+        'description': r'If this keyword is set, the weights of the short'
+                       + r'-range NN are updated a second time after the fo'
+                       + r'rce update with respect to the total energies in'
+                       + r' the data set.  This usually results in a more a'
+                       + r'ccurate potential energy fitting at the cost of '
+                       + r'slightly detiorated forces.',
+        'format': r'repeated_energy_update',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2683,8 +3636,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'reset_kalman': {
         'type': bool,
-        'description': " Re-initialize the correlation matrix of the Kalman filter at each new training epoch.",
-        'format': "reset_kalman",
+        'description': r'Re-initialize the correlation matrix of the Kalm'
+                       + r'an filter at each new training epoch.',
+        'format': r'reset_kalman',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2694,8 +3648,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'restrict_weights': {
-        'description': " Restrict the weights of the NN to the interval  [`-restrictw +1.0`, `restrictw - 1.0`].",
-        'format': "restrict_weights a0",
+        'description': r'Restrict the weights of the NN to the interval  '
+                       + r'[`-restrictw +1.0`, `restrictw - 1.0`].',
+        'format': r'restrict_weights a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2703,7 +3658,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Boundary default_value for neural network weights. Must be positive.",
+                'description': r'Boundary default_value for neural networ'
+                               + r'k weights. Must be positive.',
                 'type': float,
                 'default_value': -100000.0,
             },
@@ -2711,8 +3667,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'runner_mode': {
-        'description': " Choose the operating mode of `RuNNer`.",
-        'format': "runner_mode i0",
+        'description': r'Choose the operating mode of `RuNNer`.',
+        'format': r'runner_mode i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2720,18 +3676,25 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The chosen mode of `RuNNer`.",
+                'description': r'The chosen mode of `RuNNer`.',
                 'type': int,
-                'default_value': "None",
+                'default_value': r'None',
                 'options': {
                     1: {
-                        'description': " Preparation mode. Generate the symmetry functions from structures in the `input.data` file.",
+                        'description': r'Preparation mode. Generate the s'
+                                       + r'ymmetry functions from structure'
+                                       + r's in the `input.data` file.',
                     },
                     2: {
-                        'description': " Fitting mode. Determine the NN weight parameters.",
+                        'description': r'Fitting mode. Determine the NN w'
+                                       + r'eight parameters.',
                     },
                     3: {
-                        'description': " Production mode. Application of the NN potential, prediction of the energy and forces of all structures in the `input.data` file.",
+                        'description': r'Production mode. Application of '
+                                       + r'the NN potential, prediction of '
+                                       + r'the energy and forces of all str'
+                                       + r'uctures in the `input.data` file'
+                                       + r'.',
                     },
                 },
             },
@@ -2740,8 +3703,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'save_kalman_matrices': {
         'type': bool,
-        'description': " Save the Kalman filter matrices to the files `kalman.short.XXX.data` and `kalman.elec.XXX.data`. `XXX` is the nuclear charge of the respective element. The Kalman matrices are read from the files using the keyword  read_kalman_matrices.",
-        'format': "save_kalman_matrices",
+        'description': r'Save the Kalman filter matrices to the files `ka'
+                       + r'lman.short.XXX.data` and `kalman.elec.XXX.data`.'
+                       + r' `XXX` is the nuclear charge of the respective e'
+                       + r'lement. The Kalman matrices are read from the fi'
+                       + r'les using the keyword  read_kalman_matrices.',
+        'format': r'save_kalman_matrices',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2751,8 +3718,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_max_elec': {
-        'description': " Rescale the electrostatic symmetry functions to an interval given by * scale_min_elec and  * scale_max_elec  For further details please see  scale_symmetry_functions.",
-        'format': "scale_max_elec a0",
+        'description': r'Rescale the electrostatic symmetry functions to '
+                       + r'an interval given by * scale_min_elec and  * sca'
+                       + r'le_max_elec  For further details please see  sca'
+                       + r'le_symmetry_functions.',
+        'format': r'scale_max_elec a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2760,7 +3730,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Upper boundary default_value for rescaling the electrostatic symmetry functions.",
+                'description': r'Upper boundary default_value for rescali'
+                               + r'ng the electrostatic symmetry functions.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2768,8 +3739,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_max_short': {
-        'description': " Rescale the electrostatic symmetry functions to an interval given by * scale_min_elec and  * scale_max_elec  For further details please see  scale_symmetry_functions.",
-        'format': "scale_max_short a0",
+        'description': r'Rescale the electrostatic symmetry functions to '
+                       + r'an interval given by * scale_min_elec and  * sca'
+                       + r'le_max_elec  For further details please see  sca'
+                       + r'le_symmetry_functions.',
+        'format': r'scale_max_short a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2777,7 +3751,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Upper boundary default_value for rescaling the electrostatic symmetry functions.",
+                'description': r'Upper boundary default_value for rescali'
+                               + r'ng the electrostatic symmetry functions.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2785,8 +3760,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_max_short_atomic': {
-        'description': " Rescale the short-range symmetry functions to an interval given by * scale_min_short_atomic and  * scale_max_short_atomic  For further details please see  scale_symmetry_functions.",
-        'format': "scale_max_short_atomic a0",
+        'description': r'Rescale the short-range symmetry functions to an'
+                       + r' interval given by * scale_min_short_atomic and '
+                       + r' * scale_max_short_atomic  For further details p'
+                       + r'lease see  scale_symmetry_functions.',
+        'format': r'scale_max_short_atomic a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2794,7 +3772,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Upper boundary default_value for rescaling the short-range symmetry functions.",
+                'description': r'Upper boundary default_value for rescali'
+                               + r'ng the short-range symmetry functions.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2802,8 +3781,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_max_short_pair': {
-        'description': " Rescale the short-range pairwise symmetry functions to an interval given by * scale_min_short_pair and  * scale_max_short_pair  For further details please see  scale_symmetry_functions.",
-        'format': "scale_max_short_pair a0",
+        'description': r'Rescale the short-range pairwise symmetry functi'
+                       + r'ons to an interval given by * scale_min_short_pa'
+                       + r'ir and  * scale_max_short_pair  For further deta'
+                       + r'ils please see  scale_symmetry_functions.',
+        'format': r'scale_max_short_pair a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2811,7 +3793,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Upper boundary default_value for rescaling the short-range pairwise symmetry functions.",
+                'description': r'Upper boundary default_value for rescali'
+                               + r'ng the short-range pairwise symmetry fun'
+                               + r'ctions.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2819,8 +3803,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_min_elec': {
-        'description': " Rescale the electrostatic symmetry functions to an interval given by * scale_min_elec and  * scale_max_elec  For further details please see  scale_symmetry_functions.",
-        'format': "scale_min_elec a0",
+        'description': r'Rescale the electrostatic symmetry functions to '
+                       + r'an interval given by * scale_min_elec and  * sca'
+                       + r'le_max_elec  For further details please see  sca'
+                       + r'le_symmetry_functions.',
+        'format': r'scale_min_elec a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2828,7 +3815,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Lower boundary default_value for rescaling the electrostatic symmetry functions.",
+                'description': r'Lower boundary default_value for rescali'
+                               + r'ng the electrostatic symmetry functions.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2836,8 +3824,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_min_short_atomic': {
-        'description': " Rescale the short-range symmetry functions to an interval given by * scale_min_short_atomic and  * scale_max_short_atomic  For further details please see  scale_symmetry_functions.",
-        'format': "scale_min_short_atomic a0",
+        'description': r'Rescale the short-range symmetry functions to an'
+                       + r' interval given by * scale_min_short_atomic and '
+                       + r' * scale_max_short_atomic  For further details p'
+                       + r'lease see  scale_symmetry_functions.',
+        'format': r'scale_min_short_atomic a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2845,7 +3836,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Lower boundary default_value for rescaling the short-range symmetry functions.",
+                'description': r'Lower boundary default_value for rescali'
+                               + r'ng the short-range symmetry functions.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2853,8 +3845,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'scale_min_short_pair': {
-        'description': " Rescale the short-range pairwise symmetry functions to an interval given by * scale_min_short_pair and  * scale_max_short_pair  For further details please see  scale_symmetry_functions.",
-        'format': "scale_min_short_pair a0",
+        'description': r'Rescale the short-range pairwise symmetry functi'
+                       + r'ons to an interval given by * scale_min_short_pa'
+                       + r'ir and  * scale_max_short_pair  For further deta'
+                       + r'ils please see  scale_symmetry_functions.',
+        'format': r'scale_min_short_pair a0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2862,7 +3857,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Lower boundary default_value for rescaling the short-range pairwise symmetry functions.",
+                'description': r'Lower boundary default_value for rescali'
+                               + r'ng the short-range pairwise symmetry fun'
+                               + r'ctions.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2871,8 +3868,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'scale_symmetry_functions': {
         'type': bool,
-        'description': " Rescale symmetry functions to a certain interval (the default interval is 0 to  1). This has numerical advantages if the orders of magnitudes of different  symmetry functions are very different. If the minimum and maximum default_value for a symmetry function is the same for all structures, rescaling is not possible and `RuNNer` will terminate with an error. The interval can be specified by the  keywords  * scale_min_short_atomic, * scale_max_short_atomic,  * scale_min_short_pair, and * scale_max_short_pair  for the short range / pairwise NN and by  * scale_min_elec and  * scale_max_elec  for the electrostatic NN. ",
-        'format': "scale_symmetry_functions",
+        'description': r'Rescale symmetry functions to a certain interval'
+                       + r' (the default interval is 0 to  1). This has num'
+                       + r'erical advantages if the orders of magnitudes of'
+                       + r' different  symmetry functions are very differen'
+                       + r't. If the minimum and maximum default_value for '
+                       + r'a symmetry function is the same for all structur'
+                       + r'es, rescaling is not possible and `RuNNer` will '
+                       + r'terminate with an error. The interval can be spe'
+                       + r'cified by the  keywords  * scale_min_short_atomi'
+                       + r'c, * scale_max_short_atomic,  * scale_min_short_'
+                       + r'pair, and * scale_max_short_pair  for the short '
+                       + r'range / pairwise NN and by  * scale_min_elec and'
+                       + r'  * scale_max_elec  for the electrostatic NN. ',
+        'format': r'scale_symmetry_functions',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -2883,8 +3892,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'separate_bias_ini_short': {
         'type': bool,
-        'description': " Request a separate random initialization of the bias weights at the beginning of `runner_mode 2` on an interval between  `biasweights_min` and `biasweights_max`. ",
-        'format': "separate_bias_ini_short",
+        'description': r'Request a separate random initialization of the '
+                       + r'bias weights at the beginning of `runner_mode 2`'
+                       + r' on an interval between  `biasweights_min` and `'
+                       + r'biasweights_max`. ',
+        'format': r'separate_bias_ini_short',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2895,8 +3907,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'separate_kalman_short': {
         'type': bool,
-        'description': " Use a different Kalman filter correlation matrix for the energy and force  update. ",
-        'format': "separate_kalman_short",
+        'description': r'Use a different Kalman filter correlation matrix'
+                       + r' for the energy and force  update. ',
+        'format': r'separate_kalman_short',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2906,8 +3919,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_energy_error_threshold': {
-        'description': " Threshold default_value for the error of the energies in units of the RMSE of the previous epoch. A default_value of 0.3 means that only charges with an error larger than 0.3*RMSE will be used for the weight update. Large default_values (about 1.0) will speed up the first epochs, because only a few points will be used. ",
-        'format': "short_energy_error_threshold a0",
+        'description': r'Threshold default_value for the error of the ene'
+                       + r'rgies in units of the RMSE of the previous epoch'
+                       + r'. A default_value of 0.3 means that only charges'
+                       + r' with an error larger than 0.3*RMSE will be used'
+                       + r' for the weight update. Large default_values (ab'
+                       + r'out 1.0) will speed up the first epochs, because'
+                       + r' only a few points will be used. ',
+        'format': r'short_energy_error_threshold a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2915,7 +3934,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of energy RMSE that a point needs to reach to be used in the weight update.",
+                'description': r'Fraction of energy RMSE that a point nee'
+                               + r'ds to reach to be used in the weight upd'
+                               + r'ate.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2923,8 +3944,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_energy_fraction': {
-        'description': " Defines the random fraction of energies used for fitting the short range weights.",
-        'format': "short_energy_fraction a0",
+        'description': r'Defines the random fraction of energies used for'
+                       + r' fitting the short range weights.',
+        'format': r'short_energy_fraction a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2932,7 +3954,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of energies used for short-range fitting. 100% = 1.0.",
+                'description': r'Fraction of energies used for short-rang'
+                               + r'e fitting. 100% = 1.0.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2940,8 +3963,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_energy_group': {
-        'description': " Do not update the short range NN weights after the presentation of an  individual atomic charge, but average the derivatives with respect to the  weights over the specified number of structures for each element.",
-        'format': "short_energy_group i0",
+        'description': r'Do not update the short range NN weights after t'
+                       + r'he presentation of an  individual atomic charge,'
+                       + r' but average the derivatives with respect to the'
+                       + r'  weights over the specified number of structure'
+                       + r's for each element.',
+        'format': r'short_energy_group i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2949,7 +3976,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of structures per group. The maximum is given by points_in_memory.",
+                'description': r'Number of structures per group. The maxi'
+                               + r'mum is given by points_in_memory.',
                 'type': int,
                 'default_value': 1,
             },
@@ -2957,8 +3985,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_force_error_threshold': {
-        'description': " Threshold default_value for the error of the atomic forces in units of the RMSE of the previous epoch. A default_value of 0.3 means that only forces with an error larger than 0.3*RMSE will be used for the weight update. Large default_values (about 1.0) will speed up the first epochs, because only a few points will be used. ",
-        'format': "short_force_error_threshold a0",
+        'description': r'Threshold default_value for the error of the ato'
+                       + r'mic forces in units of the RMSE of the previous '
+                       + r'epoch. A default_value of 0.3 means that only fo'
+                       + r'rces with an error larger than 0.3*RMSE will be '
+                       + r'used for the weight update. Large default_values'
+                       + r' (about 1.0) will speed up the first epochs, bec'
+                       + r'ause only a few points will be used. ',
+        'format': r'short_force_error_threshold a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2966,7 +4000,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of force RMSE that a point needs to reach to be used in the weight update.",
+                'description': r'Fraction of force RMSE that a point need'
+                               + r's to reach to be used in the weight upda'
+                               + r'te.',
                 'type': float,
                 'default_value': 0.0,
             },
@@ -2974,8 +4010,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_force_fraction': {
-        'description': " Defines the random fraction of forces used for fitting the short range weights.",
-        'format': "short_force_fraction a0",
+        'description': r'Defines the random fraction of forces used for f'
+                       + r'itting the short range weights.',
+        'format': r'short_force_fraction a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -2983,7 +4020,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Fraction of force used for short-range fitting. 100% = 1.0.",
+                'description': r'Fraction of force used for short-range f'
+                               + r'itting. 100% = 1.0.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -2991,8 +4029,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'short_force_group': {
-        'description': " Do not update the short range NN weights after the presentation of an  individual atomic force, but average the derivatives with respect to the  weights over the specified number of forces for each element.",
-        'format': "short_force_group i0",
+        'description': r'Do not update the short range NN weights after t'
+                       + r'he presentation of an  individual atomic force, '
+                       + r'but average the derivatives with respect to the '
+                       + r' weights over the specified number of forces for'
+                       + r' each element.',
+        'format': r'short_force_group i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3000,7 +4042,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Number of structures per group. The maximum is given by points_in_memory.",
+                'description': r'Number of structures per group. The maxi'
+                               + r'mum is given by points_in_memory.',
                 'type': int,
                 'default_value': 1,
             },
@@ -3008,8 +4051,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'shuffle_weights_short_atomic': {
-        'description': " Randomly shuffle some weights in the short-range atomic NN after a defined  number of epochs.",
-        'format': "shuffle_weights_short_atomic i0 a0",
+        'description': r'Randomly shuffle some weights in the short-range'
+                       + r' atomic NN after a defined  number of epochs.',
+        'format': r'shuffle_weights_short_atomic i0 a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3017,12 +4061,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " The weights will be shuffled every `i0` epochs.",
+                'description': r'The weights will be shuffled every `i0` '
+                               + r'epochs.',
                 'type': int,
                 'default_value': 10,
             },
             'a0': {
-                'description': " Treshold that a random number has to pass so that the weights at handled will be shuffled. This indirectly defines the number of weights that will be shuffled.",
+                'description': r'Treshold that a random number has to pas'
+                               + r's so that the weights at handled will be'
+                               + r' shuffled. This indirectly defines the n'
+                               + r'umber of weights that will be shuffled.',
                 'type': float,
                 'default_value': 0.1,
             },
@@ -3030,8 +4078,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'steepest_descent_step_charge': {
-        'description': " Step size for steepest descent fitting of the atomic charges.",
-        'format': "steepest_descent_step_charge a0",
+        'description': r'Step size for steepest descent fitting of the at'
+                       + r'omic charges.',
+        'format': r'steepest_descent_step_charge a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3039,7 +4088,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Charge steepest descent step size.",
+                'description': r'Charge steepest descent step size.',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -3047,8 +4096,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'steepest_descent_step_energy_short': {
-        'description': " Step size for steepest descent fitting of the short-range energy.",
-        'format': "steepest_descent_step_energy_short a0",
+        'description': r'Step size for steepest descent fitting of the sh'
+                       + r'ort-range energy.',
+        'format': r'steepest_descent_step_energy_short a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3056,7 +4106,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Short-range energy steepest descent step size.",
+                'description': r'Short-range energy steepest descent step'
+                               + r' size.',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -3064,8 +4115,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'steepest_descent_step_force_short': {
-        'description': " Step size for steepest descent fitting of the short-range forces.",
-        'format': "steepest_descent_step_force_short a0",
+        'description': r'Step size for steepest descent fitting of the sh'
+                       + r'ort-range forces.',
+        'format': r'steepest_descent_step_force_short a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3073,7 +4125,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Short-range force steepest descent step size.",
+                'description': r'Short-range force steepest descent step '
+                               + r'size.',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -3082,8 +4135,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'symfunction_correlation': {
         'type': bool,
-        'description': " Determine and print Pearson's correlation of all pairs of symmetry functions.",
-        'format': "symfunction_correlation",
+        'description': r"Determine and print Pearson's correlation of all"
+                       + r' pairs of symmetry functions.',
+        'format': r'symfunction_correlation',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3093,8 +4147,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'symfunction_electrostatic': {
-        'description': " Specification of the symmetry functions for a specific element with a specific  neighbor element combination for the electrostatic NN.",
-        'format': "symfunction_electrostatic element type [parameters] cutoff",
+        'description': r'Specification of the symmetry functions for a sp'
+                       + r'ecific element with a specific  neighbor element'
+                       + r' combination for the electrostatic NN.',
+        'format': r'symfunction_electrostatic element type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3102,24 +4158,33 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the center element.",
+                'description': r'The periodic table symbol of the center '
+                               + r'element.',
                 'type': str,
                 'default_value': None,
             },
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires the pair `element` and parameters `eta` and `rshift`. ```runner-config symfunction_electrostatic element 2 element eta rshift cutoff ```",
+                        'description': r'Radial function. Requires the pa'
+                                       + r'ir `element` and parameters `eta'
+                                       + r'` and `rshift`. ```runner-config'
+                                       + r' symfunction_electrostatic eleme'
+                                       + r'nt 2 element eta rshift cutoff `'
+                                       + r'``',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },               
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3131,16 +4196,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires two pair elements and `parameters` `eta`, `lambda`, and `zeta`. ```runner-config symfunction_electrostatic element 3 element element eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires two p'
+                                       + r'air elements and `parameters` `e'
+                                       + r'ta`, `lambda`, and `zeta`. ```ru'
+                                       + r'nner-config symfunction_electros'
+                                       + r'tatic element 3 element element '
+                                       + r'eta lambda zeta cutoff ```',
                         'parameters': {
                             'element1': {
                                 'type': str,
                                 'default_value': None,
-                            },            
+                            },
                             'element2': {
                                 'type': str,
                                 'default_value': None,
-                            },                   
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3148,7 +4218,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3156,12 +4226,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires a pair `element` and the parameter `eta`. ```runner-config symfunction_electrostatic element 4 element eta cutoff ```",
+                        'description': r'Radial function. Requires a pair'
+                                       + r' `element` and the parameter `et'
+                                       + r'a`. ```runner-config symfunction'
+                                       + r'_electrostatic element 4 element'
+                                       + r' eta cutoff ```',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },                               
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3169,8 +4243,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config symfunction_electrostatic element 5 eta ```",
-                        'parameters': {                          
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig symfunction_electrostatic ele'
+                                       + r'ment 5 eta ```',
+                        'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3178,18 +4258,26 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config symfunction_electrostatic element 6 cutoff ```",             
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config symfunction_electrostat'
+                                       + r'ic element 6 cutoff ```',
                     },
                     7: {
-                        'description': " Not implemented.",
+                        'description': r'Not implemented.',
                     },
                     8: {
-                        'description': " Angular function. Requires two `element`s and `parameters` `eta`, and `rshift`. ```runner-config symfunction_electrostatic element 8 element element eta rshift cutoff ```",
+                        'description': r'Angular function. Requires two `'
+                                       + r'element`s and `parameters` `eta`'
+                                       + r', and `rshift`. ```runner-config'
+                                       + r' symfunction_electrostatic eleme'
+                                       + r'nt 8 element element eta rshift '
+                                       + r'cutoff ```',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },                        
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3197,11 +4285,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires two `element`s and `parameters` `eta`. ```runner-config symfunction_electrostatic element 9 element element eta cutoff ```.",
+                        'description': r'Angular function. Requires two `'
+                                       + r'element`s and `parameters` `eta`'
+                                       + r'. ```runner-config symfunction_e'
+                                       + r'lectrostatic element 9 element e'
+                                       + r'lement eta cutoff ```.',
                         'parameters': {
                             'element1': {
                                 'type': str,
@@ -3210,17 +4302,18 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'element2': {
                                 'type': str,
                                 'default_value': None,
-                            },         
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
-                },                
+                },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -3228,8 +4321,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'symfunction_short': {
-        'description': " Specification of the symmetry functions for a specific element with a specific  neighbor element combination for the short-range NN.",
-        'format': "symfunction_short element type [parameters] cutoff",
+        'description': r'Specification of the symmetry functions for a sp'
+                       + r'ecific element with a specific  neighbor element'
+                       + r' combination for the short-range NN.',
+        'format': r'symfunction_short element type [parameters] cutoff',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3237,24 +4332,32 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'element': {
-                'description': " The periodic table symbol of the center element.",
+                'description': r'The periodic table symbol of the center '
+                               + r'element.',
                 'type': str,
                 'default_value': None,
             },
             'type [parameters]': {
-                'description': " The type of symmetry function to be used. Different `parameters` have to be set depending on the choice of `type`:",
+                'description': r'The type of symmetry function to be used'
+                               + r'. Different `parameters` have to be set '
+                               + r'depending on the choice of `type`:',
                 'type': int,
                 'options': {
                     1: {
-                        'description': " Radial function. Requires no further `parameters`.",
+                        'description': r'Radial function. Requires no fur'
+                                       + r'ther `parameters`.',
                     },
                     2: {
-                        'description': " Radial function. Requires the pair `element` and parameters `eta` and `rshift`. ```runner-config symfunction_short element 2 element eta rshift cutoff ```",
+                        'description': r'Radial function. Requires the pa'
+                                       + r'ir `element` and parameters `eta'
+                                       + r'` and `rshift`. ```runner-config'
+                                       + r' symfunction_short element 2 ele'
+                                       + r'ment eta rshift cutoff ```',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },               
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3266,16 +4369,21 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     3: {
-                        'description': " Angular function. Requires two pair elements and `parameters` `eta`, `lambda`, and `zeta`. ```runner-config symfunction_short element 3 element element eta lambda zeta cutoff ```",
+                        'description': r'Angular function. Requires two p'
+                                       + r'air elements and `parameters` `e'
+                                       + r'ta`, `lambda`, and `zeta`. ```ru'
+                                       + r'nner-config symfunction_short el'
+                                       + r'ement 3 element element eta lamb'
+                                       + r'da zeta cutoff ```',
                         'parameters': {
                             'element1': {
                                 'type': str,
                                 'default_value': None,
-                            },            
+                            },
                             'element2': {
                                 'type': str,
                                 'default_value': None,
-                            },                   
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3283,7 +4391,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'lambda': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                             'zeta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3291,12 +4399,16 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     4: {
-                        'description': " Radial function. Requires a pair `element` and the parameter `eta`. ```runner-config symfunction_short element 4 element eta cutoff ```",
+                        'description': r'Radial function. Requires a pair'
+                                       + r' `element` and the parameter `et'
+                                       + r'a`. ```runner-config symfunction'
+                                       + r'_short element 4 element eta cut'
+                                       + r'off ```',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },                               
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3304,8 +4416,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     5: {
-                        'description': " Cartesian coordinate function. The parameter `eta` will determine the coordinate axis `eta=1.0: X, eta=2.0: Y, eta=3.0: Z`. No `cutoff` required. ```runner-config symfunction_short element 5 eta ```",
-                        'parameters': {                          
+                        'description': r'Cartesian coordinate function. T'
+                                       + r'he parameter `eta` will determin'
+                                       + r'e the coordinate axis `eta=1.0: '
+                                       + r'X, eta=2.0: Y, eta=3.0: Z`. No `'
+                                       + r'cutoff` required. ```runner-conf'
+                                       + r'ig symfunction_short element 5 e'
+                                       + r'ta ```',
+                        'parameters': {
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3313,18 +4431,26 @@ RUNNERCONFIG_DEFAULTS: dict = {
                         },
                     },
                     6: {
-                        'description': " Bond length function. Requires no further `parameters`. ```runner-config symfunction_short element 6 cutoff ```",             
+                        'description': r'Bond length function. Requires n'
+                                       + r'o further `parameters`. ```runne'
+                                       + r'r-config symfunction_short eleme'
+                                       + r'nt 6 cutoff ```',
                     },
                     7: {
-                        'description': " Not implemented.",
+                        'description': r'Not implemented.',
                     },
                     8: {
-                        'description': " Angular function. Requires two `element`s and `parameters` `eta`, and `rshift`. ```runner-config symfunction_short element 8 element element eta rshift cutoff ```",
+                        'description': r'Angular function. Requires two `'
+                                       + r'element`s and `parameters` `eta`'
+                                       + r', and `rshift`. ```runner-config'
+                                       + r' symfunction_short element 8 ele'
+                                       + r'ment element eta rshift cutoff `'
+                                       + r'``',
                         'parameters': {
                             'element': {
                                 'type': str,
                                 'default_value': None,
-                            },                        
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
@@ -3332,11 +4458,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'rshift': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                            
+                            },
                         },
                     },
                     9: {
-                        'description': " Angular function. Requires two `element`s and `parameters` `eta`. ```runner-config symfunction_short element 9 element element eta cutoff ```.",
+                        'description': r'Angular function. Requires two `'
+                                       + r'element`s and `parameters` `eta`'
+                                       + r'. ```runner-config symfunction_s'
+                                       + r'hort element 9 element element e'
+                                       + r'ta cutoff ```.',
                         'parameters': {
                             'element1': {
                                 'type': str,
@@ -3345,17 +4475,18 @@ RUNNERCONFIG_DEFAULTS: dict = {
                             'element2': {
                                 'type': str,
                                 'default_value': None,
-                            },         
+                            },
                             'eta': {
                                 'type': float,
                                 'default_value': 0.0,
-                            },                         
+                            },
                         },
                     },
-                }, 
+                },
             },
             'cutoff': {
-                'description': " The symmetry function cutoff radius (unit: Bohr).",
+                'description': r'The symmetry function cutoff radius (uni'
+                               + r't: Bohr).',
                 'type': float,
                 'default_value': None,
             },
@@ -3363,8 +4494,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': True,
     },
     'test_fraction': {
-        'description': " Threshold for splitting between training and testing set in  [`runner_mode`](/runner/reference/keywords/runner_mode) 1.",
-        'format': "test_fraction a0",
+        'description': r'Threshold for splitting between training and tes'
+                       + r'ting set in  [`runner_mode`](/runner/reference/k'
+                       + r'eywords/runner_mode) 1.',
+        'format': r'test_fraction a0',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -3372,7 +4505,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " Splitting ratio. A default_value of e.g. 0.1 means that 10% of the structures in the `input.data` file will be used as test set and 90% as training set.",
+                'description': r'Splitting ratio. A default_value of e.g.'
+                               + r' 0.1 means that 10% of the structures in'
+                               + r' the `input.data` file will be used as t'
+                               + r'est set and 90% as training set.',
                 'type': float,
                 'default_value': 0.01,
             },
@@ -3380,8 +4516,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'update_single_element': {
-        'description': " During training, only the NN weight parameters for the NNs of a specified element will be updated. In this case the printed errors for the  forces and the charges will refer only to this element. The total energy error  will remain large since some NNs are not optimized. ",
-        'format': "update_single_element i0",
+        'description': r'During training, only the NN weight parameters f'
+                       + r'or the NNs of a specified element will be update'
+                       + r'd. In this case the printed errors for the  forc'
+                       + r'es and the charges will refer only to this eleme'
+                       + r'nt. The total energy error  will remain large si'
+                       + r'nce some NNs are not optimized. ',
+        'format': r'update_single_element i0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3389,16 +4530,22 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " The nuclear charge of the element whose NN should be updated.",
+                'description': r'The nuclear charge of the element whose '
+                               + r'NN should be updated.',
                 'type': int,
-                'default_value': "None",
+                'default_value': r'None',
             },
         },
         'allow_multiple': False,
     },
     'update_worst_charges': {
-        'description': " To speed up the fits for each block specified by points_in_memory first the worst charges are determined. Only these charges are then used for the weight update for this block of points, no matter if the fit would be reduced during the update.",
-        'format': "update_worst_charges a0",
+        'description': r'To speed up the fits for each block specified by'
+                       + r' points_in_memory first the worst charges are de'
+                       + r'termined. Only these charges are then used for t'
+                       + r'he weight update for this block of points, no ma'
+                       + r'tter if the fit would be reduced during the upda'
+                       + r'te.',
+        'format': r'update_worst_charges a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3406,7 +4553,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The percentage of worst charges to be considered for the weight update. A default_value of 0.1 here means to identify the worst 10%.",
+                'description': r'The percentage of worst charges to be co'
+                               + r'nsidered for the weight update. A defaul'
+                               + r't_value of 0.1 here means to identify th'
+                               + r'e worst 10%.',
                 'type': float,
                 'default_value': None,
             },
@@ -3414,8 +4564,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'update_worst_short_energies': {
-        'description': " To speed up the fits for each block specified by points_in_memory first the worst energies are determined. Only these points are then used for the weight update for this block of points, no matter if the fit would be reduced during the update.",
-        'format': "update_worst_short_energies a0",
+        'description': r'To speed up the fits for each block specified by'
+                       + r' points_in_memory first the worst energies are d'
+                       + r'etermined. Only these points are then used for t'
+                       + r'he weight update for this block of points, no ma'
+                       + r'tter if the fit would be reduced during the upda'
+                       + r'te.',
+        'format': r'update_worst_short_energies a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3423,7 +4578,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The percentage of worst energies to be considered for the weight update. A default_value of 0.1 here means to identify the worst 10%.",
+                'description': r'The percentage of worst energies to be c'
+                               + r'onsidered for the weight update. A defau'
+                               + r'lt_value of 0.1 here means to identify t'
+                               + r'he worst 10%.',
                 'type': float,
                 'default_value': None,
             },
@@ -3431,8 +4589,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'update_worst_short_forces': {
-        'description': " To speed up the fits for each block specified by points_in_memory first the worst forces are determined. Only these points are then used for the weight update for this block of points, no matter if the fit would be reduced during the update.",
-        'format': "update_worst_short_forces a0",
+        'description': r'To speed up the fits for each block specified by'
+                       + r' points_in_memory first the worst forces are det'
+                       + r'ermined. Only these points are then used for the'
+                       + r' weight update for this block of points, no matt'
+                       + r'er if the fit would be reduced during the update'
+                       + r'.',
+        'format': r'update_worst_short_forces a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3440,7 +4603,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The percentage of worst forces to be considered for the weight update. A default_value of 0.1 here means to identify the worst 10%.",
+                'description': r'The percentage of worst forces to be con'
+                               + r'sidered for the weight update. A default'
+                               + r'_value of 0.1 here means to identify the'
+                               + r' worst 10%.',
                 'type': float,
                 'default_value': None,
             },
@@ -3449,8 +4615,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_atom_charges': {
         'type': bool,
-        'description': " Use atomic charges for fitting. At the moment this flag will be switched on automatically by `RuNNer` if electrostatic NNs are requested. In future versions of `RuNNer` this keyword will be used to control different origins of atomic charges.",
-        'format': "use_atom_charges",
+        'description': r'Use atomic charges for fitting. At the moment th'
+                       + r'is flag will be switched on automatically by `Ru'
+                       + r'NNer` if electrostatic NNs are requested. In fut'
+                       + r'ure versions of `RuNNer` this keyword will be us'
+                       + r'ed to control different origins of atomic charge'
+                       + r's.',
+        'format': r'use_atom_charges',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3461,8 +4632,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_atom_energies': {
         'type': bool,
-        'description': " Check if sum of specified atomic energies is equal to the total energy of each structure.",
-        'format': "use_atom_energies",
+        'description': r'Check if sum of specified atomic energies is equ'
+                       + r'al to the total energy of each structure.',
+        'format': r'use_atom_energies',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3472,8 +4644,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'use_damping': {
-        'description': " In order to avoid too large (too positive or too negative) weight parameters, this damping scheme can be used. An additional term is added to the absolute energy error. * For the short range energy the modification is:    `errore=(1.d0-dampw)errore + (dampwsumwsquared) /dble(totnum_weightsshort)` * For the short range forces the modification is:   `errorf=(1.d0-dampw)errorf+(dampwsumwsquared) /dble(num_weightsshort(elementindex(zelem(i2))))` * For the short range forces the modification is:   `error=(1.d0-dampw)*error + (dampwsumwsquared) /dble(num_weightsewald(elementindex(zelem_list(idx(i1),i2))))`",
-        'format': "use_damping a0",
+        'description': r'In order to avoid too large (too positive or too'
+                       + r' negative) weight parameters, this damping schem'
+                       + r'e can be used. An additional term is added to th'
+                       + r'e absolute energy error. * For the short range e'
+                       + r'nergy the modification is:    `errore=(1.d0-damp'
+                       + r'w)errore + (dampwsumwsquared) /dble(totnum_weigh'
+                       + r'tsshort)` * For the short range forces the modif'
+                       + r'ication is:   `errorf=(1.d0-dampw)errorf+(dampws'
+                       + r'umwsquared) /dble(num_weightsshort(elementindex('
+                       + r'zelem(i2))))` * For the short range forces the m'
+                       + r'odification is:   `error=(1.d0-dampw)*error + (d'
+                       + r'ampwsumwsquared) /dble(num_weightsewald(elementi'
+                       + r'ndex(zelem_list(idx(i1),i2))))`',
+        'format': r'use_damping a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3481,7 +4665,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " The damping parameter.",
+                'description': r'The damping parameter.',
                 'type': float,
                 'default_value': None,
             },
@@ -3490,8 +4674,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_electrostatics': {
         'type': bool,
-        'description': " Calculate long range electrostatic interactions explicitly. The type of atomic charges is specified by the keyword  electrostatic_type .",
-        'format': "use_electrostatics",
+        'description': r'Calculate long range electrostatic interactions '
+                       + r'explicitly. The type of atomic charges is specif'
+                       + r'ied by the keyword  electrostatic_type .',
+        'format': r'use_electrostatics',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3502,8 +4688,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_fixed_charges': {
         'type': bool,
-        'description': " Do not use a NN to calculate the atomic charges, but use fixed charges for each element independent of the chemical environment. electrostatic_type.",
-        'format': "use_fixed_charges",
+        'description': r'Do not use a NN to calculate the atomic charges,'
+                       + r' but use fixed charges for each element independ'
+                       + r'ent of the chemical environment. electrostatic_t'
+                       + r'ype.',
+        'format': r'use_fixed_charges',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3514,8 +4703,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_gausswidth': {
         'type': bool,
-        'description': " Use Gaussian for modeling atomic charges during the construction of 4G-HDNNPs.",
-        'format': "use_gausswidth",
+        'description': r'Use Gaussian for modeling atomic charges during '
+                       + r'the construction of 4G-HDNNPs.',
+        'format': r'use_gausswidth',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3526,8 +4716,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_noisematrix': {
         'type': bool,
-        'description': " Use noise matrix for fitting the short range weight with the short range NN  weights with Kalman filter.",
-        'format': "use_noisematrix",
+        'description': r'Use noise matrix for fitting the short range wei'
+                       + r'ght with the short range NN  weights with Kalman'
+                       + r' filter.',
+        'format': r'use_noisematrix',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3538,8 +4730,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_old_scaling': {
         'type': bool,
-        'description': " Restart a fit with old scaling parameters for the short-range and electrostatic  NNs. The symmetry function scaling factors are read from `scaling.data`.",
-        'format': "use_old_scaling",
+        'description': r'Restart a fit with old scaling parameters for th'
+                       + r'e short-range and electrostatic  NNs. The symmet'
+                       + r'ry function scaling factors are read from `scali'
+                       + r'ng.data`.',
+        'format': r'use_old_scaling',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3550,8 +4745,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_old_weights_charge': {
         'type': bool,
-        'description': " Restart a fit with old weight parameters for the electrostatic NN. The files `weightse.XXX.data` must be present.  If the training data set is  unchanged, the error of epoch 0 must be the same as the error of the previous fitting cycle.",
-        'format': "use_old_weights_charge",
+        'description': r'Restart a fit with old weight parameters for the'
+                       + r' electrostatic NN. The files `weightse.XXX.data`'
+                       + r' must be present.  If the training data set is  '
+                       + r'unchanged, the error of epoch 0 must be the same'
+                       + r' as the error of the previous fitting cycle.',
+        'format': r'use_old_weights_charge',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3562,8 +4761,17 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_old_weights_short': {
         'type': bool,
-        'description': " Restart a fit with old weight parameters for the short-range NN. This keyword is active only in mode 2. The files `weights.XXX.data` must be present.  If the training data set is unchanged, the error of epoch 0 must be the same as the error of the previous fitting cycle. However, if the training data is  different, the file `scaling.data` changes and either one of the keywords scale_symmetry_functions or center_symmetry_functions is used, the RMSE will be different.",
-        'format': "use_old_weights_short",
+        'description': r'Restart a fit with old weight parameters for the'
+                       + r' short-range NN. This keyword is active only in '
+                       + r'mode 2. The files `weights.XXX.data` must be pre'
+                       + r'sent.  If the training data set is unchanged, th'
+                       + r'e error of epoch 0 must be the same as the error'
+                       + r' of the previous fitting cycle. However, if the '
+                       + r'training data is  different, the file `scaling.d'
+                       + r'ata` changes and either one of the keywords scal'
+                       + r'e_symmetry_functions or center_symmetry_function'
+                       + r's is used, the RMSE will be different.',
+        'format': r'use_old_weights_short',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3574,8 +4782,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_omp_mkl': {
         'type': bool,
-        'description': " Make use of the OpenMP threading in Intels MKL library. ",
-        'format': "use_omp_mkl",
+        'description': r'Make use of the OpenMP threading in Intels MKL l'
+                       + r'ibrary. ',
+        'format': r'use_omp_mkl',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3586,8 +4795,18 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_short_forces': {
         'type': bool,
-        'description': " Use forces for fitting the short range NN weights. In  runner_mode 1, the  files `trainforces.data`, `testforces.data`, `trainforcese.data` and `testforcese.data` are written.  In  runner_mode 2,  these files are needed to use the short range forces for optimizing the  short range weights. However, if the training data is different, the file  `scaling.data` changes and either one of the keywords scale_symmetry_functions or center_symmetry_functions is used, the RMSE will be different.",
-        'format': "use_short_forces",
+        'description': r'Use forces for fitting the short range NN weight'
+                       + r's. In  runner_mode 1, the  files `trainforces.da'
+                       + r'ta`, `testforces.data`, `trainforcese.data` and '
+                       + r'`testforcese.data` are written.  In  runner_mode'
+                       + r' 2,  these files are needed to use the short ran'
+                       + r'ge forces for optimizing the  short range weight'
+                       + r's. However, if the training data is different, t'
+                       + r'he file  `scaling.data` changes and either one o'
+                       + r'f the keywords scale_symmetry_functions or cente'
+                       + r'r_symmetry_functions is used, the RMSE will be d'
+                       + r'ifferent.',
+        'format': r'use_short_forces',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3598,8 +4817,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_short_nn': {
         'type': bool,
-        'description': " Use the a short range NN. Whether an atomic or pair-based energy expression is used is determined via the keyword nn_type_short.",
-        'format': "use_short_nn",
+        'description': r'Use the a short range NN. Whether an atomic or p'
+                       + r'air-based energy expression is used is determine'
+                       + r'd via the keyword nn_type_short.',
+        'format': r'use_short_nn',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3610,8 +4831,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_systematic_weights_electrostatic': {
         'type': bool,
-        'description': " Overwrite the randomly initialized weights of the electrostatic NNs with  systematically calculated weights. The weights are evenly distributed over the interval between the minimum and maximum of the weights after the random initialization.",
-        'format': "use_systematic_weights_electrostatic",
+        'description': r'Overwrite the randomly initialized weights of th'
+                       + r'e electrostatic NNs with  systematically calcula'
+                       + r'ted weights. The weights are evenly distributed '
+                       + r'over the interval between the minimum and maximu'
+                       + r'm of the weights after the random initialization'
+                       + r'.',
+        'format': r'use_systematic_weights_electrostatic',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3622,8 +4848,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_systematic_weights_short': {
         'type': bool,
-        'description': " Overwrite the randomly initialized weights of the short-range and pairwise NNs with systematically calculated weights. The weights are evenly distributed over the interval between the minimum and maximum of the weights after the random initialization.",
-        'format': "use_systematic_weights_short",
+        'description': r'Overwrite the randomly initialized weights of th'
+                       + r'e short-range and pairwise NNs with systematical'
+                       + r'ly calculated weights. The weights are evenly di'
+                       + r'stributed over the interval between the minimum '
+                       + r'and maximum of the weights after the random init'
+                       + r'ialization.',
+        'format': r'use_systematic_weights_short',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3634,8 +4865,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'use_vdw': {
         'type': bool,
-        'description': "Turn on dispersion corrections.",
-        'format': "use_vdw",
+        'description': r'Turn on dispersion corrections.',
+        'format': r'use_vdw',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -3643,10 +4874,12 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'default_value': False,
         'allow_multiple': False,
-    },    
+    },
     'vdw_screening': {
-        'description': " Specification of the shape parameters of the Fermi-screening function in the employed DFT-D2 dispersion correction expression.",
-        'format': "vdw_screening s_6 d s_R",
+        'description': r'Specification of the shape parameters of the Fer'
+                       + r'mi-screening function in the employed DFT-D2 dis'
+                       + r'persion correction expression.',
+        'format': r'vdw_screening s_6 d s_R',
         'modes': {
             'mode1': True,
             'mode2': False,
@@ -3654,17 +4887,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             's_6': {
-                'description': " The global scaling parameter $s_6$ in the screening function.",
+                'description': r'The global scaling parameter $s_6$ in th'
+                               + r'e screening function.',
                 'type': float,
                 'default_value': None,
             },
             'd': {
-                'description': " The exchange-correlation functional dependent damping parameter. More information can be found in the theory section.",
+                'description': r'The exchange-correlation functional depe'
+                               + r'ndent damping parameter. More informatio'
+                               + r'n can be found in the theory section.',
                 'type': float,
                 'default_value': None,
             },
             's_R': {
-                'description': " Range separation parameter.",
+                'description': r'Range separation parameter.',
                 'type': float,
                 'default_value': None,
             },
@@ -3672,8 +4908,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'vdw_type': {
-        'description': " Specification of the type of dispersion correction to be employed.",
-        'format': "vdw_type i0",
+        'description': r'Specification of the type of dispersion correcti'
+                       + r'on to be employed.',
+        'format': r'vdw_type i0',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3681,18 +4918,20 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i0': {
-                'description': " Type of vdW correction scheme.",
+                'description': r'Type of vdW correction scheme.',
                 'type': int,
-                'default_value': "default",
+                'default_value': r'default',
                 'options': {
                     1: {
-                        'description': " Simple, environment-dependent dispersion correction inspired by the Tkatchenko-Scheffler scheme.",
+                        'description': r'Simple, environment-dependent di'
+                                       + r'spersion correction inspired by '
+                                       + r'the Tkatchenko-Scheffler scheme.',
                     },
                     2: {
-                        'description': " Grimme DFT-D2 correction.",
+                        'description': r'Grimme DFT-D2 correction.',
                     },
                     3: {
-                        'description': " Grimme DFT-D3 correction.",
+                        'description': r'Grimme DFT-D3 correction.',
                     },
                 },
             },
@@ -3701,8 +4940,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'weight_analysis': {
         'type': bool,
-        'description': " Print analysis of weights in  runner_mode 2.",
-        'format': "weight_analysis",
+        'description': r'Print analysis of weights in  runner_mode 2.',
+        'format': r'weight_analysis',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3712,8 +4951,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'weights_max': {
-        'description': " Set an upper limit for the random initialization of the short-range NN weights. ",
-        'format': "weights_max a0",
+        'description': r'Set an upper limit for the random initialization'
+                       + r' of the short-range NN weights. ',
+        'format': r'weights_max a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3721,7 +4961,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " This number defines the maximum default_value for initial random short range weights.",
+                'description': r'This number defines the maximum default_'
+                               + r'value for initial random short range wei'
+                               + r'ghts.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -3729,8 +4971,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'weights_min': {
-        'description': " Set a lower limit for the random initialization of the short-range NN weights. ",
-        'format': "weights_min a0",
+        'description': r'Set a lower limit for the random initialization '
+                       + r'of the short-range NN weights. ',
+        'format': r'weights_min a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3738,7 +4981,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " This number defines the minimum default_value for initial random short range weights.",
+                'description': r'This number defines the minimum default_'
+                               + r'value for initial random short range wei'
+                               + r'ghts.',
                 'type': float,
                 'default_value': -1.0,
             },
@@ -3746,8 +4991,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'weightse_max': {
-        'description': " Set an upper limit for the random initialization of the electrostatic NN weights. ",
-        'format': "weightse_max a0",
+        'description': r'Set an upper limit for the random initialization'
+                       + r' of the electrostatic NN weights. ',
+        'format': r'weightse_max a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3755,7 +5001,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " This number defines the maximum default_value for initial random electrostatic weights. This keyword is active only if an electrostatic NN is used, i.e. for `electrostatic_type` 1.",
+                'description': r'This number defines the maximum default_'
+                               + r'value for initial random electrostatic w'
+                               + r'eights. This keyword is active only if a'
+                               + r'n electrostatic NN is used, i.e. for `el'
+                               + r'ectrostatic_type` 1.',
                 'type': float,
                 'default_value': 1.0,
             },
@@ -3763,8 +5013,9 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'weightse_min': {
-        'description': " Set a lower limit for the random initialization of the electrostatic NN weights. ",
-        'format': "weightse_min a0",
+        'description': r'Set a lower limit for the random initialization '
+                       + r'of the electrostatic NN weights. ',
+        'format': r'weightse_min a0',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3772,7 +5023,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'a0': {
-                'description': " This number defines the minimum default_value for initial random electrostatic weights. This keyword is active only if an electrostatic NN is used, i.e. for `electrostatic_type` 1.",
+                'description': r'This number defines the minimum default_'
+                               + r'value for initial random electrostatic w'
+                               + r'eights. This keyword is active only if a'
+                               + r'n electrostatic NN is used, i.e. for `el'
+                               + r'ectrostatic_type` 1.',
                 'type': float,
                 'default_value': -1.0,
             },
@@ -3781,8 +5036,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_fit_statistics': {
         'type': bool,
-        'description': "",
-        'format': "write_fit_statistics",
+        'description': r'',
+        'format': r'write_fit_statistics',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3793,8 +5048,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_temporary_weights': {
         'type': bool,
-        'description': " Write temporary weights after each data block defined by `points_in_memory` to files `tmpweights.XXX.out` and `tmpweightse.XXX.out`. XXX is the nuclear charge. This option is active only in `runner_mode` 2 and meant to store  intermediate weights in very long epochs.",
-        'format': "write_temporary_weights",
+        'description': r'Write temporary weights after each data block de'
+                       + r'fined by `points_in_memory` to files `tmpweights'
+                       + r'.XXX.out` and `tmpweightse.XXX.out`. XXX is the '
+                       + r'nuclear charge. This option is active only in `r'
+                       + r'unner_mode` 2 and meant to store  intermediate w'
+                       + r'eights in very long epochs.',
+        'format': r'write_temporary_weights',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3805,8 +5065,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_traincharges': {
         'type': bool,
-        'description': " In runner_mode 2  write the files `traincharges.YYYYYY.out` and `testcharges.YYYYYY.out` for each epoch. `YYYYYY` is the number of the epoch.  The files are written only if the electrostatic NN is used in case of  electrostatic_type 1.  This can generate many large files and is intended for a detailed analysis of  the fits.",
-        'format': "write_traincharges",
+        'description': r'In runner_mode 2  write the files `traincharges.'
+                       + r'YYYYYY.out` and `testcharges.YYYYYY.out` for eac'
+                       + r'h epoch. `YYYYYY` is the number of the epoch.  T'
+                       + r'he files are written only if the electrostatic N'
+                       + r'N is used in case of  electrostatic_type 1.  Thi'
+                       + r's can generate many large files and is intended '
+                       + r'for a detailed analysis of  the fits.',
+        'format': r'write_traincharges',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3817,8 +5083,15 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_trainforces': {
         'type': bool,
-        'description': " In runner_mode 2  write the files  `trainforces.YYYYYY.out`  and  `testforces.YYYYYY.out`  for each epoch. `YYYYYY` is the number of the epoch. The files are written only if the short range NN is used and if the forces are used for training (keyword  use_short_forces.  This can generate  many large files and is intended for a detailed analysis of the fits.",
-        'format': "write_trainforces",
+        'description': r'In runner_mode 2  write the files  `trainforces.'
+                       + r'YYYYYY.out`  and  `testforces.YYYYYY.out`  for e'
+                       + r'ach epoch. `YYYYYY` is the number of the epoch. '
+                       + r'The files are written only if the short range NN'
+                       + r' is used and if the forces are used for training'
+                       + r' (keyword  use_short_forces.  This can generate '
+                       + r' many large files and is intended for a detailed'
+                       + r' analysis of the fits.',
+        'format': r'write_trainforces',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3829,8 +5102,14 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_symfunctions': {
         'type': bool,
-        'description': " In runner_mode  3 write the file `symfunctions.out` containing  the unscaled and non-centered symmetry functions default_values of all atoms in the  predicted structure. The format is the same as for the files  function.data and  testing.data with the exception that no energies are given. The purpose of this file is code debugging.",
-        'format': "write_symfunctions",
+        'description': r'In runner_mode  3 write the file `symfunctions.o'
+                       + r'ut` containing  the unscaled and non-centered sy'
+                       + r'mmetry functions default_values of all atoms in '
+                       + r'the  predicted structure. The format is the same'
+                       + r' as for the files  function.data and  testing.da'
+                       + r'ta with the exception that no energies are given'
+                       + r'. The purpose of this file is code debugging.',
+        'format': r'write_symfunctions',
         'modes': {
             'mode1': False,
             'mode2': False,
@@ -3841,8 +5120,11 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_binding_energy_only': {
         'type': bool,
-        'description': " In  runner_mode 2  write only the binding energy instead of total energies in  the files  trainpoints.XXXXXX.out and testpoints.XXXXXX.out for each epoch.",
-        'format': "write_binding_energy_only",
+        'description': r'In  runner_mode 2  write only the binding energy'
+                       + r' instead of total energies in  the files  trainp'
+                       + r'oints.XXXXXX.out and testpoints.XXXXXX.out for e'
+                       + r'ach epoch.',
+        'format': r'write_binding_energy_only',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3853,8 +5135,13 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_trainpoints': {
         'type': bool,
-        'description': " In  runner_mode 2  write the files  trainpoints.XXXXXX.out and testpoints.XXXXXX.out for each epoch. `XXXXXX` is the number of the epoch. The files are written only if the short range NN is used. This can generate many large files and is intended for a detailed analysis of the fits.",
-        'format': "write_trainpoints",
+        'description': r'In  runner_mode 2  write the files  trainpoints.'
+                       + r'XXXXXX.out and testpoints.XXXXXX.out for each ep'
+                       + r'och. `XXXXXX` is the number of the epoch. The fi'
+                       + r'les are written only if the short range NN is us'
+                       + r'ed. This can generate many large files and is in'
+                       + r'tended for a detailed analysis of the fits.',
+        'format': r'write_trainpoints',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3865,8 +5152,8 @@ RUNNERCONFIG_DEFAULTS: dict = {
     },
     'write_unformatted': {
         'type': bool,
-        'description': " Write output without any formatting.",
-        'format': "write_unformatted",
+        'description': r'Write output without any formatting.',
+        'format': r'write_unformatted',
         'modes': {
             'mode1': True,
             'mode2': True,
@@ -3876,8 +5163,10 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
     'write_weights_epoch': {
-        'description': " Determine in which epochs the files `YYYYYY.short.XXX.out` and  `YYYYYY.elec.XXX.out` are written. ",
-        'format': "write_weights_epoch i1",
+        'description': r'Determine in which epochs the files `YYYYYY.shor'
+                       + r't.XXX.out` and  `YYYYYY.elec.XXX.out` are writte'
+                       + r'n. ',
+        'format': r'write_weights_epoch i1',
         'modes': {
             'mode1': False,
             'mode2': True,
@@ -3885,7 +5174,7 @@ RUNNERCONFIG_DEFAULTS: dict = {
         },
         'arguments': {
             'i1': {
-                'description': " Frequency of weight output.",
+                'description': r'Frequency of weight output.',
                 'type': int,
                 'default_value': 1,
             },
@@ -3893,138 +5182,3 @@ RUNNERCONFIG_DEFAULTS: dict = {
         'allow_multiple': False,
     },
 }
-
-# ---------- RuNNer ASE general defaults --------------------------------------#
-# These dictionaries contains two types of keywords:
-#   1. those which have to be changed frequently / depend on the system at hand,
-#   2. those where the default value is different from the RuNNer default.
-# They are not ordered alphabetically but by category instead.
-# Here, only the keywords independent of the NNP type are given.
-
-RUNNERASE_PARAMS: dict = {
-    # General for all modes.
-    'runner_mode': 1,                   # Default should be starting a new fit.
-    'elements': None,                   # Will be set by ASE when attaching an atoms object.
-    'number_of_elements': None,         # Will be set by ASE when attaching an atoms object.
-    'bond_threshold': 0.5,              # Default ok but this has to be changed for every system.
-    'nn_type_short': 1,                 # Most people use atomic NNs.
-    'nnp_gen': 2,                       # 2Gs remain the most common use case.
-    'use_short_nn': True,               # Short-range fitting is the default.
-    'optmode_charge': 1,                # Default ok but should be a visible options.
-    'optmode_short_energy': 1,          # Default ok but should be a visible options.
-    'optmode_short_force': 1,           # Default ok but should be a visible options.
-    'points_in_memory': 1000,           # Default is very small, modern PCs can handle more.
-    'scale_symmetry_functions': True,   # Scaling is used by almost everyone.
-    'cutoff_type': 1,                   # Default ok, but important.
-    # Mode 1.
-    'test_fraction': 0.1,               # The RuNNer default is only 1%, more is standard procedure.
-    # Mode 1 and 2.
-    'random_seed': 0,                   # The seed will be initialized by np.rand later on, but it is an important information.
-    'use_short_forces': True,           # Force fitting is standard procedure.
-    # Mode 1 and 3.
-    'remove_atom_energies': True,       # Everyone only fits binding energies.
-    'atom_energy': [],                  # Interdependent with `remove_atom_energies`.
-    # Mode 2.
-    'epochs': 30,                       # Default was 0 and most train for 30 epochs.
-    'kalman_lambda_short': 0.98000,     # Very typical default value.
-    'kalman_nue_short': 0.99870,        # Very typical default value.
-    'mix_all_points': True,             # This is a standard option for most.
-    'nguyen_widrow_weights_short': True,  # Typically improves the fit.
-    'repeated_energy_update': True,       # Typically improves the fit with force fitting.
-    'short_energy_error_threshold': 0.1,  # Only energies with 0.1*RMSE are used.
-    'short_energy_fraction': 1.0,         # All energies are used.
-    'short_force_error_threshold': 1.0,   # All forces are used.
-    'short_force_fraction': 0.1,        # 10% of the forces are used.
-    'use_old_weights_charge': False,    # Might be very important for fit restarting.
-    'use_old_weights_short': False,     # Might be very important for fit restarting.
-    'write_weights_epoch': 5,           # Default is 1, very verbose.
-    # Mode 2 and 3.
-    'center_symmetry_functions': True,  # This is standard procedure.
-    'precondition_weights': True,       # This is standard procedure.
-    # Mode 3.
-    'calculate_forces': False,          # Will be set by ASE automatically, but should be visible.
-    'calculate_stress': False,          # Will be set by ASE automatically, but should be visible.
-    # ---------- 2G-specific keywords. ----------
-    # All modes.
-    'symfunction_short': [],
-    # Mode 2 and 3.
-    'global_activation_short': [None],
-    'global_hidden_layers_short': None,
-    'global_nodes_short': [None],
-    # ---------- PairNN-specific keywords. ----------
-    # All modes.
-    'element_pairsymfunction_short': [None, None, None],
-    'global_pairsymfunction_short': [None, None, None],
-    # Mode 2 and 3.
-    'element_activation_pair': [None, None, None, None],
-    'element_hidden_layers_pair': [None, None],
-    'element_nodes_pair': [None, None, 'global_nodes_pair'],
-    'global_activation_pair': None,
-    'global_hidden_layers_pair': None,
-    'global_nodes_pair': None,
-    # # 3G-/4G-specific keywords.
-    # 'electrostatic_type': 1,            # Default ok, but should be visible.
-    # 'use_fixed_charges': False,
-    # 'use_gausswidth': False,
-    # 'fixed_gausswidth': [None, -99.0],
-    # 'element_symfunction_electrostatic': [None, None, None],
-    # 'global_symfunction_electrostatic': [None, None, None],
-    # 'symfunction_electrostatic': [None, None, None],
-    #
-    # 'element_activation_electrostatic': [None, None, None, None],
-    # 'element_activation_pair': [None, None, None, None],
-    # 'element_activation_short': [None, None, None, None],
-    # 'element_hidden_layers_electrostatic': [None, None],
-    # 'element_hidden_layers_pair': [None, None],
-    # 'element_hidden_layers_short': [None, None],
-    # 'element_nodes_electrostatic': [None, None, 'global_nodes_electrostatic'],
-    # 'element_nodes_pair': [None, None, 'global_nodes_pair'],
-    # 'element_nodes_short': [None, None, 'global_nodes_short'],
-    # 'global_activation_electrostatic': None,
-    # 'global_activation_pair': None,
-    # 'global_activation_short': None,
-    # 'global_hidden_layers_electrostatic': None,
-    # 'global_hidden_layers_pair': None,
-    # 'global_hidden_layers_short': None,
-    # 'global_nodes_electrostatic': None,
-    # 'global_nodes_pair': None,
-    # 'global_nodes_short': None,
-    # # Mode 1.
-    # 'enforce_totcharge': 1,
-    # # Mode 2.
-    # 'kalman_lambda_charge': 0.98000,           # Very common choice.        
-    # 'kalman_nue_charge': 0.99870,              # Very common choice.
-    # 'charge_error_threshold': 0.0,             # Default is ok, but changed often.
-    # 'charge_fraction': 1.0,                    # Default is 0, which is useless.
-    # 'nguyen_widrow_weights_ewald': True,       # Typically improves the fit.
-    # 'regularize_fit_param': 0.00001,           # Very important for charge fitting.
-    # # Mode 2 and 3.
-    # 'use_electrostatics': False,
-    # 'ewald_alpha': 0.0,
-    # 'ewald_cutoff': 0.0,
-    # 'ewald_kmax': 0,
-    # 'ewald_prec': -1.0,
-    # 'fixed_charge': [None, 0.0],
-    # 'use_atom_charges': True,
-    # 'element_activation_electrostatic': [None, None, None, None],
-    # 'element_hidden_layers_electrostatic': [None, None],
-    # 'element_nodes_electrostatic': [None, None, 'global_nodes_electrostatic'],
-    # 'global_activation_electrostatic': None,
-    # 'global_hidden_layers_electrostatic': None,
-    # 'global_nodes_electrostatic': None
-}
-
-RUNNERDATA_KEYWORDS = [
-    'begin',               
-    'comment',
-    'lattice',
-    'atom',
-    'charge',
-    'energy',
-    'end'
-]
-
-
-if __name__ == "__main__":
-
-    print(RUNNERCONFIG_DEFAULTS)
