@@ -35,6 +35,7 @@ class TestFunctional:
 
     seed = 42
 
+    @pytest.mark.calculator('runner')
     def test_modes(self, system):
         """Run RuNNer Mode 1 for a given test system."""
         # Get the dataset and parameters.
