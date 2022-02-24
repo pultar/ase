@@ -27,7 +27,7 @@ Contributors
 
 """
 
-from typing import Union, Optional
+from typing import Union, Optional, Dict, List
 
 from itertools import combinations_with_replacement, product
 
@@ -51,14 +51,14 @@ from ase.io.runner.storageclasses import (RunnerSymmetryFunctionValues,
                                           RunnerResults)
 from ase.io.runner.defaultoptions import RunnerOptions, DEFAULT_PARAMETERS
 
-from ase.io.runner.symmetryfunctions import (SymmetryFunction,
-                                             SymmetryFunctionSet)
+from ase.io.runner.storageclasses import (SymmetryFunction,
+                                          SymmetryFunctionSet)
 
 
 def get_element_groups(
-    elements: list[str],
+    elements: List[str],
     groupsize: int
-) -> list[list[str]]:
+) -> List[List[str]]:
     """Create doubles or triplets of elements from all `elements`.
 
     Arguments
@@ -88,27 +88,27 @@ def get_element_groups(
 
 
 def get_minimum_distances(
-    dataset: list[Atoms],
-    elements: list[str]
-) -> dict[str, float]:
+    dataset: List[Atoms],
+    elements: List[str]
+) -> Dict[str, float]:
     """Calculate min. distance between all `elements` pairs in `dataset`.
 
     Parameters
     ----------
-    dataset : list[Atoms]
+    dataset : List[Atoms]
         The minimum distances will be returned for each element pair across all
         images in `dataset`.
-    elements : list[str]
+    elements : List[str]
         The list of elements from which a list of element pairs will be built.
 
     Returns
     -------
-    minimum_distances: dict[str, float]
+    minimum_distances: Dict[str, float]
         A dictionary where the keys are strings of the format 'C-H' and the
         values are the minimum distances of the respective element pair.
 
     """
-    minimum_distances: dict[str, float] = {}
+    minimum_distances: Dict[str, float] = {}
     for elem1, elem2 in get_element_groups(elements, 2):
         for structure in dataset:
 
@@ -138,22 +138,22 @@ def get_minimum_distances(
     return minimum_distances
 
 
-def get_elements(images: list[Atoms]) -> list[str]:
+def get_elements(images: List[Atoms]) -> List[str]:
     """Extract a list of elements from a given list of ASE Atoms objects.
 
     Parameters
     ----------
-    images : list[Atoms]
+    images : List[Atoms]
         A list of ASE atoms objects.
 
     Returns
     -------
-    elements : list[str]
+    elements : List[str]
         A list of all elements contained in `images`.
 
     """
     # Get the chemical symbol of all elements.
-    elements: list[str] = []
+    elements: List[str] = []
     for atoms in images:
         elements = atoms.get_chemical_symbols()
         for element in elements:
@@ -233,7 +233,7 @@ class Runner(FileIOCalculator):
         label: Optional[str] = None,
         directory: Optional[str] = '.',
         atoms: Optional[Atoms] = None,
-        dataset: Optional[list[Atoms]] = None,
+        dataset: Optional[List[Atoms]] = None,
         weights: Optional[RunnerWeights] = None,
         scaling: Optional[RunnerScaling] = None,
         sfvalues: Optional[RunnerSymmetryFunctionValues] = None,
@@ -254,7 +254,7 @@ class Runner(FileIOCalculator):
             Path to the calculation directory.
         atoms : Atoms
             Atoms object to be attached to this calculator.
-        dataset : list[Atoms]
+        dataset : List[Atoms]
             List of ASE Atoms objects used for training the neural network
             potential. Mandatory for RuNNer Mode 2.
         weights : RunnerWeights
@@ -335,7 +335,7 @@ class Runner(FileIOCalculator):
         self._directory: str
 
     @property
-    def elements(self) -> list[str]:
+    def elements(self) -> List[str]:
         """Show the elements pertaining to this calculator.
 
         Store chemical symbols of elements in the parameters dictionary.
@@ -360,7 +360,7 @@ class Runner(FileIOCalculator):
 
         Returns
         ---------
-        elements : list[str]
+        elements : List[str]
             Elements can either be set directly from a list of strings, or
             they are automatically extracted from the attached dataset or Atoms
             objects on the calculator.
@@ -387,7 +387,7 @@ class Runner(FileIOCalculator):
         return elements
 
     @elements.setter
-    def elements(self, elements: list[str]) -> None:
+    def elements(self, elements: List[str]) -> None:
         """Store chemical symbols of elements in the parameters dictionary.
 
         This routine adjusts the RuNNer keywords 'elements'
@@ -556,24 +556,24 @@ class Runner(FileIOCalculator):
 
     def write_input(
         self,
-        atoms: Union[Atoms, list[Atoms]],
-        properties: Optional[list[str]] = None,
-        system_changes: Optional[list[str]] = None
+        atoms: Union[Atoms, List[Atoms]],
+        properties: Optional[List[str]] = None,
+        system_changes: Optional[List[str]] = None
     ) -> None:
         """Write relevant RuNNer input file(s) to the calculation directory.
 
         Parameters
         ----------
-        atoms : Atoms or list[Atoms]
+        atoms : Atoms or List[Atoms]
             A single structure or a list of structures for which the symmetry
             functions shall be calculated (= RuNNer Mode 1), for which atomic
             properties like energies and forces will be calculated (= RuNNer
             Mode 3) or on which a neural network potential will be trained
             (= RuNNer Mode 2).
-        properties : list[str]
+        properties : List[str]
             The target properties which shall be returned. See
             `implemented_properties` for a list of options.
-        system_changes : list[str]
+        system_changes : List[str]
             A list of changes in `atoms` in comparison to the previous run.
         """
         # Per default, `io.write_all_inputs` will only write the input.data and
@@ -610,18 +610,18 @@ class Runner(FileIOCalculator):
 
     def check_state(
         self,
-        atoms: Union[Atoms, list[Atoms]],
+        atoms: Union[Atoms, List[Atoms]],
         tol: float = 1e-15
-    ) -> list[str]:
+    ) -> List[str]:
         """Check for any changes since the last calculation.
 
         Check whether any of the parameters in atoms differs from those in
         `self.atoms`. Overrides the `Calculator` routine to extend the
-        functionality to list[Atoms], i.e. RuNNer datasets.
+        functionality to List[Atoms], i.e. RuNNer datasets.
 
         Parameters
         ----------
-        atoms : Atoms or list[Atoms]
+        atoms : Atoms or List[Atoms]
             A RuNNer dataset or an ASE Atoms object which will be compared
             to the calculator storage.
         tol : float, _default_ 1e-15

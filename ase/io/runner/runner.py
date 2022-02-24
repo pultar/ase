@@ -15,7 +15,7 @@ Contributors
 
 """
 
-from typing import Optional, Union, Iterator, Tuple
+from typing import Optional, Union, Iterator, Tuple, List
 
 import os
 import io
@@ -75,16 +75,16 @@ class TempAtoms:
 
     def __init__(self, atoms: Optional[Atoms] = None) -> None:
         """Initialize the object."""
-        self.positions: list[list[float]] = []
-        self.symbols: list[str] = []
-        self.charges: list[float] = []
-        self.magmoms: list[float] = []
+        self.positions: List[List[float]] = []
+        self.symbols: List[str] = []
+        self.charges: List[float] = []
+        self.magmoms: List[float] = []
 
-        self.cell: list[list[float]] = []
+        self.cell: List[List[float]] = []
 
         self.energy: float = np.NaN
         self.totalcharge: float = np.NaN
-        self.forces: list[list[float]] = []
+        self.forces: List[List[float]] = []
 
         # If given, read values from a given ASE Atoms object.
         if atoms is not None:
@@ -92,7 +92,7 @@ class TempAtoms:
 
     def __iter__(
         self
-    ) -> Iterator[Tuple[list[float], str, float, float, list[float]]]:
+    ) -> Iterator[Tuple[List[float], str, float, float, List[float]]]:
         """Iterate over tuples of information for each atom in storage."""
         for idx, xyz in enumerate(self.positions):
             element = self.symbols[idx]
@@ -103,7 +103,7 @@ class TempAtoms:
             yield (xyz, element, charge, atomenergy, force_xyz)
 
     @property
-    def pbc(self) -> list[bool]:
+    def pbc(self) -> List[bool]:
         """Show the periodicity of the object along the Cartesian axes."""
         pbc = [False, False, False]
         for idx, vector in enumerate(self.cell):
@@ -117,9 +117,12 @@ class TempAtoms:
         atoms = Atoms(
             positions=self.positions,
             symbols=self.symbols,
-            cell=self.cell,
             pbc=self.pbc
         )
+
+        # Add the unit cell information.
+        if len(self.cell) > 1:
+            atoms.set_cell(self.cell)
 
         atoms.set_initial_charges(self.charges)
         atoms.set_initial_magnetic_moments(self.magmoms)
@@ -224,7 +227,7 @@ def read_runnerdata(
     [documentation](https://runner.pages.gwdg.de/runner/reference/files/#inputdata)
     """
     # Container for all images in the file.
-    images: list[Atoms] = []
+    images: List[Atoms] = []
 
     for line in infile:
 
@@ -282,7 +285,7 @@ def read_runnerdata(
 @writer
 def write_runnerdata(
     outfile: io.TextIOWrapper,
-    images: list[Atoms],
+    images: List[Atoms],
     comment: str = '',
     fmt: str = '16.10f',
     input_units: str = 'si'
@@ -348,7 +351,7 @@ def write_runnerdata(
 
 def read_runnerase(
     label: str
-) -> Tuple[Union[Atoms, list[Atoms]], Parameters]:
+) -> Tuple[Union[Atoms, List[Atoms]], Parameters]:
     """Read structure and parameter options from a previous calculation.
 
     Parameters
@@ -359,7 +362,7 @@ def read_runnerase(
 
     Returns
     --------
-    atoms : ASE Atoms or list[Atoms]
+    atoms : ASE Atoms or List[Atoms]
         A list of all structures associated with the given calculation.
     parameters : Parameters
         A dictionary containing all RuNNer settings of the calculation.
@@ -420,7 +423,7 @@ def _format_argument(argument: Union[bool, float, int, str]) -> str:
 def _format_keyword(
     outfile: io.TextIOWrapper,
     keyword: str,
-    arguments: Union[list[Union[int, float, bool, str]],
+    arguments: Union[List[Union[int, float, bool, str]],
                      int, float, bool, str,
                      SymmetryFunctionSet]
 ) -> None:
@@ -501,8 +504,8 @@ def write_runnerconfig(
 
 def _read_arguments(
     keyword: str,
-    arguments: list[str]
-) -> Union[bool, int, float, str, list[Union[bool, int, float, str]]]:
+    arguments: List[str]
+) -> Union[bool, int, float, str, List[Union[bool, int, float, str]]]:
 
     # Get the default arguments belonging to this keyword.
     defaults = do.RUNNERCONFIG_DEFAULTS[keyword]['arguments'].items()
@@ -633,7 +636,7 @@ def read_runnerconfig(
 # it increases the number of parameters.
 # pylint: disable=too-many-arguments
 def write_all_inputs(
-    atoms: Union[Atoms, list[Atoms]],
+    atoms: Union[Atoms, List[Atoms]],
     parameters: Parameters,
     label: str = 'runner',
     directory: str = '.',
@@ -720,7 +723,7 @@ def write_scaling(outfile: io.TextIOWrapper, scaling: RunnerScaling) -> None:
 
 def read_weights(
     path: str = '.',
-    elements: Optional[list[str]] = None,
+    elements: Optional[List[str]] = None,
     prefix: str = 'weights',
     suffix: str = 'data'
 ) -> RunnerWeights:
@@ -730,7 +733,7 @@ def read_weights(
     ----------
     path : str, optional, _default_ '.'
         Data will be read from all weight files under the given directory.
-    elements : list[str], optional, _default_ `None`
+    elements : List[str], optional, _default_ `None`
         A selection of chemical symbols for which the weights under `path`
         will be read.
     prefix : str, optional, _default_ `weights`
@@ -751,7 +754,7 @@ def read_weights(
 def write_weights(
     weights: RunnerWeights,
     path: str = '.',
-    elements: Optional[list[str]] = None,
+    elements: Optional[List[str]] = None,
     prefix: str = 'weights',
     suffix: str = 'data'
 ) -> None:
@@ -763,7 +766,7 @@ def write_weights(
         The weights data.
     path : str, optional, _default_ '.'
         Data will be read from all weight files under the given directory.
-    elements : list[str], optional, _default_ `None`
+    elements : List[str], optional, _default_ `None`
         A selection of chemical symbols for which the weights under `path`
         will be read.
     prefix : str, optional, _default_ `weights`
@@ -951,7 +954,7 @@ def read_results_mode3(directory: str) -> RunnerResults:
 @writer
 def write_trainteststruct(
     outfile: io.TextIOWrapper,
-    images: list[Atoms],
+    images: List[Atoms],
     index: Union[int, slice] = slice(0, None),
     fmt: str = '16.10f',
     input_units: str = 'si'
@@ -962,7 +965,7 @@ def write_trainteststruct(
     ----------
     outfile : TextIOWrapper
         The fileobj where the data will be written.
-    images : list[Atoms]
+    images : List[Atoms]
         List of ASE `Atoms` objects.
     index : int or slice, _default_ `slice(0, None)`
         Only the selection of `images` given by `index` will be written.
@@ -1009,8 +1012,8 @@ def write_trainteststruct(
 @writer
 def write_traintestforces(
     outfile: io.TextIOWrapper,
-    images: list[Atoms],
-    index: Union[int, slice, list[int]] = slice(0, None),
+    images: List[Atoms],
+    index: Union[int, slice, List[int]] = slice(0, None),
     fmt: str = '16.10f',
     input_units: str = 'si'
 ) -> None:
@@ -1020,7 +1023,7 @@ def write_traintestforces(
     ----------
     outfile : TextIOWrapper
         The fileobj where the data will be written.
-    images : list[Atoms]
+    images : List[Atoms]
         List of ASE `Atoms` objects.
     index : int or slice, _default_ `slice(0, None)`
         Only the selection of `images` given by `index` will be written.

@@ -39,7 +39,7 @@ Contributors
 
 """
 
-from typing import Optional, Union, Iterator, Tuple, TypedDict
+from typing import Optional, Union, Iterator, Tuple, TypedDict, List, Dict
 
 import os
 import io
@@ -71,7 +71,7 @@ class ElementStorageMixin:
     def __init__(self) -> None:
         """Initialize the object."""
         # Data container for element - data pairs.
-        self.data: dict[str, NDArray[float]] = {}
+        self.data: Dict[str, NDArray[float]] = {}
 
     def __iter__(self) -> Iterator[Tuple[str, NDArray[float]]]:
         """Iterate over all key-value pairs in the `self.data` container."""
@@ -128,7 +128,7 @@ class ElementStorageMixin:
         return self.data[key]
 
     @property
-    def elements(self) -> list[str]:
+    def elements(self) -> List[str]:
         """Show a list of elements for which data is available in storage."""
         return list(self.data.keys())
 
@@ -175,7 +175,7 @@ class RunnerScaling(ElementStorageMixin):
         infile : TextIOWrapper
             The fileobj containing the scaling data in RuNNer format.
         """
-        scaling: dict[str, list[list[float]]] = {}
+        scaling: Dict[str, List[List[float]]] = {}
         for line in infile:
             data = line.split()
 
@@ -235,7 +235,7 @@ class RunnerWeights(ElementStorageMixin):
         self,
         infile: Optional[io.TextIOWrapper] = None,
         path: Optional[str] = None,
-        elements: Optional[list[str]] = None,
+        elements: Optional[List[str]] = None,
         prefix: str = 'weights',
         suffix: str = 'data'
     ) -> None:
@@ -251,7 +251,7 @@ class RunnerWeights(ElementStorageMixin):
         path : str, optional, _default_ `None`
             If given, data will be read from all weight files under the given
             directory.
-        elements : list[str], optional, _default_ `None`
+        elements : List[str], optional, _default_ `None`
             A selection of chemical symbols for which the weights under `path`
             will be read. Only active when `path` is given.
         prefix : str, optional, _default_ `weights`
@@ -296,7 +296,7 @@ class RunnerWeights(ElementStorageMixin):
     def readall(
         self,
         path: str = '.',
-        elements: Optional[list[str]] = None,
+        elements: Optional[List[str]] = None,
         prefix: str = 'weights',
         suffix: str = 'data'
     ) -> None:
@@ -310,7 +310,7 @@ class RunnerWeights(ElementStorageMixin):
         path : str, _default_ '.'
             Data will be read from all weight files found under the given
             path.
-        elements : list[str], optional, _default_ `None`
+        elements : List[str], optional, _default_ `None`
             A selection of chemical symbols for which the weights under `path`
             will be read.
         prefix : str, optional, _default_ `weights`
@@ -341,7 +341,7 @@ class RunnerWeights(ElementStorageMixin):
     def write(
         self,
         path: str = '.',
-        elements: Optional[list[str]] = None,
+        elements: Optional[List[str]] = None,
         prefix: str = 'weights',
         suffix: str = 'data'
     ) -> None:
@@ -352,7 +352,7 @@ class RunnerWeights(ElementStorageMixin):
         path : str, _default_ '.'
             Data will be read from all weight files found under the given
             path.
-        elements : list[str], optional, _default_ `None`
+        elements : List[str], optional, _default_ `None`
             A selection of chemical symbols for which the weights under `path`
             will be read.
         prefix : str, optional, _default_ `weights`
@@ -402,13 +402,13 @@ class RunnerStructureSymmetryFunctionValues(ElementStorageMixin):
         """Show a string representation of the object."""
         return f'{self.__class__.__name__}(n_atoms={len(self)})'
 
-    def by_atoms(self) -> list[Tuple[str, NDArray[float]]]:
+    def by_atoms(self) -> List[Tuple[str, NDArray[float]]]:
         """Expand dictionary of element symmetry functions into atom tuples."""
         data_tuples = []
         index = []
         for element, element_sfvalues in self.data.items():
             index += list(element_sfvalues[:, 0])
-            sfvalues_list: list[NDArray[float]] = list(element_sfvalues[:, 1:])
+            sfvalues_list: List[NDArray[float]] = list(element_sfvalues[:, 1:])
 
             for atom_sfvalues in sfvalues_list:
                 data_tuples.append((element, atom_sfvalues))
@@ -442,7 +442,7 @@ class RunnerSymmetryFunctionValues:
         # Initialize the base class. This will create the main data storage.
         super().__init__()
 
-        self.data: list[RunnerStructureSymmetryFunctionValues] = []
+        self.data: List[RunnerStructureSymmetryFunctionValues] = []
 
         # If given, read data from `infile`.
         if isinstance(infile, io.TextIOWrapper):
@@ -468,7 +468,7 @@ class RunnerSymmetryFunctionValues:
         self.append(blob)
         return self
 
-    def sort(self, index: list[int]) -> None:
+    def sort(self, index: List[int]) -> None:
         """Sort the structures in storage by `index`."""
         self.data = [x for _, x in sorted(zip(index, self.data))]
 
@@ -479,7 +479,7 @@ class RunnerSymmetryFunctionValues:
 
     def read(self, infile: io.TextIOWrapper) -> None:
         """Read symmetry function values from `infile`."""
-        allsfvalues: dict[str, list[list[float]]] = {}
+        allsfvalues: Dict[str, List[List[float]]] = {}
         idx_atom = 0
         for line in infile:
             spline = line.split()
@@ -517,7 +517,7 @@ class RunnerSymmetryFunctionValues:
     def write(
         self,
         outfile: io.TextIOWrapper,
-        index: Union[int, slice, list[int]] = slice(0, None),
+        index: Union[int, slice, List[int]] = slice(0, None),
         fmt: str = '16.10f'
     ) -> None:
         """Write symmetry function scaling data."""
@@ -559,16 +559,16 @@ class RunnerFitResults:
     analysis:
     epochs : int
         The number of epochs in the training process.
-    rmse_energy : dict[str, float]
+    rmse_energy : Dict[str, float]
         Root mean square error of the total energy. Possible keys are 'train',
         for the RMSE in the train set, and 'test', for the RMSE in the test set.
-    rmse_force : dict[str, float]
+    rmse_force : Dict[str, float]
         Root mean square error of the atomic forces. See `rmse_energy`.
-    rmse_charge : dict[str, float]
+    rmse_charge : Dict[str, float]
         Root mean square error of the atomic charges. See `rmse_energy`.
     opt_rmse_epoch : int, optional, _default_ `None`
         The number of the epoch were the best fit was obtained.
-    units : dict[str, str]
+    units : Dict[str, str]
         The units of the energy and force RMSE.
     """
 
@@ -581,14 +581,14 @@ class RunnerFitResults:
             If given, data will be read from this fileobj upon initialization.
         """
         # Helper type hint definition for code brevity.
-        RMSEDict = dict[str, list[Optional[float]]]
+        RMSEDict = Dict[str, List[Optional[float]]]
 
-        self.epochs: list[Optional[int]] = []
+        self.epochs: List[Optional[int]] = []
         self.rmse_energy: RMSEDict = {'train': [], 'test': []}
         self.rmse_forces: RMSEDict = {'train': [], 'test': []}
         self.rmse_charge: RMSEDict = {'train': [], 'test': []}
         self.opt_rmse_epoch: Optional[int] = None
-        self.units: dict[str, str] = {'rmse_energy': '', 'rmse_force': ''}
+        self.units: Dict[str, str] = {'rmse_energy': '', 'rmse_force': ''}
 
         # If given, read data from `infile`.
         if isinstance(infile, io.TextIOWrapper):
@@ -643,7 +643,7 @@ class RunnerFitResults:
                 # Use regular expressions to find the units. All units
                 # conveniently start with two letters ('Ha', or 'eV'), followed
                 # by a slash and some more letters (e.g. 'Bohr', or 'atom').
-                units: list[str] = re.findall(r'\w{2}/\w+', line)
+                units: List[str] = re.findall(r'\w{2}/\w+', line)
                 self.units['rmse_energy'] = units[0]
                 self.units['rmse_force'] = units[0]
 
@@ -675,8 +675,8 @@ class RunnerSplitTrainTest:
         infile : TextIOWrapper, optional, _default_ `None`
             If provided, data will be read from this fileobj.
         """
-        self.train: list[int] = []
-        self.test: list[int] = []
+        self.train: List[int] = []
+        self.test: List[int] = []
 
         # If given, read data from `infile`.
         if isinstance(infile, io.TextIOWrapper):
@@ -727,9 +727,9 @@ class SymmetryFunction:
         self,
         sftype: Optional[int] = None,
         cutoff: Optional[float] = None,
-        elements: Optional[list[str]] = None,
-        coefficients: Optional[list[float]] = None,
-        sflist: Optional[list[Union[float, int, str]]] = None
+        elements: Optional[List[str]] = None,
+        coefficients: Optional[List[float]] = None,
+        sflist: Optional[List[Union[float, int, str]]] = None
     ) -> None:
         """Initialize the class.
 
@@ -742,11 +742,11 @@ class SymmetryFunction:
 
         Optional Arguments
         ------------------
-        coefficients : list[float]
+        coefficients : List[float]
             The coefficients of this symmetry function. The number of necessary
             coefficients depends on the `sftype` as documented in the RuNNer
             manual.
-        elements : list[str]
+        elements : List[str]
             Symbols of the elements described by this symmetry function.
             The first entry of the list gives the central atom, while all
             following entries stand for neighbor atoms. Usually, the number of
@@ -828,7 +828,7 @@ class SymmetryFunction:
 
         return string
 
-    def to_list(self) -> list[Union[float, str, int]]:
+    def to_list(self) -> List[Union[float, str, int]]:
         """Create a list representation of the symmetry function."""
         sflist = [self.elements[0], self.sftype, *self.elements[1:],
                 *self.coefficients, self.cutoff]
@@ -836,7 +836,7 @@ class SymmetryFunction:
 
     def from_list(
         self,
-        sflist: list[Union[str, int, float]]
+        sflist: List[Union[str, int, float]]
     ) -> None:
         """Fill storage from a list of symmetry function parameters."""
         self.sftype = sflist[1]
@@ -856,8 +856,8 @@ class SymmetryFunctionSet:
 
     def __init__(
         self,
-        sflist: Optional[list[list[Union[str, float, int]]]] = None,
-        min_distances: Optional[dict[str, float]] = None
+        sflist: Optional[List[List[Union[str, float, int]]]] = None,
+        min_distances: Optional[Dict[str, float]] = None
     ) -> None:
         """Initialize the class.
 
@@ -865,11 +865,11 @@ class SymmetryFunctionSet:
 
         Optional Parameters
         -------------------
-        elements : list[str], _default_ None
-        min_distances : list[float], _default_ None
+        elements : List[str], _default_ None
+        min_distances : List[float], _default_ None
         """
-        self._sets: list[SymmetryFunctionSet] = []
-        self._symmetryfunctions: list[SymmetryFunction] = []
+        self._sets: List[SymmetryFunctionSet] = []
+        self._symmetryfunctions: List[SymmetryFunction] = []
         self.min_distances = min_distances
 
         if sflist is not None:
@@ -887,7 +887,7 @@ class SymmetryFunctionSet:
         """Show a unique summary of the class object."""
         return f'{self.to_list()}'
 
-    def to_list(self) -> list[list[Union[int, float, str]]]:
+    def to_list(self) -> List[List[Union[int, float, str]]]:
         """Create a list of all stored symmetryfunctions."""
         symmetryfunction_list = []
         for symmetryfunction in self.storage:
@@ -896,7 +896,7 @@ class SymmetryFunctionSet:
 
     def from_list(
         self,
-        symmetryfunction_list: list[list[Union[int, float, str]]]
+        symmetryfunction_list: List[List[Union[int, float, str]]]
     ) -> None:
         """Fill storage from a list of symmetry functions."""
         for entry in symmetryfunction_list:
@@ -930,17 +930,17 @@ class SymmetryFunctionSet:
             yield symmetryfunction
 
     @property
-    def sets(self) -> list['SymmetryFunctionSet']:
+    def sets(self) -> List['SymmetryFunctionSet']:
         """Show a list of all stored `SymmetryFunctionSet` objects."""
         return self._sets
 
     @property
-    def symmetryfunctions(self) -> list[SymmetryFunction]:
+    def symmetryfunctions(self) -> List[SymmetryFunction]:
         """Show a list of all stored `SymmetryFunction` objects."""
         return self._symmetryfunctions
 
     @property
-    def storage(self) -> list[SymmetryFunction]:
+    def storage(self) -> List[SymmetryFunction]:
         """Show all stored symmetry functions recursively."""
         storage = self.symmetryfunctions.copy()
         for sfset in self.sets:
@@ -961,7 +961,7 @@ class SymmetryFunctionSet:
         return None
 
     @property
-    def elements(self) -> Optional[list[str]]:
+    def elements(self) -> Optional[List[str]]:
         """Show a list of all elements covered in self.symmetryfunctions."""
         # Store all elements of all symmetryfunctions.
         elements = []
@@ -979,7 +979,7 @@ class SymmetryFunctionSet:
         return elements
 
     @property
-    def cutoffs(self) -> Optional[list[float]]:
+    def cutoffs(self) -> Optional[List[float]]:
         """Show a list of all cutoffs in self.symmetryfunctions."""
         # Collect the cutoff values of all symmetryfunctions.
         cutoffs = list(set(sf.cutoff for sf in self.symmetryfunctions))

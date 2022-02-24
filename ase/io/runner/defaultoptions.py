@@ -12,7 +12,7 @@ DEFAULT_PARAMETERS : RunnerOptions
         - or very commonly used,
         - or have a default in RuNNer that is rarely seen in applications.
     This dictionary is used when initializing a RuNNer calculator object.
-RUNNERDATA_KEYWORDS : list[str]
+RUNNERDATA_KEYWORDS : List[str]
     A list of the possible allowed keywords in an input.nn file.
 RUNNERCONFIG_DEFAULTS : nested dict
     A dictionary of all RuNNer options, complete with
@@ -34,8 +34,8 @@ Contributors
 
 """
 
-from typing import TypedDict, Optional
-from .symmetryfunctions import SymmetryFunctionSet
+from typing import TypedDict, Optional, Dict, List
+from .storageclasses import SymmetryFunctionSet
 
 
 class RunnerOptions(TypedDict, total=False):
@@ -43,7 +43,7 @@ class RunnerOptions(TypedDict, total=False):
 
     runner_mode: int
     symfunction_short: SymmetryFunctionSet
-    elements: Optional[list[str]]
+    elements: Optional[List[str]]
     number_of_elements: int
     bond_threshold: float
     nn_type_short: int
@@ -60,7 +60,7 @@ class RunnerOptions(TypedDict, total=False):
     use_short_forces: bool
     # Mode 1 and 3.
     remove_atom_energies: bool
-    atom_energy: dict[str, float]
+    atom_energy: Dict[str, float]
     # Mode 2.
     epochs: int
     kalman_lambda_short: float
@@ -78,9 +78,9 @@ class RunnerOptions(TypedDict, total=False):
     # Mode 2 and 3.
     center_symmetry_functions: bool
     precondition_weights: bool
-    global_activation_short: list[str]
+    global_activation_short: List[str]
     global_hidden_layers_short: int
-    global_nodes_short: list[int]
+    global_nodes_short: List[int]
     # Mode 3.
     calculate_forces: bool
     calculate_stress: bool
@@ -133,7 +133,7 @@ DEFAULT_PARAMETERS: RunnerOptions = {
 }
 
 
-RUNNERDATA_KEYWORDS: list[str] = ['begin', 'comment', 'lattice', 'atom',
+RUNNERDATA_KEYWORDS: List[str] = ['begin', 'comment', 'lattice', 'atom',
                                   'charge', 'energy', 'end']
 
 
