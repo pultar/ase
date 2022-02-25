@@ -121,7 +121,7 @@ class TempAtoms:
         )
 
         # Add the unit cell information.
-        if len(self.cell) > 1:
+        if any(self.pbc):
             atoms.set_cell(self.cell)
 
         atoms.set_initial_charges(self.charges)
@@ -147,7 +147,8 @@ class TempAtoms:
         self.charges = list(atoms.get_initial_charges())
         self.magmoms = list(atoms.get_initial_magnetic_moments())
 
-        self.cell = atoms.cell
+        if any(atoms.pbc):
+            self.cell = atoms.cell
 
         if atoms.calc is not None:
             self.energy = atoms.get_potential_energy()
@@ -156,32 +157,29 @@ class TempAtoms:
                 self.totalcharge = atoms.calc.get_property('totalcharge')
             else:
                 self.totalcharge = np.sum(atoms.get_initial_charges())
+        else:
+            self.energy = 0.0
+            self.forces = [[0.0, 0.0, 0.0] for i in self.positions]
+            self.totalcharge = 0.0
 
     def convert(self, input_units: str, output_units: str) -> None:
         """Convert all data from `input_units` to `output_units`."""
         # Transform lists into numpy arrays for faster processing.
-        positions: NDArray[float] = np.array(self.positions)
-        cell: NDArray[float] = np.array(self.cell)
-        forces: NDArray[float] = np.array(self.forces)
 
         if input_units == output_units:
             pass
 
         elif input_units == 'atomic' and output_units == 'si':
-            positions *= Bohr
-            cell *= Bohr
+            self.positions = [[i * Bohr for i in xyz] for xyz in self.positions]
+            self.cell = [[i * Bohr for i in xyz] for xyz in self.cell]
             self.energy *= Hartree
-            forces *= Hartree * Bohr
+            self.forces = [[i * Hartree * Bohr for i in xyz] for xyz in self.forces]
 
         elif input_units == 'si' and output_units == 'atomic':
-            positions /= Bohr
-            cell /= Bohr
+            self.positions = [[i / Bohr for i in xyz] for xyz in self.positions]
+            self.cell = [[i / Bohr for i in xyz] for xyz in self.cell]
             self.energy /= Hartree
-            forces /= Hartree * Bohr
-
-        self.positions = list(positions)
-        self.cell = list(cell)
-        self.forces = list(forces)
+            self.forces = [[i / Hartree * Bohr for i in xyz] for xyz in self.forces]
 
 
 @reader
