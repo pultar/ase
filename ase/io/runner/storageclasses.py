@@ -530,7 +530,7 @@ class RunnerSymmetryFunctionValues:
     ) -> None:
         """Write symmetry function scaling data."""
         # Retrieve the data.
-        images: list[RunnerStructureSymmetryFunctionValues] = self.data
+        images: List[RunnerStructureSymmetryFunctionValues] = self.data
 
         # Filter the images which should be printed according to `index`.
         if isinstance(index, slice):

@@ -375,7 +375,9 @@ def read_runnerase(
 
     # Read structural information from the input.data file.
     if os.path.exists(inputdata_path):
-        atoms = read(inputdata_path, ':', format='runnerdata')
+        atoms: Optional[Union[Atoms, list[Atoms]]] = read(
+            inputdata_path, ':', format='runnerdata'
+        )
     else:
         atoms = None
 
