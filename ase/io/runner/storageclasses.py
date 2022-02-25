@@ -50,6 +50,13 @@ from numpy.typing import NDArray
 from ase.data import atomic_numbers, chemical_symbols
 
 
+# Custom type specification for lists of symmetry function parameters. Can be
+# two kinds of tuples, depending on whether it is a radial or an angular
+# symmetry function.
+SFListType = Union[Tuple[str, int, str, float, float, float],
+                   Tuple[str, int, str, str, float, float, float, float]]
+
+
 class ElementStorageMixin:
     """Abstract mixin for storing element-specific RuNNer parameters/results.
 
@@ -71,9 +78,9 @@ class ElementStorageMixin:
     def __init__(self) -> None:
         """Initialize the object."""
         # Data container for element - data pairs.
-        self.data: Dict[str, NDArray[float]] = {}
+        self.data: Dict[str, NDArray[np.float64]] = {}
 
-    def __iter__(self) -> Iterator[Tuple[str, NDArray[float]]]:
+    def __iter__(self) -> Iterator[Tuple[str, NDArray[np.float64]]]:
         """Iterate over all key-value pairs in the `self.data` container."""
         for key, value in self.data.items():
             yield key, value
@@ -82,7 +89,7 @@ class ElementStorageMixin:
         """Show the combined length of all stored element data arrays."""
         length = 0
         for value in self.data.values():
-            shape: Tuple[int] = value.shape
+            shape: Tuple[int, ...] = value.shape
             length += shape[0]
 
         return length
@@ -90,7 +97,7 @@ class ElementStorageMixin:
     def __setitem__(
         self,
         key: Union[str, int],
-        value: NDArray[float]
+        value: NDArray[np.float64]
     ) -> None:
         """Set one key-value pair in the self.data dictionary.
 
@@ -111,7 +118,7 @@ class ElementStorageMixin:
 
         self.data[key] = value
 
-    def __getitem__(self, key: Union[str, int]) -> NDArray[float]:
+    def __getitem__(self, key: Union[str, int]) -> NDArray[np.float64]:
         """Get the data associated with `key` in the self.data dictionary.
 
         The data can either be accessed by the atomic number or the chemical
@@ -195,7 +202,7 @@ class RunnerScaling(ElementStorageMixin):
 
         # Transform data into numpy arrays.
         for element_id, scalingdata in scaling.items():
-            npdata: NDArray[float] = np.array(scalingdata)
+            npdata: NDArray[np.float64] = np.array(scalingdata)
             self.data[element_id] = npdata
 
     def write(self, outfile: io.TextIOWrapper) -> None:
@@ -224,7 +231,7 @@ class RunnerWeights(ElementStorageMixin):
     ---------
     For more information on the `weights.XXX.data` file format in RuNNer please
     visit the
-    [documentation](https://theochemgoettingen.gitlab.io/RuNNer/1.3/reference/files/#weightsxxxdata).
+    [docs](https://theochemgoettingen.gitlab.io/RuNNer/1.3/reference/files/#weightsxxxdata).
     """
 
     # Weights can be read either from a single file (`infile` argument) or from
@@ -402,13 +409,14 @@ class RunnerStructureSymmetryFunctionValues(ElementStorageMixin):
         """Show a string representation of the object."""
         return f'{self.__class__.__name__}(n_atoms={len(self)})'
 
-    def by_atoms(self) -> List[Tuple[str, NDArray[float]]]:
+    def by_atoms(self) -> List[Tuple[str, NDArray[np.float64]]]:
         """Expand dictionary of element symmetry functions into atom tuples."""
         data_tuples = []
         index = []
+
         for element, element_sfvalues in self.data.items():
             index += list(element_sfvalues[:, 0])
-            sfvalues_list: List[NDArray[float]] = list(element_sfvalues[:, 1:])
+            sfvalues_list: List[NDArray[np.float64]] = list(element_sfvalues[:, 1:])
 
             for atom_sfvalues in sfvalues_list:
                 data_tuples.append((element, atom_sfvalues))
@@ -522,11 +530,13 @@ class RunnerSymmetryFunctionValues:
     ) -> None:
         """Write symmetry function scaling data."""
         # Retrieve the data.
-        images = self.data
+        images: list[RunnerStructureSymmetryFunctionValues] = self.data
 
         # Filter the images which should be printed according to `index`.
-        if isinstance(index, (int, slice)):
+        if isinstance(index, slice):
             images = images[index]
+        elif isinstance(index, int):
+            images = [images[index]]
         else:
             images = [images[i] for i in index]
 
@@ -716,20 +726,23 @@ class RunnerResults(TypedDict, total=False):
     weights: RunnerWeights
     scaling: RunnerScaling
     splittraintest: RunnerSplitTrainTest
-    energy: Union[float, NDArray[float]]
-    forces: NDArray[float]
+    energy: Union[float, NDArray[np.float64]]
+    forces: NDArray[np.float64]
 
 
 class SymmetryFunction:
     """Generic class for one single symmetry function."""
 
+    # Symmetry functions have a few arguments which need to be given upon
+    # class initialization.
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         sftype: Optional[int] = None,
         cutoff: Optional[float] = None,
         elements: Optional[List[str]] = None,
         coefficients: Optional[List[float]] = None,
-        sflist: Optional[List[Union[float, int, str]]] = None
+        sflist: Optional[SFListType] = None
     ) -> None:
         """Initialize the class.
 
@@ -828,27 +841,38 @@ class SymmetryFunction:
 
         return string
 
-    def to_list(self) -> List[Union[float, str, int]]:
+    def to_list(self) -> SFListType:
         """Create a list representation of the symmetry function."""
-        sflist = [self.elements[0], self.sftype, *self.elements[1:],
-                *self.coefficients, self.cutoff]
-        return sflist
+        if (self.elements is None or self.coefficients is None
+            or self.sftype is None or self.cutoff is None):
+            raise Exception('Symmetry function not fully defined.')
 
-    def from_list(
-        self,
-        sflist: List[Union[str, int, float]]
-    ) -> None:
+        if self.tag == 'radial':
+            return (self.elements[0], self.sftype, self.elements[1],
+                      self.coefficients[0], self.coefficients[1], self.cutoff)
+
+        else:
+            return (self.elements[0], self.sftype, self.elements[1],
+                      self.elements[2], self.coefficients[0],
+                      self.coefficients[1], self.coefficients[2], self.cutoff)
+
+    def from_list(self, sflist: SFListType) -> None:
         """Fill storage from a list of symmetry function parameters."""
         self.sftype = sflist[1]
         self.cutoff = sflist[-1]
 
-        if self.tag == 'radial':
+        # The type: ignore statements are justified because the len() checks in
+        # the if-statements make sure that the number of parameters is
+        # compatible with the sftype.
+        if self.tag == 'radial' and len(sflist) == 6:
             self.elements = [sflist[0], sflist[2]]
-            self.coefficients = sflist[3:-1]
+            self.coefficients = [sflist[3], sflist[4]]  # type: ignore
 
-        elif self.tag == 'angular':
-            self.elements = [sflist[0]] + sflist[2:4]
-            self.coefficients = sflist[4:-1]
+        elif self.tag == 'angular' and len(sflist) == 8:
+            self.elements = [sflist[0], sflist[2], sflist[3]]  # type: ignore
+            self.coefficients = [sflist[3], sflist[4], sflist[5]]  # type: ignore
+        else:
+            raise ValueError('sftype incompatible with number of parameters.')
 
 
 class SymmetryFunctionSet:
@@ -856,7 +880,7 @@ class SymmetryFunctionSet:
 
     def __init__(
         self,
-        sflist: Optional[List[List[Union[str, float, int]]]] = None,
+        sflist: Optional[List[SFListType]] = None,
         min_distances: Optional[Dict[str, float]] = None
     ) -> None:
         """Initialize the class.
@@ -887,7 +911,7 @@ class SymmetryFunctionSet:
         """Show a unique summary of the class object."""
         return f'{self.to_list()}'
 
-    def to_list(self) -> List[List[Union[int, float, str]]]:
+    def to_list(self) -> List[SFListType]:
         """Create a list of all stored symmetryfunctions."""
         symmetryfunction_list = []
         for symmetryfunction in self.storage:
@@ -896,7 +920,7 @@ class SymmetryFunctionSet:
 
     def from_list(
         self,
-        symmetryfunction_list: List[List[Union[int, float, str]]]
+        symmetryfunction_list: List[SFListType]
     ) -> None:
         """Fill storage from a list of symmetry functions."""
         for entry in symmetryfunction_list:
@@ -979,7 +1003,7 @@ class SymmetryFunctionSet:
         return elements
 
     @property
-    def cutoffs(self) -> Optional[List[float]]:
+    def cutoffs(self) -> Optional[List[Optional[float]]]:
         """Show a list of all cutoffs in self.symmetryfunctions."""
         # Collect the cutoff values of all symmetryfunctions.
         cutoffs = list(set(sf.cutoff for sf in self.symmetryfunctions))

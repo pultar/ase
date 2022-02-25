@@ -47,8 +47,8 @@ from ase.calculators.calculator import (FileIOCalculator,
 from ase.io.runner.storageclasses import (RunnerSymmetryFunctionValues,
                                           RunnerSplitTrainTest,
                                           RunnerWeights,
-                                          RunnerScaling,
-                                          RunnerResults)
+                                          RunnerScaling)
+
 from ase.io.runner.defaultoptions import RunnerOptions, DEFAULT_PARAMETERS
 
 from ase.io.runner.storageclasses import (SymmetryFunction,
@@ -121,7 +121,7 @@ def get_minimum_distances(
             distmatrix = get_distances(pos1, pos2)[1]
 
             # Remove same atom interaction.
-            flat: NDArray[float] = distmatrix.flatten()
+            flat = distmatrix.flatten()
             flat = flat[flat > 0.0]
 
             dmin: float = min(flat)
@@ -221,7 +221,7 @@ class Runner(FileIOCalculator):
     # Type clash with base class is intentional. For RuNNer the values of the
     # default_parameters dict have narrower types than `Any`. These types
     # are defined in the `RunnerOptions` TypedDict.
-    default_parameters = DEFAULT_PARAMETERS
+    default_parameters = DEFAULT_PARAMETERS  # type: ignore
 
     # Explicit is better than implicit. By passing all arguments explicitely,
     # the argument types can be narrowly specified.
@@ -238,7 +238,7 @@ class Runner(FileIOCalculator):
         scaling: Optional[RunnerScaling] = None,
         sfvalues: Optional[RunnerSymmetryFunctionValues] = None,
         splittraintest: Optional[RunnerSplitTrainTest] = None,
-        **kwargs: RunnerOptions
+        **kwargs
     ) -> None:
         """Construct RuNNer-calculator object.
 
@@ -326,13 +326,6 @@ class Runner(FileIOCalculator):
             atoms=atoms,
             directory=directory,
             **kwargs)
-
-        # Overwrite type hints for parameters and results here.
-        self.parameters: RunnerOptions
-        self.results: RunnerResults
-        self.atoms: Atoms
-        self.label: str
-        self._directory: str
 
     @property
     def elements(self) -> List[str]:
@@ -519,6 +512,12 @@ class Runner(FileIOCalculator):
             The label of the calculation whose output will be parsed.
 
         """
+        if label is None:
+            label = self.label
+
+        if label is None:
+            raise CalculatorSetupError('Please provide a valid label.')
+
         # Call the method of the parent class, which will handle the correct
         # treatment of the `label`.
         FileIOCalculator.read(self, label)
@@ -647,7 +646,7 @@ class Runner(FileIOCalculator):
 
         return compare_atoms(self.atoms, atoms, tol=tol)
 
-    def get_forces(self, atoms: Optional[Atoms] = None) -> NDArray[float]:
+    def get_forces(self, atoms: Optional[Atoms] = None) -> NDArray[np.float64]:
         """Calculate the atomic forces.
 
         Overrides the `Calculator` routine to ensure that the `calculate_forces`
@@ -660,7 +659,7 @@ class Runner(FileIOCalculator):
             The Atoms object for which the forces will be calculated.
         Returns
         -------
-        stress : NDArray[float]
+        stress : NDArray[np.float64]
             The atomic stress in a [Nx3] array where N is the number of atoms
             in the system.
         """
@@ -668,7 +667,7 @@ class Runner(FileIOCalculator):
         self.parameters['calculate_forces'] = True
         return super().get_forces(atoms)
 
-    def get_stress(self, atoms: Optional[Atoms] = None) -> NDArray[float]:
+    def get_stress(self, atoms: Optional[Atoms] = None) -> NDArray[np.float64]:
         """Calculate the atomic stress.
 
         Overrides the `Calculator` routine to ensure that the `calculate_stress`
@@ -681,7 +680,7 @@ class Runner(FileIOCalculator):
             The Atoms object for which the stress will be calculated.
         Returns
         -------
-        stress : NDArray[float]
+        stress : NDArray[np.float64]
             The atomic stress in a [Nx3x3] array where N is the number of atoms
             in the system.
         """

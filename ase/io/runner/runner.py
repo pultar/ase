@@ -349,7 +349,7 @@ def write_runnerdata(
 
 def read_runnerase(
     label: str
-) -> Tuple[Union[Atoms, List[Atoms]], Parameters]:
+) -> Tuple[Union[Atoms, List[Atoms], None], Parameters]:
     """Read structure and parameter options from a previous calculation.
 
     Parameters
@@ -503,10 +503,13 @@ def write_runnerconfig(
 def _read_arguments(
     keyword: str,
     arguments: List[str]
-) -> Union[bool, int, float, str, List[Union[bool, int, float, str]]]:
+) -> Union[bool, int, float, str,
+           List[Union[bool, int, float, str]],
+           SymmetryFunction]:
 
     # Get the default arguments belonging to this keyword.
-    defaults = do.RUNNERCONFIG_DEFAULTS[keyword]['arguments'].items()
+    # FIXME: Type is ignored because the default's dictionary is not typed yet.
+    defaults = do.RUNNERCONFIG_DEFAULTS[keyword]['arguments'].items()  # type: ignore
 
     # Iterate over all the default arguments and check the user-defined
     # arguments against them.
@@ -569,7 +572,9 @@ def _read_arguments(
 
     # Treat symmetry function separately.
     if 'symfunction' in keyword:
-        return SymmetryFunction(sflist=arguments_formatted)
+        # After running through this routine, all 'symfuncion_*' keywords
+        # will have the correct list formatting.
+        return SymmetryFunction(sflist=arguments_formatted)  # type: ignore
 
     return arguments_formatted
 
@@ -612,10 +617,10 @@ def read_runnerconfig(
 
         # Format the parameters to this keyword correctly. If the line only
         # has the keyword and no parameters, it is a Boolean and set to `True`.
-        if len(spline) == 1:
-            parameter = True
-        else:
+        if len(spline) != 1:
             parameter = _read_arguments(keyword, spline[1:])
+        else:
+            parameter = True
 
         # Append keywords which can occur more than once to their list.
         if do.RUNNERCONFIG_DEFAULTS[keyword]['allow_multiple']:
@@ -936,23 +941,23 @@ def read_results_mode3(directory: str) -> RunnerResults:
     # `read` automatically converts all properties to SI units.
     path = f'{directory}/output.data'
     predicted_structures = read(path, ':', format='runnerdata')
-    energy = np.array([i.get_potential_energy() for i in predicted_structures])
+    energies = np.array([i.get_potential_energy() for i in predicted_structures])
     forces = np.array([i.get_forces() for i in predicted_structures])
 
     # For just one structure, flatten the energy and force arrays.
-    if energy.shape[0] == 1:
-        energy = float(energy[0])
-
     if forces.shape[0] == 1:
         forces = forces[0, :, :]
 
-    return {'energy': energy, 'forces': forces}
+    if energies.shape[0] == 1:
+        return {'energy': float(energies[0]), 'forces': forces}
+
+    return {'energy': energies, 'forces': forces}
 
 
 @writer
 def write_trainteststruct(
     outfile: io.TextIOWrapper,
-    images: List[Atoms],
+    images: Union[Atoms, List[Atoms]],
     index: Union[int, slice] = slice(0, None),
     fmt: str = '16.10f',
     input_units: str = 'si'
@@ -1010,7 +1015,7 @@ def write_trainteststruct(
 @writer
 def write_traintestforces(
     outfile: io.TextIOWrapper,
-    images: List[Atoms],
+    images: Union[Atoms, List[Atoms]],
     index: Union[int, slice, List[int]] = slice(0, None),
     fmt: str = '16.10f',
     input_units: str = 'si'
@@ -1057,7 +1062,7 @@ def read_traintestpoints(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray[float]:
+) -> NDArray[np.float64]:
     """Read RuNNer trainpoint.XXXXXX.out / testpoint.XXXXXX.out.
 
     Parameters
@@ -1074,12 +1079,11 @@ def read_traintestpoints(
     -------
     data : np.ndarray
         An array holding the following columns: image ID, number of atoms,
-        reference energy, neural network energy, difference between ref. and NN
-        energy.
+        reference energy, neural network energy, difference between ref. and
+        neural network energy.
     """
-
     # The first row holds the column names.
-    data: NDArray[float] = np.loadtxt(infile, skiprows=1)
+    data: NDArray[np.float64] = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':
@@ -1096,7 +1100,7 @@ def read_traintestforces(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray[float]:
+) -> NDArray[np.float64]:
     """Read RuNNer trainforces.XXXXXX.our / testpoint.XXXXXX.out.
 
     Parameters
@@ -1116,9 +1120,8 @@ def read_traintestforces(
         force x, reference force y, reference force z, neural network force x,
         neural network force y, neural network force z.
     """
-
     # The first row holds the column names.
-    data: NDArray[float] = np.loadtxt(infile, skiprows=1)
+    data: NDArray[np.float64] = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':
