@@ -15,7 +15,7 @@ Contributors
 
 """
 
-from typing import Optional, Union, Iterator, Tuple, List, Any, Dict
+from typing import Optional, Union, Iterator, Tuple, List, Dict
 
 import os
 import io
