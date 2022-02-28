@@ -20,6 +20,9 @@ def fixture_system(request):
     test_dir, _ = os.path.splitext(request.module.__file__)
     res_directory = os.path.join(test_dir, path)
 
+    print(os.listdir(test_dir))
+    print(os.listdir(res_directory))
+
     # Read in the dataset and options from the example.
     dataset = read(os.path.join(res_directory, 'input.data'), index=':')
     options = io.read_runnerconfig(os.path.join(res_directory, 'input.nn'))

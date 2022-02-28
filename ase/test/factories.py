@@ -183,6 +183,23 @@ class CastepFactory:
         return cls(config.executables['castep'])
 
 
+@factory('runner')
+class RunnerFactory:
+    def __init__(self, executable):
+        self.executable = executable
+
+    def version(self):
+        NotImplementedError('RuNNer does not provide version information.')
+
+    def calc(self, **kwargs):
+        from ase.calculators.runner.runner import Runner
+        return Runner(command=self.executable, **kwargs)
+
+    @classmethod
+    def fromconfig(cls, config):
+        return cls(config.executables['runner'])
+
+
 @factory('dftb')
 class DFTBFactory:
     def __init__(self, executable, skt_paths):
