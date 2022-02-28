@@ -34,59 +34,58 @@ Contributors
 
 """
 
-from typing import Optional, Dict, List
+from typing import Dict, List
 from .storageclasses import SymmetryFunctionSet
 
 
 # Originally inherited from TypedDict, but this was removed for now to retain
 # backwards compatibility with Python 3.6 and 3.7.
 # class RunnerOptions(TypedDict, total=False)
-class RunnerOptions:
-    """Type specifications for RuNNer default options."""
-
-    runner_mode: int
-    symfunction_short: SymmetryFunctionSet
-    elements: Optional[List[str]]
-    number_of_elements: int
-    bond_threshold: float
-    nn_type_short: int
-    use_short_nn: bool
-    optmode_charge: int
-    optmode_short_energy: int
-    optmode_short_force: int
-    points_in_memory: int
-    scale_symmetry_functions: bool
-    cutoff_type: int
-    # Mode 1.
-    test_fraction: float
-    # Mode 1 and 2.
-    use_short_forces: bool
-    # Mode 1 and 3.
-    remove_atom_energies: bool
-    atom_energy: Dict[str, float]
-    # Mode 2.
-    epochs: int
-    kalman_lambda_short: float
-    kalman_nue_short: float
-    mix_all_points: bool
-    nguyen_widrow_weights_short: bool
-    repeated_energy_update: bool
-    short_energy_error_threshold: float
-    short_energy_fraction: float
-    short_force_error_threshold: float
-    short_force_fraction: float
-    use_old_weights_charge: bool
-    use_old_weights_short: bool
-    write_weights_epoch: int
-    # Mode 2 and 3.
-    center_symmetry_functions: bool
-    precondition_weights: bool
-    global_activation_short: List[str]
-    global_hidden_layers_short: int
-    global_nodes_short: List[int]
-    # Mode 3.
-    calculate_forces: bool
-    calculate_stress: bool
+#     """Type specifications for RuNNer default options."""
+# 
+#     runner_mode: int
+#     symfunction_short: SymmetryFunctionSet
+#     elements: Optional[List[str]]
+#     number_of_elements: int
+#     bond_threshold: float
+#     nn_type_short: int
+#     use_short_nn: bool
+#     optmode_charge: int
+#     optmode_short_energy: int
+#     optmode_short_force: int
+#     points_in_memory: int
+#     scale_symmetry_functions: bool
+#     cutoff_type: int
+#     # Mode 1.
+#     test_fraction: float
+#     # Mode 1 and 2.
+#     use_short_forces: bool
+#     # Mode 1 and 3.
+#     remove_atom_energies: bool
+#     atom_energy: Dict[str, float]
+#     # Mode 2.
+#     epochs: int
+#     kalman_lambda_short: float
+#     kalman_nue_short: float
+#     mix_all_points: bool
+#     nguyen_widrow_weights_short: bool
+#     repeated_energy_update: bool
+#     short_energy_error_threshold: float
+#     short_energy_fraction: float
+#     short_force_error_threshold: float
+#     short_force_fraction: float
+#     use_old_weights_charge: bool
+#     use_old_weights_short: bool
+#     write_weights_epoch: int
+#     # Mode 2 and 3.
+#     center_symmetry_functions: bool
+#     precondition_weights: bool
+#     global_activation_short: List[str]
+#     global_hidden_layers_short: int
+#     global_nodes_short: List[int]
+#     # Mode 3.
+#     calculate_forces: bool
+#     calculate_stress: bool
 
 
 DEFAULT_PARAMETERS: Dict[str, object] = {

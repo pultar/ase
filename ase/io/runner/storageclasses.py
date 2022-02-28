@@ -54,11 +54,6 @@ from ase.data import atomic_numbers, chemical_symbols
 SFListType = Union[Tuple[str, int, str, float, float, float],
                    Tuple[str, int, str, str, float, float, float, float]]
 
-# Custom type for numpy arrays. This maintains backwards compatibility with
-# numpy >= 1.20 as a type similar to this is natively available since the
-# introduction of the numpy.typing module.
-NDArray = np.ndarray
-
 
 class ElementStorageMixin:
     """Abstract mixin for storing element-specific RuNNer parameters/results.
@@ -81,9 +76,9 @@ class ElementStorageMixin:
     def __init__(self) -> None:
         """Initialize the object."""
         # Data container for element - data pairs.
-        self.data: Dict[str, NDArray] = {}
+        self.data: Dict[str, np.ndarray] = {}
 
-    def __iter__(self) -> Iterator[Tuple[str, NDArray]]:
+    def __iter__(self) -> Iterator[Tuple[str, np.ndarray]]:
         """Iterate over all key-value pairs in the `self.data` container."""
         for key, value in self.data.items():
             yield key, value
@@ -100,7 +95,7 @@ class ElementStorageMixin:
     def __setitem__(
         self,
         key: Union[str, int],
-        value: NDArray
+        value: np.ndarray
     ) -> None:
         """Set one key-value pair in the self.data dictionary.
 
@@ -121,7 +116,7 @@ class ElementStorageMixin:
 
         self.data[key] = value
 
-    def __getitem__(self, key: Union[str, int]) -> NDArray:
+    def __getitem__(self, key: Union[str, int]) -> np.ndarray:
         """Get the data associated with `key` in the self.data dictionary.
 
         The data can either be accessed by the atomic number or the chemical
@@ -205,7 +200,7 @@ class RunnerScaling(ElementStorageMixin):
 
         # Transform data into numpy arrays.
         for element_id, scalingdata in scaling.items():
-            npdata: NDArray = np.array(scalingdata)
+            npdata: np.ndarray = np.array(scalingdata)
             self.data[element_id] = npdata
 
     def write(self, outfile: io.TextIOWrapper) -> None:
@@ -412,14 +407,14 @@ class RunnerStructureSymmetryFunctionValues(ElementStorageMixin):
         """Show a string representation of the object."""
         return f'{self.__class__.__name__}(n_atoms={len(self)})'
 
-    def by_atoms(self) -> List[Tuple[str, NDArray]]:
+    def by_atoms(self) -> List[Tuple[str, np.ndarray]]:
         """Expand dictionary of element symmetry functions into atom tuples."""
         data_tuples = []
         index = []
 
         for element, element_sfvalues in self.data.items():
             index += list(element_sfvalues[:, 0])
-            sfvalues_list: List[NDArray] = list(element_sfvalues[:, 1:])
+            sfvalues_list: List[np.ndarray] = list(element_sfvalues[:, 1:])
 
             for atom_sfvalues in sfvalues_list:
                 data_tuples.append((element, atom_sfvalues))
@@ -724,16 +719,15 @@ class RunnerSplitTrainTest:
 # Originally inherited from TypedDict, but this was removed for now to retain
 # backwards compatibility with Python 3.6 and 3.7.
 # class RunnerResults(TypedDict, total=False)
-class RunnerResults:
-    """Type hints for RuNNer results dictionaries."""
-
-    fitresults: RunnerFitResults
-    sfvalues: RunnerSymmetryFunctionValues
-    weights: RunnerWeights
-    scaling: RunnerScaling
-    splittraintest: RunnerSplitTrainTest
-    energy: Union[float, NDArray]
-    forces: NDArray
+#     """Type hints for RuNNer results dictionaries."""
+# 
+#     fitresults: RunnerFitResults
+#     sfvalues: RunnerSymmetryFunctionValues
+#     weights: RunnerWeights
+#     scaling: RunnerScaling
+#     splittraintest: RunnerSplitTrainTest
+#     energy: Union[float, NDArray]
+#     forces: NDArray
 
 
 class SymmetryFunction:

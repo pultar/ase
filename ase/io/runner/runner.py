@@ -33,13 +33,7 @@ from . import defaultoptions as do
 from .storageclasses import (RunnerScaling, RunnerFitResults,
                              RunnerSplitTrainTest, RunnerWeights,
                              RunnerSymmetryFunctionValues,
-                             RunnerResults,
                              SymmetryFunction, SymmetryFunctionSet)
-
-# Custom type for numpy arrays. This maintains backwards compatibility with
-# numpy >= 1.20 as a type similar to this is natively available since the
-# introduction of the numpy.typing module.
-NDArray = np.ndarray
 
 
 class UnrecognizedKeywordError(Exception):
@@ -419,7 +413,10 @@ def _format_argument(argument: Union[bool, float, int, str]) -> str:
         argument_formatted = f'{argument}'
 
     else:
-        raise FileFormatError(f"Unknown argument type of argument '{argument}'")
+        raise FileFormatError(f"The input.nn argument '{argument}' has an "
+                               + 'unknown argument type. If the value is '
+                               + '`None`, you probably need to specify this '
+                               + 'parameter.')
 
     return argument_formatted
 
@@ -1068,7 +1065,7 @@ def read_traintestpoints(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray:
+) -> np.ndarray:
     """Read RuNNer trainpoint.XXXXXX.out / testpoint.XXXXXX.out.
 
     Parameters
@@ -1089,7 +1086,7 @@ def read_traintestpoints(
         neural network energy.
     """
     # The first row holds the column names.
-    data: NDArray = np.loadtxt(infile, skiprows=1)
+    data: np.ndarray = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':
@@ -1106,7 +1103,7 @@ def read_traintestforces(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray:
+) -> np.ndarray:
     """Read RuNNer trainforces.XXXXXX.our / testpoint.XXXXXX.out.
 
     Parameters
@@ -1127,7 +1124,7 @@ def read_traintestforces(
         neural network force y, neural network force z.
     """
     # The first row holds the column names.
-    data: NDArray = np.loadtxt(infile, skiprows=1)
+    data: np.ndarray = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':

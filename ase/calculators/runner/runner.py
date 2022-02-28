@@ -48,16 +48,10 @@ from ase.io.runner.storageclasses import (RunnerSymmetryFunctionValues,
                                           RunnerWeights,
                                           RunnerScaling)
 
-from ase.io.runner.defaultoptions import RunnerOptions, DEFAULT_PARAMETERS
+from ase.io.runner.defaultoptions import DEFAULT_PARAMETERS
 
 from ase.io.runner.storageclasses import (SymmetryFunction,
                                           SymmetryFunctionSet)
-
-
-# Custom type for numpy arrays. This maintains backwards compatibility with
-# numpy >= 1.20 as a type similar to this is natively available since the
-# introduction of the numpy.typing module.
-NDArray = np.ndarray
 
 
 def get_element_groups(
@@ -427,7 +421,7 @@ class Runner(FileIOCalculator):
         """
         self.symmetryfunctions += symmetryfunctions
 
-    def set(self, **kwargs) -> RunnerOptions:
+    def set(self, **kwargs) -> Dict[str, object]:
         """Update `self.parameters` with `kwargs`.
 
         Adds the ability to do keyword validation before calling the base
@@ -445,7 +439,7 @@ class Runner(FileIOCalculator):
         if isinstance(kwargs, dict) and validate is True:
             io.check_valid_keywords(kwargs)
 
-        changed_parameters: RunnerOptions = super().set(**kwargs)
+        changed_parameters: Dict[str, object] = super().set(**kwargs)
 
         return changed_parameters
 
@@ -654,7 +648,7 @@ class Runner(FileIOCalculator):
     def get_forces(
         self,
         atoms: Optional[Atoms] = None
-    ) -> NDArray:
+    ) -> np.ndarray:
         """Calculate the atomic forces.
 
         Overrides the `Calculator` routine to ensure that the `calculate_forces`
@@ -667,7 +661,7 @@ class Runner(FileIOCalculator):
             The Atoms object for which the forces will be calculated.
         Returns
         -------
-        stress : NDArray[np.float64]
+        stress : np.ndarray[np.float64]
             The atomic stress in a [Nx3] array where N is the number of atoms
             in the system.
         """
@@ -678,7 +672,7 @@ class Runner(FileIOCalculator):
     def get_stress(
         self,
         atoms: Optional[Atoms] = None
-    ) -> NDArray:
+    ) -> np.ndarray:
         """Calculate the atomic stress.
 
         Overrides the `Calculator` routine to ensure that the `calculate_stress`
