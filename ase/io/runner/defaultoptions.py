@@ -34,11 +34,14 @@ Contributors
 
 """
 
-from typing import TypedDict, Optional, Dict, List
+from typing import Optional, Dict, List
 from .storageclasses import SymmetryFunctionSet
 
 
-class RunnerOptions(TypedDict, total=False):
+# Originally inherited from TypedDict, but this was removed for now to retain
+# backwards compatibility with Python 3.6 and 3.7.
+# class RunnerOptions(TypedDict, total=False)
+class RunnerOptions:
     """Type specifications for RuNNer default options."""
 
     runner_mode: int
@@ -86,7 +89,7 @@ class RunnerOptions(TypedDict, total=False):
     calculate_stress: bool
 
 
-DEFAULT_PARAMETERS: RunnerOptions = {
+DEFAULT_PARAMETERS: Dict[str, object] = {
     # General for all modes.
     'runner_mode': 1,                     # Default is starting a new fit.
     # All modes.

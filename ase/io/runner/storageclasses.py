@@ -39,22 +39,25 @@ Contributors
 
 """
 
-from typing import Optional, Union, Iterator, Tuple, TypedDict, List, Dict
+from typing import Optional, Union, Iterator, Tuple, List, Dict
 
 import os
 import io
 import re
 
 import numpy as np
-from numpy.typing import NDArray
 from ase.data import atomic_numbers, chemical_symbols
-
 
 # Custom type specification for lists of symmetry function parameters. Can be
 # two kinds of tuples, depending on whether it is a radial or an angular
 # symmetry function.
 SFListType = Union[Tuple[str, int, str, float, float, float],
                    Tuple[str, int, str, str, float, float, float, float]]
+
+# Custom type for numpy arrays. This maintains backwards compatibility with
+# numpy >= 1.20 as a type similar to this is natively available since the
+# introduction of the numpy.typing module.
+NDArray = np.ndarray
 
 
 class ElementStorageMixin:
@@ -78,9 +81,9 @@ class ElementStorageMixin:
     def __init__(self) -> None:
         """Initialize the object."""
         # Data container for element - data pairs.
-        self.data: Dict[str, NDArray[np.float64]] = {}
+        self.data: Dict[str, NDArray] = {}
 
-    def __iter__(self) -> Iterator[Tuple[str, NDArray[np.float64]]]:
+    def __iter__(self) -> Iterator[Tuple[str, NDArray]]:
         """Iterate over all key-value pairs in the `self.data` container."""
         for key, value in self.data.items():
             yield key, value
@@ -97,7 +100,7 @@ class ElementStorageMixin:
     def __setitem__(
         self,
         key: Union[str, int],
-        value: NDArray[np.float64]
+        value: NDArray
     ) -> None:
         """Set one key-value pair in the self.data dictionary.
 
@@ -118,7 +121,7 @@ class ElementStorageMixin:
 
         self.data[key] = value
 
-    def __getitem__(self, key: Union[str, int]) -> NDArray[np.float64]:
+    def __getitem__(self, key: Union[str, int]) -> NDArray:
         """Get the data associated with `key` in the self.data dictionary.
 
         The data can either be accessed by the atomic number or the chemical
@@ -202,7 +205,7 @@ class RunnerScaling(ElementStorageMixin):
 
         # Transform data into numpy arrays.
         for element_id, scalingdata in scaling.items():
-            npdata: NDArray[np.float64] = np.array(scalingdata)
+            npdata: NDArray = np.array(scalingdata)
             self.data[element_id] = npdata
 
     def write(self, outfile: io.TextIOWrapper) -> None:
@@ -409,14 +412,14 @@ class RunnerStructureSymmetryFunctionValues(ElementStorageMixin):
         """Show a string representation of the object."""
         return f'{self.__class__.__name__}(n_atoms={len(self)})'
 
-    def by_atoms(self) -> List[Tuple[str, NDArray[np.float64]]]:
+    def by_atoms(self) -> List[Tuple[str, NDArray]]:
         """Expand dictionary of element symmetry functions into atom tuples."""
         data_tuples = []
         index = []
 
         for element, element_sfvalues in self.data.items():
             index += list(element_sfvalues[:, 0])
-            sfvalues_list: List[NDArray[np.float64]] = list(element_sfvalues[:, 1:])
+            sfvalues_list: List[NDArray] = list(element_sfvalues[:, 1:])
 
             for atom_sfvalues in sfvalues_list:
                 data_tuples.append((element, atom_sfvalues))
@@ -718,7 +721,10 @@ class RunnerSplitTrainTest:
                     self.test.append(point_idx)
 
 
-class RunnerResults(TypedDict, total=False):
+# Originally inherited from TypedDict, but this was removed for now to retain
+# backwards compatibility with Python 3.6 and 3.7.
+# class RunnerResults(TypedDict, total=False)
+class RunnerResults:
     """Type hints for RuNNer results dictionaries."""
 
     fitresults: RunnerFitResults
@@ -726,8 +732,8 @@ class RunnerResults(TypedDict, total=False):
     weights: RunnerWeights
     scaling: RunnerScaling
     splittraintest: RunnerSplitTrainTest
-    energy: Union[float, NDArray[np.float64]]
-    forces: NDArray[np.float64]
+    energy: Union[float, NDArray]
+    forces: NDArray
 
 
 class SymmetryFunction:
@@ -845,16 +851,19 @@ class SymmetryFunction:
         """Create a list representation of the symmetry function."""
         if (self.elements is None or self.coefficients is None
             or self.sftype is None or self.cutoff is None):
-            raise Exception('Symmetry function not fully defined.')
+            raise AttributeError('Symmetry function not fully defined.')
 
         if self.tag == 'radial':
             return (self.elements[0], self.sftype, self.elements[1],
                       self.coefficients[0], self.coefficients[1], self.cutoff)
 
-        else:
+        if self.tag == 'angular':
             return (self.elements[0], self.sftype, self.elements[1],
                       self.elements[2], self.coefficients[0],
                       self.coefficients[1], self.coefficients[2], self.cutoff)
+
+        raise NotImplementedError('Cannot convert symmetry functions of '
+                                  + f'type {self.tag} to list.')
 
     def from_list(self, sflist: SFListType) -> None:
         """Fill storage from a list of symmetry function parameters."""
@@ -911,21 +920,6 @@ class SymmetryFunctionSet:
         """Show a unique summary of the class object."""
         return f'{self.to_list()}'
 
-    def to_list(self) -> List[SFListType]:
-        """Create a list of all stored symmetryfunctions."""
-        symmetryfunction_list = []
-        for symmetryfunction in self.storage:
-            symmetryfunction_list.append(symmetryfunction.to_list())
-        return symmetryfunction_list
-
-    def from_list(
-        self,
-        symmetryfunction_list: List[SFListType]
-    ) -> None:
-        """Fill storage from a list of symmetry functions."""
-        for entry in symmetryfunction_list:
-            self += SymmetryFunction(sflist=entry)
-
     def __len__(self) -> int:
         """Return the number of symmetry functions as the object length."""
         return len(self._symmetryfunctions)
@@ -952,6 +946,21 @@ class SymmetryFunctionSet:
         """Iterate over all stored symmetry functions."""
         for symmetryfunction in self.storage:
             yield symmetryfunction
+
+    def to_list(self) -> List[SFListType]:
+        """Create a list of all stored symmetryfunctions."""
+        symmetryfunction_list = []
+        for symmetryfunction in self.storage:
+            symmetryfunction_list.append(symmetryfunction.to_list())
+        return symmetryfunction_list
+
+    def from_list(
+        self,
+        symmetryfunction_list: List[SFListType]
+    ) -> None:
+        """Fill storage from a list of symmetry functions."""
+        for entry in symmetryfunction_list:
+            self.append(SymmetryFunction(sflist=entry))
 
     @property
     def sets(self) -> List['SymmetryFunctionSet']:

@@ -27,12 +27,11 @@ Contributors
 
 """
 
-from typing import Union, Optional, Dict, List
+from typing import Union, Optional, Dict, List, Any
 
 from itertools import combinations_with_replacement, product
 
 import numpy as np
-from numpy.typing import NDArray
 
 import ase.io.runner.runner as io
 
@@ -55,6 +54,12 @@ from ase.io.runner.storageclasses import (SymmetryFunction,
                                           SymmetryFunctionSet)
 
 
+# Custom type for numpy arrays. This maintains backwards compatibility with
+# numpy >= 1.20 as a type similar to this is natively available since the
+# introduction of the numpy.typing module.
+NDArray = np.ndarray
+
+
 def get_element_groups(
     elements: List[str],
     groupsize: int
@@ -70,7 +75,7 @@ def get_element_groups(
 
     Returns
     -------
-    groups : list of lists of str
+    groups : list[lists[str]]
         A list of elements groups.
     """
     # Build pairs of elements.
@@ -238,7 +243,7 @@ class Runner(FileIOCalculator):
         scaling: Optional[RunnerScaling] = None,
         sfvalues: Optional[RunnerSymmetryFunctionValues] = None,
         splittraintest: Optional[RunnerSplitTrainTest] = None,
-        **kwargs
+        **kwargs: Dict[Any, Any]
     ) -> None:
         """Construct RuNNer-calculator object.
 
@@ -646,7 +651,10 @@ class Runner(FileIOCalculator):
 
         return compare_atoms(self.atoms, atoms, tol=tol)
 
-    def get_forces(self, atoms: Optional[Atoms] = None) -> NDArray[np.float64]:
+    def get_forces(
+        self,
+        atoms: Optional[Atoms] = None
+    ) -> NDArray:
         """Calculate the atomic forces.
 
         Overrides the `Calculator` routine to ensure that the `calculate_forces`
@@ -667,7 +675,10 @@ class Runner(FileIOCalculator):
         self.parameters['calculate_forces'] = True
         return super().get_forces(atoms)
 
-    def get_stress(self, atoms: Optional[Atoms] = None) -> NDArray[np.float64]:
+    def get_stress(
+        self,
+        atoms: Optional[Atoms] = None
+    ) -> NDArray:
         """Calculate the atomic stress.
 
         Overrides the `Calculator` routine to ensure that the `calculate_stress`
@@ -680,7 +691,7 @@ class Runner(FileIOCalculator):
             The Atoms object for which the stress will be calculated.
         Returns
         -------
-        stress : NDArray[np.float64]
+        stress : np.ndarray[np.float64]
             The atomic stress in a [Nx3x3] array where N is the number of atoms
             in the system.
         """

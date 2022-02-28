@@ -15,14 +15,13 @@ Contributors
 
 """
 
-from typing import Optional, Union, Iterator, Tuple, List
+from typing import Optional, Union, Iterator, Tuple, List, Any, Dict
 
 import os
 import io
 import numpy as np
-from numpy.typing import NDArray
-from ase.io import read
 
+from ase.io import read
 from ase.atoms import Atoms
 from ase.utils import reader, writer
 from ase.calculators.calculator import Parameters
@@ -36,6 +35,11 @@ from .storageclasses import (RunnerScaling, RunnerFitResults,
                              RunnerSymmetryFunctionValues,
                              RunnerResults,
                              SymmetryFunction, SymmetryFunctionSet)
+
+# Custom type for numpy arrays. This maintains backwards compatibility with
+# numpy >= 1.20 as a type similar to this is natively available since the
+# introduction of the numpy.typing module.
+NDArray = np.ndarray
 
 
 class UnrecognizedKeywordError(Exception):
@@ -510,7 +514,7 @@ def _read_arguments(
            SymmetryFunction]:
 
     # Get the default arguments belonging to this keyword.
-    # FIXME: Type is ignored because the default's dictionary is not typed yet.
+    # Type is ignored because the default's dictionary is not typed yet.
     defaults = do.RUNNERCONFIG_DEFAULTS[keyword]['arguments'].items()  # type: ignore
 
     # Iterate over all the default arguments and check the user-defined
@@ -859,7 +863,7 @@ def write_functiontestingdata(
     sfvalues.write(outfile, index, fmt)
 
 
-def read_results_mode1(label: str, directory: str) -> RunnerResults:
+def read_results_mode1(label: str, directory: str) -> Dict[str, object]:
     """Read all results of RuNNer Mode 1.
 
     Parameters
@@ -890,7 +894,7 @@ def read_results_mode1(label: str, directory: str) -> RunnerResults:
     return {'sfvalues': sfvalues, 'splittraintest': splittraintest}
 
 
-def read_results_mode2(label: str, directory: str) -> RunnerResults:
+def read_results_mode2(label: str, directory: str) -> Dict[str, object]:
     """Read all results of RuNNer Mode 2.
 
     Parameters
@@ -921,7 +925,7 @@ def read_results_mode2(label: str, directory: str) -> RunnerResults:
     return {'fitresults': fitresults, 'weights': weights, 'scaling': scaling}
 
 
-def read_results_mode3(directory: str) -> RunnerResults:
+def read_results_mode3(directory: str) -> Dict[str, object]:
     """Read all results of RuNNer Mode 3.
 
     Parameters
@@ -1064,7 +1068,7 @@ def read_traintestpoints(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray[np.float64]:
+) -> NDArray:
     """Read RuNNer trainpoint.XXXXXX.out / testpoint.XXXXXX.out.
 
     Parameters
@@ -1085,7 +1089,7 @@ def read_traintestpoints(
         neural network energy.
     """
     # The first row holds the column names.
-    data: NDArray[np.float64] = np.loadtxt(infile, skiprows=1)
+    data: NDArray = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':
@@ -1102,7 +1106,7 @@ def read_traintestforces(
     infile: io.TextIOWrapper,
     input_units: str = 'atomic',
     output_units: str = 'si'
-) -> NDArray[np.float64]:
+) -> NDArray:
     """Read RuNNer trainforces.XXXXXX.our / testpoint.XXXXXX.out.
 
     Parameters
@@ -1123,7 +1127,7 @@ def read_traintestforces(
         neural network force y, neural network force z.
     """
     # The first row holds the column names.
-    data: NDArray[np.float64] = np.loadtxt(infile, skiprows=1)
+    data: NDArray = np.loadtxt(infile, skiprows=1)
 
     # Unit conversion.
     if input_units == 'atomic' and output_units == 'si':
