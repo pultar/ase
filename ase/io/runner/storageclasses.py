@@ -869,11 +869,11 @@ class SymmetryFunction:
         # compatible with the sftype.
         if self.tag == 'radial' and len(sflist) == 6:
             self.elements = [sflist[0], sflist[2]]
-            self.coefficients = [sflist[3], sflist[4]]  # type: ignore
+            self.coefficients = [float(sflist[3]), float(sflist[4])]  # type: ignore
 
         elif self.tag == 'angular' and len(sflist) == 8:
             self.elements = [sflist[0], sflist[2], sflist[3]]  # type: ignore
-            self.coefficients = [sflist[3], sflist[4], sflist[5]]  # type: ignore
+            self.coefficients = [float(sflist[4]), float(sflist[5]), float(sflist[6])]  # type: ignore
         else:
             raise ValueError('sftype incompatible with number of parameters.')
 
