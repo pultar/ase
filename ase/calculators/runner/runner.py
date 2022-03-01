@@ -6,11 +6,6 @@ group of Prof. Dr. Jörg Behler at Georg-August-Universität Göttingen.
 
 Provides
 --------
-
-get_element_groups : utility function
-    Create a list of element pairs and triples from a list of chemical symbols.
-get_minimum_distances : utility function
-    Find the minimum distance for each pair of elements in a list of images.
 get_elements : utility function
     Get a list of all elements in a list of images.
 
@@ -29,14 +24,11 @@ Contributors
 
 from typing import Union, Optional, Dict, List, Any
 
-from itertools import combinations_with_replacement, product
-
 import numpy as np
 
 import ase.io.runner.runner as io
 
 from ase.atoms import Atoms
-from ase.geometry import get_distances
 from ase.data import atomic_numbers
 
 from ase.calculators.calculator import (FileIOCalculator,
@@ -46,95 +38,10 @@ from ase.calculators.calculator import (FileIOCalculator,
 from ase.io.runner.storageclasses import (RunnerSymmetryFunctionValues,
                                           RunnerSplitTrainTest,
                                           RunnerWeights,
-                                          RunnerScaling)
-
-from ase.io.runner.defaultoptions import DEFAULT_PARAMETERS
-
-from ase.io.runner.storageclasses import (SymmetryFunction,
+                                          RunnerScaling,
                                           SymmetryFunctionSet)
 
-
-def get_element_groups(
-    elements: List[str],
-    groupsize: int
-) -> List[List[str]]:
-    """Create doubles or triplets of elements from all `elements`.
-
-    Arguments
-    ---------
-    elements : list of str
-        A list of all the elements from which the groups shall be built.
-    groupsize : int
-        The desired size of the group.
-
-    Returns
-    -------
-    groups : list[lists[str]]
-        A list of elements groups.
-    """
-    # Build pairs of elements.
-    if groupsize == 2:
-        doubles = list(product(elements, repeat=2))
-        groups = [[a, b] for (a, b) in doubles]
-
-    # Build triples of elements.
-    elif groupsize == 3:
-        pairs = combinations_with_replacement(elements, 2)
-        triples = product(pairs, elements)
-        groups = [[a, b, c] for (a, b), c in triples]
-
-    return groups
-
-
-def get_minimum_distances(
-    dataset: List[Atoms],
-    elements: List[str]
-) -> Dict[str, float]:
-    """Calculate min. distance between all `elements` pairs in `dataset`.
-
-    Parameters
-    ----------
-    dataset : List[Atoms]
-        The minimum distances will be returned for each element pair across all
-        images in `dataset`.
-    elements : List[str]
-        The list of elements from which a list of element pairs will be built.
-
-    Returns
-    -------
-    minimum_distances: Dict[str, float]
-        A dictionary where the keys are strings of the format 'C-H' and the
-        values are the minimum distances of the respective element pair.
-
-    """
-    minimum_distances: Dict[str, float] = {}
-    for elem1, elem2 in get_element_groups(elements, 2):
-        for structure in dataset:
-
-            elems = structure.get_chemical_symbols()
-
-            # All positions of one element.
-            pos1 = structure.positions[np.array(elems) == elem1]
-            pos2 = structure.positions[np.array(elems) == elem2]
-
-            distmatrix = get_distances(pos1, pos2)[1]
-
-            # Remove same atom interaction.
-            flat = distmatrix.flatten()
-            flat = flat[flat > 0.0]
-
-            dmin: float = min(flat)
-            label = '-'.join([elem1, elem2])
-
-            if label not in minimum_distances:
-                minimum_distances[label] = dmin
-
-            # Overwrite the currently saved minimum distances if a smaller one
-            # has been found.
-            if minimum_distances[label] > dmin:
-                minimum_distances[label] = dmin
-
-    return minimum_distances
+from ase.io.runner.defaultoptions import DEFAULT_PARAMETERS
 
 
 def get_elements(images: List[Atoms]) -> List[str]:
@@ -215,10 +122,7 @@ class Runner(FileIOCalculator):
 
     discard_results_on_any_change = True
 
-    # Type clash with base class is intentional. For RuNNer the values of the
-    # default_parameters dict have narrower types than `Any`. These types
-    # are defined in the `RunnerOptions` TypedDict.
-    default_parameters = DEFAULT_PARAMETERS  # type: ignore
+    default_parameters = DEFAULT_PARAMETERS
 
     # Explicit is better than implicit. By passing all arguments explicitely,
     # the argument types can be narrowly specified.
@@ -425,7 +329,7 @@ class Runner(FileIOCalculator):
     @symmetryfunctions.setter
     def symmetryfunctions(
         self,
-        symmetryfunctions: Union[SymmetryFunction, SymmetryFunctionSet]
+        sfset: SymmetryFunctionSet
     ) -> None:
         """Add symmetry functions to the currently stored ones.
 
@@ -434,7 +338,7 @@ class Runner(FileIOCalculator):
         `self.parameters['symfunction_short'].`
 
         """
-        self.symmetryfunctions += symmetryfunctions
+        self.parameters['symfunction_short'] = sfset
 
     def set(self, **kwargs) -> Dict[str, object]:
         """Update `self.parameters` with `kwargs`.
