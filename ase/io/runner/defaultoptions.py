@@ -42,7 +42,7 @@ from .storageclasses import SymmetryFunctionSet
 # backwards compatibility with Python 3.6 and 3.7.
 # class RunnerOptions(TypedDict, total=False)
 #     """Type specifications for RuNNer default options."""
-# 
+#
 #     runner_mode: int
 #     symfunction_short: SymmetryFunctionSet
 #     elements: Optional[List[str]]
@@ -109,9 +109,6 @@ DEFAULT_PARAMETERS: Dict[str, object] = {
     'test_fraction': 0.1,                 # Default too small, more common.
     # Mode 1 and 2.
     'use_short_forces': True,             # Force fitting is standard.
-    # Mode 1 and 3.
-    'remove_atom_energies': True,         # Standard use case.
-    'atom_energy': {},                    # `remove_atom_energies` dependency.
     # Mode 2.
     'epochs': 30,                         # Default is 0, 30 is common.
     'kalman_lambda_short': 0.98000,       # No Default, this is sensible value.
