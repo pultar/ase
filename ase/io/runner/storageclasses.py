@@ -720,7 +720,7 @@ class RunnerSplitTrainTest:
 # backwards compatibility with Python 3.6 and 3.7.
 # class RunnerResults(TypedDict, total=False)
 #     """Type hints for RuNNer results dictionaries."""
-# 
+#
 #     fitresults: RunnerFitResults
 #     sfvalues: RunnerSymmetryFunctionValues
 #     weights: RunnerWeights
@@ -869,11 +869,12 @@ class SymmetryFunction:
         # compatible with the sftype.
         if self.tag == 'radial' and len(sflist) == 6:
             self.elements = [sflist[0], sflist[2]]
-            self.coefficients = [float(sflist[3]), float(sflist[4])]  # type: ignore
+            self.coefficients = [float(sflist[3]), float(sflist[4])]
 
         elif self.tag == 'angular' and len(sflist) == 8:
             self.elements = [sflist[0], sflist[2], sflist[3]]  # type: ignore
-            self.coefficients = [float(sflist[4]), float(sflist[5]), float(sflist[6])]  # type: ignore
+            self.coefficients = [float(sflist[4]), float(sflist[5]),
+                                 float(sflist[6])]  # type: ignore
         else:
             raise ValueError('sftype incompatible with number of parameters.')
 
@@ -916,7 +917,7 @@ class SymmetryFunctionSet:
 
     def __len__(self) -> int:
         """Return the number of symmetry functions as the object length."""
-        return len(self._symmetryfunctions)
+        return len(self._sets) + len(self._symmetryfunctions)
 
     def __add__(
         self,
