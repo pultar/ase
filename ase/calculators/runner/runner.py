@@ -154,8 +154,7 @@ def get_elements(images: List[Atoms]) -> List[str]:
     # Get the chemical symbol of all elements.
     elements: List[str] = []
     for atoms in images:
-        elements = atoms.get_chemical_symbols()
-        for element in elements:
+        for element in atoms.get_chemical_symbols():
             elements.append(element)
 
     # Remove repeated elements.
@@ -163,7 +162,6 @@ def get_elements(images: List[Atoms]) -> List[str]:
 
     # Sort the elements by atomic number.
     elements.sort(key=lambda i: atomic_numbers[i])
-
     return elements
 
 
@@ -360,21 +358,9 @@ class Runner(FileIOCalculator):
         """
         elements = self.parameters['elements']
 
-        # If no elements were specified yet, set them automatically based on the
-        # attached dataset or Atoms object.
         if elements is None:
-            images = self.dataset or [self.atoms]
-
-            # Elements will either be extracted from the training dataset or
-            # from the `Atoms` object to which the calculator has been attached.
-            if images is None:
-                raise CalculatorSetupError('Please specify a custom list of '
-                    + 'elements, or attach a dataset or Atoms object to the '
-                    + 'calculator.')
-
-            elements = get_elements(images)
-
-        self.elements = elements
+            self.set_elements()
+            elements = self.parameters['elements']
 
         return elements
 
@@ -393,6 +379,35 @@ class Runner(FileIOCalculator):
         """
         self.parameters['elements'] = elements
         self.parameters['number_of_elements'] = len(elements)
+
+    def set_elements(self, elements: Optional[List[str]] = None) -> None:
+        """Set the `elements` attribute based on `dataset` or `atoms`.
+
+        This routine automatically determined the elements of this calculator
+        based on either the attached dataset or the attached Atoms object.
+        One may optionally supply a list of elements that will be set.
+
+        Arguments
+        ---------
+        elements : list[str], optional, _default_ `None`
+            The list of elements which will be stored.
+
+        """
+        # If no elements were specified, set them automatically based on the
+        # attached dataset or Atoms object.
+        if elements is None:
+            images = self.dataset or [self.atoms]
+
+            # Elements will either be extracted from the training dataset or
+            # from the `Atoms` object to which the calculator has been attached.
+            if images is None:
+                raise CalculatorSetupError('Please specify a custom list of '
+                    + 'elements, or attach a dataset or Atoms object to the '
+                    + 'calculator.')
+
+            elements = get_elements(images)
+
+        self.elements = elements
 
     @property
     def symmetryfunctions(self) -> SymmetryFunctionSet:
@@ -477,8 +492,10 @@ class Runner(FileIOCalculator):
         # Set the correct calculation label.
         if label is None:
             label = f'mode{mode}/mode{mode}'
-
         self.label = label
+
+        # Set the correct elements of the system.
+        self.set_elements()
 
         # RuNNer can either be called for a single ASE Atoms object to
         # which the calculator has been attached (`self.atoms`) or for the
