@@ -24,7 +24,7 @@ import numpy as np
 from ase.io import read
 from ase.atoms import Atoms
 from ase.utils import reader, writer
-from ase.calculators.calculator import Parameters
+from ase.calculators.calculator import Parameters, CalculatorSetupError
 from ase.units import Hartree, Bohr
 from ase.data import atomic_numbers
 
@@ -401,7 +401,10 @@ def check_valid_keywords(keyword_dict):
         raise UnrecognizedKeywordError(keyword_dict)
 
 
-def _format_argument(argument: Union[bool, float, int, str]) -> str:
+def _format_argument(
+    keyword: str,
+    argument: Union[bool, float, int, str]
+) -> str:
     """Format one argument value when writing the input.nn file."""
     if isinstance(argument, bool):
         argument_formatted = ''
@@ -413,9 +416,9 @@ def _format_argument(argument: Union[bool, float, int, str]) -> str:
         argument_formatted = f'{argument}'
 
     else:
-        raise FileFormatError(f"The input.nn argument '{argument}' has an "
-                               + 'unknown argument type. If the value is '
-                               + '`None`, you probably need to specify this '
+        raise FileFormatError(f"Argument '{argument}' is invalid for keyword "
+                               + f"'{keyword}'. If the value is `None`, "
+                               + 'chances are you forgot to specify this '
                                + 'parameter.')
 
     return argument_formatted
@@ -442,19 +445,25 @@ def _format_keyword(
     # If `arguments` contains a list of arguments, each entry is formatted
     # individually and joined to one large string.
     if isinstance(arguments, list):
-        arguments_formatted = ' '.join([_format_argument(i) for i in arguments])
+        arguments_formatted = ' '.join([_format_argument(keyword, i) for i in arguments])
         outfile.write(f'{keyword:30}')
         outfile.write(f'{arguments_formatted}\n')
 
     # `SymmetryFunction`s have their own to_runner() write routine.
     elif isinstance(arguments, SymmetryFunctionSet):
+        # Check whether at least one symmetry functions was supplied.
+        if len(arguments) == 0:
+            raise CalculatorSetupError('No symmetry functions found. The '
+                                       + 'specification of symmetry functions '
+                                       + 'is mandatory in RuNNer.')
+
         for symmetryfunction in arguments:
             outfile.write(f'{keyword:30}')
             outfile.write(f'{symmetryfunction.to_runner()}\n')
 
     # All other arguments are simply formatted once and written.
     else:
-        arguments_formatted = _format_argument(arguments)
+        arguments_formatted = _format_argument(keyword, arguments)
         outfile.write(f'{keyword:30}')
         outfile.write(f'{arguments_formatted}\n')
 
