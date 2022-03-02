@@ -909,7 +909,8 @@ class FileIOCalculator(Calculator):
 
     def execute(self):
         if self.stdout_file is not None and len(self.stdout_file) == 0:
-            stdout_file = self.prefix + '.stdout'
+            prefix = self.prefix if self.prefix is not None else self.name
+            stdout_file = prefix + '.stdout'
         else:
             stdout_file = self.stdout_file
         if stdout_file is not None:
