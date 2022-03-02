@@ -17,6 +17,7 @@ from pathlib import Path
 
 from ase.calculators.calculator import all_changes
 
+
 def SSA(base_calc, SSA_weights='uniform', *args, **kwargs):
     """Creates SSA Calculator object
 

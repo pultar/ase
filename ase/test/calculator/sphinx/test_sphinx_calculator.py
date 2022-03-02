@@ -18,8 +18,8 @@ def atoms_E_F_ref():
     # consistent with PAWs from
     # from "small core datasets" at http://users.wfu.edu/natalie/papers/pwpaw/newperiodictable/
     Eref = -269.04643944536
-    Fref = [[-3.7064726e-03,  1.2093000e-06,  1.3123000e-06],
-            [ 3.6769230e-03,  3.9721000e-06, -2.5040000e-06]]
+    Fref = [[-3.7064726e-03, 1.2093000e-06, 1.3123000e-06],
+            [3.6769230e-03, 3.9721000e-06, -2.5040000e-06]]
 
     return atoms, Eref, Fref
 
@@ -27,7 +27,7 @@ def atoms_E_F_ref():
 @pytest.mark.skipif('ASE_SPHINX_COMMAND' not in os.environ, reason='Need $ASE_SPHINX_COMMAND for full SPHInX Calculator test')
 def test_sphinx(tmpdir, atoms_E_F_ref):
     (atoms, Eref, Fref) = atoms_E_F_ref
-    calc = SPHInX(eCut=300.0, spinpol=True, constrain_spins=True, kpts=[2,2,2],
+    calc = SPHInX(eCut=300.0, spinpol=True, constrain_spins=True, kpts=[2, 2, 2],
             potentials_dir=Path(__file__).parent,
             potentials={'Fe': ('AtomPAW', 'Fe.atomicdata'), 'Co': ('AtomPAW', 'Co.atomicdata')},
             energy_tol=0.01, directory=tmpdir)

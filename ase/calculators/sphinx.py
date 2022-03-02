@@ -15,7 +15,6 @@ from pathlib import Path
 import numpy as np
 
 from ase.units import Ry, Ha, Bohr
-from ase.io import write
 from ase.calculators.calculator import FileIOCalculator, Calculator, all_changes
 
 
@@ -68,13 +67,13 @@ class SPHInX(FileIOCalculator):
         with open(self_dir / self._base_file, 'w') as fout:
             params = self.parameters
             fout.write(f'format {params["potential_style"]};\n')
-            fout.write(f'include <parameters.sx>;\n')
-            fout.write(f'\n')
+            fout.write('include <parameters.sx>;\n')
+            fout.write('\n')
             fout.write(f'include "{self._struct_file}";\n')
-            fout.write(f'\n')
+            fout.write('\n')
 
             # basis
-            fout.write(f'basis {{\n')
+            fout.write('basis {\n')
             fout.write(f'    eCut = {params["eCut"]} / {Ry};\n')
             kpt_offset = [0.0, 0.0, 0.0]
             if params['kpts'] is not None:
@@ -84,71 +83,70 @@ class SPHInX(FileIOCalculator):
             fout.write(f'    kPoint {{ coords = {kpt_offset}; relative; }}\n')
             if params['kpts'] is not None and np.product(params['kpts']) > 1:
                 fout.write(f'    folding = {list(params["kpts"])};\n')
-            fout.write(f'}}\n')
+            fout.write('}\n')
 
             pot_dir = Path(params.get('potentials_dir', os.environ.get('ASE_SPHINX_POT_DIR')))
             if params['potential_style'] == 'paw':
                 # potentials
-                fout.write(f'pawPot {{\n')
+                fout.write('pawPot {\n')
                 for pot_species in sorted(params['potentials']):
                     pot_type, pot_file = params['potentials'][pot_species]
-                    fout.write(f'    species {{\n')
+                    fout.write('    species {\n')
                     fout.write(f'        name = "{pot_species}_{pot_file.replace("/","_")}";\n')
                     fout.write(f'        potType = "{pot_type}";\n')
                     fout.write(f'        element = "{pot_species}";\n')
                     fout.write(f'        potential = "{pot_dir / pot_file}";\n')
-                    fout.write(f'    }}\n')
-                fout.write(f'}}\n')
+                    fout.write('    }\n')
+                fout.write('}\n')
 
                 # general params
-                fout.write(f'PAWHamiltonian {{\n')
+                fout.write('PAWHamiltonian {\n')
                 fout.write(f'    spinPolarized = {int(params["spinpol"])};\n')
                 n_empty_states = params.get("empty_states", max(10, len(atoms) * 2))
                 fout.write(f'    nEmptyStates = {n_empty_states};\n')
                 fout.write(f'    ekt = {params["smearing"]};\n')
                 if params["smearing_type"] == "Gaussian":
-                    fout.write(f'    MethfesselPaxton = 1;\n')
+                    fout.write('    MethfesselPaxton = 1;\n')
                 elif params["smearing_type"] == "FermiDirect":
-                    fout.write(f'    FermiDirac = 0;\n')
+                    fout.write('    FermiDirac = 0;\n')
                 elif params["smearing_type"].startswith("MethfesselPaxton"):
                     t_m, t_a = params["smearing_type"].split(maxsplit=1)
                     fout.write(f'    {t_m} = {t_a};\n')
                 else:
                     raise ValueError(f'Unsupported smearing_type {params["smearing_type"]}')
                 fout.write(f'    xc = {params["xc"]};\n')
-                fout.write(f'}}\n')
+                fout.write('}\n')
             else:
                 raise ValueError(f'Unsupported potential_style {params["potential_style"]}')
 
-            fout.write(f'main {{\n')
-            fout.write(f'    scfDiag {{\n')
+            fout.write('main {\n')
+            fout.write('    scfDiag {\n')
             fout.write(f'        blockCCG {{ blockSize=32; maxStepsCCG=4; }}\n')
             fout.write(f'        dEnergy = 0.001 / {Ha};\n')
-            fout.write(f'        rhoMixing = 0.5;\n')
+            fout.write('        rhoMixing = 0.5;\n')
             if params["spinpol"]:
-                fout.write(f'        spinMixing = 0.5;\n')
-            fout.write(f'        maxSteps = 100;\n')
-            fout.write(f'        nPulaySteps = 20;\n')
+                fout.write('        spinMixing = 0.5;\n')
+            fout.write('        maxSteps = 100;\n')
+            fout.write('        nPulaySteps = 20;\n')
             fout.write(f'        preconditioner {{ type = KERKER; scaling = 0.5; }}\n')
-            fout.write(f'    }}\n')
+            fout.write('    }\n')
             fout.write(f'    scfDiag {{\n')
             fout.write(f'        blockCCG {{ blockSize=32; maxStepsCCG=4; }}\n')
             fout.write(f'        dEnergy = {params["energy_tol"]} / {Ha};\n')
-            fout.write(f'        rhoMixing = 1.0;\n')
+            fout.write('        rhoMixing = 1.0;\n')
             if params["spinpol"]:
-                fout.write(f'        spinMixing = 1.0;\n')
-            fout.write(f'        maxSteps = 500;\n')
-            fout.write(f'        nPulaySteps = 20;\n')
+                fout.write('        spinMixing = 1.0;\n')
+            fout.write('        maxSteps = 500;\n')
+            fout.write('        nPulaySteps = 20;\n')
             fout.write(f'        preconditioner {{ type = KERKER; scaling = 0.5; }}\n')
-            fout.write(f'    }}\n')
+            fout.write('    }\n')
             fout.write(f'    evalForces {{ file = "{self._forces_file}"; }}\n')
-            fout.write(f'}}\n')
+            fout.write('}\n')
 
         with open(self_dir / self._struct_file, 'w') as fout:
             self.write_sphinx_struct(atoms, fout,
                                      initialGuess_rho_file=initialGuess_rho_file,
                                      initialGuess_waves_file=initialGuess_waves_file)
-
 
     def write_sphinx_struct(self, atoms, fout, initialGuess_rho_file=False, initialGuess_waves_file=False):
         spin_polarized = self.parameters["spinpol"]
@@ -177,7 +175,7 @@ class SPHInX(FileIOCalculator):
         if not self.parameters['symmetry']:
             # Empty symmetry section disables symmetry, and default is to use species
             # but not magnetic order
-            fout.write(f'    symmetry {{ }}\n')
+            fout.write('    symmetry { }\n')
         else:
             magmoms = atoms.get_initial_magnetic_moments()
             if spin_polarized and (magmoms != magmoms[0]).any():
@@ -215,10 +213,8 @@ class SPHInX(FileIOCalculator):
                 fout.write(f'    constraint = {init_magmoms[at_ind]};\n')
                 fout.write('}\n')
 
-
     def set_atoms(self, atoms):
         self.clean_restart()
-
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(
@@ -231,13 +227,12 @@ class SPHInX(FileIOCalculator):
         self.atoms_input = atoms
         self.atoms = None
 
-
     # copied from FileIOCalculator.calculate
     def calculate(self, atoms=None, properties=['energy'],
                   system_changes=all_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
         self.write_input(self.atoms, properties, system_changes)
-        self.command = re.sub(f' -i [^ ]+$', '', self.command)
+        self.command = re.sub(r' -i [^ ]+$', '', self.command)
         self.command += f' -i {self._base_file}'
         self.execute()
         self.read_results()
@@ -284,14 +279,12 @@ class SPHInX(FileIOCalculator):
 
         return cell_a, symbols_a, pos_a, labels_a, forces_a
 
-
     def clean_restart(self):
         for f in ['rho.sxb', 'waves.sxb']:
             try:
                 (Path(self.directory) / f).unlink()
             except FileNotFoundError:
                 pass
-
 
     def clean(self, clean_restart=True):
         for g in ['AtomsOrbitals*.dat', 'energy.dat', 'eps.*.dat', 'fftwisdon.dat',
@@ -302,7 +295,6 @@ class SPHInX(FileIOCalculator):
 
         if clean_restart:
             self.clean_restart()
-
 
     def read_results(self):
         """ all results are read from forces.sx, energy.dat, and spins.dat files
@@ -324,9 +316,12 @@ class SPHInX(FileIOCalculator):
         self.results['forces'] = forces
 
         # read energy
+        # Use usual convention that 'energy' is T -> 0 extrapolated, 'free_energy'
+        # is energy consistent with forces, and unmodified DFT energy isn't actually
+        # returned
         with open(self_dir / 'energy.dat') as fin:
             f = fin.readlines()[-1].strip().split()
-            E = float(f[2])
+            # E = float(f[2])
             EF = float(f[3])
             E0 = float(f[4])
         self.results['energy'] = E0
