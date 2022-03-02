@@ -121,24 +121,24 @@ class SPHInX(FileIOCalculator):
 
             fout.write('main {\n')
             fout.write('    scfDiag {\n')
-            fout.write(f'        blockCCG {{ blockSize=32; maxStepsCCG=4; }}\n')
+            fout.write('        blockCCG { blockSize=32; maxStepsCCG=4; }\n')
             fout.write(f'        dEnergy = 0.001 / {Ha};\n')
             fout.write('        rhoMixing = 0.5;\n')
             if params["spinpol"]:
                 fout.write('        spinMixing = 0.5;\n')
             fout.write('        maxSteps = 100;\n')
             fout.write('        nPulaySteps = 20;\n')
-            fout.write(f'        preconditioner {{ type = KERKER; scaling = 0.5; }}\n')
+            fout.write('        preconditioner { type = KERKER; scaling = 0.5; }\n')
             fout.write('    }\n')
-            fout.write(f'    scfDiag {{\n')
-            fout.write(f'        blockCCG {{ blockSize=32; maxStepsCCG=4; }}\n')
+            fout.write('    scfDiag {\n')
+            fout.write('        blockCCG { blockSize=32; maxStepsCCG=4; }\n')
             fout.write(f'        dEnergy = {params["energy_tol"]} / {Ha};\n')
             fout.write('        rhoMixing = 1.0;\n')
             if params["spinpol"]:
                 fout.write('        spinMixing = 1.0;\n')
             fout.write('        maxSteps = 500;\n')
             fout.write('        nPulaySteps = 20;\n')
-            fout.write(f'        preconditioner {{ type = KERKER; scaling = 0.5; }}\n')
+            fout.write('        preconditioner { type = KERKER; scaling = 0.5; }\n')
             fout.write('    }\n')
             fout.write(f'    evalForces {{ file = "{self._forces_file}"; }}\n')
             fout.write('}\n')
@@ -156,7 +156,7 @@ class SPHInX(FileIOCalculator):
 
         l = f'    cell = {1.0 / Bohr} * [ '
         fout.write(l)
-        fout.write(                 f'[ {atoms.cell[0, 0]}, {atoms.cell[0, 1]}, {atoms.cell[0, 2]}],\n')
+        fout.write(f'[ {atoms.cell[0, 0]}, {atoms.cell[0, 1]}, {atoms.cell[0, 2]}],\n')
         fout.write((' ' * len(l)) + f'[ {atoms.cell[1, 0]}, {atoms.cell[1, 1]}, {atoms.cell[1, 2]}],\n')
         fout.write((' ' * len(l)) + f'[ {atoms.cell[2, 0]}, {atoms.cell[2, 1]}, {atoms.cell[2, 2]} ] ];\n')
 
@@ -268,7 +268,7 @@ class SPHInX(FileIOCalculator):
             label_re = re.search(r'\blabel\s*=\s*"([^"]*)"\s*;', atom_str)
             labels_a.append(label_re.group(1))
 
-        cell_a = np.asarray([float(cell_re.group(i)) for i in range(1, 10)]).reshape(3,3)
+        cell_a = np.asarray([float(cell_re.group(i)) for i in range(1, 10)]).reshape((3, 3))
         pos_a = np.asarray(pos_a)
         labels_a = np.asarray(labels_a)
         symbols_a = np.asarray(symbols_a)

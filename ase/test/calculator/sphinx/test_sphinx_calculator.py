@@ -12,7 +12,7 @@ from ase.calculators.sphinx import SPHInX
 
 @pytest.fixture
 def atoms_E_F_ref():
-    atoms = Atoms('FeCo', cell=[4, 4, 4], positions = [[0, 0, 0], [2.1, 2, 2]], pbc = [True]*3)
+    atoms = Atoms('FeCo', cell=[4, 4, 4], positions=[[0, 0, 0], [2.1, 2, 2]], pbc=[True]*3)
     atoms.set_initial_magnetic_moments([2.0, -2.1])
 
     # consistent with PAWs from
