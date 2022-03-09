@@ -45,6 +45,14 @@ class SPHInX(FileIOCalculator):
             smearing=0.1,
             energy_tol=1.0e-7,
             symmetry=False,
+            scfDiag_prelim_energy_tol=[1.0e-3],
+            scfDiag_blockSize=32,
+            scfDiag_maxStepsCCG=4,
+            scfDiag_rhoMixing=[0.5, 1.0],
+            scfDiag_spinMixing=[0.5, 1.0],
+            scfDiag_maxSteps=100,
+            scfDiag_nPulaySteps=20,
+            scfDiag_preconditioner_scaling=0.5,
             otherkeys=[])
 
         self.atoms = None
@@ -119,27 +127,25 @@ class SPHInX(FileIOCalculator):
             else:
                 raise ValueError(f'Unsupported potential_style {params["potential_style"]}')
 
+            def _get(val, index):
+                try:
+                    return val[index]
+                except TypeError:
+                    return val
+
             fout.write('main {\n')
-            fout.write('    scfDiag {\n')
-            fout.write('        blockCCG { blockSize=32; maxStepsCCG=4; }\n')
-            fout.write(f'        dEnergy = 0.001 / {Ha};\n')
-            fout.write('        rhoMixing = 0.5;\n')
-            if params["spinpol"]:
-                fout.write('        spinMixing = 0.5;\n')
-            fout.write('        maxSteps = 100;\n')
-            fout.write('        nPulaySteps = 20;\n')
-            fout.write('        preconditioner { type = KERKER; scaling = 0.5; }\n')
-            fout.write('    }\n')
-            fout.write('    scfDiag {\n')
-            fout.write('        blockCCG { blockSize=32; maxStepsCCG=4; }\n')
-            fout.write(f'        dEnergy = {params["energy_tol"]} / {Ha};\n')
-            fout.write('        rhoMixing = 1.0;\n')
-            if params["spinpol"]:
-                fout.write('        spinMixing = 1.0;\n')
-            fout.write('        maxSteps = 500;\n')
-            fout.write('        nPulaySteps = 20;\n')
-            fout.write('        preconditioner { type = KERKER; scaling = 0.5; }\n')
-            fout.write('    }\n')
+            for subSCF_i, energy_tol in enumerate(params["scfDiag_prelim_energy_tol"] + [params["energy_tol"]]):
+                fout.write('    scfDiag {\n')
+                fout.write(f'        blockCCG {{ blockSize={_get(params["scfDiag_blockSize"], subSCF_i)}; ')
+                fout.write(f'maxStepsCCG={_get(params["scfDiag_maxStepsCCG"], subSCF_i)}; }}\n')
+                fout.write(f'        dEnergy = {energy_tol} / {Ha};\n')
+                fout.write(f'        rhoMixing = {_get(params["scfDiag_rhoMixing"], subSCF_i)};\n')
+                if params["spinpol"]:
+                    fout.write(f'        spinMixing = {_get(params["scfDiag_spinMixing"], subSCF_i)};\n')
+                fout.write(f'        maxSteps = {_get(params["scfDiag_maxSteps"], subSCF_i)};\n')
+                fout.write(f'        nPulaySteps = {_get(params["scfDiag_nPulaySteps"], subSCF_i)};\n')
+                fout.write(f'        preconditioner {{ type = KERKER; scaling = {_get(params["scfDiag_preconditioner_scaling"], subSCF_i)}; }}\n')
+                fout.write('    }\n')
             fout.write(f'    evalForces {{ file = "{self._forces_file}"; }}\n')
             fout.write('}\n')
 
