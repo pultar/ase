@@ -24,6 +24,8 @@ Contributors
 
 from typing import Union, Optional, Dict, List, Any
 
+import os
+
 import numpy as np
 
 import ase.io.runner.runner as io
@@ -395,7 +397,8 @@ class Runner(FileIOCalculator):
 
         # Set the correct calculation label.
         if label is None:
-            label = f'mode{mode}/mode{mode}'
+            label = os.path.join(self.directory, f'mode{mode}', f'mode{mode}')
+
         self.label = label
 
         # Set the correct elements of the system.
