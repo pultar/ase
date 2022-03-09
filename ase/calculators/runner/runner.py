@@ -509,6 +509,8 @@ class Runner(FileIOCalculator):
         if self.parameters['runner_mode'] == 2:
             sfvalues = self.sfvalues or self.results['sfvalues']
             splittraintest = self.splittraintest or self.results['splittraintest']
+            scaling = self.scaling
+            weights = self.weights
 
         # RuNNer Mode 3 requires the symmetry function scaling data and the
         # neural network weights which were obtained as the results of
