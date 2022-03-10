@@ -653,11 +653,12 @@ class RunnerFitResults:
                 # by a slash and some more letters (e.g. 'Bohr', or 'atom').
                 units: List[str] = re.findall(r'\w{2}/\w+', line)
                 self.units['rmse_energy'] = units[0]
-                self.units['rmse_force'] = units[0]
+                self.units['rmse_force'] = units[1]
 
             # Read in the epoch where the best fit was obtained.
             if 'Best short range fit has been obtained in epoch' in line:
-                self.opt_rmse_epoch = int(data[-1])
+                # Increase by one, because we also read the 0th epoch.
+                self.opt_rmse_epoch = int(data[-1]) + 1
 
             # Explicitely handle the special case that the fit did not yield any
             # improvement. This also means that no weights were written.
