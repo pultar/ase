@@ -97,7 +97,7 @@ class SPHInX(FileIOCalculator):
             if params['potential_style'] == 'paw':
                 # potentials
                 fout.write('pawPot {\n')
-                for pot_species in sorted(params['potentials']):
+                for pot_species in sorted(set(atoms.symbols)):
                     pot_type, pot_file = params['potentials'][pot_species]
                     fout.write('    species {\n')
                     fout.write(f'        name = "{pot_species}_{pot_file.replace("/","_")}";\n')
