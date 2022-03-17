@@ -252,7 +252,11 @@ def iread_xsf(fileobj, read_data=False):
         data = []
         line = readline()  # First line of data
         while not line.startswith('END_DATAGRID_3D'):
-            data.extend([float(x) for x in line.split()])
+            try:
+                data.extend([float(x) for x in line.split()])
+            except ValueError:
+                if line.startswith("***"):
+                    data.extend(np.nan)
             line = readline()
         assert len(data) == npoints
         data = np.array(data, float).reshape(shape[::-1]).T
