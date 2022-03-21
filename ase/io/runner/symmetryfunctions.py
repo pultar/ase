@@ -20,7 +20,7 @@ Contributors
 
 """
 
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 
 from itertools import combinations_with_replacement, product
 
@@ -126,7 +126,8 @@ def generate_symmetryfunctions(
     algorithm: str = 'half',
     elements: Optional[List[str]] = None,
     min_distances: Optional[Dict[str, float]] = None,
-    lambda_angular: Optional[List[float]] = None
+    lambda_angular: Optional[List[float]] = None,
+    eta_angular: Optional[Union[Dict[str, float], SymmetryFunctionSet]] = None
 ) -> SymmetryFunctionSet:
     """Based on a dataset, generate a set of radial symmetry functions."""
     # If no elements were provided use all elements of this set.
@@ -163,28 +164,54 @@ def generate_symmetryfunctions(
 
     # Generate angular symmetry functions.
     elif sftype == 3:
+
+        if isinstance(eta_angular, SymmetryFunctionSet):
+            all_etas: Dict[str, List[float]] = {}
+            for symfun in eta_angular:
+                label = '-'.join(symfun.elements)
+                eta = symfun.coefficients[0]
+
+                if label not in all_etas:
+                    all_etas[label] = []
+                all_etas[label].append(eta)
+
+            eta_angular = {label: sorted(etas)[-2] for label, etas in all_etas.items()}
+
         # Set lambda coefficients, if unprovided.
         if lambda_angular is None:
             lambda_angular = [-1.0, +1.0]
 
         # Create one set of symmetry functions for each element triplet.
         for element_group in get_element_groups(elements, 3):
+
+            eta_list = [0.0]
+
+            # Choose the right radial eta values for this triplet, if provided.
+            if eta_angular is not None and algorithm == 'eta_mean':
+                radial_etas = []
+                for pair in get_element_groups(element_group, 2):
+                    label = '-'.join(pair)
+                    radial_etas.append(eta_angular[label])
+
+                eta_list += [np.mean(radial_etas)]
+
             for lamb in lambda_angular:
+                for eta in eta_list:
+                    # Add `amount` symmetry functions to a fresh set.
+                    element_symfunset = SymmetryFunctionSet()
+                    for _ in range(amount):
+                        element_symfunset += SymmetryFunction(
+                            sftype=3,
+                            cutoff=cutoff,
+                            elements=element_group
+                        )
 
-                # Add `amount` symmetry functions to a fresh set.
-                element_symfunset = SymmetryFunctionSet()
-                for _ in range(amount):
-                    element_symfunset += SymmetryFunction(
-                        sftype=3,
-                        cutoff=cutoff,
-                        elements=element_group
-                    )
+                    # Set the symmetry function coefficients. This modifies
+                    # symfunset.
+                    generate_symfun_angular(element_symfunset, algorithm, lamb,
+                                            eta)
 
-                # Set the symmetry function coefficients. This modifies
-                # symfunset.
-                generate_symfun_angular(element_symfunset, algorithm, lamb)
-
-                parent_symfunset.append(element_symfunset)
+                    parent_symfunset.append(element_symfunset)
 
     else:
         raise NotImplementedError('Cannot generate symmetry functions for '
@@ -256,7 +283,8 @@ def generate_symfun_radial(
 
 def get_angular_coefficients_turn(
     turn: float,
-    lamb: float
+    lamb: float,
+    eta: float
 ) -> List[float]:
     """Calculate coefficients of one radial symfun with turnpoint at `rturn`."""
     costurn: float = np.cos(turn)
@@ -264,12 +292,13 @@ def get_angular_coefficients_turn(
     rho = 1.0 + lamb * costurn
     zeta = 1.0 + (costurn / sinturn**2) * rho / lamb
 
-    return [0.0, lamb, zeta]
+    return [eta, lamb, zeta]
 
 
 def get_angular_coefficients_half(
     turn: float,
-    lamb: float
+    lamb: float,
+    eta: float
 ) -> List[float]:
     """Calculate coefficients of one radial symfun with turnpoint at `rturn`."""
     costurn: float = np.cos(turn)
@@ -277,13 +306,14 @@ def get_angular_coefficients_half(
     logrho: float = np.log(rho)
     zeta: float = -np.log(2) / (logrho - np.log(2))
 
-    return [0.0, lamb, zeta]
+    return [eta, lamb, zeta]
 
 
 def generate_symfun_angular(
     sfset: SymmetryFunctionSet,
     algorithm: str,
-    lambda_angular: float
+    lambda_angular: float,
+    eta_angular: float = 0.0
 ) -> None:
     """Calculate the coefficients of angular symmetry functions."""
     # Calculate the angular range that has to be covered.
@@ -295,16 +325,19 @@ def generate_symfun_angular(
         # Equally spaced at G(r) = 0.5.
         if algorithm == 'half':
             symfun.coefficients = get_angular_coefficients_half(turn,
-                                                                lambda_angular)
+                                                                lambda_angular,
+                                                                eta_angular)
 
         # Equally spaced turning points.
         elif algorithm == 'turn':
             symfun.coefficients = get_angular_coefficients_turn(turn,
-                                                                lambda_angular)
+                                                                lambda_angular,
+                                                                eta_angular)
 
-        # Library of literature values.
-        elif algorithm == 'literature':
-            symfun.coefficients = [0.0, lambda_angular, 2**idx]
+        # Library of literature values or algorithm based on mean of radial
+        # eta values.
+        elif algorithm == 'literature' or algorithm == 'eta_mean':
+            symfun.coefficients = [eta_angular, lambda_angular, 2**idx]
 
         else:
             raise NotImplementedError(f"Unknown algorithm '{algorithm}'.")
