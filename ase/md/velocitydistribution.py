@@ -43,7 +43,7 @@ def force_temperature(atoms, temperature, unit="K"):
 
     temperature_atoms = atoms.get_temperature()
 
-    if temperature_atoms < eps_temp and (target_temperature > 0.0):
+    if (temperature_atoms < eps_temp) and (target_temperature > 0.0):
         raise RuntimeError("Cannot rescale system at 0 K to finite temperature.")
     
     if target_temperature > 0.0:
