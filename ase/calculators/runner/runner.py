@@ -397,9 +397,11 @@ class Runner(FileIOCalculator):
 
         # Set the correct calculation label.
         if label is None:
-            label = os.path.join(self.directory, f'mode{mode}', f'mode{mode}')
-
-        self.label = label
+            self.label = None
+            self.directory = f'mode{mode}'
+            self.prefix = f'mode{mode}'
+        else:
+            self.label = label
 
         # Set the correct elements of the system.
         self.set_elements()
