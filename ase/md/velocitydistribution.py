@@ -35,15 +35,16 @@ def force_temperature(atoms, temperature, unit="K"):
     """
 
     if unit == "K":
-        E_temp = temperature * units.kB
+        T = temperature
     elif unit == "eV":
-        E_temp = temperature
+        T = temperature / units.kB
     else:
         raise UnitError("'{}' is not supported, use 'K' or 'eV'.".format(unit))
 
+    current_T = atoms.get_temperature()
+
     if temperature > eps_temp:
-        E_kin0 = atoms.get_kinetic_energy() / len(atoms) / 1.5
-        gamma = E_temp / E_kin0
+        gamma = T / current_T
     else:
         gamma = 0.0
     atoms.set_momenta(atoms.get_momenta() * np.sqrt(gamma))
