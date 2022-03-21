@@ -35,18 +35,22 @@ def force_temperature(atoms, temperature, unit="K"):
     """
 
     if unit == "K":
-        T = temperature
+        target_temperature = temperature
     elif unit == "eV":
-        T = temperature / units.kB
+        target_temperature = temperature / units.kB
     else:
         raise UnitError("'{}' is not supported, use 'K' or 'eV'.".format(unit))
 
-    current_T = atoms.get_temperature()
+    temperature_atoms = atoms.get_temperature()
 
-    if temperature > eps_temp:
-        gamma = T / current_T
+    if temperature_atoms < eps_temp and (target_temperature > 0.0):
+        raise RuntimeError("Cannot rescale system at 0 K to finite temperature.")
+    
+    if target_temperature > 0.0:
+        gamma = target_temperature / temperature_atoms
     else:
         gamma = 0.0
+        
     atoms.set_momenta(atoms.get_momenta() * np.sqrt(gamma))
 
 
