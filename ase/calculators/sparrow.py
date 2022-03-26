@@ -8,24 +8,22 @@ atoms.calc = Sparrow(charge=0, magmom=0)
 
 """
 
-import numpy as np
-
 from ase.calculators.calculator import Calculator, all_changes
 from ase.units import Bohr, Hartree
 
 try:
     import scine_utilities as su
-    import scine_sparrow
+    #import scine_sparrow
     _manager = su.core.ModuleManager()
-    _prop_dict = { 'energy': su.Property.Energy
-                 , 'forces': su.Property.Gradients
-                 , 'free_energy': su.Property.Energy
-                 }
+    _prop_dict = {'energy': su.Property.Energy,
+                  'forces': su.Property.Gradients,
+                  'free_energy': su.Property.Energy}
     have_sparrow = True
 except ImportError:
     _manager = None
     _prop_dict = {}
     have_sparrow = False
+
 
 class Sparrow(Calculator):
     implemented_properties = ['energy', 'forces', 'free_energy']
@@ -84,15 +82,15 @@ class Sparrow(Calculator):
         self.calc.set_required_properties(list(
             set(_prop_dict[p] for p in properties)))
 
-        natoms = len(self.atoms)
+        #natoms = len(self.atoms)
 
         if 'numbers' in system_changes:
-            self._set_elements( atoms.symbols )
+            self._set_elements(atoms.symbols)
         if 'positions' in system_changes:
             self.structure.positions = self.atoms.positions / Bohr
             self.calc.structure = self.structure
-        if 'cell' in system_changes or 'pbc' in system_changes:
-            cell = self.atoms.cell / Bohr # TODO - use cell
+        #if 'cell' in system_changes or 'pbc' in system_changes:
+        #    cell = self.atoms.cell / Bohr  # TODO - use cell
         if 'initial_charges' in system_changes:
             self.calc.settings["molecular_charge"] = self.parameters.charge
         if 'initial_magmoms' in system_changes:
@@ -109,4 +107,3 @@ class Sparrow(Calculator):
             self.results['free_energy'] = ans.energy * Hartree
         if 'forces' in properties:
             self.results['forces'] = ans.gradients * (-Hartree/Bohr)
-
