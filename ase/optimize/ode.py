@@ -1,6 +1,8 @@
 import numpy as np
 
 from ase.optimize.sciopt import SciPyOptimizer, OptimizerConvergenceError
+from ase.parallel import world
+from ase.deprecate import deprecated
    
 
 def ode12r(f, X0, h=None, verbose=1, fmax=1e-6, maxtol=1e3, steps=100,
@@ -180,11 +182,11 @@ class ODE12r(SciPyOptimizer):
     Optimizer based on adaptive ODE solver :func:`ode12r`
     """
     def __init__(self, atoms, logfile='-', trajectory=None,
-                 callback_always=False, alpha=1.0, master=None,
-                 force_consistent=None, precon=None, verbose=0, rtol=1e-2):
+                 callback_always=False, alpha=1.0, master=deprecated(),
+                 force_consistent=None, precon=None, verbose=0, rtol=1e-2, comm=world):
         SciPyOptimizer.__init__(self, atoms, logfile, trajectory,
                                 callback_always, alpha, master,
-                                force_consistent)
+                                force_consistent, comm=comm)
         from ase.optimize.precon.precon import make_precon  # avoid circular dep
         self.precon = make_precon(precon)
         self.verbose = verbose

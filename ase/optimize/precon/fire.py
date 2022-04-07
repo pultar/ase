@@ -3,14 +3,16 @@ import numpy as np
 from ase.optimize.optimize import Optimizer
 from ase.constraints import UnitCellFilter
 import time
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class PreconFIRE(Optimizer):
 
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  dt=0.1, maxmove=0.2, dtmax=1.0, Nmin=5, finc=1.1, fdec=0.5,
-                 astart=0.1, fa=0.99, a=0.1, theta=0.1, master=None,
-                 precon=None, use_armijo=True, variable_cell=False):
+                 astart=0.1, fa=0.99, a=0.1, theta=0.1, master=deprecated(),
+                 precon=None, use_armijo=True, variable_cell=False, comm=world):
         """
         Preconditioned version of the FIRE optimizer
 
@@ -38,12 +40,15 @@ class PreconFIRE(Optimizer):
         variable_cell: bool
             If True, wrap atoms in UnitCellFilter to relax cell and positions.
 
+        comm: MPI Communicator
+            Used to restrict calculation to a subset of MPI ranks.
+
         In time this implementation is expected to replace
         ase.optimize.fire.FIRE.
         """
         if variable_cell:
             atoms = UnitCellFilter(atoms)
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
 
         self.dt = dt
         self.Nsteps = 0

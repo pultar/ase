@@ -5,6 +5,7 @@ from ase.data import atomic_numbers
 from ase.utils import IOContext
 from ase.geometry import get_distances
 from ase.cell import Cell
+from ase.parallel import world
 
 
 class SimpleQMMM(Calculator):
@@ -92,7 +93,7 @@ class EIQMMM(Calculator, IOContext):
     implemented_properties = ['energy', 'forces']
 
     def __init__(self, selection, qmcalc, mmcalc, interaction,
-                 vacuum=None, embedding=None, output=None):
+                 vacuum=None, embedding=None, output=None, comm=world):
         """EIQMMM object.
 
         The energy is calculated as::
@@ -119,6 +120,8 @@ class EIQMMM(Calculator, IOContext):
             default one.
         output: None, '-', str or file-descriptor.
             File for logging information - default is no logging (None).
+        comm: MPI Communicator
+            Used to restraint calculations to specific MPI ranks.
 
         """
 
@@ -135,7 +138,7 @@ class EIQMMM(Calculator, IOContext):
         self.mask = None
         self.center = None  # center of QM atoms in QM-box
 
-        self.output = self.openfile(output)
+        self.output = self.openfile(output, comm=comm)
 
         Calculator.__init__(self)
 

@@ -25,14 +25,14 @@ class MDLogger(IOContext):
     """
 
     def __init__(self, dyn, atoms, logfile, header=True, stress=False,
-                 peratom=False, mode="a"):
+                 peratom=False, mode="a", comm=world):
         if hasattr(dyn, "get_time"):
             self.dyn = weakref.proxy(dyn)
         else:
             self.dyn = None
         self.atoms = atoms
         global_natoms = atoms.get_global_number_of_atoms()
-        self.logfile = self.openfile(logfile, comm=world, mode=mode)
+        self.logfile = self.openfile(logfile, comm=comm, mode=mode)
         self.stress = stress
         self.peratom = peratom
         if self.dyn is not None:

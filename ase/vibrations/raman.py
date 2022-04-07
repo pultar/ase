@@ -37,7 +37,7 @@ class RamanCalculatorBase(IOContext):
 
         self.exext = exext
 
-        self.txt = self.openfile(txt, comm)
+        self.txt = self.openfile(txt, comm=comm)
         self.verbose = verbose
 
         self.comm = comm
@@ -102,7 +102,7 @@ class RamanBase(AtomicDisplacements, IOContext):
             self.exname = exname
         self.exext = exext
 
-        self.txt = self.openfile(txt, comm)
+        self.txt = self.openfile(txt, comm=comm)
         self.verbose = verbose
 
         self.comm = comm

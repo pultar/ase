@@ -13,6 +13,8 @@ import numpy as np
 from numpy.linalg import eigh
 
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 def f(lamda, Gbar, b, radius):
@@ -102,7 +104,7 @@ class GoodOldQuasiNewton(Optimizer):
                  hessianupdate='BFGS', hessian=None, forcemin=True,
                  verbosity=None, maxradius=None,
                  diagonal=20., radius=None,
-                 transitionstate=False, master=None):
+                 transitionstate=False, master=deprecated(), comm=world):
         """Parameters:
 
         atoms: Atoms object
@@ -130,7 +132,7 @@ class GoodOldQuasiNewton(Optimizer):
             set to true,  this rank will save files.
         """
 
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
 
         self.eps = 1e-12
         self.hessianupdate = hessianupdate

@@ -6,6 +6,7 @@ from math import sqrt
 from os.path import isfile
 
 from ase.calculators.calculator import PropertyNotImplementedError
+from ase.deprecate import deprecated, warn_if_used
 from ase.io.jsonio import read_json, write_json
 from ase.io.trajectory import Trajectory
 from ase.parallel import barrier, world
@@ -20,7 +21,8 @@ class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
     def __init__(
-        self, atoms, logfile, trajectory, append_trajectory=False, master=None
+            self, atoms, logfile, trajectory, append_trajectory=False,
+            master=deprecated(), comm=world,
     ):
         """Dynamics object.
 
@@ -44,31 +46,41 @@ class Dynamics(IOContext):
             If True, the new structures are appended to the trajectory
             file instead.
 
-        master: boolean
-            Defaults to None, which causes only rank 0 to save files.  If
-            set to true,  this rank will save files.
+        master: boolean (deprecated)
+            Defaults to None, which causes only rank 0 of passed communicator
+            to save files.  If set to true, this rank will save files.
+
+        comm: MPI communicator
+            Defaults to ase.parallel.world.
         """
+        warn_if_used(
+            master,
+            "The 'master' keyword is deprecated, "
+            "please provide a communicator instead: Dynamics(..., comm=...)."
+        )
 
         self.atoms = atoms
-        self.logfile = self.openfile(logfile, mode='a', comm=world)
+        self.logfile = self.openfile(logfile, mode='a', comm=comm)
         self.observers = []
         self.nsteps = 0
         # maximum number of steps placeholder with maxint
         self.max_steps = 100000000
 
-        if trajectory is not None:
-            if isinstance(trajectory, str):
-                mode = "a" if append_trajectory else "w"
-                trajectory = self.closelater(Trajectory(
-                    trajectory, mode=mode, master=master
-                ))
-            self.attach(trajectory, atoms=atoms)
+        if trajectory is None:
+            return
+
+        if isinstance(trajectory, str):
+            mode = "a" if append_trajectory else "w"
+            trajectory = self.closelater(Trajectory(
+                trajectory, mode=mode, master=master, comm=comm
+            ))
+        self.attach(trajectory, atoms=atoms)
 
     def get_number_of_steps(self):
         return self.nsteps
 
     def insert_observer(
-        self, function, position=0, interval=1, *args, **kwargs
+            self, function, position=0, interval=1, *args, **kwargs
     ):
         """Insert an observer."""
         if not isinstance(function, collections.abc.Callable):
@@ -130,7 +142,6 @@ class Dynamics(IOContext):
 
         # run the algorithm until converged or max_steps reached
         while not self.converged() and self.nsteps < self.max_steps:
-
             # compute the next step
             self.step()
             self.nsteps += 1
@@ -179,14 +190,15 @@ class Optimizer(Dynamics):
     defaults = {'maxstep': 0.2}
 
     def __init__(
-        self,
-        atoms,
-        restart,
-        logfile,
-        trajectory,
-        master=None,
-        append_trajectory=False,
-        force_consistent=False,
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master=deprecated(),
+            append_trajectory=False,
+            force_consistent=False,
+            comm=world,
     ):
         """Structure optimizer object.
 
@@ -207,7 +219,7 @@ class Optimizer(Dynamics):
             Trajectory will be constructed.  Use *None* for no
             trajectory.
 
-        master: boolean
+        master: boolean (deprecated)
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
 
@@ -219,6 +231,9 @@ class Optimizer(Dynamics):
             extrapolated to 0 K).  If force_consistent=None, uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of MPI ranks.
         """
         Dynamics.__init__(
             self,
@@ -227,6 +242,7 @@ class Optimizer(Dynamics):
             trajectory,
             append_trajectory=append_trajectory,
             master=master,
+            comm=comm
         )
 
         self.force_consistent = force_consistent

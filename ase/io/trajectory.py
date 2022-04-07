@@ -1,23 +1,32 @@
+import numpy as np
 import warnings
 from typing import Tuple
 
-import numpy as np
-
 from ase import __version__
+from ase.atoms import Atoms
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator, all_properties
 from ase.constraints import dict2constraint
-from ase.calculators.calculator import PropertyNotImplementedError
-from ase.atoms import Atoms
+from ase.deprecate import deprecated, warn_if_used
 from ase.io.jsonio import encode, decode
 from ase.io.pickletrajectory import PickleTrajectory
 from ase.parallel import world
 from ase.utils import tokenize_version
 
-
 __all__ = ['Trajectory', 'PickleTrajectory']
 
 
-def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
+def _warn_master_was_used(master):
+    msg = (
+        "The 'master' keyword is deprecated, "
+        "please provide a communicator instead: Trajectory(..., comm=...)."
+    )
+    warn_if_used(master, msg)
+
+
+def Trajectory(filename, mode='r', atoms=None, properties=None,
+               master=deprecated(),
+               comm=world):
     """A Trajectory can be created in read, write or append mode.
 
     Parameters:
@@ -39,22 +48,27 @@ def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
         trajectory.  If not specified, all supported quantities are
         saved.  Possible values: energy, forces, stress, dipole,
         charges, magmom and magmoms.
-    master: bool
+    master: bool (deprecated)
         Controls which process does the actual writing. The
         default is that process number 0 does this.  If this
         argument is given, processes where it is True will write.
+    comm: MPI Communicator
+        Communicator handling the current trajectory.
 
     The atoms, properties and master arguments are ignores in read mode.
     """
+    _warn_master_was_used(master)
     if mode == 'r':
-        return TrajectoryReader(filename)
-    return TrajectoryWriter(filename, mode, atoms, properties, master=master)
+        return TrajectoryReader(filename, comm=comm)
+    return TrajectoryWriter(filename, mode, atoms, properties,
+                            master=master, comm=comm)
 
 
 class TrajectoryWriter:
     """Writes Atoms objects to a .traj file."""
+
     def __init__(self, filename, mode='w', atoms=None, properties=None,
-                 extra=[], master=None):
+                 extra=[], master=deprecated(), comm=world):
         """A Trajectory writer, in write or append mode.
 
         Parameters:
@@ -76,14 +90,21 @@ class TrajectoryWriter:
             trajectory.  If not specified, all supported quantities are
             saved.  Possible values: energy, forces, stress, dipole,
             charges, magmom and magmoms.
-        master: bool
+        master: bool (deprecated)
             Controls which process does the actual writing. The
             default is that process number 0 does this.  If this
             argument is given, processes where it is True will write.
+        comm: MPI Communicator
+            Used to determine which process must write to disk (i.e.
+            comm.rank == 0).
         """
-        if master is None:
-            master = (world.rank == 0)
-        self.master = master
+
+        _warn_master_was_used(master)
+
+        if (master is deprecated()) or (master is None):
+            master = (comm.rank == 0)
+
+        self._is_dummy_writer = not master
         self.atoms = atoms
         self.properties = properties
 
@@ -92,6 +113,13 @@ class TrajectoryWriter:
         self.multiple_headers = False
 
         self._open(filename, mode)
+
+    @property
+    def master(self):
+        warnings.warn(
+            "This attribute is deprecated and won't be provided anymore.",
+            FutureWarning)
+        return not self._is_dummy_writer
 
     def __enter__(self):
         return self
@@ -106,14 +134,13 @@ class TrajectoryWriter:
         import ase.io.ulm as ulm
         if mode not in 'aw':
             raise ValueError('mode must be "w" or "a".')
-        if self.master:
-            self.backend = ulm.open(filename, mode, tag='ASE-Trajectory')
-            if len(self.backend) > 0 and mode == 'a':
-                with Trajectory(filename) as traj:
-                    atoms = traj[0]
-                self.header_data = get_header_data(atoms)
-        else:
+        if self._is_dummy_writer:
             self.backend = ulm.DummyWriter()
+        self.backend = ulm.open(filename, mode, tag='ASE-Trajectory')
+        if len(self.backend) > 0 and mode == 'a':
+            with Trajectory(filename) as traj:
+                atoms = traj[0]
+            self.header_data = get_header_data(atoms)
 
     def write(self, atoms=None, **kwargs):
         """Write the atoms to the file.
@@ -212,7 +239,8 @@ class TrajectoryWriter:
 
 class TrajectoryReader:
     """Reads Atoms objects from a .traj file."""
-    def __init__(self, filename):
+
+    def __init__(self, filename, comm=world):
         """A Trajectory in read mode.
 
         The filename traditionally ends in .traj.
@@ -336,7 +364,6 @@ def read_atoms(backend,
                header: Tuple = None,
                traj: TrajectoryReader = None,
                _try_except: bool = True) -> Atoms:
-
     if _try_except:
         try:
             return read_atoms(backend, header, traj, False)
@@ -426,7 +453,7 @@ class OldCalculatorWrapper:
     def get_property(self, prop, atoms, allow_calculation=True):
         try:
             if (not allow_calculation and
-                self.calc.calculation_required(atoms, [prop])):
+                    self.calc.calculation_required(atoms, [prop])):
                 return None
         except AttributeError:
             pass
@@ -455,10 +482,10 @@ def convert(name):
 def main():
     import optparse
     parser = optparse.OptionParser(usage='python -m ase.io.trajectory '
-                                   'a1.traj [a2.traj ...]',
+                                         'a1.traj [a2.traj ...]',
                                    description='Convert old trajectory '
-                                   'file(s) to new format. '
-                                   'The old file is kept as a1.traj.old.')
+                                               'file(s) to new format. '
+                                               'The old file is kept as a1.traj.old.')
     opts, args = parser.parse_args()
     for name in args:
         convert(name)

@@ -10,6 +10,7 @@ from scipy.interpolate import CubicSpline
 from scipy.integrate import cumtrapz
 
 import ase.parallel
+from ase.parallel import world
 from ase.build import minimize_rotation_and_translation
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointCalculator
@@ -21,6 +22,8 @@ from ase.utils import lazyproperty, deprecated
 from ase.utils.forcecurve import fit_images
 from ase.optimize.precon import Precon, PreconImages
 from ase.optimize.ode import ode12r
+
+from ase.deprecate import deprecated as _deprecated
 
 
 class Spring:
@@ -820,7 +823,8 @@ class NEBOptimizer(Optimizer):
     def __init__(self,
                  neb,
                  restart=None, logfile='-', trajectory=None,
-                 master=None,
+                 master=_deprecated(),
+                 comm=world,
                  append_trajectory=False,
                  method='ODE',
                  alpha=0.01,
@@ -833,7 +837,8 @@ class NEBOptimizer(Optimizer):
                          logfile=logfile, trajectory=trajectory,
                          master=master,
                          append_trajectory=append_trajectory,
-                         force_consistent=False)
+                         force_consistent=False,
+                         comm=comm)
         self.neb = neb
 
         method = method.lower()

@@ -628,8 +628,14 @@ class IOContext:
         self._exitstack.close()
 
     def openfile(self, file, comm=None, mode='w'):
-        from ase.parallel import world
+        """Opens file ensuring only comm.rank 0 process writes on disk"""
         if comm is None:
+            import warnings
+            from ase.parallel import world
+            warnings.warn(
+                "Explicitly passing a MPI communicator "
+                "will be required in the future."
+            )
             comm = world
 
         if hasattr(file, 'close'):

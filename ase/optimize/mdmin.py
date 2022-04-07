@@ -1,6 +1,8 @@
 import numpy as np
 
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 
 class MDMin(Optimizer):
@@ -8,7 +10,7 @@ class MDMin(Optimizer):
     defaults = {**Optimizer.defaults, 'dt': 0.2}
 
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 dt=None, master=None):
+                 dt=None, master=deprecated(), comm=world):
         """Parameters:
 
         atoms: Atoms object
@@ -29,7 +31,7 @@ class MDMin(Optimizer):
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
         """
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master, comm=comm)
 
         if dt is None:
             self.dt = self.defaults['dt']

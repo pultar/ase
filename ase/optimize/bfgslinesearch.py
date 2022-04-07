@@ -10,6 +10,8 @@ import numpy as np
 from numpy import eye, absolute, sqrt, isinf
 from ase.utils.linesearch import LineSearch
 from ase.optimize.optimize import Optimizer
+from ase.parallel import world
+from ase.deprecate import deprecated
 
 # These have been copied from Numeric's MLab.py
 # I don't think they made the transition to scipy_core
@@ -24,7 +26,7 @@ __version__ = '0.1'
 class BFGSLineSearch(Optimizer):
     def __init__(self, atoms, restart=None, logfile='-', maxstep=None,
                  trajectory=None, c1=0.23, c2=0.46, alpha=10.0, stpmax=50.0,
-                 master=None, force_consistent=None):
+                 master=deprecated(), force_consistent=None, comm=world):
         """Optimize atomic positions in the BFGSLineSearch algorithm, which
         uses both forces and potential energy information.
 
@@ -49,7 +51,7 @@ class BFGSLineSearch(Optimizer):
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
 
-        master: boolean
+        master: boolean (deprecated)
             Defaults to None, which causes only rank 0 to save files.  If
             set to true,  this rank will save files.
 
@@ -58,6 +60,9 @@ class BFGSLineSearch(Optimizer):
             extrapolated to 0 K).  By default (force_consistent=None) uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+
+        comm: MPI Communicator
+            Used to restrict calculations to a subset of ranks.
         """
         if maxstep is None:
             self.maxstep = self.defaults['maxstep']
@@ -82,7 +87,7 @@ class BFGSLineSearch(Optimizer):
         self.replay = False
 
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+                           master, force_consistent=force_consistent, comm=comm)
 
     def read(self):
         self.r0, self.g0, self.e0, self.task, self.H = self.load()

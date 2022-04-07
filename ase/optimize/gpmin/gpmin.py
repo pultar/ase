@@ -8,14 +8,15 @@ from ase.optimize.optimize import Optimizer
 from ase.optimize.gpmin.gp import GaussianProcess
 from ase.optimize.gpmin.kernel import SquaredExponential
 from ase.optimize.gpmin.prior import ConstantPrior
+from ase.deprecate import deprecated
 
 
 class GPMin(Optimizer, GaussianProcess):
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 prior=None, kernel=None, master=None, noise=None, weight=None,
+                 prior=None, kernel=None, master=deprecated(), noise=None, weight=None,
                  scale=None, force_consistent=None, batch_size=None,
                  bounds=None, update_prior_strategy="maximum",
-                 update_hyperparams=False):
+                 update_hyperparams=False, comm=world):
         """Optimize atomic positions using GPMin algorithm, which uses both
         potential energies and forces information to build a PES via Gaussian
         Process (GP) regression and then minimizes it.
@@ -123,6 +124,9 @@ class GPMin(Optimizer, GaussianProcess):
             If bounds is False, no constraints are set in the optimization of
             the hyperparameters.
 
+        comm: MPI Communicator
+            Used to restrict calculation to a subset of MPI ranks.
+
         .. warning:: The memory of the optimizer scales as O(n²N²) where
                      N is the number of atoms and n the number of steps.
                      If the number of atoms is sufficiently high, this
@@ -190,7 +194,7 @@ class GPMin(Optimizer, GaussianProcess):
         self.y_list = []      # Training set targets
 
         Optimizer.__init__(self, atoms, restart, logfile,
-                           trajectory, master, force_consistent)
+                           trajectory, master, force_consistent, comm=comm)
         if prior is None:
             self.update_prior = True
             prior = ConstantPrior(constant=None)
