@@ -196,7 +196,7 @@ class SPHInX(FileIOCalculator):
 
         fout.write('initialGuess {\n')
         if initialGuess_waves_file:
-            fout.write('    waves { file = "waves.sxb" }\n')
+            fout.write('    waves { file = "waves.sxb"; }\n')
         else:
             fout.write('    waves { lcao {} }\n')
         if initialGuess_rho_file:
