@@ -275,11 +275,11 @@ class SPHInX(FileIOCalculator):
             labels_a.append(label_re.group(1))
 
         cell_a = np.asarray([float(cell_re.group(i)) for i in range(1, 10)]).reshape((3, 3))
-        pos_a = np.asarray(pos_a)
+        pos_a = np.asarray(pos_a) * Bohr
         labels_a = np.asarray(labels_a)
         symbols_a = np.asarray(symbols_a)
         if len(forces_a) > 0:
-            forces_a = np.asarray(forces_a)
+            forces_a = np.asarray(forces_a) * Ha / Bohr
         else:
             forces_a = None
 
@@ -330,8 +330,8 @@ class SPHInX(FileIOCalculator):
             # E = float(f[2])
             EF = float(f[3])
             E0 = float(f[4])
-        self.results['energy'] = E0
-        self.results['free_energy'] = EF
+        self.results['energy'] = E0 * Ha
+        self.results['free_energy'] = EF * Ha
 
         # read spins
         if self.parameters["spinpol"]:
