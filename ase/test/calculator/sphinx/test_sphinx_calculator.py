@@ -6,7 +6,6 @@ import pytest
 
 import numpy as np
 
-from ase.units import Ha, Bohr
 from ase.atoms import Atoms
 from ase.calculators.sphinx import SPHInX
 
@@ -19,8 +18,8 @@ def atoms_E_F_ref():
     # consistent with PAWs from
     # from "small core datasets" at http://users.wfu.edu/natalie/papers/pwpaw/newperiodictable/
     Eref = -7324.57959504685
-    Fref = [[ 5.99842999e-01, -5.34789498e-07 ,-1.99365797e-01],
-            [-5.99848203e-01 ,-5.96495978e-07,  1.99345953e-01]]
+    Fref = [[5.99842999e-01, -5.34789498e-07 ,-1.99365797e-01],
+            [-5.99848203e-01, -5.96495978e-07, 1.99345953e-01]]
 
     return atoms, Eref, Fref
 
@@ -47,6 +46,7 @@ def test_sphinx_ref(tmpdir, atoms_E_F_ref):
     assert np.isclose(F, Fref, rtol=0.05, atol=1.0e-4).all()
 
     assert time_F < time_E / 100.0
+
 
 @pytest.mark.skipif('ASE_SPHINX_COMMAND' not in os.environ, reason='Need $ASE_SPHINX_COMMAND for full SPHInX Calculator test')
 def test_sphinx_finite_diff(tmpdir):
