@@ -18,7 +18,7 @@ def atoms_E_F_ref():
     # consistent with PAWs from
     # from "small core datasets" at http://users.wfu.edu/natalie/papers/pwpaw/newperiodictable/
     Eref = -7324.57959504685
-    Fref = [[5.99842999e-01, -5.34789498e-07 ,-1.99365797e-01],
+    Fref = [[5.99842999e-01, -5.34789498e-07, -1.99365797e-01],
             [-5.99848203e-01, -5.96495978e-07, 1.99345953e-01]]
 
     return atoms, Eref, Fref
