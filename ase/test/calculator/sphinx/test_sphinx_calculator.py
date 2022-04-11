@@ -59,7 +59,7 @@ def test_sphinx_finite_diff(tmpdir):
             energy_tol=1e-6, scfDiag_maxSteps=300, scfDiag_preconditioner_scaling=0.1, directory=tmpdir)
     atoms.calc = calc
 
-    E0 = atoms.get_potential_energy()
+    # E0 = atoms.get_potential_energy()
     F0 = atoms.get_forces()
 
     dx = 0.02
