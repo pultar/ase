@@ -479,7 +479,7 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style=ASTYLE_FULL,
             ind = atom_id - 1
         else:
             ind = i
-        ind_of_id[atom_id] = i
+        ind_of_id[atom_id] = ind
         atom_type = pos_in[atom_id][0]
         positions[ind, :] = [pos_in[atom_id][1],
                              pos_in[atom_id][2],
