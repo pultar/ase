@@ -41,7 +41,7 @@ class EspressoProfile:
     def run(self, directory, inputfile, outputfile):
         from subprocess import check_call
         argv = list(self.argv) + ['-in', str(inputfile)]
-        with open(outputfile, 'wb') as fd:
+        with open(directory / outputfile, 'wb') as fd:
             check_call(argv, stdout=fd, cwd=directory)
 
     def socketio_argv_unix(self, socket):
@@ -61,7 +61,6 @@ class EspressoTemplate(CalculatorTemplate):
         self.outputname = 'espresso.pwo'
 
     def write_input(self, directory, atoms, parameters, properties):
-        directory.mkdir(exist_ok=True, parents=True)
         dst = directory / self.inputname
         write(dst, atoms, format='espresso-in', properties=properties,
               **parameters)

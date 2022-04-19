@@ -475,11 +475,11 @@ def read_lammps_data(fileobj, Z_of_type=None, atom_style=ASTYLE_FULL,
     # copy per-atom quantities from read-in values
     for (i, atom_id) in enumerate(pos_in.keys()):
         # by id
-        ind_of_id[atom_id] = i
         if sort_by_id:
             ind = atom_id - 1
         else:
             ind = i
+        ind_of_id[atom_id] = i
         atom_type = pos_in[atom_id][0]
         positions[ind, :] = [pos_in[atom_id][1],
                              pos_in[atom_id][2],

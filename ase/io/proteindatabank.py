@@ -24,7 +24,6 @@ def read_atom_line(line_full):
     Read atom line from pdb format
     HETATM    1  H14 ORTE    0       6.301   0.693   1.919  1.00  0.00        H
     """
-
     line = line_full.rstrip('\n')
     type_atm = line[0:6]
     if type_atm == "ATOM  " or type_atm == "HETATM":
@@ -35,7 +34,11 @@ def read_atom_line(line_full):
         resname = line[17:21]
         # chainid = line[21]        # Not used
 
-        resseq = int(line[22:26].split()[0])  # sequence identifier
+        seq = line[22:26].split()
+        if len(seq) == 0:
+            resseq = 1
+        else:
+            resseq = int(seq[0])  # sequence identifier
         # icode = line[26]          # insertion code, not used
 
         # atomic coordinates
@@ -166,6 +169,7 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
             occ = []
             bfactor = []
             residuenames = []
+            residuenumbers = []
             atomtypes = []
             symbols = []
             positions = []
@@ -181,17 +185,9 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
 @writer
 def write_proteindatabank(fileobj, images, write_arrays=True):
     """Write images to PDB-file."""
+    rot_t = None
     if hasattr(images, 'get_positions'):
         images = [images]
-
-    if images[0].get_pbc().any():
-        currentcell = images[0].get_cell()
-        cellpar = currentcell.cellpar()
-        exportedcell, rot_t = currentcell.standard_form()
-        # ignoring Z-value, using P1 since we have all atoms defined explicitly
-        format = 'CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1\n'
-        fileobj.write(format % (cellpar[0], cellpar[1], cellpar[2],
-                                cellpar[3], cellpar[4], cellpar[5]))
 
     #     1234567 123 6789012345678901   89   67   456789012345678901234567 890
     format = ('ATOM  %5d %4s MOL     1    %8.3f%8.3f%8.3f%6.2f%6.2f'
@@ -205,9 +201,18 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
     natoms = len(symbols)
 
     for n, atoms in enumerate(images):
+        if atoms.get_pbc().any():
+            currentcell = atoms.get_cell()
+            cellpar = currentcell.cellpar()
+            _, rot_t = currentcell.standard_form()
+            # ignoring Z-value, using P1 since we have all atoms defined explicitly
+            cellformat = 'CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1\n'
+            fileobj.write(cellformat % (cellpar[0], cellpar[1], cellpar[2],
+                                        cellpar[3], cellpar[4], cellpar[5]))
         fileobj.write('MODEL     ' + str(n + 1) + '\n')
         p = atoms.get_positions()
-        p = p.dot(rot_t.T)
+        if rot_t is not None:
+            p = p.dot(rot_t.T)
         occupancy = np.ones(len(atoms))
         bfactor = np.zeros(len(atoms))
         if write_arrays:

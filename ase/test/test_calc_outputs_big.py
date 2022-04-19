@@ -1,6 +1,5 @@
-import pytest
 import numpy as np
-
+import pytest
 from ase.outputs import Properties, all_outputs
 
 
@@ -16,24 +15,28 @@ def props(rng):
 
     results = dict(
         natoms=natoms,
-        energy=rng.rand(),
-        free_energy=rng.rand(),
-        energies=rng.rand(natoms),
-        forces=rng.rand(natoms, 3),
-        stress=rng.rand(6),
-        stresses=rng.rand(natoms, 6),
+        energy=rng.random(),
+        free_energy=rng.random(),
+        energies=rng.random(natoms),
+        forces=rng.random((natoms, 3)),
+        stress=rng.random(6),
+        stresses=rng.random((natoms, 6)),
         nspins=nspins,
         nkpts=nkpts,
         nbands=nbands,
-        eigenvalues=rng.rand(nspins, nkpts, nbands),
-        occupations=rng.rand(nspins, nkpts, nbands),
-        fermi_level=rng.rand(),
-        ibz_kpoints=rng.rand(nkpts, 3),
-        kpoint_weights=rng.rand(nkpts),
-        dipole=rng.rand(3),
-        charges=rng.rand(natoms),
-        magmom=rng.rand(),
-        magmoms=rng.rand(natoms),
+        eigenvalues=rng.random((nspins, nkpts, nbands)),
+        occupations=rng.random((nspins, nkpts, nbands)),
+        fermi_level=rng.random(),
+        ibz_kpoints=rng.random((nkpts, 3)),
+        kpoint_weights=rng.random(nkpts),
+        dipole=rng.random(3),
+        charges=rng.random(natoms),
+        magmom=rng.random(),
+        magmoms=rng.random(natoms),
+        polarization=rng.random(3),
+        born_charges=rng.random((natoms, 3, 3)),
+        dielectric_tensor=rng.random((3, 3)),
+
     )
     return Properties(results)
 
