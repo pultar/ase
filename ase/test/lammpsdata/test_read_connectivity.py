@@ -134,7 +134,7 @@ def test_cell(lammpsdata):
 
 
 def test_connectivity(lammpsdata):
-    atoms, sorted = lammpsdata
+    atoms, sorted_atoms = lammpsdata
 
     parser_data = {
         'bonds': (0, 1),
@@ -144,6 +144,6 @@ def test_connectivity(lammpsdata):
 
     for label, permutation in parser_data.items():
         tuples, types = parse_dicts(atoms, permutation, label)
-        tuples = sorted[tuples.flatten()].reshape(tuples.shape)
+        tuples = sorted_atoms[tuples.flatten()].reshape(tuples.shape)
         assert np.all(tuples == REFERENCE[label]['atoms'])
         assert np.all(types == REFERENCE[label]['types'])
