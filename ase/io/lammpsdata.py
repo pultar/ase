@@ -73,9 +73,9 @@ def _store_angles(angles_in, ind_of_id, N):
 def _store_dihedrals(dih_in, ind_of_id, N):
     """Store the dihedrals as read in an array to be added to an Atoms object.
 
-    The entry for atom j in the array is a dict with the dihedrals type k as
+    The entry for atom i in the array is a dict with the dihedrals type k as
     key and a list of all atom trios which form a dihedral of type k, with atom
-    j as second atom.
+    i as first atom.
 
     So the following entry in a LAMMPS datafile Dihedrals section:
 
@@ -83,9 +83,9 @@ def _store_dihedrals(dih_in, ind_of_id, N):
 
     Will result in:
 
-        dihedrals[28] = {4: [(16,29,20)]}
+        dihedrals[16] = {4: [(28,29,20)]}
 
-    The entry for the i-j-k-l dihedral is stored in dihedrals[j] as (i, k, l).
+    The entry for the i-j-k-l dihedral is stored in dihedrals[i] as (j, k, l).
     """
     dihedrals = [{} for _ in range(N)]
     for dih_type, a1, a2, a3, a4 in dih_in:
@@ -94,9 +94,9 @@ def _store_dihedrals(dih_in, ind_of_id, N):
         ind_a3 = ind_of_id[a3]
         ind_a4 = ind_of_id[a4]
         if dih_type in dihedrals[ind_a2]:
-            dihedrals[ind_a2][dih_type].append((ind_a1, ind_a3, ind_a4))
+            dihedrals[ind_a1][dih_type].append((ind_a2, ind_a3, ind_a4))
         else:
-            dihedrals[ind_a2][dih_type] = [(ind_a1, ind_a3, ind_a4)]
+            dihedrals[ind_a1][dih_type] = [(ind_a2, ind_a3, ind_a4)]
     return np.array(dihedrals)
 
 
@@ -630,9 +630,9 @@ def _prepare_dihedrals(atoms):
         return None
 
     dihedrals = []
-    for at2, atom_dihedrals in enumerate(atoms.arrays['dihedrals']):
+    for at1, atom_dihedrals in enumerate(atoms.arrays['dihedrals']):
         for dihedral_type in atom_dihedrals:
-            for at1, at3, at4 in atom_dihedrals[dihedral_type]:
+            for at2, at3, at4 in atom_dihedrals[dihedral_type]:
                 # ID type at1 at2 at3
                 # ID is list index +1
                 # FIXME: dihedral IDs are not preserved.
