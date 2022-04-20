@@ -5,6 +5,7 @@ import pytest
 from ase.atoms import Atoms
 from ase.calculators.qmmm import ForceConstantCalculator
 from ase.calculators.singlepoint import SinglePointCalculator
+import ase.db
 import ase.vibrations.finite_diff
 
 
@@ -76,12 +77,15 @@ indexed_labels = labels_from_list(indexed_displacement_spec)
                            list(zip(indexed_displacements,
                                     indexed_labels)))])
 def test_get_displacements_with_identities(options, expected_output):
-    output = ase.vibrations.finite_diff.get_displacements_with_identities(simple_dimer(), **options)
+    output = ase.vibrations.finite_diff.get_displacements_with_identities(
+        simple_dimer(), **options)
 
-    for ((atoms, label), (expected_atoms, expected_label)) in zip(output, expected_output):
+    for ((atoms, label), (expected_atoms, expected_label)
+         ) in zip(output, expected_output):
         assert label == expected_label
         assert_array_almost_equal(atoms.positions, expected_atoms.positions)
-        assert atoms.get_chemical_symbols() == expected_atoms.get_chemical_symbols()
+        assert (atoms.get_chemical_symbols()
+                == expected_atoms.get_chemical_symbols())
 
 
 def attach_forces(atoms, forces):
@@ -103,5 +107,36 @@ def test_read_axis_aligned_forces(random_dimer):
 
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
         random_dimer, displacements)
+
+    assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+
+def test_db_workflow(testdir, random_dimer):
+    """Check that Hessian is recovered when using database workflow"""
+
+    ref_hessian = random_dimer.calc.D
+    metadata = {'phase': 'random'}
+    db_file = 'vibtest.db'
+
+    ase.vibrations.finite_diff.write_displacements_to_db(random_dimer,
+                                                         db=db_file,
+                                                         metadata=metadata)
+
+    with ase.db.connect(db_file, append=True) as db:
+        for row in db.select(**metadata):
+            atoms = row.toatoms()
+            atoms.calc = ForceConstantCalculator(D=ref_hessian,
+                                                 ref=random_dimer,
+                                                 f0=np.zeros((2, 3)))
+            atoms.get_forces()
+            db.write(atoms, name='extra', **metadata)
+
+        # Write some irrelevant atoms to DB with different metadata
+        junk = Atoms('H')
+        junk.calc = SinglePointCalculator(junk, forces=[[1., 0., 0.]])
+        db.write(junk, name='extra')
+
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_db(
+        ref_atoms=random_dimer, db=db_file, metadata=metadata)
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)

@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Iterator, List, Tuple, Union, Sequence
+from typing import Dict, Iterator, List, Tuple, Union, Sequence
 
 import numpy as np
 from numpy.linalg import lstsq
@@ -71,7 +71,7 @@ def get_displacements_with_identities(atoms: Atoms,
     displacements_labels = []
     for displacement, identity in _get_displacements_with_identities(
             atoms, **disp_kwargs):
-    
+
         identity['direction_index'] = (identity['sign'] + 1) // 2
         label = ('{atom_index}-{cartesian_axis}-{direction_index}'
                  .format(**identity))
@@ -147,11 +147,48 @@ def write_displacements_to_db(atoms: Atoms,
         db = ase.db.connect(db, append=True)      # type: Database
 
     for (displacement, label) in get_displacements_with_identities(
-        atoms, **disp_kwargs):
-        db.write(atoms, label=label, **metadata)
+            atoms, **disp_kwargs):
+        db.write(displacement, label=label, **metadata)
 
     return db
 
+
+def read_axis_aligned_db(ref_atoms: Atoms,
+                         db: Union[Database, str] = 'displacements.db',
+                         metadata: Dict[str, str] = None,
+                         **kwargs) -> VibrationsData:
+    """Read axis-aligned displacements from ASE DB and get VibrationsData
+
+    This is intended to be used with a set of displacements from
+    ``write_displacements_to_db`` or ``get_displacements``, but it is possible
+    to combine multiple sets of displacements in order to perform e.g. 4-point
+    finite differences.
+
+    Args:
+        ref_atoms: reference structure (from which displacements are
+            interpreted)
+        db: ASE database containing displaced structures with computed forces.
+            (Entries without forces may be present and will be ignored.)
+        metadata: Dict of DB keys/values identifying rows to consider. This may
+            be used to e.g. store multiple molecules in the same database as
+            part of a high-throughput workflow.
+
+        kwargs: Remaining arguments will be passed to read_axis_aligned_forces.
+
+    Returns:
+        VibrationsData
+
+    """
+    if metadata is None:
+        metadata = {}
+
+    with ase.db.connect(db) as db_connection:
+        displacement_rows = db_connection.select('fmax>0', **metadata)
+        displacements = [row.toatoms() for row in displacement_rows]
+
+    return read_axis_aligned_forces(ref_atoms,
+                                    displacements,
+                                    **kwargs)
 
 def read_axis_aligned_forces(ref_atoms: Atoms,
                              displacements: Sequence[Atoms],
@@ -224,7 +261,8 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
         arranged_displacements[atom_index][cartesian_direction].append(
             {'h': h, 'forces': forces})
 
-    # We could inspect arranged_displacements to determine if abs(h) is consistent...
+    # We could inspect arranged_displacements to determine
+    # if abs(h) is consistent...
 
     n_atoms = len(ref_atoms)
     hessian = np.empty([n_atoms * 3, n_atoms * 3])
