@@ -523,6 +523,50 @@ def test_bad_hessian(n2_data):
         with pytest.raises(ValueError):
             VibrationsData(n2_data['atoms'], bad_hessian)
 
+    def test_frederiksen(random_dimer):
+        """Check that Hessian is recovered perfectly when using Hessian calculator
+
+        For Frederiksen method this is only the case when Hessian conserves
+        momentum; use a symmetric array in which each row sums to zero.
+
+        """
+        ref_hessian = np.array([[-1.0, +0.50, +0.50, +0.00, +0.0, +0.0],
+                                [+0.5, -0.75, +0.25, +0.00, +0.0, +0.0],
+                                [+0.5, +0.25, -1.00, +0.25, +0.0, +0.0],
+                                [+0.0, +0.00, +0.25, +0.25, -0.5, +0.0],
+                                [+0.0, +0.00, +0.00, -0.50, +1.0, -0.5],
+                                [+0.0, +0.00, +0.00, +0.00, -0.5, +0.5]])
+
+
+        vib_data = VibrationsData.from_2d(Atoms('N2',
+                                                positions=[[0., 0., 0.],
+                                                           [0., 0., 1.]]),
+                                          ref_hessian)
+
+        # Sum rules should do nothing to already-satisfactory Hessian
+        assert_array_almost_equal(
+            vib_data.apply_sum_rules(method='frederiksen').get_hessian_2d(),
+            ref_hessian)
+
+        # Correction should undo changes to the diagonal
+        mod_hessian = ref_hessian + np.eye(6)
+        vib_data = VibrationsData.from_2d(Atoms('N2',
+                                                positions=[[0., 0., 0.],
+                                                           [0., 0., 1.]]),
+                                          mod_hessian)
+        vib_data = vib_data.apply_sum_rules(method='frederiksen')
+        assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+        # Sum rule should be correct when applied to a random starting-point;
+        # all rows shoudl sum to zero
+        vib_data = VibrationsData.from_2d(Atoms('N2',
+                                                positions=[[0., 0., 0.],
+                                                           [0., 0., 1.]]),
+                                          np.random.random([6, 6]))
+        vib_data = vib_data.apply_sum_rules(method='frederiksen')
+        assert_array_almost_equal(vib_data.get_hessian_2d.sum(axis=1),
+                                  np.zeros(6))
+
 
 def test_bad_hessian2d(n2_data):
     bad_hessians = (None, 'fish', 1,
