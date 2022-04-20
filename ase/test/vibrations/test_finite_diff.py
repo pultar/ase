@@ -102,7 +102,7 @@ def test_read_axis_aligned_forces(random_dimer):
                                                     f0=np.zeros((2, 3)))
 
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
-        random_dimer, displacements, method='standard')
+        random_dimer, displacements)
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
@@ -129,7 +129,7 @@ def test_frederiksen(random_dimer):
                                                     f0=np.zeros((2, 3)))
 
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
-        random_dimer, displacements, method='frederiksen')
+        random_dimer, displacements).apply_sum_rules()
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
@@ -142,7 +142,7 @@ def test_frederiksen(random_dimer):
                                                     f0=np.zeros((2, 3)))
 
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
-        random_dimer, displacements, method='frederiksen')
+        random_dimer, displacements).apply_sum_rules(method='frederiksen')
 
     with pytest.raises(AssertionError):
         assert_array_almost_equal(vib_data.get_hessian_2d(), mod_hessian)

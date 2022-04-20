@@ -625,3 +625,27 @@ class VibrationsData:
         new_atoms.set_masses(masses)
         return self.__class__(new_atoms, self.get_hessian(),
                               indices=self.get_indices())
+
+    def apply_sum_rules(self: VD, method='frederiksen') -> VD:
+        """Apply sum rule correction(s) to Hessian matrix
+
+        Numerical errors can lead to violations in fundamental properties of
+        the Hessian. Imposing these properties as a correction can clean up the
+        results, but if significant violations are present then it may be
+        necessary to go back and perform more accurate calculations.
+
+        Available corrections:
+            - "Frederiksen"; set each diagonal element to the negative of the
+              sum of elements in its row. This enforces Newton's third law.
+
+        """
+        hessian = self.get_hessian_2d()
+        
+        if method.lower() == 'frederiksen':
+            np.fill_diagonal(hessian, hessian.diagonal() - hessian.sum(axis=1))
+        else:
+            raise ValueError(f'Sum rule "{method}" is not recognised.')
+
+        return self.from_2d(self.get_atoms(),
+                            hessian,
+                            indices=self.get_indices())

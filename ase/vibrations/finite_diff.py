@@ -155,7 +155,6 @@ def write_displacements_to_db(atoms: Atoms,
 
 def read_axis_aligned_forces(ref_atoms: Atoms,
                              displacements: Sequence[Atoms],
-                             method: str = 'standard',
                              use_equilibrium_forces: bool = None,
                              indices: Sequence[int] = None,
                              direction: str = None,
@@ -186,7 +185,6 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
     """
 
     arranged_displacements = [[[], [], []] for _ in ref_atoms]
-    assert method.lower() in ('standard', 'frederiksen')
 
     if use_equilibrium_forces:
         if ref_atoms.calc is None:
@@ -251,9 +249,5 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
                                     rcond=None)[0]
 
             hessian[atom_index * 3 + cartesian_index] = hessian_element
-
-    if method.lower() == 'frederiksen':
-        # Impose momentum conservation by replacing diagonal elements
-        np.fill_diagonal(hessian, hessian.diagonal() - hessian.sum(axis=1))
 
     return VibrationsData.from_2d(ref_atoms, hessian, indices=indices)
