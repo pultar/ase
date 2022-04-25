@@ -491,11 +491,8 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         else:
             lastdipole = None
 
-        de = (float(lastscf.find('i[@name="e_0_energy"]').text) -
-              float(lastscf.find('i[@name="e_fr_energy"]').text))
-
-        free_energy = float(step.find('energy/i[@name="e_fr_energy"]').text)
-        energy = free_energy + de
+        energy = float(lastscf.find('i[@name="e_0_energy"]').text)
+        free_energy = float(lastscf.find('i[@name="e_fr_energy"]').text)
 
         cell = np.zeros((3, 3), dtype=float)
         for i, vector in enumerate(
