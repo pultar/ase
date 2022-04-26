@@ -507,7 +507,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
               float(lastscf.find('i[@name="e_fr_energy"]').text))
         if has_stress:
             volume = np.linalg.det(cell)
-            PV = pstress / 10 * GPa * volume
+            PV = pstress / 10 * volume / 1.60217733E2  # this is GPa in vasp
         else:
             PV = 0.
         free_energy = float(step.find('energy/i[@name="e_fr_energy"]').text) - PV
