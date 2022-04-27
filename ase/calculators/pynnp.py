@@ -158,8 +158,10 @@ class PyNNP(Calculator):
                 weight_file_format = 'weights.%03zu.data',
                 scaling_file       = 'scaling.data',
                 use_unscaled_symmetry_functions = False,
-                **kwargs):
-        Calculator.__init__(self, **kwargs)
+                atoms=None, 
+                #**kwargs
+                ):
+        
 
         assert len(elements) > 0
         self.elements = elements
@@ -171,6 +173,8 @@ class PyNNP(Calculator):
         self.G = None
         self.dGdr = None
         self.dEdG = None
+        #print(kwargs)
+        Calculator.__init__(self)#, atoms)#**kwargs)
 
     def initialize(self):#, atoms):
         self.elementmap = elementmap_from_element_list(self.elements)
