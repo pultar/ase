@@ -139,6 +139,32 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
             print(atom.index, atom.element, nnp_mode.elementMap[atom.element], atom.energy, atom.f.r)
             
 
+def parse_input_file(input_file): 
+    
+    fid=open(input_file,'r')
+    lines_with_comments=fid.readlines()
+    fid.close()
+    
+    parameters = {}
+    symfunctions = []
+    for line in lines_with_comments:
+        if line[0] != '#':
+            comment_free_line = line.split('#')[0]
+            line_parts = comment_free_line.split()
+            if len(line_parts)>0:# skip empty
+                if line_parts[0] == 'symfunction_short': #the symfunction keywords are probably the only ones that repeat.
+                    symfunctions.append(line_parts)
+                else:
+                    if len(line_parts)==1:
+                        line_parts.append(None) # some parameters are on-off flags so we need a value to store, maybe the value should be '' to make writting easier
+                    parameters[line_parts[0]]=line_parts[1:]
+                    ### we could do this so that we don't create single element lists
+                    #if len(line_parts)>2:
+                    #    parameters[line_parts[0]]=line_parts[1:]
+                    #else:   
+                    #    parameters[line_parts[0]]=line_parts[1]
+                    
+    return parameters, symfunctions
 
 
 class PyNNP(Calculator):
@@ -153,18 +179,15 @@ class PyNNP(Calculator):
     
 
     def __init__(self, 
-                elements, # looks ['Nb', 'Ti', 'Zr', 'O'], could be read from the input file in the future
                 input_file         = 'input.nn',
                 weight_file_format = 'weights.%03zu.data',
                 scaling_file       = 'scaling.data',
                 use_unscaled_symmetry_functions = False,
                 atoms=None, 
-                #**kwargs
+                **kwargs
                 ):
         
-
-        assert len(elements) > 0
-        self.elements = elements
+        self.elements = None
         self.input_file = input_file
         self.weight_file_format = weight_file_format
         self.scaling_file       = scaling_file
@@ -173,10 +196,14 @@ class PyNNP(Calculator):
         self.G = None
         self.dGdr = None
         self.dEdG = None
-        #print(kwargs)
-        Calculator.__init__(self)#, atoms)#**kwargs)
+        self.input_parameters = {}
+        self.input_symmetry_functions = []
+        Calculator.__init__(self, **kwargs)
 
     def initialize(self):#, atoms):
+        self.input_parameters, self.input_symmetry_functions = parse_input_file(self.input_file)
+        self.elements = self.input_parameters['elements']
+    
         self.elementmap = elementmap_from_element_list(self.elements)
         self.nnp_mode = setup_nnp_mode( self.input_file, self.scaling_file, self.weight_file_format,
                                         self.use_unscaled_symmetry_functions) 
