@@ -184,7 +184,7 @@ class PyNNP(Calculator):
                 scaling_file       = 'scaling.data',
                 use_unscaled_symmetry_functions = False,
                 atoms=None, 
-                **kwargs
+                **kwargs,
                 ):
         
         self.elements = None
