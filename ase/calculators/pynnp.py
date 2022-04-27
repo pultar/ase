@@ -108,23 +108,35 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
     # Collect force contributions.
     nnp_mode.calculateForces(nnp_str)
 
-    print("")
 
-    print("------------")
-    print("Structure:")
-    print("------------")
-    print("Cell:") 
-    print('a]',nnp_str.box[0])
-    print('b]',nnp_str.box[1])
-    print('c]',nnp_str.box[2])
-    print("numAtoms           : ", nnp_str.numAtoms)
-    print("numAtomsPerElement : ", nnp_str.numAtomsPerElement)
-    print("------------")
-    print("Energy (Ref) : ", nnp_str.energyRef)
-    print("Energy (NNP) : ", nnp_str.energy)
-    print("------------")
-    for atom in nnp_str.atoms:
-        print(atom.index, atom.element, nnp_mode.elementMap[atom.element], atom.f.r)
+    if False:
+        print("dir(nnp_str):")
+        for meth in dir(nnp_str):
+            print(meth)
+
+        print("dir(nnp_mode):")
+        for meth in dir(nnp_mode):
+            print(meth)
+
+        print("dir(nnp_str.atoms[0]):")
+        for meth in dir(nnp_str.atoms[0]):
+            print(meth)
+
+        print("------------")
+        print("Structure:")
+        print("------------")
+        print("Cell:") 
+        print('a]',nnp_str.box[0])
+        print('b]',nnp_str.box[1])
+        print('c]',nnp_str.box[2])
+        print("numAtoms           : ", nnp_str.numAtoms)
+        print("numAtomsPerElement : ", nnp_str.numAtomsPerElement)
+        print("------------")
+        print("Energy (Ref) : ", nnp_str.energyRef)
+        print("Energy (NNP) : ", nnp_str.energy)
+        print("------------")
+        for atom in nnp_str.atoms:
+            print(atom.index, atom.element, nnp_mode.elementMap[atom.element], atom.energy, atom.f.r)
             
 
 
@@ -156,6 +168,9 @@ class PyNNP(Calculator):
         self.scaling_file       = scaling_file
         self.use_unscaled_symmetry_functions = use_unscaled_symmetry_functions
         self.nnp_mode = None
+        self.G = None
+        self.dGdr = None
+        self.dEdG = None
 
     def initialize(self):#, atoms):
         self.elementmap = elementmap_from_element_list(self.elements)
@@ -176,11 +191,21 @@ class PyNNP(Calculator):
         calculate_on_nnp_structure(nnp_str,self.nnp_mode)
         
         self.results['energy'] = nnp_str.energy
-        #self.results['energies'] = self.energies
-        #self.results['free_energy'] = self.energy
-        #self.results['forces'] = self.forces
+        self.results['free_energy'] = nnp_str.energy
+        energies=np.zeros(len(atoms))
+        forces  =np.zeros((len(atoms),3))
+        self.G = []
+        self.dGdR = []
+        self.dEdG = []
+        for i in range(len(atoms)):
+            energies[i] = nnp_str.atoms[i].energy 
+            forces[i]    = nnp_str.atoms[i].f.r
+            self.G.append(nnp_str.atoms[i].G)
+            self.dGdR.append(nnp_str.atoms[i].dGdr)
+            self.dEdG.append(nnp_str.atoms[i].dEdG)
         
-        
+        self.results['energies'] = energies
+        self.results['forces'] = forces
         
         if 'stress' in properties:
             raise PropertyNotImplementedError
