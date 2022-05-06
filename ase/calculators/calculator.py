@@ -448,13 +448,13 @@ class BaseCalculator(GetPropertiesMixin):
     # any other object (such as None).
     _deprecated = object()
 
-    def __init__(self, parameters=None, use_cache=True):
+    def __init__(self, parameters: Union[Dict[str, Any], Parameters, None] = None, use_cache=True):
         if parameters is None:
             parameters = {}
 
-        self.parameters = dict(parameters)
-        self.atoms = None
-        self.results = {}
+        self.parameters: Dict[str, Any] = dict(parameters)  # calculational parameters
+        self.atoms: Optional[Atoms] = None  # copy of atoms object from last calculation
+        self.results: Dict[str, Any] = {}  # calculated properties (energy, forces, ...)
         self.use_cache = use_cache
 
     def calculate_properties(self, atoms, properties):
@@ -564,9 +564,10 @@ class Calculator(BaseCalculator):
     'Whether we purge the results following any change in the set() method.  '
     'Most (file I/O) calculators will probably want this.'
 
-    def __init__(self, restart=None,
+    def __init__(self, restart: Optional[str] = None,
                  ignore_bad_restart_file=BaseCalculator._deprecated,
-                 label=None, atoms=None, directory='.',
+                 label: Optional[str] = None, atoms: Optional[Atoms] = None,
+                 directory: Union[str, os.PathLike] = '.',
                  **kwargs):
         """Basic calculator implementation.
 
@@ -591,10 +592,8 @@ class Calculator(BaseCalculator):
             attached.  When restarting, atoms will get its positions and
             unit-cell updated from file.
         """
-        self.atoms = None  # copy of atoms object from last calculation
-        self.results = {}  # calculated properties (energy, forces, ...)
-        self.parameters = None  # calculational parameters
-        self._directory = None  # Initialize
+        super().__init__(parameters=kwargs.get("parameters", None))
+        self._directory: str = "TMP"  # Initialize (is updated some lines below)
 
         if ignore_bad_restart_file is self._deprecated:
             ignore_bad_restart_file = False
@@ -617,8 +616,8 @@ class Calculator(BaseCalculator):
                 else:
                     raise
 
-        self.directory = directory
-        self.prefix = None
+        self.directory = directory  # type: ignore # https://github.com/python/mypy/issues/3004
+        self.prefix: Optional[str] = None
         if label is not None:
             if self.directory == '.' and '/' in label:
                 # We specified directory in label, and nothing in the diretory key
@@ -633,7 +632,7 @@ class Calculator(BaseCalculator):
                                  'Please omit "/" in label.'
                                  .format(self.directory, label))
 
-        if self.parameters is None:
+        if not self.parameters:
             # Use default parameters if they were not read from file:
             self.parameters = self.get_default_parameters()
 
