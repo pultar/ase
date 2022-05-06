@@ -470,7 +470,8 @@ class BaseCalculator(GetPropertiesMixin):
         if parameters is None:
             parameters = {}
 
-        self.parameters: Dict[str, Any] = dict(parameters)  # calculational parameters
+        self.parameters: Dict[str, Any] = None  # type: ignore # workaround for LAMMPS.__setattr__
+        self.parameters = dict(parameters)  # calculational parameters
         self.atoms: Optional[Atoms] = None  # copy of atoms object from last calculation
         self.results: Dict[str, Any] = {}  # calculated properties (energy, forces, ...)
         self.use_cache = use_cache
