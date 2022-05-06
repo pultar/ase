@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Sequence, Union, Dict
+from typing import Sequence, Union, Dict, Mapping as TMapping
 
 import numpy as np
 
@@ -98,7 +98,7 @@ class ArrayProperty(Property):
 ShapeSpec = Union[str, int]
 
 
-def _build_outputs() -> Mapping[str, Property]:
+def _build_outputs() -> TMapping[str, Property]:
     _all_outputs: Dict[str, Property] = {}
 
     def _defineprop(
@@ -118,7 +118,7 @@ def _build_outputs() -> Mapping[str, Property]:
         else:
             prop = ArrayProperty(name, dtype, shape)
 
-        assert name not in all_outputs, name
+        assert name not in _all_outputs, name
         _all_outputs[name] = prop
         return prop
 
@@ -153,7 +153,7 @@ def _build_outputs() -> Mapping[str, Property]:
     return _all_outputs
 
 
-all_outputs: Mapping[str, Property] = _build_outputs()
+all_outputs: TMapping[str, Property] = _build_outputs()
 
 
 # We might want to allow properties that are part of Atoms, such as
