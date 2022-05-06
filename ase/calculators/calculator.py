@@ -348,13 +348,15 @@ class KPoints:
 
 
 def kpts2kpts(kpts: Union[Dict[str, Any], KPoints, Sequence[int], None],
-              atoms: Optional[Atoms] = None) -> KPoints:
+              atoms: Optional[Atoms] = None) -> Any:
     from ase.dft.kpoints import monkhorst_pack
 
     if kpts is None:
         return KPoints()
 
-    if isinstance(kpts, KPoints):
+    if isinstance(kpts, KPoints) or hasattr(kpts, 'kpts'):
+        # TODO could use a typing.Protocol here, because things can be returned
+        #      here that are not actually KPoints instances
         return kpts
 
     if isinstance(kpts, dict):
