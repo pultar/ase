@@ -260,7 +260,7 @@ def row2dct(row,
 
     from ase.db.core import float_to_time_string, now
 
-    dct = {}
+    dct: Dict[str, Any] = {}
 
     atoms = Atoms(cell=row.cell, pbc=row.pbc)
     dct['size'] = kptdensity2monkhorstpack(atoms,

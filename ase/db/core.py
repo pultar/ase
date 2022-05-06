@@ -76,8 +76,8 @@ invop = {'<': '>=', '<=': '>', '>=': '<', '>': '<=', '=': '!=', '!=': '='}
 
 word = re.compile('[_a-zA-Z][_0-9a-zA-Z]*$')
 
-reserved_keys = set(all_properties +
-                    all_changes +
+reserved_keys = set(list(all_properties) +
+                    list(all_changes) +
                     list(atomic_numbers) +
                     ['id', 'unique_id', 'ctime', 'mtime', 'user',
                      'fmax', 'smax',
