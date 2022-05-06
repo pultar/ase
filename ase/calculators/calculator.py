@@ -687,9 +687,8 @@ class Calculator(BaseCalculator):
         self._directory = str(Path(directory))  # Normalize path.
 
     @property
-    def label(self) -> str:
+    def label(self) -> Optional[str]:
         if self.directory == '.':
-            assert self.prefix is not None
             return self.prefix
 
         # Generally, label ~ directory/prefix
@@ -731,7 +730,7 @@ class Calculator(BaseCalculator):
         * label='dir1/abc': (directory='dir1', prefix='abc')
         * label=None: (directory='.', prefix=None)
         """
-        self.label = label  # type: ignore # https://github.com/python/mypy/issues/3004
+        self.label = label
 
     def get_default_parameters(self) -> Parameters:
         return Parameters(copy.deepcopy(self.default_parameters))
