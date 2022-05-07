@@ -31,6 +31,7 @@ __all__ = ['read_xyz', 'write_xyz', 'iread_xyz']
 
 PROPERTY_NAME_MAP = {'positions': 'pos',
                      'numbers': 'Z',
+                     'masses': 'mass',
                      'charges': 'charge',
                      'symbols': 'species'}
 
@@ -474,6 +475,11 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             duplicate_numbers = arrays['numbers']
         del arrays['numbers']
 
+    masses = None
+    if 'masses' in arrays:
+        masses = arrays['masses']
+        del arrays['masses']
+
     charges = None
     if 'charges' in arrays:
         charges = arrays['charges']
@@ -487,6 +493,7 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
     atoms = Atoms(symbols=symbols,
                   positions=positions,
                   numbers=numbers,
+                  masses=masses,
                   charges=charges,
                   cell=cell,
                   pbc=pbc,
