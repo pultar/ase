@@ -44,6 +44,9 @@ def setup_nnp_mode(input_file, scaling_file, weight_file_format,
     # Initialize NNP setup (symmetry functions only).
     nnp_mode = pynnp.Mode()
     nnp_mode.initialize()
+    # I think setupGeneric is only for unit testing
+    #if hasattr(nnp_mode, 'setupGeneric'):  
+    #    nnp_mode.setupGeneric()
     nnp_mode.loadSettingsFile(input_file)
     nnp_mode.setupNormalization()
 
@@ -51,13 +54,13 @@ def setup_nnp_mode(input_file, scaling_file, weight_file_format,
     nnp_mode.setupElements()
     nnp_mode.setupCutoff()
     
-    #print('nnp_mode.setupSymmetryFunctions()')
+    # each step prints to stdout a bunch of info, this one dumps the most.
     nnp_mode.setupSymmetryFunctions()
-    #print('nnp_mode.setupSymmetryFunctionMemory()')
-    nnp_mode.setupSymmetryFunctionMemory()
-    #print('nnp_mode.setupSymmetryFunctionCache()')
-    nnp_mode.setupSymmetryFunctionCache()
-    #print('nnp_mode.setupSymmetryFunctionGroups()')
+    # not all versions have these features
+    if hasattr(nnp_mode, 'setupSymmetryFunctionMemory'):  
+        nnp_mode.setupSymmetryFunctionMemory(verbose=False)
+    if hasattr(nnp_mode, 'setupSymmetryFunctionCache'): 
+        nnp_mode.setupSymmetryFunctionCache(verbose=False)
     nnp_mode.setupSymmetryFunctionGroups()
     
     if use_unscaled_symmetry_functions:
@@ -78,16 +81,18 @@ def setup_nnp_mode(input_file, scaling_file, weight_file_format,
 
 def calculate_on_nnp_structure(nnp_str, nnp_mode):
 
-    use_normalization = nnp_mode.useNormalization()
+    if hasattr(nnp_mode, 'useNormalization'):
+        use_normalization = nnp_mode.useNormalization()
+            # If normalization is used, convert structure data.
+        if use_normalization:
+            nnp_str.toNormalizedUnits(meanEnergy, convEnergy, convLength)
+    # these might not be implemented in all versions, hasattr might be needed in the future
     meanEnergy = nnp_mode.getMeanEnergy()
     convEnergy = nnp_mode.getConvEnergy()
     convLength = nnp_mode.getConvLength()
-
     nnp_mode.removeEnergyOffset(nnp_str);
-    # If normalization is used, convert structure data.
-    if use_normalization:
-        s.toNormalizedUnits(meanEnergy, convEnergy, convLength)
 
+    
     # Retrieve cutoff radius form NNP setup.
     cutoffRadius = nnp_mode.getMaxCutoffRadius()
     #print("Cutoff radius = ", cutoffRadius/convLength)
@@ -97,10 +102,10 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
 
     # Calculate symmetry functions for all atoms (use groups).
     #nnp_mode.calculateSymmetryFunctions(nnp_str, True)
-    nnp_mode.calculateSymmetryFunctionGroups(nnp_str, True)
+    nnp_mode.calculateSymmetryFunctionGroups(nnp_str, derivatives = True)
 
     # Calculate atomic neural networks.
-    nnp_mode.calculateAtomicNeuralNetworks(nnp_str, True)
+    nnp_mode.calculateAtomicNeuralNetworks(nnp_str, derivatives = True)
 
     # Sum up potential energy.
     nnp_mode.calculateEnergy(nnp_str)
