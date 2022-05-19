@@ -142,52 +142,8 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
         print("------------")
         for atom in nnp_str.atoms:
             print(atom.index, atom.element, nnp_mode.elementMap[atom.element], atom.energy, atom.f.r)
-            
 
-def parse_input_file(input_file): 
-    
-    fid=open(input_file,'r')
-    lines_with_comments=fid.readlines()
-    fid.close()
-    
-    parameters = {}
-    symfunctions = []
-    for line in lines_with_comments:
-        if line[0] != '#':
-            comment_free_line = line.split('#')[0]
-            line_parts = comment_free_line.split()
-            if len(line_parts)>0:# skip empty
-                if line_parts[0] == 'symfunction_short': #the symfunction keywords are probably the only ones that repeat.
-                    symfunctions.append(line_parts)
-                else:
-                    if len(line_parts)==1:
-                        line_parts.append(None) # some parameters are on-off flags so we need a value to store, maybe the value should be '' to make writting easier
-                    parameters[line_parts[0]]=line_parts[1:]
-                    ### we could do this so that we don't create single element lists
-                    #if len(line_parts)>2:
-                    #    parameters[line_parts[0]]=line_parts[1:]
-                    #else:   
-                    #    parameters[line_parts[0]]=line_parts[1]
-                    
-    return parameters, symfunctions
-
-
-def write_input_file(filename, parameters, symfunctions):
-    
-    fid = open(filename,'w')
-    
-    for key in parameters.keys():
-        fid.write(str(key))
-        for value in parameters[key]:
-            fid.write(' '+str(value))
-        fid.write('\n')
-        
-    for symfunc in symfunctions:
-        for value in symfunc:
-            fid.write(value + ' ')
-        fid.write('\n')
-    fid.close() 
-
+from .n2p2 import parse_input_file
 
 class PyNNP(Calculator):
     '''uses to n2p2's python interface'''

@@ -360,3 +360,126 @@ class N2P2Calculator(FileIOCalculator):
         if not self.keep_tmp_files:
             shutil.rmtree(self.directory)
 
+
+
+
+
+            
+
+def parse_input_file(input_file): 
+    
+    fid=open(input_file,'r')
+    lines_with_comments=fid.readlines()
+    fid.close()
+    
+    parameters = {}
+    symfunctions = []
+    for line in lines_with_comments:
+        if line[0] != '#':
+            comment_free_line = line.split('#')[0]
+            line_parts = comment_free_line.split()
+            if len(line_parts)>0:# skip empty
+                if line_parts[0] == 'symfunction_short': #the symfunction keywords are probably the only ones that repeat.
+                    symfunctions.append(line_parts)
+                else:
+                    if len(line_parts)==1:
+                        line_parts.append(None) # some parameters are on-off flags so we need a value to store, maybe the value should be '' to make writting easier
+                    parameters[line_parts[0]]=line_parts[1:]
+                    ### we could do this so that we don't create single element lists
+                    #if len(line_parts)>2:
+                    #    parameters[line_parts[0]]=line_parts[1:]
+                    #else:   
+                    #    parameters[line_parts[0]]=line_parts[1]
+                    
+    return parameters, symfunctions
+
+
+def write_input_file(filename, parameters, symfunctions):
+    
+    fid = open(filename,'w')
+    
+    for key in parameters.keys():
+        fid.write(str(key))
+        for value in parameters[key]:
+            fid.write(' '+str(value))
+        fid.write('\n')
+        
+    for symfunc in symfunctions:
+        for value in symfunc:
+            fid.write(value + ' ')
+        fid.write('\n')
+    fid.close() 
+    
+    
+    
+    
+    
+
+def radial_grid(N_r, r_0, r_c, width_scale, mode):
+    N        = N_r
+    grid, dr = np.linspace(r_0, r_c, N, endpoint=False, retstep=True)
+    r_N = grid[-1]
+    if mode == "center":
+        eta_grid = 0.5 / (grid * width_scale)**2
+        rs_grid = [0.0] * N
+    elif mode == "shift":
+        eta_grid = [0.5 / (dr * width_scale)**2 ] * N
+        rs_grid = grid
+    return rs_grid, eta_grid
+
+
+def generate_symfunctions_G2(elements, radkwrds, annotate = True):
+    rs_grid, eta_grid = radial_grid(**radkwrds)
+    r_c = radkwrds['r_c']
+    symfunctions = []
+    
+    if annotate:
+        symfunctions.append([''])
+        symfunctions.append(["# Generating radial symmetry function set:"  ])
+        symfunctions.append(["# mode  = {0:9s}".format(radkwrds['mode'])   ])
+        symfunctions.append(["# r_0   = {0:9.3E}".format(radkwrds['r_0'])  ])
+        symfunctions.append(["# r_c   = {0:9.3E}".format(radkwrds['r_c'])  ])
+        #symfunctions.append(["# r_N   = {0:9.3E}".format(r_N)])
+        symfunctions.append(["# N     = {0:9d}".format(radkwrds['N_r'])    ])
+        symfunctions.append(["# r_s  = " + " ".join(str(_) for _ in rs_grid)   ])
+        symfunctions.append(["# eta  = " + " ".join(str(_) for _ in eta_grid)  ])
+        
+    for e0 in elements:
+        if annotate:
+            symfunctions.append(["# Radial symmetry functions for element {0:2s}".format(e0)])
+        for e1 in elements:
+            for (eta, rs) in zip(eta_grid, rs_grid):
+                line = "symfunction_short {0:2s} 2 {1:2s} {2:9.3E} {3:9.3E} {4:9.3E}".format(e0, e1, eta, rs, r_c)
+                symfunctions.append(line.split())
+    return symfunctions
+
+def generate_symfunctions_G9(elements, radkwrds, zetas, annotate = True):
+    rs_grid, eta_grid = radial_grid(**radkwrds)
+    r_c = radkwrds['r_c']
+    symfunctions = []
+
+    if annotate:
+        symfunctions.append([''])
+        symfunctions.append(["# Generating wide angular symmetry function set:"])
+        symfunctions.append(["# mode  = {0:9s}".format(radkwrds['mode'])       ])
+        symfunctions.append(["# r_0   = {0:9.3E}".format(radkwrds['r_0'])      ])
+        symfunctions.append(["# r_c   = {0:9.3E}".format(radkwrds['r_c'])      ])
+        #symfunctions.append(["# r_N   = {0:9.3E}".format(r_N)])
+        symfunctions.append(["# N     = {0:9d}".format(radkwrds['N_r'])        ])
+        symfunctions.append(["# r_s  = " + " ".join(str(_) for _ in rs_grid)   ])
+        symfunctions.append(["# eta  = " + " ".join(str(_) for _ in eta_grid)  ])
+        symfunctions.append(["# zetas = " + " ".join(str(z) for z in zetas)    ])
+        
+    
+    for e0 in elements:
+        if annotate:
+            symfunctions.append(["# Wide angular symmetry functions for element {0:2s}".format(e0)])
+        for e1 in elements:
+            elements_reduced = elements[elements.index(e1):]
+            for e2 in elements_reduced:
+                for (eta, rs) in zip(eta_grid, rs_grid):
+                    for zeta in zetas:
+                        for lambd in [-1.0, 1.0]:
+                            line = "symfunction_short {0:2s} 9 {1:2s} {2:2s} {3:9.3E} {4:2.0f} {5:9.3E} {6:9.3E} {7:9.3E}".format(e0, e1, e2, eta, lambd, zeta, r_c, rs)
+                            symfunctions.append(line.split())
+    return symfunctions
