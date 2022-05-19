@@ -172,6 +172,23 @@ def parse_input_file(input_file):
     return parameters, symfunctions
 
 
+def write_input_file(filename, parameters, symfunctions):
+    
+    fid = open(filename,'w')
+    
+    for key in parameters.keys():
+        fid.write(str(key))
+        for value in parameters[key]:
+            fid.write(' '+str(value))
+        fid.write('\n')
+        
+    for symfunc in symfunctions:
+        for value in symfunc:
+            fid.write(value + ' ')
+        fid.write('\n')
+    fid.close() 
+
+
 class PyNNP(Calculator):
     '''uses to n2p2's python interface'''
 
