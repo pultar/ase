@@ -374,6 +374,7 @@ def parse_input_file(input_file):
     
     parameters = {}
     symfunctions = []
+    atom_energy = {}
     for line in lines_with_comments:
         if line[0] != '#':
             comment_free_line = line.split('#')[0]
@@ -381,6 +382,8 @@ def parse_input_file(input_file):
             if len(line_parts)>0:# skip empty
                 if line_parts[0] == 'symfunction_short': #the symfunction keywords are probably the only ones that repeat.
                     symfunctions.append(line_parts)
+                elif line_parts[0] == 'atom_energy':
+                    atom_energy[line_parts[1]]=float(line_parts[2])
                 else:
                     if len(line_parts)==1:
                         line_parts.append(None) # some parameters are on-off flags so we need a value to store, maybe the value should be '' to make writting easier
@@ -390,7 +393,7 @@ def parse_input_file(input_file):
                     #    parameters[line_parts[0]]=line_parts[1:]
                     #else:   
                     #    parameters[line_parts[0]]=line_parts[1]
-                    
+    parameters['atom_energy'] = atom_energy
     return parameters, symfunctions
 
 
@@ -399,10 +402,15 @@ def write_input_file(filename, parameters, symfunctions):
     fid = open(filename,'w')
     
     for key in parameters.keys():
-        fid.write(str(key))
-        for value in parameters[key]:
-            fid.write(' '+str(value))
-        fid.write('\n')
+        if key=='atom_energy':
+            atom_energy = parameters['atom_energy']
+            for element in atom_energy.keys():
+                fid.write('atom_energy   %s   %f\n'%(element, atom_energy[element]))
+        else:
+            fid.write(str(key))
+            for value in parameters[key]:
+                fid.write(' '+str(value))
+            fid.write('\n')
         
     for symfunc in symfunctions:
         for value in symfunc:

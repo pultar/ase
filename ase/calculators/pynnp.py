@@ -81,15 +81,18 @@ def setup_nnp_mode(input_file, scaling_file, weight_file_format,
 
 def calculate_on_nnp_structure(nnp_str, nnp_mode):
 
-    if hasattr(nnp_mode, 'useNormalization'):
+    ### we need someone to do a normalization check to ensure this block works
+    if hasattr(nnp_mode, 'useNormalization'): # this isn't always an available attribute 
         use_normalization = nnp_mode.useNormalization()
-            # If normalization is used, convert structure data.
+        # If normalization is used, convert structure data.
         if use_normalization:
+            # these might not be implemented in all versions, hasattr might be needed in the future
+            meanEnergy = nnp_mode.getMeanEnergy()
+            convEnergy = nnp_mode.getConvEnergy()
+            convLength = nnp_mode.getConvLength()
             nnp_str.toNormalizedUnits(meanEnergy, convEnergy, convLength)
-    # these might not be implemented in all versions, hasattr might be needed in the future
-    meanEnergy = nnp_mode.getMeanEnergy()
-    convEnergy = nnp_mode.getConvEnergy()
-    convLength = nnp_mode.getConvLength()
+
+    ### we need someone to try a network with reference energy offsets to ensure this is workint  
     nnp_mode.removeEnergyOffset(nnp_str);
 
     
@@ -114,7 +117,7 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
     nnp_mode.calculateForces(nnp_str)
 
 
-    if False:
+    if False: # These should be documented as notes for future developers. 
         print("dir(nnp_str):")
         for meth in dir(nnp_str):
             print(meth)
