@@ -18,22 +18,26 @@ def elementmap_from_element_list(elements):
 
 
 def make_structure_from_ase_atoms(ase_atoms, elementMap):
+    ## pynnp needs the atoms to be wrapped into the unit cell
+    wrapped_atoms = ase_atoms.copy()
+    wrapped_atoms.wrap()
+    
     nnp_structure = pynnp.Structure()
     nnp_structure.setElementMap(elementMap)
 
-    for ase_atom in ase_atoms:
+    for ase_atom in wrapped_atoms:
         nnp_atom = pynnp.Atom()
         nnp_atom.r[0] = ase_atom.x
         nnp_atom.r[1] = ase_atom.y
         nnp_atom.r[2] = ase_atom.z
         nnp_structure.addAtom(nnp_atom, ase_atom.symbol)
             
-    nnp_structure.isPeriodic = ase_atoms.pbc[0] # I should check all of the directions eventually
+    nnp_structure.isPeriodic = wrapped_atoms.pbc[0] # I should check all of the directions eventually
     nnp_structure.isTriclinic = True # does it matter if this is always true?
     
     for i in range(3):
         for j in range(3):
-            nnp_structure.box[i][j] = ase_atoms.cell[i][j]
+            nnp_structure.box[i][j] = wrapped_atoms.cell[i][j]
 
     return nnp_structure
 
@@ -81,6 +85,11 @@ def setup_nnp_mode(input_file, scaling_file, weight_file_format,
 
 def calculate_on_nnp_structure(nnp_str, nnp_mode):
 
+
+    ### we need someone to try a network with reference energy offsets to ensure this is workint  
+    nnp_mode.removeEnergyOffset(nnp_str);
+
+    use_normalization = False
     ### we need someone to do a normalization check to ensure this block works
     if hasattr(nnp_mode, 'useNormalization'): # this isn't always an available attribute 
         use_normalization = nnp_mode.useNormalization()
@@ -91,10 +100,6 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
             convEnergy = nnp_mode.getConvEnergy()
             convLength = nnp_mode.getConvLength()
             nnp_str.toNormalizedUnits(meanEnergy, convEnergy, convLength)
-
-    ### we need someone to try a network with reference energy offsets to ensure this is workint  
-    nnp_mode.removeEnergyOffset(nnp_str);
-
     
     # Retrieve cutoff radius form NNP setup.
     cutoffRadius = nnp_mode.getMaxCutoffRadius()
@@ -116,6 +121,12 @@ def calculate_on_nnp_structure(nnp_str, nnp_mode):
     # Collect force contributions.
     nnp_mode.calculateForces(nnp_str)
 
+    if use_normalization:
+        nnp_str.toPhysicalUnits(meanEnergy, convEnergy, convLength)
+
+    ### I think this is important to do after denormalization
+    nnp_mode.addEnergyOffset(nnp_str, False);
+    nnp_mode.addEnergyOffset(nnp_str, True);
 
     if False: # These should be documented as notes for future developers. 
         print("dir(nnp_str):")
