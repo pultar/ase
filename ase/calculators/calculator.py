@@ -714,6 +714,7 @@ class Calculator(BaseCalculator):
         return Parameters(copy.deepcopy(self.default_parameters))
 
     def todict(self, skip_default=True):
+        excluded_keys = ["comm"]
         defaults = self.get_default_parameters()
         dct = {}
         for key, value in self.parameters.items():
@@ -723,7 +724,8 @@ class Calculator(BaseCalculator):
                 default = defaults.get(key, '_no_default_')
                 if default != '_no_default_' and equal(value, default):
                     continue
-            dct[key] = value
+            if key not in excluded_keys:
+                dct[key] = value
         return dct
 
     def reset(self):
