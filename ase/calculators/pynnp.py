@@ -163,7 +163,8 @@ class PyNNP(Calculator):
     '''uses to n2p2's python interface'''
 
     implemented_properties = ['energy', 'free_energy', 'energies', 'forces']
-    #                          'stress', 'magmom', 'magmoms']
+    #, 'stress', 'stresses']
+    #                              'stress', 'magmom', 'magmoms']
 
     nolabel = True
 
@@ -231,4 +232,8 @@ class PyNNP(Calculator):
         self.results['forces'] = forces
         
         if 'stress' in properties:
+            print('Try the numeric force wrapper?')
             raise PropertyNotImplementedError
+            
+
+

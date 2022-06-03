@@ -364,8 +364,6 @@ class N2P2Calculator(FileIOCalculator):
 
 
 
-            
-
 def parse_input_file(input_file): 
     
     fid=open(input_file,'r')
@@ -491,3 +489,50 @@ def generate_symfunctions_G9(elements, radkwrds, zetas, annotate = True):
                             line = "symfunction_short {0:2s} 9 {1:2s} {2:2s} {3:9.3E} {4:2.0f} {5:9.3E} {6:9.3E} {7:9.3E}".format(e0, e1, e2, eta, lambd, zeta, r_c, rs)
                             symfunctions.append(line.split())
     return symfunctions
+    
+    
+
+
+from ase.calculators.test import numeric_stress
+
+def AttachNumericStresses(SubCalculator, calckwrds, d=1e-6, voigt=True):
+
+    class NumericForceWrapper(SubCalculator):
+        def __init__(self, SubCalculator, calckwrds, d=d, voigt=voigt):
+            #self.calc = SubCalculator(**calckwrds)
+            
+            super().__init__(**calckwrds)
+            self.implemented_properties.append('stress')
+            self.implemented_properties.append('stresses')
+            ## these long names should avoid any attribute conflicts
+            self.numeric_stress_d = d
+            self.numeric_stress_voigt = voigt
+            
+        def calculate(self, atoms=None, properties=['energy','forces'], system_changes=all_changes):
+            """ Calculates all the specific property for each calculator and returns with the summed value. 
+            """
+            
+            #Calculator.calculate(self, atoms, properties, system_changes) # do we need this for a simple wrapper?
+            
+            properties_without_stress = []
+            for prop in properties:
+                if prop!='stress':
+                    properties_without_stress.append(prop)
+                if prop!='stresses':
+                    properties_without_stress.append(prop)
+                    
+            if 'stress' in properties or 'stresses' in properties:
+                # does this let us avoid the cache invalidation?
+                atoms_with_cell_fd = atoms.copy()
+                atoms_with_cell_fd.calc = super()
+                stress = numeric_stress(atoms_with_cell_fd, 
+                    d=self.numeric_stress_d,
+                    voigt=self.numeric_stress_voigt)
+                
+            super().calculate(atoms, properties_without_stress, system_changes)
+
+            if 'stress' in properties or 'stresses' in properties:
+                self.results['stress'] = stress
+                self.results['stresses'] = stress
+
+    return NumericForceWrapper(SubCalculator,calckwrds)
