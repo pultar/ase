@@ -516,19 +516,22 @@ def AttachNumericStresses(SubCalculator, calckwrds, d=1e-6, voigt=True):
             
             properties_without_stress = []
             for prop in properties:
-                if prop!='stress':
+                if prop not in ['stress', 'stresses']:
                     properties_without_stress.append(prop)
-                if prop!='stresses':
-                    properties_without_stress.append(prop)
-                    
+
             if 'stress' in properties or 'stresses' in properties:
-                # does this let us avoid the cache invalidation?
+                # The point here is to avoid doing 6 calculations unless explicity asked. 
+                # if you ask for energy/forces, they'll be calculated but not stresses.
+                # if you ask for stresses, the energy/forces will also be calulated since 
+                # those are required for the numerical stress calculation
+                # there might be 1 or 2 calculator calls than can be avoided by reordering, 
+                # but numeric stresses already require 12 calls, so it's not a large savings 
                 atoms_with_cell_fd = atoms.copy()
                 atoms_with_cell_fd.calc = super()
                 stress = numeric_stress(atoms_with_cell_fd, 
                     d=self.numeric_stress_d,
                     voigt=self.numeric_stress_voigt)
-                
+            
             super().calculate(atoms, properties_without_stress, system_changes)
 
             if 'stress' in properties or 'stresses' in properties:
