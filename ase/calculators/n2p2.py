@@ -497,7 +497,7 @@ from ase.calculators.test import numeric_stress
 
 def AttachNumericStresses(SubCalculator, calckwrds, d=1e-6, voigt=True):
 
-    class NumericForceWrapper(SubCalculator):
+    class NumericStressWrapper(SubCalculator):
         def __init__(self, SubCalculator, calckwrds, d=d, voigt=voigt):
             #self.calc = SubCalculator(**calckwrds)
             
@@ -538,4 +538,4 @@ def AttachNumericStresses(SubCalculator, calckwrds, d=1e-6, voigt=True):
                 self.results['stress'] = stress
                 self.results['stresses'] = stress
 
-    return NumericForceWrapper(SubCalculator,calckwrds)
+    return NumericStressWrapper(SubCalculator,calckwrds)
