@@ -156,6 +156,7 @@ def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' 
             image.calc = SinglePointCalculator(
                             atoms=image,
                             energy = energy,
+                            free_energy=energy,
                             forces = forces,
                             charges = charges)
                             #charge  = charge)

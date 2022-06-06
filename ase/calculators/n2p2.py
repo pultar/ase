@@ -212,6 +212,7 @@ class N2P2Calculator(FileIOCalculator):
             self.command = os.environ.get(name, self.command)
             
         self.implemented_properties = {
+            'free_energy': self.calculate,
             'energy' : self.calculate,
             'forces' : self.calculate}
         self.results = {}
