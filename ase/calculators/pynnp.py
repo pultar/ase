@@ -4,7 +4,7 @@ import numpy as np
 from ase.data import chemical_symbols, atomic_numbers
 from ase.calculators.calculator import (Calculator, all_changes,
                                         PropertyNotImplementedError)
-
+from ase import units 
 
 
 def elementmap_from_element_list(elements):
@@ -17,7 +17,7 @@ def elementmap_from_element_list(elements):
     return nnp_element_map
 
 
-def make_structure_from_ase_atoms(ase_atoms, elementMap):
+def make_structure_from_ase_atoms(ase_atoms, elementMap, model_length_units=1.0):
     ## pynnp needs the atoms to be wrapped into the unit cell
     wrapped_atoms = ase_atoms.copy()
     wrapped_atoms.wrap()
@@ -27,9 +27,9 @@ def make_structure_from_ase_atoms(ase_atoms, elementMap):
 
     for ase_atom in wrapped_atoms:
         nnp_atom = pynnp.Atom()
-        nnp_atom.r[0] = ase_atom.x
-        nnp_atom.r[1] = ase_atom.y
-        nnp_atom.r[2] = ase_atom.z
+        nnp_atom.r[0] = ase_atom.x/model_length_units
+        nnp_atom.r[1] = ase_atom.y/model_length_units
+        nnp_atom.r[2] = ase_atom.z/model_length_units
         nnp_structure.addAtom(nnp_atom, ase_atom.symbol)
             
     nnp_structure.isPeriodic = wrapped_atoms.pbc[0] # I should check all of the directions eventually
@@ -37,7 +37,7 @@ def make_structure_from_ase_atoms(ase_atoms, elementMap):
     
     for i in range(3):
         for j in range(3):
-            nnp_structure.box[i][j] = wrapped_atoms.cell[i][j]
+            nnp_structure.box[i][j] = wrapped_atoms.cell[i][j]/model_length_units
 
     return nnp_structure
 
@@ -176,7 +176,9 @@ class PyNNP(Calculator):
                 weight_file_format = 'weights.%03zu.data',
                 scaling_file       = 'scaling.data',
                 use_unscaled_symmetry_functions = False,
-                atoms=None, 
+                atoms=None,
+                model_length_units = units.Ang, #model units to ASE units, i.e. units.Bohr
+                model_energy_units = units.eV,
                 **kwargs,
                 ):
         
@@ -185,6 +187,8 @@ class PyNNP(Calculator):
         self.weight_file_format = weight_file_format
         self.scaling_file       = scaling_file
         self.use_unscaled_symmetry_functions = use_unscaled_symmetry_functions
+        self.model_length_units = model_length_units
+        self.model_energy_units = model_energy_units
         self.nnp_mode = None
         self.G = None
         self.dGdr = None
@@ -210,12 +214,12 @@ class PyNNP(Calculator):
         #    self.initialize(self.atoms)
         if self.nnp_mode is None:
              self.initialize()#self.atoms)
-            
-        nnp_str = make_structure_from_ase_atoms(atoms, self.elementmap)
-        calculate_on_nnp_structure(nnp_str,self.nnp_mode)
         
-        self.results['energy'] = nnp_str.energy
-        self.results['free_energy'] = nnp_str.energy
+        nnp_str = make_structure_from_ase_atoms(atoms, self.elementmap, self.model_length_units)
+        calculate_on_nnp_structure(nnp_str, self.nnp_mode)
+        
+        self.results['energy'] = nnp_str.energy*self.model_energy_units
+        self.results['free_energy'] = nnp_str.energy*self.model_energy_units
         energies=np.zeros(len(atoms))
         forces  =np.zeros((len(atoms),3))
         self.G = []
@@ -224,12 +228,21 @@ class PyNNP(Calculator):
         for i in range(len(atoms)):
             energies[i] = nnp_str.atoms[i].energy 
             forces[i]    = nnp_str.atoms[i].f.r
-            self.G.append(nnp_str.atoms[i].G)
-            self.dGdR.append(nnp_str.atoms[i].dGdr)
-            self.dEdG.append(nnp_str.atoms[i].dEdG)
+            self.G.append( np.array(nnp_str.atoms[i].G) )
+            self.dEdG.append( np.array(nnp_str.atoms[i].dEdG)*self.model_energy_units )
+            # atoms[i].dGdr is a list of pynnp.Vec3D like  <pynnp.Vec3D object at 0x7fafba834c40>
+            # this converts to np.arrays
+            atom_dGdR       = nnp_str.atoms[i].dGdr 
+            atom_dGdR_array = np.zeros((len(atom_dGdR),3))
+            for i in range(len(atom_dGdR)):
+                for j in range(3):
+                    atom_dGdR_array[i,j]=atom_dGdR[i][j]
+            self.dGdR.append( atom_dGdR_array / self.model_length_units) 
+            
+
         
-        self.results['energies'] = energies
-        self.results['forces'] = forces
+        self.results['energies'] = energies*self.model_energy_units
+        self.results['forces'] = forces * self.model_energy_units/self.model_length_units
         
         if 'stress' in properties:
             print('Try the numeric force wrapper?')

@@ -2,7 +2,7 @@
 import numpy as np
 from ase import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
-
+from ase import units 
 
 def _write_n2p2(fid, atoms, comment='', with_charges=False, with_energy_and_forces = 'auto'):
     #float_form = "{: 13.8f}" # looks nicer but, results can be very sensitive
@@ -99,7 +99,9 @@ class N2P2_data:
     
     
     
-def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' ):
+def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' , 
+                model_length_units = units.Ang, #n2p2 doesn't have units, so you should specify if not eV and Ang
+                model_energy_units = units.eV,):
     """Import n2p2 .data file
     I'm not sure this correct
     """
@@ -142,7 +144,9 @@ def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' 
                 charge = float(line.split()[-1])
             line = fd.readline()
 
-        image = Atoms(symbols = symbols, positions = positions, cell = cell)
+        image = Atoms(symbols = symbols,
+                positions = np.array(positions)*model_length_units,
+                cell = cell*model_length_units)
 
         
         store_energy_and_forces = False
@@ -155,9 +159,9 @@ def read_n2p2(filename='output.data', index=-1, with_energy_and_forces = 'auto' 
         if store_energy_and_forces:
             image.calc = SinglePointCalculator(
                             atoms=image,
-                            energy = energy,
-                            free_energy=energy,
-                            forces = forces,
+                            energy = energy*model_energy_units,
+                            free_energy=energy*model_energy_units,
+                            forces = np.array(forces)*model_energy_units/model_length_units,
                             charges = charges)
                             #charge  = charge)
         images.append(image)

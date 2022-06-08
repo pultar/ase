@@ -7,7 +7,7 @@ import os
 import shutil
 from ase.io.n2p2 import read_n2p2, write_n2p2
 from tempfile import mkdtemp#, NamedTemporaryFile, mktemp as uns_mktemp
-
+from ase import units 
 
 class N2P2Template:
     '''example: 
@@ -27,7 +27,10 @@ class N2P2Template:
     name = 'n2p2'
 
     def __init__(self, restart=None, ignore_bad_restart_file=False,
-                 label=None, atoms=None, command=None, files=[], **kwargs):
+                    label=None, atoms=None, command=None, files=[],
+                    model_length_units = units.Ang, #model units to ASE units, i.e. units.Bohr
+                    model_energy_units = units.eV,
+                    **kwargs):
         """File-IO calculator.
 
         command: str
@@ -195,6 +198,8 @@ class N2P2Calculator(FileIOCalculator):
     def __init__(self, restart=None, 
                 label=None, atoms=None, command=None,
                 files=[], txt='n2p2.out', keep_tmp_files=False,
+                model_length_units = units.Ang, #model units to ASE units, i.e. units.Bohr
+                model_energy_units = units.eV,
                 **kwargs):
         """File-IO calculator.
 
@@ -203,6 +208,8 @@ class N2P2Calculator(FileIOCalculator):
         """
 
         self.files = files
+        self.model_length_units = model_length_units
+        self.model_energy_units = model_energy_units
         FileIOCalculator.__init__(self, restart, **kwargs)
 
         if command is not None:
@@ -240,9 +247,13 @@ class N2P2Calculator(FileIOCalculator):
         if self.directory != os.curdir and not os.path.isdir(self.directory):
             os.makedirs(self.directory)
             
+        atoms_model_units = atoms.copy()
+        atoms_model_units.set_positions(atoms.get_positions()/self.model_length_units)
+        atoms_model_units.set_cell(atoms.get_cell()/self.model_length_units)
+        
         write_n2p2(
             os.path.join(self.directory, 'input.data'),
-            atoms,
+            atoms_model_units,
             with_energy_and_forces = False)
 
     def write_files(self): #should this be initialize?
@@ -354,7 +365,9 @@ class N2P2Calculator(FileIOCalculator):
         res_atoms = read_n2p2(
                     filename= os.path.join(self.directory,'output.data'),
                     index=-1, 
-                    with_energy_and_forces = True)
+                    with_energy_and_forces = True,
+                    model_length_units = self.model_length_units,
+                    model_energy_units = self.model_energy_units)
         self.results = res_atoms.calc.results
         
     def clean(self):
