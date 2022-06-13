@@ -1,18 +1,21 @@
 """Resonant Raman intensities"""
 
+from abc import abstractmethod
 import sys
 from pathlib import Path
 import numpy as np
+import typing as tp
 
 import ase.units as u
 from ase.parallel import world, paropen, parprint
-from ase.vibrations import Vibrations
+from ase.vibrations.vibrations import Vibrations
 from ase.vibrations.raman import Raman, RamanCalculatorBase
 
 
 class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
     """Base class for resonant Raman calculators using finite differences.
     """
+
     def __init__(self, atoms, ExcitationsCalculator, *args,
                  exkwargs=None, exext='.ex.gz', overlap=False,
                  **kwargs):
@@ -97,6 +100,7 @@ class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
 class ResonantRaman(Raman):
     """Base Class for resonant Raman intensities using finite differences.
     """
+
     def __init__(self, atoms, Excitations, *args,
                  observation=None,
                  form='v',         # form of the dipole operator
@@ -584,3 +588,23 @@ class LrResonantRaman(ResonantRaman):
         self.exF_rp = np.array(self.exF_rp) * eu / 2 / self.delta
         self.exmm_rpc = np.array(exmm_rpc) * u.Bohr
         self.expm_rpc = np.array(expm_rpc) * u.Bohr
+
+
+def _copy_atoms_calc(atoms):
+    # XXXX stupid way to make a copy
+    import tempfile
+    import shutil
+    atoms.get_potential_energy()
+
+    tempdir = Path(tempfile.mkdtemp())
+    fname = tempdir / 'tmp.gpw'
+    atoms.calc.write(fname, 'all')
+    copied = atoms.calc.__class__(restart=fname)
+    shutil.rmtree(tempdir)
+    try:
+        # XXX GPAW specific
+        copied.converge_wave_functions()
+    except AttributeError:
+        pass
+
+    return copied

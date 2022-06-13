@@ -1,6 +1,11 @@
 import numpy as np
+import typing as tp
+import abc
 
+from ase.atoms import Atoms
 from ase.units import Hartree, Bohr
+
+EXL = tp.TypeVar('EXL', bound='ExcitationList')
 
 
 class Excitation:
@@ -65,7 +70,7 @@ class Excitation:
             magn = np.array([float(l.pop(0)) for i in range(3)])
         except IndexError:
             magn = None
-       
+
         return cls(energy, index, mur, muv, magn)
 
     def get_dipole_me(self, form='r'):
@@ -90,14 +95,37 @@ class Excitation:
         return np.array([np.sum(me2_c) / 3.] + me2_c.tolist())
 
 
-class ExcitationList(list):
+class ExcitationList(list, abc.ABC):
     """Base class for excitions from the ground state"""
     def __init__(self):
         # initialise empty list
         super().__init__()
-        
+
         # set default energy scale to get eV
         self.energy_to_eV_scale = 1.
+
+    @classmethod
+    @abc.abstractmethod
+    def read(cls: tp.Type[EXL], filename, **kwargs) -> EXL:
+        """Read from a filepath."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def write(self, fname):
+        """Write to a filepath."""
+        raise NotImplementedError
+
+
+class ExcitationListCalculator(abc.ABC):
+    """Base class for calculators of excitation lists."""
+
+    @abc.abstractmethod
+    def calculate(self, atoms: Atoms) -> ExcitationList:
+        raise NotImplementedError
+
+    def read(self, filename) -> ExcitationList:
+        # NOTE: implementations can typically forward this to the ExcitationList's read
+        raise NotImplementedError
 
 
 def polarizability(exlist, omega, form='v',

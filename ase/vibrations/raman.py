@@ -1,9 +1,11 @@
+from abc import abstractmethod
 import numpy as np
 
 import ase.units as u
 from ase.parallel import world
 from ase.phonons import Phonons
 from ase.vibrations.vibrations import Vibrations, AtomicDisplacements
+from ase.vibrations.data import VibrationsData
 from ase.dft import monkhorst_pack
 from ase.utils import IOContext
 
@@ -46,6 +48,7 @@ class RamanCalculatorBase(IOContext):
 class StaticRamanCalculatorBase(RamanCalculatorBase):
     """Base class for Raman intensities derived from
     static polarizabilities"""
+
     def __init__(self, atoms, exobj, exkwargs=None, *args, **kwargs):
         self.exobj = exobj
         if exkwargs is None:
@@ -108,8 +111,172 @@ class RamanBase(AtomicDisplacements, IOContext):
         self.comm = comm
 
 
+def _m2(z):
+    return (z * z.conj()).real
+
+
+def _map_to_modes(V_rcc, im_r, modes_Qq):
+    V_qcc = (V_rcc.T * im_r).T  # units Angstrom^2 / sqrt(amu)
+    V_Qcc = np.dot(V_qcc.T, modes_Qq.T).T
+    return V_Qcc
+
+# FIXME: Name should include e.g. an author name or something to distinguish from albrecht
+
+
+def _me_Qcc(
+        elme_Qcc,  # Angstrom^2 / sqrt(amu)
+        vib01_Q,
+):
+    """Full matrix element
+
+    Returns
+    -------
+    Matrix element in e^2 Angstrom^2 / eV
+    """
+    # XXX ML - This is unused
+    assert False  # XXX TEST COVERAGE
+    temp_Qcc = elme_Qcc / (u.Hartree * u.Bohr)  # e^2 Angstrom / eV / sqrt(amu)
+    return elme_Qcc * vib01_Q[:, None, None]
+
+
+def _get_absolute_intensities(
+        elme_Qcc,
+        delta):
+    """Absolute Raman intensity or Raman scattering factor
+
+    Parameter
+    ---------
+    elme_Qcc: float
+        electronic matrix element, Angstrom^2 / sqrt(amu)
+    delta: float
+        pre-factor for asymmetric anisotropy, default 0
+
+    References
+    ----------
+    Porezag and Pederson, PRB 54 (1996) 7830-7836 (delta=0)
+    Baiardi and Barone, JCTC 11 (2015) 3267-3280 (delta=5)
+
+    Returns
+    -------
+    raman intensity, unit Ang**4/amu
+    """
+    alpha2_r, gamma2_r, delta2_r = _invariants(elme_Qcc)
+    return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
+
+
+def _intensity(alpha_Qcc, observation):
+    """Raman intensity
+
+    Returns
+    -------
+    unit e^4 Angstrom^4 / eV^2
+    """
+
+    m2 = Raman.m2
+    # XXX enable when appropriate
+    #        if observation['orientation'].lower() != 'random':
+    #            raise NotImplementedError('not yet')
+
+    # random orientation of the molecular frame
+    # Woodward & Long,
+    # Guthmuller, J. J. Chem. Phys. 2016, 144 (6), 64106
+    alpha2_r, gamma2_r, delta2_r = _invariants(alpha_Qcc)
+
+    if observation['geometry'] == '-Z(XX)Z':  # Porto's notation
+        return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.
+    elif observation['geometry'] == '-Z(XY)Z':  # Porto's notation
+        return gamma2_r / 15.
+    elif observation['scattered'] == 'Z':
+        # scattered light in direction of incoming light
+        return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+    elif observation['scattered'] == 'parallel':
+        # scattered light perendicular and
+        # polarization in plane
+        return 6 * gamma2_r / 45.
+    elif observation['scattered'] == 'perpendicular':
+        # scattered light perendicular and
+        # polarization out of plane
+        return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+    else:
+        raise NotImplementedError
+
+
+def _invariants(alpha_Qcc):
+    """Raman invariants
+
+    Parameter
+    ---------
+    alpha_Qcc: array
+        Matrix element or polarizability tensor
+
+    Reference
+    ---------
+    Derek A. Long, The Raman Effect, ISBN 0-471-49028-8
+
+    Returns
+    -------
+    mean polarizability, anisotropy, asymmetric anisotropy
+    """
+    m2 = _m2
+    alpha2_r = m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] +
+                    alpha_Qcc[:, 2, 2]) / 9.
+    delta2_r = 3 / 4. * (
+        m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0]) +
+        m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0]) +
+        m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1]))
+    gamma2_r = (3 / 4. * (m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0]) +
+                            m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0]) +
+                            m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])) +
+                (m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1]) +
+                    m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
+                    m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
+    return alpha2_r, gamma2_r, delta2_r
+
+
+def _summary(log, hnu, intensities):
+    te = int(np.log10(intensities.max())) - 2
+    scale = 10**(-te)
+
+    if not te:
+        ts = ''
+    elif te > -2 and te < 3:
+        ts = str(10**te)
+    else:
+        ts = '10^{0}'.format(te)
+
+    print('-------------------------------------', file=log)
+    print(' Mode    Frequency        Intensity', file=log)
+    print('  #    meV     cm^-1      [{0}A^4/amu]'.format(ts), file=log)
+    print('-------------------------------------', file=log)
+    for n, e in enumerate(hnu):
+        if e.imag != 0:
+            c = 'i'
+            e = e.imag
+        else:
+            c = ' '
+            e = e.real
+        print('%3d %6.1f%s  %7.1f%s  %9.2f' %
+                (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
+                file=log)
+    print('-------------------------------------', file=log)
+    # XXX enable this in phonons
+    # parprint('Zero-point energy: %.3f eV' %
+    #         self.vibrations.get_zero_point_energy(),
+    #         file=log)
+
+
+# PURPOSE:  Provided common functionality to both Raman and RamanPhonons.
+# STATUS: Old, only for backwards compatibility.
+#
+#         Currently NOT implemented in terms of RamanOutput because the current behavior
+#         is too fragile and influenced far too much by information outside of each function
+#         body for any of them to be safely refactored.
+#
+#         Instead, the important stuff has been pulled out into free functions which are
+#         reused by the new classes RamanOutput.
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
+
     def __init__(self, atoms,  # XXX do we need atoms at this stage ?
                  *args,
                  exname=None,      # name for excited state calculations
@@ -157,11 +324,11 @@ class RamanData(RamanBase):
 
     @staticmethod
     def m2(z):
-        return (z * z.conj()).real
+        return _m2(z)
 
     def map_to_modes(self, V_rcc):
-        V_qcc = (V_rcc.T * self.im_r).T  # units Angstrom^2 / sqrt(amu)
-        V_Qcc = np.dot(V_qcc.T, self.modes_Qq.T).T
+        # XXX ML - what does this do ???  is it supposed to be public?
+        V_Qcc = _map_to_modes(V_rcc=V_rcc, im_r=self.im_r, modes_Qq=self.modes_Qq)
         return V_Qcc
 
     def me_Qcc(self, *args, **kwargs):
@@ -171,11 +338,9 @@ class RamanData(RamanBase):
         -------
         Matrix element in e^2 Angstrom^2 / eV
         """
-        # Angstrom^2 / sqrt(amu)
+        assert False  # XXX TEST COVERAGE
         elme_Qcc = self.electronic_me_Qcc(*args, **kwargs)
-        # Angstrom^3 -> e^2 Angstrom^2 / eV
-        elme_Qcc /= u.Hartree * u.Bohr  # e^2 Angstrom / eV / sqrt(amu)
-        return elme_Qcc * self.vib01_Q[:, None, None]
+        return _me_Qcc(elme_Qcc=elme_Qcc, vib01_Q=vib01_Q)
 
     def get_absolute_intensities(self, delta=0, **kwargs):
         """Absolute Raman intensity or Raman scattering factor
@@ -194,9 +359,7 @@ class RamanData(RamanBase):
         -------
         raman intensity, unit Ang**4/amu
         """
-        alpha2_r, gamma2_r, delta2_r = self._invariants(
-            self.electronic_me_Qcc(**kwargs))
-        return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
+        return _get_absolute_intensities(elme_Qcc=self.electronic_me_Qcc(**kwargs), delta=delta)
 
     def intensity(self, *args, **kwargs):
         """Raman intensity
@@ -206,38 +369,15 @@ class RamanData(RamanBase):
         unit e^4 Angstrom^4 / eV^2
         """
         self.calculate_energies_and_modes()
-        
-        m2 = Raman.m2
+
+        m2 = _m2
         alpha_Qcc = self.me_Qcc(*args, **kwargs)
         if not self.observation:  # XXXX remove
+            assert False  # XXX TEST COVERAGE
             """Simple sum, maybe too simple"""
-            return m2(alpha_Qcc).sum(axis=1).sum(axis=1)
-        # XXX enable when appropriate
-        #        if self.observation['orientation'].lower() != 'random':
-        #            raise NotImplementedError('not yet')
+            return _m2(alpha_Qcc).sum(axis=1).sum(axis=1)
 
-        # random orientation of the molecular frame
-        # Woodward & Long,
-        # Guthmuller, J. J. Chem. Phys. 2016, 144 (6), 64106
-        alpha2_r, gamma2_r, delta2_r = self._invariants(alpha_Qcc)
-
-        if self.observation['geometry'] == '-Z(XX)Z':  # Porto's notation
-            return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.
-        elif self.observation['geometry'] == '-Z(XY)Z':  # Porto's notation
-            return gamma2_r / 15.
-        elif self.observation['scattered'] == 'Z':
-            # scattered light in direction of incoming light
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
-        elif self.observation['scattered'] == 'parallel':
-            # scattered light perendicular and
-            # polarization in plane
-            return 6 * gamma2_r / 45.
-        elif self.observation['scattered'] == 'perpendicular':
-            # scattered light perendicular and
-            # polarization out of plane
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
-        else:
-            raise NotImplementedError
+        return _intensity(alpha_Qcc=alpha_Qcc, observation=self.observation)
 
     def _invariants(self, alpha_Qcc):
         """Raman invariants
@@ -255,61 +395,17 @@ class RamanData(RamanBase):
         -------
         mean polarizability, anisotropy, asymmetric anisotropy
         """
-        m2 = Raman.m2
-        alpha2_r = m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] +
-                      alpha_Qcc[:, 2, 2]) / 9.
-        delta2_r = 3 / 4. * (
-            m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0]) +
-            m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0]) +
-            m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1]))
-        gamma2_r = (3 / 4. * (m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0]) +
-                              m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0]) +
-                              m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])) +
-                    (m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1]) +
-                     m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
-                     m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
-        return alpha2_r, gamma2_r, delta2_r
+        return _invariants(alpha_Qcc)
 
     def summary(self, log='-'):
         """Print summary for given omega [eV]"""
         with IOContext() as io:
             log = io.openfile(log, comm=self.comm, mode='a')
-            return self._summary(log)
-
-    def _summary(self, log):
-        hnu = self.get_energies()
-        intensities = self.get_absolute_intensities()
-        te = int(np.log10(intensities.max())) - 2
-        scale = 10**(-te)
-
-        if not te:
-            ts = ''
-        elif te > -2 and te < 3:
-            ts = str(10**te)
-        else:
-            ts = '10^{0}'.format(te)
-
-        print('-------------------------------------', file=log)
-        print(' Mode    Frequency        Intensity', file=log)
-        print('  #    meV     cm^-1      [{0}A^4/amu]'.format(ts), file=log)
-        print('-------------------------------------', file=log)
-        for n, e in enumerate(hnu):
-            if e.imag != 0:
-                c = 'i'
-                e = e.imag
-            else:
-                c = ' '
-                e = e.real
-            print('%3d %6.1f%s  %7.1f%s  %9.2f' %
-                  (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
-                  file=log)
-        print('-------------------------------------', file=log)
-        # XXX enable this in phonons
-        # parprint('Zero-point energy: %.3f eV' %
-        #         self.vibrations.get_zero_point_energy(),
-        #         file=log)
+            return _summary(log=log, hnu=self.get_energies(), intensities=self.get_absolute_intensities())
 
 
+# STATUS: Old, kept for backwards compatibility
+# PURPOSE: Adapts RamanData to the Vibrations class (contrast with Phonons)
 class Raman(RamanData):
     def __init__(self, atoms, *args, **kwargs):
         super().__init__(atoms, *args, **kwargs)
@@ -318,14 +414,14 @@ class Raman(RamanData):
             kwargs.pop(key, None)
         kwargs['name'] = kwargs.get('name', self.name)
         self.vibrations = Vibrations(atoms, *args, **kwargs)
-        
+
         self.delta = self.vibrations.delta
         self.indices = self.vibrations.indices
 
     def calculate_energies_and_modes(self):
         if hasattr(self, 'im_r'):
             return
-        
+
         self.read()
 
         self.im_r = self.vibrations.im
@@ -340,6 +436,8 @@ class Raman(RamanData):
         self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr
 
 
+# STATUS: Old, kept for backwards compatibility
+# PURPOSE: Adapts RamanData to the Phonons class
 class RamanPhonons(RamanData):
     def __init__(self, atoms, *args, **kwargs):
         RamanData.__init__(self, atoms, *args, **kwargs)
@@ -389,3 +487,89 @@ class RamanPhonons(RamanData):
                     self.om_Q > 0, 1. / np.sqrt(2 * self.om_Q), 0)
             # -> sqrt(amu) * Angstrom
             self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr
+
+
+# XXX FIXME NAME  (RamanData took the name we want)
+class RamanOutput:
+    """Class containing matrix elements from a Raman computation.
+
+    From this, the Raman intensities of modes can be computed."""
+
+    def __init__(self,
+                 vibrations: VibrationsData,
+                 elme_Qcc: np.ndarray,
+                 me_Qcc: np.ndarray,
+                 ):
+        """
+        Parameters
+        ----------
+        vibrations: VibrationsData object
+        elme_Qcc: Electronic matrix elements
+        me_Qcc: Full matrix elements
+        """
+        self.vibrations = vibrations
+        self._electronic_me_Qcc = elme_Qcc
+        self._me_Qcc = me_Qcc
+
+    @property
+    def modes(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self.vibrations.modes
+
+    @property
+    def matrix_elements(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self._me_Qcc
+
+    @property
+    def electronic_matrix_elements(self):
+        """ FIXME DOC """
+        assert False  # XXX TEST COVERAGE
+        return self._electronic_me_Qcc
+
+    def get_absolute_intensities(self, delta=0):
+        """Absolute Raman intensity or Raman scattering factor
+
+        Parameters
+        ----------
+        delta: float
+           pre-factor for asymmetric anisotropy, default 0
+
+        References
+        ----------
+        Porezag and Pederson, PRB 54 (1996) 7830-7836 (delta=0)
+        Baiardi and Barone, JCTC 11 (2015) 3267-3280 (delta=5)
+
+        Returns
+        -------
+        raman intensity, unit Ang**4/amu
+        """
+        assert False  # XXX TEST COVERAGE
+        return _get_absolute_intensities(elme_Qcc=self._elme_Qcc, delta=delta)
+
+    def intensity(self, observation=None):
+        """Raman intensity
+
+        Returns
+        -------
+        unit e^4 Angstrom^4 / eV^2
+        """
+        # assert False  # XXX TEST COVERAGE
+        alpha_Qcc = self._me_Qcc
+        if observation is None:
+            observation = {'geometry': '-Z(XX)Z'}
+        if not observation:  # XXXX remove - triggers on empty dict
+            assert False  # XXX TEST COVERAGE
+            """Simple sum, maybe too simple"""
+            return _m2(alpha_Qcc).sum(axis=1).sum(axis=1)
+
+        return _intensity(alpha_Qcc=alpha_Qcc, observation=observation)
+
+    def summary(self, log='-'):
+        """Print summary for given omega [eV]"""
+        assert False  # FIXME:  no MPI communicator here, might need to take one as argument or disallow filepaths? :/
+        with IOContext() as io:
+            log = io.openfile(log, comm=comm, mode='a')
+            return _summary(log=log, hnu=self.get_energies(), intensities=self.get_absolute_intensities())
