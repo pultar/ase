@@ -162,6 +162,7 @@ class Vibrations(AtomicDisplacements):
         self.H = None
         self.ir = None
         self._vibrations = None
+        self._vibrations_key = None
 
         self.cache = get_json_cache(name)
 
@@ -313,6 +314,7 @@ Please remove them and recalculate or run \
         self.direction = direction.lower()
         assert self.method in ['standard', 'frederiksen']
         assert self.direction in ['central', 'forward', 'backward']
+        caching_key = (method, direction)
 
         n = 3 * len(self.indices)
         H = np.empty((n, n))
@@ -363,7 +365,8 @@ Please remove them and recalculate or run \
                                ' to set all masses to non-zero values.')
 
         self.im = np.repeat(masses[self.indices]**-0.5, 3)
-        self._vibrations = self.get_vibrations(read_cache=False)
+        self._vibrations = self._get_vibrations_nocache()
+        self._vibrations_key = caching_key
 
         omega2, modes = np.linalg.eigh(self.im[:, None] * H * self.im)
         self.modes = modes.T.copy()
@@ -392,16 +395,19 @@ Please remove them and recalculate or run \
             VibrationsData
 
         """
+        key = (method.lower(), direction.lower())
         if read_cache and (self._vibrations is not None):
             return self._vibrations
 
         else:
-            if (self.H is None or method.lower() != self.method or
-                direction.lower() != self.direction):
+            if (self.H is None or key != self._vibrations_key):
                 self.read(method, direction, **kw)
 
-            return VibrationsData.from_2d(self.atoms, self.H,
-                                          indices=self.indices)
+            return self._get_vibrations_nocache()
+
+    def _get_vibrations_nocache(self):
+        return VibrationsData.from_2d(self.atoms, self.H,
+                                      indices=self.indices)
 
     def get_energies(self, method='standard', direction='central', **kw):
         """Get vibration energies in eV."""

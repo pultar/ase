@@ -228,7 +228,7 @@ class VibrationsData:
             atoms[1] in the x-direction in response to a movement in the
             z-direction of atoms[0]
         """
-        n_atoms = int(self._hessian2d.shape[0] / 3)
+        n_atoms = self._hessian2d.shape[0] // 3
         return self._hessian2d.reshape(n_atoms, 3, n_atoms, 3).copy()
 
     def get_hessian_2d(self) -> np.ndarray:
