@@ -69,7 +69,6 @@ filterwarnings = pytest.mark.filterwarnings
              filterwarnings('ignore:convert_string_to_fd')])
 @calc('nwchem')
 @calc('octopus', Spacing='0.4 * angstrom')
-@calc('openmx')
 @calc('siesta', marks=pytest.mark.xfail)
 def test_ch4_reaction(factory):
     e_ch4 = _calculate(factory, 'CH4')

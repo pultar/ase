@@ -450,11 +450,11 @@ class OpenMXFactory:
         self.data_path = data_path
 
     def version(self):
-        from ase.calculators.openmx.openmx import parse_omx_version
+        from ase.io.openmx import parse_openmx_log_version
         dummyfile = 'omx_dummy_input'
         stdout = read_stdout([self.executable, dummyfile],
                              createfile=dummyfile)
-        return parse_omx_version(stdout)
+        return parse_openmx_log_version(stdout)
 
     def calc(self, **kwargs):
         from ase.calculators.openmx import OpenMX
@@ -545,7 +545,7 @@ class PlumedFactory:
     def __init__(self):
         import plumed
         self.path = plumed.__spec__.origin
-        
+
     def calc(self, **kwargs):
         from ase.calculators.plumed import Plumed
         return Plumed(**kwargs)
