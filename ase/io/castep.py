@@ -7,7 +7,7 @@ from copy import deepcopy
 import numpy as np
 import os
 import re
-from typing import List
+from typing import Dict, List
 import warnings
 
 import ase
@@ -325,7 +325,7 @@ def _get_species_mass_block(atoms: ase.Atoms, elems: List[str]
                             ) -> List[str]:
     from ase.data import atomic_masses
     masses = atoms.get_array('masses')
-    custom_masses = {}
+    custom_masses = {}  # type: Dict[str, Dict[float, List[int]]]
 
     for i, species in enumerate(elems):
         custom_mass = masses[i]
