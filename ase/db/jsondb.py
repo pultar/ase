@@ -93,8 +93,8 @@ class JSONDatabase(Database):
         return bigdct, ids, bigdct['nextid']
 
     def _write_json(self, bigdct, ids, nextid):
-        if world.rank > 0:
-            return
+        # if world.rank > 0:
+        #     return
 
         with ExitStack() as stack:
             if isinstance(self.filename, str):
