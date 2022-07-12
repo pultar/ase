@@ -1,6 +1,5 @@
 """Testing lammpsdata reader."""
 
-import re
 import pytest
 import numpy as np
 
@@ -96,25 +95,30 @@ def lammpsdata(fmt, sort_by_id):
     return read(fd, format=fmt, sort_by_id=sort_by_id), SORTED[sort_by_id]
 
 
-def parse_tuples(atoms, regex, permutation, label):
+def parse_dicts(atoms, permutation, label):
     """Parse connectivity strings stored in atoms."""
     all_tuples = np.zeros((0, len(permutation)), int)
     types = np.array([], int)
 
-    tuples = atoms.arrays[label]
-    bonded = np.where(tuples != '_')[0]
+    dicts = atoms.arrays[label]
+    bonded = np.where(dicts != {})[0]
 
-    for i, per_atom in zip(bonded, tuples[bonded]):
-        per_atom = np.array(regex.findall(per_atom), int)
-        new_tuples = np.array([
-            np.full(per_atom.shape[0], i, int),
-            *(per_atom[:, :-1].T)
-        ])
+    for i, per_atom in zip(bonded, dicts[bonded]):
+        for type_n, per_type in per_atom.items():
+            if label == 'bonds':
+                per_type = np.array([per_type], int)
+            else:
+                per_type = np.array(per_type, int)
+            new_tuples = [
+                np.full(per_type.shape[0], i, int),
+                *(per_type.T)
+            ]
+            new_tuples = np.array(new_tuples)
 
-        all_tuples = np.append(all_tuples,
-                                new_tuples[permutation, :].T,
-                                axis=0)
-        types = np.append(types, per_atom[:, -1])
+            all_tuples = np.append(all_tuples,
+                                    new_tuples[permutation, :].T,
+                                    axis=0)
+            types = np.append(types, np.full(per_type.shape[0], type_n))
 
     return all_tuples, types
 
@@ -130,16 +134,16 @@ def test_cell(lammpsdata):
 
 
 def test_connectivity(lammpsdata):
-    atoms, sorted = lammpsdata
+    atoms, sorted_atoms = lammpsdata
 
     parser_data = {
-        'bonds': ((0, 1), re.compile(r'(\d+)\((\d+)\)')),
-        'angles': ((1, 0, 2), re.compile(r'(\d+)-(\d+)\((\d+)\)')),
-        'dihedrals': ((0, 1, 2, 3), re.compile(r'(\d+)-(\d+)-(\d+)\((\d+)\)')),
+        'bonds': (0, 1),
+        'angles': (1, 0, 2),
+        'dihedrals': (0, 1, 2, 3),
     }
 
-    for k, v in parser_data.items():
-        tuples, types = parse_tuples(atoms, v[1], v[0], k)
-        tuples = sorted[tuples.flatten()].reshape(tuples.shape)
-        assert np.all(tuples == REFERENCE[k]['atoms'])
-        assert np.all(types == REFERENCE[k]['types'])
+    for label, permutation in parser_data.items():
+        tuples, types = parse_dicts(atoms, permutation, label)
+        tuples = sorted_atoms[tuples.flatten()].reshape(tuples.shape)
+        assert np.all(tuples == REFERENCE[label]['atoms'])
+        assert np.all(types == REFERENCE[label]['types'])

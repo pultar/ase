@@ -30,6 +30,7 @@ def extract_section(raw_datafile_contents, section_header):
     section = None
 
     for ind, block in enumerate(contents_split_by_section):
+        # TODO support section headers with comments
         if block.startswith(section_header):
             section = contents_split_by_section[ind + 1].strip()
             break
