@@ -3,18 +3,19 @@ The key idea is that all function accept or return  atoms objects.
 CASTEP specific parameters will be returned through the <atoms>.calc
 attribute.
 """
+from copy import deepcopy
+import numpy as np
 import os
 import re
+from typing import Dict, List
 import warnings
-import numpy as np
-from copy import deepcopy
 
 import ase
-
+from ase.constraints import FixAtoms, FixedPlane, FixedLine, FixCartesian
+from ase.geometry.cell import cellpar_to_cell
 from ase.parallel import paropen
 from ase.spacegroup import Spacegroup
-from ase.geometry.cell import cellpar_to_cell
-from ase.constraints import FixAtoms, FixedPlane, FixedLine, FixCartesian
+import ase.units
 from ase.utils import atoms_to_spglib_cell
 
 # independent unit management included here:
@@ -23,7 +24,6 @@ from ase.utils import atoms_to_spglib_cell
 # (CODATA1986 for ase-3.6.0.2515 vs CODATA2002 for CASTEP 5.01).
 #
 # ase.units in in ase-3.6.0.2515 is based on CODATA1986
-import ase.units
 units_ase = {
     'hbar': ase.units._hbar * ase.units.J,
     'Eh': ase.units.Hartree,
@@ -203,72 +203,13 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
         positions = atoms.get_positions()
 
     if atoms.has('castep_custom_species'):
-        elems = atoms.get_array('castep_custom_species')
+        elems = list(atoms.get_array('castep_custom_species'))
     else:
         elems = atoms.get_chemical_symbols()
+
     if atoms.has('masses'):
-
-        from ase.data import atomic_masses
-        masses = atoms.get_array('masses')
-        custom_masses = {}
-
-        for i, species in enumerate(elems):
-            custom_mass = masses[i]
-
-            # build record of different masses for each species
-            if species not in custom_masses.keys():
-
-                # build dictionary of positions of all species with same name and mass value
-                # ideally there should only be one mass per species
-                custom_masses[species] = {custom_mass: [i]}
-
-            # if multiple masses found for a species
-            elif custom_mass not in custom_masses[species].keys():
-
-                # if custom species were already manually defined raise an error
-                if atoms.has('castep_custom_species'):
-                    raise ValueError("Could not write custom mass block for {0}. \n"
-                                     "Custom mass was set ({1}), but an inconsistent set of "
-                                     "castep_custom_species already defines ({2}) for {0}. \n"
-                                     "If using both features, ensure that "
-                                     "each species type in atoms.arrays['castep_custom_species'] "
-                                     "has consistent mass values and that each atom with non-standard "
-                                     "mass belongs to a custom species type.""".format(species, custom_mass,
-                                                                                       list(custom_masses[species].keys())[0])
-                                     )
-
-                # append mass to create custom species later
-                else:
-                    custom_masses[species][custom_mass] = [i]
-            else:
-                custom_masses[species][custom_mass].append(i)
-
-        # create species_mass block
-        mass_block = []
-
-        for el, mass_dict in custom_masses.items():
-
-            # ignore mass record that match defaults
-            default = mass_dict.pop(atomic_masses[atoms.get_array('numbers')[list(elems).index(el)]], None)
-            if mass_dict:
-                # no custom species need to be created
-                if len(mass_dict) == 1 and not default:
-                    mass_block.append('{0} {1}'.format(el, list(mass_dict.keys())[0]))
-                # for each custom mass, create new species and change names to match in 'elems' list
-                else:
-                    warnings.warn('Custom mass specified for '
-                                  'standard species {0}, creating custom species'.format(el))
-
-                    for i, vals in enumerate(mass_dict.items()):
-                        mass_val, idxs = vals
-                        custom_species_name = "{0}:{1}".format(el, i)
-                        warnings.warn(
-                            'Creating custom species {0} with mass {1}'.format(custom_species_name, str(mass_dict)))
-                        for idx in idxs:
-                            elems[idx] = custom_species_name
-                        mass_block.append('{0} {1}'.format(custom_species_name, mass_val))
-
-        setattr(cell, 'species_mass', mass_block)
+        mass_block = _get_species_mass_block(atoms, elems)
+        cell.species_mass = mass_block
 
     if atoms.has('castep_labels'):
         labels = atoms.get_array('castep_labels')
@@ -378,6 +319,73 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     write_freeform(fd, cell)
 
     return True
+
+
+def _get_species_mass_block(atoms: ase.Atoms, elems: List[str]
+                            ) -> List[str]:
+    from ase.data import atomic_masses
+    masses = atoms.get_array('masses')
+    custom_masses = {}  # type: Dict[str, Dict[float, List[int]]]
+
+    for i, species in enumerate(elems):
+        custom_mass = masses[i]
+
+        # build record of different masses for each species
+        if species not in custom_masses.keys():
+
+            # build dictionary of positions of all species with same name and mass value
+            # ideally there should only be one mass per species
+            custom_masses[species] = {custom_mass: [i]}
+
+        # if multiple masses found for a species
+        elif custom_mass not in custom_masses[species].keys():
+
+            # if custom species were already manually defined raise an error
+            if atoms.has('castep_custom_species'):
+                raise ValueError(
+                    "Could not write custom mass block for {0}. \n"
+                    "Custom mass was set ({1}), but an inconsistent set of "
+                    "castep_custom_species already defines ({2}) for {0}. \n"
+                    "If using both features, ensure that "
+                    "each species type in atoms.arrays['castep_custom_species'] "
+                    "has consistent mass values and that each atom with "
+                    "non-standard mass belongs to a custom species type."
+                    "".format(species, custom_mass,
+                              list(custom_masses[species].keys())[0])
+                                 )
+
+            # append mass to create custom species later
+            else:
+                custom_masses[species][custom_mass] = [i]
+        else:
+            custom_masses[species][custom_mass].append(i)
+
+    # create species_mass block
+    mass_block = []
+
+    for el, mass_dict in custom_masses.items():
+
+        # ignore mass record that match defaults
+        default = mass_dict.pop(atomic_masses[atoms.get_array('numbers')[elems.index(el)]], None)
+        if mass_dict:
+            # no custom species need to be created
+            if len(mass_dict) == 1 and not default:
+                mass_block.append('{0} {1}'.format(el, list(mass_dict.keys())[0]))
+            # for each custom mass, create new species and change names to match in 'elems' list
+            else:
+                warnings.warn('Custom mass specified for '
+                              'standard species {0}, creating custom species'.format(el))
+
+                for i, vals in enumerate(mass_dict.items()):
+                    mass_val, idxs = vals
+                    custom_species_name = "{0}:{1}".format(el, i)
+                    warnings.warn(
+                        'Creating custom species {0} with mass {1}'.format(custom_species_name, str(mass_dict)))
+                    for idx in idxs:
+                        elems[idx] = custom_species_name
+                    mass_block.append('{0} {1}'.format(custom_species_name, mass_val))
+
+    return mass_block
 
 
 def read_freeform(fd):
