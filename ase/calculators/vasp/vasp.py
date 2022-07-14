@@ -632,7 +632,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         """Direct access for setting the xc parameter"""
         self.set(xc=xc)
 
-    @property
+    @property  # type: ignore # https://github.com/python/mypy/issues/4125
     def atoms(self):
         return self._atoms
 

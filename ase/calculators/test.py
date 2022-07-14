@@ -167,7 +167,7 @@ class FreeElectrons(Calculator):
         return 1
 
 
-def numeric_force(atoms, a, i, d=0.001):
+def numeric_force(atoms: Atoms, a, i, d=0.001):
     """Compute numeric force on atom with index a, Cartesian component i,
     with finite step of size d
     """
@@ -183,12 +183,12 @@ def numeric_force(atoms, a, i, d=0.001):
     return (eminus - eplus) / (2 * d)
 
 
-def numeric_forces(atoms, d=0.001):
+def numeric_forces(atoms: Atoms, d=0.001):
     return np.array([[numeric_force(atoms, a, i, d)
                       for i in range(3)] for a in range(len(atoms))])
 
 
-def numeric_stress(atoms, d=1e-6, voigt=True):
+def numeric_stress(atoms: Atoms, d=1e-6, voigt=True):
     stress = np.zeros((3, 3), dtype=float)
 
     cell = atoms.cell.copy()

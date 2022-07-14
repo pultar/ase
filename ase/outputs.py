@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import Sequence, Union
+from typing import Sequence, Union, Dict, Mapping as MappingType
 
 import numpy as np
 
@@ -61,9 +61,6 @@ class Properties(Mapping):
         return f'({clsname}({self._dct})'
 
 
-all_outputs = {}
-
-
 class Property(ABC):
     def __init__(self, name, dtype, shapespec):
         self.name = name
@@ -101,55 +98,62 @@ class ArrayProperty(Property):
 ShapeSpec = Union[str, int]
 
 
-def _defineprop(
-        name: str,
-        dtype: type = float,
-        shape: Union[ShapeSpec, Sequence[ShapeSpec]] = tuple()
-) -> Property:
-    """Create, register, and return a property."""
+def _build_outputs() -> MappingType[str, Property]:
+    _all_outputs: Dict[str, Property] = {}
 
-    if isinstance(shape, (int, str)):
-        shape = (shape,)
+    def _defineprop(
+            name: str,
+            dtype: type = float,
+            shape: Union[ShapeSpec, Sequence[ShapeSpec]] = tuple()
+    ) -> Property:
+        """Create, register, and return a property."""
 
-    shape = tuple(shape)
-    prop: Property
-    if len(shape) == 0:
-        prop = ScalarProperty(name, dtype)
-    else:
-        prop = ArrayProperty(name, dtype, shape)
+        if isinstance(shape, (int, str)):
+            shape = (shape,)
 
-    assert name not in all_outputs, name
-    all_outputs[name] = prop
-    return prop
+        shape = tuple(shape)
+        prop: Property
+        if len(shape) == 0:
+            prop = ScalarProperty(name, dtype)
+        else:
+            prop = ArrayProperty(name, dtype, shape)
+
+        assert name not in _all_outputs, name
+        _all_outputs[name] = prop
+        return prop
+
+    # Atoms, energy, forces, stress:
+    _defineprop('natoms', int)
+    _defineprop('energy', float)
+    _defineprop('energies', float, shape='natoms')
+    _defineprop('free_energy', float)
+    _defineprop('forces', float, shape=('natoms', 3))
+    _defineprop('stress', float, shape=6)
+    _defineprop('stresses', float, shape=('natoms', 6))
+
+    # Electronic structure:
+    _defineprop('nbands', int)
+    _defineprop('nkpts', int)
+    _defineprop('nspins', int)
+    _defineprop('fermi_level', float)
+    _defineprop('kpoint_weights', float, shape='nkpts')
+    _defineprop('ibz_kpoints', float, shape=('nkpts', 3))
+    _defineprop('eigenvalues', float, shape=('nspins', 'nkpts', 'nbands'))
+    _defineprop('occupations', float, shape=('nspins', 'nkpts', 'nbands'))
+
+    # Miscellaneous:
+    _defineprop('dipole', float, shape=3)
+    _defineprop('charges', float, shape='natoms')
+    _defineprop('magmom', float)
+    _defineprop('magmoms', float, shape='natoms')  # XXX spinors?
+    _defineprop('polarization', float, shape=3)
+    _defineprop('born_charges', float, shape=('natoms', 3, 3))
+    _defineprop('dielectric_tensor', float, shape=(3, 3))
+
+    return _all_outputs
 
 
-# Atoms, energy, forces, stress:
-_defineprop('natoms', int)
-_defineprop('energy', float)
-_defineprop('energies', float, shape='natoms')
-_defineprop('free_energy', float)
-_defineprop('forces', float, shape=('natoms', 3))
-_defineprop('stress', float, shape=6)
-_defineprop('stresses', float, shape=('natoms', 6))
-
-# Electronic structure:
-_defineprop('nbands', int)
-_defineprop('nkpts', int)
-_defineprop('nspins', int)
-_defineprop('fermi_level', float)
-_defineprop('kpoint_weights', float, shape='nkpts')
-_defineprop('ibz_kpoints', float, shape=('nkpts', 3))
-_defineprop('eigenvalues', float, shape=('nspins', 'nkpts', 'nbands'))
-_defineprop('occupations', float, shape=('nspins', 'nkpts', 'nbands'))
-
-# Miscellaneous:
-_defineprop('dipole', float, shape=3)
-_defineprop('charges', float, shape='natoms')
-_defineprop('magmom', float)
-_defineprop('magmoms', float, shape='natoms')  # XXX spinors?
-_defineprop('polarization', float, shape=3)
-_defineprop('born_charges', float, shape=('natoms', 3, 3))
-_defineprop('dielectric_tensor', float, shape=(3, 3))
+all_outputs: MappingType[str, Property] = _build_outputs()
 
 # We might want to allow properties that are part of Atoms, such as
 # positions, numbers, pbc, cell.  It would be reasonable for those
