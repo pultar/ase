@@ -539,7 +539,8 @@ def read_espresso_in(fileobj):
 
     # species_info holds some info for each element
     species_card = get_atomic_species(card_lines, n_species=data['system']['ntyp'])
-    species_info = {}
+    # species_info = {}
+    species_label_info = {}
     for ispec, (label, weight, pseudo) in enumerate(species_card):
         symbol = label_to_symbol(label)
         valence = get_valence_electrons(symbol, data, pseudo)
@@ -547,15 +548,18 @@ def read_espresso_in(fileobj):
         # starting_magnetization is in fractions of valence electrons
         magnet_key = "starting_magnetization({0})".format(ispec + 1)
         magmom = valence * data["system"].get(magnet_key, 0.0)
-        species_info[symbol] = {"weight": weight, "pseudo": pseudo,
+        # We don't do anything most of this, but in principle we can
+        # in the future
+        species_label_info[label] = {"weight": weight, "pseudo": pseudo,
                                 "valence": valence, "magmom": magmom}
 
     positions_card = get_atomic_positions(
         card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
+    labels = [position[0] for position in positions_card]
     positions = [position[1] for position in positions_card]
-    magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
+    magmoms = [species_label_info[label]["magmom"] for label in labels]
 
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
