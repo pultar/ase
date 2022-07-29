@@ -69,7 +69,7 @@ class NPTBerendsen(NVTBerendsen):
             Use '-' for stdout.
 
         loginterval: int (optional)
-            Only write a log line for every *loginterval* time steps.
+            Only write a log line for every *loginterval* time steps.  
             Default: 1
 
         append_trajectory: boolean (optional)
@@ -136,6 +136,9 @@ class NPTBerendsen(NVTBerendsen):
         scl_pressure = (1.0 - taupscl * self.compressibility / 3.0 *
                         (self.pressure - old_pressure))
 
+        #print("old_pressure", old_pressure, self.pressure)
+        #print("volume scaling by:", scl_pressure)
+
         cell = self.atoms.get_cell()
         cell = scl_pressure * cell
         self.atoms.set_cell(cell, scale_atoms=True)
@@ -192,7 +195,7 @@ class NPTBerendsen(NVTBerendsen):
         pressure_au: None or float
             Pressure in ev/Å^3.
 
-        Exactly one of the two pressure parameters must be different from
+        Exactly one of the two pressure parameters must be different from 
         None, otherwise an error is issued.
 
         Return value: Pressure in eV/Å^3.
@@ -258,7 +261,7 @@ class Inhomogeneous_NPTBerendsen(NPTBerendsen):
                  pressure_au=None, taup=1e3 * units.fs,
                  compressibility=None, compressibility_au=None,
                  mask=(1, 1, 1), fixcm=True, trajectory=None,
-                 logfile=None, loginterval=1):
+                 logfile=None, loginterval=1, append_trajectory=False):
 
         NPTBerendsen.__init__(self, atoms, timestep, temperature=temperature,
                               temperature_K=temperature_K,
@@ -267,7 +270,8 @@ class Inhomogeneous_NPTBerendsen(NPTBerendsen):
                               compressibility=compressibility,
                               compressibility_au=compressibility_au,
                               fixcm=fixcm, trajectory=trajectory,
-                              logfile=logfile, loginterval=loginterval)
+                              logfile=logfile, loginterval=loginterval,
+                              append_trajectory=append_trajectory)
         self.mask = mask
 
     def scale_positions_and_cell(self):
