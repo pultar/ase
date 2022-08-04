@@ -9,6 +9,7 @@ Different information can be obtained from this:
    :maxdepth: 2
 
    modes
+   finitedisplacement
    infrared
    raman
    franck_condon
