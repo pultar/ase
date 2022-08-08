@@ -162,6 +162,15 @@ class Dynamics(IOContext):
         Optimizer """
         return False
 
+    def log_msg(self, msg):
+        """ Write message to the logfile, if it exists. """
+
+        if not self.logfile:
+            return
+
+        self.logfile.write(msg)
+        self.logfile.flush()
+
     def log(self, *args):
         """ a dummy function as placeholder for a real logger, e.g. in
         Optimizer """
