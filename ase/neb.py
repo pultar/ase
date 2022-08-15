@@ -21,6 +21,7 @@ from ase.utils import lazyproperty, deprecated
 from ase.utils.forcecurve import fit_images
 from ase.optimize.precon import Precon, PreconImages
 from ase.optimize.ode import ode12r
+from ase.constraints import FixBondLengths
 
 
 class Spring:
@@ -328,7 +329,8 @@ class BaseNEB:
                                 **results_to_include):
         atoms.calc = SinglePointCalculator(atoms=atoms, **results_to_include)
 
-    def interpolate(self, method='linear', mic=False, apply_constraint=None):
+    def interpolate(self, method='linear', mic=False, apply_constraint=None,
+                    tethered_indices=None):
         """Interpolate the positions of the interior images between the
         initial state (image 0) and final state (image -1).
 
@@ -347,21 +349,29 @@ class BaseNEB:
             if the positions are not the same
             the user is required to specify the desired behaviour
             by setting up apply_constraint keyword argument to False or True.
+        tethered_indices : sequence of int
+            Indices for those atoms that should always be tethered (stay close)
+            along the interpolated path. The first index should correspond to 
+            the reference atom which all other tethered atoms follow.
         """
         if self.remove_rotation_and_translation:
             minimize_rotation_and_translation(self.images[0], self.images[-1])
 
-        interpolate(self.images, mic, apply_constraint=apply_constraint)
+        interpolate(self.images, mic, apply_constraint=apply_constraint,
+                    tethered_indices=tethered_indices)
 
         if method == 'idpp':
-            idpp_interpolate(images=self, traj=None, log=None, mic=mic)
+            idpp_interpolate(images=self, traj=None, log=None, mic=mic,
+                             tethered_indices=tethered_indices)
 
     @deprecated("Please use NEB's interpolate(method='idpp') method or "
                 "directly call the idpp_interpolate function from ase.neb")
     def idpp_interpolate(self, traj='idpp.traj', log='idpp.log', fmax=0.1,
-                         optimizer=MDMin, mic=False, steps=100):
+                         optimizer=MDMin, mic=False, tethered_indices=None,
+                         steps=100):
         idpp_interpolate(self, traj=traj, log=log, fmax=fmax,
-                         optimizer=optimizer, mic=mic, steps=steps)
+                         optimizer=optimizer, mic=mic, 
+                         tethered_indices=tethered_indices, steps=steps)
 
     def get_positions(self):
         positions = np.empty(((self.nimages - 2) * self.natoms, 3))
@@ -980,7 +990,8 @@ class SingleCalculatorNEB(NEB):
 
 
 def interpolate(images, mic=False, interpolate_cell=False,
-                use_scaled_coord=False, apply_constraint=None):
+                use_scaled_coord=False, apply_constraint=None,
+                tethered_indices=None):
     """Given a list of images, linearly interpolate the positions of the
     interior images.
 
@@ -1000,6 +1011,11 @@ def interpolate(images, mic=False, interpolate_cell=False,
          (apply_constraint=False), if the positions are not the same
          the user is required to specify the desired behaviour
          by setting up apply_constraint keyword argument to False or True.
+    tethered_indices : sequence of int
+         Indices for those atoms that should always be tethered (stay close) 
+         along the interpolated path. The first index should correspond to the
+         reference atom which all other tethered atoms follow. Implemented only
+         for NEB calculations!
     """
     if use_scaled_coord:
         pos1 = images[0].get_scaled_positions(wrap=mic)
@@ -1010,6 +1026,12 @@ def interpolate(images, mic=False, interpolate_cell=False,
     d = pos2 - pos1
     if not use_scaled_coord and mic:
         d = find_mic(d, images[0].get_cell(), images[0].pbc)[0]
+    if not use_scaled_coord and (tethered_indices is not None):
+        ti = np.array(tethered_indices)
+        tmp = pos1[ti[1:]] + d[ti[0]]
+        di = find_mic(pos2[ti[1:]] - tmp, images[0].get_cell(),
+                      images[0].pbc)[0] + d[ti[0]]
+        d[ti[1:]] = di 
     d /= (len(images) - 1.0)
     if interpolate_cell:
         cell1 = images[0].get_cell()
@@ -1045,7 +1067,8 @@ def interpolate(images, mic=False, interpolate_cell=False,
 
 
 def idpp_interpolate(images, traj='idpp.traj', log='idpp.log', fmax=0.1,
-                     optimizer=MDMin, mic=False, steps=100):
+                     optimizer=MDMin, mic=False, tethered_indices=None, 
+                     steps=100):
     """Interpolate using the IDPP method. 'images' can either be a plain
     list of images or an NEB object (containing a list of images)."""
     if hasattr(images, 'interpolate'):
@@ -1060,11 +1083,16 @@ def idpp_interpolate(images, traj='idpp.traj', log='idpp.log', fmax=0.1,
     for i, image in enumerate(neb.images):
         real_calcs.append(image.calc)
         image.calc = IDPP(d1 + i * d, mic=mic)
+        if tethered_indices is not None:
+            c = FixBondLengths([[int(tethered_indices[0]), int(j)] 
+                                for j in tethered_indices[1:]])
+            image.constraints.append(c)
 
     with optimizer(neb, trajectory=traj, logfile=log) as opt:
         opt.run(fmax=fmax, steps=steps)
 
     for image, calc in zip(neb.images, real_calcs):
+        image.constraints = image.constraints[:-1]
         image.calc = calc
 
 
