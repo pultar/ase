@@ -349,10 +349,12 @@ class BaseNEB:
             if the positions are not the same
             the user is required to specify the desired behaviour
             by setting up apply_constraint keyword argument to False or True.
-        tethered_indices : sequence of int
+        tethered_indices : sequence(s) of int
             Indices for those atoms that should always be tethered (stay close)
             along the interpolated path. The first index should correspond to 
-            the reference atom which all other tethered atoms follow.
+            the reference atom which all other tethered atoms follow. Nested
+            sequences are can also be provided to tether atoms to multiple 
+            reference atoms.
         """
         if self.remove_rotation_and_translation:
             minimize_rotation_and_translation(self.images[0], self.images[-1])
@@ -1011,11 +1013,12 @@ def interpolate(images, mic=False, interpolate_cell=False,
          (apply_constraint=False), if the positions are not the same
          the user is required to specify the desired behaviour
          by setting up apply_constraint keyword argument to False or True.
-    tethered_indices : sequence of int
+    tethered_indices : sequence(s) of int
          Indices for those atoms that should always be tethered (stay close) 
          along the interpolated path. The first index should correspond to the
-         reference atom which all other tethered atoms follow. Implemented only
-         for NEB calculations!
+         reference atom which all other tethered atoms follow. Nested sequences 
+         are can also be provided to tether atoms to multiple reference atoms. 
+         Implemented only for NEB calculations!
     """
     if use_scaled_coord:
         pos1 = images[0].get_scaled_positions(wrap=mic)
@@ -1028,10 +1031,14 @@ def interpolate(images, mic=False, interpolate_cell=False,
         d = find_mic(d, images[0].get_cell(), images[0].pbc)[0]
     if not use_scaled_coord and (tethered_indices is not None):
         ti = np.array(tethered_indices)
-        tmp = pos1[ti[1:]] + d[ti[0]]
-        di = find_mic(pos2[ti[1:]] - tmp, images[0].get_cell(),
-                      images[0].pbc)[0] + d[ti[0]]
-        d[ti[1:]] = di 
+        if ti.ndim == 1:
+            ti = np.array([ti])
+        for i in range(ti.shape[0]):
+            tii = ti[i]
+            tmp = pos1[tii[1:]] + d[tii[0]]
+            dii = find_mic(pos2[tii[1:]] - tmp, images[0].get_cell(),
+                           images[0].pbc)[0] + d[tii[0]]
+            d[tii[1:]] = dii 
     d /= (len(images) - 1.0)
     if interpolate_cell:
         cell1 = images[0].get_cell()
@@ -1080,19 +1087,28 @@ def idpp_interpolate(images, traj='idpp.traj', log='idpp.log', fmax=0.1,
     d2 = neb.images[-1].get_all_distances(mic=mic)
     d = (d2 - d1) / (neb.nimages - 1)
     real_calcs = []
+    if tethered_indices is not None:
+        ti = np.array(tethered_indices)
+        if ti.ndim == 1:
+            ti = np.array([ti])
     for i, image in enumerate(neb.images):
+        c0 = image.constraints.copy()
         real_calcs.append(image.calc)
         image.calc = IDPP(d1 + i * d, mic=mic)
         if tethered_indices is not None:
-            c = FixBondLengths([[int(tethered_indices[0]), int(j)] 
-                                for j in tethered_indices[1:]])
-            image.constraints.append(c)
+            fixed_indices = []
+            for j in range(ti.shape[0]):
+                tij = ti[j]
+                fixed_indices += [[tij[0], k] for k in tij[1:]]
+            c = FixBondLengths(fixed_indices)
+            image.constraints = c0 + [c]
 
     with optimizer(neb, trajectory=traj, logfile=log) as opt:
         opt.run(fmax=fmax, steps=steps)
 
     for image, calc in zip(neb.images, real_calcs):
-        image.constraints = image.constraints[:-1]
+        if tethered_indices is not None:
+            image.constraints = image.constraints[:-1]
         image.calc = calc
 
 
