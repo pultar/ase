@@ -351,9 +351,9 @@ class BaseNEB:
             by setting up apply_constraint keyword argument to False or True.
         tethered_indices : sequence(s) of int
             Indices for those atoms that should always be tethered (stay close)
-            along the interpolated path. The first index should correspond to 
+            along the interpolated path. The first index should correspond to
             the reference atom which all other tethered atoms follow. Nested
-            sequences are can also be provided to tether atoms to multiple 
+            sequences are can also be provided to tether atoms to multiple
             reference atoms.
         """
         if self.remove_rotation_and_translation:
@@ -372,7 +372,7 @@ class BaseNEB:
                          optimizer=MDMin, mic=False, tethered_indices=None,
                          steps=100):
         idpp_interpolate(self, traj=traj, log=log, fmax=fmax,
-                         optimizer=optimizer, mic=mic, 
+                         optimizer=optimizer, mic=mic,
                          tethered_indices=tethered_indices, steps=steps)
 
     def get_positions(self):
@@ -1014,10 +1014,10 @@ def interpolate(images, mic=False, interpolate_cell=False,
          the user is required to specify the desired behaviour
          by setting up apply_constraint keyword argument to False or True.
     tethered_indices : sequence(s) of int
-         Indices for those atoms that should always be tethered (stay close) 
+         Indices for those atoms that should always be tethered (stay close)
          along the interpolated path. The first index should correspond to the
-         reference atom which all other tethered atoms follow. Nested sequences 
-         are can also be provided to tether atoms to multiple reference atoms. 
+         reference atom which all other tethered atoms follow. Nested sequences
+         are can also be provided to tether atoms to multiple reference atoms.
          Implemented only for NEB calculations!
     """
     if use_scaled_coord:
@@ -1038,7 +1038,7 @@ def interpolate(images, mic=False, interpolate_cell=False,
             tmp = pos1[tii[1:]] + d[tii[0]]
             dii = find_mic(pos2[tii[1:]] - tmp, images[0].get_cell(),
                            images[0].pbc)[0] + d[tii[0]]
-            d[tii[1:]] = dii 
+            d[tii[1:]] = dii
     d /= (len(images) - 1.0)
     if interpolate_cell:
         cell1 = images[0].get_cell()
@@ -1074,7 +1074,7 @@ def interpolate(images, mic=False, interpolate_cell=False,
 
 
 def idpp_interpolate(images, traj='idpp.traj', log='idpp.log', fmax=0.1,
-                     optimizer=MDMin, mic=False, tethered_indices=None, 
+                     optimizer=MDMin, mic=False, tethered_indices=None,
                      steps=100):
     """Interpolate using the IDPP method. 'images' can either be a plain
     list of images or an NEB object (containing a list of images)."""
