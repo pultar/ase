@@ -353,7 +353,7 @@ class BaseNEB:
             Indices for those atoms that should always be tethered (stay close)
             along the interpolated path. The first index should correspond to
             the reference atom which all other tethered atoms follow. Nested
-            sequences are can also be provided to tether atoms to multiple
+            sequences can also be provided to tether atoms to multiple
             reference atoms.
         """
         if self.remove_rotation_and_translation:
@@ -1017,7 +1017,7 @@ def interpolate(images, mic=False, interpolate_cell=False,
          Indices for those atoms that should always be tethered (stay close)
          along the interpolated path. The first index should correspond to the
          reference atom which all other tethered atoms follow. Nested sequences
-         are can also be provided to tether atoms to multiple reference atoms.
+         can also be provided to tether atoms to multiple reference atoms.
          Implemented only for NEB calculations!
     """
     if use_scaled_coord:
