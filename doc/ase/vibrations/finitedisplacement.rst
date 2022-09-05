@@ -62,5 +62,36 @@ The output *ethanol_mopac_vibs.xyz* file can be visualised with JMOL.
 Note that broadly the vibrations around 1000-1500 cm-1 are bending
 modes whereas the modes above 2500 cm-1 are characterised by bond
 stretching.
-      
+
+Example 2: File-based workflow
+------------------------------
+
+In this example, displacements are written to files, forces are
+calculated at the user's leisure, and then the results are read back
+for analysis. This workflow may be better suited to slow calculations
+performed on a batch system. For this tutorial example we use GPAW.
+
+.. literalinclude:: displacements_files_write.py
+
+After optimizing the structure and writing displaced files, we use a
+Bash script to iterate over the files, run a DFT calculation and save
+the outputs somewhere useful. In this case it is a simple ``for`` loop
+over all displacements, but in practice one might e.g. run in small
+batches on different machines, run several displacements in parallel,
+add more logging...
+
+.. literalinclude:: displacements_files_run.sh
+
+Finally the results are analyzed. Note that it isn't really important
+for the filenames to reflect the displacements or match the input file
+names; this is only done here to avoid overwriting files and assist
+troubleshooting.
+
+.. literalinclude:: displacements_files_read.py
+
+The output frequencies and *ethanol_gpaw_vibs.xyz* file should look
+pretty similar to the MOPAC results in Example 1. With the input files
+above, the low frequencies do not come out especially close to zero;
+this should improve with finer GPAW calculation parameters!
+                    
 .. automodule:: ase.vibrations.finite_diff
