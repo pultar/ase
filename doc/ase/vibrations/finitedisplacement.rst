@@ -58,5 +58,9 @@ qualitative results for these organic molecules.
 
 .. literalinclude:: displacements_interactive.py
 
+The output *ethanol_mopac_vibs.xyz* file can be visualised with JMOL.
+Note that broadly the vibrations around 1000-1500 cm-1 are bending
+modes whereas the modes above 2500 cm-1 are characterised by bond
+stretching.
       
 .. automodule:: ase.vibrations.finite_diff
