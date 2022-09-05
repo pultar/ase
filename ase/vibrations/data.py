@@ -530,7 +530,8 @@ class VibrationsData:
                                                 modes=self.get_modes(
                                                     all_atoms=True),
                                                 ir_intensities=ir_intensities))
-        ase.io.write(filename, all_images, format='extxyz')
+        ase.io.write(filename, all_images, format='extxyz',
+                     columns=['symbols', 'positions', 'mode'])
 
     @staticmethod
     def _get_jmol_images(atoms: Atoms,
