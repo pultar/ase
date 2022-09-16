@@ -93,8 +93,6 @@ The output frequencies and *ethanol_gpaw_vibs.xyz* file should look
 pretty similar to the MOPAC results in Example 1. With the input files
 above, the low frequencies do not come out especially close to zero;
 this should improve with finer GPAW calculation parameters!
-                    
-.. automodule:: ase.vibrations.finite_diff
 
 Example 3: ASE database, job array
 ----------------------------------
@@ -140,3 +138,9 @@ In this case the frequencies between the methods shouldn't be too
 different.  Note that a ``name`` key was also used here to specify the
 system; if desired more molecules could be stored in the same file and
 ``metadata`` used to separate them.
+
+Available functions
+-------------------
+
+.. automodule:: ase.vibrations.finite_diff
+   :members:
