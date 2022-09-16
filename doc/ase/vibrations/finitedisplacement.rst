@@ -95,3 +95,48 @@ above, the low frequencies do not come out especially close to zero;
 this should improve with finer GPAW calculation parameters!
                     
 .. automodule:: ase.vibrations.finite_diff
+
+Example 3: ASE database, job array
+----------------------------------
+
+In this example, an ASE database file is used to store the
+displacements for two separate vibration calculations with different
+XC functionals. A job array is used to manage a batch of calculations
+on an HPC cluster, running displacements simultaneously where the
+resources are available. The database metadata is then used to
+separate the results and obtain a vibration spectrum for each
+functional. This example uses Quantum Espresso, but any Calculator
+could be used.
+
+First the structure is optimised with each functional and
+displacements written to an ASE-DB with metadata:
+
+.. literalinclude:: displacements_db_write.py
+
+Next we write a script that checks environment variables to select an
+appropriate row from the database, calculate forces with the
+appropriate functional (using the ``xc`` metadata), and add them the
+database row:
+
+.. literalinclude:: displacement_db_run_file.py
+
+A single cluster submission declares a job array, launching many
+instances of the above Python script with a different array
+index. In this example we use Slurm, so the index is exposed as the
+``SLURM_ARRAY_TASK_ID`` environment variable.  (Other Slurm parameters
+would need to be adjusted to suit different cluster configurations and
+load appropriate modules, select the correct queue etc.)
+
+.. literalinclude:: run_displacements.slurm
+
+Finally results for each functional can be read from the same database
+to construct :class:`ase.vibrations.data.VibrationsData` objects and
+examine the vibrational modes. The custom ``xc`` key is used to
+separate the results.
+
+.. literalinclude:: displacements_db_read.py
+
+In this case the frequencies between the methods shouldn't be too
+different.  Note that a ``name`` key was also used here to specify the
+system; if desired more molecules could be stored in the same file and
+``metadata`` used to separate them.
