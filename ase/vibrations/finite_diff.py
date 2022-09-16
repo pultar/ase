@@ -22,11 +22,11 @@ def _get_displacements_with_identities(atoms: Atoms,
     directions = (0, 1, 2)
 
     if direction == 'central':
-        signs = (-1, 1)
+        signs = [-1, 1]
     elif direction == 'forward':
-        signs = (1,)
+        signs = [1,]
     elif direction == 'backward':
-        signs = (-1,)
+        signs = [-1,]
     else:
         raise ValueError(f'Direction scheme "{direction}" is not known.')
 
@@ -66,11 +66,10 @@ def get_displacements_with_identities(atoms: Atoms,
         Series of pairs: displaced Atoms object with an identifying string
 
     """
-    disp_kwargs = dict(indices=indices, direction=direction, delta=delta)
 
     displacements_labels = []
     for displacement, identity in _get_displacements_with_identities(
-            atoms, **disp_kwargs):
+            atoms, indices=indices, direction=direction, delta=delta):
 
         identity['direction_index'] = (identity['sign'] + 1) // 2
         label = ('{atom_index}-{cartesian_axis}-{direction_index}'
@@ -139,15 +138,14 @@ def write_displacements_to_db(atoms: Atoms,
 
     """
 
-    disp_kwargs = dict(indices=indices, direction=direction, delta=delta)
-
     metadata = {} if metadata is None else metadata
 
     if isinstance(db, str):
-        db = ase.db.connect(db, append=True)      # type: Database
+        db = ase.db.connect(db, append=True)
+        assert isinstance(db, Database)
 
     for (displacement, label) in get_displacements_with_identities(
-            atoms, **disp_kwargs):
+            atoms, indices=indices, direction=direction, delta=delta):
         db.write(displacement, label=label, **metadata)
 
     return db
@@ -221,7 +219,9 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
 
     """
 
-    arranged_displacements = [[[], [], []] for _ in ref_atoms]
+    # Create a container: List[List[Dict[str, Union[float, np.ndarray]]]]
+    # Mypy doesn't handle this well: https://github.com/python/mypy/issues/6463
+    arranged_displacements = [[[], [], []] for _ in ref_atoms] # type: ignore
 
     if use_equilibrium_forces:
         if ref_atoms.calc is None:
