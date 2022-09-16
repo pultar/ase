@@ -1,5 +1,4 @@
 import ase.io
-from gpaw import GPAW
 from ase.vibrations.finite_diff import read_axis_aligned_forces
 from pathlib import Path
 

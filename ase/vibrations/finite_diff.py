@@ -24,9 +24,9 @@ def _get_displacements_with_identities(atoms: Atoms,
     if direction == 'central':
         signs = [-1, 1]
     elif direction == 'forward':
-        signs = [1,]
+        signs = [1, ]
     elif direction == 'backward':
-        signs = [-1,]
+        signs = [-1, ]
     else:
         raise ValueError(f'Direction scheme "{direction}" is not known.')
 
@@ -188,6 +188,7 @@ def read_axis_aligned_db(ref_atoms: Atoms,
                                     displacements,
                                     **kwargs)
 
+
 def read_axis_aligned_forces(ref_atoms: Atoms,
                              displacements: Sequence[Atoms],
                              use_equilibrium_forces: bool = None,
@@ -221,7 +222,7 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
 
     # Create a container: List[List[Dict[str, Union[float, np.ndarray]]]]
     # Mypy doesn't handle this well: https://github.com/python/mypy/issues/6463
-    arranged_displacements = [[[], [], []] for _ in ref_atoms] # type: ignore
+    arranged_displacements = [[[], [], []] for _ in ref_atoms]  # type: ignore
 
     if use_equilibrium_forces:
         if ref_atoms.calc is None:

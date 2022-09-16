@@ -537,7 +537,6 @@ def test_bad_hessian(n2_data):
                                 [+0.0, +0.00, +0.00, -0.50, +1.0, -0.5],
                                 [+0.0, +0.00, +0.00, +0.00, -0.5, +0.5]])
 
-
         vib_data = VibrationsData.from_2d(Atoms('N2',
                                                 positions=[[0., 0., 0.],
                                                            [0., 0., 1.]]),

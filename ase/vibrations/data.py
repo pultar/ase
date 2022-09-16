@@ -641,7 +641,7 @@ class VibrationsData:
 
         """
         hessian = self.get_hessian_2d()
-        
+
         if method.lower() == 'frederiksen':
             np.fill_diagonal(hessian, hessian.diagonal() - hessian.sum(axis=1))
         else:
