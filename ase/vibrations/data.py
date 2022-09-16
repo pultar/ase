@@ -3,7 +3,8 @@
 import collections
 from math import sin, pi, sqrt
 from numbers import Real, Integral
-from typing import Any, Dict, Iterator, List, Sequence, Tuple, TypeVar, Union
+from typing import (Any, Dict, Iterator, List, Sequence,
+                    Tuple, Type, TypeVar, Union)
 
 import numpy as np
 
@@ -61,10 +62,9 @@ class VibrationsData:
                  ) -> None:
 
         if indices is None:
-            indices = np.asarray(self.indices_from_constraints(atoms),
-                                 dtype=int)
-
-        self._indices = np.array(indices, dtype=int)
+            self._indices = self.indices_from_constraints(atoms)
+        else:
+            self._indices = np.array(indices, dtype=int).tolist()
 
         n_atoms = self._check_dimensions(atoms, np.asarray(hessian),
                                          indices=self._indices)
@@ -78,9 +78,9 @@ class VibrationsData:
                      "(optionally) indices/mask.")
 
     @classmethod
-    def from_2d(cls, atoms: Atoms,
+    def from_2d(cls: Type[VD], atoms: Atoms,
                 hessian_2d: Union[Sequence[Sequence[Real]], np.ndarray],
-                indices: Sequence[int] = None) -> 'VibrationsData':
+                indices: Sequence[int] = None) -> VD:
         """Instantiate VibrationsData when the Hessian is in a 3Nx3N format
 
         Args:
@@ -195,7 +195,7 @@ class VibrationsData:
     def get_atoms(self) -> Atoms:
         return self._atoms.copy()
 
-    def get_indices(self) -> np.ndarray:
+    def get_indices(self) -> List[int]:
         return self._indices.copy()
 
     def get_mask(self) -> np.ndarray:
