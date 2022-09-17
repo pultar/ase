@@ -23,7 +23,7 @@ def bulk(name, crystalstructure=None, a=None, b=None, c=None, *, alpha=None,
         Chemical symbol or symbols as in 'MgO' or 'NaCl'.
     crystalstructure: str
         Must be one of sc, fcc, bcc, tetragonal, bct, hcp, rhombohedral,
-        orthorhombic, mlc, diamond, zincblende, rocksalt, cesiumchloride,
+        orthorhombic, mcl, diamond, zincblende, rocksalt, cesiumchloride,
         fluorite or wurtzite.
     a: float
         Lattice constant.
@@ -65,7 +65,7 @@ def bulk(name, crystalstructure=None, a=None, b=None, c=None, *, alpha=None,
             # is given, and the reference state says we need one, but
             # does not have one, then we can't proceed.
             if (crystalstructure is None and basis is None
-                and 'basis' in ref and ref['basis'] is None):
+                    and 'basis' in ref and ref['basis'] is None):
                 # XXX This is getting much too complicated, we need to split
                 # this function up.  A lot.
                 raise RuntimeError('This structure requires an atomic basis')

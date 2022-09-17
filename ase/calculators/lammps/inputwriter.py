@@ -136,8 +136,10 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
                        "dihedral", "improper", "kspace"):
         style = style_type + "_style"
         if style in parameters:
-            fileobj.write('{} {} \n'.format(style, parameters[style])
-                          .encode("utf-8"))
+            fileobj.write(
+                '{} {} \n'.format(
+                    style,
+                    parameters[style]).encode("utf-8"))
 
     # write initialization lines needed for some LAMMPS potentials
     if 'model_init' in parameters:
@@ -180,11 +182,18 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
 
     # Write interaction stuff
     fileobj.write("\n### interactions\n".encode("utf-8"))
+<<<<<<< HEAD
     if 'interactions_file' in parameters:
         fileobj.write(('include ' + parameters['interactions_file'] + '\n')
                       .encode("utf-8"))
     elif "kim_interactions" in parameters:
         fileobj.write("{}\n".format(parameters["kim_interactions"]).encode("utf-8"))
+=======
+    if "kim_interactions" in parameters:
+        fileobj.write(
+            "{}\n".format(
+                parameters["kim_interactions"]).encode("utf-8"))
+>>>>>>> master
         write_model_post_and_masses(fileobj, parameters)
 
     elif ("pair_style" in parameters) and ("pair_coeff" in parameters):
