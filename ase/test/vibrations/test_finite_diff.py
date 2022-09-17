@@ -69,13 +69,32 @@ indexed_displacements = displacements_from_list(
     simple_dimer(), indexed_displacement_spec, h=0.02)
 indexed_labels = labels_from_list(indexed_displacement_spec)
 
+# Forward displacements only
+forward_displacement_spec = [(0, 0, 1), (0, 1, 1), (0, 2, 1), (1, 0, 1),
+                             (1, 1, 1), (1, 2, 1)]
+forward_displacements = displacements_from_list(
+    simple_dimer(), forward_displacement_spec)
+forward_labels = labels_from_list(forward_displacement_spec)
+
+# Backward displacements only
+backward_displacement_spec = [(0, 0, -1), (0, 1, -1), (0, 2, -1), (1, 0, -1),
+                              (1, 1, -1), (1, 2, -1)]
+backward_displacements = displacements_from_list(
+    simple_dimer(), backward_displacement_spec)
+backward_labels = labels_from_list(backward_displacement_spec)
+
 
 @pytest.mark.parametrize('options, expected_output',
                          [({}, list(zip(dimer_full_displacements,
                                         dimer_full_labels))),
                           ({'indices': [1], 'delta': 0.02},
                            list(zip(indexed_displacements,
-                                    indexed_labels)))])
+                                    indexed_labels))),
+                          ({'direction': 'forward'},
+                           list(zip(forward_displacements, forward_labels))),
+                          ({'direction': 'backward'},
+                           list(zip(backward_displacements, backward_labels))),
+                          ])
 def test_get_displacements_with_identities(options, expected_output):
     output = ase.vibrations.finite_diff.get_displacements_with_identities(
         simple_dimer(), **options)
@@ -86,6 +105,14 @@ def test_get_displacements_with_identities(options, expected_output):
         assert_array_almost_equal(atoms.positions, expected_atoms.positions)
         assert (atoms.get_chemical_symbols()
                 == expected_atoms.get_chemical_symbols())
+
+
+@pytest.mark.parametrize('options, expected_error',
+                         [({'direction': 'inside-out'}, ValueError)])
+def test_get_displacements_invalid(options, expected_error):
+    with pytest.raises(expected_error):
+        _ = ase.vibrations.finite_diff.get_displacements_with_identities(
+            simple_dimer(), **options)
 
 
 def attach_forces(atoms, forces):
@@ -109,6 +136,33 @@ def test_read_axis_aligned_forces(random_dimer):
         random_dimer, displacements)
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+    # Raise error if user requests use of unavailable equilibrium forces
+
+    dimer_no_forces = random_dimer.copy()
+    with pytest.raises(ValueError):
+        ase.vibrations.finite_diff.read_axis_aligned_forces(
+            dimer_no_forces, displacements,
+            use_equilibrium_forces=True)
+
+    dimer_no_forces.calc = SinglePointCalculator(dimer_no_forces)
+    with pytest.raises(ValueError):
+        ase.vibrations.finite_diff.read_axis_aligned_forces(
+            dimer_no_forces, displacements,
+            use_equilibrium_forces=True)
+
+    # Raise error if displacements not all axis-aligned
+    displacements[4].rattle()
+    with pytest.raises(ValueError):
+        ase.vibrations.finite_diff.read_axis_aligned_forces(
+            random_dimer, displacements)
+
+    # Raise error if not enough displacements available
+    del displacements[4]
+    del displacements[4]
+    with pytest.raises(ValueError):
+        ase.vibrations.finite_diff.read_axis_aligned_forces(
+            random_dimer, displacements)
 
 
 def test_db_workflow(testdir, random_dimer):
