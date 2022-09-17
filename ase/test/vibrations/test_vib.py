@@ -563,7 +563,7 @@ def test_bad_hessian(n2_data):
                                                            [0., 0., 1.]]),
                                           np.random.random([6, 6]))
         vib_data = vib_data.apply_sum_rules(method='frederiksen')
-        assert_array_almost_equal(vib_data.get_hessian_2d.sum(axis=1),
+        assert_array_almost_equal(vib_data.get_hessian_2d().sum(axis=1),
                                   np.zeros(6))
 
 
