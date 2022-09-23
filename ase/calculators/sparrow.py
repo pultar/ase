@@ -13,7 +13,7 @@ from ase.units import Bohr, Hartree
 
 try:
     import scine_utilities as su
-    #import scine_sparrow
+    import scine_sparrow
     _manager = su.core.ModuleManager()
     _prop_dict = {'energy': su.Property.Energy,
                   'forces': su.Property.Gradients,
@@ -55,6 +55,7 @@ class Sparrow(Calculator):
 
         Calculator.__init__(self, **kwargs)
         self.calc = _manager.get('calculator', self.parameters.method)
+        assert self.calc is not None
         self.calc.log.output.remove('cout')
 
     def _set_elements(self, symbols):
