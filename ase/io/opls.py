@@ -117,13 +117,14 @@ class OPLSff:
         self.dihedrals = DihedralsData(self.data['dihedrals'])
         self.cutoffs = CutoffList(self.data['cutoffs'])
 
-    def write_lammps(self, atoms, prefix='lammps'):
-        """Write input for a LAMMPS calculation."""
-        self.prefix = prefix
+    def topology(self, atoms):
+        """Create or extract topology for atoms accoring to your parameters
 
-        if hasattr(atoms, 'connectivities'):
-            connectivities = atoms.connectivities
-        else:
+        Returns
+
+        connectivity: dict
+        """
+        if not hasattr(atoms, 'connectivities'):
             btypes, blist = self.get_bonds(atoms)
             atypes, alist = self.get_angles()
             dtypes, dlist = self.get_dihedrals(alist, atypes)
@@ -134,11 +135,20 @@ class OPLSff:
                 'angle types': atypes,
                 'dihedrals': dlist,
                 'dihedral types': dtypes}
+            atoms.connectivities = connectivities
 
-            self.write_lammps_definitions(atoms, btypes, atypes, dtypes)
-            self.write_lammps_in()
+        return atoms.connectivities
 
-        self.write_lammps_atoms(atoms, connectivities)
+    def write_lammps(self, atoms, prefix='lammps'):
+        """Write input for a LAMMPS calculation."""
+        self.prefix = prefix
+
+        connectivities = self.topology(atoms)
+
+        self.write_lammps_definitions(atoms)
+        self.write_lammps_in()
+
+        return self.write_lammps_atoms(atoms, connectivities)
 
     def write_lammps_in(self):
         with open(self.prefix + '_in', 'w') as fileobj:
@@ -178,12 +188,14 @@ minimize        1.0e-14 1.0e-5 100000 100000
         """Write atoms input for LAMMPS"""
         with open(self.prefix + '_atoms', 'w') as fileobj:
             self._write_lammps_atoms(fileobj, atoms, connectivities)
+        return fileobj
 
     def _write_lammps_atoms(self, fileobj, atoms, connectivities):
         # header
         fileobj.write(fileobj.name + ' (by ' + str(self.__class__) + ')\n\n')
         fileobj.write(str(len(atoms)) + ' atoms\n')
-        fileobj.write(str(len(atoms.types)) + ' atom types\n')
+        fileobj.write(str(len(atoms.arrays['types']))
+                      + ' atom types\n')
         blist = connectivities['bonds']
         if len(blist):
             btypes = connectivities['bond types']
@@ -219,14 +231,14 @@ minimize        1.0e-14 1.0e-5 100000 100000
             molid = [1] * len(atoms)
         for i, r in enumerate(
                 p.vector_to_lammps(atoms.get_positions())):
-            atype = atoms.types[tag[i]]
+            atype = atoms.arrays['types'][tag[i]]
             if len(atype) < 2:
                 atype = atype + ' '
             q = self.data['one'][atype][2]
             fileobj.write('%6d %3d %3d %s %s %s %s' % ((i + 1, molid[i],
                                                         tag[i] + 1,
                                                         q) + tuple(r)))
-            fileobj.write(' # ' + atoms.types[tag[i]] + '\n')
+            fileobj.write(' # ' + atoms.arrays['types'][tag[i]] + '\n')
 
         # velocities
         velocities = atoms.get_velocities()
@@ -239,7 +251,7 @@ minimize        1.0e-14 1.0e-5 100000 100000
 
         # masses
         fileobj.write('\nMasses\n\n')
-        for i, typ in enumerate(atoms.types):
+        for i, typ in enumerate(atoms.arrays['types']):
             cs = atoms.split_symbol(typ)[0]
             fileobj.write('%6d %g # %s -> %s\n' %
                           (i + 1,
@@ -447,17 +459,26 @@ minimize        1.0e-14 1.0e-5 100000 100000
 
         return dih_types, dih_list
 
-    def write_lammps_definitions(self, atoms, btypes, atypes, dtypes):
+    def write_lammps_definitions(self, atoms):
         """Write force field definitions for LAMMPS."""
         with open(self.prefix + '_opls', 'w') as fd:
-            self._write_lammps_definitions(fd, atoms, btypes, atypes, dtypes)
+            self._write_lammps_definitions(fd, atoms)
 
-    def _write_lammps_definitions(self, fileobj, atoms, btypes, atypes,
-                                  dtypes):
+    def _write_lammps_definitions(self, fileobj, atoms):
+
+        connectivities = self.topology(atoms)
+        btypes = connectivities['bond types']
+        atypes = connectivities['angle types']
+        dtypes = connectivities['dihedral types']
+
         fileobj.write('# OPLS potential\n')
-        fileobj.write('# write_lammps' +
+        fileobj.write('# write_lammps ' +
                       str(time.asctime(time.localtime(time.time()))))
-
+        fileobj.write('''\n
+kspace_style pppm 1e-5
+kspace_modify gewald 1e-5
+\n''')
+        
         # bonds
         if len(btypes):
             fileobj.write('\n# bonds\n')
@@ -494,7 +515,7 @@ minimize        1.0e-14 1.0e-5 100000 100000
                       ' # consider changing these parameters\n')
         fileobj.write('special_bonds lj/coul 0.0 0.0 0.5\n')
         data = self.data['one']
-        for ia, atype in enumerate(atoms.types):
+        for ia, atype in enumerate(atoms.arrays['types']):
             if len(atype) < 2:
                 atype = atype + ' '
             fileobj.write('pair_coeff ' + str(ia + 1) + ' ' + str(ia + 1))
@@ -505,7 +526,7 @@ minimize        1.0e-14 1.0e-5 100000 100000
 
         # Charges
         fileobj.write('\n# charges\n')
-        for ia, atype in enumerate(atoms.types):
+        for ia, atype in enumerate(atoms.arrays['types']):
             if len(atype) < 2:
                 atype = atype + ' '
             fileobj.write('set type ' + str(ia + 1))
@@ -527,18 +548,25 @@ class OPLSStructure(Atoms):
         Atoms.__init__(self, *args, **kwargs)
         if filename:
             self.read_extended_xyz(filename)
-        else:
-            self.types = []
-            for atom in self:
-                if atom.symbol not in self.types:
-                    self.types.append(atom.symbol)
-                atom.tag = self.types.index(atom.symbol)
+
+    @classmethod
+    def reconstruct(cls, atoms):
+        assert atoms.calc.name == 'OPLSlmp'
+        struct = cls(None, atoms)
+        struct.arrays['types'] = atoms.calc.parameters['types']
+        return struct
 
     def append(self, atom):
         """Append atom to end."""
         self.extend(Atoms([atom]))
 
-    def read_extended_xyz(self, fileobj, map={}):
+    def copy(self):
+        atoms = super().copy()
+        if hasattr(self, 'connectivities'):
+            atoms.connectivities = self.connectivities
+        return atoms
+
+    def read_extended_xyz(self, fileobj):
         """Read extended xyz file with labeled atoms."""
         atoms = read(fileobj)
         self.set_cell(atoms.get_cell())
@@ -552,7 +580,7 @@ class OPLSStructure(Atoms):
                 types.append(type)
             atom.tag = types_map[type]
             self.append(atom)
-        self.types = types
+        self.arrays['types'] = types
 
         # copy extra array info
         for name, array in atoms.arrays.items():
@@ -568,13 +596,13 @@ class OPLSStructure(Atoms):
         return string[0], string[1]
 
     def get_types(self):
-        return self.types
+        return self.arrays['types']
 
     def colored(self, elements):
         res = Atoms()
         res.set_cell(self.get_cell())
         for atom in self:
-            elem = self.types[atom.tag]
+            elem = self.arrays['types'][atom.tag]
             if elem in elements:
                 elem = elements[elem]
             res.append(Atom(elem, atom.position))
@@ -660,7 +688,7 @@ class OPLSStructure(Atoms):
             key = next_key()
 
         if key == 'Masses':
-            ntypes = len(self.types)
+            ntypes = len(self.arrays['types'])
             masses = np.empty((ntypes))
             for i in range(ntypes):
                 w = lines.pop(0).split()
@@ -690,13 +718,14 @@ class OPLSStructure(Atoms):
                 ams[np.isnan(ams)] = 0
                 for i, mass in enumerate(masses):
                     m2 = (ams - mass)**2
-                    symbolmap[self.types[i]] = chemical_symbols[m2.argmin()]
-                    typemap[self.types[i]] = newtype(
+                    symbolmap[self.arrays['types'][i]] = (
+                        chemical_symbols[m2.argmin()])
+                    typemap[self.arrays['types'][i]] = newtype(
                         chemical_symbols[m2.argmin()], types)
-                    types.append(typemap[self.types[i]])
+                    types.append(typemap[self.arrays['types'][i]])
                 for atom in self:
                     atom.symbol = symbolmap[atom.symbol]
-                self.types = types
+                self.arrays['types'] = types
 
             key = next_key()
 
