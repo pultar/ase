@@ -215,8 +215,19 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
             Subtract forces on central atoms from displacement forces. If None,
             detect whether forces are available and use if possible. This is
             only expected to benefit asymmetric displacements (e.g. 'forward').
+        indices:
+            Indices of atoms that should be included in harmonic vibrations.
+            If None, all atoms with available displacements will be used.
+            If no displacement data is available for an atom in Indices, an
+            error will be raised. If an item from ``displacements`` would
+            be used to calculate the Hessian row for an atom that is missing
+            from ``indices``, it is skipped.
         direction: If 'forward', 'backward' or 'central' is specified, check
             that displacements have the expected directions.
+        threshold: Difference tolerated between ref_atoms positions and
+            positions in displaced structure, when identifying which atom has
+            been moved. A higher threshold may be needed to accommodate
+            structure files that were written to limited precision.
 
     """
 
@@ -262,9 +273,6 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
         arranged_displacements[atom_index][cartesian_direction].append(
             {'h': h, 'forces': forces})
 
-    # We could inspect arranged_displacements to determine
-    # if abs(h) is consistent...
-
     n_atoms = len(ref_atoms)
     hessian = np.empty([n_atoms * 3, n_atoms * 3])
     indices = []
@@ -290,3 +298,29 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
             hessian[atom_index * 3 + cartesian_index] = hessian_element
 
     return VibrationsData.from_2d(ref_atoms, hessian, indices=indices)
+
+
+def guess_ref_atoms(displacements: Sequence[Atoms]) -> Atoms:
+    """Obtain the presumed reference structure from axis-aligned displacements
+
+    Returns an Atoms object with the modal (i.e. most common) position of each
+    atom in the displacement set along each axis.
+
+    This could get memory-intensive for a very large set of displacements.
+
+    """
+
+    from scipy.stats import mode
+
+    all_positions = np.stack([displacement.positions
+                              for displacement in displacements])
+
+    atoms = displacements[0].copy()
+    atoms.positions, counts = mode(all_positions, axis=0)
+
+    # Check a mode was found for each degree of freedom
+    if counts.min() == 1:
+        raise ValueError(
+            "Not all positions could be determined; repeated value not found.")
+
+    return atoms

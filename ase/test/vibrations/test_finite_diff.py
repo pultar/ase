@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 import pytest
 
 from ase.atoms import Atoms
@@ -194,3 +194,22 @@ def test_db_workflow(testdir, random_dimer):
         ref_atoms=random_dimer, db=db_file, metadata=metadata)
 
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+
+def test_guess_ref_atoms(random_dimer):
+    displacements = displacements_from_list(
+        random_dimer, full_displacement_spec, h=1e-2)
+
+    guess_atoms = ase.vibrations.finite_diff.guess_ref_atoms(displacements)
+
+    assert_array_almost_equal(guess_atoms.positions, random_dimer.positions)
+    assert (guess_atoms.get_chemical_symbols()
+            == random_dimer.get_chemical_symbols())
+    assert_array_equal(guess_atoms.pbc, random_dimer.pbc)
+
+    # Raise error if no repeated values to work with
+    ambiguous_displacements = displacements_from_list(
+        random_dimer, [(0, 0, 1), (0, 0, 2), (0, 0, 3)])
+
+    with pytest.raises(ValueError):
+        ase.vibrations.finite_diff.guess_ref_atoms(ambiguous_displacements)
