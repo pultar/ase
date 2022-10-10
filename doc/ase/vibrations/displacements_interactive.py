@@ -23,7 +23,7 @@ for disp in displacements:
 
 # Call get_forces() on each Atoms, and compare structures to build Hessian
 print("Calculating vibrations...")
-vibrations = read_axis_aligned_forces(atoms, displacements)
+vibrations = read_axis_aligned_forces(displacements, ref_atoms=atoms)
 print("Calculated vibrational frequencies:")
 print(vibrations.tabulate())
 vibrations.write('ethanol_mopac_vibs.json')

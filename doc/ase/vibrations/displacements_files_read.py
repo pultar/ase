@@ -8,7 +8,7 @@ displacements = [ase.io.read(disp_file)
                  for disp_file in
                  Path('./ethanol_forces').glob('*.xyz')]
 
-vibrations = read_axis_aligned_forces(atoms, displacements)
+vibrations = read_axis_aligned_forces(displacements, ref_atoms=atoms)
 print("Calculated vibrational frequencies:")
 print(vibrations.tabulate())
 vibrations.write('ethanol_gpaw_vibs.json')

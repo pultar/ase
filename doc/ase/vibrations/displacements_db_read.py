@@ -8,7 +8,7 @@ for xc in ('PBE', 'revPBE'):
     ref_atoms = ase.io.read(f'{name}-{xc}.extxyz')
 
     # Read data: reduce required precision due as these EXTXYZ only have 8.d.p.
-    vibrations = read_axis_aligned_db(ref_atoms, db='displacements.db',
+    vibrations = read_axis_aligned_db('displacements.db', ref_atoms=ref_atoms,
                                       metadata={'xc': xc, 'name': name},
                                       threshold=1e-6)
 
