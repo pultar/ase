@@ -132,37 +132,41 @@ def test_read_axis_aligned_forces(random_dimer):
                                                     ref=random_dimer,
                                                     f0=np.zeros((2, 3)))
 
+    # With ref atoms
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
-        random_dimer, displacements)
+        displacements, ref_atoms=random_dimer)
+    assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
+    # Without ref atoms
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_forces(
+        displacements)
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
     # Raise error if user requests use of unavailable equilibrium forces
-
     dimer_no_forces = random_dimer.copy()
     with pytest.raises(ValueError):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
-            dimer_no_forces, displacements,
+            displacements, ref_atoms=dimer_no_forces,
             use_equilibrium_forces=True)
 
     dimer_no_forces.calc = SinglePointCalculator(dimer_no_forces)
     with pytest.raises(ValueError):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
-            dimer_no_forces, displacements,
+            displacements, ref_atoms=dimer_no_forces,
             use_equilibrium_forces=True)
 
     # Raise error if displacements not all axis-aligned
     displacements[4].rattle()
     with pytest.raises(ValueError):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
-            random_dimer, displacements)
+            displacements, ref_atoms=random_dimer)
 
     # Raise error if not enough displacements available
     del displacements[4]
     del displacements[4]
     with pytest.raises(ValueError):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
-            random_dimer, displacements)
+            displacements, ref_atoms=random_dimer)
 
 
 def test_db_workflow(testdir, random_dimer):
@@ -191,8 +195,12 @@ def test_db_workflow(testdir, random_dimer):
         db.write(junk, name='extra')
 
     vib_data = ase.vibrations.finite_diff.read_axis_aligned_db(
-        ref_atoms=random_dimer, db=db_file, metadata=metadata)
+        db=db_file, ref_atoms=random_dimer, metadata=metadata)
+    assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
+    # Should also work without ref atoms
+    vib_data = ase.vibrations.finite_diff.read_axis_aligned_db(
+        db=db_file, metadata=metadata)
     assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
 
 

@@ -151,8 +151,8 @@ def write_displacements_to_db(atoms: Atoms,
     return db
 
 
-def read_axis_aligned_db(ref_atoms: Atoms,
-                         db: Union[Database, str] = 'displacements.db',
+def read_axis_aligned_db(db: Union[Database, str] = 'displacements.db',
+                         ref_atoms: Atoms = None,
                          metadata: Dict[str, str] = None,
                          **kwargs) -> VibrationsData:
     """Read axis-aligned displacements from ASE DB and get VibrationsData
@@ -163,10 +163,10 @@ def read_axis_aligned_db(ref_atoms: Atoms,
     finite differences.
 
     Args:
-        ref_atoms: reference structure (from which displacements are
-            interpreted)
         db: ASE database containing displaced structures with computed forces.
             (Entries without forces may be present and will be ignored.)
+        ref_atoms: reference structure for displacements. If not provided, a
+            reference geometry will be inferred from the displaced structures.
         metadata: Dict of DB keys/values identifying rows to consider. This may
             be used to e.g. store multiple molecules in the same database as
             part of a high-throughput workflow.
@@ -184,13 +184,13 @@ def read_axis_aligned_db(ref_atoms: Atoms,
         displacement_rows = db_connection.select('fmax>0', **metadata)
         displacements = [row.toatoms() for row in displacement_rows]
 
-    return read_axis_aligned_forces(ref_atoms,
-                                    displacements,
+    return read_axis_aligned_forces(displacements,
+                                    ref_atoms=ref_atoms,
                                     **kwargs)
 
 
-def read_axis_aligned_forces(ref_atoms: Atoms,
-                             displacements: Sequence[Atoms],
+def read_axis_aligned_forces(displacements: Sequence[Atoms],
+                             ref_atoms: Atoms = None,
                              use_equilibrium_forces: bool = None,
                              indices: Sequence[int] = None,
                              direction: str = None,
@@ -210,7 +210,10 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
 
 
     Args:
-        ref_atoms:
+        displacements:
+            Structures with axis-aligned displacements and available forces
+        ref_atoms: reference structure for displacements. If not provided, a
+            reference geometry will be inferred from the displaced structures.
         use_equilibrium_forces:
             Subtract forces on central atoms from displacement forces. If None,
             detect whether forces are available and use if possible. This is
@@ -230,6 +233,8 @@ def read_axis_aligned_forces(ref_atoms: Atoms,
             structure files that were written to limited precision.
 
     """
+    if ref_atoms is None:
+        ref_atoms = guess_ref_atoms(displacements)
 
     # Create a container: List[List[Dict[str, Union[float, np.ndarray]]]]
     # Mypy doesn't handle this well: https://github.com/python/mypy/issues/6463
