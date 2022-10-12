@@ -316,12 +316,21 @@ def guess_ref_atoms(displacements: Sequence[Atoms]) -> Atoms:
     """
 
     from scipy.stats import mode
+    import scipy.version
+
+    # Scipy 1.9 raises deprecation warnings if (newly-introduced) keepdims
+    # parameter is not set.
+    scipy_major, scipy_minor, _ = scipy.version.short_version.split('.')
+    if scipy_major == '1' and int(scipy_minor) < 9:
+        mode_kwargs = {}
+    else:
+        mode_kwargs = {'keepdims': True}
 
     all_positions = np.stack([displacement.positions
                               for displacement in displacements])
 
     atoms = displacements[0].copy()
-    atoms.positions, counts = mode(all_positions, axis=0)
+    atoms.positions, counts = mode(all_positions, axis=0, **mode_kwargs)
 
     # Check a mode was found for each degree of freedom
     if counts.min() == 1:
