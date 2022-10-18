@@ -58,11 +58,12 @@ class HarmonicPlusLennardJones(LennardJones):
     of molecular dimers and with only one element.
     """
     implemented_properties = ['energy', 'forces', 'stress']
-    default_parameters = {'k': 1.0, 'r0': 1.0}
     nolabel = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, k=1.0, r0=1.0, **kwargs):
         LennardJones.__init__(self, **kwargs)
+        self.parameters.k = k
+        self.parameters.r0 = r0
 
     def calculate(self, atoms=None,
                   properties=['energy'],
