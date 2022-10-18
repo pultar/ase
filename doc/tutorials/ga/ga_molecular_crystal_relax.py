@@ -108,11 +108,10 @@ class HarmonicPlusLennardJones(LennardJones):
             forces[a2] += -f
             stress += -np.dot(np.array([f]).T, np.array([d]))
 
-        if 'stress' in properties:
-            stress += stress.T.copy()
-            stress *= -0.5 / self.atoms.get_volume()
-            self.results['stress'] += stress.flat[[0, 4, 8, 5, 2, 1]]
-
         self.results['energy'] += energy
         self.results['free_energy'] += energy
         self.results['forces'] += forces
+
+        stress += stress.T.copy()
+        stress *= -0.5 / self.atoms.get_volume()
+        self.results['stress'] += stress.flat[[0, 4, 8, 5, 2, 1]]
