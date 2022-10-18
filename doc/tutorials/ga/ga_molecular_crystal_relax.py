@@ -57,7 +57,7 @@ class HarmonicPlusLennardJones(LennardJones):
     Only works for structures consisting of a series
     of molecular dimers and with only one element.
     """
-    implemented_properties = ['energy', 'forces', 'stress']
+    implemented_properties = ['energy', 'forces', 'free_energy', 'stress']
     nolabel = True
 
     def __init__(self, k=1.0, r0=1.0, **kwargs):
