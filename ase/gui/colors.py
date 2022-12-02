@@ -90,10 +90,11 @@ class ColorWindow:
             mx = np.max(scalars)
             self.gui.colormode_data = None, mn, mx
 
+            # define all possible colormap names
             cmaps = ['default', 'old']
             try:
-                import pylab as plt
-                cmaps += [m for m in plt.cm.datad if not m.endswith("_r")]
+                import matplotlib.colormaps as cm
+                cmaps += [m for m in cm.datad if not m.endswith("_r")]
             except ImportError:
                 pass
             self.cmaps = [_('cmap:'),
@@ -138,7 +139,7 @@ class ColorWindow:
         self.toggle(mode)
 
     def update_colormap(self, cmap=None, N=26):
-        "Called by gui when colormap has changed"
+        "Called by gui object when colormap has changed"
         if cmap is None:
             cmap = self.cmaps[1].value
         try:
