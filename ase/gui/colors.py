@@ -93,8 +93,10 @@ class ColorWindow:
             # define all possible colormap names
             cmaps = ['default', 'old']
             try:
-                import matplotlib.colormaps as cm
-                cmaps += [m for m in cm.datad if not m.endswith("_r")]
+                import matplotlib as mpl
+                cmaps += [
+                    m.name for m in mpl.colormaps.values()
+                    if not m.name.endswith("_r")]
             except ImportError:
                 pass
             self.cmaps = [_('cmap:'),
