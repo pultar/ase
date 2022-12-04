@@ -4,7 +4,7 @@
 import numpy as np
 from ase.gui.i18n import _
 import warnings
-
+from ase.spacegroup.spacegroup import Spacegroup
 
 ucellformat = """\
   {:8.3f}  {:8.3f}  {:8.3f}
@@ -12,6 +12,22 @@ ucellformat = """\
   {:8.3f}  {:8.3f}  {:8.3f}
 """
 
+def occupancy_str(occupancies):
+    # format `occupancies` dictionary as string
+    def site_str(site_dict):
+        # format occupancy info of a site
+        try:
+            return ', '.join(map('{0[0]}: {0[1]}'.format, site_dict.items()))
+        except:
+            # return as-is if data format is not as expected
+            return str(site_dict)
+
+    try:
+        site_strs = map(site_str, occupancies.values())
+        return '\n'.join(map('{0[0]}: {0[1]}'.format, zip(occupancies, site_strs)))
+    except:
+        # return as-is if data format is not as expected
+        return str(occupancies)
 
 def info(gui):
     images = gui.images
@@ -123,5 +139,18 @@ def info(gui):
             if magmom is not None:
                 mag_str = _('Magmom: {:.3f} µ').format(magmom)
                 add(mag_str)
+            
+        for key,value in atoms.info.items():
+            if key.lower() == 'occupancy':
+                value = '\n' + occupancy_str(value)
+            elif isinstance(value, Spacegroup):
+                value = value.symbol
+            else:
+                # crop too long strings of unknown format
+                value = str(value)
+                value = value[:90] + '...' + value[-3:] if len(value) > 100 else value
+
+            kv_str = _('{}: {}').format(key, value)
+            add(kv_str)
 
     return '\n'.join(tokens)
