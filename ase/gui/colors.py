@@ -158,11 +158,15 @@ class ColorWindow:
         else:
             try:
                 import matplotlib
-                cmap = matplotlib.colormaps.get_cmap(cmap)
+                mplcmap = matplotlib.colormaps.get_cmap(cmap)
                 colorscale = [matplotlib.colors.rgb2hex(c[:3]) for c in
-                              cmap(np.linspace(0, 1, N))]
+                              mplcmap(np.linspace(0, 1, N))]
             except (ImportError, ValueError) as e:
                 raise RuntimeError('Can not load colormap {0}: {1}'.format(
                     cmap, str(e)))
+
+        if hasattr(self.cmaps[1], 'widget'):
+            self.cmaps[1].value = cmap
+
         self.gui.colormode_data = colorscale, mn, mx
         self.gui.draw()

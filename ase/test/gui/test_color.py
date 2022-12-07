@@ -27,3 +27,15 @@ def test_color(gui, c10):
     assert activebuttons == [1, 0, 1, 0, 0, 1, 1, 1], activebuttons
     c.toggle('corehole_energies')
     c.change_mnmx(101, 120)
+
+
+def test_cmap_label(gui, c10):
+    gui.new_atoms(c10)
+    c = gui.colors_window()
+    c.toggle('magmom')
+
+    cmap = 'old'
+    c.update_colormap(cmap)
+
+    # make sure color map label is changed
+    assert c.cmaps[1].value == cmap
