@@ -144,10 +144,9 @@ class ColorWindow:
         "Called by gui object when colormap has changed"
         if cmap is None:
             cmap = self.cmaps[1].value
-        try:
+        if hasattr(self.cmaps[3], 'widget'):
             N = int(self.cmaps[3].value)
-        except AttributeError:
-            N = 26
+
         colorscale, mn, mx = self.gui.colormode_data
         if cmap == 'default':
             colorscale = ['#{0:02X}80{0:02X}'.format(int(red))
