@@ -13,6 +13,8 @@ from ase.gui.gui import GUI
 from ase.gui.save import save_dialog
 from ase.gui.quickinfo import info
 
+from . import display, guifactory, gui
+
 
 class GUIError(Exception):
     def __init__(self, title, text=None):
@@ -21,18 +23,6 @@ class GUIError(Exception):
 
 def mock_gui_error(title, text=None):
     raise GUIError(title, text)
-
-
-@pytest.fixture
-def display():
-    pytest.importorskip('tkinter')
-    if not os.environ.get('DISPLAY'):
-        raise pytest.skip('no display')
-
-
-@pytest.fixture
-def gui(guifactory):
-    return guifactory(None)
 
 
 @pytest.fixture(autouse=True)
@@ -48,20 +38,6 @@ def no_blocking_errors_monkeypatch(monkeypatch):
     # ui.showinfo = mock_ugi_error
     # yield
     # ui.error = orig_ui_error
-
-
-@pytest.fixture
-def guifactory(display):
-    guis = []
-
-    def factory(images):
-        gui = GUI(images)
-        guis.append(gui)
-        return gui
-    yield factory
-
-    for gui in guis:
-        gui.exit()
 
 
 @pytest.fixture
