@@ -1,6 +1,390 @@
+import os
 import numpy as np
+import ase.io
 from ase.atoms import Atoms
+from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.utils import reader, writer
+from ase.units import Hartree, Bohr
+
+
+def prepare_dftb_input(outfile, atoms, parameters, properties, directory):
+    """ Write the input file for the dftb+ calculation.
+        Geometry is taken always from the file 'geo_end.gen'.
+    """
+    # Write geometry information
+    write_dftb(f'{directory}/geo_end.gen', atoms)
+
+    # Write parameter information
+    prepare_dftb_parameters(outfile, atoms, parameters, properties, directory)
+
+
+def prepare_dftb_parameters(outfile, atoms, parameters, properties, directory):
+    """Write DFTB+ *.hsd input file."""
+    outfile.write('Geometry = GenFormat { \n')
+    outfile.write('    <<< "geo_end.gen" \n')
+    outfile.write('} \n')
+    outfile.write(' \n')
+
+    params = parameters.copy()
+
+    assert 'skt_path' in params.keys()
+    slako_dir = params.pop('skt_path', None)
+    if slako_dir is None:
+        slako_dir = os.environ.get('DFTB_PREFIX', './')
+        if not slako_dir.endswith('/'):
+            slako_dir += '/'
+    pcpot = params.pop('pcpot', None)
+
+    do_forces = False
+    if properties is not None:
+        if 'forces' in properties or 'stress' in properties:
+            do_forces = True
+
+    kpts = params.pop('kpts') if 'kpts' in params else None
+    params.update(dict(
+            Hamiltonian_='DFTB',
+            Hamiltonian_SlaterKosterFiles_='Type2FileNames',
+            Hamiltonian_SlaterKosterFiles_Prefix=slako_dir,
+            Hamiltonian_SlaterKosterFiles_Separator='"-"',
+            Hamiltonian_SlaterKosterFiles_Suffix='".skf"',
+            Hamiltonian_MaxAngularMomentum_='',
+            Options_='',
+            Options_WriteResultsTag='Yes')
+        )
+
+    if kpts is not None:
+        initkey = 'Hamiltonian_KPointsAndWeights'
+        mp_mesh = None
+        offsets = None
+
+        if isinstance(kpts, dict):
+            if 'path' in kpts:
+                # kpts is path in Brillouin zone
+                params[initkey + '_'] = 'Klines '
+                kpts_coord = kpts2ndarray(kpts, atoms=atoms)
+            else:
+                # kpts is (implicit) definition of
+                # Monkhorst-Pack grid
+                params[initkey + '_'] = 'SupercellFolding '
+                mp_mesh, offsets = kpts2sizeandoffsets(atoms=atoms,
+                                                       **kpts)
+        elif np.array(kpts).ndim == 1:
+            # kpts is Monkhorst-Pack grid
+            params[initkey + '_'] = 'SupercellFolding '
+            mp_mesh = kpts
+            offsets = [0.] * 3
+        elif np.array(kpts).ndim == 2:
+            # kpts is (N x 3) list/array of k-point coordinates
+            # each will be given equal weight
+            params[initkey + '_'] = ''
+            kpts_coord = np.array(kpts)
+        else:
+            raise ValueError('Illegal kpts definition:' + str(kpts))
+
+        if mp_mesh is not None:
+            eps = 1e-10
+            for i in range(3):
+                key = initkey + '_empty%03d' % i
+                val = [mp_mesh[i] if j == i else 0 for j in range(3)]
+                params[key] = ' '.join(map(str, val))
+                offsets[i] *= mp_mesh[i]
+                assert abs(offsets[i]) < eps or abs(offsets[i] - 0.5) < eps
+                # DFTB+ uses a different offset convention, where
+                # the k-point mesh is already Gamma-centered prior
+                # to the addition of any offsets
+                if mp_mesh[i] % 2 == 0:
+                    offsets[i] += 0.5
+            key = initkey + '_empty%03d' % 3
+            params[key] = ' '.join(map(str, offsets))
+
+        elif kpts_coord is not None:
+            for i, c in enumerate(kpts_coord):
+                key = initkey + '_empty%09d' % i
+                c_str = ' '.join(map(str, c))
+                if 'Klines' in params[initkey + '_']:
+                    c_str = '1 ' + c_str
+                else:
+                    c_str += ' 1.0'
+                params[key] = c_str
+
+    s = 'Hamiltonian_MaxAngularMomentum_'
+    for key in params:
+        if key.startswith(s) and len(key) > len(s):
+            break
+    else:
+        # User didn't specify max angular mometa.  Get them from
+        # the .skf files:
+        symbols = set(atoms.get_chemical_symbols())
+        for symbol in symbols:
+            path = os.path.join(slako_dir,
+                                '{0}-{0}.skf'.format(symbol))
+            l = read_max_angular_momentum(path)
+            params[s + symbol] = '"{}"'.format('spdf'[l])
+
+    # --------MAIN KEYWORDS-------
+    previous_key = 'dummy_'
+    myspace = ' '
+    for key, value in sorted(params.items()):
+        current_depth = key.rstrip('_').count('_')
+        previous_depth = previous_key.rstrip('_').count('_')
+        for my_backsclash in reversed(
+                range(previous_depth - current_depth)):
+            outfile.write(3 * (1 + my_backsclash) * myspace + '} \n')
+        outfile.write(3 * current_depth * myspace)
+        if key.endswith('_') and len(value) > 0:
+            outfile.write(key.rstrip('_').rsplit('_')[-1] +
+                          ' = ' + str(value) + '{ \n')
+        elif (key.endswith('_') and (len(value) == 0)
+              and current_depth == 0):  # E.g. 'Options {'
+            outfile.write(key.rstrip('_').rsplit('_')[-1] +
+                          ' ' + str(value) + '{ \n')
+        elif (key.endswith('_') and (len(value) == 0)
+              and current_depth > 0):  # E.g. 'Hamiltonian_Max... = {'
+            outfile.write(key.rstrip('_').rsplit('_')[-1] +
+                          ' = ' + str(value) + '{ \n')
+        elif key.count('_empty') == 1:
+            outfile.write(str(value) + ' \n')
+        elif ((key == 'Hamiltonian_ReadInitialCharges') and
+              (str(value).upper() == 'YES')):
+            f1 = os.path.isfile(directory + os.sep + 'charges.dat')
+            f2 = os.path.isfile(directory + os.sep + 'charges.bin')
+            if not (f1 or f2):
+                print('charges.dat or .bin not found, switching off guess')
+                value = 'No'
+            outfile.write(key.rsplit('_')[-1] + ' = ' + str(value) + ' \n')
+        else:
+            outfile.write(key.rsplit('_')[-1] + ' = ' + str(value) + ' \n')
+        if pcpot is not None and ('DFTB' in str(value)):
+            outfile.write('   ElectricField = { \n')
+            outfile.write('      PointCharges = { \n')
+            outfile.write(
+                '         CoordsAndCharges [Angstrom] = DirectRead { \n')
+            outfile.write('            Records = ' +
+                          str(len(pcpot.mmcharges)) + ' \n')
+            outfile.write(
+                '            File = "dftb_external_charges.dat" \n')
+            outfile.write('         } \n')
+            outfile.write('      } \n')
+            outfile.write('   } \n')
+        previous_key = key
+    current_depth = key.rstrip('_').count('_')
+    for my_backsclash in reversed(range(current_depth)):
+        outfile.write(3 * my_backsclash * myspace + '} \n')
+    outfile.write('ParserOptions { \n')
+    outfile.write('   IgnoreUnprocessedNodes = Yes  \n')
+    outfile.write('} \n')
+    if do_forces:
+        outfile.write('Analysis { \n')
+        outfile.write('   CalculateForces = Yes  \n')
+        outfile.write('} \n')
+
+
+def read_dftb_outputs(directory, label):
+    """ all results are read from results.tag file
+        It will be destroyed after it is read to avoid
+        reading it once again after some runtime error """
+    results = {}
+
+    with open(os.path.join(directory, 'results.tag'), 'r') as fd:
+        lines = fd.readlines()
+
+    do_forces = False
+    for li in lines:
+        if li.startswith('forces'):
+            do_forces = True
+
+    with open(f'{directory}/{label}_pin.hsd', 'r') as fd:
+        results['atoms'] = read_dftb(fd)
+
+    charges, energy, dipole = read_charges_energy_dipole(directory, len(results['atoms']))
+    if charges is not None:
+        results['charges'] = charges
+    results['energy'] = energy
+    if dipole is not None:
+        results['dipole'] = dipole
+    if do_forces:
+        forces = read_forces(lines)
+        results['forces'] = forces
+    mmpositions = None
+
+    stress = read_stress(lines)
+    if stress is not None:
+        results['stress'] = stress
+
+    # eigenvalues and fermi levels
+    fermi_levels = read_fermi_levels(lines)
+    if fermi_levels is not None:
+        results['fermi_levels'] = fermi_levels
+
+    eigenvalues = read_eigenvalues(lines)
+    if eigenvalues is not None:
+        results['eigenvalues'] = eigenvalues
+
+    # calculation was carried out with atoms written in write_input
+    os.remove(os.path.join(directory, 'results.tag'))
+
+    return results
+
+def read_max_angular_momentum(path):
+    """Read maximum angular momentum from .skf file.
+
+    See dftb.org for A detailed description of the Slater-Koster file format.
+    """
+    with open(path, 'r') as fd:
+        line = fd.readline()
+        if line[0] == '@':
+            # Extended format
+            fd.readline()
+            l = 3
+            pos = 9
+        else:
+            # Simple format:
+            l = 2
+            pos = 7
+
+        # Sometimes there ar commas, sometimes not:
+        line = fd.readline().replace(',', ' ')
+
+        occs = [float(f) for f in line.split()[pos:pos + l + 1]]
+        for f in occs:
+            if f > 0.0:
+                return l
+            l -= 1
+
+def read_charges_energy_dipole(directory, num_atoms):
+    """Get partial charges on atoms
+        in case we cannot find charges they are set to None
+    """
+    with open(os.path.join(directory, 'detailed.out'), 'r') as fd:
+        lines = fd.readlines()
+
+    for line in lines:
+        if line.strip().startswith('Total energy:'):
+            energy = float(line.split()[2]) * Hartree
+            break
+
+    qm_charges = []
+    for n, line in enumerate(lines):
+        if ('Atom' and 'Charge' in line):
+            chargestart = n + 1
+            break
+    else:
+        # print('Warning: did not find DFTB-charges')
+        # print('This is ok if flag SCC=No')
+        return None, energy, None
+
+    lines1 = lines[chargestart:(chargestart + num_atoms)]
+    for line in lines1:
+        qm_charges.append(float(line.split()[-1]))
+
+    dipole = None
+    for line in lines:
+        if 'Dipole moment:' in line and 'au' in line:
+            words = line.split()
+            dipole = np.array(
+                [float(w) for w in words[-4:-1]]) * Bohr
+
+    return np.array(qm_charges), energy, dipole
+
+def read_forces(lines):
+    """Read Forces from dftb output file (results.tag)."""
+    from ase.units import Hartree, Bohr
+
+    # Initialise the indices so their scope
+    # reaches outside of the for loop
+    index_force_begin = -1
+    index_force_end = -1
+
+    # Force line indexes
+    for iline, line in enumerate(lines):
+        fstring = 'forces   '
+        if line.find(fstring) >= 0:
+            index_force_begin = iline + 1
+            line1 = line.replace(':', ',')
+            index_force_end = iline + 1 + \
+                int(line1.split(',')[-1])
+            break
+
+    gradients = []
+    for j in range(index_force_begin, index_force_end):
+        word = lines[j].split()
+        gradients.append([float(word[k]) for k in range(0, 3)])
+
+    return np.array(gradients) * Hartree / Bohr
+
+def read_fermi_levels(lines):
+    """ Read Fermi level(s) from dftb output file (results.tag). """
+    # Fermi level line indexes
+    for iline, line in enumerate(lines):
+        fstring = 'fermi_level   '
+        if line.find(fstring) >= 0:
+            index_fermi = iline + 1
+            break
+    else:
+        return None
+
+    fermi_levels = []
+    words = lines[index_fermi].split()
+    assert len(words) in [1, 2], 'Expected either 1 or 2 Fermi levels'
+
+    for word in words:
+        e = float(word)
+        # In non-spin-polarized calculations with DFTB+ v17.1,
+        # two Fermi levels are given, with the second one being 0,
+        # but we don't want to add that one to the list
+        if abs(e) > 1e-8:
+            fermi_levels.append(e)
+
+    return np.array(fermi_levels) * Hartree
+
+def read_eigenvalues(lines):
+    """ Read Eigenvalues from dftb output file (results.tag).
+        Unfortunately, the order seems to be scrambled. """
+    # Eigenvalue line indexes
+    index_eig_begin = None
+    for iline, line in enumerate(lines):
+        fstring = 'eigenvalues   '
+        if line.find(fstring) >= 0:
+            index_eig_begin = iline + 1
+            line1 = line.replace(':', ',')
+            ncol, nband, nkpt, nspin = map(int, line1.split(',')[-4:])
+            break
+    else:
+        return None
+
+    # Take into account that the last row may lack
+    # columns if nkpt * nspin * nband % ncol != 0
+    nrow = int(np.ceil(nkpt * nspin * nband * 1. / ncol))
+    index_eig_end = index_eig_begin + nrow
+    ncol_last = len(lines[index_eig_end - 1].split())
+    lines[index_eig_end - 1] += ' 0.0 ' * (ncol - ncol_last)
+
+    eig = np.loadtxt(lines[index_eig_begin:index_eig_end]).flatten()
+    eig *= Hartree
+    N = nkpt * nband
+    eigenvalues = [eig[i * N:(i + 1) * N].reshape((nkpt, nband))
+                   for i in range(nspin)]
+
+    return eigenvalues
+
+def read_stress(lines):
+    """Read stress from dftb output file (results.tag)."""
+    sstring = 'stress'
+    have_stress = False
+    stress = list()
+    for iline, line in enumerate(lines):
+        if sstring in line:
+            have_stress = True
+            start = iline + 1
+            end = start + 3
+            for i in range(start, end):
+                cell = [float(x) for x in lines[i].split()]
+                stress.append(cell)
+    if have_stress:
+        stress = -np.array(stress) * Hartree / Bohr**3
+        return stress.flat[[0, 4, 8, 5, 2, 1]]
+    else:
+        return None
 
 
 @reader
