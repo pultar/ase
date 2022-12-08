@@ -35,6 +35,7 @@ def read_forces(lines: List[str],
             raise IOError('Malformed GPAW log file: %s' % m)
     return f, i
 
+
 def read_constraints_from_preamble(lines) -> List:
     """Read the applied constraints and kwargs from the preamble"""
     constraints = []
@@ -62,6 +63,7 @@ def read_constraints_from_preamble(lines) -> List:
                      'function produces a string that can can be used with '
                      'eval()')
     return constraints
+
 
 def read_stresses(lines: List[str],
                   ii: int,) -> Tuple[List[Tuple[float, float, float]], int]:

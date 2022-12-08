@@ -53,6 +53,6 @@ def test_gpaw_constraints_from_log():
             if line.split()[0].rstrip(':') == 'Positions':
                 i1 = i2 + 1
 
-    # Check if the labels in the table correspond to the indices of the contraints
+    # Check if labels in the table correspond to the indices of the contraints
     for n, line in enumerate(lines[i1:i3]):
         assert constraints[n] == line.split()[5]
