@@ -730,7 +730,8 @@ class FixedPlane(IndexedConstraint):
         }
 
     def __repr__(self):
-        return f'FixedPlane(indices={self.index}, direction={self.dir.tolist()})'
+        return f'FixedPlane(indices={self.index}, '\
+            f'direction={self.dir.tolist()})'
 
 
 def _projection(vectors, direction):
