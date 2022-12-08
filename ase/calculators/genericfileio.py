@@ -50,7 +50,7 @@ class CalculatorTemplate(ABC):
 
 
 class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
-    def __init__(self, *, template, profile, directory='.', parameters=None):
+    def __init__(self, *, template, profile, directory, parameters=None):
         self.template = template
         self.profile = profile
 
@@ -75,15 +75,20 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
     def name(self):
         return self.template.name
 
+    def write_inputfiles(self, atoms, properties):
+        # SocketIOCalculators like to write inputfiles
+        # without calculating.
+        self.directory.mkdir(exist_ok=True, parents=True)
+        self.template.write_input(
+            atoms=atoms,
+            parameters=self.parameters,
+            properties=properties,
+            directory=self.directory)
+
     def calculate(self, atoms, properties, system_changes):
-        self.atoms = atoms.copy()
-
-        directory = self.directory
-
-        self.template.write_input(directory, atoms, self.parameters,
-                                  properties)
-        self.template.execute(directory, self.profile)
-        self.results = self.template.read_results(directory)
+        self.write_inputfiles(atoms, properties)
+        self.template.execute(self.directory, self.profile)
+        self.results = self.template.read_results(self.directory)
         # XXX Return something useful?
 
     def _outputmixin_get_results(self):

@@ -35,7 +35,6 @@ def read_forces(lines: List[str],
             raise IOError('Malformed GPAW log file: %s' % m)
     return f, i
 
-
 def read_constraints_from_preamble(lines) -> List:
     """Read the applied constraints and kwargs from the preamble"""
     constraints = []
@@ -63,6 +62,17 @@ def read_constraints_from_preamble(lines) -> List:
                      'function produces a string that can can be used with '
                      'eval()')
     return constraints
+
+def read_stresses(lines: List[str],
+                  ii: int,) -> Tuple[List[Tuple[float, float, float]], int]:
+    s = []
+    for i in range(ii + 1, ii + 4):
+        try:
+            x, y, z = lines[i].split()[-3:]
+            s.append((float(x), float(y), float(z)))
+        except (ValueError, IndexError) as m:
+            raise IOError(f'Malformed GPAW log file: {m}')
+    return s, i
 
 
 def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
@@ -144,13 +154,17 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
             e = energy_contributions = None
         else:
             energy_contributions = {}
-            for line in lines[i + 2:i + 8]:
+            for line in lines[i + 2:i + 13]:
                 fields = line.split(':')
-                energy_contributions[fields[0]] = float(fields[1])
-            line = lines[i + 10]
-            assert (line.startswith('zero kelvin:') or
-                    line.startswith('extrapolated:'))
-            e = float(line.split()[-1])
+                if len(fields) == 2:
+                    name = fields[0]
+                    energy = float(fields[1])
+                    energy_contributions[name] = energy
+                    if name in ['zero kelvin', 'extrapolated']:
+                        e = energy
+                        break
+            else:  # no break
+                raise ValueError
 
         try:
             ii = index_pattern(lines, '(fixed )?fermi level(s)?:')
@@ -185,7 +199,7 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
             ii += 1
             words = lines[ii].split()
             vals = []
-            while(len(words) > 2):
+            while len(words) > 2:
                 vals.append([float(w) for w in words])
                 ii += 1
                 words = lines[ii].split()
@@ -233,6 +247,13 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
             f, i = read_forces(lines, ii, atoms)
 
         try:
+            ii = lines.index('stress tensor:\n')
+        except ValueError:
+            stress_tensor = None
+        else:
+            stress_tensor, i = read_stresses(lines, ii)
+
+        try:
             parameters = {}
             ii = index_startswith(lines, 'vdw correction:')
         except ValueError:
@@ -264,7 +285,8 @@ def read_gpaw_out(fileobj, index):  # -> Union[Atoms, List[Atoms]]:
             calc = SinglePointDFTCalculator(atoms, energy=e, forces=f,
                                             dipole=dipole, magmoms=magmoms,
                                             efermi=eFermi,
-                                            bzkpts=bz_kpts, ibzkpts=ibz_kpts)
+                                            bzkpts=bz_kpts, ibzkpts=ibz_kpts,
+                                            stress=stress_tensor)
             calc.name = name
             calc.parameters = parameters
             if energy_contributions is not None:

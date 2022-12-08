@@ -125,7 +125,7 @@ def read_convergence(restart, parameters):
         if not bool(len(read_data_group('energy'))):
             return False
         if (os.path.exists('job.start') and
-            os.path.exists('GEO_OPT_FAILED')):
+                os.path.exists('GEO_OPT_FAILED')):
             return False
         return True
 
@@ -218,7 +218,7 @@ def read_occupation_numbers(results):
     lines = execute_command(['eiger', '--all', '--pview']).split('\n')
     for line in lines:
         regex = (
-            r'^\s+(\d+)\.*\s+(\w*)\s+(\d+)\s+(\S+)'
+            r'^\s+(\d+)\.\s([\sab])\s*(\d+)\s?(\w+)'
             r'\s+(\d*\.*\d*)\s+([-+]?\d+\.\d*)'
         )
         match = re.search(regex, line)
@@ -289,7 +289,7 @@ def read_mos(results):
                 if match:
                     flen = int(match.group(1))
                 if ('scfdump' in line or 'expanded' in line or
-                    'scfconv' not in line):
+                        'scfconv' not in line):
                     converged = False
                 continue
             if '$end' in line:

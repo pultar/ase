@@ -1,9 +1,9 @@
 import pytest
-
 from ase import Atoms
-from ase.db import connect
-from ase.db.web import Session
 from ase.calculators.calculator import compare_atoms
+from ase.db import connect
+from ase.db.cli import check_jsmol
+from ase.db.web import Session
 
 
 def get_atoms():
@@ -66,12 +66,14 @@ def test_add_columns(database):
 
 
 def test_favicon(client):
-    assert client.get('/favicon.ico').status_code == 308  # redirect
+    # no content or redirect
+    assert client.get('/favicon.ico').status_code in (204, 308)
     assert client.get('/favicon.ico/').status_code == 204  # no content
 
 
 def test_db_web(client):
     import io
+
     from ase.db.web import Session
     from ase.io import read
     c = client
@@ -113,6 +115,8 @@ def test_paging(database):
     session.update('query', '', {'query': ''}, project)
     table = session.create_table(database, 'id', ['foo'])
     assert len(table.rows) == 2
+    assert session.nrows == 2
+    assert session.nrows_total == 2
 
     session.update('limit', '1', {}, project)
     session.update('page', '1', {}, project)
@@ -123,3 +127,9 @@ def test_paging(database):
     session.update('query', '', {'query': 'id=1'}, project)
     table = session.create_table(database, 'id', ['foo'])
     assert len(table.rows) == 1
+    assert session.nrows == 1
+    assert session.nrows_total == 2
+
+
+def test_check_jsmol():
+    check_jsmol()
