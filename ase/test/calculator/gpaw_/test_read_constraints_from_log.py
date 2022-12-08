@@ -9,7 +9,7 @@ import numpy as np
 
 def test_gpaw_constraints_from_log():
     parent = str(Path(__file__).parent)
-    gpaw_logfile = parent + '/log_for_constraint_reading'
+    gpaw_logfile = parent + '/gpaw_output_for_constraint_reading.txt'
 
     # try:
     atoms = read(gpaw_logfile)
