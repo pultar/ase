@@ -58,24 +58,16 @@ def test_gpaw_constraints_from_log():
 
 def write_gpaw_out(gpaw_logfile):
     out = open(gpaw_logfile, 'w')
-    out.write(
-'''  ___ ___ ___ _ _ _
+    out.write('''  ___ ___ ___ _ _ _
  |   |   |_  | | | |
  | | | | | . | | | |
  |__ |  _|___|_____|  21.6.1b1
  |___|_|
 
-User:   geokast@slid.fysik.dtu.dk
 Date:   Thu Oct 14 11:15:03 2021
 Arch:   x86_64
 Pid:    42184
 Python: 3.8.6
-gpaw:   /home/cat/geokast/opt/gpaw_devel_own_fork/gpaw/gpaw (0cbaccc447)
-_gpaw:  /home/cat/geokast/opt/gpaw_devel_own_fork/gpaw/build/lib.linux-x86_64-broadwell-3.8/
-        _gpaw.cpython-38-x86_64-linux-gnu.so (a72f39b2e0)
-ase:    /home/cat/geokast/opt/gpaw_devel_own_fork/ase/ase (version 3.23.0b1-70cad607af)
-numpy:  /home/modules/software/SciPy-bundle/2020.11-foss-2020b/lib/python3.8/site-packages/numpy (version 1.19.4)
-scipy:  /home/modules/software/SciPy-bundle/2020.11-foss-2020b/lib/python3.8/site-packages/scipy (version 1.5.4)
 libxc:  4.3.4
 units:  Angstrom and eV
 cores: 1
@@ -122,7 +114,6 @@ Spin-paired calculation
 Convergence criteria:
  Maximum [total energy] change in last 3 cyles: 5000 eV / electron
  Maximum integral of absolute [dens]ity change: inf electrons / valence electron
- Maximum integral of absolute [eigenst]ate change: 4e+100 eV^2 / valence electron
  Maximum number of scf [iter]ations: 333
  (Square brackets indicate name in SCF output, whereas a 'c' in
  the SCF output indicates the quantity has converged.)
