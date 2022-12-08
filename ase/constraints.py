@@ -19,6 +19,8 @@ __all__ = [
 
 
 def str2constraint(string):
+    # TODO: Make this work without eval!
+    # HOW? Turn text into dict and the dict2constraint?
     if string.split('(')[0] not in __all__:
         raise ValueError
     return eval(string)
