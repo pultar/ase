@@ -3,14 +3,14 @@ I do not have access to the ase-datafiles repo, so I am adding the logfile
 into the same directory
 """
 from ase.io import read
-from pathlib import Path
+# from pathlib import Path
 import numpy as np
 
 
 def test_gpaw_constraints_from_log():
     # parent = str(Path(__file__).parent)
     # gpaw_logfile = parent + '/gpaw_output_for_constraint_reading.txt'
-    gpaw_logfile='gpaw_output.txt'
+    gpaw_logfile = 'gpaw_output.txt'
 
     write_gpaw_out(gpaw_logfile)
     atoms = read(gpaw_logfile)
@@ -57,7 +57,7 @@ def test_gpaw_constraints_from_log():
 
 
 def write_gpaw_out(gpaw_logfile):
-    out = open(gpaw_logfile,'w')
+    out = open(gpaw_logfile, 'w')
     out.write(
 '''  ___ ___ ___ _ _ _
  |   |   |_  | | | |
@@ -395,4 +395,5 @@ Total:                                         1.044 100.0%
 Date: Thu Oct 14 11:15:04 2021
 ''')
     out.close()
-test_gpaw_constraints_from_log()
+
+# test_gpaw_constraints_from_log()
