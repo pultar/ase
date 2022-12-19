@@ -79,4 +79,4 @@ def test_attach_randomly():
         atoms = attach_randomly(m1, m2, distance, rng=rng)
         pos2_ac += atoms.get_positions()[12:, :]
     # the average position should be "zero" approximately
-    assert (np.abs(pos2_ac / N) <= 2).all()
+    assert (np.abs(pos2_ac / N) <= 1).all()
