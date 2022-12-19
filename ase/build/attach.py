@@ -23,7 +23,6 @@ def randomly_orient(atoms: Atoms, rng=np.random) -> Atoms:
     theta = np.arccos(-1 + 2 * rng.random()) * 180 / np.pi
     phi = 360 * rng.random()
     psi = 360 * rng.random()
-    print(theta, phi, psi)
     atoms.euler_rotate(
         phi, theta, psi, center=atoms.get_center_of_mass())
     return atoms
