@@ -18,11 +18,12 @@ def random_unit_vector(rng):
     return np.array([st * np.cos(phi), st * np.sin(phi), ct])
 
 
-def randomly_orient(atoms: Atoms, rng) -> Atoms:
+def randomly_orient(atoms: Atoms, rng=np.random) -> Atoms:
     """Randomly orient the atoms object"""
-    theta = np.arccos(-1 + 2 * rng.random())
-    phi = 2 * np.pi * rng.random()
-    psi = 2 * np.pi * rng.random()
+    theta = np.arccos(-1 + 2 * rng.random()) * 180 / np.pi
+    phi = 360 * rng.random()
+    psi = 360 * rng.random()
+    print(theta, phi, psi)
     atoms.euler_rotate(
         phi, theta, psi, center=atoms.get_center_of_mass())
     return atoms
