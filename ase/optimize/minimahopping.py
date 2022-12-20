@@ -31,7 +31,7 @@ class MinimaHopping:
         'optimizer': QuasiNewton,  # local optimizer to use
         'minima_traj': 'minima.traj',  # storage file for minima list
         'fmax': 0.05,  # eV/A, max force for optimizations
-        'opt_maxsteps': None}  # max steps during optimization 
+        'opt_maxsteps': None}  # max steps during local optimization
 
     def __init__(self, atoms, **kwargs):
         """Initialize with an ASE atoms object and keyword arguments."""
