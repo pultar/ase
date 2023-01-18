@@ -29,6 +29,8 @@ External:        +0.000000
 XC:             -24.279425
 Entropy (-ST):   -0.381921
 Local:           -0.018721
+Extra
+stuff:          117.420000
 --------------------------
 Free energy:    -10.229926
 Extrapolated:   -10.038965
@@ -39,8 +41,14 @@ Forces in eV/Ang:
   0 Al    0.00000    0.00000   -0.00000
 """
 
+stress = """
+Stress tensor:
+     0.000000     0.000000     0.000000
+     0.000000     0.000000     0.000000
+     0.000000     0.000000     0.000000"""
+
 # Three configurations.  Only 1. and 3. has forces.
-text = header + atoms + forces + atoms + atoms + forces
+text = header + atoms + forces + atoms + atoms + forces + stress
 
 
 def test_gpaw_output():
