@@ -296,6 +296,9 @@ def write_nwchem_in(fd, atoms, properties=None, echo=False, **params):
     theory = _get_theory(**params)
     params['theory'] = theory
     xc = params.get('xc')
+#memory assignment
+    memory = params.get('memory')
+
     if 'xc' in params:
         xc = _xc_conv.get(params['xc'].lower(), params['xc'])
         if theory in ['dft', 'tddft']:
@@ -323,6 +326,7 @@ def write_nwchem_in(fd, atoms, properties=None, echo=False, **params):
     else:
         out = []
     out.extend(['title "{}"'.format(short_label),
+                'memory {} mb'.format(memory), #call from the parameter lib 'memory'
                 'permanent_dir {}'.format(perm),
                 'scratch_dir {}'.format(scratch),
                 '{} {}'.format(restart_kw, short_label),
