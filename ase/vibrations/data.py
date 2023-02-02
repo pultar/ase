@@ -51,7 +51,8 @@ class VibrationsData:
             in Hessian.  Default value (None) includes all freely
             moving atoms (i.e. not fixed ones). Leave at None if
             constraints should be determined automatically from the
-            atoms object.
+            atoms object. Note that regardless of the order of indices, the
+            order of Hessian rows should follow the order of atoms.
 
     """
 

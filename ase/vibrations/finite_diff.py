@@ -224,7 +224,9 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
             If no displacement data is available for an atom in Indices, an
             error will be raised. If an item from ``displacements`` would
             be used to calculate the Hessian row for an atom that is missing
-            from ``indices``, it is skipped.
+            from ``indices``, it is skipped. Indices will be sorted in the
+            output data; this feature cannot be used to reorder the rows of the
+            Hessian relative to the atom order.
         direction: If 'forward', 'backward' or 'central' is specified, check
             that displacements have the expected directions.
         threshold: Difference tolerated between ref_atoms positions and
@@ -280,14 +282,38 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
 
     n_atoms = len(ref_atoms)
     hessian = np.empty([n_atoms * 3, n_atoms * 3])
-    indices = []
-    for atom_index, atom_data in enumerate(arranged_displacements):
+
+    displaced_atoms = [i for i, row in enumerate(arranged_displacements)
+                       if any(row)]
+
+    if indices is None:
+        if displaced_atoms != set(range(len(ref_atoms))):
+            warnings.warn('Displacements not found for all atoms in reference '
+                          'structure. As expected indices were not provided, '
+                          'assume that this is intentional and create '
+                          'VibrationsData with some frozen atoms.')
+            indices = sorted(displaced_atoms)
+        else:
+            indices = list(range(len(ref_atoms)))
+
+    elif not displaced_atoms.issuperset(indices):
+        raise ValueError(f"Atoms {set(indices) - displaced_atoms} were "
+                         "included in requested indices but corresponding "
+                         "displacements were not found.")
+    else:
+        unused_displacements = (displaced_atoms - set(indices))
+        if unused_displacements:
+            warnings.warn("Found some displacements outside of requested "
+                          f"indices: {unused_displacements}")
+        indices = sorted(indices)
+
+    for atom_index in indices:
+        atom_data = arranged_displacements[atom_index]:
         if not any(atom_data):
             continue
         elif not all(atom_data):
             raise ValueError(f"Displacement data is not complete "
                              f"for atom {atom_index}.")
-        indices.append(atom_index)
 
         for cartesian_index, disp_data in enumerate(atom_data):
             f_array = np.stack([disp['forces'].flatten()
