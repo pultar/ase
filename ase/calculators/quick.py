@@ -1,16 +1,12 @@
-import os
-import copy
-from collections.abc import Iterable
-from shutil import which
-from typing import Dict, Optional
+import numpy as np
 
+from shutil import which
 from ase.atoms import Atoms
 from ase.calculators.calculator import FileIOCalculator
-import numpy as np
 
 class QUICK(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole']
-    command = 'QUICK PREFIX.com' # quick should be detected and substituted to keyword.
+    command = 'QUICK PREFIX.com' 
     discard_results_on_any_change = True
 
     default_parameters = {'charge': 0}
@@ -36,19 +32,19 @@ class QUICK(FileIOCalculator):
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
-        atoms.write(self.label + '.com', format = 'xyz')
+        atoms.write(self.label + '.com', format='xyz')
         charge = self.parameters.charge
 
         if 'method' in self.parameters:
             method = self.parameters['method'].upper()
         else:
             method = 'HF'
-       
+
         if 'basis' in self.parameters:
             basis = self.parameters['basis'].upper()
         else:
             basis = 'STO-3G'
-   
+
         if 'mult' in self.parameters:
             mult = self.parameters['mult'].upper()
         else:
@@ -56,19 +52,18 @@ class QUICK(FileIOCalculator):
 
         with open(self.label + '.com', 'r') as f:
             lines = f.readlines()
-        # Hard code the input line for now. Make this able to switch out 
         lines[0] = str(method) + ' ' + str(basis) + ' CUTOFF=1.0d-10 DENSERMS=1.0d-6 GRADIENT DIPOLE CHARGE=' + str(charge) + ' MULT=' + str(mult) + '\n' #str(atoms.get_initial_charges().sum())
         lines[1] = '\n'
         with open(self.label + '.com', 'w') as g:
             g.writelines(lines)
-    
+ 
     def read_results(self):
         with open(self.label + '.out', 'r') as f:
             lines = f.readlines()
         geom_index = [x for x in range(len(lines)) if 'ANALYTICAL GRADIENT: ' in lines[x]][0] + 4
         charge_index = [x for x in range(len(lines)) if 'ATOMIC CHARGES' in lines[x]][0] + 2
         dipole_index = [x for x in range(len(lines)) if 'DIPOLE (DEBYE)' in lines[x]][0] + 2
-        energy_index  = [x for x in range(len(lines)) if 'TOTAL ENERGY' in lines[x]][0]
+        energy_index = [x for x in range(len(lines)) if 'TOTAL ENERGY' in lines[x]][0]
         elem = []
         mulliken = []
         lowdin = []
@@ -92,7 +87,7 @@ class QUICK(FileIOCalculator):
             grads[atom_index, axis_index] = float(g)
             i += 1
             readindex = geom_index + i
-        
+ 
         # update the Atoms object
         self.atoms = Atoms(''.join(elem), positions=coords)
         self.atoms.charges = mulliken
@@ -100,4 +95,3 @@ class QUICK(FileIOCalculator):
         self.results['energy'] = float(lines[energy_index].split()[-1])
         self.results['forces'] = - grads
         self.results['dipole'] = np.array([float(x) for x in lines[dipole_index].split()[:3]]).reshape([1,3])
-
