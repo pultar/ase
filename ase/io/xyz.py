@@ -28,7 +28,7 @@ def read_xyz(fileobj, index):
             symbol, x, y, z = line.split()[:4]
             symbol = symbol.lower().capitalize()
             symbols.append(symbol)
-            positions.append([float(x), float(y), float(z)])
+            positions.append([float(x.replace("*^", "e")), float(y.replace("*^", "e")), float(z.replace("*^", "e"))])
         images.append(Atoms(symbols=symbols, positions=positions))
     for atoms in images[index]:
         yield atoms
