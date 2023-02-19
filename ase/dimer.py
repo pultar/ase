@@ -541,8 +541,8 @@ class MinModeAtoms:
         # Seed the randomness
         if random_seed is None:
             t = time.time()
-            # if world.size > 1:
-            #     t = world.sum(t) / world.size
+            if world.size > 1:
+                t = world.sum(t) / world.size
             # Harvest the latter part of the current time
             random_seed = int(('%30.9f' % t)[-9:])
         self.random_state = np.random.RandomState(random_seed)
