@@ -18,7 +18,10 @@ def read_xyz(fileobj, index):
     while len(lines) > 0:
         symbols = []
         positions = []
-        natoms = int(lines.pop(0))
+        try:  # fixes reading QM9 database
+            natoms = int(lines.pop(0))
+        except ValueError:
+            break
         lines.pop(0)  # Comment line; ignored
         for _ in range(natoms):
             line = lines.pop(0)
