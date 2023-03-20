@@ -15,7 +15,7 @@ GPAW_TEXT = b"""
 EXCITING_OUT_TEXT = b"""
 ==================================================================
 | EXCITING CARBON started                                        =
-"""
+"""  # noqa: W291
 
 EXCITING_IN_TEXT = b"""<?xml version="1.0"?>
 <?xml-stylesheet href="http://xml.exciting-code.org/info.xsl
