@@ -9,7 +9,7 @@ text = b"""
  |__ |  _|___|_____|  19.8.2b1
  |___|_|             
 
-"""
+"""  # noqa: W291
 
 
 def test_gpaw_match_magic():
