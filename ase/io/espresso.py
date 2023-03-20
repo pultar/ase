@@ -18,6 +18,7 @@ import re
 import warnings
 from collections import OrderedDict
 from os import path
+from pathlib import Path
 
 import numpy as np
 
@@ -724,8 +725,9 @@ def get_pseudo_dirs(data):
         pseudo_dirs.append(data['control']['pseudo_dir'])
     if 'ESPRESSO_PSEUDO' in os.environ:
         pseudo_dirs.append(os.environ['ESPRESSO_PSEUDO'])
-    pseudo_dirs.append(path.expanduser('~/espresso/pseudo/'))
-    return pseudo_dirs
+
+    pseudo_dirs.append(Path.home() / 'espresso/pseudo')
+    return [Path(d) for d in pseudo_dirs]
 
 
 def get_valence_electrons(symbol, data, pseudo=None):
@@ -745,10 +747,12 @@ def get_valence_electrons(symbol, data, pseudo=None):
         http://materialscloud.org/sssp/ is employed.
     """
     if pseudo is None:
-        pseudo = '{}_dummy.UPF'.format(symbol)
+        pseudo = f'{symbol}_dummy.UPF'
+
     for pseudo_dir in get_pseudo_dirs(data):
-        if path.exists(path.join(pseudo_dir, pseudo)):
-            valence = grep_valence(path.join(pseudo_dir, pseudo))
+        pseudofile = pseudo_dir / pseudo
+        if pseudofile.exists():
+            valence = grep_valence(pseudofile)
             break
     else:  # not found in a file
         valence = SSSP_VALENCE[atomic_numbers[symbol]]
@@ -1599,10 +1603,10 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
-    for species in set(atoms.get_chemical_symbols()):
+    for species in set(atoms.symbols):
         # Look in all possible locations for the pseudos and try to figure
         # out the number of valence electrons
-        pseudo = pseudopotentials.get(species, None)
+        pseudo = pseudopotentials[species]
         valence = get_valence_electrons(species, input_parameters, pseudo)
         species_info[species] = {'pseudo': pseudo, 'valence': valence}
 
@@ -1638,7 +1642,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 mag_str = 'starting_magnetization({0})'.format(sidx)
                 input_parameters['system'][mag_str] = fspin
                 atomic_species_str.append(
-                    '{species}{tidx} {mass} {pseudo}\n'.format(
+                    '{species}{tidx} {mass} {pseudo:s}\n'.format(
                         species=atom.symbol, tidx=tidx, mass=atom.mass,
                         pseudo=species_info[atom.symbol]['pseudo']))
             # lookup tidx to append to name
@@ -1654,7 +1658,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             if atom.symbol not in atomic_species:
                 atomic_species[atom.symbol] = True  # just a placeholder
                 atomic_species_str.append(
-                    '{species} {mass} {pseudo}\n'.format(
+                    '{species} {mass} {pseudo:s}\n'.format(
                         species=atom.symbol, mass=atom.mass,
                         pseudo=species_info[atom.symbol]['pseudo']))
             # construct line for atomic positions
