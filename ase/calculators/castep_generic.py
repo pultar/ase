@@ -31,7 +31,7 @@ class CastepProfile:
         if pseudopotential_path:
             self.pseudopotential_path = pseudopotential_path
         elif 'CASTEP_PP_PATH' in os.environ:
-            self.pp_path = os.environ['CASTEP_PP_PATH']
+            self.pseudopotential_path = os.environ['CASTEP_PP_PATH']
 
     @staticmethod
     def parse_version(stdout):
