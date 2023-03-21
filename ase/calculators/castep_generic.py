@@ -1,24 +1,38 @@
-"""CASTEP GenericFileIO calculator"""   
-
+"""CASTEP GenericFileIO calculator"""
 
 import os
+from pathlib import Path
+from typing import Optional, Union
+import warnings
+
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
-    
-from ase.io import read, write
+from ase.io import write
 from ase.io.castep import read_castep_castep_old
 
 
 ################################
-#  Castep Generic IO Template  # 
+#  Castep Generic IO Template  #
 ################################
 
 class CastepProfile:
-    def __init__(self, argv):
-        self.exe = 'castep.serial'
-        if 'CASTEP_COMMAND' in os.environ:
+    def __init__(self,
+                 command: Optional[str] = None,
+                 *,
+                 pseudopotential_path: Union[Path, str, None] = None):
+
+        if command:
+            self.exe = command
+        elif 'CASTEP_COMMAND' in os.environ:
             self.exe = os.environ['CASTEP_COMMAND']
-            
+        else:
+            self.exe = 'castep.serial'
+
+        if pseudopotential_path:
+            self.pseudopotential_path = pseudopotential_path
+        elif 'CASTEP_PP_PATH' in os.environ:
+            self.pp_path = os.environ['CASTEP_PP_PATH']
+
     @staticmethod
     def parse_version(stdout):
         """Parse the version of castep from the executable"""
@@ -35,18 +49,24 @@ class CastepProfile:
     def run(self, directory, seedname):
         """Define how to run Castep"""
         from subprocess import check_call
-        import os
         argv = [self.exe, str(seedname)]
         print("running:", argv)
-        check_call(argv, cwd=directory, env=os.environ)
+
+        if self.pseudopotential_path:
+            run_env = os.environ.copy()
+            run_env.update({'PSPOT_DIR': self})
+        else:
+            run_env = os.environ
+
+        check_call(argv, cwd=directory, env=run_env)
 
 
 class CastepTemplate(CalculatorTemplate):
     def __init__(self):
         """Initialise castep calculation definition"""
         super().__init__(
-            'castep',
-            ['energy', 'free_energy'])
+            name='castep',
+            implemented_properties=['energy', 'free_energy'])
         self.seedname = 'castep'
 
     def write_input(self, directory, atoms, parameters, properties):
@@ -66,28 +86,28 @@ class CastepTemplate(CalculatorTemplate):
         with open(path) as fd:
             props = read_castep_castep_old(fd)
         return props[-1].calc.results
-        
+
+
 ################################
 # The ASE calculator interface #
 ################################
-
 class Castep(GenericFileIOCalculator):
-    def __init__(self, *, profile=None,
+    def __init__(self, *,
+                 profile=None,
                  command=GenericFileIOCalculator._deprecated,
                  label=GenericFileIOCalculator._deprecated,
                  directory='.',
                  **kwargs):
 
         if label is not self._deprecated:
-            import warnings
             warnings.warn('Ignoring label, please use directory instead',
                           FutureWarning)
 
-        cmd = 'castep.serial'
+        if command is not self._deprecated:
+            raise RuntimeError(
+                'Generic calculator does not use "command" argument, this '
+                'should be passed to "profile" argument as CastepProfile')
 
-        if 'CASTEP_COMMAND' in os.environ:
-            cmd = os.environ['CASTEP_COMMAND']
-            
         template = CastepTemplate()
         if profile is None:
             profile = CastepProfile(argv=[])
