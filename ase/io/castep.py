@@ -511,7 +511,12 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     write_freeform(fd, cell)
 
     return True
+from typing import List
 
+def read_forces_from_castep(fd: TextIO) -> List[np.ndarray]:
+    """Read the last forces from a castep file"""
+    force_data = _read_forces_from_castep_file(fd)
+    return force_data
 
 def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
     """Find and parse next forces block from .castep"""
@@ -522,8 +527,9 @@ def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
             break
 
     # Skip header
+    header_regex = re.compile(r"x\W+y\W+z")
     for line in fd:
-        if 'x                    y                    z' in line:
+        if header_regex.search(line):
             break
     fd.readline()
 
@@ -1011,6 +1017,17 @@ def read_castep_castep(fd, index=None):
     calc._old_cell = calc.cell
 
     return [calc.atoms]  # Returning in the form of a list for next()
+
+def read_castep_castep_new(fd):
+    """Read the final energy and forces from a .castep file"""
+
+    fd.seek(0)
+    castep_data = read_castep_castep_old(fd, -1).calc.results
+
+    fd.seek(0)
+    castep_data['forces'] = read_forces_from_castep(fd)
+
+    return castep_data
 
 
 def read_castep_castep_old(fd, index=None):

@@ -9,7 +9,7 @@ from ase import Atoms
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
 # from ase.io import write
-from ase.io.castep import read_castep_castep_old, write_cell_simple, write_param_simple, read_bands
+from ase.io.castep import read_castep_castep_new, write_cell_simple, write_param_simple, read_bands
 
 
 ################################
@@ -107,7 +107,7 @@ class CastepTemplate(CalculatorTemplate):
         """Parse results from the .castep file and return them as a dict"""
         dotcastep_path = directory / (self.seedname + ".castep")
         with open(dotcastep_path) as fd:
-            props = read_castep_castep_old(fd)[-1].calc.results
+            props = read_castep_castep_new(fd)
 
         dotbands_path = directory / (self.seedname + ".bands")
         with open(dotbands_path) as fd:
