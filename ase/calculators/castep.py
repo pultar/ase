@@ -36,7 +36,7 @@ import ase.units as units
 from ase.calculators.general import Calculator
 from ase.calculators.calculator import compare_atoms
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.calculator import kpts2kpts, kpts2sizeandoffsets
+from ase.calculators.calculator import kpts2kpts
 from ase.calculators.calculator import WeightedKPoints
 from ase.dft.kpoints import BandPath, RegularGridKPoints
 from ase.parallel import paropen

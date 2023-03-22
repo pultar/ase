@@ -2,9 +2,11 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+
 def test_bandpath():
     from ase.dft.kpoints import bandpath
     print(bandpath('GX,GX', np.eye(3), 6))
+
 
 def test_weighted_kpts():
     from ase.calculators.calculator import WeightedKPoints
@@ -27,4 +29,3 @@ def test_weighted_kpts():
 
     with pytest.raises(IndexError):
         WeightedKPoints.from_array(np.random.random([3, 3]))
-
