@@ -354,6 +354,8 @@ class KPoints(KPointsABC):
             kpts = np.zeros((1, 3))
         self._kpts = kpts
 
+    # In this case we can read and write .kpts property, but ABC only promises
+    # that we can read so we need to use @property.
     @property
     def kpts(self) -> np.ndarray:
         return self._kpts
@@ -366,26 +368,28 @@ class KPoints(KPointsABC):
         return vars(self)
 
 
-def kpts2kpts(kpts, atoms=None):
-    from ase.dft.kpoints import monkhorst_pack
+def kpts2kpts(kpts, atoms=None) -> KPointsABC:
+    from ase.dft.kpoints import RegularGridKPoints
 
     if kpts is None:
-        return KPoints()
+        return RegularGridKPoints([1, 1, 1])
 
-    if hasattr(kpts, 'kpts'):
+    if isinstance(kpts, KPointsABC):
         return kpts
 
     if isinstance(kpts, dict):
         if 'kpts' in kpts:
             return KPoints(kpts['kpts'])
+
         if 'path' in kpts:
             cell = Cell.ascell(atoms.cell)
             return cell.bandpath(pbc=atoms.pbc, **kpts)
-        size, offsets = kpts2sizeandoffsets(atoms=atoms, **kpts)
-        return KPoints(monkhorst_pack(size) + offsets)
+
+        size, offset = kpts2sizeandoffsets(atoms=atoms, **kpts)
+        return RegularGridKPoints(size, offset=offset)
 
     if isinstance(kpts[0], int):
-        return KPoints(monkhorst_pack(kpts))
+        return RegularGridKPoints(kpts)
 
     return KPoints(np.array(kpts))
 
