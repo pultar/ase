@@ -164,26 +164,50 @@ def write_param_simple(fd: TextIO,
     if parameters is None:
         parameters = {}
 
-    _format = get_format(precision)
-
     for key, value in parameters.items():
-        fd.write(_format(key) + ": ")
-        if isinstance(value, (list, tuple)):
-            for v in value:
-                fd.write(_format(v))
-                fd.write(" ")
+        if is_block(value):
+            write_block(fd, key, value, precision=precision)
         else:
-            fd.write(_format(value))
-        fd.write("\n")
+            write_key(fd, key, value, precision=precision)
+
+
+
+def is_block(value) -> bool:
+    """
+    Detect if a value is two dimensional and should be written as a block.
+    Only supports lists of lists and 2d ndarrays
+    """
+    if isinstance(value, list):
+        return isinstance(value[0], list)
+    elif isinstance(value, np.ndarray):
+        return value.ndim == 2
+    else:
+        return False
+
+
+def write_key(fd: TextIO,
+                name: str,
+                data: Union[int, str, float, Sequence[Union[int, str, float]]],
+                precision: int = 12) -> None:    
+    """Write a key: value pair to the file descriptor"""
+    _format = get_format(precision)
+    fd.write(_format(name) + ": ")
+    if isinstance(data, (list, tuple)):
+        for v in data:
+            fd.write(_format(v))
+            fd.write(" ")
+    else:
+        fd.write(_format(data))
+    fd.write("\n")
+
 
 def write_block(fd: TextIO,
                 name: str,
                 data: Sequence[Sequence[Union[int, str, float]]],
                 *,
                 precision: int = 12) -> None:
-
+    """Write a keyword block to the file descriptor"""
     _format = get_format(precision)
-
     fd.write(f'%block {name}\n')
     for row in data:
         fd.write(' '.join(_format(token) for token in row))
@@ -200,9 +224,8 @@ def write_cell_simple(fd: TextIO,
 
     This is a simple implementation to support new GenericFileIOCalculator.
     It does not make any intelligent interpretation of keywords: they will be
-    directly written to the file.
-
-    WARNING: currently "block" format is not supported for parameters
+    directly written to the file. Any value that is a list of a list, or a 
+    ndarray will be written as a block.
 
     Args:
         fd: output stream

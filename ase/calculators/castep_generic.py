@@ -9,7 +9,7 @@ from ase import Atoms
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
 # from ase.io import write
-from ase.io.castep import read_castep_castep_old, write_cell_simple, write_param_simple
+from ase.io.castep import read_castep_castep_old, write_cell_simple, write_param_simple, read_bands
 
 
 ################################
@@ -77,7 +77,7 @@ class CastepTemplate(CalculatorTemplate):
                            parameters: dict) -> dict:
         """Get Castep .cell parameters from user 'kpts' specification"""
         if 'kpts' in parameters:
-            return {'kpoint_mp_grid': kpts}
+            return {'kpoint_mp_grid': parameters['kpts']}
         else:
             return {}
 
@@ -89,7 +89,7 @@ class CastepTemplate(CalculatorTemplate):
         param_params = parameters.get('param')
 
         cell_params.update(self._get_kpoint_params(atoms, parameters))
-
+        
         cellname = directory / (self.seedname + ".cell")
         with open(cellname, "w") as fd:
             write_cell_simple(fd, atoms, parameters=cell_params)
@@ -105,11 +105,16 @@ class CastepTemplate(CalculatorTemplate):
 
     def read_results(self, directory):
         """Parse results from the .castep file and return them as a dict"""
-        path = directory / (self.seedname + ".castep")
-        with open(path) as fd:
-            props = read_castep_castep_old(fd)
-        return props[-1].calc.results
+        dotcastep_path = directory / (self.seedname + ".castep")
+        with open(dotcastep_path) as fd:
+            props = read_castep_castep_old(fd)[-1].calc.results
 
+        dotbands_path = directory / (self.seedname + ".bands")
+        with open(dotbands_path) as fd:
+            kpts, weights, eigenvalues, efermi = read_bands(dotbands_path)
+            props.update(kpts=kpts, weights=weights, eigenvalues=eigenvalues, efermi=efermi)
+
+        return props
 
 ################################
 # The ASE calculator interface #
