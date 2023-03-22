@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, Union
 import warnings
 
+from ase import Atoms
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
 # from ase.io import write
@@ -71,12 +72,23 @@ class CastepTemplate(CalculatorTemplate):
             implemented_properties=['energy', 'free_energy'])
         self.seedname = 'castep'
 
+    @staticmethod
+    def _get_kpoint_params(atoms: Atoms,
+                           parameters: dict) -> dict:
+        """Get Castep .cell parameters from user 'kpts' specification"""
+        if 'kpts' in parameters:
+            return {'kpoint_mp_grid': kpts}
+        else:
+            return {}
+
     def write_input(self, directory, atoms, parameters, properties):
         """Write the castep cell and param files"""
-        # TODO : write kpoints and params file
 
-        cell_params = parameters.get('cell') # Parameters for seedname.cell
-        param_params = parameters.get('param') # Parameters for seedname.param
+        # Separate parameters for seedname.cell and seedname.param files
+        cell_params = parameters.get('cell', {}).copy()
+        param_params = parameters.get('param')
+
+        cell_params.update(self._get_kpoint_params(atoms, parameters))
 
         cellname = directory / (self.seedname + ".cell")
         with open(cellname, "w") as fd:
@@ -84,7 +96,7 @@ class CastepTemplate(CalculatorTemplate):
 
         paramname = directory / (self.seedname + ".param")
         with open(paramname, "w") as fd:
-            write_param_simple(fd, parameters=param_params) 
+            write_param_simple(fd, parameters=param_params)
 
     def execute(self, directory, profile):
         """Execute castep"""

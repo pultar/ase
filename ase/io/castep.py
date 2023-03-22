@@ -3,11 +3,14 @@ The key idea is that all function accept or return  atoms objects.
 CASTEP specific parameters will be returned through the <atoms>.calc
 attribute.
 """
+import numbers
 import os
 import re
 import warnings
+
 import numpy as np
 from copy import deepcopy
+from typing import TextIO, Sequence, Union, Optional
 
 import ase
 
@@ -132,10 +135,6 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
           castep_cell=castep_cell, force_write=force_write)
 
 
-
-from typing import TextIO, Sequence, Union, Optional
-import numbers
-
 def get_format(precision=12):
     def _format(token: Union[int, str, float]) -> str:
         if isinstance(token, numbers.Real) and not isinstance(token, int):
@@ -144,10 +143,27 @@ def get_format(precision=12):
     return _format
 
 
-def write_param_simple(fd: TextIO, 
-                parameters: Optional[dict] = None, 
+def write_param_simple(fd: TextIO,
+                parameters: Optional[dict] = None,
                 precision: int = 12):
-    
+    """Write .param or .cell parameters to file
+
+    This is a simple implementation to support new GenericFileIOCalculator.
+    It does not make any intelligent interpretation of keywords: they will be
+    directly written to the file.
+
+    WARNING: currently "block" format is not supported for parameters
+
+    Args:
+        fd: output stream
+        parameters: CASTEP keywords and values
+        precision: decimal places for floating-point numbers
+
+    """
+
+    if parameters is None:
+        parameters = {}
+
     _format = get_format(precision)
 
     for key, value in parameters.items():
@@ -165,9 +181,9 @@ def write_block(fd: TextIO,
                 data: Sequence[Sequence[Union[int, str, float]]],
                 *,
                 precision: int = 12) -> None:
-    
+
     _format = get_format(precision)
-        
+
     fd.write(f'%block {name}\n')
     for row in data:
         fd.write(' '.join(_format(token) for token in row))
@@ -175,7 +191,27 @@ def write_block(fd: TextIO,
     fd.write(f'%endblock {name}\n\n')
 
 
-def write_cell_simple(fd, atoms, *, parameters: Optional[dict] = None, precision=12):
+def write_cell_simple(fd: TextIO,
+                      atoms: ase.Atoms,
+                      *,
+                      parameters: Optional[dict] = None,
+                      precision: int = 12) -> None:
+    """Write .cell parameters to file
+
+    This is a simple implementation to support new GenericFileIOCalculator.
+    It does not make any intelligent interpretation of keywords: they will be
+    directly written to the file.
+
+    WARNING: currently "block" format is not supported for parameters
+
+    Args:
+        fd: output stream
+        atoms: structure
+        parameters: CASTEP keywords and values
+        precision: decimal places for floating-point numbers
+
+    """
+
     if atoms is None:
         warnings.warn('Atoms object not initialized')
         return False
@@ -189,12 +225,8 @@ def write_cell_simple(fd, atoms, *, parameters: Optional[dict] = None, precision
     positions_frac = [[label] + list(pos) for label,pos in zip(symbols, pos)]
     write_block(fd, "positions_frac", positions_frac)
 
-    if parameters and parameters.get('kpts') is not None:
-        write_kpoints(fd, parameters['kpts'])
+    write_param_simple(fd, parameters, precision)
 
-def write_kpoints(fd, kpts):
-    """Set k-point mesh/path using a str, tuple or ASE features"""
-    fd.write("kpoint_mp_grid: " + " ".join(str(k) for k in kpts) + "\n")
 
 def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
                       precision=6, magnetic_moments=None,
