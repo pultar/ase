@@ -323,7 +323,15 @@ class KPoints(KPointsABC):
     def __init__(self, kpts=None):
         if kpts is None:
             kpts = np.zeros((1, 3))
-        self.kpts = kpts
+        self._kpts = kpts
+
+    @property
+    def kpts(self) -> np.ndarray:
+        return self._kpts
+
+    @kpts.setter
+    def kpts(self, value: np.ndarray) -> None:
+        self._kpts = value
 
     def todict(self):
         return vars(self)
