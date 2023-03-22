@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import re
 import warnings
-from typing import Dict, List
+from typing import Dict, List, Sequence
 
 import numpy as np
 
@@ -258,6 +258,7 @@ class KPointsABC(ABC):
         ...
 
 
+@jsonable('regulargridkpoints')
 class RegularGridKPoints(KPointsABC):
     """k-points defined as divisions and offsets of reciprocal lattice vectors
 
@@ -268,9 +269,9 @@ class RegularGridKPoints(KPointsABC):
     """
     def __init__(self,
                  size: List[int],
-                 offset: List[float] = [0., 0., 0.]) -> None:
+                 offset: Sequence[float] = (0., 0., 0.)) -> None:
         self.size = size
-        self.offset = offset
+        self.offset = list(offset)
 
     @property
     def kpts(self) -> np.ndarray:
