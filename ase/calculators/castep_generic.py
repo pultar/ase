@@ -29,12 +29,11 @@ class CastepProfile:
         else:
             self.exe = 'castep.serial'
 
+        self.pseudopotential_path = None
         if pseudopotential_path:
             self.pseudopotential_path = pseudopotential_path
         elif 'CASTEP_PP_PATH' in os.environ:
             self.pseudopotential_path = os.environ['CASTEP_PP_PATH']
-        else:
-            self.pseudopotential_path = None
 
     @staticmethod
     def parse_version(stdout):
@@ -89,7 +88,7 @@ class CastepTemplate(CalculatorTemplate):
         param_params = parameters.get('param')
 
         cell_params.update(self._get_kpoint_params(atoms, parameters))
-        
+
         cellname = directory / (self.seedname + ".cell")
         with open(cellname, "w") as fd:
             write_cell_simple(fd, atoms, parameters=cell_params)
