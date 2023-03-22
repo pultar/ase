@@ -8,7 +8,7 @@ import warnings
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
 # from ase.io import write
-from ase.io.castep import read_castep_castep_old, write_cell_simple
+from ase.io.castep import read_castep_castep_old, write_cell_simple, write_param_simple
 
 
 ################################
@@ -74,18 +74,17 @@ class CastepTemplate(CalculatorTemplate):
     def write_input(self, directory, atoms, parameters, properties):
         """Write the castep cell and param files"""
         # TODO : write kpoints and params file
-        cellname = directory / (self.seedname + ".cell")
-
-        if 'kpts' in parameters:
-            kpts = parameters['kpts']
-        else:
-            kpts = None
 
         cell_params = parameters.get('cell') # Parameters for seedname.cell
         param_params = parameters.get('param') # Parameters for seedname.param
 
+        cellname = directory / (self.seedname + ".cell")
         with open(cellname, "w") as fd:
             write_cell_simple(fd, atoms, parameters=cell_params)
+
+        paramname = directory / (self.seedname + ".param")
+        with open(paramname, "w") as fd:
+            write_param_simple(fd, parameters=param_params) 
 
     def execute(self, directory, profile):
         """Execute castep"""

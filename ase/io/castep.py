@@ -131,7 +131,34 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
     write(filename, atoms, positions_frac=positions_frac,
           castep_cell=castep_cell, force_write=force_write)
 
+
+
 from typing import TextIO, Sequence, Union, Optional
+import numbers
+
+def get_format(precision=12):
+    def _format(token: Union[int, str, float]) -> str:
+        if isinstance(token, numbers.Real) and not isinstance(token, int):
+            return f'{token:.{precision}f}'
+        return str(token)
+    return _format
+
+
+def write_param_simple(fd: TextIO, 
+                parameters: Optional[dict] = None, 
+                precision: int = 12):
+    
+    _format = get_format(precision)
+
+    for key, value in parameters.items():
+        fd.write(_format(key) + ": ")
+        if isinstance(value, (list, tuple)):
+            for v in value:
+                fd.write(_format(v))
+                fd.write(" ")
+        else:
+            fd.write(_format(value))
+        fd.write("\n")
 
 def write_block(fd: TextIO,
                 name: str,
@@ -139,11 +166,7 @@ def write_block(fd: TextIO,
                 *,
                 precision: int = 12) -> None:
     
-    def _format(token: Union[int, str, float]) -> str:
-        if isinstance(token, (str, int)):
-            return str(token)
-        else:
-            return f'{token:.{precision}f}'
+    _format = get_format(precision)
         
     fd.write(f'%block {name}\n')
     for row in data:
