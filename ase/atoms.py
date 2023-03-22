@@ -1843,14 +1843,7 @@ class Atoms:
                 R[i] -= (x * (1.0 - fix)) * D[0]
 
     def get_fractional_coordinates(self, wrap=False):
-        """Get fractional coordinates
-
-        Wraps `get_scaled_positions` with `wrap=False` default
-        """
-        return self.get_scaled_positions(wrap=wrap)
-
-    def get_scaled_positions(self, wrap=True):
-        """Get positions relative to unit cell.
+        """Get positions/coordinates relative to unit cell.
 
         If wrap is True, atoms outside the unit cell will be wrapped into
         the cell in those directions with periodic boundary conditions
@@ -1860,8 +1853,8 @@ class Atoms:
         are evaluated as if the cell were completed using
         ``cell.complete()``.  This means coordinates will be Cartesian
         as long as the non-zero cell vectors span a Cartesian axis or
-        plane."""
-
+        plane.
+        """
         fractional = self.cell.scaled_positions(self.positions)
 
         if wrap:
@@ -1873,6 +1866,15 @@ class Atoms:
                     fractional[:, i] %= 1.0
 
         return fractional
+
+
+    def get_scaled_positions(self, wrap=True):
+        """Get scaled coordinates (legacy)
+
+        Wraps `get_fractional_coordinates` with `wrap=True` default
+        """
+        return self.get_fractional_coordinates(wrap=wrap)
+
 
     def set_scaled_positions(self, scaled):
         """Set positions relative to unit cell."""
