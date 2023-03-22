@@ -38,9 +38,7 @@ from ase.calculators.calculator import (
     BaseCalculator,
     compare_atoms,
     kpts2kpts,
-    kpts2sizeandoffsets,
     WeightedKPoints)
-
 from ase.config import cfg
 from ase.constraints import FixConstraint, FixAtoms, FixCartesian
 from ase.dft.kpoints import BandPath, RegularGridKPoints
