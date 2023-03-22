@@ -1,9 +1,12 @@
+import io
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 import re
 
 import ase.build
 from ase.io import write, read
+from ase.io.castep import _read_forces_from_castep_file
 
 
 # create mol with custom mass - from a list of positions or using
@@ -85,3 +88,44 @@ def test_custom_mass_overwrite(tmp_path):
     with pytest.raises(ValueError,
                        match="Could not write custom mass block for H."):
         atoms.write("{0}/{1}".format(tmp_path, "castep_test2.cell"))
+
+
+def test_read_forces_from_castep_file():
+    # removed some ' ' and '*' from example for line length limit
+    example = """
+ ***************************** Constrained Forces *****************************
+ *                                                                            *
+ *                        Cartesian components (eV/A)                         *
+ * -------------------------------------------------------------------------- *
+ *                     x                    y                    z            *
+ *                                                                            *
+ * Si            1     1.12300            -1.45600             1.78900        *
+ * Si            2    -2.12300             2.45600            -2.78900        *
+ ******************************************************************************
+
+ ***************************** Constrained Forces *****************************
+ *                                                                            *
+ *                        Cartesian components (eV/A)                         *
+ * -------------------------------------------------------------------------- *
+ *                     x                    y                    z            *
+ *                                                                            *
+ * Si            1    -1.12300             1.45600            -1.78900        *
+ * Si            2     2.12300            -2.45600             2.78900        *
+ ******************************************************************************
+"""
+    fd = io.StringIO(example)
+
+    # First block
+    forces = _read_forces_from_castep_file(fd)
+    desired = np.array([[1.123, -1.456, 1.789], [-2.123, 2.456, -2.789]])
+    assert_allclose(forces, desired)
+
+    # Second block
+    forces = _read_forces_from_castep_file(fd)
+    desired *= -1
+    assert_allclose(forces, desired)
+
+    # No block
+    forces = _read_forces_from_castep_file(fd)
+    desired = np.array([])
+    assert_allclose(forces, desired)

@@ -11,7 +11,6 @@ import warnings
 import numpy as np
 from copy import deepcopy
 from typing import TextIO, Sequence, Union, Optional
-from nptyping import NDArray
 
 import ase
 
