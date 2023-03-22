@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import re
 import warnings
 from typing import Dict
@@ -246,8 +247,19 @@ def normalize_special_points(special_points):
     return dct
 
 
+class KPointsABC(ABC):
+    @property
+    @abstractmethod
+    def kpts(self) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def todict(self) -> dict:
+        ...
+
+
 @jsonable('bandpath')
-class BandPath:
+class BandPath(KPointsABC):
     """Represents a Brillouin zone path or bandpath.
 
     A band path has a unit cell, a path specification, special points,

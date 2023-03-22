@@ -13,6 +13,7 @@ import numpy as np
 from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.config import cfg as _cfg
+from ase.dft.kpoints import KPointsABC
 from ase.outputs import Properties, all_outputs
 from ase.utils import jsonable
 
@@ -347,7 +348,7 @@ def kpts2sizeandoffsets(
 
 
 @jsonable('kpoints')
-class KPoints:
+class KPoints(KPointsABC):
     def __init__(self, kpts=None):
         if kpts is None:
             kpts = np.zeros((1, 3))
