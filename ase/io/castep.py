@@ -167,7 +167,7 @@ def write_cell_simple(fd, atoms, *, parameters: Optional[dict] = None, precision
     write_block(fd, "positions_frac", positions_frac)
 
     if parameters and parameters.get('kpts') is not None:
-        write_kpoints(parameters['kpts'])
+        write_kpoints(fd, parameters['kpts'])
 
 def write_kpoints(fd, kpts):
     """Set k-point mesh/path using a str, tuple or ASE features"""
