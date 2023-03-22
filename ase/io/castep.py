@@ -132,6 +132,70 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
           castep_cell=castep_cell, force_write=force_write)
 
 
+
+from typing import TextIO, Sequence, Union, Optional
+import numbers
+
+def get_format(precision=12):
+    def _format(token: Union[int, str, float]) -> str:
+        if isinstance(token, numbers.Real) and not isinstance(token, int):
+            return f'{token:.{precision}f}'
+        return str(token)
+    return _format
+
+
+def write_param_simple(fd: TextIO, 
+                parameters: Optional[dict] = None, 
+                precision: int = 12):
+    
+    _format = get_format(precision)
+
+    for key, value in parameters.items():
+        fd.write(_format(key) + ": ")
+        if isinstance(value, (list, tuple)):
+            for v in value:
+                fd.write(_format(v))
+                fd.write(" ")
+        else:
+            fd.write(_format(value))
+        fd.write("\n")
+
+def write_block(fd: TextIO,
+                name: str,
+                data: Sequence[Sequence[Union[int, str, float]]],
+                *,
+                precision: int = 12) -> None:
+    
+    _format = get_format(precision)
+        
+    fd.write(f'%block {name}\n')
+    for row in data:
+        fd.write(' '.join(_format(token) for token in row))
+        fd.write('\n')
+    fd.write(f'%endblock {name}\n\n')
+
+
+def write_cell_simple(fd, atoms, *, parameters: Optional[dict] = None, precision=12):
+    if atoms is None:
+        warnings.warn('Atoms object not initialized')
+        return False
+
+    # Write lattice
+    write_block(fd, "lattice_cart", atoms.get_cell())
+
+    # Write positions_frac
+    symbols = atoms.get_chemical_symbols()
+    pos = atoms.get_scaled_positions()
+    positions_frac = [[label] + list(pos) for label,pos in zip(symbols, pos)]
+    write_block(fd, "positions_frac", positions_frac)
+
+    if parameters and parameters.get('kpts') is not None:
+        write_kpoints(fd, parameters['kpts'])
+
+def write_kpoints(fd, kpts):
+    """Set k-point mesh/path using a str, tuple or ASE features"""
+    fd.write("kpoint_mp_grid: " + " ".join(str(k) for k in kpts) + "\n")
+
 def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
                       precision=6, magnetic_moments=None,
                       castep_cell=None):
