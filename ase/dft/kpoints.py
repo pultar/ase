@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import re
 import warnings
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 
@@ -256,6 +256,28 @@ class KPointsABC(ABC):
     @abstractmethod
     def todict(self) -> dict:
         ...
+
+
+class RegularGridKPoints(KPointsABC):
+    """k-points defined as divisions and offsets of reciprocal lattice vectors
+
+    The specification is stored and can be accessed using "size" and "offset"
+    attributes, while an explicit array of k-points can be obtained on-the-fly
+    by accessing the "kpts" property.
+
+    """
+    def __init__(self,
+                 size: List[int],
+                 offset: List[float] = [0., 0., 0.]) -> None:
+        self.size = size
+        self.offset = offset
+
+    @property
+    def kpts(self) -> np.ndarray:
+        return monkhorst_pack(self.size) + self.offset
+
+    def todict(self) -> dict:
+        return vars(self)
 
 
 @jsonable('bandpath')
