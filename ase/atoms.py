@@ -1867,14 +1867,13 @@ class Atoms:
 
         return fractional
 
-
+    @deprecated(DeprecationWarning("use `get_fractional_coordinates` instead"))
     def get_scaled_positions(self, wrap=True):
         """Get scaled coordinates (legacy)
 
         Wraps `get_fractional_coordinates` with `wrap=True` default
         """
         return self.get_fractional_coordinates(wrap=wrap)
-
 
     def set_scaled_positions(self, scaled):
         """Set positions relative to unit cell."""

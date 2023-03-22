@@ -2,7 +2,7 @@ import ase
 from typing import Mapping, Sequence, Union
 import numpy as np
 from ase.utils.arraywrapper import arraylike
-from ase.utils import pbc2pbc
+from ase.utils import pbc2pbc, deprecated
 
 
 __all__ = ['Cell']
@@ -257,8 +257,9 @@ class Cell:
         :meth:`~ase.cell.Cell.complete`."""
         return np.linalg.solve(self.complete().T, np.transpose(positions)).T
 
+    @deprecated(DeprecationWarning("use `fractional_coordinates` instead"))
     def scaled_positions(self, positions):
-        """Legacy interface to fractional_coordinates"""
+        """Legacy interface to fractional_coordinates (deprecated)"""
         return self.fractional_coordinates(positions=positions)
 
     def cartesian_positions(self, scaled_positions):
