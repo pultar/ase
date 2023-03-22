@@ -414,7 +414,11 @@ def kpts2kpts(kpts, atoms=None) -> KPointsABC:
     if isinstance(kpts[0], int):
         return RegularGridKPoints(kpts)
 
-    return KPoints(np.array(kpts))
+    kpts = np.array(kpts)
+    if kpts.shape[1] == 4:
+        return WeightedKPoints.from_array(kpts)
+
+    return KPoints(kpts)
 
 
 def kpts2ndarray(kpts, atoms=None):
