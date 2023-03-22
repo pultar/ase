@@ -2,9 +2,8 @@ import os
 import copy
 import subprocess
 from math import pi, sqrt
-import numbers
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Sequence, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Union
 import warnings
 from abc import abstractmethod
 
@@ -340,13 +339,10 @@ class KPoints(KPointsABC):
         return vars(self)
 
 
-WK = TypeVar('WK', bound='WeightedKPoints')
-
-
 class WeightedKPoints(KPoints):
     def __init__(self,
                  kpts: np.ndarray,
-                 weights: Sequence[numbers.Real]) -> None:
+                 weights: np.ndarray) -> None:
         self.weights = weights
         super().__init__(kpts=kpts)
 
@@ -354,7 +350,7 @@ class WeightedKPoints(KPoints):
             raise IndexError("Number of weights does not match number of kpts")
 
     @classmethod
-    def from_array(cls: WK, data: np.ndarray) -> WK:
+    def from_array(cls, data: np.ndarray) -> 'WeightedKPoints':
         """Construct k-points with weights from Nx4 array"""
         if data.shape[1] == 4:
             return cls(kpts=data[:, :3], weights=data[:, 3])
