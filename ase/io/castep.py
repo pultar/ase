@@ -491,10 +491,8 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     return True
 
 
-def _read_forces_from_castep_file(fd: TextIO) -> Optional[NDArray]:
+def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
     """Find and parse next forces block from .castep"""
-
-    forces = []
 
     # Find title
     for line in fd:
@@ -508,6 +506,7 @@ def _read_forces_from_castep_file(fd: TextIO) -> Optional[NDArray]:
     fd.readline()
 
     # Read force lines
+    forces = []
     found_constraints = False
     for line in fd:
         fields = line.split()
@@ -515,19 +514,19 @@ def _read_forces_from_castep_file(fd: TextIO) -> Optional[NDArray]:
             break
 
         sxyz = fields[3:6]
-        constraints = (f.endswith("(cons'd)") for f in sxyz)
+        constraints = (s.endswith("(cons'd)") for s in sxyz)
         if any(constraints):
             found_constraints = True
-            sxyz = [f.replace("(cons'd)", '') for f in sxyz]
+            sxyz = [s.replace("(cons'd)", '') for s in sxyz]
 
         fxyz = [float(s) for s in sxyz]
         forces.append(fxyz)
 
     if found_constraints:
-        warnings.warn('Constraints detected while reading forces.'
+        warnings.warn('Constraints detected while reading forces. '
                       'They are ignored for now.')
 
-    return np.vstack(forces)
+    return np.array(forces, dtype=float)
 
 
 def read_freeform(fd):
