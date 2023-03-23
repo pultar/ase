@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 from copy import deepcopy
-from typing import TextIO, Sequence, Union, Optional, List
+from typing import TextIO, Sequence, Union, Optional
 
 import ase
 
@@ -512,9 +512,16 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     return True
 
 
-def read_forces_from_castep(fd: TextIO) -> List[np.ndarray]:
+def read_forces_from_castep(fd: TextIO) -> Optional[np.ndarray]:
     """Read the last forces from a castep file"""
-    force_data = _read_forces_from_castep_file(fd)
+    force_data = None
+    while True:
+        result = _read_forces_from_castep_file(fd)
+        if result is not None:
+            force_data = result
+        else:
+            break
+
     return force_data
 
 
