@@ -1,16 +1,61 @@
 """ASE-interface to Octopus.
-
-Ask Hjorth Larsen <asklarsen@gmail.com>
-Carlos de Armas
-
-http://tddft.org/programs/octopus/
 """
-
+import re
 import numpy as np
+from pathlib import Path
+from subprocess import check_call, check_output
+from typing import List
+
+from ase.atoms import Atoms
 from ase.io.octopus.input import process_special_kwargs, generate_input
 from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
+
+
+def version(argv):
+    """ Get Octopus version.
+    :param argv
+    :return
+    """
+    txt = check_output(argv + ['--version']).decode('ascii')
+    match = re.match(r'octopus\s*(.+)', txt)
+    # With MPI it prints the line for each rank, but we just match
+    # the first line.
+    return match.group(1)
+
+
+def write_input(directory: Path, atoms: Atoms, parameters: dict):
+    """ Write Octopus input file.
+    """
+    txt = generate_input(atoms, process_special_kwargs(atoms, parameters))
+    inp = directory / 'inp'
+    inp.write_text(txt)
+
+
+def read_results(directory: Path) -> dict:
+    """Read octopus output files and extract data.
+    """
+    results = {}
+    with open(directory / 'static/info') as fd:
+        results.update(read_static_info(fd))
+
+    # If the eigenvalues file exists, we get the eigs/occs from that one.
+    # This probably means someone ran Octopus in 'unocc' mode to
+    # get eigenvalues (e.g. for band structures), and the values in
+    # static/info will be the old (selfconsistent) ones.
+    eigpath = directory / 'static/eigenvalues'
+    if eigpath.is_file():
+        with open(eigpath) as fd:
+            kpts, eigs, occs = read_eigenvalues_file(fd)
+            # XXX ?  Or 1 / len(kpts) ?
+            # XXX New Octopus probably has symmetry reduction !!
+            kpt_weights = np.ones(len(kpts))
+        results.update(eigenvalues=eigs,
+                       occupations=occs,
+                       ibz_k_points=kpts,
+                       k_point_weights=kpt_weights)
+    return results
 
 
 class OctopusIOError(IOError):
@@ -22,55 +67,37 @@ class OctopusProfile:
         self.argv = argv
 
     def version(self):
-        from subprocess import check_output
-        import re
-        txt = check_output(self.argv + ['--version']).decode('ascii')
-        match = re.match(r'octopus\s*(.+)', txt)
-        # With MPI it prints the line for each rank, but we just match
-        # the first line.
-        return match.group(1)
+        return version(self.argv)
 
-    def run(self, directory, outputfile):
-        from subprocess import check_call
-        with open(directory / outputfile, 'w') as fd:
+    def run(self, directory, output_file):
+        with open(directory / output_file, 'w') as fd:
             check_call(self.argv, stdout=fd, cwd=directory)
 
 
 class OctopusTemplate(CalculatorTemplate):
+
+    _implemented_properties = ['energy', 'forces', 'dipole', 'stress']
+    _input_file = 'inp'
+
     def __init__(self):
         super().__init__(
             name='octopus',
-            implemented_properties=['energy', 'forces', 'dipole', 'stress'],
+            implemented_properties=self._implemented_properties,
         )
 
-    def read_results(self, directory):
-        """Read octopus output files and extract data."""
-        results = {}
-        with open(directory / 'static/info') as fd:
-            results.update(read_static_info(fd))
+    def implemented_properties(self) -> List[str]:
+        return self._implemented_properties
 
-        # If the eigenvalues file exists, we get the eigs/occs from that one.
-        # This probably means someone ran Octopus in 'unocc' mode to
-        # get eigenvalues (e.g. for band structures), and the values in
-        # static/info will be the old (selfconsistent) ones.
-        eigpath = directory / 'static/eigenvalues'
-        if eigpath.is_file():
-            with open(eigpath) as fd:
-                kpts, eigs, occs = read_eigenvalues_file(fd)
-                kpt_weights = np.ones(len(kpts))  # XXX ?  Or 1 / len(kpts) ?
-                # XXX New Octopus probably has symmetry reduction !!
-            results.update(eigenvalues=eigs, occupations=occs,
-                           ibz_k_points=kpts,
-                           k_point_weights=kpt_weights)
-        return results
+    def read_results(self, directory: Path) -> dict:
+        """Read octopus output files and extract data."""
+        return read_results(directory)
 
     def execute(self, directory, profile):
         profile.run(directory, 'octopus.out')
 
     def write_input(self, directory, atoms, parameters, properties):
-        txt = generate_input(atoms, process_special_kwargs(atoms, parameters))
-        inp = directory / 'inp'
-        inp.write_text(txt)
+        write_input(Path(directory), atoms, parameters)
+
 
 
 class Octopus(GenericFileIOCalculator):
