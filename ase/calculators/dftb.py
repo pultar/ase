@@ -8,6 +8,8 @@ Initial development: markus.kaukonen@iki.fi
 
 import os
 import numpy as np
+from typing import Tuple
+
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
 from ase.units import Hartree, Bohr
@@ -128,43 +130,51 @@ class Dftb(FileIOCalculator):
 
         # kpoint stuff by ase
         self.kpts = kpts
-        self.kpts_coord = None
+        kpts_parameters, kpts_coord = self._get_kpts_parameters(kpts, atoms)
+        self.parameters.update(kpts_parameters)
+        self.kpts_coord = kpts_coord
 
-        if self.kpts is not None:
+    @staticmethod
+    def _get_kpts_parameters(kpts, atoms) -> Tuple[dict, np.ndarray]:
+        """Get parameter values associated with k-points, and explicit points"""
+        parameters = {}
+        kpts_coord = None
+
+        if kpts is not None:
             initkey = 'Hamiltonian_KPointsAndWeights'
             mp_mesh = None
             offsets = None
 
-            if isinstance(self.kpts, dict):
-                if 'path' in self.kpts:
+            if isinstance(kpts, dict):
+                if 'path' in kpts:
                     # kpts is path in Brillouin zone
-                    self.parameters[initkey + '_'] = 'Klines '
-                    self.kpts_coord = kpts2ndarray(self.kpts, atoms=atoms)
+                    parameters[initkey + '_'] = 'Klines '
+                    kpts_coord = kpts2ndarray(kpts, atoms=atoms)
                 else:
                     # kpts is (implicit) definition of
                     # Monkhorst-Pack grid
-                    self.parameters[initkey + '_'] = 'SupercellFolding '
+                    parameters[initkey + '_'] = 'SupercellFolding '
                     mp_mesh, offsets = kpts2sizeandoffsets(atoms=atoms,
-                                                           **self.kpts)
-            elif np.array(self.kpts).ndim == 1:
+                                                           **kpts)
+            elif np.array(kpts).ndim == 1:
                 # kpts is Monkhorst-Pack grid
-                self.parameters[initkey + '_'] = 'SupercellFolding '
-                mp_mesh = self.kpts
+                parameters[initkey + '_'] = 'SupercellFolding '
+                mp_mesh = kpts
                 offsets = [0.] * 3
-            elif np.array(self.kpts).ndim == 2:
+            elif np.array(kpts).ndim == 2:
                 # kpts is (N x 3) list/array of k-point coordinates
                 # each will be given equal weight
-                self.parameters[initkey + '_'] = ''
-                self.kpts_coord = np.array(self.kpts)
+                parameters[initkey + '_'] = ''
+                kpts_coord = np.array(kpts)
             else:
-                raise ValueError('Illegal kpts definition:' + str(self.kpts))
+                raise ValueError('Illegal kpts definition:' + str(kpts))
 
             if mp_mesh is not None:
                 eps = 1e-10
                 for i in range(3):
                     key = initkey + '_empty%03d' % i
                     val = [mp_mesh[i] if j == i else 0 for j in range(3)]
-                    self.parameters[key] = ' '.join(map(str, val))
+                    parameters[key] = ' '.join(map(str, val))
                     offsets[i] *= mp_mesh[i]
                     assert abs(offsets[i]) < eps or abs(offsets[i] - 0.5) < eps
                     # DFTB+ uses a different offset convention, where
@@ -173,17 +183,20 @@ class Dftb(FileIOCalculator):
                     if mp_mesh[i] % 2 == 0:
                         offsets[i] += 0.5
                 key = initkey + '_empty%03d' % 3
-                self.parameters[key] = ' '.join(map(str, offsets))
+                parameters[key] = ' '.join(map(str, offsets))
 
-            elif self.kpts_coord is not None:
-                for i, c in enumerate(self.kpts_coord):
+            elif kpts_coord is not None:
+                for i, c in enumerate(kpts_coord):
                     key = initkey + '_empty%09d' % i
                     c_str = ' '.join(map(str, c))
-                    if 'Klines' in self.parameters[initkey + '_']:
+                    if 'Klines' in parameters[initkey + '_']:
                         c_str = '1 ' + c_str
                     else:
                         c_str += ' 1.0'
-                    self.parameters[key] = c_str
+                    parameters[key] = c_str
+
+        return parameters, kpts_coord
+
 
     def write_dftb_in(self, outfile):
         """ Write the innput file for the dftb+ calculation.
