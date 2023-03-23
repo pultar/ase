@@ -3,6 +3,7 @@ import pytest
 from ase.build import bulk
 from ase.calculators.dftb import Dftb
 
+
 def test_kpoint_params():
     atoms = bulk('Si')
 
@@ -14,11 +15,12 @@ def test_kpoint_params():
         'Hamiltonian_KPointsAndWeights_': '',
         'Hamiltonian_KPointsAndWeights_empty000000000': '0.0 0.0 0.0 1.0',
         'Hamiltonian_KPointsAndWeights_empty000000001': '0.5 0.0 0.5 1.0',
-        'Hamiltonian_KPointsAndWeights_empty000000002': '0.33333333333333337 0.0 0.33333333333333337 1.0',
-        'Hamiltonian_KPointsAndWeights_empty000000003': '0.16666666666666669 0.0 0.16666666666666669 1.0',
+        'Hamiltonian_KPointsAndWeights_empty000000002': '0.33333333333333337 0.0 0.33333333333333337 1.0',  # noqa: E501
+        'Hamiltonian_KPointsAndWeights_empty000000003': '0.16666666666666669 0.0 0.16666666666666669 1.0',  # noqa: E501
         'Hamiltonian_KPointsAndWeights_empty000000004': '0.0 0.0 0.0 1.0'}
-    
-    params, _ = Dftb._get_kpts_parameters({'size': [2, 3, 4], 'gamma': True}, atoms)
+
+    params, _ = Dftb._get_kpts_parameters({'size': [2, 3, 4], 'gamma': True},
+                                          atoms)
     assert params == {
         'Hamiltonian_KPointsAndWeights_': 'SupercellFolding ',
         'Hamiltonian_KPointsAndWeights_empty000': '2 0 0',
@@ -46,4 +48,3 @@ def test_kpoint_params():
 
     with pytest.raises(ValueError):
         Dftb._get_kpts_parameters('a string', atoms)
-
