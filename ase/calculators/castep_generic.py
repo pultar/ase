@@ -9,7 +9,8 @@ from ase import Atoms
 from ase.calculators.genericfileio import (
     GenericFileIOCalculator, CalculatorTemplate, read_stdout)
 # from ase.io import write
-from ase.io.castep import read_castep_castep_new, write_cell_simple, write_param_simple, read_bands
+from ase.io.castep import (read_castep_castep_new, write_cell_simple,
+                           write_param_simple, read_bands)
 
 
 ################################
@@ -111,9 +112,11 @@ class CastepTemplate(CalculatorTemplate):
         dotbands_path = directory / (self.seedname + ".bands")
         with open(dotbands_path) as fd:
             kpts, weights, eigenvalues, efermi = read_bands(dotbands_path)
-            props.update(kpts=kpts, weights=weights, eigenvalues=eigenvalues, efermi=efermi)
+            props.update(kpts=kpts, weights=weights,
+                         eigenvalues=eigenvalues, efermi=efermi)
 
         return props
+
 
 ################################
 # The ASE calculator interface #

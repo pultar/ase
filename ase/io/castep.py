@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 from copy import deepcopy
-from typing import TextIO, Sequence, Union, Optional
+from typing import TextIO, Sequence, Union, Optional, List
 
 import ase
 
@@ -144,8 +144,8 @@ def get_format(precision=12):
 
 
 def write_param_simple(fd: TextIO,
-                parameters: Optional[dict] = None,
-                precision: int = 12):
+                       parameters: Optional[dict] = None,
+                       precision: int = 12):
     """Write .param or .cell parameters to file
 
     This is a simple implementation to support new GenericFileIOCalculator.
@@ -171,7 +171,6 @@ def write_param_simple(fd: TextIO,
             write_key(fd, key, value, precision=precision)
 
 
-
 def is_block(value) -> bool:
     """
     Detect if a value is two dimensional and should be written as a block.
@@ -186,9 +185,9 @@ def is_block(value) -> bool:
 
 
 def write_key(fd: TextIO,
-                name: str,
-                data: Union[int, str, float, Sequence[Union[int, str, float]]],
-                precision: int = 12) -> None:    
+              name: str,
+              data: Union[int, str, float, Sequence[Union[int, str, float]]],
+              precision: int = 12) -> None:
     """Write a key: value pair to the file descriptor"""
     _format = get_format(precision)
     fd.write(_format(name) + ": ")
@@ -224,7 +223,7 @@ def write_cell_simple(fd: TextIO,
 
     This is a simple implementation to support new GenericFileIOCalculator.
     It does not make any intelligent interpretation of keywords: they will be
-    directly written to the file. Any value that is a list of a list, or a 
+    directly written to the file. Any value that is a list of a list, or a
     ndarray will be written as a block.
 
     Args:
@@ -245,7 +244,7 @@ def write_cell_simple(fd: TextIO,
     # Write positions_frac
     symbols = atoms.get_chemical_symbols()
     pos = atoms.get_scaled_positions()
-    positions_frac = [[label] + list(pos) for label,pos in zip(symbols, pos)]
+    positions_frac = [[label] + list(pos) for label, pos in zip(symbols, pos)]
     write_block(fd, "positions_frac", positions_frac)
 
     write_param_simple(fd, parameters, precision)
@@ -511,12 +510,13 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     write_freeform(fd, cell)
 
     return True
-from typing import List
+
 
 def read_forces_from_castep(fd: TextIO) -> List[np.ndarray]:
     """Read the last forces from a castep file"""
     force_data = _read_forces_from_castep_file(fd)
     return force_data
+
 
 def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
     """Find and parse next forces block from .castep"""
@@ -1017,6 +1017,7 @@ def read_castep_castep(fd, index=None):
     calc._old_cell = calc.cell
 
     return [calc.atoms]  # Returning in the form of a list for next()
+
 
 def read_castep_castep_new(fd):
     """Read the final energy and forces from a .castep file"""
