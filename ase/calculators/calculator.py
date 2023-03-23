@@ -2,6 +2,7 @@ import os
 import copy
 import subprocess
 from math import pi, sqrt
+import numbers
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 import warnings
@@ -378,14 +379,26 @@ def kpts2kpts(kpts, atoms=None) -> KPointsABC:
         size, offset = kpts2sizeandoffsets(atoms=atoms, **kpts)
         return RegularGridKPoints(size, offset=offset)
 
-    if isinstance(kpts[0], int):
-        return RegularGridKPoints(kpts)
+    kpts_array = np.array(kpts)
 
-    kpts = np.array(kpts)
-    if kpts.shape[1] == 4:
-        return WeightedKPoints.from_array(kpts)
+    if kpts_array.ndim == 1:
+        if isinstance(kpts_array[0], numbers.Integral):
+            return RegularGridKPoints(kpts_array.tolist())
+        else:
+            raise ValueError("1-D kpts array should be a series of int")
 
-    return KPoints(kpts)
+    elif kpts_array.ndim == 2:
+        if kpts_array.shape[1] == 4:
+            return WeightedKPoints.from_array(kpts_array)
+
+        elif kpts_array.shape[1] == 3:
+            return KPoints(kpts_array)
+
+        else:
+            raise ValueError("2-D kpts array should have 3 or 4 colums")
+
+    else:
+        raise ValueError(f"Could not interpret '{kpts}' as kpoints")
 
 
 def kpts2ndarray(kpts, atoms=None):
