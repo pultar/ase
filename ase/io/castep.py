@@ -567,6 +567,18 @@ def _read_forces_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
         return np.array(forces, dtype=float)
 
 
+def read_stress_from_castep(fd: TextIO) -> Optional[np.ndarray]:
+    """Read the last forces from a castep file"""
+    stress_data = None
+    while True:
+        result = _read_stress_from_castep_file(fd)
+        if result is not None:
+            stress_data = result
+        else:
+            break
+
+    return stress_data
+
 def _read_stress_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
     """Find and parse next stress block from .castep"""
 
@@ -1069,6 +1081,11 @@ def read_castep_castep_new(fd):
 
     fd.seek(0)
     castep_data['forces'] = read_forces_from_castep(fd)
+
+    fd.seek(0)
+    stress = read_stress_from_castep(fd)
+    if stress is not None:
+        castep_data['stress'] = stress
 
     return castep_data
 

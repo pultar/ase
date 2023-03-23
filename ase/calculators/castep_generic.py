@@ -69,7 +69,7 @@ class CastepTemplate(CalculatorTemplate):
         """Initialise castep calculation definition"""
         super().__init__(
             name='castep',
-            implemented_properties=['energy', 'free_energy'])
+            implemented_properties=['energy', 'free_energy', 'forces', 'stress'])
         self.seedname = 'castep'
 
     @staticmethod
@@ -86,13 +86,16 @@ class CastepTemplate(CalculatorTemplate):
 
         # Separate parameters for seedname.cell and seedname.param files
         cell_params = parameters.get('cell', {}).copy()
-        param_params = parameters.get('param')
+        param_params = parameters.get('param', {}).copy()
 
         cell_params.update(self._get_kpoint_params(atoms, parameters))
 
         cellname = directory / (self.seedname + ".cell")
         with open(cellname, "w") as fd:
             write_cell_simple(fd, atoms, parameters=cell_params)
+
+        if 'stress' in properties:
+            param_params['CALCULATE_STRESS'] = 'true'
 
         paramname = directory / (self.seedname + ".param")
         with open(paramname, "w") as fd:
@@ -140,7 +143,7 @@ class Castep(GenericFileIOCalculator):
 
         template = CastepTemplate()
         if profile is None:
-            profile = CastepProfile(argv=[])
+            profile = CastepProfile()
         super().__init__(profile=profile, template=template,
                          directory=directory,
                          parameters=kwargs)
