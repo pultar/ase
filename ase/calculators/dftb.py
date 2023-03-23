@@ -145,12 +145,12 @@ class Dftb(FileIOCalculator):
     def _get_kpts_parameters(kpts, atoms) -> Tuple[dict, np.ndarray]:
         """Get parameter values associated with k-points, and explicit points"""
         parameters = {}
-        kpts_coord = None
+        kpts_coord = np.array([])
+        offsets = []
 
         if kpts is not None:
             initkey = 'Hamiltonian_KPointsAndWeights'
             mp_mesh = None
-            offsets = None
 
             if isinstance(kpts, dict):
                 if 'path' in kpts:
@@ -177,6 +177,8 @@ class Dftb(FileIOCalculator):
                 raise ValueError('Illegal kpts definition:' + str(kpts))
 
             if mp_mesh is not None:
+                mp_mesh = list(mp_mesh)
+
                 eps = 1e-10
                 for i in range(3):
                     key = initkey + '_empty%03d' % i
