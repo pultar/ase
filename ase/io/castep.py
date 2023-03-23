@@ -518,7 +518,7 @@ def read_forces_from_castep(fd: TextIO) -> List[np.ndarray]:
     return force_data
 
 
-def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
+def _read_forces_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
     """Find and parse next forces block from .castep"""
 
     # Find title
@@ -554,7 +554,10 @@ def _read_forces_from_castep_file(fd: TextIO) -> np.ndarray:
         warnings.warn('Constraints detected while reading forces. '
                       'They are ignored for now.')
 
-    return np.array(forces, dtype=float)
+    if len(forces) == 0:
+        return None
+    else:
+        return np.array(forces, dtype=float)
 
 
 def read_freeform(fd):

@@ -127,5 +127,4 @@ def test_read_forces_from_castep_file():
 
     # No block
     forces = _read_forces_from_castep_file(fd)
-    desired = np.array([])
-    assert_allclose(forces, desired)
+    assert forces is None
