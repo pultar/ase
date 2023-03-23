@@ -567,6 +567,38 @@ def _read_forces_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
         return np.array(forces, dtype=float)
 
 
+def _read_stress_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
+    """Find and parse next stress block from .castep"""
+
+    # Find title
+    for line in fd:
+        if ' Stress Tensor ***' in line:
+            break
+
+    # Skip header
+    header_regex = re.compile(r"x\W+y\W+z")
+    for line in fd:
+        if header_regex.search(line):
+            break
+    fd.readline()
+
+    # Read stress lines
+    stress = []
+    for line in fd:
+        fields = line.split()
+        if len(fields) != 6:
+            break
+
+        sxyz = fields[2:5]
+        fxyz = [float(s) for s in sxyz]
+        stress.append(fxyz)
+
+    if len(stress) == 0:
+        return None
+    else:
+        return np.array(stress, dtype=float)
+
+
 def read_freeform(fd):
     """
     Read a CASTEP freeform file (the basic format of .cell and .param files)

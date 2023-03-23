@@ -6,7 +6,8 @@ import re
 
 import ase.build
 from ase.io import write, read
-from ase.io.castep import _read_forces_from_castep_file
+from ase.io.castep import (_read_forces_from_castep_file,
+                           _read_stress_from_castep_file)
 
 
 # create mol with custom mass - from a list of positions or using
@@ -128,3 +129,53 @@ def test_read_forces_from_castep_file():
     # No block
     forces = _read_forces_from_castep_file(fd)
     assert forces is None
+
+
+def test_read_stress_from_castep_file():
+    # removed some ' ' and '*' from example for line length limit
+    example = """
+ ***************** Stress Tensor *****************
+ *                                               *
+ *          Cartesian components (GPa)           *
+ * --------------------------------------------- *
+ *             x             y             z     *
+ *                                               *
+ *  x      1.123000     -1.456000      1.789000  *
+ *  y     -2.123000      2.456000     -2.789000  *
+ *  z      3.123000     -3.456000      3.789000  *
+ *                                               *
+ *  Pressure:   -2.4563                          *
+ *                                               *
+ *************************************************
+
+ ***************** Stress Tensor *****************
+ *                                               *
+ *          Cartesian components (GPa)           *
+ * --------------------------------------------- *
+ *             x             y             z     *
+ *                                               *
+ *  x     -1.123000      1.456000     -1.789000  *
+ *  y      2.123000     -2.456000      2.789000  *
+ *  z     -3.123000      3.456000     -3.789000  *
+ *                                               *
+ *  Pressure:    2.4563                          *
+ *                                               *
+ *************************************************
+"""
+    fd = io.StringIO(example)
+
+    # First block
+    stress = _read_stress_from_castep_file(fd)
+    desired = np.array([[1.123, -1.456, 1.789],
+                        [-2.123, 2.456, -2.789],
+                        [3.123, -3.456, 3.789]])
+    assert_allclose(stress, desired)
+
+    # Second block
+    stress = _read_stress_from_castep_file(fd)
+    desired *= -1
+    assert_allclose(stress, desired)
+
+    # No block
+    stress = _read_stress_from_castep_file(fd)
+    assert stress is None
