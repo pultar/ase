@@ -1,4 +1,8 @@
-"""ASE-interface to VASP.
+"""
+ASE-interface to VASP using GenericFileIOCalculator.
+
+Work in Progress by Michael Wolloch
+michael.wolloch@univie.ac.at
 
 www.vasp.at
 """
