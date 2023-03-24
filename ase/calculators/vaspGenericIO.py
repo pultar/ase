@@ -3,6 +3,7 @@
 www.vasp.at
 """
 
+import os
 import numpy as np
 from ase import Atoms
 from xml.etree import ElementTree
@@ -16,7 +17,7 @@ from ase.calculators.genericfileio import (CalculatorTemplate,
 
 class VaspProfile:
     def __init__(self, vasp_command):
-        self.vasp_command = vasp_command.split()
+        self.vasp_command = vasp_command
 
     def version(self):
         from subprocess import check_output
@@ -43,13 +44,13 @@ class VaspTemplate(CalculatorTemplate):
         )
         
         
-    def _read_xml(self):
+    def _read_xml(self, directory):
         """Read vasprun.xml, and return the last calculator object.
         Returns calculator from the xml file.
         Raises a ReadError if the reader is not able to construct a calculator.
         """
-        from ase.formats import read
-        file = self._indir('vasprun.xml')
+        from ase.io.formats import read
+        file = directory / 'vasprun.xml'
         incomplete_msg = (
             f'The file "{file}" is incomplete, and no DFT data was available. '
             'This is likely due to an incomplete calculation.')
@@ -63,8 +64,7 @@ class VaspTemplate(CalculatorTemplate):
         if _xml_atoms is None or _xml_atoms.calc is None:
             raise calculator.ReadError(incomplete_msg)
 
-        self._xml_calc = _xml_atoms.calc
-        return self._xml_calc
+        return _xml_atoms.calc
 
     def read_results(self, directory):
         """
@@ -77,7 +77,7 @@ class VaspTemplate(CalculatorTemplate):
         results = {}
 
         # Read the data we can from vasprun.xml
-        calc_xml = self._read_xml()
+        calc_xml = self._read_xml(directory)
         xml_results = calc_xml.results
 
         # Fix sorting
@@ -88,7 +88,7 @@ class VaspTemplate(CalculatorTemplate):
 
         # Stress is not always present.
         # Prevent calculation from going into a loop
-        if 'stress' not in self.results:
+        if 'stress' not in results:
             results.update(dict(stress=None))
 
         return results
@@ -97,29 +97,39 @@ class VaspTemplate(CalculatorTemplate):
         profile.run(directory, 'vasp.out')
 
     def write_input(self, directory, atoms, parameters, properties):
-        """Write INCAR, POSCAR, POTCAR and probably KPOINTS."""
-        ...
+        """
+        Write INCAR, POSCAR, POTCAR and KPOINTS
+        using the old ase class for now. Needs to be refactored and replaced
+        by smaller functions.
+        KPOINTS should also be passed as a general object as currently under
+        development by Adam Jackson.
+        also use the properties here eventually.
+        """
+        
+        from ase.calculators.vasp.create_input import  GenerateVaspInput
+        vasp_input_generator = GenerateVaspInput()
+        vasp_input_generator.initialize(atoms)
+        vasp_input_generator.set(**parameters)
+        vasp_input_generator.write_input(atoms, directory)
 
 
 class Vasp(GenericFileIOCalculator):
-    """Vasp calculator.
-
-    The label is always assumed to be a directory."""
+    """
+    Vasp calculator.
+    """
 
     def __init__(self,
                  profile=None,
                  directory='.',
                  **kwargs):
-        """Create Octopus calculator.
+        """
+        Create Vasp calculator.
+        """
 
-        Label is always taken as a subdirectory.
-        Restart is taken to be a label."""
-
-        if profile is None:
-            profile = VaspProfile('mpirun -np 4 vasp')
+        if (profile is None and 'ASE_VASP_COMMAND' in os.environ):
+            profile = VaspProfile(os.environ['ASE_VASP_COMMAND'].split())
+        
 
         super().__init__(profile=profile, template=VaspTemplate(),
                          directory=directory,
                          parameters=kwargs)
-
-       ...
