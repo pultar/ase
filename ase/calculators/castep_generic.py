@@ -86,7 +86,8 @@ class CastepTemplate(CalculatorTemplate):
 
         from ase.io.castep import sort_atoms
         # Write the sorting/unsorting map so we can reorder atoms on read
-        _ = sort_atoms(atoms, sort_file=f'{self.seedname}.ase-sort.json')
+        _ = sort_atoms(atoms,
+                       sort_file=(directory / f'{self.seedname}.ase-sort.json'))
 
         # Separate parameters for seedname.cell and seedname.param files
         cell_params = parameters.get('cell', {}).copy()
@@ -121,6 +122,14 @@ class CastepTemplate(CalculatorTemplate):
             kpts, weights, eigenvalues, efermi = read_bands(dotbands_path)
             props.update(kpts=kpts, weights=weights,
                          eigenvalues=eigenvalues, efermi=efermi)
+
+        sortfile_path = directory / (self.seedname + ".ase-sort.json")
+        if sortfile_path.is_file():
+            from json import load as load_json
+            with open(sortfile_path, 'r') as fd:
+                mapping = load_json(fd)['castep_to_ase']
+
+            props['forces'] = props['forces'][mapping]
 
         return props
 

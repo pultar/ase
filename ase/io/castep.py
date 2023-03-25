@@ -214,8 +214,8 @@ def write_block(fd: TextIO,
     fd.write(f'%endblock {name}\n\n')
 
 
-def write_sort_file(atoms: ase.Atoms,
-                    sort_file: os.PathLike) -> ase.Atoms:
+def sort_atoms(atoms: ase.Atoms,
+               sort_file: os.PathLike) -> ase.Atoms:
     """Get a copy of Atoms in CASTEP internal sorting order
 
     If tags are set on atoms.arrays['castep_custom_species'] these are used.
@@ -231,7 +231,7 @@ def write_sort_file(atoms: ase.Atoms,
         custom_species = atoms.get_chemical_symbols()
     ase_to_castep = atom_order(custom_species)
     castep_to_ase = [None] * len(ase_to_castep)
-    for i, pos in ase_to_castep:
+    for i, pos in enumerate(ase_to_castep):
         castep_to_ase[pos] = i
 
     if sort_file is not None:
