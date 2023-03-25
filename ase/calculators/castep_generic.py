@@ -84,6 +84,10 @@ class CastepTemplate(CalculatorTemplate):
     def write_input(self, directory, atoms, parameters, properties):
         """Write the castep cell and param files"""
 
+        from ase.io.castep import sort_atoms
+        # Write the sorting/unsorting map so we can reorder atoms on read
+        _ = sort_atoms(atoms, sort_file=f'{self.seedname}.ase-sort.json')
+
         # Separate parameters for seedname.cell and seedname.param files
         cell_params = parameters.get('cell', {}).copy()
         param_params = parameters.get('param', {}).copy()

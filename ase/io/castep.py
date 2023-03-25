@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 from copy import deepcopy
-from typing import TextIO, Sequence, Union, Optional
+from typing import List, Optional, Sequence, TextIO, Union
 
 import ase
 
@@ -214,17 +214,96 @@ def write_block(fd: TextIO,
     fd.write(f'%endblock {name}\n\n')
 
 
+def write_sort_file(atoms: ase.Atoms,
+                    sort_file: os.PathLike) -> ase.Atoms:
+    """Get a copy of Atoms in CASTEP internal sorting order
+
+    If tags are set on atoms.arrays['castep_custom_species'] these are used.
+
+    Args:
+        atoms: unsorted structure
+        sort_file: if provided, write a mapping to/from the new order
+
+    """
+    if 'castep_custom_species' in atoms.arrays:
+        custom_species = atoms.arrays['castep_custom_species']
+    else:
+        custom_species = atoms.get_chemical_symbols()
+    ase_to_castep = atom_order(custom_species)
+    castep_to_ase = [None] * len(ase_to_castep)
+    for i, pos in ase_to_castep:
+        castep_to_ase[pos] = i
+
+    if sort_file is not None:
+        with open(sort_file, 'w') as fd:
+            import json
+            json.dump({'ase_to_castep': ase_to_castep,
+                       'castep_to_ase': castep_to_ase},
+                      fd)
+
+    return atoms.copy()[ase_to_castep]
+
+
+def atom_order(custom_species: List[str]) -> List[int]:
+    """Get the CASTEP sorting order from a list of tagged species
+
+    CASTEP does not respect the order of Atoms in the .cell file. To avoid
+    nasty surprises, we can anticipate this sorting and obtain a map to
+    recover the original Atoms sorting.
+
+    Args:
+        custom_species: series of tagged species corresponding to atoms, e.g.
+            ["C", "C:13", "C", "H:D", "H"]
+
+    """
+    from ase.data import atomic_numbers
+    from collections import OrderedDict
+
+    tagged = OrderedDict()
+    untagged = {}
+
+    for i, species in enumerate(custom_species):
+        symbol, *tag = species.split(':')
+
+        if tag:
+            section = tagged
+        else:
+            section = untagged
+
+        if species in section:
+            section[species].append(i)
+        else:
+            section[species] = [i]
+
+    index = []
+
+    # Untagged entries are sorted by Z
+    for _, species in sorted([(atomic_numbers[species], species)
+                              for species in untagged]):
+        index += untagged[species]
+
+    # Tagged entries are sorted by first appearance
+    for species, indices in tagged.items():
+        index += indices
+
+    return index
+
+
 def write_cell_simple(fd: TextIO,
                       atoms: ase.Atoms,
                       *,
                       parameters: Optional[dict] = None,
-                      precision: int = 12) -> None:
+                      precision: int = 12,
+                      sort: bool = False) -> None:
     """Write .cell parameters to file
 
     This is a simple implementation to support new GenericFileIOCalculator.
     It does not make any intelligent interpretation of keywords: they will be
     directly written to the file. Any value that is a list of a list, or a
     ndarray will be written as a block.
+
+    If atoms.arrays['castep_custom_species'] is set, these atom labels will be
+    used; otherwise, the element symbols are used.
 
     Args:
         fd: output stream
@@ -242,7 +321,11 @@ def write_cell_simple(fd: TextIO,
     write_block(fd, "lattice_cart", atoms.get_cell())
 
     # Write positions_frac
-    symbols = atoms.get_chemical_symbols()
+    if 'castep_custom_species' in atoms.arrays:
+        symbols = atoms.arrays['castep_custom_species']
+    else:
+        symbols = atoms.get_chemical_symbols()
+
     pos = atoms.get_scaled_positions()
     positions_frac = [[label] + list(pos) for label, pos in zip(symbols, pos)]
     write_block(fd, "positions_frac", positions_frac)

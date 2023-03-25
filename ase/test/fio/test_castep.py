@@ -179,3 +179,16 @@ def test_read_stress_from_castep_file():
     # No block
     stress = _read_stress_from_castep_file(fd)
     assert stress is None
+
+
+def test_atom_order():
+    from ase.io.castep import atom_order
+    custom_species = ['Li:a', 'Si', 'Si:a', 'O:a',
+                      'Si', 'Si:a', 'O', 'Si']
+
+    expected_sort = [6, 1, 4, 7, 0, 2, 5, 3]
+
+    # i.e. Li:a Si Si:a O:a Si Si:a O Si
+    # -->  O Si Si Si Li:a Si:a Si:a O:a
+
+    assert atom_order(custom_species) == expected_sort
