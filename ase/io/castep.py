@@ -293,8 +293,7 @@ def write_cell_simple(fd: TextIO,
                       atoms: ase.Atoms,
                       *,
                       parameters: Optional[dict] = None,
-                      precision: int = 12,
-                      sort: bool = False) -> None:
+                      precision: int = 12) -> None:
     """Write .cell parameters to file
 
     This is a simple implementation to support new GenericFileIOCalculator.
@@ -318,7 +317,7 @@ def write_cell_simple(fd: TextIO,
         return False
 
     # Write lattice
-    write_block(fd, "lattice_cart", atoms.get_cell())
+    write_block(fd, "lattice_cart", atoms.get_cell(), precision=precision)
 
     # Write positions_frac
     if 'castep_custom_species' in atoms.arrays:
@@ -328,9 +327,9 @@ def write_cell_simple(fd: TextIO,
 
     pos = atoms.get_scaled_positions()
     positions_frac = [[label] + list(pos) for label, pos in zip(symbols, pos)]
-    write_block(fd, "positions_frac", positions_frac)
+    write_block(fd, "positions_frac", positions_frac, precision=precision)
 
-    write_param_simple(fd, parameters, precision)
+    write_param_simple(fd, parameters, precision=precision)
 
 
 def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,

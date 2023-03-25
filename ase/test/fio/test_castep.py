@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose
 import pytest
 import re
 
+from ase import Atoms
 import ase.build
 from ase.io import write, read
 from ase.io.castep import (_read_forces_from_castep_file,
@@ -192,3 +193,60 @@ def test_atom_order():
     # -->  O Si Si Si Li:a Si:a Si:a O:a
 
     assert atom_order(custom_species) == expected_sort
+
+
+def test_write_cell_simple():
+    from ase.io.castep import write_cell_simple
+
+    atoms = Atoms('NaCl',
+                  cell = np.eye(3) * [1, 2, 3] + [0.1, 0.2, 0.3],
+                  scaled_positions = [[0, 0.5, 0], [0.2, 0, 0.2]],
+                  pbc=True)
+    atoms.new_array('castep_custom_species',
+                    np.array(['Na', 'Cl:fish']))
+
+    testfile = 'cell_simple_test.cell'
+
+    with open(testfile, 'w') as fd:
+        write_cell_simple(
+            fd,
+            atoms=atoms,
+            parameters={'string_key': 'hello',
+                        'bool_key': True,
+                        'tuple_key': (4, 'eV'),
+                        'block_key_one_line': [['Cl:fish', 'salad']],
+                        'block_key_multiline': [[0.1, 0.2],
+                                                [0.3, 0.4]]},
+            precision=4
+
+        )
+
+    expected_output = [
+        '%block lattice_cart\n',
+        '1.1000 0.2000 0.3000\n',
+        '0.1000 2.2000 0.3000\n',
+        '0.1000 0.2000 3.3000\n',
+        '%endblock lattice_cart\n',
+        '\n',
+        '%block positions_frac\n',
+        'Na 0.0000 0.5000 0.0000\n',
+        'Cl:fish 0.2000 0.0000 0.2000\n',
+        '%endblock positions_frac\n',
+        '\n',
+        'string_key: hello\n',
+        'bool_key: True\n',
+        'tuple_key: 4 eV \n',
+        '%block block_key_one_line\n',
+        'Cl:fish salad\n',
+        '%endblock block_key_one_line\n',
+        '\n',
+        '%block block_key_multiline\n',
+        '0.1000 0.2000\n',
+        '0.3000 0.4000\n',
+        '%endblock block_key_multiline\n',
+        '\n',
+    ]
+
+    with open(testfile, 'r') as fd:
+        cell_output = fd.readlines()
+        assert cell_output == expected_output
