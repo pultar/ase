@@ -14,9 +14,12 @@ import numpy as np
 from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.config import cfg as _cfg
-from ase.dft.kpoints import KPointsABC
+from ase.dft.kpoints import KPointsABC, RegularGridKPoints, WeightedKPoints
 from ase.outputs import Properties, all_outputs
-from ase.utils import jsonable
+
+# Import KPoints for backward-compatibility; it used to be defined here
+# noqa: F401
+from ase.dft.kpoints import KPoints
 
 from .names import names
 
@@ -348,49 +351,7 @@ def kpts2sizeandoffsets(
     return size, offsets
 
 
-@jsonable('kpoints')
-class KPoints(KPointsABC):
-    def __init__(self, kpts=None):
-        if kpts is None:
-            kpts = np.zeros((1, 3))
-        self._kpts = kpts
-
-    # In this case we can read and write .kpts property, but ABC only promises
-    # that we can read so we need to use @property.
-    @property
-    def kpts(self) -> np.ndarray:
-        return self._kpts
-
-    @kpts.setter
-    def kpts(self, value: np.ndarray) -> None:
-        self._kpts = value
-
-    def todict(self):
-        return vars(self)
-
-
-class WeightedKPoints(KPoints):
-    def __init__(self,
-                 kpts: np.ndarray,
-                 weights: np.ndarray) -> None:
-        self.weights = weights
-        super().__init__(kpts=kpts)
-
-        if len(weights) != len(kpts):
-            raise IndexError("Number of weights does not match number of kpts")
-
-    @classmethod
-    def from_array(cls, data: np.ndarray) -> 'WeightedKPoints':
-        """Construct k-points with weights from Nx4 array"""
-        if data.shape[1] == 4:
-            return cls(kpts=data[:, :3], weights=data[:, 3])
-        else:
-            raise IndexError("Expected Nx4 array of k-points and weights")
-
-
 def kpts2kpts(kpts, atoms=None) -> KPointsABC:
-    from ase.dft.kpoints import RegularGridKPoints
-
     if kpts is None:
         return RegularGridKPoints([1, 1, 1])
 
