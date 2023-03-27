@@ -33,11 +33,15 @@ Git master branch
 
 * In :mod:`ase.dft.kpoints` the existing set of KPoints classes has
   been expanded and formalised further:
-  - A base class :class:`~ase.dft.kpoints.KPointsABC` promises availability of a readable ``.kpts`` attribute; i.e. you can always get an explicit list of KPoints from such objects.
-    - The existing :class:`~ase.dft.kpoints.KPoints` and :class:`~ase.dft.kpoints.BandPath` classes inherit this base class and :class:`~ase.dft.kpoints.KPoints` has been moved from `ase.calculators.calculator` to `ase.dft.kpoints`.
+
+  - A base class :class:`~ase.dft.kpoints.KPointsABC` promises availability of a readable ``.kpts`` attribute; i.e. you can always get an explicit list of **k**-points from such objects.
+
+    - The existing :class:`~ase.dft.kpoints.KPoints` and :class:`~ase.dft.kpoints.BandPath` classes inherit this base class and :class:`~ase.dft.kpoints.KPoints` has been moved from :mod:`ase.calculators.calculator` to :mod:`ase.dft.kpoints`.
     - A new :class:`~ase.dft.kpoints.RegularGridKPoints` represents a Monkhorst-Pack grid with offsets.
-    - A new :class:`~ase.dft.kpoints.WeightedKPoints` represets a series of explicit k-points with weights.
+    - A new :class:`~ase.dft.kpoints.WeightedKPoints` represets a series of explicit **k**-points with weights.
+
   - The existing :func:`~ase.calculators.calculator.kpts2kpts` function will now dispatch from a wide range of user specifications to one of these classes as appropriate.
+
   - Castep and DFTB+ Calculators have been refactored to use these
     tools, simplifying the implementation-specific logic.
 
