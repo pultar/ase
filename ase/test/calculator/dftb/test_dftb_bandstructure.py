@@ -4,7 +4,7 @@ from ase.build import bulk
 from ase.utils import tokenize_version
 
 
-@pytest.mark.skip('test is rather broken')
+# @pytest.mark.skip('test is rather broken')
 def test_dftb_bandstructure(dftb_factory):
     # We need to get the DFTB+ version to know
     # whether to skip this test or not.

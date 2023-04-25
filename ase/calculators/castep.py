@@ -28,6 +28,7 @@ import subprocess
 from copy import deepcopy
 from collections import namedtuple
 from itertools import product
+from pathlib import Path
 from typing import List, Set
 
 import ase
@@ -35,8 +36,9 @@ import ase.units as units
 from ase.calculators.general import Calculator
 from ase.calculators.calculator import compare_atoms
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.calculator import kpts2sizeandoffsets
-from ase.dft.kpoints import BandPath
+from ase.calculators.calculator import kpts2kpts
+from ase.calculators.calculator import WeightedKPoints
+from ase.dft.kpoints import BandPath, RegularGridKPoints
 from ase.parallel import paropen
 from ase.io.castep import read_param
 from ase.io.castep import read_bands
@@ -692,7 +694,7 @@ End CASTEP Interface Documentation
             raise TypeError('Band structure path must be an '
                             'ase.dft.kpoint.BandPath object')
 
-    def set_kpts(self, kpts):
+    def set_kpts(self, kpts, precision=6):
         """Set k-point mesh/path using a str, tuple or ASE features
 
         Args:
@@ -725,85 +727,53 @@ End CASTEP Interface Documentation
         - 'gamma' (bool) to offset the Monkhorst-Pack grid to include
           (0, 0, 0); set False to offset each direction avoiding 0.
         """
+        string_formatter = f'{{:.{precision}f}}'
 
-        def clear_mp_keywords():
-            mp_keywords = product({'kpoint', 'kpoints'},
-                                  {'mp_grid', 'mp_offset',
-                                   'mp_spacing', 'list'})
-            for kp_tag in mp_keywords:
-                setattr(self.cell, '_'.join(kp_tag), None)
+        # Clear existing kpoint keywords
+        mp_keywords = product({'kpoint', 'kpoints'},
+                              {'mp_grid', 'mp_offset',
+                               'mp_spacing', 'list'})
+        for kp_tag in mp_keywords:
+            setattr(self.cell, '_'.join(kp_tag), None)
 
-        # Case 1: Clear parameters with set_kpts(None)
+        # First we check a few non-standard input forms
+
         if kpts is None:
-            clear_mp_keywords()
+            # Fall back on CASTEP default (not equal to kpts2kpts default)
             pass
 
-        # Case 2: list of explicit k-points with weights
-        # e.g. [[ 0,    0,   0,    0.125],
-        #       [ 0,   -0.5, 0,    0.375],
-        #       [-0.5,  0,  -0.5,  0.375],
-        #       [-0.5, -0.5, -0.5, 0.125]]
+        elif isinstance(kpts, str):
+            # One-line string: interpret as MP mesh e.g. '2 3 4'
+            self.cell.kpoint_mp_grid = kpts
 
-        elif (isinstance(kpts, (tuple, list))
-              and isinstance(kpts[0], (tuple, list))):
-
-            if not all(map((lambda row: len(row) == 4), kpts)):
-                raise ValueError(
-                    'In explicit kpt list each row should have 4 elements')
-
-            clear_mp_keywords()
-            self.cell.kpoint_list = [' '.join(map(str, row)) for row in kpts]
-
-        # Case 3: list of explicit kpts formatted as list of str
-        # i.e. the internal format of calc.kpoint_list split on \n
-        # e.g. ['0 0 0 0.125', '0 -0.5 0 0.375', '-0.5 0 -0.5 0.375']
         elif isinstance(kpts, (tuple, list)) and isinstance(kpts[0], str):
-
-            if not all(map((lambda row: len(row.split()) == 4), kpts)):
-                raise ValueError(
-                    'In explicit kpt list each row should have 4 elements')
-
-            clear_mp_keywords()
+            # If data is already in CASTEP format then just set it directly
+            # e.g. ['0 0 0 0.125', '0 -0.5 0 0.375', '-0.5 0 -0.5 0.375']
             self.cell.kpoint_list = kpts
 
-        # Case 4: list or tuple of MP samples e.g. [3, 3, 2]
-        elif isinstance(kpts, (tuple, list)) and isinstance(kpts[0], int):
-            if len(kpts) != 3:
-                raise ValueError('Monkhorst-pack grid should have 3 values')
-            clear_mp_keywords()
-            self.cell.kpoint_mp_grid = '%d %d %d' % tuple(kpts)
-
-        # Case 5: str representation of Case 3 e.g. '3 3 2'
-        elif isinstance(kpts, str):
-            self.set_kpts([int(x) for x in kpts.split()])
-
-        # Case 6: dict of options e.g. {'size': (3, 3, 2), 'gamma': True}
-        # 'spacing' is allowed but transformed to 'density' to get mesh/offset
-        elif isinstance(kpts, dict):
-            kpts = kpts.copy()
-
-            if (kpts.get('spacing') is not None
-                    and kpts.get('density') is not None):
-                raise ValueError(
-                    'Cannot set kpts spacing and density simultaneously.')
-            else:
-                if kpts.get('spacing') is not None:
-                    kpts = kpts.copy()
-                    spacing = kpts.pop('spacing')
-                    kpts['density'] = 1 / (np.pi * spacing)
-
-                clear_mp_keywords()
-                size, offsets = kpts2sizeandoffsets(atoms=self.atoms, **kpts)
-                self.cell.kpoint_mp_grid = '%d %d %d' % tuple(size)
-                self.cell.kpoint_mp_offset = '%f %f %f' % tuple(offsets)
-
-        # Case 7: some other iterator. Try treating as a list:
-        elif hasattr(kpts, '__iter__'):
-            self.set_kpts(list(kpts))
-
-        # Otherwise, give up
         else:
-            raise TypeError('Cannot interpret kpts of this type')
+            # Now we go to standard ASE machinery kpts2kpts
+
+            # Castep special treatment: allow 'spacing', convert to density
+            if isinstance(kpts, dict) and kpts.get('spacing') is not None:
+                kpts = kpts.copy()
+                spacing = kpts.pop('spacing')
+                kpts['density'] = 1 / (np.pi * spacing)
+
+            kpts = kpts2kpts(kpts, atoms=self.atoms)
+
+            if isinstance(kpts, WeightedKPoints):
+                self.cell.kpoint_list = [
+                    ' '.join(map(str, kpt)) + ' ' + str(weight)
+                    for kpt, weight in zip(kpts.kpts, kpts.weights)]
+
+            elif isinstance(kpts, RegularGridKPoints):
+                self.cell.kpoint_mp_grid = ' '.join(map(str, kpts.size))
+                self.cell.kpoint_mp_offset = (' '.join([string_formatter] * 3)
+                                              ).format(*kpts.offset)
+            else:
+                self.cell.kpoint_list = [' '.join(map(str, kpt))
+                                         for kpt in kpts.kpts]
 
     def todict(self, skip_default=True):
         """Create dict with settings of .param and .cell"""
@@ -3001,15 +2971,14 @@ def shell_stdouterr(raw_command, cwd=None):
 def import_castep_keywords(castep_command='',
                            filename='castep_keywords.json',
                            path='.'):
+    """Search for castep keywords JSON in multiple paths"""
 
-    # Search for castep_keywords.json (or however it's called) in multiple
-    # paths
-
-    searchpaths = [path, os.path.expanduser('~/.ase'),
-                   os.path.expanduser('~/.config/ase')]
+    config_paths = ('~/.ase', '~/.config/ase')
+    searchpaths = [path] + [os.path.expanduser(config_path)
+                            for config_path in config_paths]
     try:
-        kwfile = sum([glob.glob(os.path.join(sp, filename))
-                      for sp in searchpaths], [])[0]
+        keywords_file = sum([glob.glob(os.path.join(sp, filename))
+                             for sp in searchpaths], [])[0]
     except IndexError:
         warnings.warn("""Generating CASTEP keywords JSON file... hang on.
     The CASTEP keywords JSON file contains abstractions for CASTEP input
@@ -3018,23 +2987,20 @@ def import_castep_keywords(castep_command='',
     internal online help facility of a CASTEP binary, thus allowing to
     easily keep the calculator synchronized with (different versions of)
     the CASTEP code. Consequently, avoiding licensing issues (CASTEP is
-    distributed commercially by accelrys), we consider it wise not to
+    distributed commercially by Biovia), we consider it wise not to
     provide the file in the first place.""")
         create_castep_keywords(get_castep_command(castep_command),
                                filename=filename, path=path)
+        keywords_file = Path(path).absolute() / filename
+
         warnings.warn(
-            'Stored %s in %s.  Copy it to your ASE installation under '
-            'ase/calculators for system-wide installation. Using a *nix '
-            'OS this can be a simple as mv %s %s' %
-            (filename, os.path.abspath(path),
-             os.path.join(os.path.abspath(path), filename),
-             os.path.join(os.path.dirname(ase.__file__),
-                          'calculators')))
-        kwfile = os.path.join(path, filename)
+            f'Stored castep keywords dictionary as {keywords_file}. '
+            f'Copy it to {Path(config_paths[0]).expanduser() / filename} for '
+            r'user installation.')
 
     # Now create the castep_keywords object proper
-    with open(kwfile) as f:
-        kwdata = json.load(f)
+    with open(keywords_file) as fd:
+        kwdata = json.load(fd)
 
     # This is a bit awkward, but it's necessary for backwards compatibility
     param_dict = make_param_dict(kwdata['param'])
