@@ -1,22 +1,28 @@
 """
 ASE-interface to VASP using GenericFileIOCalculator.
 
-Work in Progress by Michael Wolloch
+Work in Progress by Michael Wolloch based on VASP input creation and output
+parsing by Martin Schlipf using py4vasp
 michael.wolloch@univie.ac.at
+martin.schlipf@vasp.at
 
 www.vasp.at
+www.vasp.at/py4vasp/latest/
 """
 
 import os
-import numpy as np
 from ase import Atoms
 from xml.etree import ElementTree
 from ase.calculators import calculator
+import copy
 
-from ase.io.octopus.input import process_special_kwargs, generate_input
-from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
+import ase.io.vasp_parsers.incar_writer as incar
+import ase.io.vasp_parsers.kpoints_writer as kpoints
+import ase.io.vasp_parsers.potcar_writer as potcar
+import ase.io.vasp_parsers.vasp_structure_io as structure_io
+
 
 
 class VaspProfile:
@@ -78,29 +84,36 @@ class VaspTemplate(CalculatorTemplate):
         However, we do not resort the forces since that requires an ase-sort.dat
         file and a lot of other code.
         """
-        results = {}
-
-        # Read the data we can from vasprun.xml
-        calc_xml = self._read_xml(directory)
-        xml_results = calc_xml.results
-
-        # Fix sorting
-        #xml_results['forces'] = xml_results['forces'][self.resort]
-
-        results.update(xml_results)
-
-
-        # Stress is not always present.
-        # Prevent calculation from going into a loop
-        if 'stress' not in results:
-            results.update(dict(stress=None))
+        
+        try:
+            import py4vasp_core
+            print('parsing with py4vasp')
+            calc = py4vasp.Calculation.from_path(directory)
+            return read_from_py4vasp(calc)
+        except ModuleNotFoundError:
+            results = {}
+    
+            # Read the data we can from vasprun.xml
+            calc_xml = self._read_xml(directory)
+            xml_results = calc_xml.results
+    
+            # Fix sorting
+            #xml_results['forces'] = xml_results['forces'][self.resort]
+    
+            results.update(xml_results)
+    
+    
+            # Stress is not always present.
+            # Prevent calculation from going into a loop
+            if 'stress' not in results:
+                results.update(dict(stress=None))
 
         return results
 
     def execute(self, directory, profile):
         profile.run(directory, 'vasp.out')
 
-    def write_input(self, directory, atoms, parameters, properties):
+    def write_input(self, directory, atoms, parameters, properties=None):
         """
         Write INCAR, POSCAR, POTCAR and KPOINTS
         using the old ase class for now. Needs to be refactored and replaced
@@ -109,13 +122,29 @@ class VaspTemplate(CalculatorTemplate):
         development by Adam Jackson.
         also use the properties here eventually.
         """
-        
-        from ase.calculators.vasp.create_input import  GenerateVaspInput
-        vasp_input_generator = GenerateVaspInput()
-        vasp_input_generator.initialize(atoms)
-        vasp_input_generator.set(**parameters)
-        vasp_input_generator.write_input(atoms, directory)
+        #pop pp from prams if it exists
+        if os.environ.get('VASP_POTENTIALS'):
+            params = copy.deepcopy(parameters)
+            kpts = params.pop('kpts', None)
+            pp = params.pop('pp', None)
+            xc = params.pop('xc', None)
+            incar.write_incar(directory, params)
+            kpoints.write_kpoints(directory, kpts)
+            structure_io.write_vasp_structure(f"{directory}/POSCAR", atoms)
+        else:
+            from ase.calculators.vasp.create_input import  GenerateVaspInput
+            vasp_input_generator = GenerateVaspInput()
+            vasp_input_generator.initialize(atoms)
+            vasp_input_generator.set(**parameters)
+            vasp_input_generator.write_input(atoms, directory)
 
+
+def read_from_py4vasp(calc):
+    properties = ["energy","force","stress","magnetism"]
+    return {prop: read_prop(calc,prop) for prop in properties}
+
+def read_prop(calc,prop):
+    return getattr(calc,prop)[:].to_dict()
 
 class Vasp(GenericFileIOCalculator):
     """

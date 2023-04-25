@@ -13,6 +13,10 @@ class _State:
 def write_kpoints(directory, parameters):
     if isinstance(parameters, str):
         kpoints_str = parameters
+    elif isinstance(parameters, list):
+        state = _State()
+        update_state(state, "Gamma", parameters)
+        kpoints_str = "\n".join(prepare_lines(state))
     elif parameters is None:
         return
     else:
