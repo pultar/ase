@@ -19,8 +19,7 @@ import copy
 from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
 import ase.io.vasp_parsers.incar_writer as incar
-import ase.io.vasp_parsers.kpoints_writer as kpoints
-import ase.io.vasp_parsers.potcar_writer as potcar
+from ase.io.vasp_parsers.kpoints_writer import KPointsWriter
 import ase.io.vasp_parsers.vasp_structure_io as structure_io
 
 
@@ -88,7 +87,7 @@ class VaspTemplate(CalculatorTemplate):
         try:
             import py4vasp_core
             print('parsing with py4vasp')
-            calc = py4vasp.Calculation.from_path(directory)
+            calc = py4vasp_core.Calculation.from_path(directory)
             return read_from_py4vasp(calc)
         except ModuleNotFoundError:
             results = {}
@@ -129,7 +128,8 @@ class VaspTemplate(CalculatorTemplate):
             pp = params.pop('pp', None)
             xc = params.pop('xc', None)
             incar.write_incar(directory, params)
-            kpoints.write_kpoints(directory, kpts)
+            kpts_writer = KPointsWriter(kpts)
+            kpts_writer.write_kpoints(directory)
             structure_io.write_vasp_structure(f"{directory}/POSCAR", atoms)
         else:
             from ase.calculators.vasp.create_input import  GenerateVaspInput
@@ -158,10 +158,8 @@ class Vasp(GenericFileIOCalculator):
         """
         Create Vasp calculator.
         """
-
         if (profile is None and 'ASE_VASP_COMMAND' in os.environ):
             profile = VaspProfile(os.environ['ASE_VASP_COMMAND'].split())
-        
 
         super().__init__(profile=profile, template=VaspTemplate(),
                          directory=directory,
