@@ -19,7 +19,8 @@ class Dftb(FileIOCalculator):
     else:
         command = 'dftb+ > PREFIX.out'
 
-    implemented_properties = ['energy', 'forces', 'charges', 'stress']
+    implemented_properties = ['energy', 'forces', 'charges',
+                              'stress', 'dipole']
     discard_results_on_any_change = True
 
     def __init__(self, restart=None,
@@ -91,13 +92,18 @@ class Dftb(FileIOCalculator):
 
         self.slako_dir = slako_dir
 
-        self.default_parameters = dict(
+        if kwargs.get('Hamiltonian_', 'DFTB') == 'DFTB':
+            self.default_parameters = dict(
                 Hamiltonian_='DFTB',
                 Hamiltonian_SlaterKosterFiles_='Type2FileNames',
                 Hamiltonian_SlaterKosterFiles_Prefix=self.slako_dir,
                 Hamiltonian_SlaterKosterFiles_Separator='"-"',
                 Hamiltonian_SlaterKosterFiles_Suffix='".skf"',
                 Hamiltonian_MaxAngularMomentum_='',
+                Options_='',
+                Options_WriteResultsTag='Yes')
+        else:
+            self.default_parameters = dict(
                 Options_='',
                 Options_WriteResultsTag='Yes')
 
@@ -196,14 +202,15 @@ class Dftb(FileIOCalculator):
             if key.startswith(s) and len(key) > len(s):
                 break
         else:
-            # User didn't specify max angular mometa.  Get them from
-            # the .skf files:
-            symbols = set(self.atoms.get_chemical_symbols())
-            for symbol in symbols:
-                path = os.path.join(self.slako_dir,
-                                    '{0}-{0}.skf'.format(symbol))
-                l = read_max_angular_momentum(path)
-                params[s + symbol] = '"{}"'.format('spdf'[l])
+            if params.get('Hamiltonian_', 'DFTB') == 'DFTB':
+                # User didn't specify max angular mometa.  Get them from
+                # the .skf files:
+                symbols = set(self.atoms.get_chemical_symbols())
+                for symbol in symbols:
+                    path = os.path.join(self.slako_dir,
+                                        '{0}-{0}.skf'.format(symbol))
+                    l = read_max_angular_momentum(path)
+                    params[s + symbol] = '"{}"'.format('spdf'[l])
 
         # --------MAIN KEYWORDS-------
         previous_key = 'dummy_'
@@ -280,7 +287,8 @@ class Dftb(FileIOCalculator):
             self, atoms, properties, system_changes)
         with open(os.path.join(self.directory, 'dftb_in.hsd'), 'w') as fd:
             self.write_dftb_in(fd)
-        write(os.path.join(self.directory, 'geo_end.gen'), atoms, parallel=False)
+        write(os.path.join(self.directory, 'geo_end.gen'), atoms,
+              parallel=False)
         # self.atoms is none until results are read out,
         # then it is set to the ones at writing input
         self.atoms_input = atoms
@@ -297,10 +305,12 @@ class Dftb(FileIOCalculator):
             self.lines = fd.readlines()
 
         self.atoms = self.atoms_input
-        charges, energy = self.read_charges_and_energy()
+        charges, energy, dipole = self.read_charges_energy_dipole()
         if charges is not None:
             self.results['charges'] = charges
         self.results['energy'] = energy
+        if dipole is not None:
+            self.results['dipole'] = dipole
         if self.do_forces:
             forces = self.read_forces()
             self.results['forces'] = forces
@@ -361,7 +371,7 @@ class Dftb(FileIOCalculator):
 
         return np.array(gradients) * Hartree / Bohr
 
-    def read_charges_and_energy(self):
+    def read_charges_energy_dipole(self):
         """Get partial charges on atoms
             in case we cannot find charges they are set to None
         """
@@ -381,13 +391,20 @@ class Dftb(FileIOCalculator):
         else:
             # print('Warning: did not find DFTB-charges')
             # print('This is ok if flag SCC=No')
-            return None, energy
+            return None, energy, None
 
         lines1 = lines[chargestart:(chargestart + len(self.atoms))]
         for line in lines1:
             qm_charges.append(float(line.split()[-1]))
 
-        return np.array(qm_charges), energy
+        dipole = None
+        for line in lines:
+            if 'Dipole moment:' in line and 'au' in line:
+                words = line.split()
+                dipole = np.array(
+                    [float(w) for w in words[-4:-1]]) * Bohr
+
+        return np.array(qm_charges), energy, dipole
 
     def get_charges(self, atoms):
         """ Get the calculated charges
@@ -417,7 +434,10 @@ class Dftb(FileIOCalculator):
         nrow = int(np.ceil(nkpt * nspin * nband * 1. / ncol))
         index_eig_end = index_eig_begin + nrow
         ncol_last = len(self.lines[index_eig_end - 1].split())
-        self.lines[index_eig_end - 1] += ' 0.0 ' * (ncol - ncol_last)
+        # XXX dirty fix
+        self.lines[index_eig_end - 1] = (
+            self.lines[index_eig_end - 1].strip()
+            + ' 0.0 ' * (ncol - ncol_last))
 
         eig = np.loadtxt(self.lines[index_eig_begin:index_eig_end]).flatten()
         eig *= Hartree

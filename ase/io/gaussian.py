@@ -230,8 +230,8 @@ def _format_basis_set(basis, basisfile, basis_set):
         if basisfile[0] == '@':
             out.append(basisfile)
         else:
-            with open(basisfile, 'r') as f:
-                out.append(f.read())
+            with open(basisfile, 'r') as fd:
+                out.append(fd.read())
     elif basis_set is not None:
         out.append(basis_set)
     else:
@@ -500,7 +500,7 @@ def _validate_symbol_string(string):
 
 
 def _get_key_value_pairs(line):
-    '''Reads a line of a gaussian input file, which contains keywords and options
+    '''Read line of a gaussian input file with keywords and options
     separated according to the rules of the route section.
 
     Parameters
@@ -674,9 +674,9 @@ def _get_cartesian_atom_coords(symbol, pos):
         try:
             return list(map(float, pos))
         except ValueError:
-            raise(ParseError(
+            raise ParseError(
                 "ERROR: Molecule specification in"
-                "Gaussian input file could not be read"))
+                "Gaussian input file could not be read")
 
 
 def _get_zmatrix_line(line):
@@ -689,7 +689,7 @@ def _get_zmatrix_line(line):
             ", as the alternative Z-matrix format using "
             "two bond angles instead of a bond angle and "
             "a dihedral angle is not supported.")
-    return(line.strip() + '\n')
+    return line.strip() + '\n'
 
 
 def _read_zmatrix(zmatrix_contents, zmatrix_vars=None):
@@ -1236,7 +1236,8 @@ def read_gaussian_out(fd, index=-1):
             break
 
         if (line == 'Input orientation:'
-                or line == 'Z-Matrix orientation:'):
+                or line == 'Z-Matrix orientation:'
+                or line == "Standard orientation:"):
             if atoms is not None:
                 atoms.calc = SinglePointCalculator(
                     atoms, energy=energy, dipole=dipole, forces=forces,

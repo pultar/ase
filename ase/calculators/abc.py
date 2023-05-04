@@ -16,6 +16,13 @@ class GetPropertiesMixin(ABC):
     def get_property(self, name, atoms=None, allow_calculation=True):
         """Get the named property."""
 
+    def get_potential_energy(self, atoms=None, force_consistent=False):
+        if force_consistent:
+            name = 'free_energy'
+        else:
+            name = 'energy'
+        return self.get_property(name, atoms)
+
     def get_potential_energies(self, atoms=None):
         return self.get_property('energies', atoms)
 
@@ -82,7 +89,7 @@ class GetOutputsMixin(ABC):
 
     def get_eigenvalues(self, kpt=0, spin=0):
         eigs = self._get('eigenvalues')
-        return eigs[kpt, spin]
+        return eigs[spin, kpt]
 
     def _eigshape(self):
         # We don't need this if we already have a Properties object.
@@ -90,7 +97,7 @@ class GetOutputsMixin(ABC):
 
     def get_occupation_numbers(self, kpt=0, spin=0):
         occs = self._get('occupations')
-        return occs[kpt, spin]
+        return occs[spin, kpt]
 
     def get_number_of_bands(self):
         return self._eigshape()[2]

@@ -249,7 +249,8 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
 
 """
 
-    implemented_properties = ['energy', 'forces', 'stress']
+    implemented_properties = ['energy', 'free_energy', 'forces', 'stress',
+                              'energies']
 
     started = False
     initialized = False
@@ -330,14 +331,17 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
     def set_lammps_pos(self, atoms):
         # Create local copy of positions that are wrapped along any periodic
         # directions
-        pos = wrap_positions(atoms.get_positions(), atoms.get_cell(),
-                             atoms.get_pbc())
-        pos = convert(pos, "distance", "ASE", self.units)
+        cell = convert(atoms.cell, "distance", "ASE", self.units)
+        pos = convert(atoms.positions, "distance", "ASE", self.units)
 
         # If necessary, transform the positions to new coordinate system
         if self.coord_transform is not None:
-            pos = np.dot(self.coord_transform, pos.transpose())
-            pos = pos.transpose()
+            pos = np.dot(pos, self.coord_transform.T)
+            cell = np.dot(cell, self.coord_transform.T)
+
+        # wrap only after scaling and rotating to reduce chances of
+        # lammps neighbor list bugs.
+        pos = wrap_positions(pos, cell, atoms.get_pbc())
 
         # Convert ase position matrix to lammps-style position array
         # contiguous in memory
@@ -485,6 +489,18 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         )
         self.results['free_energy'] = self.results['energy']
 
+        ids = self.lmp.numpy.extract_atom("id")
+        # if ids doesn't match atoms then data is MPI distributed, which
+        # we can't handle
+        assert len(ids) == len(atoms)
+        self.results["energies"] = convert(
+            self.lmp.numpy.extract_compute('pe_peratom',
+                                           self.LMP_STYLE_ATOM,
+                                           self.LMP_TYPE_VECTOR),
+            "energy", self.units, "ASE"
+        )
+        self.results["energies"][ids - 1] = self.results["energies"]
+
         stress = np.empty(6)
         stress_vars = ['pxx', 'pyy', 'pzz', 'pyz', 'pxz', 'pxy']
 
@@ -612,7 +628,11 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         # Only import lammps when running a calculation
         # so it is not required to use other parts of the
         # module
-        from lammps import lammps
+        from lammps import lammps, LMP_STYLE_ATOM, LMP_TYPE_VECTOR
+
+        self.LMP_STYLE_ATOM = LMP_STYLE_ATOM
+        self.LMP_TYPE_VECTOR = LMP_TYPE_VECTOR
+
         # start lammps process
         if self.parameters.log_file is None:
             cmd_args = ['-echo', 'log', '-log', 'none', '-screen', 'none',
@@ -680,7 +700,7 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
             self.previous_atoms_numbers = atoms.numbers.copy()
 
         # execute the user commands
-        for cmd in self.parameters.lmpcmds:
+        for cmd in self.parameters.lmpcmds + ["compute pe_peratom all pe/atom"]:
             self.lmp.command(cmd)
 
         # Set masses after user commands, e.g. to override

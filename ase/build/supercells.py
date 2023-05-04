@@ -1,7 +1,6 @@
 """Helper functions for creating supercells."""
 
 import numpy as np
-
 from ase import Atoms
 
 
@@ -39,9 +38,7 @@ def get_deviation_from_optimal_cell_shape(cell, target_shape="sc", norm=None):
     elif target_shape in ["fcc", "face-centered cubic"]:
         target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
     if not norm:
-        norm = (np.linalg.det(cell) / np.linalg.det(target_metric)) ** (
-            -1.0 / 3
-        )
+        norm = (np.linalg.det(cell) / np.linalg.det(target_metric))**(-1.0 / 3)
     return np.linalg.norm(norm * cell - target_metric)
 
 
@@ -80,17 +77,15 @@ def find_optimal_cell_shape(
     if target_shape in ["sc", "simple-cubic"]:
         target_metric = np.eye(3)
     elif target_shape in ["fcc", "face-centered cubic"]:
-        target_metric = 0.5 * np.array(
-            [[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=float
-        )
+        target_metric = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]],
+                                       dtype=float)
     if verbose:
         print("target metric (h_target):")
         print(target_metric)
 
     # Normalize cell metric to reduce computation time during looping
-    norm = (
-        target_size * np.linalg.det(cell) / np.linalg.det(target_metric)
-    ) ** (-1.0 / 3)
+    norm = (target_size * np.linalg.det(cell) /
+            np.linalg.det(target_metric))**(-1.0 / 3)
     norm_cell = norm * cell
     if verbose:
         print("normalization factor (Q): %g" % norm)
@@ -116,8 +111,7 @@ def find_optimal_cell_shape(
         if int(np.around(np.linalg.det(P), 0)) != target_size:
             continue
         score = get_deviation_from_optimal_cell_shape(
-            np.dot(P, norm_cell), target_shape=target_shape, norm=1.0
-        )
+            np.dot(P, norm_cell), target_shape=target_shape, norm=1.0)
         if score < best_score:
             best_score = score
             optimal_P = P
@@ -133,14 +127,12 @@ def find_optimal_cell_shape(
         print(optimal_P)
         print("supercell metric:")
         print(np.round(np.dot(optimal_P, cell), 4))
-        print(
-            "determinant of optimal transformation matrix: %g"
-            % np.linalg.det(optimal_P)
-        )
+        print("determinant of optimal transformation matrix: %g" %
+              np.linalg.det(optimal_P))
     return optimal_P
 
 
-def make_supercell(prim, P, wrap=True, tol=1e-5):
+def make_supercell(prim, P, *, wrap=True, order="cell-major", tol=1e-5):
     r"""Generate a supercell by applying a general transformation (*P*) to
     the input configuration (*prim*).
 
@@ -158,6 +150,18 @@ def make_supercell(prim, P, wrap=True, tol=1e-5):
         Transformation matrix `\mathbf{P}`.
     wrap: bool
         wrap in the end
+    order: str (default: "cell-major")
+        how to order the atoms in the supercell
+
+        "cell-major":
+        [atom1_shift1, atom2_shift1, ..., atom1_shift2, atom2_shift2, ...]
+        i.e. run first over all the atoms in cell1 and then move to cell2.
+
+        "atom-major":
+        [atom1_shift1, atom1_shift2, ..., atom2_shift1, atom2_shift2, ...]
+        i.e. run first over atom1 in all the cells and then move to atom2.
+        This may be the order preferred by most VASP users.
+
     tol: float
         tolerance for wrapping
     """
@@ -168,20 +172,37 @@ def make_supercell(prim, P, wrap=True, tol=1e-5):
     # cartesian lattice points
     lattice_points_frac = lattice_points_in_supercell(supercell_matrix)
     lattice_points = np.dot(lattice_points_frac, supercell)
+    N = len(lattice_points)
 
-    superatoms = Atoms(cell=supercell, pbc=prim.pbc)
+    if order == "cell-major":
+        shifted = prim.positions[None, :, :] + lattice_points[:, None, :]
+    elif order  == "atom-major":
+        shifted = prim.positions[:, None, :] + lattice_points[None, :, :]
+    else:
+        raise ValueError(f"invalid order: {order}")
+    shifted_reshaped = shifted.reshape(-1, 3)
 
-    for lp in lattice_points:
-        shifted_atoms = prim.copy()
-        shifted_atoms.positions += lp
-        superatoms.extend(shifted_atoms)
+    superatoms = Atoms(positions=shifted_reshaped,
+                       cell=supercell,
+                       pbc=prim.pbc)
+
+    # Copy over any other possible arrays, inspired by atoms.__imul__
+    for name, arr in prim.arrays.items():
+        if name == "positions":
+            # This was added during construction of the super cell
+            continue
+        shape = (N * arr.shape[0], *arr.shape[1:])
+        if order == "cell-major":
+            new_arr = np.repeat(arr[None, :], N, axis=0).reshape(shape)
+        elif order == "atom-major":
+            new_arr = np.repeat(arr[:, None], N, axis=1).reshape(shape)
+        superatoms.set_array(name, new_arr)
 
     # check number of atoms is correct
-    n_target = int(np.round(np.linalg.det(supercell_matrix) * len(prim)))
+    n_target = abs(int(np.round(np.linalg.det(supercell_matrix) * len(prim))))
     if n_target != len(superatoms):
         msg = "Number of atoms in supercell: {}, expected: {}".format(
-            n_target, len(superatoms)
-        )
+            n_target, len(superatoms))
         raise SupercellError(msg)
 
     if wrap:
@@ -198,18 +219,16 @@ def lattice_points_in_supercell(supercell_matrix):
     University of California, through Lawrence Berkeley National Laboratory
     """
 
-    diagonals = np.array(
-        [
-            [0, 0, 0],
-            [0, 0, 1],
-            [0, 1, 0],
-            [0, 1, 1],
-            [1, 0, 0],
-            [1, 0, 1],
-            [1, 1, 0],
-            [1, 1, 1],
-        ]
-    )
+    diagonals = np.array([
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 1, 0],
+        [0, 1, 1],
+        [1, 0, 0],
+        [1, 0, 1],
+        [1, 1, 0],
+        [1, 1, 1],
+    ])
     d_points = np.dot(diagonals, supercell_matrix)
 
     mins = np.min(d_points, axis=0)
@@ -224,10 +243,8 @@ def lattice_points_in_supercell(supercell_matrix):
 
     frac_points = np.dot(all_points, np.linalg.inv(supercell_matrix))
 
-    tvects = frac_points[
-        np.all(frac_points < 1 - 1e-10, axis=1)
-        & np.all(frac_points >= -1e-10, axis=1)
-    ]
+    tvects = frac_points[np.all(frac_points < 1 - 1e-10, axis=1)
+                         & np.all(frac_points >= -1e-10, axis=1)]
     assert len(tvects) == round(abs(np.linalg.det(supercell_matrix)))
     return tvects
 

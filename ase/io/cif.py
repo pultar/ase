@@ -87,20 +87,14 @@ def parse_singletag(lines: List[str], line: str) -> Tuple[str, CIFDataValue]:
     return key, convert_value(value)
 
 
-
 def parse_cif_loop_headers(lines: List[str]) -> Iterator[str]:
-    header_pattern = r'\s*(_\S*)'
-
     while lines:
         line = lines.pop()
-        match = re.match(header_pattern, line)
+        tokens = line.split()
 
-        if match:
-            header = match.group(1).lower()
+        if len(tokens) == 1 and tokens[0].startswith('_'):
+            header = tokens[0].lower()
             yield header
-        elif re.match(r'\s*#', line):
-            # XXX we should filter comments out already.
-            continue
         else:
             lines.append(line)  # 'undo' pop
             return
@@ -115,9 +109,9 @@ def parse_cif_loop_data(lines: List[str],
         line = lines.pop().strip()
         lowerline = line.lower()
         if (not line or
-              line.startswith('_') or
-              lowerline.startswith('data_') or
-              lowerline.startswith('loop_')):
+            line.startswith('_') or
+            lowerline.startswith('data_') or
+                lowerline.startswith('loop_')):
             lines.append(line)
             break
 
@@ -363,7 +357,11 @@ class CIFBlock(collections.abc.Mapping):
 
         setting = 1
         spacegroup = 1
-        if sitesym is not None:
+        if sitesym:
+            # Special cases: sitesym can be None or an empty list.
+            # The empty list could be replaced with just the identity
+            # function, but it seems more correct to try to get the
+            # spacegroup number and derive the symmetries for that.
             subtrans = [(0.0, 0.0, 0.0)] if subtrans_included else None
             spacegroup = spacegroup_from_data(
                 no=no, symbol=hm_symbol, sitesym=sitesym, subtrans=subtrans,
@@ -421,8 +419,8 @@ class CIFBlock(collections.abc.Mapping):
         coordtype, coords = self._get_site_coordinates()
 
         atoms = Atoms(symbols=symbols,
-                     cell=self.get_cell(),
-                     masses=self._get_masses())
+                      cell=self.get_cell(),
+                      masses=self._get_masses())
 
         if coordtype == 'scaled':
             atoms.set_scaled_positions(coords)
@@ -489,7 +487,7 @@ class CIFBlock(collections.abc.Mapping):
                 # Compile an occupancies dictionary
                 occ_dict = {}
                 for i, sym in enumerate(atoms.symbols):
-                    occ_dict[i] = {sym: occupancies[i]}
+                    occ_dict[str(i)] = {sym: occupancies[i]}
                 atoms.info['occupancy'] = occ_dict
 
         return atoms
@@ -589,9 +587,12 @@ def read_cif(fileobj, index, store_tags=False, primitive_cell=False,
     cell.
 
     If *fractional_occupancies* is true, the resulting atoms object will be
-    tagged equipped with an array `occupancy`. Also, in case of mixed
-    occupancies, the atom's chemical symbol will be that of the most dominant
-    species.
+    tagged equipped with a dictionary `occupancy`. The keys of this dictionary
+    will be integers converted to strings. The conversion to string is done
+    in order to avoid troubles with JSON encoding/decoding of the dictionaries
+    with non-string keys.
+    Also, in case of mixed occupancies, the atom's chemical symbol will be
+    that of the most dominant species.
 
     String *reader* is used to select CIF reader. Value `ase` selects
     built-in CIF reader (default), while `pycodcif` selects CIF reader based
@@ -617,7 +618,7 @@ def format_cell(cell: Cell) -> str:
     assert cell.rank == 3
     lines = []
     for name, value in zip(CIFBlock.cell_tags, cell.cellpar()):
-        line = '{:20} {:g}\n'.format(name, value)
+        line = '{:20} {}\n'.format(name, value)
         lines.append(line)
     assert len(lines) == 6
     return ''.join(lines)
@@ -756,14 +757,14 @@ def expand_kinds(atoms, coords):
     kinds = atoms.arrays.get('spacegroup_kinds')
     if occ_info is not None and kinds is not None:
         for i, kind in enumerate(kinds):
-            occ_info_kind = occ_info[kind]
+            occ_info_kind = occ_info[str(kind)]
             symbol = symbols[i]
             if symbol not in occ_info_kind:
                 raise BadOccupancies('Occupancies present but no occupancy '
                                      'info for "{symbol}"')
             occupancies[i] = occ_info_kind[symbol]
             # extend the positions array in case of mixed occupancy
-            for sym, occ in occ_info[kind].items():
+            for sym, occ in occ_info[str(kind)].items():
                 if sym != symbols[i]:
                     symbols.append(sym)
                     coords.append(coords[i])
@@ -798,7 +799,7 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
 
     _coords = np.array(coords)
     for i, key in enumerate(coord_headers):
-        loopdata[key] = (_coords[:, i], '{:7.5f}')
+        loopdata[key] = (_coords[:, i], '{}')
 
     loopdata['_atom_site_type_symbol'] = (symbols, '{:<2s}')
     loopdata['_atom_site_symmetry_multiplicity'] = (

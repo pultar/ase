@@ -1,11 +1,11 @@
 from random import randint
-from typing import Dict, Tuple, Any
+from typing import Dict, Any
 
 import numpy as np
 
 from ase import Atoms
 from ase.constraints import dict2constraint
-from ase.calculators.calculator import (get_calculator_class, all_properties,
+from ase.calculators.calculator import (all_properties,
                                         PropertyNotImplementedError,
                                         kptdensity2monkhorstpack)
 from ase.calculators.singlepoint import SinglePointCalculator
@@ -66,6 +66,10 @@ def atoms2dict(atoms):
 
 
 class AtomsRow:
+    mtime: float
+    positions: np.ndarray
+    id: int
+
     def __init__(self, dct):
         if isinstance(dct, dict):
             dct = dct.copy()
@@ -214,12 +218,12 @@ class AtomsRow:
     @property
     def charge(self):
         """Total charge."""
-        charges = self.get('inital_charges')
+        charges = self.get('initial_charges')
         if charges is None:
             return 0.0
         return charges.sum()
 
-    def toatoms(self, attach_calculator=False,
+    def toatoms(self,
                 add_additional_information=False):
         """Create Atoms object."""
         atoms = Atoms(self.numbers,
@@ -233,17 +237,13 @@ class AtomsRow:
                       momenta=self.get('momenta'),
                       constraint=self.constraints)
 
-        if attach_calculator:
-            params = self.get('calculator_parameters', {})
-            atoms.calc = get_calculator_class(self.calculator)(**params)
-        else:
-            results = {}
-            for prop in all_properties:
-                if prop in self:
-                    results[prop] = self[prop]
-            if results:
-                atoms.calc = SinglePointCalculator(atoms, **results)
-                atoms.calc.name = self.get('calculator', 'unknown')
+        results = {}
+        for prop in all_properties:
+            if prop in self:
+                results[prop] = self[prop]
+        if results:
+            atoms.calc = SinglePointCalculator(atoms, **results)
+            atoms.calc.name = self.get('calculator', 'unknown')
 
         if add_additional_information:
             atoms.info = {}
@@ -257,9 +257,7 @@ class AtomsRow:
         return atoms
 
 
-def row2dct(row,
-            key_descriptions: Dict[str, Tuple[str, str, str]] = {}
-            ) -> Dict[str, Any]:
+def row2dct(row, key_descriptions) -> Dict[str, Any]:
     """Convert row to dict of things for printing or a web-page."""
 
     from ase.db.core import float_to_time_string, now
@@ -299,6 +297,8 @@ def row2dct(row,
             set(key_descriptions) |
             set(row.key_value_pairs))
     dct['table'] = []
+
+    from ase.db.project import KeyDescription
     for key in keys:
         if key == 'age':
             age = float_to_time_string(now() - row.ctime, True)
@@ -310,9 +310,12 @@ def row2dct(row,
                 value = '{:.3f}'.format(value)
             elif not isinstance(value, str):
                 value = str(value)
-            desc, unit = key_descriptions.get(key, ['', '', ''])[1:]
+
+            nokeydesc = KeyDescription(key, '', '', '')
+            keydesc = key_descriptions.get(key, nokeydesc)
+            unit = keydesc.unit
             if unit:
                 value += ' ' + unit
-            dct['table'].append((key, desc, value))
+            dct['table'].append((key, keydesc.longdesc, value))
 
     return dct
