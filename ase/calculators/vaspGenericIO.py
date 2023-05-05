@@ -19,7 +19,7 @@ import copy
 from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
 import ase.io.vasp_parsers.incar_writer as incar
-from ase.io.vasp_parsers.kpoints_writer import KPointsWriter
+from ase.io.vasp_parsers.kpoints_writer import write_kpoints
 import ase.io.vasp_parsers.vasp_structure_io as structure_io
 
 
@@ -128,8 +128,7 @@ class VaspTemplate(CalculatorTemplate):
             pp = params.pop('pp', None)
             xc = params.pop('xc', None)
             incar.write_incar(directory, params)
-            kpts_writer = KPointsWriter(kpts)
-            kpts_writer.write_kpoints(directory)
+            write_kpoints(directory, kpts)
             structure_io.write_vasp_structure(f"{directory}/POSCAR", atoms)
         else:
             from ase.calculators.vasp.create_input import  GenerateVaspInput
