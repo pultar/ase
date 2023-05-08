@@ -70,6 +70,18 @@ def read_vasp_structure(filename='CONTCAR'):
         atomtypes = numofatoms
         numofatoms = fd.readline().split()
 
+        #check if atomtypes are in VASP 6 POTCAR.h5 format and contain POTCAR info
+        #and if so, remove the partial hash behind the "/" symbol for each type,
+        #as well as the potential info after the "_" symbol.
+        reduced_atoms_types = []
+        for type in atomtypes:
+            if "/" in type:
+                type = type.split("/")[0]
+            if "_" in type:
+                type = type.split("_")[0]
+            reduced_atoms_types.append(type)
+        atomtypes = reduced_atoms_types
+
     # check for comments in numofatoms line and get rid of them if necessary
     commentcheck = np.array(['!' in s for s in numofatoms])
     if commentcheck.any():
@@ -261,6 +273,7 @@ def get_atomtypes_from_formula(formula):
             atomtypes.append(s)
     return atomtypes
 
+
 @writer
 def write_vasp_structure(filename,
                          atoms,
@@ -269,7 +282,9 @@ def write_vasp_structure(filename,
                          symbol_count=None,
                          vasp5=True,
                          ignore_constraints=False,
-                         wrap=False):
+                         wrap=False,
+                         vasp6=False,
+                         potential_mapping={}):
     """Method to write VASP position (POSCAR/CONTCAR) files.
 
     Writes label, scalefactor, unitcell, # of various kinds of atoms,
@@ -360,8 +375,11 @@ def write_vasp_structure(filename,
             fd.write(f' {el:21.16f}')
         fd.write('\n')
 
-    # Write out symbols (if VASP 5.x) and counts of atoms
-    _write_symbol_count(fd, sc, vasp5=vasp5)
+    # Write out symbols (if VASP 5.x or VASP 6.x) and counts of atoms
+    _write_symbol_count(fd, sc,
+                        vasp5=vasp5,
+                        vasp6=vasp6,
+                        symbol_mapping=potential_mapping)
 
     if constraints:
         fd.write('Selective dynamics\n')
@@ -407,25 +425,40 @@ def _symbol_count_from_symbols(symbols):
     return sc
 
 
-def _write_symbol_count(fd, sc, vasp5=True):
+def _write_symbol_count(fd, sc, vasp5=True, vasp6=False, symbol_mapping={}):
     """Write the symbols and numbers block for POSCAR or XDATCAR
 
     Args:
         f (fd): Descriptor for writable file
         sc (list of 2-tuple): list of paired elements and counts
         vasp5 (bool): if False, omit symbols and only write counts
+        vasp6 (bool): if True, write symbols in VASP 6 format (allows for potential
+                        type and hash)
+        symbol_mapping (dict): mapping of symbols to VASP 6 symbols
 
-    e.g. if sc is [(Sn, 4), (S, 6)] then write::
+    e.g. if sc is [(Sn, 4), (S, 6)] then write for vasp 5::
 
       Sn   S
        4   6
 
+    and for vasp 6 with mapping {'Sn': 'Sn_d_GW', 'S': 'S_GW/357d'}::
+
+        Sn_d_GW S_GW/357d
+                4        6
+
     """
-    if vasp5:
+    if vasp6:
+        for sym, _ in sc:
+            fd.write(f' {symbol_mapping.get(sym, sym)[:14]:16s}')
+        fd.write('\n')
+    elif vasp5:
         for sym, _ in sc:
             fd.write(f' {sym:3s}')
         fd.write('\n')
 
     for _, count in sc:
-        fd.write(f' {count:3d}')
+        if vasp6:
+            fd.write(f' {count:16d}')
+        else:
+            fd.write(f' {count:3d}')
     fd.write('\n')
