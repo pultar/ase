@@ -20,7 +20,7 @@ from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
 import ase.io.vasp_parsers.incar_writer as incar
 from ase.io.vasp_parsers.kpoints_writer import write_kpoints
-import ase.io.vasp_parsers.vasp_structure_io as structure_io
+from ase.io.vasp_parsers.vasp_structure_io import write_vasp_structure
 
 
 
@@ -112,24 +112,32 @@ class VaspTemplate(CalculatorTemplate):
     def execute(self, directory, profile):
         profile.run(directory, 'vasp.out')
 
-    def write_input(self, directory, atoms, parameters, properties=None):
+    def write_input(self, directory, atoms, parameters, profile, properties=None):
         """
-        Write INCAR, POSCAR, POTCAR and KPOINTS
-        using the old ase class for now. Needs to be refactored and replaced
-        by smaller functions.
-        KPOINTS should also be passed as a general object as currently under
-        development by Adam Jackson.
-        also use the properties here eventually.
+        Write INCAR, POSCAR and KPOINTS for VASP 6, using new input creation
+        code written by Martin Schlipf and extended by Michael Wolloch to
+        incorporate Adam Jackson's new KPOINTS classes.
+        
+        For VASP 5, the old ASE code is used to create the inputs.
+
+        Also use the properties here eventually.
         """
-        #pop pp from prams if it exists
-        if os.environ.get('VASP_POTENTIALS'):
+
+        if os.environ.get('VASP_POTENTIALS') and profile.version() >= '6.0.0':
             params = copy.deepcopy(parameters)
             kpts = params.pop('kpts', None)
-            pp = params.pop('pp', None)
+            potential_mapping = params.pop('potential_mapping', {})
             xc = params.pop('xc', None)
+            if xc == 'LDA':
+                params.update({'POTENTIALTYP': 'LDA'})
+            else:
+                params.update({'POTENTIALTYP': 'PBE'})
             incar.write_incar(directory, params)
             write_kpoints(directory, kpts)
-            structure_io.write_vasp_structure(f"{directory}/POSCAR", atoms)
+            write_vasp_structure(file=f"{directory}/POSCAR",
+                                atoms=atoms,
+                                vasp6=True,
+                                potential_mapping=potential_mapping)
         else:
             from ase.calculators.vasp.create_input import  GenerateVaspInput
             vasp_input_generator = GenerateVaspInput()
