@@ -1,5 +1,6 @@
 from itertools import product
 from typing import Dict, Iterator, List, Tuple, Union, Sequence
+import warnings
 
 import numpy as np
 from numpy.linalg import lstsq
@@ -54,7 +55,8 @@ def get_displacements_with_identities(atoms: Atoms,
 
     Args:
         atoms: reference structure
-        indices: Atoms to be displaced. (If None, all atoms are included.)
+        indices: Atoms to be displaced. (If None, all atoms without relevant
+            constraints are included.)
         delta: Displacement distance.
         direction: 'forward', 'backward' or 'central' differences.
 
@@ -66,6 +68,8 @@ def get_displacements_with_identities(atoms: Atoms,
         Series of pairs: displaced Atoms object with an identifying string
 
     """
+    if indices is None:
+        indices = VibrationsData.indices_from_constraints(atoms)
 
     displacements_labels = []
     for displacement, identity in _get_displacements_with_identities(
@@ -87,7 +91,8 @@ def get_displacements(atoms: Atoms,
 
     Args:
         atoms: reference structure
-        indices: Atoms to be displaced. (If None, all atoms are included.)
+        indices: Atoms to be displaced. (If None, all atoms without relevant
+            constraints are included.)
         delta: Displacement distance.
         direction: 'forward', 'backward' or 'central' differences.
 
@@ -121,7 +126,8 @@ def write_displacements_to_db(atoms: Atoms,
 
     Args:
         atoms: reference structure
-        indices: Atoms to be displaced. (If None, all atoms are included.)
+        indices: Atoms to be displaced. (If None, all atoms without relevant
+            constraints are included.)
         direction: 'forward', 'backward' or 'central' differences.
         delta: Displacement distance.
         db: An active ASE database, or string for a new database file. If the
@@ -243,10 +249,9 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
     arranged_displacements = [[[], [], []] for _ in ref_atoms]  # type: ignore
 
     if use_equilibrium_forces:
-        if ref_atoms.calc is None:
-            raise ValueError("Could not read equilibrium forces, but "
-                             "use_equilibrium_forces is True.")
         try:
+            if ref_atoms.calc is None:
+                raise PropertyNotPresent()
             eq_forces = ref_atoms.get_forces()
         except (PropertyNotImplementedError, PropertyNotPresent):
             raise ValueError("Could not read equilibrium forces, but "
@@ -283,8 +288,8 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
     n_atoms = len(ref_atoms)
     hessian = np.empty([n_atoms * 3, n_atoms * 3])
 
-    displaced_atoms = [i for i, row in enumerate(arranged_displacements)
-                       if any(row)]
+    displaced_atoms = set(i for i, row in enumerate(arranged_displacements)
+                          if all(row))
 
     if indices is None:
         if displaced_atoms != set(range(len(ref_atoms))):
@@ -308,7 +313,7 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
         indices = sorted(indices)
 
     for atom_index in indices:
-        atom_data = arranged_displacements[atom_index]:
+        atom_data = arranged_displacements[atom_index]
         if not any(atom_data):
             continue
         elif not all(atom_data):
@@ -328,7 +333,13 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
 
             hessian[atom_index * 3 + cartesian_index] = hessian_element
 
-    return VibrationsData.from_2d(ref_atoms, hessian, indices=indices)
+    # Convert Hessian to 4-D format for easier indexing
+    hessian = hessian.reshape(n_atoms, 3, n_atoms, 3)
+
+    # Cut down to active atom indices
+    hessian = hessian.take(indices, axis=0).take(indices, axis=2)
+
+    return VibrationsData(ref_atoms, hessian, indices=indices)
 
 
 def guess_ref_atoms(displacements: Sequence[Atoms]) -> Atoms:

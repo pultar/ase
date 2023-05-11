@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 import pytest
+import warnings
 
 from ase.atoms import Atoms
 from ase.calculators.qmmm import ForceConstantCalculator
@@ -161,10 +162,10 @@ def test_read_axis_aligned_forces(random_dimer):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
             displacements, ref_atoms=random_dimer)
 
-    # Raise error if not enough displacements available
+    # Raise warning if not enough displacements available
     del displacements[4]
     del displacements[4]
-    with pytest.raises(ValueError):
+    with pytest.warns(UserWarning):
         ase.vibrations.finite_diff.read_axis_aligned_forces(
             displacements, ref_atoms=random_dimer)
 

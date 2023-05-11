@@ -50,9 +50,9 @@ class VibrationsData:
         indices: indices of atoms which are included
             in Hessian.  Default value (None) includes all freely
             moving atoms (i.e. not fixed ones). Leave at None if
-            constraints should be determined automatically from the
-            atoms object. Note that regardless of the order of indices, the
-            order of Hessian rows should follow the order of atoms.
+            constraints should be determined automatically from the atoms
+            object. These indices must be sorted in ascending order and
+            correspond to the row order of the Hessian.
 
     """
 
@@ -66,7 +66,8 @@ class VibrationsData:
             self._indices = self.indices_from_constraints(atoms)
         else:
             self._indices = np.array(indices, dtype=int).tolist()
-
+            self.assert_sorted_indices(self._indices)
+            
         n_atoms = self._check_dimensions(atoms, np.asarray(hessian),
                                          indices=self._indices)
         self._atoms = atoms.copy()
@@ -77,6 +78,12 @@ class VibrationsData:
     _setter_error = ("VibrationsData properties cannot be modified: construct "
                      "a new VibrationsData with consistent atoms, Hessian and "
                      "(optionally) indices/mask.")
+
+    @staticmethod
+    def assert_sorted_indices(indices: List[int]) -> None:
+        """Raise AssertionError if indices are not in ascending order"""
+        assert indices == sorted(indices), \
+            "Atom indices must be sorted in ascending order"
 
     @classmethod
     def from_2d(cls: Type[VD], atoms: Atoms,
