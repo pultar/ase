@@ -140,9 +140,10 @@ system; if desired more molecules could be stored in the same file and
 ``metadata`` used to separate them.
 
 Example 4: Progressive displacements
+------------------------------------
 
 In this example we look at how the vibrations converge as more atoms
-are "unfrozen". The model system is taken from `_surface`_. First we
+are "unfrozen". The model system is taken from :doc:`/gettingstarted/surface`. First we
 optimise the structure to fine tolerance; note that unlike the
 original tutorial we do _not_ fix the atom positions at this stage.
 

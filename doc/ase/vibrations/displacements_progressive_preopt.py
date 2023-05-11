@@ -15,4 +15,3 @@ dyn = QuasiNewton(slab, trajectory='N2Cu.traj')
 dyn.run(fmax=1e-4)
 
 slab.write('opt_slab.extxyz')
-

@@ -1,6 +1,7 @@
 import ase.io
 from ase.calculators.emt import EMT
-from ase.vibrations.finite_diff import get_displacements, read_axis_aligned_forces
+from ase.vibrations.finite_diff import (get_displacements,
+                                        read_axis_aligned_forces)
 
 atoms = ase.io.read("opt_slab.extxyz")
 atoms.calc = EMT()
@@ -23,7 +24,7 @@ for index, distance in enumerate(distances[indices]):
         break
 
     # Compute a batch of 6 displacements for central differences on next atom
-    for displacement in all_displacements[index * 6 : (index * 6 + 6)]:
+    for displacement in all_displacements[index * 6: (index * 6 + 6)]:
         displacement.calc = EMT()
         calculated_displacements.append(displacement)
 
