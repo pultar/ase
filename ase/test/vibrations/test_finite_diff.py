@@ -1,7 +1,6 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 import pytest
-import warnings
 
 from ase.atoms import Atoms
 from ase.calculators.qmmm import ForceConstantCalculator

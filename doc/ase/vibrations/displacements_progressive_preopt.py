@@ -1,6 +1,5 @@
 from ase import Atoms
 from ase.calculators.emt import EMT
-from ase.constraints import FixAtoms
 from ase.optimize import QuasiNewton
 from ase.build import fcc111, add_adsorbate
 

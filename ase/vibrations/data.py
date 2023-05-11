@@ -67,7 +67,7 @@ class VibrationsData:
         else:
             self._indices = np.array(indices, dtype=int).tolist()
             self.assert_sorted_indices(self._indices)
-            
+
         n_atoms = self._check_dimensions(atoms, np.asarray(hessian),
                                          indices=self._indices)
         self._atoms = atoms.copy()
