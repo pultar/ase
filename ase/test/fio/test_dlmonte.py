@@ -2202,6 +2202,7 @@ Cl c
 Cl c
 6.9095924 9.1251368 -9.6922617 0""")
 
+
 def test_dlm_config():
 
     cell1 = np.array([[25.832, 0, 0], [0, 25.832, 0], [0, 0, 25.832]])
@@ -2219,6 +2220,7 @@ def test_dlm_config():
         assert i[0][0] == 'IRMOF1'
         assert len(i[0][1]) == 424
 
+
 def test_dlm_traj():
     cells = []
     cells.append(np.array([[25.832, 0, 0], [0, 25.832, 0], [0, 0, 25.832]]))
@@ -2230,13 +2232,13 @@ def test_dlm_traj():
     assert len(traj) == 1, len(traj)
     assert len(traj[0].keys()) == 14, len(traj[0].keys())
     assert traj[0][0][0] == 'CCl4'
-    assert set(traj[0][0][1].numbers) == {6,17}, traj[0][0][1].numbers
+    assert set(traj[0][0][1].numbers) == {6, 17}, traj[0][0][1].numbers
 
     traj2 = iread_dlm_history(hist_test)
-    print(traj2)
+
     assert len(list(traj2)) == 3
-    num_molecules = [16,11,14]
-    for count,i in enumerate(traj2):
+    num_molecules = [16, 11, 14]
+    for count, i in enumerate(traj2):
         assert len(i) == num_molecules[count]
         assert i[0][0] == 'CCl4'
         assert i[0][1].symbols() == 'CCl4'

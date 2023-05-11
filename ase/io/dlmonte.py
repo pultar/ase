@@ -7,14 +7,14 @@ from ase.calculators.singlepoint import SinglePointCalculator
 
 chemical_symbols.extend(['Me']) # quality of life helper for dummy atoms
 
+
 def read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None, verbose=False):
     """
-
     :param f: IOWrapper object containing your ASCII DL_MONTE config file
     :param levcfg: Data types to be read in. Expects positional only if == 0
     :param imcon: Coordinate system. Cartesian if 0 or fractional if 1.
     :param natoms: number of expected atoms
-    :param is_trajectory: Bool. Expects multiple frames (found wth the string 'EXTRAS') if true.
+    :param is_trajectory: Bool. Expects multiple frames if true.
     :param symbols: a list of atomtype symbols (?)
     :param verbose: Bool. Prints extra information if true
     :return: A dictionary of format {molecule name: Atoms object}
@@ -36,6 +36,7 @@ def read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None,
         sym = symbols
     else:
         sym = []
+
     positions = []
     velocities = []
     forces = []
@@ -43,7 +44,7 @@ def read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None,
     if is_trajectory:
         counter = natoms
     else:
-        counter = inf  # clunky fix to handle single frame files (e.g. CONFIG files)
+        counter = inf  # clunky fix to handle single frame files (e.g. CONFIG)
     verboseprint('Atoms to read before stopping:', counter)
     labels = []
 
@@ -63,23 +64,23 @@ def read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None,
         if m.string.split()[0] == 'NUMMOL':  # catch for a NUMMOL statement
             nummol = line.split()[1]
             verboseprint('nummol detected:', line.split()[1])
-            molformat = True  # output a dictionary of one Atoms object per molecule
-            molnames = {}  # dictionary of unique molecule names and their lengths
+            molformat = True  # outputs each molecule as a separate Atoms object
+            molnames = {}  # dictionary of unique molecule names and lengths
             molnamelist = []  # list of molecule names in order
-            molstart = []  # start positions in lists (e.g. symbols) for each molecule
+            molstart = []  # start positions for each molecule
             counter += 1
             continue
-        if m.string.split()[0] == 'MOLECULE':  # catch each new molecule as it appears
+        if m.string.split()[0] == 'MOLECULE':  # catch new molecules
             verboseprint('Molecule detected:', line.split()[1])
             try:
                 molnames
                 molnamelist
                 molstart
             except NameError:
-                raise NameError('I found the first molecule before a NUMMOL statement. \
-                                                   Is your trajectory file corrupted?')
+                raise NameError('First molecule found before NUMMOL statement')
 
-            molnames[m.string.split()[1]] = m.string.split()[2]  # create entry into molnames dictionary
+            # Create entry into molnames dictionary
+            molnames[m.string.split()[1]] = m.string.split()[2] 
             molnamelist.append(m.string.split()[1])  # append to molecule list
             molstart.append(len(sym))
             verboseprint(molnamelist, molstart)
@@ -89,8 +90,10 @@ def read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols=None,
         symbol = symbol.capitalize()
 
         if not symbols:
-            assert symbol in chemical_symbols, 'Line reading error, line is {:}'.format(line)
+            assert symbol in chemical_symbols, 'Unknown chemical symbol.\
+Line is:  {:}'.format(line)
             sym.append(symbol)
+
         # make sure label is not empty
         if label:
             labels.append(label)
@@ -165,7 +168,7 @@ def read_dlm(f, symbols=None, verbose=False):
     Please complain to joseph.manning@manchester.ac.uk in case of bugs.
 
     :param f: IOWrapper object containing your ASCII DL_MONTE config file
-    :param symbols: a list of atomtype symbols (?). Passed on directly to read_simgle_dlm_image
+    :param symbols: a list of atomtype symbols, passed to read_simgle_dlm_image
     :param verbose: Bool. Prints useful debugging information if True
     :yield: a generator containing each frame of f
     """
@@ -205,7 +208,8 @@ def read_dlm(f, symbols=None, verbose=False):
             verboseprint(natoms, 'atoms found to read in.')
         else:
             natoms = None
-        yield read_single_dlm_image(f, levcfg, imcon, natoms, is_trajectory, symbols, verbose)
+        yield read_single_dlm_image(f, levcfg, imcon, natoms, 
+                                    is_trajectory, symbols, verbose)
         line = f.readline()
 
 
@@ -272,7 +276,6 @@ def _get_frame_positions_dlm(f):
         nframes = int(items[3])
         pos = [((natoms * (levcfg + 2) + 4) * i + 3) * rl for i in range(nframes)]
     f.seek(init_pos)
-    # print(natoms)
     return levcfg, imcon, natoms, pos
 
 
@@ -288,8 +291,8 @@ def read_dlm_history(f, index=-1, symbols=None):
 
     :param index:
     :param f: IOWrapper object containing your ASCII DL_MONTE config file
-    :param symbols: a list of atomtype symbols (?). Passed on directly to read_simgle_dlm_image
-    :return: A list of dictionaries, each with the format {molecule name: Atoms object} (one per frame)
+    :param symbols: a list of atomtype symbols passed to read_simgle_dlm_image
+    :return: A list of dictionaries with the format {name: Atoms object}
     """
     levcfg, imcon, natoms, pos = _get_frame_positions_dlm(f)
     print(pos)
@@ -306,7 +309,8 @@ def read_dlm_history(f, index=-1, symbols=None):
         f.seek(fpos + 1)
         print('fnatoms', fnatoms)
         images.append(read_single_dlm_image(f, levcfg, imcon, fnatoms,
-                                            is_trajectory=True, symbols=symbols))
+                                            is_trajectory=True, 
+                                            symbols=symbols))
 
     return images
 
@@ -317,5 +321,5 @@ def iread_dlm_history(f, symbols=None):
     for p, pnatoms in zip(pos, natoms):
         print('reading frame {0} out of {1}'.format(pos.index(p), len(pos)))
         f.seek(p + 1)
-        yield read_single_dlm_image(f, levcfg, imcon, pnatoms, is_trajectory=True,
-                                    symbols=symbols)
+        yield read_single_dlm_image(f, levcfg, imcon, pnatoms,
+                                    is_trajectory=True, symbols=symbols)
