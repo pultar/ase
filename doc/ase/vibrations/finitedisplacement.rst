@@ -146,12 +146,12 @@ are "unfrozen". The model system is taken from `_surface`_. First we
 optimise the structure to fine tolerance; note that unlike the
 original tutorial we do _not_ fix the atom positions at this stage.
 
-.. literalincude:: displacements_progressive_preopt.py
+.. literalinclude:: displacements_progressive_preopt.py
 
 Now we perform a series of displacements, starting with the nearest
 atoms to the nitrogen molecule.
 
-.. literalincude:: displacements_progressive.py
+.. literalinclude:: displacements_progressive.py
 
 We see that the N2 stretching-mode frequency is quite insensitive
 beyond the first few atoms, and can affort to stop the calculation
