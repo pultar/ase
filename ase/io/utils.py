@@ -7,12 +7,26 @@ from ase.utils import rotate
 from ase.data import covalent_radii, atomic_numbers
 from ase.data.colors import jmol_colors
 
+def get_cell_vertex_points(cell, disp=(0.0,0.0,0.0)):
+    ''' returns 8x3 list of the cell vertex coordinates'''
+    cell_vertices = np.empty((2, 2, 2, 3))
+    displacement = np.array(disp)
+    for c1 in range(2):
+        for c2 in range(2):
+            for c3 in range(2):
+                cell_vertices[c1, c2, c3] = np.dot([c1, c2, c3],
+                                                   cell) + displacement
+    cell_vertices.shape = (8, 3)
+    return cell_vertices
 
 class PlottingVariables:
     # removed writer - self
     def __init__(self, atoms, rotation='', show_unit_cell=2,
                  radii=None, bbox=None, colors=None, scale=20,
-                 maxwidth=500, extra_offset=(0., 0.)):
+                 maxwidth=500, extra_offset=(0., 0.),
+                 auto_bbox_size = 1.05):
+
+
         self.numbers = atoms.get_atomic_numbers()
         self.colors = colors
         if colors is None:
@@ -25,25 +39,25 @@ class PlottingVariables:
             radii = covalent_radii[self.numbers] * radii
         else:
             radii = np.array(radii)
+        self.d = 2 * scale * radii
 
         natoms = len(atoms)
+        # will be overwritten if bbox is set
+        self.scale = scale
+        self.offset = np.zeros(3)
 
         if isinstance(rotation, str):
             rotation = rotate(rotation)
+        self.rotation = rotation
+
 
         cell = atoms.get_cell()
         disp = atoms.get_celldisp().flatten()
 
         if show_unit_cell > 0:
             L, T, D = cell_to_lines(self, cell)
-            cell_vertices = np.empty((2, 2, 2, 3))
-            for c1 in range(2):
-                for c2 in range(2):
-                    for c3 in range(2):
-                        cell_vertices[c1, c2, c3] = np.dot([c1, c2, c3],
-                                                           cell) + disp
-            cell_vertices.shape = (8, 3)
-            cell_vertices = np.dot(cell_vertices, rotation)
+            cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
+            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
         else:
             L = np.empty((0, 3))
             T = None
@@ -57,6 +71,7 @@ class PlottingVariables:
         positions[:natoms] = R
         positions[natoms:] = L
 
+        # what the heck is this?
         r2 = radii**2
         for n in range(nlines):
             d = D[T[n]]
@@ -64,53 +79,68 @@ class PlottingVariables:
                     (((R - L[n] + d)**2).sum(1) < r2)).any():
                 T[n] = -1
 
-        positions = np.dot(positions, rotation)
-        R = positions[:natoms]
+        #positions = np.dot(positions, rotation)
+        # just a rotations and scaling since offset is currently [0,0,0]
+        positions = self.to_image_plane_positions(positions)
 
         if bbox is None:
-            X1 = (R - radii[:, None]).min(0)
-            X2 = (R + radii[:, None]).max(0)
+            im_high, im_low =  self.get_bbox_from_atoms(atoms, self.d/2)
             if show_unit_cell == 2:
-                X1 = np.minimum(X1, cell_vertices.min(0))
-                X2 = np.maximum(X2, cell_vertices.max(0))
-            M = (X1 + X2) / 2
-            S = 1.05 * (X2 - X1)
-            w = scale * S[0]
+                cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
+                im_low  = np.minimum(im_low,  cv_low)
+                im_high = np.maximum(im_high, cv_high)
+
+            middle = (im_high + im_low) / 2
+            im_size = auto_bbox_size * (im_high - im_low)
+            w = im_size[0]
+            h = im_size[1]
+            aspect = h/w
             if w > maxwidth:
                 w = maxwidth
-                scale = w / S[0]
-            h = scale * S[1]
-            offset = np.array([scale * M[0] - w / 2, scale * M[1] - h / 2, 0])
+                h = aspect * w
+                self.scale *= w / S[0]
+            offset = np.array([ middle[0] - w / 2, middle[1] - h / 2, 0])
         else:
             w = (bbox[2] - bbox[0]) * scale
             h = (bbox[3] - bbox[1]) * scale
             offset = np.array([bbox[0], bbox[1], 0]) * scale
 
+
+
         offset[0] = offset[0] - extra_offset[0]
         offset[1] = offset[1] - extra_offset[1]
+        #offset[2] = offset[2] - extra_offset[2]
+        #offset -= extra_offset[0:3]
+        self.offset = offset
         self.w = w + extra_offset[0]
         self.h = h + extra_offset[1]
 
-        positions *= scale
+        ### since we computed the offset
         positions -= offset
 
         if nlines > 0:
-            D = np.dot(D, rotation)[:, :2] * scale
+            # is D depth?
+            #D = np.dot(D, rotation)[:, :2] * scale
+            D = self.to_image_plane_positions(D)[:, :2]
 
         if cell_vertices is not None:
-            cell_vertices *= scale
-            cell_vertices -= offset
+            # since we updated the offset
+            #cell_vertices -= offset
+            ##
+            cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
+            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
 
-        cell = np.dot(cell, rotation)
-        cell *= scale
+        # no displacement since it's a vector
+        cell_vec_im = np.dot(cell, rotation)
+        cell_vec_im *= scale
 
-        self.cell = cell
+        self.cell = cell_vec_im
         self.positions = positions
         self.D = D
         self.T = T
         self.cell_vertices = cell_vertices
         self.natoms = natoms
-        self.d = 2 * scale * radii
+
         self.constraints = atoms.constraints
 
         # extension for partial occupancies
@@ -124,6 +154,51 @@ class PlottingVariables:
             self.frac_occ = True
         except KeyError:
             pass
+
+
+
+    def to_image_plane_positions(self, positions):
+        im_positions = np.dot(positions, self.rotation)*self.scale - self.offset
+        return im_positions
+
+    def to_atom_positions(self, im_positions):
+        positions = np.dot( (im_positions + self.offset)/self.scale, self.rotation.T)
+        return positions
+
+    def get_bbox_from_atoms(self, atoms, im_radii):
+        im_positions = self.to_image_plane_positions( atoms.get_positions())
+        im_low  = (im_positions - im_radii[:, None]).min(0)
+        im_high = (im_positions + im_radii[:, None]).max(0)
+        return im_high, im_low
+
+    def get_bbox_from_cell(self, cell, disp=(0.0,0.0,0.0)):
+        displacement = np.array(disp)
+        cell_verts_in_atom_coords = get_cell_vertex_points(cell, displacement)
+        cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
+        im_low = cell_vertices.min(0)
+        im_high = cell_vertices.max(0)
+        return im_high, im_low
+
+    def get_image_plane_center(self):
+        return self.to_atom_positions(np.array([0,0,0]))
+
+    def get_camera_direction(self):
+        c0 = self.get_image_plane_center()
+        c1 = self.to_atom_positions(np.array([0,0,-1]))
+        camera_direction = c1-c0
+        return camera_direction/np.linalg.norm(camera_direction)
+
+    def get_camera_up(self):
+        c0 = self.get_image_plane_center()
+        c1 = self.to_atom_positions(np.array([0,1,0]))
+        camera_direction = c1-c0
+        return camera_direction/np.linalg.norm(camera_direction)
+
+    def get_camera_right(self):
+        c0 = self.get_image_plane_center()
+        c1 = self.to_atom_positions(np.array([1,0,0]))
+        camera_direction = c1-c0
+        return camera_direction/np.linalg.norm(camera_direction)
 
 
 def cell_to_lines(writer, cell):
