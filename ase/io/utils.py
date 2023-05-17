@@ -19,6 +19,18 @@ def get_cell_vertex_points(cell, disp=(0.0,0.0,0.0)):
     cell_vertices.shape = (8, 3)
     return cell_vertices
 
+def update_line_order_for_atoms(L, T, D, atoms, radii):
+    # why/how does this happen before the camera rotation???
+    R = atoms.get_positions()
+    r2 = radii**2
+    for n in range(len(L)):
+        d = D[T[n]]
+        if ((((R - L[n] - d)**2).sum(1) < r2) &
+                (((R - L[n] + d)**2).sum(1) < r2)).any():
+            T[n] = -1
+    return T
+
+
 class PlottingVariables:
     # removed writer - self
     def __init__(self, atoms, rotation='', show_unit_cell=2,
@@ -50,36 +62,22 @@ class PlottingVariables:
             rotation = rotate(rotation)
         self.rotation = rotation
 
-
         cell = atoms.get_cell()
         disp = atoms.get_celldisp().flatten()
+        positions = atoms.get_positions()
 
         if show_unit_cell > 0:
             L, T, D = cell_to_lines(self, cell)
             cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
             cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
+            T = update_line_order_for_atoms(L, T, D, atoms,  radii)
+            positions = np.concatenate((positions, L) , axis=0)
         else:
             L = np.empty((0, 3))
             T = None
             D = None
             cell_vertices = None
 
-        nlines = len(L)
-
-        positions = np.empty((natoms + nlines, 3))
-        R = atoms.get_positions()
-        positions[:natoms] = R
-        positions[natoms:] = L
-
-        # what the heck is this?
-        r2 = radii**2
-        for n in range(nlines):
-            d = D[T[n]]
-            if ((((R - L[n] - d)**2).sum(1) < r2) &
-                    (((R - L[n] + d)**2).sum(1) < r2)).any():
-                T[n] = -1
-
-        #positions = np.dot(positions, rotation)
         # just a rotations and scaling since offset is currently [0,0,0]
         positions = self.to_image_plane_positions(positions)
 
@@ -89,7 +87,6 @@ class PlottingVariables:
                 cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
                 im_low  = np.minimum(im_low,  cv_low)
                 im_high = np.maximum(im_high, cv_high)
-
             middle = (im_high + im_low) / 2
             im_size = auto_bbox_size * (im_high - im_low)
             w = im_size[0]
@@ -105,21 +102,17 @@ class PlottingVariables:
             h = (bbox[3] - bbox[1]) * scale
             offset = np.array([bbox[0], bbox[1], 0]) * scale
 
-
-
-        offset[0] = offset[0] - extra_offset[0]
-        offset[1] = offset[1] - extra_offset[1]
-        #offset[2] = offset[2] - extra_offset[2]
-        #offset -= extra_offset[0:3]
+        # allows extra_offset to be 2D or 3D
+        offset[:len(extra_offset)] -= np.array(extra_offset)
         self.offset = offset
         self.w = w + extra_offset[0]
         self.h = h + extra_offset[1]
 
-        ### since we computed the offset
+        # since we computed the offset
         positions -= offset
 
-        if nlines > 0:
-            # is D depth?
+        if len(L) > 0:
+            # D are a positions in the image plane
             #D = np.dot(D, rotation)[:, :2] * scale
             D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
 
@@ -137,10 +130,9 @@ class PlottingVariables:
         self.cell = cell_vec_im
         self.positions = positions
         self.D = D # list of 2D cell points in the imageplane without the offset
-        self.T = T # itegers, probably zorder of objections?
+        self.T = T # itegers, probably zorder of objects?
         self.cell_vertices = cell_vertices
         self.natoms = natoms
-
         self.constraints = atoms.constraints
 
         # extension for partial occupancies
@@ -154,7 +146,6 @@ class PlottingVariables:
             self.frac_occ = True
         except KeyError:
             pass
-
 
 
     def to_image_plane_positions(self, positions):
