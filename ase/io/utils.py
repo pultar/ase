@@ -121,7 +121,7 @@ class PlottingVariables:
         if nlines > 0:
             # is D depth?
             #D = np.dot(D, rotation)[:, :2] * scale
-            D = self.to_image_plane_positions(D)[:, :2]
+            D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
 
         if cell_vertices is not None:
             # since we updated the offset
