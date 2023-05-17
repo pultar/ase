@@ -124,9 +124,9 @@ class PlottingVariables:
             D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
 
         if cell_vertices is not None:
-            # since we updated the offset
+            # since we updated the offset, we could do this:
             #cell_vertices -= offset
-            ##
+            # but this is more in keeping with the new format
             cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
             cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
 
@@ -136,8 +136,8 @@ class PlottingVariables:
 
         self.cell = cell_vec_im
         self.positions = positions
-        self.D = D
-        self.T = T
+        self.D = D # list of 2D cell points in the imageplane without the offset
+        self.T = T # itegers, probably zorder of objections?
         self.cell_vertices = cell_vertices
         self.natoms = natoms
 
