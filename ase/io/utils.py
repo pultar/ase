@@ -104,12 +104,11 @@ class PlottingVariables:
 
         # allows extra_offset to be 2D or 3D
         offset[:len(extra_offset)] -= np.array(extra_offset)
+        # since we computed the offset, we can finalize the positions
+        positions -= offset
         self.offset = offset
         self.w = w + extra_offset[0]
         self.h = h + extra_offset[1]
-
-        # since we computed the offset
-        positions -= offset
 
         if len(L) > 0:
             # D are a positions in the image plane
@@ -130,7 +129,7 @@ class PlottingVariables:
         self.cell = cell_vec_im
         self.positions = positions
         self.D = D # list of 2D cell points in the imageplane without the offset
-        self.T = T # itegers, probably zorder of objects?
+        self.T = T # integers, probably z-order for lines?
         self.cell_vertices = cell_vertices
         self.natoms = natoms
         self.constraints = atoms.constraints
