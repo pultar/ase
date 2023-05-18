@@ -38,8 +38,20 @@ class PlottingVariables:
                  maxwidth=500, extra_offset=(0., 0.),
                  auto_bbox_size = 1.05):
 
+        assert show_unit_cell in (0,1,2,3)
+        '''
+        show_unit_cell: 0 cell is not shown, 1 cell is shown, 2 cell is shown
+                        and bounding box is computed to fit atoms and cell, 3
+                        bounding box is fixed to cell only.
+        '''
 
+        self.show_unit_cell = show_unit_cell
         self.numbers = atoms.get_atomic_numbers()
+        self.maxwidth = maxwidth
+        self.atoms = atoms
+        self.extra_offset = extra_offset
+        self.auto_bbox_size=auto_bbox_size
+
         self.colors = colors
         if colors is None:
             ncolors = len(jmol_colors)
@@ -52,6 +64,7 @@ class PlottingVariables:
         else:
             radii = np.array(radii)
         self.d = 2 * scale * radii
+        self.radii = radii
 
         natoms = len(atoms)
         # will be overwritten if bbox is set
@@ -61,79 +74,16 @@ class PlottingVariables:
         if isinstance(rotation, str):
             rotation = rotate(rotation)
         self.rotation = rotation
-
-        cell = atoms.get_cell()
-        disp = atoms.get_celldisp().flatten()
-        positions = atoms.get_positions()
-
-        if show_unit_cell > 0:
-            L, T, D = cell_to_lines(self, cell)
-            cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
-            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
-            T = update_line_order_for_atoms(L, T, D, atoms,  radii)
-            positions = np.concatenate((positions, L) , axis=0)
-        else:
-            L = np.empty((0, 3))
-            T = None
-            D = None
-            cell_vertices = None
-
-        # just a rotations and scaling since offset is currently [0,0,0]
-        positions = self.to_image_plane_positions(positions)
-
-        if bbox is None:
-            im_high, im_low =  self.get_bbox_from_atoms(atoms, self.d/2)
-            if show_unit_cell == 2:
-                cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
-                im_low  = np.minimum(im_low,  cv_low)
-                im_high = np.maximum(im_high, cv_high)
-            middle = (im_high + im_low) / 2
-            im_size = auto_bbox_size * (im_high - im_low)
-            w = im_size[0]
-            h = im_size[1]
-            aspect = h/w
-            if w > maxwidth:
-                w = maxwidth
-                h = aspect * w
-                self.scale *= w / S[0]
-            offset = np.array([ middle[0] - w / 2, middle[1] - h / 2, 0])
-        else:
-            w = (bbox[2] - bbox[0]) * scale
-            h = (bbox[3] - bbox[1]) * scale
-            offset = np.array([bbox[0], bbox[1], 0]) * scale
-
-        # allows extra_offset to be 2D or 3D
-        offset[:len(extra_offset)] -= np.array(extra_offset)
-        # since we computed the offset, we can finalize the positions
-        positions -= offset
-        self.offset = offset
-        self.w = w + extra_offset[0]
-        self.h = h + extra_offset[1]
-
-        if len(L) > 0:
-            # D are a positions in the image plane
-            #D = np.dot(D, rotation)[:, :2] * scale
-            D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
-
-        if cell_vertices is not None:
-            # since we updated the offset, we could do this:
-            #cell_vertices -= offset
-            # but this is more in keeping with the new format
-            cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
-            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
+        self.updated_image_plane_offset_and_size( bbox=bbox)
+        # the old arcane stuff has been pushed into this function.
+        self.update_patch_and_line_vars()
 
         # no displacement since it's a vector
-        cell_vec_im = np.dot(cell, rotation)
+        cell_vec_im = np.dot(atoms.get_cell(), rotation)
         cell_vec_im *= scale
-
         self.cell = cell_vec_im
-        self.positions = positions
-        self.D = D # list of 2D cell points in the imageplane without the offset
-        self.T = T # integers, probably z-order for lines?
-        self.cell_vertices = cell_vertices
         self.natoms = natoms
         self.constraints = atoms.constraints
-
         # extension for partial occupancies
         self.frac_occ = False
         self.tags = None
@@ -146,6 +96,70 @@ class PlottingVariables:
         except KeyError:
             pass
 
+
+    def update_patch_and_line_vars(self):
+        '''Updates all the line and path stuff that is still in obvious, this
+        function should be deprecated if nobody can understand why it's features
+        exist'''
+        cell = self.atoms.get_cell()
+        disp = self.atoms.get_celldisp().flatten()
+        positions = self.atoms.get_positions()
+
+        if self.show_unit_cell > 0:
+            L, T, D = cell_to_lines(self, cell)
+            cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
+            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
+            T = update_line_order_for_atoms(L, T, D, self.atoms,  self.radii)
+            # D are a positions in the image plane, not sure why it's setup like this
+            D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
+            positions = np.concatenate((positions, L) , axis=0)
+        else:
+            L = np.empty((0, 3))
+            T = None
+            D = None
+            cell_vertices = None
+        # just a rotations and scaling since offset is currently [0,0,0]
+        positions = self.to_image_plane_positions(positions)
+        self.positions = positions
+        self.D = D # list of 2D cell points in the imageplane without the offset
+        self.T = T # integers, probably z-order for lines?
+        self.cell_vertices = cell_vertices
+
+
+    def updated_image_plane_offset_and_size(self, bbox=None):
+        if bbox is None:
+            im_high, im_low =  self.get_bbox_from_atoms(self.atoms, self.d/2)
+            if self.show_unit_cell in (2,3):
+                cell = self.atoms.get_cell()
+                disp = self.atoms.get_celldisp().flatten()
+                cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
+                if self.show_unit_cell == 2:
+                    im_low  = np.minimum(im_low,  cv_low)
+                    im_high = np.maximum(im_high, cv_high)
+                else:
+                    im_low  = cv_low
+                    im_high = cv_high
+            middle = (im_high + im_low) / 2
+            im_size = self.auto_bbox_size * (im_high - im_low)
+            w = im_size[0]
+            h = im_size[1]
+            aspect = h/w
+            if w > self.maxwidth:
+                w = self.maxwidth
+                h = aspect * w
+                self.scale *= w / im_size[0]
+            offset = np.array([ middle[0] - w / 2, middle[1] - h / 2, 0])
+        else:
+            w = (bbox[2] - bbox[0]) * scale
+            h = (bbox[3] - bbox[1]) * scale
+            offset = np.array([bbox[0], bbox[1], 0]) * scale
+
+        self.offset = offset
+        # why does the picture size change with extra_offset? seems like a bug
+        self.w = w + self.extra_offset[0]
+        self.h = h + self.extra_offset[1]
+        # allows extra_offset to be 2D or 3D
+        self.offset[:len(self.extra_offset)] -= np.array(self.extra_offset)
 
     def to_image_plane_positions(self, positions):
         im_positions = np.dot(positions, self.rotation)*self.scale - self.offset
