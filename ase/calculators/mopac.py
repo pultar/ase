@@ -206,6 +206,7 @@ class MOPAC(FileIOCalculator):
             r'^\s+TOTAL ENERGY\s+\=\s+(-?\d+\.\d+) EV')
         final_heat_regex = re.compile(
             r'^\s+FINAL HEAT OF FORMATION\s+\=\s+(-?\d+\.\d+) KCAL/MOL')
+        dipole_regex = re.compile(r'^\s+DIPOLE')
 
         for i, line in enumerate(lines):
             if total_energy_regex.match(line):
@@ -250,7 +251,7 @@ class MOPAC(FileIOCalculator):
                         eigs += [float(e) for e in lines[j].split()]
                         j += 1
                     self.eigenvalues = np.array(eigs).reshape(1, 1, -1)
-            elif line.find('DIPOLE   ') != -1:
+            elif dipole_regex.match(line):
                 self.results['dipole'] = np.array(
                     lines[i + 3].split()[1:1 + 3], float) * Debye
 
