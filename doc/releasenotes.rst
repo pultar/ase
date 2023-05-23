@@ -83,6 +83,13 @@ Optimizers:
 * Add :class:`ase.optimize.climbfixinternals.ClimbFixInternals` class for
   transition state search and optimization along internal reaction coordinates
 
+I/O:
+
+* Reading of "chemical json" file types is assigned to names ``*.cjson``
+  as used in avogadro2_
+
+.. _avogadro2: https://www.openchemistry.org/projects/avogadro2
+
 
 Version 3.22.1
 ==============
@@ -166,6 +173,7 @@ I/O:
   extracts all variables from the input file.
 
 * Reading of "chemical json" file types with name ``*.cml`` is enabled.
+
 * LAMMPS dump: Reading of elements column added, with priority over types
   if given. All four of the position specifier columns read correctly now.
 
