@@ -397,7 +397,10 @@ F('espresso-in', 'Quantum espresso in file', '1F',
   module='espresso', ext='pwi', magic=[b'*\n&system', b'*\n&SYSTEM'])
 F('espresso-out', 'Quantum espresso out file', '+F',
   module='espresso', ext=['pwo', 'out'], magic=b'*Program PWSCF')
-F('exciting', 'exciting input', '1F', glob='input.xml')
+F('exciting-in', 'exciting in', '1F',
+  magic_regex=b'.*\\n.*exciting-code\\.org\\/info\\.xsl')
+F('exciting-out', 'exciting output', '1F',
+  magic_regex=b'.*\\n\\| EXCITING \\w+ started\\s*=')
 F('extxyz', 'Extended XYZ file', '+F', ext='xyz')
 F('findsym', 'FINDSYM-format', '+F')
 F('gamess-us-out', 'GAMESS-US output file', '1F',
