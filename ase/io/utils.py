@@ -7,7 +7,8 @@ from ase.utils import rotate
 from ase.data import covalent_radii, atomic_numbers
 from ase.data.colors import jmol_colors
 
-def get_cell_vertex_points(cell, disp=(0.0,0.0,0.0)):
+
+def get_cell_vertex_points(cell, disp=(0.0, 0.0, 0.0)):
     ''' returns 8x3 list of the cell vertex coordinates'''
     cell_vertices = np.empty((2, 2, 2, 3))
     displacement = np.array(disp)
@@ -17,6 +18,7 @@ def get_cell_vertex_points(cell, disp=(0.0,0.0,0.0)):
                 cell_vertices[c1, c2, c3] = [c1, c2, c3] @ cell + displacement
     cell_vertices.shape = (8, 3)
     return cell_vertices
+
 
 def update_line_order_for_atoms(L, T, D, atoms, radii):
     # why/how does this happen before the camera rotation???
@@ -35,9 +37,9 @@ class PlottingVariables:
     def __init__(self, atoms, rotation='', show_unit_cell=2,
                  radii=None, bbox=None, colors=None, scale=20,
                  maxwidth=500, extra_offset=(0., 0.),
-                 auto_bbox_size = 1.05):
+                 auto_bbox_size=1.05):
 
-        assert show_unit_cell in (0,1,2,3)
+        assert show_unit_cell in (0, 1, 2, 3)
         '''
         show_unit_cell: 0 cell is not shown, 1 cell is shown, 2 cell is shown
                         and bounding box is computed to fit atoms and cell, 3
@@ -49,7 +51,7 @@ class PlottingVariables:
         self.maxwidth = maxwidth
         self.atoms = atoms
         self.extra_offset = extra_offset
-        self.auto_bbox_size=auto_bbox_size
+        self.auto_bbox_size = auto_bbox_size
 
         self.colors = colors
         if colors is None:
@@ -73,7 +75,7 @@ class PlottingVariables:
         if isinstance(rotation, str):
             rotation = rotate(rotation)
         self.rotation = rotation
-        self.updated_image_plane_offset_and_size( bbox=bbox)
+        self.updated_image_plane_offset_and_size(bbox=bbox)
         # the old arcane stuff has been pushed into this function.
         self.update_patch_and_line_vars()
 
@@ -95,7 +97,6 @@ class PlottingVariables:
         except KeyError:
             pass
 
-
     def update_patch_and_line_vars(self):
         '''Updates all the line and path stuff that is still in obvious, this
         function should be deprecated if nobody can understand why it's features
@@ -107,11 +108,12 @@ class PlottingVariables:
         if self.show_unit_cell > 0:
             L, T, D = cell_to_lines(self, cell)
             cell_verts_in_atom_coords = get_cell_vertex_points(cell, disp)
-            cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
-            T = update_line_order_for_atoms(L, T, D, self.atoms,  self.radii)
+            cell_vertices = self.to_image_plane_positions(
+                cell_verts_in_atom_coords)
+            T = update_line_order_for_atoms(L, T, D, self.atoms, self.radii)
             # D are a positions in the image plane, not sure why it's setup like this
-            D = (self.to_image_plane_positions(D)+self.offset)[:, :2]
-            positions = np.concatenate((positions, L) , axis=0)
+            D = (self.to_image_plane_positions(D) + self.offset)[:, :2]
+            positions = np.concatenate((positions, L), axis=0)
         else:
             L = np.empty((0, 3))
             T = None
@@ -120,34 +122,33 @@ class PlottingVariables:
         # just a rotations and scaling since offset is currently [0,0,0]
         positions = self.to_image_plane_positions(positions)
         self.positions = positions
-        self.D = D # list of 2D cell points in the imageplane without the offset
-        self.T = T # integers, probably z-order for lines?
+        self.D = D  # list of 2D cell points in the imageplane without the offset
+        self.T = T  # integers, probably z-order for lines?
         self.cell_vertices = cell_vertices
-
 
     def updated_image_plane_offset_and_size(self, bbox=None):
         if bbox is None:
-            im_high, im_low =  self.get_bbox_from_atoms(self.atoms, self.d/2)
-            if self.show_unit_cell in (2,3):
+            im_high, im_low = self.get_bbox_from_atoms(self.atoms, self.d / 2)
+            if self.show_unit_cell in (2, 3):
                 cell = self.atoms.get_cell()
                 disp = self.atoms.get_celldisp().flatten()
                 cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
                 if self.show_unit_cell == 2:
-                    im_low  = np.minimum(im_low,  cv_low)
+                    im_low = np.minimum(im_low, cv_low)
                     im_high = np.maximum(im_high, cv_high)
                 else:
-                    im_low  = cv_low
+                    im_low = cv_low
                     im_high = cv_high
             middle = (im_high + im_low) / 2
             im_size = self.auto_bbox_size * (im_high - im_low)
             w = im_size[0]
             h = im_size[1]
-            aspect = h/w
+            aspect = h / w
             if w > self.maxwidth:
                 w = self.maxwidth
                 h = aspect * w
                 self.scale *= w / im_size[0]
-            offset = np.array([ middle[0] - w / 2, middle[1] - h / 2, 0])
+            offset = np.array([middle[0] - w / 2, middle[1] - h / 2, 0])
         else:
             w = (bbox[2] - bbox[0]) * self.scale
             h = (bbox[3] - bbox[1]) * self.scale
@@ -161,20 +162,21 @@ class PlottingVariables:
         self.offset[:len(self.extra_offset)] -= np.array(self.extra_offset)
 
     def to_image_plane_positions(self, positions):
-        im_positions = (positions @ self.rotation)*self.scale - self.offset
+        im_positions = (positions @ self.rotation) * self.scale - self.offset
         return im_positions
 
     def to_atom_positions(self, im_positions):
-        positions =  ((im_positions + self.offset)/self.scale) @ (self.rotation.T)
+        positions = ((im_positions + self.offset) /
+                     self.scale) @ (self.rotation.T)
         return positions
 
     def get_bbox_from_atoms(self, atoms, im_radii):
-        im_positions = self.to_image_plane_positions( atoms.get_positions())
-        im_low  = (im_positions - im_radii[:, None]).min(0)
+        im_positions = self.to_image_plane_positions(atoms.get_positions())
+        im_low = (im_positions - im_radii[:, None]).min(0)
         im_high = (im_positions + im_radii[:, None]).max(0)
         return im_high, im_low
 
-    def get_bbox_from_cell(self, cell, disp=(0.0,0.0,0.0)):
+    def get_bbox_from_cell(self, cell, disp=(0.0, 0.0, 0.0)):
         displacement = np.array(disp)
         cell_verts_in_atom_coords = get_cell_vertex_points(cell, displacement)
         cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
@@ -183,22 +185,22 @@ class PlottingVariables:
         return im_high, im_low
 
     def get_image_plane_center(self):
-        return self.to_atom_positions(np.array([0,0,0]))
+        return self.to_atom_positions(np.array([0, 0, 0]))
 
     def get_atom_direction(self, direction):
         c0 = self.get_image_plane_center()
         c1 = self.to_atom_positions(direction)
-        atom_direction = c1-c0
-        return atom_direction/np.linalg.norm(atom_direction)
+        atom_direction = c1 - c0
+        return atom_direction / np.linalg.norm(atom_direction)
 
     def get_camera_direction(self):
-        return self.get_atom_direction([0,0,-1])
+        return self.get_atom_direction([0, 0, -1])
 
     def get_camera_up(self):
-        return self.get_atom_direction([0,1,0])
+        return self.get_atom_direction([0, 1, 0])
 
     def get_camera_right(self):
-        return self.get_atom_direction([1,0,0])
+        return self.get_atom_direction([1, 0, 0])
 
 
 def cell_to_lines(writer, cell):
