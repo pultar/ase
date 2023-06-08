@@ -186,23 +186,20 @@ class PlottingVariables:
     def get_image_plane_center(self):
         return self.to_atom_positions(np.array([0,0,0]))
 
-    def get_camera_direction(self):
+    def get_atom_direction(self, direction):
         c0 = self.get_image_plane_center()
-        c1 = self.to_atom_positions(np.array([0,0,-1]))
-        camera_direction = c1-c0
-        return camera_direction/np.linalg.norm(camera_direction)
+        c1 = self.to_atom_positions(direction)
+        atom_direction = c1-c0
+        return atom_direction/np.linalg.norm(atom_direction)
+
+    def get_camera_direction(self):
+        return self.get_atom_direction([0,0,-1])
 
     def get_camera_up(self):
-        c0 = self.get_image_plane_center()
-        c1 = self.to_atom_positions(np.array([0,1,0]))
-        camera_direction = c1-c0
-        return camera_direction/np.linalg.norm(camera_direction)
+        return self.get_atom_direction([0,1,0])
 
     def get_camera_right(self):
-        c0 = self.get_image_plane_center()
-        c1 = self.to_atom_positions(np.array([1,0,0]))
-        camera_direction = c1-c0
-        return camera_direction/np.linalg.norm(camera_direction)
+        return self.get_atom_direction([1,0,0])
 
 
 def cell_to_lines(writer, cell):
