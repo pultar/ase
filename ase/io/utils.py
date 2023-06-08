@@ -14,8 +14,7 @@ def get_cell_vertex_points(cell, disp=(0.0,0.0,0.0)):
     for c1 in range(2):
         for c2 in range(2):
             for c3 in range(2):
-                cell_vertices[c1, c2, c3] = np.dot([c1, c2, c3],
-                                                   cell) + displacement
+                cell_vertices[c1, c2, c3] = [c1, c2, c3] @ cell + displacement
     cell_vertices.shape = (8, 3)
     return cell_vertices
 
@@ -79,7 +78,7 @@ class PlottingVariables:
         self.update_patch_and_line_vars()
 
         # no displacement since it's a vector
-        cell_vec_im = np.dot(atoms.get_cell(), rotation)
+        cell_vec_im = atoms.get_cell() @ rotation
         cell_vec_im *= scale
         self.cell = cell_vec_im
         self.natoms = natoms
@@ -162,11 +161,11 @@ class PlottingVariables:
         self.offset[:len(self.extra_offset)] -= np.array(self.extra_offset)
 
     def to_image_plane_positions(self, positions):
-        im_positions = np.dot(positions, self.rotation)*self.scale - self.offset
+        im_positions = (positions @ self.rotation)*self.scale - self.offset
         return im_positions
 
     def to_atom_positions(self, im_positions):
-        positions = np.dot( (im_positions + self.offset)/self.scale, self.rotation.T)
+        positions =  ((im_positions + self.offset)/self.scale) @ (self.rotation.T)
         return positions
 
     def get_bbox_from_atoms(self, atoms, im_radii):
