@@ -111,7 +111,8 @@ class PlottingVariables:
             cell_vertices = self.to_image_plane_positions(
                 cell_verts_in_atom_coords)
             T = update_line_order_for_atoms(L, T, D, self.atoms, self.radii)
-            # D are a positions in the image plane, not sure why it's setup like this
+            # D are a positions in the image plane,
+            # not sure why it's setup like this
             D = (self.to_image_plane_positions(D) + self.offset)[:, :2]
             positions = np.concatenate((positions, L), axis=0)
         else:
@@ -122,8 +123,10 @@ class PlottingVariables:
         # just a rotations and scaling since offset is currently [0,0,0]
         positions = self.to_image_plane_positions(positions)
         self.positions = positions
-        self.D = D  # list of 2D cell points in the imageplane without the offset
-        self.T = T  # integers, probably z-order for lines?
+        # list of 2D cell points in the imageplane without the offset
+        self.D = D
+        # integers, probably z-order for lines?
+        self.T = T
         self.cell_vertices = cell_vertices
 
     def updated_image_plane_offset_and_size(self, bbox=None):
