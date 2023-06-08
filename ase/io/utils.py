@@ -149,9 +149,9 @@ class PlottingVariables:
                 self.scale *= w / im_size[0]
             offset = np.array([ middle[0] - w / 2, middle[1] - h / 2, 0])
         else:
-            w = (bbox[2] - bbox[0]) * scale
-            h = (bbox[3] - bbox[1]) * scale
-            offset = np.array([bbox[0], bbox[1], 0]) * scale
+            w = (bbox[2] - bbox[0]) * self.scale
+            h = (bbox[3] - bbox[1]) * self.scale
+            offset = np.array([bbox[0], bbox[1], 0]) * self.scale
 
         self.offset = offset
         # why does the picture size change with extra_offset? seems like a bug
