@@ -23,6 +23,7 @@ install_requires = [
     'numpy>=1.17.0',  # July 2019
     'scipy>=1.3.1',  # August 2019
     'matplotlib>=3.1.0',  # May 2019
+    'importlib-metadata>=0.12;python_version<"3.8"'
 ]
 
 
@@ -55,7 +56,9 @@ package_data = {'ase': ['spacegroup/spacegroup.dat',
                         'db/templates/*',
                         'db/static/*'],
                 'ase.test': ['pytest.ini',
-                             'testdata/*']}
+                             'testdata/*',
+                             'testdata/*/*',
+                             'testdata/*/*/*']}
 
 
 class build_py(_build_py):
