@@ -71,7 +71,7 @@ class RNEB:
         spg_tuple = atoms_to_spglib_cell(orig)
         return spg.get_symmetry(spg_tuple, symprec=self.tol)
 
-    def get_all_equivalent_images(self, atoms):
+    def get_all_equivalent_images(self, atoms, discard_equal_structures=False):
         """Get a list of all symmetry equivalent structures.
 
         All symmetry operations are applied to the provided
@@ -84,6 +84,9 @@ class RNEB:
 
         Args:
             atoms (Atoms): The structure with a defect.
+            discard_equal_structures (bool): If True, the returned
+            list can not contain duplicate structures regarding
+            positions.
 
         Returns:
             list:
@@ -101,7 +104,15 @@ class RNEB:
             pos = wrap_positions(rot_pos, cell)
             ac = atoms.copy()
             ac.positions = pos
-            equiv_structs.append(reshuffle_positions(atoms, ac, .1))
+            equivalent_structure = reshuffle_positions(atoms, ac, .1)
+            if discard_equal_structures:
+                for struct in equiv_structs:
+                    if atoms_equal(struct, equivalent_structure):
+                        break
+                else:
+                    equiv_structs.append(equivalent_structure)
+            else:
+                equiv_structs.append(equivalent_structure)
         return equiv_structs
 
     def get_final_image(self, initial, initial_relaxed, final,
@@ -628,22 +639,56 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
     pos2 = final_s.positions.copy()
 
     _, D = get_distances(pos1, pos2, cell=cell, pbc=True)
-    final_idx = []
-    for c, j in enumerate(np.argmin(D, axis=0)):
+    not_shuffled = []
+    already_shuffled = []
+    # Iterate over initial (c) and the closest atom in final (j)
+    for c, j in enumerate(np.argmin(D, axis=1)):
         if j != c:
             # Shuffled indices we need to shuffle back
-            if D[j, c] < ml:  # assuming neb path length is above ml
+            # final_s.positions[c] = pos2[j]
+            if D[c, j] < ml:  # assuming neb path length is above ml
                 # this is not the correct atom moving, i.e. we shuffle
-                final_s.positions[j] = pos2[c]
+                # by moving c in final into the position of j in final
+                # (as j is the closest to c in initial)
+                final_s.positions[c] = pos2[j]
+                already_shuffled.append(j)
             else:
-                final_idx.append(c)
-    if len(final_idx) > 0:
-        initial_idx = []
-        # We need to get the atom in final furthest away from initial as well
-        for c, j in enumerate(np.argmin(D, axis=1)):
-            if D[c, j] > ml:
-                initial_idx.append(c)
-        assert len(final_idx) == len(initial_idx)
-        final_s.positions[np.array(initial_idx)] = pos2[np.array(final_idx)]
+                not_shuffled.append(c)
+    if len(not_shuffled) > 0:
+        # Some atoms had moved more than min_neb_path_length, they
+        # have not been reshuffled yet and they could be closer to
+        # other atoms that already have been assigned
+        for c in not_shuffled:
+            # Find the closest atom in final to c in initial not already assigned
+            for j in np.argsort(D[c]):
+                if j not in already_shuffled:
+                    break
+            final_s.positions[c] = pos2[j]
+            already_shuffled.append(j)
 
     return final_s
+
+def atoms_equal(a, b) -> bool:
+    """Check if two atoms objects are equal, but use np.allclose
+    for positions and cell instead of the absolute comparison done in
+    Atoms.__eq__
+
+    Args:
+        atoms1 (Atoms): Atoms
+        atoms2 (Atoms): Atoms
+    
+    Returns:
+        bool: True if atoms are equal, False otherwise.
+
+    """
+    if not isinstance(a, Atoms):
+        return False
+    if not isinstance(b, Atoms):
+        return False
+    
+    return (len(a) == len(b) and
+            np.allclose(a.positions, b.positions) and
+            (a.numbers == b.numbers).all() and
+            np.allclose(a.cell, b.cell) and
+            (a.pbc == b.pbc).all())
+    
