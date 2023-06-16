@@ -104,7 +104,9 @@ class RNEB:
             pos = wrap_positions(rot_pos, cell)
             ac = atoms.copy()
             ac.positions = pos
+            
             equivalent_structure = reshuffle_positions(atoms, ac, .1)
+            
             if discard_equal_structures:
                 for struct in equiv_structs:
                     if atoms_equal(struct, equivalent_structure):
@@ -654,6 +656,10 @@ def reshuffle_positions(initial, final, min_neb_path_length=1.2):
                 already_shuffled.append(j)
             else:
                 not_shuffled.append(c)
+        else:
+            # No need to shuffle but we still need to remember that
+            # position j is taken.
+            already_shuffled.append(j)
     if len(not_shuffled) > 0:
         # Some atoms had moved more than min_neb_path_length, they
         # have not been reshuffled yet and they could be closer to
