@@ -209,7 +209,7 @@ class Conquest(FileIOCalculator):
 
             # TODO rewrite make_ion_files to avoid what is below
             basis_single = {k: basis[k] for k in self.species_list}
-            species_single_list = [self.species_list[count -1 ]]
+            species_single_list = [self.species_list[count - 1]]
             species_single = self.species_list[count - 1]
 
             # Yes : run make_ion_files
@@ -265,58 +265,40 @@ class Conquest(FileIOCalculator):
         ion_file_path = ion_dir.joinpath(Path(fname))
 
         if ("xc" in basis[species]):
-            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"] 
-                                                     + "/" + species + '/' 
+            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"]
+                                                     + "/" + species + '/'
                                                      + fname))
         else:
-            ion_file_path_xc = ion_dir.joinpath(ion_xc + "/"+species + '/' 
+            ion_file_path_xc = ion_dir.joinpath(ion_xc + "/" + species + '/'
                                                 + fname)
-        
+
         count = 0
-        for ion_file in [ion_file_path, 
-                         ion_file_path_lib, 
-                         ion_file_path_xc, 
-                         Path(fname), 
+        for ion_file in [ion_file_path,
+                         ion_file_path_lib,
+                         ion_file_path_xc,
+                         Path(fname),
                          Path(self.directory).joinpath(fname)]: 
 
-            print("Try to find {} in {}".format(fname,ion_file), end="")
+            print("Try to find {} in {}".format(fname,ion_file), end = "")
             if(ion_file.is_file() and ion_file != fullpath):
-                print("... Found")                
+                print("... Found")
                 copy(ion_file, fullpath)
-                ConquestWarning("{} copied into {}".format(ion_file,fullpath))
+                ConquestWarning("{} copied into {}".format(ion_file, fullpath))
                 count += 1
                 break
 
             elif(ion_file.is_file() and ion_file == fullpath):
-                print("... Found")    
-                ConquestWarning("{} copied into {}".format(ion_file,fullpath))
+                print("... Found")
+                ConquestWarning("{} copied into {}".format(ion_file, fullpath))
                 count += 1
                 break
 
             else:
                 print("... Not found")
 
-        if (count == 0) :
+        if (count == 0):
             raise ConquestError("Ion file {} not found".format(fname))
 
-        # else:                                              
-            # Else if .ion file exists in the current directory
-        #    print("Try to find {} in current directory".format(dname), end="")
-        #    if ( Path(dname).is_file() ):
-        #        print("... Found")
-        #        copy(fname, fullpath)
-        #        ConquestWarning("{} from current directory copied into {}".format(dname,fullpath))
-        #    else:
-        #        print("... Not found")
-        #    # Else if .ion file exists in the working directory    
-        #    print("Try to find {} in working directory".format(dname), end="")
-        #    if ( fullpath.is_file() ): 
-        #        print("... Found")
-        #        ConquestWarning("{} taken form working directory {}".format(pname,fullpath))
-        #        
-        #    else:
-        #        raise ConquestError("Ion file {} not found".format(pname))
-            
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """
