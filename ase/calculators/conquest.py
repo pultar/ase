@@ -9,13 +9,14 @@ Authors: J Kane Shenton <jkshenton@gmail.com>
 """
 from __future__ import print_function
 
-import warnings
-import numpy as np
+#import warnings
+#import numpy as np
 from ase.units import Hartree
 from pathlib import Path
-from shutil  import copy
+from shutil import copy
 from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 from ase.io.conquest import ConquestEnv, ConquestError, ConquestWarning
+
 
 class Conquest(FileIOCalculator):
     """ASE-Calculator for CONQUEST.
@@ -23,7 +24,7 @@ class Conquest(FileIOCalculator):
 
     implemented_properties = ['energy', 'forces', 'stress']
     command = None
-    conquest_infile  = "Conquest_input"
+    conquest_infile = "Conquest_input"
     conquest_outfile = "Conquest_out_ase"
 
     # A minimal set of defaults
@@ -41,8 +42,9 @@ class Conquest(FileIOCalculator):
         'atommove.typeofrun': 'static',
         'dm.solutionmethod': 'diagon'}
 
-    def __init__(self, restart=None, label=None, atoms=None, basis={}, **kwargs):
-        
+    def __init__(self, restart=None, label=None, atoms=None, basis={}, 
+                 **kwargs):
+
         """Construct CONQUEST-calculator object.
         Species are sorted by atomic number for purposes of indexing.
 
@@ -90,7 +92,7 @@ class Conquest(FileIOCalculator):
                  - pseudopotential_type      : Str (siesta, hamann)
                  - xc functional use for generation : Str (PBE, LDA)
                  (if not given functional prodiced in Calculator is used)
-                 
+
             For example, for NaCl you might have something like:
 
                 basis = {"Na" : {"valence_charge"       : 1.00,
@@ -108,7 +110,7 @@ class Conquest(FileIOCalculator):
             CQ_PP_PATH is the absolute path towards a library of ion files 
             (from the Conquest root tree located at ~/pseudo-and-pao)
             
-            CQ_GEN_BASIS_CMD is the absolute path towards the the MakeIonFiles exe
+            CQ_GEN_BASIS_CMD is the absolute path towards the the MakeIonFiles
             (from the Conquest root tree located at ~/tools/BasisGeneration)
             
             
@@ -139,15 +141,16 @@ class Conquest(FileIOCalculator):
         """
 
         self.initialised = False
-        self.label       = label
+        self.label = label
         self.eigenvalues = None
         self.occupancies = None
         self.kpoints = None
         self.weights = None
-        self.nspin   = None
-        self.coorfile= None
+        self.nspin = None
+        self.coorfile = None
 
-        FileIOCalculator.__init__(self, restart=restart, label=self.label, atoms=atoms, **kwargs)
+        FileIOCalculator.__init__(self, restart=restart, label=self.label, 
+                                  atoms=atoms, **kwargs)
         
         self.basis = {}
         for spec in basis:
