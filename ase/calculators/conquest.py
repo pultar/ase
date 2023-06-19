@@ -209,8 +209,8 @@ class Conquest(FileIOCalculator):
 
             # TODO rewrite make_ion_files to avoid what is below
             basis_single = {k: basis[k] for k in self.species_list}
-            species_single_list = [self.species_list[count-1]]
-            species_single = self.species_list[count-1]
+            species_single_list = [self.species_list[count -1 ]]
+            species_single = self.species_list[count - 1]
 
             # Yes : run make_ion_files
             if (test):
@@ -240,7 +240,7 @@ class Conquest(FileIOCalculator):
         # Default name used for the input
         dname = species + ".ion"
 
-        # Name of the file from basis dictionary 
+        # Name of the file from basis dictionary
         if ("file" in basis[species]):
             fname = basis[species]["file"]
 
@@ -249,10 +249,10 @@ class Conquest(FileIOCalculator):
             fname = dname
 
         # Default working directory
-        fullpath  = Path(self.directory).joinpath(dname)
+        fullpath = Path(self.directory).joinpath(dname)
 
-        if (not ion_dir or ion_dir == '.' or ion_dir == './' \
-            or ion_dir == '/'):
+        if (not ion_dir or ion_dir == '.' or ion_dir == './'
+                or ion_dir == '/'):
 
             ion_dir = Path('')
         else:
@@ -261,20 +261,22 @@ class Conquest(FileIOCalculator):
         if (species not in basis):
             basis[species] = {}
 
-        ion_file_path_lib = ion_dir.joinpath(Path("lib/"+fname))
+        ion_file_path_lib = ion_dir.joinpath(Path("lib/" + fname))
         ion_file_path = ion_dir.joinpath(Path(fname))
 
         if ("xc" in basis[species]):
-            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"]+"/"+\
-                                                     species+'/'+fname))
+            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"] 
+                                                     + "/" + species + '/' 
+                                                     + fname))
         else:
-            ion_file_path_xc = ion_dir.joinpath(ion_xc+"/"+species+'/'+fname)
+            ion_file_path_xc = ion_dir.joinpath(ion_xc + "/"+species + '/' 
+                                                + fname)
         
         count = 0
-        for ion_file in [ion_file_path,\
-                         ion_file_path_lib,\
-                         ion_file_path_xc,\
-                         Path(fname),\
+        for ion_file in [ion_file_path, 
+                         ion_file_path_lib, 
+                         ion_file_path_xc, 
+                         Path(fname), 
                          Path(self.directory).joinpath(fname)]: 
 
             print("Try to find {} in {}".format(fname,ion_file), end="")
