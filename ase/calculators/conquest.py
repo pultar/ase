@@ -277,9 +277,9 @@ class Conquest(FileIOCalculator):
                          ion_file_path_lib,
                          ion_file_path_xc,
                          Path(fname),
-                         Path(self.directory).joinpath(fname)]: 
+                         Path(self.directory).joinpath(fname)]:
 
-            print("Try to find {} in {}".format(fname,ion_file), end = "")
+            print("Try to find {} in {}".format(fname, ion_file), end="")
             if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
                 copy(ion_file, fullpath)
@@ -299,7 +299,6 @@ class Conquest(FileIOCalculator):
         if (count == 0):
             raise ConquestError("Ion file {} not found".format(fname))
 
-
     def write_input(self, atoms, properties=None, system_changes=None):
         """
         Create the directory, make the basis if necessary, write the
@@ -309,11 +308,11 @@ class Conquest(FileIOCalculator):
         from ase.io.conquest import write_conquest_input, write_conquest
 
         # set io.title
-        if (not 'io.title' in self.parameters):
+        if ('io.title' not in self.parameters):
             self.parameters['io.title'] = atoms.get_chemical_formula()
 
         # set coordfile from io.title
-        if (not 'io.coordinates' in self.parameters):
+        if ('io.coordinates' not in self.parameters):
             coordfile = self.parameters['io.title'] + '.in'
             self.parameters['io.coordinates'] = coordfile
         else:
@@ -328,8 +327,8 @@ class Conquest(FileIOCalculator):
             try:
                 pseudo_dir = cq_env.get('pseudo_path')
 
-            except:
-                pseudo_dir = './'                
+            except pseudo_dir.DoesNotExist:
+                pseudo_dir = './'
 
             self.init_basis(atoms, self.basis, ion_dir=pseudo_dir)
 
@@ -337,7 +336,7 @@ class Conquest(FileIOCalculator):
         cq_coord = Path(self.directory).joinpath(Path(coordfile))
         
         with cq_in.open(mode='w') as infile_obj:
-            
+
             write_conquest_input(infile_obj, atoms, self.species_list,
                                  self.parameters,
                                  directory=self.directory, basis=self.basis)
@@ -346,17 +345,17 @@ class Conquest(FileIOCalculator):
             write_conquest(coordfile_obj, atoms, self.species_list) 
 
         # it looks label is needed when using some ASE routines, eg. NEB
-        if self.label : 
+        if self.label: 
             self.parameters.write(self.label + '.ase')
 
     def read_results(self, atoms=None):
         """
         Parse energy, Fermi level, forces, stresses from Conquest_out
         """
-        
+
         from ase.io.conquest import read_conquest_out
 
-        if ( atoms != None ):
+        if (atoms is not None):
             self.atoms = atoms
 
         cq_out_path = Path(self.directory).joinpath(Path(self.conquest_outfile))
@@ -365,7 +364,7 @@ class Conquest(FileIOCalculator):
             raise ReadError
 
         with cq_out_path.open(mode='r') as outfile_obj:
-            # print(outfile_obj)   
+            # print(outfile_obj)
             self.results = read_conquest_out(outfile_obj, self.atoms)
 
         # Eigenvalues are printed only for IO.Iprint > 2, and diagonalisation
@@ -388,18 +387,19 @@ class Conquest(FileIOCalculator):
         with open(cq_out_path, 'r') as cqout_fileobj:
             self.eigenvalues, self.occupancies = \
                 read_bands(self.parameters['nspin'], cqout_fileobj)
-                
+
         with open(cq_out_path, 'r') as cqout_fileobj:
             self.kpoints, self.weights = get_k_points(cqout_fileobj)
-    # 
+    #
     # Below functions necessary for ASE band_structure()
     #
+    
     def get_ibz_k_points(self):
 
         return self.kpoints
 
     def get_k_point_weights(self):
-        
+
         return self.weights
 
     def get_eigenvalues(self, kpt=0, spin=0):
@@ -414,10 +414,10 @@ class Conquest(FileIOCalculator):
 
         for key in self.parameters:
 
-            if ( key == 'nspin'):
+            if (key == 'nspin'):
                 self.nspin = self.parameters[key]
 
-        if ( self.nspin is None ):        
+        if (self.nspin is None):        
                 ConquestWarning('nspin not specified in Conquest input')
                 self.nspin = 1
 
