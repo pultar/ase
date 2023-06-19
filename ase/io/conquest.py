@@ -11,7 +11,7 @@ from inspect import currentframe, getframeinfo
 
 import numpy as np
 from pathlib import Path
-from shutil import move
+from shutil import move, copy
 import ase.utils
 from ase.atoms import Atoms
 from ase.units import Bohr, Hartree
@@ -398,11 +398,9 @@ def setup_basis(species, basis=None, version="v323", xc="PBE",
     basis_str += cqip_line("atom.pseudopotentialfile", str(in_file))
     basis_str += cqip_line("atom.vkbfile", str(pot_file))
     basis_str += cqip_line('atom.basissize', basis["basis_size"])
-    #basis_str += cqip_line('xc', xc)
-
-    for key in basis:
-        if key not in special:
-            print(key, basis[key])
+  
+    for key in basis:        
+        if ( (key not in special) and (key != 'xc') ):
             basis_str += cqip_line(key, basis[key])
 
     return basis_str
@@ -449,8 +447,9 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
 
     cq_env = ConquestEnv()
     nspec  = len(species_list)
-    makeion_input = Path("Conquest_ion_input")
-
+    makeion_input      = Path("Conquest_ion_input")
+    makeion_input_spec = Path("Conquest_ion_input"+"_"+species_list[0])
+    
     basis_strings = {}
     labels_string = '%block SpeciesLabels\n'
     i = 1
@@ -460,8 +459,8 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
         if 'gen_basis' in basis[species]:
             if 'basis_size' not in basis[species]:
                 print(f'basis_size not specified in basis for {species}')
-                print(f'Generating default basis (small)')
-                basis['basis_size'] = 'small'
+                print(f'Generating default basis (medium)')
+                basis['basis_size'] = 'medium'
             # get basic string - required to generate basis
             #cq_env.get('pseudo_path')
             
@@ -480,7 +479,7 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
             fileobj.write('# Only for basis generation!\n')
             fileobj.write(80 * '#' + '\n\n')
             fileobj.write(cqip_line('general.numberofspecies', nspec))
-            fileobj.write(cqip_line('io.plotoutput', True))
+            fileobj.write(cqip_line('io.plotoutput', False))
             fileobj.write('\n')
             fileobj.write(labels_string)
             for species in species_list:
@@ -488,6 +487,9 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
                 fileobj.write(basis_strings[species])
                 fileobj.write('%endblock\n\n')
 
+
+        copy(makeion_input, makeion_input_spec)
+            
         # generate the basis sets
         # TODO: method of overriding ion_params?
         # TODO: check that pseudo types are all the same
@@ -542,7 +544,8 @@ def parse_ion(species, ionfile):
     """
     ion_params = dict()
     # Check basis set type: siesta or hamann
-    # TODO this could be made more clever    
+    # TODO this could be made more clever
+    
     with open(ionfile, 'r') as cqion:
         for line in cqion:
             # pseudopotential_type:
@@ -640,10 +643,10 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
     """
 
     # Translation of ASE keys into Conquest XC functionals
-    cq_xc_dict = {'PZ': 1,     # Perdew-Zunger 81 LDA
-                  'LDA': 3,     # Perdew-Wang 92 LDA
-                  'PBE': 101,   # Perdew, Burke, Ernzerhof
-                  'WC': 104    # Wu-Cohen
+    cq_xc_dict = {'PZ':    1,     # Perdew-Zunger 81 LDA
+                  'LDA':   3,     # Perdew-Wang 92 LDA
+                  'PBE': 101,     # Perdew, Burke, Ernzerhof
+                  'WC':  104      # Wu-Cohen
                   }
     cq_input = []
     for key in parameters:
