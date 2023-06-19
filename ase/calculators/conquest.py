@@ -9,8 +9,8 @@ Authors: J Kane Shenton <jkshenton@gmail.com>
 """
 from __future__ import print_function
 
-#import warnings
-#import numpy as np
+# import warnings
+# import numpy as np
 from ase.units import Hartree
 from pathlib import Path
 from shutil import copy
@@ -42,7 +42,7 @@ class Conquest(FileIOCalculator):
         'atommove.typeofrun': 'static',
         'dm.solutionmethod': 'diagon'}
 
-    def __init__(self, restart=None, label=None, atoms=None, basis={}, 
+    def __init__(self, restart=None, label=None, atoms=None, basis={}, \
                  **kwargs):
 
         """Construct CONQUEST-calculator object.
@@ -103,22 +103,21 @@ class Conquest(FileIOCalculator):
                                  "number_of_supports"   : 9,
                                  "support_fn_range"     : 5.00,
                                  "pseudopotential_type" : "siesta"}}
-            
+
             Above is deprecated you have now 3 options which depend upon
             ConquestEnv by setting up CQ_PP_PATH and CQ_GEN_BASIS_CMD
-                                
-            CQ_PP_PATH is the absolute path towards a library of ion files 
+
+            CQ_PP_PATH is the absolute path towards a library of ion files
             (from the Conquest root tree located at ~/pseudo-and-pao)
-            
+
             CQ_GEN_BASIS_CMD is the absolute path towards the the MakeIonFiles
             (from the Conquest root tree located at ~/tools/BasisGeneration)
-            
-            
+
             option 1) specify the ion file names located in CQ_PP_PATH
-                              
+                  
                 basis = {'Na' : {'file' : 'Na_PBE_DZP_CQ.ion'},
                          'Cl' : {'file' : 'Cl_PBE_DZP_CQ.ion'}}
-            
+
             option 2)
 
             Alternatively, if paths to a pseudopotential library and the
@@ -149,21 +148,21 @@ class Conquest(FileIOCalculator):
         self.nspin = None
         self.coorfile = None
 
-        FileIOCalculator.__init__(self, restart=restart, label=self.label, 
+        FileIOCalculator.__init__(self, restart=restart, label=self.label,\
                                   atoms=atoms, **kwargs)
-        
+
         self.basis = {}
         for spec in basis:
             self.basis[spec] = \
                 Parameters({k.lower(): basis[spec][k] for k in basis[spec]})
             print('input basis:')
-            print(spec,self.basis[spec])
+            print(spec, self.basis[spec])
 
         self.parameters = Parameters({})
-        
+
         for key in kwargs:
             self.parameters[key.lower()] = kwargs[key]
-            
+
         for key in self.default_parameters:
             if key not in self.parameters:
                 self.parameters[key] = self.default_parameters[key]
@@ -181,24 +180,24 @@ class Conquest(FileIOCalculator):
         self.species_list = sort_by_atomic_number(atoms)
 
         # Get XC for ion generation as input XC ; use PBE if not
-        for key in self.parameters :
-            if ( key == 'xc'):
+        for key in self.parameters:
+            if (key == 'xc'):
                 ion_xc = self.parameters[key]
                 break
-            
+
             else:
                 ion_xc = 'PBE'
 
-        gen_basis = [ ]
-        for species in self.species_list :
-            if ( "gen_basis" in basis[species] ): 
-                                
-                if ( basis[species]["gen_basis"] ):                               
+        gen_basis = []
+        for species in self.species_list:
+            if ("gen_basis" in basis[species]): 
+                      
+                if (basis[species]["gen_basis"]):
                     gen_basis.append(True)
-                
+
                 else:                    
                     gen_basis.append(False)
-                    
+
             else:                
                 basis[species]["gen_basis"] = False
                 gen_basis.append(False)
@@ -209,22 +208,26 @@ class Conquest(FileIOCalculator):
             count += 1
  
             # TODO rewrite make_ion_files to avoid what is below           
-            basis_single        = {k: basis[k] for k in self.species_list}
+            basis_single = {k: basis[k] for k in self.species_list}
             species_single_list = [self.species_list[count-1]]
-            species_single      =  self.species_list[count-1]            
-            
+            species_single  = self.species_list[count-1]
+
             # Yes : run make_ion_files            
-            if ( test ):
-                if ( 'xc' in basis_single[species_single] ):
-                    
-                    if ( ion_xc != basis_single[species_single]['xc'] ):
-                        ConquestWarning("{} xc {} enforced for basis generation".format(species_single,ion_xc))                
+            if (test):
+                if ('xc' in basis_single[species_single]):
+
+                    if (ion_xc != basis_single[species_single]['xc']):
+                        ConquestWarning("{} xc {} enforced for basis \
+                                        generation".format(species_single,\
+                                            ion_xc))
+
                         basis_single[species_single]['xc'] = ion_xc
-                        
+
                 print('\nmake_ion_files input:')
-                print(species_single,basis_single[species_single])  
+                print(species_single, basis_single[species_single])  
                 print(ion_xc)
-                make_ion_files(basis_single, species_single_list, directory=self.directory, xc=ion_xc)
+                make_ion_files(basis_single, species_single_list, \
+                               directory=self.directory, xc=ion_xc)
                 
             # No : try to find the ion file                    
             else :
@@ -240,31 +243,33 @@ class Conquest(FileIOCalculator):
         dname = species + ".ion"
 
         # Name of the file from basis dictionary 
-        if ( "file" in basis[species] ):
+        if ("file" in basis[species]):
             fname = basis[species]["file"]
 
         # Default otherwise
         else:
             fname = dname
-        
+
         # Default working directory
         fullpath  = Path(self.directory).joinpath(dname)
-        
-        if ( not ion_dir or ion_dir == '.' or ion_dir == './' or ion_dir == '/' ):
+
+        if (not ion_dir or ion_dir == '.' or ion_dir == './' \
+            or ion_dir == '/'):
+
             ion_dir = Path('')
         else:
             ion_dir = Path(ion_dir)
 
-        if ( species not in basis ):
+        if (species not in basis):
             basis[species] = {}
-            
-        ion_file_path_lib = ion_dir.joinpath(Path("lib/"+fname))
-        ion_file_path     = ion_dir.joinpath(Path(       fname))
 
-        if ( "xc" in basis[species] ) :
-            ion_file_path_xc  = ion_dir.joinpath(Path(basis[species]["xc"]+"/"+species+'/'+fname))
-        else :
-            ion_file_path_xc  = ion_dir.joinpath(ion_xc+"/"+species+'/'+fname)
+        ion_file_path_lib = ion_dir.joinpath(Path("lib/"+fname))
+        ion_file_path = ion_dir.joinpath(Path(fname))
+
+        if ("xc" in basis[species]):
+            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"]+"/"+species+'/'+fname))
+        else:
+            ion_file_path_xc = ion_dir.joinpath(ion_xc+"/"+species+'/'+fname)
         
         count = 0
         for ion_file in [ion_file_path,\
@@ -272,28 +277,28 @@ class Conquest(FileIOCalculator):
                          ion_file_path_xc,\
                          Path(fname),\
                          Path(self.directory).joinpath(fname)]: 
-            
+
             print("Try to find {} in {}".format(fname,ion_file), end="")
-            if( ion_file.is_file() and ion_file != fullpath ):
+            if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")                
                 copy(ion_file, fullpath)
                 ConquestWarning("{} copied into {}".format(ion_file,fullpath))
                 count += 1
                 break
-            
-            elif( ion_file.is_file() and ion_file == fullpath ):
+
+            elif(ion_file.is_file() and ion_file == fullpath):
                 print("... Found")    
                 ConquestWarning("{} copied into {}".format(ion_file,fullpath))
                 count += 1
                 break
-            
+
             else:
                 print("... Not found")
-        
-        if ( count == 0) :
+
+        if (count == 0) :
             raise ConquestError("Ion file {} not found".format(fname))
 
-        #else:                                              
+        # else:                                              
             # Else if .ion file exists in the current directory
         #    print("Try to find {} in current directory".format(dname), end="")
         #    if ( Path(dname).is_file() ):
@@ -323,20 +328,20 @@ class Conquest(FileIOCalculator):
         # set io.title
         if (not 'io.title' in self.parameters):
             self.parameters['io.title'] = atoms.get_chemical_formula()
-            
-        #set coordfile from io.title
+
+        # set coordfile from io.title
         if (not 'io.coordinates' in self.parameters):
             coordfile = self.parameters['io.title'] + '.in'
             self.parameters['io.coordinates'] = coordfile
         else:
             coordfile = self.parameters['io.coordinates']
-        
-        #super().write_input(atoms, properties, system_changes)
+
+        # super().write_input(atoms, properties, system_changes)
 
         if not self.initialised:  # make the basis once only
-        
+
             cq_env = ConquestEnv()
-            
+
             try:
                 pseudo_dir = cq_env.get('pseudo_path')
 
@@ -344,8 +349,8 @@ class Conquest(FileIOCalculator):
                 pseudo_dir = './'                
 
             self.init_basis(atoms, self.basis, ion_dir=pseudo_dir)
-            
-        cq_in    = Path(self.directory).joinpath(Path(self.conquest_infile))
+
+        cq_in = Path(self.directory).joinpath(Path(self.conquest_infile))
         cq_coord = Path(self.directory).joinpath(Path(coordfile))
         
         with cq_in.open(mode='w') as infile_obj:
@@ -353,15 +358,15 @@ class Conquest(FileIOCalculator):
             write_conquest_input(infile_obj, atoms, self.species_list,
                                  self.parameters,
                                  directory=self.directory, basis=self.basis)
+
         with cq_coord.open(mode='w') as coordfile_obj:
             write_conquest(coordfile_obj, atoms, self.species_list) 
-            
+
         # it looks label is needed when using some ASE routines, eg. NEB
         if self.label : 
             self.parameters.write(self.label + '.ase')
-        
 
-    def read_results(self,atoms=None):
+    def read_results(self, atoms=None):
         """
         Parse energy, Fermi level, forces, stresses from Conquest_out
         """
@@ -370,16 +375,16 @@ class Conquest(FileIOCalculator):
 
         if ( atoms != None ):
             self.atoms = atoms
-        
+
         cq_out_path = Path(self.directory).joinpath(Path(self.conquest_outfile))
 
-        if not cq_out_path.is_file():
+        if (not cq_out_path.is_file()):
             raise ReadError
 
         with cq_out_path.open(mode='r') as outfile_obj:
-            #print(outfile_obj)   
+            # print(outfile_obj)   
             self.results = read_conquest_out(outfile_obj, self.atoms)
-            
+
         # Eigenvalues are printed only for IO.Iprint > 2, and diagonalisation
         if (self.parameters['dm.solutionmethod'] == 'diagon'):
             if (self.parameters['io.iprint'] >= 2):
@@ -393,7 +398,7 @@ class Conquest(FileIOCalculator):
         weights
         """
         from ase.io.conquest import read_bands, get_fermi_level, get_k_points
-        
+
         with open(cq_out_path, 'r') as cqout_fileobj:
             self.eFermi = get_fermi_level(cqout_fileobj)
 
@@ -421,18 +426,18 @@ class Conquest(FileIOCalculator):
     def get_fermi_level(self):
 
         return self.eFermi
-    
+
     def get_number_of_spins(self):
-        
+
         for key in self.parameters:
 
             if ( key == 'nspin'):
                 self.nspin = self.parameters[key]
-                
+
         if ( self.nspin is None ):        
                 ConquestWarning('nspin not specified in Conquest input')
                 self.nspin = 1
-                
+
         return self.nspin      
 
 
