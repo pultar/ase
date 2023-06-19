@@ -42,7 +42,7 @@ class Conquest(FileIOCalculator):
         'atommove.typeofrun': 'static',
         'dm.solutionmethod': 'diagon'}
 
-    def __init__(self, restart=None, label=None, atoms=None, basis={}, \
+    def __init__(self, restart=None, label=None, atoms=None, basis={},
                  **kwargs):
 
         """Construct CONQUEST-calculator object.
@@ -114,7 +114,7 @@ class Conquest(FileIOCalculator):
             (from the Conquest root tree located at ~/tools/BasisGeneration)
 
             option 1) specify the ion file names located in CQ_PP_PATH
-                  
+
                 basis = {'Na' : {'file' : 'Na_PBE_DZP_CQ.ion'},
                          'Cl' : {'file' : 'Cl_PBE_DZP_CQ.ion'}}
 
@@ -148,7 +148,7 @@ class Conquest(FileIOCalculator):
         self.nspin = None
         self.coorfile = None
 
-        FileIOCalculator.__init__(self, restart=restart, label=self.label,\
+        FileIOCalculator.__init__(self, restart=restart, label=self.label,
                                   atoms=atoms, **kwargs)
 
         self.basis = {}
@@ -190,55 +190,53 @@ class Conquest(FileIOCalculator):
 
         gen_basis = []
         for species in self.species_list:
-            if ("gen_basis" in basis[species]): 
-                      
+            if ("gen_basis" in basis[species]):
+
                 if (basis[species]["gen_basis"]):
                     gen_basis.append(True)
 
-                else:                    
+                else:
                     gen_basis.append(False)
 
-            else:                
+            else:
                 basis[species]["gen_basis"] = False
                 gen_basis.append(False)
 
-        count = 0        
+        count = 0
         # Test weither or not if we need to generate the basis
-        for test in gen_basis:            
+        for test in gen_basis:
             count += 1
- 
-            # TODO rewrite make_ion_files to avoid what is below           
+
+            # TODO rewrite make_ion_files to avoid what is below
             basis_single = {k: basis[k] for k in self.species_list}
             species_single_list = [self.species_list[count-1]]
-            species_single  = self.species_list[count-1]
+            species_single = self.species_list[count-1]
 
-            # Yes : run make_ion_files            
+            # Yes : run make_ion_files
             if (test):
                 if ('xc' in basis_single[species_single]):
 
                     if (ion_xc != basis_single[species_single]['xc']):
                         ConquestWarning("{} xc {} enforced for basis \
-                                        generation".format(species_single,\
-                                            ion_xc))
+                                        generation".format(species_single,
+                                        ion_xc))
 
                         basis_single[species_single]['xc'] = ion_xc
 
                 print('\nmake_ion_files input:')
-                print(species_single, basis_single[species_single])  
+                print(species_single, basis_single[species_single])
                 print(ion_xc)
-                make_ion_files(basis_single, species_single_list, \
+                make_ion_files(basis_single, species_single_list,
                                directory=self.directory, xc=ion_xc)
-                
-            # No : try to find the ion file                    
-            else :
+
+            # No : try to find the ion file
+            else:
                 self.find_ion_file(species_single, basis, ion_dir, ion_xc)
-                
-            
+
         self.initialised = True
 
     def find_ion_file(self, species, basis, ion_dir, ion_xc):
 
-        
         # Default name used for the input
         dname = species + ".ion"
 
@@ -267,7 +265,8 @@ class Conquest(FileIOCalculator):
         ion_file_path = ion_dir.joinpath(Path(fname))
 
         if ("xc" in basis[species]):
-            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"]+"/"+species+'/'+fname))
+            ion_file_path_xc = ion_dir.joinpath(Path(basis[species]["xc"]+"/"+\
+                                                     species+'/'+fname))
         else:
             ion_file_path_xc = ion_dir.joinpath(ion_xc+"/"+species+'/'+fname)
         
