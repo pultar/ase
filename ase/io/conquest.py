@@ -863,15 +863,15 @@ def read_bands(nspin, fileobj):
     Authors Jack Poulton & J Kane Shenton
     """
 
-    nkpt_frac_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints \
-                              in fractional')
+    nkpt_frac_re = \
+        re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in fractional')
 
     all_kpts_re = re.compile(
         r'All\s+(\d+)\s+Kpoints in fractional coordinates:' +
         '(.*?)\n\n', re.S | re.M)
 
-    nkpt_cart_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in\
-                              Cartesian')
+    nkpt_cart_re = \
+        re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in Cartesian')
 
     kpt_block_1_re = \
         re.compile(r'Eigenvalues and occupancies(.*?)Sum of eigenvalues(.*?)\n',
