@@ -115,7 +115,8 @@ def Conquest_orthorhombic_check(atoms, verbose):
                                                            no_idealize=False,
                                                            symprec=1e-5)
         # New atoms fractional positions
-        atoms = Atoms(numbers, positions=scaled_positions, pbc=[True, True, True])
+        atoms = Atoms(numbers, positions=scaled_positions, 
+                      pbc=[True, True, True])
         # Set new cell
         atoms.set_cell(cell, scale_atoms=True)
         # Test again and stop if not orthorhombic
@@ -149,9 +150,9 @@ def print_cell_data(atoms, verbose):
         print('Cartesian atomic positions (Ang.)')
         for i in range(len(atoms)):
             # print formated forces
-            print('  {}{:14.6f}{:14.6f}{:14.6f}'.format(atom_names[i],
-                                                        atom_positions[i,0],
-                                                        atom_positions[i,1],
+            print('  {}{:14.6f}{:14.6f}{:14.6f}'.format(atom_names[i], 
+                                                        atom_positions[i,0], 
+                                                        atom_positions[i,1], 
                                                         atom_positions[i,2]))
 
 
@@ -160,24 +161,24 @@ def read_conquest_out(fileobj, atoms):
     Parse energy, forces and stresses from the Conquest_out file
     Returns results :: dict
     """
-# WARNING: format change into release XXX   
+# WARNING: format change into release XXX
 # ***old format pre-release
 #    nspec_re = re.compile(
-#        r'The number of atomic species in the system is.*?(\d+)(.*?)' + 
+#        r'The number of atomic species in the system is.*?(\d+)(.*?)' +
 #        r'Energy tolerance required', re.S | re.M)
 #
-# ***new format:  
+# ***new format:
     nspec_re = re.compile(
-        r'Number of species.*?(\d+)(.*?)' + 
+        r'Number of species.*?(\d+)(.*?)' +
         r'end of species report', re.S | re.M)
 # END WARNING
 
     # (?s:.*) forces search from the *end* of the string
     energy_re = re.compile(r'(?s:.*)DFT total energy\s+=\s+([-]?\d+\.\d+) Ha')
-    
+
     force_re = re.compile(
         r'(?s:.*)Atom\s+X\s+Y\s+Z\s+(.*?)\s+end of force report', re.S | re.M)
-    
+
     stress_re = re.compile(r'(?s:.*)Total stress:\s+(.*?)\s+GPa')
 
     num_atoms = len(atoms)
@@ -189,18 +190,19 @@ def read_conquest_out(fileobj, atoms):
 
 #
 #
-#    test_re = re.compile(r'The number of atomic species in the system is.*?(\d+)', re.S | re.M)
+#    test_re = re.compile(r'The number of atomic species in the system 
+#    is.*?(\d+)', re.S | re.M)
 #    test_text = fileobj.read()
 #    res = re.search(test_re, test_text)
 #    print('res', res)
 #    print(res.group(0))
 #    print(res.group(1),len(res.group(1)))
-#    
+#
 #    fileobj.seek(0)
 ##
     text = fileobj.read()
     m = re.search(nspec_re, text)
-    
+
     if not m:
         raise ConquestError("Could not find number of species in Conquest_out")
     nspec = int(m.group(1))
@@ -210,17 +212,17 @@ def read_conquest_out(fileobj, atoms):
 
     order = []
     for n in range(nspec):
-# WARNING: format change into release XXX   
-# ***old format pre-release        
-#        index, spec, mass, charge, rcut, nsf = specinfo[n].split()
-# ***new format:  
+        # WARNING: format change into release XXXX
+        # ***old format pre-release
+        #        index, spec, mass, charge, rcut, nsf = specinfo[n].split()
+        # ***new format:
         #print(specinfo[n].split())
     
         tmp1, index, mass, charge, rcut, nsf, spec, tmp2 = specinfo[n].split()
-# END WARNING
+        # END WARNING
 
         order.append(spec)
-        
+
     m = re.search(energy_re, text)
     if not m:
         raise ConquestError("Could not find DFT total energy in Conquest_out")
@@ -231,10 +233,10 @@ def read_conquest_out(fileobj, atoms):
         raise ConquestError("Could not find forces in Conquest_out")
     f = m.group(1).splitlines()
     for atom in range(num_atoms):
-# WARNING: format change into release XXX   
-# ***old format pre-release        
+# WARNING: format change into release XXX
+# ***old format pre-release
 #        for i, force in enumerate(f[atom].split()[1:]):
-# ***new format:  
+# ***new format:
         for i, force in enumerate(f[atom].split()[2:]):
 # END WARNING
             forces[atom, i] = float(force)
@@ -245,10 +247,10 @@ def read_conquest_out(fileobj, atoms):
     stresses[0:3] = np.array([float(bit) for bit in m.group(1).split()])
     energy = energy * Hartree
     force = forces * Hartree / Bohr    
-# WARNING: format change into release XXX   
-# ***old format pre-release        
+# WARNING: format change into release XXX
+# ***old format pre-release
 #    stresses = stresses * Hartree / (atoms.get_cell().trace())
-# ***new format: convert from GPa to eV/Ang 
+# ***new format: convert from GPa to eV/Ang
     stresses = stresses / 160.2176621
 # END WARNING
 
@@ -274,7 +276,8 @@ def read_conquest(fileobj, fractional=True, atomic_order=[]):
         lines.append(fileobj.readline().split())
     natoms = int(fileobj.readline().split()[0])
     # CONQUEST always uses orthorhombic cells
-    cell = [float(lines[0][0])*Bohr, float(lines[1][1])*Bohr, float(lines[2][2])*Bohr]
+    cell = [float(lines[0][0]) * Bohr, float(lines[1][1]) * Bohr, 
+            float(lines[2][2]) * Bohr]
     # This is for constraining certain atoms
     moveflags = np.empty((natoms, 3), dtype=bool)
     con = {'t': True, 'f': False}
@@ -316,17 +319,17 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     """
     Write structure to CONQUEST-formatted file.
     """
-    #LAT: not needed / use ase.geometry.orthorhombic instead
+    # LAT: not needed / use ase.geometry.orthorhombic instead
     #
-    #orthorhombic = True
-    #small = 1.0E-3
-    #angles = atoms.get_cell_lengths_and_angles()[3:6]
-    #for i in range(3):
-    #    if ( abs(angles[i] - 90.0) >= small ):
-    #        orthorhombic = False
-    #assert orthorhombic, "Conquest can only handle orthorhombic cells"
+    # orthorhombic = True
+    # small = 1.0E-3
+    # angles = atoms.get_cell_lengths_and_angles()[3:6]
+    # for i in range(3):
+    #     if ( abs(angles[i] - 90.0) >= small ):
+    #         orthorhombic = False
+    # assert orthorhombic, "Conquest can only handle orthorhombic cells"
     #
-    #test_cell = atoms.get_cell()  
+    # test_cell = atoms.get_cell()
     #
     # Test if orthorhombic / stop if not
     if ( not is_orthorhombic(atoms.get_cell()) ):
