@@ -87,7 +87,7 @@ class ConquestEnv:
             raise RuntimeError(
                 '{} returned an error: {}'.format(command, errorcode))
 
-    
+
 class EnvError(Exception):
     """Exceptions related to test environment
 
@@ -100,6 +100,7 @@ class EnvError(Exception):
 def __init__(self, message):
     self.message = message
 
+
 def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
     # get cell
     cell = atoms.get_cell()
@@ -109,9 +110,9 @@ def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
         ConquestWarning('Current cell not orthorhombic:')
         print_cell_data(atoms, verbose=verbose)
         # If not orthorhombic standardize and check
-        cell, scaled_positions, numbers = standardize_cell(atoms, 
-                                                           to_primitive=False, 
-                                                           no_idealize =False, 
+        cell, scaled_positions, numbers = standardize_cell(atoms,
+                                                           to_primitive=False,
+                                                           no_idealize =False,
                                                            symprec=1e-5)
         # New atoms fractional positions
         atoms = Atoms(numbers, positions=scaled_positions, pbc=[True,True,True])
@@ -120,18 +121,20 @@ def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
         # Test again and stop if not orthorhombic
         orthorhombic(cell)
         # Print new cell data
-        print('\n') ; ConquestWarning('New orthorhombic cell:')
-        print_cell_data(atoms,verbose=verbose)
-        # Take care "atoms" may have been modified !        
+        print('\n')
+        ConquestWarning('New orthorhombic cell:')
+        print_cell_data(atoms, verbose=verbose)
+        # Take care "atoms" may have been modified !
     return atoms
 
-def print_cell_data(atoms,verbose):
+
+def print_cell_data(atoms, verbose):
     cell = atoms.get_cell()
     cell_param = atoms.get_cell_lengths_and_angles()        
     print('Bravais lattice:')
-    print('  ',cell.get_bravais_lattice())        
+    print('  ' , cell.get_bravais_lattice())
     print('Space group:')
-    print('  ',get_spacegroup(atoms, symprec=1e-5))   
+    print('  ', get_spacegroup(atoms, symprec=1e-5))
     print('Cell parameters (Ang. and degree):')
     print('   a = {:14.6f}'.format(cell_param[0]))
     print('   b = {:14.6f}'.format(cell_param[1]))
@@ -140,7 +143,7 @@ def print_cell_data(atoms,verbose):
     print('   beta  = {:8.4f}'.format(cell_param[4]))
     print('   gamma = {:8.4f}'.format(cell_param[5]))
     #
-    if ( verbose ):
+    if (verbose):
         atom_positions = atoms.get_positions()
         atom_names     = atoms.get_chemical_symbols()
         print('Cartesian atomic positions (Ang.)')
