@@ -101,8 +101,8 @@ def __init__(self, message):
     self.message = message
 
 
-def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
-    # get cell
+def Conquest_orthorhombic_check(atoms, verbose):
+    # get cell from ASE Atoms object
     cell = atoms.get_cell()
     # test cell and if not orthorhombic standardize and check again
     if (not is_orthorhombic(cell)):
@@ -112,10 +112,10 @@ def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
         # If not orthorhombic standardize and check
         cell, scaled_positions, numbers = standardize_cell(atoms,
                                                            to_primitive=False,
-                                                           no_idealize =False,
+                                                           no_idealize=False,
                                                            symprec=1e-5)
         # New atoms fractional positions
-        atoms = Atoms(numbers, positions=scaled_positions, pbc=[True,True,True])
+        atoms = Atoms(numbers, positions=scaled_positions, pbc=[True, True, True])
         # Set new cell
         atoms.set_cell(cell, scale_atoms=True)
         # Test again and stop if not orthorhombic
@@ -130,9 +130,9 @@ def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
 
 def print_cell_data(atoms, verbose):
     cell = atoms.get_cell()
-    cell_param = atoms.get_cell_lengths_and_angles()        
+    cell_param = atoms.get_cell_lengths_and_angles()
     print('Bravais lattice:')
-    print('  ' , cell.get_bravais_lattice())
+    print('  ', cell.get_bravais_lattice())
     print('Space group:')
     print('  ', get_spacegroup(atoms, symprec=1e-5))
     print('Cell parameters (Ang. and degree):')
@@ -145,13 +145,15 @@ def print_cell_data(atoms, verbose):
     #
     if (verbose):
         atom_positions = atoms.get_positions()
-        atom_names     = atoms.get_chemical_symbols()
+        atom_names = atoms.get_chemical_symbols()
         print('Cartesian atomic positions (Ang.)')
         for i in range(len(atoms)):
             # print formated forces
             print('  {}{:14.6f}{:14.6f}{:14.6f}'.format(atom_names[i],
-            atom_positions[i,0],atom_positions[i,1],atom_positions[i,2]))
-    
+                                                        atom_positions[i,0],
+                                                        atom_positions[i,1],
+                                                        atom_positions[i,2]))
+
 
 def read_conquest_out(fileobj, atoms):
     """
@@ -173,14 +175,14 @@ def read_conquest_out(fileobj, atoms):
     # (?s:.*) forces search from the *end* of the string
     energy_re = re.compile(r'(?s:.*)DFT total energy\s+=\s+([-]?\d+\.\d+) Ha')
     
-    force_re  = re.compile(
+    force_re = re.compile(
         r'(?s:.*)Atom\s+X\s+Y\s+Z\s+(.*?)\s+end of force report', re.S | re.M)
     
     stress_re = re.compile(r'(?s:.*)Total stress:\s+(.*?)\s+GPa')
 
     num_atoms = len(atoms)
-    forces    = np.empty([num_atoms, 3])
-    stresses  = np.zeros(6)
+    forces = np.empty([num_atoms, 3])
+    stresses = np.zeros(6)
     nspec = 0
 #
 #
@@ -241,15 +243,14 @@ def read_conquest_out(fileobj, atoms):
     if not m:
         raise ConquestError("Could not find stresses in Conquest_out")
     stresses[0:3] = np.array([float(bit) for bit in m.group(1).split()])
-    energy   = energy * Hartree
-    force    = forces * Hartree / Bohr    
+    energy = energy * Hartree
+    force = forces * Hartree / Bohr    
 # WARNING: format change into release XXX   
 # ***old format pre-release        
 #    stresses = stresses * Hartree / (atoms.get_cell().trace())
 # ***new format: convert from GPa to eV/Ang 
     stresses = stresses / 160.2176621
 # END WARNING
-
 
     stresses = stresses * Hartree / (atoms.get_cell().trace())
 
@@ -288,6 +289,7 @@ def read_conquest(fileobj, fractional=True, atomic_order=[]):
                         float(z) * cell[2]]
         else:
             position = [float(x) * Bohr, float(y) * Bohr, float(z) * Bohr]
+
         moveflags[n] = [not con[cx.lower()], not con[cy.lower()],
                         not con[cz.lower()]]
         n += 1
