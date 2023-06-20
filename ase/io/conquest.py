@@ -190,7 +190,7 @@ def read_conquest_out(fileobj, atoms):
 
 #
 #
-#    test_re = re.compile(r'The number of atomic species in the system 
+#    test_re = re.compile(r'The number of atomic species in the system
 #    is.*?(\d+)', re.S | re.M)
 #    test_text = fileobj.read()
 #    res = re.search(test_re, test_text)
@@ -242,7 +242,7 @@ def read_conquest_out(fileobj, atoms):
         raise ConquestError("Could not find stresses in Conquest_out")
     stresses[0:3] = np.array([float(bit) for bit in m.group(1).split()])
     energy = energy * Hartree
-    force = forces * Hartree / Bohr    
+    force = forces * Hartree / Bohr
     stresses = stresses / 160.2176621
     stresses = stresses * Hartree / (atoms.get_cell().trace())
 
@@ -266,7 +266,7 @@ def read_conquest(fileobj, fractional=True, atomic_order=[]):
         lines.append(fileobj.readline().split())
     natoms = int(fileobj.readline().split()[0])
     # CONQUEST always uses orthorhombic cells
-    cell = [float(lines[0][0]) * Bohr, float(lines[1][1]) * Bohr, 
+    cell = [float(lines[0][0]) * Bohr, float(lines[1][1]) * Bohr,
             float(lines[2][2]) * Bohr]
     # This is for constraining certain atoms
     moveflags = np.empty((natoms, 3), dtype=bool)
@@ -322,7 +322,7 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     # test_cell = atoms.get_cell()
     #
     # Test if orthorhombic / stop if not
-    if ( not is_orthorhombic(atoms.get_cell()) ):
+    if (not is_orthorhombic(atoms.get_cell())):
         raise ConquestError("Conquest can only handle orthorhombic cells")
 
     cellpar = atoms.get_cell_lengths_and_angles()
@@ -381,12 +381,12 @@ def setup_basis(species, basis=None, version="v323", xc="PBE",
     string  ::  vkb_file     Pseudopotential VKB file (.pot)
     """
     special = ['gen_basis', 'basis_size', 'pseudopotential_type']
-    cq_env  = ConquestEnv()    
-    path    = Path(cq_env.get('pseudo_path')).joinpath(Path(xc+'/'+species))
+    cq_env = ConquestEnv()    
+    path = Path(cq_env.get('pseudo_path')).joinpath(Path(xc + '/' + species))
 
     if not pot_file or not vkb_file:
-        pot_file = path.joinpath(species+'.pot')
-        in_file  = path.joinpath(species+'.in')
+        pot_file = path.joinpath(species + '.pot')
+        in_file = path.joinpath(species + '.in')
     # Does the pseudo exist for this species?
     if not pot_file.is_file():
         raise ReadError('CQ pseudo file ' + str(pot_file) + ' missing.')
@@ -397,9 +397,9 @@ def setup_basis(species, basis=None, version="v323", xc="PBE",
     basis_str += cqip_line("atom.pseudopotentialfile", str(in_file))
     basis_str += cqip_line("atom.vkbfile", str(pot_file))
     basis_str += cqip_line('atom.basissize', basis["basis_size"])
-  
-    for key in basis:        
-        if ( (key not in special) and (key != 'xc') ):
+
+    for key in basis:
+        if ((key not in special) and (key != 'xc')):
             basis_str += cqip_line(key, basis[key])
 
     return basis_str
@@ -440,15 +440,15 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
     species_list :: list     *ordered* list of atomic species
     string  ::  command      path to gen_basis executable; otherwise set by
     environment variable CQ_GEN_BASIS_CMD
-        
+
     """
     # TODO: need to rewrite since no more species_list ; single species
 
     cq_env = ConquestEnv()
-    nspec  = len(species_list)
-    makeion_input      = Path("Conquest_ion_input")
-    makeion_input_spec = Path("Conquest_ion_input"+"_"+species_list[0])
-    
+    nspec = len(species_list)
+    makeion_input = Path("Conquest_ion_input")
+    makeion_input_spec = Path("Conquest_ion_input" + "_" + species_list[0])
+
     basis_strings = {}
     labels_string = '%block SpeciesLabels\n'
     i = 1
@@ -457,13 +457,14 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
         # We could do this by generalising 'species'
         if 'gen_basis' in basis[species]:
             if 'basis_size' not in basis[species]:
-                print(f'basis_size not specified in basis for {species}')
-                print(f'Generating default basis (medium)')
+                print('basis_size not specified in basis for {species}')
+                print('Generating default basis (medium)')
                 basis['basis_size'] = 'medium'
             # get basic string - required to generate basis
-            #cq_env.get('pseudo_path')
-            
-            basis_strings[species] = setup_basis(species, basis=basis[species], xc=xc)
+            # cq_env.get('pseudo_path')
+
+            basis_strings[species] = setup_basis(species, basis=basis[species],
+                                                 xc=xc)
             # Write basic Conquest_input file in order to generate basis:
             labels_string += f'{i} {species}\n'
             i += 1
@@ -486,20 +487,19 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
                 fileobj.write(basis_strings[species])
                 fileobj.write('%endblock\n\n')
 
-
         copy(makeion_input, makeion_input_spec)
-            
+
         # generate the basis sets
         # TODO: method of overriding ion_params?
         # TODO: check that pseudo types are all the same
         if not command:
             command = cq_env.get('gen_basis_command')
-        
+
         cq_env.run_command(command)
-        
+
         for species in species_list:
             ion_name_orig = species + 'CQ.ion'
-            ion_name_new  = species + '.ion'
+            ion_name_new = species + '.ion'
             move(ion_name_orig, ion_name_new)
 
 
@@ -544,7 +544,7 @@ def parse_ion(species, ionfile):
     ion_params = dict()
     # Check basis set type: siesta or hamann
     # TODO this could be made more clever
-    
+
     with open(ionfile, 'r') as cqion:
         for line in cqion:
             # pseudopotential_type:
@@ -642,15 +642,15 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
     """
 
     # Translation of ASE keys into Conquest XC functionals
-    cq_xc_dict = {'PZ':    1,     # Perdew-Zunger 81 LDA
-                  'LDA':   3,     # Perdew-Wang 92 LDA
-                  'PBE': 101,     # Perdew, Burke, Ernzerhof
-                  'WC':  104      # Wu-Cohen
+    cq_xc_dict = {'PZ': 1,     # Perdew-Zunger 81 LDA
+                  'LDA': 3,    # Perdew-Wang 92 LDA
+                  'PBE': 101,  # Perdew, Burke, Ernzerhof
+                  'WC': 104    # Wu-Cohen
                   }
     cq_input = []
     for key in parameters:
         # special cases
-        if   key == 'grid_cutoff':
+        if key == 'grid_cutoff':
             cq_input.append(cqip_line("grid.gridcutoff",
                                       parameters['grid_cutoff']))
         elif key == 'xc':
@@ -666,14 +666,14 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
                                       parameters['scf_tolerance']))
         elif key == 'kpts':
             kpt_string = write_kpoints(atoms, parameters['kpts'])
-            
+ 
         elif key == 'nspin':
             polarized = (parameters['nspin'] == 2)
             cq_input.append(cqip_line('spin.spinpolarised', polarized))
 
         elif key == 'directory':
             pass
-            
+
         # all other keywords
         else:
             cq_input.append(cqip_line(key, parameters[key]))
@@ -717,7 +717,7 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
         fileobj.write('%endblock\n')
 
 
-def write_kpoints(atoms, kpts):    
+def write_kpoints(atoms, kpts):
     """
     Write the part of Conquest_input where the k-points are specified.
     Generates either a Monkhorst-Pack grid or a set of points with weights.
@@ -800,7 +800,8 @@ def write_kpoints(atoms, kpts):
                 k_r = special_kpoints[point_set[ik]]
                 kpt_string += f'{k_r[0]:2.6f} {k_r[1]:2.6f} {k_r[2]:2.6f}\n'
                 k_r_2 = special_kpoints[point_set[ik + 1]]
-                kpt_string += f'{k_r_2[0]:2.6f} {k_r_2[1]:2.6f} {k_r_2[2]:2.6f}\n'
+                kpt_string += f'{k_r_2[0]:2.6f} {k_r_2[1]:2.6f} \
+                                {k_r_2[2]:2.6f}\n'
         kpt_string += '%endblock\n'
 
     return kpt_string
@@ -845,7 +846,7 @@ def get_k_points(fileobj):
         m = re.search(all_kpts_re, text)
 
     nkpts = int(m.group(1))
-    kpts  = m.group(2).strip().split('\n')
+    kpts = m.group(2).strip().split('\n')
     for line in range(nkpts):
         i, kx, ky, kz, weight = kpts[line].strip().split()
         kpoints.append([float(kx), float(ky), float(kz)])
@@ -862,13 +863,15 @@ def read_bands(nspin, fileobj):
     Authors Jack Poulton & J Kane Shenton
     """
 
-    nkpt_frac_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in fractional')
+    nkpt_frac_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints \
+                              in fractional')
 
     all_kpts_re = re.compile(
         r'All\s+(\d+)\s+Kpoints in fractional coordinates:' +
         '(.*?)\n\n', re.S | re.M)
 
-    nkpt_cart_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in Cartesian')
+    nkpt_cart_re = re.compile(r'(\d+)\s+symmetry inequivalent Kpoints in\
+                              Cartesian')
 
     kpt_block_1_re = \
         re.compile(r'Eigenvalues and occupancies(.*?)Sum of eigenvalues(.*?)\n',
@@ -890,7 +893,7 @@ def read_bands(nspin, fileobj):
     try:
         m = re.search(nkpt_frac_re, text)
         nkpoints = int(m.group(1))        
-        
+
     except AttributeError:
         try:
             m = re.search(nkpt_cart_re, text)
@@ -902,7 +905,7 @@ def read_bands(nspin, fileobj):
                 nkpoints = int(m.group(1))
 
             except AttributeError:
-                print('re.search error!')    
+                print('re.search error!')
 
     if nspin == 1:
         kpt_blocks = re.findall(kpt_block_1_re, text)
@@ -933,7 +936,7 @@ def read_bands(nspin, fileobj):
                               flags=re.S | re.M)
             eigs_2 = re.split(r'\s\s\s+', m.group(4).strip(),
                               flags=re.S | re.M)
-            
+
             for i, pair in enumerate(eigs_1):
                 eig_1, occ_1 = [float(bit) for bit in pair.split()]
                 eig_2, occ_2 = [float(bit) for bit in eigs_2[i].split()]
@@ -949,6 +952,6 @@ def sort_by_atomic_number(atoms):
     """
     Sort a list of atomic species by atomic number
     """
-    sorted_numbers  = np.array(sorted(set(atoms.numbers)))
+    sorted_numbers = np.array(sorted(set(atoms.numbers)))
     species_symbols = Symbols(sorted_numbers)
     return [species for species in species_symbols]
