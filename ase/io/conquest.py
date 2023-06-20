@@ -381,7 +381,7 @@ def setup_basis(species, basis=None, version="v323", xc="PBE",
     string  ::  vkb_file     Pseudopotential VKB file (.pot)
     """
     special = ['gen_basis', 'basis_size', 'pseudopotential_type']
-    cq_env = ConquestEnv()    
+    cq_env = ConquestEnv()
     path = Path(cq_env.get('pseudo_path')).joinpath(Path(xc + '/' + species))
 
     if not pot_file or not vkb_file:
@@ -666,7 +666,7 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
                                       parameters['scf_tolerance']))
         elif key == 'kpts':
             kpt_string = write_kpoints(atoms, parameters['kpts'])
- 
+
         elif key == 'nspin':
             polarized = (parameters['nspin'] == 2)
             cq_input.append(cqip_line('spin.spinpolarised', polarized))
@@ -892,7 +892,7 @@ def read_bands(nspin, fileobj):
 
     try:
         m = re.search(nkpt_frac_re, text)
-        nkpoints = int(m.group(1))        
+        nkpoints = int(m.group(1))
 
     except AttributeError:
         try:
