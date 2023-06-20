@@ -3,10 +3,9 @@ This module contains functions to write all CONQUEST input files and
 read all CONQUEST output files.
 """
 import re
-import os, sys
+import os
 import subprocess
 
-import warnings
 from inspect import currentframe, getframeinfo
 
 import numpy as np
@@ -23,12 +22,12 @@ from ase.symbols import Symbols
 from ase.geometry import orthorhombic, is_orthorhombic
 from spglib import standardize_cell, get_spacegroup
 
-# TODO give the reference
 
 class Error(Exception):
     """Base class for exceptions in this module
     """
     pass
+
 
 class ConquestError(Error):
     """Exceptions related to Conquest I/O
@@ -37,19 +36,18 @@ class ConquestError(Error):
     ----------
     message : explanation of the error
     """
-
     def __init__(self, message):
         self.message = message
         
 def ConquestWarning(message):
-    
+
     frameinfo = getframeinfo(currentframe().f_back)
 
     print('## ConquestWarning ##')
-    print('file:',frameinfo.filename,', line:',frameinfo.lineno)
-    print('>>>> ',message)
-        
-    
+    print('file:', frameinfo.filename, ', line:', frameinfo.lineno)
+    print('>>>> ', message)     
+
+
 class ConquestEnv:
     """Environmental variables for Conquest
 
@@ -61,7 +59,7 @@ class ConquestEnv:
 
     def __init__(self, stop=True):
         self._variables = {
-            'cq_command' : 'ASE_CONQUEST_COMMAND',
+            'cq_command': 'ASE_CONQUEST_COMMAND',
             'pseudo_path': 'CQ_PP_PATH',
             'gen_basis_command': 'CQ_GEN_BASIS_CMD'
         }
