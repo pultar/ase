@@ -115,7 +115,7 @@ def Conquest_orthorhombic_check(atoms, verbose):
                                                            no_idealize=False,
                                                            symprec=1e-5)
         # New atoms fractional positions
-        atoms = Atoms(numbers, positions=scaled_positions, 
+        atoms = Atoms(numbers, positions=scaled_positions,
                       pbc=[True, True, True])
         # Set new cell
         atoms.set_cell(cell, scale_atoms=True)
@@ -150,10 +150,10 @@ def print_cell_data(atoms, verbose):
         print('Cartesian atomic positions (Ang.)')
         for i in range(len(atoms)):
             # print formated forces
-            print('  {}{:14.6f}{:14.6f}{:14.6f}'.format(atom_names[i], 
-                                                        atom_positions[i,0], 
-                                                        atom_positions[i,1], 
-                                                        atom_positions[i,2]))
+            print('  {}{:14.6f}{:14.6f}{:14.6f}'.format(atom_names[i],
+                                                        atom_positions[i, 0],
+                                                        atom_positions[i, 1],
+                                                        atom_positions[i, 2]))
 
 
 def read_conquest_out(fileobj, atoms):
@@ -216,8 +216,8 @@ def read_conquest_out(fileobj, atoms):
         # ***old format pre-release
         #        index, spec, mass, charge, rcut, nsf = specinfo[n].split()
         # ***new format:
-        #print(specinfo[n].split())
-    
+        # print(specinfo[n].split())
+
         tmp1, index, mass, charge, rcut, nsf, spec, tmp2 = specinfo[n].split()
         # END WARNING
 
@@ -232,13 +232,9 @@ def read_conquest_out(fileobj, atoms):
     if not m:
         raise ConquestError("Could not find forces in Conquest_out")
     f = m.group(1).splitlines()
+
     for atom in range(num_atoms):
-# WARNING: format change into release XXX
-# ***old format pre-release
-#        for i, force in enumerate(f[atom].split()[1:]):
-# ***new format:
         for i, force in enumerate(f[atom].split()[2:]):
-# END WARNING
             forces[atom, i] = float(force)
 
     m = re.search(stress_re, text)
@@ -247,13 +243,7 @@ def read_conquest_out(fileobj, atoms):
     stresses[0:3] = np.array([float(bit) for bit in m.group(1).split()])
     energy = energy * Hartree
     force = forces * Hartree / Bohr    
-# WARNING: format change into release XXX
-# ***old format pre-release
-#    stresses = stresses * Hartree / (atoms.get_cell().trace())
-# ***new format: convert from GPa to eV/Ang
     stresses = stresses / 160.2176621
-# END WARNING
-
     stresses = stresses * Hartree / (atoms.get_cell().trace())
 
     return {'energy': energy, 'forces': force, 'stress': stresses}
