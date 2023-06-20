@@ -38,14 +38,15 @@ class ConquestError(Error):
     """
     def __init__(self, message):
         self.message = message
-        
+
+
 def ConquestWarning(message):
 
     frameinfo = getframeinfo(currentframe().f_back)
 
     print('## ConquestWarning ##')
     print('file:', frameinfo.filename, ', line:', frameinfo.lineno)
-    print('>>>> ', message)     
+    print('>>>> ', message)
 
 
 class ConquestEnv:
@@ -85,31 +86,33 @@ class ConquestEnv:
         if errorcode:
             raise RuntimeError(
                 '{} returned an error: {}'.format(command, errorcode))
-            
+
+    
 class EnvError(Exception):
-  """Exceptions related to test environment
+    """Exceptions related to test environment
 
-  Attributes
-  ----------
-  message : explanation of the error
-  """
+    Attributes
+    ----------
+    message : explanation of the error
+    """
 
-  def __init__(self, message):
+
+def __init__(self, message):
     self.message = message
 
-def Conquest_orthorhombic_check(atoms,verbose):# atoms = ASE Atoms object
+def Conquest_orthorhombic_check(atoms, verbose):# atoms = ASE Atoms object
     # get cell
     cell = atoms.get_cell()
     # test cell and if not orthorhombic standardize and check again
-    if ( not is_orthorhombic(cell) ):
+    if (not is_orthorhombic(cell)):
         # Print cell type before modification
         ConquestWarning('Current cell not orthorhombic:')
-        print_cell_data(atoms,verbose=verbose)
+        print_cell_data(atoms, verbose=verbose)
         # If not orthorhombic standardize and check
         cell, scaled_positions, numbers = standardize_cell(atoms, 
-                                        to_primitive=False, 
-                                        no_idealize =False, 
-                                        symprec=1e-5)
+                                                           to_primitive=False, 
+                                                           no_idealize =False, 
+                                                           symprec=1e-5)
         # New atoms fractional positions
         atoms = Atoms(numbers, positions=scaled_positions, pbc=[True,True,True])
         # Set new cell

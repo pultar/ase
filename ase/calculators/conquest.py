@@ -334,7 +334,7 @@ class Conquest(FileIOCalculator):
 
         cq_in = Path(self.directory).joinpath(Path(self.conquest_infile))
         cq_coord = Path(self.directory).joinpath(Path(coordfile))
-        
+
         with cq_in.open(mode='w') as infile_obj:
 
             write_conquest_input(infile_obj, atoms, self.species_list,
@@ -342,10 +342,10 @@ class Conquest(FileIOCalculator):
                                  directory=self.directory, basis=self.basis)
 
         with cq_coord.open(mode='w') as coordfile_obj:
-            write_conquest(coordfile_obj, atoms, self.species_list) 
+            write_conquest(coordfile_obj, atoms, self.species_list)
 
         # it looks label is needed when using some ASE routines, eg. NEB
-        if self.label: 
+        if self.label:
             self.parameters.write(self.label + '.ase')
 
     def read_results(self, atoms=None):
@@ -393,7 +393,7 @@ class Conquest(FileIOCalculator):
     #
     # Below functions necessary for ASE band_structure()
     #
-    
+
     def get_ibz_k_points(self):
 
         return self.kpoints
@@ -417,10 +417,8 @@ class Conquest(FileIOCalculator):
             if (key == 'nspin'):
                 self.nspin = self.parameters[key]
 
-        if (self.nspin is None):        
-                ConquestWarning('nspin not specified in Conquest input')
-                self.nspin = 1
+        if (self.nspin is None):
+            ConquestWarning('nspin not specified in Conquest input')
+            self.nspin = 1
 
-        return self.nspin      
-
-
+        return self.nspin
