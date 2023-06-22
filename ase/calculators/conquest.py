@@ -225,7 +225,6 @@ class Conquest(FileIOCalculator):
 
                 print('\nmake_ion_files input:')
                 print(species_single, basis_single[species_single])
-                print(ion_xc)
                 make_ion_files(basis_single, species_single_list,
                                directory=self.directory, xc=ion_xc)
 
