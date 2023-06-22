@@ -40,11 +40,54 @@ class PlottingVariables:
                  auto_bbox_size=1.05):
 
         assert show_unit_cell in (0, 1, 2, 3)
-        '''
-        show_unit_cell: 0 cell is not shown, 1 cell is shown, 2 cell is shown
-                        and bounding box is computed to fit atoms and cell, 3
-                        bounding box is fixed to cell only.
-        '''
+        """Handles camera/paper space transformations used for rendering, 2D
+        plots, ...and a few legacy features.
+
+        atoms: Atoms object
+            The Atoms object to render/plot.
+
+        rotation: string or 3x3 matrix
+            Controls camera rotation. Can be a string with euler angles in
+            degrees like '45x, 90y, 0z' or a rotation matrix.
+            (defaults to '0x, 0y, 0z')
+
+        show_unit_cell: int 0, 1, 2, or 3
+            0 cell is not shown, 1 cell is shown, 2 cell is shown and bounding
+            box is computed to fit atoms and cell, 3 bounding box is fixed to
+            cell only. (default 2)
+
+        radii: list of floats
+            a list of atomic radii for the atoms. (default None)
+
+        bbox: list of four floats
+            Allows explicit control of the image plane bounding box in the form
+            (xlo, ylo, xhi, yhi) where x and y are the horizontal and vertical
+            axes of the image plane. The units are in atomic coordinates without
+            the paperspace scale factor. (defaults to None the automatic
+            bounding box is used)
+
+        colors : a list of RGB color triples
+            a list of the RGB color triples for each atom. (default None, uses
+            Jmol colors)
+
+        scale: float
+            The ratio between the image plane units and atomic units, e.g.
+            Angstroms per cm. (default 20.0)
+
+        maxwidth: float
+            Limits the width of the image plane. (why?) Uses paperspace units.
+            (default 500)
+
+        extra_offset: (float, float)
+            Translates the image center in the image plane by (x,y) where x and
+            y are the horizontal and vertical shift distances, respectively.
+            (default (0.0, 0.0))
+
+        auto_bbox_size: float
+            Controls the padding given to the bounding box in the image plane.
+            With auto_bbox_size=1.0 the structure touches the edges of the
+            image. auto_bbox_size>1.0 gives whitespace padding. (default 1.05)
+        """
 
         self.show_unit_cell = show_unit_cell
         self.numbers = atoms.get_atomic_numbers()
@@ -100,7 +143,7 @@ class PlottingVariables:
     def update_patch_and_line_vars(self):
         '''Updates all the line and path stuff that is still in obvious, this
         function should be deprecated if nobody can understand why it's features
-        exist'''
+        exist.'''
         cell = self.atoms.get_cell()
         disp = self.atoms.get_celldisp().flatten()
         positions = self.atoms.get_positions()
@@ -130,6 +173,8 @@ class PlottingVariables:
         self.cell_vertices = cell_vertices
 
     def updated_image_plane_offset_and_size(self, bbox=None):
+        """Updates image size to fit structure according to show_unit_cell
+        if bbox=None. Otherwise, sets the image size from bbox."""
         if bbox is None:
             im_high, im_low = self.get_bbox_from_atoms(self.atoms, self.d / 2)
             if self.show_unit_cell in (2, 3):
@@ -165,21 +210,28 @@ class PlottingVariables:
         self.offset[:len(self.extra_offset)] -= np.array(self.extra_offset)
 
     def to_image_plane_positions(self, positions):
+        """Converts atomic coordinates to image plane positions. The third
+        coordinate is distance from the image plane"""
         im_positions = (positions @ self.rotation) * self.scale - self.offset
         return im_positions
 
     def to_atom_positions(self, im_positions):
+        """Converts image plane positions to atomic coordinates."""
         positions = ((im_positions + self.offset) /
                      self.scale) @ (self.rotation.T)
         return positions
 
     def get_bbox_from_atoms(self, atoms, im_radii):
+        """Uses supplied atoms and radii to compute the bounding box of the
+        atoms in the image plane"""
         im_positions = self.to_image_plane_positions(atoms.get_positions())
         im_low = (im_positions - im_radii[:, None]).min(0)
         im_high = (im_positions + im_radii[:, None]).max(0)
         return im_high, im_low
 
     def get_bbox_from_cell(self, cell, disp=(0.0, 0.0, 0.0)):
+        """Uses supplied cell to compute the bounding box of the cell in the
+        image plane"""
         displacement = np.array(disp)
         cell_verts_in_atom_coords = get_cell_vertex_points(cell, displacement)
         cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
@@ -197,12 +249,16 @@ class PlottingVariables:
         return atom_direction / np.linalg.norm(atom_direction)
 
     def get_camera_direction(self):
+        """Returns vector pointing away from camera toward atoms/cell in atomic
+        coordinates"""
         return self.get_atom_direction([0, 0, -1])
 
     def get_camera_up(self):
+        """Returns the image plane up direction in atomic coordinates"""
         return self.get_atom_direction([0, 1, 0])
 
     def get_camera_right(self):
+        """Returns the image plane right direction in atomic coordinates"""
         return self.get_atom_direction([1, 0, 0])
 
 
