@@ -93,7 +93,7 @@ class PlottingVariables:
         self.numbers = atoms.get_atomic_numbers()
         self.maxwidth = maxwidth
         self.atoms = atoms
-        self.extra_offset = extra_offset
+        self.extra_offset = np.array(extra_offset)
         self.auto_bbox_size = auto_bbox_size
 
         self.colors = colors
@@ -204,10 +204,11 @@ class PlottingVariables:
 
         self.offset = offset
         # why does the picture size change with extra_offset? seems like a bug
-        self.w = w + self.extra_offset[0]
-        self.h = h + self.extra_offset[1]
+        self.w = w #+ self.extra_offset[0]
+        self.h = h #+ self.extra_offset[1]
         # allows extra_offset to be 2D or 3D
-        self.offset[:len(self.extra_offset)] -= np.array(self.extra_offset)
+        for i in range(len(self.extra_offset)):
+            self.offset[i]-=self.extra_offset[i]
 
     def to_image_plane_positions(self, positions):
         """Converts atomic coordinates to image plane positions. The third
@@ -240,10 +241,10 @@ class PlottingVariables:
         return im_high, im_low
 
     def get_image_plane_center(self):
-        return self.to_atom_positions(np.array([0, 0, 0]))
+        return self.to_atom_positions(np.array([self.w/2, self.h/2, 0]))
 
     def get_atom_direction(self, direction):
-        c0 = self.get_image_plane_center()
+        c0 = self.to_atom_positions([0,0,0]) #self.get_image_plane_center()
         c1 = self.to_atom_positions(direction)
         atom_direction = c1 - c0
         return atom_direction / np.linalg.norm(atom_direction)
