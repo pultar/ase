@@ -79,6 +79,8 @@ def fixture_optcls(request):
     optcls = request.param
     if optcls is Berny:
         pytest.importorskip("berny")  # check if pyberny installed
+        optcls = partial(optcls, dihedral=False)
+        optcls.__name__ = Berny.__name__
 
     return optcls
 
