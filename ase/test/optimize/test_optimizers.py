@@ -16,7 +16,6 @@ from ase.optimize import (
     MDMin,
     ODE12r,
 )
-from ase.optimize.optimize import Optimizer
 from ase.optimize.precon import PreconFIRE, PreconLBFGS, PreconODE12r
 from ase.optimize.sciopt import OptimizerConvergenceError, SciPyFminBFGS, SciPyFminCG
 
