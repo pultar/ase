@@ -143,7 +143,7 @@ def test_run_twice(optcls, atoms, kwargs):
 
 @pytest.mark.parametrize('optcls,max_steps', product(optclasses, range(-1,2)))
 def test_should_respect_steps_limit(
-    optcls: Optimizer, max_steps: int, atoms, testdir, kwargs, to_catch
+    optcls, max_steps, atoms, testdir, kwargs, to_catch
 ):
     fmax = 0.01
     with optcls(atoms, logfile=testdir / "opt.log", **kwargs) as opt:
