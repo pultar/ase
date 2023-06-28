@@ -46,10 +46,10 @@ def fixture_ref_atoms(optcls):
         ref_atoms.calc = EMT()
         return ref_atoms
 
-    atoms = bulk("Au")
-    atoms.calc = EMT()
-    atoms.get_potential_energy()
-    return atoms
+    ref_atoms = bulk("Au")
+    ref_atoms.calc = EMT()
+    ref_atoms.get_potential_energy()
+    return ref_atoms
 
 
 @pytest.fixture(name="atoms", scope="module")
