@@ -1,11 +1,13 @@
+from functools import partial
+from itertools import product
+
 import pytest
 
 from ase.build import bulk
 from ase.calculators.emt import EMT
-from ase.cluster import Icosahedron
-from ase.optimize import (BFGS, FIRE, LBFGS, Berny, BFGSLineSearch,
-                          GoodOldQuasiNewton, GPMin, LBFGSLineSearch, MDMin,
-                          ODE12r)
+from ase.optimize import (MDMin, FIRE, LBFGS, LBFGSLineSearch, BFGSLineSearch,
+                          BFGS, GoodOldQuasiNewton, GPMin, Berny, ODE12r)
+from ase.optimize.sciopt import OptimizerConvergenceError, SciPyFminCG, SciPyFminBFGS
 from ase.optimize.precon import PreconFIRE, PreconLBFGS, PreconODE12r
 from ase.optimize.sciopt import SciPyFminBFGS, SciPyFminCG
 
@@ -118,17 +120,40 @@ def test_run_twice(optcls, atoms, kwargs):
     assert opt.max_steps == 2 * steps
 
 
+@pytest.mark.parametrize('optcls,max_steps', product(optclasses, range(-1,2)))
 def test_should_respect_steps_limit(
-    atoms, max_steps, testdir
+    optcls, atoms, max_steps, testdir
 ):
+    if optcls is Berny:
+        pytest.importorskip('berny')  # check if pyberny installed
+        optcls = partial(optcls, dihedral=False)
+        optcls.__name__ = Berny.__name__
+        atoms, _ = atoms_no_pbc()
+    kw = {}
+    if optcls is PreconLBFGS:
+        kw['precon'] = None
+    else:
+        kw = {}
+    
+    if optcls in (ODE12r, PreconODE12r):
+        to_catch = (OptimizerConvergenceError,)
+    else:
+        to_catch = []
+
     fmax = 0.01
-    with BFGS(atoms, logfile=testdir / "opt.log") as opt:
-        opt.run(fmax=fmax, steps=max_steps)
+    with optcls(atoms, logfile=testdir / "opt.log", **kw) as opt:
+        try:
+            opt.run(fmax=fmax, steps=max_steps)
+        except to_catch:
+            pass
 
     with open(testdir / "opt.log", encoding="utf-8") as file:
         lines = file.readlines()
 
     steps_ran = int(lines[-1].split()[1].strip("[]"))
+
+    if optcls in (ODE12r, PreconODE12r):
+        steps_ran -= 1  # ODE12r and PreconODE12r repeat the first step
 
     max_steps = max_steps if max_steps >= 0 else 0
 
