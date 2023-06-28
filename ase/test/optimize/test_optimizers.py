@@ -119,15 +119,17 @@ def test_run_twice(optcls, atoms, kwargs):
 
 
 def test_should_respect_steps_limit(
-    atoms, testdir
+    atoms, max_steps, testdir
 ):
     fmax = 0.01
     with BFGS(atoms, logfile=testdir / "opt.log") as opt:
-        opt.run(fmax=fmax, steps=0)
+        opt.run(fmax=fmax, steps=max_steps)
 
     with open(testdir / "opt.log", encoding="utf-8") as file:
         lines = file.readlines()
 
-    final_step = int(lines[-1].split()[1].strip("[]"))
+    steps_ran = int(lines[-1].split()[1].strip("[]"))
 
-    assert final_step == 0
+    max_steps = max_steps if max_steps >= 0 else 0
+
+    assert steps_ran <= max_steps
