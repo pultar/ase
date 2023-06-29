@@ -31,13 +31,24 @@ def update_line_order_for_atoms(L, T, D, atoms, radii):
             T[n] = -1
     return T
 
+def combine_bboxes(bbox_a,bbox_b):
+    """Combines bboxes using their extrema"""
+    bbox_low  = np.minimum(bbox_a[0], bbox_b[0])
+    bbox_high = np.maximum(bbox_a[1], bbox_b[1])
+    return np.array([bbox_low, bbox_high])
+
+def has_cell(atoms):
+    return
 
 class PlottingVariables:
     # removed writer - self
     def __init__(self, atoms, rotation='', show_unit_cell=2,
                  radii=None, bbox=None, colors=None, scale=20,
                  maxwidth=500, extra_offset=(0., 0.),
-                 auto_bbox_size=1.05):
+                 auto_bbox_size=1.05,
+                 auto_image_plane_z = 'legacy', #'legacy', 'front_all', 'auto_front'
+                 ):
+
 
         assert show_unit_cell in (0, 1, 2, 3)
         """Handles camera/paper space transformations used for rendering, 2D
@@ -175,37 +186,58 @@ class PlottingVariables:
     def updated_image_plane_offset_and_size(self, bbox=None):
         """Updates image size to fit structure according to show_unit_cell
         if bbox=None. Otherwise, sets the image size from bbox."""
-        if bbox is None:
-            im_high, im_low = self.get_bbox_from_atoms(self.atoms, self.d / 2)
-            if self.show_unit_cell in (2, 3):
-                cell = self.atoms.get_cell()
-                disp = self.atoms.get_celldisp().flatten()
-                cv_high, cv_low = self.get_bbox_from_cell(cell, disp)
-                if self.show_unit_cell == 2:
-                    im_low = np.minimum(im_low, cv_low)
-                    im_high = np.maximum(im_high, cv_high)
-                else:
-                    im_low = cv_low
-                    im_high = cv_high
-            middle = (im_high + im_low) / 2
-            im_size = self.auto_bbox_size * (im_high - im_low)
-            w = im_size[0]
-            h = im_size[1]
-            aspect = h / w
-            if w > self.maxwidth:
-                w = self.maxwidth
-                h = aspect * w
-                self.scale *= w / im_size[0]
-            offset = np.array([middle[0] - w / 2, middle[1] - h / 2, 0])
+        # note the bbox input shape is (4), the internal functions use (2,3)
+
+        # computing the bboxes in self.atoms here makes it easier to follow the
+        # various options later
+        bbox_atoms = self.get_bbox_from_atoms(self.atoms, self.d / 2)
+        if has_cell(self.atoms):
+            cell = self.atoms.get_cell()
+            disp = self.atoms.get_celldisp().flatten()
+            bbox_cell = self.get_bbox_from_cell(cell, disp)
+            bbox_combined = combine_bboxes(bbox_atoms, bbox_cell)
         else:
-            w = (bbox[2] - bbox[0]) * self.scale
-            h = (bbox[3] - bbox[1]) * self.scale
+            bbox_combined = bbox_atoms
+
+        # bbox_auto is the bbox that matches the show_unit_cell option
+        if has_cell(self.atoms) and self.show_unit_cell in (2,3):
+            if self.show_unit_cell == 2:
+                bbox_auto = bbox_combined
+            else:
+                bbox_auto = bbox_cell
+        else:
+            bbox_auto = bbox_atoms
+
+        #
+        if bbox is None:
+            middle = (bbox_auto[0] + bbox_auto[1]) / 2
+            im_size = self.auto_bbox_size * (bbox_auto[1] - bbox_auto[0])
+            # should auto_bbox_size pad the z_heght via offset?
+
+            if im_size[0] > self.maxwidth:
+                rescale_factor = self.maxwidth/im_size[0]
+                im_size    *= rescale_factor
+                self.scale *= rescale_factor
+            offset = middle-im_size/2
+        else:
+            width  = (bbox[2] - bbox[0]) * self.scale
+            height = (bbox[3] - bbox[1]) * self.scale
+
+            im_size = np.array([width,height,0])
             offset = np.array([bbox[0], bbox[1], 0]) * self.scale
+
+        # this section shifts the image plane up and down parallel to the look
+        # direction to match the legacy option, or to force it allways touch the
+        # front most objects regardless of the show_unit_cell setting
+        if self.auto_image_plane_z == 'front_all':
+            offset[2] = bbox_combined[, 2]
+        elif self.auto_image_plane_z == 'legacy':
+            offset[2] = 0
 
         self.offset = offset
         # why does the picture size change with extra_offset? seems like a bug
-        self.w = w #+ self.extra_offset[0]
-        self.h = h #+ self.extra_offset[1]
+        self.w = im_size[0] #+ self.extra_offset[0]
+        self.h = im_size[1] #+ self.extra_offset[1]
         # allows extra_offset to be 2D or 3D
         for i in range(len(self.extra_offset)):
             self.offset[i]-=self.extra_offset[i]
@@ -228,7 +260,7 @@ class PlottingVariables:
         im_positions = self.to_image_plane_positions(atoms.get_positions())
         im_low = (im_positions - im_radii[:, None]).min(0)
         im_high = (im_positions + im_radii[:, None]).max(0)
-        return im_high, im_low
+        return np.array([im_low, im_high])
 
     def get_bbox_from_cell(self, cell, disp=(0.0, 0.0, 0.0)):
         """Uses supplied cell to compute the bounding box of the cell in the
@@ -238,7 +270,7 @@ class PlottingVariables:
         cell_vertices = self.to_image_plane_positions(cell_verts_in_atom_coords)
         im_low = cell_vertices.min(0)
         im_high = cell_vertices.max(0)
-        return im_high, im_low
+        return np.array([im_low, im_high])
 
     def get_image_plane_center(self):
         return self.to_atom_positions(np.array([self.w/2, self.h/2, 0]))
