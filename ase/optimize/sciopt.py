@@ -30,11 +30,11 @@ class SciPyOptimizer(Optimizer):
         trajectory: string
             Pickle file used to store trajectory of atomic movement.
 
-        logfile: file object or str
+        logfile: file object or string
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
 
-        callback_always: book
+        callback_always: boolean
             Should the callback be run after each force call (also in the
             linesearch)
 
@@ -53,6 +53,20 @@ class SciPyOptimizer(Optimizer):
             extrapolated to 0 K).  By default (force_consistent=None) uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+        
+        method: string or callable object or None
+            Defaults to 'BFGS'. If a string is supplied, it must correspond
+            to a valid value for the `method` parameter of 
+            `scipy.optimize.minimize`. If a callable object is supplied, it
+            will be called as `method(fun, x0, args, **kwargs, **options)`
+            where `fun = self.f`, `x0 = self.x0()`, `args = ()`,
+            `options = self.options`, and `kwargs` contains the remaining
+            keyword arguments passed to `scipy.optimizer.minimize` in
+            `SciPyOptimizer.run`.
+        options: dictionary or None
+            Defaults to an empty dictionary. Specify any additional keyword
+            arguments to pass to the function specified by `method`.
+        
         """
         restart = None
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
@@ -60,7 +74,7 @@ class SciPyOptimizer(Optimizer):
         self.force_calls = 0
         self.callback_always = callback_always
         self.H0 = alpha
-        self.method = method
+        self.method = method or 'BFGS'
         self.options = options or {}
 
     def x0(self):
