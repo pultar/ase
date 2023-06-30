@@ -19,7 +19,7 @@ class SciPyOptimizer(Optimizer):
 
     def __init__(self, atoms, logfile='-', trajectory=None,
                  callback_always=False, alpha=70.0, master=None,
-                 force_consistent=None):
+                 force_consistent=None, method=None, options=None):
         """Initialize object
 
         Parameters:
@@ -60,6 +60,8 @@ class SciPyOptimizer(Optimizer):
         self.force_calls = 0
         self.callback_always = callback_always
         self.H0 = alpha
+        self.method = method
+        self.options = options or {}
 
     def x0(self):
         """Return x0 in a way SciPy can use
@@ -124,53 +126,84 @@ class SciPyOptimizer(Optimizer):
         pass
 
     def call_fmin(self, fmax, steps):
-        raise NotImplementedError
+        self.options['maxiter'] = steps
+        if 'gtol' in self.options and self.options['gtol'] is None:
+            self.options['gtol'] = fmax * 0.1
+            opt.fmin_cg
+
+        output = opt.minimize(
+            fun=self.f,
+            x0=self.x0(),
+            method=self.method,
+            jac=self.fprime,
+            callback=self.callback,
+            options=self.options
+        )
+        if not output.success:
+            if output.message != 'Maximum number of iterations has been exceeded.':
+                raise OptimizerConvergenceError(
+                    f'Warning: Desired error not necessarily achieved: {output.message}'
+                    )
 
 
 class SciPyFminCG(SciPyOptimizer):
     """Non-linear (Polak-Ribiere) conjugate gradient algorithm"""
 
-    def call_fmin(self, fmax, steps):
-        output = opt.fmin_cg(self.f,
-                             self.x0(),
-                             fprime=self.fprime,
-                             # args=(),
-                             gtol=fmax * 0.1,  # Should never be reached
-                             norm=np.inf,
-                             # epsilon=
-                             maxiter=steps,
-                             full_output=1,
-                             disp=0,
-                             # retall=0,
-                             callback=self.callback)
-        warnflag = output[-1]
-        if warnflag == 2:
-            raise OptimizerConvergenceError(
-                'Warning: Desired error not necessarily achieved '
-                'due to precision loss')
+    def __init__(self,
+                 atoms,
+                 logfile='-',
+                 trajectory=None,
+                 callback_always=False,
+                 alpha=70,
+                 master=None,
+                 force_consistent=None,
+                 gtol = None,
+                 disp = False,
+                 norm = np.inf):
+        options = {
+            'gtol': gtol,
+            'norm': norm,
+            'disp': disp,
+        }
+        super().__init__(atoms,
+                         logfile,
+                         trajectory,
+                         callback_always,
+                         alpha,
+                         master,
+                         force_consistent,
+                         'CG',
+                         options)
 
 
 class SciPyFminBFGS(SciPyOptimizer):
     """Quasi-Newton method (Broydon-Fletcher-Goldfarb-Shanno)"""
 
-    def call_fmin(self, fmax, steps):
-        output = opt.fmin_bfgs(self.f,
-                               self.x0(),
-                               fprime=self.fprime,
-                               # args=(),
-                               gtol=fmax * 0.1,  # Should never be reached
-                               norm=np.inf,
-                               # epsilon=1.4901161193847656e-08,
-                               maxiter=steps,
-                               full_output=1,
-                               disp=0,
-                               # retall=0,
-                               callback=self.callback)
-        warnflag = output[-1]
-        if warnflag == 2:
-            raise OptimizerConvergenceError(
-                'Warning: Desired error not necessarily achieved '
-                'due to precision loss')
+    def __init__(self,
+                 atoms,
+                 logfile='-',
+                 trajectory=None,
+                 callback_always=False,
+                 alpha=70,
+                 master=None,
+                 force_consistent=None,
+                 gtol = None,
+                 disp = False,
+                 norm = np.inf):
+        options = {
+            'gtol': gtol,
+            'norm': norm,
+            'disp': disp,
+        }
+        super().__init__(atoms,
+                         logfile,
+                         trajectory,
+                         callback_always,
+                         alpha,
+                         master,
+                         force_consistent,
+                         'BFGS',
+                         options)
 
 
 class SciPyGradientlessOptimizer(Optimizer):
