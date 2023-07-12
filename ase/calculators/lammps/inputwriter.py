@@ -182,10 +182,18 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
 
     # Write interaction stuff
     fileobj.write("\n### interactions\n".encode("utf-8"))
+<<<<<<< HEAD
+    if 'interactions_file' in parameters:
+        fileobj.write(('include ' + parameters['interactions_file'] + '\n')
+                      .encode("utf-8"))
+    elif "kim_interactions" in parameters:
+        fileobj.write("{}\n".format(parameters["kim_interactions"]).encode("utf-8"))
+=======
     if "kim_interactions" in parameters:
         fileobj.write(
             "{}\n".format(
                 parameters["kim_interactions"]).encode("utf-8"))
+>>>>>>> master
         write_model_post_and_masses(fileobj, parameters)
 
     elif ("pair_style" in parameters) and ("pair_coeff" in parameters):
@@ -196,7 +204,6 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
                 "pair_coeff {0} \n" "".format(pair_coeff).encode("utf-8")
             )
         write_model_post_and_masses(fileobj, parameters)
-
     else:
         # simple default parameters
         # that should always make the LAMMPS calculation run
