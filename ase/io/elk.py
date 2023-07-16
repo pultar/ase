@@ -173,7 +173,9 @@ def write_elk_in(fd, atoms, parameters=None):
         elif isinstance(value, (int, float)):
             fd.write('%s\n\n' % value)
         else:
-            fd.write('%s\n\n' % ' '.join([str(x) for x in value]))
+            to_write = [str(x) if type(x) != str else f"'{x}'" for x in value]
+            print(to_write)
+            fd.write(f"{' '.join(to_write)}\n\n")
 
     # cell
     fd.write('avec\n')
