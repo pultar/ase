@@ -2848,3 +2848,174 @@ class ExpCellFilter(UnitCellFilter):
         forces[natoms:] = deform_grad_log_force
         self.stress = full_3x3_to_voigt_6_stress(convergence_crit_stress)
         return forces
+        
+from scipy.linalg import null_space,solve,pinv,inv,eigh
+from numpy.linalg import cond, norm, qr,svd
+from ase.io import write
+import os
+import numpy as np
+from ase.io import read
+from ase.calculators.espresso import Espresso
+from ase import Atom, Atoms
+from ase.io.trajectory import Trajectory
+from ase.calculators.emt import EMT
+from ase.optimize import BFGS
+from scipy.optimize import least_squares
+from ase.constraints import FixAtoms
+class FixExternals:
+
+	def __init__(self, atoms, indicies):
+		self.name='FixExternals'
+		self.indicies=indicies
+		self.atoms=atoms
+		ads=atoms[self.indicies]
+		Ivecval=ads.get_moments_of_inertia(vectors=True)
+		self.pa=np.transpose(Ivecval[1])
+		self.COM=ads.get_center_of_mass()
+		self.POS=ads.get_positions()
+		self.POS_COM=np.copy(self.POS)-np.copy(self.COM)
+		self.dx=0.2
+		self.angles=np.asarray([0,0,0])
+		m=ads.get_masses()
+		for i in range(len(m)):
+			m[i]=np.sqrt(np.copy(m[i]))
+		self.M=m
+		self.ROT=np.identity(3)
+
+	def __repr__(self):
+        	return 'FixExternals'
+	
+	def rot_x(self,x):
+		return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
+	def rot_y(self,y):
+		return np.array(((np.cos(y), 0, np.sin(y)),(0, 1, 0),(-np.sin(y), 0, np.cos(y))))
+	def rot_z(self,z):
+		return np.array(((1, 0, 0),(0, np.cos(z), -np.sin(z)),(0, np.sin(z), np.cos(z))))
+
+	def sort_ivec(self,Ivec_ref):
+		tmp_ivec=np.zeros([3,3])
+		for i in range(3):
+			d1=np.dot(Ivec_ref[:,0],self.pa[:,i])
+			d2=np.dot(Ivec_ref[:,1],self.pa[:,i])
+			d3=np.dot(Ivec_ref[:,2],self.pa[:,i])
+			if abs(d1) > abs(d2) and abs(d1) > abs(d3):
+				if d1 <= 0:
+					tmp_ivec[:,i]=-Ivec_ref[:,0]
+				else:
+					tmp_ivec[:,i]=Ivec_ref[:,0]
+				Ivec_ref[:,0]=0
+			if abs(d2) > abs(d1) and abs(d2) > abs(d3):
+				if d2 <= 0:
+					tmp_ivec[:,i]=-Ivec_ref[:,1]
+				else:
+					tmp_ivec[:,i]=Ivec_ref[:,1]
+				Ivec_ref[:,1]=0
+			if abs(d3) > abs(d2) and abs(d3) > abs(d1):
+				if d3 <= 0:
+					tmp_ivec[:,i]=-Ivec_ref[:,2]
+				else:
+					tmp_ivec[:,i]=Ivec_ref[:,2]
+				Ivec_ref[:,2]=0
+		return tmp_ivec
+
+	def adjust_rotation(self,ads_ref):
+		com_ref=ads_ref.get_center_of_mass()
+		pos_ref=ads_ref.get_positions()
+		pos_com_ref=np.copy(pos_ref)-np.copy(com_ref)
+		Ivecval_ref=ads_ref.get_moments_of_inertia(vectors=True)
+		Ivec_ref=self.sort_ivec(np.transpose(Ivecval_ref[1]))
+		A_solve=np.copy(np.matmul(self.pa,inv(Ivec_ref)))
+		A_solve=A_solve.flatten()
+		def f(x):
+			x0, x1, x2 = x
+			A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+			A = A.flatten()
+			return A
+		def system(x,b=A_solve):
+			return(f(x)-b)
+		x=least_squares(system,np.asarray((0,0,0)))
+		self.angles=np.copy(x.x)
+		x0, x1, x2 = self.angles
+		A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+		self.ROT=A
+		mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
+		return mapped_ads+self.COM
+	
+	def get_subspace(self,ads_ref):
+		com_ref=ads_ref.get_center_of_mass()
+		pos_ref=ads_ref.get_positions()
+		pos_com_ref=np.copy(pos_ref)-np.copy(com_ref)
+		E_Space=np.zeros([len(ads_ref),3,6])
+		E_Space[:,0,0]=self.M
+		E_Space[:,1,1]=self.M
+		E_Space[:,2,2]=self.M
+		
+		for i in range(len(pos_com_ref)):
+			Px=np.dot(pos_com_ref[i,:],np.transpose(self.pa[0,:]))
+			Py=np.dot(pos_com_ref[i,:],np.transpose(self.pa[1,:]))
+			Pz=np.dot(pos_com_ref[i,:],np.transpose(self.pa[2,:]))
+			for j in range(3):
+				E_Space[i,j,3]=(1/self.M[i])*(Py*self.pa[j,2]-Pz*self.pa[j,1])
+				E_Space[i,j,4]=(1/self.M[i])*(Pz*self.pa[j,0]-Px*self.pa[j,2])
+				E_Space[i,j,5]=(1/self.M[i])*(Px*self.pa[j,1]-Py*self.pa[j,0])
+
+		E_2D=np.zeros([3*len(ads_ref),3*len(ads_ref)])
+		for i in range(6):
+			for j in range(len(ads_ref)):
+				E_2D[3*j:3*j+3,i]=np.copy(E_Space[j,:,i])				
+		for i in range(6):
+			E_2D[:,i]*=(1/norm(np.copy(E_2D[:,i])))
+		Q,R=qr(E_2D)
+
+		#E_2D[:,1]=np.copy(E_2D[:,1]-np.dot(np.transpose(E_2D[:,1]),E_2D[:,0])*E_2D[:,0])
+		#E_2D[:,2]=np.copy(E_2D[:,2]-np.dot(np.transpose(E_2D[:,2]),E_2D[:,0])*E_2D[:,0]-np.dot(np.transpose(E_2D[:,2]),E_2D[:,1])*E_2D[:,1])
+		#E_2D[:,3]=np.copy(E_2D[:,3]-np.dot(np.transpose(E_2D[:,3]),E_2D[:,0])*E_2D[:,0]-np.dot(np.transpose(E_2D[:,3]),E_2D[:,1])*E_2D[:,1]-np.dot(np.transpose(E_2D[:,3]),E_2D[:,2])*E_2D[:,2])
+		#E_2D[:,4]=np.copy(E_2D[:,4]-np.dot(np.transpose(E_2D[:,4]),E_2D[:,0])*E_2D[:,0]-np.dot(np.transpose(E_2D[:,4]),E_2D[:,1])*E_2D[:,1]-np.dot(np.transpose(E_2D[:,4]),E_2D[:,2])*E_2D[:,2]-np.dot(np.transpose(E_2D[:,4]),E_2D[:,3])*E_2D[:,3])
+		#E_2D[:,5]=np.copy(E_2D[:,5]-np.dot(np.transpose(E_2D[:,5]),E_2D[:,0])*E_2D[:,0]-np.dot(np.transpose(E_2D[:,5]),E_2D[:,1])*E_2D[:,1]-np.dot(np.transpose(E_2D[:,5]),E_2D[:,2])*E_2D[:,2]-np.dot(np.transpose(E_2D[:,5]),E_2D[:,3])*E_2D[:,3]-np.dot(np.transpose(E_2D[:,5]),E_2D[:,4])*E_2D[:,4])
+		for i in range(6):
+			E_2D[:,i]*=(1/norm(np.copy(E_2D[:,i])))
+
+		return E_2D, Q[:,0:6]
+
+	def adjust_positions(self,atoms,newpositions):
+		indx=self.indicies
+		cpy=atoms.copy()
+		del cpy.constraints
+		cpy.positions=newpositions
+		ads_ref=cpy[indx].copy()
+		ads_ref.positions=self.adjust_rotation(ads_ref)
+		newpositions[indx]=ads_ref.positions
+		return newpositions
+
+	def adjust_forces(self,atoms,forces):
+		indx=self.indicies
+		cpy=atoms.copy()
+		del cpy.constraints
+		ads_ref=cpy[indx].copy()
+		E_2D, NULL=self.get_subspace(ads_ref)
+		forces_1D=np.zeros(3*len(ads_ref))
+		for i in range(len(ads_ref)):
+			forces_1D[3*i:3*i+3]=forces[indx[i],:]
+		for i in range(np.shape(NULL)[1]):
+			coef=np.dot(NULL[:,i],forces_1D)
+			forces_1D-=(coef*NULL[:,i])
+		for i in range(len(ads_ref)):
+			forces[indx[i],:]=np.copy(forces_1D[3*i:3*i+3])
+		for i in range(len(forces)):
+			if i not in indx:
+				forces[i]=0
+		return forces
+	def rot_old_values(self, H0, f0):
+
+		#new_r=np.copy(r0)
+		new_f=np.copy(f0)
+		eig, vec=eigh(H0)
+		new_vec=np.copy(vec)
+		for i in range(int(len(f0)/3)):
+		#	new_r[3*i:3*i+3]=np.copy(np.transpose(np.matmul(self.ROT,np.transpose(r0[3*i:3*i+3]))))
+			new_f[3*i:3*i+3]=np.copy(np.matmul(self.ROT,f0[3*i:3*i+3]))
+			new_vec[3*i:3*i+3,:]=np.copy(np.matmul(self.ROT,vec[3*i:3*i+3,:]))
+		new_H=np.matmul(np.matmul(new_vec,np.diag(eig)),inv(new_vec))
+		print(eig)
+		self.ROT=np.identity(3)
+		return new_H, new_f

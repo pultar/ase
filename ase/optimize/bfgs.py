@@ -103,6 +103,13 @@ class BFGS(Optimizer):
         steplengths = (dpos**2).sum(1)**0.5
         self.pos0 = pos.flat.copy()
         self.forces0 = forces.copy()
+
+        cons = atoms.constraints.copy()
+        for i in range(len(cons)):
+            if 'FixExternals' == repr(cons[i]):
+                self.H, self.forces0= cons[i].rot_old_values(self.H, self.forces0)
+
+
         return dpos, steplengths
 
     def determine_step(self, dpos, steplengths):
