@@ -8,6 +8,9 @@ from ase.units import Bohr, Hartree
 from ase.utils import reader, writer
 
 
+import warnings
+
+
 elk_parameters = {'swidth': Hartree}
 
 
@@ -166,7 +169,14 @@ def write_elk_in(fd, atoms, parameters=None):
             inp[key] /= elk_parameters[key]
 
     # write all keys
+    def column_of_tasks_string(list_of_tasks):
+        return "\n".join(map(str, list_of_tasks))
+    
     for key, value in inp.items():
+        if key == 'tasks':
+            fd.write(key + '\n')
+            fd.write(column_of_tasks_string(value) + "\n\n")
+            continue
         fd.write('%s\n' % key)
         if isinstance(value, bool):
             fd.write('.%s.\n\n' % ('false', 'true')[value])
@@ -174,7 +184,6 @@ def write_elk_in(fd, atoms, parameters=None):
             fd.write('%s\n\n' % value)
         else:
             to_write = [str(x) if type(x) != str else f"'{x}'" for x in value]
-            print(to_write)
             fd.write(f"{' '.join(to_write)}\n\n")
 
     # cell
@@ -308,7 +317,7 @@ def parse_elk_info(fd):
 
     yield 'converged', converged and not actually_did_not_converge
     if spinpol is None:
-        raise RuntimeError('Could not determine spin treatment')
+        warnings.warn('Could not determine spin treatment')
     yield 'spinpol', spinpol
 
     if 'Fermi' in dct:
