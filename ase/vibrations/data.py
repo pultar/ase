@@ -647,6 +647,8 @@ class VibrationsData:
             - "Frederiksen"; set each diagonal element to the negative of the
               sum of elements in its row. This enforces Newton's third law.
 
+              See https://doi.org/10.1103/PhysRevB.75.205413 (Eq 13)
+
         """
         hessian = self.get_hessian_2d()
 
