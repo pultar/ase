@@ -99,6 +99,18 @@ class VibrationsData:
 
             indices: Indices of (non-frozen) atoms included in Hessian
 
+        The Hessian should be ordered by atom index and Cartesian direction::
+
+        >> [[at1x_at1x, at1x_at1y, at1x_at1z, at1x_at2x, ...],
+        >> [at1y_at1x, at1y_at1y, at1y_at1z, at1y_at2x, ...],
+        >> [at1z_at1x, at1z_at1y, at1z_at1z, at1z_at2x, ...],
+        >> [at2x_at1x, at2x_at1y, at2x_at1z, at2x_at2x, ...],
+        >> ...]
+
+        e.g. the element h[2, 3] gives a harmonic force exerted on
+        atoms[1] in the x-direction in response to a movement in the
+        z-direction of atoms[0]
+
         """
         if indices is None:
             indices = range(len(atoms))
