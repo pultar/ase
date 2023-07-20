@@ -7,15 +7,11 @@ Authors: J Kane Shenton <jkshenton@gmail.com>
          Zamaan Raza
          L Truflandier <lionel.truflandier@u-bordeaux.fr>
 """
-from __future__ import print_function
-
-# import warnings
-# import numpy as np
 from ase.units import Hartree
 from pathlib import Path
 from shutil import copy
 from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
-from ase.io.conquest import ConquestEnv, ConquestError, ConquestWarning
+from ase.io.conquest import ConquestEnv, conquest_err, conquest_warn
 
 
 class Conquest(FileIOCalculator):
@@ -45,14 +41,14 @@ class Conquest(FileIOCalculator):
     def __init__(self, restart=None, label=None, atoms=None, basis={},
                  **kwargs):
 
-        """Construct CONQUEST-calculator object.
-        Species are sorted by atomic number for purposes of indexing.
+        """
+        Construct CONQUEST-calculator object.
 
         Parameters
         ==========
 
         directory: str
-            directory for calculation
+            directory used for storing input/output files and calculation
 
         atoms: ASE atoms object
             An atoms object constructed either via ASE or read from an input.
@@ -62,8 +58,8 @@ class Conquest(FileIOCalculator):
         kwargs: keyword arguments
             Critical DFT parameters for the calculator. These have defaults,
             but are *strongly* system-dependent.
-            "grid_cutoff"  = 150      Integration grid energy cutoff (Ha)
-            "kpts"         = [4,4,4]  K-point mesh etc
+            "grid_cutoff"  = 120      Integration grid energy cutoff (Ha)
+            "kpts"         = [4,4,4]  K-point mesh
             "xc"           = "PBE"    XC functional
             "scf_tolerance = 1.0e-7   Self-consistent tolerance
             "nspin"        = 1        spin polarisation
@@ -184,20 +180,17 @@ class Conquest(FileIOCalculator):
             if (key == 'xc'):
                 ion_xc = self.parameters[key]
                 break
-
             else:
                 ion_xc = 'PBE'
 
+        # 
         gen_basis = []
         for species in self.species_list:
             if ("gen_basis" in basis[species]):
-
                 if (basis[species]["gen_basis"]):
                     gen_basis.append(True)
-
                 else:
                     gen_basis.append(False)
-
             else:
                 basis[species]["gen_basis"] = False
                 gen_basis.append(False)
@@ -212,12 +205,12 @@ class Conquest(FileIOCalculator):
             species_single_list = [self.species_list[count - 1]]
             species_single = self.species_list[count - 1]
 
-            # Yes : run make_ion_files
+            # Yes: run make_ion_files
             if (test):
                 if ('xc' in basis_single[species_single]):
 
                     if (ion_xc != basis_single[species_single]['xc']):
-                        ConquestWarning("{} xc {} enforced for basis \
+                        conquest_warn("{} xc {} enforced for basis \
                                         generation".format(species_single,
                                         ion_xc))
 
@@ -228,12 +221,13 @@ class Conquest(FileIOCalculator):
                 make_ion_files(basis_single, species_single_list,
                                directory=self.directory, xc=ion_xc)
 
-            # No : try to find the ion file
+            # No: try to find the ion file
             else:
                 self.find_ion_file(species_single, basis, ion_dir, ion_xc)
 
         self.initialised = True
 
+    # Try to locate .ion files
     def find_ion_file(self, species, basis, ion_dir, ion_xc):
 
         # Default name used for the input
@@ -252,7 +246,6 @@ class Conquest(FileIOCalculator):
 
         if (not ion_dir or ion_dir == '.' or ion_dir == './'
                 or ion_dir == '/'):
-
             ion_dir = Path('')
         else:
             ion_dir = Path(ion_dir)
@@ -282,13 +275,13 @@ class Conquest(FileIOCalculator):
             if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
                 copy(ion_file, fullpath)
-                ConquestWarning("{} copied into {}".format(ion_file, fullpath))
+                conquest_warn("{} copied into {}".format(ion_file, fullpath))
                 count += 1
                 break
 
             elif(ion_file.is_file() and ion_file == fullpath):
                 print("... Found")
-                ConquestWarning("{} copied into {}".format(ion_file, fullpath))
+                conquest_warn("{} copied into {}".format(ion_file, fullpath))
                 count += 1
                 break
 
@@ -296,7 +289,7 @@ class Conquest(FileIOCalculator):
                 print("... Not found")
 
         if (count == 0):
-            raise ConquestError("Ion file {} not found".format(fname))
+            raise conquest_err("Ion file {} not found".format(fname))
 
     def write_input(self, atoms, properties=None, system_changes=None):
         """
@@ -320,15 +313,11 @@ class Conquest(FileIOCalculator):
         # super().write_input(atoms, properties, system_changes)
 
         if not self.initialised:  # make the basis once only
-
             cq_env = ConquestEnv()
-
             try:
                 pseudo_dir = cq_env.get('pseudo_path')
-
             except pseudo_dir.DoesNotExist:
                 pseudo_dir = './'
-
             self.init_basis(atoms, self.basis, ion_dir=pseudo_dir)
 
         cq_in = Path(self.directory).joinpath(Path(self.conquest_infile))
@@ -363,10 +352,8 @@ class Conquest(FileIOCalculator):
             raise ReadError
 
         with cq_out_path.open(mode='r') as outfile_obj:
-            # print(outfile_obj)
             self.results = read_conquest_out(outfile_obj, self.atoms)
 
-        # Eigenvalues are printed only for IO.Iprint > 2, and diagonalisation
         if (self.parameters['dm.solutionmethod'] == 'diagon'):
             if (self.parameters['io.iprint'] >= 2):
                 self.get_bands(cq_out_path)
@@ -389,35 +376,27 @@ class Conquest(FileIOCalculator):
 
         with open(cq_out_path, 'r') as cqout_fileobj:
             self.kpoints, self.weights = get_k_points(cqout_fileobj)
-    #
+            
     # Below functions necessary for ASE band_structure()
-    #
-
     def get_ibz_k_points(self):
-
         return self.kpoints
 
     def get_k_point_weights(self):
-
         return self.weights
 
     def get_eigenvalues(self, kpt=0, spin=0):
-
         return self.eigenvalues[spin][kpt][:] * Hartree
 
     def get_fermi_level(self):
-
         return self.eFermi
 
     def get_number_of_spins(self):
-
         for key in self.parameters:
-
             if (key == 'nspin'):
                 self.nspin = self.parameters[key]
 
         if (self.nspin is None):
-            ConquestWarning('nspin not specified in Conquest input')
+            conquest_warn('nspin not specified in Conquest input')
             self.nspin = 1
 
         return self.nspin

@@ -11,7 +11,9 @@ from inspect import currentframe, getframeinfo
 import numpy as np
 from pathlib import Path
 from shutil import move, copy
+
 import ase.utils
+
 from ase.atoms import Atoms
 from ase.units import Bohr, Hartree
 from ase.constraints import FixAtoms, FixScaled
@@ -23,13 +25,17 @@ from ase.geometry import orthorhombic, is_orthorhombic
 from spglib import standardize_cell, get_spacegroup
 
 
-class Error(Exception):
+class error(Exception):
     """Base class for exceptions in this module
     """
     pass
 
+class warning(Warning):
+    """Base class for warning in this module
+    """
+    pass
 
-class ConquestError(Error):
+class conquest_err(error):
     """Exceptions related to Conquest I/O
 
     Attributes
@@ -39,14 +45,16 @@ class ConquestError(Error):
     def __init__(self, message):
         self.message = message
 
+class conquest_warn(warning):
 
-def ConquestWarning(message):
+    def __init__(self, message):
+        self.message = message
+    
+        frameinfo = getframeinfo(currentframe().f_back)
 
-    frameinfo = getframeinfo(currentframe().f_back)
-
-    print('## ConquestWarning ##')
-    print('file:', frameinfo.filename, ', line:', frameinfo.lineno)
-    print('>>>> ', message)
+        print('## ConquestWarning ##')
+        print('file:', frameinfo.filename, ', line:', frameinfo.lineno)
+        print('>>>> ', message)
 
 
 class ConquestEnv:
@@ -79,7 +87,7 @@ class ConquestEnv:
 
     def _error(self, var):
         if var not in os.environ:
-            raise ConquestError("Env {} not set".format(var))
+            raise conquest_err("Env {} not set".format(var))
 
     def run_command(self, command):
         errorcode = subprocess.call(command, shell=True, stdout=subprocess.PIPE)
@@ -96,21 +104,22 @@ class EnvError(Exception):
     message : explanation of the error
     """
 
+    def __init__(self, message):
+        self.message = message
 
-def __init__(self, message):
-    self.message = message
 
-
-def Conquest_orthorhombic_check(atoms, verbose):
+def conquest_orthorhombic_check(atoms, verbose):
     # get cell from ASE Atoms object
     cell = atoms.get_cell()
     # test cell and if not orthorhombic standardize and check again
-    if (not is_orthorhombic(cell)):
+    if not is_orthorhombic(cell):
         # Print cell type before modification
-        ConquestWarning('Current cell not orthorhombic:')
+        conquest_warn('Current cell not orthorhombic:')
         print_cell_data(atoms, verbose=verbose)
         # If not orthorhombic standardize and check
-        cell, scaled_positions, numbers = standardize_cell(atoms,
+
+        atoms_ = ase.utils.atoms_to_spglib_cell(atoms)
+        cell, scaled_positions, numbers = standardize_cell(atoms_,
                                                            to_primitive=False,
                                                            no_idealize=False,
                                                            symprec=1e-5)
@@ -123,7 +132,7 @@ def Conquest_orthorhombic_check(atoms, verbose):
         orthorhombic(cell)
         # Print new cell data
         print('\n')
-        ConquestWarning('New orthorhombic cell:')
+        conquest_warn('New orthorhombic cell:')
         print_cell_data(atoms, verbose=verbose)
         # Take care "atoms" may have been modified !
     return atoms
@@ -204,7 +213,7 @@ def read_conquest_out(fileobj, atoms):
     m = re.search(nspec_re, text)
 
     if not m:
-        raise ConquestError("Could not find number of species in Conquest_out")
+        raise conquest_err("Could not find number of species in Conquest_out")
     nspec = int(m.group(1))
     specinfo = [line.strip() for line in m.group(2).strip().splitlines()]
     specinfo = [line for line in specinfo if not line == "PAO basis"]
@@ -225,12 +234,12 @@ def read_conquest_out(fileobj, atoms):
 
     m = re.search(energy_re, text)
     if not m:
-        raise ConquestError("Could not find DFT total energy in Conquest_out")
+        raise conquest_err("Could not find DFT total energy in Conquest_out")
     energy = float(m.group(1))
 
     m = re.search(force_re, text)
     if not m:
-        raise ConquestError("Could not find forces in Conquest_out")
+        raise conquest_err("Could not find forces in Conquest_out")
     f = m.group(1).splitlines()
 
     for atom in range(num_atoms):
@@ -239,7 +248,7 @@ def read_conquest_out(fileobj, atoms):
 
     m = re.search(stress_re, text)
     if not m:
-        raise ConquestError("Could not find stresses in Conquest_out")
+        raise conquest_err("Could not find stresses in Conquest_out")
     stresses[0:3] = np.array([float(bit) for bit in m.group(1).split()])
     energy = energy * Hartree
     force = forces * Hartree / Bohr
@@ -255,7 +264,7 @@ def read_conquest(fileobj, fractional=True, atomic_order=[]):
     Returns atoms object
     """
     if atomic_order == []:
-        raise ConquestError("Atomic order must be specified as a list.")
+        raise conquest_err("Atomic order must be specified as a list.")
 
     if isinstance(fileobj, str):
         fileobj = open(fileobj)
@@ -323,7 +332,7 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     #
     # Test if orthorhombic / stop if not
     if (not is_orthorhombic(atoms.get_cell())):
-        raise ConquestError("Conquest can only handle orthorhombic cells")
+        raise conquest_err("Conquest can only handle orthorhombic cells")
 
     cellpar = atoms.get_cell_lengths_and_angles()
     # CONQUEST by default works in units of Bohr:
@@ -586,9 +595,9 @@ def parse_ion(species, ionfile):
                 if re_cutoffs.search(line):
                     paoranges.append(float(line.split()[1]))
                 if re_orbitals.search(line):
-                    l, n, z, is_polarised, population = line.split()
-                    paos.append(int(l), int(n), int(z),
-                                int(is_polarised), float(population))
+                    l, n, z, is_polarised, population = line.split()[0:5]
+                    paos.append([int(l), int(n), int(z),
+                                int(is_polarised), float(population)])
         paos = np.array(paos)
         # npaos = sum(2l+1)
         npao = 0
