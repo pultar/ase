@@ -7,10 +7,6 @@ Authors: J Kane Shenton <jkshenton@gmail.com>
          Zamaan Raza
          L Truflandier <lionel.truflandier@u-bordeaux.fr>
 """
-from __future__ import print_function
-
-# import warnings
-# import numpy as np
 from ase.units import Hartree
 from pathlib import Path
 from shutil import copy
