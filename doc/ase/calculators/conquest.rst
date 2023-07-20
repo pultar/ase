@@ -1,24 +1,37 @@
 .. module:: ase.calculators.conquest
 
 ========
-Espresso
+Conquest
 ========
 
 .. image:: ../../static/conquest.png
 
-`Quantum ESPRESSO <http://www.quantum-espresso.org>`_ (QE) is an integrated
-suite of Open-Source computer codes for electronic-structure calculations and
-materials modeling at the nanoscale. It is based on density-functional
-theory, plane waves, and pseudopotentials.
-
-The ASE calculator is an interface to the ``pw.x`` executable.
+`Conquest <https://conquest.readthedocs.io/en/latest/>`_ is a local orbital 
+density functional theory (DFT) code including periodic boundary conditions.
+Conquest is designed to scale to large systems, either using exact 
+diagonalisation or with linear scaling. Kohn-Sham eigenstates or 
+the density matrix in terms of pseudo-atomic numerical orbitals (PAOs).
+A PAO generation code is included with the Conquest distribution, with 
+well-defined and reliable default basis sets for most elements.
 
 Setup
 =====
 
-Set up the calculator like a standard ``FileIOCalculator``:
+For a direct calculation you need the following ASE environment variables to be set:
 
- * ``export ASE_ESPRESSO_COMMAND="/path/to/pw.x -in PREFIX.pwi > PREFIX.pwo"``
+ * The Conquest executable command including MPI/openMPI prefix : ``ASE_ESPRESSO_COMMAND``      
+ * The PAO executable command: ``CQ_GEN_BASIS_CMD``      
+ * The PAO path directory for where to find the ion files containing pseudopotential and PAO for each element: ``CQ_PP_PATH``
+
+    Given the Conquest root directory ``CQ_ROOT``, in a python/jupyter-notebook file this might be something like::
+    
+        import os
+    
+        os.environ['ASE_CONQUEST_COMMAND'] = 'mpirun -np 4 CQ_ROOT/src/Conquest'
+        os.environ['CQ_GEN_BASIS_CMD'] = 'CQ_ROOT/tools/BasisGeneration/MakeIonFiles'
+        os.environ['CQ_PP_PATH'] = 'CQ_ROOT/pseudo-and-pao/'
+
+
 
 Any calculation will need pseudopotentials for the elements involved. The
 directory for the pseudopotential files can be set with the ``pseudo_dir``
@@ -104,5 +117,5 @@ that provide a number of extra features:
 Espresso Calculator Class
 =========================
 
-# .. autoclass:: ase.calculators.conquest.Conquest
+ .. autoclass:: ase.calculators.conquest.Conquest
 
