@@ -4,7 +4,7 @@ Finite-displacement tools
 
 While :mod:`~ase.vibrations.vibrations` provides an object-oriented
 approach to Vibration calculations,
-:mod:`~ase.vibrations.finite_diff` provides tools for
+:mod:`~ase.vibrations.finite_displacements` provides tools for
 performing similar workflows in separate steps that may be customised,
 automated or task-farmed.
 
@@ -161,5 +161,5 @@ early rather than add more points.
 Available functions
 -------------------
 
-.. automodule:: ase.vibrations.finite_diff
+.. automodule:: ase.vibrations.finite_displacements
    :members:

@@ -1,7 +1,7 @@
 import ase.io
 from ase.calculators.emt import EMT
-from ase.vibrations.finite_diff import (get_displacements,
-                                        read_axis_aligned_forces)
+from ase.vibrations.finite_displacements import (get_displacements,
+                                                 read_axis_aligned_forces)
 
 atoms = ase.io.read("opt_slab.extxyz")
 atoms.calc = EMT()

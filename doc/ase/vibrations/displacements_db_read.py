@@ -1,6 +1,6 @@
 import ase.db
 import ase.io
-from ase.vibrations.finite_diff import read_axis_aligned_db
+from ase.vibrations.finite_displacements import read_axis_aligned_db
 
 name = 'ethanol'
 

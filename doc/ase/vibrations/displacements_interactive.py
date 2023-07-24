@@ -1,7 +1,7 @@
 import ase.build
 from ase.calculators.mopac import MOPAC
-from ase.vibrations.finite_diff import (get_displacements,
-                                        read_axis_aligned_forces)
+from ase.vibrations.finite_displacements import (get_displacements,
+                                                 read_axis_aligned_forces)
 from ase.optimize import LBFGS, FIRE
 
 atoms = ase.build.molecule('CH3CH2OH')

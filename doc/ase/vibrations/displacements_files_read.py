@@ -1,5 +1,5 @@
 import ase.io
-from ase.vibrations.finite_diff import read_axis_aligned_forces
+from ase.vibrations.finite_displacements import read_axis_aligned_forces
 from pathlib import Path
 
 atoms = ase.io.read('ethanol_gpaw_opt.xyz')

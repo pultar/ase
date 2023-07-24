@@ -1,6 +1,7 @@
 import ase.build
 from gpaw import GPAW
-from ase.vibrations.finite_diff import get_displacements_with_identities
+from ase.vibrations.finite_displacements import (
+    get_displacements_with_identities)
 from ase.optimize import LBFGS
 from pathlib import Path
 

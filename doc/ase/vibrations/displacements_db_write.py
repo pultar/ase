@@ -1,7 +1,7 @@
 import ase.build
 from ase.calculators.espresso import Espresso, EspressoProfile
 import ase.io
-from ase.vibrations.finite_diff import write_displacements_to_db
+from ase.vibrations.finite_displacements import write_displacements_to_db
 from pathlib import Path
 
 atoms = ase.build.molecule('CH3CH2OH', vacuum=7.)
