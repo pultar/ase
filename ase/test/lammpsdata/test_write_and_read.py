@@ -1,7 +1,6 @@
 """Test write and read."""
 import io
 
-import numpy as np
 import pytest
 from ase import Atoms
 from ase.build import bulk
@@ -12,6 +11,12 @@ from ase.io.lammpsdata import read_lammps_data, write_lammps_data
 @pytest.mark.parametrize("masses", [False, True])
 class _Base:
     def _run(self, atoms_ref: Atoms, masses: bool):
+        self._check_explicit_numbers(atoms_ref, masses)
+        if masses:
+            self._check_masses2numbers(atoms_ref)
+
+    def _check_explicit_numbers(self, atoms_ref: Atoms, masses: bool):
+        """Check if write-read is consistent when giving Z_of_type."""
         buf = io.StringIO()
         write_lammps_data(buf, atoms_ref, masses=masses)
         buf.seek(0)
@@ -22,12 +27,19 @@ class _Base:
         atoms = read_lammps_data(buf, Z_of_type=Z_of_type, style="atomic")
         self._compare(atoms, atoms_ref)
 
+    def _check_masses2numbers(self, atoms_ref: Atoms):
+        """Check if write-read is consistent when guessing atomic numbers."""
+        buf = io.StringIO()
+        write_lammps_data(buf, atoms_ref, masses=True)
+        buf.seek(0)
+        atoms = read_lammps_data(buf, style="atomic")
+        self._compare(atoms, atoms_ref)
+
     def _compare(self, atoms: Atoms, atoms_ref: Atoms):
-        func = np.testing.assert_array_equal
-        func(atoms.get_atomic_numbers(), atoms_ref.get_atomic_numbers())
-        func = np.testing.assert_allclose
-        func(atoms.get_masses(), atoms_ref.get_masses())
-        func(atoms.get_scaled_positions(), atoms_ref.get_scaled_positions())
+        assert all(atoms.numbers == atoms_ref.numbers)
+        assert atoms.get_masses() == pytest.approx(atoms_ref.get_masses())
+        assert atoms.get_scaled_positions() == pytest.approx(
+            atoms_ref.get_scaled_positions())
 
 
 @pytest.mark.parametrize("cubic", [False, True])
