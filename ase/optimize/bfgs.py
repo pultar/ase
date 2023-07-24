@@ -80,6 +80,15 @@ class BFGS(Optimizer):
         dpos, steplengths = self.prepare_step(pos, forces)
         dpos = self.determine_step(dpos, steplengths)
         atoms.set_positions(pos + dpos)
+        if hasattr(atoms,'constraints') and self.pos0 is not None:
+            cons = atoms.constraints.copy()
+            for i in range(len(cons)):
+                if 'FixExternals' == repr(cons[i]):
+                    dr_eff=atoms.positions-pos
+                    forces, self.H = cons[i].retro_update_f(self.H0, self.pos0, self.forces0, pos.flat, forces, dr_eff.flat, self.maxstep)
+                    
+        self.pos0 = pos.flat.copy()
+        self.forces0 = forces.copy()        
         self.dump((self.H, self.pos0, self.forces0, self.maxstep))
 
     def prepare_step(self, pos, forces):
@@ -101,8 +110,7 @@ class BFGS(Optimizer):
 
         dpos = np.dot(V, np.dot(forces, V) / np.fabs(omega)).reshape((-1, 3))
         steplengths = (dpos**2).sum(1)**0.5
-        self.pos0 = pos.flat.copy()
-        self.forces0 = forces.copy()
+
 
         return dpos, steplengths
 
@@ -128,6 +136,7 @@ class BFGS(Optimizer):
         if self.H is None:
             self.H = self.H0
             return
+        self.H0=self.H.copy()
         dpos = pos - pos0
 
         if np.abs(dpos).max() < 1e-7:

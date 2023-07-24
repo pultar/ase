@@ -1,6 +1,9 @@
 from warnings import warn
 
 import numpy as np
+from scipy.linalg import expm, logm, null_space, solve, pinv, inv, eigh
+from numpy.linalg import cond, norm, qr, svd, matrix_rank
+from scipy.optimize import least_squares
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.geometry import (find_mic, wrap_positions, get_distances_derivatives,
                           get_angles_derivatives, get_dihedrals_derivatives,
@@ -2849,11 +2852,6 @@ class ExpCellFilter(UnitCellFilter):
         self.stress = full_3x3_to_voigt_6_stress(convergence_crit_stress)
         return forces
         
-from scipy.linalg import null_space,solve,pinv,inv,eigh
-from numpy.linalg import cond, norm, qr,svd,matrix_rank
-import numpy as np
-from scipy.optimize import least_squares
-
 class FixExternals:
 
 	def __init__(self, atoms, indicies):
@@ -2866,6 +2864,10 @@ class FixExternals:
 		self.POS=ads.get_positions()
 		self.POS_COM=np.copy(self.POS)-np.copy(self.COM)
 		self.dx=0.2
+		self.angles=np.asarray([0,0,0])
+		self.ROT=np.identity(3)
+	def __repr__(self):
+		return 'FixExternals'
 
 	def rot_x(self,x):
 		return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
@@ -2916,14 +2918,16 @@ class FixExternals:
 		def system(x,b=A_solve):
 			return(f(x)-b)
 		x=least_squares(system,np.asarray((0,0,0)))
+		self.angles=np.copy(x.x)
 		x0, x1, x2 = x.x
 		A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+		self.ROT=A
+		print(self.ROT)
 		mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
 		return mapped_ads+self.COM
 	
 	def get_subspace(self,ads):
-
-		h=1e-1*self.dx
+		h=self.dx
 		com=ads.get_center_of_mass()
 		pos=ads.get_positions()
 		pos_com=np.copy(pos)-np.copy(com)
@@ -2958,9 +2962,8 @@ class FixExternals:
 				J[9,(3*i+j)]=(ff_Ivec[2,0]-fi_Ivec[2,0])/(2.*h)
 				J[10,(3*i+j)]=(ff_Ivec[2,1]-fi_Ivec[2,1])/(2.*h)
 				J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h)  
-
 		u,s,v=svd(J)
-		rcond=np.mean(s[6:8])/s[0]
+		rcond=np.mean(s[5:7])/s[0]
 		J_sub=null_space(J,rcond)
 		for i in range(np.shape(J_sub)[1]):
 			J_sub[:,i]*=(1/norm(np.copy(J_sub[:,i])))
@@ -2974,8 +2977,9 @@ class FixExternals:
 		ads_ref=cpy[indx].copy()
 		ads_ref.positions=self.adjust_rotation(ads_ref)
 		newpositions[indx]=ads_ref.positions
-		self.dx=norm(newpositions-atoms.positions)
+		self.dx=np.mean(abs(newpositions-atoms.positions))
 		return newpositions
+		
 	def adjust_forces(self,atoms,forces):
 		indx=self.indicies
 		cpy=atoms.copy()
@@ -2995,3 +2999,24 @@ class FixExternals:
 			if i not in indx:
 				forces[i]=0
 		return forces
+
+	def retro_update_f(self,H0,r0,f0,r,f_init,dr_eff,maxstep):
+		def get_dr(f):
+			dr = r - r0
+			df = f - f0
+			a = np.dot(dr, df)
+			dg = np.dot(H0, dr)
+			b = np.dot(dr, dg)
+			self.H = H0-(np.outer(df, df) / a + np.outer(dg, dg) / b)
+			omega, V = eigh(self.H)
+			dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
+			steplengths = (dr**2).sum(1)**0.5
+			maxsteplength = np.max(steplengths)
+			if maxsteplength >= maxstep:
+				scale = maxstep / maxsteplength
+				dr *= scale
+			return dr.flatten()
+		def system(f,b=dr_eff):
+			return(get_dr(f)-b)
+		f=least_squares(system,f_init,ftol=1e-5,xtol=1e-5,gtol=1e-5)
+		return f.x, self.H
