@@ -369,32 +369,40 @@ def test_reflective_images_equality():
     assert r1 == r1
 
 def test_rocksalt():
-    from ase.io import read
     from ase.build import bulk
     from ase import Atoms
-    from ase.visualize import view
-    from ase.rneb import RNEB, reshuffle_positions
-    from ase.geometry import wrap_positions
+    from ase.io import read, write
+    from ase.rneb import RNEB
     
     a = 16.0802 / 4
+
+    pristine = read('/home/stly/ase/ase/test/neb/pristine.traj')
+    LiF_relaxed = read('/home/stly/ase/ase/test/neb/relaxed.traj')
     
     LiF = bulk('Li', crystalstructure='fcc', a=1, cubic=False, orthorhombic=False)
     LiF += Atoms('F', positions=[(0.5, 0.5, 0.5)], pbc=True)
     LiF.set_cell(LiF.get_cell() * a, scale_atoms=True)
     LiF.set_pbc(True)
     LiF *= (4, 4, 4)
-    # LiF *= (2, 2, 2)
     
-    rneb = RNEB(LiF)
+    cell = LiF.cell
+    LiF.rotate(cell[0], pristine.cell[0], rotate_cell=True)
 
-    LiF_relaxed = LiF.copy()
-    LiF_relaxed.set_distance(113, 121, 1.7773663, mic=True)
-    # LiF_relaxed.set_distance(9, 13, 1.7773663, mic=True)
+    # Take the x component away from the vectors
+    LiF_nox = LiF.copy().cell[1]
+    LiF_nox[0] = 0
+    pris_nox = pristine.copy().cell[1]
+    pris_nox[0] = 0
     
-    
+    # Calculate the angle between the x axis and the y axis
+    angle = np.arccos(np.dot(LiF_nox, pris_nox) / (np.linalg.norm(LiF_nox) * np.linalg.norm(pris_nox))) * (180 / np.pi)
+
+    # Rotate around x axis to align with y axis
+    LiF.rotate(angle, LiF.cell[0], rotate_cell=True)
+
+    rneb = RNEB(pristine)
     all_eq = rneb.get_all_equivalent_images(LiF_relaxed)
     assert len(all_eq) == len(rneb.all_sym_ops['rotations'])
     
     all_eq_no_dupes = rneb.get_all_equivalent_images(LiF_relaxed, discard_equal_structures=True)
     assert len(all_eq_no_dupes) < len(all_eq)
-
