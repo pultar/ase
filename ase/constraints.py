@@ -2851,172 +2851,178 @@ class ExpCellFilter(UnitCellFilter):
         forces[natoms:] = deform_grad_log_force
         self.stress = full_3x3_to_voigt_6_stress(convergence_crit_stress)
         return forces
-        
+
 class FixExternals:
+    def __init__(self, atoms, indicies):
+        self.indicies=indicies
+        self.atoms=atoms
+        ads=atoms[self.indicies]
+        Ivecval=ads.get_moments_of_inertia(vectors=True)
+        self.pa=np.transpose(Ivecval[1])
+        self.COM=ads.get_center_of_mass()
+        self.POS=ads.get_positions()
+        self.POS_COM=np.copy(self.POS)-np.copy(self.COM)
+        self.dx=0.2
+        self.angles=np.asarray([0,0,0])
+        self.ROT=np.identity(3)
+    def __repr__(self):
+        return 'FixExternals'
 
-	def __init__(self, atoms, indicies):
-		self.indicies=indicies
-		self.atoms=atoms
-		ads=atoms[self.indicies]
-		Ivecval=ads.get_moments_of_inertia(vectors=True)
-		self.pa=np.transpose(Ivecval[1])
-		self.COM=ads.get_center_of_mass()
-		self.POS=ads.get_positions()
-		self.POS_COM=np.copy(self.POS)-np.copy(self.COM)
-		self.dx=0.2
-		self.angles=np.asarray([0,0,0])
-		self.ROT=np.identity(3)
-	def __repr__(self):
-		return 'FixExternals'
+    def rot_x(self,x):
+        return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
+    def rot_y(self,y):
+        return np.array(((np.cos(y), 0, np.sin(y)),(0, 1, 0),(-np.sin(y), 0, np.cos(y))))
+    def rot_z(self,z):
+        return np.array(((1, 0, 0),(0, np.cos(z), -np.sin(z)),(0, np.sin(z), np.cos(z))))
 
-	def rot_x(self,x):
-		return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
-	def rot_y(self,y):
-		return np.array(((np.cos(y), 0, np.sin(y)),(0, 1, 0),(-np.sin(y), 0, np.cos(y))))
-	def rot_z(self,z):
-		return np.array(((1, 0, 0),(0, np.cos(z), -np.sin(z)),(0, np.sin(z), np.cos(z))))
+    def sort_ivec(self,Ivec_ref):
+        tmp_ivec=np.zeros([3,3])
+        for i in range(3):
+            d1=np.dot(Ivec_ref[:,0],self.pa[:,i])
+            d2=np.dot(Ivec_ref[:,1],self.pa[:,i])
+            d3=np.dot(Ivec_ref[:,2],self.pa[:,i])
+            if abs(d1) > abs(d2) and abs(d1) > abs(d3):
+                if d1 <= 0:
+                    tmp_ivec[:,i]=-Ivec_ref[:,0]
+                else:
+                    tmp_ivec[:,i]=Ivec_ref[:,0]
+                Ivec_ref[:,0]=0
+            if abs(d2) > abs(d1) and abs(d2) > abs(d3):
+                if d2 <= 0:
+                    tmp_ivec[:,i]=-Ivec_ref[:,1]
+                else:
+                    tmp_ivec[:,i]=Ivec_ref[:,1]
+                Ivec_ref[:,1]=0
+            if abs(d3) > abs(d2) and abs(d3) > abs(d1):
+                if d3 <= 0:
+                    tmp_ivec[:,i]=-Ivec_ref[:,2]
+                else:
+                    tmp_ivec[:,i]=Ivec_ref[:,2]
+                Ivec_ref[:,2]=0
+        return tmp_ivec
 
-	def sort_ivec(self,Ivec_ref):
-		tmp_ivec=np.zeros([3,3])
-		for i in range(3):
-			d1=np.dot(Ivec_ref[:,0],self.pa[:,i])
-			d2=np.dot(Ivec_ref[:,1],self.pa[:,i])
-			d3=np.dot(Ivec_ref[:,2],self.pa[:,i])
-			if abs(d1) > abs(d2) and abs(d1) > abs(d3):
-				if d1 <= 0:
-					tmp_ivec[:,i]=-Ivec_ref[:,0]
-				else:
-					tmp_ivec[:,i]=Ivec_ref[:,0]
-				Ivec_ref[:,0]=0
-			if abs(d2) > abs(d1) and abs(d2) > abs(d3):
-				if d2 <= 0:
-					tmp_ivec[:,i]=-Ivec_ref[:,1]
-				else:
-					tmp_ivec[:,i]=Ivec_ref[:,1]
-				Ivec_ref[:,1]=0
-			if abs(d3) > abs(d2) and abs(d3) > abs(d1):
-				if d3 <= 0:
-					tmp_ivec[:,i]=-Ivec_ref[:,2]
-				else:
-					tmp_ivec[:,i]=Ivec_ref[:,2]
-				Ivec_ref[:,2]=0
-		return tmp_ivec
-
-	def adjust_rotation(self,ads_ref):
-		com_ref=ads_ref.get_center_of_mass()
-		pos_ref=ads_ref.get_positions()
-		pos_com_ref=np.copy(pos_ref)-np.copy(com_ref)
-		Ivecval_ref=ads_ref.get_moments_of_inertia(vectors=True)
-		Ivec_ref=self.sort_ivec(np.transpose(Ivecval_ref[1]))
-		A_solve=np.copy(np.matmul(self.pa,inv(Ivec_ref)))
-		A_solve=A_solve.flatten()
-		def f(x):
-			x0, x1, x2 = x
-			A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
-			A = A.flatten()
-			return A
-		def system(x,b=A_solve):
-			return(f(x)-b)
-		x=least_squares(system,np.asarray((0,0,0)))
-		self.angles=np.copy(x.x)
-		x0, x1, x2 = x.x
-		A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
-		self.ROT=A
-		print(self.ROT)
-		mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
-		return mapped_ads+self.COM
+    def adjust_rotation(self,ads_ref):
+        com_ref=ads_ref.get_center_of_mass()
+        pos_ref=ads_ref.get_positions()
+        pos_com_ref=np.copy(pos_ref)-np.copy(com_ref)
+        Ivecval_ref=ads_ref.get_moments_of_inertia(vectors=True)
+        Ivec_ref=self.sort_ivec(np.transpose(Ivecval_ref[1]))
+        A_solve=np.copy(np.matmul(self.pa,inv(Ivec_ref)))
+        A_solve=A_solve.flatten()
+        def f(x):
+            x0, x1, x2 = x
+            A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+            A = A.flatten()
+            return A
+        def system(x,b=A_solve):
+            return(f(x)-b)
+        x=least_squares(system,np.asarray((0,0,0)))
+        self.angles=np.copy(x.x)
+        x0, x1, x2 = x.x
+        A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+        self.ROT=A
+        mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
+        return mapped_ads+self.COM
 	
-	def get_subspace(self,ads):
-		h=self.dx
-		com=ads.get_center_of_mass()
-		pos=ads.get_positions()
-		pos_com=np.copy(pos)-np.copy(com)
-		J=np.zeros([12,3*len(pos)])
-		for i in range(len(pos)):
-			for j in range(3):
-				fi=np.copy(pos_com)
-				ff=np.copy(pos_com)
-				fi[i,j]=fi[i,j]-h
-				ff[i,j]=ff[i,j]+h
-				fi_ads=ads.copy()
-				ff_ads=ads.copy()
-				ff_ads.positions=ff
-				fi_ads.positions=fi
-				fi_com=fi_ads.get_center_of_mass()
-				ff_com=ff_ads.get_center_of_mass()
-				fi_inert=fi_ads.get_moments_of_inertia(vectors=True)
-				fi_Ivec=self.sort_ivec(np.transpose(fi_inert[1]))
-				fi_Ival=fi_inert[0]
-				ff_inert=ff_ads.get_moments_of_inertia(vectors=True)
-				ff_Ivec=self.sort_ivec(np.transpose(ff_inert[1]))
-				ff_Ival=ff_inert[0]
-				J[0,(3*i+j)]=(ff_com[0]-fi_com[0])/(2.*h)
-				J[1,(3*i+j)]=(ff_com[1]-fi_com[1])/(2.*h)
-				J[2,(3*i+j)]=(ff_com[2]-fi_com[2])/(2.*h)
-				J[3,(3*i+j)]=(ff_Ivec[0,0]-fi_Ivec[0,0])/(2.*h)
-				J[4,(3*i+j)]=(ff_Ivec[0,1]-fi_Ivec[0,1])/(2.*h)
-				J[5,(3*i+j)]=(ff_Ivec[0,2]-fi_Ivec[0,2])/(2.*h)
-				J[6,(3*i+j)]=(ff_Ivec[1,0]-fi_Ivec[1,0])/(2.*h)
-				J[7,(3*i+j)]=(ff_Ivec[1,1]-fi_Ivec[1,1])/(2.*h)
-				J[8,(3*i+j)]=(ff_Ivec[1,2]-fi_Ivec[1,2])/(2.*h)
-				J[9,(3*i+j)]=(ff_Ivec[2,0]-fi_Ivec[2,0])/(2.*h)
-				J[10,(3*i+j)]=(ff_Ivec[2,1]-fi_Ivec[2,1])/(2.*h)
-				J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h)  
-		u,s,v=svd(J)
-		rcond=np.mean(s[5:7])/s[0]
-		J_sub=null_space(J,rcond)
-		for i in range(np.shape(J_sub)[1]):
-			J_sub[:,i]*=(1/norm(np.copy(J_sub[:,i])))
-		return J_sub
+    def get_subspace(self,ads):
+        h=self.dx
+        com=ads.get_center_of_mass()
+        pos=ads.get_positions()
+        pos_com=np.copy(pos)-np.copy(com)
+        J=np.zeros([12,3*len(pos)])
+        for i in range(len(pos)):
+            for j in range(3):
+                fi=np.copy(pos_com)
+                ff=np.copy(pos_com)
+                fi[i,j]=fi[i,j]-h
+                ff[i,j]=ff[i,j]+h
+                fi_ads=ads.copy()
+                ff_ads=ads.copy()
+                ff_ads.positions=ff
+                fi_ads.positions=fi
+                fi_com=fi_ads.get_center_of_mass()
+                ff_com=ff_ads.get_center_of_mass()
+                fi_inert=fi_ads.get_moments_of_inertia(vectors=True)
+                fi_Ivec=self.sort_ivec(np.transpose(fi_inert[1]))
+                fi_Ival=fi_inert[0]
+                ff_inert=ff_ads.get_moments_of_inertia(vectors=True)
+                ff_Ivec=self.sort_ivec(np.transpose(ff_inert[1]))
+                ff_Ival=ff_inert[0]
+                J[0,(3*i+j)]=(ff_com[0]-fi_com[0])/(2.*h)
+                J[1,(3*i+j)]=(ff_com[1]-fi_com[1])/(2.*h)
+                J[2,(3*i+j)]=(ff_com[2]-fi_com[2])/(2.*h)
+                J[3,(3*i+j)]=(ff_Ivec[0,0]-fi_Ivec[0,0])/(2.*h)
+                J[4,(3*i+j)]=(ff_Ivec[0,1]-fi_Ivec[0,1])/(2.*h)
+                J[5,(3*i+j)]=(ff_Ivec[0,2]-fi_Ivec[0,2])/(2.*h)
+                J[6,(3*i+j)]=(ff_Ivec[1,0]-fi_Ivec[1,0])/(2.*h)
+                J[7,(3*i+j)]=(ff_Ivec[1,1]-fi_Ivec[1,1])/(2.*h)
+                J[8,(3*i+j)]=(ff_Ivec[1,2]-fi_Ivec[1,2])/(2.*h)
+                J[9,(3*i+j)]=(ff_Ivec[2,0]-fi_Ivec[2,0])/(2.*h)
+                J[10,(3*i+j)]=(ff_Ivec[2,1]-fi_Ivec[2,1])/(2.*h)
+                J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h)  
+        u,s,v=svd(J)
+        rcond=np.mean(s[5:7])/s[0]
+        J_sub=null_space(J,rcond)
+        for i in range(np.shape(J_sub)[1]):
+            J_sub[:,i]*=(1/norm(np.copy(J_sub[:,i])))
+        return J_sub
 
-	def adjust_positions(self,atoms,newpositions):
-		indx=self.indicies
-		cpy=atoms.copy()
-		del cpy.constraints
-		cpy.positions=newpositions
-		ads_ref=cpy[indx].copy()
-		ads_ref.positions=self.adjust_rotation(ads_ref)
-		newpositions[indx]=ads_ref.positions
-		self.dx=np.mean(abs(newpositions-atoms.positions))
-		return newpositions
-		
-	def adjust_forces(self,atoms,forces):
-		indx=self.indicies
-		cpy=atoms.copy()
-		del cpy.constraints
-		ads_ref=cpy[indx].copy()
-		J_sub=self.get_subspace(ads_ref)
-		forces_1D=np.zeros(3*len(ads_ref))
-		for i in range(len(ads_ref)):
-			forces_1D[3*i:3*i+3]=np.copy(forces[indx[i],:])
-		tmp_forces=np.zeros(3*len(ads_ref))
-		for i in range(np.shape(J_sub)[1]):
-			coef=np.copy(np.dot(J_sub[:,i],forces_1D))
-			tmp_forces+=(coef*J_sub[:,i])
-		for i in range(len(ads_ref)):
-			forces[indx[i],:]=tmp_forces[3*i:3*i+3]
-		for i in range(len(forces)):
-			if i not in indx:
-				forces[i]=0
-		return forces
+    def adjust_positions(self,atoms,newpositions):
+        indx=self.indicies
+        dpos=np.copy((newpositions-atoms.positions)[indx])
+        cpy=atoms.copy()
+        del cpy.constraints
+        cpy.positions=newpositions
+        ads_ref=cpy[indx].copy()
+        ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
+        maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
+        #while maxstep >= 0.2:
+        #    scale=(0.2/maxstep)
+        #    dpos*=scale
+        #    ads_ref.positions=np.copy(atoms.positions[indx]+dpos)
+        #    ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
+        #    maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
+        newpositions[indx]=ads_ref.positions
+        print(maxstep)
+        self.dx=np.mean(abs(newpositions-atoms.positions))
+        return newpositions
+    def adjust_forces(self,atoms,forces):
+        indx=self.indicies
+        cpy=atoms.copy()
+        del cpy.constraints
+        ads_ref=cpy[indx].copy()
+        J_sub=self.get_subspace(ads_ref)
+        forces_1D=np.zeros(3*len(ads_ref))
+        for i in range(len(ads_ref)):
+            forces_1D[3*i:3*i+3]=np.copy(forces[indx[i],:])
+        tmp_forces=np.zeros(3*len(ads_ref))
+        for i in range(np.shape(J_sub)[1]):
+            coef=np.copy(np.dot(J_sub[:,i],forces_1D))
+            tmp_forces+=(coef*J_sub[:,i])
+        for i in range(len(ads_ref)):
+            forces[indx[i],:]=tmp_forces[3*i:3*i+3]
+        for i in range(len(forces)):
+            if i not in indx:
+                forces[i]=0
+        return forces
 
-	def retro_update_f(self,H0,r0,f0,r,f_init,dr_eff,maxstep):
-		def get_dr(f):
-			dr = r - r0
-			df = f - f0
-			a = np.dot(dr, df)
-			dg = np.dot(H0, dr)
-			b = np.dot(dr, dg)
-			self.H = H0-(np.outer(df, df) / a + np.outer(dg, dg) / b)
-			omega, V = eigh(self.H)
-			dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
-			steplengths = (dr**2).sum(1)**0.5
-			maxsteplength = np.max(steplengths)
-			if maxsteplength >= maxstep:
-				scale = maxstep / maxsteplength
-				dr *= scale
-			return dr.flatten()
-		def system(f,b=dr_eff):
-			return(get_dr(f)-b)
-		f=least_squares(system,f_init,ftol=1e-5,xtol=1e-5,gtol=1e-5)
-		return f.x, self.H
+    def retro_update_f(self,H0,r0,f0,r,f_init,dr_eff,maxstep):
+        def get_dr(f):
+            dr = r - r0
+            df = f - f0
+            a = np.dot(dr, df)
+            dg = np.dot(H0, dr)
+            b = np.dot(dr, dg)
+            self.H = H0-(np.outer(df, df) / a + np.outer(dg, dg) / b)
+            omega, V = eigh(self.H)
+            dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
+            steplengths = (dr**2).sum(1)**0.5
+            maxsteplength = np.max(steplengths)
+            if maxsteplength >= maxstep:
+                scale = maxstep / maxsteplength
+                dr *= scale
+            return dr.flatten()
+        def system(f,b=dr_eff):
+            return(get_dr(f)-b)
+        f=least_squares(system,f_init,ftol=1e-2,xtol=1e-2,gtol=1e-2)
+        return f.x, self.H

@@ -75,7 +75,7 @@ class BFGS(Optimizer):
 
         if forces is None:
             forces = atoms.get_forces()
-
+        forces = forces.reshape(-1)
         pos = atoms.get_positions()
         dpos, steplengths = self.prepare_step(pos, forces)
         dpos = self.determine_step(dpos, steplengths)
@@ -91,8 +91,7 @@ class BFGS(Optimizer):
         self.forces0 = forces.copy()        
         self.dump((self.H, self.pos0, self.forces0, self.maxstep))
 
-    def prepare_step(self, pos, forces):
-        forces = forces.reshape(-1)
+    def prepare_step(self, pos, forces): 
         self.update(pos.flat, forces, self.pos0, self.forces0)
         omega, V = eigh(self.H)
 
