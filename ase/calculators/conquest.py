@@ -15,8 +15,6 @@ from ase.io.conquest import ConquestEnv, conquest_err, conquest_warn
 
 
 class Conquest(FileIOCalculator):
-    """ASE-Calculator for CONQUEST.
-    """
 
     implemented_properties = ['energy', 'forces', 'stress']
     command = None
@@ -25,114 +23,52 @@ class Conquest(FileIOCalculator):
 
     # A minimal set of defaults
     default_parameters = {
-        'grid_cutoff': 100,     # DFT defaults
+        'grid_cutoff': 100,
         'kpts': None,
         'xc': 'PBE',
+        'self_consistent': True,
         'scf_tolerance': 1.0e-6,
         'nspin': 1,
-        'general.pseudopotentialtype': 'Hamann',  # CONQUEST defaults
-        'basis.basisset': 'PAOs',
-        'io.iprint': 2,
+        'general.pseudopotentialtype': 'Hamann',            
+        'io.iprint': 1,
         'io.fractionalatomiccoords': True,
         'sc.maxiters': 50,
+        'diag.smearingType': 1,
+        'diag.kt': 0.001,        
         'atommove.typeofrun': 'static',
-        'dm.solutionmethod': 'diagon'}
+        'dm.solutionmethod': 'diagon',
+        'io.writeouttoasefile': True}
 
     def __init__(self, restart=None, label=None, atoms=None, basis={},
-                 **kwargs):
-
+        **kwargs):
         """
-        Construct CONQUEST-calculator object.
+        ASE-Calculator class for Conquest.
 
-        Parameters
+        Parameters        
         ==========
 
         directory: str
-            directory used for storing input/output files and calculation
-
+            directory used for storing input/output and calculation files (default None).
+        label: str
+            basename for working files (only used by ASE, eg. NEB).
         atoms: ASE atoms object
-            An atoms object constructed either via ASE or read from an input.
-            A CONQUEST-formatted structure file can be parsed into an atoms
-            object using the function ase.io.conquest.read_conquest_structure
-
-        kwargs: keyword arguments
-            Critical DFT parameters for the calculator. These have defaults,
-            but are *strongly* system-dependent.
-            "grid_cutoff"  = 120      Integration grid energy cutoff (Ha)
-            "kpts"         = [4,4,4]  K-point mesh
-            "xc"           = "PBE"    XC functional
-            "scf_tolerance = 1.0e-7   Self-consistent tolerance
-            "nspin"        = 1        spin polarisation
-
-            The rest can be CONQUEST key/value pairs in a dictionary, e.g.
-            other_keywords = {"Basis.MultisiteSF"         : True,
-                              "Multisite.LFD"             : True,
-                              "Mulisite.LFD.ThreshE       : 1.0e-6
-                              "Mulisite.LFD.ThreshD       : 1.0e-6
-                              "Multistie.LFD.MaxIteration : 150}
-
-           calc = Conquest(grid_cutoff=50,
-                           xc="LDA",
-                           self_consistent=True,
-                           basis=basis,
-                           kpts=[4,4,4],
-                           nspin=2,
-                           **other_keywords)
-
+            an atoms object constructed either via ASE or read from an input.
         basis: dict
-            A dictionary specifying the basis set parameters. These will
-            generally be parsed from the .ion file, but can be set as follows:
-                 - valence_charge            : Float
-                 - number_of_supports        : Int
-                 - support_fn_range          : Float
-                 - pseudopotential_type      : Str (siesta, hamann)
-                 - xc functional use for generation : Str (PBE, LDA)
-                 (if not given functional prodiced in Calculator is used)
-
-            For example, for NaCl you might have something like:
-
-                basis = {"Na" : {"valence_charge"       : 1.00,
-                                 "number_of_supports"   : 4,
-                                 "support_fn_range"     : 7.25,
-                                 "pseudopotential_type" : "siesta"},
-                        "Cl" :  {"valence_charge"       : 7.00,
-                                 "number_of_supports"   : 9,
-                                 "support_fn_range"     : 5.00,
-                                 "pseudopotential_type" : "siesta"}}
-
-            Above is deprecated you have now 3 options which depend upon
-            ConquestEnv by setting up CQ_PP_PATH and CQ_GEN_BASIS_CMD
-
-            CQ_PP_PATH is the absolute path towards a library of ion files
-            (from the Conquest root tree located at ~/pseudo-and-pao)
-
-            CQ_GEN_BASIS_CMD is the absolute path towards the the MakeIonFiles
-            (from the Conquest root tree located at ~/tools/BasisGeneration)
-
-            option 1) specify the ion file names located in CQ_PP_PATH
-
-                basis = {'Na' : {'file' : 'Na_PBE_DZP_CQ.ion'},
-                         'Cl' : {'file' : 'Cl_PBE_DZP_CQ.ion'}}
-
-            option 2)
-
-            Alternatively, if paths to a pseudopotential library and the
-            MakeIonFiles tool are set, a basis set will be generated with the
-            following input:
-
-                basis = {"Na" : {"gen_basis"            : True,
-                                 "basis_size"           : "medium",
-                                 "pseudopotential_type" : "hamann"},
-                        "Cl" :  {"gen_basis"            : True,
-                                 "basis_size"           : "medium",
-                                 "pseudopotential_type" : "hamann"}}
-
-            option 3) ... mix of 1) and 2)
-
-        Examples
-        ========
-        Use default values:
-        TODO
+            a dictionary specifying the pseudopotential/basis files.
+        grid_cutoff: float
+            integration grid in Ha (default 100).
+        kpts: list or tuple 
+            k-points grid (default None).
+        xc: str
+            exchange and correlation functional (default 'PBE').
+        self_consistent: bool
+            choose either a SCF or non-SCF    (default True).       
+        scf_tolerance: float
+            Self-consistent-field convergence tolerance in Ha (default 1.0e-6).
+        nspin: int
+            Spin polarisation: 1 for unpolarized (default) ; 2 for polarised.
+        conquest_flags: dict
+            Other Conquest keyword arguments
         """
 
         self.initialised = False
@@ -355,7 +291,7 @@ class Conquest(FileIOCalculator):
             self.results = read_conquest_out(outfile_obj, self.atoms)
 
         if (self.parameters['dm.solutionmethod'] == 'diagon'):
-            if (self.parameters['io.iprint'] >= 2):
+            if (self.parameters['io.iprint'] >= 1):
                 self.get_bands(cq_out_path)
 
     def get_bands(self, cq_out_path):

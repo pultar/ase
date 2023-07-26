@@ -520,13 +520,13 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
 
     parameters :: dict
         Contains mandatory flags plus other CONQUEST flags as key/value pairs
-    parameters = {'grid_cutoff'              : 100,
-                  'kpts'                     : [4,4,4],
-                  'xc'                       : 'PBE',
-                  'scf_tolerance'            : 1.0e-6,
-                  'io.iprint'                : 1,
-                  'IO.FractionalAtomicCoords': True,
-                  'SC.MaxIters'              : 50}
+    parameters = {'grid_cutoff'     : 100,                      
+                  'xc'              : 'PBE',
+                  'self_consistent' : True,
+                  'scf_tolerance'   : 1.0e-6,
+                  'kpts'            : None,
+                  'nspin'           : 1,
+                  'directory'       : None}
 
     basis :: dict
         A dictionary specifying the basis set parameters. These will
@@ -535,10 +535,10 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
     """
 
     # Translation of ASE keys into Conquest XC functionals
-    cq_xc_dict = {'PZ': 1,     # Perdew-Zunger 81 LDA
+    cq_xc_dict = {'PZ':  1,    # Perdew-Zunger 81 LDA
                   'LDA': 3,    # Perdew-Wang 92 LDA
                   'PBE': 101,  # Perdew, Burke, Ernzerhof
-                  'WC': 104    # Wu-Cohen
+                  'WC':  104   # Wu-Cohen
                   }
     cq_input = []
     for key in parameters:
