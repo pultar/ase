@@ -177,8 +177,8 @@ def test_db_workflow(testdir, random_dimer):
     db_file = 'vibtest.db'
 
     finite_displacements.write_displacements_to_db(random_dimer,
-                                                         db=db_file,
-                                                         metadata=metadata)
+                                                   db=db_file,
+                                                   metadata=metadata)
 
     with ase.db.connect(db_file, append=True) as db:
         for row in db.select(**metadata):
