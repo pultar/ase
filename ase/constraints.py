@@ -2976,14 +2976,16 @@ class FixExternals:
         ads_ref=cpy[indx].copy()
         ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
         maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
-        #while maxstep >= 0.2:
-        #    scale=(0.2/maxstep)
-        #    dpos*=scale
-        #    ads_ref.positions=np.copy(atoms.positions[indx]+dpos)
-        #    ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
-        #    maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
+        dxstep=0
+        while maxstep >= 0.2:
+            scale=(0.2/maxstep)
+            dxstep+=1
+            dpos*=scale
+            ads_ref.positions=np.copy(atoms.positions[indx]+dpos)
+            ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
+            maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
         newpositions[indx]=ads_ref.positions
-        print(maxstep)
+        print('dx step:',dxstep)
         self.dx=np.mean(abs(newpositions-atoms.positions))
         return newpositions
     def adjust_forces(self,atoms,forces):
@@ -3007,13 +3009,15 @@ class FixExternals:
         return forces
 
     def retro_update_f(self,H0,r0,f0,r,f_init,dr_eff,maxstep):
+        self.dfstep=0
         def get_dr(f):
+            self.dfstep+=1
             dr = r - r0
             df = f - f0
             a = np.dot(dr, df)
             dg = np.dot(H0, dr)
             b = np.dot(dr, dg)
-            self.H = H0-(np.outer(df, df) / a + np.outer(dg, dg) / b)
+            self.H = H0-np.outer(df, df) / a - np.outer(dg, dg) / b
             omega, V = eigh(self.H)
             dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
             steplengths = (dr**2).sum(1)**0.5
@@ -3024,5 +3028,7 @@ class FixExternals:
             return dr.flatten()
         def system(f,b=dr_eff):
             return(get_dr(f)-b)
-        f=least_squares(system,f_init,ftol=1e-2,xtol=1e-2,gtol=1e-2)
+        f=least_squares(system,f_init, ftol=1e-5,xtol=1e-5,gtol=1e-5)
+#        print(f_init)
+        print('df step:',self.dfstep)
         return f.x, self.H

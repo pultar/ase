@@ -94,6 +94,7 @@ class BFGS(Optimizer):
     def prepare_step(self, pos, forces): 
         self.update(pos.flat, forces, self.pos0, self.forces0)
         omega, V = eigh(self.H)
+        #print(omega)
 
         # FUTURE: Log this properly
         # # check for negative eigenvalues of the hessian
