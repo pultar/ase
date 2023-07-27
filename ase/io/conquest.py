@@ -350,9 +350,9 @@ def make_ion_files(basis, species_list, command=None, directory=None, xc=None):
         # We could do this by generalising 'species'
         if 'gen_basis' in basis[species]:
             if 'basis_size' not in basis[species]:
-                print('basis_size not specified in basis for {species}')
+                print('basis_size not specified in basis for %s'%species)
                 print('Generating default basis (medium)')
-                basis['basis_size'] = 'medium'
+                basis[species]['basis_size'] = 'medium'
             # get basic string - required to generate basis
             # cq_env.get('pseudo_path')
 

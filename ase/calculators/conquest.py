@@ -146,11 +146,12 @@ class Conquest(FileIOCalculator):
                 if ('xc' in basis_single[species_single]):
 
                     if (ion_xc != basis_single[species_single]['xc']):
+                        ion_xc = basis_single[species_single]['xc']
                         conquest_warn("{} xc {} enforced for basis \
-                                        generation".format(species_single,
-                                        ion_xc))
-
-                        basis_single[species_single]['xc'] = ion_xc
+                                      generation".format(species_single,
+                                      ion_xc))
+                         
+                        #basis_single[species_single]['xc'] = ion_xc
 
                 print('\nmake_ion_files input:')
                 print(species_single, basis_single[species_single])
@@ -173,6 +174,9 @@ class Conquest(FileIOCalculator):
         if ("file" in basis[species]):
             fname = basis[species]["file"]
 
+        if ("directory" in basis[species]):
+            dname_ = basis[species]["directory"]+'/'
+
         # Default otherwise
         else:
             fname = dname
@@ -189,6 +193,7 @@ class Conquest(FileIOCalculator):
         if (species not in basis):
             basis[species] = {}
 
+        ion_file_path_    = ion_dir.joinpath(Path(dname_ + fname))
         ion_file_path_lib = ion_dir.joinpath(Path("lib/" + fname))
         ion_file_path = ion_dir.joinpath(Path(fname))
 
@@ -201,12 +206,13 @@ class Conquest(FileIOCalculator):
                                                 + fname)
 
         count = 0
-        for ion_file in [ion_file_path,
+        for ion_file in [ion_file_path_,
+                         ion_file_path,
                          ion_file_path_lib,
                          ion_file_path_xc,
                          Path(fname),
                          Path(self.directory).joinpath(fname)]:
-
+            print()
             print("Try to find {} in {}".format(fname, ion_file), end="")
             if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
