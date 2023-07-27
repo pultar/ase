@@ -43,7 +43,7 @@ def _get_displacements_with_identities(atoms: Atoms,
                     'sign': sign,
                     'delta': delta}
 
-        yield(displacement_atoms, identity)
+        yield (displacement_atoms, identity)
 
 
 def get_displacements_with_identities(atoms: Atoms,
