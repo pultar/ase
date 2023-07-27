@@ -647,7 +647,82 @@ class VibrationsData:
         return self.__class__(new_atoms, self.get_hessian(),
                               indices=self.get_indices())
 
-    def apply_sum_rules(self: VD, translation=True, transposition=True) -> VD:
+    @classmethod
+    def _apply_combined_sum_rules(cls, hessian,
+                                  threshold=1e-8, iter_index=0, max_iter=50
+                                  ) -> np.ndarray:
+        """Apply an iterative scheme to satisfy translation and transposition
+
+        This process satisfies the sum rule
+
+        Σ{j≠i} Φ{iα, jβ} = Σ{j≠i} Φ{iβ, jα}  (1)
+
+        which results from arithmetic combination of translation sum rule
+        Φ{iα, iβ} = -Σ{j≠i} Φ{iα, jβ}        (2)
+
+        and transposition symmetry
+        Φ{iα, jβ} = Φ{iβ, jα}                (3)
+
+        where i, j are atom indices; α, β are direction indices; Φ is the
+        force-constants (Hessian) array; {} indicates array indices.
+
+        A final correction to satisfy (2) is required after this operation.
+
+        This is the second method described in:
+        G J Ackland, M C Warren and S J Clark (1997)
+        J Phys: Condens. Matter 9 pp 7861-7872
+        DOI:10.1088/0953-8984/9/37/017
+
+        """
+        if iter_index >= max_iter:
+            raise IndexError("Combined sum rule did not converge")
+
+        max_violation, min_violation = 0., 0.
+
+        from itertools import product
+
+        # iterate over atoms and over pairs of directions
+        for atom_index, (alpha, beta) in product(range(hessian.shape[0]),
+                                                 [(0, 1), (0, 2), (1, 2)]):
+            # non-zero, non-self terms of hessian[atom_index, alpha, :, beta]
+            left_sum_indices = np.nonzero(hessian[atom_index, alpha, :, beta]
+                                          )[0]
+            left_sum_indices = left_sum_indices[left_sum_indices != atom_index]
+
+            # non-zero, non-self terms of hessian[atom_index, beta, :, alpha]
+            right_sum_indices = np.nonzero(hessian[atom_index, beta, :, alpha]
+                                           )[0]
+            right_sum_indices = \
+                right_sum_indices[right_sum_indices != atom_index]
+
+            left_sum = np.sum(
+                hessian[atom_index, alpha, :, beta][left_sum_indices])
+            right_sum = np.sum(
+                hessian[atom_index, beta, :, alpha][right_sum_indices])
+            violation = right_sum - left_sum
+            max_violation = max(violation, max_violation)
+            min_violation = min(violation, min_violation)
+
+            if len(left_sum_indices) > 0:
+                hessian[atom_index, alpha, :, beta][left_sum_indices] \
+                    += 0.5 * violation / len(left_sum_indices)
+            if len(right_sum_indices) > 0:
+                hessian[atom_index, beta, :, alpha][right_sum_indices] \
+                    -= 0.5 * violation / len(right_sum_indices)
+
+        # Fix matrix symmetry
+        hessian = 0.5 * (hessian.transpose(2, 3, 0, 1) + hessian)
+
+        # Iterate to convergence
+        if max_violation < threshold and min_violation > -threshold:
+            return hessian
+        else:
+            return cls._apply_combined_sum_rules(hessian,
+                                                 threshold=threshold,
+                                                 iter_index=(iter_index + 1),
+                                                 max_iter=max_iter)
+
+    def apply_sum_rules(self: VD, translation=True, transposition=False) -> VD:
         """Apply sum rule correction(s) to Hessian matrix
 
         Numerical errors can lead to violations in fundamental properties of
@@ -659,16 +734,18 @@ class VibrationsData:
         # 4-D Hessian, indices (atom1, dir1, atom2, dir2)
         hessian = self.get_hessian()
 
-        if transposition:
-            hessian = 0.5 * (hessian.transpose(2, 3, 0, 1) + hessian)
+        if transposition and translation:
+            hessian = self._apply_combined_sum_rules(hessian)
 
         if translation:
             for atom_index in range(len(hessian)):
                 hessian[atom_index, :, atom_index, :] = (
                     # Easier to add current value than to exclude it from sum!
                     hessian[atom_index, :, atom_index, :]
-                    - hessian[atom_index, :, :, :].sum(axis=1)
-                    )
+                    - hessian[atom_index, :, :, :].sum(axis=1))
+
+        elif transposition:
+            hessian = 0.5 * (hessian.transpose(2, 3, 0, 1) + hessian)
 
         return type(self)(self.get_atoms(),
                           hessian,
