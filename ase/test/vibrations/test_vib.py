@@ -523,6 +523,7 @@ def test_bad_hessian(n2_data):
         with pytest.raises(ValueError):
             VibrationsData(n2_data['atoms'], bad_hessian)
 
+
 def test_sum_rules(random_dimer):
     # A somewhat-physical Hessian for a homonuclear diatomic molecule
     ref_hessian = np.array([[+1.50, +0.00, +0.25, -1.50, +0.00, -0.25],
@@ -538,7 +539,7 @@ def test_sum_rules(random_dimer):
     assert_array_almost_equal(
         vib_data.apply_sum_rules(translation=True,
                                  transposition=True
-                              )
+                                 )
         .get_hessian_2d(),
         ref_hessian)
 
@@ -556,7 +557,9 @@ def test_sum_rules(random_dimer):
 
     # Make equal-and opposite adjustment to upper and lower triangles;
     # sum rules should undo this exactly
-    mod_hessian = np.tril(ref_hessian + 0.1) + np.triu(ref_hessian - 0.1) - (np.eye(6) * ref_hessian)
+    mod_hessian = (np.tril(ref_hessian + 0.1)
+                   + np.triu(ref_hessian - 0.1)
+                   - (np.eye(6) * ref_hessian))
     vib_data = VibrationsData.from_2d(random_dimer, mod_hessian)
     assert_array_almost_equal(vib_data
                               .apply_sum_rules(translation=False,
@@ -583,10 +586,14 @@ def test_sum_rules(random_dimer):
                                       np.random.RandomState(42).rand(12, 12))
     vib_data = vib_data.apply_sum_rules(translation=True, transposition=True)
     assert_array_almost_equal(vib_data.get_hessian(),
-                              vib_data.apply_sum_rules(translation=True, transposition=False).get_hessian())
+                              vib_data.apply_sum_rules(translation=True,
+                                                       transposition=False
+                                                       ).get_hessian())
 
     assert_array_almost_equal(vib_data.get_hessian(),
-                              vib_data.apply_sum_rules(translation=False, transposition=True).get_hessian())
+                              vib_data.apply_sum_rules(translation=False,
+                                                       transposition=True
+                                                       ).get_hessian())
 
 
 def test_bad_hessian2d(n2_data):
