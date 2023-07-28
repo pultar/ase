@@ -14,6 +14,14 @@ from ase.constraints import FixAtoms, FixCartesian
 from ase.build import fcc111, add_adsorbate
 
 
+class NoisyForceConstantCalculator(ForceConstantCalculator):
+    rng = np.random.RandomState(42)
+
+    def get_forces(self, atoms=None):
+        clean_forces = super().get_forces(atoms=atoms)
+        return clean_forces + self.rng.random(clean_forces.shape) * 1e-4
+
+
 @pytest.fixture
 def random_dimer():
     rng = np.random.RandomState(42)
@@ -30,6 +38,15 @@ def random_dimer():
                                          ref=ref_atoms,
                                          f0=np.zeros((2, 3)))
     return atoms
+
+
+@pytest.fixture
+def noisy_dimer(random_dimer):
+    random_dimer.calc = NoisyForceConstantCalculator(
+        D=random_dimer.calc.D,
+        ref=random_dimer.calc.ref,
+        f0=random_dimer.calc.f0)
+    return random_dimer
 
 
 def test_harmonic_vibrations(testdir):
@@ -106,6 +123,25 @@ def test_consistency_with_vibrationsdata(testdir, random_dimer):
     assert_array_almost_equal(random_dimer.calc.D,
                               vib_data.get_hessian_2d(),
                               decimal=6)
+
+
+def test_frederiksen(testdir, noisy_dimer):
+    vib = Vibrations(noisy_dimer, delta=1e-2, nfree=2)
+    vib.run()
+    vib_data_std = vib.get_vibrations(read_cache=False, method='standard')
+    vib_data_frd = vib.get_vibrations(read_cache=False, method='frederiksen')
+
+    # Check Frederiksen option made a difference
+    assert not np.allclose(vib_data_std.get_hessian(),
+                           vib_data_frd.get_hessian())
+
+    # Check sum rule was violated by noise
+    assert not np.allclose(vib_data_std.get_hessian()[0, :, 0, :],
+                           -vib_data_std.get_hessian()[0, :, 1, :])
+
+    # And is fixed by Frederiksen scheme
+    assert_array_almost_equal(vib_data_frd.get_hessian()[0, :, 0, :],
+                              -vib_data_frd.get_hessian()[0, :, 1, :])
 
 
 def test_json_manipulation(testdir, random_dimer):
