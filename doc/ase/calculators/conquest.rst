@@ -26,7 +26,7 @@ Setup
 Environment variables
 ---------------------
 
-* ``ASE_ESPRESSO_COMMAND``: the Conquest executable command including MPI/openMPI prefix.
+* ``ASE_CONQUEST_COMMAND``: the Conquest executable command including MPI/openMPI prefix.
 * ``CQ_PP_PATH``: the PAO path directory to where are located the the ``.ion`` files.
 
 Given the Conquest root directory ``CQ_ROOT``, initialisation might look to something like::
