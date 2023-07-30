@@ -174,12 +174,14 @@ class Conquest(FileIOCalculator):
         if ("file" in basis[species]):
             fname = basis[species]["file"]
 
-        if ("directory" in basis[species]):
-            dname_ = basis[species]["directory"]+'/'
-
         # Default otherwise
         else:
             fname = dname
+
+        if ("directory" in basis[species]):
+            dname_ = basis[species]["directory"]+'/'
+        else:
+            dname_ = '.'
 
         # Default working directory
         fullpath = Path(self.directory).joinpath(dname)
@@ -206,13 +208,14 @@ class Conquest(FileIOCalculator):
                                                 + fname)
 
         count = 0
+        print()
         for ion_file in [ion_file_path_,
                          ion_file_path,
                          ion_file_path_lib,
                          ion_file_path_xc,
                          Path(fname),
                          Path(self.directory).joinpath(fname)]:
-            print()
+            
             print("Try to find {} in {}".format(fname, ion_file), end="")
             if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
