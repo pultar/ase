@@ -61,7 +61,7 @@ Having set up the environment variables properly, the minimal set of parameters
 to launch a SCF calculation is given below with the example of NaCl::
 
     struct = bulk('NaCl', crystalstructure='rocksalt', a=5.71, cubic=True)    
-    basis  = {'Cl' : {'file' : 'ClCQ.ion'}, {'Na' : {'file' : 'NaCQ.ion'}}    
+    basis  = {'Cl' : {'file' : 'ClCQ.ion'}, 'Na' : {'file' : 'NaCQ.ion'}}    
     
     struct.calc = Conquest(basis=basis)
     struct.get_potential_energy()
