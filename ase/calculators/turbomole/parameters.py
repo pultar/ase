@@ -17,7 +17,7 @@ class TurbomoleParameters(dict):
         'slater-dirac-exchange', 's-vwn', 'vwn', 's-vwn_Gaussian', 'pwlda',
         'becke-exchange', 'b-lyp', 'b-vwn', 'lyp', 'b-p', 'pbe', 'tpss',
         'bh-lyp', 'b3-lyp', 'b3-lyp_Gaussian', 'pbe0', 'tpssh', 'lhf', 'oep',
-        'b97-d', 'b2-plyp'
+        'b97-d', 'b2-plyp', 'm06'
     ]
 
     # nested dictionary with parameters attributes
@@ -35,12 +35,30 @@ class TurbomoleParameters(dict):
             'units': 'eV',
             'updateable': True
         },
+       'basis set atom': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'basis',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updateable': False
+        },
         'basis set definition': {
             'comment': 'used only in restart',
             'default': None,
             'group': 'basis',
             'key': None,
             'type': list,
+            'units': None,
+            'updateable': False
+        },
+        'basis set file': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'basis',
+            'key': None,
+            'type': str,
             'units': None,
             'updateable': False
         },
@@ -107,6 +125,37 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': True
         },
+       'dispersion correction': {
+            'comment': None,
+            'default': None,
+            'group': 'dft',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updatable': True
+        },
+        'dispersion correction damping': {
+            'comment': 'Will be added to the control file afterwards.',
+            'default': None,
+        },
+        'ecp file': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'basis',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updateable': False
+        },
+        'ecp name': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'basis',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updateable': False
+        },
         'energy convergence': {
             'comment': 'jobex -energy <int>',
             'default': None,
@@ -119,6 +168,15 @@ class TurbomoleParameters(dict):
             'type': float,
             'units': 'eV',
             'updateable': True
+        },
+        'excitation': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'basis',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updateable': False
         },
         'fermi annealing factor': {
             'comment': None,
@@ -213,6 +271,15 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': False
         },
+        'idef': {
+            'comment': 'only this is currently supported',
+            'default': None,
+            'group': None,
+            'key': None,
+            'type': bool,
+            'units': None,
+            'updateable': False
+        },
         'initial damping': {
             'comment': None,
             'default': None,
@@ -228,6 +295,24 @@ class TurbomoleParameters(dict):
             'group': None,
             'key': None,
             'type': (str, dict),
+            'units': None,
+            'updateable': False
+        },
+        'jbas': {
+            'comment': 'current default from module "define"',
+            'default': None,
+            'group': 'ri-basis',
+            'key': None,
+            'type': str,
+            'units': None,
+            'updateable': False
+        },
+        'marij':{
+            'comment': None,
+            'default': False,
+            'group': 'rij',
+            'key': 'marij',
+            'type': bool,
             'units': None,
             'updateable': False
         },
@@ -572,14 +657,23 @@ class TurbomoleParameters(dict):
         define_str_tpl = (
             '\n__title__\na coord\n__inter__\n'
             'bb all __basis_set__\n*\neht\n__eht_aos_str__y\n__charge_str__'
-            '__occ_str____single_atom_str____norb_str____dft_str____ri_str__'
+            '__occ_str____single_atom_str____norb_str____dft_str____dsp_str__'
+            '__ri_str____ex__'
             '__scfiterlimit____fermi_str____damp_str__q\n'
         )
 
         params = self
 
+        if type(params["excitation"]) == list:
+            exStr = "ex\n{}\n*\n{}\n*\n*\n\n".format(params["excitation"][0], params["excitation"][1])
+        else:
+            exStr = ""
+
         if params['use redundant internals']:
-            internals_str = 'ired\n*'
+            if params["idef"] != None:
+                internals_str = 'idef\n{}\n\n\n\nired\n*'.format(params["idef"])
+            else:
+                internals_str = 'ired\n*'
         else:
             internals_str = '*\nno'
         charge_str = str(params['total charge']) + '\n'
@@ -618,11 +712,25 @@ class TurbomoleParameters(dict):
         if params['density functional']:
             dft_str += 'dft\nfunc ' + params['density functional'] + '\n*\n'
 
+        if params['dispersion correction'] != False:
+            if type(params['dispersion correction']) == str:
+                dsp_str = 'dsp\n{}\n*\n'.format(params['dispersion correction'])
+            else:
+                dsp_str = 'dsp\non\n*\n'
+        else:
+            dsp_str = ''
+
         if params['grid size']:
             dft_str += 'dft\ngrid ' + params['grid size'] + '\n*\n'
 
         if params['use resolution of identity']:
             ri_str = 'ri\non\nm ' + str(params['ri memory']) + '\n*\n'
+            if params['marij']:
+                ri_str += 'marij\n'
+            if params['jbas'] != None:
+                for jbas in params['jbas']:
+                    basisAtom, basisSet = jbas.split()
+                    ri_str += 'jbas\nb "%s" %s' % (basisAtom, basisSet)
         else:
             ri_str = ''
 
@@ -670,12 +778,49 @@ class TurbomoleParameters(dict):
 
         define_str = define_str_tpl
         define_str = re.sub('__title__', params['title'], define_str)
-        define_str = re.sub('__basis_set__', params['basis set name'],
-                            define_str)
+        if params['basis set atom'] != None:
+            if type(params['basis set atom']) == list:
+                skips = ""
+                for i in range(len(params['basis set atom'])):
+                    skips += "\n"
+                for i, item in enumerate(params['basis set atom']):
+                    basisAtom, basisSet = item.split()
+                    params['basis set name'] += '%s\nb "%s" %s' % (skips, basisAtom, basisSet)
+                    if params['basis set file'] != None:
+                        params['basis set name'] += '\nfile %s' % (params['basis set file'][i])
+            else:
+                basisAtom, basisSet = params['basis set atom'].split()
+                params['basis set name'] += '\n\n "%s" "%s"' % (basisAtom, basisSet)
+                if params['basis set file'] != None:
+                    params['basis set name'] += '\nfile %s' % (params['basis set file'][i])
+        if params["ecp name"] != None:
+            if type(params["ecp name"]) == str:
+                ecpAtom, ecpPot = params['ecp name'].split()
+                ecpString = 'ecp "%s" %s\n' % (ecpAtom, ecpPot)
+                if params['ecp file'] != None:
+                    ecpString += 'file\n%s\n' % params['ecp file']
+                define_str = re.sub('__ecp__', ecpString, define_str)
+            elif type(params["ecp name"]) == list:
+                ecpString = ""
+                for elem in range(len(params['ecp name'])):
+                    ecpString += "\n"
+                for elem in range(len(params['ecp name'])):
+                    print(elem)
+                    ecpAtom, ecpPot = params['ecp name'][elem].split()
+                    ecpString += 'ecp "%s" %s\n' % (ecpAtom, ecpPot)
+                    if params['ecp file'][elem] != None:
+                        ecpString += 'file\n%s\n' % params['ecp file'][elem]
+                define_str = re.sub('__ecp__', ecpString, define_str)
+        else:
+            define_str = re.sub('__ecp__', "", define_str)
+
+        define_str = re.sub('__basis_set__', params['basis set name'], define_str)
+
         define_str = re.sub('__charge_str__', charge_str, define_str)
         define_str = re.sub('__occ_str__', occ_str, define_str)
         define_str = re.sub('__norb_str__', norb_str, define_str)
         define_str = re.sub('__dft_str__', dft_str, define_str)
+        define_str = re.sub('__dsp_str__', dsp_str, define_str)
         define_str = re.sub('__ri_str__', ri_str, define_str)
         define_str = re.sub('__single_atom_str__', single_atom_str,
                             define_str)
