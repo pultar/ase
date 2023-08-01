@@ -74,15 +74,15 @@ Default parameters are given in the ``Calculator Class`` above. Note that:
 Parameters
 ==========
 
-In principle all the `Conquest input parameters <file:///Users/lioneltruflandier/CONQUEST-release-f-rework-output-ase/docs/_build/html/input_tags.html>`_
+In principle all the `Conquest input parameters <https://conquest.readthedocs.io/en/latest/input_tags.html>`_
 can be managed by the calculator using key/value pairs in a dictionary. Below is
 a list of other *important* parameters set as default by the Calculator.
 
 ===============================  =========  ===============  ================================
 keyword                          type       default value    description
 ===============================  =========  ===============  ================================
-``DM.SolutionMethod``            ``str``    'diagon'         must always be 'diagon' when using ASE
 ``IO.WriteOutToASEFile``         ``bool``   True             must always be True when using ASE
+``DM.SolutionMethod``            ``str``    'diagon'         must always be 'diagon' when using ASE
 ``IO.Iprint``                    ``int``    1                verbose for the output
 ``General.PseudopotentialType``  ``str``    'Hamann'         kind of pseudopotential other type are 'siesta' and 'abinit'
 ``SC.MaxIters``                  ``int``    50               maximum number SCF cycles

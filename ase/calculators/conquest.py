@@ -46,19 +46,18 @@ class Conquest(FileIOCalculator):
 
         Parameters        
         ==========
-
+        atoms: ASE atoms object
+            (mandatory) an atoms object constructed either via ASE or read from an input.
+        basis: dict
+            (mandatory) a dictionary specifying the pseudopotential/basis files.
         directory: str
             directory used for storing input/output and calculation files (default None).
         label: str
-            basename for working files (only used by ASE, eg. NEB).
-        atoms: ASE atoms object
-            an atoms object constructed either via ASE or read from an input.
-        basis: dict
-            a dictionary specifying the pseudopotential/basis files.
-        grid_cutoff: float
-            integration grid in Ha (default 100).
+            basename for working files (only used by ASE, eg. NEB ; default None).
         kpts: list or tuple 
             k-points grid (default None).
+        grid_cutoff: float
+            integration grid in Ha (default 100).
         xc: str
             exchange and correlation functional (default 'PBE').
         self_consistent: bool
