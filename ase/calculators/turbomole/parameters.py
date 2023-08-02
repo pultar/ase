@@ -17,7 +17,7 @@ class TurbomoleParameters(dict):
         'slater-dirac-exchange', 's-vwn', 'vwn', 's-vwn_Gaussian', 'pwlda',
         'becke-exchange', 'b-lyp', 'b-vwn', 'lyp', 'b-p', 'pbe', 'tpss',
         'bh-lyp', 'b3-lyp', 'b3-lyp_Gaussian', 'pbe0', 'tpssh', 'pw6b96',
-        'm06', 'm06-l', 'm096-2x', 'b97-d', 'pbeh-3c', 'b97-3c',
+        'm06', 'm06-l', 'm06-2x', 'b97-d', 'pbeh-3c', 'b97-3c',
         'lh07t-svwn', 'lh07s-svwn', 'lh12ct-ssirpw92', 'lh12ct-ssifpw92',
         'lh14t-calpbe', 'lh20t', 'b2-plyp', 'hse06', 'cam-b3lyp', 'wb97x', 
         'wb97x-d', 'wb97x-v', 'wb97m-v', 'm11', 'revm11', 'mn12-sx', 'mn15',
@@ -672,7 +672,20 @@ class TurbomoleParameters(dict):
 
         dsp_str = ''
         if params['dispersion correction']:
-            dsp_str = 'dsp\n' + params['dispersion correction'] + '\n*\n'
+            # Adjusting dispersion corrections to specficic needs of particular functionals
+            if params['density functional'] in ['b3-lyp_Gaussian','b97-d', 'lh20t', 'hse06', 
+                                                'wb97x-d', 'wb97x-v', 'wb97m-v', 'm11', 'revm11', 'mn12-sx',
+                                                'mn15', 'm15-l', 'pkzb', 'scan-libxc']:
+                print('Dispersion corrections turned off')
+                dsp_str = '\n'
+            elif params['density functional'] in ['pbeh-3c', 'b97-3c']:
+                print('Dispersion corrections set to D3 with BJ damping')
+                dsp_str = 'dsp\nbj\n*\n'
+            elif params['density functional'] in ['revtpss', 'r2scan', 'r2scan-3c']:
+                print('Dispersion corrections set to D4')
+                dsp_str = 'dsp\nd4\n*\n'
+            else:
+                dsp_str = 'dsp\n' + params['dispersion correction'] + '\n*\n'
 
         define_str = define_str_tpl
         define_str = re.sub('__title__', params['title'], define_str)
