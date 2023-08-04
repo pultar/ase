@@ -1,4 +1,3 @@
-from typing import Sequence
 from warnings import warn
 
 import numpy as np
@@ -964,7 +963,7 @@ class FixInternals(FixConstraint):
         Identification by its definition via indices (and coefficients)."""
         self.initialize(atoms)
         for subconstr in self.constraints:
-            if isinstance(definition[0], Sequence):  # Combo constraint
+            if type(definition[0]) == list:  # identify Combo constraint
                 defin = [d + [c] for d, c in zip(subconstr.indices,
                                                  subconstr.coefs)]
                 if defin == definition:
@@ -2854,6 +2853,7 @@ class ExpCellFilter(UnitCellFilter):
         return forces
 
 class FixExternals:
+
     def __init__(self, atoms, indicies):
         self.indicies=indicies
         self.atoms=atoms
@@ -2861,14 +2861,10 @@ class FixExternals:
         Ivecval=ads.get_moments_of_inertia(vectors=True)
         self.pa=np.transpose(Ivecval[1])
         self.COM=ads.get_center_of_mass()
-        self.POS=ads.get_positions()
-        self.POS_COM=np.copy(self.POS)-np.copy(self.COM)
         self.dx=0.2
-        self.angles=np.asarray([0,0,0])
         self.ROT=np.identity(3)
-    def __repr__(self):
-        return 'FixExternals'
-
+        self.J_sub=np.identity(3*len(self.indicies))
+       
     def rot_x(self,x):
         return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
     def rot_y(self,y):
@@ -2921,12 +2917,11 @@ class FixExternals:
         self.angles=np.copy(x.x)
         x0, x1, x2 = x.x
         A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
-        self.ROT=A
         mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
         return mapped_ads+self.COM
 	
     def get_subspace(self,ads):
-        h=self.dx
+        h=1e-8*self.dx
         com=ads.get_center_of_mass()
         pos=ads.get_positions()
         pos_com=np.copy(pos)-np.copy(com)
@@ -2960,20 +2955,29 @@ class FixExternals:
                 J[8,(3*i+j)]=(ff_Ivec[1,2]-fi_Ivec[1,2])/(2.*h)
                 J[9,(3*i+j)]=(ff_Ivec[2,0]-fi_Ivec[2,0])/(2.*h)
                 J[10,(3*i+j)]=(ff_Ivec[2,1]-fi_Ivec[2,1])/(2.*h)
-                J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h)  
+                J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h) 
+       
         u,s,v=svd(J)
         rcond=np.mean(s[5:7])/s[0]
         J_sub=null_space(J,rcond)
-        for i in range(np.shape(J_sub)[1]):
-            J_sub[:,i]*=(1/norm(np.copy(J_sub[:,i])))
+        self.J_sub=J_sub
         return J_sub
 
     def adjust_positions(self,atoms,newpositions):
         indx=self.indicies
-        dpos=np.copy((newpositions-atoms.positions)[indx])
+        dpos=np.copy(newpositions-atoms.positions)
+        dpos_1D=np.zeros(3*len(indx))
+        for i in range(len(indx)):
+            dpos_1D[3*i:3*i+3]=np.copy(dpos[indx[i],:])
+        tmp_dpos=np.zeros(3*len(indx))
+        for i in range(np.shape(self.J_sub)[1]):
+            coef=np.copy(np.dot(self.J_sub[:,i],dpos_1D))
+            tmp_dpos+=(coef*self.J_sub[:,i])
+        for i in range(len(indx)):
+            dpos[indx[i],:]=tmp_dpos[3*i:3*i+3]
         cpy=atoms.copy()
         del cpy.constraints
-        cpy.positions=newpositions
+        cpy.positions=(atoms.positions+dpos)
         ads_ref=cpy[indx].copy()
         ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
         maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
@@ -2982,13 +2986,13 @@ class FixExternals:
             scale=(0.2/maxstep)
             dxstep+=1
             dpos*=scale
-            ads_ref.positions=np.copy(atoms.positions[indx]+dpos)
+            ads_ref.positions=np.copy(atoms.positions[indx]+dpos[indx])
             ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
             maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
         newpositions[indx]=ads_ref.positions
-        print('dx step:',dxstep)
         self.dx=np.mean(abs(newpositions-atoms.positions))
         return newpositions
+
     def adjust_forces(self,atoms,forces):
         indx=self.indicies
         cpy=atoms.copy()
@@ -3004,32 +3008,6 @@ class FixExternals:
             tmp_forces+=(coef*J_sub[:,i])
         for i in range(len(ads_ref)):
             forces[indx[i],:]=tmp_forces[3*i:3*i+3]
-        for i in range(len(forces)):
-            if i not in indx:
-                forces[i]=0
         return forces
 
-    def retro_update_f(self,H0,r0,f0,r,f_init,dr_eff,maxstep):
-        self.dfstep=0
-        def get_dr(f):
-            self.dfstep+=1
-            dr = r - r0
-            df = f - f0
-            a = np.dot(dr, df)
-            dg = np.dot(H0, dr)
-            b = np.dot(dr, dg)
-            self.H = H0-np.outer(df, df) / a - np.outer(dg, dg) / b
-            omega, V = eigh(self.H)
-            dr = np.dot(V, np.dot(f, V) / np.fabs(omega)).reshape((-1, 3))
-            steplengths = (dr**2).sum(1)**0.5
-            maxsteplength = np.max(steplengths)
-            if maxsteplength >= maxstep:
-                scale = maxstep / maxsteplength
-                dr *= scale
-            return dr.flatten()
-        def system(f,b=dr_eff):
-            return(get_dr(f)-b)
-        f=least_squares(system,f_init, ftol=1e-5,xtol=1e-5,gtol=1e-5)
-#        print(f_init)
-        print('df step:',self.dfstep)
-        return f.x, self.H
+
