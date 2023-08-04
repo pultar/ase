@@ -17,7 +17,7 @@ __all__ = [
     'FixAtoms', 'UnitCellFilter', 'ExpCellFilter',
     'FixScaled', 'StrainFilter', 'FixCom', 'FixedPlane', 'Filter',
     'FixConstraint', 'FixedLine', 'FixBondLengths', 'FixLinearTriatomic',
-    'FixInternals', 'Hookean', 'ExternalForce', 'MirrorForce', 'MirrorTorque',
+    'FixInternals','FixExternals', 'Hookean', 'ExternalForce', 'MirrorForce', 'MirrorTorque',
     "FixScaledParametricRelations", "FixCartesianParametricRelations"]
 
 
@@ -2854,7 +2854,7 @@ class ExpCellFilter(UnitCellFilter):
 
 class FixExternals:
 
-    def __init__(self, atoms, indicies):
+    def __init__(self, atoms, indicies, Fix_All_Others=True):
         self.indicies=indicies
         self.atoms=atoms
         ads=atoms[self.indicies]
@@ -2864,7 +2864,10 @@ class FixExternals:
         self.dx=0.2
         self.ROT=np.identity(3)
         self.J_sub=np.identity(3*len(self.indicies))
-       
+        self.Fix_All_Others=Fix_All_Others
+    def __repr__(self):
+        return 'FixExternals'
+
     def rot_x(self,x):
         return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
     def rot_y(self,y):
@@ -3008,6 +3011,10 @@ class FixExternals:
             tmp_forces+=(coef*J_sub[:,i])
         for i in range(len(ads_ref)):
             forces[indx[i],:]=tmp_forces[3*i:3*i+3]
+        if self.Fix_All_Others:
+            for i in range(len(forces)):
+                if i not in indx:
+                    forces[i]=0
         return forces
 
 
