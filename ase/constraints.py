@@ -1,8 +1,8 @@
 from warnings import warn
 
 import numpy as np
-from scipy.linalg import expm, logm, null_space, solve, pinv, inv, eigh
-from numpy.linalg import cond, norm, qr, svd, matrix_rank
+from scipy.linalg import null_space, inv
+from numpy.linalg import svd
 from scipy.optimize import least_squares
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.geometry import (find_mic, wrap_positions, get_distances_derivatives,
@@ -13,12 +13,13 @@ from ase.stress import (full_3x3_to_voigt_6_stress,
                         voigt_6_to_full_3x3_stress)
 
 __all__ = [
-    'FixCartesian', 'FixBondLength', 'FixedMode',
-    'FixAtoms', 'UnitCellFilter', 'ExpCellFilter',
-    'FixScaled', 'StrainFilter', 'FixCom', 'FixedPlane', 'Filter',
-    'FixConstraint', 'FixedLine', 'FixBondLengths', 'FixLinearTriatomic',
-    'FixInternals','FixExternals', 'Hookean', 'ExternalForce', 'MirrorForce', 'MirrorTorque',
-    "FixScaledParametricRelations", "FixCartesianParametricRelations"]
+    'FixCartesian', 'FixBondLength', 'FixedMode', 'FixAtoms',
+    'UnitCellFilter', 'ExpCellFilter', 'FixScaled', 'StrainFilter',
+    'FixCom', 'FixedPlane', 'Filter', 'FixConstraint',
+    'FixedLine', 'FixBondLengths', 'FixLinearTriatomic', 'FixInternals',
+    'FixExternals', 'Hookean', 'ExternalForce', 'MirrorForce',
+    'MirrorTorque', "FixScaledParametricRelations",
+    "FixCartesianParametricRelations"]
 
 
 def dict2constraint(dct):
@@ -2852,169 +2853,173 @@ class ExpCellFilter(UnitCellFilter):
         self.stress = full_3x3_to_voigt_6_stress(convergence_crit_stress)
         return forces
 
+
 class FixExternals:
 
-    def __init__(self, atoms, indicies, Fix_All_Others=True):
-        self.indicies=indicies
-        self.atoms=atoms
-        ads=atoms[self.indicies]
-        Ivecval=ads.get_moments_of_inertia(vectors=True)
-        self.pa=np.transpose(Ivecval[1])
-        self.COM=ads.get_center_of_mass()
-        self.dx=0.2
-        self.ROT=np.identity(3)
-        self.J_sub=np.identity(3*len(self.indicies))
-        self.Fix_All_Others=Fix_All_Others
+    def __init__(self, atoms, indices, fix_all_others=True):
+        self.indices = indices
+        self.atoms = atoms
+        ads = atoms[self.indices]
+        ivecval = ads.get_moments_of_inertia(vectors=True)
+        self.principle_axis = np.transpose(ivecval[1])
+        self.center_of_mass = ads.get_center_of_mass()
+        self.dx = 0.2
+        self.constrained_space = np.identity(3 * len(self.indices))
+        self.fix_all_others = fix_all_others
+
     def __repr__(self):
         return 'FixExternals'
 
-    def rot_x(self,x):
-        return np.array(((np.cos(x), -np.sin(x), 0),(np.sin(x), np.cos(x), 0),(0, 0, 1)))
-    def rot_y(self,y):
-        return np.array(((np.cos(y), 0, np.sin(y)),(0, 1, 0),(-np.sin(y), 0, np.cos(y))))
-    def rot_z(self,z):
-        return np.array(((1, 0, 0),(0, np.cos(z), -np.sin(z)),(0, np.sin(z), np.cos(z))))
+    def rot_x(self, x):
+        return np.array(((np.cos(x), -np.sin(x), 0),
+                        (np.sin(x), np.cos(x), 0), (0, 0, 1)))
 
-    def sort_ivec(self,Ivec_ref):
-        tmp_ivec=np.zeros([3,3])
+    def rot_y(self, y):
+        return np.array(((np.cos(y), 0, np.sin(y)),
+                        (0, 1, 0), (-np.sin(y), 0, np.cos(y))))
+
+    def rot_z(self, z):
+        return np.array(((1, 0, 0), (0, np.cos(z),
+                        -np.sin(z)), (0, np.sin(z), np.cos(z))))
+
+    def sort_ivec(self, ivec_ref):
+        tmp_ivec = np.zeros([3, 3])
         for i in range(3):
-            d1=np.dot(Ivec_ref[:,0],self.pa[:,i])
-            d2=np.dot(Ivec_ref[:,1],self.pa[:,i])
-            d3=np.dot(Ivec_ref[:,2],self.pa[:,i])
+            d1 = np.dot(ivec_ref[:, 0], self.principle_axis[:, i])
+            d2 = np.dot(ivec_ref[:, 1], self.principle_axis[:, i])
+            d3 = np.dot(ivec_ref[:, 2], self.principle_axis[:, i])
             if abs(d1) > abs(d2) and abs(d1) > abs(d3):
                 if d1 <= 0:
-                    tmp_ivec[:,i]=-Ivec_ref[:,0]
+                    tmp_ivec[:, i] = -ivec_ref[:, 0]
                 else:
-                    tmp_ivec[:,i]=Ivec_ref[:,0]
-                Ivec_ref[:,0]=0
+                    tmp_ivec[:, i] = ivec_ref[:, 0]
+                ivec_ref[:, 0] = 0
             if abs(d2) > abs(d1) and abs(d2) > abs(d3):
                 if d2 <= 0:
-                    tmp_ivec[:,i]=-Ivec_ref[:,1]
+                    tmp_ivec[:, i] = -ivec_ref[:, 1]
                 else:
-                    tmp_ivec[:,i]=Ivec_ref[:,1]
-                Ivec_ref[:,1]=0
+                    tmp_ivec[:, i] = ivec_ref[:, 1]
+                ivec_ref[:, 1] = 0
             if abs(d3) > abs(d2) and abs(d3) > abs(d1):
                 if d3 <= 0:
-                    tmp_ivec[:,i]=-Ivec_ref[:,2]
+                    tmp_ivec[:, i] = -ivec_ref[:, 2]
                 else:
-                    tmp_ivec[:,i]=Ivec_ref[:,2]
-                Ivec_ref[:,2]=0
+                    tmp_ivec[:, i] = ivec_ref[:, 2]
+                ivec_ref[:, 2] = 0
         return tmp_ivec
 
-    def adjust_rotation(self,ads_ref):
-        com_ref=ads_ref.get_center_of_mass()
-        pos_ref=ads_ref.get_positions()
-        pos_com_ref=np.copy(pos_ref)-np.copy(com_ref)
-        Ivecval_ref=ads_ref.get_moments_of_inertia(vectors=True)
-        Ivec_ref=self.sort_ivec(np.transpose(Ivecval_ref[1]))
-        A_solve=np.copy(np.matmul(self.pa,inv(Ivec_ref)))
-        A_solve=A_solve.flatten()
+    def adjust_rotation(self, ads_ref):
+        com_ref = ads_ref.get_center_of_mass()
+        pos_ref = ads_ref.get_positions()
+        pos_com_ref = np.copy(pos_ref) - np.copy(com_ref)
+        Ivecval_ref = ads_ref.get_moments_of_inertia(vectors=True)
+        Ivec_ref = self.sort_ivec(np.transpose(Ivecval_ref[1]))
+        A_solve = np.copy(np.matmul(self.principle_axis, inv(Ivec_ref)))
+        A_solve = A_solve.flatten()
+
         def f(x):
             x0, x1, x2 = x
-            A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
+            A = np.dot(np.dot(self.rot_x(x2), self.rot_y(x1)), self.rot_z(x0))
             A = A.flatten()
             return A
-        def system(x,b=A_solve):
-            return(f(x)-b)
-        x=least_squares(system,np.asarray((0,0,0)))
-        self.angles=np.copy(x.x)
+
+        def system(x, b=A_solve):
+            return (f(x) - b)
+
+        x = least_squares(system, np.asarray((0, 0, 0)))
+        self.angles = np.copy(x.x)
         x0, x1, x2 = x.x
-        A = np.dot(np.dot(self.rot_x(x2),self.rot_y(x1)), self.rot_z(x0))
-        mapped_ads=np.transpose(np.matmul(A,np.transpose(pos_com_ref)))
-        return mapped_ads+self.COM
-	
-    def get_subspace(self,ads):
-        h=1e-8*self.dx
-        com=ads.get_center_of_mass()
-        pos=ads.get_positions()
-        pos_com=np.copy(pos)-np.copy(com)
-        J=np.zeros([12,3*len(pos)])
+        A = np.dot(np.dot(self.rot_x(x2), self.rot_y(x1)), self.rot_z(x0))
+        mapped_ads = np.transpose(np.matmul(A, np.transpose(pos_com_ref)))
+        return mapped_ads + self.center_of_mass
+
+    def get_subspace(self, ads):
+        h = 1e-8 * self.dx
+        com = ads.get_center_of_mass()
+        pos = ads.get_positions()
+        pos_com = np.copy(pos) - np.copy(com)
+        J = np.zeros([12, 3 * len(pos)])
         for i in range(len(pos)):
             for j in range(3):
-                fi=np.copy(pos_com)
-                ff=np.copy(pos_com)
-                fi[i,j]=fi[i,j]-h
-                ff[i,j]=ff[i,j]+h
-                fi_ads=ads.copy()
-                ff_ads=ads.copy()
-                ff_ads.positions=ff
-                fi_ads.positions=fi
-                fi_com=fi_ads.get_center_of_mass()
-                ff_com=ff_ads.get_center_of_mass()
-                fi_inert=fi_ads.get_moments_of_inertia(vectors=True)
-                fi_Ivec=self.sort_ivec(np.transpose(fi_inert[1]))
-                fi_Ival=fi_inert[0]
-                ff_inert=ff_ads.get_moments_of_inertia(vectors=True)
-                ff_Ivec=self.sort_ivec(np.transpose(ff_inert[1]))
-                ff_Ival=ff_inert[0]
-                J[0,(3*i+j)]=(ff_com[0]-fi_com[0])/(2.*h)
-                J[1,(3*i+j)]=(ff_com[1]-fi_com[1])/(2.*h)
-                J[2,(3*i+j)]=(ff_com[2]-fi_com[2])/(2.*h)
-                J[3,(3*i+j)]=(ff_Ivec[0,0]-fi_Ivec[0,0])/(2.*h)
-                J[4,(3*i+j)]=(ff_Ivec[0,1]-fi_Ivec[0,1])/(2.*h)
-                J[5,(3*i+j)]=(ff_Ivec[0,2]-fi_Ivec[0,2])/(2.*h)
-                J[6,(3*i+j)]=(ff_Ivec[1,0]-fi_Ivec[1,0])/(2.*h)
-                J[7,(3*i+j)]=(ff_Ivec[1,1]-fi_Ivec[1,1])/(2.*h)
-                J[8,(3*i+j)]=(ff_Ivec[1,2]-fi_Ivec[1,2])/(2.*h)
-                J[9,(3*i+j)]=(ff_Ivec[2,0]-fi_Ivec[2,0])/(2.*h)
-                J[10,(3*i+j)]=(ff_Ivec[2,1]-fi_Ivec[2,1])/(2.*h)
-                J[11,(3*i+j)]=(ff_Ivec[2,2]-fi_Ivec[2,2])/(2.*h) 
-       
-        u,s,v=svd(J)
-        rcond=np.mean(s[5:7])/s[0]
-        J_sub=null_space(J,rcond)
-        self.J_sub=J_sub
+                fi = np.copy(pos_com)
+                ff = np.copy(pos_com)
+                fi[i, j] = fi[i, j] - h
+                ff[i, j] = ff[i, j] + h
+                fi_ads = ads.copy()
+                ff_ads = ads.copy()
+                ff_ads.positions = ff
+                fi_ads.positions = fi
+                fi_com = fi_ads.get_center_of_mass()
+                ff_com = ff_ads.get_center_of_mass()
+                fi_inert = fi_ads.get_moments_of_inertia(vectors=True)
+                fi_Ivec = self.sort_ivec(np.transpose(fi_inert[1]))
+                ff_inert = ff_ads.get_moments_of_inertia(vectors=True)
+                ff_Ivec = self.sort_ivec(np.transpose(ff_inert[1]))
+                J[0, (3 * i + j)] = (ff_com[0] - fi_com[0]) / (2. * h)
+                J[1, (3 * i + j)] = (ff_com[1] - fi_com[1]) / (2. * h)
+                J[2, (3 * i + j)] = (ff_com[2] - fi_com[2]) / (2. * h)
+                J[3, (3 * i + j)] = (ff_Ivec[0, 0] - fi_Ivec[0, 0]) / (2. * h)
+                J[4, (3 * i + j)] = (ff_Ivec[0, 1] - fi_Ivec[0, 1]) / (2. * h)
+                J[5, (3 * i + j)] = (ff_Ivec[0, 2] - fi_Ivec[0, 2]) / (2. * h)
+                J[6, (3 * i + j)] = (ff_Ivec[1, 0] - fi_Ivec[1, 0]) / (2. * h)
+                J[7, (3 * i + j)] = (ff_Ivec[1, 1] - fi_Ivec[1, 1]) / (2. * h)
+                J[8, (3 * i + j)] = (ff_Ivec[1, 2] - fi_Ivec[1, 2]) / (2. * h)
+                J[9, (3 * i + j)] = (ff_Ivec[2, 0] - fi_Ivec[2, 0]) / (2. * h)
+                J[10, (3 * i + j)] = (ff_Ivec[2, 1] - fi_Ivec[2, 1]) / (2. * h)
+                J[11, (3 * i + j)] = (ff_Ivec[2, 2] - fi_Ivec[2, 2]) / (2. * h)
+        u, s, v = svd(J)
+        rcond = np.mean(s[5:7]) / s[0]
+        J_sub = null_space(J, rcond)
+        self.constrained_space = J_sub
         return J_sub
 
-    def adjust_positions(self,atoms,newpositions):
-        indx=self.indicies
-        dpos=np.copy(newpositions-atoms.positions)
-        dpos_1D=np.zeros(3*len(indx))
+    def adjust_positions(self, atoms, newpositions):
+        indx = self.indices
+        dpos = np.copy(newpositions - atoms.positions)
+        dpos_1D = np.zeros(3 * len(indx))
         for i in range(len(indx)):
-            dpos_1D[3*i:3*i+3]=np.copy(dpos[indx[i],:])
-        tmp_dpos=np.zeros(3*len(indx))
-        for i in range(np.shape(self.J_sub)[1]):
-            coef=np.copy(np.dot(self.J_sub[:,i],dpos_1D))
-            tmp_dpos+=(coef*self.J_sub[:,i])
+            dpos_1D[3 * i:3 * i + 3] = np.copy(dpos[indx[i], :])
+        tmp_dpos = np.zeros(3 * len(indx))
+        for i in range(np.shape(self.constrained_space)[1]):
+            coef = np.copy(np.dot(self.constrained_space[:, i], dpos_1D))
+            tmp_dpos += (coef * self.constrained_space[:, i])
         for i in range(len(indx)):
-            dpos[indx[i],:]=tmp_dpos[3*i:3*i+3]
-        cpy=atoms.copy()
+            dpos[indx[i], :] = tmp_dpos[3 * i:3 * i + 3]
+        cpy = atoms.copy()
         del cpy.constraints
-        cpy.positions=(atoms.positions+dpos)
-        ads_ref=cpy[indx].copy()
-        ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
-        maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
-        dxstep=0
+        cpy.positions = (atoms.positions + dpos)
+        ads_ref = cpy[indx].copy()
+        ads_ref.positions = np.copy(self.adjust_rotation(ads_ref))
+        maxstep = np.max(abs(ads_ref.positions - atoms.positions[indx]))
+        dxstep = 0
         while maxstep >= 0.2:
-            scale=(0.2/maxstep)
-            dxstep+=1
-            dpos*=scale
-            ads_ref.positions=np.copy(atoms.positions[indx]+dpos[indx])
-            ads_ref.positions=np.copy(self.adjust_rotation(ads_ref))
-            maxstep = np.max(abs(ads_ref.positions-atoms.positions[indx]))
-        newpositions[indx]=ads_ref.positions
-        self.dx=np.mean(abs(newpositions-atoms.positions))
+            scale = (0.2 / maxstep)
+            dxstep += 1
+            dpos *= scale
+            ads_ref.positions = np.copy(atoms.positions[indx] + dpos[indx])
+            ads_ref.positions = np.copy(self.adjust_rotation(ads_ref))
+            maxstep = np.max(abs(ads_ref.positions - atoms.positions[indx]))
+        newpositions[indx] = ads_ref.positions
+        self.dx = np.mean(abs(newpositions - atoms.positions))
         return newpositions
 
-    def adjust_forces(self,atoms,forces):
-        indx=self.indicies
-        cpy=atoms.copy()
+    def adjust_forces(self, atoms, forces):
+        indx = self.indices
+        cpy = atoms.copy()
         del cpy.constraints
-        ads_ref=cpy[indx].copy()
-        J_sub=self.get_subspace(ads_ref)
-        forces_1D=np.zeros(3*len(ads_ref))
+        ads_ref = cpy[indx].copy()
+        J_sub = self.get_subspace(ads_ref)
+        forces_1D = np.zeros(3 * len(ads_ref))
         for i in range(len(ads_ref)):
-            forces_1D[3*i:3*i+3]=np.copy(forces[indx[i],:])
-        tmp_forces=np.zeros(3*len(ads_ref))
+            forces_1D[3 * i:3 * i + 3] = np.copy(forces[indx[i], :])
+        tmp_forces = np.zeros(3 * len(ads_ref))
         for i in range(np.shape(J_sub)[1]):
-            coef=np.copy(np.dot(J_sub[:,i],forces_1D))
-            tmp_forces+=(coef*J_sub[:,i])
+            coef = np.copy(np.dot(J_sub[:, i], forces_1D))
+            tmp_forces += (coef * J_sub[:, i])
         for i in range(len(ads_ref)):
-            forces[indx[i],:]=tmp_forces[3*i:3*i+3]
-        if self.Fix_All_Others:
+            forces[indx[i], :] = tmp_forces[3 * i:3 * i + 3]
+        if self.fix_all_others:
             for i in range(len(forces)):
                 if i not in indx:
-                    forces[i]=0
+                    forces[i] = 0
         return forces
-
-
