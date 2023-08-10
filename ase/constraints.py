@@ -2855,8 +2855,18 @@ class ExpCellFilter(UnitCellFilter):
 
 
 class FixExternals:
-
-    def __init__(self, atoms, indices, fix_all_others=True):
+        
+    def __init__(self, atoms, indices, fix_all_other_indices=True):
+        """atoms : ase.atoms.Atoms object
+           An Atoms object
+        indices : list
+            A list of indices that will be constrained by FixExternals.
+            For now this list should contain 3 or more atoms.
+        fix_all_other_indices : bool
+            If True, all other atoms not in indices will be fixed.
+            
+            If False, all other atoms not in indices will not have an additional
+            constraint placed on them."""
         self.indices = indices
         self.atoms = atoms
         ads = atoms[self.indices]
@@ -2864,9 +2874,9 @@ class FixExternals:
         self.principle_axis = np.transpose(ivecval[1])
         self.center_of_mass = ads.get_center_of_mass()
         self.dx = 0.2
-        self.constrained_space = np.identity(3 * len(self.indices))
-        self.fix_all_others = fix_all_others
-
+        self.space_orthogonal_to_constraint = np.identity(3 * len(self.indices))
+        self.fix_all_other_indices = fix_all_other_indices
+        
     def __repr__(self):
         return 'FixExternals'
 
@@ -2882,39 +2892,41 @@ class FixExternals:
         return np.array(((1, 0, 0), (0, np.cos(z),
                         -np.sin(z)), (0, np.sin(z), np.cos(z))))
 
-    def sort_ivec(self, ivec_ref):
-        tmp_ivec = np.zeros([3, 3])
+    def sort_principle_axis(self, principle_axis):
+        tmp_axis = np.zeros([3, 3])
         for i in range(3):
-            d1 = np.dot(ivec_ref[:, 0], self.principle_axis[:, i])
-            d2 = np.dot(ivec_ref[:, 1], self.principle_axis[:, i])
-            d3 = np.dot(ivec_ref[:, 2], self.principle_axis[:, i])
+            d1 = np.dot(principle_axis[:, 0], self.principle_axis[:, i])
+            d2 = np.dot(principle_axis[:, 1], self.principle_axis[:, i])
+            d3 = np.dot(principle_axis[:, 2], self.principle_axis[:, i])
             if abs(d1) > abs(d2) and abs(d1) > abs(d3):
                 if d1 <= 0:
-                    tmp_ivec[:, i] = -ivec_ref[:, 0]
+                    tmp_axis[:, i] = -principle_axis[:, 0]
                 else:
-                    tmp_ivec[:, i] = ivec_ref[:, 0]
-                ivec_ref[:, 0] = 0
+                    tmp_axis[:, i] = principle_axis[:, 0]
+                principle_axis[:, 0] = 0
             if abs(d2) > abs(d1) and abs(d2) > abs(d3):
                 if d2 <= 0:
-                    tmp_ivec[:, i] = -ivec_ref[:, 1]
+                    tmp_axis[:, i] = -principle_axis[:, 1]
                 else:
-                    tmp_ivec[:, i] = ivec_ref[:, 1]
-                ivec_ref[:, 1] = 0
+                    tmp_axis[:, i] = principle_axis[:, 1]
+                principle_axis[:, 1] = 0
             if abs(d3) > abs(d2) and abs(d3) > abs(d1):
                 if d3 <= 0:
-                    tmp_ivec[:, i] = -ivec_ref[:, 2]
+                    tmp_axis[:, i] = -principle_axis[:, 2]
                 else:
-                    tmp_ivec[:, i] = ivec_ref[:, 2]
-                ivec_ref[:, 2] = 0
-        return tmp_ivec
+                    tmp_axis[:, i] = principle_axis[:, 2]
+                principle_axis[:, 2] = 0
+        return tmp_axis
 
-    def adjust_rotation(self, ads_ref):
-        com_ref = ads_ref.get_center_of_mass()
-        pos_ref = ads_ref.get_positions()
-        pos_com_ref = np.copy(pos_ref) - np.copy(com_ref)
-        Ivecval_ref = ads_ref.get_moments_of_inertia(vectors=True)
-        Ivec_ref = self.sort_ivec(np.transpose(Ivecval_ref[1]))
-        A_solve = np.copy(np.matmul(self.principle_axis, inv(Ivec_ref)))
+    def adjust_rotation(self, adsorbate):
+        com = adsorbate.get_center_of_mass()
+        pos = adsorbate.get_positions()
+        pos_com = np.copy(pos) - np.copy(com)
+        principle_axis_and_moments = \
+            adsorbate.get_moments_of_inertia(vectors=True)
+        principle_axis = self.sort_principle_axis(
+            np.transpose(principle_axis_and_moments[1]))
+        A_solve = np.copy(np.matmul(self.principle_axis, inv(principle_axis)))
         A_solve = A_solve.flatten()
 
         def f(x):
@@ -2930,13 +2942,13 @@ class FixExternals:
         self.angles = np.copy(x.x)
         x0, x1, x2 = x.x
         A = np.dot(np.dot(self.rot_x(x2), self.rot_y(x1)), self.rot_z(x0))
-        mapped_ads = np.transpose(np.matmul(A, np.transpose(pos_com_ref)))
+        mapped_ads = np.transpose(np.matmul(A, np.transpose(pos_com)))
         return mapped_ads + self.center_of_mass
 
-    def get_subspace(self, ads):
+    def get_subspace(self, adsorbate):
         h = 1e-8 * self.dx
-        com = ads.get_center_of_mass()
-        pos = ads.get_positions()
+        com = adsorbate.get_center_of_mass()
+        pos = adsorbate.get_positions()
         pos_com = np.copy(pos) - np.copy(com)
         J = np.zeros([12, 3 * len(pos)])
         for i in range(len(pos)):
@@ -2945,16 +2957,16 @@ class FixExternals:
                 ff = np.copy(pos_com)
                 fi[i, j] = fi[i, j] - h
                 ff[i, j] = ff[i, j] + h
-                fi_ads = ads.copy()
-                ff_ads = ads.copy()
+                fi_ads = adsorbate.copy()
+                ff_ads = adsorbate.copy()
                 ff_ads.positions = ff
                 fi_ads.positions = fi
                 fi_com = fi_ads.get_center_of_mass()
                 ff_com = ff_ads.get_center_of_mass()
                 fi_inert = fi_ads.get_moments_of_inertia(vectors=True)
-                fi_Ivec = self.sort_ivec(np.transpose(fi_inert[1]))
+                fi_Ivec = self.sort_principle_axis(np.transpose(fi_inert[1]))
                 ff_inert = ff_ads.get_moments_of_inertia(vectors=True)
-                ff_Ivec = self.sort_ivec(np.transpose(ff_inert[1]))
+                ff_Ivec = self.sort_principle_axis(np.transpose(ff_inert[1]))
                 J[0, (3 * i + j)] = (ff_com[0] - fi_com[0]) / (2. * h)
                 J[1, (3 * i + j)] = (ff_com[1] - fi_com[1]) / (2. * h)
                 J[2, (3 * i + j)] = (ff_com[2] - fi_com[2]) / (2. * h)
@@ -2970,7 +2982,7 @@ class FixExternals:
         u, s, v = svd(J)
         rcond = np.mean(s[5:7]) / s[0]
         J_sub = null_space(J, rcond)
-        self.constrained_space = J_sub
+        self.space_orthogonal_to_constraint = J_sub
         return J_sub
 
     def adjust_positions(self, atoms, newpositions):
@@ -2980,9 +2992,10 @@ class FixExternals:
         for i in range(len(indx)):
             dpos_1D[3 * i:3 * i + 3] = np.copy(dpos[indx[i], :])
         tmp_dpos = np.zeros(3 * len(indx))
-        for i in range(np.shape(self.constrained_space)[1]):
-            coef = np.copy(np.dot(self.constrained_space[:, i], dpos_1D))
-            tmp_dpos += (coef * self.constrained_space[:, i])
+        for i in range(np.shape(self.space_orthogonal_to_constraint)[1]):
+            coef = np.copy(np.dot(
+                self.space_orthogonal_to_constraint[:, i], dpos_1D))
+            tmp_dpos += (coef * self.space_orthogonal_to_constraint[:, i])
         for i in range(len(indx)):
             dpos[indx[i], :] = tmp_dpos[3 * i:3 * i + 3]
         cpy = atoms.copy()
@@ -3018,7 +3031,7 @@ class FixExternals:
             tmp_forces += (coef * J_sub[:, i])
         for i in range(len(ads_ref)):
             forces[indx[i], :] = tmp_forces[3 * i:3 * i + 3]
-        if self.fix_all_others:
+        if self.fix_all_other_indices:
             for i in range(len(forces)):
                 if i not in indx:
                     forces[i] = 0
