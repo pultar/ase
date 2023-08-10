@@ -2855,7 +2855,7 @@ class ExpCellFilter(UnitCellFilter):
 
 
 class FixExternals:
-        
+
     def __init__(self, atoms, indices, fix_all_other_indices=True):
         """atoms : ase.atoms.Atoms object
            An Atoms object
@@ -2864,7 +2864,7 @@ class FixExternals:
             For now this list should contain 3 or more atoms.
         fix_all_other_indices : bool
             If True, all other atoms not in indices will be fixed.
-            
+
             If False, all other atoms not in indices will not have an additional
             constraint placed on them."""
         self.indices = indices
@@ -2876,7 +2876,7 @@ class FixExternals:
         self.dx = 0.2
         self.space_orthogonal_to_constraint = np.identity(3 * len(self.indices))
         self.fix_all_other_indices = fix_all_other_indices
-        
+
     def __repr__(self):
         return 'FixExternals'
 
