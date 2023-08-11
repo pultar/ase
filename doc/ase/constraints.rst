@@ -492,18 +492,18 @@ The FixExternals class
 
 For a given set of N atoms, where N>2, there exist 3N-6 internal degrees of
 freedom, and 6 external degrees of freedom. The internal degrees of freedom are
-defined in terms of bond lengths,bond angles, and dihedral angles. Here, the six
+defined in terms of bond lengths, bond angles, and dihedral angles. Here, the six
 external degrees of freedom are defined in terms of the three euler angles
-formed between the principle axis and the coordinate system, as well as the
+formed between the principle axes and the coordinate system, as well as the
 three components of the atoms’ center of mass. This class constrains a set
-of atoms to travel in directions in which the principle axis of inertia, as
+of atoms to travel in directions in which the principle axes of inertia, as
 well as the center of mass are fixed.
 
 .. autoclass:: ase.constraints.FixExternals
 
 This constraint was originally envisioned to be used to constrain an adsorbate
 on a metal surface, but can be used on any system as long as the number of
-constrained atoms is greater 2. Below is a hypothetical example where methanol
+constrained atoms is greater than 2. Below is a hypothetical example where methanol
 is placed over a copper surface and is relaxed using BFGS as the
 optimizer and EMT as the calculator::
 
@@ -513,14 +513,14 @@ optimizer and EMT as the calculator::
   from ase.build import fcc111, add_adsorbate, molecule
 
   size = [3, 3, 4]
-  syst = fcc111(symbol='Cu', size=size, a=3.58)
+  atoms = fcc111(symbol='Cu', size=size, a=3.58)
   adsorbate = molecule('CH3OH')
-  add_adsorbate(syst, adsorbate, 2.5, 'ontop')
-  syst.center(vacuum=8.5, axis=2)
+  add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
+  atoms.center(vacuum=8.5, axis=2)
   indices = [36, 37, 38, 39, 40, 41]
-  c = FixExternals(syst, indices)
-  syst.set_constraint(c)
-  syst.calc = EMT()
-  dyn = BFGS(syst)
+  c = FixExternals(atoms, indices)
+  atoms.set_constraint(c)
+  atoms.calc = EMT()
+  dyn = BFGS(atoms)
   dyn.run(fmax=0.05)
 
