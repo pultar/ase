@@ -125,8 +125,19 @@ def test_consistency_with_vibrationsdata(testdir, random_dimer):
                               decimal=6)
 
 
-def test_frederiksen(testdir, noisy_dimer):
-    vib = Vibrations(noisy_dimer, delta=1e-2, nfree=2)
+def test_frederiksen(testdir, random_dimer):
+    # Apply appropriate symmetry to non-"self" terms so that Frederiksen result
+    # is not modified by translational symmetrisation step:
+    #
+    # - We have a 6x6 matrix for the dimer force-constants
+    # - On-diagonal 3x3 blocks should by modified by correction
+    # - These blocks need to have translational symmetry after correction
+    # - So we impose that symmetry on off-diagonal blocks used in correction
+    rng = np.random.RandomState(10)
+    random_dimer.calc.D[:3,3:] += random_dimer.calc.D[:3,3:].T
+    random_dimer.calc.D[3:,:3] += random_dimer.calc.D[3:,:3].T
+
+    vib = Vibrations(random_dimer, delta=1e-2, nfree=2)
     vib.run()
     vib_data_std = vib.get_vibrations(read_cache=False, method='standard')
     vib_data_frd = vib.get_vibrations(read_cache=False, method='frederiksen')
@@ -135,7 +146,7 @@ def test_frederiksen(testdir, noisy_dimer):
     assert not np.allclose(vib_data_std.get_hessian(),
                            vib_data_frd.get_hessian())
 
-    # Check sum rule was violated by noise
+    # Check sum rule was violated by original Hessian
     assert not np.allclose(vib_data_std.get_hessian()[0, :, 0, :],
                            -vib_data_std.get_hessian()[0, :, 1, :])
 
