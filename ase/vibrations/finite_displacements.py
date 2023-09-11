@@ -246,7 +246,8 @@ def read_axis_aligned_forces(displacements: Sequence[Atoms],
 
     # Create a container: List[List[Dict[str, Union[float, np.ndarray]]]]
     # Mypy doesn't handle this well: https://github.com/python/mypy/issues/6463
-    arranged_displacements = [[[], [], []] for _ in ref_atoms]  # type: ignore
+    arranged_displacements = [[[], [], []] for _ in ref_atoms
+                              ]  # type: ignore[var-annotated]
 
     if use_equilibrium_forces:
         try:
