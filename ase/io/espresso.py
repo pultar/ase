@@ -51,6 +51,8 @@ _PW_HIGHEST_OCCUPIED_LOWEST_FREE = 'highest occupied, lowest unoccupied level'
 _PW_KPTS = 'number of k points='
 _PW_BANDS = _PW_END
 _PW_BANDSTRUCTURE = 'End of band structure calculation'
+_PW_DFT_PLUS_U_ENTER = '--- enter write_ns ---'
+_PW_DFT_PLUS_U_EXIT = '--- exit write_ns ---'
 
 # ibrav error message
 ibrav_error_message = (
@@ -130,6 +132,8 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
         _PW_KPTS: [],
         _PW_BANDS: [],
         _PW_BANDSTRUCTURE: [],
+        _PW_DFT_PLUS_U_ENTER: [],
+        _PW_DFT_PLUS_U_EXIT: [],
     }
 
     for idx, line in enumerate(pwo_lines):
@@ -150,6 +154,8 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
     #   abnormally.
     # - 'relax' and 'vc-relax' re-prints the final configuration but
     #   only 'vc-relax' recalculates.
+    if indexes[_PW_DFT_PLUS_U_EXIT]:
+        indexes[_PW_BANDS] = indexes[_PW_DFT_PLUS_U_EXIT][2:] 
     if results_required:
         results_indexes = sorted(indexes[_PW_TOTEN] + indexes[_PW_FORCE] +
                                  indexes[_PW_STRESS] + indexes[_PW_MAGMOM] +
@@ -171,7 +177,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
     else:
         image_indexes = all_config_indexes[index]
 
-    # Extract initialisation information each time PWSCF starts
+    # Extract initialization information each time PWSCF starts
     # to add to subsequent configurations. Use None so slices know
     # when to fill in the blanks.
     pwscf_start_info = dict((idx, None) for idx in indexes[_PW_START])
@@ -291,6 +297,17 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 if image_index < holf_index < next_index:
                     efermi = float(pwo_lines[holf_index].split()[-2])
 
+        # DFT plus U read not yet implemented
+        for hubbard_index in indexes[_PW_DFT_PLUS_U_ENTER]:
+            if image_index < hubbard_index < next_index:
+                while True:
+                    L = pwo_lines[hubbard_index].replace('-', ' -').split()
+                    if len(L) == 0:
+                        pass
+                    else:
+                        break        
+                    hubbard_index += 1
+    
         # K-points
         ibzkpts = None
         weights = None
@@ -366,7 +383,7 @@ def read_espresso_out(fileobj, index=-1, results_required=True):
                 if spin == 1:
                     assert len(eigenvalues[0]) == len(eigenvalues[1])
                 assert len(eigenvalues[0]) == len(ibzkpts), \
-                    (np.shape(eigenvalues), len(ibzkpts))
+                    (np.shape(eigenvalues)[1], len(ibzkpts))
 
                 kpts = []
                 for s in range(spin + 1):
@@ -1227,7 +1244,7 @@ KEYS = Namelist((
         'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
         'exx_fraction', 'screening_parameter', 'exxdiv_treatment',
         'x_gamma_extrapolation', 'ecutvcut', 'nqx1', 'nqx2', 'nqx3',
-        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_U', 'Hubbard_J0',
+        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_J0',
         'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
         'starting_ns_eigenvalue', 'U_projection_type', 'edir',
         'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
@@ -1616,6 +1633,9 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     atomic_positions_str = []
 
     nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
+    dft_plus_u = input_parameters['system'].get('lda_plus_u', False) # False is the default
+    dft_plus_u_kind = input_parameters['system'].get('lda_plus_u_kind',0) # 0 is the default
+
     if any(atoms.get_initial_magnetic_moments()):
         if nspin == 1:
             # Force spin on
@@ -1636,6 +1656,12 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
                 # Add magnetization to the input file
                 mag_str = 'starting_magnetization({0})'.format(sidx)
+                if dft_plus_u:
+                    if ((dft_plus_u_kind == 0) or (dft_plus_u_kind == 1)):
+                        if not ('Hubbard_U' in kwargs):
+                            exit("Please include a dft_Hubbard_U array for each atomic type in calculator")
+                        hubbard_u_str = 'Hubbard_U({0})'.format(sidx)
+                        input_parameters['system'][hubbard_u_str] = kwargs.get('Hubbard_U')[sidx-1] 
                 input_parameters['system'][mag_str] = fspin
                 atomic_species_str.append(
                     '{species}{tidx} {mass} {pseudo}\n'.format(
