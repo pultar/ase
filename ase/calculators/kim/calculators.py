@@ -48,10 +48,10 @@ def LAMMPSRunCalculator(
         parameters["units"] = supported_units
 
         parameters["model_init"] = [
-            "kim_init {} {}{}".format(model_name, supported_units, os.linesep)
+            "kim init {} {}{}".format(model_name, supported_units, os.linesep)
         ]
 
-        parameters["kim_interactions"] = "kim_interactions {}{}".format(
+        parameters["kim_interactions"] = "kim interactions {}{}".format(
             (" ").join(supported_species), os.linesep
         )
 
@@ -90,7 +90,7 @@ def LAMMPSRunCalculator(
     # metadata. For Portable Models, we use "metal" units.
     supported_units = kwargs.get("supported_units", "metal")
 
-    # Set up kim_init and kim_interactions lines
+    # Set up kim init and kim_interactions lines
     parameters = get_params(
         model_name,
         supported_units,
@@ -126,7 +126,7 @@ def LAMMPSLibCalculator(model_name, supported_species,
     model_init = ["units " + supported_units + os.linesep]
 
     model_init.append(
-        "kim_init {} {}{}".format(model_name, supported_units, os.linesep)
+        "kim init {} {}{}".format(model_name, supported_units, os.linesep)
     )
     model_init.append("atom_modify map array sort 0 0" + os.linesep)
 
@@ -136,7 +136,7 @@ def LAMMPSLibCalculator(model_name, supported_species,
         atom_types[s] = i_s + 1
 
     kim_interactions = [
-        "kim_interactions {}".format(
+        "kim interactions {}".format(
             (" ").join(supported_species))]
 
     # Return LAMMPSlib calculator
