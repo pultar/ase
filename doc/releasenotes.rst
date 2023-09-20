@@ -36,6 +36,8 @@ Git master branch
   :meth:`~ase.cell.Cell.area` and
   :meth:`~ase.cell.Cell.areas`, which return the area spanned by one
   or all pairs of cell vectors.
+  
+* The :ref:`reflective-neb-in-neb` method has been implemented.
 
 * New ``a2b`` and ``periodic`` formats for :class:`~ase.formula.Formula`
   objects.  See :meth:`ase.formula.Formula.format`.  The ``abc`` format

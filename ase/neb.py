@@ -811,8 +811,7 @@ class NEB(DyNEB):
             remove_rotation_and_translation=remove_rotation_and_translation,
             world=world, method=method,
             allow_shared_calculator=allow_shared_calculator,
-            precon=precon,
-            **defaults)
+            precon=precon, **defaults)
 
 
 class NEBOptimizer(Optimizer):
