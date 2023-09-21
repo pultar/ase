@@ -896,7 +896,9 @@ class NEBOptimizer(Optimizer):
                    callback=self.callback,
                    residual=self.get_residual)
             return True
-        except OptimizerConvergenceError:
+        except OptimizerConvergenceError as err:
+            msg = 'ODE optimization failed: %s' % err
+            self.log_msg(msg)
             return False
 
     def run_static(self, fmax):
