@@ -2,7 +2,7 @@ import ase
 from typing import Mapping, Sequence, Union
 import numpy as np
 from ase.utils.arraywrapper import arraylike
-from ase.utils import pbc2pbc
+from ase.utils import pbc2pbc, deprecated
 
 
 __all__ = ['Cell']
@@ -248,8 +248,8 @@ class Cell:
         do not span three dimensions."""
         return int(np.sign(np.linalg.det(self)))
 
-    def scaled_positions(self, positions) -> np.ndarray:
-        """Calculate scaled positions from Cartesian positions.
+    def fractional_coordinates(self, positions):
+        """Calculate fractional/scaled coordinates from Cartesian positions.
 
         The scaled positions are the positions given in the basis
         of the cell vectors.  For the purpose of defining the basis, cell
@@ -257,7 +257,12 @@ class Cell:
         :meth:`~ase.cell.Cell.complete`."""
         return np.linalg.solve(self.complete().T, np.transpose(positions)).T
 
-    def cartesian_positions(self, scaled_positions) -> np.ndarray:
+    @deprecated(DeprecationWarning("use `fractional_coordinates` instead"))
+    def scaled_positions(self, positions):
+        """Legacy interface to fractional_coordinates (deprecated)"""
+        return self.fractional_coordinates(positions=positions)
+
+    def cartesian_positions(self, scaled_positions):
         """Calculate Cartesian positions from scaled positions."""
         return scaled_positions @ self.complete()
 
