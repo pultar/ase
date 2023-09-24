@@ -229,6 +229,18 @@ def read_vasp(filename='CONTCAR'):
             for flag in ac[3:6]:
                 curflag.append(flag == 'F')
             selective_flags[atom] = curflag
+
+    ac_type = fd.readline()
+    # Check if velocities are present
+    cartesian_v = False
+    if ac_type:
+        cartesian_v = ac_type[0].lower() == 'c' or ac_type[0].lower() == 'k'
+        atoms_vel = np.empty((tot_natoms, 3))
+    if cartesian_v:
+        for atom in range(tot_natoms):
+            ac = fd.readline().split()
+            atoms_vel[atom] = (float(ac[0]), float(ac[1]), float(ac[2]))
+
     if cartesian:
         atoms_pos *= lattice_constant
     atoms = Atoms(symbols=atom_symbols, cell=basis_vectors, pbc=True)
@@ -248,6 +260,10 @@ def read_vasp(filename='CONTCAR'):
             constraints.append(FixAtoms(indices))
         if constraints:
             atoms.set_constraint(constraints)
+
+    if cartesian_v:
+       atoms.set_velocities(atoms_vel)
+
     return atoms
 
 
@@ -856,3 +872,15 @@ def write_vasp(filename,
                     s = 'T'
                 fd.write('%4s' % s)
         fd.write('\n')
+
+    # if velocities in atoms object write out
+    if atoms.get_velocities() is not None:
+        if long_format:
+            cform = 3*' {:19.16f}'+'\n'
+        else:
+            cform = 3*' {:9.6f}'+'\n'
+        fd.write('Cartesian\n')
+        vel = atoms.get_velocities() 
+        for vatom in vel:
+            fd.write(cform.format(*vatom))
+        
