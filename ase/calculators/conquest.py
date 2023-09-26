@@ -33,7 +33,7 @@ class Conquest(FileIOCalculator):
         'io.iprint': 1,
         'io.fractionalatomiccoords': True,
         'sc.maxiters': 50,
-        'diag.smearingType': 1,
+        'diag.smearingtype': 1,
         'diag.kt': 0.001,        
         'atommove.typeofrun': 'static',
         'dm.solutionmethod': 'diagon',
