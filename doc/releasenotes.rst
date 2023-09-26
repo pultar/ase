@@ -41,6 +41,20 @@ Git master branch
   :meth:`~ase.cell.Cell.areas`, which return the area spanned by one
   or all pairs of cell vectors.
 
+* In :mod:`ase.dft.kpoints` the existing set of KPoints classes has
+  been expanded and formalised further:
+
+  - A base class :class:`~ase.dft.kpoints.KPointsABC` promises availability of a readable ``.kpts`` attribute; i.e. you can always get an explicit list of **k**-points from such objects.
+
+    - The existing :class:`~ase.dft.kpoints.KPoints` and :class:`~ase.dft.kpoints.BandPath` classes inherit this base class and :class:`~ase.dft.kpoints.KPoints` has been moved from :mod:`ase.calculators.calculator` to :mod:`ase.dft.kpoints`.
+    - A new :class:`~ase.dft.kpoints.RegularGridKPoints` represents a Monkhorst-Pack grid with offsets.
+    - A new :class:`~ase.dft.kpoints.WeightedKPoints` represets a series of explicit **k**-points with weights.
+
+  - The existing :func:`~ase.calculators.calculator.kpts2kpts` function will now dispatch from a wide range of user specifications to one of these classes as appropriate.
+
+  - Castep and DFTB+ Calculators have been refactored to use these
+    tools, simplifying the implementation-specific logic.
+
 * New ``a2b`` and ``periodic`` formats for :class:`~ase.formula.Formula`
   objects.  See :meth:`ase.formula.Formula.format`.  The ``abc`` format
   has been renamed to ``ab2``.

@@ -2,17 +2,23 @@ import os
 import copy
 import subprocess
 from math import pi, sqrt
+import numbers
 from pathlib import Path
-from typing import Union, Optional, List, Set, Dict, Any
+from typing import Any, Dict, List, Optional, Set, Union
 import warnings
 from abc import abstractmethod
 
 import numpy as np
 
 from ase.cell import Cell
+from ase.dft.kpoints import KPointsABC, RegularGridKPoints, WeightedKPoints
 from ase.outputs import Properties, all_outputs
-from ase.utils import jsonable
 from ase.calculators.abc import GetPropertiesMixin
+
+# Import KPoints for backward-compatibility; it used to be defined here
+# noqa: F401
+from ase.dft.kpoints import KPoints
+
 
 from .names import names
 
@@ -318,39 +324,44 @@ def kpts2sizeandoffsets(size=None, density=None, gamma=None, even=None,
     return size, offsets
 
 
-@jsonable('kpoints')
-class KPoints:
-    def __init__(self, kpts=None):
-        if kpts is None:
-            kpts = np.zeros((1, 3))
-        self.kpts = kpts
-
-    def todict(self):
-        return vars(self)
-
-
-def kpts2kpts(kpts, atoms=None):
-    from ase.dft.kpoints import monkhorst_pack
-
+def kpts2kpts(kpts, atoms=None) -> KPointsABC:
     if kpts is None:
-        return KPoints()
+        return RegularGridKPoints([1, 1, 1])
 
-    if hasattr(kpts, 'kpts'):
+    if isinstance(kpts, KPointsABC):
         return kpts
 
     if isinstance(kpts, dict):
         if 'kpts' in kpts:
             return KPoints(kpts['kpts'])
+
         if 'path' in kpts:
             cell = Cell.ascell(atoms.cell)
             return cell.bandpath(pbc=atoms.pbc, **kpts)
-        size, offsets = kpts2sizeandoffsets(atoms=atoms, **kpts)
-        return KPoints(monkhorst_pack(size) + offsets)
 
-    if isinstance(kpts[0], int):
-        return KPoints(monkhorst_pack(kpts))
+        size, offset = kpts2sizeandoffsets(atoms=atoms, **kpts)
+        return RegularGridKPoints(size, offset=offset)
 
-    return KPoints(np.array(kpts))
+    kpts_array = np.array(kpts)
+
+    if kpts_array.ndim == 1:
+        if isinstance(kpts_array[0], numbers.Integral):
+            return RegularGridKPoints(kpts_array.tolist())
+        else:
+            raise ValueError("1-D kpts array should be a series of int")
+
+    elif kpts_array.ndim == 2:
+        if kpts_array.shape[1] == 4:
+            return WeightedKPoints.from_array(kpts_array)
+
+        elif kpts_array.shape[1] == 3:
+            return KPoints(kpts_array)
+
+        else:
+            raise ValueError("2-D kpts array should have 3 or 4 colums")
+
+    else:
+        raise ValueError(f"Could not interpret '{kpts}' as kpoints")
 
 
 def kpts2ndarray(kpts, atoms=None):
