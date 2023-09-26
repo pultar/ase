@@ -1,8 +1,9 @@
 """Module for calculating phonons of periodic systems."""
 
 from math import pi, sqrt
-import warnings
 from pathlib import Path
+from typing import Any, Dict, Optional, Union, Sequence
+import warnings
 
 import numpy as np
 import numpy.linalg as la
@@ -15,6 +16,10 @@ from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
 from ase.utils.filecache import MultiFileJSONCache
 from ase.utils import deprecated
+
+from ase.calculators.calculator import kpts2kpts, KPoints
+from ase.spectrum.dosdata import RawDOSData
+from ase.spectrum.doscollection import DOSCollection
 
 
 class Displacement:
@@ -711,9 +716,54 @@ class Phonons(Displacement):
 
         return omega_kl
 
-    def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
+    def get_pdos(self, kpts: Optional[Union[Sequence[int],
+                                            Dict[str, Any],
+                                            KPoints]] = None) -> DOSCollection:
+        """Calculate atom-projected phonon DOS
+
+        This returns a DOSCollection of unbroadened RawDOSData objects, tagged
+        with their atom index and symbol in DOSData.info. To plot a typical
+        element-wise phonon DOS with broadening::
+
+          pdos = phonon.get_pdos()
+          ax = pdos.sum_by('symbol').plot(width=5e-3, show=True)
+
+        (The energy units are eV. The total over all contributions should sum
+        to 3N.)
+
+        args:
+            kpts: Monkhorst-Pack grid specification for DOS sampling. This is
+                provided to ase.calculators.calculator.kpts2kpts; a dict the
+                keys 'size', 'density', 'gamma' and/or 'even' may be set. E.g.
+                for a non-gamma-centered 4x4x8 Monkhorst-Pack mesh,
+                kpts={'size': (4, 4, 8), 'gamma': False}. The default value
+                uses 'density' to generate a moderate uniform sampling mesh.
+                Simple meshes can also be given as a 3-tuple or list
+                e.g. (4, 4, 4). For more elaborate sampling, use the KPoints
+                class.
+        """
+
+        # The usual "default" k-point sampling of Gamma-point-only is far too
+        # sparse for a decent phonon DOS so a default density is set.
+        if kpts is None:
+            kpts = {'density': 8}
+        kpts_kc = kpts2kpts(kpts, atoms=self.atoms).kpts
+
+        omega_kl, u_kl = self.band_structure(kpts_kc, modes=True)
+        masses = self.atoms.get_masses()[self.indices][np.newaxis,
+                                                       :, np.newaxis]
+        vectors = u_kl / masses**-0.5
+        weights = (np.linalg.norm(vectors, axis=-1)**2).T / len(kpts_kc)
+
+        raw_dos_by_k = DOSCollection(
+            [RawDOSData(omega_kl.ravel(), weights[i].ravel(order='F'),
+                        info={'index': str(self.indices[i]),
+                              'symbol': self.atoms[i].symbol})
+             for i in range(len(self.indices))])
+        return raw_dos_by_k.sum_by('index')
+
+    def get_dos(self, kpts=(10, 10, 10)) -> RawDOSData:
         from ase.spectrum.dosdata import RawDOSData
-        # dos = self.dos(kpts, npts, delta, indices)
         kpts_kc = monkhorst_pack(kpts)
         omega_w = self.band_structure(kpts_kc).ravel()
         dos = RawDOSData(omega_w, np.ones_like(omega_w))
