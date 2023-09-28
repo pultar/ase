@@ -30,6 +30,7 @@ from collections import namedtuple
 from itertools import product
 from pathlib import Path
 from typing import List, Set
+from pathlib import Path
 
 import ase
 import ase.units as units
@@ -41,6 +42,7 @@ from ase.dft.kpoints import BandPath
 from ase.parallel import paropen
 from ase.io.castep import read_param
 from ase.io.castep import read_bands
+from ase.io.castep import write_castep_cell
 from ase.constraints import FixCartesian
 
 __all__ = [
@@ -494,10 +496,7 @@ End CASTEP Interface Documentation
 
         # initialize the ase.calculators.general calculator
         Calculator.__init__(self)
-
-        from ase.io.castep import write_cell
-        self._write_cell = write_cell
-
+        
         if castep_keywords is None:
             castep_keywords = CastepKeywords(make_param_dict(),
                                              make_cell_dict(),
@@ -1916,10 +1915,20 @@ End CASTEP Interface Documentation
         self._castep_file = self._abs_path('%s.castep' % self._seed)
 
         # write out the input file
-        self._write_cell(self._abs_path('%s.cell' % self._seed),
-                         self.atoms, castep_cell=self.cell,
-                         force_write=force_write)
+        path_to_file = Path(self._abs_path('%s.cell' % self._seed))
+        with path_to_file.open(mode='w') as file:
+            # If polarised, use new write_castep_cell method that can read in the initial_magnetic_moments.
+            # Should the spins not be specified, get_initial_magnetic_moments() gives an array of 0s.
+            # If non polarised, do not write magnetic moments to cell, as it crashes the calculation.
 
+            magnetic_moments = ('initial' if self.param.spin_polarized.value == 'TRUE' 
+                                else None)
+            write_castep_cell(file,
+                             self.atoms,
+                             castep_cell=self.cell,
+                             force_write=force_write,
+                             magnetic_moments=magnetic_moments)   
+            
         if self._export_settings:
             interface_options = self._opt
         else:
@@ -2154,8 +2163,20 @@ End CASTEP Interface Documentation
         self._fetch_pspots(temp_dir)
         seed = 'dryrun'
 
-        self._write_cell(os.path.join(temp_dir, '%s.cell' % seed),
-                         self.atoms, castep_cell=self.cell)
+        # write out the input file
+        path_to_file = Path(self._abs_path('%s.cell' % self._seed))
+        with path_to_file.open(mode='w') as file:
+            # If polarised, use new write_castep_cell method that can read in the initial_magnetic_moments.
+            # Should the spins not be specified, get_initial_magnetic_moments() gives an array of 0s.
+            # If non polarised, do not write magnetic moments to cell, as it crashes the calculation.
+
+            magnetic_moments = ('initial' if self.param.spin_polarized.value == 'TRUE' 
+                                else None)
+            write_castep_cell(file,
+                             self.atoms,
+                             castep_cell=self.cell,
+                             magnetic_moments=magnetic_moments)  
+
         # This part needs to be modified now that we rely on the new formats.py
         # interface
         if not os.path.isfile(os.path.join(temp_dir, '%s.cell' % seed)):
