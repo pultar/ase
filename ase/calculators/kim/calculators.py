@@ -51,7 +51,7 @@ def LAMMPSRunCalculator(
             "kim init {} {}{}".format(model_name, supported_units, os.linesep)
         ]
 
-        parameters["kim_interactions"] = "kim interactions {}{}".format(
+        parameters["kim interactions"] = "kim interactions {}{}".format(
             (" ").join(supported_species), os.linesep
         )
 
@@ -90,7 +90,7 @@ def LAMMPSRunCalculator(
     # metadata. For Portable Models, we use "metal" units.
     supported_units = kwargs.get("supported_units", "metal")
 
-    # Set up kim init and kim_interactions lines
+    # Set up kim init and kim interactions lines
     parameters = get_params(
         model_name,
         supported_units,
