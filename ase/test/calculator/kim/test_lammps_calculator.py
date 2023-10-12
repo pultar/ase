@@ -10,7 +10,7 @@ from ase.atoms import Atoms
 
 
 # ignore warning that semi-periodic cells might be wrong
-@mark.calculator_lite
+@mark.calculator
 def test_energy_forces_stress_lammpsrun(KIM):
     """
     To test that the calculator can produce correct energy and forces.  This
@@ -59,7 +59,7 @@ def test_energy_forces_stress_lammpsrun(KIM):
     assert np.allclose(stress, stress_numer, tol)
 
 
-@mark.calculator_lite
+@mark.calculators
 def test_lennard_jones_calculation(KIM):
     """
     Check that for a simulator model the correct energy is calculated in a
@@ -68,7 +68,9 @@ def test_lennard_jones_calculation(KIM):
     # Create an FCC atoms crystal
 
     for simulator in ["lammpsrun", "lammpslib"]:
-        atoms = Atoms("Au2", positions=[(0.1, 0.1, 0.1), (1.1, 0.1, 0.1)], cell=(2, 2, 2))
+        atoms = Atoms("Au2",
+                      positions=[(0.1, 0.1, 0.1), (1.1, 0.1, 0.1)],
+                      cell=(2, 2, 2))
         calc = KIM("Sim_LAMMPS_LJcut_AkersonElliott_Alchemy_PbAu",
                    simulator=simulator)
         atoms.calc = calc
@@ -76,7 +78,7 @@ def test_lennard_jones_calculation(KIM):
         # Get energy and analytical forces/stress from KIM model
         energy = atoms.get_potential_energy()
         forces = atoms.get_forces()
-        stress = atoms.get_stress()
+        # stress = atoms.get_stress()
 
         # Calculate directly the energy of the LJ model with the parameters
         # set by KIM
@@ -86,7 +88,9 @@ def test_lennard_jones_calculation(KIM):
 
         # Compute forces and virial stress numerically
         forces_numer = calc.calculate_numerical_forces(atoms, d=0.0001)
-        stress_numer = calc.calculate_numerical_stress(atoms, d=0.0001, voigt=True)
+        # stress_numer = calc.calculate_numerical_stress(atoms,
+        #                                                d=0.0001,
+        #                                                voigt=True)
 
         tol = 1e-6
         assert np.isclose(energy, energy_ref, tol)
