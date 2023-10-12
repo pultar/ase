@@ -59,7 +59,7 @@ def test_energy_forces_stress_lammpsrun(KIM):
     assert np.allclose(stress, stress_numer, tol)
 
 
-@mark.calculators
+@mark.calculator
 def test_lennard_jones_calculation(KIM):
     """
     Check that for a simulator model the correct energy is calculated in a
