@@ -60,40 +60,39 @@ def test_energy_forces_stress_lammpsrun(KIM):
 
 
 @mark.calculator
-def test_lennard_jones_calculation(KIM):
+@mark.parametrize("simulator", ["lammpsrun", "lammpslib"])
+def test_lennard_jones_calculation(KIM, simulator):
     """
     Check that for a simulator model the correct energy is calculated in a
     two-atom lennard jones cell.
     """
-    # Create an FCC atoms crystal
 
-    for simulator in ["lammpsrun", "lammpslib"]:
-        atoms = Atoms("Au2",
-                      positions=[(0.1, 0.1, 0.1), (1.1, 0.1, 0.1)],
-                      cell=(2, 2, 2))
-        calc = KIM("Sim_LAMMPS_LJcut_AkersonElliott_Alchemy_PbAu",
-                   simulator=simulator)
-        atoms.calc = calc
+    atoms = Atoms("Au2",
+                  positions=[(0.1, 0.1, 0.1), (1.1, 0.1, 0.1)],
+                  cell=(2, 2, 2))
 
-        # Get energy and analytical forces/stress from KIM model
-        energy = atoms.get_potential_energy()
-        forces = atoms.get_forces()
-        # stress = atoms.get_stress()
+    calc = KIM("Sim_LAMMPS_LJcut_AkersonElliott_Alchemy_PbAu",
+               simulator=simulator)
+    atoms.calc = calc
 
-        # Calculate directly the energy of the LJ model with the parameters
-        # set by KIM
-        epsilon = 2.3058000
-        sigma = 2.42324
-        energy_ref = 4 * epsilon * (sigma**12 - sigma**6)  # eV
+    # Get energy and analytical forces/stress from KIM model
+    energy = atoms.get_potential_energy()
+    forces = atoms.get_forces()
+    # stress = atoms.get_stress()
 
-        # Compute forces and virial stress numerically
-        forces_numer = calc.calculate_numerical_forces(atoms, d=0.0001)
-        # stress_numer = calc.calculate_numerical_stress(atoms,
-        #                                                d=0.0001,
-        #                                                voigt=True)
+    # Calculate directly the energy of the LJ model with the parameters
+    # set by KIM
+    epsilon = 2.3058000
+    sigma = 2.42324
+    energy_ref = 4 * epsilon * (sigma**12 - sigma**6)  # eV
 
-        tol = 1e-6
-        assert np.isclose(energy, energy_ref, tol)
-        assert np.allclose(forces, forces_numer, tol)
-        # the following does not work, not sure whether it should
-        # assert np.allclose(stress, stress_numer, tol)
+    # compute the forces numerically for comparison (stress computation fails)
+    forces_numer = calc.calculate_numerical_forces(atoms, d=0.0001)
+    # stress_numer = calc.calculate_numerical_stress(atoms,
+    #                                                d=0.0001,
+    #                                                voigt=True)
+
+    tol = 1e-6
+    assert np.isclose(energy, energy_ref, tol)
+    assert np.allclose(forces, forces_numer, tol)
+    # assert np.allclose(stress, stress_numer, tol)
