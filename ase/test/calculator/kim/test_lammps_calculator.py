@@ -10,7 +10,7 @@ from ase.atoms import Atoms
 
 
 # ignore warning that semi-periodic cells might be wrong
-@mark.calculator
+@mark.calculator_lite
 def test_energy_forces_stress_lammpsrun(KIM):
     """
     To test that the calculator can produce correct energy and forces.  This
@@ -59,7 +59,7 @@ def test_energy_forces_stress_lammpsrun(KIM):
     assert np.allclose(stress, stress_numer, tol)
 
 
-@mark.calculator
+@mark.calculator_lite
 @mark.parametrize("simulator", ["lammpsrun", "lammpslib"])
 def test_lennard_jones_calculation(KIM, simulator):
     """
