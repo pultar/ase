@@ -38,6 +38,7 @@ class Amber(FileIOCalculator):
                  infile='mm.in', outfile='mm.out',
                  topologyfile='mm.top', incoordfile='mm.crd',
                  outcoordfile='mm_dummy.crd', mdcoordfile=None,
+                 energyfile='mden', forcefile='mdfrc',
                  **kwargs):
         """Construct Amber-calculator object.
 
@@ -67,6 +68,10 @@ class Amber(FileIOCalculator):
             this file is not used in case minisation/dynamics is done by ase.
             It is only relevant
             if you run MD/optimisation many steps with amber.
+        energyfile: str
+            Name of the file containing output energies.
+        forcefile: str
+            Name of the file containing output forces.
 
         """
 
@@ -84,6 +89,8 @@ class Amber(FileIOCalculator):
         self.incoordfile = incoordfile
         self.outcoordfile = outcoordfile
         self.mdcoordfile = mdcoordfile
+        self.energyfile = energyfile
+        self.forcefile = forcefile
         if command is not None:
             self.command = command
         else:
@@ -92,7 +99,9 @@ class Amber(FileIOCalculator):
                             ' -o ' + self.outfile +
                             ' -p ' + self.topologyfile +
                             ' -c ' + self.incoordfile +
-                            ' -r ' + self.outcoordfile)
+                            ' -r ' + self.outcoordfile +
+                            ' -e ' + self.energyfile +
+                            ' -frc ' + self.forcefile)
             if self.mdcoordfile is not None:
                 self.command = self.command + ' -x ' + self.mdcoordfile
 
@@ -107,8 +116,8 @@ class Amber(FileIOCalculator):
 
     def read_results(self):
         """ read energy and forces """
-        self.read_energy()
-        self.read_forces()
+        self.read_energy(filename=self.energyfile)
+        self.read_forces(filename=self.forcefile)
 
     def write_coordinates(self, atoms, filename=''):
         """ write amber coordinates in netCDF format,
@@ -146,7 +155,13 @@ class Amber(FileIOCalculator):
             velocities = fout.createVariable('velocities', 'd',
                                              ('atom', 'spatial'))
             velocities.units = 'angstrom/picosecond'
-            velocities[:] = atoms.get_velocities()[:]
+            # Amber's units of time are 1/20.455 ps
+            # See: http://ambermd.org/Questions/units.html
+            # Apply conversion factor from ps:
+            velocities.scale_factor = units.fs * 1000 / 20.455
+            # get_velocities call returns velocities with units sqrt(eV/u)
+            # so convert to Ang/ps
+            velocities[:] = atoms.get_velocities()[:] * velocities.scale_factor
 
         # title
         cell_angular = fout.createVariable('cell_angular', 'c',
@@ -194,7 +209,6 @@ class Amber(FileIOCalculator):
 
         from scipy.io import netcdf
         import numpy as np
-        import ase.units as units
 
         fin = netcdf.netcdf_file(filename, 'r')
         all_coordinates = fin.variables['coordinates'][:]
@@ -209,7 +223,15 @@ class Amber(FileIOCalculator):
             all_coordinates = all_coordinates[-1]
         atoms.set_positions(all_coordinates)
         if 'velocities' in fin.variables:
-            all_velocities = fin.variables['velocities'][:] / (1000 * units.fs)
+            all_velocities = fin.variables['velocities']
+            if hasattr(all_velocities, 'units'):
+                if all_velocities.units != b'angstrom/picosecond':
+                    raise Exception(f'Unrecognised units {all_velocities.units}')
+            if hasattr(all_velocities, 'scale_factor'):
+                scale_factor = all_velocities.scale_factor
+            else:
+                scale_factor = 1.0
+            all_velocities = all_velocities[:] / (1000 * units.fs) * scale_factor
             if get_last_frame:
                 all_velocities = all_velocities[-1]
             atoms.set_velocities(all_velocities)
@@ -236,13 +258,20 @@ class Amber(FileIOCalculator):
 
         else:
             atoms.set_pbc(False)
+        fin.close()
 
     def read_energy(self, filename='mden'):
         """ read total energy from amber file """
         with open(filename, 'r') as fd:
             lines = fd.readlines()
+            blocks = []
+            while 'L0' in lines[0].split()[0]:
+                blocks.append(lines[0:10])
+                lines = lines[10:]
+                if lines == []:
+                    break
         self.results['energy'] = \
-            float(lines[16].split()[2]) * units.kcal / units.mol
+            float(blocks[-1][6].split()[2]) * units.kcal / units.mol
 
     def read_forces(self, filename='mdfrc'):
         """ read forces from amber file """
