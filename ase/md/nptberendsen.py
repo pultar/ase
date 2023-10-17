@@ -258,7 +258,7 @@ class Inhomogeneous_NPTBerendsen(NPTBerendsen):
                  pressure_au=None, taup=1e3 * units.fs,
                  compressibility=None, compressibility_au=None,
                  mask=(1, 1, 1), fixcm=True, trajectory=None,
-                 logfile=None, loginterval=1):
+                 logfile=None, loginterval=1, append_trajectory=False):
 
         NPTBerendsen.__init__(self, atoms, timestep, temperature=temperature,
                               temperature_K=temperature_K,
@@ -267,7 +267,8 @@ class Inhomogeneous_NPTBerendsen(NPTBerendsen):
                               compressibility=compressibility,
                               compressibility_au=compressibility_au,
                               fixcm=fixcm, trajectory=trajectory,
-                              logfile=logfile, loginterval=loginterval)
+                              logfile=logfile, loginterval=loginterval,
+                              append_trajectory=append_trajectory)
         self.mask = mask
 
     def scale_positions_and_cell(self):
