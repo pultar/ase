@@ -134,7 +134,7 @@ Keyword                                  Description
 
 ``keep_alive``           Boolean
                          whether to keep the lammps routine alive for more
-                         commands
+                         commands. Default is True.
 
 =======================  ======================================================
 
@@ -260,7 +260,7 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         atom_type_masses=None,
         log_file=None,
         lammps_name='',
-        keep_alive=False,
+        keep_alive=True,
         lammps_header=['units metal',
                        'atom_style atomic',
                        'atom_modify map array sort 0 0'],
@@ -276,10 +276,11 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         Calculator.__init__(self, *args, **kwargs)
         self.lmp = None
 
-    def __del__(self):
+    def clean(self):
         if self.started:
             self.lmp.close()
             self.started = False
+            self.initialized = False
             self.lmp = None
 
     def set_cell(self, atoms, change=False):
@@ -541,8 +542,8 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         # otherwise check_state will always trigger a new calculation
         self.atoms = atoms.copy()
 
-        if not self.parameters.keep_alive:
-            self.lmp.close()
+        if not self.parameters["keep_alive"]:
+            self.clean()
 
     def lammpsbc(self, atoms):
         """Determine LAMMPS boundary types based on ASE pbc settings. For

@@ -325,7 +325,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         if errorcode:
             raise calculator.CalculationFailed(
                 '{} in {} returned an error: {:d}'.format(
-                    self.name, self.directory, errorcode))
+                    self.name, Path(self.directory).resolve(), errorcode))
 
         # Read results from calculation
         self.update_atoms(atoms)
@@ -774,7 +774,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         return nelect
 
     def get_k_point_weights(self):
-        filename = self._indir('IBZKPT')
+        filename = 'IBZKPT'
         return self.read_k_point_weights(filename)
 
     def get_dos(self, spin=None, **kwargs):
