@@ -524,6 +524,78 @@ def test_bad_hessian(n2_data):
             VibrationsData(n2_data['atoms'], bad_hessian)
 
 
+def test_sum_rules(random_dimer):
+    # A somewhat-physical Hessian for a homonuclear diatomic molecule
+    ref_hessian = np.array([[+1.50, +0.00, +0.25, -1.50, +0.00, -0.25],
+                            [+0.00, +1.50, +0.25, +0.00, -1.50, -0.25],
+                            [+0.25, +0.25, +1.50, -0.25, -0.25, -1.50],
+                            [-1.50, +0.00, -0.25, +1.50, +0.00, +0.25],
+                            [+0.00, -1.50, -0.25, +0.00, +1.50, +0.25],
+                            [-0.25, -0.25, -1.50, +0.25, +0.25, +1.50]])
+
+    vib_data = VibrationsData.from_2d(random_dimer, ref_hessian)
+
+    # Sum rules should do nothing to already-satisfactory Hessian
+    assert_array_almost_equal(
+        vib_data.apply_sum_rules(translation=True,
+                                 transposition=True
+                                 )
+        .get_hessian_2d(),
+        ref_hessian)
+
+    assert_array_almost_equal(
+        vib_data.apply_sum_rules(translation=True, transposition=False)
+        .apply_sum_rules(translation=False, transposition=True)
+        .get_hessian_2d(),
+        ref_hessian)
+
+    # Translational correction should undo changes to the diagonal
+    mod_hessian = ref_hessian + np.eye(6)
+    vib_data = VibrationsData.from_2d(random_dimer, mod_hessian)
+    vib_data = vib_data.apply_sum_rules(translation=True)
+    assert_array_almost_equal(vib_data.get_hessian_2d(), ref_hessian)
+
+    # Make equal-and opposite adjustment to upper and lower triangles;
+    # sum rules should undo this exactly
+    mod_hessian = (np.tril(ref_hessian + 0.1)
+                   + np.triu(ref_hessian - 0.1)
+                   - (np.eye(6) * ref_hessian))
+    vib_data = VibrationsData.from_2d(random_dimer, mod_hessian)
+    assert_array_almost_equal(vib_data
+                              .apply_sum_rules(translation=False,
+                                               transposition=True)
+                              .get_hessian_2d(),
+                              ref_hessian)
+
+    # Sum rule should also be correct when applied to a random starting-point;
+    # all rows should sum to zero and 2d matrix should become symmetric
+    vib_data = VibrationsData.from_2d(random_dimer,
+                                      np.random.RandomState(5).rand(6, 6))
+    vib_data = vib_data.apply_sum_rules(transposition=True, translation=False)
+    assert_array_almost_equal(vib_data.get_hessian_2d(),
+                              vib_data.get_hessian_2d().transpose())
+
+    vib_data = vib_data.apply_sum_rules(translation=True)
+    assert_array_almost_equal(vib_data.get_hessian_2d().sum(axis=1),
+                              np.zeros(6))
+
+    # Finally the combined (Ackland v2) scheme should satisfy both constraints
+    # from a random starting point. Use a bigger matrix to make it work harder.
+
+    vib_data = VibrationsData.from_2d(Atoms('N4', positions=np.zeros((4, 3))),
+                                      np.random.RandomState(42).rand(12, 12))
+    vib_data = vib_data.apply_sum_rules(translation=True, transposition=True)
+    assert_array_almost_equal(vib_data.get_hessian(),
+                              vib_data.apply_sum_rules(translation=True,
+                                                       transposition=False
+                                                       ).get_hessian())
+
+    assert_array_almost_equal(vib_data.get_hessian(),
+                              vib_data.apply_sum_rules(translation=False,
+                                                       transposition=True
+                                                       ).get_hessian())
+
+
 def test_bad_hessian2d(n2_data):
     bad_hessians = (None, 'fish', 1,
                     np.array([1, 2, 3]),
