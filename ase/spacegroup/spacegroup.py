@@ -900,6 +900,28 @@ def spacegroup_from_data(no=None,
     return spg
 
 
+def get_layergroup(atoms, symprec=1e-5):
+    """Determine the layer group of the Atoms object. Requires spglib.
+
+    Parameters:
+
+    atoms: Atoms object
+        Types, position and unit-cell.
+    symprec: float
+        Symmetry tolerance, i.e. distance tolerance in Cartesian
+        coordinates to find crystal symmetry.
+
+    """
+    import spglib
+
+    assert(sum(atoms.pbc)==2)
+    aperiodic_dir = np.where(atoms.pbc==False)[0][0]
+
+    sg = spglib.get_layergroup((atoms.get_cell(), atoms.get_scaled_positions(),
+                                atoms.get_atomic_numbers()),
+                                symprec=symprec, aperiodic_dir=aperiodic_dir)
+    return sg
+
 def get_spacegroup(atoms, symprec=1e-5):
     """Determine the spacegroup to which belongs the Atoms object.
 
