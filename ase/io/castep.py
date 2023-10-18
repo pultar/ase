@@ -3,11 +3,14 @@ The key idea is that all function accept or return  atoms objects.
 CASTEP specific parameters will be returned through the <atoms>.calc
 attribute.
 """
+import numbers
 import os
 import re
 import warnings
+
 import numpy as np
 from copy import deepcopy
+from typing import List, Optional, Sequence, TextIO, Union
 
 import ase
 
@@ -130,6 +133,203 @@ def write_cell(filename, atoms, positions_frac=False, castep_cell=None,
 
     write(filename, atoms, positions_frac=positions_frac,
           castep_cell=castep_cell, force_write=force_write)
+
+
+def get_format(precision=12):
+    def _format(token: Union[int, str, float]) -> str:
+        if isinstance(token, numbers.Real) and not isinstance(token, int):
+            return f'{token:.{precision}f}'
+        return str(token)
+    return _format
+
+
+def write_param_simple(fd: TextIO,
+                       parameters: Optional[dict] = None,
+                       precision: int = 12):
+    """Write .param or .cell parameters to file
+
+    This is a simple implementation to support new GenericFileIOCalculator.
+    It does not make any intelligent interpretation of keywords: they will be
+    directly written to the file.
+
+    WARNING: currently "block" format is not supported for parameters
+
+    Args:
+        fd: output stream
+        parameters: CASTEP keywords and values
+        precision: decimal places for floating-point numbers
+
+    """
+
+    if parameters is None:
+        parameters = {}
+
+    for key, value in parameters.items():
+        if is_block(value):
+            write_block(fd, key, value, precision=precision)
+        else:
+            write_key(fd, key, value, precision=precision)
+
+
+def is_block(value) -> bool:
+    """
+    Detect if a value is two dimensional and should be written as a block.
+    Only supports lists of lists and 2d ndarrays
+    """
+    if isinstance(value, list):
+        return isinstance(value[0], list)
+    elif isinstance(value, np.ndarray):
+        return value.ndim == 2
+    else:
+        return False
+
+
+def write_key(fd: TextIO,
+              name: str,
+              data: Union[int, str, float, Sequence[Union[int, str, float]]],
+              precision: int = 12) -> None:
+    """Write a key: value pair to the file descriptor"""
+    _format = get_format(precision)
+    fd.write(_format(name) + ": ")
+    if isinstance(data, (list, tuple)):
+        for v in data:
+            fd.write(_format(v))
+            fd.write(" ")
+    else:
+        fd.write(_format(data))
+    fd.write("\n")
+
+
+def write_block(fd: TextIO,
+                name: str,
+                data: Sequence[Sequence[Union[int, str, float]]],
+                *,
+                precision: int = 12) -> None:
+    """Write a keyword block to the file descriptor"""
+    _format = get_format(precision)
+    fd.write(f'%block {name}\n')
+    for row in data:
+        fd.write(' '.join(_format(token) for token in row))
+        fd.write('\n')
+    fd.write(f'%endblock {name}\n\n')
+
+
+def sort_atoms(atoms: ase.Atoms,
+               sort_file: os.PathLike) -> ase.Atoms:
+    """Get a copy of Atoms in CASTEP internal sorting order
+
+    If tags are set on atoms.arrays['castep_custom_species'] these are used.
+
+    Args:
+        atoms: unsorted structure
+        sort_file: if provided, write a mapping to/from the new order
+
+    """
+    if 'castep_custom_species' in atoms.arrays:
+        custom_species = atoms.arrays['castep_custom_species']
+    else:
+        custom_species = atoms.get_chemical_symbols()
+    ase_to_castep = atom_order(custom_species)
+    castep_to_ase = [None] * len(ase_to_castep)
+    for i, pos in enumerate(ase_to_castep):
+        castep_to_ase[pos] = i
+
+    if sort_file is not None:
+        with open(sort_file, 'w') as fd:
+            import json
+            json.dump({'ase_to_castep': ase_to_castep,
+                       'castep_to_ase': castep_to_ase},
+                      fd)
+
+    return atoms.copy()[ase_to_castep]
+
+
+def atom_order(custom_species: List[str]) -> List[int]:
+    """Get the CASTEP sorting order from a list of tagged species
+
+    CASTEP does not respect the order of Atoms in the .cell file. To avoid
+    nasty surprises, we can anticipate this sorting and obtain a map to
+    recover the original Atoms sorting.
+
+    Args:
+        custom_species: series of tagged species corresponding to atoms, e.g.
+            ["C", "C:13", "C", "H:D", "H"]
+
+    """
+    from ase.data import atomic_numbers
+    from collections import OrderedDict
+
+    tagged = OrderedDict()
+    untagged = {}
+
+    for i, species in enumerate(custom_species):
+        symbol, *tag = species.split(':')
+
+        if tag:
+            section = tagged
+        else:
+            section = untagged
+
+        if species in section:
+            section[species].append(i)
+        else:
+            section[species] = [i]
+
+    index = []
+
+    # Untagged entries are sorted by Z
+    for _, species in sorted([(atomic_numbers[species], species)
+                              for species in untagged]):
+        index += untagged[species]
+
+    # Tagged entries are sorted by first appearance
+    for species, indices in tagged.items():
+        index += indices
+
+    return index
+
+
+def write_cell_simple(fd: TextIO,
+                      atoms: ase.Atoms,
+                      *,
+                      parameters: Optional[dict] = None,
+                      precision: int = 12) -> None:
+    """Write .cell parameters to file
+
+    This is a simple implementation to support new GenericFileIOCalculator.
+    It does not make any intelligent interpretation of keywords: they will be
+    directly written to the file. Any value that is a list of a list, or a
+    ndarray will be written as a block.
+
+    If atoms.arrays['castep_custom_species'] is set, these atom labels will be
+    used; otherwise, the element symbols are used.
+
+    Args:
+        fd: output stream
+        atoms: structure
+        parameters: CASTEP keywords and values
+        precision: decimal places for floating-point numbers
+
+    """
+
+    if atoms is None:
+        warnings.warn('Atoms object not initialized')
+        return False
+
+    # Write lattice
+    write_block(fd, "lattice_cart", atoms.get_cell(), precision=precision)
+
+    # Write positions_frac
+    if 'castep_custom_species' in atoms.arrays:
+        symbols = atoms.arrays['castep_custom_species']
+    else:
+        symbols = atoms.get_chemical_symbols()
+
+    pos = atoms.get_scaled_positions()
+    positions_frac = [[label] + list(pos) for label, pos in zip(symbols, pos)]
+    write_block(fd, "positions_frac", positions_frac, precision=precision)
+
+    write_param_simple(fd, parameters, precision=precision)
 
 
 def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
@@ -392,6 +592,105 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
     write_freeform(fd, cell)
 
     return True
+
+
+def read_forces_from_castep(fd: TextIO) -> Optional[np.ndarray]:
+    """Read the last forces from a castep file"""
+    force_data = None
+    while True:
+        result = _read_forces_from_castep_file(fd)
+        if result is not None:
+            force_data = result
+        else:
+            break
+
+    return force_data
+
+
+def _read_forces_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
+    """Find and parse next forces block from .castep"""
+
+    # Find title
+    for line in fd:
+        if ' Forces ***' in line:
+            break
+
+    # Skip header
+    header_regex = re.compile(r"x\W+y\W+z")
+    for line in fd:
+        if header_regex.search(line):
+            break
+    fd.readline()
+
+    # Read force lines
+    forces = []
+    found_constraints = False
+    for line in fd:
+        fields = line.split()
+        if len(fields) != 7:
+            break
+
+        sxyz = fields[3:6]
+        constraints = (s.endswith("(cons'd)") for s in sxyz)
+        if any(constraints):
+            found_constraints = True
+            sxyz = [s.replace("(cons'd)", '') for s in sxyz]
+
+        fxyz = [float(s) for s in sxyz]
+        forces.append(fxyz)
+
+    if found_constraints:
+        warnings.warn('Constraints detected while reading forces. '
+                      'They are ignored for now.')
+
+    if len(forces) == 0:
+        return None
+    else:
+        return np.array(forces, dtype=float)
+
+
+def read_stress_from_castep(fd: TextIO) -> Optional[np.ndarray]:
+    """Read the last forces from a castep file"""
+    stress_data = None
+    while True:
+        result = _read_stress_from_castep_file(fd)
+        if result is not None:
+            stress_data = result
+        else:
+            break
+
+    return stress_data
+
+def _read_stress_from_castep_file(fd: TextIO) -> Optional[np.ndarray]:
+    """Find and parse next stress block from .castep"""
+
+    # Find title
+    for line in fd:
+        if ' Stress Tensor ***' in line:
+            break
+
+    # Skip header
+    header_regex = re.compile(r"x\W+y\W+z")
+    for line in fd:
+        if header_regex.search(line):
+            break
+    fd.readline()
+
+    # Read stress lines
+    stress = []
+    for line in fd:
+        fields = line.split()
+        if len(fields) != 6:
+            break
+
+        sxyz = fields[2:5]
+        fxyz = [float(s) for s in sxyz]
+        stress.append(fxyz)
+
+    if len(stress) == 0:
+        return None
+    else:
+        return np.array(stress, dtype=float)
 
 
 def read_freeform(fd):
@@ -854,6 +1153,23 @@ def read_castep_castep(fd, index=None):
     calc._old_cell = calc.cell
 
     return [calc.atoms]  # Returning in the form of a list for next()
+
+
+def read_castep_castep_new(fd):
+    """Read the final energy and forces from a .castep file"""
+
+    fd.seek(0)
+    castep_data = read_castep_castep_old(fd, -1).calc.results
+
+    fd.seek(0)
+    castep_data['forces'] = read_forces_from_castep(fd)
+
+    fd.seek(0)
+    stress = read_stress_from_castep(fd)
+    if stress is not None:
+        castep_data['stress'] = stress
+
+    return castep_data
 
 
 def read_castep_castep_old(fd, index=None):
