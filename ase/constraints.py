@@ -969,7 +969,7 @@ class FixInternals(FixConstraint):
         Identification by its definition via indices (and coefficients)."""
         self.initialize(atoms)
         for subconstr in self.constraints:
-            if isinstance(definition[0], Sequence):  # identify Combo constraint
+            if isinstance(definition[0], Sequence):  # identify combo constraint
                 defin = [d + [c] for d, c in zip(subconstr.indices,
                                                  subconstr.coefs)]
                 if defin == definition:
