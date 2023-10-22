@@ -5,11 +5,13 @@ from ase.gui.i18n import _
 import ase.gui.ui as ui
 from ase.gui.widgets import Element
 from ase.gui.utils import get_magmoms
+import numpy as np
 
 
 class ModifyAtoms:
     """Presents a dialog box where the user is able to change the
-    atomic type, the magnetic moment and tags of the selected atoms.
+    atomic type, the magnetic moment and tags of the selected atoms,
+    and switch atomic indices in preparation of input for NEB calculations.
     """
 
     def __init__(self, gui):
@@ -41,6 +43,29 @@ class ModifyAtoms:
         magmoms = get_magmoms(atoms)[selected]
         if magmoms.round(2).ptp() == 0.0:
             self.magmom.value = round(magmoms[0], 2)
+
+        win.add(ui.Button(_('Switch indices'), self.switch_indices))
+        win.add(ui.Button(_('Sort indices by element'), self.sort_indices_by_element))
+
+    def switch_indices(self):
+        selected = self.selection()
+        indices = np.where(selected)[0]
+        if len(indices) != 2:
+            ui.error(_('Only two atoms must be selected!'))
+            return
+
+        # Defining list of manipulated atoms
+        i = [atom.index for atom in self.gui.atoms]
+        i[indices[0]], i[indices[1]] = i[indices[1]], i[indices[0]]
+        self.gui.new_atoms(self.gui.atoms[i])
+
+    def sort_indices_by_element(self):
+        ordered = []
+        symbols = self.gui.atoms.get_chemical_symbols()
+        symbols_set = sorted(list(set(symbols)))
+        for i in symbols_set:
+            ordered += [x.index for x in self.gui.atoms if x.symbol == i]
+        self.gui.new_atoms(self.gui.atoms[ordered])
 
     def selection(self):
         return self.gui.images.selected[:len(self.gui.atoms)]
