@@ -2236,10 +2236,10 @@ class FixExternals:
             constraint placed on them."""
         self.indices = indices
         self.atoms = atoms
-        ads = atoms[self.indices]
-        ivecval = ads.get_moments_of_inertia(vectors=True)
+        adsorbate = atoms[self.indices]
+        ivecval = adsorbate.get_moments_of_inertia(vectors=True)
         self.principle_axes = np.transpose(ivecval[1])
-        self.center_of_mass = ads.get_center_of_mass()
+        self.center_of_mass = adsorbate.get_center_of_mass()
         self.dx = 0.2
         self.space_orthogonal_to_constraint = np.identity(3 * len(self.indices))
         self.fix_all_other_indices = fix_all_other_indices
