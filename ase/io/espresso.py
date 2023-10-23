@@ -504,17 +504,17 @@ def read_espresso_in(fileobj):
     data, card_lines = read_fortran_namelist(fileobj)
 
     # get the cell if ibrav=0
-    if 'system' not in data:
+    if 'SYSTEM' not in data:
         raise KeyError('Required section &SYSTEM not found.')
-    elif 'ibrav' not in data['system']:
+    elif 'ibrav' not in data['SYSTEM']:
         raise KeyError('ibrav is required in &SYSTEM')
-    elif data['system']['ibrav'] == 0:
+    elif data['SYSTEM']['ibrav'] == 0:
         # celldm(1) is in Bohr, A is in angstrom. celldm(1) will be
         # used even if A is also specified.
-        if 'celldm(1)' in data['system']:
-            alat = data['system']['celldm(1)'] * units['Bohr']
-        elif 'A' in data['system']:
-            alat = data['system']['A']
+        if 'celldm(1)' in data['SYSTEM']:
+            alat = data['SYSTEM']['celldm(1)'] * units['Bohr']
+        elif 'A' in data['SYSTEM']:
+            alat = data['SYSTEM']['A']
         else:
             alat = None
         cell, _ = get_cell_parameters(card_lines, alat=alat)
@@ -523,7 +523,7 @@ def read_espresso_in(fileobj):
 
     # species_info holds some info for each element
     species_card = get_atomic_species(
-        card_lines, n_species=data['system']['ntyp'])
+        card_lines, n_species=data['SYSTEM']['ntyp'])
     species_info = {}
     for ispec, (label, weight, pseudo) in enumerate(species_card):
         symbol = label_to_symbol(label)
@@ -536,7 +536,7 @@ def read_espresso_in(fileobj):
                                 "valence": valence, "magmom": magmom}
 
     positions_card = get_atomic_positions(
-        card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
+        card_lines, n_atoms=data['SYSTEM']['nat'], cell=cell, alat=alat)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
@@ -703,8 +703,8 @@ def get_pseudo_dirs(data):
         A list of directories where pseudopotential files could be located.
     """
     pseudo_dirs = []
-    if 'pseudo_dir' in data['control']:
-        pseudo_dirs.append(data['control']['pseudo_dir'])
+    if 'pseudo_dir' in data['CONTROL']:
+        pseudo_dirs.append(data['CONTROL']['pseudo_dir'])
     if 'ESPRESSO_PSEUDO' in os.environ:
         pseudo_dirs.append(os.environ['ESPRESSO_PSEUDO'])
     pseudo_dirs.append(path.expanduser('~/espresso/pseudo/'))
@@ -1192,7 +1192,7 @@ def infix_float(text):
 ###
 
 
-NAMELISTS = {'control': [
+NAMELISTS = {'CONTROL': [
     'calculation', 'title', 'verbosity', 'restart_mode', 'wf_collect',
     'nstep', 'iprint', 'tstress', 'tprnfor', 'dt', 'outdir', 'wfcdir',
     'prefix', 'lkpoint_dir', 'max_seconds', 'etot_conv_thr',
@@ -1200,7 +1200,7 @@ NAMELISTS = {'control': [
     'lelfield', 'nberrycyc', 'lorbm', 'lberry', 'gdir', 'nppstr',
     'gate', 'twochem', 'lfcp', 'trism'],
 
-    'system': [
+    'SYSTEM': [
     'ibrav', 'nat', 'ntyp', 'nbnd', 'nbnd_cond', 'tot_charge',
     'starting_charge', 'tot_magnetization', 'starting_magnetization',
     'ecutwfc', 'ecutrho', 'ecutfock',
@@ -1223,7 +1223,7 @@ NAMELISTS = {'control': [
     'space_group', 'uniqueb', 'origin_choice', 'rhombohedral', 'zmon',
     'relaxz', 'block', 'block_1', 'block_2', 'block_height'],
 
-    'electrons': [
+    'ELECTRONS': [
     'electron_maxstep', 'exx_maxstep', 'scf_must_converge', 'conv_thr',
     'adaptive_thr', 'conv_thr_init', 'conv_thr_multi', 'mixing_mode',
     'mixing_beta', 'mixing_ndim', 'mixing_fixed_ns', 'diagonalization',
@@ -1232,7 +1232,7 @@ NAMELISTS = {'control': [
     'diago_full_acc', 'efield', 'efield_cart', 'efield_phase',
     'startingpot', 'startingwfc', 'tqr', 'real_space'],
 
-    'ions': [
+    'IONS': [
     'ion_positions', 'ion_dynamics', 'pot_extrapolation',
     'wfc_extrapolation', 'remove_rigid_rot', 'ion_temperature', 'tempw',
     'tolp', 'delta_t', 'nraise', 'refold_pos', 'upscale', 'bfgs_ndim',
@@ -1245,8 +1245,8 @@ NAMELISTS = {'control': [
     'cell_dofree'],
 }
 
-NAMELIST_ORDERED_NAMES = ['control', 'system', 'electrons', 'ions',
-                          'cell', 'fcp', 'rism']
+NAMELIST_ORDERED_NAMES = ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS',
+                          'CELL', 'FCP', 'RISM']
 NAMELIST_REQUIRED_NAMES = NAMELIST_ORDERED_NAMES[:3]
 
 
@@ -1279,8 +1279,8 @@ def _construct_ordered_namelist_dict(kwargs_from_calc, input_data_from_calc):
                    in input_data_from_calc.values()), \
             "All values in input_data must be dicts since we" \
             "require that the section key is provided for each" \
-            "set of keywords. Try something like {'section': " \
-            "dictionary_of_keywords_in_section}."
+            "set of keywords. Try something like {'SECTION': " \
+            "dictionary_of_keywords_in_SECTION}."
         for key, value in input_data_from_calc.items():
             if key in nested_kwargs_dict_unordered.keys():
                 nested_kwargs_dict_unordered[key].update(value)
@@ -1565,11 +1565,11 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     atomic_species_str = []
     atomic_positions_str = []
 
-    nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
+    nspin = input_parameters['SYSTEM'].get('nspin', 1)  # 1 is the default
     if any(atoms.get_initial_magnetic_moments()):
         if nspin == 1:
             # Force spin on
-            input_parameters['system']['nspin'] = 2
+            input_parameters['SYSTEM']['nspin'] = 2
             nspin = 2
 
     if nspin == 2:
@@ -1586,7 +1586,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
                 # Add magnetization to the input file
                 mag_str = 'starting_magnetization({0})'.format(sidx)
-                input_parameters['system'][mag_str] = fspin
+                input_parameters['SYSTEM'][mag_str] = fspin
                 atomic_species_str.append(
                     '{species}{tidx} {mass} {pseudo}\n'.format(
                         species=atom.symbol, tidx=tidx, mass=atom.mass,
@@ -1614,23 +1614,35 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # Add computed parameters
     # different magnetisms means different types
-    input_parameters['system']['ntyp'] = len(atomic_species)
-    input_parameters['system']['nat'] = len(atoms)
+    input_parameters['SYSTEM']['ntyp'] = len(atomic_species)
+    input_parameters['SYSTEM']['nat'] = len(atoms)
 
     # Use cell as given or fit to a specific ibrav
-    if 'ibrav' in input_parameters['system']:
-        ibrav = input_parameters['system']['ibrav']
+    if 'ibrav' in input_parameters['SYSTEM']:
+        ibrav = input_parameters['SYSTEM']['ibrav']
         if ibrav != 0:
             raise ValueError(ibrav_error_message)
     else:
         # Just use standard cell block
-        input_parameters['system']['ibrav'] = 0
+        input_parameters['SYSTEM']['ibrav'] = 0
 
     # Construct input file into this
+    pwi = []
 
     # Assume sections are ordered (taken care of in namelist construction)
-    pwi = [str(Namelist(input_parameters))]
-    pwi.append('\n\n')
+    # and that repr converts to a QE readable representation (except bools)
+    for section in input_parameters:
+        pwi.append('&{0}\n'.format(section.upper()))
+        for key, value in input_parameters[section].items():
+            if value is True:
+                pwi.append('   {0:16} = .true.\n'.format(key))
+            elif value is False:
+                pwi.append('   {0:16} = .false.\n'.format(key))
+            else:
+                # repr format to get quotes around strings
+                pwi.append('   {0:16} = {1!r:}\n'.format(key, value))
+        pwi.append('/\n')  # terminate section
+    pwi.append('\n')
 
     # Pseudopotentials
     pwi.append('ATOMIC_SPECIES\n')
@@ -1675,7 +1687,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         pwi.append('\n')
 
     # CELL block, if required
-    if input_parameters['system']['ibrav'] == 0:
+    if input_parameters['SYSTEM']['ibrav'] == 0:
         pwi.append('CELL_PARAMETERS angstrom\n')
         pwi.append('{cell[0][0]:.14f} {cell[0][1]:.14f} {cell[0][2]:.14f}\n'
                    '{cell[1][0]:.14f} {cell[1][1]:.14f} {cell[1][2]:.14f}\n'
