@@ -49,7 +49,9 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
 
     >>> from ase.io.cube import read_cube
     >>> from ase.utils.cube import cube_2d_slice
-    >>> cube = read_cube(open("pt111_dens.cube", 'r'))
+    >>> f = open(..., 'r')
+    >>> cube = read_cube(f)
+    >>> close(f)
     >>> atoms = cube['atoms']
     >>> u = atoms[1].position - atoms[0].position
     >>> v = atoms[2].position - atoms[0].position
@@ -69,9 +71,8 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     o = np.array(o, dtype=np.float64)
 
     # We avoid some problems
-    u += np.random.random(3) * 1.0e-8
-    v += np.random.random(3) * 1.0e-8
-    o += np.random.random(3) * 1.0e-8
+    u[0] += 1.0e-8
+    v[1] += 1.0e-8
 
     size = cube['data'].shape
 
