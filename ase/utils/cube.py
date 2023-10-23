@@ -73,16 +73,15 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     v += np.random.random(3) * 1.0e-8
     o += np.random.random(3) * 1.0e-8
 
+    size = cube['data'].shape
+
     lengths = np.linalg.norm(cell, axis=1)
 
     A = cell / lengths[:, None]
 
-    # We avoid accuracy problems
-    lengths -= real_step / 5
-
-    ox = np.arange(0, lengths[0], real_step[0])
-    oy = np.arange(0, lengths[1], real_step[1])
-    oz = np.arange(0, lengths[2], real_step[2])
+    ox = np.arange(0, size[0]) * real_step[0]
+    oy = np.arange(0, size[1]) * real_step[1]
+    oz = np.arange(0, size[2]) * real_step[2]
 
     u, v = u / np.linalg.norm(u), v / np.linalg.norm(v)
 
