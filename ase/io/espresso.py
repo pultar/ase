@@ -33,7 +33,6 @@ from ase.cell import Cell
 from ase.constraints import FixAtoms, FixCartesian
 from ase.data import atomic_numbers, chemical_symbols
 from ase.dft.kpoints import kpoint_convert
->>>>>>> ase/io/espresso.py
 from ase.units import create_units
 from ase.utils import iofunction
 
