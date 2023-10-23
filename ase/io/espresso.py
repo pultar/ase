@@ -24,15 +24,11 @@ from ase.atoms import Atoms
 from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
-
 from ase.dft.kpoints import kpoint_convert
 from ase.constraints import FixAtoms, FixCartesian, FixExternals
 from ase.data import chemical_symbols, atomic_numbers
 
 from ase.cell import Cell
-from ase.constraints import FixAtoms, FixCartesian
-from ase.data import atomic_numbers, chemical_symbols
-from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import iofunction
 
