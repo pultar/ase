@@ -21,14 +21,13 @@ import sqlite3
 import sys
 from contextlib import contextmanager
 
-import numpy as np
-
 import ase.io.jsonio
-from ase.data import atomic_numbers
+import numpy as np
 from ase.calculators.calculator import all_properties
+from ase.data import atomic_numbers
+from ase.db.core import (Database, bytes_to_object, invop, lock, now,
+                         object_to_bytes, ops, parse_selection)
 from ase.db.row import AtomsRow
-from ase.db.core import (Database, ops, now, lock, invop, parse_selection,
-                         object_to_bytes, bytes_to_object)
 from ase.parallel import parallel_function
 
 VERSION = 9
@@ -919,6 +918,14 @@ class SQLite3Database(Database):
             dictionary = dict([(item[0], item[1]) for item in items])
 
         return dictionary
+
+    def get_all_key_names(self):
+        """Create set of all key names."""
+        with self.managed_connection() as con:
+            cur = con.cursor()
+            cur.execute('SELECT DISTINCT key FROM keys;')
+            all_keys = set(row[0] for row in cur.fetchall())
+        return all_keys
 
 
 if __name__ == '__main__':

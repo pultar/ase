@@ -1,8 +1,8 @@
 """
 Stream input commands to lammps to perform desired simulations
 """
-from ase.parallel import paropen
 from ase.calculators.lammps.unitconvert import convert
+from ase.parallel import paropen
 
 # "End mark" used to indicate that the calculation is done
 CALCULATION_END_MARK = "__end_of_ase_invoked_calculation__"
@@ -161,6 +161,13 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
                 *tuple("sp"[int(x)] for x in pbc)
             )
         )
+    # Prior to version 22Dec2022, `box tilt large` is necessary to run systems
+    # with large tilts. Since version 22Dec2022, this command is ignored, and
+    # systems with large tilts can be run by default.
+    # https://docs.lammps.org/Commands_removed.html#box-command
+    # This command does not affect the efficiency for systems with small tilts
+    # and therefore worth written always.
+    fileobj.write("box tilt large \n")
     fileobj.write("atom_modify sort 0 0.0 \n")
     for key in ("neighbor", "newton"):
         if key in parameters:

@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from ase.calculators.abc import GetOutputsMixin
+from ase.calculators.calculator import FileIOCalculator
 from ase.io import write
 from ase.io.elk import ElkReader
-from ase.calculators.abc import GetOutputsMixin
 
 import os
 from ase.calculators.genericfileio import (
