@@ -60,14 +60,16 @@ All parameters must be given in QE units, usually Ry or atomic units
 in line with the documentation. ASE does not add any defaults over the
 defaults of QE.
 
-Parameters can be given as keywords and ASE will try to put them into
-the correct section of the input file. 
-Since not all keywords can be/are recognized by ASE, users can use ``input_data`` as a dictionay of keywords already assigned to their 
+Parameters can be given as keywords and the calculator will put them into
+the correct section of the input file. The calculator also accepts a keyword
+argument ``input_data`` which is a dict, parameters may be put into sections
+in ``input_data``, but it is not necessary::
 
     input_data = {
-        'SYSTEM': {
+        'system': {
             'ecutwfc': 64,
-            'ecutrho': 576}}
+            'ecutrho': 576}
+        'disk_io': 'low'}  # automatically put into 'control'
 
     calc = Espresso(pseudopotentials=pseudopotentials,
                     tstress=True, tprnfor=True,  # kwargs added to parameters

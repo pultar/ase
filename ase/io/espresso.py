@@ -32,8 +32,6 @@ from ase.data import chemical_symbols, atomic_numbers
 from ase.units import create_units
 from ase.utils import iofunction
 
-from f90nml import Namelist
-
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
@@ -60,6 +58,25 @@ ibrav_error_message = (
     '== 0, Quantum ESPRESSO will still detect the symmetries '
     'of your system because the CELL_PARAMETERS are defined '
     'to a high level of precision.')
+
+
+class Namelist(OrderedDict):
+    """Case insensitive dict that emulates Fortran Namelists."""
+
+    def __contains__(self, key):
+        return super(Namelist, self).__contains__(key.lower())
+
+    def __delitem__(self, key):
+        return super(Namelist, self).__delitem__(key.lower())
+
+    def __getitem__(self, key):
+        return super(Namelist, self).__getitem__(key.lower())
+
+    def __setitem__(self, key, value):
+        super(Namelist, self).__setitem__(key.lower(), value)
+
+    def get(self, key, default=None):
+        return super(Namelist, self).get(key.lower(), default)
 
 
 @iofunction('rU')
@@ -504,17 +521,17 @@ def read_espresso_in(fileobj):
     data, card_lines = read_fortran_namelist(fileobj)
 
     # get the cell if ibrav=0
-    if 'SYSTEM' not in data:
+    if 'system' not in data:
         raise KeyError('Required section &SYSTEM not found.')
-    elif 'ibrav' not in data['SYSTEM']:
+    elif 'ibrav' not in data['system']:
         raise KeyError('ibrav is required in &SYSTEM')
-    elif data['SYSTEM']['ibrav'] == 0:
+    elif data['system']['ibrav'] == 0:
         # celldm(1) is in Bohr, A is in angstrom. celldm(1) will be
         # used even if A is also specified.
-        if 'celldm(1)' in data['SYSTEM']:
-            alat = data['SYSTEM']['celldm(1)'] * units['Bohr']
-        elif 'A' in data['SYSTEM']:
-            alat = data['SYSTEM']['A']
+        if 'celldm(1)' in data['system']:
+            alat = data['system']['celldm(1)'] * units['Bohr']
+        elif 'A' in data['system']:
+            alat = data['system']['A']
         else:
             alat = None
         cell, _ = get_cell_parameters(card_lines, alat=alat)
@@ -523,7 +540,7 @@ def read_espresso_in(fileobj):
 
     # species_info holds some info for each element
     species_card = get_atomic_species(
-        card_lines, n_species=data['SYSTEM']['ntyp'])
+        card_lines, n_species=data['system']['ntyp'])
     species_info = {}
     for ispec, (label, weight, pseudo) in enumerate(species_card):
         symbol = label_to_symbol(label)
@@ -536,7 +553,7 @@ def read_espresso_in(fileobj):
                                 "valence": valence, "magmom": magmom}
 
     positions_card = get_atomic_positions(
-        card_lines, n_atoms=data['SYSTEM']['nat'], cell=cell, alat=alat)
+        card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
@@ -703,8 +720,8 @@ def get_pseudo_dirs(data):
         A list of directories where pseudopotential files could be located.
     """
     pseudo_dirs = []
-    if 'pseudo_dir' in data['CONTROL']:
-        pseudo_dirs.append(data['CONTROL']['pseudo_dir'])
+    if 'pseudo_dir' in data['control']:
+        pseudo_dirs.append(data['control']['pseudo_dir'])
     if 'ESPRESSO_PSEUDO' in os.environ:
         pseudo_dirs.append(os.environ['ESPRESSO_PSEUDO'])
     pseudo_dirs.append(path.expanduser('~/espresso/pseudo/'))
@@ -1192,115 +1209,51 @@ def infix_float(text):
 ###
 
 
-NAMELISTS = {'CONTROL': [
-    'calculation', 'title', 'verbosity', 'restart_mode', 'wf_collect',
-    'nstep', 'iprint', 'tstress', 'tprnfor', 'dt', 'outdir', 'wfcdir',
-    'prefix', 'lkpoint_dir', 'max_seconds', 'etot_conv_thr',
-    'forc_conv_thr', 'disk_io', 'pseudo_dir', 'tefield', 'dipfield',
-    'lelfield', 'nberrycyc', 'lorbm', 'lberry', 'gdir', 'nppstr',
-    'gate', 'twochem', 'lfcp', 'trism'],
-
-    'SYSTEM': [
-    'ibrav', 'nat', 'ntyp', 'nbnd', 'nbnd_cond', 'tot_charge',
-    'starting_charge', 'tot_magnetization', 'starting_magnetization',
-    'ecutwfc', 'ecutrho', 'ecutfock',
-    'nr1', 'nr2', 'nr3', 'nr1s', 'nr2s', 'nr3s', 'nosym', 'nosym_evc', 'noinv',
-    'no_t_rev', 'force_symmorphic', 'use_all_frac', 'occupations',
-    'one_atom_occupations', 'starting_spin_angle', 'degauss_cond', 'degauss',
-    'smearing', 'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma',
-    'input_dft', 'ace', 'exx_fraction', 'screening_parameter',
-    'exxdiv_treatment', 'x_gamma_extrapolation', 'ecutvcut',
-    'nqx1', 'nqx2', 'nqx3',
-    'localization_thr' 'lda_plus_u', 'lda_plus_u_kind',
-    'Hubbard_U', 'Hubbard_J0', 'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
-    'starting_ns_eigenvalue', 'U_projection_type', 'edir',
-    'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
-    'constrained_magnetization', 'fixed_magnetization', 'lambda',
-    'report', 'lspinorb', 'assume_isolated', 'esm_bc', 'esm_w',
-    'esm_efield', 'esm_nfit', 'fcp_mu', 'vdw_corr', 'london',
-    'london_s6', 'london_c6', 'london_rvdw', 'london_rcut',
-    'ts_vdw_econv_thr', 'ts_vdw_isolated', 'xdm', 'xdm_a1', 'xdm_a2',
-    'space_group', 'uniqueb', 'origin_choice', 'rhombohedral', 'zmon',
-    'relaxz', 'block', 'block_1', 'block_2', 'block_height'],
-
-    'ELECTRONS': [
-    'electron_maxstep', 'exx_maxstep', 'scf_must_converge', 'conv_thr',
-    'adaptive_thr', 'conv_thr_init', 'conv_thr_multi', 'mixing_mode',
-    'mixing_beta', 'mixing_ndim', 'mixing_fixed_ns', 'diagonalization',
-    'diago_thr_init', 'diago_cg_maxiter', 'diago_david_ndim',
-    'diago_rmm_ndim', 'diago_rmm_conv', 'diago_gs_nblock',
-    'diago_full_acc', 'efield', 'efield_cart', 'efield_phase',
-    'startingpot', 'startingwfc', 'tqr', 'real_space'],
-
-    'IONS': [
-    'ion_positions', 'ion_dynamics', 'pot_extrapolation',
-    'wfc_extrapolation', 'remove_rigid_rot', 'ion_temperature', 'tempw',
-    'tolp', 'delta_t', 'nraise', 'refold_pos', 'upscale', 'bfgs_ndim',
-    'trust_radius_max', 'trust_radius_min', 'trust_radius_ini', 'w_1',
-    'w_2', 'fire_alpha_init', 'fire_falpha', 'fire_nmin', 'fire_f_inc',
-    'fire_f_dec', 'fire_dtmax'],
-
-    'CELL': [
-    'cell_dynamics', 'press', 'wmass', 'cell_factor', 'press_conv_thr',
-    'cell_dofree'],
-}
-
-NAMELIST_ORDERED_NAMES = ['CONTROL', 'SYSTEM', 'ELECTRONS', 'IONS',
-                          'CELL', 'FCP', 'RISM']
-NAMELIST_REQUIRED_NAMES = NAMELIST_ORDERED_NAMES[:3]
-
-
-def _construct_ordered_namelist_dict(kwargs_from_calc, input_data_from_calc):
-    nested_kwargs_dict_unordered = {}
-    used_kwargs_dict = {}
-
-    # Loop over all unsectioned kwargs
-    for keyword, value in kwargs_from_calc.items():
-        # Loop over the sections we actually store
-        for k, vlist in NAMELISTS.items():
-            tmp = {keyword: value}
-            # This keyword belongs in this section
-            if keyword in vlist:
-                # We have added values to this section before
-                if k in nested_kwargs_dict_unordered.keys():
-                    nested_kwargs_dict_unordered[k].update(tmp)
-                    used_kwargs_dict.update(tmp)
-
-                # First time adding values to this section
-                else:
-                    nested_kwargs_dict_unordered[k] = tmp
-                    used_kwargs_dict.update(tmp)
-
-    if input_data_from_calc is not None:
-        # Enforce that all elements of input_data_from_calc
-        # need to be sectioned by the user. This takes off
-        # responsibility from ASE.
-        assert all(type(value) is dict for value
-                   in input_data_from_calc.values()), \
-            "All values in input_data must be dicts since we" \
-            "require that the section key is provided for each" \
-            "set of keywords. Try something like {'SECTION': " \
-            "dictionary_of_keywords_in_SECTION}."
-        for key, value in input_data_from_calc.items():
-            if key in nested_kwargs_dict_unordered.keys():
-                nested_kwargs_dict_unordered[key].update(value)
-            else:
-                nested_kwargs_dict_unordered[key] = value
-
-    nested_dict_kwargs_ordered = OrderedDict()
-
-    for key in NAMELIST_ORDERED_NAMES:
-        # These are not optional
-        if key in NAMELIST_REQUIRED_NAMES:
-            if key not in nested_kwargs_dict_unordered.keys():
-                nested_kwargs_dict_unordered[key] = {}
-
-    for key in NAMELIST_ORDERED_NAMES:
-        if key in nested_kwargs_dict_unordered.keys():
-            nested_dict_kwargs_ordered[key] = nested_kwargs_dict_unordered[key]
-
-    return (nested_dict_kwargs_ordered,
-            set(kwargs_from_calc) - set(used_kwargs_dict))
+# Ordered and case insensitive
+KEYS = Namelist((
+    ('CONTROL', [
+        'calculation', 'title', 'verbosity', 'restart_mode', 'wf_collect',
+        'nstep', 'iprint', 'tstress', 'tprnfor', 'dt', 'outdir', 'wfcdir',
+        'prefix', 'lkpoint_dir', 'max_seconds', 'etot_conv_thr',
+        'forc_conv_thr', 'disk_io', 'pseudo_dir', 'tefield', 'dipfield',
+        'lelfield', 'nberrycyc', 'lorbm', 'lberry', 'gdir', 'nppstr',
+        'lfcpopt', 'monopole']),
+    ('SYSTEM', [
+        'ibrav', 'nat', 'ntyp', 'nbnd', 'tot_charge', 'tot_magnetization',
+        'starting_magnetization', 'ecutwfc', 'ecutrho', 'ecutfock', 'nr1',
+        'nr2', 'nr3', 'nr1s', 'nr2s', 'nr3s', 'nosym', 'nosym_evc', 'noinv',
+        'no_t_rev', 'force_symmorphic', 'use_all_frac', 'occupations',
+        'one_atom_occupations', 'starting_spin_angle', 'degauss', 'smearing',
+        'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
+        'exx_fraction', 'screening_parameter', 'exxdiv_treatment',
+        'x_gamma_extrapolation', 'ecutvcut', 'nqx1', 'nqx2', 'nqx3',
+        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_U', 'Hubbard_J0',
+        'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
+        'starting_ns_eigenvalue', 'U_projection_type', 'edir',
+        'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
+        'constrained_magnetization', 'fixed_magnetization', 'lambda',
+        'report', 'lspinorb', 'assume_isolated', 'esm_bc', 'esm_w',
+        'esm_efield', 'esm_nfit', 'fcp_mu', 'vdw_corr', 'london',
+        'london_s6', 'london_c6', 'london_rvdw', 'london_rcut',
+        'ts_vdw_econv_thr', 'ts_vdw_isolated', 'xdm', 'xdm_a1', 'xdm_a2',
+        'space_group', 'uniqueb', 'origin_choice', 'rhombohedral', 'zmon',
+        'realxz', 'block', 'block_1', 'block_2', 'block_height']),
+    ('ELECTRONS', [
+        'electron_maxstep', 'scf_must_converge', 'conv_thr', 'adaptive_thr',
+        'conv_thr_init', 'conv_thr_multi', 'mixing_mode', 'mixing_beta',
+        'mixing_ndim', 'mixing_fixed_ns', 'diagonalization', 'ortho_para',
+        'diago_thr_init', 'diago_cg_maxiter', 'diago_david_ndim',
+        'diago_full_acc', 'efield', 'efield_cart', 'efield_phase',
+        'startingpot', 'startingwfc', 'tqr']),
+    ('IONS', [
+        'ion_dynamics', 'ion_positions', 'pot_extrapolation',
+        'wfc_extrapolation', 'remove_rigid_rot', 'ion_temperature', 'tempw',
+        'tolp', 'delta_t', 'nraise', 'refold_pos', 'upscale', 'bfgs_ndim',
+        'trust_radius_max', 'trust_radius_min', 'trust_radius_ini', 'w_1',
+        'w_2']),
+    ('CELL', [
+        'cell_dynamics', 'press', 'wmass', 'cell_factor', 'press_conv_thr',
+        'cell_dofree'])))
 
 
 # Number of valence electrons in the pseudopotentials recommended by
@@ -1315,6 +1268,105 @@ SSSP_VALENCE = [
     7.0, 18.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0,
     19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 36.0, 27.0, 14.0, 15.0, 30.0,
     15.0, 32.0, 19.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0]
+
+
+def construct_namelist(parameters=None, warn=False, **kwargs):
+    """
+    Construct an ordered Namelist containing all the parameters given (as
+    a dictionary or kwargs). Keys will be inserted into their appropriate
+    section in the namelist and the dictionary may contain flat and nested
+    structures. Any kwargs that match input keys will be incorporated into
+    their correct section. All matches are case-insensitive, and returned
+    Namelist object is a case-insensitive dict.
+
+    If a key is not known to ase, but in a section within `parameters`,
+    it will be assumed that it was put there on purpose and included
+    in the output namelist. Anything not in a section will be ignored (set
+    `warn` to True to see ignored keys).
+
+    Keys with a dimension (e.g. Hubbard_U(1)) will be incorporated as-is
+    so the `i` should be made to match the output.
+
+    The priority of the keys is:
+        kwargs[key] > parameters[key] > parameters[section][key]
+    Only the highest priority item will be included.
+
+    Parameters
+    ----------
+    parameters: dict
+        Flat or nested set of input parameters.
+    warn: bool
+        Enable warnings for unused keys.
+
+    Returns
+    -------
+    input_namelist: Namelist
+        pw.x compatible namelist of input parameters.
+
+    """
+    # Convert everything to Namelist early to make case-insensitive
+    if parameters is None:
+        parameters = Namelist()
+    else:
+        # Maximum one level of nested dict
+        # Don't modify in place
+        parameters_namelist = Namelist()
+        for key, value in parameters.items():
+            if isinstance(value, dict):
+                parameters_namelist[key] = Namelist(value)
+            else:
+                parameters_namelist[key] = value
+        parameters = parameters_namelist
+
+    # Just a dict
+    kwargs = Namelist(kwargs)
+
+    # Final parameter set
+    input_namelist = Namelist()
+
+    # Collect
+    for section in KEYS:
+        sec_list = Namelist()
+        for key in KEYS[section]:
+            # Check all three separately and pop them all so that
+            # we can check for missing values later
+            if key in parameters.get(section, {}):
+                sec_list[key] = parameters[section].pop(key)
+            if key in parameters:
+                sec_list[key] = parameters.pop(key)
+            if key in kwargs:
+                sec_list[key] = kwargs.pop(key)
+
+            # Check if there is a key(i) version (no extra parsing)
+            for arg_key in list(parameters.get(section, {})):
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = parameters[section].pop(arg_key)
+            cp_parameters = parameters.copy()
+            for arg_key in cp_parameters:
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = parameters.pop(arg_key)
+            cp_kwargs = kwargs.copy()
+            for arg_key in cp_kwargs:
+                if arg_key.split('(')[0].strip().lower() == key.lower():
+                    sec_list[arg_key] = kwargs.pop(arg_key)
+
+        # Add to output
+        input_namelist[section] = sec_list
+
+    unused_keys = list(kwargs)
+    # pass anything else already in a section
+    for key, value in parameters.items():
+        if key in KEYS and isinstance(value, dict):
+            input_namelist[key].update(value)
+        elif isinstance(value, dict):
+            unused_keys.extend(list(value))
+        else:
+            unused_keys.append(key)
+
+    if warn and unused_keys:
+        warnings.warn('Unused keys: {}'.format(', '.join(unused_keys)))
+
+    return input_namelist
 
 
 def grep_valence(pseudopotential):
@@ -1519,9 +1571,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # Convert to a namelist to make working with parameters much easier
     # Note that the name ``input_data`` is chosen to prevent clash with
     # ``parameters`` in Calculator objects
-    # input_parameters = construct_namelist(input_data, **kwargs)
-    (input_parameters,
-     unused_keys) = _construct_ordered_namelist_dict(kwargs, input_data)
+    input_parameters = construct_namelist(input_data, **kwargs)
 
     # Convert ase constraints to QE constraints
     # Nx3 array of force multipliers matches what QE uses
@@ -1565,11 +1615,11 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     atomic_species_str = []
     atomic_positions_str = []
 
-    nspin = input_parameters['SYSTEM'].get('nspin', 1)  # 1 is the default
+    nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
     if any(atoms.get_initial_magnetic_moments()):
         if nspin == 1:
             # Force spin on
-            input_parameters['SYSTEM']['nspin'] = 2
+            input_parameters['system']['nspin'] = 2
             nspin = 2
 
     if nspin == 2:
@@ -1586,7 +1636,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
                 # Add magnetization to the input file
                 mag_str = 'starting_magnetization({0})'.format(sidx)
-                input_parameters['SYSTEM'][mag_str] = fspin
+                input_parameters['system'][mag_str] = fspin
                 atomic_species_str.append(
                     '{species}{tidx} {mass} {pseudo}\n'.format(
                         species=atom.symbol, tidx=tidx, mass=atom.mass,
@@ -1614,17 +1664,17 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # Add computed parameters
     # different magnetisms means different types
-    input_parameters['SYSTEM']['ntyp'] = len(atomic_species)
-    input_parameters['SYSTEM']['nat'] = len(atoms)
+    input_parameters['system']['ntyp'] = len(atomic_species)
+    input_parameters['system']['nat'] = len(atoms)
 
     # Use cell as given or fit to a specific ibrav
-    if 'ibrav' in input_parameters['SYSTEM']:
-        ibrav = input_parameters['SYSTEM']['ibrav']
+    if 'ibrav' in input_parameters['system']:
+        ibrav = input_parameters['system']['ibrav']
         if ibrav != 0:
             raise ValueError(ibrav_error_message)
     else:
         # Just use standard cell block
-        input_parameters['SYSTEM']['ibrav'] = 0
+        input_parameters['system']['ibrav'] = 0
 
     # Construct input file into this
     pwi = []
