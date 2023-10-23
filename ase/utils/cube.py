@@ -60,9 +60,7 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     >>> plt.pcolormesh(X, Y, D)
     """
 
-    atoms = cube['atoms'].copy()
-
-    cell = atoms.get_cell()
+    cell = cube['atoms'].get_cell()
 
     real_step = np.linalg.norm(cube['spacing'], axis=1)
 
@@ -114,10 +112,10 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     vectors = np.dot(vectors, np.linalg.inv(A))
 
     D = interpn((ox, oy, oz),
-                          cube['data'],
-                          vectors,
-                          bounds_error=False,
-                          method='linear'
-                          ).reshape(X.shape)
+                cube['data'],
+                vectors,
+                bounds_error=False,
+                method='linear'
+                ).reshape(X.shape)
 
     return X - Bo[0], Y - Bo[1], D
