@@ -77,9 +77,12 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
 
     A = cell / lengths[:, None]
 
-    ox = np.arange(0, lengths[0] - 1.0e-3, real_step[0])
-    oy = np.arange(0, lengths[1] - 1.0e-3, real_step[1])
-    oz = np.arange(0, lengths[2] - 1.0e-3, real_step[2])
+    # We avoid accuracy problems
+    lengths -= real_step / 5
+
+    ox = np.arange(0, lengths[0], real_step[0])
+    oy = np.arange(0, lengths[1], real_step[1])
+    oz = np.arange(0, lengths[2], real_step[2])
 
     u, v = u / np.linalg.norm(u), v / np.linalg.norm(v)
 
