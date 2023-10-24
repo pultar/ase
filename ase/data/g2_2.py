@@ -27,7 +27,7 @@ Experimental ionization potentials are from http://srdata.nist.gov/cccbdb/
 Information presented on these pages is considered public information
 and may be distributed or copied http://www.nist.gov/public_affairs/disclaimer.cfm
 """
-
+from typing import List
 
 from ase.atoms import Atoms
 
@@ -1775,7 +1775,7 @@ data = {
 
 
 # all constituent atoms
-atoms_g22 = []
+atoms_g22: List[Atoms] = []
 for f in data:
     s = Atoms(symbols=data[f]['symbols'],  # type: ignore[index]
               positions=data[f]['positions'])  # type: ignore[index]
