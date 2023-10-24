@@ -2,7 +2,7 @@ import numpy as np
 from scipy.interpolate import interpn
 
 
-def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
+def grid_2d_slice(spacings, array, u, v, o=(0, 0, 0), step=0.02,
                   size_u=(-10, 10), size_v=(-10, 10)):
     """Extract a 2D slice from a cube file using interpolation.
 
@@ -48,33 +48,34 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     the direction of the first three atoms in the file:
 
     >>> from ase.io.cube import read_cube
-    >>> from ase.utils.cube import cube_2d_slice
-    >>> f = open(..., 'r')
-    >>> cube = read_cube(f)
-    >>> close(f)
+    >>> from ase.utils.cube import grid_2d_slice
+    >>> with open(..., 'r') as f:
+    >>>     cube = read_cube(f)
     >>> atoms = cube['atoms']
+    >>> spacings = cube['spacing']
+    >>> array = cube['data']
     >>> u = atoms[1].position - atoms[0].position
     >>> v = atoms[2].position - atoms[0].position
     >>> o = atoms[0].position
-    >>> X, Y, D = cube_2d_slice(cube, u, v, o, size_u=(-1, 10), size_v=(-1, 10))
-    >>> #We can now plot the data directly
+    >>> X, Y, D = grid_2d_slice(spacings, array, u, v, o, size_u=(-1, 10),
+    >>>    size_v=(-1, 10))
+    >>> # We can now plot the data directly
     >>> import matplotlib.pyplot as plt
     >>> plt.pcolormesh(X, Y, D)
     """
 
-    cell = cube['atoms'].get_cell()
-
-    real_step = np.linalg.norm(cube['spacing'], axis=1)
+    real_step = np.linalg.norm(spacings, axis=1)
 
     u = np.array(u, dtype=np.float64)
     v = np.array(v, dtype=np.float64)
     o = np.array(o, dtype=np.float64)
 
-    # We avoid some problems
-    u[0] += 1.0e-8
-    v[1] += 1.0e-8
+    size = array.shape
 
-    size = cube['data'].shape
+    spacings = np.array(spacings)
+    array = np.array(array)
+
+    cell = spacings * size
 
     lengths = np.linalg.norm(cell, axis=1)
 
@@ -96,9 +97,15 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     B = np.array([u, u_perp, n])
     Bo = np.dot(B, o)
 
-    zoff = ((0 - o[1]) * (u[0] * v[2] - v[0] * u[2]) -
-            (0 - o[0]) * (u[1] * v[2] - v[1] * u[2])) \
-        / (u[0] * v[1] - v[0] * u[1]) + o[2]
+    det = (u[0] * v[1] - v[0] * u[1])
+
+    if det != 0:
+        zoff = ((0 - o[1]) * (u[0] * v[2] - v[0] * u[2]) -
+                (0 - o[0]) * (u[1] * v[2] - v[1] * u[2])) \
+            / det + o[2]
+    else:
+        zoff = 0
+
     zoff = np.dot(B, [0, 0, zoff])[-1]
 
     x, y = np.arange(*size_u, step), np.arange(*size_v, step)
@@ -114,8 +121,11 @@ def cube_2d_slice(cube, u, v, o=(0, 0, 0), step=0.02,
     # If the cell is not orthogonal, we need to rotate the vectors
     vectors = np.dot(vectors, np.linalg.inv(A))
 
+    # We avoid nan values at boundary
+    vectors = np.round(vectors, 12)
+
     D = interpn((ox, oy, oz),
-                cube['data'],
+                array,
                 vectors,
                 bounds_error=False,
                 method='linear'
