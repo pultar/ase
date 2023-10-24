@@ -3032,4 +3032,6 @@ def get_s22x5_distance(name, dist=None):
     x00 = data[s22_name]['positions 1.0'][0][0]
     x01 = data[s22_name]['positions 1.0'][-1][0]
     x10 = data[s22_name][f'positions {dist_}'][0][0]
-    return data[s22_name][f'positions {dist_}'][-1][0] - x10 - (x01 - x00)
+    d0 = x01 - x00
+    d1 = x11 - x10
+    return d1 - d0
