@@ -1775,7 +1775,7 @@ data = {
 
 
 # all constituent atoms
-atoms_g22: List[Atoms] = []
+atoms_g22: List[str] = []
 for f in data:
     s = Atoms(symbols=data[f]['symbols'],  # type: ignore[index]
               positions=data[f]['positions'])  # type: ignore[index]
