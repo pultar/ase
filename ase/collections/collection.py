@@ -46,7 +46,7 @@ class Collection:
         self._names = []
         self._systems = {}
         self._data = {}
-        self.filename = op.join(op.dirname(__file__), name + '.json')
+        self.filename = op.join(op.dirname(__file__), f'{name}.json')
 
     def __getitem__(self, name):
         self._read()
@@ -92,4 +92,4 @@ class Collection:
             self._names.append(name)
             self._systems[name] = AtomsRow(dct).toatoms()
             del kvp['name']
-            self._data[name] = dict((str(k), v) for k, v in kvp.items())
+            self._data[name] = {str(k): v for k, v in kvp.items()}
