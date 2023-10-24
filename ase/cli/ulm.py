@@ -31,8 +31,8 @@ class CLICommand:
         from ase.io.ulm import copy, print_ulm_info
 
         if args.delete:
-            exclude = set('.' + key for key in args.delete.split(','))
-            copy(args.filename, args.filename + '.temp', exclude)
-            os.rename(args.filename + '.temp', args.filename)
+            exclude = {f'.{key}' for key in args.delete.split(',')}
+            copy(args.filename, f'{args.filename}.temp', exclude)
+            os.rename(f'{args.filename}.temp', args.filename)
         else:
             print_ulm_info(args.filename, args.index, verbose=args.verbose)

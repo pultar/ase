@@ -54,7 +54,7 @@ class CLICommand:
         from ase.io import iread
 
         files = [os.path.split(path)[1] for path in args.filenames]
-        lmax = max([len(f) for f in files]) + 2
+        lmax = max(len(f) for f in files) + 2
 
         print('file'.ljust(lmax) +
               'type   score     a      b      component counts')
@@ -76,11 +76,7 @@ class CLICommand:
                         score = '{:.3f}'.format(entry.score).ljust(5)
                         a = '{:.3f}'.format(entry.a).ljust(5)
                         b = '{:.3f}'.format(entry.b).ljust(5)
-                        if i == 0:
-                            name = f.ljust(lmax)
-                        else:
-                            name = ' ' * lmax
-
+                        name = f.ljust(lmax) if i == 0 else ' ' * lmax
                         line = ('{}{}' + '   {}' * 4).format(name, dimtype,
                                                              score, a, b,
                                                              entry.h)

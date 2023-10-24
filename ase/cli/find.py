@@ -77,9 +77,7 @@ def allpaths(folder, include, exclude):
                         break
                 else:
                     continue
-            path = op.join(dirpath, name)
-            yield path
-
+            yield op.join(dirpath, name)
         # Skip .git, __pycache__ and friends:
         dirnames[:] = (name for name in dirnames if name[0] not in '._')
 
@@ -114,7 +112,7 @@ def check(path, query, verbose):
             atoms = read(path, format=format)
         except Exception as x:
             if verbose:
-                print(path + ':', x, file=sys.stderr)
+                print(f'{path}:', x, file=sys.stderr)
             return '', None
         db = FakeDB(atoms)
 
@@ -123,6 +121,6 @@ def check(path, query, verbose):
             return format, row
     except Exception as x:
         if verbose:
-            print(path + ':', x, file=sys.stderr)
+            print(f'{path}:', x, file=sys.stderr)
 
     return '', None

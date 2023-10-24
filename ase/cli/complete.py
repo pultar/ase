@@ -17,8 +17,11 @@ from glob import glob
 
 
 def match(word, *suffixes):
-    return [w for w in glob(word + '*')
-            if any(w.endswith(suffix) for suffix in suffixes)]
+    return [
+        w
+        for w in glob(f'{word}*')
+        if any(w.endswith(suffix) for suffix in suffixes)
+    ]
 
 
 # Beginning of computer generated data:
@@ -96,10 +99,9 @@ commands = {
 
 def complete(word, previous, line, point):
     for w in line[:point - len(word)].strip().split()[1:]:
-        if w[0].isalpha():
-            if w in commands:
-                command = w
-                break
+        if w[0].isalpha() and w in commands:
+            command = w
+            break
     else:
         if word[:1] == '-':
             return ['-h', '--help', '--version']
@@ -110,30 +112,43 @@ def complete(word, previous, line, point):
 
     words = []
 
-    if command == 'db':
-        if previous == 'db':
-            words = match(word, '.db', '.json')
+    if command == 'build' and previous in ['-x', '--crystal-structure']:
+        words = ['sc', 'fcc', 'bcc', 'hcp', 'diamond', 'zincblende',
+                 'rocksalt', 'cesiumchloride', 'fluorite', 'wurtzite']
 
-    elif command == 'run':
-        if previous == 'run':
-            from ase.calculators.calculator import names as words
+    elif (
+        command == 'build'
+        and previous not in ['-x', '--crystal-structure']
+        or command != 'build'
+        and command == 'db'
+        and previous != 'db'
+        or command != 'build'
+        and command != 'db'
+        and command == 'run'
+        and previous != 'run'
+        or command != 'build'
+        and command != 'db'
+        and command != 'run'
+        and command == 'test'
+        and previous not in ['-c', '--calculators']
+        and word.startswith('-')
+        or command not in ['build', 'db', 'run', 'test']
+    ):
+        pass
+    elif command == 'db':
+        words = match(word, '.db', '.json')
 
-    elif command == 'build':
-        if previous in ['-x', '--crystal-structure']:
-            words = ['sc', 'fcc', 'bcc', 'hcp', 'diamond', 'zincblende',
-                     'rocksalt', 'cesiumchloride', 'fluorite', 'wurtzite']
+    elif command == 'run' or previous in ['-c', '--calculators']:
+        from ase.calculators.calculator import names as words
 
-    elif command == 'test':
-        if previous in ['-c', '--calculators']:
-            from ase.calculators.calculator import names as words
-        elif not word.startswith('-'):
-            from ase.test.testsuite import all_test_modules_and_groups
-            words = []
-            for path in all_test_modules_and_groups():
-                path = str(path)
-                if not path.endswith('.py'):
-                    path += '/'
-                words.append(path)
+    else:
+        from ase.test.testsuite import all_test_modules_and_groups
+        words = []
+        for path in all_test_modules_and_groups():
+            path = str(path)
+            if not path.endswith('.py'):
+                path += '/'
+            words.append(path)
 
     return words
 

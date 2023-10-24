@@ -42,9 +42,9 @@ class CLICommand:
                 configs = detect_calculators()
                 print('Calculators:')
                 for message in format_configs(configs):
-                    print('  {}'.format(message))
+                    print(f'  {message}')
                 print()
-                print('Available: {}'.format(','.join(sorted(configs))))
+                print(f"Available: {','.join(sorted(configs))}")
             return
 
         n = max(len(filename) for filename in args.filename) + 2
@@ -60,17 +60,13 @@ class CLICommand:
                 format = '?'
                 description = '?'
             else:
-                if format in ioformats:
-                    description = ioformats[format].description
-                else:
-                    description = '?'
-
-            print('{:{}}{} ({})'.format(filename + ':', n,
-                                        description, format))
-            if args.verbose:
-                if format == 'traj':
+                description = ioformats[format].description if format in ioformats else '?'
+            print('{:{}}{} ({})'.format(f'{filename}:', n, description, format))
+            if format == 'traj':
+                if args.verbose:
                     print_ulm_info(filename)
-                elif format == 'bundletrajectory':
+            elif format == 'bundletrajectory':
+                if args.verbose:
                     print_bundletrajectory_info(filename)
 
         raise SystemExit(nfiles_not_found)
@@ -82,8 +78,10 @@ def print_info():
 
     from ase.dependencies import all_dependencies
 
-    versions = [('platform', platform.platform()),
-                ('python-' + sys.version.split()[0], sys.executable)]
+    versions = [
+        ('platform', platform.platform()),
+        (f'python-{sys.version.split()[0]}', sys.executable),
+    ]
 
     for name, path in versions + all_dependencies():
         print('{:24} {}'.format(name, path))
@@ -105,10 +103,8 @@ def print_formats():
 
         moreinfo = [infostring]
         if fmt.extensions:
-            moreinfo.append('ext={}'.format('|'.join(fmt.extensions)))
+            moreinfo.append(f"ext={'|'.join(fmt.extensions)}")
         if fmt.globs:
-            moreinfo.append('glob={}'.format('|'.join(fmt.globs)))
+            moreinfo.append(f"glob={'|'.join(fmt.globs)}")
 
-        print('  {} [{}]: {}'.format(fmt.name,
-                                     ', '.join(moreinfo),
-                                     fmt.description))
+        print(f"  {fmt.name} [{', '.join(moreinfo)}]: {fmt.description}")

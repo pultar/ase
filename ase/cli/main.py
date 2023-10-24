@@ -43,8 +43,9 @@ def main(prog='ase', description='ASE command line tool.',
     parser = argparse.ArgumentParser(prog=prog,
                                      description=description,
                                      formatter_class=Formatter)
-    parser.add_argument('--version', action='version',
-                        version='%(prog)s-{}'.format(version))
+    parser.add_argument(
+        '--version', action='version', version=f'%(prog)s-{version}'
+    )
     parser.add_argument('-T', '--traceback', action='store_true')
     subparsers = parser.add_subparsers(title='Sub-commands',
                                        dest='command')
@@ -83,11 +84,7 @@ def main(prog='ase', description='ASE command line tool.',
         functions[command] = cmd.run
         parsers[command] = subparser
 
-    if hook:
-        args = hook(parser, args)
-    else:
-        args = parser.parse_args(args)
-
+    args = hook(parser, args) if hook else parser.parse_args(args)
     if args.command == 'help':
         if args.helpcommand is None:
             parser.print_help()
@@ -109,11 +106,9 @@ def main(prog='ase', description='ASE command line tool.',
         except Exception as x:
             if args.traceback:
                 raise
-            else:
-                l1 = '{}: {}\n'.format(x.__class__.__name__, x)
-                l2 = ('To get a full traceback, use: {} -T {} ...'
-                      .format(prog, args.command))
-                parser.error(l1 + l2)
+            l1 = f'{x.__class__.__name__}: {x}\n'
+            l2 = f'To get a full traceback, use: {prog} -T {args.command} ...'
+            parser.error(l1 + l2)
 
 
 class Formatter(argparse.HelpFormatter):

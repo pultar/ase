@@ -112,7 +112,7 @@ class CLICommand:
         if args.output:
             write(args.output, atoms)
         elif sys.stdout.isatty():
-            write(args.name + '.json', atoms)
+            write(f'{args.name}.json', atoms)
         else:
             con = connect(sys.stdout, type='json')
             con.write(atoms, name=args.name)
@@ -128,7 +128,7 @@ def build_molecule(args):
     try:
         # Known molecule or atom?
         atoms = molecule(args.name)
-    except (NotImplementedError, KeyError):
+    except (NotImplementedError, KeyError) as e:
         symbols = string2symbols(args.name)
         if len(symbols) == 1:
             Z = atomic_numbers[symbols[0]]
@@ -144,7 +144,7 @@ def build_molecule(args):
             atoms = Atoms(args.name, positions=[(0, 0, 0),
                                                 (b, 0, 0)])
         else:
-            raise ValueError('Unknown molecule: ' + args.name)
+            raise ValueError(f'Unknown molecule: {args.name}') from e
     else:
         if len(atoms) == 2 and args.bond_length is not None:
             atoms.set_distance(0, 1, args.bond_length)

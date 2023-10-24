@@ -25,10 +25,10 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         from ase.calculators.names import names
-        parser.add_argument('calculator',
-                            help='Name of calculator to use.  '
-                            'Must be one of: {}.'
-                            .format(', '.join(names)))
+        parser.add_argument(
+            'calculator',
+            help=f"Name of calculator to use.  Must be one of: {', '.join(names)}.",
+        )
         CLICommand.add_more_arguments(parser)
 
     @staticmethod
@@ -211,9 +211,9 @@ class Runner:
         if '.' in name:
             name = name.rsplit('.', 1)[0]
         if self.args.tag is not None:
-            name += '-' + self.args.tag
+            name += f'-{self.args.tag}'
         if ext:
-            name += '.' + ext
+            name += f'.{ext}'
         return name
 
 
@@ -236,7 +236,7 @@ def str2dict(s: str, namespace={}, sep: str = '=') -> Dict[str, Any]:
         return value
 
     dct = {}
-    strings = (s + ',').split(sep)
+    strings = f'{s},'.split(sep)
     for i in range(len(strings) - 1):
         key = strings[i]
         m = strings[i + 1].rfind(',')

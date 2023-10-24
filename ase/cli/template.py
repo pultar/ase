@@ -19,18 +19,16 @@ def field_specs_on_conditions(calculator_outputs, rank_order):
         if rank_order in field_specs:
             for c, i in enumerate(field_specs):
                 if i == rank_order:
-                    field_specs[c] = i + ':0:1'
+                    field_specs[c] = f'{i}:0:1'
         else:
-            field_specs.append(rank_order + ':0:1')
+            field_specs.append(f'{rank_order}:0:1')
     else:
-        field_specs[0] = field_specs[0] + ':1'
+        field_specs[0] = f'{field_specs[0]}:1'
     return field_specs
 
 
 def summary_functions_on_conditions(has_calc):
-    if has_calc:
-        return [rmsd, energy_delta]
-    return [rmsd]
+    return [rmsd, energy_delta] if has_calc else [rmsd]
 
 
 def header_alias(h):
@@ -47,7 +45,7 @@ def header_alias(h):
     elif h[0] == 'd':
         h = h.replace('d', 'Δ')
     elif h[0] == 'r':
-        h = 'rank ' + header_alias(h[1:])
+        h = f'rank {header_alias(h[1:])}'
     elif h[0] == 'a':
         h = h.replace('a', '<')
         h += '>'
@@ -61,10 +59,9 @@ def prec_round(a, prec=2):
     """
     if a == 0:
         return a
-    else:
-        s = 1 if a > 0 else -1
-        m = np.log10(s * a) // 1
-        c = np.log10(s * a) % 1
+    s = 1 if a > 0 else -1
+    m = np.log10(s * a) // 1
+    c = np.log10(s * a) % 1
     return s * np.round(10**c, prec) * 10**m
 
 
@@ -117,11 +114,7 @@ def get_field_data(atoms1, atoms2, field):
             if field.startswith('d'):
                 y = atoms2.positions - atoms1.positions
             elif field.startswith('p'):
-                if field[1] == '1':
-                    y = atoms1.positions
-                else:
-                    y = atoms2.positions
-
+                y = atoms1.positions if field[1] == '1' else atoms2.positions
             if field.endswith('x'):
                 data = y[:, 0]
             elif field.endswith('y'):
@@ -136,11 +129,7 @@ def get_field_data(atoms1, atoms2, field):
         elif field[0] == 'a':
             y = (atoms2.get_forces() + atoms1.get_forces()) / 2
         else:
-            if field[1] == '1':
-                y = atoms1.get_forces()
-            else:
-                y = atoms2.get_forces()
-
+            y = atoms1.get_forces() if field[1] == '1' else atoms2.get_forces()
         if field.endswith('x'):
             data = y[:, 0]
         elif field.endswith('y'):
@@ -150,10 +139,7 @@ def get_field_data(atoms1, atoms2, field):
         else:
             data = np.linalg.norm(y, axis=1)
 
-    if rank_order:
-        return np.argsort(np.argsort(-data))
-
-    return data
+    return np.argsort(np.argsort(-data)) if rank_order else data
 
 
 # Summary Functions
@@ -208,7 +194,7 @@ class MapFormatter(string.Formatter):
     def format_field(self, value, spec):
         if spec.endswith('h'):
             value = num2sym[int(value)]
-            spec = spec[:-1] + 's'
+            spec = f'{spec[:-1]}s'
         return super(MapFormatter, self).format_field(value, spec)
 
 
@@ -244,7 +230,6 @@ class TableFormat:
                 self.columnwidth),
             'conv': "{{:^{}h}}".format(
                 self.columnwidth)}
-        fmt = {}
         signed_floats = [
             'dx',
             'dy',
@@ -267,13 +252,15 @@ class TableFormat:
             'f2y',
             'f1z',
             'f2z']
-        for sf in signed_floats:
-            fmt[sf] = self.fmt_class['signed float']
+        fmt = {sf: self.fmt_class['signed float'] for sf in signed_floats}
         unsigned_floats = ['d', 'df', 'af', 'p1', 'p2', 'f1', 'f2']
         for usf in unsigned_floats:
             fmt[usf] = self.fmt_class['unsigned float']
-        integers = ['i', 'an', 't'] + ['r' + sf for sf in signed_floats] + \
-            ['r' + usf for usf in unsigned_floats]
+        integers = (
+            ['i', 'an', 't']
+            + [f'r{sf}' for sf in signed_floats]
+            + [f'r{usf}' for usf in unsigned_floats]
+        )
         for i in integers:
             fmt[i] = self.fmt_class['int']
         fmt['el'] = self.fmt_class['conv']
@@ -282,14 +269,10 @@ class TableFormat:
 
 
 class Table:
-    def __init__(self,
-                 field_specs,
-                 summary_functions=[],
-                 tableformat=None,
-                 max_lines=None,
-                 title='',
-                 tablewidth=None):
+    def __init__(self, field_specs, summary_functions=None, tableformat=None, max_lines=None, title='', tablewidth=None):
 
+        if summary_functions is None:
+            summary_functions = []
         self.max_lines = max_lines
         self.summary_functions = summary_functions
         self.field_specs = field_specs
@@ -298,11 +281,7 @@ class Table:
         self.nfields = len(self.fields)
 
         # formatting
-        if tableformat is None:
-            self.tableformat = TableFormat()
-        else:
-            self.tableformat = tableformat
-
+        self.tableformat = TableFormat() if tableformat is None else tableformat
         if tablewidth is None:
             self.tablewidth = self.tableformat.columnwidth * self.nfields
         else:
