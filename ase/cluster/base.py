@@ -42,10 +42,8 @@ class ClusterBase:
             for i in range(len(d)):
                 for n in range(1, (len(d) - i) // 2 + 1):
                     if np.all(np.abs(d[i:i + n] - d[i + n:i + 2 * n]) < tol):
-                        counts = 2
-                        for j in range(i + 2 * n, len(d), n):
-                            if np.all(np.abs(d[j:j + n] - d[i:i + n]) < tol):
-                                counts += 1
+                        counts = 2 + sum(bool(np.all(np.abs(d[j : j + n] - d[i : i + n]) < tol))
+                                     for j in range(i + 2 * n, len(d), n))
                         if counts * n * 1.0 / len(d) > 0.5:
                             pattern = d[i:i + n].copy()
                             break
@@ -101,17 +99,15 @@ class ClusterBase:
         else:
             ld = np.array([d1])
 
-        if len(ld) > 1:
-            if layers < 0:
-                ld = np.array([-ld[1], -ld[0]])
-                layers *= -1
+        if len(ld) <= 1:
+            return ld[0] * layers
 
-            map = np.arange(layers - (layers % 1), dtype=int) % len(ld)
-            r = ld[map].sum() + (layers % 1) * ld[np.abs(map[-1] - 1)]
-        else:
-            r = ld[0] * layers
+        if layers < 0:
+            ld = np.array([-ld[1], -ld[0]])
+            layers *= -1
 
-        return r
+        map = np.arange(layers - (layers % 1), dtype=int) % len(ld)
+        return ld[map].sum() + (layers % 1) * ld[np.abs(map[-1] - 1)]
 
     def miller_to_direction(self, miller, norm=True):
         """Returns the direction corresponding to a given Miller index."""

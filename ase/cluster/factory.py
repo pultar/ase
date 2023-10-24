@@ -113,11 +113,7 @@ class ClusterFactory(ClusterBase):
                                 "string or an atomic number.")
             element_basis = [0] * len(self.atomic_basis)
         else:
-            if isinstance(symbols, (list, tuple)):
-                nsymbols = len(symbols)
-            else:
-                nsymbols = 0
-
+            nsymbols = len(symbols) if isinstance(symbols, (list, tuple)) else 0
             nelement_basis = max(self.element_basis) + 1
             if nsymbols != nelement_basis:
                 raise TypeError("The symbol argument must be a sequence " +
@@ -239,7 +235,4 @@ def reduce_miller(hkl):
         hkl = hkl // d
         d = GCD(GCD(hkl[0], hkl[1]), hkl[2])
 
-    if np.dot(old, hkl) > 0:
-        return hkl
-    else:
-        return -hkl
+    return hkl if np.dot(old, hkl) > 0 else -hkl

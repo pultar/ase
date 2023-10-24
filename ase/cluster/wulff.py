@@ -49,7 +49,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
               (size, rounding))
 
         if rounding not in ['above', 'below', 'closest']:
-            raise ValueError('Invalid rounding: %s' % rounding)
+            raise ValueError(f'Invalid rounding: {rounding}')
 
     # Interpret structure, if it is a string.
     if isinstance(structure, str):
@@ -65,7 +65,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
         elif structure == 'graphite':
             from ase.cluster.hexagonal import Graphite as structure
         else:
-            error = 'Crystal structure %s is not supported.' % structure
+            error = f'Crystal structure {structure} is not supported.'
             raise NotImplementedError(error)
 
     # Check number of surfaces
@@ -104,8 +104,8 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
         factor = 1 / energies.min()
         atoms, layers = make_atoms(symbol, surfaces, energies, factor,
                                    structure, latticeconstant)
-        if len(atoms) == 0:
-            raise RuntimeError('Failed to create a finite cluster.')
+    if len(atoms) == 0:
+        raise RuntimeError('Failed to create a finite cluster.')
 
     # Second guess: scale to get closer.
     old_factor = factor
@@ -141,7 +141,6 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
                                            structure, latticeconstant)
             assert (new_layers - layers).max() == 1
             assert (new_layers - layers).min() >= 0
-            layers = new_layers
         else:
             # Find a smaller cluster
             if debug:
@@ -151,7 +150,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
                                            structure, latticeconstant)
             assert (new_layers - layers).max() <= 0
             assert (new_layers - layers).min() == -1
-            layers = new_layers
+        layers = new_layers
         if len(atoms) <= size:
             below = atoms
         if len(atoms) >= size:
@@ -169,10 +168,7 @@ def wulff_construction(symbol, surfaces, energies, size, structure,
         return above
     else:
         assert rounding == 'closest'
-        if (len(above) - size) < (size - len(below)):
-            atoms = above
-        else:
-            atoms = below
+        atoms = above if (len(above) - size) < (size - len(below)) else below
         if debug:
             print('Choosing closest cluster with %i atoms' % len(atoms))
         return atoms

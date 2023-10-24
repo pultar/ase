@@ -44,11 +44,8 @@ def Icosahedron(symbol, noshells, latticeconstant=None):
                           [0., 1., -t],
                           [0., -1., -t]])
 
-    positions = []
-    tags = []
-    positions.append(np.zeros(3))
-    tags.append(1)
-
+    positions = [np.zeros(3)]
+    tags = [1]
     for n in range(1, noshells):
         # Construct square edges (6)
         for k in range(0, 12, 2):
@@ -68,7 +65,7 @@ def Icosahedron(symbol, noshells, latticeconstant=None):
                    8: (4, 5), 9: (6, 7),
                    10: (4, 5), 11: (6, 7)}
 
-            for k in range(0, 12):
+            for k in range(12):
                 v0 = n * verticies[k]
                 v1 = (verticies[map[k][0]] - verticies[k])
                 v2 = (verticies[map[k][1]] - verticies[k])
@@ -87,7 +84,7 @@ def Icosahedron(symbol, noshells, latticeconstant=None):
                    2: (9, 7, 8, 5,),
                    3: (11, 7, 10, 5)}
 
-            for k in range(0, 4):
+            for k in range(4):
                 v0 = n * verticies[k]
                 v1 = (verticies[map[k][0]] - verticies[k])
                 v2 = (verticies[map[k][1]] - verticies[k])

@@ -24,10 +24,7 @@ class Cluster(Atoms, ClusterBase):
 
     def get_surfaces(self):
         """Returns the miller indexs of the stored surfaces of the cluster."""
-        if self.surfaces is not None:
-            return self.surfaces.copy()
-        else:
-            return None
+        return self.surfaces.copy() if self.surfaces is not None else None
 
     def get_layers(self):
         """Return number of atomic layers in stored surfaces directions."""
