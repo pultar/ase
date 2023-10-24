@@ -116,9 +116,9 @@ def bulk(
     natoms = len(string2symbols(name))
     natoms0 = structures[crystalstructure]
     if natoms != natoms0:
-        raise ValueError('Please specify {} for {} and not {}'
-                         .format(plural(natoms0, 'atom'),
-                                 crystalstructure, natoms))
+        raise ValueError(
+            f"Please specify {plural(natoms0, 'atom')} for {crystalstructure} and not {natoms}"
+        )
 
     if alpha is None:
         alpha = ref.get('alpha')
@@ -143,11 +143,7 @@ def bulk(
         if c is not None:
             covera = c / a
         elif covera is None:
-            if xref == crystalstructure:
-                covera = ref['c/a']
-            else:
-                covera = sqrt(8 / 3)
-
+            covera = ref['c/a'] if xref == crystalstructure else sqrt(8 / 3)
     if covera is None:
         covera = ref.get('c/a')
         if c is None and covera is not None:

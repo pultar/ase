@@ -64,10 +64,10 @@ def surfaces_with_termination(lattice, indices, layers, vacuum=None, tol=1e-10,
             check = [a for a in comp if a not in term]
             # list of atoms in requested termination and not in top layer
             check2 = [a for a in term if a not in comp]
-        if len(return_surfs) > 0:
+        if return_surfs:
             pos_diff = [a.get_positions() - surf.get_positions()
                         for a in return_surfs]
-            for i, su in enumerate(pos_diff):
+            for su in pos_diff:
                 similarity_test = su.flatten() < tol * 1000
                 if similarity_test.all():
                     # checks if surface is too similar to another surface

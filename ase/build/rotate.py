@@ -43,11 +43,7 @@ def rotation_matrix_from_points(m0, m1):
     # positive eigenvalue
     q = V[:, np.argmax(w)]
 
-    # Rotation matrix from the quaternion q
-
-    R = quaternion_to_matrix(q)
-
-    return R
+    return quaternion_to_matrix(q)
 
 
 def quaternion_to_matrix(q):
