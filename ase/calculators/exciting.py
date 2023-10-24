@@ -1,11 +1,11 @@
 import os
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 import numpy as np
-import xml.etree.ElementTree as ET
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.io.exciting import atoms2etree
 from ase.units import Bohr, Hartree
-from ase.calculators.calculator import PropertyNotImplementedError
-from xml.dom import minidom
 
 
 class Exciting:
@@ -66,9 +66,7 @@ class Exciting:
         self.write(atoms)
 
     def get_potential_energy(self, atoms):
-        """
-        returns potential Energy
-        """
+        """Returns potential Energy."""
         self.update(atoms)
         return self.energy
 
@@ -115,7 +113,7 @@ class Exciting:
             reparsed = minidom.parseString(rough_string)
             return reparsed.toprettyxml(indent="\t")
 
-        if(self.paramdict):
+        if self.paramdict:
             self.dicttoxml(self.paramdict, root)
             fd = open('%s/input.xml' % self.dir, 'w')
             fd.write(prettify(root))
@@ -141,7 +139,7 @@ class Exciting:
                 for item in value:
                     self.dicttoxml(item, ET.SubElement(element, key))
             elif (isinstance(value, dict)):
-                if(element.findall(key) == []):
+                if element.findall(key) == []:
                     self.dicttoxml(value, ET.SubElement(element, key))
                 else:
                     self.dicttoxml(value, element.findall(key)[0])

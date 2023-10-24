@@ -1,12 +1,12 @@
 import sys
-import numpy as np
 from itertools import combinations_with_replacement
 
 import ase.units as u
-from ase.parallel import parprint, paropen
+import numpy as np
+from ase.parallel import paropen, parprint
+from ase.vibrations.franck_condon import (FranckCondonOverlap,
+                                          FranckCondonRecursive)
 from ase.vibrations.resonant_raman import ResonantRaman
-from ase.vibrations.franck_condon import FranckCondonOverlap
-from ase.vibrations.franck_condon import FranckCondonRecursive
 
 
 class Albrecht(ResonantRaman):
@@ -110,7 +110,7 @@ class Albrecht(ResonantRaman):
         -------
         Unitless displacements in Eigenmode coordinates
         """
-        assert(len(forces_r.flat) == self.ndof)
+        assert len(forces_r.flat) == self.ndof
 
         if not hasattr(self, 'Dm1_q'):
             self.eigv_q, self.eigw_rq = np.linalg.eigh(
@@ -341,7 +341,7 @@ class Albrecht(ResonantRaman):
         self.calculate_energies_and_modes()
 
         approx = self.approximation.lower()
-        assert(self.combinations == 1)
+        assert self.combinations == 1
         Vel_Qcc = np.zeros((len(self.om_Q), 3, 3), dtype=complex)
         if approx == 'albrecht a' or approx == 'albrecht':
             Vel_Qcc += self.meA(omega, gamma)  # e^2 Angstrom^2 / eV
@@ -381,11 +381,11 @@ class Albrecht(ResonantRaman):
                 vel_vcc = self.meBCmult(omega, gamma)
                 V_vcc = 0
         elif approx == 'albrecht b':
-            assert(self.combinations == 1)
+            assert self.combinations == 1
             vel_vcc = self.meBC(omega, gamma, term='B')
             V_vcc = vel_vcc * self.vib01_Q[:, None, None]
         if approx == 'albrecht c':
-            assert(self.combinations == 1)
+            assert self.combinations == 1
             vel_vcc = self.meBC(omega, gamma, term='C')
             V_vcc = vel_vcc * self.vib01_Q[:, None, None]
 

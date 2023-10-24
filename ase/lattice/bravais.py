@@ -6,10 +6,9 @@ This is a base class for numerous classes setting up pieces of crystal.
 import math
 from typing import Optional, Sequence
 
-import numpy as np
-
-from ase.atoms import Atoms
 import ase.data
+import numpy as np
+from ase.atoms import Atoms
 
 
 class Bravais:
@@ -313,7 +312,7 @@ class Bravais:
                 #    if perce > percent + 10:
                 #        print ("%d%%" % perce),
                 #        percent = perce
-        assert(self.nput == self.natoms)
+        assert self.nput == self.natoms
 
     def inside(self, point):
         "Is a point inside the unit cell?"

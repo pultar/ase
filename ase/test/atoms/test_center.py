@@ -1,16 +1,13 @@
-from math import pi, sqrt, cos
+from math import cos, pi, sqrt
 
-import pytest
 import numpy as np
-
-from ase import Atoms
-from ase import data
+import pytest
+from ase import Atoms, data
 from ase.lattice.cubic import FaceCenteredCubic
-
 
 symb = 'Cu'
 Z = data.atomic_numbers[symb]
-a0 = data.reference_states[Z]['a']  # type: ignore
+a0 = data.reference_states[Z]['a']  # type: ignore[index]
 
 
 def checkang(a, b, phi):

@@ -22,7 +22,7 @@ if sys.version_info < python_min_version:
 install_requires = [
     'numpy>=1.17.0',  # July 2019
     'scipy>=1.3.1',  # August 2019
-    'matplotlib>=3.1.0',  # May 2019
+    'matplotlib>=3.3.0',  # July 2020
     'importlib-metadata>=0.12;python_version<"3.8"'
 ]
 
@@ -34,8 +34,7 @@ extras_require = {
         'pillow',
     ],
     'test': [
-        'pytest>=5.0.0',  # required by pytest-mock
-        'pytest-mock>=3.3.0',
+        'pytest>=5.0.0',
         'pytest-xdist>=1.30.0',
     ]
 }
@@ -54,7 +53,10 @@ with open('ase/__init__.py') as fd:
 package_data = {'ase': ['spacegroup/spacegroup.dat',
                         'collections/*.json',
                         'db/templates/*',
-                        'db/static/*'],
+                        'db/static/*',
+                        # make ASE a PEP 561 compliant package so that
+                        # other packages can use ASE's type hints:
+                        'py.typed'],
                 'ase.test': ['pytest.ini',
                              'testdata/*',
                              'testdata/*/*',
@@ -104,12 +106,7 @@ setup(name='ase',
       install_requires=install_requires,
       extras_require=extras_require,
       package_data=package_data,
-      entry_points={'console_scripts': ['ase=ase.cli.main:main',
-                                        'ase-db=ase.cli.main:old',
-                                        'ase-gui=ase.cli.main:old',
-                                        'ase-run=ase.cli.main:old',
-                                        'ase-info=ase.cli.main:old',
-                                        'ase-build=ase.cli.main:old']},
+      entry_points={'console_scripts': ['ase=ase.cli.main:main']},
       long_description=long_description,
       cmdclass={'build_py': build_py},
       classifiers=[
@@ -118,7 +115,7 @@ setup(name='ase',
           'GNU Lesser General Public License v2 or later (LGPLv2+)',
           'Operating System :: OS Independent',
           'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Topic :: Scientific/Engineering :: Physics'])

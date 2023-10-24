@@ -1,13 +1,12 @@
 """van der Waals correction schemes for DFT"""
 import numpy as np
-from ase.units import Bohr, Hartree
 from ase.calculators.calculator import Calculator
 from ase.calculators.polarizability import StaticPolarizabilityCalculator
-from scipy.special import erfinv, erfc
 from ase.neighborlist import neighbor_list
-from ase.parallel import world, myslice
+from ase.parallel import myslice, world
+from ase.units import Bohr, Hartree
 from ase.utils import IOContext
-
+from scipy.special import erfc, erfinv
 
 # dipole polarizabilities and C6 values from
 # X. Chu and A. Dalgarno, J. Chem. Phys. 121 (2004) 4083
@@ -230,7 +229,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         if self.vdwradii is not None:
             # external vdW radii
             vdwradii = self.vdwradii
-            assert(len(atoms) == len(vdwradii))
+            assert len(atoms) == len(vdwradii)
         else:
             vdwradii = []
             for atom in atoms:
@@ -239,7 +238,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         if self.hirshfeld is None:
             volume_ratios = [1.] * len(atoms)
         elif hasattr(self.hirshfeld, '__len__'):  # a list
-            assert(len(atoms) == len(self.hirshfeld))
+            assert len(atoms) == len(self.hirshfeld)
             volume_ratios = self.hirshfeld
         else:  # should be an object
             self.hirshfeld.initialize()

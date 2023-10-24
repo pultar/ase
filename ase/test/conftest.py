@@ -1,20 +1,17 @@
-import sys
 import os
-from pathlib import Path
-from subprocess import Popen, PIPE, check_output
+import sys
 import zlib
-
-import pytest
-import numpy as np
+from pathlib import Path
+from subprocess import PIPE, Popen, check_output
 
 import ase
-from ase.utils import workdir, seterr, get_python_package_path_description
-from ase.test.factories import (CalculatorInputs,
-                                factory_classes,
-                                NoSuchCalculator,
-                                get_factories,
-                                make_factory_fixture)
+import numpy as np
+import pytest
 from ase.dependencies import all_dependencies
+from ase.test.factories import (CalculatorInputs, NoSuchCalculator,
+                                factory_classes, get_factories,
+                                make_factory_fixture)
+from ase.utils import get_python_package_path_description, seterr, workdir
 
 helpful_message = """\
  * Use --calculators option to select calculators.
@@ -245,8 +242,10 @@ cp2k_factory = make_factory_fixture('cp2k')
 dftb_factory = make_factory_fixture('dftb')
 espresso_factory = make_factory_fixture('espresso')
 gpaw_factory = make_factory_fixture('gpaw')
+mopac_factory = make_factory_fixture('mopac')
 octopus_factory = make_factory_fixture('octopus')
 siesta_factory = make_factory_fixture('siesta')
+orca_factory = make_factory_fixture('orca')
 
 
 @pytest.fixture
@@ -256,6 +255,9 @@ def factory(request, factories):
         pytest.skip(f'Not installed: {name}')
     if not factories.enabled(name):
         pytest.skip(f'Not enabled: {name}')
+    if name in factories.builtin_calculators & factories.datafile_calculators:
+        if not factories.datafiles_module:
+            pytest.skip('ase-datafiles package not installed')
     factory = factories[name]
     return CalculatorInputs(factory, kwargs)
 
@@ -311,13 +313,6 @@ def cli(factories):
 def datadir():
     test_basedir = Path(__file__).parent
     return test_basedir / 'testdata'
-
-
-@pytest.fixture
-def pt_eam_potential_file(datadir):
-    # EAM potential for Pt from LAMMPS, also used with eam calculator.
-    # (Where should this fixture really live?)
-    return datadir / 'eam_Pt_u3.dat'
 
 
 @pytest.fixture(scope='session')

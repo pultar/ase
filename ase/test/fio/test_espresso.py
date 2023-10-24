@@ -7,11 +7,8 @@ Implemented:
 """
 
 import numpy as np
-
-from ase import io
-from ase import build
+from ase import build, io
 from ase.io.espresso import parse_position_line
-
 from pytest import approx
 
 # This file is parsed correctly by pw.x, even though things are
@@ -312,7 +309,8 @@ def test_pw_output():
 
 def test_pw_parse_line():
     """Parse a single position line from a pw.x output file."""
-    txt = """       994           Pt  tau( 994) = (   1.4749849   0.7329881   0.0719387  )
+    txt = """       994           Pt  tau( 994) = \
+(   1.4749849   0.7329881   0.0719387  )
        995           Sb  tau( 995) = (   1.4212023   0.7037863   0.1242640  )
        996           Sb  tau( 996) = (   1.5430640   0.7699524   0.1700400  )
        997           Sb  tau( 997) = (   1.4892815   0.7407506   0.2223653  )

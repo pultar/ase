@@ -1,8 +1,7 @@
 # test read
 # https://wiki.openchemistry.org/Chemical_JSON
-import pytest
 import numpy as np
-
+import pytest
 from ase import io
 
 ethane = """{
@@ -75,7 +74,7 @@ tio2 = """{
 
 
 def test_ethane():
-    fname = 'ethane.cml'
+    fname = 'ethane.cjson'
     with open(fname, 'w') as fd:
         fd.write(ethane)
 
@@ -85,7 +84,7 @@ def test_ethane():
 
 
 def test_rutile():
-    fname = 'TiO2_rutile.cml'
+    fname = 'TiO2_rutile.cjson'
     with open(fname, 'w') as fd:
         fd.write(tio2)
 

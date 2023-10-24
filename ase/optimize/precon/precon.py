@@ -1268,7 +1268,7 @@ class PreconImages:
         Wrapper for a list of Precon objects and associated images
 
         This is used when preconditioning a NEB object. Equation references
-        refer to Paper IV in the :class:`ase.neb.NEB` documentation, i.e.
+        refer to Paper IV in the :class:`ase.mep.NEB` documentation, i.e.
 
         S. Makri, C. Ortner and J. R. Kermode, J. Chem. Phys.
         150, 094109 (2019)
@@ -1280,6 +1280,8 @@ class PreconImages:
 
         """
         self.images = images
+        self._spline = None
+
         if isinstance(precon, list):
             if len(precon) != len(images):
                 raise ValueError(f'length mismatch: len(precon)={len(precon)} '
@@ -1292,7 +1294,6 @@ class PreconImages:
             P = P0.copy()
             P.make_precon(image)
             self.precon.append(P)
-        self._spline = None
 
     def __len__(self):
         return len(self.precon)

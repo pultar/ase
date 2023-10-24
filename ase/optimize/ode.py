@@ -1,5 +1,8 @@
+from typing import IO, Optional, Union
+
 import numpy as np
 
+from ase import Atoms
 from ase.optimize.sciopt import SciPyOptimizer, OptimizerConvergenceError
 
 
@@ -101,7 +104,7 @@ def ode12r(f, X0, h=None, verbose=1, fmax=1e-6, maxtol=1e3, steps=100,
         h = 0.5 * rtol ** 0.5 / r  # Chose a stepsize based on that force
         h = max(h, hmin)  # Make sure the step size is not too big
 
-    for nit in range(1, steps):
+    for nit in range(1, steps + 1):
         Xnew = X + h * Fp  # Pick a new position
         Fn_new = f(Xnew)  # Calculate the new forces at this position
         Rn_new = residual(Fn_new, Xnew)
@@ -140,13 +143,14 @@ def ode12r(f, X0, h=None, verbose=1, fmax=1e-6, maxtol=1e3, steps=100,
             callback(X)
 
             # We check the residuals again
+            if Rn >= maxtol:
+                raise OptimizerConvergenceError(
+                    f"ODE12r: Residual {Rn} is too "
+                    f"large at iteration number {nit}")
+
             if converged(Fn, X):
                 log(f"ODE12r: terminates successfully "
                     f"after {nit} iterations.")
-                return X
-            if Rn >= maxtol:
-                log(f"ODE12r: Residual {Rn} is too "
-                    f"large at iteration number {nit}")
                 return X
 
             # Compute a new step size.
@@ -180,9 +184,19 @@ class ODE12r(SciPyOptimizer):
     Optimizer based on adaptive ODE solver :func:`ode12r`
     """
 
-    def __init__(self, atoms, logfile='-', trajectory=None,
-                 callback_always=False, alpha=1.0, master=None,
-                 force_consistent=None, precon=None, verbose=0, rtol=1e-2):
+    def __init__(
+        self,
+        atoms: Atoms,
+        logfile: Union[IO, str] = '-',
+        trajectory: Optional[str] = None,
+        callback_always: bool = False,
+        alpha: float = 1.0,
+        master: Optional[bool] = None,
+        force_consistent: Optional[bool] = None,
+        precon: Optional[str] = None,
+        verbose: int = 0,
+        rtol: float = 1e-2,
+    ):
         SciPyOptimizer.__init__(self, atoms, logfile, trajectory,
                                 callback_always, alpha, master,
                                 force_consistent)

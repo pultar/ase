@@ -1,6 +1,6 @@
-from ase.calculators.calculator import BaseCalculator, all_changes
-from ase.calculators.calculator import (PropertyNotImplementedError,
-                                        CalculatorSetupError)
+from ase.calculators.calculator import (BaseCalculator, CalculatorSetupError,
+                                        PropertyNotImplementedError,
+                                        all_changes)
 
 
 class Mixer:
@@ -45,8 +45,7 @@ class Mixer:
 
 
 class LinearCombinationCalculator(BaseCalculator):
-    """LinearCombinationCalculator for weighted summation of multiple calculators.
-    """
+    """Weighted summation of multiple calculators."""
 
     def __init__(self, calcs, weights):
         """Implementation of sum of calculators.

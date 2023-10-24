@@ -1,18 +1,19 @@
-import os
 import copy
+import os
 import subprocess
-from math import pi, sqrt
-from pathlib import Path
-from typing import Union, Optional, List, Set, Dict, Any
 import warnings
 from abc import abstractmethod
+from math import pi, sqrt
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Union
 
 import numpy as np
-
+from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.outputs import Properties, all_outputs
 from ase.utils import jsonable
-from ase.calculators.abc import GetPropertiesMixin
+
+from .names import names
 
 
 class CalculatorError(RuntimeError):
@@ -22,7 +23,7 @@ class CalculatorError(RuntimeError):
 class CalculatorSetupError(CalculatorError):
     """Calculation cannot be performed with the given parameters.
 
-    Reasons to raise this errors are:
+    Reasons to raise this error are:
       * The calculator is not properly configured
         (missing executable, environment variables, ...)
       * The given atoms object is not supported
@@ -118,22 +119,12 @@ def compare_atoms(atoms1, atoms2, tol=1e-15, excluded_properties=None):
 
 
 all_properties = ['energy', 'forces', 'stress', 'stresses', 'dipole',
-                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies']
+                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies',
+                  'dielectric_tensor', 'born_effective_charges', 'polarization']
 
 
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
-
-
-# Recognized names of calculators sorted alphabetically:
-names = ['abinit', 'ace', 'aims', 'amber', 'asap', 'castep', 'cp2k',
-         'crystal', 'demon', 'demonnano', 'dftb', 'dftd3', 'dmol', 'eam',
-         'elk', 'emt', 'espresso', 'exciting', 'ff', 'gamess_us',
-         'gaussian', 'gpaw', 'gromacs', 'gulp', 'hotbit', 'kim',
-         'lammpslib', 'lammpsrun', 'lj', 'mopac', 'morse', 'nwchem',
-         'octopus', 'onetep', 'openmx', 'orca',
-         'plumed', 'psi4', 'qchem', 'siesta',
-         'tip3p', 'tip4p', 'turbomole', 'vasp']
 
 
 special = {'cp2k': 'CP2K',
@@ -143,6 +134,7 @@ special = {'cp2k': 'CP2K',
            'eam': 'EAM',
            'elk': 'ELK',
            'emt': 'EMT',
+           'exciting': 'ExcitingGroundStateCalculator',
            'crystal': 'CRYSTAL',
            'ff': 'ForceField',
            'gamess_us': 'GAMESSUS',
@@ -869,6 +861,7 @@ class Calculator(BaseCalculator):
     def band_structure(self):
         """Create band-structure object for plotting."""
         from ase.spectrum.band_structure import get_band_structure
+
         # XXX This calculator is supposed to just have done a band structure
         # calculation, but the calculator may not have the correct Fermi level
         # if it updated the Fermi level after changing k-points.

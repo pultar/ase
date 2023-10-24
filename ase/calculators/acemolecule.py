@@ -1,9 +1,8 @@
-# type: ignore
 import os
 from copy import deepcopy
+
+from ase.calculators.calculator import FileIOCalculator, ReadError
 from ase.io import read
-from ase.calculators.calculator import ReadError
-from ase.calculators.calculator import FileIOCalculator
 
 
 class ACE(FileIOCalculator):
@@ -34,7 +33,7 @@ class ACE(FileIOCalculator):
     }]
 
     order_list = ['BasicInformation', 'Guess', 'Scf']
-    guess_list = [{}]
+    guess_list = [{}]  # type: ignore[var-annotated]
     default_parameters = {'BasicInformation': basic_list, 'Guess': guess_list,
                           'Scf': scf_list, 'Force': force_list,
                           'TDDFT': tddft_list, 'order': order_list}
@@ -73,7 +72,7 @@ class ACE(FileIOCalculator):
             for section_name in section_sets:
                 repeat = kwargs['order'].count(section_name)
                 if section_name in self.default_parameters.keys():
-                    for i in range(repeat-1):
+                    for i in range(repeat - 1):
                         new_parameters[section_name] += deepcopy(
                             self.default_parameters[section_name])
                 else:

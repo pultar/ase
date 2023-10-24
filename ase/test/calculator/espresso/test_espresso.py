@@ -1,15 +1,30 @@
 import pytest
-from ase.build import bulk
-from ase.calculators.espresso import EspressoProfile, Espresso
+from ase.build import bulk, molecule
+from ase.calculators.espresso import Espresso, EspressoProfile
+
+espresso_versions = [
+    ('6.4.1', """
+Program PWSCF v.6.4.1 starts on  5Aug2021 at 11: 2:26
+
+This program is part of the open-source Quantum ESPRESSO suite
+"""),
+    ('6.7MaX', """
+
+Program PWSCF v.6.7MaX starts on  1Oct2022 at 16:26:59
+
+This program is part of the open-source Quantum ESPRESSO suite
+""")]
 
 
-def test_version():
-    txt = """
-     Program PWSCF v.6.4.1 starts on  5Aug2021 at 11: 2:26
+@pytest.mark.parametrize('version, txt', espresso_versions)
+def test_version(version, txt):
+    assert EspressoProfile.parse_version(txt) == version
 
-     This program is part of the open-source Quantum ESPRESSO suite
-    """
-    assert EspressoProfile.parse_version(txt) == '6.4.1'
+
+def test_version_integration(espresso_factory):
+    profile = EspressoProfile([espresso_factory.executable])
+    version = profile.version()
+    assert version[0].isdigit()
 
 
 def verify(calc):
@@ -37,6 +52,27 @@ def test_smearing(espresso_factory):
     atoms.calc = espresso_factory.calc(input_data=input_data)
     atoms.get_potential_energy()
     verify(atoms.calc)
+
+
+@pytest.mark.calculator_lite
+def test_dipole(espresso_factory):
+    atoms = molecule('H2O', cell=[10, 10, 10])
+    atoms.center()
+    input_data = {'control': {'tefield': True,
+                              'dipfield': True},
+                  'system': {'occupations': 'smearing',
+                             'smearing': 'fermi-dirac',
+                             'degauss': 0.02,
+                             'edir': 3,
+                             'eamp': 0.00,
+                             'eopreg': 0.0001,
+                             'emaxpos': 0.0001}}
+    atoms.calc = espresso_factory.calc(input_data=input_data)
+    atoms.get_potential_energy()
+    verify(atoms.calc)
+    dipol_arr = atoms.get_dipole_moment().tolist()
+    expected_dipol_arr = [0, 0, -0.36991972]
+    assert dipol_arr == pytest.approx(expected_dipol_arr, abs=0.02)
 
 
 def test_warn_label():

@@ -1,6 +1,5 @@
 import numpy as np
 
-
 # The indices of the full stiffness matrix of (orthorhombic) interest
 voigt_notation = [(0, 0), (1, 1), (2, 2), (1, 2), (0, 2), (0, 1)]
 
@@ -53,8 +52,8 @@ def full_3x3_to_voigt_6_stress(stress_matrix):
                          stress_matrix[..., 1, 1],
                          stress_matrix[..., 2, 2],
                          (stress_matrix[..., 1, 2] +
-                          stress_matrix[..., 1, 2]) / 2,
+                          stress_matrix[..., 2, 1]) / 2,
                          (stress_matrix[..., 0, 2] +
-                          stress_matrix[..., 0, 2]) / 2,
+                          stress_matrix[..., 2, 0]) / 2,
                          (stress_matrix[..., 0, 1] +
-                          stress_matrix[..., 0, 1]) / 2])
+                          stress_matrix[..., 1, 0]) / 2])

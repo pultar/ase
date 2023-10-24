@@ -1,10 +1,10 @@
+from os.path import exists
+
+import numpy as np
 from ase.calculators.calculator import Calculator, all_changes
 from ase.io.trajectory import Trajectory
-from ase.parallel import broadcast
-from ase.parallel import world
-import numpy as np
-from os.path import exists
-from ase.units import fs, mol, kJ, nm
+from ase.parallel import broadcast, world
+from ase.units import fs, kJ, mol, nm
 
 
 def restart_from_trajectory(prev_traj, *args, prev_steps=None, atoms=None,
@@ -136,9 +136,9 @@ class Plumed(Calculator):
             ASE and plumed - mass unit is in a.m.u units '''
 
             ps = 1000 * fs
-            self.plumed.cmd("setMDEnergyUnits", mol/kJ)
-            self.plumed.cmd("setMDLengthUnits", 1/nm)
-            self.plumed.cmd("setMDTimeUnits", 1/ps)
+            self.plumed.cmd("setMDEnergyUnits", mol / kJ)
+            self.plumed.cmd("setMDLengthUnits", 1 / nm)
+            self.plumed.cmd("setMDTimeUnits", 1 / ps)
             self.plumed.cmd("setMDChargeUnits", 1.)
             self.plumed.cmd("setMDMassUnits", 1.)
 
@@ -235,9 +235,9 @@ class Plumed(Calculator):
                     ini = line.find('FILE')
                     end = line.find(' ', ini)
                     if end == -1:
-                        file_name = line[ini+5:]
+                        file_name = line[ini + 5:]
                     else:
-                        file_name = line[ini+5:end]
+                        file_name = line[ini + 5:end]
                     read_files[file_name] = np.loadtxt(file_name, unpack=True)
 
             if len(read_files) == 0:

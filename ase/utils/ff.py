@@ -1,7 +1,7 @@
 # flake8: noqa
 import numpy as np
+from ase import units
 from numpy import linalg
-from ase import units 
 
 # Three variables extracted from what used to be endless repetitions below.
 Ax = np.array([[1, 0, 0, -1, 0, 0, 0, 0, 0],
@@ -73,7 +73,7 @@ class VdW:
         if epsilonij is not None:
             if sigmaij is not None:
                 self.Aij = scale * 4.0 * epsilonij * sigmaij**12
-                self.Bij = scale * 4.0 * epsilonij * sigmaij**6 * scale
+                self.Bij = scale * 4.0 * epsilonij * sigmaij**6
             elif rminij is not None:
                 self.Aij = scale * epsilonij * rminij**12
                 self.Bij = scale * 2.0 * epsilonij * rminij**6
@@ -87,7 +87,7 @@ class VdW:
             if sigmai is not None and sigmaj is not None:
                 self.Aij = ( scale * 4.0 * np.sqrt(epsiloni * epsilonj)
                              * ((sigmai + sigmaj) / 2.0)**12 )
-                self.Bij = ( scale * 2.0 * np.sqrt(epsiloni * epsilonj)
+                self.Bij = ( scale * 4.0 * np.sqrt(epsiloni * epsilonj)
                              * ((sigmai + sigmaj) / 2.0)**6 )
             elif rmini is not None and rminj is not None:
                 self.Aij = ( scale * np.sqrt(epsiloni * epsilonj)
