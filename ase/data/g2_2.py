@@ -28,6 +28,7 @@ Information presented on these pages is considered public information
 and may be distributed or copied http://www.nist.gov/public_affairs/disclaimer.cfm
 """
 
+
 from ase.atoms import Atoms
 
 atom_names = ['H','B','C','N','O','F','Al','Si','S','Cl']
@@ -1775,11 +1776,10 @@ data = {
 
 # all constituent atoms
 atoms_g22 = []
-for f in data.keys():
+for f in data:
     s = Atoms(symbols=data[f]['symbols'],  # type: ignore[index]
               positions=data[f]['positions'])  # type: ignore[index]
-    for a in s:
-        atoms_g22.append(a.symbol)
+    atoms_g22.extend(a.symbol for a in s)
 # unique atoms
 atoms_g22 = list(set(atoms_g22))
 
@@ -1787,5 +1787,5 @@ atoms_g22 = list(set(atoms_g22))
 from ase.data.g2_1 import data as data1
 
 for a in atoms_g22:
-    if not a in data.keys():
+    if a not in data:
         data[a] = data1[a]

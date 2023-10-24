@@ -478,7 +478,7 @@ def create_dbh24_system(name, **kwargs):
     """Creates a DBH24 system.
     """
     if name not in data:
-        raise NotImplementedError('System %s not in database.' % name)
+        raise NotImplementedError(f'System {name} not in database.')
     d = data[name]
     if 'magmoms' not in kwargs:
         kwargs['magmoms'] = d['magmoms']
@@ -488,7 +488,7 @@ def get_dbh24_magmoms(name):
     """Returns the magnetic moments of DBH24 systems.
     """
     if name not in data:
-        raise KeyError('System %s not in database.' % name)
+        raise KeyError(f'System {name} not in database.')
     else:
         return data[name]['magmoms']
 
@@ -497,45 +497,39 @@ def get_dbh24_charge(name):
     """
     assert name in dbh24
     d = data[name]
-    charge = d['charge']
-    return charge
+    return d['charge']
 
 def get_dbh24_Vf(name):
     """ Returns forward DBH24 TST barrier in kcal/mol
     """
     assert name in dbh24
     d = data[name]
-    Vf = d['Vf']
-    return Vf
+    return d['Vf']
 
 def get_dbh24_Vb(name):
     """ Returns backward DBH24 TST barrier in kcal/mol
     """
     assert name in dbh24
     d = data[name]
-    Vb = d['Vb']
-    return Vb
+    return d['Vb']
 
 def get_dbh24_initial_states(name):
     """ Returns initial DBH24 states
     """
     assert name in dbh24_reaction_list
     d = dbh24_reaction_list[name]
-    initial = d['initial']
-    return initial
+    return d['initial']
 
 def get_dbh24_final_states(name):
     """ Returns final DBH24 states
     """
     assert name in dbh24_reaction_list
     d = dbh24_reaction_list[name]
-    final = d['final']
-    return final
+    return d['final']
 
 def get_dbh24_tst(name):
     """ Returns DBH24 TST names
     """
     assert name in dbh24_reaction_list
     d = dbh24_reaction_list[name]
-    tst = d['tst']
-    return tst
+    return d['tst']
