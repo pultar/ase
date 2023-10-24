@@ -1,19 +1,17 @@
 """A class for computing vibrational modes"""
 
-from math import pi, sqrt, log
 import sys
-
-import numpy as np
+from collections import namedtuple
+from math import log, pi, sqrt
 from pathlib import Path
 
-import ase.units as units
 import ase.io
-from ase.parallel import world, paropen
-
+import ase.units as units
+import numpy as np
+from ase.parallel import paropen, world
 from ase.utils.filecache import get_json_cache
-from .data import VibrationsData
 
-from collections import namedtuple
+from .data import VibrationsData
 
 
 class AtomicDisplacements:
@@ -363,7 +361,9 @@ Please remove them and recalculate or run \
                                ' to set all masses to non-zero values.')
 
         self.im = np.repeat(masses[self.indices]**-0.5, 3)
-        self._vibrations = self.get_vibrations(read_cache=False)
+        self._vibrations = self.get_vibrations(read_cache=False,
+                                               method=self.method,
+                                               direction=self.direction)
 
         omega2, modes = np.linalg.eigh(self.im[:, None] * H * self.im)
         self.modes = modes.T.copy()

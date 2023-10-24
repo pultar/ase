@@ -122,13 +122,12 @@ Versions
 
 import numbers
 from pathlib import Path
-from typing import Union, Set
+from typing import Set, Union
 
 import numpy as np
-
-from ase.io.jsonio import encode, decode
+from ase.io.formats import is_compressed
+from ase.io.jsonio import decode, encode
 from ase.utils import plural
-
 
 VERSION = 3
 N1 = 42  # block size - max number of items: 1, N1, N1*N1, N1*N1*N1, ...
@@ -648,7 +647,7 @@ class NDArrayReader:
         offset = self.offset + start * self.itemsize * stride
         self.fd.seek(offset)
         count = (stop - start) * stride
-        if self.hasfileno:
+        if not is_compressed(self.fd) and self.hasfileno:
             a = np.fromfile(self.fd, self.dtype, count)
         else:
             # Not as fast, but works for reading from tar-files:

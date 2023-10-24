@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
-
 from ase import Atoms
 from ase.build import fcc111
 from ase.calculators.emt import EMT as OrigEMT
-from ase.dyneb import DyNEB
+from ase.mep import DyNEB
 from ase.optimize import BFGS
 
 

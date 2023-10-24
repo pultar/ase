@@ -19,14 +19,13 @@ http://cms.mpi.univie.ac.at/vasp/
 """
 
 import os
-import warnings
 import shutil
-from os.path import join, isfile, islink
+import warnings
+from os.path import isfile, islink, join
 from typing import List, Sequence, Tuple
 
-import numpy as np
-
 import ase
+import numpy as np
 from ase.calculators.calculator import kpts2ndarray
 from ase.calculators.vasp.setups import get_default_setups
 
@@ -1021,6 +1020,7 @@ class GenerateVaspInput:
         self.list_float_params = {}
         self.special_params = {}
         self.dict_params = {}
+        self.atoms = None
         for key in float_keys:
             self.float_params[key] = None
         for key in exp_keys:
@@ -1218,7 +1218,7 @@ class GenerateVaspInput:
             if m in setups:
                 special_setup_index = m
             elif str(m) in setups:
-                special_setup_index = str(m)  # type: ignore
+                special_setup_index = str(m)  # type: ignore[assignment]
             else:
                 raise Exception("Having trouble with special setup index {0}."
                                 " Please use an int.".format(m))
@@ -1292,6 +1292,9 @@ class GenerateVaspInput:
 
         # String shortcuts are initialised to dict form
         elif isinstance(p['setups'], str):
+            if p['setups'].lower() == 'materialsproject':
+                warnings.warn('`materialsproject` setup will be'
+                              'removed in a future release.', FutureWarning)
             if p['setups'].lower() in setups_defaults.keys():
                 p['setups'] = {'base': p['setups']}
 
