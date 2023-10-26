@@ -1,18 +1,12 @@
 # flake8: noqa
 import numpy as np
-from ase.io import read
-from ase.io.aims import (
-    AimsParseError,
-    AimsOutChunk,
-    AimsOutHeaderChunk,
-    AimsOutCalcChunk,
-    LINE_NOT_FOUND,
-)
-from ase.stress import full_3x3_to_voigt_6_stress
-
+import pytest
 from numpy.linalg import norm
 
-import pytest
+from ase.io import read
+from ase.io.aims import (LINE_NOT_FOUND, AimsOutCalcChunk, AimsOutChunk,
+                         AimsOutHeaderChunk, AimsParseError)
+from ase.stress import full_3x3_to_voigt_6_stress
 
 eps_hp = 1e-15  # The espsilon value used to compare numbers that are high-precision
 eps_lp = 1e-7  # The espsilon value used to compare numbers that are low-precision
@@ -984,17 +978,6 @@ def test_calc_occupancies(calc_chunk, eigenvalues_occupancies):
                        eigenvalues_occupancies[:, :, :, 0])
     assert np.allclose(
         calc_chunk.results["occupancies"], eigenvalues_occupancies[:, :, :, 0]
-    )
-
-
-@pytest.fixture
-def molecular_positions():
-    return np.array(
-        [
-            [0.00000000, 0.00000000, 0.00000000],
-            [0.95840000, 0.00000000, 0.00000000],
-            [-0.24000000, 0.92790000, 0.00000000],
-        ]
     )
 
 
