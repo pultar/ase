@@ -1,9 +1,10 @@
-import ase
 from typing import Mapping, Sequence, Union
-import numpy as np
-from ase.utils.arraywrapper import arraylike
-from ase.utils import pbc2pbc
 
+import numpy as np
+
+import ase
+from ase.utils import pbc2pbc
+from ase.utils.arraywrapper import arraylike
 
 __all__ = ['Cell']
 
@@ -205,7 +206,7 @@ class Cell:
 
         Equal to the number of nonzero lattice vectors."""
         # The name ndim clashes with ndarray.ndim
-        return sum(self.mask())  # type: ignore
+        return sum(self.mask())
 
     @property
     def orthorhombic(self) -> bool:
@@ -272,7 +273,7 @@ class Cell:
 
         Does not include factor of 2 pi."""
         icell = Cell(np.linalg.pinv(self).transpose())
-        icell[~self.mask()] = 0.0  # type: ignore
+        icell[~self.mask()] = 0.0  # type: ignore[index]
         return icell
 
     def normal(self, i):

@@ -13,9 +13,11 @@ Options
 """
 import os
 import re
+
 import numpy as np
-from ase.units import eV, Ang
+
 from ase.calculators.calculator import FileIOCalculator, ReadError
+from ase.units import Ang, eV
 
 
 class GULPOptimizer:
@@ -114,7 +116,9 @@ class GULP(FileIOCalculator):
                 s += ' {0:2} shel' \
                      ' {1:10.7f}  {2:10.7f}  {3:10.7f}\n' .format(symbol, *xyz)
 
-        s += '\nlibrary {0}\n'.format(p.library)
+        if p.library:
+            s += '\nlibrary {0}\n'.format(p.library)
+
         if p.options:
             for t in p.options:
                 s += '%s\n' % t

@@ -1,9 +1,8 @@
 """colors.py - select how to color the atoms in the GUI."""
-from ase.gui.i18n import _
-
 import numpy as np
 
 import ase.gui.ui as ui
+from ase.gui.i18n import _
 from ase.gui.utils import get_magmoms
 
 

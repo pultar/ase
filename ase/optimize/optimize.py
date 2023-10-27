@@ -1,10 +1,11 @@
 """Structure optimization. """
-
 import collections.abc
 import time
 from math import sqrt
 from os.path import isfile
+from typing import IO, Any, Callable, Dict, List, Optional, Union
 
+from ase import Atoms
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.io.jsonio import read_json, write_json
 from ase.io.trajectory import Trajectory
@@ -20,7 +21,12 @@ class Dynamics(IOContext):
     """Base-class for all MD and structure optimization classes."""
 
     def __init__(
-        self, atoms, logfile, trajectory, append_trajectory=False, master=None
+        self,
+        atoms: Atoms,
+        logfile: Optional[Union[IO, str]] = None,
+        trajectory: Optional[str] = None,
+        append_trajectory: bool = False,
+        master: Optional[bool] = None,
     ):
         """Dynamics object.
 
@@ -51,7 +57,7 @@ class Dynamics(IOContext):
 
         self.atoms = atoms
         self.logfile = self.openfile(logfile, mode='a', comm=world)
-        self.observers = []
+        self.observers: List[Callable] = []
         self.nsteps = 0
         # maximum number of steps placeholder with maxint
         self.max_steps = 100000000
@@ -63,6 +69,11 @@ class Dynamics(IOContext):
                     trajectory, mode=mode, master=master
                 ))
             self.attach(trajectory, atoms=atoms)
+
+        self.trajectory = trajectory
+
+    def todict(self) -> Dict[str, Any]:
+        raise NotImplementedError
 
     def get_number_of_steps(self):
         return self.nsteps
@@ -157,7 +168,7 @@ class Dynamics(IOContext):
             pass
         return converged
 
-    def converged(self, *args):
+    def converged(self):
         """" a dummy function as placeholder for a real criterion, e.g. in
         Optimizer """
         return False
@@ -180,13 +191,13 @@ class Optimizer(Dynamics):
 
     def __init__(
         self,
-        atoms,
-        restart,
-        logfile,
-        trajectory,
-        master=None,
-        append_trajectory=False,
-        force_consistent=False,
+        atoms: Atoms,
+        restart: Optional[str] = None,
+        logfile: Optional[Union[IO, str]] = None,
+        trajectory: Optional[str] = None,
+        master: Optional[bool] = None,
+        append_trajectory: bool = False,
+        force_consistent: Optional[bool] = False,
     ):
         """Structure optimizer object.
 
@@ -244,6 +255,9 @@ class Optimizer(Dynamics):
             self.read()
             barrier()
 
+    def read(self):
+        raise NotImplementedError
+
     def todict(self):
         description = {
             "type": "optimization",
@@ -261,14 +275,14 @@ class Optimizer(Dynamics):
     def irun(self, fmax=0.05, steps=None):
         """ call Dynamics.irun and keep track of fmax"""
         self.fmax = fmax
-        if steps:
+        if steps is not None:
             self.max_steps = steps
         return Dynamics.irun(self)
 
     def run(self, fmax=0.05, steps=None):
         """ call Dynamics.run and keep track of fmax"""
         self.fmax = fmax
-        if steps:
+        if steps is not None:
             self.max_steps = steps
         return Dynamics.run(self)
 

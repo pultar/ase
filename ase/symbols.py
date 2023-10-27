@@ -1,12 +1,12 @@
-from typing import List, Sequence, Set, Dict, Union, Iterator
-import warnings
 import collections.abc
+import numbers
+import warnings
+from typing import Dict, Iterator, List, Sequence, Set, Union
 
 import numpy as np
 
 from ase.data import atomic_numbers, chemical_symbols
 from ase.formula import Formula
-
 
 Integers = Union[Sequence[int], np.ndarray]
 
@@ -76,7 +76,7 @@ dtype=bool)
 
     def __getitem__(self, key) -> Union['Symbols', str]:
         num = self.numbers[key]
-        if np.isscalar(num):
+        if isinstance(num, numbers.Integral):
             return chemical_symbols[num]
         return Symbols(num)
 

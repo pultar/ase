@@ -1,11 +1,12 @@
 import os
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 import numpy as np
-import xml.etree.ElementTree as ET
+
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.io.exciting import atoms2etree
 from ase.units import Bohr, Hartree
-from ase.calculators.calculator import PropertyNotImplementedError
-from xml.dom import minidom
 
 
 class Exciting:
@@ -66,9 +67,7 @@ class Exciting:
         self.write(atoms)
 
     def get_potential_energy(self, atoms):
-        """
-        returns potential Energy
-        """
+        """Returns potential Energy."""
         self.update(atoms)
         return self.energy
 
