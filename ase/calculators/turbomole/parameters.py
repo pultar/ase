@@ -665,13 +665,13 @@ class TurbomoleParameters(dict):
 
         params = self
 
-        if type(params["excitation"]) == list:
+        if isInstance(params["excitation"], list):
             exStr = "ex\n{}\n*\n{}\n*\n*\n\n".format(params["excitation"][0], params["excitation"][1])
         else:
             exStr = ""
 
         if params['use redundant internals']:
-            if params["idef"] != None:
+            if not params["idef"]:
                 internals_str = 'idef\n{}\n\n\n\nired\n*'.format(params["idef"])
             else:
                 internals_str = 'ired\n*'
@@ -713,8 +713,8 @@ class TurbomoleParameters(dict):
         if params['density functional']:
             dft_str += 'dft\nfunc ' + params['density functional'] + '\n*\n'
 
-        if params['dispersion correction'] != False:
-            if type(params['dispersion correction']) == str:
+        if not params["dispersion correction"]:
+            if isInstance(params['dispersion correction'], str):
                 dsp_str = 'dsp\n{}\n*\n'.format(params['dispersion correction'])
             else:
                 dsp_str = 'dsp\non\n*\n'
@@ -728,7 +728,7 @@ class TurbomoleParameters(dict):
             ri_str = 'ri\non\nm ' + str(params['ri memory']) + '\n*\n'
             if params['marij']:
                 ri_str += 'marij\n'
-            if params['jbas'] != None:
+            if params['jbas'] is not None:
                 for jbas in params['jbas']:
                     basisAtom, basisSet = jbas.split()
                     ri_str += 'jbas\nb "%s" %s' % (basisAtom, basisSet)
@@ -779,8 +779,8 @@ class TurbomoleParameters(dict):
 
         define_str = define_str_tpl
         define_str = re.sub('__title__', params['title'], define_str)
-        if params['basis set atom'] != None:
-            if type(params['basis set atom']) == list:
+        if params['basis set atom'] is not None:
+            if isInstance(params['basis set atom'], list):
                 skips = ""
                 for i in range(len(params['basis set atom'])):
                     skips += "\n"
