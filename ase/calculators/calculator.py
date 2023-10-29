@@ -880,11 +880,16 @@ class FileIOCalculator(Calculator):
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=Calculator._deprecated,
-                 label=None, atoms=None, command=None, **kwargs):
+                 label=None, atoms=None, command=None, stdout_file='',
+                 **kwargs):
         """File-IO calculator.
+
+        Parameters:
 
         command: str
             Command used to start calculation.
+        stdout_file: str, default ''
+            File to use for stdout of executed process, empty string for <prefix>.stdout, None to write to stdout instead of file
         """
 
         Calculator.__init__(self, restart, ignore_bad_restart_file, label,
@@ -896,6 +901,8 @@ class FileIOCalculator(Calculator):
             name = 'ASE_' + self.name.upper() + '_COMMAND'
             self.command = os.environ.get(name, self.command)
 
+        self.stdout_file = stdout_file
+
     def calculate(self, atoms=None, properties=['energy'],
                   system_changes=all_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
@@ -904,6 +911,14 @@ class FileIOCalculator(Calculator):
         self.read_results()
 
     def execute(self):
+        if self.stdout_file is not None and len(self.stdout_file) == 0:
+            prefix = self.prefix if self.prefix is not None else self.name
+            stdout_file = prefix + '.stdout'
+        else:
+            stdout_file = self.stdout_file
+        if stdout_file is not None:
+            stdout_file = open(os.path.join(self.directory, stdout_file), 'w')
+
         if self.command is None:
             raise CalculatorSetupError(
                 'Please set ${} environment variable '
@@ -914,14 +929,19 @@ class FileIOCalculator(Calculator):
             command = command.replace('PREFIX', self.prefix)
 
         try:
-            proc = subprocess.Popen(command, shell=True, cwd=self.directory)
+            proc = subprocess.Popen(command, shell=True, cwd=self.directory, stdout=stdout_file, stderr=subprocess.STDOUT)
         except OSError as err:
             # Actually this may never happen with shell=True, since
             # probably the shell launches successfully.  But we soon want
             # to allow calling the subprocess directly, and then this
             # distinction (failed to launch vs failed to run) is useful.
             msg = 'Failed to execute "{}"'.format(command)
+            if stdout_file is not None:
+                stdout_file.close()
             raise EnvironmentError(msg) from err
+
+        if stdout_file is not None:
+            stdout_file.close()
 
         errorcode = proc.wait()
 
