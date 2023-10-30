@@ -53,39 +53,38 @@ class Session:
         if self.columns is None:
             self.columns = list(project.default_columns)
 
-        if what == 'query':
-            self.query = project.handle_query(args)
-            self.nrows = None
-            self.page = 0
-
-        elif what == 'sort':
-            if x == self.sort:
-                self.sort = '-' + x
-            elif '-' + x == self.sort:
-                self.sort = 'id'
-            else:
-                self.sort = x
-            self.page = 0
-
-        elif what == 'limit':
+        if what == 'limit':
             self.limit = int(x)
             self.page = 0
 
         elif what == 'page':
             self.page = int(x)
 
+        elif what == 'query':
+            self.query = project.handle_query(args)
+            self.nrows = None
+            self.page = 0
+
+        elif what == 'sort':
+            if x == self.sort:
+                self.sort = f'-{x}'
+            elif f'-{x}' == self.sort:
+                self.sort = 'id'
+            else:
+                self.sort = x
+            self.page = 0
+
         elif what == 'toggle':
             column = x
             if column == 'reset':
                 self.columns = list(project.default_columns)
+            elif column in self.columns:
+                self.columns.remove(column)
+                if column == self.sort.lstrip('-'):
+                    self.sort = 'id'
+                    self.page = 0
             else:
-                if column in self.columns:
-                    self.columns.remove(column)
-                    if column == self.sort.lstrip('-'):
-                        self.sort = 'id'
-                        self.page = 0
-                else:
-                    self.columns.append(column)
+                self.columns.append(column)
 
     @property
     def row1(self) -> int:

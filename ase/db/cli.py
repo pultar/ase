@@ -21,7 +21,7 @@ def count_keys(db, query):
 
     n = max(len(key) for key in keys) + 1
     for key, number in keys.items():
-        print('{:{}} {}'.format(key + ':', n, number))
+        print('{:{}} {}'.format(f'{key}:', n, number))
     return
 
 
@@ -31,7 +31,7 @@ def main(args):
 
     if args.sort.endswith('-'):
         # Allow using "key-" instead of "-key" for reverse sorting
-        args.sort = '-' + args.sort[:-1]
+        args.sort = f'-{args.sort[:-1]}'
 
     if query.isdigit():
         query = int(query)
@@ -42,11 +42,7 @@ def main(args):
             key, value = pair.split('=')
             add_key_value_pairs[key] = convert_str_to_int_float_or_str(value)
 
-    if args.delete_keys:
-        delete_keys = args.delete_keys.split(',')
-    else:
-        delete_keys = []
-
+    delete_keys = args.delete_keys.split(',') if args.delete_keys else []
     db = connect(args.database, use_lock_file=not args.no_lock_file)
 
     def out(*args):
@@ -78,13 +74,17 @@ def main(args):
         for key in keys:
             vals = values[key]
             if key in numbers:
-                print('{:{}} [{}..{}]'
-                      .format(key + ':', n, min(vals), max(vals)))
+                print(
+                    '{:{}} [{}..{}]'.format(f'{key}:', n, min(vals), max(vals))
+                )
             else:
-                print('{:{}} {}'
-                      .format(key + ':', n,
-                              ', '.join(f'{v}({n})'
-                                        for v, n in vals.items())))
+                print(
+                    '{:{}} {}'.format(
+                        f'{key}:',
+                        n,
+                        ', '.join(f'{v}({n})' for v, n in vals.items()),
+                    )
+                )
         return
 
     if args.add_from_file:
@@ -140,9 +140,9 @@ def main(args):
                         db2.write(row, data=row.get('data'), **kvp)
                     nrows += 1
 
-        out('Added %s (%s updated)' %
-            (plural(nkvp, 'key-value pair'),
-             plural(len(add_key_value_pairs) * nrows - nkvp, 'pair')))
+        out(
+            f"Added {plural(nkvp, 'key-value pair')} ({plural(len(add_key_value_pairs) * nrows - nkvp, 'pair')} updated)"
+        )
         out(f'Inserted {plural(nrows, "row")}')
         return
 
@@ -175,9 +175,9 @@ def main(args):
                                  **add_key_value_pairs)
                 M += m
                 N += n
-        out('Added %s (%s updated)' %
-            (plural(M, 'key-value pair'),
-             plural(len(add_key_value_pairs) * len(ids) - M, 'pair')))
+        out(
+            f"Added {plural(M, 'key-value pair')} ({plural(len(add_key_value_pairs) * len(ids) - M, 'pair')} updated)"
+        )
         out('Removed', plural(N, 'key-value pair'))
 
         return
@@ -218,7 +218,7 @@ def main(args):
             xyy = list(zip(*plot))
             x = xyy[0]
             for y, key in zip(xyy[1:], keys[1:]):
-                plt.plot(x, y, label=name + ':' + key)
+                plt.plot(x, y, label=f'{name}:{key}')
         if X:
             plt.xticks(range(len(labels)), labels, rotation=90)
         plt.legend()
@@ -257,10 +257,7 @@ def main(args):
                              include_data=False):
             keys.update(row._keys)
         columns.extend(keys)
-        if c[2:3] == ',':
-            c = c[3:]
-        else:
-            c = ''
+        c = c[3:] if c[2:3] == ',' else ''
     if c:
         if c[0] == '+':
             c = c[1:]
@@ -286,34 +283,39 @@ def row2str(row) -> str:
          'Unit cell in Ang:',
          'axis|periodic|          x|          y|          z|' +
          '    length|     angle']
-    c = 1
     fmt = ('   {0}|     {1}|{2[0]:>11}|{2[1]:>11}|{2[2]:>11}|' +
            '{3:>10}|{4:>10}')
-    for p, axis, L, A in zip(row.pbc, t['cell'], t['lengths'], t['angles']):
-        S.append(fmt.format(c, [' no', 'yes'][p], axis, L, A))
-        c += 1
+    S.extend(
+        fmt.format(c, [' no', 'yes'][p], axis, L, A)
+        for c, (p, axis, L, A) in enumerate(
+            zip(row.pbc, t['cell'], t['lengths'], t['angles']), start=1
+        )
+    )
     S.append('')
 
     if 'stress' in t:
-        S += ['Stress tensor (xx, yy, zz, zy, zx, yx) in eV/Ang^3:',
-              '   {}\n'.format(t['stress'])]
+        S += [
+            'Stress tensor (xx, yy, zz, zy, zx, yx) in eV/Ang^3:',
+            f"   {t['stress']}\n",
+        ]
 
     if 'dipole' in t:
-        S.append('Dipole moment in e*Ang: ({})\n'.format(t['dipole']))
+        S.append(f"Dipole moment in e*Ang: ({t['dipole']})\n")
 
     if 'constraints' in t:
-        S.append('Constraints: {}\n'.format(t['constraints']))
+        S.append(f"Constraints: {t['constraints']}\n")
 
     if 'data' in t:
-        S.append('Data: {}\n'.format(t['data']))
+        S.append(f"Data: {t['data']}\n")
 
     width0 = max(max(len(row[0]) for row in t['table']), 3)
     width1 = max(max(len(row[1]) for row in t['table']), 11)
     S.append('{:{}} | {:{}} | Value'
              .format('Key', width0, 'Description', width1))
-    for key, desc, value in t['table']:
-        S.append('{:{}} | {:{}} | {}'
-                 .format(key, width0, desc, width1, value))
+    S.extend(
+        '{:{}} | {:{}} | {}'.format(key, width0, desc, width1, value)
+        for key, desc, value in t['table']
+    )
     return '\n'.join(S)
 
 

@@ -152,12 +152,12 @@ def check(key_value_pairs):
             for t in [int, float]:
                 if str_represents(value, t):
                     raise ValueError(
-                        'Value ' + value + ' is put in as string ' +
-                        'but can be interpreted as ' +
-                        f'{t.__name__}! Please convert ' +
-                        f'to {t.__name__} using ' +
-                        f'{t.__name__}(value) before ' +
-                        'writing to the database OR change ' +
+                        f'Value {value} is put in as string '
+                        'but can be interpreted as '
+                        f'{t.__name__}! Please convert '
+                        f'to {t.__name__} using '
+                        f'{t.__name__}(value) before '
+                        'writing to the database OR change '
                         'to a different string.')
 
 
@@ -207,9 +207,8 @@ def connect(name, type='extract_from_name', create_indices=True,
     if type is None:
         return Database()
 
-    if not append and world.rank == 0:
-        if isinstance(name, str) and os.path.isfile(name):
-            os.remove(name)
+    if not append and world.rank == 0 and (isinstance(name, str) and os.path.isfile(name)):
+        os.remove(name)
 
     if type not in ['postgresql', 'mysql'] and isinstance(name, str):
         name = os.path.abspath(name)
@@ -228,7 +227,7 @@ def connect(name, type='extract_from_name', create_indices=True,
     if type == 'mysql':
         from ase.db.mysql import MySQLDatabase
         return MySQLDatabase(name)
-    raise ValueError('Unknown database type: ' + type)
+    raise ValueError(f'Unknown database type: {type}')
 
 
 def lock(method):
@@ -237,9 +236,9 @@ def lock(method):
     def new_method(self, *args, **kwargs):
         if self.lock is None:
             return method(self, *args, **kwargs)
-        else:
-            with self.lock:
-                return method(self, *args, **kwargs)
+        with self.lock:
+            return method(self, *args, **kwargs)
+
     return new_method
 
 
@@ -298,9 +297,7 @@ def parse_selection(selection, **kwargs):
         comparisons.append((key, op, value))
 
     cmps = []
-    for key, value in kwargs.items():
-        comparisons.append((key, '=', value))
-
+    comparisons.extend((key, '=', value) for key, value in kwargs.items())
     for key, op, value in comparisons:
         if key == 'age':
             key = 'ctime'
@@ -345,7 +342,7 @@ class Database:
         self.filename = filename
         self.create_indices = create_indices
         if use_lock_file and isinstance(filename, str):
-            self.lock = Lock(filename + '.lock', world=DummyMPI())
+            self.lock = Lock(f'{filename}.lock', world=DummyMPI())
         else:
             self.lock = None
         self.serial = serial
@@ -359,7 +356,7 @@ class Database:
 
     @parallel_function
     @lock
-    def write(self, atoms, key_value_pairs={}, data={}, id=None, **kwargs):
+    def write(self, atoms, key_value_pairs=None, data=None, id=None, **kwargs):
         """Write atoms to database with key-value pairs.
 
         atoms: Atoms object
@@ -380,6 +377,10 @@ class Database:
         Returns integer id of the new row.
         """
 
+        if key_value_pairs is None:
+            key_value_pairs = {}
+        if data is None:
+            data = {}
         if atoms is None:
             atoms = Atoms()
 
@@ -407,20 +408,17 @@ class Database:
         anything and return None.
         """
 
-        for dct in self._select([],
-                                [(key, '=', value)
-                                 for key, value in key_value_pairs.items()]):
+        for _ in self._select([],
+                              [(key, '=', value)
+                               for key, value in key_value_pairs.items()]):
             return None
 
         atoms = Atoms()
 
-        calc_name = key_value_pairs.pop('calculator', None)
-
-        if calc_name:
+        if calc_name := key_value_pairs.pop('calculator', None):
             # Allow use of calculator key
             assert calc_name.lower() == calc_name
 
-            # Fake calculator class:
             class Fake:
                 name = calc_name
 
@@ -432,9 +430,7 @@ class Database:
 
             atoms.calc = Fake()
 
-        id = self._write(atoms, key_value_pairs, {}, None)
-
-        return id
+        return self._write(atoms, key_value_pairs, {}, None)
 
     def __delitem__(self, id):
         self.delete([id])
@@ -534,18 +530,14 @@ class Database:
         See the select() method for the selection syntax.  Use db.count() or
         len(db) to count all rows.
         """
-        n = 0
-        for row in self.select(selection, **kwargs):
-            n += 1
-        return n
+        return sum(1 for _ in self.select(selection, **kwargs))
 
     def __len__(self):
         return self.count()
 
     @parallel_function
     @lock
-    def update(self, id, atoms=None, delete_keys=[], data=None,
-               **add_key_value_pairs):
+    def update(self, id, atoms=None, delete_keys=None, data=None, **add_key_value_pairs):
         """Update and/or delete key-value pairs of row(s).
 
         id: int
@@ -562,6 +554,8 @@ class Database:
         Returns number of key-value pairs added and removed.
         """
 
+        if delete_keys is None:
+            delete_keys = []
         if not isinstance(id, numbers.Integral):
             if isinstance(id, list):
                 err = ('First argument must be an int and not a list.\n'
@@ -634,10 +628,7 @@ def float_to_time_string(t, long=False):
         x = t / seconds[s]
         if x > 5:
             break
-    if long:
-        return f'{x:.3f} {longwords[s]}s'
-    else:
-        return f'{round(x):.0f}{s}'
+    return f'{x:.3f} {longwords[s]}s' if long else f'{round(x):.0f}{s}'
 
 
 def object_to_bytes(obj: Any) -> bytes:
@@ -682,8 +673,7 @@ def o2b(obj: Any, parts: List[bytes]):
                                 offset]}
     if isinstance(obj, complex):
         return {'__complex__': [obj.real, obj.imag]}
-    objtype = getattr(obj, 'ase_objtype')
-    if objtype:
+    if objtype := getattr(obj, 'ase_objtype'):
         dct = o2b(obj.todict(), parts)
         dct['__ase_objtype__'] = objtype
         return dct
@@ -717,6 +707,4 @@ def b2o(obj: Any, b: bytes) -> Any:
 
     dct = {key: b2o(value, b) for key, value in obj.items()}
     objtype = dct.pop('__ase_objtype__', None)
-    if objtype is None:
-        return dct
-    return create_ase_object(objtype, dct)
+    return dct if objtype is None else create_ase_object(objtype, dct)

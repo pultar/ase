@@ -40,12 +40,11 @@ class JSONDatabase(Database):
             row.ctime = mtime
             row.user = os.getenv('USER')
 
-        dct = {}
-        for key in row.__dict__:
-            if key[0] == '_' or key in row._keys or key == 'id':
-                continue
-            dct[key] = row[key]
-
+        dct = {
+            key: row[key]
+            for key in row.__dict__
+            if key[0] != '_' and key not in row._keys and key != 'id'
+        }
         dct['mtime'] = mtime
 
         if key_value_pairs:
@@ -54,8 +53,7 @@ class JSONDatabase(Database):
         if data:
             dct['data'] = data
 
-        constraints = row.get('constraints')
-        if constraints:
+        if constraints := row.get('constraints'):
             dct['constraints'] = constraints
 
         if id is None:
@@ -78,8 +76,7 @@ class JSONDatabase(Database):
             if self.filename is not sys.stdin:
                 self.filename.seek(0)
 
-        if not isinstance(bigdct, dict) or not ('ids' in bigdct
-                                                or 1 in bigdct):
+        if not isinstance(bigdct, dict) or 'ids' not in bigdct and 1 not in bigdct:
             from ase.io.formats import UnknownFileTypeError
             raise UnknownFileTypeError('Does not resemble ASE JSON database')
 
@@ -220,7 +217,6 @@ class JSONDatabase(Database):
         bigdct, ids, nextid = self._read_json()
         for id in ids:
             dct = bigdct[id]
-            kvp = dct.get('key_value_pairs')
-            if kvp:
+            if kvp := dct.get('key_value_pairs'):
                 keys.update(kvp)
         return keys

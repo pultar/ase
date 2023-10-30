@@ -129,9 +129,7 @@ class SQLite3Database(Database):
                    for line in init_statements[0].splitlines()[1:]]
 
     def encode(self, obj, binary=False):
-        if binary:
-            return object_to_bytes(obj)
-        return ase.io.jsonio.encode(obj)
+        return object_to_bytes(obj) if binary else ase.io.jsonio.encode(obj)
 
     def decode(self, txt, lazy=False):
         if lazy:
@@ -239,14 +237,13 @@ class SQLite3Database(Database):
 
                 cur = con.execute(
                     'SELECT value FROM information WHERE name="metadata"')
-                results = cur.fetchall()
-                if results:
+                if results := cur.fetchall():
                     self._metadata = json.loads(results[0][0])
 
         if self.version > VERSION:
-            raise OSError('Can not read new ase.db format '
-                          '(version {}).  Please update to latest ASE.'
-                          .format(self.version))
+            raise OSError(
+                f'Can not read new ase.db format (version {self.version}).  Please update to latest ASE.'
+            )
         if self.version < 5 and not self._allow_reading_old_format:
             raise OSError('Please convert to new format. ' +
                           'Use: python -m ase.db.convert ' + self.filename)
@@ -271,8 +268,7 @@ class SQLite3Database(Database):
             # Extract the external tables from AtomsRow
             names = self._get_external_table_names()
             for name in names:
-                new_table = row.get(name, {})
-                if new_table:
+                if new_table := row.get(name, {}):
                     ext_tables[name] = new_table
 
         if not id and not key_value_pairs and not ext_tables:
@@ -335,19 +331,18 @@ class SQLite3Database(Database):
 
             cur = con.cursor()
             if id is None:
-                q = self.default + ', ' + ', '.join('?' * len(values))
+                q = f'{self.default}, ' + ', '.join('?' * len(values))
                 cur.execute(f'INSERT INTO systems VALUES ({q})',
                             values)
                 id = self.get_last_id(cur)
             else:
                 self._delete(cur, [id], ['keys', 'text_key_values',
                                          'number_key_values', 'species'])
-                q = ', '.join(name + '=?' for name in self.columnnames[1:])
+                q = ', '.join(f'{name}=?' for name in self.columnnames[1:])
                 cur.execute(f'UPDATE systems SET {q} WHERE id=?',
                             values + (id,))
 
-            count = row.count_atoms()
-            if count:
+            if count := row.count_atoms():
                 species = [(atomic_numbers[symbol], n, id)
                            for symbol, n in count.items()]
                 cur.executemany('INSERT INTO species VALUES (?, ?, ?)',
@@ -429,11 +424,7 @@ class SQLite3Database(Database):
     def get_last_id(self, cur):
         cur.execute('SELECT seq FROM sqlite_sequence WHERE name="systems"')
         result = cur.fetchone()
-        if result is not None:
-            id = result[0]
-            return id
-        else:
-            return 0
+        return result[0] if result is not None else 0
 
     def _get_row(self, id):
         with self.managed_connection() as con:
@@ -515,8 +506,6 @@ class SQLite3Database(Database):
         if self.type == 'postgresql':
             assert self.version >= 8, 'Your db-version is too old!'
         assert self.version >= 4, 'Your db-file is too old!'
-        if self.version < 5:
-            pass  # should be ok for reading by convert.py script
         if self.version < 6:
             m = values[23]
             if m is not None and not isinstance(m, float):
@@ -527,7 +516,6 @@ class SQLite3Database(Database):
     def create_select_statement(self, keys, cmps,
                                 sort=None, order=None, sort_table=None,
                                 what='systems.*'):
-        tables = ['systems']
         where = []
         args = []
         for key in keys:
@@ -569,20 +557,15 @@ class SQLite3Database(Database):
             elif isinstance(key, int):
                 if self.type == 'postgresql':
                     where.append(
-                        'cardinality(array_positions(' +
-                        f'numbers::int[], ?)){op}?')
-                    args += [key, value]
+                        f'cardinality(array_positions(numbers::int[], ?)){op}?')
+                elif bad[key]:
+                    where.append(
+                        f'systems.id not in (select id from species where Z=? and n{invop[op]}?)'
+                    )
                 else:
-                    if bad[key]:
-                        where.append(
-                            'systems.id not in (select id from species ' +
-                            f'where Z=? and n{invop[op]}?)')
-                        args += [key, value]
-                    else:
-                        where.append('systems.id in (select id from species ' +
-                                     f'where Z=? and n{op}?)')
-                        args += [key, value]
-
+                    where.append(
+                        f'systems.id in (select id from species where Z=? and n{op}?)')
+                args += [key, value]
             elif self.type == 'postgresql':
                 jsonop = '->'
                 if isinstance(value, str):
@@ -590,28 +573,28 @@ class SQLite3Database(Database):
                 elif isinstance(value, bool):
                     jsonop = '->>'
                     value = str(value).lower()
-                where.append("systems.key_value_pairs {} '{}'{}?"
-                             .format(jsonop, key, op))
+                where.append(f"systems.key_value_pairs {jsonop} '{key}'{op}?")
                 args.append(str(value))
 
             elif isinstance(value, str):
-                where.append('systems.id in (select id from text_key_values ' +
-                             f'where key=? and value{op}?)')
+                where.append(
+                    f'systems.id in (select id from text_key_values where key=? and value{op}?)'
+                )
                 args += [key, value]
             else:
                 where.append(
-                    'systems.id in (select id from number_key_values ' +
-                    f'where key=? and value{op}?)')
+                    f'systems.id in (select id from number_key_values where key=? and value{op}?)'
+                )
                 args += [key, float(value)]
 
-        if sort:
-            if sort_table != 'systems':
-                tables.append(f'{sort_table} AS sort_table')
-                where.append('systems.id=sort_table.id AND '
-                             'sort_table.key=?')
-                args.append(sort)
-                sort_table = 'sort_table'
-                sort = 'value'
+        tables = ['systems']
+        if sort and sort_table != 'systems':
+            tables.append(f'{sort_table} AS sort_table')
+            where.append('systems.id=sort_table.id AND '
+                         'sort_table.key=?')
+            args.append(sort)
+            sort_table = 'sort_table'
+            sort = 'value'
 
         sql = f'SELECT {what} FROM\n  ' + ', '.join(tables)
         if where:
@@ -627,14 +610,14 @@ class SQLite3Database(Database):
                 limit=None, offset=0, sort=None, include_data=True,
                 columns='all'):
 
-        values = np.array([None for i in range(27)])
+        values = np.array([None for _ in range(27)])
         values[25] = '{}'
         values[26] = 'null'
 
         if columns == 'all':
             columnindex = list(range(26))
         else:
-            columnindex = [c for c in range(0, 26)
+            columnindex = [c for c in range(26)
                            if self.columnnames[c] in columns]
         if include_data:
             columnindex.append(26)
@@ -666,15 +649,16 @@ class SQLite3Database(Database):
             order = None
             sort_table = None
 
-        what = ', '.join('systems.' + name
-                         for name in
-                         np.array(self.columnnames)[np.array(columnindex)])
+        what = ', '.join(
+            f'systems.{name}'
+            for name in np.array(self.columnnames)[np.array(columnindex)]
+        )
 
         sql, args = self.create_select_statement(keys, cmps, sort, order,
                                                  sort_table, what)
 
         if explain:
-            sql = 'EXPLAIN QUERY PLAN ' + sql
+            sql = f'EXPLAIN QUERY PLAN {sql}'
 
         if limit:
             sql += f'\nLIMIT {limit}'
@@ -704,11 +688,14 @@ class SQLite3Database(Database):
                         if n == limit:
                             return
                         limit -= n
-                    for row in self._select(keys + ['-' + sort], cmps,
-                                            limit=limit, offset=offset,
-                                            include_data=include_data,
-                                            columns=columns):
-                        yield row
+                    yield from self._select(
+                        keys + [f'-{sort}'],
+                        cmps,
+                        limit=limit,
+                        offset=offset,
+                        include_data=include_data,
+                        columns=columns,
+                    )
 
     def get_offset_string(self, offset, limit=None):
         sql = ''
@@ -747,11 +734,12 @@ class SQLite3Database(Database):
     def _delete(self, cur, ids, tables=None):
         tables = tables or all_tables[::-1]
         for table in tables:
-            cur.execute('DELETE FROM {} WHERE id in ({});'.
-                        format(table, ', '.join([str(id) for id in ids])))
+            cur.execute(
+                f"DELETE FROM {table} WHERE id in ({', '.join([str(id) for id in ids])});"
+            )
 
     def vacuum(self):
-        if not self.type == 'db':
+        if self.type != 'db':
             return
 
         with self.managed_connection() as con:
@@ -807,8 +795,7 @@ class SQLite3Database(Database):
 
         taken_names = set(all_tables + all_properties + self.columnnames)
         if name in taken_names:
-            raise ValueError("External table can not be any of {}"
-                             "".format(taken_names))
+            raise ValueError(f"External table can not be any of {taken_names}")
 
         if self._external_table_exists(name):
             return
@@ -823,7 +810,7 @@ class SQLite3Database(Database):
             # Insert an entry saying that there is a new external table
             # present and an entry with the datatype
             cur.execute(sql2, ("external_table_name", name))
-            cur.execute(sql2, (name + "_dtype", dtype))
+            cur.execute(sql2, (f"{name}_dtype", dtype))
 
     def delete_external_table(self, name):
         """Delete an external table."""
@@ -839,7 +826,7 @@ class SQLite3Database(Database):
             sql = "DELETE FROM information WHERE value=?"
             cur.execute(sql, (name,))
             sql = "DELETE FROM information WHERE name=?"
-            cur.execute(sql, (name + "_dtype",))
+            cur.execute(sql, (f"{name}_dtype", ))
 
     def _convert_to_recognized_types(self, value):
         """Convert Numpy types to python types."""
@@ -859,10 +846,9 @@ class SQLite3Database(Database):
         dtype = self._guess_type(entries)
         expected_dtype = self._get_value_type_of_table(cursor, name)
         if dtype != expected_dtype:
-            raise ValueError("The provided data type for table {} "
-                             "is {}, while it is initialized to "
-                             "be of type {}"
-                             "".format(name, dtype, expected_dtype))
+            raise ValueError(
+                f"The provided data type for table {name} is {dtype}, while it is initialized to be of type {expected_dtype}"
+            )
 
         # First we check if entries already exists
         cursor.execute(f"SELECT key FROM {name} WHERE id=?", (id,))
@@ -891,8 +877,9 @@ class SQLite3Database(Database):
         all_types = [type(v) for v in values]
         if any(t != all_types[0] for t in all_types):
             typenames = [t.__name__ for t in all_types]
-            raise ValueError("Inconsistent datatypes in the table. "
-                             "given types: {}".format(typenames))
+            raise ValueError(
+                f"Inconsistent datatypes in the table. given types: {typenames}"
+            )
 
         val = values[0]
         if isinstance(val, int) or np.issubdtype(type(val), np.integer):
@@ -906,7 +893,7 @@ class SQLite3Database(Database):
     def _get_value_type_of_table(self, cursor, tab_name):
         """Return the expected value name."""
         sql = "SELECT value FROM information WHERE name=?"
-        cursor.execute(sql, (tab_name + "_dtype",))
+        cursor.execute(sql, (f"{tab_name}_dtype", ))
         return cursor.fetchone()[0]
 
     def _read_external_table(self, name, id):

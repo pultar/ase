@@ -10,7 +10,7 @@ from ase.db.sqlite import index_statements
 def convert(name, opts):
     con1 = connect(name, use_lock_file=False)
     con1._allow_reading_old_format = True
-    newname = name[:-2] + 'new.db'
+    newname = f'{name[:-2]}new.db'
     with connect(newname, create_indices=False, use_lock_file=False) as con2:
         row = None
         for row in con1.select():
@@ -41,7 +41,7 @@ def convert(name, opts):
         c.execute(statement)
     c.commit()
 
-    os.rename(name, name[:-2] + 'old.db')
+    os.rename(name, f'{name[:-2]}old.db')
     os.rename(newname, name)
 
 

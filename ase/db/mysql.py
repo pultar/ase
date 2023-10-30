@@ -175,8 +175,8 @@ class MySQLDatabase(SQLite3Database):
 
         cur = con.cursor()
 
-        information_exists = True
         self._metadata = {}
+        information_exists = True
         try:
             cur.execute("SELECT 1 FROM information")
         except ProgrammingError:
@@ -187,8 +187,7 @@ class MySQLDatabase(SQLite3Database):
             # MySQL require that id is explicitly set as primary key
             # in the systems table
             init_statements_cpy = deepcopy(init_statements)
-            init_statements_cpy[0] = init_statements_cpy[0][:-1] + \
-                ', PRIMARY KEY(id))'
+            init_statements_cpy[0] = f'{init_statements_cpy[0][:-1]}, PRIMARY KEY(id))'
 
             statements = schema_update(init_statements_cpy)
             for statement in statements:
@@ -199,17 +198,15 @@ class MySQLDatabase(SQLite3Database):
             cur.execute('select * from information')
 
             for name, value in cur.fetchall():
-                if name == 'version':
-                    self.version = int(value)
-                elif name == 'metadata':
+                if name == 'metadata':
                     self._metadata = json.loads(value)
 
+                elif name == 'version':
+                    self.version = int(value)
         self.initialized = True
 
     def blob(self, array):
-        if array is None:
-            return None
-        return super().blob(array).tobytes()
+        return None if array is None else super().blob(array).tobytes()
 
     def get_offset_string(self, offset, limit=None):
         sql = ''
@@ -222,8 +219,7 @@ class MySQLDatabase(SQLite3Database):
 
     def get_last_id(self, cur):
         cur.execute('select max(id) as ID from systems')
-        last_id = cur.fetchone()[0]
-        return last_id
+        return cur.fetchone()[0]
 
     def create_select_statement(self, keys, cmps,
                                 sort=None, order=None, sort_table=None,

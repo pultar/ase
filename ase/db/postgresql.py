@@ -73,7 +73,7 @@ class Cursor:
         else:
             q = ', '.join('?' * N)
         statement = statement.replace(f'({q})', '%s')
-        q = '({})'.format(q.replace('?', '%s'))
+        q = f"({q.replace('?', '%s')})"
 
         execute_values(self.cur, statement.replace('?', '%s'),
                        argslist=args[0], template=q, page_size=len(args[0]))
@@ -120,9 +120,7 @@ class PostgreSQLDatabase(SQLite3Database):
         """Convert blob/buffer object to ndarray of correct dtype and shape.
 
         (without creating an extra view)."""
-        if buf is None:
-            return None
-        return np.array(buf, dtype=dtype)
+        return None if buf is None else np.array(buf, dtype=dtype)
 
     def _connect(self):
         return Connection(connect(self.filename))
@@ -136,11 +134,7 @@ class PostgreSQLDatabase(SQLite3Database):
         cur = con.cursor()
         cur.execute("show search_path;")
         schema = cur.fetchone()[0].split(', ')
-        if schema[0] == '"$user"':
-            schema = schema[1]
-        else:
-            schema = schema[0]
-
+        schema = schema[1] if schema[0] == '"$user"' else schema[0]
         cur.execute("""
         SELECT EXISTS(select * from information_schema.tables where
         table_name='information' and table_schema='{}');
@@ -159,11 +153,11 @@ class PostgreSQLDatabase(SQLite3Database):
         else:
             cur.execute('select * from information;')
             for name, value in cur.fetchall():
-                if name == 'version':
-                    self.version = int(value)
-                elif name == 'metadata':
+                if name == 'metadata':
                     self._metadata = json.loads(value)
 
+                elif name == 'version':
+                    self.version = int(value)
         assert 5 < self.version <= VERSION
 
         self.initialized = True
@@ -193,10 +187,8 @@ def schema_update(sql):
     txt2jsonb = ['calculator_parameters', 'key_value_pairs']
 
     for column in arrays_1D:
-        if column in ['numbers', 'tags']:
-            dtype = 'INTEGER'
-        else:
-            dtype = 'DOUBLE PRECISION'
+        dtype = 'INTEGER' if column in [
+            'numbers', 'tags'] else 'DOUBLE PRECISION'
         sql = sql.replace(f'{column} BLOB,',
                           f'{column} {dtype}[],')
     for column in arrays_2D:

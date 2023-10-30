@@ -31,8 +31,7 @@ def get_sql_columns(columns):
     if 'charge' in columns:
         sql_columns[sql_columns.index('charge')] = 'charges'
 
-    sql_columns.append('key_value_pairs')
-    sql_columns.append('constraints')
+    sql_columns.extend(('key_value_pairs', 'constraints'))
     if 'id' not in sql_columns:
         sql_columns.append('id')
 
@@ -40,15 +39,11 @@ def get_sql_columns(columns):
 
 
 def plural(n, word):
-    if n == 1:
-        return '1 ' + word
-    return '%d %ss' % (n, word)
+    return f'1 {word}' if n == 1 else '%d %ss' % (n, word)
 
 
 def cut(txt, length):
-    if len(txt) <= length or length == 0:
-        return txt
-    return txt[:length - 3] + '...'
+    return txt if len(txt) <= length or length == 0 else f'{txt[:length - 3]}...'
 
 
 def cutlist(lst, length):

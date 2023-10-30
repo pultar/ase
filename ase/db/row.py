@@ -21,9 +21,7 @@ class FancyDict(dict):
         if key not in self:
             return dict.__getattribute__(self, key)
         value = self[key]
-        if isinstance(value, dict):
-            return FancyDict(value)
-        return value
+        return FancyDict(value) if isinstance(value, dict) else value
 
     def __dir__(self):
         return self.keys()  # for tab-completion
@@ -126,8 +124,7 @@ class AtomsRow:
         setattr(self, key, value)
 
     def __str__(self):
-        return '<AtomsRow: formula={}, keys={}>'.format(
-            self.formula, ','.join(self._keys))
+        return f"<AtomsRow: formula={self.formula}, keys={','.join(self._keys)}>"
 
     @property
     def constraints(self):
@@ -138,9 +135,7 @@ class AtomsRow:
             cs = decode(self._constraints)
             self._constraints = []
             for c in cs:
-                # Convert to new format:
-                name = c.pop('__name__', None)
-                if name:
+                if name := c.pop('__name__', None):
                     c = {'name': name, 'kwargs': c}
                 if c['name'].startswith('ase'):
                     c['name'] = c['name'].rsplit('.', 1)[1]
@@ -184,8 +179,7 @@ class AtomsRow:
         if self._constrained_forces is not None:
             return self._constrained_forces
         forces = self.forces
-        constraints = self.constraints
-        if constraints:
+        if constraints := self.constraints:
             forces = forces.copy()
             atoms = self.toatoms()
             for constraint in constraints:
@@ -220,9 +214,7 @@ class AtomsRow:
     def charge(self):
         """Total charge."""
         charges = self.get('initial_charges')
-        if charges is None:
-            return 0.0
-        return charges.sum()
+        return 0.0 if charges is None else charges.sum()
 
     def toatoms(self,
                 add_additional_information=False):
@@ -238,21 +230,17 @@ class AtomsRow:
                       momenta=self.get('momenta'),
                       constraint=self.constraints)
 
-        results = {}
-        for prop in all_properties:
-            if prop in self:
-                results[prop] = self[prop]
-        if results:
+        if results := {
+            prop: self[prop] for prop in all_properties if prop in self
+        }:
             atoms.calc = SinglePointCalculator(atoms, **results)
             atoms.calc.name = self.get('calculator', 'unknown')
 
         if add_additional_information:
-            atoms.info = {}
-            atoms.info['unique_id'] = self.unique_id
+            atoms.info = {'unique_id': self.unique_id}
             if self._keys:
                 atoms.info['key_value_pairs'] = self.key_value_pairs
-            data = self.get('data')
-            if data:
+            if data := self.get('data'):
                 atoms.info['data'] = data
 
         return atoms
@@ -263,13 +251,8 @@ def row2dct(row, key_descriptions) -> Dict[str, Any]:
 
     from ase.db.core import float_to_time_string, now
 
-    dct = {}
-
     atoms = Atoms(cell=row.cell, pbc=row.pbc)
-    dct['size'] = kptdensity2monkhorstpack(atoms,
-                                           kptdensity=1.8,
-                                           even=False)
-
+    dct = {'size': kptdensity2monkhorstpack(atoms, kptdensity=1.8, even=False)}
     dct['cell'] = [[f'{a:.3f}' for a in axis] for axis in row.cell]
     par = [f'{x:.3f}' for x in cell_to_cellpar(row.cell)]
     dct['lengths'] = par[:3]
@@ -285,12 +268,10 @@ def row2dct(row, key_descriptions) -> Dict[str, Any]:
     if dipole is not None:
         dct['dipole'] = ', '.join(f'{d:.3f}' for d in dipole)
 
-    data = row.get('data')
-    if data:
+    if data := row.get('data'):
         dct['data'] = ', '.join(data.keys())
 
-    constraints = row.get('constraints')
-    if constraints:
+    if constraints := row.get('constraints'):
         dct['constraints'] = ', '.join(c.__class__.__name__
                                        for c in constraints)
 
@@ -314,9 +295,8 @@ def row2dct(row, key_descriptions) -> Dict[str, Any]:
 
             nokeydesc = KeyDescription(key, '', '', '')
             keydesc = key_descriptions.get(key, nokeydesc)
-            unit = keydesc.unit
-            if unit:
-                value += ' ' + unit
+            if unit := keydesc.unit:
+                value += f' {unit}'
             dct['table'].append((key, keydesc.longdesc, value))
 
     return dct
