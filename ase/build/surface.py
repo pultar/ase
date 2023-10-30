@@ -279,7 +279,8 @@ def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
     if a is None:
         sym = reference_states[Z]['symmetry']
         if sym != structure:
-            raise ValueError(f"Can't guess lattice constant for {structure}-{symbol}!")
+            raise ValueError(
+                f"Can't guess lattice constant for {structure}-{symbol}!")
         a = reference_states[Z]['a']
 
     if structure == 'hcp' and c is None:
