@@ -155,8 +155,8 @@ class ColorWindow:
                           for red in np.linspace(0, 230, N)]
         else:
             try:
-                import matplotlib
-                mplcmap = matplotlib.colormaps.get_cmap(cmap)
+                import matplotlib.cm
+                mplcmap = matplotlib.cm.get_cmap(cmap)
                 colorscale = [matplotlib.colors.rgb2hex(c[:3]) for c in
                               mplcmap(np.linspace(0, 1, N))]
             except (ImportError, ValueError) as e:

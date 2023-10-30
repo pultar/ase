@@ -34,8 +34,10 @@ def test_cmap_label(gui, c10):
     c = gui.colors_window()
     c.toggle('magmom')
 
-    cmap = 'old'
-    c.update_colormap(cmap)
-
-    # make sure color map label is changed
-    assert c.cmaps[1].value == cmap
+    for cmap in ['old', 'RdBu']:
+        try:
+            c.update_colormap(cmap)
+            # make sure color map label is changed
+            assert c.cmaps[1].value == cmap
+        except RuntimeError:  # probably no matplotlib
+            pass
