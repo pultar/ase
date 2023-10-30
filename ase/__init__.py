@@ -20,3 +20,5 @@ from ase.atoms import Atoms
 # ase.parallel does "from gpaw.mpi import world":
 import ase.parallel  # noqa
 ase.parallel  # silence pyflakes
+
+__path__ = __import__('pkgutil').extend_path(__path__, __name__)
