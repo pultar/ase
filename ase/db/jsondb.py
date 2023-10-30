@@ -214,9 +214,10 @@ class JSONDatabase(Database):
 
     def get_all_key_names(self):
         keys = set()
-        bigdct, ids, nextid = self._read_json()
+        bigdct, ids, _ = self._read_json()
         for id in ids:
             dct = bigdct[id]
-            if kvp := dct.get('key_value_pairs'):
+            kvp = dct.get('key_value_pairs')
+            if kvp:
                 keys.update(kvp)
         return keys
