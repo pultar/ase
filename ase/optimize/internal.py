@@ -11,7 +11,7 @@ class Internal(Optimizer):
     def run(self, fmax=0.05, steps=None):
         """call internal run and collect results"""
         self.atoms.calc.reset()
-        
+
         self.fmax = fmax
         if steps:
             self.max_steps = steps

@@ -13,7 +13,7 @@ class Internal(MolecularDynamics):
     def run(self, steps=50):
         """ Call internal dynamics run"""
         self.atoms.calc.reset()
-        
+
         self.atoms.calc.md(self.atoms,
                            self.dt,
                            self.temperature,

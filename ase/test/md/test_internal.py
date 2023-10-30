@@ -13,12 +13,12 @@ from ase.io import Trajectory
 def test_dftb(factory, testdir):
     atoms = molecule('H2O')
     initial_positions = atoms.get_positions().copy()
-    
+
     fixed = 0
     atoms.set_constraint(FixAtoms([fixed]))
 
     atoms.calc = factory.calc(label='h2o/main')
-    
+
     timestep = 2 * fs
     trajname = 'h2o.traj'
     dyn = Internal(atoms, timestep, 300 * kB, trajectory=trajname)

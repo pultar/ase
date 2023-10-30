@@ -12,12 +12,12 @@ def test_dftb(factory, testdir):
     atoms = molecule('H2O')
     atoms[0].position[0] -= 0.5
     initial_positions = atoms.get_positions().copy()
-    
+
     fixed = 0
     atoms.set_constraint(FixAtoms([fixed]))
 
     atoms.calc = factory.calc(label='h2o/main')
-    
+
     fmax = 0.7
     dyn = Internal(atoms)
     dyn.run(fmax=fmax, steps=1000)
