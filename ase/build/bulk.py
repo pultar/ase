@@ -117,7 +117,7 @@ def bulk(
     natoms0 = structures[crystalstructure]
     if natoms != natoms0:
         raise ValueError(
-            f'Please specify {plural(natoms0, 'atom')} for {crystalstructure} '
+            f'Please specify {plural(natoms0, "atom")} for {crystalstructure} '
             f'and not {natoms}'
         )
 
