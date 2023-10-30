@@ -179,7 +179,7 @@ def make_supercell(prim, P, *, wrap=True, order="cell-major", tol=1e-5):
     elif order == "atom-major":
         shifted = prim.positions[:, None, :] + lattice_points[None, :, :]
     else:
-        raise ValueError(f"invalid order: {order}")
+        raise ValueError(f'invalid order: {order}')
     shifted_reshaped = shifted.reshape(-1, 3)
 
     superatoms = Atoms(positions=shifted_reshaped,
