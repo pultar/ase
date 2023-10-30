@@ -2,10 +2,11 @@
 
 import sys
 from pathlib import Path
+
 import numpy as np
 
 import ase.units as u
-from ase.parallel import world, paropen, parprint
+from ase.parallel import paropen, parprint, world
 from ase.vibrations import Vibrations
 from ase.vibrations.raman import Raman, RamanCalculatorBase
 
@@ -13,6 +14,7 @@ from ase.vibrations.raman import Raman, RamanCalculatorBase
 class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
     """Base class for resonant Raman calculators using finite differences.
     """
+
     def __init__(self, atoms, ExcitationsCalculator, *args,
                  exkwargs=None, exext='.ex.gz', overlap=False,
                  **kwargs):
@@ -97,6 +99,7 @@ class ResonantRamanCalculator(RamanCalculatorBase, Vibrations):
 class ResonantRaman(Raman):
     """Base Class for resonant Raman intensities using finite differences.
     """
+
     def __init__(self, atoms, Excitations, *args,
                  observation=None,
                  form='v',         # form of the dipole operator
@@ -151,7 +154,7 @@ class ResonantRaman(Raman):
 
         kwargs['exext'] = exext
         Raman.__init__(self, atoms, *args, **kwargs)
-        assert(self.vibrations.nfree == 2)
+        assert self.vibrations.nfree == 2
 
         self.exobj = Excitations
         if exkwargs is None:
@@ -233,7 +236,7 @@ class ResonantRaman(Raman):
 
         def select(exl, matching):
             mlst = [ex for ex in exl if ex in matching]
-            assert(len(mlst) == len(matching))
+            assert len(mlst) == len(matching)
             return mlst
 
         ex0 = select(ex0_object, matching)

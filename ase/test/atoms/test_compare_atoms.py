@@ -4,6 +4,7 @@ def test_compare_atoms():
     types of system changes
     """
     import numpy as np
+
     from ase import Atoms
     from ase.calculators.calculator import compare_atoms
 
@@ -29,7 +30,8 @@ def test_compare_atoms():
     assert set(compare_atoms(atoms1, atoms2)) == {"positions"}
 
     # An excluded property (re-use atoms1 and atoms2 from previous check)
-    assert set(compare_atoms(atoms1, atoms2, excluded_properties={"positions"})) == set()
+    assert set(compare_atoms(atoms1, atoms2,
+               excluded_properties={"positions"})) == set()
 
     # Optional array (currently 'initial_charges' or 'initial_magmoms')
     # NOTE: Suppose you initialize an array of *zero charges* for atoms2

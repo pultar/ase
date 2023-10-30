@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase import Atoms
 from ase.formula import Formula
 
@@ -56,6 +57,11 @@ def test_formula():
 
 def test_convert():
     assert str(Formula('AgAg').convert('hill')) == 'Ag2'
+
+
+def test_formula_on_formula():
+    formula = Formula('CH3CH2OH')
+    assert formula == Formula(formula)
 
 
 @pytest.mark.parametrize(

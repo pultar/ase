@@ -1,11 +1,11 @@
 import os
+
 import numpy as np
 
-from ase.gui.i18n import _
-from ase import Atoms
 import ase.gui.ui as ui
+from ase import Atoms
 from ase.data import atomic_numbers, chemical_symbols
-
+from ase.gui.i18n import _
 
 current_selection_string = _('(selection)')
 
@@ -13,7 +13,7 @@ current_selection_string = _('(selection)')
 class AddAtoms:
     def __init__(self, gui):
         self.gui = gui
-        win = self.win = ui.Window(_('Add atoms'))
+        win = self.win = ui.Window(_('Add atoms'), wmtype='utility')
         win.add(_('Specify chemical symbol, formula, or filename.'))
 
         def choose_file():

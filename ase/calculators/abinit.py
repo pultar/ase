@@ -3,13 +3,14 @@
 http://www.abinit.org/
 """
 
+import os
 import re
+from pathlib import Path
+from subprocess import check_call, check_output
 
 import ase.io.abinit as io
 from ase.calculators.genericfileio import (CalculatorTemplate,
                                            GenericFileIOCalculator)
-from subprocess import check_output
-from pathlib import Path
 
 
 def get_abinit_version(command):
@@ -28,14 +29,12 @@ class AbinitProfile:
         self.argv = argv
 
     def version(self):
-        from subprocess import check_output
         return check_output(self.argv + ['--version'])
 
     def run(self, directory, inputfile, outputfile):
-        from subprocess import check_call
-        with open(outputfile, 'w') as fd:
-            check_call(self.argv + [str(inputfile)], stdout=fd,
-                       cwd=directory)
+        argv = self.argv + [str(inputfile)]
+        with open(directory / outputfile, 'wb') as fd:
+            check_call(argv, stdout=fd, env=os.environ, cwd=directory)
 
 
 class AbinitTemplate(CalculatorTemplate):
@@ -47,15 +46,16 @@ class AbinitTemplate(CalculatorTemplate):
             implemented_properties=['energy', 'free_energy',
                                     'forces', 'stress', 'magmom'])
 
-        self.input_file = f'{self._label}.in'
-        self.output_file = f'{self._label}.log'
+        # XXX superclass should require inputname and outputname
+
+        self.inputname = f'{self._label}.in'
+        self.outputname = f'{self._label}.log'
 
     def execute(self, directory, profile) -> None:
-        profile.run(directory, self.input_file, self.output_file)
+        profile.run(directory, self.inputname, self.outputname)
 
     def write_input(self, directory, atoms, parameters, properties):
         directory = Path(directory)
-        directory.mkdir(exist_ok=True, parents=True)
         parameters = dict(parameters)
         pp_paths = parameters.pop('pp_paths', None)
         assert pp_paths is not None
@@ -75,6 +75,18 @@ class AbinitTemplate(CalculatorTemplate):
 
     def read_results(self, directory):
         return io.read_abinit_outputs(directory, self._label)
+
+    def socketio_argv(self, profile, unixsocket, port):
+        # XXX This handling of --ipi argument is used by at least two
+        # calculators, should refactor if needed yet again
+        if unixsocket:
+            ipi_arg = f'{unixsocket}:UNIX'
+        else:
+            ipi_arg = f'localhost:{port:d}'
+        return [*profile.argv, self.inputname, '--ipi', ipi_arg]
+
+    def socketio_parameters(self, unixsocket, port):
+        return dict(ionmov=28, expert_user=1, optcell=2)
 
 
 class Abinit(GenericFileIOCalculator):

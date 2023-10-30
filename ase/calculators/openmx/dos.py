@@ -17,10 +17,11 @@ functional theories.
     You should have received a copy of the GNU Lesser General Public License
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
-import numpy as np
 import os
 import subprocess
 import warnings
+
+import numpy as np
 
 from ase.calculators.openmx.reader import rn as read_nth_to_last_value
 
@@ -84,7 +85,7 @@ class DOS:
             atom_and_orbital = str(atom_index) + orbital
         key += 'dos'
         self.dos_dict[key + '_energies_' + atom_and_orbital] = np.ndarray(
-              number_of_lines)
+            number_of_lines)
         if spin_polarization:
             self.dos_dict[key + atom_and_orbital + 'up'] = \
                 np.ndarray(number_of_lines)
@@ -193,7 +194,7 @@ class DOS:
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
                 if label_index == bottom_index or label_index == \
-                                                  len(yticklabels) // 2:
+                   len(yticklabels) // 2:
                     t.set_color(density_color)
                 else:
                     t.set_visible(False)
@@ -204,7 +205,7 @@ class DOS:
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
                 if label_index == bottom_index or label_index == \
-                                                  len(yticklabels) // 2:
+                   len(yticklabels) // 2:
                     t.set_color(cum_color)
                 else:
                     t.set_visible(False)
@@ -231,7 +232,7 @@ class DOS:
                 bottom_index = len(yticklabels) - 1
             for t in yticklabels:
                 if label_index == bottom_index or label_index == \
-                                                  len(yticklabels) // 2:
+                   len(yticklabels) // 2:
                     t.set_color(color)
                 else:
                     t.set_visible(False)

@@ -1,20 +1,20 @@
 """colors.py - select how to color the atoms in the GUI."""
-from ase.gui.i18n import _
-
 import numpy as np
 
 import ase.gui.ui as ui
+from ase.gui.i18n import _
 from ase.gui.utils import get_magmoms
 
 
 class ColorWindow:
     """A window for selecting how to color the atoms."""
+
     def __init__(self, gui):
         self.reset(gui)
 
     def reset(self, gui):
         """create a new color window"""
-        self.win = ui.Window(_('Colors'))
+        self.win = ui.Window(_('Colors'), wmtype='utility')
         self.gui = gui
         self.win.add(ui.Label(_('Choose how the atoms are colored:')))
         values = ['jmol', 'tag', 'force', 'velocity',
@@ -153,8 +153,8 @@ class ColorWindow:
                           for red in np.linspace(0, 230, N)]
         else:
             try:
-                import pylab as plt
                 import matplotlib
+                import pylab as plt
                 cmap = plt.cm.get_cmap(cmap)
                 colorscale = [matplotlib.colors.rgb2hex(c[:3]) for c in
                               cmap(np.linspace(0, 1, N))]

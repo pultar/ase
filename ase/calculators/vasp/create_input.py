@@ -19,9 +19,9 @@ http://cms.mpi.univie.ac.at/vasp/
 """
 
 import os
-import warnings
 import shutil
-from os.path import join, isfile, islink
+import warnings
+from os.path import isfile, islink, join
 from typing import List, Sequence, Tuple
 
 import numpy as np
@@ -29,6 +29,49 @@ import numpy as np
 import ase
 from ase.calculators.calculator import kpts2ndarray
 from ase.calculators.vasp.setups import get_default_setups
+
+
+def format_kpoints(kpts, atoms, reciprocal=False, gamma=False):
+    tokens = []
+    append = tokens.append
+
+    append('KPOINTS created by Atomic Simulation Environment\n')
+
+    if isinstance(kpts, dict):
+        kpts = kpts2ndarray(kpts, atoms=atoms)
+        reciprocal = True
+
+    shape = np.array(kpts).shape
+
+    # Wrap scalar in list if necessary
+    if shape == ():
+        kpts = [kpts]
+        shape = (1, )
+
+    if len(shape) == 1:
+        append('0\n')
+        if shape == (1, ):
+            append('Auto\n')
+        elif gamma:
+            append('Gamma\n')
+        else:
+            append('Monkhorst-Pack\n')
+        append(' '.join(f'{kpt:d}' for kpt in kpts))
+        append('\n0 0 0\n')
+    elif len(shape) == 2:
+        append('%i \n' % (len(kpts)))
+        if reciprocal:
+            append('Reciprocal\n')
+        else:
+            append('Cartesian\n')
+        for n in range(len(kpts)):
+            [append('%f ' % kpt) for kpt in kpts[n]]
+            if shape[1] == 4:
+                append('\n')
+            elif shape[1] == 3:
+                append('1.0 \n')
+    return ''.join(tokens)
+
 
 # Parameters that can be set in INCAR. The values which are None
 # are not written and default parameters of VASP are used for them.
@@ -181,7 +224,6 @@ float_keys = [
     'dvvvnorm0',  # Undocumented parameter
     'dvvminpotim',  # Undocumented parameter
     'dvvmaxpotim',  # Undocumented parameter
-    'efermi',  # Undocumented parameter
     'enchg',  # Undocumented charge fitting parameter
     'tau0',  # Undocumented charge fitting parameter
     'encut4o',  # Cutoff energy for 4-center integrals (HF)
@@ -226,6 +268,7 @@ float_keys = [
     'qdt',  # Timestep for quickmin minimization (instanton)
     'qtpz',  # Temperature (instanton)
     'qftol',  # Tolerance (instanton)
+    'nupdown',  # fix spin moment to specified value
 ]
 
 exp_keys = [
@@ -247,6 +290,7 @@ string_keys = [
     'radeq',  # Which type of radial equations to use for rel. core calcs.
     'localized_basis',  # Basis to use in CRPA
     'proutine',  # Select profiling routine
+    'efermi',  # Sets the FERMI level in VASP 6.4.0+
 ]
 
 int_keys = [
@@ -255,6 +299,7 @@ int_keys = [
     'icharg',  # charge: 0-WAVECAR 1-CHGCAR 2-atom 10-const
     'idipol',  # monopol/dipol and quadropole corrections
     'images',  # number of images for NEB calculation
+    'imix',  # specifies density mixing
     'iniwav',  # initial electr wf. : 0-lowe 1-rand
     'isif',  # calculate stress and what to relax
     'ismear',  # part. occupancies: -5 Blochl -4-tet -1-fermi 0-gaus >0 MP
@@ -280,6 +325,7 @@ int_keys = [
     'nbmod',  # specifies mode for partial charge calculation
     'nelm',  # nr. of electronic steps (default 60)
     'nelmdl',  # nr. of initial electronic steps
+    'nelmgw',  # nr. of self-consistency cycles for GW
     'nelmin',
     'nfree',  # number of steps per DOF when calculting Hessian using
     # finite differences
@@ -293,7 +339,6 @@ int_keys = [
     'npar',  # parallelization over bands
     'nsim',  # evaluate NSIM bands simultaneously if using RMM-DIIS
     'nsw',  # number of steps for ionic upd.
-    'nupdown',  # fix spin moment to specified value
     'nwrite',  # verbosity write-flag (how much is written)
     'vdwgr',  # extra keyword for Andris program
     'vdwrn',  # extra keyword for Andris program
@@ -322,7 +367,9 @@ int_keys = [
     'nedos',  # Number of grid points in DOS
     'turbo',  # Ewald, 0 = Normal, 1 = PME
     'omegapar',  # Number of groups for response function calc.
-    'taupar',  # (Possibly Depricated) Number of groups in real time for response function calc.
+    # (Possibly Depricated) Number of groups in real time for
+    # response function calc.
+    'taupar',
     'ntaupar',  # Number of groups in real time for response function calc.
     'antires',  # How to treat antiresonant part of response function
     'magatom',  # Index of atom at which to place magnetic field (NMR)
@@ -555,7 +602,7 @@ bool_keys = [
     'oddonly',  # Undocumented HF parameter
     'evenonly',  # Undocumented HF parameter
     'lfockaedft',  # Undocumented HF parameter
-    'lsubsrot',  # Enable subspace rotation diagonalization
+    'lsubrot',  # Enable subspace rotation diagonalization
     'mixfirst',  # Mix before diagonalization
     'lvcader',  # Calculate derivs. w.r.t. VCA parameters
     'lcompat',  # Enable "full compatibility"
@@ -758,6 +805,14 @@ class GenerateVaspInput:
             'pp': 'LDA'
         },
         # GGAs
+        'blyp': {  # https://www.vasp.at/forum/viewtopic.php?p=17234
+            'pp': 'PBE',
+            'gga': 'B5',
+            'aldax': 1.00,
+            'aggax': 1.00,
+            'aggac': 1.00,
+            'aldac': 0.00
+        },
         'pw91': {
             'pp': 'PW91',
             'gga': '91'
@@ -967,6 +1022,7 @@ class GenerateVaspInput:
         self.list_float_params = {}
         self.special_params = {}
         self.dict_params = {}
+        self.atoms = None
         for key in float_keys:
             self.float_params[key] = None
         for key in exp_keys:
@@ -1164,7 +1220,7 @@ class GenerateVaspInput:
             if m in setups:
                 special_setup_index = m
             elif str(m) in setups:
-                special_setup_index = str(m)  # type: ignore
+                special_setup_index = str(m)  # type: ignore[assignment]
             else:
                 raise Exception("Having trouble with special setup index {0}."
                                 " Please use an int.".format(m))
@@ -1205,7 +1261,7 @@ class GenerateVaspInput:
                         LDA:  $VASP_PP_PATH/potpaw/
                         PBE:  $VASP_PP_PATH/potpaw_PBE/
                         PW91: $VASP_PP_PATH/potpaw_GGA/
-                        
+
                         No pseudopotential for {}!""".format(potcar, symbol))
                 raise RuntimeError(msg)
         return ppp_list
@@ -1238,6 +1294,9 @@ class GenerateVaspInput:
 
         # String shortcuts are initialised to dict form
         elif isinstance(p['setups'], str):
+            if p['setups'].lower() == 'materialsproject':
+                warnings.warn('`materialsproject` setup will be'
+                              'removed in a future release.', FutureWarning)
             if p['setups'].lower() in setups_defaults.keys():
                 p['setups'] = {'base': p['setups']}
 
@@ -1257,6 +1316,14 @@ class GenerateVaspInput:
             except ValueError:
                 pass
         return setups, special_setups
+
+    def _set_spinpol(self, atoms):
+        if self.int_params['ispin'] is None:
+            self.spinpol = atoms.get_initial_magnetic_moments().any()
+        else:
+            # VASP runs non-spin-polarized calculations when `ispin=1`,
+            # regardless if `magmom` is specified or not.
+            self.spinpol = (self.int_params['ispin'] == 2)
 
     def initialize(self, atoms):
         """Initialize a VASP calculation
@@ -1281,8 +1348,7 @@ class GenerateVaspInput:
         self.all_symbols = atoms.get_chemical_symbols()
         self.natoms = len(atoms)
 
-        self.spinpol = (atoms.get_initial_magnetic_moments().any()
-                        or self.int_params['ispin'] == 2)
+        self._set_spinpol(atoms)
 
         setups, special_setups = self._get_setups()
 
@@ -1594,43 +1660,13 @@ class GenerateVaspInput:
                                  "Please use None or a positive number."
                                  "".format(self.float_params['kspacing']))
 
-        p = self.input_params
+        kpointstring = format_kpoints(
+            kpts=self.input_params['kpts'],
+            atoms=atoms,
+            reciprocal=self.input_params['reciprocal'],
+            gamma=self.input_params['gamma'])
         with open(join(directory, 'KPOINTS'), 'w') as kpoints:
-            kpoints.write('KPOINTS created by Atomic Simulation Environment\n')
-
-            if isinstance(p['kpts'], dict):
-                p['kpts'] = kpts2ndarray(p['kpts'], atoms=atoms)
-                p['reciprocal'] = True
-
-            shape = np.array(p['kpts']).shape
-
-            # Wrap scalar in list if necessary
-            if shape == ():
-                p['kpts'] = [p['kpts']]
-                shape = (1, )
-
-            if len(shape) == 1:
-                kpoints.write('0\n')
-                if shape == (1, ):
-                    kpoints.write('Auto\n')
-                elif p['gamma']:
-                    kpoints.write('Gamma\n')
-                else:
-                    kpoints.write('Monkhorst-Pack\n')
-                [kpoints.write('%i ' % kpt) for kpt in p['kpts']]
-                kpoints.write('\n0 0 0\n')
-            elif len(shape) == 2:
-                kpoints.write('%i \n' % (len(p['kpts'])))
-                if p['reciprocal']:
-                    kpoints.write('Reciprocal\n')
-                else:
-                    kpoints.write('Cartesian\n')
-                for n in range(len(p['kpts'])):
-                    [kpoints.write('%f ' % kpt) for kpt in p['kpts'][n]]
-                    if shape[1] == 4:
-                        kpoints.write('\n')
-                    elif shape[1] == 3:
-                        kpoints.write('1.0 \n')
+            kpoints.write(kpointstring)
 
     def write_potcar(self, suffix="", directory='./'):
         """Writes the POTCAR file."""
@@ -1649,9 +1685,9 @@ class GenerateVaspInput:
         column. It is used for restart purposes to get sorting right
         when reading in an old calculation to ASE."""
 
-        file = open(join(directory, 'ase-sort.dat'), 'w')
-        for n in range(len(self.sort)):
-            file.write('%5i %5i \n' % (self.sort[n], self.resort[n]))
+        with open(join(directory, 'ase-sort.dat'), 'w') as fd:
+            for n in range(len(self.sort)):
+                fd.write('%5i %5i \n' % (self.sort[n], self.resort[n]))
 
     # The below functions are used to restart a calculation
 
@@ -1944,11 +1980,11 @@ def read_potcar_numbers_of_electrons(file_obj):
 
 def count_symbols(atoms, exclude=()):
     """Count symbols in atoms object, excluding a set of indices
-    
+
     Parameters:
         atoms: Atoms object to be grouped
         exclude: List of indices to be excluded from the counting
-    
+
     Returns:
         Tuple of (symbols, symbolcount)
         symbols: The unique symbols in the included list

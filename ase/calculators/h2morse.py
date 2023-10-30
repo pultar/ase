@@ -1,12 +1,13 @@
 from itertools import count
+
 import numpy as np
 
 from ase import Atoms
-from ase.units import invcm, Ha
-from ase.data import atomic_masses
 from ase.calculators.calculator import all_changes
-from ase.calculators.morse import MorsePotential
 from ase.calculators.excitation_list import Excitation, ExcitationList
+from ase.calculators.morse import MorsePotential
+from ase.data import atomic_masses
+from ase.units import Ha, invcm
 
 """The H2 molecule represented by Morse-Potentials for
 gound and first 3 excited singlet states B + C(doubly degenerate)"""
@@ -108,6 +109,7 @@ class H2MorseCalculator(MorsePotential):
 
 class H2MorseExcitedStatesCalculator():
     """First singlet excited states of H2 from Morse potentials"""
+
     def __init__(self, nstates=3):
         """
         Parameters
@@ -151,6 +153,7 @@ class H2MorseExcitedStatesCalculator():
 
 class H2MorseExcitedStates(ExcitationList):
     """First singlet excited states of H2"""
+
     def __init__(self, nstates=3):
         """
         Parameters
@@ -198,6 +201,7 @@ class H2Excitation(Excitation):
 class H2MorseExcitedStatesAndCalculator(
         H2MorseExcitedStatesCalculator, H2MorseExcitedStates):
     """Traditional joined object for backward compatibility only"""
+
     def __init__(self, calculator, nstates=3):
         if isinstance(calculator, str):
             exlist = H2MorseExcitedStates.read(calculator, nstates)

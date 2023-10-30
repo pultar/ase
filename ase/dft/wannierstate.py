@@ -20,6 +20,10 @@ def random_orthogonal_matrix(dim, rng=np.random, real=False):
     return ortho_m
 
 
+def _empty():
+    return np.empty(0, complex)
+
+
 class WannierSpec:
     def __init__(self, Nk, Nw, Nb, fixedstates_k):
         self.Nk = Nk
@@ -38,7 +42,7 @@ class WannierSpec:
             if L > 0:
                 C_kul.append(np.identity(self.Nb - M, complex)[:, :L])
             else:
-                C_kul.append([])
+                C_kul.append(_empty())
         return WannierState(C_kul, U_kww)
 
     def random(self, rng, edf_k):
@@ -51,7 +55,7 @@ class WannierSpec:
                 C_kul.append(random_orthogonal_matrix(
                     self.Nb - M, rng=rng, real=False)[:, :L])
             else:
-                C_kul.append(np.array([]))
+                C_kul.append(_empty())
         return WannierState(C_kul, U_kww)
 
     def initial_orbitals(self, calc, orbitals, kptgrid, edf_k, spin):
@@ -67,6 +71,7 @@ class WannierSpec:
 
     def scdm(self, calc, kpt_kc, spin):
         from ase.dft.wannier import scdm
+
         # get the size of the grid and check if there are Nw bands:
         ps = calc.get_pseudo_wave_function(band=self.Nw,
                                            kpt=0, spin=0)
@@ -89,5 +94,6 @@ class WannierSpec:
 
 class WannierState:
     def __init__(self, C_kul, U_kww):
-        self.C_kul = C_kul
+        # Number of u is not always the same, so C_kul is ragged
+        self.C_kul = [C_ul.astype(complex) for C_ul in C_kul]
         self.U_kww = U_kww

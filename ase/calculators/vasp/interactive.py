@@ -1,16 +1,15 @@
-from subprocess import Popen, PIPE
+import os
+import sys
+import time
+from subprocess import PIPE, Popen
 
 from ase.calculators.calculator import Calculator
 from ase.io import read
 
 from .create_input import GenerateVaspInput
 
-import time
-import os
-import sys
 
-
-class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore
+class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore[misc]
     name = "VaspInteractive"
     implemented_properties = ['energy', 'forces', 'stress']
 
@@ -112,7 +111,7 @@ class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore
         # or it exited with an error. Either way, we need to raise an error.
 
         raise RuntimeError("VASP exited unexpectedly with exit code {}"
-                           "".format(self.subprocess.poll()))
+                           "".format(self.process.poll()))
 
     def close(self):
         if self.process is None:
@@ -143,10 +142,11 @@ class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore
 
         new = read(os.path.join(self.path, 'vasprun.xml'), index=-1)
 
-        self.results = {'free_energy': new.get_potential_energy(force_consistent=True),
-                        'energy': new.get_potential_energy(),
-                        'forces': new.get_forces()[self.resort],
-                        'stress': new.get_stress()}
+        self.results = {
+            'free_energy': new.get_potential_energy(force_consistent=True),
+            'energy': new.get_potential_energy(),
+            'forces': new.get_forces()[self.resort],
+            'stress': new.get_stress()}
 
     def __del__(self):
         self.close()

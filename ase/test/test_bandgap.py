@@ -1,5 +1,6 @@
 def test_bandgap():
     import numpy as np
+
     from ase.dft.bandgap import bandgap
 
     class Calculator:
@@ -42,8 +43,10 @@ def test_bandgap():
     r = test([[[-1, 2, 3], [-1, -1, 1]]])
     assert r == [(0, None, None), (0, None, None)]
     r = test([[[-1, 2, 3], [-1, -1, 1]], [[-1, 2, 2], [-3, 1, 1]]])
-    assert r == [(0, (None, None), (None, None)), (0, (None, None), (None, None)),
-                 (0, (None, None), (None, None)), (0, (None, None), (None, None)),
+    assert r == [(0, (None, None), (None, None)),
+                 (0, (None, None), (None, None)),
+                 (0, (None, None), (None, None)),
+                 (0, (None, None), (None, None)),
                  (2, (1, 0), (1, 1)), (3, (1, 0), (1, 0))]
     r = test([[[-1, 5], [-2, 2]], [[-2, 4], [-4, 1]]])
     assert r == [(2, (0, 0), (1, 1)), (3, (0, 1), (1, 1)),

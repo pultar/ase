@@ -1,7 +1,10 @@
 from typing import List
+
 import numpy as np
+
 from ase import Atoms
-from .spacegroup import Spacegroup, _SPACEGROUP
+
+from .spacegroup import _SPACEGROUP, Spacegroup
 
 __all__ = ('get_basis', )
 
@@ -160,7 +163,7 @@ def get_basis(atoms: Atoms,
 def _get_reduced_indices(atoms: Atoms, tol: float = 1e-5) -> List[int]:
     """Get a list of the reduced atomic indices using spglib.
     Note: Does no checks to see if spglib is installed.
-    
+
     :param atoms: ase Atoms object to reduce
     :param tol: ``float``, numeric tolerance for positional comparisons
     """

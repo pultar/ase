@@ -1,29 +1,28 @@
 import errno
 import functools
-import os
 import io
+import os
 import pickle
+import re
+import string
 import sys
 import time
-import string
 import warnings
+from contextlib import ExitStack, contextmanager
 from importlib import import_module
-from math import sin, cos, radians, atan2, degrees
-from contextlib import contextmanager, ExitStack
-from math import gcd
-from pathlib import PurePath, Path
-import re
+from math import atan2, cos, degrees, gcd, radians, sin
+from pathlib import Path, PurePath
 
 import numpy as np
 
 from ase.formula import formula_hill, formula_metal
 
-__all__ = ['exec_', 'basestring', 'import_module', 'seterr', 'plural',
+__all__ = ['basestring', 'import_module', 'seterr', 'plural',
            'devnull', 'gcd', 'convert_string_to_fd', 'Lock',
            'opencew', 'OpenLock', 'rotate', 'irotate', 'pbc2pbc', 'givens',
-           'hsv2rgb', 'hsv', 'pickleload', 'FileNotFoundError',
+           'hsv2rgb', 'hsv', 'pickleload', 'reader',
            'formula_hill', 'formula_metal', 'PurePath', 'xwopen',
-           'tokenize_version']
+           'tokenize_version', 'get_python_package_path_description']
 
 
 def tokenize_version(version_string: str):
@@ -80,6 +79,8 @@ def seterr(**kwargs):
 
 def plural(n, word):
     """Use plural for n!=1.
+
+    >>> from ase.utils import plural
 
     >>> plural(0, 'egg'), plural(1, 'egg'), plural(2, 'egg')
     ('0 eggs', '1 egg', '2 eggs')
@@ -170,14 +171,15 @@ def xwopen(filename, world=None):
             fd.close()
 
 
-#@deprecated('use "with xwopen(...) as fd: ..." to prevent resource leak')
+# @deprecated('use "with xwopen(...) as fd: ..." to prevent resource leak')
 def opencew(filename, world=None):
     return _opencew(filename, world)
 
 
 def _opencew(filename, world=None):
+    import ase.parallel as parallel
     if world is None:
-        from ase.parallel import world
+        world = parallel.world
 
     closelater = []
 
@@ -198,7 +200,7 @@ def _opencew(filename, world=None):
             closelater.append(fd)
 
         # Synchronize:
-        error = world.sum(error)
+        error = parallel.broadcast(error, 0, world)
         if error == errno.EEXIST:
             return None
         if error:
@@ -470,6 +472,7 @@ class iofunction:
     """Decorate func so it accepts either str or file.
 
     (Won't work on functions that return a generator.)"""
+
     def __init__(self, mode):
         self.mode = mode
 
@@ -511,12 +514,12 @@ def write_json(self, fd):
     _write_json(fd, self)
 
 
-@classmethod  # type: ignore
+@classmethod  # type: ignore[misc]
 def read_json(cls, fd):
     """Read new instance from JSON file."""
     from ase.io.jsonio import read_json as _read_json
     obj = _read_json(fd)
-    assert type(obj) is cls
+    assert isinstance(obj, cls)
     return obj
 
 
@@ -634,10 +637,32 @@ class IOContext:
         if hasattr(file, 'close'):
             return file  # File already opened, not for us to close.
 
+        encoding = None if mode.endswith('b') else 'utf-8'
+
         if file is None or comm.rank != 0:
-            return self.closelater(open(os.devnull, mode=mode))
+            return self.closelater(open(os.devnull, mode=mode,
+                                        encoding=encoding))
 
         if file == '-':
             return sys.stdout
 
-        return self.closelater(open(file, mode=mode))
+        return self.closelater(open(file, mode=mode, encoding=encoding))
+
+
+def get_python_package_path_description(
+        package, default='module has no path') -> str:
+    """Helper to get path description of a python package/module
+
+    If path has multiple elements, the first one is returned.
+    If it is empty, the default is returned.
+    Exceptions are returned as strings default+(exception).
+    Always returns a string.
+    """
+    try:
+        p = list(package.__path__)
+        if p:
+            return str(p[0])
+        else:
+            return default
+    except Exception as ex:
+        return "{:} ({:})".format(default, ex)

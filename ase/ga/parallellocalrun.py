@@ -1,10 +1,11 @@
 """ Class for handling several simultaneous jobs.
     The class has been tested on linux and Mac OS X.
 """
-from subprocess import Popen, PIPE
 import os
 import time
-from ase.io import write, read
+from subprocess import PIPE, Popen
+
+from ase.io import read, write
 
 
 class ParallelLocalRun:
@@ -68,13 +69,13 @@ class ParallelLocalRun:
                   universal_newlines=True)
         (_, fout) = (p.stdin, p.stdout)
         lines = fout.readlines()
-        lines = [l for l in lines if l.find('defunct') == -1]
+        lines = [line for line in lines if line.find('defunct') == -1]
 
         stopped_runs = []
         for i in range(len(self.running_pids) - 1, -1, -1):
             found = False
-            for l in lines:
-                if l.find(str(self.running_pids[i][1])) != -1:
+            for line in lines:
+                if line.find(str(self.running_pids[i][1])) != -1:
                     found = True
                     break
             if not found:

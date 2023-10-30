@@ -8,17 +8,15 @@ object.
 """
 import copy
 import numbers
-from math import cos, sin, pi
+from math import cos, pi, sin
 
 import numpy as np
 
 import ase.units as units
 from ase.atom import Atom
 from ase.cell import Cell
-from ase.stress import voigt_6_to_full_3x3_stress, full_3x3_to_voigt_6_stress
 from ase.data import atomic_masses, atomic_masses_common
-from ase.geometry import (wrap_positions, find_mic, get_angles, get_distances,
-                          get_dihedrals)
+from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
 from ase.symbols import Symbols, symbols2numbers
 from ase.utils import deprecated
 
@@ -104,6 +102,8 @@ class Atoms:
     Examples:
 
     These three are equivalent:
+
+    >>> from ase import Atom
 
     >>> d = 1.104  # N2 bondlength
     >>> a = Atoms('N2', [(0, 0, 0), (0, 0, d)])
@@ -295,12 +295,12 @@ class Atoms:
         if hasattr(calc, 'set_atoms'):
             calc.set_atoms(self)
 
-    @calc.deleter  # type: ignore
+    @calc.deleter
     @deprecated(DeprecationWarning('Please use atoms.calc = None'))
     def calc(self):
         self._calc = None
 
-    @property  # type: ignore
+    @property
     @deprecated('Please use atoms.cell.rank instead')
     def number_of_lattice_vectors(self):
         """Number of (non-zero) lattice vectors."""
@@ -703,6 +703,7 @@ class Atoms:
             optional keywords `pbc`, `center`, `pretty_translation`, `eps`,
             see :func:`ase.geometry.wrap_positions`
         """
+        from ase.geometry import wrap_positions
         if wrap:
             if 'pbc' not in wrap_kw:
                 wrap_kw['pbc'] = self.pbc
@@ -1094,6 +1095,8 @@ class Atoms:
             return Atom(atoms=self, index=i)
         elif not isinstance(i, slice):
             i = np.array(i)
+            if len(i) == 0:
+                i = np.array([], dtype=int)
             # if i is a mask
             if i.dtype == bool:
                 if len(i) != len(self):
@@ -1172,7 +1175,7 @@ class Atoms:
                 raise ValueError('Cannot repeat along undefined lattice '
                                  'vector')
 
-        M = np.product(m)
+        M = np.prod(m)
         n = len(self)
 
         for name, a in self.arrays.items():
@@ -1315,7 +1318,7 @@ class Atoms:
         Constraints are considered for scaled=False.
         """
         old_com = self.get_center_of_mass(scaled=scaled)
-        difference = old_com - com
+        difference = com - old_com
         if scaled:
             self.set_scaled_positions(self.get_scaled_positions() + difference)
         else:
@@ -1347,11 +1350,11 @@ class Atoms:
             I13 += -m * x * z
             I23 += -m * y * z
 
-        I = np.array([[I11, I12, I13],
-                      [I12, I22, I23],
-                      [I13, I23, I33]])
+        Itensor = np.array([[I11, I12, I13],
+                            [I12, I22, I23],
+                            [I13, I23, I33]])
 
-        evals, evecs = np.linalg.eigh(I)
+        evals, evecs = np.linalg.eigh(Itensor)
         if vectors:
             return evals, evecs.transpose()
         else:
@@ -1533,6 +1536,8 @@ class Atoms:
         Use mic=True to use the Minimum Image Convention and calculate the
         angles across periodic boundaries.
         """
+        from ase.geometry import get_dihedrals
+
         indices = np.array(indices)
         assert indices.shape[1] == 4
 
@@ -1614,8 +1619,7 @@ class Atoms:
         center = self.positions[a3]
         self._masked_rotate(center, axis, diff, mask)
 
-    def rotate_dihedral(self, a1, a2, a3, a4,
-                        angle=None, mask=None, indices=None):
+    def rotate_dihedral(self, a1, a2, a3, a4, angle, mask=None, indices=None):
         """Rotate dihedral angle.
 
         Same usage as in :meth:`ase.Atoms.set_dihedral`: Rotate a group by a
@@ -1644,6 +1648,8 @@ class Atoms:
         Use mic=True to use the Minimum Image Convention and calculate
         the angle across periodic boundaries.
         """
+        from ase.geometry import get_angles
+
         indices = np.array(indices)
         assert indices.shape[1] == 3
 
@@ -1738,6 +1744,8 @@ class Atoms:
         Use mic=True to use the Minimum Image Convention.
         vector=True gives the distance vector (from a to self[indices]).
         """
+        from ase.geometry import get_distances
+
         R = self.arrays['positions']
         p1 = [R[a]]
         p2 = R[indices]
@@ -1763,6 +1771,8 @@ class Atoms:
 
         Use mic=True to use the Minimum Image Convention.
         """
+        from ase.geometry import get_distances
+
         R = self.arrays['positions']
 
         cell = None
@@ -1798,6 +1808,7 @@ class Atoms:
 
         It is assumed that the atoms in *mask*/*indices* move together
         with *a1*. If *fix=1*, only *a0* will therefore be moved."""
+        from ase.geometry import find_mic
 
         if a0 % len(self) == a1 % len(self):
             raise ValueError('a0 and a1 must not be the same')
@@ -1976,8 +1987,8 @@ class Atoms:
         please set matplotlib.use('gtk') before calling this
         method.
         """
-        from ase.gui.images import Images
         from ase.gui.gui import GUI
+        from ase.gui.images import Images
         images = Images([self])
         gui = GUI(images)
         gui.run()

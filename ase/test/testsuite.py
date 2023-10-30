@@ -1,13 +1,9 @@
+import argparse
 import os
 import sys
-from subprocess import Popen
-import importlib
-from pathlib import Path
 import warnings
-import argparse
-from multiprocessing import cpu_count
+from pathlib import Path
 
-from ase.calculators.calculator import names as calc_names
 from ase.cli.main import CLIError
 
 testdir = Path(__file__).parent
@@ -53,7 +49,8 @@ def test(calculators=tuple(), jobs=0, verbose=False,
 
 
 def have_module(module):
-    return importlib.find_loader(module) is not None
+    import importlib.util
+    return importlib.util.find_spec(module) is not None
 
 
 MULTIPROCESSING_MAX_WORKERS = 32
@@ -62,6 +59,8 @@ MULTIPROCESSING_AUTO = -1
 
 
 def choose_how_many_workers(jobs):
+    from multiprocessing import cpu_count
+
     if jobs == MULTIPROCESSING_AUTO:
         if have_module('xdist'):
             jobs = min(cpu_count(), MULTIPROCESSING_MAX_WORKERS)
@@ -93,7 +92,7 @@ the ASE_CONFIG environment variable.  Example configuration file:
 [executables]
 abinit = abinit
 cp2k = cp2k_shell
-dftb+ = dftb+
+dftb = dftb+
 espresso = pw.x
 lammpsrun = lmp
 nwchem = /usr/bin/nwchem
@@ -151,6 +150,10 @@ class CLICommand:
 
     @staticmethod
     def run(args):
+        from subprocess import Popen
+
+        from ase.calculators.names import names as calc_names
+
         if args.help_calculators:
             print(help_calculators)
             sys.exit(0)
@@ -163,7 +166,7 @@ class CLICommand:
         if args.nogui:
             os.environ.pop('DISPLAY')
 
-        pytest_args = ['-v']
+        pytest_args = []
 
         def add_args(*args):
             pytest_args.extend(args)

@@ -7,24 +7,22 @@ comment line, and additional per-atom properties as extra columns.
 
 Contributed by James Kermode <james.kermode@gmail.com>
 """
-
-
-from itertools import islice
+import json
+import numbers
 import re
 import warnings
 from io import StringIO, UnsupportedOperation
-import json
 
 import numpy as np
-import numbers
 
 from ase.atoms import Atoms
-from ase.calculators.calculator import all_properties, Calculator
+from ase.calculators.calculator import BaseCalculator, all_properties
 from ase.calculators.singlepoint import SinglePointCalculator
-from ase.spacegroup.spacegroup import Spacegroup
-from ase.parallel import paropen
 from ase.constraints import FixAtoms, FixCartesian
 from ase.io.formats import index2range
+from ase.io.utils import ImageIterator
+from ase.parallel import paropen
+from ase.spacegroup.spacegroup import Spacegroup
 from ase.utils import reader
 
 __all__ = ['read_xyz', 'write_xyz', 'iread_xyz']
@@ -145,19 +143,26 @@ def key_val_str_to_dict(string, sep=None):
 
             # parse special strings as boolean or JSON
             if isinstance(value, str):
-                # Parse boolean values: 'T' -> True, 'F' -> False,
-                #                       'T T F' -> [True, True, False]
-                str_to_bool = {'T': True, 'F': False}
-
+                # Parse boolean values:
+                # T or [tT]rue or TRUE -> True
+                # F or [fF]alse or FALSE -> False
+                # For list: 'T T F' -> [True, True, False]
+                # Cannot use `.lower()` to reduce `str_to_bool` mapping because
+                # 't'/'f' not accepted
+                str_to_bool = {
+                    'T': True, 'F': False, 'true': True, 'false': False,
+                    'True': True, 'False': False, 'TRUE': True, 'FALSE': False
+                }
                 try:
                     boolvalue = [str_to_bool[vpart] for vpart in
                                  re.findall(r'[^\s,]+', value)]
+
                     if len(boolvalue) == 1:
                         value = boolvalue[0]
                     else:
                         value = boolvalue
                 except KeyError:
-                    # parse JSON
+                    # Try to parse JSON
                     if value.startswith("_JSON "):
                         d = json.loads(value.replace("_JSON ", "", 1))
                         value = np.array(d)
@@ -380,8 +385,7 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
 
     pbc = None
     if 'pbc' in info:
-        pbc = info['pbc']
-        del info['pbc']
+        pbc = info.pop('pbc')
     elif 'Lattice' in info:
         # default pbc for extxyz file containing Lattice
         # is True in all directions
@@ -474,10 +478,10 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             duplicate_numbers = arrays['numbers']
         del arrays['numbers']
 
-    charges = None
-    if 'charges' in arrays:
-        charges = arrays['charges']
-        del arrays['charges']
+    initial_charges = None
+    if 'initial_charges' in arrays:
+        initial_charges = arrays['initial_charges']
+        del arrays['initial_charges']
 
     positions = None
     if 'positions' in arrays:
@@ -487,20 +491,21 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
     atoms = Atoms(symbols=symbols,
                   positions=positions,
                   numbers=numbers,
-                  charges=charges,
+                  charges=initial_charges,
                   cell=cell,
                   pbc=pbc,
                   info=info)
 
     # Read and set constraints
     if 'move_mask' in arrays:
+        move_mask = arrays['move_mask'].astype(bool)
         if properties['move_mask'][1] == 3:
             cons = []
             for a in range(natoms):
-                cons.append(FixCartesian(a, mask=~arrays['move_mask'][a, :]))
+                cons.append(FixCartesian(a, mask=~move_mask[a, :]))
             atoms.set_constraint(cons)
         elif properties['move_mask'][1] == 1:
-            atoms.set_constraint(FixAtoms(mask=~arrays['move_mask']))
+            atoms.set_constraint(FixAtoms(mask=~move_mask))
         else:
             raise XYZError('Not implemented constraint')
         del arrays['move_mask']
@@ -528,7 +533,7 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
                 results[key] = stress
     for key in list(atoms.arrays.keys()):
         if (key in per_atom_properties and len(value.shape) >= 1
-            and value.shape[0] == len(atoms)):
+                and value.shape[0] == len(atoms)):
             results[key] = atoms.arrays[key]
     if results != {}:
         calculator = SinglePointCalculator(atoms, **results)
@@ -563,39 +568,6 @@ def ixyzchunks(fd):
         except StopIteration:
             raise XYZError('Incomplete XYZ chunk')
         yield XYZChunk(lines, natoms)
-
-
-class ImageIterator:
-    """"""
-
-    def __init__(self, ichunks):
-        self.ichunks = ichunks
-
-    def __call__(self, fd, indices=-1):
-        if not hasattr(indices, 'start'):
-            if indices < 0:
-                indices = slice(indices - 1, indices)
-            else:
-                indices = slice(indices, indices + 1)
-
-        for chunk in self._getslice(fd, indices):
-            yield chunk.build()
-
-    def _getslice(self, fd, indices):
-        try:
-            iterator = islice(self.ichunks(fd), indices.start, indices.stop,
-                              indices.step)
-        except ValueError:
-            # Negative indices.  Go through the whole thing to get the length,
-            # which allows us to evaluate the slice, and then read it again
-            startpos = fd.tell()
-            nchunks = 0
-            for chunk in self.ichunks(fd):
-                nchunks += 1
-            fd.seek(startpos)
-            indices_tuple = indices.indices(nchunks)
-            iterator = islice(self.ichunks(fd), *indices_tuple)
-        return iterator
 
 
 iread_xyz = ImageIterator(ixyzchunks)
@@ -899,14 +871,14 @@ def write_xyz(fileobj, images, comment='', columns=None,
         if write_results:
             calculator = atoms.calc
             if (calculator is not None
-                    and isinstance(calculator, Calculator)):
+                    and isinstance(calculator, BaseCalculator)):
                 for key in all_properties:
                     value = calculator.results.get(key, None)
                     if value is None:
                         # skip missing calculator results
                         continue
                     if (key in per_atom_properties and len(value.shape) >= 1
-                        and value.shape[0] == len(atoms)):
+                            and value.shape[0] == len(atoms)):
                         # per-atom quantities (forces, energies, stresses)
                         per_atom_results[key] = value
                     elif key in per_config_properties:

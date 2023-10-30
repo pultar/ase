@@ -19,69 +19,71 @@ http://cms.mpi.univie.ac.at/vasp/
 """
 
 import os
-import sys
 import re
-import numpy as np
 import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Dict, List, Tuple
 from warnings import warn
-from typing import Dict, Any
 from xml.etree import ElementTree
 
+import numpy as np
+
 import ase
-from ase.io import read, jsonio
-from ase.utils import PurePath
 from ase.calculators import calculator
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointDFTCalculator
 from ase.calculators.vasp.create_input import GenerateVaspInput
+from ase.io import jsonio, read
+from ase.utils import PurePath
+from ase.vibrations.data import VibrationsData
 
 
-class Vasp(GenerateVaspInput, Calculator):  # type: ignore
+class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
     """ASE interface for the Vienna Ab initio Simulation Package (VASP),
     with the Calculator interface.
 
-        Parameters:
+    Parameters:
 
-            atoms:  object
-                Attach an atoms object to the calculator.
+    atoms:  object
+        Attach an atoms object to the calculator.
 
-            label: str
-                Prefix for the output file, and sets the working directory.
-                Default is 'vasp'.
+    label: str
+        Prefix for the output file, and sets the working directory.
+        Default is 'vasp'.
 
-            directory: str
-                Set the working directory. Is prepended to ``label``.
+    directory: str
+        Set the working directory. Is prepended to ``label``.
 
-            restart: str or bool
-                Sets a label for the directory to load files from.
-                if :code:`restart=True`, the working directory from
-                ``directory`` is used.
+    restart: str or bool
+        Sets a label for the directory to load files from.
+        if :code:`restart=True`, the working directory from
+        ``directory`` is used.
 
-            txt: bool, None, str or writable object
-                - If txt is None, output stream will be supressed
+    txt: bool, None, str or writable object
+        - If txt is None, output stream will be supressed
 
-                - If txt is '-' the output will be sent through stdout
+        - If txt is '-' the output will be sent through stdout
 
-                - If txt is a string a file will be opened,\
-                    and the output will be sent to that file.
+        - If txt is a string a file will be opened,\
+            and the output will be sent to that file.
 
-                - Finally, txt can also be a an output stream,\
-                    which has a 'write' attribute.
+        - Finally, txt can also be a an output stream,\
+            which has a 'write' attribute.
 
-                Default is 'vasp.out'
+        Default is 'vasp.out'
 
-                - Examples:
+        - Examples:
+            >>> from ase.calculators.vasp import Vasp
+            >>> calc = Vasp(label='mylabel', txt='vasp.out') # Redirect stdout
+            >>> calc = Vasp(txt='myfile.txt') # Redirect stdout
+            >>> calc = Vasp(txt='-') # Print vasp output to stdout
+            >>> calc = Vasp(txt=None)  # Suppress txt output
 
-                    >>> Vasp(label='mylabel', txt='vasp.out') # Redirect stdout
-                    >>> Vasp(txt='myfile.txt') # Redirect stdout
-                    >>> Vasp(txt='-') # Print vasp output to stdout
-                    >>> Vasp(txt=None)  # Suppress txt output
-
-            command: str
-                Custom instructions on how to execute VASP. Has priority over
-                environment variables.
+    command: str
+        Custom instructions on how to execute VASP. Has priority over
+        environment variables.
     """
     name = 'vasp'
     ase_objtype = 'vasp_calculator'  # For JSON storage
@@ -324,7 +326,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if errorcode:
             raise calculator.CalculationFailed(
                 '{} in {} returned an error: {:d}'.format(
-                    self.name, self.directory, errorcode))
+                    self.name, Path(self.directory).resolve(), errorcode))
 
         # Read results from calculation
         self.update_atoms(atoms)
@@ -381,7 +383,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
             list_int_params=self.list_int_params.copy(),
             list_bool_params=self.list_bool_params.copy(),
             list_float_params=self.list_float_params.copy(),
-            dict_params=self.dict_params.copy())
+            dict_params=self.dict_params.copy(),
+            special_params=self.special_params.copy())
 
     def asdict(self):
         """Return a dictionary representation of the calculator state.
@@ -648,7 +651,9 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         """Reads a file in the directory, and returns the lines
 
         Example:
-        >>> outcar = load_file('OUTCAR')
+        >>> from ase.calculators.vasp import Vasp
+        >>> calc = Vasp()
+        >>> outcar = calc.load_file('OUTCAR')  # doctest: +SKIP
         """
         filename = self._indir(filename)
         with open(filename, 'r') as fd:
@@ -770,7 +775,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         return nelect
 
     def get_k_point_weights(self):
-        filename = self._indir('IBZKPT')
+        filename = 'IBZKPT'
         return self.read_k_point_weights(filename)
 
     def get_dos(self, spin=None, **kwargs):
@@ -1010,7 +1015,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         # Read that occurrence
         if nidx > -1:
             for m in range(len(self.atoms)):
-                magnetic_moments[m] = float(lines[nidx + m + 4].split()[4])
+                magnetic_moments[m] = float(lines[nidx + m + 4].split()[-1])
         return magnetic_moments[self.resort]
 
     def _read_magnetic_moment(self, lines=None):
@@ -1018,9 +1023,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
         if not lines:
             lines = self.load_file('OUTCAR')
 
-        for n, line in enumerate(lines):
+        for line in lines:
             if 'number of electron  ' in line:
-                magnetic_moment = float(line.split()[-1])
+                _ = line.split()[-1]
+                magnetic_moment = 0.0 if _ == "magnetization" else float(_)
         return magnetic_moment
 
     def read_nbands(self, lines=None):
@@ -1151,10 +1157,13 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
     def get_bz_k_points(self):
         raise NotImplementedError
 
-    def read_vib_freq(self, lines=None):
+    def read_vib_freq(self, lines=None) -> Tuple[List[float], List[float]]:
         """Read vibrational frequencies.
 
-        Returns list of real and list of imaginary frequencies."""
+        Returns:
+            List of real and list of imaginary frequencies
+            (imaginary number as real number).
+        """
         freq = []
         i_freq = []
 
@@ -1169,6 +1178,102 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore
                 else:
                     i_freq.append(float(data[-2]))
         return freq, i_freq
+
+    def _read_massweighted_hessian_xml(self) -> np.ndarray:
+        """Read the Mass Weighted Hessian from vasprun.xml.
+
+        Returns:
+            The Mass Weighted Hessian as np.ndarray from the xml file.
+
+            Raises a ReadError if the reader is not able to read the Hessian.
+
+            Converts to ASE units for VASP version 6.
+        """
+
+        file = self._indir('vasprun.xml')
+        try:
+            tree = ElementTree.iterparse(file)
+            hessian = None
+            for event, elem in tree:
+                if elem.tag == 'dynmat':
+                    for i, entry in enumerate(
+                            elem.findall('varray[@name="hessian"]/v')):
+                        text_split = entry.text.split()
+                        if not text_split:
+                            raise ElementTree.ParseError(
+                                "Could not find varray hessian!")
+                        if i == 0:
+                            n_items = len(text_split)
+                            hessian = np.zeros((n_items, n_items))
+                        assert isinstance(hessian, np.ndarray)
+                        hessian[i, :] = np.array(
+                            [float(val) for val in text_split])
+                    if i != n_items - 1:
+                        raise ElementTree.ParseError(
+                            "Hessian is not quadratic!")
+                    # VASP6+ uses THz**2 as unit, not mEV**2 as before
+                    for entry in elem.findall('i[@name="unit"]'):
+                        if entry.text.strip() == 'THz^2':
+                            conv = ase.units._amu / ase.units._e / \
+                                1e-4 * (2 * np.pi)**2  # THz**2 to eV**2
+                            # VASP6 uses factor 2pi
+                            # 1e-4 = (angstrom to meter times Hz to THz) squared
+                            # = (1e10 times 1e-12)**2
+                            break
+                        else:  # Catch changes in VASP
+                            vasp_version_error_msg = (
+                                f'The file "{file}" is from a '
+                                'non-supported VASP version. '
+                                'Not sure what unit the Hessian '
+                                'is in, aborting.')
+                            raise calculator.ReadError(vasp_version_error_msg)
+
+                    else:
+                        conv = 1.0  # VASP version <6 unit is meV**2
+                    assert isinstance(hessian, np.ndarray)
+                    hessian *= conv
+            if hessian is None:
+                raise ElementTree.ParseError("Hessian is None!")
+
+        except ElementTree.ParseError as exc:
+            incomplete_msg = (
+                f'The file "{file}" is incomplete, '
+                'and no DFT data was available. '
+                'This is likely due to an incomplete calculation.')
+            raise calculator.ReadError(incomplete_msg) from exc
+        # VASP uses the negative definition of the hessian compared to ASE
+        return -hessian
+
+    def get_vibrations(self) -> VibrationsData:
+        """Get a VibrationsData Object from a VASP Calculation.
+
+        Returns:
+            VibrationsData object.
+
+            Note that the atoms in the VibrationsData object can be resorted.
+
+            Uses the (mass weighted) Hessian from vasprun.xml, different masses
+            in the POTCAR can therefore result in different results.
+
+            Note the limitations concerning k-points and symmetry mentioned in
+            the VASP-Wiki.
+        """
+
+        mass_weighted_hessian = self._read_massweighted_hessian_xml()
+        # get indices of freely moving atoms, i.e. respect constraints.
+        indices = VibrationsData.indices_from_constraints(self.atoms)
+        # save the corresponding sorted atom numbers
+        sort_indices = np.array(self.sort)[indices]
+        # mass weights = 1/sqrt(mass)
+        mass_weights = np.repeat(self.atoms.get_masses()[sort_indices]**-0.5, 3)
+        # get the unweighted hessian = H_w / m_w / m_w^T
+        # ugly and twice the work, but needed since vasprun.xml does
+        # not have the unweighted ase.vibrations.vibration will do the
+        # opposite in Vibrations.read
+        hessian = mass_weighted_hessian / \
+            mass_weights / mass_weights[:, np.newaxis]
+
+        return VibrationsData.from_2d(self.atoms[self.sort], hessian, indices)
 
     def get_nonselfconsistent_energies(self, bee_type):
         """ Method that reads and returns BEE energy contributions

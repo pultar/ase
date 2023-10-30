@@ -40,20 +40,24 @@ Supported calculators
 
 The calculators can be divided in four groups:
 
-1) Asap_, BigDFT_, DFTK_, GPAW_, and Hotbit_ have their own native ASE
-interfaces.
+1) Abacus_, AMS_, Asap_, BigDFT_, DeePMD-kit_, DFTD3_, DFTD4_, DFTK_, FLEUR_, GPAW_, Hotbit_, TBLite_, and XTB_
+   have their own native or external ASE interfaces.
 
-2) ABINIT, AMBER, CP2K, CASTEP, deMon2k, DFTB+, ELK, EXCITING, FHI-aims, FLEUR, GAUSSIAN,
+2) ABINIT, AMBER, CP2K, CASTEP, deMon2k, DFTB+, ELK, EXCITING, FHI-aims, GAUSSIAN,
    Gromacs, LAMMPS, MOPAC, NWChem, Octopus, ONETEP, PLUMED, psi4, Q-Chem, Quantum ESPRESSO, SIESTA,
    TURBOMOLE and VASP, have Python wrappers in the ASE package, but the actual
    FORTRAN/C/C++ codes are not part of ASE.
 
 3) Pure python implementations included in the ASE package: EMT, EAM,
-   Lennard-Jones and Morse.
+   Lennard-Jones, Morse and HarmonicCalculator.
 
 4) Calculators that wrap others, included in the ASE package:
    :class:`ase.calculators.checkpoint.CheckpointCalculator`,
    the :class:`ase.calculators.loggingcalc.LoggingCalculator`,
+   the :class:`ase.calculators.mixing.LinearCombinationCalculator`,
+   the :class:`ase.calculators.mixing.MixedCalculator`,
+   the :class:`ase.calculators.mixing.SumCalculator`,
+   the :class:`ase.calculators.mixing.AverageCalculator`,
    the :class:`ase.calculators.socketio.SocketIOCalculator`,
    the :ref:`Grimme-D3 <grimme>` potential, and the qmmm calculators
    :class:`~ase.calculators.qmmm.EIQMMM`,  and :class:`~ase.calculators.qmmm.SimpleQMMM`.
@@ -61,11 +65,19 @@ interfaces.
 ========================================= ===========================================
 name                                      description
 ========================================= ===========================================
+Abacus_                                   DFT supporting both pw and lcao basis
+AMS_                                      Amsterdam Modeling Suite
 Asap_                                     Highly efficient EMT code
 BigDFT_                                   Wavelet based code for DFT
+DeePMD-kit_                               A deep learning package for many-body potential energy representation
+DFTD3_                                    London-dispersion correction
+DFTD4_                                    Charge-dependent London-dispersion correction
 DFTK_                                     Plane-wave code for DFT and related models
+FLEUR_                                    Full Potential LAPW code
 GPAW_                                     Real-space/plane-wave/LCAO PAW code
 Hotbit_                                   DFT based tight binding
+TBLite_                                   Light-weight tight-binding framework
+XTB_                                      Semiemprical extended tight-binding program package
 :mod:`~ase.calculators.abinit`            Plane-wave pseudopotential code
 :mod:`~ase.calculators.amber`             Classical molecular dynamics code
 :mod:`~ase.calculators.castep`            Plane-wave pseudopotential code
@@ -79,11 +91,11 @@ elk                                       Full Potential LAPW code
 :mod:`~ase.calculators.espresso`          Plane-wave pseudopotential code
 :mod:`~ase.calculators.exciting`          Full Potential LAPW code
 :mod:`~ase.calculators.aims`              Numeric atomic orbital, full potential code
-:mod:`~ase.calculators.fleur`             Full Potential LAPW code
 :mod:`~ase.calculators.gamess_us`         Gaussian based electronic structure code
 :mod:`~ase.calculators.gaussian`          Gaussian based electronic structure code
 :mod:`~ase.calculators.gromacs`           Classical molecular dynamics code
 :mod:`~ase.calculators.gulp`              Interatomic potential code
+:mod:`~ase.calculators.harmonic`          Hessian based harmonic force-field code
 :mod:`~ase.calculators.kim`               Classical MD with standardized models
 :mod:`~ase.calculators.lammps`            Classical molecular dynamics code
 :mod:`~ase.calculators.mixing`            Combination of multiple calculators
@@ -126,12 +138,19 @@ The calculators included in ASE are used like this:
 
 where ``abc`` is the module name and ``ABC`` is the class name.
 
-
+.. _Abacus: https://gitlab.com/1041176461/ase-abacus
+.. _AMS: https://www.scm.com/doc/plams/examples/AMSCalculator/ASECalculator.html#asecalculatorexample
 .. _Asap: https://wiki.fysik.dtu.dk/asap
 .. _BigDFT: https://l_sim.gitlab.io/bigdft-suite/tutorials/Interoperability-Simulation.html#ASE-Interoperability
 .. _GPAW: https://wiki.fysik.dtu.dk/gpaw
 .. _Hotbit: https://github.com/pekkosk/hotbit
 .. _DFTK: https://dftk.org
+.. _DeePMD-kit: https://github.com/deepmodeling/deepmd-kit
+.. _DFTD4: https://github.com/dftd4/dftd4/tree/main/python
+.. _DFTD3: https://dftd3.readthedocs.io/en/latest/api/python.html#module-dftd3.ase
+.. _FLEUR: https://github.com/JuDFTteam/ase-fleur
+.. _TBLite: https://tblite.readthedocs.io/en/latest/users/ase.html
+.. _XTB: https://xtb-python.readthedocs.io/en/latest/ase-calculator.html
 
 Calculator keywords
 ===================
@@ -224,11 +243,11 @@ the :meth:`set` method:
    gaussian
    gromacs
    gulp
+   harmonic
    socketio/socketio
    jacapo
    kim
    lammps
-   lammpsrun
    mopac
    nwchem
    octopus

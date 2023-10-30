@@ -1,14 +1,16 @@
 """Various utility methods used troughout the GA."""
+import itertools
 import os
 import time
-import itertools
+
 import numpy as np
 from scipy.spatial.distance import cdist
-from ase.io import write, read
-from ase.geometry.cell import cell_to_cellpar
-from ase.geometry.rdf import get_rdf
+
 from ase.data import covalent_radii
 from ase.ga import get_neighbor_list
+from ase.geometry.cell import cell_to_cellpar
+from ase.geometry.rdf import get_rdf
+from ase.io import read, write
 
 
 def closest_distances_generator(atom_numbers, ratio_of_covalent_radii):
@@ -545,6 +547,7 @@ class CellBounds:
     ...                    'psi': [20, 160],
     ...                    'a': [2, 20], 'b': [2, 20], 'c': [2, 20]})
     """
+
     def __init__(self, bounds={}):
         self.bounds = {'alpha': [0, np.pi], 'beta': [0, np.pi],
                        'gamma': [0, np.pi], 'phi': [0, np.pi],

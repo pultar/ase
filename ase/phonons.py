@@ -1,20 +1,20 @@
 """Module for calculating phonons of periodic systems."""
 
-from math import pi, sqrt
 import warnings
+from math import pi, sqrt
 from pathlib import Path
 
 import numpy as np
-import numpy.linalg as la
 import numpy.fft as fft
+import numpy.linalg as la
 
 import ase
 import ase.units as units
-from ase.parallel import world
 from ase.dft import monkhorst_pack
 from ase.io.trajectory import Trajectory
-from ase.utils.filecache import MultiFileJSONCache
+from ase.parallel import world
 from ase.utils import deprecated
+from ase.utils.filecache import MultiFileJSONCache
 
 
 class Displacement:
@@ -33,7 +33,7 @@ class Displacement:
     """
 
     def __init__(self, atoms, calc=None, supercell=(1, 1, 1), name=None,
-                 delta=0.01, center_refcell=False):
+                 delta=0.01, center_refcell=False, comm=None):
         """Init with an instance of class ``Atoms`` and a calculator.
 
         Parameters:
@@ -53,7 +53,9 @@ class Displacement:
             Reference cell in which the atoms will be displaced. If False, then
             corner cell in supercell is used. If True, then cell in the center
             of the supercell is used.
-
+        comm: communicator
+            MPI communicator for the phonon calculation.
+            Default is to use world.
         """
 
         # Store atoms and calculator
@@ -66,6 +68,10 @@ class Displacement:
         self.delta = delta
         self.center_refcell = center_refcell
         self.supercell = supercell
+
+        if comm is None:
+            comm = world
+        self.comm = comm
 
         self.cache = MultiFileJSONCache(self.name)
 
@@ -82,7 +88,7 @@ class Displacement:
                            N_c[2] // 2)
         return self.offset
 
-    @property  # type: ignore
+    @property
     @ase.utils.deprecated('Please use phonons.supercell instead of .N_c')
     def N_c(self):
         return self._supercell
@@ -204,20 +210,27 @@ class Displacement:
                             # Return to initial positions
                             atoms_N.positions[offset + a, i] = pos[a, i]
 
+        self.comm.barrier()
+
     def clean(self):
         """Delete generated files."""
-        if world.rank != 0:
-            return 0
+        if self.comm.rank == 0:
+            nfiles = self._clean()
+        else:
+            nfiles = 0
+        self.comm.barrier()
+        return nfiles
 
+    def _clean(self):
         name = Path(self.name)
 
-        n = 0
+        nfiles = 0
         if name.is_dir():
             for fname in name.iterdir():
                 fname.unlink()
-                n += 1
+                nfiles += 1
             name.rmdir()
-        return n
+        return nfiles
 
 
 class Phonons(Displacement):
@@ -274,10 +287,11 @@ class Phonons(Displacement):
     >>> from ase.build import bulk
     >>> from ase.phonons import Phonons
     >>> from gpaw import GPAW, FermiDirac
+
     >>> atoms = bulk('Si', 'diamond', a=5.4)
     >>> calc = GPAW(kpts=(5, 5, 5),
-                    h=0.2,
-                    occupations=FermiDirac(0.))
+    ...             h=0.2,
+    ...             occupations=FermiDirac(0.))
     >>> ph = Phonons(atoms, calc, supercell=(5, 5, 5))
     >>> ph.run()
     >>> ph.read(method='frederiksen', acoustic=True)
@@ -333,7 +347,9 @@ class Phonons(Displacement):
 
         return fmin, fmax, i_min, i_max
 
-    @deprecated('Current implementation of non-analytical correction is likely incorrect, see https://gitlab.com/ase/ase/-/issues/941')
+    @deprecated('Current implementation of non-analytical correction is '
+                'likely incorrect, see '
+                'https://gitlab.com/ase/ase/-/issues/941')
     def read_born_charges(self, name='born', neutrality=True):
         r"""Read Born charges and dieletric tensor from JSON file.
 
@@ -698,6 +714,7 @@ class Phonons(Displacement):
 
     def get_dos(self, kpts=(10, 10, 10), npts=1000, delta=1e-3, indices=None):
         from ase.spectrum.dosdata import RawDOSData
+
         # dos = self.dos(kpts, npts, delta, indices)
         kpts_kc = monkhorst_pack(kpts)
         omega_w = self.band_structure(kpts_kc).ravel()
@@ -790,10 +807,10 @@ class Phonons(Displacement):
         phase_N = np.exp(2.j * pi * np.dot(q_c, R_cN))
         phase_Na = phase_N.repeat(len(self.atoms))
 
-        for l in branch_l:
+        for lval in branch_l:
 
-            omega = omega_l[0, l]
-            u_av = u_l[0, l]
+            omega = omega_l[0, lval]
+            u_av = u_l[0, lval]
 
             # Mean displacement of a classical oscillator at temperature T
             u_av *= sqrt(kT) / abs(omega)
@@ -804,7 +821,8 @@ class Phonons(Displacement):
             # Repeat and multiply by Bloch phase factor
             mode_Nav = np.vstack(N * [mode_av]) * phase_Na[:, np.newaxis]
 
-            with Trajectory('%s.mode.%d.traj' % (self.name, l), 'w') as traj:
+            with Trajectory('%s.mode.%d.traj'
+                            % (self.name, lval), 'w') as traj:
                 for x in np.linspace(0, 2 * pi, nimages, endpoint=False):
                     atoms.set_positions((pos_Nav + np.exp(1.j * x) *
                                          mode_Nav).real)

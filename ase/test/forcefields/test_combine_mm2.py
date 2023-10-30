@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
+
+from ase.calculators.combine_mm import CombineMM
+from ase.calculators.tip3p import TIP3P, epsilon0, sigma0
+from ase.constraints import FixBondLengths
 from ase.data import s22
 from ase.optimize import FIRE
-from ase.constraints import FixBondLengths
-from ase.calculators.tip3p import TIP3P, epsilon0, sigma0
-from ase.calculators.combine_mm import CombineMM
 
 
 def make_atoms():
@@ -13,8 +14,8 @@ def make_atoms():
     center = atoms[0].position
     atoms.translate(-center)
     h = atoms[3].position[1] - atoms[0].position[1]
-    l = np.linalg.norm(atoms[0].position - atoms[3].position)
-    angle = np.degrees(np.arcsin(h / l))
+    L = np.linalg.norm(atoms[0].position - atoms[3].position)
+    angle = np.degrees(np.arcsin(h / L))
     atoms.rotate(angle, '-z', center=center)
     return atoms
 
@@ -65,7 +66,6 @@ def test_combine_mm2(testdir):
         tag = '4mer_combtip3_opt_{0:02d}.'.format(ii)
         with FIRE(atoms, logfile=tag + 'log', trajectory=tag + 'traj') as opt:
             opt.run(fmax=0.05)
-        assert((abs(atoms.positions - tip3_pos) < 1e-8).all())
-        print(
-            '{0}: {1!s:>28s}: Same Geometry as TIP3P'.format(
-                atoms.calc.name, idx))
+        assert (abs(atoms.positions - tip3_pos) < 1e-8).all()
+        print('{0}: {1!s:>28s}: Same Geometry as TIP3P'
+              .format(atoms.calc.name, idx))

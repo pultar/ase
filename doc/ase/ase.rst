@@ -25,7 +25,7 @@ Quick links:
     - :mod:`~ase.io`
     - :mod:`~ase.lattice`
   * - :mod:`~ase.md`
-    - :mod:`~ase.neb`
+    - :mod:`~ase.mep`
     - :mod:`~ase.neighborlist`
     - :mod:`~ase.optimize`
   * - :mod:`~ase.parallel`
@@ -46,7 +46,8 @@ Quick links:
    * :ref:`tutorials`
    * :ref:`cli`
    * :git:`Source code <>`
-   * Presentation about ASE: :download:`ase-talk.pdf`
+   * Presentation about ASE:
+     `ase-talk.pdf <https://wiki.fysik.dtu.dk/ase-files/ase-talk.pdf>`__
    * List of :ref:`removed features <removed_features>`
 
 List of all modules:
@@ -67,6 +68,7 @@ List of all modules:
    optimize
    md
    constraints
+   filters
    spacegroup/spacegroup
    neighborlist
    geometry

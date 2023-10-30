@@ -1,5 +1,7 @@
 import pytest
-from ase.utils import deprecated, devnull, tokenize_version
+
+from ase.utils import (deprecated, devnull,
+                       get_python_package_path_description, tokenize_version)
 
 
 def test_deprecated_decorator():
@@ -37,3 +39,20 @@ def test_tokenize_version_lessthan(v1, v2):
 def test_tokenize_version_equal():
     version = '3.8x.xx'
     assert tokenize_version(version) == tokenize_version(version)
+
+
+class DummyIterator:
+    def __iter__(self):
+        yield from ["test", "bla"]
+
+
+class Dummy:
+    @property
+    def __path__(self):
+        return DummyIterator()
+
+
+def test_get_python_package_path_description():
+    assert isinstance(get_python_package_path_description(Dummy()), str)
+    # test object not containing __path__
+    assert isinstance(get_python_package_path_description(object()), str)

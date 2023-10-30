@@ -3,19 +3,19 @@
     Find the set of partly occupied Wannier functions using the method from
     Thygesen, Hansen and Jacobsen PRB v72 i12 p125119 2005.
 """
-import warnings
 import functools
+import warnings
+from math import pi, sqrt
 from time import time
-from math import sqrt, pi
-from scipy.linalg import qr
 
 import numpy as np
+from scipy.linalg import qr
 
-from ase.parallel import paropen
 from ase.dft.bandgap import bandgap
 from ase.dft.kpoints import get_monkhorst_pack_size_and_offset
-from ase.transport.tools import dagger, normalize
 from ase.io.jsonio import read_json, write_json
+from ase.parallel import paropen
+from ase.transport.tools import dagger, normalize
 
 dag = dagger
 
@@ -623,7 +623,7 @@ class Wannier:
 
         Keywords are identical to those of the constructor.
         """
-        from ase.dft.wannierstate import WannierState, WannierSpec
+        from ase.dft.wannierstate import WannierSpec, WannierState
 
         spec = WannierSpec(self.Nk, self.nwannier, self.nbands,
                            self.fixedstates_k)
@@ -645,8 +645,9 @@ class Wannier:
         elif initialwannier == 'scdm':
             wannier_state = spec.scdm(self.calc, self.kpt_kc, self.spin)
         else:
-            wannier_state = spec.initial_wannier(self.calc, initialwannier, self.kptgrid,
-                                                 self.edf_k, self.spin)
+            wannier_state = spec.initial_wannier(
+                self.calc, initialwannier, self.kptgrid,
+                self.edf_k, self.spin)
 
         self.wannier_state = wannier_state
         self.update()

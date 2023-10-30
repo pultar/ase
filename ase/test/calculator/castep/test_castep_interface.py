@@ -1,13 +1,13 @@
 import os
 
-import pytest
 import numpy as np
+import pytest
+
 import ase
 import ase.lattice.cubic
-from ase.calculators.castep import (Castep, CastepOption,
-                                    CastepParam, CastepCell,
-                                    make_cell_dict, make_param_dict,
-                                    CastepKeywords)
+from ase.calculators.castep import (Castep, CastepCell, CastepKeywords,
+                                    CastepOption, CastepParam, make_cell_dict,
+                                    make_param_dict)
 
 calc = pytest.mark.calculator
 
@@ -121,7 +121,7 @@ def test_fundamental_params():
 
     # Test special parsers
     mock_cparam.continuation = 'default'
-    with pytest.warns(None):
+    with pytest.warns(UserWarning):
         mock_cparam.reuse = 'default'
     assert mock_cparam.reuse.value is None
 
@@ -188,9 +188,9 @@ He He_test.usp"""
     R = np.array([np.eye(3), -np.eye(3)])
     T = np.zeros((2, 3))
     ccell.symmetry_ops = (R, T)
-    strblock = [l.strip() for l in ccell.symmetry_ops.value.split('\n')
-                if l.strip() != '']
-    fblock = np.array([list(map(float, l.split())) for l in strblock])
+    strblock = [line.strip() for line in ccell.symmetry_ops.value.split('\n')
+                if line.strip() != '']
+    fblock = np.array([list(map(float, line.split())) for line in strblock])
 
     assert np.isclose(fblock[:3], R[0]).all()
     assert np.isclose(fblock[3], T[0]).all()
@@ -213,10 +213,10 @@ He He_test.usp"""
 
         pos_lines = []
         while len(lines) > 0:
-            l = lines.pop(0).strip()
-            if l == '':
+            line = lines.pop(0).strip()
+            if line == '':
                 continue
-            el, x, y, z = l.split()
+            el, x, y, z = line.split()
             xyz = np.array(list(map(float, [x, y, z])))
             pos_lines.append((el, xyz))
 
@@ -272,6 +272,7 @@ def test_castep_param(testing_keywords):
         cparam.basis_precision = 'FINE'
 
 
+@pytest.mark.skipif(os.name == "nt", reason="No symlink on Windows")
 def test_workflow(testing_calculator):
     c = testing_calculator
     c._build_missing_pspots = False

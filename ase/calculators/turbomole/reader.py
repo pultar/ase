@@ -2,12 +2,14 @@
 
 import os
 import re
-import warnings
 import subprocess
+import warnings
+
 import numpy as np
+
 from ase import Atom, Atoms
-from ase.units import Ha, Bohr
 from ase.calculators.calculator import ReadError
+from ase.units import Bohr, Ha
 
 
 def execute_command(args):
@@ -22,22 +24,24 @@ def read_data_group(data_group):
     return execute_command(['sdg', data_group]).strip()
 
 
-def parse_data_group(dg, dg_name):
+def parse_data_group(dgr, dg_name):
     """parse a data group"""
-    if len(dg) == 0:
+    if len(dgr) == 0:
         return None
-    lsep = None
-    ksep = None
-    ndg = dg.replace('$' + dg_name, '').strip()
-    if '\n' in ndg:
-        lsep = '\n'
-    if '=' in ndg:
-        ksep = '='
-    if not lsep and not ksep:
+    dg_key = '$' + dg_name
+    if not dgr.startswith(dg_key):
+        raise ValueError(f'data group does not start with {dg_key}')
+    ndg = dgr.replace(dg_key, '').strip()
+    ndg = re.sub(r'=\s+', '=', re.sub(r'\s+=', '=', ndg))
+    if all(c not in ndg for c in ('\n', ' ', '=')):
         return ndg
+    lsep = '\n' if '\n' in dgr else ' '
     result = {}
     lines = ndg.split(lsep)
     for line in lines:
+        if len(line) == 0:
+            continue
+        ksep = '=' if '=' in line else None
         fields = line.strip().split(ksep)
         if len(fields) == 2:
             result[fields[0]] = fields[1]
@@ -125,7 +129,7 @@ def read_convergence(restart, parameters):
         if not bool(len(read_data_group('energy'))):
             return False
         if (os.path.exists('job.start') and
-            os.path.exists('GEO_OPT_FAILED')):
+                os.path.exists('GEO_OPT_FAILED')):
             return False
         return True
 
@@ -218,7 +222,7 @@ def read_occupation_numbers(results):
     lines = execute_command(['eiger', '--all', '--pview']).split('\n')
     for line in lines:
         regex = (
-            r'^\s+(\d+)\.*\s+(\w*)\s+(\d+)\s+(\S+)'
+            r'^\s+(\d+)\.\s([\sab])\s*(\d+)\s?(\w+)'
             r'\s+(\d*\.*\d*)\s+([-+]?\d+\.\d*)'
         )
         match = re.search(regex, line)
@@ -289,7 +293,7 @@ def read_mos(results):
                 if match:
                     flen = int(match.group(1))
                 if ('scfdump' in line or 'expanded' in line or
-                    'scfconv' not in line):
+                        'scfconv' not in line):
                     converged = False
                 continue
             if '$end' in line:

@@ -1,6 +1,7 @@
 def test_permute_axes():
     import numpy as np
     from numpy.testing import assert_allclose
+
     from ase import Atoms
     from ase.geometry import permute_axes
 
@@ -21,7 +22,8 @@ def test_permute_axes():
 
         assert (original.pbc == atoms.pbc).all()
         assert_allclose(original.cell, atoms.cell, atol=TOL)
-        assert_allclose(original.get_positions(), atoms.get_positions(), atol=TOL)
+        assert_allclose(original.get_positions(),
+                        atoms.get_positions(), atol=TOL)
         assert_allclose(atoms.get_positions()[:, permutation],
                         permuted.get_positions(), atol=TOL)
 

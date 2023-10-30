@@ -1,10 +1,9 @@
 '''surfaceslab.py - Window for setting up surfaces
 '''
-from ase.gui.i18n import _, ngettext
-
-import ase.gui.ui as ui
 import ase.build as build
+import ase.gui.ui as ui
 from ase.data import reference_states
+from ase.gui.i18n import _, ngettext
 from ase.gui.widgets import Element, pybutton
 
 introtext = _("""\
@@ -43,6 +42,7 @@ atoms = {func}(symbol='{symbol}', size={size},
 
 class SetupSurfaceSlab:
     '''Window for setting up a surface.'''
+
     def __init__(self, gui):
         self.element = Element('', self.apply)
         self.structure = ui.ComboBox(structures, structures,
@@ -62,7 +62,7 @@ class SetupSurfaceSlab:
         self.vacuum = ui.SpinBox(5, 0, 40, 0.01, self.make)
         self.description = ui.Label('')
 
-        win = self.win = ui.Window(_('Surface'))
+        win = self.win = ui.Window(_('Surface'), wmtype='utility')
         win.add(ui.Text(introtext))
         win.add(self.element)
         win.add([_('Structure:'), self.structure, self.structure_warn])
@@ -132,7 +132,7 @@ class SetupSurfaceSlab:
                 if surface[1] == _('hcp'):
                     self.lattice_c.active = True
                     self.lattice_c.value = round(self.lattice_a.value *
-                                                 ((8.0/3.0) ** (0.5)), 3)
+                                                 ((8.0 / 3.0) ** (0.5)), 3)
                 else:
                     self.lattice_c.active = False
                     self.lattice_c.value = 'None'

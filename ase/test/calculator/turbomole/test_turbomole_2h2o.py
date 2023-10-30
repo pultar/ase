@@ -1,7 +1,8 @@
 # type: ignore
 from numpy.linalg import norm
-from ase.collections import s22
+
 from ase.calculators.turbomole import Turbomole
+from ase.collections import s22
 
 
 def test_turbomole_2h2o():
@@ -53,7 +54,8 @@ def test_turbomole_2h2o():
         (new2, old2) = (prop['c2'][-1], prop['c2'][-2])
         conv['c'].append((norm(new1 - old1) + norm(new2 - old2)) /
                          (norm(old1) + norm(old2)))
-        fmt = 'iteration {0:d}: convergence of energy {1:10e}; of charges {2:10e}'
+        fmt = ('iteration {0:d}: convergence of energy {1:10e}; '
+               'of charges {2:10e}')
         print(fmt.format(iteration, conv['e'][-1], norm(conv['c'][-1])))
 
     # check the result

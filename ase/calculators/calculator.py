@@ -1,18 +1,20 @@
-import os
 import copy
+import os
 import subprocess
-from math import pi, sqrt
-from pathlib import Path
-from typing import Union, Optional, List, Set, Dict, Any
 import warnings
 from abc import abstractmethod
+from math import pi, sqrt
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Union
 
 import numpy as np
 
+from ase.calculators.abc import GetPropertiesMixin
 from ase.cell import Cell
 from ase.outputs import Properties, all_outputs
 from ase.utils import jsonable
-from ase.calculators.abc import GetPropertiesMixin
+
+from .names import names
 
 
 class CalculatorError(RuntimeError):
@@ -22,7 +24,7 @@ class CalculatorError(RuntimeError):
 class CalculatorSetupError(CalculatorError):
     """Calculation cannot be performed with the given parameters.
 
-    Reasons to raise this errors are:
+    Reasons to raise this error are:
       * The calculator is not properly configured
         (missing executable, environment variables, ...)
       * The given atoms object is not supported
@@ -118,21 +120,12 @@ def compare_atoms(atoms1, atoms2, tol=1e-15, excluded_properties=None):
 
 
 all_properties = ['energy', 'forces', 'stress', 'stresses', 'dipole',
-                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies']
+                  'charges', 'magmom', 'magmoms', 'free_energy', 'energies',
+                  'dielectric_tensor', 'born_effective_charges', 'polarization']
 
 
 all_changes = ['positions', 'numbers', 'cell', 'pbc',
                'initial_charges', 'initial_magmoms']
-
-
-# Recognized names of calculators sorted alphabetically:
-names = ['abinit', 'ace', 'aims', 'amber', 'asap', 'castep', 'cp2k',
-         'crystal', 'demon', 'demonnano', 'dftb', 'dftd3', 'dmol', 'eam',
-         'elk', 'emt', 'espresso', 'exciting', 'ff', 'fleur', 'gamess_us',
-         'gaussian', 'gpaw', 'gromacs', 'gulp', 'hotbit', 'kim',
-         'lammpslib', 'lammpsrun', 'lj', 'mopac', 'morse', 'nwchem',
-         'octopus', 'onetep', 'openmx', 'orca', 'plumed', 'psi4', 'qchem', 'siesta',
-         'tip3p', 'tip4p', 'turbomole', 'vasp']
 
 
 special = {'cp2k': 'CP2K',
@@ -142,9 +135,9 @@ special = {'cp2k': 'CP2K',
            'eam': 'EAM',
            'elk': 'ELK',
            'emt': 'EMT',
+           'exciting': 'ExcitingGroundStateCalculator',
            'crystal': 'CRYSTAL',
            'ff': 'ForceField',
-           'fleur': 'FLEUR',
            'gamess_us': 'GAMESSUS',
            'gulp': 'GULP',
            'kim': 'KIM',
@@ -448,12 +441,14 @@ class BaseCalculator(GetPropertiesMixin):
     # any other object (such as None).
     _deprecated = object()
 
-    def __init__(self, parameters=None):
+    def __init__(self, parameters=None, use_cache=True):
         if parameters is None:
             parameters = {}
+
         self.parameters = dict(parameters)
         self.atoms = None
         self.results = {}
+        self.use_cache = use_cache
 
     def calculate_properties(self, atoms, properties):
         """This method is experimental; currently for internal use."""
@@ -477,7 +472,10 @@ class BaseCalculator(GetPropertiesMixin):
 
     def check_state(self, atoms, tol=1e-15):
         """Check for any system changes since last calculation."""
-        return compare_atoms(self.atoms, atoms, tol=tol)
+        if self.use_cache:
+            return compare_atoms(self.atoms, atoms, tol=tol)
+        else:
+            return all_changes
 
     def get_property(self, name, atoms=None, allow_calculation=True):
         if name not in self.implemented_properties:
@@ -489,6 +487,7 @@ class BaseCalculator(GetPropertiesMixin):
             system_changes = []
         else:
             system_changes = self.check_state(atoms)
+
             if system_changes:
                 self.atoms = None
                 self.results = {}
@@ -496,6 +495,10 @@ class BaseCalculator(GetPropertiesMixin):
         if name not in self.results:
             if not allow_calculation:
                 return None
+
+            if self.use_cache:
+                self.atoms = atoms.copy()
+
             self.calculate(atoms, [name], system_changes)
 
         if name not in self.results:
@@ -521,6 +524,13 @@ class BaseCalculator(GetPropertiesMixin):
 
     def export_properties(self):
         return Properties(self.results)
+
+    def _get_name(self) -> str:  # child class can override this
+        return self.__class__.__name__.lower()
+
+    @property
+    def name(self) -> str:
+        return self._get_name()
 
 
 class Calculator(BaseCalculator):
@@ -604,7 +614,8 @@ class Calculator(BaseCalculator):
         self.prefix = None
         if label is not None:
             if self.directory == '.' and '/' in label:
-                # We specified directory in label, and nothing in the diretory key
+                # We specified directory in label, and nothing in the diretory
+                # key
                 self.label = label
             elif '/' not in label:
                 # We specified our directory in the directory keyword
@@ -632,12 +643,13 @@ class Calculator(BaseCalculator):
 
         self.set(**kwargs)
 
-        if not hasattr(self, 'name'):
-            self.name = self.__class__.__name__.lower()
-
         if not hasattr(self, 'get_spin_polarized'):
             self.get_spin_polarized = self._deprecated_get_spin_polarized
         # XXX We are very naughty and do not call super constructor!
+
+        # For historical reasons we have a particular caching protocol.
+        # We disable the superclass' optional cache.
+        self.use_cache = False
 
     @property
     def directory(self) -> str:
@@ -813,60 +825,31 @@ class Calculator(BaseCalculator):
         implementation to set the atoms attribute and create any missing
         directories.
         """
-
         if atoms is not None:
             self.atoms = atoms.copy()
         if not os.path.isdir(self._directory):
-            os.makedirs(self._directory)
+            try:
+                os.makedirs(self._directory)
+            except FileExistsError as e:
+                # We can only end up here in case of a race condition if
+                # multiple Calculators are running concurrently *and* use the
+                # same _directory, which cannot be expected to work anyway.
+                msg = ('Concurrent use of directory ' + self._directory +
+                       'by multiple Calculator instances detected. Please '
+                       'use one directory per instance.')
+                raise RuntimeError(msg) from e
 
     def calculate_numerical_forces(self, atoms, d=0.001):
         """Calculate numerical forces using finite difference.
 
         All atoms will be displaced by +d and -d in all directions."""
-
-        from ase.calculators.test import numeric_force
-        return np.array([[numeric_force(atoms, a, i, d)
-                          for i in range(3)] for a in range(len(atoms))])
+        from ase.calculators.test import numeric_forces
+        return numeric_forces(atoms, d=d)
 
     def calculate_numerical_stress(self, atoms, d=1e-6, voigt=True):
         """Calculate numerical stress using finite difference."""
-
-        stress = np.zeros((3, 3), dtype=float)
-
-        cell = atoms.cell.copy()
-        V = atoms.get_volume()
-        for i in range(3):
-            x = np.eye(3)
-            x[i, i] += d
-            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
-            eplus = atoms.get_potential_energy(force_consistent=True)
-
-            x[i, i] -= 2 * d
-            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
-            eminus = atoms.get_potential_energy(force_consistent=True)
-
-            stress[i, i] = (eplus - eminus) / (2 * d * V)
-            x[i, i] += d
-
-            j = i - 2
-            x[i, j] = d
-            x[j, i] = d
-            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
-            eplus = atoms.get_potential_energy(force_consistent=True)
-
-            x[i, j] = -d
-            x[j, i] = -d
-            atoms.set_cell(np.dot(cell, x), scale_atoms=True)
-            eminus = atoms.get_potential_energy(force_consistent=True)
-
-            stress[i, j] = (eplus - eminus) / (4 * d * V)
-            stress[j, i] = stress[i, j]
-        atoms.set_cell(cell, scale_atoms=True)
-
-        if voigt:
-            return stress.flat[[0, 4, 8, 5, 2, 1]]
-        else:
-            return stress
+        from ase.calculators.test import numeric_stress
+        return numeric_stress(atoms, d=d, voigt=voigt)
 
     def _deprecated_get_spin_polarized(self):
         msg = ('This calculator does not implement get_spin_polarized().  '
@@ -879,6 +862,7 @@ class Calculator(BaseCalculator):
     def band_structure(self):
         """Create band-structure object for plotting."""
         from ase.spectrum.band_structure import get_band_structure
+
         # XXX This calculator is supposed to just have done a band structure
         # calculation, but the calculator may not have the correct Fermi level
         # if it updated the Fermi level after changing k-points.

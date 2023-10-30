@@ -1,12 +1,14 @@
-import pytest
-from ase import Atoms
-from ase.units import fs, GPa, bar
-from ase.build import bulk
-from ase.md.nvtberendsen import NVTBerendsen
-from ase.md.nptberendsen import NPTBerendsen
-from ase.md.npt import NPT
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
 import numpy as np
+import pytest
+
+from ase import Atoms
+from ase.build import bulk
+from ase.md.npt import NPT
+from ase.md.nptberendsen import NPTBerendsen
+from ase.md.nvtberendsen import NVTBerendsen
+from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
+                                         Stationary)
+from ase.units import GPa, bar, fs
 
 
 @pytest.fixture(scope='module')
@@ -26,7 +28,6 @@ def equilibrated(asap3, berendsenparams):
     rng = np.random.RandomState(42)
     # Must be big enough to avoid ridiculous fluctuations
     atoms = bulk('Au', cubic=True).repeat((3, 3, 3))
-    #a[5].symbol = 'Ag'
     atoms.calc = asap3.EMT()
     MaxwellBoltzmannDistribution(atoms, temperature_K=100, force_temp=True,
                                  rng=rng)

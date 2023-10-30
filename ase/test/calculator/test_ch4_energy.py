@@ -1,4 +1,5 @@
 import pytest
+
 from ase.build import molecule
 from ase.calculators.calculator import get_calculator_class
 from ase.units import Ry
@@ -68,7 +69,8 @@ filterwarnings = pytest.mark.filterwarnings
       marks=[filterwarnings('ignore:.*?ignore_bad_restart_file'),
              filterwarnings('ignore:convert_string_to_fd')])
 @calc('nwchem')
-@calc('octopus', Spacing='0.4 * angstrom')
+@calc('octopus', Spacing='0.25 * angstrom', BoxShape='minimum',
+      convreldens=1e-3, Radius='3.5 * angstrom')
 @calc('openmx')
 @calc('siesta', marks=pytest.mark.xfail)
 def test_ch4_reaction(factory):

@@ -1,12 +1,23 @@
+import warnings
+from typing import IO, Optional, Union
+
 import numpy as np
 
+from ase import Atoms
 from ase.md.md import MolecularDynamics
-import warnings
 
 
 class VelocityVerlet(MolecularDynamics):
-    def __init__(self, atoms, timestep=None, trajectory=None, logfile=None,
-                 loginterval=1, dt=None, append_trajectory=False):
+    def __init__(
+        self,
+        atoms: Atoms,
+        timestep: Optional[float] = None,
+        trajectory: Optional[str] = None,
+        logfile: Optional[Union[IO, str]] = None,
+        loginterval: int = 1,
+        dt: Optional[float] = None,
+        append_trajectory: bool = False,
+    ):
         """Molecular Dynamics object.
 
         Parameters:
@@ -26,7 +37,7 @@ class VelocityVerlet(MolecularDynamics):
             Use '-' for stdout.  Default: None.
 
         loginterval: int (optional)
-            Only write a log line for every *loginterval* time steps.  
+            Only write a log line for every *loginterval* time steps.
             Default: 1
 
         append_trajectory: boolean
@@ -39,7 +50,9 @@ class VelocityVerlet(MolecularDynamics):
             Alias for timestep.
         """
         if dt is not None:
-            warnings.warn(FutureWarning('dt variable is deprecated; please use timestep.'))
+            warnings.warn(
+                FutureWarning(
+                    'dt variable is deprecated; please use timestep.'))
             timestep = dt
         if timestep is None:
             raise TypeError('Missing timestep argument')

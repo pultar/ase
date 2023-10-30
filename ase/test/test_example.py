@@ -1,8 +1,8 @@
 from ase import Atoms
+from ase.calculators.morse import MorsePotential
 from ase.constraints import FixAtoms
 from ase.io import Trajectory
 from ase.optimize import QuasiNewton
-from ase.calculators.morse import MorsePotential
 
 
 def test_example(testdir):
@@ -18,7 +18,7 @@ def test_example(testdir):
                   calculator=MorsePotential())
 
     with Trajectory('H.traj', 'w', atoms) as traj, \
-         QuasiNewton(atoms, maxstep=0.2) as dyn:
+            QuasiNewton(atoms, maxstep=0.2) as dyn:
         dyn.attach(traj.write)
         dyn.run(fmax=0.01, steps=100)
 

@@ -2,7 +2,7 @@ import fractions
 import functools
 import re
 from collections import OrderedDict
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -253,9 +253,7 @@ class Pourbaix:
         result = linprog(c=energies,
                          A_eq=np.transpose(eq2),
                          b_eq=eq1,
-                         bounds=bounds,
-                         options={'lstsq': True,
-                                  'presolve': True})
+                         bounds=bounds)
 
         if verbose:
             print_results(zip(names, result.x, energies))
@@ -298,8 +296,8 @@ class Pourbaix:
             text.append((x, y, name))
 
         if plot:
-            import matplotlib.pyplot as plt
             import matplotlib.cm as cm
+            import matplotlib.pyplot as plt
             if ax is None:
                 ax = plt.gca()
 

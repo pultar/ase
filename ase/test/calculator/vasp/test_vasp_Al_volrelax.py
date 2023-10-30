@@ -1,8 +1,9 @@
-import pytest
 import numpy as np
+import pytest
+
 from ase import io
-from ase.optimize import BFGS
 from ase.build import bulk
+from ase.optimize import BFGS
 
 calc = pytest.mark.calculator
 
@@ -45,13 +46,13 @@ def test_vasp_Al_volrelax(factory):
 
         return Al
 
-    # -- Perform Volume relaxation using ASE with Vasp as force/stress calculator
+    # -- Volume relaxation using ASE with Vasp as force/stress calculator
     def ase_vol_relax():
         Al = bulk('Al', 'fcc', a=4.5, cubic=True)
         calc = factory.calc(xc='LDA')
         Al.calc = calc
 
-        from ase.constraints import StrainFilter
+        from ase.filters import StrainFilter
         sf = StrainFilter(Al)
         with BFGS(sf, logfile='relaxation.log') as qn:
             qn.run(fmax=0.1, steps=5)

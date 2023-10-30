@@ -6,8 +6,8 @@ from sys import stdout
 import numpy as np
 
 import ase.units as units
-from ase.parallel import parprint, paropen
-from ase.vibrations import Vibrations
+from ase.parallel import paropen, parprint
+from ase.vibrations.vibrations import Vibrations
 
 
 class Infrared(Vibrations):
@@ -135,6 +135,7 @@ class Infrared(Vibrations):
     >>> ir.summary()
 
     """
+
     def __init__(self, atoms, indices=None, name='ir', delta=0.01,
                  nfree=2, directions=None):
         Vibrations.__init__(self, atoms, indices=indices, name=name,

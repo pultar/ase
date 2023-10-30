@@ -1,22 +1,35 @@
 """Langevin dynamics class."""
+from typing import IO, Optional, Union
 
 import numpy as np
 
+from ase import Atoms, units
 from ase.md.md import MolecularDynamics
-from ase.parallel import world, DummyMPI
-from ase import units
+from ase.parallel import DummyMPI, world
 
 
 class Langevin(MolecularDynamics):
     """Langevin (constant N, V, T) molecular dynamics."""
 
     # Helps Asap doing the right thing.  Increment when changing stuff:
-    _lgv_version = 4
+    _lgv_version = 5
 
-    def __init__(self, atoms, timestep, temperature=None, friction=None,
-                 fixcm=True, *, temperature_K=None, trajectory=None,
-                 logfile=None, loginterval=1, communicator=world,
-                 rng=None, append_trajectory=False):
+    def __init__(
+        self,
+        atoms: Atoms,
+        timestep: float,
+        temperature: Optional[float] = None,
+        friction: Optional[float] = None,
+        fixcm: bool = True,
+        *,
+        temperature_K: Optional[float] = None,
+        trajectory: Optional[str] = None,
+        logfile: Optional[Union[IO, str]] = None,
+        loginterval: int = 1,
+        communicator=world,
+        rng=None,
+        append_trajectory: bool = False,
+    ):
         """
         Parameters:
 
@@ -33,7 +46,9 @@ class Langevin(MolecularDynamics):
             The desired temperature, in Kelvin.
 
         friction: float
-            A friction coefficient, typically 1e-4 to 1e-2.
+            A friction coefficient in inverse ASE time units.
+            For example, set ``0.01 / ase.units.fs`` to provide
+            0.01 fs\\ :sup:`−1` (10 ps\\ :sup:`−1`).
 
         fixcm: bool (optional)
             If True, the position and momentum of the center of mass is
@@ -132,18 +147,13 @@ class Langevin(MolecularDynamics):
         if forces is None:
             forces = atoms.get_forces(md=True)
 
-        # This velocity as well as xi, eta and a few other variables are stored
-        # as attributes, so Asap can do its magic when atoms migrate between
-        # processors.
+        # This velocity as well as rnd_pos, rnd_mom and a few other
+        # variables are stored as attributes, so Asap can do its magic
+        # when atoms migrate between processors.
         self.v = atoms.get_velocities()
 
-        self.xi = self.rng.standard_normal(size=(natoms, 3))
-        self.eta = self.rng.standard_normal(size=(natoms, 3))
-
-        # To keep the center of mass stationary, the random arrays should add to (0,0,0)
-        if self.fix_com:
-            self.xi -= self.xi.sum(axis=0) / natoms
-            self.eta -= self.eta.sum(axis=0) / natoms
+        xi = self.rng.standard_normal(size=(natoms, 3))
+        eta = self.rng.standard_normal(size=(natoms, 3))
 
         # When holonomic constraints for rigid linear triatomic molecules are
         # present, ask the constraints to redistribute xi and eta within each
@@ -151,30 +161,39 @@ class Langevin(MolecularDynamics):
         # correct target temperature.
         for constraint in self.atoms.constraints:
             if hasattr(constraint, 'redistribute_forces_md'):
-                constraint.redistribute_forces_md(atoms, self.xi, rand=True)
-                constraint.redistribute_forces_md(atoms, self.eta, rand=True)
+                constraint.redistribute_forces_md(atoms, xi, rand=True)
+                constraint.redistribute_forces_md(atoms, eta, rand=True)
 
-        self.communicator.broadcast(self.xi, 0)
-        self.communicator.broadcast(self.eta, 0)
+        self.communicator.broadcast(xi, 0)
+        self.communicator.broadcast(eta, 0)
+
+        # To keep the center of mass stationary, we have to calculate
+        # the random perturbations to the positions and the momenta,
+        # and make sure that they sum to zero.
+        self.rnd_pos = self.c5 * eta
+        self.rnd_vel = self.c3 * xi - self.c4 * eta
+        if self.fix_com:
+            self.rnd_pos -= self.rnd_pos.sum(axis=0) / natoms
+            self.rnd_vel -= (self.rnd_vel *
+                             self.masses).sum(axis=0) / (self.masses * natoms)
 
         # First halfstep in the velocity.
         self.v += (self.c1 * forces / self.masses - self.c2 * self.v +
-                   self.c3 * self.xi - self.c4 * self.eta)
+                   self.rnd_vel)
 
         # Full step in positions
         x = atoms.get_positions()
 
         # Step: x^n -> x^(n+1) - this applies constraints if any.
-        atoms.set_positions(x + self.dt * self.v + self.c5 * self.eta)
+        atoms.set_positions(x + self.dt * self.v + self.rnd_pos)
 
         # recalc velocities after RATTLE constraints are applied
-        self.v = (self.atoms.get_positions() - x -
-                  self.c5 * self.eta) / self.dt
+        self.v = (self.atoms.get_positions() - x - self.rnd_pos) / self.dt
         forces = atoms.get_forces(md=True)
 
         # Update the velocities
         self.v += (self.c1 * forces / self.masses - self.c2 * self.v +
-                   self.c3 * self.xi - self.c4 * self.eta)
+                   self.rnd_vel)
 
         # Second part of RATTLE taken care of here
         atoms.set_momenta(self.v * self.masses)

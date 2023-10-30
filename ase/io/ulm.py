@@ -120,16 +120,15 @@ Versions
 3) Changed magic string from "AFFormat" to "- of Ulm".
 """
 
-import os
 import numbers
 from pathlib import Path
-from typing import Union, Set
+from typing import Set, Union
 
 import numpy as np
 
-from ase.io.jsonio import encode, decode
+from ase.io.formats import is_compressed
+from ase.io.jsonio import decode, encode
 from ase.utils import plural
-
 
 VERSION = 3
 N1 = 42  # block size - max number of items: 1, N1, N1*N1, N1*N1*N1, ...
@@ -473,15 +472,22 @@ class Reader:
 
         self._little_endian = _little_endian
 
+        self.must_close_fd = False
         if not hasattr(fd, 'read'):
+            self.must_close_fd = True
             fd = Path(fd).open('rb')
 
         self._fd = fd
         self._index = index
 
         if data is None:
-            (self._tag, self._version, self._nitems, self._pos0,
-             self._offsets) = read_header(fd)
+            try:
+                (self._tag, self._version, self._nitems, self._pos0,
+                 self._offsets) = read_header(fd)
+            except BaseException:
+                if self.must_close_fd:
+                    fd.close()
+                raise
             if self._nitems > 0:
                 data = self._read_data(index)
             else:
@@ -605,7 +611,8 @@ class Reader:
         return self.tostr(False, '').replace('\n', ' ')
 
     def close(self):
-        self._fd.close()
+        if self.must_close_fd:
+            self._fd.close()
 
 
 class NDArrayReader:
@@ -641,7 +648,7 @@ class NDArrayReader:
         offset = self.offset + start * self.itemsize * stride
         self.fd.seek(offset)
         count = (stop - start) * stride
-        if self.hasfileno:
+        if not is_compressed(self.fd) and self.hasfileno:
             a = np.fromfile(self.fd, self.dtype, count)
         else:
             # Not as fast, but works for reading from tar-files:
@@ -711,34 +718,3 @@ def copy(reader: Union[str, Path, Reader],
         reader.close()
     if close_writer:
         writer.close()
-
-
-class CLICommand:
-    """Manipulate/show content of ulm-file.
-
-    The ULM file format is used for ASE's trajectory files,
-    for GPAW's gpw-files and other things.
-
-    Example (show first image of a trajectory file):
-
-        ase ulm abc.traj -n 0 -v
-    """
-
-    @staticmethod
-    def add_arguments(parser):
-        add = parser.add_argument
-        add('filename', help='Name of ULM-file.')
-        add('-n', '--index', type=int,
-            help='Show only one index.  Default is to show all.')
-        add('-d', '--delete', metavar='key1,key2,...',
-            help='Remove key(s) from ULM-file.')
-        add('-v', '--verbose', action='store_true', help='More output.')
-
-    @staticmethod
-    def run(args):
-        if args.delete:
-            exclude = set('.' + key for key in args.delete.split(','))
-            copy(args.filename, args.filename + '.temp', exclude)
-            os.rename(args.filename + '.temp', args.filename)
-        else:
-            print_ulm_info(args.filename, args.index, verbose=args.verbose)

@@ -6,12 +6,12 @@ from typing import Dict, List, Sequence, Tuple, Union
 from ase.data import atomic_numbers, chemical_symbols
 
 # For type hints (A, A2, A+B):
-Tree = Union[str, Tuple['Tree', int], List['Tree']]  # type: ignore
+Tree = Union[str, Tuple['Tree', int], List['Tree']]
 
 
 class Formula:
     def __init__(self,
-                 formula: str = '',
+                 formula: Union[str, 'Formula'] = '',
                  *,
                  strict: bool = False,
                  format: str = '',
@@ -52,13 +52,20 @@ class Formula:
         ValueError
             on malformed formula
         """
+
+        # Be sure that Formula(x) works the same whether x is string or Formula
+        assert isinstance(formula, (str, Formula))
+        formula = str(formula)
+
         if format:
             assert _tree is None and _count is None
             if format not in {'hill', 'metal', 'abc', 'reduce', 'ab2', 'a2b',
                               'periodic'}:
                 raise ValueError(f'Illegal format: {format}')
             formula = Formula(formula).format(format)
+
         self._formula = formula
+
         self._tree = _tree or parse(formula)
         self._count = _count or count_tree(self._tree)
         if strict:
@@ -243,7 +250,7 @@ class Formula:
     def from_list(symbols: Sequence[str]) -> 'Formula':
         """Convert list of chemical symbols to Formula."""
         return Formula(''.join(symbols),
-                       _tree=[(symbols[:], 1)])
+                       _tree=[(symbols[:], 1)])  # type: ignore[list-item]
 
     def __len__(self) -> int:
         """Number of atoms."""
@@ -347,7 +354,10 @@ class Formula:
     def __rfloordiv__(self, other):
         return Formula(other) // self
 
-    def __iter__(self, tree=None):
+    def __iter__(self):
+        return self._tree_iter()
+
+    def _tree_iter(self, tree=None):
         if tree is None:
             tree = self._tree
         if isinstance(tree, str):
@@ -355,10 +365,10 @@ class Formula:
         elif isinstance(tree, tuple):
             tree, N = tree
             for _ in range(N):
-                yield from self.__iter__(tree)
+                yield from self._tree_iter(tree)
         else:
             for tree in tree:
-                yield from self.__iter__(tree)
+                yield from self._tree_iter(tree)
 
     def __str__(self):
         return self._formula
@@ -411,7 +421,7 @@ def parse(f: str) -> Tree:
     for part in parts:
         n, f = strip_number(part)
         result.append((parse2(f), n))
-    return result
+    return result  # type: ignore[return-value]
 
 
 def parse2(f: str) -> Tree:

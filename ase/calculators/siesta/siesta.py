@@ -12,23 +12,23 @@ http://www.uam.es/departamentos/ciencias/fismateriac/siesta
 
 import os
 import re
+import shutil
 import tempfile
 import warnings
-import shutil
-from os.path import join, isfile, islink
+from os.path import isfile, islink, join
+
 import numpy as np
 
-from ase.units import Ry, eV, Bohr
+from ase.calculators.calculator import (FileIOCalculator, Parameters,
+                                        ReadError, all_changes)
+from ase.calculators.siesta.import_functions import (get_valence_charge,
+                                                     read_rho,
+                                                     read_vca_synth_block)
+from ase.calculators.siesta.parameters import (PAOBasisBlock, Species,
+                                               format_fdf)
 from ase.data import atomic_numbers
 from ase.io.siesta import read_siesta_xv
-from ase.calculators.siesta.import_functions import read_rho
-from ase.calculators.siesta.import_functions import \
-    get_valence_charge, read_vca_synth_block
-from ase.calculators.calculator import FileIOCalculator, ReadError
-from ase.calculators.calculator import Parameters, all_changes
-from ase.calculators.siesta.parameters import PAOBasisBlock, Species
-from ase.calculators.siesta.parameters import format_fdf
-
+from ase.units import Bohr, Ry, eV
 
 meV = 0.001 * eV
 
@@ -57,7 +57,7 @@ def get_siesta_version(executable: str) -> str:
 
     temp_dirname = tempfile.mkdtemp(prefix='siesta-version-check-')
     try:
-        from subprocess import Popen, PIPE
+        from subprocess import PIPE, Popen
         proc = Popen([executable],
                      stdin=PIPE,
                      stdout=PIPE,
@@ -142,6 +142,7 @@ class SiestaParameters(Parameters):
     Documented in BaseSiesta.__init__
 
     """
+
     def __init__(
             self,
             label='siesta',
@@ -337,7 +338,7 @@ class Siesta(FileIOCalculator):
             i += 1
 
         # Set up the non-default species.
-        non_default_species = [s for s in species if not s['tag'] is None]
+        non_default_species = [s for s in species if s['tag'] is not None]
         for spec in non_default_species:
             mask1 = (tags == spec['tag'])
             mask2 = (symbols == spec['symbol'])
@@ -550,9 +551,17 @@ class Siesta(FileIOCalculator):
             fd.write(format_fdf('Spin     ', self['spin']))
             # Spin backwards compatibility.
             if self['spin'] == 'collinear':
-                fd.write(format_fdf('SpinPolarized', (True, "# Backwards compatibility.")))
+                fd.write(
+                    format_fdf(
+                        'SpinPolarized',
+                        (True,
+                         "# Backwards compatibility.")))
             elif self['spin'] == 'non-collinear':
-                fd.write(format_fdf('NonCollinear', (True, "# Backwards compatibility.")))
+                fd.write(
+                    format_fdf(
+                        'NonCollinearSpin',
+                        (True,
+                         "# Backwards compatibility.")))
 
             # Write functional.
             functional, authors = self['xc']
@@ -660,7 +669,9 @@ class Siesta(FileIOCalculator):
             if len(magmoms) != 0 and isinstance(magmoms[0], np.ndarray):
                 for n, M in enumerate(magmoms):
                     if M[0] != 0:
-                        fd.write('    %d %.14f %.14f %.14f \n' % (n + 1, M[0], M[1], M[2]))
+                        fd.write(
+                            '    %d %.14f %.14f %.14f \n' %
+                            (n + 1, M[0], M[1], M[2]))
             elif len(magmoms) != 0 and isinstance(magmoms[0], float):
                 for n, M in enumerate(magmoms):
                     if M != 0:
@@ -748,9 +759,11 @@ class Siesta(FileIOCalculator):
           1 -- means that the coordinate will be updated during relaxation
           0 -- mains that the coordinate will be fixed during relaxation
         """
-        from ase.constraints import FixAtoms, FixedLine, FixedPlane
         import sys
         import warnings
+
+        from ase.constraints import (FixAtoms, FixCartesian, FixedLine,
+                                     FixedPlane)
 
         a = atoms
         a2c = np.ones((len(a), 3), dtype=int)
@@ -763,14 +776,16 @@ class Siesta(FileIOCalculator):
                     raise RuntimeError(
                         'norm_dir: {} -- must be one of the Cartesian axes...'
                         .format(norm_dir))
-                a2c[c.a] = norm_dir.round().astype(int)
+                a2c[c.get_indices()] = norm_dir.round().astype(int)
             elif isinstance(c, FixedPlane):
                 norm_dir = c.dir / np.linalg.norm(c.dir)
                 if (max(norm_dir) - 1.0) > 1e-6:
                     raise RuntimeError(
                         'norm_dir: {} -- must be one of the Cartesian axes...'
                         .format(norm_dir))
-                a2c[c.a] = abs(1 - norm_dir.round().astype(int))
+                a2c[c.get_indices()] = abs(1 - norm_dir.round().astype(int))
+            elif isinstance(c, FixCartesian):
+                a2c[c.get_indices()] = c.mask.astype(int)
             else:
                 warnings.warn('Constraint {} is ignored at {}'
                               .format(str(c), sys._getframe().f_code))
@@ -879,7 +894,7 @@ class Siesta(FileIOCalculator):
                 else:
                     shutil.copy(pseudopotential, pseudo_targetpath)
 
-            if not spec['excess_charge'] is None:
+            if spec['excess_charge'] is not None:
                 atomic_number += 200
                 n_atoms = sum(np.array(species_numbers) == species_number)
 
@@ -1116,7 +1131,7 @@ class Siesta(FileIOCalculator):
                 self.results['free_energy'] = float(line.split()[-1])
 
         if ('energy' not in self.results or
-            'free_energy' not in self.results):
+                'free_energy' not in self.results):
             raise RuntimeError
 
     def read_forces_stress(self):
@@ -1150,28 +1165,29 @@ class Siesta(FileIOCalculator):
     def read_eigenvalues(self):
         """ A robust procedure using the suggestion by Federico Marchesin """
 
-        fname = self.getpath(ext='EIG')
+        file_name = self.getpath(ext='EIG')
         try:
-            with open(fname, "r") as fd:
+            with open(file_name, "r") as fd:
                 self.results['fermi_energy'] = float(fd.readline())
-                n, nspin, nkp = map(int, fd.readline().split())
+                n, num_hamilton_dim, nkp = map(int, fd.readline().split())
                 _ee = np.split(
                     np.array(fd.read().split()).astype(float), nkp)
-        except (IOError):
+        except IOError:
             return 1
 
-        ksn2e = np.delete(_ee, 0, 1).reshape([nkp, nspin, n])
+        n_spin = 1 if num_hamilton_dim > 2 else num_hamilton_dim
+        ksn2e = np.delete(_ee, 0, 1).reshape([nkp, n_spin, n])
 
-        eigarray = np.empty((nspin, nkp, n))
-        eigarray[:] = np.inf
+        eig_array = np.empty((n_spin, nkp, n))
+        eig_array[:] = np.inf
 
         for k, sn2e in enumerate(ksn2e):
             for s, n2e in enumerate(sn2e):
-                eigarray[s, k, :] = n2e
+                eig_array[s, k, :] = n2e
 
-        assert np.isfinite(eigarray).all()
+        assert np.isfinite(eig_array).all()
 
-        self.results['eigenvalues'] = eigarray
+        self.results['eigenvalues'] = eig_array
         return 0
 
     def read_kpoints(self):

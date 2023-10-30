@@ -13,13 +13,9 @@ on KIM, visit https://openkim.org.
 """
 
 from . import kimpy_wrappers
+from .calculators import (ASAPCalculator, KIMCalculator, LAMMPSLibCalculator,
+                          LAMMPSRunCalculator)
 from .exceptions import KIMCalculatorError
-from .calculators import (
-    KIMCalculator,
-    ASAPCalculator,
-    LAMMPSRunCalculator,
-    LAMMPSLibCalculator,
-)
 
 
 def KIM(model_name, simulator=None, options=None, debug=False):
@@ -112,8 +108,8 @@ def KIM(model_name, simulator=None, options=None, debug=False):
     if options is None:
         options = dict()
 
-    # If this is a KIM Portable Model (supports KIM API), return support through
-    # a KIM-compliant simulator
+    # If this is a KIM Portable Model (supports KIM API), return
+    # support through a KIM-compliant simulator
     model_type = "pm" if _is_portable_model(model_name) else "sm"
 
     if model_type == "pm":
@@ -138,14 +134,13 @@ def KIM(model_name, simulator=None, options=None, debug=False):
 
         elif simulator == "lammpslib":
             raise KIMCalculatorError(
-                '"lammpslib" calculator does not support KIM Portable Models. Try '
-                'using the "lammpsrun" calculator.'
+                '"lammpslib" calculator does not support KIM Portable Models. '
+                'Try using the "lammpsrun" calculator.'
             )
         else:
             raise KIMCalculatorError(
-                'Unsupported simulator "{}" requested to run KIM Portable Model.'.format(
-                    simulator
-                )
+                'Unsupported simulator "{}" requested to run KIM '
+                'Portable Model.'.format(simulator)
             )
 
     #######################################################
@@ -187,7 +182,8 @@ def KIM(model_name, simulator=None, options=None, debug=False):
 
             elif simulator == "lammpslib":
                 return LAMMPSLibCalculator(
-                    model_name, sm.supported_species, sm.supported_units, options
+                    model_name, sm.supported_species, sm.supported_units,
+                    options
                 )
 
             else:

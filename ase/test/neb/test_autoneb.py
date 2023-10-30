@@ -1,12 +1,13 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from ase import Atoms
-from ase.autoneb import AutoNEB
-from ase.build import fcc211, add_adsorbate
-from ase.constraints import FixAtoms
-from ase.neb import NEBTools
-from ase.optimize import QuasiNewton, BFGS
+from ase.build import add_adsorbate, fcc211
 from ase.calculators.emt import EMT
+from ase.constraints import FixAtoms
+from ase.mep import AutoNEB, NEBTools
+from ase.optimize import BFGS, QuasiNewton
 
 
 def test_autoneb(asap3, testdir):
@@ -67,7 +68,7 @@ def test_Au2Ag(testdir):
 
     middle = initial.copy()
     middle[1].position[0] = 0
-    
+
     final = initial.copy()
     final[1].position[0] += d
 
@@ -80,12 +81,12 @@ def test_Au2Ag(testdir):
         opt = QuasiNewton(image)
         opt.run(fmax=fmax)
     middle.get_forces()
-    
+
     prefix = Path('subdir') / 'neb'
     prefix.parent.mkdir()
     for i, image in enumerate([initial, middle, final]):
         image.write(f'{prefix}00{i}.traj')
-    
+
     autoneb = AutoNEB(attach_calculators,
                       prefix=prefix,
                       optimizer=QuasiNewton,
@@ -96,6 +97,6 @@ def test_Au2Ag(testdir):
                       parallel=False,
                       maxsteps=[20, 1000])
     autoneb.run()
-    
+
     nebtools = NEBTools(autoneb.all_images)
     assert nebtools.get_barrier()[0] == pytest.approx(4.185, 1e-3)

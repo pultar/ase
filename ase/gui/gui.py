@@ -3,14 +3,14 @@ import subprocess
 import sys
 import weakref
 from functools import partial
-from ase.gui.i18n import _
 from time import time
 
 import numpy as np
 
-from ase import Atoms, __version__
 import ase.gui.ui as ui
+from ase import Atoms, __version__
 from ase.gui.defaults import read_defaults
+from ase.gui.i18n import _
 from ase.gui.images import Images
 from ase.gui.nanoparticle import SetupNanoparticle
 from ase.gui.nanotube import SetupNanotube
@@ -300,9 +300,9 @@ class GUI(View, Status):
             self.bad_plot(_('Requires 3D cell.'))
             return
 
-        kwargs = dict(cell=self.atoms.cell.uncomplete(self.atoms.pbc),
-                      vectors=True)
-        return self.pipe('reciprocal', kwargs)
+        cell = self.atoms.cell.uncomplete(self.atoms.pbc)
+        bandpath = cell.bandpath(npoints=0)
+        return self.pipe('reciprocal', bandpath)
 
     def open(self, button=None, filename=None):
         chooser = ui.ASEFileChooser(self.window.win)
@@ -331,7 +331,7 @@ class GUI(View, Status):
 
     def quick_info_window(self, key=None):
         from ase.gui.quickinfo import info
-        info_win = ui.Window(_('Quick Info'))
+        info_win = ui.Window(_('Quick Info'), wmtype='utility')
         info_win.add(info(self))
 
         # Update quickinfo window when we change frame

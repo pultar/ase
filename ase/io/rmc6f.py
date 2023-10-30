@@ -1,10 +1,11 @@
 import re
 import time
+
 import numpy as np
 
 from ase.atoms import Atoms
-from ase.utils import reader, writer
 from ase.cell import Cell
+from ase.utils import reader, writer
 
 __all__ = ['read_rmc6f', 'write_rmc6f']
 
@@ -17,7 +18,7 @@ def _read_construct_regex(lines):
     """
     Utility for constructing  regular expressions used by reader.
     """
-    lines = [l.strip() for l in lines]
+    lines = [line.strip() for line in lines]
     lines_re = '|'.join(lines)
     lines_re = lines_re.replace(' ', r'\s+')
     lines_re = lines_re.replace('(', r'\(')

@@ -2,13 +2,13 @@ import os
 import sys
 import threading
 
-import pytest
 import numpy as np
+import pytest
 
-from ase.calculators.socketio import SocketClient, SocketIOCalculator
 from ase.calculators.emt import EMT
-from ase.optimize import BFGS
+from ase.calculators.socketio import SocketClient, SocketIOCalculator
 from ase.cluster.icosahedron import Icosahedron
+from ase.optimize import BFGS
 
 # If multiple test suites are running, we don't want port clashes.
 # Thus we generate a port from the pid.
@@ -18,7 +18,7 @@ pid = os.getpid()
 inet_port = (3141 + pid) % 65536
 # We could also use a Unix port perhaps, but not yet implemented
 
-#unixsocket = 'grumble'
+# unixsocket = 'grumble'
 timeout = 20.0
 
 
