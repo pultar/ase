@@ -215,11 +215,7 @@ def add_adsorbate(slab, adsorbate, height, position=(0, 0), offset=None,
     else:
         pos += position
 
-    if 'cell' in info:
-        cell = info['cell']
-    else:
-        cell = slab.get_cell()[:2, :2]
-
+    cell = info['cell'] if 'cell' in info else slab.get_cell()[:2, :2]
     pos += np.dot(spos, cell)
 
     # Convert the adsorbate to an Atoms object
@@ -388,7 +384,7 @@ def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
             else:
                 positions[-2::-3, ..., :2] += (-1.0 / 3, 2.0 / 3)
                 positions[-3::-3, ..., :2] += (1.0 / 3, 1.0 / 3)
-            sites.update({'hollow': (1.0 / 3, 1.0 / 3)})
+            sites['hollow'] = (1.0 / 3, 1.0 / 3)
         else:
             2 / 0
 
@@ -530,9 +526,21 @@ def graphene(formula='C2', a=2.460, thickness=0.0,
 
 
 def _all_surface_functions():
-    # Convenient for debugging.
-    d = {}
-    for func in [fcc100, fcc110, bcc100, bcc110, bcc111, fcc111, hcp0001,
-                 hcp10m10, diamond100, diamond111, fcc111, mx2, graphene]:
-        d[func.__name__] = func
-    return d
+    return {
+        func.__name__: func
+        for func in [
+            fcc100,
+            fcc110,
+            bcc100,
+            bcc110,
+            bcc111,
+            fcc111,
+            hcp0001,
+            hcp10m10,
+            diamond100,
+            diamond111,
+            fcc111,
+            mx2,
+            graphene,
+        ]
+    }

@@ -201,9 +201,8 @@ def make_supercell(prim, P, *, wrap=True, order="cell-major", tol=1e-5):
     # check number of atoms is correct
     n_target = abs(int(np.round(np.linalg.det(supercell_matrix) * len(prim))))
     if n_target != len(superatoms):
-        msg = "Number of atoms in supercell: {}, expected: {}".format(
-            n_target, len(superatoms))
-        raise SupercellError(msg)
+        raise SupercellError(f'Number of atoms in supercell: {n_target}, '
+                             f'expected: {len(superatoms)}')
 
     if wrap:
         superatoms.wrap(eps=tol)

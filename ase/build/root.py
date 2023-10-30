@@ -61,9 +61,9 @@ def point_in_cell_2d(point, cell, eps=1e-8):
     """
     # Define area of a triangle
     def tri_area(t1, t2, t3):
-        t1x, t1y = t1[0:2]
-        t2x, t2y = t2[0:2]
-        t3x, t3y = t3[0:2]
+        t1x, t1y = t1[:2]
+        t2x, t2y = t2[:2]
+        t3x, t3y = t3[:2]
         return abs(t1x * (t2y - t3y) + t2x *
                    (t3y - t1y) + t3x * (t1y - t2y)) / 2
 
@@ -122,9 +122,7 @@ def _root_surface_analysis(primitive_slab, root, eps=1e-8):
 
     valid_roots = np.nonzero(roots == root)[0]
     if len(valid_roots) == 0:
-        raise ValueError(
-            "Invalid root {} for cell {}".format(
-                root, cell_vectors))
+        raise ValueError(f"Invalid root {root} for cell {cell_vectors}")
     int_roots = np.array([int(this_root) for this_root in roots
                           if this_root.is_integer() and this_root <= root])
     return cell_points, cell_points[np.nonzero(

@@ -304,7 +304,7 @@ def stack(atoms1, atoms2, axis=2, cell=None, fix=0.5,
             return np.sqrt(((pos1[idx1] - pos2[idx2])**2).sum(axis=1).min())
 
         def func(x):
-            t1, t2, h1, h2 = x[0:3], x[3:6], x[6], x[7]
+            t1, t2, h1, h2 = x[:3], x[3:6], x[6], x[7]
             pos1 = atoms1.positions + t1
             pos2 = atoms2.positions + t2
             d1 = mindist(pos1, pos2 + (h1 + 1.0) * atoms1.cell[axis])
@@ -315,7 +315,7 @@ def stack(atoms1, atoms2, axis=2, cell=None, fix=0.5,
         atoms2.center()
         x0 = np.zeros((8,))
         x = fmin(func, x0)
-        t1, t2, h1, h2 = x[0:3], x[3:6], x[6], x[7]
+        t1, t2, h1, h2 = x[:3], x[3:6], x[6], x[7]
         atoms1.translate(t1)
         atoms2.translate(t2)
         atoms1.cell[axis] *= 1.0 + h1
@@ -359,8 +359,7 @@ def rotation_matrix(a1, a2, b1, b2):
 
     A1 = np.array([a1, b1, c1])
     A2 = np.array([a2, b3, c2])
-    R = np.linalg.solve(A1, A2).T
-    return R
+    return np.linalg.solve(A1, A2).T
 
 
 def rotate(atoms, a1, a2, b1, b2, rotate_cell=True, center=(0, 0, 0)):
@@ -493,10 +492,7 @@ def sort(atoms, tags=None):
     >>> np.all(nacl_sorted.cell == nacl.cell)
     True
     """
-    if tags is None:
-        tags = atoms.get_chemical_symbols()
-    else:
-        tags = list(tags)
+    tags = atoms.get_chemical_symbols() if tags is None else list(tags)
     deco = sorted([(tag, i) for i, tag in enumerate(tags)])
     indices = [i for tag, i in deco]
     return atoms[indices]

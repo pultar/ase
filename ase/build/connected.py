@@ -75,11 +75,7 @@ def split_bond(atoms, index1, index2, **kwargs):
     Returns two Atoms objects
     """
     assert index1 != index2
-    if index2 > index1:
-        shift = 0, 1
-    else:
-        shift = 1, 0
-
+    shift = (0, 1) if index2 > index1 else (1, 0)
     atoms_copy = atoms.copy()
     del atoms_copy[index2]
     atoms1 = connected_atoms(atoms_copy, index1 - shift[0], **kwargs)

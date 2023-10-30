@@ -51,21 +51,13 @@ def nanotube(n, m, length=1, bond=1.42, symbol='C', verbose=False,
     l1 = sqrt(l2)
 
     nd = gcd(n, m)
-    if (n - m) % (3 * nd) == 0:
-        ndr = 3 * nd
-    else:
-        ndr = nd
-
+    ndr = 3 * nd if (n - m) % (3 * nd) == 0 else nd
     nr = (2 * m + n) // ndr
     ns = -(2 * n + m) // ndr
     nn = 2 * l2 // ndr
 
     ichk = 0
-    if nr == 0:
-        n60 = 1
-    else:
-        n60 = nr * 4
-
+    n60 = 1 if nr == 0 else nr * 4
     absn = abs(n60)
     nnp = []
     nnq = []
@@ -139,9 +131,6 @@ def nanotube(n, m, length=1, bond=1.42, symbol='C', verbose=False,
             x2 = rs * np.cos(i * q4 + q5)
             y2 = rs * np.sin(i * q4 + q5)
             z2 = (i * abs(r) - k * h1) * np.sin(q3) - h2
-            x.append(x2)
-            y.append(y2)
-            z.append(z2)
         else:
             x2 = rs * np.cos(i * q4 + q5)
             y2 = rs * np.sin(i * q4 + q5)
@@ -151,21 +140,16 @@ def nanotube(n, m, length=1, bond=1.42, symbol='C', verbose=False,
                 z2 -= t * kk
             elif z2 < 0:
                 z2 += t * kk
-            x.append(x2)
-            y.append(y2)
-            z.append(z2)
-
+        x.append(x2)
+        y.append(y2)
+        z.append(z2)
     ntotal = 2 * nn
-    X = []
-    for i in range(ntotal):
-        X.append([x[i], y[i], sign * z[i]])
-
+    X = [[x[i], y[i], sign * z[i]] for i in range(ntotal)]
     if length > 1:
         xx = X[:]
         for mnp in range(2, length + 1):
-            for i in range(len(xx)):
-                X.append(xx[i][:2] + [xx[i][2] + (mnp - 1) * t])
-
+            X.extend(xx[i][:2] + [xx[i][2] + (mnp - 1) * t]
+                     for i in range(len(xx)))
     transvec = t
     numatom = ntotal * length
     diameter = rs * 2
