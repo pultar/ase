@@ -14,16 +14,16 @@ def test_bulk():
 
 class TestCubic:
     def test_sc(self):
-        name = "Po"
-        structure = "sc"
+        name = 'Po'
+        structure = 'sc'
         a = 1.0
         atoms0 = bulk(name, structure, a=a)
         atoms1 = bulk(name, structure, a=a, cubic=True)
         self.compare(atoms0, atoms1)
 
     def test_bcc(self):
-        name = "Li"
-        structure = "bcc"
+        name = 'Li'
+        structure = 'bcc'
         a = 1.0
         P = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)
@@ -31,16 +31,16 @@ class TestCubic:
         self.compare(atoms0, atoms1)
 
     def test_cesiumchloride(self):
-        name = "CsCl"
-        structure = "cesiumchloride"
+        name = 'CsCl'
+        structure = 'cesiumchloride'
         a = 1.0
         atoms0 = bulk(name, structure, a=a)
         atoms1 = bulk(name, structure, a=a, cubic=True)
         self.compare(atoms0, atoms1)
 
     def test_fcc(self):
-        name = "Cu"
-        structure = "fcc"
+        name = 'Cu'
+        structure = 'fcc'
         a = 1.0
         P = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)
@@ -49,8 +49,8 @@ class TestCubic:
         self.compare(atoms0, atoms1)
 
     def test_diamond(self):
-        name = "C"
-        structure = "diamond"
+        name = 'C'
+        structure = 'diamond'
         a = 1.0
         P = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)
@@ -59,8 +59,8 @@ class TestCubic:
         self.compare(atoms0, atoms1)
 
     def test_zincblende(self):
-        name = "ZnS"
-        structure = "zincblende"
+        name = 'ZnS'
+        structure = 'zincblende'
         a = 1.0
         P = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)
@@ -69,8 +69,8 @@ class TestCubic:
         self.compare(atoms0, atoms1)
 
     def test_rocksalt(self):
-        name = "NaCl"
-        structure = "rocksalt"
+        name = 'NaCl'
+        structure = 'rocksalt'
         a = 1.0
         P = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)
@@ -79,8 +79,8 @@ class TestCubic:
         self.compare(atoms0, atoms1)
 
     def test_fluorite(self):
-        name = "CaF2"
-        structure = "fluorite"
+        name = 'CaF2'
+        structure = 'fluorite'
         a = 1.0
         P = [[-1, 1, 1], [1, -1, 1], [1, 1, -1]]
         atoms0 = make_supercell(bulk(name, structure, a=a), P)

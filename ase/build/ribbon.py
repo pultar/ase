@@ -5,9 +5,20 @@ import numpy as np
 from ase.atoms import Atoms
 
 
-def graphene_nanoribbon(n, m, type='zigzag', saturated=False, C_H=1.09,
-                        C_C=1.42, vacuum=None, magnetic=False, initial_mag=1.12,
-                        sheet=False, main_element='C', saturate_element='H'):
+def graphene_nanoribbon(
+    n,
+    m,
+    type='zigzag',
+    saturated=False,
+    C_H=1.09,
+    C_C=1.42,
+    vacuum=None,
+    magnetic=False,
+    initial_mag=1.12,
+    sheet=False,
+    main_element='C',
+    saturate_element='H',
+):
     """Create a graphene nanoribbon.
 
     Creates a graphene nanoribbon in the x-z plane, with the nanoribbon
@@ -45,23 +56,23 @@ def graphene_nanoribbon(n, m, type='zigzag', saturated=False, C_H=1.09,
         raise ValueError('n must be an integer for zigzag ribbons')
 
     b = sqrt(3) * C_C / 4
-    arm_unit = Atoms(main_element + '4',
-                     pbc=(1, 0, 1),
-                     cell=[4 * b, 0, 3 * C_C])
-    arm_unit.positions = [[0, 0, 0],
-                          [b * 2, 0, C_C / 2.],
-                          [b * 2, 0, 3 * C_C / 2.],
-                          [0, 0, 2 * C_C]]
-    arm_unit_half = Atoms(main_element + '2',
-                          pbc=(1, 0, 1),
-                          cell=[2 * b, 0, 3 * C_C])
-    arm_unit_half.positions = [[b * 2, 0, C_C / 2.],
-                               [b * 2, 0, 3 * C_C / 2.]]
-    zz_unit = Atoms(main_element + '2',
-                    pbc=(1, 0, 1),
-                    cell=[3 * C_C / 2.0, 0, b * 4])
-    zz_unit.positions = [[0, 0, 0],
-                         [C_C / 2.0, 0, b * 2]]
+    arm_unit = Atoms(
+        main_element + '4', pbc=(1, 0, 1), cell=[4 * b, 0, 3 * C_C]
+    )
+    arm_unit.positions = [
+        [0, 0, 0],
+        [b * 2, 0, C_C / 2.0],
+        [b * 2, 0, 3 * C_C / 2.0],
+        [0, 0, 2 * C_C],
+    ]
+    arm_unit_half = Atoms(
+        main_element + '2', pbc=(1, 0, 1), cell=[2 * b, 0, 3 * C_C]
+    )
+    arm_unit_half.positions = [[b * 2, 0, C_C / 2.0], [b * 2, 0, 3 * C_C / 2.0]]
+    zz_unit = Atoms(
+        main_element + '2', pbc=(1, 0, 1), cell=[3 * C_C / 2.0, 0, b * 4]
+    )
+    zz_unit.positions = [[0, 0, 0], [C_C / 2.0, 0, b * 2]]
     atoms = Atoms()
 
     if type == 'zigzag':
@@ -102,7 +113,8 @@ def graphene_nanoribbon(n, m, type='zigzag', saturated=False, C_H=1.09,
         n_int = int(round(n))
         if abs(n_int - n) > 1e-10:
             raise ValueError(
-                'The argument n has to be half-integer for armchair ribbons.')
+                'The argument n has to be half-integer for armchair ribbons.'
+            )
         n = n_int
 
         for i in range(n // 2):
@@ -118,24 +130,32 @@ def graphene_nanoribbon(n, m, type='zigzag', saturated=False, C_H=1.09,
 
         if saturated:
             if n % 2:
-                arm_right_saturation = Atoms(saturate_element + '2',
-                                             pbc=(1, 0, 1),
-                                             cell=[2 * b, 0, 3 * C_C])
+                arm_right_saturation = Atoms(
+                    saturate_element + '2',
+                    pbc=(1, 0, 1),
+                    cell=[2 * b, 0, 3 * C_C],
+                )
                 arm_right_saturation.positions = [
-                    [- sqrt(3) / 2 * C_H, 0, C_C / 2 - C_H * 0.5],
-                    [- sqrt(3) / 2 * C_H, 0, 3 * C_C / 2.0 + C_H * 0.5]]
+                    [-sqrt(3) / 2 * C_H, 0, C_C / 2 - C_H * 0.5],
+                    [-sqrt(3) / 2 * C_H, 0, 3 * C_C / 2.0 + C_H * 0.5],
+                ]
             else:
-                arm_right_saturation = Atoms(saturate_element + '2',
-                                             pbc=(1, 0, 1),
-                                             cell=[4 * b, 0, 3 * C_C])
+                arm_right_saturation = Atoms(
+                    saturate_element + '2',
+                    pbc=(1, 0, 1),
+                    cell=[4 * b, 0, 3 * C_C],
+                )
                 arm_right_saturation.positions = [
-                    [- sqrt(3) / 2 * C_H, 0, C_H * 0.5],
-                    [- sqrt(3) / 2 * C_H, 0, 2 * C_C - C_H * 0.5]]
-            arm_left_saturation = Atoms(saturate_element + '2', pbc=(1, 0, 1),
-                                        cell=[4 * b, 0, 3 * C_C])
+                    [-sqrt(3) / 2 * C_H, 0, C_H * 0.5],
+                    [-sqrt(3) / 2 * C_H, 0, 2 * C_C - C_H * 0.5],
+                ]
+            arm_left_saturation = Atoms(
+                saturate_element + '2', pbc=(1, 0, 1), cell=[4 * b, 0, 3 * C_C]
+            )
             arm_left_saturation.positions = [
                 [b * 2 + sqrt(3) / 2 * C_H, 0, C_C / 2 - C_H * 0.5],
-                [b * 2 + sqrt(3) / 2 * C_H, 0, 3 * C_C / 2.0 + C_H * 0.5]]
+                [b * 2 + sqrt(3) / 2 * C_H, 0, 3 * C_C / 2.0 + C_H * 0.5],
+            ]
             arm_right_saturation.positions[:, 0] -= 4 * b * (n / 2.0 - 1)
 
             atoms += arm_right_saturation.repeat((1, 1, m))

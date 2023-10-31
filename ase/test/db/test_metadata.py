@@ -4,15 +4,16 @@ from ase import Atoms
 from ase.db import connect
 
 # Data for a plot:
-plot = {'a': [0, 1, 2],
-        'b': [1.2, 1.1, 1.0],
-        'abplot': {'title': 'Example',
-                   'data': [{'x': 'a',
-                             'y': 'b',
-                             'label': 'label1',
-                             'style': 'o-g'}],
-                   'xlabel': 'blah-blah [eV]',
-                   'ylabel': 'Answers'}}
+plot = {
+    'a': [0, 1, 2],
+    'b': [1.2, 1.1, 1.0],
+    'abplot': {
+        'title': 'Example',
+        'data': [{'x': 'a', 'y': 'b', 'label': 'label1', 'style': 'o-g'}],
+        'xlabel': 'blah-blah [eV]',
+        'ylabel': 'Answers',
+    },
+}
 
 
 @pytest.mark.parametrize('name', ['md.json', 'md.db'])
@@ -26,7 +27,9 @@ def test_metadata(name, testdir):
         'default_columns': ['formula', 'answer', 'kind'],
         'key_descriptions': {
             'kind': ('Type', 'Type of system', ''),
-            'answer': ('Answer', 'Answer to question', 'eV')}}
+            'answer': ('Answer', 'Answer to question', 'eV'),
+        },
+    }
 
     db = connect(name)
     md = db.metadata

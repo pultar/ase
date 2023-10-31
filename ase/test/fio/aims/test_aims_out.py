@@ -12,7 +12,7 @@ parent = Path(__file__).parents[2]
 
 
 def test_parse_socketio(testdir):
-    traj = read(parent / "testdata/aims/socket.out", ":", format="aims-output")
+    traj = read(parent / 'testdata/aims/socket.out', ':', format='aims-output')
     assert len(traj) == 6
     p0 = [[0.0, 0.0, 0.0], [0.9584, 0.0, 0.0], [-0.24, 0.9279, 0.0]]
     p1 = [
@@ -50,7 +50,7 @@ def test_parse_socketio(testdir):
 
 
 def test_parse_md(testdir):
-    traj = read(parent / "testdata/aims/md.out", ":", format="aims-output")
+    traj = read(parent / 'testdata/aims/md.out', ':', format='aims-output')
     assert len(traj) == 5
     p0 = [[0.0, 0.0, 0.0], [0.9584, 0.0, 0.0], [-0.24, 0.9279, 0.0]]
     p1 = [
@@ -88,7 +88,7 @@ def test_parse_md(testdir):
 
 
 def test_parse_relax(testdir):
-    traj = read(parent / "testdata/aims/relax.out", ":", format="aims-output")
+    traj = read(parent / 'testdata/aims/relax.out', ':', format='aims-output')
     assert len(traj) == 8
     p0 = [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]]
     assert all([np.allclose(at.get_scaled_positions(), p0) for at in traj])
@@ -126,7 +126,7 @@ def test_parse_relax(testdir):
 
 
 def test_parse_singlepoint(testdir):
-    atoms = read(parent / "testdata/aims/singlepoint.out", format="aims-output")
+    atoms = read(parent / 'testdata/aims/singlepoint.out', format='aims-output')
     p0 = [[0.0, 0.0, 0.0], [0.9584, 0.0, 0.0], [-0.24, 0.9279, 0.0]]
     assert np.allclose(atoms.get_positions(), p0)
 
@@ -137,16 +137,16 @@ def test_parse_singlepoint(testdir):
     ]
     assert np.allclose(atoms.get_forces(), f0)
 
-    results = read_aims_results(parent / "testdata/aims/singlepoint.out")
-    assert np.allclose(results["forces"], f0)
-    assert np.abs(results["energy"] + 2.06302072675943e03) < 1e-15
+    results = read_aims_results(parent / 'testdata/aims/singlepoint.out')
+    assert np.allclose(results['forces'], f0)
+    assert np.abs(results['energy'] + 2.06302072675943e03) < 1e-15
 
 
 def test_parse_dfpt_dielectric(testdir):
-    outfile = parent / "testdata/aims/DFPT_dielectric.out"
-    atoms = read(outfile, format="aims-output")
+    outfile = parent / 'testdata/aims/DFPT_dielectric.out'
+    atoms = read(outfile, format='aims-output')
 
-    diel = atoms.calc.results["dielectric_tensor"]
+    diel = atoms.calc.results['dielectric_tensor']
 
     diel_0 = [
         [7.18759265e00, -1.0000000e-15, 1.9000000e-14],
@@ -158,29 +158,34 @@ def test_parse_dfpt_dielectric(testdir):
 
 
 def test_parse_polarization(testdir):
-    outfile = parent / "testdata/aims/polarization.out"
-    atoms = read(outfile, format="aims-output")
+    outfile = parent / 'testdata/aims/polarization.out'
+    atoms = read(outfile, format='aims-output')
 
-    polar = atoms.calc.results["polarization"]
+    polar = atoms.calc.results['polarization']
 
-    polar_0 = [-51.045557E-03, -51.045557E-03, -51.458008E-03]
+    polar_0 = [-51.045557e-03, -51.045557e-03, -51.458008e-03]
 
     assert np.allclose(polar, polar_0)
 
 
 def test_preamble_failed(testdir):
-    outfile = parent / "testdata/aims/preamble_fail.out"
+    outfile = parent / 'testdata/aims/preamble_fail.out'
     with pytest.raises(ParseError, match='No SCF steps'):
-        read(outfile, format="aims-output")
+        read(outfile, format='aims-output')
 
 
 def test_numerical_stress(testdir):
-    outfile = parent / "testdata/aims/numerical_stress.out"
+    outfile = parent / 'testdata/aims/numerical_stress.out'
 
-    atoms = read(outfile, format="aims-output")
+    atoms = read(outfile, format='aims-output')
     stress = atoms.get_stress()
     stress_actual = [
-        0.00244726, 0.00267442, 0.00258710, 0.00000005, -0.00000026, -0.00000007
+        0.00244726,
+        0.00267442,
+        0.00258710,
+        0.00000005,
+        -0.00000026,
+        -0.00000007,
     ]
 
     assert np.allclose(stress, stress_actual)

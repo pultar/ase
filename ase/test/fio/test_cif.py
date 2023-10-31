@@ -7,8 +7,14 @@ import pytest
 from ase import Atoms
 from ase.build import molecule
 from ase.calculators.calculator import compare_atoms
-from ase.io.cif import (CIFLoop, NoStructureData, parse_cif, parse_loop,
-                        read_cif, write_cif)
+from ase.io.cif import (
+    CIFLoop,
+    NoStructureData,
+    parse_cif,
+    parse_loop,
+    read_cif,
+    write_cif,
+)
 
 
 def parse_string(string):
@@ -18,7 +24,7 @@ def parse_string(string):
 
 
 def check_fractional_occupancies(atoms):
-    """ Checks fractional occupancy entries in atoms.info dict """
+    """Checks fractional occupancy entries in atoms.info dict"""
     assert atoms.info['occupancy']
     assert list(atoms.arrays['spacegroup_kinds'])
 
@@ -30,7 +36,6 @@ def check_fractional_occupancies(atoms):
     for a in atoms:
         a_index_str = str(kinds[a.index])
         if a.symbol == 'Na':
-
             assert len(occupancies[a_index_str]) == 2
             assert occupancies[a_index_str]['K'] == 0.25
             assert occupancies[a_index_str]['Na'] == 0.75
@@ -270,7 +275,7 @@ def test_cif():
 
     # legacy behavior is to not read the K atoms
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+        warnings.simplefilter('ignore')
         atoms_leg = read_cif(cif_file, fractional_occupancies=False)
     elements = np.unique(atoms_leg.get_atomic_numbers())
     for n in (11, 17, 53):
@@ -376,15 +381,17 @@ def cif_atoms():
 def test_cif_loop_keys(cif_atoms):
     data = {}
     # test case has 20 entries
-    data['someKey'] = [[str(i) + "test" for i in range(20)]]
+    data['someKey'] = [[str(i) + 'test' for i in range(20)]]
     # test case has 20 entries
-    data['someIntKey'] = [[str(i) + "123" for i in range(20)]]
+    data['someIntKey'] = [[str(i) + '123' for i in range(20)]]
     cif_atoms.write('testfile.cif', loop_keys=data)
 
     atoms1 = read_cif('testfile.cif', store_tags=True)
     # keys are read lowercase only
-    r_data = {'someKey': atoms1.info['_somekey'],
-              'someIntKey': atoms1.info['_someintkey']}
+    r_data = {
+        'someKey': atoms1.info['_somekey'],
+        'someIntKey': atoms1.info['_someintkey'],
+    }
     assert r_data['someKey'] == data['someKey'][0]
     # data reading auto converts strins
     assert r_data['someIntKey'] == [int(x) for x in data['someIntKey'][0]]
@@ -398,14 +405,15 @@ def test_cif_writer_label_numbers(cif_atoms):
     # cannot use atoms.symbols as K is missing there
     elements = atoms1.info['_atom_site_type_symbol']
     build_labels = [
-        "{:}{:}".format(
-            x, i) for x in set(elements) for i in range(
-            1, elements.count(x) + 1)]
+        '{:}{:}'.format(x, i)
+        for x in set(elements)
+        for i in range(1, elements.count(x) + 1)
+    ]
     assert build_labels.sort() == labels.sort()
 
 
 def test_cif_labels(cif_atoms):
-    data = [["label" + str(i) for i in range(20)]]  # test case has 20 entries
+    data = [['label' + str(i) for i in range(20)]]  # test case has 20 entries
     cif_atoms.write('testfile.cif', labels=data)
 
     atoms1 = read_cif('testfile.cif', store_tags=True)
@@ -414,8 +422,7 @@ def test_cif_labels(cif_atoms):
 
 
 def test_cifloop():
-    dct = {'_eggs': range(4),
-           '_potatoes': [1.3, 7.1, -1, 0]}
+    dct = {'_eggs': range(4), '_potatoes': [1.3, 7.1, -1, 0]}
 
     loop = CIFLoop()
     loop.add('_eggs', dct['_eggs'], '{:<2d}')
@@ -450,11 +457,13 @@ def test_empty_or_atomless_cifblock():
 
 
 def test_symbols_questionmark():
-    blocks = parse_string("""\
+    blocks = parse_string(
+        """\
 data_dummy
 loop_
 _atom_site_label
-?""")
+?"""
+    )
 
     assert not blocks[0].has_structure()
     with pytest.raises(NoStructureData, match='undetermined'):
@@ -470,19 +479,17 @@ def test_bad_occupancies(cif_atoms):
 
 @pytest.mark.parametrize(
     'setting_name, ref_setting',
-    [
-        ('hexagonal', 1),
-        ('trigonal', 2),
-        ('rhombohedral', 2)
-    ]
+    [('hexagonal', 1), ('trigonal', 2), ('rhombohedral', 2)],
 )
 def test_spacegroup_named_setting(setting_name, ref_setting):
     """The rhombohedral crystal system signifies setting=2"""
-    blocks = parse_string("""\
+    blocks = parse_string(
+        """\
 data_test
 _space_group_crystal_system {}
 _symmetry_space_group_name_H-M         'R-3m'
-""".format(setting_name))
+""".format(setting_name)
+    )
 
     assert len(blocks) == 1
     spg = blocks[0].get_spacegroup(False)
@@ -492,12 +499,17 @@ _symmetry_space_group_name_H-M         'R-3m'
 
 @pytest.fixture
 def atoms():
-    return Atoms('CO', cell=[2., 3., 4., 50., 60., 70.], pbc=True,
-                 scaled_positions=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+    return Atoms(
+        'CO',
+        cell=[2.0, 3.0, 4.0, 50.0, 60.0, 70.0],
+        pbc=True,
+        scaled_positions=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+    )
 
 
 def roundtrip(atoms):
     from ase.io.bytes import parse_atoms, to_bytes
+
     buf = to_bytes(atoms, format='cif')
     return parse_atoms(buf, format='cif')
 
@@ -510,9 +522,11 @@ def test_cif_roundtrip_periodic(atoms):
     assert str(atoms1.symbols) == 'CO'
     assert all(atoms1.pbc)
     assert atoms.cell.cellpar() == pytest.approx(
-        atoms1.cell.cellpar(), abs=1e-5)
+        atoms1.cell.cellpar(), abs=1e-5
+    )
     assert atoms.get_scaled_positions() == pytest.approx(
-        atoms1.get_scaled_positions(), abs=1e-5)
+        atoms1.get_scaled_positions(), abs=1e-5
+    )
 
 
 def test_cif_roundtrip_nonperiodic():
@@ -534,27 +548,30 @@ def test_cif_missingvector(atoms):
 
 
 def test_cif_roundtrip_mixed():
-    atoms = Atoms('Au', cell=[1., 2., 3.], pbc=[1, 1, 0])
+    atoms = Atoms('Au', cell=[1.0, 2.0, 3.0], pbc=[1, 1, 0])
     atoms1 = roundtrip(atoms)
 
     # We cannot preserve PBC info for this case:
     assert all(atoms1.pbc)
     assert compare_atoms(atoms, atoms1, tol=1e-5) == ['pbc']
     assert atoms.get_scaled_positions() == pytest.approx(
-        atoms1.get_scaled_positions(), abs=1e-5)
+        atoms1.get_scaled_positions(), abs=1e-5
+    )
 
 
 def test_loop_with_space():
     # Regression test for https://gitlab.com/ase/ase/-/issues/859 .
     # (We do the \n\ to avoid automatic trailing whitespace cleanup)
-    blocks = parse_string("""\
+    blocks = parse_string(
+        """\
 data_image0
 loop_
  _hello
  banana
  \n\
 _potato 42
-""")
+"""
+    )
 
     assert len(blocks) == 1
     assert blocks[0]['_potato'] == 42

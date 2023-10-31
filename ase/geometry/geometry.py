@@ -33,8 +33,14 @@ def translate_pretty(fractional, pbc):
     return fractional
 
 
-def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
-                   pretty_translation=False, eps=1e-7):
+def wrap_positions(
+    positions,
+    cell,
+    pbc=True,
+    center=(0.5, 0.5, 0.5),
+    pretty_translation=False,
+    eps=1e-7,
+):
     """Wrap positions to unit cell.
 
     Returns positions changed by a multiple of the unit cell vectors to
@@ -80,8 +86,7 @@ def wrap_positions(positions, cell, pbc=True, center=(0.5, 0.5, 0.5),
     assert np.asarray(cell)[np.asarray(pbc)].any(axis=1).all(), (cell, pbc)
 
     cell = complete_cell(cell)
-    fractional = np.linalg.solve(cell.T,
-                                 np.asarray(positions).T).T - shift
+    fractional = np.linalg.solve(cell.T, np.asarray(positions).T).T - shift
 
     if pretty_translation:
         fractional = translate_pretty(fractional, pbc)
@@ -237,7 +242,7 @@ def conditional_find_mic(vectors, cell, pbc):
     if cell and pbc are set. Can be used like a simple version of get_distances.
     """
     if (cell is None) != (pbc is None):
-        raise ValueError("cell or pbc must be both set or both be None")
+        raise ValueError('cell or pbc must be both set or both be None')
     if cell is not None:
         mics = [find_mic(v, cell, pbc) for v in vectors]
         vectors, vector_lengths = zip(*mics)
@@ -283,16 +288,24 @@ def get_angles_derivatives(v0, v1, cell=None, pbc=None):
     angles = np.radians(get_angles(v0, v1, cell=cell, pbc=pbc))
     sin_angles = np.sin(angles)
     cos_angles = np.cos(angles)
-    if (sin_angles == 0.).any():  # identify singularities
+    if (sin_angles == 0.0).any():  # identify singularities
         raise ZeroDivisionError('Singularity for derivative of a planar angle')
 
     product = nv0 * nv1
-    deriv_d0 = (-(v1 / product[:, np.newaxis]  # derivatives by atom 0
-                  - np.einsum('ij,i->ij', v0, cos_angles / nv0**2))
-                / sin_angles[:, np.newaxis])
-    deriv_d2 = (-(v0 / product[:, np.newaxis]  # derivatives by atom 2
-                  - np.einsum('ij,i->ij', v1, cos_angles / nv1**2))
-                / sin_angles[:, np.newaxis])
+    deriv_d0 = (
+        -(
+            v1 / product[:, np.newaxis]  # derivatives by atom 0
+            - np.einsum('ij,i->ij', v0, cos_angles / nv0**2)
+        )
+        / sin_angles[:, np.newaxis]
+    )
+    deriv_d2 = (
+        -(
+            v0 / product[:, np.newaxis]  # derivatives by atom 2
+            - np.einsum('ij,i->ij', v1, cos_angles / nv1**2)
+        )
+        / sin_angles[:, np.newaxis]
+    )
     deriv_d1 = -(deriv_d0 + deriv_d2)  # derivatives by atom 1
     derivs = np.stack((deriv_d0, deriv_d1, deriv_d2), axis=1)
     return np.degrees(derivs)
@@ -322,8 +335,8 @@ def get_dihedrals(v0, v1, v2, cell=None, pbc=None):
 
     x = np.einsum('ij,ij->i', v, w)
     y = np.einsum('ij,ij->i', np.cross(v1n, v, axis=1), w)
-    dihedrals = np.arctan2(y, x)            # dihedral angle in [-pi, pi]
-    dihedrals[dihedrals < 0.] += 2 * np.pi  # dihedral angle in [0, 2*pi]
+    dihedrals = np.arctan2(y, x)  # dihedral angle in [-pi, pi]
+    dihedrals[dihedrals < 0.0] += 2 * np.pi  # dihedral angle in [0, 2*pi]
     return np.degrees(dihedrals)
 
 
@@ -336,8 +349,9 @@ def get_dihedrals_derivatives(v0, v1, v2, cell=None, pbc=None):
 
     Derivative output format: [[dx_a0, dy_a0, dz_a0], ..., [..., dz_a3]].
     """
-    (v0, v1, v2), (nv0, nv1, nv2) = conditional_find_mic([v0, v1, v2], cell,
-                                                         pbc)
+    (v0, v1, v2), (nv0, nv1, nv2) = conditional_find_mic(
+        [v0, v1, v2], cell, pbc
+    )
 
     v0 /= nv0[:, np.newaxis]
     v1 /= nv1[:, np.newaxis]
@@ -348,17 +362,22 @@ def get_dihedrals_derivatives(v0, v1, v2, cell=None, pbc=None):
     sin_psi01 = np.sin(np.arccos(cos_psi01))
     cos_psi12 = np.einsum('ij,ij->i', v1, v2)
     sin_psi12 = np.sin(np.arccos(cos_psi12))
-    if (sin_psi01 == 0.).any() or (sin_psi12 == 0.).any():
-        msg = ('Undefined derivative for undefined dihedral with planar inner '
-               'angle')
+    if (sin_psi01 == 0.0).any() or (sin_psi12 == 0.0).any():
+        msg = (
+            'Undefined derivative for undefined dihedral with planar inner '
+            'angle'
+        )
         raise ZeroDivisionError(msg)
 
     deriv_d0 = -normal_v01 / (nv0 * sin_psi01**2)[:, np.newaxis]  # by atom 0
     deriv_d3 = normal_v12 / (nv2 * sin_psi12**2)[:, np.newaxis]  # by atom 3
-    deriv_d1 = (((nv1 + nv0 * cos_psi01) / nv1)[:, np.newaxis] * -deriv_d0
-                + (cos_psi12 * nv2 / nv1)[:, np.newaxis] * deriv_d3)  # by a1
-    deriv_d2 = (-((nv1 + nv2 * cos_psi12) / nv1)[:, np.newaxis] * deriv_d3
-                - (cos_psi01 * nv0 / nv1)[:, np.newaxis] * -deriv_d0)  # by a2
+    deriv_d1 = ((nv1 + nv0 * cos_psi01) / nv1)[:, np.newaxis] * -deriv_d0 + (
+        cos_psi12 * nv2 / nv1
+    )[:, np.newaxis] * deriv_d3  # by a1
+    deriv_d2 = (
+        -((nv1 + nv2 * cos_psi12) / nv1)[:, np.newaxis] * deriv_d3
+        - (cos_psi01 * nv0 / nv1)[:, np.newaxis] * -deriv_d0
+    )  # by a2
     derivs = np.stack((deriv_d0, deriv_d1, deriv_d2, deriv_d3), axis=1)
     return np.degrees(derivs)
 
@@ -380,7 +399,7 @@ def get_distances(p1, p2=None, cell=None, pbc=None):
         p2 = np.atleast_2d(p2)
         D = (p2[np.newaxis, :, :] - p1[:, np.newaxis, :]).reshape((-1, 3))
 
-    (D, ), (D_len, ) = conditional_find_mic([D], cell=cell, pbc=pbc)
+    (D,), (D_len,) = conditional_find_mic([D], cell=cell, pbc=pbc)
 
     if p2 is None:
         Dout = np.zeros((np1, np1, 3))
@@ -409,13 +428,13 @@ def get_distances_derivatives(v0, cell=None, pbc=None):
     raised.
     Derivative output format: [[dx_a0, dy_a0, dz_a0], [dx_a1, dy_a1, dz_a1]].
     """
-    (v0, ), (dists, ) = conditional_find_mic([v0], cell, pbc)
+    (v0,), (dists,) = conditional_find_mic([v0], cell, pbc)
 
-    if (dists <= 0.).any():  # identify singularities
+    if (dists <= 0.0).any():  # identify singularities
         raise ZeroDivisionError('Singularity for derivative of a zero distance')
 
-    derivs_d0 = np.einsum('i,ij->ij', -1. / dists, v0)  # derivatives by atom 0
-    derivs_d1 = -derivs_d0                              # derivatives by atom 1
+    derivs_d0 = np.einsum('i,ij->ij', -1.0 / dists, v0)  # derivatives by atom 0
+    derivs_d1 = -derivs_d0  # derivatives by atom 1
     derivs = np.stack((derivs_d0, derivs_d1), axis=1)
     return derivs
 
@@ -427,6 +446,7 @@ def get_duplicate_atoms(atoms, cutoff=0.1, delete=False):
     Delete one set of them if delete == True.
     """
     from scipy.spatial.distance import pdist
+
     dists = pdist(atoms.get_positions(), 'sqeuclidean')
     dup = np.nonzero(dists < cutoff**2)
     rem = np.array(_row_col_from_pdist(len(atoms), dup[0]))
@@ -459,8 +479,9 @@ def permute_axes(atoms, permutation):
 
     permuted = atoms.copy()
     scaled = permuted.get_scaled_positions()
-    permuted.set_cell(permuted.cell.permute_axes(permutation),
-                      scale_atoms=False)
+    permuted.set_cell(
+        permuted.cell.permute_axes(permutation), scale_atoms=False
+    )
     permuted.set_scaled_positions(scaled[:, permutation])
     permuted.set_pbc(permuted.pbc[permutation])
     return permuted

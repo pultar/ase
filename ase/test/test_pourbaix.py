@@ -21,5 +21,12 @@ def test_pourbaix():
     print(d, names, text)
     assert d.shape == (3, 11)
     assert d.ptp() == 6
-    assert names == ['Zn', 'ZnO2(aq)', 'Zn++(aq)', 'HZnO2-(aq)',
-                     'ZnOH+(aq)', 'ZnO', 'ZnO2--(aq)']
+    assert names == [
+        'Zn',
+        'ZnO2(aq)',
+        'Zn++(aq)',
+        'HZnO2-(aq)',
+        'ZnOH+(aq)',
+        'ZnO',
+        'ZnO2--(aq)',
+    ]

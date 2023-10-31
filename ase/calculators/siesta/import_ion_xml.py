@@ -40,11 +40,18 @@ def get_ion(fname):
     doc = minidom.parse(fname)
 
     # the elements from the header
-    elements_headers = [['symbol', str], ['label', str], ['z', int],
-                        ['valence', float], ['mass', float],
-                        ['self_energy', float], ['lmax_basis', int],
-                        ['norbs_nl', int], ['lmax_projs', int],
-                        ['nprojs_nl', int]]
+    elements_headers = [
+        ['symbol', str],
+        ['label', str],
+        ['z', int],
+        ['valence', float],
+        ['mass', float],
+        ['self_energy', float],
+        ['lmax_basis', int],
+        ['norbs_nl', int],
+        ['lmax_projs', int],
+        ['nprojs_nl', int],
+    ]
 
     ion = {}
     for i, elname in enumerate(elements_headers):
@@ -52,8 +59,8 @@ def get_ion(fname):
         ion[elname[0]] = get_data_elements(name[0], elname[1])
 
     # extract the basis_specs
-    name = doc.getElementsByTagName("basis_specs")
-    ion["basis_specs"] = getNodeText(name[0])
+    name = doc.getElementsByTagName('basis_specs')
+    ion['basis_specs'] = getNodeText(name[0])
 
     extract_pao_elements(ion, doc)
     return ion
@@ -79,7 +86,7 @@ def get_data_elements(name, dtype):
         elif len(data) == 1:
             return data[0]
         else:
-            raise ValueError("len(data)<1 ??")
+            raise ValueError('len(data)<1 ??')
     elif dtype is float:
         data = str2float(getNodeText(name))
         if len(data) > 1:
@@ -87,7 +94,7 @@ def get_data_elements(name, dtype):
         elif len(data) == 1:
             return data[0]
         else:
-            raise ValueError("len(data)<1 ??")
+            raise ValueError('len(data)<1 ??')
     elif dtype is str:
         return getNodeText(name)
     else:
@@ -112,42 +119,52 @@ def extract_pao_elements(ion, doc):
             projector
     """
 
-    name_npts = doc.getElementsByTagName("npts")
-    name_delta = doc.getElementsByTagName("delta")
-    name_cutoff = doc.getElementsByTagName("cutoff")
-    name_data = doc.getElementsByTagName("data")
+    name_npts = doc.getElementsByTagName('npts')
+    name_delta = doc.getElementsByTagName('delta')
+    name_cutoff = doc.getElementsByTagName('cutoff')
+    name_data = doc.getElementsByTagName('data')
 
-    name_orbital = doc.getElementsByTagName("orbital")
-    name_projector = doc.getElementsByTagName("projector")
+    name_orbital = doc.getElementsByTagName('orbital')
+    name_projector = doc.getElementsByTagName('projector')
 
-    ion["orbital"] = []
-    ion["projector"] = []
+    ion['orbital'] = []
+    ion['projector'] = []
     for i in range(len(name_orbital)):
-        ion["orbital"].append(extract_orbital(name_orbital[i]))
+        ion['orbital'].append(extract_orbital(name_orbital[i]))
     for i in range(len(name_projector)):
-        ion["projector"].append(extract_projector(name_projector[i]))
+        ion['projector'].append(extract_projector(name_projector[i]))
 
     if len(name_data) != len(name_npts):
-        raise ValueError("len(name_data) != len(name_npts): {0} != {1}".
-                         format(len(name_data), len(name_npts)))
+        raise ValueError(
+            'len(name_data) != len(name_npts): {0} != {1}'.format(
+                len(name_data), len(name_npts)
+            )
+        )
     if len(name_data) != len(name_cutoff):
-        raise ValueError("len(name_data) != len(name_cutoff): {0} != {1}".
-                         format(len(name_data), len(name_cutoff)))
+        raise ValueError(
+            'len(name_data) != len(name_cutoff): {0} != {1}'.format(
+                len(name_data), len(name_cutoff)
+            )
+        )
     if len(name_data) != len(name_delta):
-        raise ValueError("len(name_data) != len(name_delta): {0} != {1}".
-                         format(len(name_data), len(name_delta)))
+        raise ValueError(
+            'len(name_data) != len(name_delta): {0} != {1}'.format(
+                len(name_data), len(name_delta)
+            )
+        )
 
-    ion["npts"] = np.zeros((len(name_npts)), dtype=int)
-    ion["delta"] = np.zeros((len(name_delta)), dtype=float)
-    ion["cutoff"] = np.zeros((len(name_cutoff)), dtype=float)
-    ion["data"] = []
+    ion['npts'] = np.zeros((len(name_npts)), dtype=int)
+    ion['delta'] = np.zeros((len(name_delta)), dtype=float)
+    ion['cutoff'] = np.zeros((len(name_cutoff)), dtype=float)
+    ion['data'] = []
 
     for i in range(len(name_data)):
-        ion["npts"][i] = get_data_elements(name_npts[i], int)
-        ion["cutoff"][i] = get_data_elements(name_cutoff[i], float)
-        ion["delta"][i] = get_data_elements(name_delta[i], float)
-        ion["data"].append(get_data_elements(name_data[i], float).
-                           reshape(ion["npts"][i], 2))
+        ion['npts'][i] = get_data_elements(name_npts[i], int)
+        ion['cutoff'][i] = get_data_elements(name_cutoff[i], float)
+        ion['delta'][i] = get_data_elements(name_delta[i], float)
+        ion['data'].append(
+            get_data_elements(name_data[i], float).reshape(ion['npts'][i], 2)
+        )
 
 
 def extract_orbital(orb_xml):

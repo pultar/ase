@@ -14,15 +14,26 @@ class CLICommand:
 
     @staticmethod
     def add_arguments(parser):
-        parser.add_argument('filename', nargs='*',
-                            help='Name of file to determine format for.')
-        parser.add_argument('-v', '--verbose', action='store_true',
-                            help='Show more information about files.')
-        parser.add_argument('--formats', action='store_true',
-                            help='List file formats known to ASE.')
-        parser.add_argument('--calculators', action='store_true',
-                            help='List calculators known to ASE '
-                            'and whether they appear to be installed.')
+        parser.add_argument(
+            'filename', nargs='*', help='Name of file to determine format for.'
+        )
+        parser.add_argument(
+            '-v',
+            '--verbose',
+            action='store_true',
+            help='Show more information about files.',
+        )
+        parser.add_argument(
+            '--formats',
+            action='store_true',
+            help='List file formats known to ASE.',
+        )
+        parser.add_argument(
+            '--calculators',
+            action='store_true',
+            help='List calculators known to ASE '
+            'and whether they appear to be installed.',
+        )
 
     @staticmethod
     def run(args):
@@ -37,8 +48,11 @@ class CLICommand:
                 print_formats()
             if args.calculators:
                 print()
-                from ase.calculators.autodetect import (detect_calculators,
-                                                        format_configs)
+                from ase.calculators.autodetect import (
+                    detect_calculators,
+                    format_configs,
+                )
+
                 configs = detect_calculators()
                 print('Calculators:')
                 for message in format_configs(configs):
@@ -65,8 +79,7 @@ class CLICommand:
                 else:
                     description = '?'
 
-            print('{:{}}{} ({})'.format(filename + ':', n,
-                                        description, format))
+            print('{:{}}{} ({})'.format(filename + ':', n, description, format))
             if args.verbose:
                 if format == 'traj':
                     print_ulm_info(filename)
@@ -82,8 +95,10 @@ def print_info():
 
     from ase.dependencies import all_dependencies
 
-    versions = [('platform', platform.platform()),
-                ('python-' + sys.version.split()[0], sys.executable)]
+    versions = [
+        ('platform', platform.platform()),
+        ('python-' + sys.version.split()[0], sys.executable),
+    ]
 
     for name, path in versions + all_dependencies():
         print(f'{name:24} {path}')
@@ -109,6 +124,8 @@ def print_formats():
         if fmt.globs:
             moreinfo.append('glob={}'.format('|'.join(fmt.globs)))
 
-        print('  {} [{}]: {}'.format(fmt.name,
-                                     ', '.join(moreinfo),
-                                     fmt.description))
+        print(
+            '  {} [{}]: {}'.format(
+                fmt.name, ', '.join(moreinfo), fmt.description
+            )
+        )

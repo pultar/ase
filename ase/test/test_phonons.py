@@ -4,7 +4,7 @@ from ase.phonons import Phonons
 
 
 def check_set_atoms(atoms, set_atoms, expected_atoms):
-    """ Perform a test that .set_atoms() only displaces the expected atoms. """
+    """Perform a test that .set_atoms() only displaces the expected atoms."""
     atoms.calc = EMT()
     phonons = Phonons(atoms, EMT())
     phonons.set_atoms(set_atoms)
@@ -49,6 +49,6 @@ def test_check_consistent_format(testdir):
     eq_data = phonons.cache['eq']
     disp_data = phonons.cache['0x-']
     assert isinstance(eq_data, dict) and isinstance(disp_data, dict)
-    assert set(eq_data) == set(disp_data), "dict keys mismatch"
+    assert set(eq_data) == set(disp_data), 'dict keys mismatch'
     for array_key in eq_data:
         assert eq_data[array_key].shape == disp_data[array_key].shape, array_key

@@ -1,8 +1,11 @@
 import numpy as np
 import pytest
 
-from ase.lattice import (all_variants, bravais_lattices,
-                         get_lattice_from_canonical_cell)
+from ase.lattice import (
+    all_variants,
+    bravais_lattices,
+    get_lattice_from_canonical_cell,
+)
 
 
 @pytest.mark.parametrize('name', list(bravais_lattices))
@@ -14,8 +17,9 @@ def test_bravais_lattices(name):
         assert par in ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
 
 
-@pytest.mark.parametrize('lat', list(all_variants()),
-                         ids=lambda lat: lat.variant)
+@pytest.mark.parametrize(
+    'lat', list(all_variants()), ids=lambda lat: lat.variant
+)
 def test_variants(lat):
     print(lat.variant)
     for par in lat.parameters:

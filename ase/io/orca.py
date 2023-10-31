@@ -23,9 +23,9 @@ def read_geom_orcainp(fd):
         if line[1:].startswith('xyz '):
             startline = index + 1
             stopline = -1
-        elif (line.startswith('end') and stopline == -1):
+        elif line.startswith('end') and stopline == -1:
             stopline = index
-        elif (line.startswith('*') and stopline == -1):
+        elif line.startswith('*') and stopline == -1:
             stopline = index
     # Format and send to read_xyz.
     xyz_text = '%i\n' % (stopline - startline)
@@ -33,7 +33,7 @@ def read_geom_orcainp(fd):
     for line in lines[startline:stopline]:
         xyz_text += line
     atoms = read(StringIO(xyz_text), format='xyz')
-    atoms.set_cell((0., 0., 0.))  # no unit cell defined
+    atoms.set_cell((0.0, 0.0, 0.0))  # no unit cell defined
 
     return atoms
 
@@ -45,17 +45,22 @@ def write_orca(fd, atoms, params):
     fd.write(f"{params['orcablocks']} \n")
 
     fd.write('*xyz')
-    fd.write(" %d" % params['charge'])
-    fd.write(" %d \n" % params['mult'])
+    fd.write(' %d' % params['charge'])
+    fd.write(' %d \n' % params['mult'])
     for atom in atoms:
         if atom.tag == 71:  # 71 is ascii G (Ghost)
             symbol = atom.symbol + ' : '
         else:
             symbol = atom.symbol + '   '
-        fd.write(symbol +
-                 str(atom.position[0]) + ' ' +
-                 str(atom.position[1]) + ' ' +
-                 str(atom.position[2]) + '\n')
+        fd.write(
+            symbol
+            + str(atom.position[0])
+            + ' '
+            + str(atom.position[1])
+            + ' '
+            + str(atom.position[2])
+            + '\n'
+        )
     fd.write('*\n')
 
 
@@ -63,8 +68,8 @@ def write_orca(fd, atoms, params):
 def read_orca_energy(fd):
     """Read Energy from ORCA output file."""
     text = fd.read()
-    re_energy = re.compile(r"FINAL SINGLE POINT ENERGY.*\n")
-    re_not_converged = re.compile(r"Wavefunction not fully converged")
+    re_energy = re.compile(r'FINAL SINGLE POINT ENERGY.*\n')
+    re_not_converged = re.compile(r'Wavefunction not fully converged')
 
     found_line = re_energy.finditer(text)
     energy = float('nan')
@@ -89,7 +94,7 @@ def read_orca_forces(fd):
             gradients = []
             tempgrad = []
             continue
-        if getgrad and "#" not in line:
+        if getgrad and '#' not in line:
             grad = line.split()[-1]
             tempgrad.append(float(grad))
             if len(tempgrad) == 3:

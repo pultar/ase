@@ -90,211 +90,375 @@ def SetBasicChilds():
     XSD = ET.Element('XSD')
     XSD.set('Version', '6.0')
 
-    ATR = SetChild(XSD, 'AtomisticTreeRoot', dict(
-        ID='1',
-        NumProperties='40',
-        NumChildren='1',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='AngleEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='BendBendEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='BendTorsionBendEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='BondEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='EFGAsymmetry',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='EFGQuadrupolarCoupling',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='ElectrostaticEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='GrowthFace',
-        Name='FaceMillerIndex',
-        Type='MillerIndex',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='GrowthFace',
-        Name='FacetTransparency',
-        Type='Float',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Bondable',
-        Name='Force',
-        Type='CoDirection',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='HydrogenBondEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Bondable',
-        Name='ImportOrder',
-        Type='UnsignedInteger',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='InversionEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='IsBackboneAtom',
-        Type='Boolean',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='IsChiralCenter',
-        Type='Boolean',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='IsOutOfPlane',
-        Type='Boolean',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='BestFitLineMonitor',
-        Name='LineExtentPadding',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Linkage',
-        Name='LinkageGroupName',
-        Type='String',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='PropertyList',
-        Name='ListIdentifier',
-        Type='String',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Atom',
-        Name='NMRShielding',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='NonBondEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Bondable',
-        Name='NormalMode',
-        Type='Direction',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Bondable',
-        Name='NormalModeFrequency',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Bondable',
-        Name='OrbitalCutoffRadius',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='BestFitPlaneMonitor',
-        Name='PlaneExtentPadding',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='PotentialEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ScalarFieldBase',
-        Name='QuantizationValue',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='RestraintEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='SeparatedStretchStretchEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='Trajectory',
-        Name='SimulationStep',
-        Type='Integer',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='StretchBendStretchEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='StretchStretchEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='StretchTorsionStretchEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='TorsionBendBendEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='TorsionEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='TorsionStretchEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='ValenceCrossTermEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='ValenceDiagonalEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='ClassicalEnergyHolder',
-        Name='VanDerWaalsEnergy',
-        Type='Double',
-    ))
-    SetChild(ATR, 'Property', dict(
-        DefinedOn='SymmetrySystem',
-        Name='_Stress',
-        Type='Matrix',
-    ))
+    ATR = SetChild(
+        XSD,
+        'AtomisticTreeRoot',
+        dict(
+            ID='1',
+            NumProperties='40',
+            NumChildren='1',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='AngleEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='BendBendEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='BendTorsionBendEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='BondEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='EFGAsymmetry',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='EFGQuadrupolarCoupling',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='ElectrostaticEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='GrowthFace',
+            Name='FaceMillerIndex',
+            Type='MillerIndex',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='GrowthFace',
+            Name='FacetTransparency',
+            Type='Float',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Bondable',
+            Name='Force',
+            Type='CoDirection',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='HydrogenBondEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Bondable',
+            Name='ImportOrder',
+            Type='UnsignedInteger',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='InversionEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='IsBackboneAtom',
+            Type='Boolean',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='IsChiralCenter',
+            Type='Boolean',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='IsOutOfPlane',
+            Type='Boolean',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='BestFitLineMonitor',
+            Name='LineExtentPadding',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Linkage',
+            Name='LinkageGroupName',
+            Type='String',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='PropertyList',
+            Name='ListIdentifier',
+            Type='String',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Atom',
+            Name='NMRShielding',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='NonBondEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Bondable',
+            Name='NormalMode',
+            Type='Direction',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Bondable',
+            Name='NormalModeFrequency',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Bondable',
+            Name='OrbitalCutoffRadius',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='BestFitPlaneMonitor',
+            Name='PlaneExtentPadding',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='PotentialEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ScalarFieldBase',
+            Name='QuantizationValue',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='RestraintEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='SeparatedStretchStretchEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='Trajectory',
+            Name='SimulationStep',
+            Type='Integer',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='StretchBendStretchEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='StretchStretchEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='StretchTorsionStretchEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='TorsionBendBendEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='TorsionEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='TorsionStretchEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='ValenceCrossTermEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='ValenceDiagonalEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='ClassicalEnergyHolder',
+            Name='VanDerWaalsEnergy',
+            Type='Double',
+        ),
+    )
+    SetChild(
+        ATR,
+        'Property',
+        dict(
+            DefinedOn='SymmetrySystem',
+            Name='_Stress',
+            Type='Matrix',
+        ),
+    )
     return ATR, XSD
 
 
@@ -315,11 +479,15 @@ def _write_xsd_html(images, connectivity=None):
 
     # non-periodic system
     if not images[0].pbc.all():
-        Molecule = SetChild(ATR, 'Molecule', dict(
-            ID='2',
-            NumChildren=str(natoms + nbonds),
-            Name='Lattice=&quot1.0',
-        ))
+        Molecule = SetChild(
+            ATR,
+            'Molecule',
+            dict(
+                ID='2',
+                NumChildren=str(natoms + nbonds),
+                Name='Lattice=&quot1.0',
+            ),
+        )
         # writing images[0]
         for x in range(natoms):
             Props = dict(
@@ -338,10 +506,14 @@ def _write_xsd_html(images, connectivity=None):
                 Props['Connections'] = ','.join(bondstr)
             SetChild(Molecule, 'Atom3d', Props)
         for x in range(nbonds):
-            SetChild(Molecule, 'Bond', dict(
-                ID=str(x + 3 + natoms),
-                Connects='%i,%i' % (bonds[x][0] + 3, bonds[x][1] + 3),
-            ))
+            SetChild(
+                Molecule,
+                'Bond',
+                dict(
+                    ID=str(x + 3 + natoms),
+                    Connects='%i,%i' % (bonds[x][0] + 3, bonds[x][1] + 3),
+                ),
+            )
     # periodic system
     else:
         atom_positions = np.dot(atom_positions, np.linalg.inv(atom_cell))
@@ -405,12 +577,16 @@ def _write_xsd_html(images, connectivity=None):
             SetChild(IdentMappng, 'Atom3d', Props)
 
         for x in range(len(bonds)):
-            SetChild(IdentMappng, 'Bond', dict(
-                ID=str(x + 4 + natoms + 1),
-                Mapping=str(natoms + len(bonds) + 7),
-                Parent='2',
-                Connects='%i,%i' % (bonds[x][0] + 4, bonds[x][1] + 4),
-            ))
+            SetChild(
+                IdentMappng,
+                'Bond',
+                dict(
+                    ID=str(x + 4 + natoms + 1),
+                    Mapping=str(natoms + len(bonds) + 7),
+                    Parent='2',
+                    Connects='%i,%i' % (bonds[x][0] + 4, bonds[x][1] + 4),
+                ),
+            )
 
         Props = dict(
             ID=str(natoms + 4),
@@ -441,16 +617,24 @@ def _write_xsd_html(images, connectivity=None):
         )
         SetChild(IdentMappng, 'SpaceGroup', Props)
 
-        SetChild(IdentMappng, 'ReciprocalLattice3D', dict(
-            ID=str(natoms + len(bonds) + 8),
-            Parent=str(natoms + 4),
-        ))
+        SetChild(
+            IdentMappng,
+            'ReciprocalLattice3D',
+            dict(
+                ID=str(natoms + len(bonds) + 8),
+                Parent=str(natoms + 4),
+            ),
+        )
 
-        SetChild(MappngSet, 'InfiniteMapping', dict(
-            ID='3',
-            Element='1,0,0,0,0,1,0,0,0,0,1,0',
-            MappedObjects='2',
-        ))
+        SetChild(
+            MappngSet,
+            'InfiniteMapping',
+            dict(
+                ID='3',
+                Element='1,0,0,0,0,1,0,0,0,0,1,0',
+                MappedObjects='2',
+            ),
+        )
 
     return XSD, ATR
 

@@ -16,6 +16,7 @@ from ase.parallel import barrier, world
 
 class PickleTrajectory:
     """Reads/writes Atoms objects into a .traj file."""
+
     # Per default, write these quantities
     write_energy = True
     write_forces = True
@@ -25,8 +26,15 @@ class PickleTrajectory:
     write_momenta = True
     write_info = True
 
-    def __init__(self, filename, mode='r', atoms=None, master=None,
-                 backup=True, _warn=True):
+    def __init__(
+        self,
+        filename,
+        mode='r',
+        atoms=None,
+        master=None,
+        backup=True,
+        _warn=True,
+    ):
         """A PickleTrajectory can be created in read, write or append mode.
 
         Parameters:
@@ -64,9 +72,10 @@ class PickleTrajectory:
         if _warn:
             msg = 'Please stop using old trajectory files!'
             if mode == 'r':
-                msg += ('\nConvert to the new future-proof format like this:\n'
-                        '\n    $ python3 -m ase.io.trajectory ' +
-                        filename + '\n')
+                msg += (
+                    '\nConvert to the new future-proof format like this:\n'
+                    '\n    $ python3 -m ase.io.trajectory ' + filename + '\n'
+                )
             raise DeprecationWarning(msg)
 
         self.numbers = None
@@ -80,7 +89,7 @@ class PickleTrajectory:
 
         self.offsets = []
         if master is None:
-            master = (world.rank == 0)
+            master = world.rank == 0
         self.master = master
         self.backup = backup
         self.set_atoms(atoms)
@@ -188,9 +197,11 @@ class PickleTrajectory:
         else:
             momenta = None
 
-        d = {'positions': atoms.get_positions(),
-             'cell': atoms.get_cell(),
-             'momenta': momenta}
+        d = {
+            'positions': atoms.get_positions(),
+            'cell': atoms.get_cell(),
+            'momenta': momenta,
+        }
 
         if atoms.calc is not None:
             if self.write_energy:
@@ -247,13 +258,15 @@ class PickleTrajectory:
             masses = atoms.get_masses()
         else:
             masses = None
-        d = {'version': 3,
-             'pbc': atoms.get_pbc(),
-             'numbers': atoms.get_atomic_numbers(),
-             'tags': tags,
-             'masses': masses,
-             'constraints': [],  # backwards compatibility
-             'constraints_string': pickle.dumps(atoms.constraints, protocol=0)}
+        d = {
+            'version': 3,
+            'pbc': atoms.get_pbc(),
+            'numbers': atoms.get_atomic_numbers(),
+            'tags': tags,
+            'masses': masses,
+            'constraints': [],  # backwards compatibility
+            'constraints_string': pickle.dumps(atoms.constraints, protocol=0),
+        }
         pickle.dump(d, self.fd, protocol=2)
         self.header_written = True
         self.offsets.append(self.fd.tell())
@@ -277,8 +290,10 @@ class PickleTrajectory:
             self.fd.seek(self.offsets[i])
             try:
                 d = pickle.load(self.fd, encoding='bytes')
-                d = {k.decode() if isinstance(k, bytes) else k: v
-                     for k, v in d.items()}
+                d = {
+                    k.decode() if isinstance(k, bytes) else k: v
+                    for k, v in d.items()
+                }
             except EOFError:
                 raise IndexError
             if i == N - 1:
@@ -290,24 +305,27 @@ class PickleTrajectory:
             except Exception:
                 constraints = []
                 warnings.warn('Constraints did not unpickle correctly.')
-            atoms = Atoms(positions=d['positions'],
-                          numbers=self.numbers,
-                          cell=d['cell'],
-                          momenta=d['momenta'],
-                          magmoms=magmoms,
-                          charges=charges,
-                          tags=self.tags,
-                          masses=self.masses,
-                          pbc=self.pbc,
-                          info=unstringnify_info(d.get('info', {})),
-                          constraint=constraints)
+            atoms = Atoms(
+                positions=d['positions'],
+                numbers=self.numbers,
+                cell=d['cell'],
+                momenta=d['momenta'],
+                magmoms=magmoms,
+                charges=charges,
+                tags=self.tags,
+                masses=self.masses,
+                pbc=self.pbc,
+                info=unstringnify_info(d.get('info', {})),
+                constraint=constraints,
+            )
             if 'energy' in d:
                 calc = SinglePointCalculator(
                     atoms,
                     energy=d.get('energy', None),
                     forces=d.get('forces', None),
                     stress=d.get('stress', None),
-                    magmoms=magmoms)
+                    magmoms=magmoms,
+                )
                 atoms.calc = calc
             return atoms
 
@@ -380,8 +398,12 @@ def stringnify_info(info):
     stringnified = {}
     for k, v in info.items():
         if not isinstance(k, str):
-            warnings.warn('Non-string info-dict key is not stored in ' +
-                          'trajectory: ' + repr(k), UserWarning)
+            warnings.warn(
+                'Non-string info-dict key is not stored in '
+                + 'trajectory: '
+                + repr(k),
+                UserWarning,
+            )
             continue
         try:
             # Should highest protocol be used here for efficiency?
@@ -390,8 +412,11 @@ def stringnify_info(info):
             # might end up with file objects in inconsistent states.
             s = pickle.dumps(v, protocol=0)
         except pickle.PicklingError:
-            warnings.warn('Skipping not picklable info-dict item: ' +
-                          f'"{k}" ({sys.exc_info()[1]})', UserWarning)
+            warnings.warn(
+                'Skipping not picklable info-dict item: '
+                + f'"{k}" ({sys.exc_info()[1]})',
+                UserWarning,
+            )
         else:
             stringnified[k] = s
     return stringnified
@@ -406,8 +431,11 @@ def unstringnify_info(stringnified):
         try:
             v = pickle.loads(s)
         except pickle.UnpicklingError:
-            warnings.warn('Skipping not unpicklable info-dict item: ' +
-                          f'"{k}" ({sys.exc_info()[1]})', UserWarning)
+            warnings.warn(
+                'Skipping not unpicklable info-dict item: '
+                + f'"{k}" ({sys.exc_info()[1]})',
+                UserWarning,
+            )
         else:
             info[k] = v
     return info

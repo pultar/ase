@@ -12,7 +12,7 @@ a0 = data.reference_states[Z]['a']  # type: ignore[index]
 
 
 def checkang(a, b, phi):
-    "Check the angle between two vectors."
+    'Check the angle between two vectors.'
     cosphi = np.dot(a, b) / sqrt(np.dot(a, a) * np.dot(b, b))
     assert np.abs(cosphi - cos(phi)) < 1e-10
 
@@ -54,9 +54,12 @@ def test_vacuum_all_directions(atoms):
 
 @pytest.fixture
 def atoms_guc():
-    return FaceCenteredCubic(size=(5, 5, 5),
-                             directions=[[1, 0, 0], [0, 1, 0], [1, 0, 1]],
-                             symbol=symb, pbc=(1, 1, 0))
+    return FaceCenteredCubic(
+        size=(5, 5, 5),
+        directions=[[1, 0, 0], [0, 1, 0], [1, 0, 1]],
+        symbol=symb,
+        pbc=(1, 1, 0),
+    )
 
 
 def test_general_unit_cell(atoms_guc):
@@ -114,6 +117,6 @@ def test_center_empty():
 
 
 def test_center_nocell():
-    atoms = Atoms('H', positions=[[1., 2., 3.]])
+    atoms = Atoms('H', positions=[[1.0, 2.0, 3.0]])
     atoms.center()
     assert atoms.positions == pytest.approx(0)

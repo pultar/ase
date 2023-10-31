@@ -25,10 +25,7 @@ def test_nwchem(atoms):
 def test_presteps(atoms):
     """Test the ability to write NWChem input files that perform a series
     of initial guesses for the final wavefunction"""
-    test_params = {
-        'theory': 'mp2',
-        'pretasks': [{'theory': 'dft'}]
-    }
+    test_params = {'theory': 'mp2', 'pretasks': [{'theory': 'dft'}]}
 
     # This should issue a warning if we try to run w/o lindep:n_dep
     with pytest.warns(UserWarning) as record:
@@ -40,9 +37,9 @@ def test_presteps(atoms):
     io.write('nwchem.nwi', atoms, **test_params)
     with open('nwchem.nwi') as fp:
         output = fp.read()
-    assert "vectors input" in output
-    assert "vectors output" in output
-    assert "task dft ignore" in output
+    assert 'vectors input' in output
+    assert 'vectors output' in output
+    assert 'task dft ignore' in output
 
     # Make a same theory and different basis set
     test_params['basis'] = '6-31g'
@@ -51,15 +48,11 @@ def test_presteps(atoms):
     io.write('nwchem.nwi', atoms, **test_params)
     with open('nwchem.nwi') as fp:
         output = fp.read()
-    assert "vectors input project smb" in output
+    assert 'vectors input project smb' in output
 
     # Add an SCF/3-21g step first
     test_params['pretasks'].insert(
-        0, {
-            'theory': 'scf',
-            'basis': '3-21g',
-            'set': {'lindep:n_dep': 0}
-        }
+        0, {'theory': 'scf', 'basis': '3-21g', 'set': {'lindep:n_dep': 0}}
     )
     test_params['pretasks'][1].pop('basis')
     io.write('nwchem.nwi', atoms, **test_params)
@@ -87,10 +80,9 @@ def test_doc_example_1(atoms):
         'theory': 'mp2',
         'basis': 'aug-cc-pvdz',
         'pretasks': [
-            {'dft': {'xc': 'hfexch'},
-             'set': {'lindep:n_dep': 0}},
-            {'theory': 'scf', 'set': {'lindep:n_dep': 0}}
-        ]
+            {'dft': {'xc': 'hfexch'}, 'set': {'lindep:n_dep': 0}},
+            {'theory': 'scf', 'set': {'lindep:n_dep': 0}},
+        ],
     }
 
     # Make sure there is a dft then SCF
@@ -115,10 +107,9 @@ def test_doc_example_2(atoms):
         'xc': 'b3lyp',
         'basis': '6-31g(2df,p)',
         'pretasks': [
-            {'theory': 'scf', 'basis': '3-21g',
-             'set': {'lindep:n_dep': 0}},
+            {'theory': 'scf', 'basis': '3-21g', 'set': {'lindep:n_dep': 0}},
             {'dft': {'xc': 'b3lyp'}},
-        ]
+        ],
     }
 
     # Make sure there is a dft then SCF

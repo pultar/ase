@@ -25,7 +25,9 @@ geometry units angstrom nocenter noautosym noautoz
    H 5.0000000000000000e-01 3.6189413945011639e-01 4.3513175463181430e-01
 end
 
-""", re.M)
+""",
+    re.M,
+)
 
 # Finds crystal specification
 _crystal = _define_pattern(
@@ -39,23 +41,27 @@ _crystal = _define_pattern(
       0.0000000000000000e+00 5.5264780000000000e+00 0.0000000000000000e+00
       0.0000000000000000e+00 0.0000000000000000e+00 4.5963089999999998e+00
   end
-""", re.M)
+""",
+    re.M,
+)
 
 # Finds 3d-periodic unit cell
 _cell_3d = _define_pattern(
-    r'^[ \t]*lattice_vectors[ \t]*\n'
-    r'^((?:(?:[ \t]+[\S]+){3}\n){3})',
+    r'^[ \t]*lattice_vectors[ \t]*\n' r'^((?:(?:[ \t]+[\S]+){3}\n){3})',
     """\
     lattice_vectors
       4.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00
       0.0000000000000000e+00 5.5264780000000000e+00 0.0000000000000000e+00
       0.0000000000000000e+00 0.0000000000000000e+00 4.5963089999999998e+00
-""", re.M)
+""",
+    re.M,
+)
 
 # Extracts chemical species from a geometry block
 _species = _define_pattern(
     r'^[ \t]*[A-Z][a-z]?(?:[ \t]+[\S]+){3}\n',
-    "   O 0.0 0.0 0.0\n", re.M,
+    '   O 0.0 0.0 0.0\n',
+    re.M,
 )
 
 

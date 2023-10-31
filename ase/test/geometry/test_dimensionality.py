@@ -2,12 +2,14 @@ import pytest
 
 import ase.build
 from ase import Atoms
-from ase.geometry.dimensionality import (analyze_dimensionality,
-                                         isolate_components)
+from ase.geometry.dimensionality import (
+    analyze_dimensionality,
+    isolate_components,
+)
 from ase.lattice.cubic import FaceCenteredCubic
 
 
-@pytest.mark.parametrize("method", ['TSA', 'RDA'])
+@pytest.mark.parametrize('method', ['TSA', 'RDA'])
 def test_mx2(method):
     atoms = ase.build.mx2(formula='MoS2', kind='2H', a=3.18, thickness=3.19)
     atoms.cell[2, 2] = 7
@@ -28,7 +30,7 @@ def test_mx2(method):
     assert intervals[2].h == (24, 0, 0, 0)
 
 
-@pytest.mark.parametrize("method", ['TSA', 'RDA'])
+@pytest.mark.parametrize('method', ['TSA', 'RDA'])
 def test_fcc(method):
     atoms = FaceCenteredCubic(size=(2, 2, 2), symbol='Cu', pbc=(1, 1, 1))
 
@@ -37,7 +39,7 @@ def test_fcc(method):
     assert m.dimtype == '3D'
 
 
-@pytest.mark.parametrize("kcutoff", [None, 1.1])
+@pytest.mark.parametrize('kcutoff', [None, 1.1])
 def test_isolation_0D(kcutoff):
     atoms = ase.build.molecule('H2O', vacuum=3.0)
 
@@ -51,18 +53,21 @@ def test_isolation_0D(kcutoff):
 
 
 def test_isolation_1D():
-    atoms = Atoms(symbols='Cl6Ti2', pbc=True,
-                  cell=[[6.27, 0, 0],
-                        [-3.135, 5.43, 0],
-                        [0, 0, 5.82]],
-                  positions=[[1.97505, 0, 1.455],
-                             [0.987525, 1.71044347, 4.365],
-                             [-0.987525, 1.71044347, 1.455],
-                             [4.29495, 0, 4.365],
-                             [2.147475, 3.71953581, 1.455],
-                             [-2.147475, 3.71953581, 4.365],
-                             [0, 0, 0],
-                             [0, 0, 2.91]])
+    atoms = Atoms(
+        symbols='Cl6Ti2',
+        pbc=True,
+        cell=[[6.27, 0, 0], [-3.135, 5.43, 0], [0, 0, 5.82]],
+        positions=[
+            [1.97505, 0, 1.455],
+            [0.987525, 1.71044347, 4.365],
+            [-0.987525, 1.71044347, 1.455],
+            [4.29495, 0, 4.365],
+            [2.147475, 3.71953581, 1.455],
+            [-2.147475, 3.71953581, 4.365],
+            [0, 0, 0],
+            [0, 0, 2.91],
+        ],
+    )
 
     result = isolate_components(atoms)
     assert len(result) == 1

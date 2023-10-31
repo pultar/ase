@@ -9,21 +9,23 @@ calc = pytest.mark.calculator
 @pytest.fixture
 def calc_settings():
     """Some simple fast calculation settings"""
-    return dict(xc='lda',
-                prec='Low',
-                algo='Fast',
-                setups='minimal',
-                ismear=0,
-                nelm=1,
-                sigma=0.1,
-                istart=0,
-                ibrion=5,
-                nfree=2,
-                potim=0.05,
-                gamma=True,
-                txt="-",
-                lwave=False,
-                lcharg=False)
+    return dict(
+        xc='lda',
+        prec='Low',
+        algo='Fast',
+        setups='minimal',
+        ismear=0,
+        nelm=1,
+        sigma=0.1,
+        istart=0,
+        ibrion=5,
+        nfree=2,
+        potim=0.05,
+        gamma=True,
+        txt='-',
+        lwave=False,
+        lcharg=False,
+    )
 
 
 @calc('vasp')

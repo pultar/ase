@@ -5,13 +5,20 @@ import numpy as np
 import pytest
 
 from ase import Atom, Atoms
-from ase.build import (add_adsorbate, bulk, fcc111, fcc211, graphene, mx2,
-                       surface)
+from ase.build import (
+    add_adsorbate,
+    bulk,
+    fcc111,
+    fcc211,
+    graphene,
+    mx2,
+    surface,
+)
 
 
 def test_surface():
     """Test general"""
-    atoms = fcc211('Au', (3, 5, 8), vacuum=10.)
+    atoms = fcc211('Au', (3, 5, 8), vacuum=10.0)
     assert len(atoms) == 120
 
     atoms = atoms.repeat((2, 1, 1))
@@ -35,22 +42,22 @@ def test_surface():
     assert failed
 
     # This test ensures that the default periodic behavior remains unchanged
-    cubic_fcc = bulk("Al", a=4.05, cubic=True)
+    cubic_fcc = bulk('Al', a=4.05, cubic=True)
     surface_fcc = surface(cubic_fcc, (1, 1, 1), 3)
 
     assert list(surface_fcc.pbc) == [True, True, False]
     assert surface_fcc.cell[2][2] == 0
 
     # This test checks the new periodic option
-    cubic_fcc = bulk("Al", a=4.05, cubic=True)
+    cubic_fcc = bulk('Al', a=4.05, cubic=True)
     surface_fcc = surface(cubic_fcc, (1, 1, 1), 3, periodic=True)
 
-    assert (list(surface_fcc.pbc) == [True, True, True])
+    assert list(surface_fcc.pbc) == [True, True, True]
     expected_length = 4.05 * 3**0.5  # for FCC with a=4.05
     assert math.isclose(surface_fcc.cell[2][2], expected_length)
 
 
-@pytest.mark.parametrize("vacuum", [None, 10.0])
+@pytest.mark.parametrize('vacuum', [None, 10.0])
 def test_others(vacuum):
     """Test if other types of `surface` functions (at least) run."""
     mx2(kind='2H', vacuum=vacuum)

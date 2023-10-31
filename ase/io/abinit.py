@@ -27,21 +27,23 @@ def read_abinit_in(fd):
 
     # note that the file can not be scanned sequentially
 
-    index = tokens.index("acell")
+    index = tokens.index('acell')
     unit = 1.0
     if tokens[index + 4].lower()[:3] != 'ang':
         unit = Bohr
-    acell = [unit * float(tokens[index + 1]),
-             unit * float(tokens[index + 2]),
-             unit * float(tokens[index + 3])]
+    acell = [
+        unit * float(tokens[index + 1]),
+        unit * float(tokens[index + 2]),
+        unit * float(tokens[index + 3]),
+    ]
 
-    index = tokens.index("natom")
+    index = tokens.index('natom')
     natom = int(tokens[index + 1])
 
-    index = tokens.index("ntypat")
+    index = tokens.index('ntypat')
     ntypat = int(tokens[index + 1])
 
-    index = tokens.index("typat")
+    index = tokens.index('typat')
     typat = []
     while len(typat) < natom:
         token = tokens[index + 1]
@@ -53,17 +55,21 @@ def read_abinit_in(fd):
         index += 1
     assert natom == len(typat)
 
-    index = tokens.index("znucl")
+    index = tokens.index('znucl')
     znucl = []
     for i in range(ntypat):
         znucl.append(int(tokens[index + 1 + i]))
 
-    index = tokens.index("rprim")
+    index = tokens.index('rprim')
     rprim = []
     for i in range(3):
-        rprim.append([acell[i] * float(tokens[index + 3 * i + 1]),
-                      acell[i] * float(tokens[index + 3 * i + 2]),
-                      acell[i] * float(tokens[index + 3 * i + 3])])
+        rprim.append(
+            [
+                acell[i] * float(tokens[index + 3 * i + 1]),
+                acell[i] * float(tokens[index + 3 * i + 2]),
+                acell[i] * float(tokens[index + 3 * i + 3]),
+            ]
+        )
 
     # create a list with the atomic numbers
     numbers = []
@@ -72,31 +78,41 @@ def read_abinit_in(fd):
         numbers.append(znucl[ii])
 
     # now the positions of the atoms
-    if "xred" in tokens:
-        index = tokens.index("xred")
+    if 'xred' in tokens:
+        index = tokens.index('xred')
         xred = []
         for i in range(natom):
-            xred.append([float(tokens[index + 3 * i + 1]),
-                         float(tokens[index + 3 * i + 2]),
-                         float(tokens[index + 3 * i + 3])])
-        atoms = Atoms(cell=rprim, scaled_positions=xred, numbers=numbers,
-                      pbc=True)
+            xred.append(
+                [
+                    float(tokens[index + 3 * i + 1]),
+                    float(tokens[index + 3 * i + 2]),
+                    float(tokens[index + 3 * i + 3]),
+                ]
+            )
+        atoms = Atoms(
+            cell=rprim, scaled_positions=xred, numbers=numbers, pbc=True
+        )
     else:
-        if "xcart" in tokens:
-            index = tokens.index("xcart")
+        if 'xcart' in tokens:
+            index = tokens.index('xcart')
             unit = Bohr
-        elif "xangst" in tokens:
+        elif 'xangst' in tokens:
             unit = 1.0
-            index = tokens.index("xangst")
+            index = tokens.index('xangst')
         else:
             raise OSError(
-                "No xred, xcart, or xangs keyword in abinit input file")
+                'No xred, xcart, or xangs keyword in abinit input file'
+            )
 
         xangs = []
         for i in range(natom):
-            xangs.append([unit * float(tokens[index + 3 * i + 1]),
-                          unit * float(tokens[index + 3 * i + 2]),
-                          unit * float(tokens[index + 3 * i + 3])])
+            xangs.append(
+                [
+                    unit * float(tokens[index + 3 * i + 1]),
+                    unit * float(tokens[index + 3 * i + 2]),
+                    unit * float(tokens[index + 3 * i + 3]),
+                ]
+            )
         atoms = Atoms(cell=rprim, positions=xangs, numbers=numbers, pbc=True)
 
     try:
@@ -150,7 +166,8 @@ keys_with_units = {
     'warningminimumatomicdistance': 'Ang',
     'rcspatial': 'Ang',
     'kgridcutoff': 'Ang',
-    'latticeconstant': 'Ang'}
+    'latticeconstant': 'Ang',
+}
 
 
 def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
@@ -172,8 +189,7 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
         assert smearing is None
 
     if smearing is not None:
-        inp['occopt'] = {'fermi-dirac': 3,
-                         'gaussian': 7}[smearing[0].lower()]
+        inp['occopt'] = {'fermi-dirac': 3, 'gaussian': 7}[smearing[0].lower()]
         inp['tsmear'] = smearing[1]
 
     inp['natom'] = len(atoms)
@@ -185,11 +201,13 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
     # ixc is set from paw/xml file. Ignore 'xc' setting then.
     if param.get('pps') not in ['pawxml']:
         if 'ixc' not in param:
-            inp['ixc'] = {'LDA': 7,
-                          'PBE': 11,
-                          'revPBE': 14,
-                          'RPBE': 15,
-                          'WC': 23}[xc]
+            inp['ixc'] = {
+                'LDA': 7,
+                'PBE': 11,
+                'revPBE': 14,
+                'RPBE': 15,
+                'WC': 23,
+            }[xc]
 
     magmoms = atoms.get_initial_magnetic_moments()
     if magmoms.any():
@@ -219,22 +237,24 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
                 value /= fs
         if isinstance(value, valid_lists):
             if isinstance(value[0], valid_lists):
-                fd.write(f"{key}\n")
+                fd.write(f'{key}\n')
                 for dim in value:
                     write_list(fd, dim, unit)
             else:
-                fd.write(f"{key}\n")
+                fd.write(f'{key}\n')
                 write_list(fd, value, unit)
         else:
             if unit is None:
-                fd.write(f"{key} {value}\n")
+                fd.write(f'{key} {value}\n')
             else:
-                fd.write(f"{key} {value} {unit}\n")
+                fd.write(f'{key} {value} {unit}\n')
 
     if param.get('raw') is not None:
         if isinstance(param['raw'], str):
-            raise TypeError('The raw parameter is a single string; expected '
-                            'a sequence of lines')
+            raise TypeError(
+                'The raw parameter is a single string; expected '
+                'a sequence of lines'
+            )
         for line in param['raw']:
             if isinstance(line, tuple):
                 fd.write(' '.join([f'{x}' for x in line]) + '\n')
@@ -246,8 +266,9 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
     fd.write(f'{1.0:.14f} {1.0:.14f} {1.0:.14f} Angstrom\n')
     fd.write('rprim\n')
     if atoms.cell.rank != 3:
-        raise RuntimeError('Abinit requires a 3D cell, but cell is {}'
-                           .format(atoms.cell))
+        raise RuntimeError(
+            'Abinit requires a 3D cell, but cell is {}'.format(atoms.cell)
+        )
     for v in atoms.cell:
         fd.write('%.14f %.14f %.14f\n' % tuple(v))
 
@@ -282,16 +303,18 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
     for pos in atoms.positions / Bohr:
         fd.write('%.14f %.14f %.14f\n' % tuple(pos))
 
-    fd.write('chkexit 1 # abinit.exit file in the running '
-             'directory terminates after the current SCF\n')
+    fd.write(
+        'chkexit 1 # abinit.exit file in the running '
+        'directory terminates after the current SCF\n'
+    )
 
 
 def write_list(fd, value, unit):
     for element in value:
-        fd.write(f"{element} ")
+        fd.write(f'{element} ')
     if unit is not None:
-        fd.write(f"{unit}")
-    fd.write("\n")
+        fd.write(f'{unit}')
+    fd.write('\n')
 
 
 def read_stress(fd):
@@ -305,8 +328,9 @@ def read_stress(fd):
         m = pat.match(line)
         if m is None:
             # Not a real value error.  What should we raise?
-            raise ValueError('Line {!r} does not match stress pattern {!r}'
-                             .format(line, pat))
+            raise ValueError(
+                'Line {!r} does not match stress pattern {!r}'.format(line, pat)
+            )
         s1, s2 = m.group(1, 2)
         stress[i] = float(m.group(1))
         stress[i + 3] = float(m.group(2))
@@ -436,26 +460,25 @@ def read_abinit_out(fd):
     znucl_int[znucl_int != znucl] = 0  # (Fractional Z)
     numbers = znucl_int[types - 1]
 
-    atoms = Atoms(numbers=numbers,
-                  positions=positions,
-                  cell=cell,
-                  pbc=True)
+    atoms = Atoms(numbers=numbers, positions=positions, cell=cell, pbc=True)
 
-    calc_results = {name: results[name] for name in
-                    set(all_properties) & set(results)}
-    atoms.calc = SinglePointCalculator(atoms,
-                                       **calc_results)
-    atoms.calc.name = "abinit"
+    calc_results = {
+        name: results[name] for name in set(all_properties) & set(results)
+    }
+    atoms.calc = SinglePointCalculator(atoms, **calc_results)
+    atoms.calc.name = 'abinit'
 
     results['atoms'] = atoms
     return results
 
 
 def match_kpt_header(line):
-    headerpattern = (r'\s*kpt#\s*\S+\s*'
-                     r'nband=\s*(\d+),\s*'
-                     r'wtk=\s*(\S+?),\s*'
-                     r'kpt=\s*(\S+)+\s*(\S+)\s*(\S+)')
+    headerpattern = (
+        r'\s*kpt#\s*\S+\s*'
+        r'nband=\s*(\d+),\s*'
+        r'wtk=\s*(\S+?),\s*'
+        r'kpt=\s*(\S+)+\s*(\S+)\s*(\S+)'
+    )
     m = re.match(headerpattern, line)
     assert m is not None, line
     nbands = int(m.group(1))
@@ -465,7 +488,6 @@ def match_kpt_header(line):
 
 
 def read_eigenvalues_for_one_spin(fd, nkpts):
-
     kpoint_weights = []
     kpoint_coords = []
 
@@ -513,8 +535,10 @@ def read_eig(fd):
         assert nspins == 2
         line = next(fd)
 
-    m = re.match(r'\s*Eigenvalues \(hartree\) for nkpt\s*='
-                 r'\s*(\S+)\s*k\s*points', line)
+    m = re.match(
+        r'\s*Eigenvalues \(hartree\) for nkpt\s*=' r'\s*(\S+)\s*k\s*points',
+        line,
+    )
     if 'SPIN' in line or 'spin' in line:
         # If using spinpol with fixed magmoms, we don't get the magmoms
         # listed before now.
@@ -549,18 +573,26 @@ def get_default_abinit_pp_paths():
     return os.environ.get('ABINIT_PP_PATH', '.').split(':')
 
 
-def prepare_abinit_input(directory, atoms, properties, parameters,
-                         pp_paths=None,
-                         raise_exception=True):
+def prepare_abinit_input(
+    directory,
+    atoms,
+    properties,
+    parameters,
+    pp_paths=None,
+    raise_exception=True,
+):
     directory = Path(directory)
     species = sorted(set(atoms.numbers))
     if pp_paths is None:
         pp_paths = get_default_abinit_pp_paths()
-    ppp = get_ppp_list(atoms, species,
-                       raise_exception=raise_exception,
-                       xc=parameters['xc'],
-                       pps=parameters['pps'],
-                       search_paths=pp_paths)
+    ppp = get_ppp_list(
+        atoms,
+        species,
+        raise_exception=raise_exception,
+        xc=parameters['xc'],
+        pps=parameters['pps'],
+        search_paths=pp_paths,
+    )
 
     inputfile = directory / 'abinit.in'
 
@@ -573,8 +605,9 @@ def prepare_abinit_input(directory, atoms, properties, parameters,
         outputfile.unlink()
 
     with open(inputfile, 'w') as fd:
-        write_abinit_in(fd, atoms, param=parameters, species=species,
-                        pseudos=ppp)
+        write_abinit_in(
+            fd, atoms, param=parameters, species=species, pseudos=ppp
+        )
 
 
 def read_abinit_outputs(directory, label):
@@ -596,6 +629,7 @@ def read_abinit_outputs(directory, label):
 
 def read_abinit_gsr(filename):
     import netCDF4
+
     data = netCDF4.Dataset(filename)
     data.set_auto_mask(False)
     version = data.abinit_version
@@ -609,10 +643,7 @@ def read_abinit_gsr(filename):
     znucl_int[znucl_int != znucl] = 0  # (Fractional Z)
     numbers = znucl_int[typat - 1]
 
-    atoms = Atoms(numbers=numbers,
-                  scaled_positions=xred,
-                  cell=cell,
-                  pbc=True)
+    atoms = Atoms(numbers=numbers, scaled_positions=xred, cell=cell, pbc=True)
 
     results = {}
 
@@ -645,8 +676,7 @@ def read_abinit_gsr(filename):
     return results
 
 
-def get_ppp_list(atoms, species, raise_exception, xc, pps,
-                 search_paths):
+def get_ppp_list(atoms, species, raise_exception, xc, pps, search_paths):
     ppp_list = []
 
     xcname = 'GGA' if xc != 'LDA' else 'LDA'
@@ -695,7 +725,7 @@ def get_ppp_list(atoms, species, raise_exception, xc, pps,
                     names.append(f'{s}[.-_]*.{pps}')
 
         found = False
-        for name in names:        # search for file names possibilities
+        for name in names:  # search for file names possibilities
             for path in search_paths:  # in all available directories
                 filenames = glob(join(path, name))
                 if not filenames:
@@ -731,10 +761,13 @@ def get_ppp_list(atoms, species, raise_exception, xc, pps,
                 break
 
         if not found:
-            ppp_list.append("Provide {}.{}.{}?".format(symbol, '*', pps))
+            ppp_list.append('Provide {}.{}.{}?'.format(symbol, '*', pps))
             if raise_exception:
-                msg = ('Could not find {} pseudopotential {} for {} in {}'
-                       .format(xcname.lower(), pps, symbol, search_paths))
+                msg = (
+                    'Could not find {} pseudopotential {} for {} in {}'.format(
+                        xcname.lower(), pps, symbol, search_paths
+                    )
+                )
                 raise RuntimeError(msg)
 
     return ppp_list

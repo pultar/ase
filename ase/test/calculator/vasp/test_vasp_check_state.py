@@ -17,14 +17,16 @@ def test_vasp_check_state(factory, atoms_2co):
     atoms = atoms_2co  # aliasing
 
     # Test
-    settings = dict(xc='LDA',
-                    prec='Low',
-                    algo='Fast',
-                    ismear=0,
-                    sigma=1.,
-                    istart=0,
-                    lwave=False,
-                    lcharg=False)
+    settings = dict(
+        xc='LDA',
+        prec='Low',
+        algo='Fast',
+        ismear=0,
+        sigma=1.0,
+        istart=0,
+        lwave=False,
+        lcharg=False,
+    )
 
     s1 = atoms.get_chemical_symbols()
 

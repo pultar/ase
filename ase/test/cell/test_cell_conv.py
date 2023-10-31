@@ -3,7 +3,7 @@ import numpy as np
 from ase.geometry import cell_to_cellpar as c2p
 from ase.geometry import cellpar_to_cell as p2c
 
-eps = 2 * np.spacing(90., dtype=np.float64)
+eps = 2 * np.spacing(90.0, dtype=np.float64)
 
 
 def nearly_equal(a, b):
@@ -32,32 +32,30 @@ def test_cell_conv():
     # Systems
     # Primitive cell, non-orthorhombic, non-cubic
     # Parameters
-    si_prim_p = np.array([h] * 3 + [60.] * 3)
+    si_prim_p = np.array([h] * 3 + [60.0] * 3)
     # Tensor format
-    si_prim_m = np.array([[0., d, d],
-                          [d, 0., d],
-                          [d, d, 0.]])
+    si_prim_m = np.array([[0.0, d, d], [d, 0.0, d], [d, d, 0.0]])
     # Tensor format in the default basis
-    si_prim_m2 = np.array([[2.0, 0., 0.],
-                           [1.0, np.sqrt(3.0), 0.],
-                           [1.0, np.sqrt(3.0) / 3.0, 2 * np.sqrt(2 / 3)]])
+    si_prim_m2 = np.array(
+        [
+            [2.0, 0.0, 0.0],
+            [1.0, np.sqrt(3.0), 0.0],
+            [1.0, np.sqrt(3.0) / 3.0, 2 * np.sqrt(2 / 3)],
+        ]
+    )
     si_prim_m2 *= h / 2.0
 
     # Orthorhombic cell, non-cubic
     # Parameters
-    si_ortho_p = np.array([h] * 2 + [a] + [90.] * 3)
+    si_ortho_p = np.array([h] * 2 + [a] + [90.0] * 3)
     # Tensor format in the default basis
-    si_ortho_m = np.array([[h, 0.0, 0.0],
-                           [0.0, h, 0.0],
-                           [0.0, 0.0, a]])
+    si_ortho_m = np.array([[h, 0.0, 0.0], [0.0, h, 0.0], [0.0, 0.0, a]])
 
     # Cubic cell
     # Parameters
-    si_cubic_p = np.array([a] * 3 + [90.] * 3)
+    si_cubic_p = np.array([a] * 3 + [90.0] * 3)
     # Tensor format in the default basis
-    si_cubic_m = np.array([[a, 0.0, 0.0],
-                           [0.0, a, 0.0],
-                           [0.0, 0.0, a]])
+    si_cubic_m = np.array([[a, 0.0, 0.0], [0.0, a, 0.0], [0.0, 0.0, a]])
 
     # Cell matrix -> cell parameters
     assert_equal(c2p(si_prim_m), si_prim_p)

@@ -6,8 +6,9 @@ class Repeat:
     def __init__(self, gui):
         win = ui.Window(_('Repeat'), wmtype='utility')
         win.add(_('Repeat atoms:'))
-        self.repeat = [ui.SpinBox(r, 1, 9, 1, self.change)
-                       for r in gui.images.repeat]
+        self.repeat = [
+            ui.SpinBox(r, 1, 9, 1, self.change) for r in gui.images.repeat
+        ]
         win.add(self.repeat)
         win.add(ui.Button(_('Set unit cell'), self.set_unit_cell))
 

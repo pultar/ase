@@ -7,9 +7,12 @@ from ase.md import VelocityVerlet
 def test_md(testdir):
     a = 3.6
     b = a / 2
-    fcc = Atoms('Cu', positions=[(0, 0, 0)],
-                cell=[(0, b, b), (b, 0, b), (b, b, 0)],
-                pbc=1)
+    fcc = Atoms(
+        'Cu',
+        positions=[(0, 0, 0)],
+        cell=[(0, b, b), (b, 0, b), (b, b, 0)],
+        pbc=1,
+    )
     fcc *= (2, 1, 1)
     fcc.calc = EMT()
     fcc.set_momenta([(0.9, 0.0, 0.0), (-0.9, 0, 0)])

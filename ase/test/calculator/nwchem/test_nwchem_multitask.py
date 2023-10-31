@@ -14,36 +14,43 @@ def atoms() -> ase.Atoms:
 @pytest.mark.calculator('nwchem')
 @pytest.mark.parametrize(
     'params',
-    [{  # Documentation example
-        'theory': 'mp2',
-        'basis': 'aug-cc-pvdz',
-        'pretasks': [
-            {'dft': {'xc': 'hfexch'},
-             'set': {'lindep:n_dep': 0}},
-            {'theory': 'scf', 'set': {'lindep:n_dep': 0}}
-        ]
-    }, {  # Increase basis set, then theory
-        'theory': 'mp2',
-        'basis': 'aug-cc-pvdz',
-        'pretasks': [
-            {'dft': {'xc': 'hfexch'}, 'basis': '3-21g',
-             'set': {'lindep:n_dep': 0}},
-            {'dft': {'xc': 'hfexch'}, 'basis': 'aug-cc-pvdz',
-             'set': {'lindep:n_dep': 0}},
-            {'theory': 'scf', 'set': {'lindep:n_dep': 0}}
-        ]
-    }, {  # Charged
-        'theory': 'mp2',
-        'basis': 'aug-cc-pvdz',
-        'charge': 1,
-        'scf': {'uhf': ''},
-        'pretasks': [
-            {'dft': {'xc': 'hfexch'},
-             'set': {'lindep:n_dep': 0}},
-            {'theory': 'scf',
-             'set': {'lindep:n_dep': 0}}
-        ]
-    }]
+    [
+        {  # Documentation example
+            'theory': 'mp2',
+            'basis': 'aug-cc-pvdz',
+            'pretasks': [
+                {'dft': {'xc': 'hfexch'}, 'set': {'lindep:n_dep': 0}},
+                {'theory': 'scf', 'set': {'lindep:n_dep': 0}},
+            ],
+        },
+        {  # Increase basis set, then theory
+            'theory': 'mp2',
+            'basis': 'aug-cc-pvdz',
+            'pretasks': [
+                {
+                    'dft': {'xc': 'hfexch'},
+                    'basis': '3-21g',
+                    'set': {'lindep:n_dep': 0},
+                },
+                {
+                    'dft': {'xc': 'hfexch'},
+                    'basis': 'aug-cc-pvdz',
+                    'set': {'lindep:n_dep': 0},
+                },
+                {'theory': 'scf', 'set': {'lindep:n_dep': 0}},
+            ],
+        },
+        {  # Charged
+            'theory': 'mp2',
+            'basis': 'aug-cc-pvdz',
+            'charge': 1,
+            'scf': {'uhf': ''},
+            'pretasks': [
+                {'dft': {'xc': 'hfexch'}, 'set': {'lindep:n_dep': 0}},
+                {'theory': 'scf', 'set': {'lindep:n_dep': 0}},
+            ],
+        },
+    ],
 )
 def test_example(factory, atoms, params):
     """Make sure the example in the documentation works"""
@@ -66,9 +73,10 @@ def test_example(factory, atoms, params):
     assert input_file.count('task') == len(params['pretasks']) + 1
     with open(f'{calc.label}.nwo') as fp:
         output = fp.read()
-    assert (output.count('Loading old vectors from job with title')
-            + output.count('Orbital projection guess')) \
-        == len(params['pretasks'])
+    assert (
+        output.count('Loading old vectors from job with title')
+        + output.count('Orbital projection guess')
+    ) == len(params['pretasks'])
     assert 'Load of old vectors failed' not in output, input_file
 
     # Get it without

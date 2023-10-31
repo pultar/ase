@@ -94,7 +94,8 @@ atoms_props = [
     'p1z',
     'p2x',
     'p2y',
-    'p2z']
+    'p2z',
+]
 
 
 def get_field_data(atoms1, atoms2, field):
@@ -158,10 +159,12 @@ def get_field_data(atoms1, atoms2, field):
 
 # Summary Functions
 
+
 def rmsd(atoms1, atoms2):
     dpositions = atoms2.positions - atoms1.positions
     return 'RMSD={:+.1E}'.format(
-        np.sqrt((np.linalg.norm(dpositions, axis=1)**2).mean()))
+        np.sqrt((np.linalg.norm(dpositions, axis=1) ** 2).mean())
+    )
 
 
 def energy_delta(atoms1, atoms2):
@@ -197,6 +200,7 @@ def parse_field_specs(field_specs):
     hier = np.argsort(hier)[::-1]
     return fields, hier, np.array(scent)
 
+
 # Class definitions
 
 
@@ -213,14 +217,15 @@ class MapFormatter(string.Formatter):
 
 
 class TableFormat:
-    def __init__(self,
-                 columnwidth=9,
-                 precision=2,
-                 representation='E',
-                 toprule='=',
-                 midrule='-',
-                 bottomrule='='):
-
+    def __init__(
+        self,
+        columnwidth=9,
+        precision=2,
+        representation='E',
+        toprule='=',
+        midrule='-',
+        bottomrule='=',
+    ):
         self.precision = precision
         self.representation = representation
         self.columnwidth = columnwidth
@@ -230,20 +235,16 @@ class TableFormat:
         self.bottomrule = bottomrule
 
         self.fmt_class = {
-            'signed float': "{{: ^{}.{}{}}}".format(
-                self.columnwidth,
-                self.precision - 1,
-                self.representation),
-            'unsigned float': "{{:^{}.{}{}}}".format(
-                self.columnwidth,
-                self.precision - 1,
-                self.representation),
-            'int': "{{:^{}n}}".format(
-                self.columnwidth),
-            'str': "{{:^{}s}}".format(
-                self.columnwidth),
-            'conv': "{{:^{}h}}".format(
-                self.columnwidth)}
+            'signed float': '{{: ^{}.{}{}}}'.format(
+                self.columnwidth, self.precision - 1, self.representation
+            ),
+            'unsigned float': '{{:^{}.{}{}}}'.format(
+                self.columnwidth, self.precision - 1, self.representation
+            ),
+            'int': '{{:^{}n}}'.format(self.columnwidth),
+            'str': '{{:^{}s}}'.format(self.columnwidth),
+            'conv': '{{:^{}h}}'.format(self.columnwidth),
+        }
         fmt = {}
         signed_floats = [
             'dx',
@@ -266,14 +267,18 @@ class TableFormat:
             'f1y',
             'f2y',
             'f1z',
-            'f2z']
+            'f2z',
+        ]
         for sf in signed_floats:
             fmt[sf] = self.fmt_class['signed float']
         unsigned_floats = ['d', 'df', 'af', 'p1', 'p2', 'f1', 'f2']
         for usf in unsigned_floats:
             fmt[usf] = self.fmt_class['unsigned float']
-        integers = ['i', 'an', 't'] + ['r' + sf for sf in signed_floats] + \
-            ['r' + usf for usf in unsigned_floats]
+        integers = (
+            ['i', 'an', 't']
+            + ['r' + sf for sf in signed_floats]
+            + ['r' + usf for usf in unsigned_floats]
+        )
         for i in integers:
             fmt[i] = self.fmt_class['int']
         fmt['el'] = self.fmt_class['conv']
@@ -282,14 +287,15 @@ class TableFormat:
 
 
 class Table:
-    def __init__(self,
-                 field_specs,
-                 summary_functions=[],
-                 tableformat=None,
-                 max_lines=None,
-                 title='',
-                 tablewidth=None):
-
+    def __init__(
+        self,
+        field_specs,
+        summary_functions=[],
+        tableformat=None,
+        max_lines=None,
+        title='',
+        tablewidth=None,
+    ):
         self.max_lines = max_lines
         self.summary_functions = summary_functions
         self.field_specs = field_specs
@@ -314,16 +320,20 @@ class Table:
         header = self.make_header(csv=csv)
         body = self.make_body(atoms1, atoms2, csv=csv)
         if self.max_lines is not None:
-            body = body[:self.max_lines]
+            body = body[: self.max_lines]
         summary = self.make_summary(atoms1, atoms2)
 
-        return '\n'.join([self.title,
-                          self.tableformat.toprule * self.tablewidth,
-                          header,
-                          self.tableformat.midrule * self.tablewidth,
-                          body,
-                          self.tableformat.bottomrule * self.tablewidth,
-                          summary])
+        return '\n'.join(
+            [
+                self.title,
+                self.tableformat.toprule * self.tablewidth,
+                header,
+                self.tableformat.midrule * self.tablewidth,
+                body,
+                self.tableformat.bottomrule * self.tablewidth,
+                summary,
+            ]
+        )
 
     def make_header(self, csv=False):
         if csv:
@@ -335,12 +345,17 @@ class Table:
         return self.tableformat.formatter(fields, *headers)
 
     def make_summary(self, atoms1, atoms2):
-        return '\n'.join([summary_function(atoms1, atoms2)
-                          for summary_function in self.summary_functions])
+        return '\n'.join(
+            [
+                summary_function(atoms1, atoms2)
+                for summary_function in self.summary_functions
+            ]
+        )
 
     def make_body(self, atoms1, atoms2, csv=False):
-        field_data = np.array([get_field_data(atoms1, atoms2, field)
-                               for field in self.fields])
+        field_data = np.array(
+            [get_field_data(atoms1, atoms2, field) for field in self.fields]
+        )
 
         sorting_array = field_data * self.scent[:, np.newaxis]
         sorting_array = sorting_array[self.hier]
@@ -350,15 +365,20 @@ class Table:
 
         if csv:
             rowformat = ','.join(
-                ['{:h}' if field == 'el' else '{{:.{}E}}'.format(
-                    self.tableformat.precision) for field in self.fields])
+                [
+                    '{:h}'
+                    if field == 'el'
+                    else '{{:.{}E}}'.format(self.tableformat.precision)
+                    for field in self.fields
+                ]
+            )
         else:
-            rowformat = ''.join([self.tableformat.fmt[field]
-                                 for field in self.fields])
+            rowformat = ''.join(
+                [self.tableformat.fmt[field] for field in self.fields]
+            )
         body = [
-            self.tableformat.formatter(
-                rowformat,
-                *row) for row in field_data]
+            self.tableformat.formatter(rowformat, *row) for row in field_data
+        ]
         return '\n'.join(body)
 
 

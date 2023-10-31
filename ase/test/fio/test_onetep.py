@@ -2003,13 +2003,18 @@ def test_onetep_input():
     assert len(set(original_tags)) == 24
     assert len(atoms) == 1_416
     assert original_cell.cellpar() == approx(
-        [120.0, 90.0, 90.0, 90.0, 90.0, 90.0])
+        [120.0, 90.0, 90.0, 90.0, 90.0, 90.0]
+    )
     fdbis = StringIO()
     # We pass the pseudopotentials manually as well,
     #  To test if it is working correctly.
-    write(fdbis, atoms, format='onetep-in',
-          keywords=original_keywords,
-          pseudopotentials=original_keywords['species_pot'])
+    write(
+        fdbis,
+        atoms,
+        format='onetep-in',
+        keywords=original_keywords,
+        pseudopotentials=original_keywords['species_pot'],
+    )
     fdbis.seek(0)
     cycled_atoms = read(fdbis, format='onetep-in')
     fdbis.seek(0)
@@ -2030,14 +2035,14 @@ def test_onetep_input():
 
 @pytest.fixture
 def test_onetep_recursive_include_input(datadir):
-    testfile_path = datadir / "onetep_include.dat"
+    testfile_path = datadir / 'onetep_include.dat'
     with pytest.raises(ValueError):
         read(testfile_path, format='onetep-in')
 
 
 @pytest.fixture
 def test_onetep_nested_include_input(datadir):
-    testfile_path = datadir / "onetep_include_nested.dat"
+    testfile_path = datadir / 'onetep_include_nested.dat'
     with pytest.raises(ValueError):
         read(testfile_path, format='onetep-in')
 
@@ -2144,8 +2149,7 @@ Species  Ion    Total   Charge (e)    Spin (hbar)
 def test_onetep_output():
     fd = StringIO(test_output)
     atoms = read(fd, format='onetep-out')
-    rpositions = np.loadtxt(test_output.splitlines()[27:30],
-                            usecols=(1, 2, 3))
+    rpositions = np.loadtxt(test_output.splitlines()[27:30], usecols=(1, 2, 3))
     rcell = np.loadtxt(test_output.splitlines()[21:24])
     assert len(atoms) == 3
     assert atoms.get_chemical_symbols() == ['O', 'H', 'H']
@@ -2161,8 +2165,7 @@ def test_onetep_output():
     fdi.seek(0)
     cycled_atoms = read(fdi, format='onetep-in')
     assert cycled_atoms.positions == approx(atoms.positions)
-    assert cycled_atoms.get_cell().array \
-        == approx(atoms.get_cell().array)
+    assert cycled_atoms.get_cell().array == approx(atoms.get_cell().array)
     assert cycled_atoms.get_chemical_symbols() == ['O', 'H', 'H']
     assert list(cycled_atoms.get_tags()) == [0, 0, 1]
     assert cycled_atoms.info['onetep_species'] == ['O', 'HKO', 'H1']
@@ -2631,10 +2634,14 @@ Species  Ion    Total   Charge (e)    Spin (hbar)
 def test_geom_output():
     positions_to_test = [14.354944, 14.357610, 14.353542, 14.347758]
     forces_to_test = [0.00168584, -0.00307940, -0.00166320, 0.00005977]
-    energy_to_test = [-17.14642427747891, -17.14646299282811,
-                      -17.14648340396906, -17.14649464854864]
+    energy_to_test = [
+        -17.14642427747891,
+        -17.14646299282811,
+        -17.14648340396906,
+        -17.14649464854864,
+    ]
     fd = StringIO(test_geom)
-    atoms = read(fd, format='onetep-out', index="::")
+    atoms = read(fd, format='onetep-out', index='::')
     # Last configuration should have the properties:
     last_charges = atoms[-1].get_charges()
     last_magnetic_moments = atoms[-1].get_magnetic_moments()
@@ -2646,24 +2653,28 @@ def test_geom_output():
     for i, x in enumerate(atoms):
         tmp = x.positions[0][-1] * angtobohr
         assert tmp == approx(positions_to_test[i])
-        assert x.get_forces()[
-            0][-1] == approx(forces_to_test[i] * eV2au * angtobohr)
+        assert x.get_forces()[0][-1] == approx(
+            forces_to_test[i] * eV2au * angtobohr
+        )
         assert x.get_total_energy() == approx(energy_to_test[i] * eV2au)
 
 
 # We test an output that has different ONETEP
 # outputs in it. (multi-calculation output)
-weird_output = '\n'.join([test_output,
-                         test_geom,
-                         test_output])
+weird_output = '\n'.join([test_output, test_geom, test_output])
 
 
 def test_weird_output():
-    energy_to_test = [-17.14642427760311, -17.14642427747891,
-                      -17.14646299282811, -17.14648340396906,
-                      -17.14649464854864, -17.14642427760311]
+    energy_to_test = [
+        -17.14642427760311,
+        -17.14642427747891,
+        -17.14646299282811,
+        -17.14648340396906,
+        -17.14649464854864,
+        -17.14642427760311,
+    ]
     fd = StringIO(weird_output)
-    atoms_list = read(fd, format='onetep-out', index="::")
+    atoms_list = read(fd, format='onetep-out', index='::')
     # Should be 1 + 4 + 1
     assert len(atoms_list) == 6
     # The before last configuration should be the same as the

@@ -32,14 +32,22 @@ class Amber(FileIOCalculator):
     implemented_properties = ['energy', 'forces']
     discard_results_on_any_change = True
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='amber', atoms=None, command=None,
-                 amber_exe='sander -O ',
-                 infile='mm.in', outfile='mm.out',
-                 topologyfile='mm.top', incoordfile='mm.crd',
-                 outcoordfile='mm_dummy.crd', mdcoordfile=None,
-                 **kwargs):
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='amber',
+        atoms=None,
+        command=None,
+        amber_exe='sander -O ',
+        infile='mm.in',
+        outfile='mm.out',
+        topologyfile='mm.top',
+        incoordfile='mm.crd',
+        outcoordfile='mm_dummy.crd',
+        mdcoordfile=None,
+        **kwargs,
+    ):
         """Construct Amber-calculator object.
 
         Parameters
@@ -88,17 +96,25 @@ class Amber(FileIOCalculator):
         if command is not None:
             self.command = command
         else:
-            self.command = (self.amber_exe +
-                            ' -i ' + self.infile +
-                            ' -o ' + self.outfile +
-                            ' -p ' + self.topologyfile +
-                            ' -c ' + self.incoordfile +
-                            ' -r ' + self.outcoordfile)
+            self.command = (
+                self.amber_exe
+                + ' -i '
+                + self.infile
+                + ' -o '
+                + self.outfile
+                + ' -p '
+                + self.topologyfile
+                + ' -c '
+                + self.incoordfile
+                + ' -r '
+                + self.outcoordfile
+            )
             if self.mdcoordfile is not None:
                 self.command = self.command + ' -x ' + self.mdcoordfile
 
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+        FileIOCalculator.__init__(
+            self, restart, ignore_bad_restart_file, label, atoms, **kwargs
+        )
 
     def write_input(self, atoms=None, properties=None, system_changes=None):
         """Write updated coordinates to a file."""
@@ -107,23 +123,23 @@ class Amber(FileIOCalculator):
         self.write_coordinates(atoms)
 
     def read_results(self):
-        """ read energy and forces """
+        """read energy and forces"""
         self.read_energy()
         self.read_forces()
 
     def write_coordinates(self, atoms, filename=''):
-        """ write amber coordinates in netCDF format,
-            only rectangular unit cells are allowed"""
+        """write amber coordinates in netCDF format,
+        only rectangular unit cells are allowed"""
         if filename == '':
             filename = self.incoordfile
         fout = netcdf.netcdf_file(filename, 'w')
         # dimension
         fout.Conventions = 'AMBERRESTART'
-        fout.ConventionVersion = "1.0"
+        fout.ConventionVersion = '1.0'
         fout.title = 'Ase-generated-amber-restart-file'
-        fout.application = "AMBER"
-        fout.program = "ASE"
-        fout.programVersion = "1.0"
+        fout.application = 'AMBER'
+        fout.program = 'ASE'
+        fout.programVersion = '1.0'
         fout.createDimension('cell_spatial', 3)
         fout.createDimension('label', 5)
         fout.createDimension('cell_angular', 3)
@@ -138,39 +154,43 @@ class Amber(FileIOCalculator):
 
         natom = len(atoms)
         fout.createDimension('atom', natom)
-        coordinates = fout.createVariable('coordinates', 'd',
-                                          ('atom', 'spatial'))
+        coordinates = fout.createVariable(
+            'coordinates', 'd', ('atom', 'spatial')
+        )
         coordinates.units = 'angstrom'
         coordinates[:] = atoms.get_positions()[:]
 
         if atoms.get_velocities() is not None:
-            velocities = fout.createVariable('velocities', 'd',
-                                             ('atom', 'spatial'))
+            velocities = fout.createVariable(
+                'velocities', 'd', ('atom', 'spatial')
+            )
             velocities.units = 'angstrom/picosecond'
             velocities[:] = atoms.get_velocities()[:]
 
         # title
-        cell_angular = fout.createVariable('cell_angular', 'c',
-                                           ('cell_angular', 'label'))
+        cell_angular = fout.createVariable(
+            'cell_angular', 'c', ('cell_angular', 'label')
+        )
         cell_angular[0] = np.asarray(list('alpha'))
         cell_angular[1] = np.asarray(list('beta '))
         cell_angular[2] = np.asarray(list('gamma'))
 
         # title
-        cell_spatial = fout.createVariable('cell_spatial', 'c',
-                                           ('cell_spatial',))
+        cell_spatial = fout.createVariable(
+            'cell_spatial', 'c', ('cell_spatial',)
+        )
         cell_spatial[0], cell_spatial[1], cell_spatial[2] = 'a', 'b', 'c'
 
         # data
-        cell_lengths = fout.createVariable('cell_lengths', 'd',
-                                           ('cell_spatial',))
+        cell_lengths = fout.createVariable(
+            'cell_lengths', 'd', ('cell_spatial',)
+        )
         cell_lengths.units = 'angstrom'
         cell_lengths[0] = atoms.get_cell()[0, 0]
         cell_lengths[1] = atoms.get_cell()[1, 1]
         cell_lengths[2] = atoms.get_cell()[2, 2]
 
-        cell_angles = fout.createVariable('cell_angles', 'd',
-                                          ('cell_angular',))
+        cell_angles = fout.createVariable('cell_angles', 'd', ('cell_angular',))
         box_alpha, box_beta, box_gamma = 90.0, 90.0, 90.0
         cell_angles[0] = box_alpha
         cell_angles[1] = box_beta
@@ -225,53 +245,61 @@ class Amber(FileIOCalculator):
                 all_angles = all_angles[-1]
             alpha, beta, gamma = all_angles
 
-            if (all(angle > 89.99 for angle in [alpha, beta, gamma]) and
-                    all(angle < 90.01 for angle in [alpha, beta, gamma])):
-                atoms.set_cell(
-                    np.array([[a, 0, 0],
-                              [0, b, 0],
-                              [0, 0, c]]))
+            if all(angle > 89.99 for angle in [alpha, beta, gamma]) and all(
+                angle < 90.01 for angle in [alpha, beta, gamma]
+            ):
+                atoms.set_cell(np.array([[a, 0, 0], [0, b, 0], [0, 0, c]]))
                 atoms.set_pbc(True)
             else:
-                raise NotImplementedError('only rectangular cells are'
-                                          ' implemented in ASE-AMBER')
+                raise NotImplementedError(
+                    'only rectangular cells are' ' implemented in ASE-AMBER'
+                )
 
         else:
             atoms.set_pbc(False)
 
     def read_energy(self, filename='mden'):
-        """ read total energy from amber file """
+        """read total energy from amber file"""
         with open(filename) as fd:
             lines = fd.readlines()
-        self.results['energy'] = \
+        self.results['energy'] = (
             float(lines[16].split()[2]) * units.kcal / units.mol
+        )
 
     def read_forces(self, filename='mdfrc'):
-        """ read forces from amber file """
+        """read forces from amber file"""
         fd = netcdf.netcdf_file(filename, 'r')
         try:
             forces = fd.variables['forces']
-            self.results['forces'] = forces[-1, :, :] \
-                / units.Ang * units.kcal / units.mol
+            self.results['forces'] = (
+                forces[-1, :, :] / units.Ang * units.kcal / units.mol
+            )
         finally:
             fd.close()
 
     def set_charges(self, selection, charges, parmed_filename=None):
-        """ Modify amber topology charges to contain the updated
-            QM charges, needed in QM/MM.
-            Using amber's parmed program to change charges.
+        """Modify amber topology charges to contain the updated
+        QM charges, needed in QM/MM.
+        Using amber's parmed program to change charges.
         """
         qm_list = list(selection)
         with open(parmed_filename, 'w') as fout:
             fout.write('# update the following QM charges \n')
             for i, charge in zip(qm_list, charges):
-                fout.write('change charge @' + str(i + 1) + ' ' +
-                           str(charge) + ' \n')
+                fout.write(
+                    'change charge @' + str(i + 1) + ' ' + str(charge) + ' \n'
+                )
             fout.write('# Output the topology file \n')
             fout.write('outparm ' + self.topologyfile + ' \n')
-        parmed_command = ('parmed -O -i ' + parmed_filename +
-                          ' -p ' + self.topologyfile +
-                          ' > ' + self.topologyfile + '.log 2>&1')
+        parmed_command = (
+            'parmed -O -i '
+            + parmed_filename
+            + ' -p '
+            + self.topologyfile
+            + ' > '
+            + self.topologyfile
+            + '.log 2>&1'
+        )
         subprocess.check_call(parmed_command, shell=True, cwd=self.directory)
 
     def get_virtual_charges(self, atoms):
@@ -280,8 +308,9 @@ class Amber(FileIOCalculator):
         for n, line in enumerate(topology):
             if '%FLAG CHARGE' in line:
                 chargestart = n + 2
-        lines1 = topology[chargestart:(chargestart
-                                       + (len(atoms) - 1) // 5 + 1)]
+        lines1 = topology[
+            chargestart : (chargestart + (len(atoms) - 1) // 5 + 1)
+        ]
         mm_charges = []
         for line in lines1:
             for el in line.split():
@@ -297,7 +326,7 @@ class Amber(FileIOCalculator):
 
 
 def map(atoms, top):
-    p = np.zeros((2, len(atoms)), dtype="int")
+    p = np.zeros((2, len(atoms)), dtype='int')
 
     elements = atoms.get_chemical_symbols()
     unique_elements = np.unique(atoms.get_chemical_symbols())
@@ -318,6 +347,7 @@ def map(atoms, top):
 
 try:
     import sander
+
     have_sander = True
 except ImportError:
     have_sander = False
@@ -329,12 +359,22 @@ class SANDER(Calculator):
 
     Requires sander Python bindings from http://ambermd.org/
     """
+
     implemented_properties = ['energy', 'forces']
 
-    def __init__(self, atoms=None, label=None, top=None, crd=None,
-                 mm_options=None, qm_options=None, permutation=None, **kwargs):
+    def __init__(
+        self,
+        atoms=None,
+        label=None,
+        top=None,
+        crd=None,
+        mm_options=None,
+        qm_options=None,
+        permutation=None,
+        **kwargs,
+    ):
         if not have_sander:
-            raise RuntimeError("sander Python module could not be imported!")
+            raise RuntimeError('sander Python module could not be imported!')
         Calculator.__init__(self, label, atoms)
         self.permutation = permutation
         if qm_options is not None:
@@ -353,33 +393,47 @@ class SANDER(Calculator):
             if self.permutation is None:
                 crd = np.reshape(atoms.get_positions(), (1, len(atoms), 3))
             else:
-                crd = np.reshape(atoms.get_positions()
-                                 [self.permutation[0, :]], (1, len(atoms), 3))
+                crd = np.reshape(
+                    atoms.get_positions()[self.permutation[0, :]],
+                    (1, len(atoms), 3),
+                )
             sander.set_positions(crd)
             e, f = sander.energy_forces()
             self.results['energy'] = e.tot * units.kcal / units.mol
             if self.permutation is None:
-                self.results['forces'] = (np.reshape(np.array(f),
-                                                     (len(atoms), 3)) *
-                                          units.kcal / units.mol)
+                self.results['forces'] = (
+                    np.reshape(np.array(f), (len(atoms), 3))
+                    * units.kcal
+                    / units.mol
+                )
             else:
-                ff = np.reshape(np.array(f), (len(atoms), 3)) * \
-                    units.kcal / units.mol
+                ff = (
+                    np.reshape(np.array(f), (len(atoms), 3))
+                    * units.kcal
+                    / units.mol
+                )
                 self.results['forces'] = ff[self.permutation[1, :]]
         if 'forces' not in self.results:
             if self.permutation is None:
                 crd = np.reshape(atoms.get_positions(), (1, len(atoms), 3))
             else:
-                crd = np.reshape(atoms.get_positions()[self.permutation[0, :]],
-                                 (1, len(atoms), 3))
+                crd = np.reshape(
+                    atoms.get_positions()[self.permutation[0, :]],
+                    (1, len(atoms), 3),
+                )
             sander.set_positions(crd)
             e, f = sander.energy_forces()
             self.results['energy'] = e.tot * units.kcal / units.mol
             if self.permutation is None:
-                self.results['forces'] = (np.reshape(np.array(f),
-                                                     (len(atoms), 3)) *
-                                          units.kcal / units.mol)
+                self.results['forces'] = (
+                    np.reshape(np.array(f), (len(atoms), 3))
+                    * units.kcal
+                    / units.mol
+                )
             else:
-                ff = np.reshape(np.array(f), (len(atoms), 3)) * \
-                    units.kcal / units.mol
+                ff = (
+                    np.reshape(np.array(f), (len(atoms), 3))
+                    * units.kcal
+                    / units.mol
+                )
                 self.results['forces'] = ff[self.permutation[1, :]]

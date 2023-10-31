@@ -61,8 +61,10 @@ class BFGS(Optimizer):
             self.maxstep = maxstep
 
         if self.maxstep > 1.0:
-            warnings.warn('You are using a *very* large value for '
-                          'the maximum step size: %.1f Å' % self.maxstep)
+            warnings.warn(
+                'You are using a *very* large value for '
+                'the maximum step size: %.1f Å' % self.maxstep
+            )
 
         self.alpha = alpha
         if self.alpha is None:
@@ -111,7 +113,7 @@ class BFGS(Optimizer):
         #         self.logfile.flush()
 
         dpos = np.dot(V, np.dot(forces, V) / np.fabs(omega)).reshape((-1, 3))
-        steplengths = (dpos**2).sum(1)**0.5
+        steplengths = (dpos**2).sum(1) ** 0.5
         self.pos0 = pos.flat.copy()
         self.forces0 = forces.copy()
         return dpos, steplengths
@@ -154,6 +156,7 @@ class BFGS(Optimizer):
         """Initialize hessian from old trajectory."""
         if isinstance(traj, str):
             from ase.io.trajectory import Trajectory
+
             traj = Trajectory(traj, 'r')
         self.H = None
         atoms = traj[0]

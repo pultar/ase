@@ -8,8 +8,10 @@ http://tddft.org/programs/octopus/
 
 import numpy as np
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator)
+from ase.calculators.genericfileio import (
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+)
 from ase.io.octopus.input import generate_input, process_special_kwargs
 from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 
@@ -25,6 +27,7 @@ class OctopusProfile:
     def version(self):
         import re
         from subprocess import check_output
+
         txt = check_output(self.argv + ['--version']).decode('ascii')
         match = re.match(r'octopus\s*(.+)', txt)
         # With MPI it prints the line for each rank, but we just match
@@ -33,6 +36,7 @@ class OctopusProfile:
 
     def run(self, directory, outputfile):
         from subprocess import check_call
+
         with open(directory / outputfile, 'w') as fd:
             check_call(self.argv, stdout=fd, cwd=directory)
 
@@ -60,9 +64,12 @@ class OctopusTemplate(CalculatorTemplate):
                 kpts, eigs, occs = read_eigenvalues_file(fd)
                 kpt_weights = np.ones(len(kpts))  # XXX ?  Or 1 / len(kpts) ?
                 # XXX New Octopus probably has symmetry reduction !!
-            results.update(eigenvalues=eigs, occupations=occs,
-                           ibz_k_points=kpts,
-                           k_point_weights=kpt_weights)
+            results.update(
+                eigenvalues=eigs,
+                occupations=occs,
+                ibz_k_points=kpts,
+                k_point_weights=kpt_weights,
+            )
         return results
 
     def execute(self, directory, profile):
@@ -79,10 +86,7 @@ class Octopus(GenericFileIOCalculator):
 
     The label is always assumed to be a directory."""
 
-    def __init__(self,
-                 profile=None,
-                 directory='.',
-                 **kwargs):
+    def __init__(self, profile=None, directory='.', **kwargs):
         """Create Octopus calculator.
 
         Label is always taken as a subdirectory.
@@ -91,13 +95,17 @@ class Octopus(GenericFileIOCalculator):
         if profile is None:
             profile = OctopusProfile(['octopus'])
 
-        super().__init__(profile=profile, template=OctopusTemplate(),
-                         directory=directory,
-                         parameters=kwargs)
+        super().__init__(
+            profile=profile,
+            template=OctopusTemplate(),
+            directory=directory,
+            parameters=kwargs,
+        )
 
     @classmethod
     def recipe(cls, **kwargs):
         from ase import Atoms
+
         system = Atoms()
         calc = Octopus(CalculationMode='recipe', **kwargs)
         system.calc = calc
@@ -106,5 +114,6 @@ class Octopus(GenericFileIOCalculator):
         except OctopusIOError:
             pass
         else:
-            raise OctopusIOError('Expected recipe, but found '
-                                 'useful physical output!')
+            raise OctopusIOError(
+                'Expected recipe, but found ' 'useful physical output!'
+            )

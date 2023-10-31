@@ -18,17 +18,27 @@ def test_main(factory):
     # Calculate forces ahead of time, compare against finite difference after
     # checking the psi4-calc.dat file
     atoms.get_forces()
-    assert_allclose(atoms.get_potential_energy(), -2056.785854116688,
-                    rtol=1e-4, atol=1e-4)
+    assert_allclose(
+        atoms.get_potential_energy(), -2056.785854116688, rtol=1e-4, atol=1e-4
+    )
 
     # Test the reader
     calc2 = factory.calc()
     calc2.read('psi4-calc')
-    assert_allclose(calc2.results['energy'], atoms.get_potential_energy(),
-                    rtol=1e-4, atol=1e-4)
-    assert_allclose(calc2.results['forces'], atoms.get_forces(),
-                    rtol=1e-4, atol=1e-4)
+    assert_allclose(
+        calc2.results['energy'],
+        atoms.get_potential_energy(),
+        rtol=1e-4,
+        atol=1e-4,
+    )
+    assert_allclose(
+        calc2.results['forces'], atoms.get_forces(), rtol=1e-4, atol=1e-4
+    )
 
     # Compare analytical vs numerical forces
-    assert_allclose(atoms.get_forces(), calc.calculate_numerical_forces(atoms),
-                    rtol=1e-4, atol=1e-4)
+    assert_allclose(
+        atoms.get_forces(),
+        calc.calculate_numerical_forces(atoms),
+        rtol=1e-4,
+        atol=1e-4,
+    )

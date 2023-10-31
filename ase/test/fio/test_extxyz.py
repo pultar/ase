@@ -46,7 +46,7 @@ def test_array_shape(at):
 
     ase.io.write('to_new.xyz', at, format='extxyz')
     at_new = ase.io.read('to_new.xyz')
-    assert at_new.arrays['ns_extra_data'].shape == (2, )
+    assert at_new.arrays['ns_extra_data'].shape == (2,)
 
 
 # test comment read/write with vec_cell
@@ -78,7 +78,8 @@ def test_vec_cell(at, images):
     read_images = ase.io.read('multi.xyz', index=':')
     assert read_images == images
     # also test for vec_cell with whitespaces
-    Path('structure.xyz').write_text("""1
+    Path('structure.xyz').write_text(
+        """1
     Coordinates
     C         -7.28250        4.71303       -3.82016
       VEC1 1.0 0.1 1.1
@@ -86,7 +87,8 @@ def test_vec_cell(at, images):
 
     C         -7.28250        4.71303       -3.82016
     VEC1 1.0 0.1 1.1
-    """)
+    """
+    )
 
     a = ase.io.read('structure.xyz', index=0)
     b = ase.io.read('structure.xyz', index=1)
@@ -94,14 +96,16 @@ def test_vec_cell(at, images):
 
     # read xyz containing trailing blank line
     # also test for upper case elements
-    Path('structure.xyz').write_text("""4
+    Path('structure.xyz').write_text(
+        """4
     Coordinates
     MG        -4.25650        3.79180       -2.54123
     C         -1.15405        2.86652       -1.26699
     C         -5.53758        3.70936        0.63504
     C         -7.28250        4.71303       -3.82016
 
-    """)
+    """
+    )
 
     a = ase.io.read('structure.xyz')
     assert a[0].symbol == 'Mg'
@@ -109,13 +113,15 @@ def test_vec_cell(at, images):
 
 # read xyz with / and @ signs in key value
 def test_read_slash():
-    Path('slash.xyz').write_text("""4
+    Path('slash.xyz').write_text(
+        """4
     key1=a key2=a/b key3=a@b key4="a@b"
     Mg        -4.25650        3.79180       -2.54123
     C         -1.15405        2.86652       -1.26699
     C         -5.53758        3.70936        0.63504
     C         -7.28250        4.71303       -3.82016
-    """)
+    """
+    )
 
     a = ase.io.read('slash.xyz')
     assert a.info['key1'] == r'a'
@@ -126,18 +132,26 @@ def test_read_slash():
 
 def test_read_struct():
     struct = Atoms(
-        'H4', pbc=[True, True, True],
-        cell=[[4.00759, 0.0, 0.0],
-              [-2.003795, 3.47067475, 0.0],
-              [3.06349683e-16, 5.30613216e-16, 5.00307]],
-        positions=[[-2.003795e-05, 2.31379473, 0.875437189],
-                   [2.00381504, 1.15688001, 4.12763281],
-                   [2.00381504, 1.15688001, 3.37697219],
-                   [-2.003795e-05, 2.31379473, 1.62609781]],
+        'H4',
+        pbc=[True, True, True],
+        cell=[
+            [4.00759, 0.0, 0.0],
+            [-2.003795, 3.47067475, 0.0],
+            [3.06349683e-16, 5.30613216e-16, 5.00307],
+        ],
+        positions=[
+            [-2.003795e-05, 2.31379473, 0.875437189],
+            [2.00381504, 1.15688001, 4.12763281],
+            [2.00381504, 1.15688001, 3.37697219],
+            [-2.003795e-05, 2.31379473, 1.62609781],
+        ],
     )
-    struct.info = {'dataset': 'deltatest', 'kpoints': np.array([28, 28, 20]),
-                   'identifier': 'deltatest_H_1.00',
-                   'unique_id': '4cf83e2f89c795fb7eaf9662e77542c1'}
+    struct.info = {
+        'dataset': 'deltatest',
+        'kpoints': np.array([28, 28, 20]),
+        'identifier': 'deltatest_H_1.00',
+        'unique_id': '4cf83e2f89c795fb7eaf9662e77542c1',
+    }
     ase.io.write('tmp.xyz', struct)
 
 
@@ -192,8 +206,8 @@ def test_complex_key_val():
 
     expected_dict = {
         'str': 'astring',
-        'quot': "quoted value",
-        'quote_special': "a_to_Z_$%%^&*",
+        'quot': 'quoted value',
+        'quote_special': 'a_to_Z_$%%^&*',
         'escaped_quote': 'esc"aped',
         'true_value': True,
         'false_value': False,
@@ -203,13 +217,13 @@ def test_complex_key_val():
         'float_array': np.array([3.3, 4.4]),
         'virial': np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
         'not_a_3x3_array': np.array([1, 4, 7, 2, 5, 8, 3, 6, 9]),
-        'Lattice': np.array([[4.3, 0.0, 0.0],
-                             [0.0, 3.3, 0.0],
-                             [0.0, 0.0, 7.0]]),
+        'Lattice': np.array(
+            [[4.3, 0.0, 0.0], [0.0, 3.3, 0.0], [0.0, 0.0, 7.0]]
+        ),
         'scientific_float': 1.2e7,
         'scientific_float_2': 5e-6,
         'scientific_float_array': np.array([1.2, 2200, 40, 0.33, 0.02]),
-        'not_array': "1.2 3.4 text",
+        'not_array': '1.2 3.4 text',
         'bool_array': np.array([True, False, True, False]),
         'bool_array_2': np.array([True, False, True]),
         'not_bool_array': 'T F S',
@@ -231,7 +245,7 @@ def test_complex_key_val():
         'f_int_array': np.array([[1, 2], [3, 4]]),
         'f_bool_bare': True,
         'f_bool_value': False,
-        'f_dict': {"a": 1}
+        'f_dict': {'a': 1},
     }
 
     parsed_dict = extxyz.key_val_str_to_dict(complex_xyz_string)
@@ -271,13 +285,15 @@ def test_write_multiple(at, images):
 
 # read xyz with blank comment line
 def test_blank_comment():
-    Path('blankcomment.xyz').write_text("""4
+    Path('blankcomment.xyz').write_text(
+        """4
 
     Mg        -4.25650        3.79180       -2.54123
     C         -1.15405        2.86652       -1.26699
     C         -5.53758        3.70936        0.63504
     C         -7.28250        4.71303       -3.82016
-    """)
+    """
+    )
 
     a = ase.io.read('blankcomment.xyz')
     assert a.info == {}
@@ -319,18 +335,25 @@ def test_json_scalars():
     a.write('tmp.xyz')
     with open('tmp.xyz') as fd:
         comment_line = fd.readlines()[1]
-    assert ("val_1=42.0" in comment_line
-            and "val_2=42.0" in comment_line
-            and "val_3=42" in comment_line)
+    assert (
+        'val_1=42.0' in comment_line
+        and 'val_2=42.0' in comment_line
+        and 'val_3=42' in comment_line
+    )
     b = ase.io.read('tmp.xyz')
     assert abs(b.info['val_1'] - 42.0) < 1e-6
     assert abs(b.info['val_2'] - 42.0) < 1e-6
     assert abs(b.info['val_3'] - 42) == 0
 
 
-@pytest.mark.parametrize('constraint', [FixAtoms(indices=(0, 2)),
-                                        FixCartesian(1, mask=(1, 0, 1)),
-                                        [FixCartesian(0), FixCartesian(2)]])
+@pytest.mark.parametrize(
+    'constraint',
+    [
+        FixAtoms(indices=(0, 2)),
+        FixCartesian(1, mask=(1, 0, 1)),
+        [FixCartesian(0), FixCartesian(2)],
+    ],
+)
 def test_constraints(constraint):
     atoms = molecule('H2O')
     atoms.set_constraint(constraint)
@@ -362,11 +385,13 @@ def test_constraints(constraint):
 
 def test_constraints_int():
     # check for regressions of issue #1015
-    Path('movemask.xyz').write_text("""3
+    Path('movemask.xyz').write_text(
+        """3
 Properties=species:S:1:pos:R:3:move_mask:I:1 pbc="F F F"
 O        0.00000000       0.00000000       0.11926200  1
 H        0.00000000       0.76323900      -0.47704700  0
-H        0.00000000      -0.76323900      -0.47704700  0""")
+H        0.00000000      -0.76323900      -0.47704700  0"""
+    )
 
     a = ase.io.read('movemask.xyz')
     assert isinstance(a.constraints[0], FixAtoms)
@@ -374,8 +399,8 @@ H        0.00000000      -0.76323900      -0.47704700  0""")
 
 
 # test read/write with both initial_charges & charges
-@pytest.mark.parametrize("enable_initial_charges", [True, False])
-@pytest.mark.parametrize("enable_charges", [True, False])
+@pytest.mark.parametrize('enable_initial_charges', [True, False])
+@pytest.mark.parametrize('enable_charges', [True, False])
 def test_write_read_charges(at, tmpdir, enable_initial_charges, enable_charges):
     initial_charges = [1.0, -1.0]
     charges = [-2.0, 2.0]
@@ -393,22 +418,27 @@ def test_write_read_charges(at, tmpdir, enable_initial_charges, enable_charges):
         assert np.allclose(r.get_charges(), charges)
 
 
-@pytest.mark.parametrize("pbc,atoms_pbc", (
-    ("True True True", [True, True, True]),
-    ("True True False", [True, True, False]),
-    ("False false T", [False, False, True]),
-    ("True true T", [True, True, True]),
-    ("True false T", [True, False, True]),
-    ("F F F", [False, False, False]),
-    ("T T F", [True, True, False]),
-    ("True", [True, True, True]),
-    ("False", [False, False, False]),
-))
+@pytest.mark.parametrize(
+    'pbc,atoms_pbc',
+    (
+        ('True True True', [True, True, True]),
+        ('True True False', [True, True, False]),
+        ('False false T', [False, False, True]),
+        ('True true T', [True, True, True]),
+        ('True false T', [True, False, True]),
+        ('F F F', [False, False, False]),
+        ('T T F', [True, True, False]),
+        ('True', [True, True, True]),
+        ('False', [False, False, False]),
+    ),
+)
 def test_pbc_property(pbc, atoms_pbc):
     """Test various specifications of the ``pbc`` property."""
-    Path('pbc-test.xyz').write_text(f"""2
+    Path('pbc-test.xyz').write_text(
+        f"""2
 Lattice="3.608 0.0 0.0 -1.804 3.125 0.0 0.0 0.0 21.3114930844" pbc="{pbc}"
 As           1.8043384632       1.0417352974      11.3518747709
-As          -0.0000000002       2.0834705948       9.9596183135""")
+As          -0.0000000002       2.0834705948       9.9596183135"""
+    )
     atoms = ase.io.read('pbc-test.xyz')
     assert (atoms.pbc == atoms_pbc).all()

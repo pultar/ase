@@ -37,24 +37,19 @@ def main():
         lines = open(name + '.csv').read().split('\n')
         firstline = lines.pop(0)
         fd.write(
-            '\n' +
-            name + '\n' +
-            '=' * len(name) + '\n'
-            'Calculator used: %s\n' % firstline.split(',')[-1] +
-            '\n' +
-            bars +
-            header +
-            bars
+            '\n' + name + '\n' + '=' * len(name) + '\n'
+            'Calculator used: %s\n'
+            % firstline.split(',')[-1]
+            + '\n'
+            + bars
+            + header
+            + bars
         )
         for line in lines:
             if len(line):
                 print(line.split(','))
-                fd.write(
-                    '%-15s %5s %17s %10s %s\n' % tuple(line.split(','))
-                )
-        fd.write(
-            bars
-        )
+                fd.write('%-15s %5s %17s %10s %s\n' % tuple(line.split(',')))
+        fd.write(bars)
     fd.close()
 
 

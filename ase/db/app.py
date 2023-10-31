@@ -51,7 +51,8 @@ class DBApp:
 
     def add_project(self, name: str, db: Database) -> None:
         self.projects[name] = DatabaseProject.load_db_as_ase_project(
-            name=name, database=db)
+            name=name, database=db
+        )
 
     @classmethod
     def run_db(cls, db):
@@ -62,6 +63,7 @@ class DBApp:
 
 def new_app(projects):
     from flask import Flask, render_template, request
+
     app = Flask(__name__, template_folder=str(DBApp.root))
 
     @app.route('/<project_name>')
@@ -75,10 +77,12 @@ def new_app(projects):
             return '', 204, []  # 204: "No content"
         session = Session(project_name)
         project = projects[project_name]
-        return render_template(str(project.get_search_template()),
-                               q=request.args.get('query', ''),
-                               project=project,
-                               session_id=session.id)
+        return render_template(
+            str(project.get_search_template()),
+            q=request.args.get('query', ''),
+            project=project,
+            session_id=session.id,
+        )
 
     @app.route('/update/<int:sid>/<what>/<x>/')
     def update(sid: int, what: str, x: str):
@@ -95,13 +99,17 @@ def new_app(projects):
         session = Session.get(sid)
         project = projects[session.project_name]
         session.update(what, x, request.args, project)
-        table = session.create_table(project.database,
-                                     project.uid_key,
-                                     keys=list(project.key_descriptions))
-        return render_template(str(project.get_table_template()),
-                               table=table,
-                               project=project,
-                               session=session)
+        table = session.create_table(
+            project.database,
+            project.uid_key,
+            keys=list(project.key_descriptions),
+        )
+        return render_template(
+            str(project.get_table_template()),
+            table=table,
+            project=project,
+            session=session,
+        )
 
     @app.route('/<project_name>/row/<uid>')
     def row(project_name: str, uid: str):
@@ -109,8 +117,13 @@ def new_app(projects):
         project = projects[project_name]
         row = project.uid_to_row(uid)
         dct = project.row_to_dict(row)
-        return render_template(str(project.get_row_template()),
-                               dct=dct, row=row, project=project, uid=uid)
+        return render_template(
+            str(project.get_row_template()),
+            dct=dct,
+            row=row,
+            project=project,
+            uid=uid,
+        )
 
     @app.route('/atoms/<project_name>/<int:id>/<type>')
     def atoms(project_name: str, id: int, type: str):
@@ -128,15 +141,20 @@ def new_app(projects):
             a.write(fd, format='extxyz')
         elif type == 'json':
             con = connect(fd, type='json')
-            con.write(row,
-                      data=row.get('data', {}),
-                      **row.get('key_value_pairs', {}))
+            con.write(
+                row, data=row.get('data', {}), **row.get('key_value_pairs', {})
+            )
         else:
             1 / 0
 
-        headers = [('Content-Disposition',
-                    'attachment; filename="{project_name}-{id}.{type}"'
-                    .format(project_name=project_name, id=id, type=type))]
+        headers = [
+            (
+                'Content-Disposition',
+                'attachment; filename="{project_name}-{id}.{type}"'.format(
+                    project_name=project_name, id=id, type=type
+                ),
+            )
+        ]
         txt = fd.getvalue()
         return txt, 200, headers
 
@@ -157,15 +175,17 @@ def new_app(projects):
 
     @app.route('/robots.txt')
     def robots():
-        return ('User-agent: *\n'
-                'Disallow: /\n'
-                '\n'
-                'User-agent: Baiduspider\n'
-                'Disallow: /\n'
-                '\n'
-                'User-agent: SiteCheck-sitecrawl by Siteimprove.com\n'
-                'Disallow: /\n',
-                200)
+        return (
+            'User-agent: *\n'
+            'Disallow: /\n'
+            '\n'
+            'User-agent: Baiduspider\n'
+            'Disallow: /\n'
+            '\n'
+            'User-agent: SiteCheck-sitecrawl by Siteimprove.com\n'
+            'Disallow: /\n',
+            200,
+        )
 
     return app
 

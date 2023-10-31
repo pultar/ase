@@ -9,7 +9,7 @@ dbtypes = ['db', 'postgresql', 'mysql', 'mariadb']
 
 @pytest.mark.parametrize('dbtype', dbtypes)
 def test_create_and_delete_ext_tab(testdir, get_db_name, dbtype):
-    ext_tab = ["tab1", "tab2", "tab3"]
+    ext_tab = ['tab1', 'tab2', 'tab3']
     atoms = Atoms()
 
     name = get_db_name(dbtype)
@@ -17,13 +17,13 @@ def test_create_and_delete_ext_tab(testdir, get_db_name, dbtype):
     db.write(atoms)
 
     for tab in ext_tab:
-        db._create_table_if_not_exists(tab, "INTEGER")
+        db._create_table_if_not_exists(tab, 'INTEGER')
     current_ext_tables = db._get_external_table_names()
     for tab in ext_tab:
         assert tab in current_ext_tables
 
-    db.delete_external_table("tab1")
-    assert "tab1" not in db._get_external_table_names()
+    db.delete_external_table('tab1')
+    assert 'tab1' not in db._get_external_table_names()
 
 
 @pytest.mark.parametrize('dbtype', dbtypes)
@@ -36,12 +36,8 @@ def test_insert_in_external_tables(testdir, get_db_name, dbtype):
     # Now a table called insert_tab with schema datatype REAL should
     # be created
     uid = db.write(
-        atoms,
-        external_tables={
-            "insert_tab": {
-                "rate": 1.0,
-                "rate1": -
-                2.0}})
+        atoms, external_tables={'insert_tab': {'rate': 1.0, 'rate1': -2.0}}
+    )
 
     db.delete([uid])
 
@@ -49,7 +45,7 @@ def test_insert_in_external_tables(testdir, get_db_name, dbtype):
     con = db._connect()
     cur = con.cursor()
 
-    sql = "SELECT * FROM insert_tab WHERE ID=?"
+    sql = 'SELECT * FROM insert_tab WHERE ID=?'
     cur.execute(sql, (uid,))
 
     entries = [x for x in cur.fetchall()]
@@ -63,63 +59,50 @@ def test_insert_in_external_tables(testdir, get_db_name, dbtype):
     # Try to insert something that should not pass
     # i.e. string value into the same table
     with pytest.raises(ValueError):
-        db.write(atoms, external_tables={
-            "insert_tab": {"rate": "something"}})
+        db.write(atoms, external_tables={'insert_tab': {'rate': 'something'}})
 
     # Try to insert Numpy floats
-    db.write(atoms, external_tables={
-        "insert_tab": {"rate": np.float32(1.0)}})
-    db.write(atoms, external_tables={
-        "insert_tab": {"rate": np.float64(1.0)}})
+    db.write(atoms, external_tables={'insert_tab': {'rate': np.float32(1.0)}})
+    db.write(atoms, external_tables={'insert_tab': {'rate': np.float64(1.0)}})
 
     # Make sure that we cannot insert a Numpy integer types into
     # a float array
     with pytest.raises(ValueError):
-        db.write(
-            atoms, external_tables={
-                "insert_tab": {
-                    "rate": np.int32(1.0)}})
+        db.write(atoms, external_tables={'insert_tab': {'rate': np.int32(1.0)}})
 
     with pytest.raises(ValueError):
-        db.write(
-            atoms, external_tables={
-                "insert_tab": {
-                    "rate": np.int64(1.0)}})
+        db.write(atoms, external_tables={'insert_tab': {'rate': np.int64(1.0)}})
 
     # Create a new table should have INTEGER types
-    db.write(atoms, external_tables={"integer_tab": {"rate": 1}})
+    db.write(atoms, external_tables={'integer_tab': {'rate': 1}})
 
     # Make sure we can insert Numpy integers
-    db.write(atoms, external_tables={"integer_tab": {"rate": np.int32(1)}})
-    db.write(atoms, external_tables={"integer_tab": {"rate": np.int64(1)}})
+    db.write(atoms, external_tables={'integer_tab': {'rate': np.int32(1)}})
+    db.write(atoms, external_tables={'integer_tab': {'rate': np.int64(1)}})
 
     # Make sure that we cannot insert float
     with pytest.raises(ValueError):
         db.write(
-            atoms, external_tables={
-                "integer_tab": {
-                    "rate": np.float32(1)}})
+            atoms, external_tables={'integer_tab': {'rate': np.float32(1)}}
+        )
 
     with pytest.raises(ValueError):
         db.write(
-            atoms, external_tables={
-                "integer_tab": {
-                    "rate": np.float64(1)}})
+            atoms, external_tables={'integer_tab': {'rate': np.float64(1)}}
+        )
 
     # Make sure that ValueError is raised with mixed datatypes
     with pytest.raises(ValueError):
         db.write(
-            atoms,
-            external_tables={
-                "integer_tab": {
-                    "rate": 1,
-                    "rate2": 2.0}})
+            atoms, external_tables={'integer_tab': {'rate': 1, 'rate2': 2.0}}
+        )
 
     # Test that we cannot insert anything into a reserved table name
     from ase.db.sqlite import all_tables
+
     for tab_name in all_tables:
         with pytest.raises(ValueError):
-            db.write(atoms, external_tables={tab_name: {"value": 1}})
+            db.write(atoms, external_tables={tab_name: {'value': 1}})
 
 
 @pytest.mark.parametrize('dbtype', dbtypes)
@@ -129,16 +112,12 @@ def test_extract_from_table(testdir, get_db_name, dbtype):
     name = get_db_name(dbtype)
     db = connect(name)
     uid = db.write(
-        atoms,
-        external_tables={
-            "insert_tab": {
-                "rate": 12.0,
-                "rate1": -
-                10.0}})
+        atoms, external_tables={'insert_tab': {'rate': 12.0, 'rate1': -10.0}}
+    )
 
     row = db.get(id=uid)
-    assert abs(row["insert_tab"]["rate"] - 12.0) < 1E-8
-    assert abs(row["insert_tab"]["rate1"] + 10.0) < 1E-8
+    assert abs(row['insert_tab']['rate'] - 12.0) < 1e-8
+    assert abs(row['insert_tab']['rate1'] + 10.0) < 1e-8
 
 
 @pytest.mark.parametrize('dbtype', dbtypes)
@@ -148,13 +127,16 @@ def test_write_atoms_row(testdir, get_db_name, dbtype):
     name = get_db_name(dbtype)
     db = connect(name)
     uid = db.write(
-        atoms, external_tables={
-            "insert_tab": {"rate": 12.0, "rate1": -10.0},
-            "another_tab": {"somevalue": 1.0}})
+        atoms,
+        external_tables={
+            'insert_tab': {'rate': 12.0, 'rate1': -10.0},
+            'another_tab': {'somevalue': 1.0},
+        },
+    )
     row = db.get(id=uid)
 
     # Hack: Just change the unique ID
-    row["unique_id"] = "uniqueIDTest"
+    row['unique_id'] = 'uniqueIDTest'
     db.write(row)
 
 

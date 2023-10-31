@@ -9,9 +9,13 @@ import pytest
 
 import ase
 from ase.dependencies import all_dependencies
-from ase.test.factories import (CalculatorInputs, NoSuchCalculator,
-                                factory_classes, get_factories,
-                                make_factory_fixture)
+from ase.test.factories import (
+    CalculatorInputs,
+    NoSuchCalculator,
+    factory_classes,
+    get_factories,
+    make_factory_fixture,
+)
 from ase.utils import get_python_package_path_description, seterr, workdir
 
 helpful_message = """\
@@ -81,6 +85,7 @@ def calculators_header(config):
             # Some really ugly hacks here:
             if hasattr(factory, 'importname'):
                 import importlib
+
                 module = importlib.import_module(factory.importname)
                 configinfo = get_python_package_path_description(module)
             else:
@@ -112,9 +117,11 @@ def calculators_header(config):
     # (Where should we do this check?)
     for name in factories.requested_calculators:
         if not factories.is_adhoc(name) and not factories.installed(name):
-            pytest.exit(f'Calculator "{name}" is not installed.  '
-                        'Please run "ase test --help-calculators" on how '
-                        'to install calculators')
+            pytest.exit(
+                f'Calculator "{name}" is not installed.  '
+                'Please run "ase test --help-calculators" on how '
+                'to install calculators'
+            )
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -139,6 +146,7 @@ def sessionlevel_testing_path():
     #
     # So we use the tempfile module for this temporary directory.
     import tempfile
+
     with tempfile.TemporaryDirectory(prefix='ase-test-workdir-') as tempdir:
         path = Path(tempdir)
         path.chmod(0o555)
@@ -173,10 +181,12 @@ def KIM():
         try:
             return _KIM(*args, **kwargs)
         except KIMModelNotFound:
-            pytest.skip('KIM tests require the example KIM models.  '
-                        'These models are available if the KIM API is '
-                        'built from source.  See https://openkim.org/kim-api/'
-                        'for more information.')
+            pytest.skip(
+                'KIM tests require the example KIM models.  '
+                'These models are available if the KIM API is '
+                'built from source.  See https://openkim.org/kim-api/'
+                'for more information.'
+            )
 
     return KIM
 
@@ -184,6 +194,7 @@ def KIM():
 @pytest.fixture(scope='session')
 def tkinter():
     import tkinter
+
     try:
         tkinter.Tk()
     except tkinter.TclError as err:
@@ -216,6 +227,7 @@ def plt(_plt_use_agg):
     pytest.importorskip('matplotlib')
 
     import matplotlib.pyplot as plt
+
     return plt
 
 
@@ -265,6 +277,7 @@ def factory(request, factories):
 
 def pytest_generate_tests(metafunc):
     from ase.test.factories import parametrize_calculator_tests
+
     parametrize_calculator_tests(metafunc)
 
     if 'seed' in metafunc.fixturenames:
@@ -287,9 +300,9 @@ class CLI:
         # on systems without Tkinter.
         environment['MPLBACKEND'] = 'Agg'
 
-        proc = Popen(['ase', '-T'] + list(args),
-                     stdout=PIPE, stdin=PIPE,
-                     env=environment)
+        proc = Popen(
+            ['ase', '-T'] + list(args), stdout=PIPE, stdin=PIPE, env=environment
+        )
         stdout, _ = proc.communicate(b'')
         status = proc.wait()
         assert (status != 0) == expect_fail
@@ -334,9 +347,10 @@ def arbitrarily_seed_rng(request):
     # In order not to generate all the same random numbers in every test,
     # we seed according to a kind of hash:
     ase_path = get_python_package_path_description(ase, default='abort!')
-    if "abort!" in ase_path:
-        raise RuntimeError("Bad ase.__path__: {:}".format(
-            ase_path.replace('abort!', '')))
+    if 'abort!' in ase_path:
+        raise RuntimeError(
+            'Bad ase.__path__: {:}'.format(ase_path.replace('abort!', ''))
+        )
     abspath = Path(request.module.__file__)
     relpath = abspath.relative_to(ase_path)
     module_identifier = relpath.as_posix()  # Same on all platforms
@@ -356,6 +370,7 @@ def arbitrarily_seed_rng(request):
 @pytest.fixture(scope='session')
 def povray_executable():
     import shutil
+
     exe = shutil.which('povray')
     if exe is None:
         pytest.skip('povray not installed')
@@ -363,10 +378,18 @@ def povray_executable():
 
 
 def pytest_addoption(parser):
-    parser.addoption('--calculators', metavar='NAMES', default='',
-                     help='comma-separated list of calculators to test or '
-                     '"auto" for all configured calculators')
-    parser.addoption('--seed', action='append', default=[],
-                     help='add a seed for tests where random number generators'
-                          ' are involved. This option can be applied more'
-                          ' than once.')
+    parser.addoption(
+        '--calculators',
+        metavar='NAMES',
+        default='',
+        help='comma-separated list of calculators to test or '
+        '"auto" for all configured calculators',
+    )
+    parser.addoption(
+        '--seed',
+        action='append',
+        default=[],
+        help='add a seed for tests where random number generators'
+        ' are involved. This option can be applied more'
+        ' than once.',
+    )

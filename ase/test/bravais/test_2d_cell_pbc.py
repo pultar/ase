@@ -6,9 +6,7 @@ from ase.cell import Cell
 
 @pytest.fixture
 def cell():
-    return Cell([[1., 0., 0.],
-                 [.1, 1., 0.],
-                 [0., 0., 0.]])
+    return Cell([[1.0, 0.0, 0.0], [0.1, 1.0, 0.0], [0.0, 0.0, 0.0]])
 
 
 def test_obl(cell):

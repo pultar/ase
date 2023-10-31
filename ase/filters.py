@@ -10,8 +10,11 @@ from ase.utils import deprecated
 from ase.utils.abc import Optimizable
 
 __all__ = [
-    'Filter', 'StrainFilter', 'UnitCellFilter', 'FrechetCellFilter',
-    'ExpCellFilter'
+    'Filter',
+    'StrainFilter',
+    'UnitCellFilter',
+    'FrechetCellFilter',
+    'ExpCellFilter',
 ]
 
 
@@ -30,7 +33,8 @@ class OptimizableFilter(Optimizable):
 
     def get_potential_energy(self, force_consistent):
         return self.filterobj.get_potential_energy(
-            force_consistent=force_consistent)
+            force_consistent=force_consistent
+        )
 
     def __len__(self):
         return len(self.filterobj)
@@ -106,8 +110,9 @@ class Filter:
         pos[self.index] = positions
         self.atoms.set_positions(pos, **kwargs)
 
-    positions = property(get_positions, set_positions,
-                         doc='Positions of the atoms')
+    positions = property(
+        get_positions, set_positions, doc='Positions of the atoms'
+    )
 
     def get_momenta(self):
         'Return the momenta of the visible atoms.'
@@ -242,9 +247,13 @@ class StrainFilter(Filter):
 
     def set_positions(self, new):
         new = new.ravel() * self.mask
-        eps = np.array([[1.0 + new[0], 0.5 * new[5], 0.5 * new[4]],
-                        [0.5 * new[5], 1.0 + new[1], 0.5 * new[3]],
-                        [0.5 * new[4], 0.5 * new[3], 1.0 + new[2]]])
+        eps = np.array(
+            [
+                [1.0 + new[0], 0.5 * new[5], 0.5 * new[4]],
+                [0.5 * new[5], 1.0 + new[1], 0.5 * new[3]],
+                [0.5 * new[4], 0.5 * new[3], 1.0 + new[2]],
+            ]
+        )
 
         self.atoms.set_cell(np.dot(self.origcell, eps), scale_atoms=True)
         self.strain[:] = new
@@ -261,13 +270,17 @@ class StrainFilter(Filter):
 
 
 class UnitCellFilter(Filter):
-    """Modify the supercell and the atom positions. """
+    """Modify the supercell and the atom positions."""
 
-    def __init__(self, atoms, mask=None,
-                 cell_factor=None,
-                 hydrostatic_strain=False,
-                 constant_volume=False,
-                 scalar_pressure=0.0):
+    def __init__(
+        self,
+        atoms,
+        mask=None,
+        cell_factor=None,
+        hydrostatic_strain=False,
+        constant_volume=False,
+        scalar_pressure=0.0,
+    ):
         """Create a filter that returns the atomic forces and unit cell
         stresses together, so they can simultaneously be minimized.
 
@@ -382,8 +395,9 @@ class UnitCellFilter(Filter):
         pos = np.zeros((natoms + 3, 3))
         # UnitCellFilter's positions are the self.atoms.positions but without
         # the applied deformation gradient
-        pos[:natoms] = np.linalg.solve(cur_deform_grad,
-                                       self.atoms.positions.T).T
+        pos[:natoms] = np.linalg.solve(
+            cur_deform_grad, self.atoms.positions.T
+        ).T
         # UnitCellFilter's cell DOFs are the deformation gradient times a
         # scaling factor
         pos[natoms:] = self.cell_factor * cur_deform_grad
@@ -408,21 +422,24 @@ class UnitCellFilter(Filter):
         # deformation gradient.  Both current and final structures should
         # preserve symmetry, so if set_cell() calls FixSymmetry.adjust_cell(),
         # it should be OK
-        self.atoms.set_cell(self.orig_cell @ new_deform_grad.T,
-                            scale_atoms=True)
+        self.atoms.set_cell(
+            self.orig_cell @ new_deform_grad.T, scale_atoms=True
+        )
         # Set the positions from the ones passed in (which are without the
         # deformation gradient applied) and the new deformation gradient.
         # This should also preserve symmetry, so if set_positions() calls
         # FixSymmetyr.adjust_positions(), it should be OK
-        self.atoms.set_positions(new_atom_positions @ new_deform_grad.T,
-                                 **kwargs)
+        self.atoms.set_positions(
+            new_atom_positions @ new_deform_grad.T, **kwargs
+        )
 
     def get_potential_energy(self, force_consistent=True):
         """
         returns potential energy including enthalpy PV term.
         """
         atoms_energy = self.atoms.get_potential_energy(
-            force_consistent=force_consistent)
+            force_consistent=force_consistent
+        )
         return atoms_energy + self.scalar_pressure * self.atoms.get_volume()
 
     def get_forces(self, **kwargs):
@@ -439,8 +456,10 @@ class UnitCellFilter(Filter):
         atoms_forces = self.atoms.get_forces(**kwargs)
 
         volume = self.atoms.get_volume()
-        virial = -volume * (voigt_6_to_full_3x3_stress(stress) +
-                            np.diag([self.scalar_pressure] * 3))
+        virial = -volume * (
+            voigt_6_to_full_3x3_stress(stress)
+            + np.diag([self.scalar_pressure] * 3)
+        )
         cur_deform_grad = self.deform_grad()
         atoms_forces = atoms_forces @ cur_deform_grad
         virial = np.linalg.solve(cur_deform_grad, virial.T).T
@@ -472,17 +491,21 @@ class UnitCellFilter(Filter):
         return self.atoms.has(x)
 
     def __len__(self):
-        return (len(self.atoms) + 3)
+        return len(self.atoms) + 3
 
 
 class FrechetCellFilter(UnitCellFilter):
     """Modify the supercell and the atom positions."""
 
-    def __init__(self, atoms, mask=None,
-                 exp_cell_factor=None,
-                 hydrostatic_strain=False,
-                 constant_volume=False,
-                 scalar_pressure=0.0):
+    def __init__(
+        self,
+        atoms,
+        mask=None,
+        exp_cell_factor=None,
+        hydrostatic_strain=False,
+        constant_volume=False,
+        scalar_pressure=0.0,
+    ):
         r"""Create a filter that returns the atomic forces and unit cell
         stresses together, so they can simultaneously be minimized.
 
@@ -561,13 +584,18 @@ class FrechetCellFilter(UnitCellFilter):
         """
 
         Filter.__init__(self, atoms, indices=range(len(atoms)))
-        UnitCellFilter.__init__(self, atoms, mask=mask,
-                                hydrostatic_strain=hydrostatic_strain,
-                                constant_volume=constant_volume,
-                                scalar_pressure=scalar_pressure)
+        UnitCellFilter.__init__(
+            self,
+            atoms,
+            mask=mask,
+            hydrostatic_strain=hydrostatic_strain,
+            constant_volume=constant_volume,
+            scalar_pressure=scalar_pressure,
+        )
 
         # We defer the scipy import to avoid high immediate import overhead
         from scipy.linalg import expm, expm_frechet, logm
+
         self.expm = expm
         self.logm = logm
         self.expm_frechet = expm_frechet
@@ -594,8 +622,10 @@ class FrechetCellFilter(UnitCellFilter):
         # need to modify the stress contribution
         stress = self.atoms.get_stress(**kwargs)
         volume = self.atoms.get_volume()
-        virial = -volume * (voigt_6_to_full_3x3_stress(stress) +
-                            np.diag([self.scalar_pressure] * 3))
+        virial = -volume * (
+            voigt_6_to_full_3x3_stress(stress)
+            + np.diag([self.scalar_pressure] * 3)
+        )
 
         cur_deform_grad = self.deform_grad()
         cur_deform_grad_log = self.logm(cur_deform_grad)
@@ -618,9 +648,7 @@ class FrechetCellFilter(UnitCellFilter):
             dir[mu, nu] = 1.0
             # Directional derivative of deformation to (mu, nu) strain direction
             expm_der = self.expm_frechet(
-                cur_deform_grad_log,
-                dir,
-                compute_expm=False
+                cur_deform_grad_log, dir, compute_expm=False
             )
             deform_grad_log_force[mu, nu] = np.sum(expm_der * ucf_cell_grad)
 
@@ -629,12 +657,16 @@ class FrechetCellFilter(UnitCellFilter):
         if self.constant_volume:
             # apply constraint to force
             dglf_trace = deform_grad_log_force.trace()
-            np.fill_diagonal(deform_grad_log_force,
-                             np.diag(deform_grad_log_force) - dglf_trace / 3.0)
+            np.fill_diagonal(
+                deform_grad_log_force,
+                np.diag(deform_grad_log_force) - dglf_trace / 3.0,
+            )
             # apply constraint to Cauchy stress used for convergence testing
             ccs_trace = convergence_crit_stress.trace()
-            np.fill_diagonal(convergence_crit_stress,
-                             np.diag(convergence_crit_stress) - ccs_trace / 3.0)
+            np.fill_diagonal(
+                convergence_crit_stress,
+                np.diag(convergence_crit_stress) - ccs_trace / 3.0,
+            )
 
         atoms_forces = self.atoms.get_forces(**kwargs)
         atoms_forces = atoms_forces @ cur_deform_grad
@@ -649,15 +681,20 @@ class FrechetCellFilter(UnitCellFilter):
 
 
 class ExpCellFilter(UnitCellFilter):
-
-    @deprecated(DeprecationWarning(
-        'Use FrechetCellFilter for better convergence w.r.t. cell variables.'
-    ))
-    def __init__(self, atoms, mask=None,
-                 cell_factor=None,
-                 hydrostatic_strain=False,
-                 constant_volume=False,
-                 scalar_pressure=0.0):
+    @deprecated(
+        DeprecationWarning(
+            'Use FrechetCellFilter for better convergence w.r.t. cell variables.'
+        )
+    )
+    def __init__(
+        self,
+        atoms,
+        mask=None,
+        cell_factor=None,
+        hydrostatic_strain=False,
+        constant_volume=False,
+        scalar_pressure=0.0,
+    ):
         r"""Create a filter that returns the atomic forces and unit cell
             stresses together, so they can simultaneously be minimized.
 
@@ -770,17 +807,24 @@ class ExpCellFilter(UnitCellFilter):
             \nabla E(U) / \nabla U_ij =  [L(U, S exp(-U))]_ij
         """
         Filter.__init__(self, atoms, indices=range(len(atoms)))
-        UnitCellFilter.__init__(self, atoms, mask, cell_factor,
-                                hydrostatic_strain,
-                                constant_volume, scalar_pressure)
+        UnitCellFilter.__init__(
+            self,
+            atoms,
+            mask,
+            cell_factor,
+            hydrostatic_strain,
+            constant_volume,
+            scalar_pressure,
+        )
         if cell_factor is not None:
             # cell_factor used in UnitCellFilter does not affect on gradients of
             # ExpCellFilter.
-            warn("cell_factor is deprecated")
+            warn('cell_factor is deprecated')
         self.cell_factor = 1.0
 
         # We defer the scipy import to avoid high immediate import overhead
         from scipy.linalg import expm, logm
+
         self.expm = expm
         self.logm = logm
 
@@ -791,8 +835,10 @@ class ExpCellFilter(UnitCellFilter):
         # need to modify the stress contribution
         stress = self.atoms.get_stress(**kwargs)
         volume = self.atoms.get_volume()
-        virial = -volume * (voigt_6_to_full_3x3_stress(stress) +
-                            np.diag([self.scalar_pressure] * 3))
+        virial = -volume * (
+            voigt_6_to_full_3x3_stress(stress)
+            + np.diag([self.scalar_pressure] * 3)
+        )
 
         cur_deform_grad = self.deform_grad()
         cur_deform_grad_log = self.logm(cur_deform_grad)
@@ -809,22 +855,28 @@ class ExpCellFilter(UnitCellFilter):
         Y = np.zeros((6, 6))
         Y[0:3, 0:3] = cur_deform_grad_log
         Y[3:6, 3:6] = cur_deform_grad_log
-        Y[0:3, 3:6] = - virial @ self.expm(-cur_deform_grad_log)
+        Y[0:3, 3:6] = -virial @ self.expm(-cur_deform_grad_log)
         deform_grad_log_force = -self.expm(Y)[0:3, 3:6]
-        for (i1, i2) in [(0, 1), (0, 2), (1, 2)]:
-            ff = 0.5 * (deform_grad_log_force[i1, i2] +
-                        deform_grad_log_force[i2, i1])
+        for i1, i2 in [(0, 1), (0, 2), (1, 2)]:
+            ff = 0.5 * (
+                deform_grad_log_force[i1, i2] + deform_grad_log_force[i2, i1]
+            )
             deform_grad_log_force[i1, i2] = ff
             deform_grad_log_force[i2, i1] = ff
 
         # check for reasonable alignment between naive and
         # exact search directions
-        all_are_equal = np.all(np.isclose(deform_grad_log_force,
-                                          deform_grad_log_force_naive))
-        if all_are_equal or \
-            (np.sum(deform_grad_log_force * deform_grad_log_force_naive) /
-             np.sqrt(np.sum(deform_grad_log_force**2) *
-                     np.sum(deform_grad_log_force_naive**2)) > 0.8):
+        all_are_equal = np.all(
+            np.isclose(deform_grad_log_force, deform_grad_log_force_naive)
+        )
+        if all_are_equal or (
+            np.sum(deform_grad_log_force * deform_grad_log_force_naive)
+            / np.sqrt(
+                np.sum(deform_grad_log_force**2)
+                * np.sum(deform_grad_log_force_naive**2)
+            )
+            > 0.8
+        ):
             deform_grad_log_force = deform_grad_log_force_naive
 
         # Cauchy stress used for convergence testing
@@ -832,12 +884,16 @@ class ExpCellFilter(UnitCellFilter):
         if self.constant_volume:
             # apply constraint to force
             dglf_trace = deform_grad_log_force.trace()
-            np.fill_diagonal(deform_grad_log_force,
-                             np.diag(deform_grad_log_force) - dglf_trace / 3.0)
+            np.fill_diagonal(
+                deform_grad_log_force,
+                np.diag(deform_grad_log_force) - dglf_trace / 3.0,
+            )
             # apply constraint to Cauchy stress used for convergence testing
             ccs_trace = convergence_crit_stress.trace()
-            np.fill_diagonal(convergence_crit_stress,
-                             np.diag(convergence_crit_stress) - ccs_trace / 3.0)
+            np.fill_diagonal(
+                convergence_crit_stress,
+                np.diag(convergence_crit_stress) - ccs_trace / 3.0,
+            )
 
         # pack gradients into vector
         natoms = len(self.atoms)

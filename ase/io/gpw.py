@@ -1,8 +1,10 @@
 """Read gpw-file from GPAW."""
 import ase.io.ulm as ulm
 from ase import Atoms
-from ase.calculators.singlepoint import (SinglePointDFTCalculator,
-                                         SinglePointKPoint)
+from ase.calculators.singlepoint import (
+    SinglePointDFTCalculator,
+    SinglePointKPoint,
+)
 from ase.io.trajectory import read_atoms
 from ase.units import Bohr, Hartree
 
@@ -37,7 +39,8 @@ def read_gpw(filename):
         ibzkpts=ibzkpts,
         bzkpts=bzkpts,
         bz2ibz=bz2ibz,
-        **reader.results.asdict())
+        **reader.results.asdict(),
+    )
 
     if kpts is not None:
         atoms.calc.kpts = []
@@ -46,7 +49,8 @@ def read_gpw(filename):
             kpt = 0
             for weight, eps_n, f_n in zip(kpts.weights, eps_kn, f_kn):
                 atoms.calc.kpts.append(
-                    SinglePointKPoint(weight, spin, kpt, eps_n, f_n))
+                    SinglePointKPoint(weight, spin, kpt, eps_n, f_n)
+                )
                 kpt += 1
             spin += 1
 
@@ -57,6 +61,7 @@ def read_gpw(filename):
 
 def read_old_gpw(filename):
     from gpaw.io.tar import Reader
+
     r = Reader(filename)
     positions = r.get('CartesianPositions') * Bohr
     numbers = r.get('AtomicNumbers')
@@ -71,10 +76,7 @@ def read_old_gpw(filename):
     else:
         forces = None
 
-    atoms = Atoms(positions=positions,
-                  numbers=numbers,
-                  cell=cell,
-                  pbc=pbc)
+    atoms = Atoms(positions=positions, numbers=numbers, cell=cell, pbc=pbc)
     if tags.any():
         atoms.set_tags(tags)
 
@@ -85,18 +87,18 @@ def read_old_gpw(filename):
         magmoms = None
         magmom = None
 
-    atoms.calc = SinglePointDFTCalculator(atoms, energy=energy,
-                                          forces=forces,
-                                          magmoms=magmoms,
-                                          magmom=magmom)
+    atoms.calc = SinglePointDFTCalculator(
+        atoms, energy=energy, forces=forces, magmoms=magmoms, magmom=magmom
+    )
     kpts = []
     if r.has_array('IBZKPoints'):
-        for w, kpt, eps_n, f_n in zip(r.get('IBZKPointWeights'),
-                                      r.get('IBZKPoints'),
-                                      r.get('Eigenvalues'),
-                                      r.get('OccupationNumbers')):
-            kpts.append(SinglePointKPoint(w, kpt[0], kpt[1],
-                                          eps_n[0], f_n[0]))
+        for w, kpt, eps_n, f_n in zip(
+            r.get('IBZKPointWeights'),
+            r.get('IBZKPoints'),
+            r.get('Eigenvalues'),
+            r.get('OccupationNumbers'),
+        ):
+            kpts.append(SinglePointKPoint(w, kpt[0], kpt[1], eps_n[0], f_n[0]))
     atoms.calc.kpts = kpts
 
     return atoms

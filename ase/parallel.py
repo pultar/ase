@@ -38,7 +38,7 @@ def paropen(name, mode='r', buffering=-1, encoding=None, comm=None):
 
 
 def parprint(*args, **kwargs):
-    """MPI-safe print - prints only from master. """
+    """MPI-safe print - prints only from master."""
     if world.rank == 0:
         print(*args, **kwargs)
 
@@ -107,10 +107,12 @@ def _get_comm():
         return MPI4PY()
     if '_gpaw' in sys.modules:
         import _gpaw
+
         if hasattr(_gpaw, 'Communicator'):
             return _gpaw.Communicator()
     if '_asap' in sys.modules:
         import _asap
+
         if hasattr(_asap, 'Communicator'):
             return _asap.Communicator()
     return DummyMPI()
@@ -120,6 +122,7 @@ class MPI4PY:
     def __init__(self, mpi4py_comm=None):
         if mpi4py_comm is None:
             from mpi4py import MPI
+
             mpi4py_comm = MPI.COMM_WORLD
         self.comm = mpi4py_comm
 
@@ -184,24 +187,28 @@ world = None
 if '_gpaw' in sys.builtin_module_names:
     # http://wiki.fysik.dtu.dk/gpaw
     import _gpaw
+
     world = _gpaw.Communicator()
 elif '_asap' in sys.builtin_module_names:
     # Modern version of Asap
     # http://wiki.fysik.dtu.dk/asap
     # We cannot import asap3.mpi here, as that creates an import deadlock
     import _asap
+
     world = _asap.Communicator()
 
 # Check if MPI implementation has been imported already:
 elif '_gpaw' in sys.modules:
     # Same thing as above but for the module version
     import _gpaw
+
     try:
         world = _gpaw.Communicator()
     except AttributeError:
         pass
 elif '_asap' in sys.modules:
     import _asap
+
     try:
         world = _asap.Communicator()
     except AttributeError:
@@ -247,9 +254,12 @@ def parallel_function(func):
 
     @functools.wraps(func)
     def new_func(*args, **kwargs):
-        if (world.size == 1 or
-            args and getattr(args[0], 'serial', False) or
-                not kwargs.pop('parallel', True)):
+        if (
+            world.size == 1
+            or args
+            and getattr(args[0], 'serial', False)
+            or not kwargs.pop('parallel', True)
+        ):
             # Disable:
             return func(*args, **kwargs)
 
@@ -278,9 +288,12 @@ def parallel_generator(generator):
 
     @functools.wraps(generator)
     def new_generator(*args, **kwargs):
-        if (world.size == 1 or
-            args and getattr(args[0], 'serial', False) or
-                not kwargs.pop('parallel', True)):
+        if (
+            world.size == 1
+            or args
+            and getattr(args[0], 'serial', False)
+            or not kwargs.pop('parallel', True)
+        ):
             # Disable:
             for result in generator(*args, **kwargs):
                 yield result
@@ -320,8 +333,13 @@ def register_parallel_cleanup_function():
         error = getattr(sys, 'last_type', None)
         if error:
             sys.stdout.flush()
-            sys.stderr.write(('ASE CLEANUP (node %d): %s occurred.  ' +
-                              'Calling MPI_Abort!\n') % (world.rank, error))
+            sys.stderr.write(
+                (
+                    'ASE CLEANUP (node %d): %s occurred.  '
+                    + 'Calling MPI_Abort!\n'
+                )
+                % (world.rank, error)
+            )
             sys.stderr.flush()
             # Give other nodes a moment to crash by themselves (perhaps
             # producing helpful error messages):

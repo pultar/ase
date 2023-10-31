@@ -6,22 +6,23 @@ from ase import Atoms
 
 from .spacegroup import _SPACEGROUP, Spacegroup
 
-__all__ = ('get_basis', )
+__all__ = ('get_basis',)
 
 
 def _has_spglib() -> bool:
     """Check if spglib is available"""
     try:
         import spglib
+
         assert spglib  # silence flakes
     except ImportError:
         return False
     return True
 
 
-def _get_basis_ase(atoms: Atoms,
-                   spacegroup: _SPACEGROUP,
-                   tol: float = 1e-5) -> np.ndarray:
+def _get_basis_ase(
+    atoms: Atoms, spacegroup: _SPACEGROUP, tol: float = 1e-5
+) -> np.ndarray:
     """Recursively get a reduced basis, by removing equivalent sites.
     Uses the first index as a basis, then removes all equivalent sites,
     uses the next index which hasn't been placed into a basis, etc.
@@ -42,9 +43,9 @@ def _get_basis_ase(atoms: Atoms,
                 return True
         return False
 
-    def _get_basis(scaled_positions: np.ndarray,
-                   spacegroup: Spacegroup,
-                   all_basis=None) -> np.ndarray:
+    def _get_basis(
+        scaled_positions: np.ndarray, spacegroup: Spacegroup, all_basis=None
+    ) -> np.ndarray:
         """Main recursive function to be executed"""
         if all_basis is None:
             # Initialization, first iteration
@@ -61,7 +62,8 @@ def _get_basis_ase(atoms: Atoms,
 
         # Remove equivalent
         new_scaled = np.array(
-            [sc for sc in scaled_positions if not scaled_in_sites(sc, sites)])
+            [sc for sc in scaled_positions if not scaled_in_sites(sc, sites)]
+        )
         # We should always have at least popped off the site itself
         assert len(new_scaled) < len(scaled_positions)
 
@@ -82,7 +84,8 @@ def _get_basis_spglib(atoms: Atoms, tol: float = 1e-5) -> np.ndarray:
         # Give a reasonable alternative solution to this function.
         raise ImportError(
             'This function requires spglib. Use "get_basis" and specify '
-            'the spacegroup instead, or install spglib.')
+            'the spacegroup instead, or install spglib.'
+        )
 
     scaled_positions = atoms.get_scaled_positions()
     reduced_indices = _get_reduced_indices(atoms, tol=tol)
@@ -103,10 +106,12 @@ def _can_use_spglib(spacegroup: _SPACEGROUP = None) -> bool:
 
 
 # Dispatcher function for chosing get_basis implementation.
-def get_basis(atoms: Atoms,
-              spacegroup: _SPACEGROUP = None,
-              method: str = 'auto',
-              tol: float = 1e-5) -> np.ndarray:
+def get_basis(
+    atoms: Atoms,
+    spacegroup: _SPACEGROUP = None,
+    method: str = 'auto',
+    tol: float = 1e-5,
+) -> np.ndarray:
     """Function for determining a reduced basis of an atoms object.
     Can use either an ASE native algorithm or an spglib based one.
     The native ASE version requires specifying a space group,
@@ -131,8 +136,9 @@ def get_basis(atoms: Atoms,
     ALLOWED_METHODS = ('auto', 'ase', 'spglib')
 
     if method not in ALLOWED_METHODS:
-        raise ValueError('Expected one of {} methods, got {}'.format(
-            ALLOWED_METHODS, method))
+        raise ValueError(
+            'Expected one of {} methods, got {}'.format(ALLOWED_METHODS, method)
+        )
 
     if method == 'auto':
         # Figure out which implementation we want to use automatically
@@ -156,7 +162,8 @@ def get_basis(atoms: Atoms,
             raise ValueError(
                 'A space group must be specified for the native ASE '
                 'implementation. Try using the spglib version instead, '
-                'or explicitly specifying a space group.')
+                'or explicitly specifying a space group.'
+            )
         return _get_basis_ase(atoms, spacegroup, tol=tol)
 
 
@@ -170,7 +177,10 @@ def _get_reduced_indices(atoms: Atoms, tol: float = 1e-5) -> List[int]:
     import spglib
 
     # Create input for spglib
-    spglib_cell = (atoms.get_cell(), atoms.get_scaled_positions(),
-                   atoms.numbers)
+    spglib_cell = (
+        atoms.get_cell(),
+        atoms.get_scaled_positions(),
+        atoms.numbers,
+    )
     symmetry_data = spglib.get_symmetry_dataset(spglib_cell, symprec=tol)
     return list(set(symmetry_data['equivalent_atoms']))

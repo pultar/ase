@@ -51,18 +51,23 @@ class VelocityVerlet(MolecularDynamics):
         """
         if dt is not None:
             warnings.warn(
-                FutureWarning(
-                    'dt variable is deprecated; please use timestep.'))
+                FutureWarning('dt variable is deprecated; please use timestep.')
+            )
             timestep = dt
         if timestep is None:
             raise TypeError('Missing timestep argument')
 
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory, logfile,
-                                   loginterval,
-                                   append_trajectory=append_trajectory)
+        MolecularDynamics.__init__(
+            self,
+            atoms,
+            timestep,
+            trajectory,
+            logfile,
+            loginterval,
+            append_trajectory=append_trajectory,
+        )
 
     def step(self, forces=None):
-
         atoms = self.atoms
 
         if forces is None:

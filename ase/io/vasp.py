@@ -18,8 +18,13 @@ from ase.utils import reader, writer
 from .vasp_parsers import vasp_outcar_parsers as vop
 
 __all__ = [
-    'read_vasp', 'read_vasp_out', 'iread_vasp_out', 'read_vasp_xdatcar',
-    'read_vasp_xml', 'write_vasp', 'write_vasp_xdatcar'
+    'read_vasp',
+    'read_vasp_out',
+    'iread_vasp_out',
+    'read_vasp_xdatcar',
+    'read_vasp_xml',
+    'write_vasp',
+    'write_vasp_xdatcar',
 ]
 
 
@@ -37,9 +42,11 @@ def get_atomtypes(fname):
     atomtypes_alt = []
     if fpath.suffix == '.gz':
         import gzip
+
         opener = gzip.open
     elif fpath.suffix == '.bz2':
         import bz2
+
         opener = bz2.BZ2File
     else:
         opener = open
@@ -49,7 +56,8 @@ def get_atomtypes(fname):
                 atomtypes.append(line.split()[3].split('_')[0].split('.')[0])
             elif 'POTCAR:' in line:
                 atomtypes_alt.append(
-                    line.split()[2].split('_')[0].split('.')[0])
+                    line.split()[2].split('_')[0].split('.')[0]
+                )
 
     if len(atomtypes) == 0 and len(atomtypes_alt) > 0:
         # old VASP doesn't echo TITEL, but all versions print out species lines
@@ -57,8 +65,9 @@ def get_atomtypes(fname):
         if len(atomtypes_alt) % 2 != 0:
             raise ParseError(
                 f'Tried to get atom types from {len(atomtypes_alt)} "POTCAR": '
-                'lines in OUTCAR, but expected an even number')
-        atomtypes = atomtypes_alt[0:len(atomtypes_alt) // 2]
+                'lines in OUTCAR, but expected an even number'
+            )
+        atomtypes = atomtypes_alt[0 : len(atomtypes_alt) // 2]
 
     return atomtypes
 
@@ -78,8 +87,7 @@ def atomtypes_outpot(posfname, numsyms):
 
     # Check files with exactly same path except POTCAR/OUTCAR instead
     # of POSCAR/CONTCAR.
-    fnames = [posfpath.with_name('POTCAR'),
-              posfpath.with_name('OUTCAR')]
+    fnames = [posfpath.with_name('POTCAR'), posfpath.with_name('OUTCAR')]
     # Try the same but with compressed files
     fsc = []
     for fnpath in fnames:
@@ -98,8 +106,9 @@ def atomtypes_outpot(posfname, numsyms):
             if len(at) == numsyms:
                 return at
 
-    raise ParseError('Could not determine chemical symbols. Tried files ' +
-                     str(tried))
+    raise ParseError(
+        'Could not determine chemical symbols. Tried files ' + str(tried)
+    )
 
 
 def get_atomtypes_from_formula(formula):
@@ -107,6 +116,7 @@ def get_atomtypes_from_formula(formula):
     with and underscore).
     """
     from ase.symbols import string2symbols
+
     symbols = string2symbols(formula.split('_')[0])
     atomtypes = [symbols[0]]
     for s in symbols[1:]:
@@ -172,15 +182,16 @@ def read_vasp(filename='CONTCAR'):
     commentcheck = np.array(['!' in s for s in numofatoms])
     if commentcheck.any():
         # only keep the elements up to the first including a '!':
-        numofatoms = numofatoms[:np.arange(len(numofatoms))[commentcheck][0]]
+        numofatoms = numofatoms[: np.arange(len(numofatoms))[commentcheck][0]]
 
     if not vasp5:
         # Split the comment line (first in the file) into words and
         # try to compose a list of chemical symbols
         from ase.formula import Formula
+
         atomtypes = []
         for word in line1.split():
-            word_without_delims = re.sub(r"-|_|,|\.|=|[0-9]|^", "", word)
+            word_without_delims = re.sub(r'-|_|,|\.|=|[0-9]|^', '', word)
             if len(word_without_delims) < 1:
                 continue
             try:
@@ -307,7 +318,7 @@ def read_vasp_xdatcar(filename='XDATCAR', index=-1):
 
     while True:
         comment_line = fd.readline()
-        if "Direct configuration=" not in comment_line:
+        if 'Direct configuration=' not in comment_line:
             try:
                 lattice_constant = float(fd.readline())
             except Exception:
@@ -323,14 +334,13 @@ def read_vasp_xdatcar(filename='XDATCAR', index=-1):
             numbers = [int(n) for n in fd.readline().split()]
             total = sum(numbers)
 
-            atomic_formula = ''.join(f'{sym:s}{numbers[n]:d}'
-                                     for n, sym in enumerate(symbols))
+            atomic_formula = ''.join(
+                f'{sym:s}{numbers[n]:d}' for n, sym in enumerate(symbols)
+            )
 
             fd.readline()
 
-        coords = [
-            np.array(fd.readline().split(), float) for ii in range(total)
-        ]
+        coords = [np.array(fd.readline().split(), float) for ii in range(total)]
 
         image = Atoms(atomic_formula, cell=cell, pbc=True)
         image.set_scaled_positions(np.array(coords))
@@ -351,6 +361,7 @@ def __get_xml_parameter(par):
     handling.
 
     """
+
     def to_bool(b):
         if b == 'T':
             return True
@@ -390,8 +401,10 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
     import xml.etree.ElementTree as ET
     from collections import OrderedDict
 
-    from ase.calculators.singlepoint import (SinglePointDFTCalculator,
-                                             SinglePointKPoint)
+    from ase.calculators.singlepoint import (
+        SinglePointDFTCalculator,
+        SinglePointKPoint,
+    )
     from ase.constraints import FixAtoms, FixScaled
     from ase.units import GPa
 
@@ -405,7 +418,6 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
 
     try:
         for event, elem in tree:
-
             if event == 'end':
                 if elem.tag == 'kpoints':
                     for subelem in elem.iter(tag='generation'):
@@ -439,29 +451,37 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
 
                     natoms = len(species)
 
-                elif (elem.tag == 'structure'
-                      and elem.attrib.get('name') == 'initialpos'):
+                elif (
+                    elem.tag == 'structure'
+                    and elem.attrib.get('name') == 'initialpos'
+                ):
                     cell_init = np.zeros((3, 3), dtype=float)
 
                     for i, v in enumerate(
-                            elem.find("crystal/varray[@name='basis']")):
+                        elem.find("crystal/varray[@name='basis']")
+                    ):
                         cell_init[i] = np.array(
-                            [float(val) for val in v.text.split()])
+                            [float(val) for val in v.text.split()]
+                        )
 
                     scpos_init = np.zeros((natoms, 3), dtype=float)
 
                     for i, v in enumerate(
-                            elem.find("varray[@name='positions']")):
+                        elem.find("varray[@name='positions']")
+                    ):
                         scpos_init[i] = np.array(
-                            [float(val) for val in v.text.split()])
+                            [float(val) for val in v.text.split()]
+                        )
 
                     constraints = []
                     fixed_indices = []
 
                     for i, entry in enumerate(
-                            elem.findall("varray[@name='selective']/v")):
-                        flags = (np.array(
-                            entry.text.split() == np.array(['F', 'F', 'F'])))
+                        elem.findall("varray[@name='selective']/v")
+                    ):
+                        flags = np.array(
+                            entry.text.split() == np.array(['F', 'F', 'F'])
+                        )
                         if flags.all():
                             fixed_indices.append(i)
                         elif flags.any():
@@ -470,17 +490,20 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                     if fixed_indices:
                         constraints.append(FixAtoms(fixed_indices))
 
-                    atoms_init = Atoms(species,
-                                       cell=cell_init,
-                                       scaled_positions=scpos_init,
-                                       constraint=constraints,
-                                       pbc=True)
+                    atoms_init = Atoms(
+                        species,
+                        cell=cell_init,
+                        scaled_positions=scpos_init,
+                        constraint=constraints,
+                        pbc=True,
+                    )
 
                 elif elem.tag == 'dipole':
                     dblock = elem.find('v[@name="dipole"]')
                     if dblock is not None:
                         dipole = np.array(
-                            [float(val) for val in dblock.text.split()])
+                            [float(val) for val in dblock.text.split()]
+                        )
 
             elif event == 'start' and elem.tag == 'calculation':
                 calculation.append(elem)
@@ -488,7 +511,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
     except ET.ParseError as parse_error:
         if atoms_init is None:
             raise parse_error
-        if calculation and calculation[-1].find("energy") is None:
+        if calculation and calculation[-1].find('energy') is None:
             calculation = calculation[:-1]
         if not calculation:
             yield atoms_init
@@ -514,20 +537,23 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         else:
             lastdipole = None
 
-        de = (float(lastscf.find('i[@name="e_0_energy"]').text) -
-              float(lastscf.find('i[@name="e_fr_energy"]').text))
+        de = float(lastscf.find('i[@name="e_0_energy"]').text) - float(
+            lastscf.find('i[@name="e_fr_energy"]').text
+        )
 
         free_energy = float(step.find('energy/i[@name="e_fr_energy"]').text)
         energy = free_energy + de
 
         cell = np.zeros((3, 3), dtype=float)
         for i, vector in enumerate(
-                step.find('structure/crystal/varray[@name="basis"]')):
+            step.find('structure/crystal/varray[@name="basis"]')
+        ):
             cell[i] = np.array([float(val) for val in vector.text.split()])
 
         scpos = np.zeros((natoms, 3), dtype=float)
         for i, vector in enumerate(
-                step.find('structure/varray[@name="positions"]')):
+            step.find('structure/varray[@name="positions"]')
+        ):
             scpos[i] = np.array([float(val) for val in vector.text.split()])
 
         forces = None
@@ -536,7 +562,8 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
             forces = np.zeros((natoms, 3), dtype=float)
             for i, vector in enumerate(fblocks):
                 forces[i] = np.array(
-                    [float(val) for val in vector.text.split()])
+                    [float(val) for val in vector.text.split()]
+                )
 
         stress = None
         sblocks = step.find('varray[@name="stress"]')
@@ -544,7 +571,8 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
             stress = np.zeros((3, 3), dtype=float)
             for i, vector in enumerate(sblocks):
                 stress[i] = np.array(
-                    [float(val) for val in vector.text.split()])
+                    [float(val) for val in vector.text.split()]
+                )
             stress *= -0.1 * GPa
             stress = stress.reshape(9)[[0, 4, 8, 5, 2, 1]]
 
@@ -567,7 +595,8 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
         kpoints = []
         for ikpt in range(1, len(ibz_kpts) + 1):
             kblocks = step.findall(
-                'eigenvalues/array/set/set/set[@comment="kpoint %d"]' % ikpt)
+                'eigenvalues/array/set/set/set[@comment="kpoint %d"]' % ikpt
+            )
             if kblocks is not None:
                 for spin, kpoint in enumerate(kblocks):
                     eigenvals = kpoint.findall('r')
@@ -580,8 +609,10 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
                     if len(kblocks) == 1:
                         f_n *= 2
                     kpoints.append(
-                        SinglePointKPoint(kpt_weights[ikpt - 1], spin, ikpt,
-                                          eps_n, f_n))
+                        SinglePointKPoint(
+                            kpt_weights[ikpt - 1], spin, ikpt, eps_n, f_n
+                        )
+                    )
         if len(kpoints) == 0:
             kpoints = None
 
@@ -616,7 +647,7 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
             efermi=efermi,
             dipole=dipole,
             dielectric_tensor=dielectric_tensor,
-            born_effective_charges=born_charges
+            born_effective_charges=born_charges,
         )
         atoms.calc.name = 'vasp'
         atoms.calc.kpts = kpoints
@@ -644,7 +675,7 @@ def write_vasp_xdatcar(fd, images, label=None):
     image = next(images)
 
     if not isinstance(image, Atoms):
-        raise TypeError("images should be a sequence of Atoms objects.")
+        raise TypeError('images should be a sequence of Atoms objects.')
 
     symbol_count = _symbol_count_from_symbols(image.get_chemical_symbols())
 
@@ -679,7 +710,7 @@ def _write_xdatcar_config(fd, atoms, index):
         index (int): configuration number written to block header
 
     """
-    fd.write(f"Direct configuration={index:6d}\n")
+    fd.write(f'Direct configuration={index:6d}\n')
     float_string = '{:11.8f}'
     scaled_positions = atoms.get_scaled_positions()
     for row in scaled_positions:
@@ -736,16 +767,18 @@ def _write_symbol_count(fd, sc, vasp5=True):
 
 
 @writer
-def write_vasp(filename,
-               atoms,
-               label=None,
-               direct=False,
-               sort=None,
-               symbol_count=None,
-               long_format=True,
-               vasp5=True,
-               ignore_constraints=False,
-               wrap=False):
+def write_vasp(
+    filename,
+    atoms,
+    label=None,
+    direct=False,
+    sort=None,
+    symbol_count=None,
+    long_format=True,
+    vasp5=True,
+    ignore_constraints=False,
+    wrap=False,
+):
     """Method to write VASP position (POSCAR/CONTCAR) files.
 
     Writes label, scalefactor, unitcell, # of various kinds of atoms,
@@ -760,16 +793,18 @@ def write_vasp(filename,
 
     if isinstance(atoms, (list, tuple)):
         if len(atoms) > 1:
-            raise RuntimeError('Don\'t know how to save more than ' +
-                               'one image to VASP input')
+            raise RuntimeError(
+                "Don't know how to save more than " + 'one image to VASP input'
+            )
         else:
             atoms = atoms[0]
 
     # Check lattice vectors are finite
-    if np.any(atoms.cell.cellpar() == 0.):
+    if np.any(atoms.cell.cellpar() == 0.0):
         raise RuntimeError(
             'Lattice vectors must be finite and not coincident. '
-            'At least one lattice length or angle is zero.')
+            'At least one lattice length or angle is zero.'
+        )
 
     # Write atom positions in scaled or cartesian coordinates
     if direct:
@@ -787,20 +822,24 @@ def write_vasp(filename,
             elif isinstance(constr, FixAtoms):
                 sflags[constr.index] = [True, True, True]
             elif isinstance(constr, FixedPlane):
-                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5,
-                              axis=1)
+                mask = np.all(
+                    np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, axis=1
+                )
                 if sum(mask) != 1:
                     raise RuntimeError(
                         'VASP requires that the direction of FixedPlane '
-                        'constraints is parallel with one of the cell axis')
+                        'constraints is parallel with one of the cell axis'
+                    )
                 sflags[constr.index] = mask
             elif isinstance(constr, FixedLine):
-                mask = np.all(np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5,
-                              axis=1)
+                mask = np.all(
+                    np.abs(np.cross(constr.dir, atoms.cell)) < 1e-5, axis=1
+                )
                 if sum(mask) != 1:
                     raise RuntimeError(
                         'VASP requires that the direction of FixedLine '
-                        'constraints is parallel with one of the cell axis')
+                        'constraints is parallel with one of the cell axis'
+                    )
                 sflags[constr.index] = ~mask
 
     if sort:

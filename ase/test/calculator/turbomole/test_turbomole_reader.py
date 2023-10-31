@@ -49,8 +49,10 @@ def test_parse_data_group():
     dgr_dct = {'off': True, 'qconv': '1.d-7', 'maxiter': '25'}
     assert parse_data_group(dgr, 'interconversion') == dgr_dct
 
-    dgr = ('$coordinateupdate\n   dqmax=0.3\n   interpolate  on\n'
-           '   statistics    5')
+    dgr = (
+        '$coordinateupdate\n   dqmax=0.3\n   interpolate  on\n'
+        '   statistics    5'
+    )
     dgr_dct = {'dqmax': '0.3', 'interpolate': 'on', 'statistics': '5'}
     assert parse_data_group(dgr, 'coordinateupdate') == dgr_dct
 

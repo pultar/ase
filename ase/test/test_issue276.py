@@ -8,25 +8,25 @@ from ase.io import read, write
 
 
 def test_issue276(testdir):
-    at = bulk("Cu")
+    at = bulk('Cu')
     at.rattle()
     at.calc = EMT()
     f = at.get_forces()
 
-    write("tmp.xyz", at)
-    at2 = read("tmp.xyz")
+    write('tmp.xyz', at)
+    at2 = read('tmp.xyz')
     f2 = at.get_forces()
 
     assert np.abs(f - f2).max() < 1e-6
 
     with warnings.catch_warnings(record=True) as w:
         # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
-        write("tmp2.xyz", at2)
+        warnings.simplefilter('always')
+        write('tmp2.xyz', at2)
         assert len(w) == 2
-        assert ('overwriting array' in str(w[0].message))
-        assert ('overwriting array' in str(w[1].message))
+        assert 'overwriting array' in str(w[0].message)
+        assert 'overwriting array' in str(w[1].message)
 
-    at3 = read("tmp2.xyz")
+    at3 = read('tmp2.xyz')
     f3 = at3.get_forces()
     assert np.abs(f - f3).max() < 1e-6

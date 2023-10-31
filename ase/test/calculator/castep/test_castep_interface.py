@@ -5,23 +5,36 @@ import pytest
 
 import ase
 import ase.lattice.cubic
-from ase.calculators.castep import (Castep, CastepCell, CastepKeywords,
-                                    CastepOption, CastepParam, make_cell_dict,
-                                    make_param_dict)
+from ase.calculators.castep import (
+    Castep,
+    CastepCell,
+    CastepKeywords,
+    CastepOption,
+    CastepParam,
+    make_cell_dict,
+    make_param_dict,
+)
 
 calc = pytest.mark.calculator
 
 # We use 'fake keywords' to test all the generic CastepOptions and
 # whether they work
-kw_types = ['Real', 'String', 'Defined', 'Integer Vector',
-            'Boolean (Logical)', 'Integer', 'Real Vector',
-            'Block', 'Physical']
+kw_types = [
+    'Real',
+    'String',
+    'Defined',
+    'Integer Vector',
+    'Boolean (Logical)',
+    'Integer',
+    'Real Vector',
+    'Block',
+    'Physical',
+]
 kw_levels = ['Dummy', 'Intermediate', 'Expert', 'Basic']
 
 
 @pytest.fixture
 def testing_keywords():
-
     kw_data = {}
 
     for kwt in kw_types:
@@ -34,7 +47,7 @@ def testing_keywords():
             'docstring': f'A fake {kwt} keyword',
             'option_type': kwt,
             'keyword': kw,
-            'level': 'Dummy'
+            'level': 'Dummy',
         }
 
     # Add the special ones for cell and param that have custom parsers
@@ -43,47 +56,49 @@ def testing_keywords():
     param_kws = [('continuation', 'String'), ('reuse', 'String')]
 
     param_kw_data = {}
-    for (pkw, t) in param_kws:
+    for pkw, t in param_kws:
         param_kw_data[pkw] = {
             'docstring': f'Dummy {pkw} keyword',
             'option_type': t,
             'keyword': pkw,
-            'level': 'Dummy'
+            'level': 'Dummy',
         }
     param_kw_data.update(kw_data)
 
     # Special keywords for the CastepCell object
-    cell_kws = [('species_pot', 'Block'),
-                ('symmetry_ops', 'Block'),
-                ('positions_abs_intermediate', 'Block'),
-                ('positions_abs_product', 'Block'),
-                ('positions_frac_intermediate', 'Block'),
-                ('positions_frac_product', 'Block'),
-                ('kpoint_mp_grid', 'Integer Vector'),
-                ('kpoint_mp_offset', 'Real Vector'),
-                ('kpoint_list', 'Block'),
-                ('bs_kpoint_list', 'Block')]
+    cell_kws = [
+        ('species_pot', 'Block'),
+        ('symmetry_ops', 'Block'),
+        ('positions_abs_intermediate', 'Block'),
+        ('positions_abs_product', 'Block'),
+        ('positions_frac_intermediate', 'Block'),
+        ('positions_frac_product', 'Block'),
+        ('kpoint_mp_grid', 'Integer Vector'),
+        ('kpoint_mp_offset', 'Real Vector'),
+        ('kpoint_list', 'Block'),
+        ('bs_kpoint_list', 'Block'),
+    ]
 
     cell_kw_data = {}
-    for (ckw, t) in cell_kws:
+    for ckw, t in cell_kws:
         cell_kw_data[ckw] = {
             'docstring': f'Dummy {ckw} keyword',
             'option_type': t,
             'keyword': ckw,
-            'level': 'Dummy'
+            'level': 'Dummy',
         }
     cell_kw_data.update(kw_data)
 
     param_dict = make_param_dict(param_kw_data)
     cell_dict = make_cell_dict(cell_kw_data)
 
-    return CastepKeywords(param_dict, cell_dict, kw_types, kw_levels,
-                          'Castep v.Fake')
+    return CastepKeywords(
+        param_dict, cell_dict, kw_types, kw_levels, 'Castep v.Fake'
+    )
 
 
 @pytest.fixture
 def pspot_tmp_path(tmp_path):
-
     path = os.path.join(tmp_path, 'ppots')
     os.mkdir(path)
 
@@ -99,8 +114,11 @@ def testing_calculator(testing_keywords, tmp_path, pspot_tmp_path):
     castep_path = os.path.join(tmp_path, 'CASTEP')
     os.mkdir(castep_path)
 
-    return Castep(castep_keywords=testing_keywords, directory=castep_path,
-                  castep_pp_path=pspot_tmp_path)
+    return Castep(
+        castep_keywords=testing_keywords,
+        directory=castep_path,
+        castep_pp_path=pspot_tmp_path,
+    )
 
 
 def test_fundamental_params():
@@ -114,8 +132,9 @@ def test_fundamental_params():
     assert np.isclose(float3Opt.raw_value, [1, 2, 3]).all()
 
     # Generate a mock keywords object
-    mock_castep_keywords = CastepKeywords(make_param_dict(), make_cell_dict(),
-                                          [], [], 0)
+    mock_castep_keywords = CastepKeywords(
+        make_param_dict(), make_cell_dict(), [], [], 0
+    )
     mock_cparam = CastepParam(mock_castep_keywords, keyword_tolerance=2)
     mock_ccell = CastepCell(mock_castep_keywords, keyword_tolerance=2)
 
@@ -138,7 +157,6 @@ def test_fundamental_params():
 
 
 def test_castep_option(testing_keywords):
-
     # check if the CastepOption assignment and comparison mechanisms work
     p1 = CastepParam(testing_keywords)
     p2 = CastepParam(testing_keywords)
@@ -168,28 +186,36 @@ def test_castep_option(testing_keywords):
 
 
 def test_castep_cell(testing_keywords):
-
     ccell = CastepCell(testing_keywords, keyword_tolerance=2)
 
     # Here we test the special keywords exclusive to cell
 
     # 1. species_pot
     ccell.species_pot = ('H', 'H_test.usp')  # Setting with a single value
-    assert ccell.species_pot.value == """
+    assert (
+        ccell.species_pot.value
+        == """
 H H_test.usp"""
+    )
 
     ccell.species_pot = [('H', 'H_test.usp'), ('He', 'He_test.usp')]  # Two
-    assert ccell.species_pot.value == """
+    assert (
+        ccell.species_pot.value
+        == """
 H H_test.usp
 He He_test.usp"""
+    )
 
     # 2. symmetry_ops
     # Create for example the P-1 spacegroup
     R = np.array([np.eye(3), -np.eye(3)])
     T = np.zeros((2, 3))
     ccell.symmetry_ops = (R, T)
-    strblock = [line.strip() for line in ccell.symmetry_ops.value.split('\n')
-                if line.strip() != '']
+    strblock = [
+        line.strip()
+        for line in ccell.symmetry_ops.value.split('\n')
+        if line.strip() != ''
+    ]
     fblock = np.array([list(map(float, line.split())) for line in strblock])
 
     assert np.isclose(fblock[:3], R[0]).all()
@@ -204,7 +230,6 @@ He He_test.usp"""
     ccell.positions_abs_intermediate = a
 
     def parse_posblock(pblock, has_units=False):
-
         lines = pblock.split('\n')
 
         units = None
@@ -252,7 +277,6 @@ He He_test.usp"""
 
 
 def test_castep_param(testing_keywords):
-
     cparam = CastepParam(testing_keywords, keyword_tolerance=2)
 
     # Special keywords for param
@@ -260,11 +284,11 @@ def test_castep_param(testing_keywords):
     # 1. continuation and reuse
     cparam.continuation = True
     with pytest.warns(UserWarning):
-        cparam.reuse = False   # This conflicts with the previous one
+        cparam.reuse = False  # This conflicts with the previous one
     cparam.continuation = None
     cparam.reuse = True
     with pytest.warns(UserWarning):
-        cparam.continuation = True   # This conflicts with the previous one
+        cparam.continuation = True  # This conflicts with the previous one
 
     # Test conflict
     cparam.cut_off_energy = 500
@@ -272,7 +296,7 @@ def test_castep_param(testing_keywords):
         cparam.basis_precision = 'FINE'
 
 
-@pytest.mark.skipif(os.name == "nt", reason="No symlink on Windows")
+@pytest.mark.skipif(os.name == 'nt', reason='No symlink on Windows')
 def test_workflow(testing_calculator):
     c = testing_calculator
     c._build_missing_pspots = False
@@ -295,17 +319,14 @@ def test_workflow(testing_calculator):
 
 
 def test_set_kpoints(testing_calculator):
-
     c = testing_calculator
 
     c.set_kpts([(0.0, 0.0, 0.0, 1.0)])
     assert c.cell.kpoint_list.value == '0.0 0.0 0.0 1.0'
     c.set_kpts(((0.0, 0.0, 0.0, 0.25), (0.25, 0.25, 0.3, 0.75)))
-    assert (c.cell.kpoint_list.value ==
-            '0.0 0.0 0.0 0.25\n0.25 0.25 0.3 0.75')
+    assert c.cell.kpoint_list.value == '0.0 0.0 0.0 0.25\n0.25 0.25 0.3 0.75'
     c.set_kpts(c.cell.kpoint_list.value.split('\n'))
-    assert (c.cell.kpoint_list.value ==
-            '0.0 0.0 0.0 0.25\n0.25 0.25 0.3 0.75')
+    assert c.cell.kpoint_list.value == '0.0 0.0 0.0 0.25\n0.25 0.25 0.3 0.75'
     c.set_kpts([3, 3, 2])
     assert c.cell.kpoint_mp_grid.value == '3 3 2'
     c.set_kpts(None)
@@ -325,27 +346,27 @@ def test_set_kpoints(testing_calculator):
     c.set_kpts({'density': 10, 'gamma': False, 'even': None})
     assert c.cell.kpoint_mp_grid.value == '27 27 27'
     assert c.cell.kpoint_mp_offset.value == '0.018519 0.018519 0.018519'
-    c.set_kpts({'spacing': (1 / (np.pi * 10)),
-                'gamma': False, 'even': True})
+    c.set_kpts({'spacing': (1 / (np.pi * 10)), 'gamma': False, 'even': True})
     assert c.cell.kpoint_mp_grid.value == '28 28 28'
     assert c.cell.kpoint_mp_offset.value == '0.0 0.0 0.0'
 
 
 def test_band_structure_setup(testing_calculator):
-
     c = testing_calculator
 
     from ase.dft.kpoints import BandPath
 
     atoms = ase.build.bulk('Ag')
-    bp = BandPath(cell=atoms.cell,
-                  path='GX',
-                  special_points={'G': [0, 0, 0], 'X': [0.5, 0, 0.5]})
+    bp = BandPath(
+        cell=atoms.cell,
+        path='GX',
+        special_points={'G': [0, 0, 0], 'X': [0.5, 0, 0.5]},
+    )
     bp = bp.interpolate(npoints=10)
 
     c.set_bandpath(bp)
 
     kpt_list = c.cell.bs_kpoint_list.value.split('\n')
     assert len(kpt_list) == 10
-    assert list(map(float, kpt_list[0].split())) == [0., 0., 0.]
+    assert list(map(float, kpt_list[0].split())) == [0.0, 0.0, 0.0]
     assert list(map(float, kpt_list[-1].split())) == [0.5, 0.0, 0.5]

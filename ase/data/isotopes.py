@@ -44,8 +44,10 @@ def download_isotope_data():
     0.7372
     """
 
-    url = 'http://physics.nist.gov/cgi-bin/Compositions/stand_alone.pl' \
+    url = (
+        'http://physics.nist.gov/cgi-bin/Compositions/stand_alone.pl'
         '?ele=&ascii=ascii&isotype=all'
+    )
 
     with request.urlopen(url) as fd:
         txt = fd.read()
@@ -59,7 +61,7 @@ def parse_isotope_data(raw_data):
     # In the list of raw data, a string containing only a series of underscores
     # preceeds the data for each element. So by getting the indexes of these
     # strings, we are recording where in the data each element starts
-    indexes = [idx for (idx, line) in enumerate(raw_data) if "_____" in line]
+    indexes = [idx for (idx, line) in enumerate(raw_data) if '_____' in line]
 
     isotopes = {}
     for idx1, idx2 in zip(indexes, indexes[1:]):

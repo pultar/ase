@@ -35,7 +35,7 @@ def test_preconlbfgs():
     assert np.abs(np.array(energies) - -0.022726045433998365).max() < 1e-4
 
     # test with fixed bondlength and fixed atom constraints
-    cu0 = bulk("Cu") * (2, 2, 2)
+    cu0 = bulk('Cu') * (2, 2, 2)
     cu0.rattle(0.01)
     a0 = cu0.get_distance(0, 1)
     cons = [FixBondLength(0, 1), FixAtoms([2, 3])]

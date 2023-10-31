@@ -21,24 +21,46 @@ from ase.units import Debye, kcal, mol
 
 
 class MOPAC(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'dipole',
-                              'magmom', 'free_energy']
+    implemented_properties = [
+        'energy',
+        'forces',
+        'dipole',
+        'magmom',
+        'free_energy',
+    ]
     command = 'mopac PREFIX.mop 2> /dev/null'
     discard_results_on_any_change = True
 
     default_parameters = dict(
-        method='PM7',
-        task='1SCF GRADIENTS',
-        charge=None,
-        relscf=0.0001)
+        method='PM7', task='1SCF GRADIENTS', charge=None, relscf=0.0001
+    )
 
-    methods = ['AM1', 'MNDO', 'MNDOD', 'PM3', 'PM6', 'PM6-D3', 'PM6-DH+',
-               'PM6-DH2', 'PM6-DH2X', 'PM6-D3H4', 'PM6-D3H4X', 'PMEP', 'PM7',
-               'PM7-TS', 'RM1']
+    methods = [
+        'AM1',
+        'MNDO',
+        'MNDOD',
+        'PM3',
+        'PM6',
+        'PM6-D3',
+        'PM6-DH+',
+        'PM6-DH2',
+        'PM6-DH2X',
+        'PM6-D3H4',
+        'PM6-D3H4X',
+        'PMEP',
+        'PM7',
+        'PM7-TS',
+        'RM1',
+    ]
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='mopac', atoms=None, **kwargs):
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='mopac',
+        atoms=None,
+        **kwargs,
+    ):
         """Construct MOPAC-calculator object.
 
         Parameters:
@@ -73,8 +95,9 @@ class MOPAC(FileIOCalculator):
         >>> atoms.calc.get_homo_lumo_levels()
 
         """
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+        FileIOCalculator.__init__(
+            self, restart, ignore_bad_restart_file, label, atoms, **kwargs
+        )
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
@@ -101,8 +124,9 @@ class MOPAC(FileIOCalculator):
 
         magmom = int(round(abs(atoms.get_initial_magnetic_moments().sum())))
         if magmom:
-            s += (['DOUBLET', 'TRIPLET', 'QUARTET', 'QUINTET'][magmom - 1] +
-                  ' UHF ')
+            s += ['DOUBLET', 'TRIPLET', 'QUARTET', 'QUINTET'][
+                magmom - 1
+            ] + ' UHF '
 
         s += '\nTitle: ASE calculation\n\n'
 
@@ -170,7 +194,7 @@ class MOPAC(FileIOCalculator):
         while not lines1[j].isspace():  # continue until we hit a blank line
             l = lines1[j].split()
             symbols.append(l[1])
-            positions.append([float(c) for c in l[2: 2 + 3]])
+            positions.append([float(c) for c in l[2 : 2 + 3]])
             j += 1
 
         return Atoms(symbols=symbols, positions=positions)
@@ -192,8 +216,7 @@ class MOPAC(FileIOCalculator):
                 return lines1[i + 1]
 
     def read_results(self):
-        """Read the results, such as energy, forces, eigenvalues, etc.
-        """
+        """Read the results, such as energy, forces, eigenvalues, etc."""
         FileIOCalculator.read(self, self.label)
         if not os.path.isfile(self.label + '.out'):
             raise ReadError
@@ -204,17 +227,21 @@ class MOPAC(FileIOCalculator):
         self.results['version'] = self.get_version_from_file(lines)
 
         total_energy_regex = re.compile(
-            r'^\s+TOTAL ENERGY\s+\=\s+(-?\d+\.\d+) EV')
+            r'^\s+TOTAL ENERGY\s+\=\s+(-?\d+\.\d+) EV'
+        )
         final_heat_regex = re.compile(
-            r'^\s+FINAL HEAT OF FORMATION\s+\=\s+(-?\d+\.\d+) KCAL/MOL')
+            r'^\s+FINAL HEAT OF FORMATION\s+\=\s+(-?\d+\.\d+) KCAL/MOL'
+        )
 
         for i, line in enumerate(lines):
             if total_energy_regex.match(line):
                 self.results['total_energy'] = float(
-                    total_energy_regex.match(line).groups()[0])
+                    total_energy_regex.match(line).groups()[0]
+                )
             elif final_heat_regex.match(line):
-                self.results['final_hof'] = float(final_heat_regex.match(line)
-                                                  .groups()[0]) * kcal / mol
+                self.results['final_hof'] = (
+                    float(final_heat_regex.match(line).groups()[0]) * kcal / mol
+                )
             elif line.find('NO. OF FILLED LEVELS') != -1:
                 self.nspins = 1
                 self.no_occ_levels = int(line.split()[-1])
@@ -222,13 +249,17 @@ class MOPAC(FileIOCalculator):
                 self.nspins = 2
                 self.no_alpha_electrons = int(line.split()[-1])
                 self.no_beta_electrons = int(lines[i + 1].split()[-1])
-                self.results['magmom'] = abs(self.no_alpha_electrons -
-                                             self.no_beta_electrons)
+                self.results['magmom'] = abs(
+                    self.no_alpha_electrons - self.no_beta_electrons
+                )
             elif line.find('FINAL  POINT  AND  DERIVATIVES') != -1:
-                forces = [-float(line.split()[6])
-                          for line in lines[i + 3:i + 3 + 3 * len(self.atoms)]]
-                self.results['forces'] = np.array(
-                    forces).reshape((-1, 3)) * kcal / mol
+                forces = [
+                    -float(line.split()[6])
+                    for line in lines[i + 3 : i + 3 + 3 * len(self.atoms)]
+                ]
+                self.results['forces'] = (
+                    np.array(forces).reshape((-1, 3)) * kcal / mol
+                )
             elif line.find('EIGENVALUES') != -1:
                 if line.find('ALPHA') != -1:
                     j = i + 1
@@ -252,8 +283,9 @@ class MOPAC(FileIOCalculator):
                         j += 1
                     self.eigenvalues = np.array(eigs).reshape(1, 1, -1)
             elif line.find('DIPOLE   ') != -1:
-                self.results['dipole'] = np.array(
-                    lines[i + 3].split()[1:1 + 3], float) * Debye
+                self.results['dipole'] = (
+                    np.array(lines[i + 3].split()[1 : 1 + 3], float) * Debye
+                )
 
         # Developers recommend using final HOF as it includes dispersion etc.
         # For backward compatibility we won't change the results of old MOPAC
@@ -261,9 +293,11 @@ class MOPAC(FileIOCalculator):
         if version.parse(self.results['version']) >= version.parse('22'):
             self.results['energy'] = self.results['final_hof']
         else:
-            warn("Using a version of MOPAC lower than v22: ASE will use "
-                 "TOTAL ENERGY as the potential energy. In future, "
-                 "FINAL HEAT OF FORMATION will be preferred for all versions.")
+            warn(
+                'Using a version of MOPAC lower than v22: ASE will use '
+                'TOTAL ENERGY as the potential energy. In future, '
+                'FINAL HEAT OF FORMATION will be preferred for all versions.'
+            )
             self.results['energy'] = self.results['total_energy']
         self.results['free_energy'] = self.results['energy']
 
@@ -293,8 +327,8 @@ class MOPAC(FileIOCalculator):
             elif nb == 0:
                 return self.eigenvalues[0, 0, na - 1], None
             else:
-                eah, eal = eigs[0, 0, na - 1: na + 1]
-                ebh, ebl = eigs[1, 0, nb - 1: nb + 1]
+                eah, eal = eigs[0, 0, na - 1 : na + 1]
+                ebh, ebl = eigs[1, 0, nb - 1 : nb + 1]
                 return np.array([max(eah, ebh), min(eal, ebl)])
 
     def get_somo_levels(self):
@@ -305,23 +339,33 @@ class MOPAC(FileIOCalculator):
         elif nb == 0:
             return self.eigenvalues[0, 0, na - 1], None
         else:
-            return np.array([self.eigenvalues[0, 0, na - 1],
-                             self.eigenvalues[1, 0, nb - 1]])
+            return np.array(
+                [self.eigenvalues[0, 0, na - 1], self.eigenvalues[1, 0, nb - 1]]
+            )
 
     def get_final_heat_of_formation(self):
         """Final heat of formation as reported in the Mopac output file"""
-        warn("This method is deprecated, please use "
-             "MOPAC.results['final_hof']", DeprecationWarning)
+        warn(
+            'This method is deprecated, please use '
+            "MOPAC.results['final_hof']",
+            DeprecationWarning,
+        )
         return self.results['final_hof']
 
     @property
     def final_hof(self):
-        warn("This property is deprecated, please use "
-             "MOPAC.results['final_hof']", DeprecationWarning)
+        warn(
+            'This property is deprecated, please use '
+            "MOPAC.results['final_hof']",
+            DeprecationWarning,
+        )
         return self.results['final_hof']
 
     @final_hof.setter
     def final_hof(self, new_hof):
-        warn("This property is deprecated, please use "
-             "MOPAC.results['final_hof']", DeprecationWarning)
+        warn(
+            'This property is deprecated, please use '
+            "MOPAC.results['final_hof']",
+            DeprecationWarning,
+        )
         self.results['final_hof'] = new_hof

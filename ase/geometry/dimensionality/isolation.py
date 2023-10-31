@@ -16,14 +16,15 @@ import numpy as np
 
 from ase import Atoms
 from ase.geometry.cell import complete_cell
-from ase.geometry.dimensionality import (analyze_dimensionality,
-                                         rank_determination)
+from ase.geometry.dimensionality import (
+    analyze_dimensionality,
+    rank_determination,
+)
 from ase.geometry.dimensionality.bond_generator import next_bond
 from ase.geometry.dimensionality.interval_analysis import merge_intervals
 
 
 def orthogonal_basis(X, Y=None):
-
     is_1d = Y is None
     b = np.zeros((3, 3))
     b[0] = X
@@ -51,7 +52,7 @@ def select_cutoff(atoms):
     intervals = analyze_dimensionality(atoms, method='RDA', merge=False)
     dimtype = max(merge_intervals(intervals), key=lambda x: x.score).dimtype
     m = next(e for e in intervals if e.dimtype == dimtype)
-    if m.b == float("inf"):
+    if m.b == float('inf'):
         return m.a + 0.1
     else:
         return (m.a + m.b) / 2
@@ -62,7 +63,7 @@ def traverse_graph(atoms, kcutoff):
         kcutoff = select_cutoff(atoms)
 
     rda = rank_determination.RDA(len(atoms))
-    for (k, i, j, offset) in next_bond(atoms):
+    for k, i, j, offset in next_bond(atoms):
         if k > kcutoff:
             break
         rda.insert_bond(i, j, offset)
@@ -92,15 +93,14 @@ def build_supercomponent(atoms, components, k, v, anchor=True):
 
 
 def select_chain_rotation(scaled):
-
     best = (-1, [1, 0, 0])
     for s in scaled:
         vhat = np.array([s[0], s[1], 0])
         norm = np.linalg.norm(vhat)
-        if norm < 1E-6:
+        if norm < 1e-6:
             continue
         vhat /= norm
-        obj = np.sum(np.dot(scaled, vhat)**2)
+        obj = np.sum(np.dot(scaled, vhat) ** 2)
         best = max(best, (obj, vhat), key=lambda x: x[0])
     _, vhat = best
     cost, sint, _ = vhat
@@ -109,7 +109,6 @@ def select_chain_rotation(scaled):
 
 
 def isolate_chain(atoms, components, k, v):
-
     # identify the vector along the chain; this is the new cell vector
     basis_points = np.array([offset for c, offset in v if c == k])
     assert len(basis_points) >= 2
@@ -147,7 +146,6 @@ def isolate_chain(atoms, components, k, v):
 
 
 def construct_inplane_basis(atoms, k, v):
-
     basis_points = np.array([offset for c, offset in v if c == k])
     assert len(basis_points) >= 3
     assert (0, 0, 0) in [tuple(e) for e in basis_points]
@@ -157,9 +155,8 @@ def construct_inplane_basis(atoms, k, v):
     basis_points = basis_points[indices]
 
     # identify primitive basis
-    best = (float("inf"), None)
+    best = (float('inf'), None)
     for u, v in itertools.combinations(basis_points, 2):
-
         basis = np.array([[0, 0, 0], u, v])
         if np.linalg.matrix_rank(basis) < 2:
             continue
@@ -173,7 +170,6 @@ def construct_inplane_basis(atoms, k, v):
 
 
 def isolate_monolayer(atoms, components, k, v):
-
     a, b, basis = construct_inplane_basis(atoms, k, v)
 
     # project atoms into new basis
@@ -201,10 +197,12 @@ def isolate_monolayer(atoms, components, k, v):
 
 
 def isolate_bulk(atoms, components, k, v):
-    positions, numbers = build_supercomponent(atoms, components, k, v,
-                                              anchor=False)
-    atoms = Atoms(numbers=numbers, positions=positions, cell=atoms.cell,
-                  pbc=[1, 1, 1])
+    positions, numbers = build_supercomponent(
+        atoms, components, k, v, anchor=False
+    )
+    atoms = Atoms(
+        numbers=numbers, positions=positions, cell=atoms.cell, pbc=[1, 1, 1]
+    )
     atoms.wrap(eps=0)
     return atoms
 

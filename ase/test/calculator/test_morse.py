@@ -6,9 +6,9 @@ from ase.build import bulk
 from ase.calculators.morse import MorsePotential, fcut, fcut_d
 from ase.vibrations import Vibrations
 
-De = 5.
-Re = 3.
-rho0 = 2.
+De = 5.0
+Re = 3.0
+rho0 = 2.0
 
 
 def test_gs_minimum_energy():

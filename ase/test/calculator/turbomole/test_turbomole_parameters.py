@@ -17,8 +17,9 @@ def test_tm_parameters_default():
     assert all(v['type'] is not None for v in params.parameter_spec.values())
     assert all(params[k] == v for k, v in defaults.items())
     assert all(v['default'] == defaults[k] for k, v in pspec.items())
-    assert all(isinstance(params[k], (v['type'], type(None)))
-               for k, v in pspec.items())
+    assert all(
+        isinstance(params[k], (v['type'], type(None))) for k, v in pspec.items()
+    )
 
 
 def test_tm_parameters_uhf():
@@ -30,7 +31,7 @@ def test_tm_parameters_update_wrong_type(default_params):
     params_update = {'uhf': 2}
     with pytest.raises(TypeError) as err:
         assert default_params.update(params_update)
-    assert str(err.value) == 'uhf has wrong type: <class \'int\'>'
+    assert str(err.value) == "uhf has wrong type: <class 'int'>"
 
 
 def test_tm_parameters_update_invalid_name(default_params):
@@ -43,7 +44,7 @@ def test_tm_parameters_restart_update(default_params):
     params_update = {'uhf': True}
     with pytest.raises(ValueError) as err:
         assert default_params.update_restart(params_update)
-    assert str(err.value) == 'parameters [\'uhf\'] cannot be changed'
+    assert str(err.value) == "parameters ['uhf'] cannot be changed"
 
 
 def test_tm_parameters_verify_empty_define_str():
@@ -102,8 +103,10 @@ def test_tm_parameters_verify_c2v(default_params):
 
 
 def test_tm_parameters_define_str(default_params):
-    ref = ('\n\na coord\n*\nno\nbb all def-SV(P)\n*\neht\ny\n0\ny\ndft\non'
-           '\n*\ndft\nfunc b-p\n*\ndft\ngrid m3\n*\nscf\niter\n60\n\nq\n')
+    ref = (
+        '\n\na coord\n*\nno\nbb all def-SV(P)\n*\neht\ny\n0\ny\ndft\non'
+        '\n*\ndft\nfunc b-p\n*\ndft\ngrid m3\n*\nscf\niter\n60\n\nq\n'
+    )
     assert default_params.get_define_str(5) == ref
     default_params.define_str = 'invalid define string'
     assert default_params.get_define_str(5) == 'invalid define string'

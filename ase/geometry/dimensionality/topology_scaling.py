@@ -21,7 +21,6 @@ from ase.geometry.dimensionality.disjoint_set import DisjointSet
 
 
 class TSA:
-
     def __init__(self, num_atoms, n=2):
         """Initializes the TSA class.
 
@@ -58,12 +57,11 @@ class TSA:
         nbr_offsets = self.num_atoms * np.dot(self.m, nbr_cells.T)
 
         self.gsingle.union(i, j)
-        for (a, b) in zip(self.offsets, nbr_offsets):
+        for a, b in zip(self.offsets, nbr_offsets):
             self.gsuper.union(a + i, b + j)
             self.gsuper.union(b + i, a + j)
 
     def _get_component_dimensionalities(self):
-
         n = self.n
         offsets = self.offsets
         single_roots = np.unique(self.gsingle.find_all())
@@ -71,7 +69,6 @@ class TSA:
 
         component_dim = {}
         for i in single_roots:
-
             num_clusters = len(np.unique(super_components[offsets + i]))
             dim = {n**3: 0, n**2: 1, n: 2, 1: 3}[num_clusters]
             component_dim[i] = dim
@@ -86,7 +83,7 @@ class TSA:
         cdim = self._get_component_dimensionalities()
         hist = np.zeros(4).astype(int)
         bc = np.bincount(list(cdim.values()))
-        hist[:len(bc)] = bc
+        hist[: len(bc)] = bc
         return tuple(hist)
 
     def get_components(self):

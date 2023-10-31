@@ -25,7 +25,7 @@ def read_turbomole(fd):
         if l.strip().startswith('$coord'):
             start = i
             break
-    for line in lines[start + 1:]:
+    for line in lines[start + 1 :]:
         if line.startswith('$'):  # start of new section
             break
         else:
@@ -38,9 +38,9 @@ def read_turbomole(fd):
                 [float(x) * Bohr, float(y) * Bohr, float(z) * Bohr]
             )
             cols = line.split()
-            if (len(cols) == 5):
+            if len(cols) == 5:
                 fixedstr = line.split()[4].strip()
-                if (fixedstr == "f"):
+                if fixedstr == 'f':
                     myconstraints.append(True)
                 else:
                     myconstraints.append(False)
@@ -48,8 +48,9 @@ def read_turbomole(fd):
                 myconstraints.append(False)
 
     # convert Turbomole ghost atom Q to X
-    atom_symbols = [element if element !=
-                    'Q' else 'X' for element in atom_symbols]
+    atom_symbols = [
+        element if element != 'Q' else 'X' for element in atom_symbols
+    ]
     atoms = Atoms(positions=atoms_pos, symbols=atom_symbols, pbc=False)
     c = FixAtoms(mask=myconstraints)
     atoms.set_constraint(c)
@@ -57,8 +58,10 @@ def read_turbomole(fd):
 
 
 class TurbomoleFormatError(ValueError):
-    default_message = ('Data format in file does not correspond to known '
-                       'Turbomole gradient format')
+    default_message = (
+        'Data format in file does not correspond to known '
+        'Turbomole gradient format'
+    )
 
     def __init__(self, *args, **kwargs):
         if args or kwargs:
@@ -68,7 +71,7 @@ class TurbomoleFormatError(ValueError):
 
 
 def read_turbomole_gradient(fd, index=-1):
-    """ Method to read turbomole gradient file """
+    """Method to read turbomole gradient file"""
 
     # read entire file
     lines = [x.strip() for x in fd.readlines()]
@@ -85,16 +88,17 @@ def read_turbomole_gradient(fd, index=-1):
             break
 
     if end <= start:
-        raise RuntimeError('File does not contain a valid \'$grad\' section')
+        raise RuntimeError("File does not contain a valid '$grad' section")
 
     # trim lines to $grad
-    del lines[:start + 1]
-    del lines[end - 1 - start:]
+    del lines[: start + 1]
+    del lines[end - 1 - start :]
 
     # Interpret $grad section
     from ase import Atom, Atoms
     from ase.calculators.singlepoint import SinglePointCalculator
     from ase.units import Bohr, Hartree
+
     images = []
     while lines:  # loop over optimization cycles
         # header line
@@ -145,14 +149,13 @@ def read_turbomole_gradient(fd, index=-1):
         images.append(atoms)
 
         # delete this frame from data to be handled
-        del lines[:2 * len(atoms) + 1]
+        del lines[: 2 * len(atoms) + 1]
 
     return images[index]
 
 
 def write_turbomole(fd, atoms):
-    """ Method to write turbomole coord file
-    """
+    """Method to write turbomole coord file"""
     from ase.constraints import FixAtoms
 
     coord = atoms.get_positions()
@@ -176,7 +179,9 @@ def write_turbomole(fd, atoms):
 
     fd.write('$coord\n')
     for (x, y, z), s, fix in zip(coord, symbols, fix_str):
-        fd.write('%20.14f  %20.14f  %20.14f      %2s  %2s \n'
-                 % (x / Bohr, y / Bohr, z / Bohr, s.lower(), fix))
+        fd.write(
+            '%20.14f  %20.14f  %20.14f      %2s  %2s \n'
+            % (x / Bohr, y / Bohr, z / Bohr, s.lower(), fix)
+        )
 
     fd.write('$end\n')

@@ -8,11 +8,11 @@ from ase import Atoms
 def lj_epsilons():
     # Set up original LJ epsilon energy parameter and another, modified,
     # epsilon value
-    return {"eps_orig": 2.5, "eps_modified": 4.25}
+    return {'eps_orig': 2.5, 'eps_modified': 4.25}
 
 
 @pytest.mark.calculator_lite
-@pytest.mark.calculator("lammpslib")
+@pytest.mark.calculator('lammpslib')
 def test_change_cell_dimensions_and_pbc(factory, dimer_params, lj_epsilons):
     """Ensure that post_change_box commands are actually executed after
     changing the dimensions of the cell or its periodicity.  This is done by
@@ -46,9 +46,10 @@ def test_change_cell_dimensions_and_pbc(factory, dimer_params, lj_epsilons):
 
     energy_modified = dimer.get_potential_energy()
 
-    eps_scaling_factor = lj_epsilons["eps_modified"] / lj_epsilons["eps_orig"]
+    eps_scaling_factor = lj_epsilons['eps_modified'] / lj_epsilons['eps_orig']
     assert energy_modified == pytest.approx(
-        eps_scaling_factor * energy_orig, rel=1e-4)
+        eps_scaling_factor * energy_orig, rel=1e-4
+    )
 
     # Reset dimer cell.  Also, create and attach new calculator so that
     # previous post_changebox_cmds won't be in effect.
@@ -67,21 +68,22 @@ def test_change_cell_dimensions_and_pbc(factory, dimer_params, lj_epsilons):
     energy_modified = dimer.get_potential_energy()
 
     assert energy_modified == pytest.approx(
-        eps_scaling_factor * energy_orig, rel=1e-4)
+        eps_scaling_factor * energy_orig, rel=1e-4
+    )
 
 
 def calc_params_lj_changebox(spec, lj_cutoff, eps_orig, eps_modified):
     def lj_pair_style_coeff_lines(lj_cutoff, eps):
-        return [f"pair_style lj/cut {lj_cutoff}", f"pair_coeff * * {eps} 1"]
+        return [f'pair_style lj/cut {lj_cutoff}', f'pair_coeff * * {eps} 1']
 
     # Set up LJ pair style using original epsilon and define a modified LJ to
     # be executed after change_box using the modified epsilon
     calc_params = {}
-    calc_params["lmpcmds"] = lj_pair_style_coeff_lines(lj_cutoff, eps_orig)
-    calc_params["atom_types"] = {spec: 1}
-    calc_params["log_file"] = "test.log"
-    calc_params["keep_alive"] = True
-    calc_params["post_changebox_cmds"] = lj_pair_style_coeff_lines(
+    calc_params['lmpcmds'] = lj_pair_style_coeff_lines(lj_cutoff, eps_orig)
+    calc_params['atom_types'] = {spec: 1}
+    calc_params['log_file'] = 'test.log'
+    calc_params['keep_alive'] = True
+    calc_params['post_changebox_cmds'] = lj_pair_style_coeff_lines(
         lj_cutoff, eps_modified
     )
     return calc_params
@@ -94,7 +96,7 @@ def extract_dimer_species_and_separation(atoms):
     """
     # Extract species
     if len(set(atoms.symbols)) > 1:
-        raise ValueError("Dimer must contain only one atomic species")
+        raise ValueError('Dimer must contain only one atomic species')
     spec = atoms.symbols[0]
 
     # Get dimer separation

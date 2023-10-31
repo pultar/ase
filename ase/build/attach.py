@@ -26,8 +26,9 @@ def nearest(atoms1, atoms2, cell=None, pbc=None):
     return i1, i2, vd_aac[i1, i2]
 
 
-def attach(atoms1, atoms2, distance, direction=(1, 0, 0),
-           maxiter=50, accuracy=1e-5):
+def attach(
+    atoms1, atoms2, distance, direction=(1, 0, 0), maxiter=50, accuracy=1e-5
+):
     """Attach two structures
 
     Parameters
@@ -75,8 +76,7 @@ def attach(atoms1, atoms2, distance, direction=(1, 0, 0),
     raise RuntimeError('attach did not converge')
 
 
-def attach_randomly(atoms1, atoms2, distance,
-                    rng=np.random):
+def attach_randomly(atoms1, atoms2, distance, rng=np.random):
     """Randomly attach two structures with a given minimal distance
 
     Parameters
@@ -93,15 +93,15 @@ def attach_randomly(atoms1, atoms2, distance,
     Joined structure as an atoms object.
     """
     atoms2 = atoms2.copy()
-    atoms2.rotate('x', random_unit_vector(rng),
-                  center=atoms2.get_center_of_mass())
-    return attach(atoms1, atoms2, distance,
-                  direction=random_unit_vector(rng))
+    atoms2.rotate(
+        'x', random_unit_vector(rng), center=atoms2.get_center_of_mass()
+    )
+    return attach(atoms1, atoms2, distance, direction=random_unit_vector(rng))
 
 
-def attach_randomly_and_broadcast(atoms1, atoms2, distance,
-                                  rng=np.random,
-                                  comm=world):
+def attach_randomly_and_broadcast(
+    atoms1, atoms2, distance, rng=np.random, comm=world
+):
     """Randomly attach two structures with a given minimal distance
       and ensure that these are distributed.
 

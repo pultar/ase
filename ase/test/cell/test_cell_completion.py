@@ -3,7 +3,7 @@ def test_cell_completion():
 
     from ase.geometry.cell import complete_cell
 
-    eps = 1E-10
+    eps = 1e-10
     rng = np.random.RandomState(0)
 
     def random_unit_vector():
@@ -14,7 +14,6 @@ def test_cell_completion():
                 return v / norm
 
     for it in range(100):
-
         cell = np.zeros((3, 3))
         index = rng.randint(0, 3)
         cell[index] = random_unit_vector()

@@ -57,24 +57,27 @@ class BasinHopping(Dynamics):
         self.lm_trajectory = local_minima_trajectory
         if isinstance(local_minima_trajectory, str):
             self.lm_trajectory = self.closelater(
-                Trajectory(local_minima_trajectory, 'w', atoms))
+                Trajectory(local_minima_trajectory, 'w', atoms)
+            )
 
         Dynamics.__init__(self, atoms, logfile, trajectory)
         self.initialize()
 
     def todict(self):
-        d = {'type': 'optimization',
-             'optimizer': self.__class__.__name__,
-             'local-minima-optimizer': self.optimizer.__name__,
-             'temperature': self.kT,
-             'max-force': self.fmax,
-             'maximal-step-width': self.dr}
+        d = {
+            'type': 'optimization',
+            'optimizer': self.__class__.__name__,
+            'local-minima-optimizer': self.optimizer.__name__,
+            'temperature': self.kT,
+            'max-force': self.fmax,
+            'maximal-step-width': self.dr,
+        }
         return d
 
     def initialize(self):
         positions = self.optimizable.get_positions()
         self.positions = np.zeros_like(positions)
-        self.Emin = self.get_energy(positions) or 1.e32
+        self.Emin = self.get_energy(positions) or 1.0e32
         self.rmin = self.optimizable.get_positions()
         self.positions = self.optimizable.get_positions()
         self.call_observers()
@@ -108,12 +111,14 @@ class BasinHopping(Dynamics):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: step %d, energy %15.6f, emin %15.6f\n'
-                           % (name, step, En, Emin))
+        self.logfile.write(
+            '%s: step %d, energy %15.6f, emin %15.6f\n' % (name, step, En, Emin)
+        )
         self.logfile.flush()
 
     def _atoms(self):
         from ase.optimize.optimize import OptimizableAtoms
+
         assert isinstance(self.optimizable, OptimizableAtoms)
         # Some parts of the basin code cannot work on Filter objects.
         # They evidently need an actual Atoms object - at least until
@@ -124,7 +129,7 @@ class BasinHopping(Dynamics):
         """Move atoms by a random step."""
         atoms = self._atoms()
         # displace coordinates
-        disp = np.random.uniform(-1., 1., (len(atoms), 3))
+        disp = np.random.uniform(-1.0, 1.0, (len(atoms), 3))
         rn = ro + self.dr * disp
         atoms.set_positions(rn)
         if self.cm is not None:
@@ -147,8 +152,9 @@ class BasinHopping(Dynamics):
             self.positions = positions
             self.optimizable.set_positions(positions)
 
-            with self.optimizer(self.optimizable,
-                                logfile=self.optimizer_logfile) as opt:
+            with self.optimizer(
+                self.optimizable, logfile=self.optimizer_logfile
+            ) as opt:
                 opt.run(fmax=self.fmax)
             if self.lm_trajectory is not None:
                 self.lm_trajectory.write(self.optimizable)

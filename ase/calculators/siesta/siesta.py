@@ -19,13 +19,18 @@ from os.path import isfile, islink, join
 
 import numpy as np
 
-from ase.calculators.calculator import (FileIOCalculator, Parameters,
-                                        ReadError, all_changes)
-from ase.calculators.siesta.import_functions import (get_valence_charge,
-                                                     read_rho,
-                                                     read_vca_synth_block)
-from ase.calculators.siesta.parameters import (PAOBasisBlock, Species,
-                                               format_fdf)
+from ase.calculators.calculator import (
+    FileIOCalculator,
+    Parameters,
+    ReadError,
+    all_changes,
+)
+from ase.calculators.siesta.import_functions import (
+    get_valence_charge,
+    read_rho,
+    read_vca_synth_block,
+)
+from ase.calculators.siesta.parameters import PAOBasisBlock, Species, format_fdf
 from ase.data import atomic_numbers
 from ase.io.siesta import read_siesta_xv
 from ase.units import Bohr, Ry, eV
@@ -37,15 +42,18 @@ def parse_siesta_version(output: bytes) -> str:
     match = re.search(rb'Siesta Version\s*:\s*(\S+)', output)
 
     if match is None:
-        raise RuntimeError('Could not get Siesta version info from output '
-                           '{!r}'.format(output))
+        raise RuntimeError(
+            'Could not get Siesta version info from output ' '{!r}'.format(
+                output
+            )
+        )
 
     string = match.group(1).decode('ascii')
     return string
 
 
 def get_siesta_version(executable: str) -> str:
-    """ Return SIESTA version number.
+    """Return SIESTA version number.
 
     Run the command, for instance 'siesta' and
     then parse the output in order find the
@@ -58,11 +66,10 @@ def get_siesta_version(executable: str) -> str:
     temp_dirname = tempfile.mkdtemp(prefix='siesta-version-check-')
     try:
         from subprocess import PIPE, Popen
-        proc = Popen([executable],
-                     stdin=PIPE,
-                     stdout=PIPE,
-                     stderr=PIPE,
-                     cwd=temp_dirname)
+
+        proc = Popen(
+            [executable], stdin=PIPE, stdout=PIPE, stderr=PIPE, cwd=temp_dirname
+        )
         output, _ = proc.communicate()
         # We are not providing any input, so Siesta will give us a failure
         # saying that it has no Chemical_species_label and exit status 1
@@ -131,6 +138,7 @@ def resolve_band_structure(path, kpts, energies, efermi):
     # Also we should perhaps verify the cell.  If we had the cell, we
     # could construct the bandpath from scratch (i.e., pure outputs).
     from ase.spectrum.band_structure import BandStructure
+
     ksn2e = energies
     skn2e = np.swapaxes(ksn2e, 0, 1)
     bs = BandStructure(path, skn2e, reference=efermi)
@@ -144,47 +152,71 @@ class SiestaParameters(Parameters):
     """
 
     def __init__(
-            self,
-            label='siesta',
-            mesh_cutoff=200 * Ry,
-            energy_shift=100 * meV,
-            kpts=None,
-            xc='LDA',
-            basis_set='DZP',
-            spin='non-polarized',
-            species=(),
-            pseudo_qualifier=None,
-            pseudo_path=None,
-            symlink_pseudos=None,
-            atoms=None,
-            restart=None,
-            fdf_arguments=None,
-            atomic_coord_format='xyz',
-            bandpath=None):
+        self,
+        label='siesta',
+        mesh_cutoff=200 * Ry,
+        energy_shift=100 * meV,
+        kpts=None,
+        xc='LDA',
+        basis_set='DZP',
+        spin='non-polarized',
+        species=(),
+        pseudo_qualifier=None,
+        pseudo_path=None,
+        symlink_pseudos=None,
+        atoms=None,
+        restart=None,
+        fdf_arguments=None,
+        atomic_coord_format='xyz',
+        bandpath=None,
+    ):
         kwargs = locals()
         kwargs.pop('self')
         Parameters.__init__(self, **kwargs)
 
 
 class Siesta(FileIOCalculator):
-    """Calculator interface to the SIESTA code.
-    """
+    """Calculator interface to the SIESTA code."""
+
     # Siesta manual does not document many of the basis names.
     # basis_specs.f has a ton of aliases for each.
     # Let's just list one of each type then.
     #
     # Maybe we should be less picky about these keyword names.
-    allowed_basis_names = ['SZ', 'SZP',
-                           'DZ', 'DZP', 'DZP2',
-                           'TZ', 'TZP', 'TZP2', 'TZP3']
-    allowed_spins = ['non-polarized', 'collinear',
-                     'non-collinear', 'spin-orbit']
+    allowed_basis_names = [
+        'SZ',
+        'SZP',
+        'DZ',
+        'DZP',
+        'DZP2',
+        'TZ',
+        'TZP',
+        'TZP2',
+        'TZP3',
+    ]
+    allowed_spins = [
+        'non-polarized',
+        'collinear',
+        'non-collinear',
+        'spin-orbit',
+    ]
     allowed_xc = {
         'LDA': ['PZ', 'CA', 'PW92'],
-        'GGA': ['PW91', 'PBE', 'revPBE', 'RPBE',
-                'WC', 'AM05', 'PBEsol', 'PBEJsJrLO',
-                'PBEGcGxLO', 'PBEGcGxHEG', 'BLYP'],
-        'VDW': ['DRSLL', 'LMKLL', 'KBM', 'C09', 'BH', 'VV']}
+        'GGA': [
+            'PW91',
+            'PBE',
+            'revPBE',
+            'RPBE',
+            'WC',
+            'AM05',
+            'PBEsol',
+            'PBEJsJrLO',
+            'PBEGcGxLO',
+            'PBEGcGxHEG',
+            'BLYP',
+        ],
+        'VDW': ['DRSLL', 'LMKLL', 'KBM', 'C09', 'BH', 'VV'],
+    }
 
     name = 'siesta'
     command = 'siesta < PREFIX.fdf > PREFIX.out'
@@ -196,7 +228,8 @@ class Siesta(FileIOCalculator):
         'dipole',
         'eigenvalues',
         'density',
-        'fermi_energy']
+        'fermi_energy',
+    ]
 
     # Dictionary of valid input vaiables.
     default_parameters = SiestaParameters()
@@ -267,33 +300,33 @@ class Siesta(FileIOCalculator):
         parameters = self.default_parameters.__class__(**kwargs)
 
         # Call the base class.
-        FileIOCalculator.__init__(
-            self,
-            command=command,
-            **parameters)
+        FileIOCalculator.__init__(self, command=command, **parameters)
 
         # For compatibility with old variable name:
         commandvar = os.environ.get('SIESTA_COMMAND')
         if commandvar is not None:
-            warnings.warn('Please use $ASE_SIESTA_COMMAND and not '
-                          '$SIESTA_COMMAND, which will be ignored '
-                          'in the future.  The new command format will not '
-                          'work with the "<%s > %s" specification.  Use '
-                          'instead e.g. "ASE_SIESTA_COMMAND=siesta'
-                          ' < PREFIX.fdf > PREFIX.out", where PREFIX will '
-                          'automatically be replaced by calculator label',
-                          np.VisibleDeprecationWarning)
+            warnings.warn(
+                'Please use $ASE_SIESTA_COMMAND and not '
+                '$SIESTA_COMMAND, which will be ignored '
+                'in the future.  The new command format will not '
+                'work with the "<%s > %s" specification.  Use '
+                'instead e.g. "ASE_SIESTA_COMMAND=siesta'
+                ' < PREFIX.fdf > PREFIX.out", where PREFIX will '
+                'automatically be replaced by calculator label',
+                np.VisibleDeprecationWarning,
+            )
             runfile = self.prefix + '.fdf'
             outfile = self.prefix + '.out'
             try:
                 self.command = commandvar % (runfile, outfile)
             except TypeError:
                 raise ValueError(
-                    "The 'SIESTA_COMMAND' environment must " +
-                    "be a format string" +
-                    " with two string arguments.\n" +
-                    "Example : 'siesta < %s > %s'.\n" +
-                    f"Got '{commandvar}'")
+                    "The 'SIESTA_COMMAND' environment must "
+                    + 'be a format string'
+                    + ' with two string arguments.\n'
+                    + "Example : 'siesta < %s > %s'.\n"
+                    + f"Got '{commandvar}'"
+                )
 
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as
@@ -317,14 +350,14 @@ class Siesta(FileIOCalculator):
         tags = atoms.get_tags()
         species = list(self['species'])
         default_species = [
-            s for s in species
-            if (s['tag'] is None) and s['symbol'] in symbols]
+            s for s in species if (s['tag'] is None) and s['symbol'] in symbols
+        ]
         default_symbols = [s['symbol'] for s in default_species]
         for symbol in symbols:
             if symbol not in default_symbols:
-                spec = Species(symbol=symbol,
-                               basis_set=self['basis_set'],
-                               tag=None)
+                spec = Species(
+                    symbol=symbol, basis_set=self['basis_set'], tag=None
+                )
                 default_species.append(spec)
                 default_symbols.append(symbol)
         assert len(default_species) == len(np.unique(symbols))
@@ -340,8 +373,8 @@ class Siesta(FileIOCalculator):
         # Set up the non-default species.
         non_default_species = [s for s in species if s['tag'] is not None]
         for spec in non_default_species:
-            mask1 = (tags == spec['tag'])
-            mask2 = (symbols == spec['symbol'])
+            mask1 = tags == spec['tag']
+            mask2 = symbols == spec['symbol']
             mask = np.logical_and(mask1, mask2)
             if sum(mask) > 0:
                 species_numbers[mask] = i
@@ -353,9 +386,9 @@ class Siesta(FileIOCalculator):
     def set(self, **kwargs):
         """Set all parameters.
 
-            Parameters:
-                -kwargs  : Dictionary containing the keywords defined in
-                           SiestaParameters.
+        Parameters:
+            -kwargs  : Dictionary containing the keywords defined in
+                       SiestaParameters.
         """
 
         # XXX Inserted these next few lines because set() would otherwise
@@ -390,17 +423,20 @@ class Siesta(FileIOCalculator):
         if 'basis_set' in kwargs:
             basis_set = kwargs['basis_set']
             allowed = self.allowed_basis_names
-            if not (isinstance(basis_set, PAOBasisBlock) or
-                    basis_set in allowed):
-                mess = f"Basis must be either {allowed}, got {basis_set}"
+            if not (
+                isinstance(basis_set, PAOBasisBlock) or basis_set in allowed
+            ):
+                mess = f'Basis must be either {allowed}, got {basis_set}'
                 raise ValueError(mess)
 
         # Check the spin input.
         if 'spin' in kwargs:
             if kwargs['spin'] == 'UNPOLARIZED':
-                warnings.warn("The keyword 'UNPOLARIZED' is deprecated,"
-                              "and replaced by 'non-polarized'",
-                              np.VisibleDeprecationWarning)
+                warnings.warn(
+                    "The keyword 'UNPOLARIZED' is deprecated,"
+                    "and replaced by 'non-polarized'",
+                    np.VisibleDeprecationWarning,
+                )
                 kwargs['spin'] = 'non-polarized'
 
             spin = kwargs['spin']
@@ -442,21 +478,21 @@ class Siesta(FileIOCalculator):
             kwargs['fdf_arguments'] = {}
 
         if not isinstance(kwargs['fdf_arguments'], dict):
-            raise TypeError("fdf_arguments must be a dictionary.")
+            raise TypeError('fdf_arguments must be a dictionary.')
 
         # Call baseclass.
         FileIOCalculator.set(self, **kwargs)
 
     def set_fdf_arguments(self, fdf_arguments):
-        """ Set the fdf_arguments after the initialization of the
-            calculator.
+        """Set the fdf_arguments after the initialization of the
+        calculator.
         """
         self.validate_fdf_arguments(fdf_arguments)
         FileIOCalculator.set(self, fdf_arguments=fdf_arguments)
 
     def validate_fdf_arguments(self, fdf_arguments):
-        """ Raises error if the fdf_argument input is not a
-            dictionary of allowed keys.
+        """Raises error if the fdf_argument input is not a
+        dictionary of allowed keys.
         """
         # None is valid
         if fdf_arguments is None:
@@ -464,12 +500,11 @@ class Siesta(FileIOCalculator):
 
         # Type checking.
         if not isinstance(fdf_arguments, dict):
-            raise TypeError("fdf_arguments must be a dictionary.")
+            raise TypeError('fdf_arguments must be a dictionary.')
 
-    def calculate(self,
-                  atoms=None,
-                  properties=['energy'],
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=['energy'], system_changes=all_changes
+    ):
         """Capture the RuntimeError from FileIOCalculator.calculate
         and add a little debug information from the Siesta output.
 
@@ -480,7 +515,8 @@ class Siesta(FileIOCalculator):
             self,
             atoms=atoms,
             properties=properties,
-            system_changes=system_changes)
+            system_changes=system_changes,
+        )
 
         # The below snippet would run if calculate() failed but I have
         # disabled it for now since it looks to be just for debugging.
@@ -516,7 +552,8 @@ class Siesta(FileIOCalculator):
             self,
             atoms=atoms,
             properties=properties,
-            system_changes=system_changes)
+            system_changes=system_changes,
+        )
 
         if system_changes is None and properties is None:
             return
@@ -532,7 +569,7 @@ class Siesta(FileIOCalculator):
             # Write system name and label.
             fd.write(format_fdf('SystemName', self.prefix))
             fd.write(format_fdf('SystemLabel', self.prefix))
-            fd.write("\n")
+            fd.write('\n')
 
             # Write explicitly given options first to
             # allow the user to override anything.
@@ -545,7 +582,7 @@ class Siesta(FileIOCalculator):
             # as default consistent with ASE expectations.
             if 'SCFMustConverge' not in fdf_arguments.keys():
                 fd.write(format_fdf('SCFMustConverge', True))
-            fd.write("\n")
+            fd.write('\n')
 
             # Write spin level.
             fd.write(format_fdf('Spin     ', self['spin']))
@@ -553,28 +590,28 @@ class Siesta(FileIOCalculator):
             if self['spin'] == 'collinear':
                 fd.write(
                     format_fdf(
-                        'SpinPolarized',
-                        (True,
-                         "# Backwards compatibility.")))
+                        'SpinPolarized', (True, '# Backwards compatibility.')
+                    )
+                )
             elif self['spin'] == 'non-collinear':
                 fd.write(
                     format_fdf(
-                        'NonCollinearSpin',
-                        (True,
-                         "# Backwards compatibility.")))
+                        'NonCollinearSpin', (True, '# Backwards compatibility.')
+                    )
+                )
 
             # Write functional.
             functional, authors = self['xc']
             fd.write(format_fdf('XC.functional', functional))
             fd.write(format_fdf('XC.authors', authors))
-            fd.write("\n")
+            fd.write('\n')
 
             # Write mesh cutoff and energy shift.
-            fd.write(format_fdf('MeshCutoff',
-                                (self['mesh_cutoff'], 'eV')))
-            fd.write(format_fdf('PAO.EnergyShift',
-                                (self['energy_shift'], 'eV')))
-            fd.write("\n")
+            fd.write(format_fdf('MeshCutoff', (self['mesh_cutoff'], 'eV')))
+            fd.write(
+                format_fdf('PAO.EnergyShift', (self['energy_shift'], 'eV'))
+            )
+            fd.write('\n')
 
             # Write the minimal arg
             self._write_species(fd, atoms)
@@ -582,10 +619,11 @@ class Siesta(FileIOCalculator):
 
             # Use the saved density matrix if only 'cell' and 'positions'
             # have changed.
-            if (system_changes is None or
-                ('numbers' not in system_changes and
-                 'initial_magmoms' not in system_changes and
-                 'initial_charges' not in system_changes)):
+            if system_changes is None or (
+                'numbers' not in system_changes
+                and 'initial_magmoms' not in system_changes
+                and 'initial_charges' not in system_changes
+            ):
                 fd.write(format_fdf('DM.UseSaveDM', True))
 
             # Save density.
@@ -601,8 +639,8 @@ class Siesta(FileIOCalculator):
 
     def read(self, filename):
         """Read structural parameters from file .XV file
-           Read other results from other files
-           filename : siesta.XV
+        Read other results from other files
+        filename : siesta.XV
         """
 
         fname = self.getpath(filename)
@@ -613,7 +651,7 @@ class Siesta(FileIOCalculator):
         self.read_results()
 
     def getpath(self, fname=None, ext=None):
-        """ Returns the directory/fname string """
+        """Returns the directory/fname string"""
         if fname is None:
             fname = self.prefix
         if ext is not None:
@@ -621,7 +659,7 @@ class Siesta(FileIOCalculator):
         return os.path.join(self.directory, fname)
 
     def remove_analysis(self):
-        """ Remove all analysis files"""
+        """Remove all analysis files"""
         filename = self.getpath(ext='RHO')
         if os.path.exists(filename):
             os.remove(filename)
@@ -637,8 +675,10 @@ class Siesta(FileIOCalculator):
         fd.write('\n')
 
         if cell.rank in [1, 2]:
-            raise ValueError('Expected 3D unit cell or no unit cell.  You may '
-                             'wish to add vacuum along some directions.')
+            raise ValueError(
+                'Expected 3D unit cell or no unit cell.  You may '
+                'wish to add vacuum along some directions.'
+            )
 
         # Write lattice vectors
         if np.any(cell):
@@ -670,8 +710,9 @@ class Siesta(FileIOCalculator):
                 for n, M in enumerate(magmoms):
                     if M[0] != 0:
                         fd.write(
-                            '    %d %.14f %.14f %.14f \n' %
-                            (n + 1, M[0], M[1], M[2]))
+                            '    %d %.14f %.14f %.14f \n'
+                            % (n + 1, M[0], M[1], M[2])
+                        )
             elif len(magmoms) != 0 and isinstance(magmoms[0], float):
                 for n, M in enumerate(magmoms):
                     if M != 0:
@@ -734,16 +775,25 @@ class Siesta(FileIOCalculator):
         fd.write('ZM.UnitsLength   Ang\n')
         fd.write('%block Zmatrix\n')
         fd.write('  cartesian\n')
-        fstr = "{:5d}" + "{:20.10f}" * 3 + "{:3d}" * 3 + "{:7d} {:s}\n"
+        fstr = '{:5d}' + '{:20.10f}' * 3 + '{:3d}' * 3 + '{:7d} {:s}\n'
         a2constr = self.make_xyz_constraints(atoms)
         a2p, a2s = atoms.get_positions(), atoms.get_chemical_symbols()
-        for ia, (sp, xyz, ccc, sym) in enumerate(zip(species_numbers,
-                                                     a2p,
-                                                     a2constr,
-                                                     a2s)):
-            fd.write(fstr.format(
-                sp, xyz[0], xyz[1], xyz[2], ccc[0],
-                ccc[1], ccc[2], ia + 1, sym))
+        for ia, (sp, xyz, ccc, sym) in enumerate(
+            zip(species_numbers, a2p, a2constr, a2s)
+        ):
+            fd.write(
+                fstr.format(
+                    sp,
+                    xyz[0],
+                    xyz[1],
+                    xyz[2],
+                    ccc[0],
+                    ccc[1],
+                    ccc[2],
+                    ia + 1,
+                    sym,
+                )
+            )
         fd.write('%endblock Zmatrix\n')
 
         origin = tuple(-atoms.get_celldisp().flatten())
@@ -754,7 +804,7 @@ class Siesta(FileIOCalculator):
             fd.write('\n')
 
     def make_xyz_constraints(self, atoms):
-        """ Create coordinate-resolved list of constraints [natoms, 0:3]
+        """Create coordinate-resolved list of constraints [natoms, 0:3]
         The elements of the list must be integers 0 or 1
           1 -- means that the coordinate will be updated during relaxation
           0 -- mains that the coordinate will be fixed during relaxation
@@ -762,8 +812,12 @@ class Siesta(FileIOCalculator):
         import sys
         import warnings
 
-        from ase.constraints import (FixAtoms, FixCartesian, FixedLine,
-                                     FixedPlane)
+        from ase.constraints import (
+            FixAtoms,
+            FixCartesian,
+            FixedLine,
+            FixedPlane,
+        )
 
         a = atoms
         a2c = np.ones((len(a), 3), dtype=int)
@@ -774,21 +828,28 @@ class Siesta(FileIOCalculator):
                 norm_dir = c.dir / np.linalg.norm(c.dir)
                 if (max(norm_dir) - 1.0) > 1e-6:
                     raise RuntimeError(
-                        'norm_dir: {} -- must be one of the Cartesian axes...'
-                        .format(norm_dir))
+                        'norm_dir: {} -- must be one of the Cartesian axes...'.format(
+                            norm_dir
+                        )
+                    )
                 a2c[c.get_indices()] = norm_dir.round().astype(int)
             elif isinstance(c, FixedPlane):
                 norm_dir = c.dir / np.linalg.norm(c.dir)
                 if (max(norm_dir) - 1.0) > 1e-6:
                     raise RuntimeError(
-                        'norm_dir: {} -- must be one of the Cartesian axes...'
-                        .format(norm_dir))
+                        'norm_dir: {} -- must be one of the Cartesian axes...'.format(
+                            norm_dir
+                        )
+                    )
                 a2c[c.get_indices()] = abs(1 - norm_dir.round().astype(int))
             elif isinstance(c, FixCartesian):
                 a2c[c.get_indices()] = c.mask.astype(int)
             else:
-                warnings.warn('Constraint {} is ignored at {}'
-                              .format(str(c), sys._getframe().f_code))
+                warnings.warn(
+                    'Constraint {} is ignored at {}'.format(
+                        str(c), sys._getframe().f_code
+                    )
+                )
         return a2c
 
     def _write_kpts(self, fd):
@@ -797,7 +858,7 @@ class Siesta(FileIOCalculator):
         Parameters:
             - f : Open filename.
         """
-        if self["kpts"] is None:
+        if self['kpts'] is None:
             return
         kpts = np.array(self['kpts'])
         fd.write('\n')
@@ -903,9 +964,9 @@ class Siesta(FileIOCalculator):
                 fraction = float(vc + paec) / vc
                 pseudo_head = name[:-4]
                 fractional_command = os.environ['SIESTA_UTIL_FRACTIONAL']
-                cmd = '{} {} {:.7f}'.format(fractional_command,
-                                            pseudo_head,
-                                            fraction)
+                cmd = '{} {} {:.7f}'.format(
+                    fractional_command, pseudo_head, fraction
+                )
                 os.system(cmd)
 
                 pseudo_head += '-Fraction-%.5f' % fraction
@@ -914,8 +975,8 @@ class Siesta(FileIOCalculator):
                 os.remove(name)
                 shutil.copyfile(synth_pseudo, name)
                 synth_block = read_vca_synth_block(
-                    synth_block_filename,
-                    species_number=species_number)
+                    synth_block_filename, species_number=species_number
+                )
                 synth_blocks.append(synth_block)
 
             if len(synth_blocks) > 0:
@@ -927,7 +988,7 @@ class Siesta(FileIOCalculator):
             if isinstance(spec['basis_set'], PAOBasisBlock):
                 pao_basis.append(spec['basis_set'].script(label))
             else:
-                basis_sizes.append(("    " + label, spec['basis_set']))
+                basis_sizes.append(('    ' + label, spec['basis_set']))
         fd.write(format_fdf('ChemicalSpecieslabel', chemical_labels))
         fd.write('\n')
         fd.write(format_fdf('PAO.Basis', pao_basis))
@@ -946,8 +1007,7 @@ class Siesta(FileIOCalculator):
             return self['pseudo_qualifier']
 
     def read_results(self):
-        """Read the results.
-        """
+        """Read the results."""
         self.read_number_of_grid_points()
         self.read_energy()
         self.read_forces_stress()
@@ -958,8 +1018,7 @@ class Siesta(FileIOCalculator):
         self.read_hsx()
         self.read_dim()
         if self.results['hsx'] is not None:
-            self.read_pld(self.results['hsx'].norbitals,
-                          len(self.atoms))
+            self.read_pld(self.results['hsx'].norbitals, len(self.atoms))
             self.atoms.cell = self.results['pld'].cell * Bohr
         else:
             self.results['pld'] = None
@@ -1099,7 +1158,7 @@ class Siesta(FileIOCalculator):
             self.results['density'] = read_rho(filename)
 
     def read_number_of_grid_points(self):
-        """Read number of grid points from SIESTA's text-output file. """
+        """Read number of grid points from SIESTA's text-output file."""
 
         fname = self.getpath(ext='out')
         with open(fname) as fd:
@@ -1113,8 +1172,7 @@ class Siesta(FileIOCalculator):
                 raise RuntimeError
 
     def read_energy(self):
-        """Read energy from SIESTA's text-output file.
-        """
+        """Read energy from SIESTA's text-output file."""
         fname = self.getpath(ext='out')
         with open(fname) as fd:
             text = fd.read().lower()
@@ -1130,13 +1188,11 @@ class Siesta(FileIOCalculator):
                 line = next(lines)
                 self.results['free_energy'] = float(line.split()[-1])
 
-        if ('energy' not in self.results or
-                'free_energy' not in self.results):
+        if 'energy' not in self.results or 'free_energy' not in self.results:
             raise RuntimeError
 
     def read_forces_stress(self):
-        """Read the forces and stress from the FORCE_STRESS file.
-        """
+        """Read the forces and stress from the FORCE_STRESS file."""
         fname = self.getpath('FORCE_STRESS')
         with open(fname) as fd:
             lines = fd.readlines()
@@ -1149,8 +1205,15 @@ class Siesta(FileIOCalculator):
             stress[i] = [float(s) for s in line]
 
         self.results['stress'] = np.array(
-            [stress[0, 0], stress[1, 1], stress[2, 2],
-             stress[1, 2], stress[0, 2], stress[0, 1]])
+            [
+                stress[0, 0],
+                stress[1, 1],
+                stress[2, 2],
+                stress[1, 2],
+                stress[0, 2],
+                stress[0, 1],
+            ]
+        )
 
         self.results['stress'] *= Ry / Bohr**3
 
@@ -1163,15 +1226,14 @@ class Siesta(FileIOCalculator):
         self.results['forces'] *= Ry / Bohr
 
     def read_eigenvalues(self):
-        """ A robust procedure using the suggestion by Federico Marchesin """
+        """A robust procedure using the suggestion by Federico Marchesin"""
 
         file_name = self.getpath(ext='EIG')
         try:
             with open(file_name) as fd:
                 self.results['fermi_energy'] = float(fd.readline())
                 n, num_hamilton_dim, nkp = map(int, fd.readline().split())
-                _ee = np.split(
-                    np.array(fd.read().split()).astype(float), nkp)
+                _ee = np.split(np.array(fd.read().split()).astype(float), nkp)
         except OSError:
             return 1
 
@@ -1191,7 +1253,7 @@ class Siesta(FileIOCalculator):
         return 0
 
     def read_kpoints(self):
-        """ Reader of the .KP files """
+        """Reader of the .KP files"""
 
         fname = self.getpath(ext='KP')
         try:
@@ -1207,7 +1269,7 @@ class Siesta(FileIOCalculator):
                     kpoints[i] = numbers[:3]
                     kweights[i] = numbers[3]
 
-        except (OSError):
+        except OSError:
             return 1
 
         self.results['kpoints'] = kpoints
@@ -1216,7 +1278,7 @@ class Siesta(FileIOCalculator):
         return 0
 
     def read_dipole(self):
-        """Read dipole moment. """
+        """Read dipole moment."""
         dipole = np.zeros([1, 3])
         with open(self.getpath(ext='out')) as fd:
             for line in fd:
@@ -1238,10 +1300,11 @@ class Siesta(FileIOCalculator):
 class Siesta3_2(Siesta):
     def __init__(self, *args, **kwargs):
         warnings.warn(
-            "The Siesta3_2 calculator class will no longer be supported. "
+            'The Siesta3_2 calculator class will no longer be supported. '
             "Use 'ase.calculators.siesta.Siesta in stead. "
-            "If using the ASE interface with SIESTA 3.2 you must explicitly "
+            'If using the ASE interface with SIESTA 3.2 you must explicitly '
             "include the keywords 'SpinPolarized', 'NonCollinearSpin' and "
             "'SpinOrbit' if needed.",
-            np.VisibleDeprecationWarning)
+            np.VisibleDeprecationWarning,
+        )
         Siesta.__init__(self, *args, **kwargs)

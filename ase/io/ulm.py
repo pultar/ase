@@ -235,9 +235,10 @@ class Writer:
             if isinstance(fd, str):
                 fd = Path(fd)
 
-            if mode == 'w' or (isinstance(fd, Path) and
-                               not (fd.is_file() and
-                                    fd.stat().st_size > 0)):
+            if mode == 'w' or (
+                isinstance(fd, Path)
+                and not (fd.is_file() and fd.stat().st_size > 0)
+            ):
                 self.nitems = 0
                 self.pos0 = 48
                 self.offsets = np.array([-1], np.int64)
@@ -249,9 +250,11 @@ class Writer:
                 a = np.array([VERSION, self.nitems, self.pos0], np.int64)
                 if not np.little_endian:
                     a.byteswap(True)
-                self.header = (f'- of Ulm{tag:16}'.encode('ascii') +
-                               a.tobytes() +
-                               self.offsets.tobytes())
+                self.header = (
+                    f'- of Ulm{tag:16}'.encode('ascii')
+                    + a.tobytes()
+                    + self.offsets.tobytes()
+                )
             else:
                 if isinstance(fd, Path):
                     fd = fd.open('r+b')
@@ -297,8 +300,7 @@ class Writer:
 
         i = align(self.fd)
 
-        self.data[name + '.'] = {
-            'ndarray': (shape, np.dtype(dtype).name, i)}
+        self.data[name + '.'] = {'ndarray': (shape, np.dtype(dtype).name, i)}
 
         assert self.nmissing == 0, 'last array not done'
 
@@ -316,7 +318,7 @@ class Writer:
     def fill(self, a):
         """Fill in ndarray chunks for array currently being written."""
         assert a.dtype == self.dtype
-        assert a.shape[1:] == self.shape[len(self.shape) - a.ndim + 1:]
+        assert a.shape[1:] == self.shape[len(self.shape) - a.ndim + 1 :]
         self.nmissing -= a.size
         assert self.nmissing >= 0
 
@@ -386,9 +388,10 @@ class Writer:
         self._write_header()
 
         for name, value in kwargs.items():
-            if isinstance(value, (bool, int, float, complex,
-                                  dict, list, tuple, str,
-                                  type(None))):
+            if isinstance(
+                value,
+                (bool, int, float, complex, dict, list, tuple, str, type(None)),
+            ):
                 self.data[name] = value
             elif hasattr(value, '__array__'):
                 value = np.asarray(value)
@@ -482,8 +485,13 @@ class Reader:
 
         if data is None:
             try:
-                (self._tag, self._version, self._nitems, self._pos0,
-                 self._offsets) = read_header(fd)
+                (
+                    self._tag,
+                    self._version,
+                    self._nitems,
+                    self._pos0,
+                    self._offsets,
+                ) = read_header(fd)
             except BaseException:
                 if self.must_close_fd:
                     fd.close()
@@ -508,14 +516,17 @@ class Reader:
                 if 'ndarray' in value:
                     shape, dtype, offset = value['ndarray']
                     dtype = dtype.encode()  # compatibility with Numpy 1.4
-                    value = NDArrayReader(self._fd,
-                                          shape,
-                                          np.dtype(dtype),
-                                          offset,
-                                          self._little_endian)
+                    value = NDArrayReader(
+                        self._fd,
+                        shape,
+                        np.dtype(dtype),
+                        offset,
+                        self._little_endian,
+                    )
                 else:
-                    value = Reader(self._fd, data=value,
-                                   _little_endian=self._little_endian)
+                    value = Reader(
+                        self._fd, data=value, _little_endian=self._little_endian
+                    )
                 name = name[:-1]
 
             self._data[name] = value
@@ -598,8 +609,9 @@ class Reader:
             if verbose and isinstance(value, NDArrayReader):
                 value = value.read()
             if isinstance(value, NDArrayReader):
-                s = '<ndarray shape={} dtype={}>'.format(value.shape,
-                                                         value.dtype)
+                s = '<ndarray shape={} dtype={}>'.format(
+                    value.shape, value.dtype
+                )
             elif isinstance(value, Reader):
                 s = value.tostr(verbose, indent + '    ')
             else:
@@ -642,7 +654,7 @@ class NDArrayReader:
         if isinstance(i, numbers.Integral):
             if i < 0:
                 i += len(self)
-            return self[i:i + 1][0]
+            return self[i : i + 1][0]
         start, stop, step = i.indices(len(self))
         stride = np.prod(self.shape[1:], dtype=int)
         offset = self.offset + start * self.itemsize * stride
@@ -652,8 +664,9 @@ class NDArrayReader:
             a = np.fromfile(self.fd, self.dtype, count)
         else:
             # Not as fast, but works for reading from tar-files:
-            a = np.frombuffer(self.fd.read(int(count * self.itemsize)),
-                              self.dtype)
+            a = np.frombuffer(
+                self.fd.read(int(count * self.itemsize)), self.dtype
+            )
         a.shape = (stop - start,) + self.shape[1:]
         if step != 1:
             a = a[::step].copy()
@@ -661,7 +674,7 @@ class NDArrayReader:
             # frombuffer() returns readonly array
             a = a.byteswap(inplace=a.flags.writeable)
         if self.length_of_last_dimension is not None:
-            a = a[..., :self.length_of_last_dimension]
+            a = a[..., : self.length_of_last_dimension]
         if self.scale != 1.0:
             a *= self.scale
         return a
@@ -673,8 +686,9 @@ class NDArrayReader:
             start += stride * index
             stride //= self.shape[i + 1]
         offset = self.offset + start * self.itemsize
-        p = NDArrayReader(self.fd, self.shape[i + 1:], self.dtype,
-                          offset, self.little_endian)
+        p = NDArrayReader(
+            self.fd, self.shape[i + 1 :], self.dtype, offset, self.little_endian
+        )
         p.scale = self.scale
         return p
 
@@ -685,17 +699,22 @@ def print_ulm_info(filename, index=None, verbose=False):
         indices = range(len(b))
     else:
         indices = [index]
-    print('{}  (tag: "{}", {})'.format(filename, b.get_tag(),
-                                       plural(len(b), 'item')))
+    print(
+        '{}  (tag: "{}", {})'.format(
+            filename, b.get_tag(), plural(len(b), 'item')
+        )
+    )
     for i in indices:
         print(f'item #{i}:')
         print(b[i].tostr(verbose))
 
 
-def copy(reader: Union[str, Path, Reader],
-         writer: Union[str, Path, Writer],
-         exclude: Set[str] = set(),
-         name: str = '') -> None:
+def copy(
+    reader: Union[str, Path, Reader],
+    writer: Union[str, Path, Writer],
+    exclude: Set[str] = set(),
+    name: str = '',
+) -> None:
     """Copy from reader to writer except for keys in exclude."""
     close_reader = False
     close_writer = False

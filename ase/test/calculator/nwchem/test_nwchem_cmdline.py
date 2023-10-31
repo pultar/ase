@@ -8,12 +8,14 @@ from ase.io.jsonio import read_json
 
 @pytest.mark.skip('CLI fixture lacks information about configured executables')
 def test_cmdline(cli):
-    cli.shell("""\
+    cli.shell(
+        """\
 ase build O O.traj &&
 ase run nwchem O.traj -o nwchem_cmdline.json &&
 ase build O2 O2.traj &&
 ase run nwchem O2.traj -o nwchem_cmdline.json""",
-              'nwchem')
+        'nwchem',
+    )
     c = connect('nwchem_cmdline.json')
     dct = read_json('nwchem_cmdline.json')
     for name in ['O2', 'O']:

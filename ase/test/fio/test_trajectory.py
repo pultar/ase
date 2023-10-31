@@ -8,8 +8,7 @@ from ase.io import Trajectory, read
 
 @pytest.fixture
 def co():
-    return Atoms([Atom('C', (0, 0, 0)),
-                  Atom('O', (0, 0, 1.2))])
+    return Atoms([Atom('C', (0, 0, 0)), Atom('O', (0, 0, 1.2))])
 
 
 @pytest.fixture
@@ -117,9 +116,9 @@ def test_only_energy():
 
 
 def test_constraint_and_momenta():
-    a = Atoms('H2',
-              positions=[(0, 0, 0), (0, 0, 1)],
-              momenta=[(1, 0, 0), (0, 0, 0)])
+    a = Atoms(
+        'H2', positions=[(0, 0, 0), (0, 0, 1)], momenta=[(1, 0, 0), (0, 0, 0)]
+    )
     a.constraints = [FixBondLength(0, 1)]
     with Trajectory('constraint.traj', 'w', a) as t:
         t.write()

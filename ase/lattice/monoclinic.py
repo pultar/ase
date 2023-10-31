@@ -11,9 +11,10 @@ from ase.lattice.triclinic import TriclinicFactory
 
 
 class SimpleMonoclinicFactory(TriclinicFactory):
-    "A factory for creating simple monoclinic lattices."
+    'A factory for creating simple monoclinic lattices.'
+
     # The name of the crystal structure in ChemicalElements
-    xtal_name = "monoclinic"
+    xtal_name = 'monoclinic'
 
     def make_crystal_basis(self):
         """Make the basis matrix for the crystal unit cell and the system
@@ -27,7 +28,8 @@ class SimpleMonoclinicFactory(TriclinicFactory):
                 self.latticeconstant = self.latticeconstant + (90, 90)
             else:
                 raise ValueError(
-                    "Improper lattice constants for monoclinic crystal.")
+                    'Improper lattice constants for monoclinic crystal.'
+                )
 
         TriclinicFactory.make_crystal_basis(self)
 
@@ -37,15 +39,11 @@ SimpleMonoclinic = SimpleMonoclinicFactory()
 
 class BaseCenteredMonoclinicFactory(SimpleMonoclinicFactory):
     # The natural basis vectors of the crystal structure
-    int_basis = np.array([[1, -1, 0],
-                          [1, 1, 0],
-                          [0, 0, 2]])
+    int_basis = np.array([[1, -1, 0], [1, 1, 0], [0, 0, 2]])
     basis_factor = 0.5
 
     # Converts the natural basis back to the crystallographic basis
-    inverse_basis = np.array([[1, 1, 0],
-                              [-1, 1, 0],
-                              [0, 0, 1]])
+    inverse_basis = np.array([[1, 1, 0], [-1, 1, 0], [0, 0, 1]])
     inverse_basis_factor = 1.0
 
 

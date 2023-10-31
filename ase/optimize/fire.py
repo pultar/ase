@@ -70,8 +70,15 @@ class FIRE(Optimizer):
             falls back to force_consistent=False if not.  Only meaningful
             when downhill_check is True.
         """
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+        Optimizer.__init__(
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master,
+            force_consistent=force_consistent,
+        )
 
         self.dt = dt
 
@@ -81,8 +88,10 @@ class FIRE(Optimizer):
             self.maxstep = maxstep
         elif maxmove is not None:
             self.maxstep = maxmove
-            warnings.warn('maxmove is deprecated; please use maxstep',
-                          np.VisibleDeprecationWarning)
+            warnings.warn(
+                'maxmove is deprecated; please use maxstep',
+                np.VisibleDeprecationWarning,
+            )
         else:
             self.maxstep = self.defaults['maxstep']
 
@@ -112,32 +121,36 @@ class FIRE(Optimizer):
             self.v = np.zeros((len(optimizable), 3))
             if self.downhill_check:
                 self.e_last = optimizable.get_potential_energy(
-                    force_consistent=self.force_consistent)
+                    force_consistent=self.force_consistent
+                )
                 self.r_last = optimizable.get_positions().copy()
                 self.v_last = self.v.copy()
         else:
             is_uphill = False
             if self.downhill_check:
                 e = optimizable.get_potential_energy(
-                    force_consistent=self.force_consistent)
+                    force_consistent=self.force_consistent
+                )
                 # Check if the energy actually decreased
                 if e > self.e_last:
                     # If not, reset to old positions...
                     if self.position_reset_callback is not None:
                         self.position_reset_callback(
-                            optimizable, self.r_last, e,
-                            self.e_last)
+                            optimizable, self.r_last, e, self.e_last
+                        )
                     optimizable.set_positions(self.r_last)
                     is_uphill = True
                 self.e_last = optimizable.get_potential_energy(
-                    force_consistent=self.force_consistent)
+                    force_consistent=self.force_consistent
+                )
                 self.r_last = optimizable.get_positions().copy()
                 self.v_last = self.v.copy()
 
             vf = np.vdot(f, self.v)
             if vf > 0.0 and not is_uphill:
                 self.v = (1.0 - self.a) * self.v + self.a * f / np.sqrt(
-                    np.vdot(f, f)) * np.sqrt(np.vdot(self.v, self.v))
+                    np.vdot(f, f)
+                ) * np.sqrt(np.vdot(self.v, self.v))
                 if self.Nsteps > self.Nmin:
                     self.dt = min(self.dt * self.finc, self.dtmax)
                     self.a *= self.fa

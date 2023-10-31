@@ -8,8 +8,7 @@ from ase.build import bulk
 # stress[4] and [5].
 # These references values are based on "consensus" between codes i.e.
 # whatever it takes to get them to pass this test.
-ref_stress = np.array([-0.22, -0.17, -0.17,
-                       -0.17, 0.18, 0.18])
+ref_stress = np.array([-0.22, -0.17, -0.17, -0.17, 0.18, 0.18])
 
 calc = pytest.mark.calculator
 

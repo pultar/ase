@@ -8,7 +8,7 @@ from ase.collections import s22
 def test_turbomole_2h2o():
     """Water dimer calculation in which each molecule is calculated quantum
     mechanically and the interaction between the molecules is electrostatic.
-    The process is repeated until self consitence. """
+    The process is repeated until self consitence."""
 
     def polarization_cycle(partition_1, partition_2, charges_2=None):
         """Performs an iteration of a polarization calculation."""
@@ -48,14 +48,18 @@ def test_turbomole_2h2o():
 
         (new1, old1) = (prop['e1'][-1], prop['e1'][-2])
         (new2, old2) = (prop['e2'][-1], prop['e2'][-2])
-        conv['e'].append((abs(new1 - old1) + abs(new2 - old2)) /
-                         (abs(old1) + abs(old2)))
+        conv['e'].append(
+            (abs(new1 - old1) + abs(new2 - old2)) / (abs(old1) + abs(old2))
+        )
         (new1, old1) = (prop['c1'][-1], prop['c1'][-2])
         (new2, old2) = (prop['c2'][-1], prop['c2'][-2])
-        conv['c'].append((norm(new1 - old1) + norm(new2 - old2)) /
-                         (norm(old1) + norm(old2)))
-        fmt = ('iteration {0:d}: convergence of energy {1:10e}; '
-               'of charges {2:10e}')
+        conv['c'].append(
+            (norm(new1 - old1) + norm(new2 - old2)) / (norm(old1) + norm(old2))
+        )
+        fmt = (
+            'iteration {0:d}: convergence of energy {1:10e}; '
+            'of charges {2:10e}'
+        )
         print(fmt.format(iteration, conv['e'][-1], norm(conv['c'][-1])))
 
     # check the result
@@ -63,7 +67,7 @@ def test_turbomole_2h2o():
         'e1': -2077.7082947500003,
         'e2': -2077.3347674372353,
         'c1': [-0.133033, 0.238218, -0.105186],
-        'c2': [-0.844336, 0.422151, 0.422184]
+        'c2': [-0.844336, 0.422151, 0.422184],
     }
 
     dev = {}

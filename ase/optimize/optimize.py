@@ -31,7 +31,8 @@ class OptimizableAtoms(Optimizable):
 
     def get_potential_energy(self, force_consistent):
         return self.atoms.get_potential_energy(
-            force_consistent=force_consistent)
+            force_consistent=force_consistent
+        )
 
     def iterimages(self):
         # XXX document purpose of iterimages
@@ -96,10 +97,11 @@ class Dynamics(IOContext):
         if trajectory is not None:
             if isinstance(trajectory, str):
                 from ase.io.trajectory import Trajectory
-                mode = "a" if append_trajectory else "w"
-                trajectory = self.closelater(Trajectory(
-                    trajectory, mode=mode, master=master
-                ))
+
+                mode = 'a' if append_trajectory else 'w'
+                trajectory = self.closelater(
+                    Trajectory(trajectory, mode=mode, master=master)
+                )
             self.attach(trajectory, atoms=self.optimizable)
 
         self.trajectory = trajectory
@@ -150,7 +152,7 @@ class Dynamics(IOContext):
         arguments *args* and keyword arguments *kwargs*.  This is
         currently zero indexed."""
 
-        if hasattr(function, "set_description"):
+        if hasattr(function, 'set_description'):
             d = self.todict()
             d.update(interval=interval)
             function.set_description(d)
@@ -220,18 +222,18 @@ class Dynamics(IOContext):
         return converged
 
     def converged(self):
-        """" a dummy function as placeholder for a real criterion, e.g. in
-        Optimizer """
+        """ " a dummy function as placeholder for a real criterion, e.g. in
+        Optimizer"""
         return False
 
     def log(self, *args):
-        """ a dummy function as placeholder for a real logger, e.g. in
-        Optimizer """
+        """a dummy function as placeholder for a real logger, e.g. in
+        Optimizer"""
         return True
 
     def step(self):
         """this needs to be implemented by subclasses"""
-        raise RuntimeError("step not implemented.")
+        raise RuntimeError('step not implemented.')
 
 
 class Optimizer(Dynamics):
@@ -311,8 +313,8 @@ class Optimizer(Dynamics):
 
     def todict(self):
         description = {
-            "type": "optimization",
-            "optimizer": self.__class__.__name__,
+            'type': 'optimization',
+            'optimizer': self.__class__.__name__,
         }
         # add custom attributes from subclasses
         for attr in ('maxstep', 'alpha', 'max_steps', 'restart'):
@@ -324,14 +326,14 @@ class Optimizer(Dynamics):
         pass
 
     def irun(self, fmax=0.05, steps=None):
-        """ call Dynamics.irun and keep track of fmax"""
+        """call Dynamics.irun and keep track of fmax"""
         self.fmax = fmax
         if steps is not None:
             self.max_steps = steps
         return Dynamics.irun(self)
 
     def run(self, fmax=0.05, steps=None):
-        """ call Dynamics.run and keep track of fmax"""
+        """call Dynamics.run and keep track of fmax"""
         self.fmax = fmax
         if steps is not None:
             self.max_steps = steps
@@ -346,7 +348,7 @@ class Optimizer(Dynamics):
     def log(self, forces=None):
         if forces is None:
             forces = self.optimizable.get_forces()
-        fmax = sqrt((forces ** 2).sum(axis=1).max())
+        fmax = sqrt((forces**2).sum(axis=1).max())
         e = self.optimizable.get_potential_energy(
             force_consistent=self.force_consistent
         )
@@ -354,8 +356,8 @@ class Optimizer(Dynamics):
         if self.logfile is not None:
             name = self.__class__.__name__
             if self.nsteps == 0:
-                args = (" " * len(name), "Step", "Time", "Energy", "fmax")
-                msg = "%s  %4s %8s %15s  %12s\n" % args
+                args = (' ' * len(name), 'Step', 'Time', 'Energy', 'fmax')
+                msg = '%s  %4s %8s %15s  %12s\n' % args
                 self.logfile.write(msg)
 
                 # if self.force_consistent:
@@ -368,26 +370,30 @@ class Optimizer(Dynamics):
             # ast = {1: "*", 0: ""}[self.force_consistent]
             ast = ''
             args = (name, self.nsteps, T[3], T[4], T[5], e, ast, fmax)
-            msg = "%s:  %3d %02d:%02d:%02d %15.6f%1s %15.6f\n" % args
+            msg = '%s:  %3d %02d:%02d:%02d %15.6f%1s %15.6f\n' % args
             self.logfile.write(msg)
 
             self.logfile.flush()
 
     def dump(self, data):
         from ase.io.jsonio import write_json
+
         if world.rank == 0 and self.restart is not None:
             with open(self.restart, 'w') as fd:
                 write_json(fd, data)
 
     def load(self):
         from ase.io.jsonio import read_json
+
         with open(self.restart) as fd:
             try:
                 return read_json(fd, always_array=False)
             except Exception as ex:
-                msg = ('Could not decode restart file as JSON.  '
-                       'You may need to delete the restart file '
-                       f'{self.restart}')
+                msg = (
+                    'Could not decode restart file as JSON.  '
+                    'You may need to delete the restart file '
+                    f'{self.restart}'
+                )
                 raise RestartError(msg) from ex
 
     def set_force_consistent(self):

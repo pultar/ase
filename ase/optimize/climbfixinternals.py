@@ -104,12 +104,19 @@ class BFGSClimbFixInternals(BFGS):
             performed with ``optB_fmax`` independent of ``optB_fmax_scaling``.
         """
         self.targetvalue = None  # may be assigned during restart in self.read()
-        super().__init__(atoms, restart=restart, logfile=logfile,
-                         trajectory=trajectory, maxstep=maxstep, master=master,
-                         alpha=alpha)
+        super().__init__(
+            atoms,
+            restart=restart,
+            logfile=logfile,
+            trajectory=trajectory,
+            maxstep=maxstep,
+            master=master,
+            alpha=alpha,
+        )
 
         self.constr2climb = get_constr2climb(
-            self.optimizable.atoms, climb_coordinate)
+            self.optimizable.atoms, climb_coordinate
+        )
         self.targetvalue = self.targetvalue or self.constr2climb.targetvalue
 
         self.optB = optB
@@ -121,8 +128,13 @@ class BFGSClimbFixInternals(BFGS):
         self.autotraj = 'trajectory' not in self.optB_kwargs
 
     def read(self):
-        (self.H, self.pos0, self.forces0, self.maxstep,
-         self.targetvalue) = self.load()
+        (
+            self.H,
+            self.pos0,
+            self.forces0,
+            self.maxstep,
+            self.targetvalue,
+        ) = self.load()
 
     def step(self):
         self.relax_remaining_dof()  # optimization with optimizer 'B'
@@ -130,8 +142,9 @@ class BFGSClimbFixInternals(BFGS):
         pos, dpos = self.pretend2climb()  # with optimizer 'A'
         self.update_positions_and_targetvalue(pos, dpos)  # obey other constr.
 
-        self.dump((self.H, self.pos0, self.forces0, self.maxstep,
-                   self.targetvalue))
+        self.dump(
+            (self.H, self.pos0, self.forces0, self.maxstep, self.targetvalue)
+        )
 
     def pretend2climb(self):
         """Get directions for climbing and climb with optimizer 'A'."""
@@ -144,10 +157,11 @@ class BFGSClimbFixInternals(BFGS):
     def update_positions_and_targetvalue(self, pos, dpos):
         """Adjust constrained targetvalue of constraint and update positions."""
         self.constr2climb.adjust_positions(pos, pos + dpos)  # update sigma
-        self.targetvalue += self.constr2climb.sigma          # climb constraint
-        self.constr2climb.targetvalue = self.targetvalue     # adjust positions
+        self.targetvalue += self.constr2climb.sigma  # climb constraint
+        self.constr2climb.targetvalue = self.targetvalue  # adjust positions
         self.optimizable.set_positions(
-            self.optimizable.get_positions())   # to targetvalue
+            self.optimizable.get_positions()
+        )  # to targetvalue
 
     def relax_remaining_dof(self):
         """Optimize remaining degrees of freedom with optimizer 'B'."""
@@ -165,8 +179,9 @@ class BFGSClimbFixInternals(BFGS):
     def get_scaled_fmax(self):
         """Return the adaptive 'fmax' based on the estimated distance to the
         transition state."""
-        return (self.optB_fmax +
-                self.scaling * norm(self.constr2climb.projected_forces))
+        return self.optB_fmax + self.scaling * norm(
+            self.constr2climb.projected_forces
+        )
 
     def get_projected_forces(self):
         """Return the projected forces along the constrained coordinate in

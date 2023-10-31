@@ -4,7 +4,7 @@ from ase.io.fortranfile import FortranFile
 
 
 def read_rho(fname):
-    "Read unformatted Siesta charge density file"
+    'Read unformatted Siesta charge density file'
 
     # TODO:
     #
@@ -35,8 +35,9 @@ def read_rho(fname):
             for n2 in range(gpts[1]):
                 x = fh.readReals('f')
                 if len(x) != gpts[0]:
-                    raise OSError('Failed to read RHO[:,%i,%i,%i]' %
-                                  (n2, n3, ispin))
+                    raise OSError(
+                        'Failed to read RHO[:,%i,%i,%i]' % (n2, n3, ispin)
+                    )
                 rho[:, n2, n3, ispin] = x
 
     fh.close()
@@ -45,7 +46,7 @@ def read_rho(fname):
 
 
 def get_valence_charge(filename):
-    """ Read the valence charge from '.psf'-file."""
+    """Read the valence charge from '.psf'-file."""
     with open(filename) as fd:
         fd.readline()
         fd.readline()
@@ -56,7 +57,7 @@ def get_valence_charge(filename):
 
 
 def read_vca_synth_block(filename, species_number=None):
-    """ Read the SyntheticAtoms block from the output of the
+    """Read the SyntheticAtoms block from the output of the
     'fractional' siesta utility.
 
     Parameters:
@@ -84,13 +85,24 @@ def readHSX(fname):
     """
     import collections
 
-    HSX_tuple = collections.namedtuple('HSX',
-                                       ['norbitals', 'norbitals_sc', 'nspin',
-                                        'nonzero', 'is_gamma', 'sc_orb2uc_orb',
-                                        'row2nnzero', 'sparse_ind2column',
-                                        'H_sparse', 'S_sparse',
-                                        'aB2RaB_sparse', 'total_elec_charge',
-                                        'temp'])
+    HSX_tuple = collections.namedtuple(
+        'HSX',
+        [
+            'norbitals',
+            'norbitals_sc',
+            'nspin',
+            'nonzero',
+            'is_gamma',
+            'sc_orb2uc_orb',
+            'row2nnzero',
+            'sparse_ind2column',
+            'H_sparse',
+            'S_sparse',
+            'aB2RaB_sparse',
+            'total_elec_charge',
+            'temp',
+        ],
+    )
 
     fh = FortranFile(fname)
     norbitals, norbitals_sc, nspin, nonzero = fh.readInts('i')
@@ -103,9 +115,12 @@ def readHSX(fname):
     row2nnzero = fh.readInts('i')
 
     sum_row2nnzero = np.sum(row2nnzero)
-    if (sum_row2nnzero != nonzero):
-        raise ValueError('sum_row2nnzero != nonzero: {} != {}'
-                         .format(sum_row2nnzero, nonzero))
+    if sum_row2nnzero != nonzero:
+        raise ValueError(
+            'sum_row2nnzero != nonzero: {} != {}'.format(
+                sum_row2nnzero, nonzero
+            )
+        )
 
     row2displ = np.zeros((norbitals), dtype=int)
 
@@ -122,7 +137,7 @@ def readHSX(fname):
         int_buff[0:f] = fh.readInts('i')
         # read set of rows where nonzero elements reside
         d = row2displ[irow]
-        sparse_ind2column[d:d + f] = int_buff[0:f]
+        sparse_ind2column[d : d + f] = int_buff[0:f]
     # END of Fill the rows for each index in *_sparse arrays
 
     # allocate H, S and X matrices
@@ -138,14 +153,14 @@ def readHSX(fname):
             d = row2displ[irow]
             f = row2nnzero[irow]
             sp_buff[0:f] = fh.readReals('f')
-            H_sparse[d:d + f, ispin] = sp_buff[0:f]
+            H_sparse[d : d + f, ispin] = sp_buff[0:f]
 
     # Read the data to S_sparse array
     for irow in range(norbitals):
         f = row2nnzero[irow]
         d = row2displ[irow]
         sp_buff[0:f] = fh.readReals('f')
-        S_sparse[d:d + f] = sp_buff[0:f]
+        S_sparse[d : d + f] = sp_buff[0:f]
 
     total_elec_charge, temp = fh.readReals('d')
 
@@ -154,16 +169,28 @@ def readHSX(fname):
     for irow in range(norbitals):
         f = row2nnzero[irow]
         d = row2displ[irow]
-        sp_buff[0: 3 * f] = fh.readReals('f')
-        aB2RaB_sparse[0, d:d + f] = sp_buff[0:f]
-        aB2RaB_sparse[1, d:d + f] = sp_buff[f:2 * f]
-        aB2RaB_sparse[2, d:d + f] = sp_buff[2 * f:3 * f]
+        sp_buff[0 : 3 * f] = fh.readReals('f')
+        aB2RaB_sparse[0, d : d + f] = sp_buff[0:f]
+        aB2RaB_sparse[1, d : d + f] = sp_buff[f : 2 * f]
+        aB2RaB_sparse[2, d : d + f] = sp_buff[2 * f : 3 * f]
 
     fh.close()
 
-    return HSX_tuple(norbitals, norbitals_sc, nspin, nonzero, is_gamma,
-                     sc_orb2uc_orb, row2nnzero, sparse_ind2column, H_sparse,
-                     S_sparse, aB2RaB_sparse, total_elec_charge, temp)
+    return HSX_tuple(
+        norbitals,
+        norbitals_sc,
+        nspin,
+        nonzero,
+        is_gamma,
+        sc_orb2uc_orb,
+        row2nnzero,
+        sparse_ind2column,
+        H_sparse,
+        S_sparse,
+        aB2RaB_sparse,
+        total_elec_charge,
+        temp,
+    )
 
 
 def readDIM(fname):
@@ -172,10 +199,17 @@ def readDIM(fname):
     """
     import collections
 
-    DIM_tuple = collections.namedtuple('DIM', ['natoms_sc', 'norbitals_sc',
-                                               'norbitals', 'nspin',
-                                               'nnonzero',
-                                               'natoms_interacting'])
+    DIM_tuple = collections.namedtuple(
+        'DIM',
+        [
+            'natoms_sc',
+            'norbitals_sc',
+            'norbitals',
+            'nspin',
+            'nnonzero',
+            'natoms_interacting',
+        ],
+    )
 
     fh = FortranFile(fname)
 
@@ -187,8 +221,9 @@ def readDIM(fname):
     natoms_interacting = fh.readInts('i')[0]
     fh.close()
 
-    return DIM_tuple(natoms_sc, norbitals_sc, norbitals, nspin,
-                     nnonzero, natoms_interacting)
+    return DIM_tuple(
+        natoms_sc, norbitals_sc, norbitals, nspin, nnonzero, natoms_interacting
+    )
 
 
 def readPLD(fname, norbitals, natoms):
@@ -196,14 +231,24 @@ def readPLD(fname, norbitals, natoms):
     Read unformatted siesta PLD file
     """
     import collections
+
     # use struct library to read mixed data type from binary
     import struct
 
-    PLD_tuple = collections.namedtuple('PLD', ['max_rcut', 'orb2ao',
-                                               'orb2uorb', 'orb2occ',
-                                               'atm2sp', 'atm2shift',
-                                               'coord_sc', 'cell',
-                                               'nunit_cells'])
+    PLD_tuple = collections.namedtuple(
+        'PLD',
+        [
+            'max_rcut',
+            'orb2ao',
+            'orb2uorb',
+            'orb2occ',
+            'atm2sp',
+            'atm2shift',
+            'coord_sc',
+            'cell',
+            'nunit_cells',
+        ],
+    )
 
     fh = FortranFile(fname)
 
@@ -239,8 +284,17 @@ def readPLD(fname, norbitals, natoms):
         coord_sc[iatm, :] = fh.readReals('d')
 
     fh.close()
-    return PLD_tuple(max_rcut, orb2ao, orb2uorb, orb2occ, atm2sp, atm2shift,
-                     coord_sc, cell, nunit_cells)
+    return PLD_tuple(
+        max_rcut,
+        orb2ao,
+        orb2uorb,
+        orb2occ,
+        atm2sp,
+        atm2shift,
+        coord_sc,
+        cell,
+        nunit_cells,
+    )
 
 
 def readWFSX(fname):
@@ -248,15 +302,28 @@ def readWFSX(fname):
     Read unformatted siesta WFSX file
     """
     import collections
+
     # use struct library to read mixed data type from binary
     import struct
 
-    WFSX_tuple = collections.namedtuple('WFSX',
-                                        ['nkpoints', 'nspin', 'norbitals',
-                                         'gamma', 'orb2atm', 'orb2strspecies',
-                                         'orb2ao', 'orb2n', 'orb2strsym',
-                                         'kpoints', 'DFT_E', 'DFT_X',
-                                         'mo_spin_kpoint_2_is_read'])
+    WFSX_tuple = collections.namedtuple(
+        'WFSX',
+        [
+            'nkpoints',
+            'nspin',
+            'norbitals',
+            'gamma',
+            'orb2atm',
+            'orb2strspecies',
+            'orb2ao',
+            'orb2n',
+            'orb2strsym',
+            'kpoints',
+            'DFT_E',
+            'DFT_X',
+            'mo_spin_kpoint_2_is_read',
+        ],
+    )
 
     fh = FortranFile(fname)
 
@@ -291,17 +358,20 @@ def readWFSX(fname):
     kpoints = np.zeros((3, nkpoints), dtype=np.float64)
     DFT_E = np.zeros((norbitals, nspin, nkpoints), dtype=np.float64)
 
-    if (gamma == 1):
-        DFT_X = np.zeros((1, norbitals, norbitals, nspin, nkpoints),
-                         dtype=np.float64)
+    if gamma == 1:
+        DFT_X = np.zeros(
+            (1, norbitals, norbitals, nspin, nkpoints), dtype=np.float64
+        )
         eigenvector = np.zeros((1, norbitals), dtype=float)
     else:
-        DFT_X = np.zeros((2, norbitals, norbitals, nspin, nkpoints),
-                         dtype=np.float64)
+        DFT_X = np.zeros(
+            (2, norbitals, norbitals, nspin, nkpoints), dtype=np.float64
+        )
         eigenvector = np.zeros((2, norbitals), dtype=float)
 
-    mo_spin_kpoint_2_is_read = np.zeros((norbitals, nspin, nkpoints),
-                                        dtype=bool)
+    mo_spin_kpoint_2_is_read = np.zeros(
+        (norbitals, nspin, nkpoints), dtype=bool
+    )
     mo_spin_kpoint_2_is_read[0:norbitals, 0:nspin, 0:nkpoints] = False
 
     dat_size = struct.calcsize('iddd')
@@ -311,51 +381,66 @@ def readWFSX(fname):
             val_list = struct.unpack('iddd', dat[0:dat_size])
             ikpoint_in = val_list[0] - 1
             kpoints[0:3, ikpoint] = val_list[1:4]
-            if (ikpoint != ikpoint_in):
+            if ikpoint != ikpoint_in:
                 raise ValueError('siesta_get_wfsx: ikpoint != ikpoint_in')
             ispin_in = fh.readInts('i')[0] - 1
-            if (ispin_in > nspin - 1):
+            if ispin_in > nspin - 1:
                 msg = 'siesta_get_wfsx: err: ispin_in>nspin\n \
                      siesta_get_wfsx: ikpoint, ispin, ispin_in = \
-                     {}  {}  {}\n siesta_get_wfsx'.format(ikpoint,
-                                                          ispin, ispin_in)
+                     {}  {}  {}\n siesta_get_wfsx'.format(
+                    ikpoint, ispin, ispin_in
+                )
                 raise ValueError(msg)
 
             norbitals_in = fh.readInts('i')[0]
-            if (norbitals_in > norbitals):
+            if norbitals_in > norbitals:
                 msg = 'siesta_get_wfsx: err: norbitals_in>norbitals\n \
                      siesta_get_wfsx: ikpoint, norbitals, norbitals_in = \
-                     {}  {}  {}\n siesta_get_wfsx'.format(ikpoint,
-                                                          norbitals,
-                                                          norbitals_in)
+                     {}  {}  {}\n siesta_get_wfsx'.format(
+                    ikpoint, norbitals, norbitals_in
+                )
                 raise ValueError(msg)
 
             for imolecular_orb in range(norbitals_in):
                 imolecular_orb_in = fh.readInts('i')[0] - 1
-                if (imolecular_orb_in > norbitals - 1):
+                if imolecular_orb_in > norbitals - 1:
                     msg = """
                         siesta_get_wfsx: err: imolecular_orb_in>norbitals\n
                         siesta_get_wfsx: ikpoint, norbitals,
                         imolecular_orb_in = {}  {}  {}\n
-                        siesta_get_wfsx""".format(ikpoint, norbitals,
-                                                  imolecular_orb_in)
+                        siesta_get_wfsx""".format(
+                        ikpoint, norbitals, imolecular_orb_in
+                    )
                     raise ValueError(msg)
 
                 real_E_eV = fh.readReals('d')[0]
                 eigenvector = fh.readReals('f')
-                DFT_E[imolecular_orb_in, ispin_in,
-                      ikpoint] = real_E_eV / 13.60580
-                DFT_X[:, :, imolecular_orb_in, ispin_in,
-                      ikpoint] = eigenvector
-                mo_spin_kpoint_2_is_read[imolecular_orb_in, ispin_in,
-                                         ikpoint] = True
+                DFT_E[imolecular_orb_in, ispin_in, ikpoint] = (
+                    real_E_eV / 13.60580
+                )
+                DFT_X[:, :, imolecular_orb_in, ispin_in, ikpoint] = eigenvector
+                mo_spin_kpoint_2_is_read[
+                    imolecular_orb_in, ispin_in, ikpoint
+                ] = True
 
-            if (not all(mo_spin_kpoint_2_is_read[:, ispin_in, ikpoint])):
+            if not all(mo_spin_kpoint_2_is_read[:, ispin_in, ikpoint]):
                 msg = 'siesta_get_wfsx: warn: .not. all(mo_spin_k_2_is_read)'
                 print('mo_spin_kpoint_2_is_read = ', mo_spin_kpoint_2_is_read)
                 raise ValueError(msg)
 
     fh.close()
-    return WFSX_tuple(nkpoints, nspin, norbitals, gamma, orb2atm,
-                      orb2strspecies, orb2ao, orb2n, orb2strsym,
-                      kpoints, DFT_E, DFT_X, mo_spin_kpoint_2_is_read)
+    return WFSX_tuple(
+        nkpoints,
+        nspin,
+        norbitals,
+        gamma,
+        orb2atm,
+        orb2strspecies,
+        orb2ao,
+        orb2n,
+        orb2strsym,
+        kpoints,
+        DFT_E,
+        DFT_X,
+        mo_spin_kpoint_2_is_read,
+    )

@@ -13,6 +13,7 @@ The file 'deMon.out' contains the results
 """
 import os
 import os.path as op
+
 # import subprocess
 import pathlib as pl
 
@@ -34,23 +35,24 @@ class DemonNanoParameters(Parameters):
     """
 
     def __init__(
-            self,
-            label='.',
-            atoms=None,
-            command=None,
-            basis_path=None,
-            restart_path='.',
-            print_out='ASE',
-            title='deMonNano input file',
-            forces=False,
-            input_arguments=None):
+        self,
+        label='.',
+        atoms=None,
+        command=None,
+        basis_path=None,
+        restart_path='.',
+        print_out='ASE',
+        title='deMonNano input file',
+        forces=False,
+        input_arguments=None,
+    ):
         kwargs = locals()
         kwargs.pop('self')
         Parameters.__init__(self, **kwargs)
 
 
 class DemonNano(FileIOCalculator):
-    """Calculator interface to the deMon-nano code. """
+    """Calculator interface to the deMon-nano code."""
 
     implemented_properties = ['energy', 'forces']
 
@@ -101,9 +103,7 @@ class DemonNano(FileIOCalculator):
             parameters['basis_path'] = basis_path
 
         # Call the base class.
-        FileIOCalculator.__init__(
-            self,
-            **parameters)
+        FileIOCalculator.__init__(self, **parameters)
 
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as
@@ -129,7 +129,8 @@ class DemonNano(FileIOCalculator):
             self,
             atoms=atoms,
             properties=properties,
-            system_changes=system_changes)
+            system_changes=system_changes,
+        )
 
         if system_changes is None and properties is None:
             return
@@ -154,7 +155,7 @@ class DemonNano(FileIOCalculator):
 
             # print argument, here other options could change this
             value = self.parameters['print_out']
-            assert (isinstance(value, str))
+            assert isinstance(value, str)
 
             if not len(value) == 0:
                 self._write_argument('PRINT', value, fd)
@@ -181,8 +182,9 @@ class DemonNano(FileIOCalculator):
         rpath = pl.Path(restart_path)
 
         if not (rpath / 'deMon.inp').exists():
-            raise ReadError('The restart_path file {} does not exist'
-                            .format(rpath))
+            raise ReadError(
+                'The restart_path file {} does not exist'.format(rpath)
+            )
 
         self.atoms = self.deMon_inp_to_atoms(rpath / 'deMon.inp')
 
@@ -251,7 +253,7 @@ class DemonNano(FileIOCalculator):
 
         fd.write('\n')
 
-# Analysis routines
+    # Analysis routines
     def read_results(self):
         """Read the results from output files."""
         self.read_energy()
@@ -264,8 +266,11 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                'The deMonNano output file for ASE {} does not exist'.format(
+                    epath
+                )
+            )
 
         filename = self.label + '/deMon.ase'
 
@@ -285,8 +290,11 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                'The deMonNano output file for ASE {} does not exist'.format(
+                    epath
+                )
+            )
 
         filename = self.label + '/deMon.ase'
 
@@ -304,8 +312,11 @@ class DemonNano(FileIOCalculator):
             if flag_found:
                 self.results['forces'] = np.zeros((natoms, 3), float)
                 for i in range(natoms):
-                    line = [s for s in lines[i + start].strip().split(' ')
-                            if len(s) > 0]
+                    line = [
+                        s
+                        for s in lines[i + start].strip().split(' ')
+                        if len(s) > 0
+                    ]
                     f = -np.array([float(x) for x in line[1:4]])
                     # output forces in a.u.
                     # self.results['forces'][i, :] = f

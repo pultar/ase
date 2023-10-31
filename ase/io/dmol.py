@@ -58,7 +58,7 @@ from ase.utils import reader, writer
 
 @writer
 def write_dmol_car(fd, atoms):
-    """ Write a dmol car-file from an Atoms object
+    """Write a dmol car-file from an Atoms object
 
     Notes
     -----
@@ -92,14 +92,16 @@ def write_dmol_car(fd, atoms):
         raise ValueError('PBC must be all true or all false for .car format')
 
     for i, (sym, pos) in enumerate(zip(symbols, positions)):
-        fd.write('%-6s  %12.8f   %12.8f   %12.8f XXXX 1      xx      %-2s  '
-                 '0.000\n' % (sym + str(i + 1), pos[0], pos[1], pos[2], sym))
+        fd.write(
+            '%-6s  %12.8f   %12.8f   %12.8f XXXX 1      xx      %-2s  '
+            '0.000\n' % (sym + str(i + 1), pos[0], pos[1], pos[2], sym)
+        )
     fd.write('end\nend\n')
 
 
 @reader
 def read_dmol_car(fd):
-    """ Read a dmol car-file and return an Atoms object.
+    """Read a dmol car-file and return an Atoms object.
 
     Notes
     -----
@@ -135,7 +137,7 @@ def read_dmol_car(fd):
 
 @writer
 def write_dmol_incoor(fd, atoms, bohr=True):
-    """ Write a dmol incoor-file from an Atoms object
+    """Write a dmol incoor-file from an Atoms object
 
     Notes
     -----
@@ -156,23 +158,34 @@ def write_dmol_incoor(fd, atoms, bohr=True):
         positions = atoms.positions
 
     fd.write('$cell vectors\n')
-    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
-        cell[0, 0], cell[0, 1], cell[0, 2]))
-    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
-        cell[1, 0], cell[1, 1], cell[1, 2]))
-    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
-        cell[2, 0], cell[2, 1], cell[2, 2]))
+    fd.write(
+        '            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
+            cell[0, 0], cell[0, 1], cell[0, 2]
+        )
+    )
+    fd.write(
+        '            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
+            cell[1, 0], cell[1, 1], cell[1, 2]
+        )
+    )
+    fd.write(
+        '            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
+            cell[2, 0], cell[2, 1], cell[2, 2]
+        )
+    )
 
     fd.write('$coordinates\n')
     for a, pos in zip(atoms, positions):
-        fd.write('%-12s%18.14f  %18.14f  %18.14f \n' % (
-            a.symbol, pos[0], pos[1], pos[2]))
+        fd.write(
+            '%-12s%18.14f  %18.14f  %18.14f \n'
+            % (a.symbol, pos[0], pos[1], pos[2])
+        )
     fd.write('$end\n')
 
 
 @reader
 def read_dmol_incoor(fd, bohr=True):
-    """ Reads an incoor file and returns an atoms object.
+    """Reads an incoor file and returns an atoms object.
 
     Notes
     -----
@@ -186,7 +199,7 @@ def read_dmol_incoor(fd, bohr=True):
     for i, line in enumerate(lines):
         if line.startswith('$cell vectors'):
             cell = np.zeros((3, 3))
-            for j, line in enumerate(lines[i + 1:i + 4]):
+            for j, line in enumerate(lines[i + 1 : i + 4]):
                 cell[j, :] = [float(fld) for fld in line.split()]
         if line.startswith('$coordinates'):
             j = i + 1
@@ -206,7 +219,7 @@ def read_dmol_incoor(fd, bohr=True):
 
 @writer
 def write_dmol_arc(fd, images):
-    """ Writes all images to file filename in arc format.
+    """Writes all images to file filename in arc format.
 
     Similar to the .car format only pbc 111 or 000 is supported.
     """
@@ -228,26 +241,29 @@ def write_dmol_arc(fd, images):
             lstsq_fit = np.linalg.lstsq(atoms.cell, new_cell, rcond=-1)
             R = lstsq_fit[0]
             fd.write('!DATE     %s\n' % dt.strftime('%b %d %H:%m:%S %Y'))
-            fd.write('PBC %9.5f %9.5f %9.5f %9.5f %9.5f %9.5f\n'
-                     % tuple(cellpar))
+            fd.write(
+                'PBC %9.5f %9.5f %9.5f %9.5f %9.5f %9.5f\n' % tuple(cellpar)
+            )
             positions = np.dot(atoms.positions, R)
         elif not np.any(atoms.pbc):  # [False,False,False]
             fd.write('!DATE     %s\n' % dt.strftime('%b %d %H:%m:%S %Y'))
             positions = atoms.positions
         else:
             raise ValueError(
-                'PBC must be all true or all false for .arc format')
+                'PBC must be all true or all false for .arc format'
+            )
         for i, (sym, pos) in enumerate(zip(symbols, positions)):
             fd.write(
                 '%-6s  %12.8f   %12.8f   %12.8f XXXX 1      xx      %-2s  '
-                '0.000\n' % (sym + str(i + 1), pos[0], pos[1], pos[2], sym))
+                '0.000\n' % (sym + str(i + 1), pos[0], pos[1], pos[2], sym)
+            )
         fd.write('end\nend\n')
         fd.write('\n')
 
 
 @reader
 def read_dmol_arc(fd, index=-1):
-    """ Read a dmol arc-file and return a series of Atoms objects (images). """
+    """Read a dmol arc-file and return a series of Atoms objects (images)."""
 
     lines = fd.readlines()
     images = []
@@ -268,8 +284,9 @@ def read_dmol_arc(fd, index=-1):
         if lines[i].startswith('!DATE'):
             # read cell
             if pbc:
-                cell_dat = np.array([float(fld)
-                                     for fld in lines[i + 1].split()[1:7]])
+                cell_dat = np.array(
+                    [float(fld) for fld in lines[i + 1].split()[1:7]]
+                )
                 cell = cellpar_to_cell(cell_dat)
                 i += 1
             i += 1
@@ -279,8 +296,9 @@ def read_dmol_arc(fd, index=-1):
                 symbols.append(flds[7])
                 positions.append(flds[1:4])
                 i += 1
-            image = Atoms(symbols=symbols, positions=positions, cell=cell,
-                          pbc=pbc)
+            image = Atoms(
+                symbols=symbols, positions=positions, cell=cell, pbc=pbc
+            )
             images.append(image)
         if len(images) == index:
             return images[-1]
@@ -291,5 +309,6 @@ def read_dmol_arc(fd, index=-1):
         return images[index]
     else:
         from ase.io.formats import index2range
+
         indices = index2range(index, len(images))
         return [images[j] for j in indices]

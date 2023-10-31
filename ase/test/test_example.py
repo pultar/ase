@@ -9,19 +9,24 @@ from ase.optimize import QuasiNewton
 
 @pytest.mark.optimize
 def test_example(testdir):
-    atoms = Atoms('H7',
-                  positions=[(0, 0, 0),
-                             (1, 0, 0),
-                             (0, 1, 0),
-                             (1, 1, 0),
-                             (0, 2, 0),
-                             (1, 2, 0),
-                             (0.5, 0.5, 1)],
-                  constraint=[FixAtoms(range(6))],
-                  calculator=MorsePotential())
+    atoms = Atoms(
+        'H7',
+        positions=[
+            (0, 0, 0),
+            (1, 0, 0),
+            (0, 1, 0),
+            (1, 1, 0),
+            (0, 2, 0),
+            (1, 2, 0),
+            (0.5, 0.5, 1),
+        ],
+        constraint=[FixAtoms(range(6))],
+        calculator=MorsePotential(),
+    )
 
-    with Trajectory('H.traj', 'w', atoms) as traj, \
-            QuasiNewton(atoms, maxstep=0.2) as dyn:
+    with Trajectory('H.traj', 'w', atoms) as traj, QuasiNewton(
+        atoms, maxstep=0.2
+    ) as dyn:
         dyn.attach(traj.write)
         dyn.run(fmax=0.01, steps=100)
 

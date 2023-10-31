@@ -1,8 +1,10 @@
 import importlib
 from typing import List, Tuple
 
-from ase.utils import (get_python_package_path_description,
-                       search_current_git_hash)
+from ase.utils import (
+    get_python_package_path_description,
+    search_current_git_hash,
+)
 
 
 def format_dependency(modname: str) -> Tuple[str, str]:
@@ -27,6 +29,15 @@ def format_dependency(modname: str) -> Tuple[str, str]:
 
 
 def all_dependencies() -> List[Tuple[str, str]]:
-    names = ['ase', 'numpy', 'scipy', 'matplotlib', 'spglib',
-             'ase_ext', 'flask', 'psycopg2', 'pyamg']
+    names = [
+        'ase',
+        'numpy',
+        'scipy',
+        'matplotlib',
+        'spglib',
+        'ase_ext',
+        'flask',
+        'psycopg2',
+        'pyamg',
+    ]
     return [format_dependency(name) for name in names]

@@ -21,9 +21,14 @@ def test_CO2linear_Au111_langevin(testdir):
 
     zpos = cos(134.3 / 2.0 * pi / 180.0) * 1.197
     xpos = sin(134.3 / 2.0 * pi / 180.0) * 1.19
-    co2 = Atoms('COO', positions=[(-xpos + 1.2, 0, -zpos),
-                                  (-xpos + 1.2, -1.1, -zpos),
-                                  (-xpos + 1.2, 1.1, -zpos)])
+    co2 = Atoms(
+        'COO',
+        positions=[
+            (-xpos + 1.2, 0, -zpos),
+            (-xpos + 1.2, -1.1, -zpos),
+            (-xpos + 1.2, 1.1, -zpos),
+        ],
+    )
 
     slab = fcc111('Au', size=(2, 2, 4), vacuum=2 * 5, orthogonal=True)
     slab.center()
@@ -39,11 +44,16 @@ def test_CO2linear_Au111_langevin(testdir):
     slab.set_constraint(constraint)
 
     fr = 0.1
-    with Langevin(slab, 2.0 * units.fs,
-                  temperature_K=300, friction=fr,
-                  trajectory='langevin_%.1f.traj' % fr,
-                  logfile='langevin_%.1f.log' % fr,
-                  loginterval=20, rng=rng) as dyn:
+    with Langevin(
+        slab,
+        2.0 * units.fs,
+        temperature_K=300,
+        friction=fr,
+        trajectory='langevin_%.1f.traj' % fr,
+        logfile='langevin_%.1f.log' % fr,
+        loginterval=20,
+        rng=rng,
+    ) as dyn:
         dyn.run(100)
 
     # Check that the temperature is within a reasonable range

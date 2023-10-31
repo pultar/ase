@@ -3,8 +3,11 @@ import numpy as np
 
 from ase import Atoms
 from ase.ga.offspring_creator import OffspringCreator
-from ase.ga.utilities import (atoms_too_close, atoms_too_close_two_sets,
-                              gather_atoms_by_tag)
+from ase.ga.utilities import (
+    atoms_too_close,
+    atoms_too_close_two_sets,
+    gather_atoms_by_tag,
+)
 from ase.geometry import find_mic
 
 
@@ -34,9 +37,9 @@ class Positions:
 
     def to_use(self):
         """Tells whether this position is at the right side."""
-        if self.distance > 0. and self.origin == 0:
+        if self.distance > 0.0 and self.origin == 0:
             return True
-        elif self.distance < 0. and self.origin == 1:
+        elif self.distance < 0.0 and self.origin == 1:
             return True
         else:
             return False
@@ -139,11 +142,21 @@ class CutAndSplicePairing(OffspringCreator):
         By default numpy.random.
     """
 
-    def __init__(self, slab, n_top, blmin, number_of_variable_cell_vectors=0,
-                 p1=1, p2=0.05, minfrac=None, cellbounds=None,
-                 test_dist_to_slab=True, use_tags=False, rng=np.random,
-                 verbose=False):
-
+    def __init__(
+        self,
+        slab,
+        n_top,
+        blmin,
+        number_of_variable_cell_vectors=0,
+        p1=1,
+        p2=0.05,
+        minfrac=None,
+        cellbounds=None,
+        test_dist_to_slab=True,
+        use_tags=False,
+        rng=np.random,
+        verbose=False,
+    ):
         OffspringCreator.__init__(self, verbose, rng=rng)
         self.slab = slab
         self.n_top = n_top
@@ -186,16 +199,14 @@ class CutAndSplicePairing(OffspringCreator):
         f, m = parents
 
         indi = self.cross(f, m)
-        desc = 'pairing: {} {}'.format(f.info['confid'],
-                                       m.info['confid'])
+        desc = 'pairing: {} {}'.format(f.info['confid'], m.info['confid'])
         # It is ok for an operator to return None
         # It means that it could not make a legal offspring
         # within a reasonable amount of time
         if indi is None:
             return indi, desc
         indi = self.initialize_individual(f, indi)
-        indi.info['data']['parents'] = [f.info['confid'],
-                                        m.info['confid']]
+        indi.info['data']['parents'] = [f.info['confid'], m.info['confid']]
 
         return self.finalize_individual(indi), desc
 
@@ -210,8 +221,8 @@ class CutAndSplicePairing(OffspringCreator):
         N = self.n_top
 
         # Only consider the atoms to optimize
-        a1 = a1[len(a1) - N: len(a1)]
-        a2 = a2[len(a2) - N: len(a2)]
+        a1 = a1[len(a1) - N : len(a1)]
+        a2 = a2[len(a2) - N : len(a2)]
 
         if not np.array_equal(a1.numbers, a2.numbers):
             err = 'Trying to pair two structures with different stoichiometry'
@@ -249,9 +260,14 @@ class CutAndSplicePairing(OffspringCreator):
             if self.number_of_variable_cell_vectors == 0:
                 # Will be generated entirely at random
                 theta = np.pi * self.rng.random()
-                phi = 2. * np.pi * self.rng.random()
-                cut_n = np.array([np.cos(phi) * np.sin(theta),
-                                  np.sin(phi) * np.sin(theta), np.cos(theta)])
+                phi = 2.0 * np.pi * self.rng.random()
+                cut_n = np.array(
+                    [
+                        np.cos(phi) * np.sin(theta),
+                        np.sin(phi) * np.sin(theta),
+                        np.cos(theta),
+                    ]
+                )
             else:
                 # Pick one of the 'variable' cell vectors
                 cut_n = self.rng.choice(self.number_of_variable_cell_vectors)
@@ -340,8 +356,8 @@ class CutAndSplicePairing(OffspringCreator):
 
                 vol = abs(np.linalg.det(newcell))
                 scaling = v_ref / vol
-                scaling **= 1. / self.number_of_variable_cell_vectors
-                newcell[:self.number_of_variable_cell_vectors] *= scaling
+                scaling **= 1.0 / self.number_of_variable_cell_vectors
+                newcell[: self.number_of_variable_cell_vectors] *= scaling
 
                 found = True
                 if self.cellbounds is not None:
@@ -474,7 +490,8 @@ class CutAndSplicePairing(OffspringCreator):
 
         newpos = np.reshape(newpos, (N, 3))
         num = a1.get_atomic_numbers()
-        child = Atoms(numbers=num, positions=newpos, pbc=pbc, cell=cell,
-                      tags=tags)
+        child = Atoms(
+            numbers=num, positions=newpos, pbc=pbc, cell=cell, tags=tags
+        )
         child.wrap()
         return child

@@ -8,13 +8,16 @@ def test_mixingcalc():
     from ase.build import fcc111
     from ase.calculators.calculator import CalculatorSetupError
     from ase.calculators.emt import EMT
-    from ase.calculators.mixing import (AverageCalculator,
-                                        LinearCombinationCalculator,
-                                        MixedCalculator, SumCalculator)
+    from ase.calculators.mixing import (
+        AverageCalculator,
+        LinearCombinationCalculator,
+        MixedCalculator,
+        SumCalculator,
+    )
     from ase.constraints import FixAtoms
 
     # Calculate reference values:
-    atoms = fcc111('Cu', (2, 2, 1), vacuum=10.)
+    atoms = fcc111('Cu', (2, 2, 1), vacuum=10.0)
     atoms[0].x += 0.2
 
     # First run the test with EMT similarly to the test of the single point
@@ -49,7 +52,7 @@ def test_mixingcalc():
     # LinearCombinationCalculator:
 
     atoms2 = atoms.copy()
-    calc2 = LinearCombinationCalculator([EMT(), EMT()], weights=[.5, .5])
+    calc2 = LinearCombinationCalculator([EMT(), EMT()], weights=[0.5, 0.5])
     atoms2.calc = calc2
 
     # Check the results (it should be the same because it is tha average of

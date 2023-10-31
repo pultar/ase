@@ -10,10 +10,9 @@ from ase.parallel import parprint, world
 DFTCalculator = Any
 
 
-def ensemble(energy: float,
-             contributions: np.ndarray,
-             xc: str,
-             verbose: bool = False) -> np.ndarray:
+def ensemble(
+    energy: float, contributions: np.ndarray, xc: str, verbose: bool = False
+) -> np.ndarray:
     """Returns an array of ensemble total energies."""
     ensemble = BEEFEnsemble(None, energy, contributions, xc, verbose)
     return ensemble.get_ensemble_energies()
@@ -22,13 +21,15 @@ def ensemble(energy: float,
 class BEEFEnsemble:
     """BEEF type ensemble error estimation."""
 
-    def __init__(self,
-                 atoms: Union[Atoms, DFTCalculator] = None,
-                 e: float = None,
-                 contribs: np.ndarray = None,
-                 xc: str = None,
-                 verbose: bool = True):
-        if (atoms is not None or contribs is not None or xc is not None):
+    def __init__(
+        self,
+        atoms: Union[Atoms, DFTCalculator] = None,
+        e: float = None,
+        contribs: np.ndarray = None,
+        xc: str = None,
+        verbose: bool = True,
+    ):
+        if atoms is not None or contribs is not None or xc is not None:
             if atoms is None:
                 assert e is not None
                 assert contribs is not None
@@ -56,9 +57,9 @@ class BEEFEnsemble:
             else:
                 raise NotImplementedError(f'No ensemble for xc = {self.xc}')
 
-    def get_ensemble_energies(self,
-                              size: int = 2000,
-                              seed: int = 0) -> np.ndarray:
+    def get_ensemble_energies(
+        self, size: int = 2000, seed: int = 0
+    ) -> np.ndarray:
         """Returns an array of ensemble total energies"""
         self.seed = seed
         if self.verbose:
@@ -66,7 +67,8 @@ class BEEFEnsemble:
 
         if self.contribs is None:
             self.contribs = self.calc.get_nonselfconsistent_energies(
-                self.beef_type)
+                self.beef_type
+            )
             self.e = self.calc.get_potential_energy(self.atoms)
         if self.beef_type == 'beefvdw':
             assert len(self.contribs) == 32
@@ -88,6 +90,7 @@ class BEEFEnsemble:
     def get_beefvdw_ensemble_coefs(self, size=2000, seed=0):
         """Perturbation coefficients of the BEEF-vdW ensemble"""
         from ase.dft.pars_beefvdw import uiOmega as omega
+
         assert np.shape(omega) == (31, 31)
 
         W, V, generator = self.eigendecomposition(omega, seed)
@@ -95,7 +98,7 @@ class BEEFEnsemble:
 
         for j in range(size):
             v = RandV[:, j]
-            coefs_i = (np.dot(np.dot(V, np.diag(np.sqrt(W))), v)[:])
+            coefs_i = np.dot(np.dot(V, np.diag(np.sqrt(W))), v)[:]
             if j == 0:
                 ensemble_coefs = coefs_i
             else:
@@ -106,17 +109,18 @@ class BEEFEnsemble:
     def get_mbeef_ensemble_coefs(self, size=2000, seed=0):
         """Perturbation coefficients of the mBEEF ensemble"""
         from ase.dft.pars_mbeef import uiOmega as omega
+
         assert np.shape(omega) == (64, 64)
 
         W, V, generator = self.eigendecomposition(omega, seed)
         mu, sigma = 0.0, 1.0
         rand = np.array(generator.normal(mu, sigma, (len(W), size)))
-        return (np.sqrt(2) * np.dot(np.dot(V, np.diag(np.sqrt(W))),
-                                    rand)[:]).T
+        return (np.sqrt(2) * np.dot(np.dot(V, np.diag(np.sqrt(W))), rand)[:]).T
 
     def get_mbeefvdw_ensemble_coefs(self, size=2000, seed=0):
         """Perturbation coefficients of the mBEEF-vdW ensemble"""
         from ase.dft.pars_mbeefvdw import uiOmega as omega
+
         assert np.shape(omega) == (28, 28)
 
         W, V, generator = self.eigendecomposition(omega, seed)
@@ -155,5 +159,6 @@ def readbee(fname: str, all: bool = False):
 
 def BEEF_Ensemble(*args, **kwargs):
     import warnings
+
     warnings.warn('Please use BEEFEnsemble instead of BEEF_Ensemble.')
     return BEEFEnsemble(*args, **kwargs)

@@ -1,11 +1,14 @@
 import pytest
 
-from ase.utils import (deprecated, devnull,
-                       get_python_package_path_description, tokenize_version)
+from ase.utils import (
+    deprecated,
+    devnull,
+    get_python_package_path_description,
+    tokenize_version,
+)
 
 
 def test_deprecated_decorator():
-
     class MyWarning(UserWarning):
         pass
 
@@ -22,14 +25,17 @@ def test_deprecated_devnull():
         devnull.tell()
 
 
-@pytest.mark.parametrize('v1, v2', [
-    ('1', '2'),
-    ('a', 'b'),
-    ('9.0', '10.0'),
-    ('3.8.0', '3.8.1'),
-    ('3a', '3b'),
-    ('3', '3a'),
-])
+@pytest.mark.parametrize(
+    'v1, v2',
+    [
+        ('1', '2'),
+        ('a', 'b'),
+        ('9.0', '10.0'),
+        ('3.8.0', '3.8.1'),
+        ('3a', '3b'),
+        ('3', '3a'),
+    ],
+)
 def test_tokenize_version_lessthan(v1, v2):
     v1 = tokenize_version(v1)
     v2 = tokenize_version(v2)
@@ -43,7 +49,7 @@ def test_tokenize_version_equal():
 
 class DummyIterator:
     def __iter__(self):
-        yield from ["test", "bla"]
+        yield from ['test', 'bla']
 
 
 class Dummy:

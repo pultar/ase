@@ -21,7 +21,7 @@ def test_turbomole_h2o():
         'ri memory': 1000,
         'force convergence': 0.001,
         'geometry optimization iterations': 50,
-        'scf iterations': 100
+        'scf iterations': 100,
     }
 
     calc = Turbomole(**params)
@@ -49,10 +49,9 @@ def test_turbomole_h2o():
 
     # perform a normal mode calculation with the optimized structure
 
-    params.update({
-        'task': 'normal mode analysis',
-        'density convergence': 1.0e-7
-    })
+    params.update(
+        {'task': 'normal mode analysis', 'density convergence': 1.0e-7}
+    )
 
     calc = Turbomole(**params)
     mol.calc = calc
@@ -75,7 +74,7 @@ def test_turbomole_h2o_parsing_issue():
         'multiplicity': 1,
         'initial damping': 2.0,
         'damping adjustment step': 0.5,
-        'minimal damping': 1.0
+        'minimal damping': 1.0,
     }
     mol.calc = Turbomole(**params)
     mol.get_potential_energy(mol)

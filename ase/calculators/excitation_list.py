@@ -26,7 +26,7 @@ class Excitation:
         self.mur = mur
         self.muv = muv
         self.magn = magn
-        self.fij = 1.
+        self.fij = 1.0
 
     def outstring(self):
         """Format yourself as a string"""
@@ -73,9 +73,9 @@ class Excitation:
         """Return the excitations dipole matrix element
         including the occupation factor sqrt(fij)"""
         if form == 'r':  # length form
-            me = - self.mur
+            me = -self.mur
         elif form == 'v':  # velocity form
-            me = - self.muv
+            me = -self.muv
         else:
             raise RuntimeError('Unknown form >' + form + '<')
         return np.sqrt(self.fij) * me
@@ -88,7 +88,7 @@ class Excitation:
     def get_oscillator_strength(self, form='r'):
         """Return the excitations dipole oscillator strength."""
         me2_c = self.get_dipole_tensor(form).diagonal().real
-        return np.array([np.sum(me2_c) / 3.] + me2_c.tolist())
+        return np.array([np.sum(me2_c) / 3.0] + me2_c.tolist())
 
 
 class ExcitationList(list):
@@ -99,11 +99,10 @@ class ExcitationList(list):
         super().__init__()
 
         # set default energy scale to get eV
-        self.energy_to_eV_scale = 1.
+        self.energy_to_eV_scale = 1.0
 
 
-def polarizability(exlist, omega, form='v',
-                   tensor=False, index=0):
+def polarizability(exlist, omega, form='v', tensor=False, index=0):
     """Evaluate the photon energy dependent polarizability
     from the sum over states
 
@@ -129,21 +128,22 @@ def polarizability(exlist, omega, form='v',
         shape = (omega.shape, 3, 3) else
     """
     omega = np.asarray(omega)
-    om2 = 1. * omega**2
+    om2 = 1.0 * omega**2
     esc = exlist.energy_to_eV_scale
 
     if tensor:
         if not np.isscalar(om2):
             om2 = om2[:, None, None]
-        alpha = np.zeros(omega.shape + (3, 3),
-                         dtype=om2.dtype)
+        alpha = np.zeros(omega.shape + (3, 3), dtype=om2.dtype)
         for ex in exlist:
             alpha += ex.get_dipole_tensor(form=form) / (
-                (ex.energy * esc)**2 - om2)
+                (ex.energy * esc) ** 2 - om2
+            )
     else:
         alpha = np.zeros_like(om2)
         for ex in exlist:
             alpha += ex.get_oscillator_strength(form=form)[index] / (
-                (ex.energy * esc)**2 - om2)
+                (ex.energy * esc) ** 2 - om2
+            )
 
     return alpha * Bohr**2 * Hartree

@@ -85,6 +85,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         Custom instructions on how to execute VASP. Has priority over
         environment variables.
     """
+
     name = 'vasp'
     ase_objtype = 'vasp_calculator'  # For JSON storage
 
@@ -92,23 +93,30 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
     env_commands = ('ASE_VASP_COMMAND', 'VASP_COMMAND', 'VASP_SCRIPT')
 
     implemented_properties = [
-        'energy', 'free_energy', 'forces', 'dipole', 'fermi', 'stress',
-        'magmom', 'magmoms'
+        'energy',
+        'free_energy',
+        'forces',
+        'dipole',
+        'fermi',
+        'stress',
+        'magmom',
+        'magmoms',
     ]
 
     # Can be used later to set some ASE defaults
     default_parameters: Dict[str, Any] = {}
 
-    def __init__(self,
-                 atoms=None,
-                 restart=None,
-                 directory='.',
-                 label='vasp',
-                 ignore_bad_restart_file=Calculator._deprecated,
-                 command=None,
-                 txt='vasp.out',
-                 **kwargs):
-
+    def __init__(
+        self,
+        atoms=None,
+        restart=None,
+        directory='.',
+        label='vasp',
+        ignore_bad_restart_file=Calculator._deprecated,
+        command=None,
+        txt='vasp.out',
+        **kwargs,
+    ):
         self._atoms = None
         self.results = {}
 
@@ -122,13 +130,19 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         # Set directory and label
         self.directory = directory
         if '/' in label:
-            warn(('Specifying directory in "label" is deprecated, '
-                  'use "directory" instead.'), np.VisibleDeprecationWarning)
+            warn(
+                (
+                    'Specifying directory in "label" is deprecated, '
+                    'use "directory" instead.'
+                ),
+                np.VisibleDeprecationWarning,
+            )
             if self.directory != '.':
-                raise ValueError('Directory redundantly specified though '
-                                 'directory="{}" and label="{}".  '
-                                 'Please omit "/" in label.'.format(
-                                     self.directory, label))
+                raise ValueError(
+                    'Directory redundantly specified though '
+                    'directory="{}" and label="{}".  '
+                    'Please omit "/" in label.'.format(self.directory, label)
+                )
             self.label = label
         else:
             self.prefix = label  # The label should only contain the prefix
@@ -146,7 +160,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             # We already, manually, created the label
             label=self.label,
             atoms=atoms,
-            **kwargs)
+            **kwargs,
+        )
 
         self.command = command
 
@@ -186,10 +201,11 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                         cmd = ' '.join([exe, cmd])
                     break
             else:
-                msg = ('Please set either command in calculator'
-                       ' or one of the following environment '
-                       'variables (prioritized as follows): {}').format(
-                           ', '.join(self.env_commands))
+                msg = (
+                    'Please set either command in calculator'
+                    ' or one of the following environment '
+                    'variables (prioritized as follows): {}'
+                ).format(', '.join(self.env_commands))
                 raise calculator.CalculatorSetupError(msg)
         return cmd
 
@@ -285,8 +301,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             elif hasattr(txt, 'write'):
                 out = txt
             else:
-                raise RuntimeError('txt should either be a string'
-                                   'or an I/O stream, got {}'.format(txt))
+                raise RuntimeError(
+                    'txt should either be a string'
+                    'or an I/O stream, got {}'.format(txt)
+                )
 
         try:
             if open_and_close:
@@ -296,10 +314,12 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             if open_and_close:
                 out.close()
 
-    def calculate(self,
-                  atoms=None,
-                  properties=('energy', ),
-                  system_changes=tuple(calculator.all_changes)):
+    def calculate(
+        self,
+        atoms=None,
+        properties=('energy',),
+        system_changes=tuple(calculator.all_changes),
+    ):
         """Do a VASP calculation in the specified directory.
 
         This will generate the necessary VASP input files, and then
@@ -319,14 +339,16 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         self.write_input(self.atoms, properties, system_changes)
 
         with self._txt_outstream() as out:
-            errorcode = self._run(command=command,
-                                  out=out,
-                                  directory=self.directory)
+            errorcode = self._run(
+                command=command, out=out, directory=self.directory
+            )
 
         if errorcode:
             raise calculator.CalculationFailed(
                 '{} in {} returned an error: {:d}'.format(
-                    self.name, Path(self.directory).resolve(), errorcode))
+                    self.name, Path(self.directory).resolve(), errorcode
+                )
+            )
 
         # Read results from calculation
         self.update_atoms(atoms)
@@ -338,14 +360,14 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             command = self.command
         if directory is None:
             directory = self.directory
-        errorcode = subprocess.call(command,
-                                    shell=True,
-                                    stdout=out,
-                                    cwd=directory)
+        errorcode = subprocess.call(
+            command, shell=True, stdout=out, cwd=directory
+        )
         return errorcode
 
     def check_state(self, atoms, tol=1e-15):
         """Check for system changes since last calculation."""
+
         def compare_dict(d1, d2):
             """Helper function to compare dictionaries"""
             # Use symmetric difference to find keys which aren't shared
@@ -384,7 +406,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             list_bool_params=self.list_bool_params.copy(),
             list_float_params=self.list_float_params.copy(),
             dict_params=self.dict_params.copy(),
-            special_params=self.special_params.copy())
+            special_params=self.special_params.copy(),
+        )
 
     def asdict(self):
         """Return a dictionary representation of the calculator state.
@@ -407,7 +430,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         inputs = {
             key: value
             for param_dct in self.param_state.values()
-            for key, value in param_dct.items() if value is not None
+            for key, value in param_dct.items()
+            if value is not None
         }
 
         dct = {
@@ -415,12 +439,13 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             'vasp_version': vaspvers,
             # '__ase_objtype__': self.ase_objtype,
             'inputs': inputs,
-            'results': self.results.copy()
+            'results': self.results.copy(),
         }
 
         if self.atoms:
             # Encode atoms as dict
             from ase.db.row import atoms2dict
+
             dct['atoms'] = atoms2dict(self.atoms)
 
         return dct
@@ -441,6 +466,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             self._store_param_state()
         if 'atoms' in dct:
             from ase.db.row import AtomsRow
+
             atoms = AtomsRow(dct['atoms']).toatoms()
             self.atoms = atoms
         if 'results' in dct:
@@ -492,7 +518,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             file = self._indir(f)
             if not file.is_file():
                 raise calculator.ReadError(
-                    f'VASP outputfile {file} was not found')
+                    f'VASP outputfile {file} was not found'
+                )
 
         # Build sorting and resorting lists
         self.read_sort()
@@ -537,8 +564,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
     def update_atoms(self, atoms):
         """Update the atoms object with new positions and cell"""
-        if (self.int_params['ibrion'] is not None
-                and self.int_params['nsw'] is not None):
+        if (
+            self.int_params['ibrion'] is not None
+            and self.int_params['nsw'] is not None
+        ):
             if self.int_params['ibrion'] > -1 and self.int_params['nsw'] > 0:
                 # Update atomic positions and unit cell with the ones read
                 # from CONTCAR.
@@ -578,7 +607,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         dipole = self.read_dipole(lines=outcar)
         nbands = self.read_nbands(lines=outcar)
         self.results.update(
-            dict(magmom=magmom, magmoms=magmoms, dipole=dipole, nbands=nbands))
+            dict(magmom=magmom, magmoms=magmoms, dipole=dipole, nbands=nbands)
+        )
 
         # Stress is not always present.
         # Prevent calculation from going into a loop
@@ -688,8 +718,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         self.nbands = self.read_nbands(lines=lines)
 
         self.read_ldau()
-        self.magnetic_moment, self.magnetic_moments = self.read_mag(
-            lines=lines)
+        self.magnetic_moment, self.magnetic_moments = self.read_mag(lines=lines)
 
     def _read_xml(self) -> SinglePointDFTCalculator:
         """Read vasprun.xml, and return the last calculator object.
@@ -699,7 +728,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         file = self._indir('vasprun.xml')
         incomplete_msg = (
             f'The file "{file}" is incomplete, and no DFT data was available. '
-            'This is likely due to an incomplete calculation.')
+            'This is likely due to an incomplete calculation.'
+        )
         try:
             _xml_atoms = read(file, index=-1, format='vasp-xml')
             # Silence mypy, we should only ever get a single atoms object
@@ -716,8 +746,10 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
     @property
     def _xml_calc(self) -> SinglePointDFTCalculator:
         if self.__xml_calc is None:
-            raise RuntimeError('vasprun.xml data has not yet been loaded. '
-                               'Run read_results() first.')
+            raise RuntimeError(
+                'vasprun.xml data has not yet been loaded. '
+                'Run read_results() first.'
+            )
         return self.__xml_calc
 
     @_xml_calc.setter
@@ -786,6 +818,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         (energies, dos).
         """
         from ase.dft.dos import DOS
+
         dos = DOS(self, **kwargs)
         e = dos.get_energies()
         d = dos.get_dos(spin=spin)
@@ -806,7 +839,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         with self.load_file_iter('OUTCAR') as lines:
             for line in lines:
                 if ' vasp.' in line:
-                    return line[len(' vasp.'):].split()[0]
+                    return line[len(' vasp.') :].split()[0]
         # We didn't find the version in VASP
         return None
 
@@ -877,7 +910,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                 ldau_luj[symbol] = {
                     'L': int(L[i]),
                     'U': float(U[i]),
-                    'J': float(J[i])
+                    'J': float(J[i]),
                 }
             self.dict_params['ldau_luj'] = ldau_luj
 
@@ -946,7 +979,9 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                 for i in range(len(self.atoms)):
                     forces.append(
                         np.array(
-                            [float(f) for f in lines[n + 2 + i].split()[3:6]]))
+                            [float(f) for f in lines[n + 2 + i].split()[3:6]]
+                        )
+                    )
 
                 if all:
                     all_forces.append(np.array(forces)[self.resort])
@@ -984,13 +1019,16 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         q = self.list_float_params
         if self.spinpol:
             magnetic_moment = self._read_magnetic_moment(lines=lines)
-            if ((p['lorbit'] is not None and p['lorbit'] >= 10)
-                    or (p['lorbit'] is None and q['rwigs'])):
+            if (p['lorbit'] is not None and p['lorbit'] >= 10) or (
+                p['lorbit'] is None and q['rwigs']
+            ):
                 magnetic_moments = self._read_magnetic_moments(lines=lines)
             else:
-                warn('Magnetic moment data not written in OUTCAR (LORBIT<10),'
-                     ' setting magnetic_moments to zero.\nSet LORBIT>=10'
-                     ' to get information on magnetic moments')
+                warn(
+                    'Magnetic moment data not written in OUTCAR (LORBIT<10),'
+                    ' setting magnetic_moments to zero.\nSet LORBIT>=10'
+                    ' to get information on magnetic moments'
+                )
                 magnetic_moments = np.zeros(len(self.atoms))
         else:
             magnetic_moment = 0.0
@@ -999,7 +1037,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
     def _read_magnetic_moments(self, lines=None):
         """Read magnetic moments from OUTCAR.
-        Only reads the last occurrence. """
+        Only reads the last occurrence."""
         if not lines:
             lines = self.load_file('OUTCAR')
 
@@ -1026,7 +1064,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         for line in lines:
             if 'number of electron  ' in line:
                 _ = line.split()[-1]
-                magnetic_moment = 0.0 if _ == "magnetization" else float(_)
+                magnetic_moment = 0.0 if _ == 'magnetization' else float(_)
         return magnetic_moment
 
     def read_nbands(self, lines=None):
@@ -1079,8 +1117,9 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                     continue
         # Then if ibrion in [1,2,3] check whether ionic relaxation
         # condition been fulfilled
-        if (self.int_params['ibrion'] in [1, 2, 3]
-                and self.int_params['nsw'] not in [0]):
+        if self.int_params['ibrion'] in [1, 2, 3] and self.int_params[
+            'nsw'
+        ] not in [0]:
             if not self.read_relaxed():
                 converged = False
             else:
@@ -1131,8 +1170,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
     def strip_warnings(self, line):
         """Returns empty string instead of line from warnings in OUTCAR."""
-        if line[0] == "|":
-            return ""
+        if line[0] == '|':
+            return ''
         return line
 
     @property
@@ -1197,25 +1236,33 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             for event, elem in tree:
                 if elem.tag == 'dynmat':
                     for i, entry in enumerate(
-                            elem.findall('varray[@name="hessian"]/v')):
+                        elem.findall('varray[@name="hessian"]/v')
+                    ):
                         text_split = entry.text.split()
                         if not text_split:
                             raise ElementTree.ParseError(
-                                "Could not find varray hessian!")
+                                'Could not find varray hessian!'
+                            )
                         if i == 0:
                             n_items = len(text_split)
                             hessian = np.zeros((n_items, n_items))
                         assert isinstance(hessian, np.ndarray)
                         hessian[i, :] = np.array(
-                            [float(val) for val in text_split])
+                            [float(val) for val in text_split]
+                        )
                     if i != n_items - 1:
                         raise ElementTree.ParseError(
-                            "Hessian is not quadratic!")
+                            'Hessian is not quadratic!'
+                        )
                     # VASP6+ uses THz**2 as unit, not mEV**2 as before
                     for entry in elem.findall('i[@name="unit"]'):
                         if entry.text.strip() == 'THz^2':
-                            conv = ase.units._amu / ase.units._e / \
-                                1e-4 * (2 * np.pi)**2  # THz**2 to eV**2
+                            conv = (
+                                ase.units._amu
+                                / ase.units._e
+                                / 1e-4
+                                * (2 * np.pi) ** 2
+                            )  # THz**2 to eV**2
                             # VASP6 uses factor 2pi
                             # 1e-4 = (angstrom to meter times Hz to THz) squared
                             # = (1e10 times 1e-12)**2
@@ -1225,7 +1272,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                                 f'The file "{file}" is from a '
                                 'non-supported VASP version. '
                                 'Not sure what unit the Hessian '
-                                'is in, aborting.')
+                                'is in, aborting.'
+                            )
                             raise calculator.ReadError(vasp_version_error_msg)
 
                     else:
@@ -1233,13 +1281,14 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                     assert isinstance(hessian, np.ndarray)
                     hessian *= conv
             if hessian is None:
-                raise ElementTree.ParseError("Hessian is None!")
+                raise ElementTree.ParseError('Hessian is None!')
 
         except ElementTree.ParseError as exc:
             incomplete_msg = (
                 f'The file "{file}" is incomplete, '
                 'and no DFT data was available. '
-                'This is likely due to an incomplete calculation.')
+                'This is likely due to an incomplete calculation.'
+            )
             raise calculator.ReadError(incomplete_msg) from exc
         # VASP uses the negative definition of the hessian compared to ASE
         return -hessian
@@ -1265,19 +1314,22 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         # save the corresponding sorted atom numbers
         sort_indices = np.array(self.sort)[indices]
         # mass weights = 1/sqrt(mass)
-        mass_weights = np.repeat(self.atoms.get_masses()[sort_indices]**-0.5, 3)
+        mass_weights = np.repeat(
+            self.atoms.get_masses()[sort_indices] ** -0.5, 3
+        )
         # get the unweighted hessian = H_w / m_w / m_w^T
         # ugly and twice the work, but needed since vasprun.xml does
         # not have the unweighted ase.vibrations.vibration will do the
         # opposite in Vibrations.read
-        hessian = mass_weighted_hessian / \
-            mass_weights / mass_weights[:, np.newaxis]
+        hessian = (
+            mass_weighted_hessian / mass_weights / mass_weights[:, np.newaxis]
+        )
 
         return VibrationsData.from_2d(self.atoms[self.sort], hessian, indices)
 
     def get_nonselfconsistent_energies(self, bee_type):
-        """ Method that reads and returns BEE energy contributions
-            written in OUTCAR file.
+        """Method that reads and returns BEE energy contributions
+        written in OUTCAR file.
         """
         assert bee_type == 'beefvdw'
         cmd = 'grep -32 "BEEF xc energy contributions" OUTCAR | tail -32'
@@ -1286,7 +1338,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         p.close()
         xc = np.array([])
         for line in s:
-            l_ = float(line.split(":")[-1])
+            l_ = float(line.split(':')[-1])
             xc = np.append(xc, l_)
         assert len(xc) == 32
         return xc
@@ -1315,9 +1367,10 @@ def check_cell(atoms: ase.Atoms) -> None:
     """
     if atoms.cell.rank < 3:
         raise calculator.CalculatorSetupError(
-            "The lattice vectors are zero! "
-            "This is the default value - please specify a "
-            "unit cell.")
+            'The lattice vectors are zero! '
+            'This is the default value - please specify a '
+            'unit cell.'
+        )
 
 
 def check_pbc(atoms: ase.Atoms) -> None:
@@ -1327,8 +1380,9 @@ def check_pbc(atoms: ase.Atoms) -> None:
     """
     if not atoms.pbc.all():
         raise calculator.CalculatorSetupError(
-            "Vasp cannot handle non-periodic boundaries. "
-            "Please enable all PBC, e.g. atoms.pbc=True")
+            'Vasp cannot handle non-periodic boundaries. '
+            'Please enable all PBC, e.g. atoms.pbc=True'
+        )
 
 
 def check_atoms_type(atoms: ase.Atoms) -> None:
@@ -1337,5 +1391,7 @@ def check_atoms_type(atoms: ase.Atoms) -> None:
     """
     if not isinstance(atoms, ase.Atoms):
         raise calculator.CalculatorSetupError(
-            'Expected an Atoms object, '
-            'instead got object of type {}'.format(type(atoms)))
+            'Expected an Atoms object, ' 'instead got object of type {}'.format(
+                type(atoms)
+            )
+        )

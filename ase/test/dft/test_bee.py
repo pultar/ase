@@ -6,6 +6,7 @@ from ase.dft.bee import BEEFEnsemble, ensemble, readbee
 
 class BEECalculator:
     """Fake DFT calculator."""
+
     atoms = None
 
     def __init__(self, name):
@@ -15,9 +16,7 @@ class BEECalculator:
         return self.name
 
     def get_nonselfconsistent_energies(self, beef_type: str) -> np.ndarray:
-        n = {'mbeef': 64,
-             'beefvdw': 32,
-             'mbeefvdw': 28}[beef_type]
+        n = {'mbeef': 64, 'beefvdw': 32, 'mbeefvdw': 28}[beef_type]
         return np.linspace(-1, 1, n)
 
     def get_potential_energy(self, atoms):

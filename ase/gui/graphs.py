@@ -6,7 +6,8 @@ import numpy as np
 import ase.gui.ui as ui
 from ase.gui.i18n import _
 
-graph_help_text = _("""\
+graph_help_text = _(
+    """\
 Symbols:
 <c>e</c>: total energy
 <c>epot</c>: potential energy
@@ -28,7 +29,8 @@ Symbols:
 <c>dih(n1,n2,n3,n4)</c>: dihedral angle between <c>n<sub>1</sub></c>, \
 <c>n<sub>2</sub></c>, <c>n<sub>3</sub></c> and <c>n<sub>4</sub></c>
 <c>T</c>: temperature (K)\
-""")
+"""
+)
 
 
 class Graphs:
@@ -37,10 +39,8 @@ class Graphs:
         self.expr = ui.Entry('', 50, self.plot)
         win.add([self.expr, ui.helpbutton(graph_help_text)])
 
-        win.add([ui.Button(_('Plot'), self.plot, 'xy'),
-                 ' x, y1, y2, ...'], 'w')
-        win.add([ui.Button(_('Plot'), self.plot, 'y'),
-                 ' y1, y2, ...'], 'w')
+        win.add([ui.Button(_('Plot'), self.plot, 'xy'), ' x, y1, y2, ...'], 'w')
+        win.add([ui.Button(_('Plot'), self.plot, 'y'), ' y1, y2, ...'], 'w')
         win.add([ui.Button(_('Save'), self.save)], 'w')
 
         self.gui = gui
@@ -63,8 +63,9 @@ class Graphs:
         self.gui.pipe('graph', pickledata)
 
     def save(self):
-        dialog = ui.SaveFileDialog(self.gui.window.win,
-                                   _('Save data to file ... '))
+        dialog = ui.SaveFileDialog(
+            self.gui.window.win, _('Save data to file ... ')
+        )
         # fix tkinter not automatically setting dialog type
         # remove from Python3.8+
         # see https://github.com/python/cpython/pull/25187
@@ -80,6 +81,7 @@ class Graphs:
 
 def make_plot(data, i, expr, type, show=True):
     import matplotlib.pyplot as plt
+
     basesize = 4
     plt.figure(figsize=(basesize * 2.5**0.5, basesize))
     m = len(data)

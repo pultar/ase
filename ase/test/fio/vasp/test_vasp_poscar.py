@@ -8,7 +8,7 @@ from ase.calculators.calculator import compare_atoms
 from ase.io import read, write
 
 
-@pytest.fixture(name="atoms")
+@pytest.fixture(name='atoms')
 def fixture_atoms():
     _atoms = bulk('NaCl', crystalstructure='rocksalt', a=4.1, cubic=True)
     _atoms.wrap()
@@ -52,7 +52,7 @@ Cartesian
 
 def test_read_negative_scaling_factor():
     """Test negative scaling factor"""
-    atoms = read(io.StringIO(BUF_NEGATIVE), format="vasp")
+    atoms = read(io.StringIO(BUF_NEGATIVE), format='vasp')
     cell_ref = [[2, 0, 0], [4, 6, 0], [-6, 2, 10]]
     positions_ref = [[0.2, 0.4, 0.6]]
     np.testing.assert_allclose(atoms.cell, cell_ref)
@@ -74,7 +74,7 @@ Cartesian
 
 def test_read_multiple_scaling_factors():
     """Test multiple scaling factors"""
-    atoms = read(io.StringIO(BUF_MULTIPLE), format="vasp")
+    atoms = read(io.StringIO(BUF_MULTIPLE), format='vasp')
     cell_ref = [[3, 0, 0], [6, 6, 0], [-9, 2, 5]]
     positions_ref = [[0.3, 0.4, 0.3]]
     np.testing.assert_allclose(atoms.cell, cell_ref)

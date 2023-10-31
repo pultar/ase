@@ -5,7 +5,7 @@ from ase import Atoms
 
 
 @pytest.mark.calculator_lite
-@pytest.mark.calculator("lammpslib")
+@pytest.mark.calculator('lammpslib')
 def test_lammpslib_small_nonperiodic(factory, dimer_params, calc_params_NiH):
     """Test that lammpslib handle nonperiodic cases where the cell size
     in some directions is small (for example for a dimer)"""
@@ -19,7 +19,7 @@ def test_lammpslib_small_nonperiodic(factory, dimer_params, calc_params_NiH):
     # Check energy
     energy_ref = -1.10756669119
     energy = dimer.get_potential_energy()
-    print(f"Computed energy: {energy}")
+    print(f'Computed energy: {energy}')
     assert energy == pytest.approx(energy_ref, rel=1e-4)
 
     # Check forces
@@ -27,7 +27,7 @@ def test_lammpslib_small_nonperiodic(factory, dimer_params, calc_params_NiH):
         [[-0.9420162329811532, 0.0, 0.0], [+0.9420162329811532, 0.0, 0.0]]
     )
     forces = dimer.get_forces()
-    print("Computed forces:")
+    print('Computed forces:')
     print(np.array2string(forces))
     assert forces == pytest.approx(forces_ref, rel=1e-4)
 

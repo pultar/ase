@@ -6,15 +6,18 @@ Run pw.x jobs.
 
 import os
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           read_stdout)
+from ase.calculators.genericfileio import (
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+    read_stdout,
+)
 from ase.io import read, write
 
 compatibility_msg = (
     'Espresso calculator is being restructured.  Please use e.g. '
-    'Espresso(profile=EspressoProfile(argv=[\'mpiexec\', \'pw.x\'])) '
-    'to customize command-line arguments.')
+    "Espresso(profile=EspressoProfile(argv=['mpiexec', 'pw.x'])) "
+    'to customize command-line arguments.'
+)
 
 
 # XXX We should find a way to display this warning.
@@ -31,6 +34,7 @@ class EspressoProfile:
     @staticmethod
     def parse_version(stdout):
         import re
+
         match = re.match(r'\s*Program PWSCF\s*v\.(\S+)', stdout, re.M)
         assert match is not None
         return match.group(1)
@@ -42,6 +46,7 @@ class EspressoProfile:
     def run(self, directory, inputfile, outputfile):
         import os
         from subprocess import check_call
+
         argv = list(self.argv) + ['-in', str(inputfile)]
         with open(directory / outputfile, 'wb') as fd:
             check_call(argv, cwd=directory, stdout=fd, env=os.environ)
@@ -51,19 +56,23 @@ class EspressoTemplate(CalculatorTemplate):
     def __init__(self):
         super().__init__(
             'espresso',
-            ['energy', 'free_energy', 'forces', 'stress', 'magmoms', 'dipole'])
+            ['energy', 'free_energy', 'forces', 'stress', 'magmoms', 'dipole'],
+        )
         self.inputname = 'espresso.pwi'
         self.outputname = 'espresso.pwo'
 
     def write_input(self, directory, atoms, parameters, properties):
         dst = directory / self.inputname
-        write(dst, atoms, format='espresso-in', properties=properties,
-              **parameters)
+        write(
+            dst,
+            atoms,
+            format='espresso-in',
+            properties=properties,
+            **parameters,
+        )
 
     def execute(self, directory, profile):
-        profile.run(directory,
-                    self.inputname,
-                    self.outputname)
+        profile.run(directory, self.inputname, self.outputname)
 
     def read_results(self, directory):
         path = directory / self.outputname
@@ -82,11 +91,15 @@ class EspressoTemplate(CalculatorTemplate):
 
 
 class Espresso(GenericFileIOCalculator):
-    def __init__(self, *, profile=None,
-                 command=GenericFileIOCalculator._deprecated,
-                 label=GenericFileIOCalculator._deprecated,
-                 directory='.',
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        profile=None,
+        command=GenericFileIOCalculator._deprecated,
+        label=GenericFileIOCalculator._deprecated,
+        directory='.',
+        **kwargs,
+    ):
         """
         All options for pw.x are copied verbatim to the input file, and put
         into the correct section. Use ``input_data`` for parameters that are
@@ -166,16 +179,22 @@ class Espresso(GenericFileIOCalculator):
 
         if label is not self._deprecated:
             import warnings
-            warnings.warn('Ignoring label, please use directory instead',
-                          FutureWarning)
+
+            warnings.warn(
+                'Ignoring label, please use directory instead', FutureWarning
+            )
 
         if 'ASE_ESPRESSO_COMMAND' in os.environ and profile is None:
             import warnings
+
             warnings.warn(compatibility_msg, FutureWarning)
 
         template = EspressoTemplate()
         if profile is None:
             profile = EspressoProfile(argv=['pw.x'])
-        super().__init__(profile=profile, template=template,
-                         directory=directory,
-                         parameters=kwargs)
+        super().__init__(
+            profile=profile,
+            template=template,
+            directory=directory,
+            parameters=kwargs,
+        )

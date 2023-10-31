@@ -10,8 +10,12 @@ class SubprocessRunResults:
     """Results returned from subprocess.run()."""
 
     def __init__(
-            self, stdout, stderr, return_code: int,
-            process_time: Optional[float] = None):
+        self,
+        stdout,
+        stderr,
+        return_code: int,
+        process_time: Optional[float] = None,
+    ):
         self.stdout = stdout
         self.stderr = stderr
         self.return_code = return_code
@@ -21,14 +25,17 @@ class SubprocessRunResults:
 
 class SimpleBinaryRunner:
     """Class to execute a subprocess."""
+
     path_type = Union[str, Path]
 
-    def __init__(self,
-                 binary,
-                 run_argv: List[str],
-                 omp_num_threads: int,
-                 directory: path_type = './',
-                 args=None) -> None:
+    def __init__(
+        self,
+        binary,
+        run_argv: List[str],
+        omp_num_threads: int,
+        directory: path_type = './',
+        args=None,
+    ) -> None:
         """Initialise class.
 
         :param binary: Binary name prepended by full path, or just binary name
@@ -51,10 +58,10 @@ class SimpleBinaryRunner:
         self.args = args
 
         if directory is not None and not Path(directory).is_dir():
-            raise OSError(f"Run directory does not exist: {directory}")
+            raise OSError(f'Run directory does not exist: {directory}')
 
         if omp_num_threads <= 0:
-            raise ValueError("Number of OMP threads must be > 0")
+            raise ValueError('Number of OMP threads must be > 0')
 
     def compose_execution_list(self) -> list:
         """Generate a complete list of strings to pass to subprocess.run().
@@ -74,11 +81,14 @@ class SimpleBinaryRunner:
         my_env = {**os.environ}
 
         time_start: float = time.time()
-        result = subprocess.run(execution_list,
-                                env=my_env,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                cwd=self.directory)
+        result = subprocess.run(
+            execution_list,
+            env=my_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.directory,
+        )
         total_time = time.time() - time_start
         return SubprocessRunResults(
-            result.stdout, result.stderr, result.returncode, total_time)
+            result.stdout, result.stderr, result.returncode, total_time
+        )

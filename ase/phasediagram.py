@@ -102,9 +102,9 @@ def bisect(A, X, Y, f):
         return
     i = len(X) // 2
     j = len(Y) // 2
-    bisect(A[:i + 1, :j + 1], X[:i + 1], Y[:j + 1], f)
-    bisect(A[:i + 1, j:], X[:i + 1], Y[j:], f)
-    bisect(A[i:, :j + 1], X[i:], Y[:j + 1], f)
+    bisect(A[: i + 1, : j + 1], X[: i + 1], Y[: j + 1], f)
+    bisect(A[: i + 1, j:], X[: i + 1], Y[j:], f)
+    bisect(A[i:, : j + 1], X[i:], Y[: j + 1], f)
     bisect(A[i:, j:], X[i:], Y[j:], f)
 
 
@@ -243,17 +243,15 @@ class Pourbaix:
                 if aq:
                     energy -= entropy
             if verbose:
-                print('{:<5}{:10}{:10.3f}'.format(len(energies),
-                                                  name, energy))
+                print('{:<5}{:10}{:10.3f}'.format(len(energies), name, energy))
             energies.append(energy)
             names.append(name)
 
         from scipy.optimize import linprog
 
-        result = linprog(c=energies,
-                         A_eq=np.transpose(eq2),
-                         b_eq=eq1,
-                         bounds=bounds)
+        result = linprog(
+            c=energies, A_eq=np.transpose(eq2), b_eq=eq1, bounds=bounds
+        )
 
         if verbose:
             print_results(zip(names, result.x, energies))
@@ -283,12 +281,14 @@ class Pourbaix:
         compositions = [None] * len(colors)
         names = [ref[-1] for ref in self.references]
         for indices, color in colors.items():
-            compositions[color] = ' + '.join(names[i] for i in indices
-                                             if names[i] not in
-                                             ['H2O(aq)', 'H+(aq)', 'e-'])
+            compositions[color] = ' + '.join(
+                names[i]
+                for i in indices
+                if names[i] not in ['H2O(aq)', 'H+(aq)', 'e-']
+            )
         text = []
         for i, name in enumerate(compositions):
-            b = (a == i)
+            b = a == i
             x = np.dot(b.sum(1), U) / b.sum()
             y = np.dot(b.sum(0), pH) / b.sum()
             name = re.sub(r'(\S)([+-]+)', r'\1$^{\2}$', name)
@@ -298,6 +298,7 @@ class Pourbaix:
         if plot:
             import matplotlib.cm as cm
             import matplotlib.pyplot as plt
+
             if ax is None:
                 ax = plt.gca()
 
@@ -305,10 +306,13 @@ class Pourbaix:
             # white border.  Unrasterized pcolormesh produces
             # unreasonably large files.  Avoid this by using the more
             # general imshow.
-            ax.imshow(a, cmap=cm.Accent,
-                      extent=[min(pH), max(pH), min(U), max(U)],
-                      origin='lower',
-                      aspect='auto')
+            ax.imshow(
+                a,
+                cmap=cm.Accent,
+                extent=[min(pH), max(pH), min(U), max(U)],
+                origin='lower',
+                aspect='auto',
+            )
 
             for x, y, name in text:
                 ax.text(y, x, name, horizontalalignment='center')
@@ -348,9 +352,11 @@ class PhaseDiagram:
         """
 
         if not references:
-            raise ValueError("You must provide a non-empty list of references"
-                             " for the phase diagram! "
-                             "You have provided '{}'".format(references))
+            raise ValueError(
+                'You must provide a non-empty list of references'
+                ' for the phase diagram! '
+                "You have provided '{}'".format(references)
+            )
         filter = parse_formula(filter)[0]
 
         self.verbose = verbose
@@ -494,13 +500,15 @@ class PhaseDiagram:
             if dims == 3:
                 projection = '3d'
                 from mpl_toolkits.mplot3d import Axes3D
+
                 Axes3D  # silence pyflakes
             fig = plt.figure()
             ax = fig.add_subplot(projection=projection)
         else:
             if dims == 3 and not hasattr(ax, 'set_zlim'):
-                raise ValueError('Cannot make 3d plot unless axes projection '
-                                 'is 3d')
+                raise ValueError(
+                    'Cannot make 3d plot unless axes projection ' 'is 3d'
+                )
 
         if dims == 2:
             if N == 2:
@@ -508,25 +516,29 @@ class PhaseDiagram:
             elif N == 3:
                 self.plot2d3(ax)
             else:
-                raise ValueError('Can only make 2-d plots for 2 and 3 '
-                                 'component systems!')
+                raise ValueError(
+                    'Can only make 2-d plots for 2 and 3 ' 'component systems!'
+                )
         else:
             if N == 3:
                 self.plot3d3(ax)
             elif N == 4:
                 self.plot3d4(ax)
             else:
-                raise ValueError('Can only make 3-d plots for 3 and 4 '
-                                 'component systems!')
+                raise ValueError(
+                    'Can only make 3-d plots for 3 and 4 ' 'component systems!'
+                )
         if show:
             plt.show()
         return ax
 
-    def plot2d2(self, ax=None,
-                only_label_simplices=False, only_plot_simplices=False):
+    def plot2d2(
+        self, ax=None, only_label_simplices=False, only_plot_simplices=False
+    ):
         x, e = self.points[:, 1:].T
-        names = [re.sub(r'(\d+)', r'$_{\1}$', ref[2])
-                 for ref in self.references]
+        names = [
+            re.sub(r'(\d+)', r'$_{\1}$', ref[2]) for ref in self.references
+        ]
         hull = self.hull
         simplices = self.simplices
         xlabel = self.symbols[1]
@@ -555,8 +567,9 @@ class PhaseDiagram:
         x, y = self.points[:, 1:-1].T.copy()
         x += y / 2
         y *= 3**0.5 / 2
-        names = [re.sub(r'(\d+)', r'$_{\1}$', ref[2])
-                 for ref in self.references]
+        names = [
+            re.sub(r'(\d+)', r'$_{\1}$', ref[2]) for ref in self.references
+        ]
         hull = self.hull
         simplices = self.simplices
 
@@ -573,19 +586,17 @@ class PhaseDiagram:
     def plot3d3(self, ax):
         x, y, e = self.points[:, 1:].T
 
-        ax.scatter(x[self.hull], y[self.hull], e[self.hull],
-                   c='g', marker='o')
-        ax.scatter(x[~self.hull], y[~self.hull], e[~self.hull],
-                   c='r', marker='s')
+        ax.scatter(x[self.hull], y[self.hull], e[self.hull], c='g', marker='o')
+        ax.scatter(
+            x[~self.hull], y[~self.hull], e[~self.hull], c='r', marker='s'
+        )
 
         for a, b, c, ref in zip(x, y, e, self.references):
             name = re.sub(r'(\d+)', r'$_{\1}$', ref[2])
             ax.text(a, b, c, name, ha='center', va='bottom')
 
         for i, j, k in self.simplices:
-            ax.plot(x[[i, j, k, i]],
-                    y[[i, j, k, i]],
-                    zs=e[[i, j, k, i]], c='b')
+            ax.plot(x[[i, j, k, i]], y[[i, j, k, i]], zs=e[[i, j, k, i]], c='b')
 
         ax.set_xlim3d(0, 1)
         ax.set_ylim3d(0, 1)
@@ -598,21 +609,24 @@ class PhaseDiagram:
         x, y, z = self.points[:, 1:-1].T
         a = x / 2 + y + z / 2
         b = 3**0.5 * (x / 2 + y / 6)
-        c = (2 / 3)**0.5 * z
+        c = (2 / 3) ** 0.5 * z
 
-        ax.scatter(a[self.hull], b[self.hull], c[self.hull],
-                   c='g', marker='o')
-        ax.scatter(a[~self.hull], b[~self.hull], c[~self.hull],
-                   c='r', marker='s')
+        ax.scatter(a[self.hull], b[self.hull], c[self.hull], c='g', marker='o')
+        ax.scatter(
+            a[~self.hull], b[~self.hull], c[~self.hull], c='r', marker='s'
+        )
 
         for x, y, z, ref in zip(a, b, c, self.references):
             name = re.sub(r'(\d+)', r'$_{\1}$', ref[2])
             ax.text(x, y, z, name, ha='center', va='bottom')
 
         for i, j, k, w in self.simplices:
-            ax.plot(a[[i, j, k, i, w, k, j, w]],
-                    b[[i, j, k, i, w, k, j, w]],
-                    zs=c[[i, j, k, i, w, k, j, w]], c='b')
+            ax.plot(
+                a[[i, j, k, i, w, k, j, w]],
+                b[[i, j, k, i, w, k, j, w]],
+                zs=c[[i, j, k, i, w, k, j, w]],
+                c='b',
+            )
 
         ax.set_xlim3d(0, 1)
         ax.set_ylim3d(0, 1)

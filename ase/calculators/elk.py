@@ -30,11 +30,13 @@ class ELK(FileIOCalculator, GetOutputsMixin):
             parameters['tforce'] = True
 
         directory = Path(self.directory)
-        write(directory / 'elk.in', atoms, parameters=parameters,
-              format='elk-in')
+        write(
+            directory / 'elk.in', atoms, parameters=parameters, format='elk-in'
+        )
 
     def read_results(self):
         from ase.outputs import Properties
+
         reader = ElkReader(self.directory)
         dct = dict(reader.read_everything())
 

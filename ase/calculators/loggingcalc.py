@@ -19,6 +19,7 @@ class LoggingCalculator(Calculator):
     """Calculator wrapper to record and plot history of energy and function
     evaluations
     """
+
     implemented_properties = all_properties
     default_parameters: Dict[str, Any] = {}
     name = 'LoggingCalculator'
@@ -28,7 +29,8 @@ class LoggingCalculator(Calculator):
         'energies': 'get_potential_energies',
         'forces': 'get_forces',
         'stress': 'get_stress',
-        'stresses': 'get_stresses'}
+        'stresses': 'get_stresses',
+    }
 
     def __init__(self, calculator, jsonfile=None, dumpjson=False):
         Calculator.__init__(self)
@@ -46,8 +48,9 @@ class LoggingCalculator(Calculator):
         Calculator.calculate(self, atoms, properties, system_changes)
 
         if isinstance(self.calculator, Calculator):
-            results = [self.calculator.get_property(prop, atoms)
-                       for prop in properties]
+            results = [
+                self.calculator.get_property(prop, atoms) for prop in properties
+            ]
         else:
             results = []
             for prop in properties:
@@ -62,8 +65,11 @@ class LoggingCalculator(Calculator):
                 energy = results[properties.index('energy')]
             except IndexError:
                 energy = sum(results[properties.index('energies')])
-            logger.info('energy call count=%d energy=%.3f',
-                        self.energy_evals[self.label], energy)
+            logger.info(
+                'energy call count=%d energy=%.3f',
+                self.energy_evals[self.label],
+                energy,
+            )
         self.results = dict(zip(properties, results))
 
         if 'forces' in self.results:
@@ -84,10 +90,15 @@ class LoggingCalculator(Calculator):
 
     def write_json(self, filename):
         with open(filename, 'w') as fd:
-            json.dump({'fmax': self.fmax,
-                       'walltime': self.walltime,
-                       'energy_evals': self.energy_evals,
-                       'energy_count': self.energy_count}, fd)
+            json.dump(
+                {
+                    'fmax': self.fmax,
+                    'walltime': self.walltime,
+                    'energy_evals': self.energy_evals,
+                    'energy_count': self.energy_count,
+                },
+                fd,
+            )
 
     def read_json(self, filename, append=False, label=None):
         with open(filename) as fd:
@@ -115,34 +126,58 @@ class LoggingCalculator(Calculator):
         print('-' * len(title))
         fmt2 = '%-10s %10d %10d %8.2f'
         for label in sorted(self.fmax.keys()):
-            print(fmt2 % (label, len(self.fmax[label]),
-                          len(self.energy_count[label]),
-                          self.walltime[label][-1] - self.walltime[label][0]))
+            print(
+                fmt2
+                % (
+                    label,
+                    len(self.fmax[label]),
+                    len(self.energy_count[label]),
+                    self.walltime[label][-1] - self.walltime[label][0],
+                )
+            )
 
-    def plot(self, fmaxlim=(1e-2, 1e2), forces=True, energy=True,
-             walltime=True,
-             markers=None, labels=None, **kwargs):
+    def plot(
+        self,
+        fmaxlim=(1e-2, 1e2),
+        forces=True,
+        energy=True,
+        walltime=True,
+        markers=None,
+        labels=None,
+        **kwargs,
+    ):
         import matplotlib.pyplot as plt
 
         if markers is None:
-            markers = [c + s for c in ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-                       for s in ['.-', '.--']]
+            markers = [
+                c + s
+                for c in ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+                for s in ['.-', '.--']
+            ]
         nsub = sum([forces, energy, walltime])
         nplot = 0
 
         if labels is not None:
-            fmax_values = [v for (k, v) in sorted(zip(self.fmax.keys(),
-                                                      self.fmax.values()))]
+            fmax_values = [
+                v
+                for (k, v) in sorted(zip(self.fmax.keys(), self.fmax.values()))
+            ]
             self.fmax = dict(zip(labels, fmax_values))
 
-            energy_count_values = [v for (k, v) in
-                                   sorted(zip(self.energy_count.keys(),
-                                              self.energy_count.values()))]
+            energy_count_values = [
+                v
+                for (k, v) in sorted(
+                    zip(self.energy_count.keys(), self.energy_count.values())
+                )
+            ]
             self.energy_count = dict(zip(labels, energy_count_values))
 
-            walltime_values = [v for (k, v) in
-                               sorted(zip(self.walltime.keys(),
-                                          self.walltime.values()))]
+            walltime_values = [
+                v
+                for (k, v) in sorted(
+                    zip(self.walltime.keys(), self.walltime.values())
+                )
+            ]
             self.walltime = dict(zip(labels, walltime_values))
 
         if forces:

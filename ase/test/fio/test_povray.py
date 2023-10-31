@@ -7,8 +7,12 @@ from ase import Atoms
 from ase.build import molecule
 from ase.cell import Cell
 from ase.io import write
-from ase.io.pov import (POVRAYIsosurface, get_bondpairs,
-                        set_high_bondorder_pairs, write_pov)
+from ase.io.pov import (
+    POVRAYIsosurface,
+    get_bondpairs,
+    set_high_bondorder_pairs,
+    write_pov,
+)
 
 
 def test_povray_io(testdir, povray_executable):
@@ -33,7 +37,8 @@ def test_povray_highorder(testdir, povray_executable):
     bondpairs = set_high_bondorder_pairs(bondpairs, high_bondorder_pairs)
 
     renderer = write_pov(
-        'atoms.pov', atoms,
+        'atoms.pov',
+        atoms,
         povray_settings=dict(canvas_width=50, bondatoms=bondpairs),
         radii=radii,
     )
@@ -65,10 +70,8 @@ def isosurface_things(skimage):
 
     # This is the step which requires scikit-image:
     surface = POVRAYIsosurface(
-        density_grid=values,
-        cut_off=0.12345,
-        cell=cell,
-        cell_origin=(0, 0, 0))
+        density_grid=values, cut_off=0.12345, cell=cell, cell_origin=(0, 0, 0)
+    )
 
     return cell, center_cell_position, surface
 
@@ -86,7 +89,8 @@ def test_render_isosurface(testdir, isosurface_things, povray_executable):
     atoms = Atoms(
         'H3',
         scaled_positions=[[0, 0, 0], [1 / 3, 0, 0], [2 / 3, 0, 0]],
-        cell=cell)
+        cell=cell,
+    )
 
     renderer = write('tmp.pov', atoms, isosurface_data=[isosurf])
     png_path = renderer.render(povray_executable=povray_executable)

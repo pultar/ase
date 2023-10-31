@@ -55,8 +55,15 @@ class Res:
         The number of times the structure was found.
     """
 
-    def __init__(self, atoms, name=None, pressure=None,
-                 energy=None, spacegroup=None, times_found=None):
+    def __init__(
+        self,
+        atoms,
+        name=None,
+        pressure=None,
+        energy=None,
+        spacegroup=None,
+        times_found=None,
+    ):
         self.atoms_ = atoms
         if name is None:
             name = atoms.info.get('name')
@@ -120,7 +127,7 @@ class Res:
 
         if num_tokens <= idx:
             return info
-        info['spacegroup'] = tokens[idx][1:len(tokens[idx]) - 1]
+        info['spacegroup'] = tokens[idx][1 : len(tokens[idx]) - 1]
         # idx + 1 = n, idx + 2 = -
         # idx + 3 = times found
         if num_tokens <= idx + 3:
@@ -145,12 +152,15 @@ class Res:
         sp = []
         coords = []
         info = {}
-        coord_patt = re.compile(r"""(\w+)\s+
+        coord_patt = re.compile(
+            r"""(\w+)\s+
                                     ([0-9]+)\s+
                                     ([0-9\-\.]+)\s+
                                     ([0-9\-\.]+)\s+
                                     ([0-9\-\.]+)\s+
-                                    ([0-9\-\.]+)""", re.VERBOSE)
+                                    ([0-9\-\.]+)""",
+            re.VERBOSE,
+        )
         lines = data.splitlines()
         line_no = 0
         while line_no < len(lines):
@@ -178,15 +188,20 @@ class Res:
                         line_no += 1  # Make sure the global is updated
             line_no += 1
 
-        return Res(Atoms(symbols=sp,
-                         scaled_positions=coords,
-                         cell=cellpar_to_cell(list(abc) + list(ang)),
-                         pbc=True, info=info),
-                   info.get('name'),
-                   info.get('pressure'),
-                   info.get('energy'),
-                   info.get('spacegroup'),
-                   info.get('times_found'))
+        return Res(
+            Atoms(
+                symbols=sp,
+                scaled_positions=coords,
+                cell=cellpar_to_cell(list(abc) + list(ang)),
+                pbc=True,
+                info=info,
+            ),
+            info.get('name'),
+            info.get('pressure'),
+            info.get('energy'),
+            info.get('spacegroup'),
+            info.get('times_found'),
+        )
 
     def get_string(self, significant_figures=6, write_info=False):
         """
@@ -206,12 +221,18 @@ class Res:
         # Title line
         if write_info:
             info = self.atoms.info.copy()
-            for attribute in ['name', 'pressure', 'energy',
-                              'spacegroup', 'times_found']:
+            for attribute in [
+                'name',
+                'pressure',
+                'energy',
+                'spacegroup',
+                'times_found',
+            ]:
                 if getattr(self, attribute) and attribute not in info:
                     info[attribute] = getattr(self, attribute)
-            lines = ['TITL ' + ' '.join([f'{k}={v}'
-                                         for (k, v) in info.items()])]
+            lines = [
+                'TITL ' + ' '.join([f'{k}={v}' for (k, v) in info.items()])
+            ]
         else:
             lines = ['TITL ' + self.print_title()]
 
@@ -234,14 +255,16 @@ class Res:
 
         fmt = '{{0}} {{1}} {{2:.{0}f}} {{3:.{0}f}} {{4:.{0}f}} 1.0'
         fmtstr = fmt.format(significant_figures)
-        for symbol, coords in zip(symbols,
-                                  self.atoms_.get_scaled_positions()):
+        for symbol, coords in zip(symbols, self.atoms_.get_scaled_positions()):
             lines.append(
-                fmtstr.format(symbol,
-                              species_types.index(symbol) + 1,
-                              coords[0],
-                              coords[1],
-                              coords[2]))
+                fmtstr.format(
+                    symbol,
+                    species_types.index(symbol) + 1,
+                    coords[0],
+                    coords[1],
+                    coords[2],
+                )
+            )
         lines.append('END')
         return '\n'.join(lines)
 
@@ -260,8 +283,15 @@ class Res:
             fd.write(self.get_string(**kwargs) + '\n')
 
     def print_title(self):
-        tokens = [self.name, self.pressure, self.atoms.get_volume(),
-                  self.energy, 0.0, 0.0, len(self.atoms)]
+        tokens = [
+            self.name,
+            self.pressure,
+            self.atoms.get_volume(),
+            self.energy,
+            0.0,
+            0.0,
+            len(self.atoms),
+        ]
         if self.spacegroup:
             tokens.append('(' + self.spacegroup + ')')
         else:
@@ -286,15 +316,15 @@ def read_res(filename, index=-1):
     for fn in sorted(glob.glob(filename)):
         res = Res.from_file(fn)
         if res.energy:
-            calc = SinglePointCalculator(res.atoms,
-                                         energy=res.energy)
+            calc = SinglePointCalculator(res.atoms, energy=res.energy)
             res.atoms.calc = calc
         images.append(res.atoms)
     return images[index]
 
 
-def write_res(filename, images, write_info=True,
-              write_results=True, significant_figures=6):
+def write_res(
+    filename, images, write_info=True, write_results=True, significant_figures=6
+):
     """
     Write output in SHELX (.res) format
 
@@ -310,8 +340,10 @@ def write_res(filename, images, write_info=True,
         images = [images]
 
     if len(images) > 1 and '%' not in filename:
-        raise RuntimeError('More than one Atoms provided but no %' +
-                           ' format string found in filename')
+        raise RuntimeError(
+            'More than one Atoms provided but no %'
+            + ' format string found in filename'
+        )
 
     for i, atoms in enumerate(images):
         fn = filename
@@ -320,10 +352,10 @@ def write_res(filename, images, write_info=True,
         res = Res(atoms)
         if write_results:
             calculator = atoms.calc
-            if (calculator is not None and
-                    isinstance(calculator, Calculator)):
+            if calculator is not None and isinstance(calculator, Calculator):
                 energy = calculator.results.get('energy')
                 if energy is not None:
                     res.energy = energy
-        res.write_file(fn, write_info=write_info,
-                       significant_figures=significant_figures)
+        res.write_file(
+            fn, write_info=write_info, significant_figures=significant_figures
+        )

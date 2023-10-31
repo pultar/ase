@@ -86,11 +86,10 @@ from ase.units import Bohr, Hartree
 
 
 class DMol3(FileIOCalculator):
-    """ DMol3 calculator object. """
+    """DMol3 calculator object."""
 
     implemented_properties = ['energy', 'forces']
-    default_parameters = {'functional': 'pbe',
-                          'symmetry': 'on'}
+    default_parameters = {'functional': 'pbe', 'symmetry': 'on'}
     discard_results_on_any_change = True
 
     if 'DMOL_COMMAND' in os.environ:
@@ -98,22 +97,27 @@ class DMol3(FileIOCalculator):
     else:
         command = None
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='dmol_calc/tmp', atoms=None, **kwargs):
-        """ Construct DMol3 calculator. """
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='dmol_calc/tmp',
+        atoms=None,
+        **kwargs,
+    ):
+        """Construct DMol3 calculator."""
+        FileIOCalculator.__init__(
+            self, restart, ignore_bad_restart_file, label, atoms, **kwargs
+        )
 
         # tracks if DMol transformed coordinate system
         self.internal_transformation = False
 
     def write_input(self, atoms, properties=None, system_changes=None):
-
         if not (np.all(atoms.pbc) or not np.any(atoms.pbc)):
             raise RuntimeError('PBC must be all true or all false')
 
-        self.clean()   # Remove files from old run
+        self.clean()  # Remove files from old run
         self.internal_transformation = False
         self.ase_positions = atoms.positions.copy()
         self.ase_cell = atoms.cell.copy()
@@ -129,7 +133,7 @@ class DMol3(FileIOCalculator):
         self.parameters.write(self.label + '.parameters.ase')
 
     def write_input_file(self):
-        """ Writes the input file. """
+        """Writes the input file."""
         with open(self.label + '.input', 'w') as fd:
             self._write_input_file(fd)
 
@@ -165,15 +169,17 @@ class DMol3(FileIOCalculator):
     def read_results(self):
         finished, message = self.finished_successfully()
         if not finished:
-            raise RuntimeError('DMol3 run failed, see outmol file for'
-                               ' more info\n\n%s' % message)
+            raise RuntimeError(
+                'DMol3 run failed, see outmol file for'
+                ' more info\n\n%s' % message
+            )
 
         self.find_dmol_transformation()
         self.read_energy()
         self.read_forces()
 
     def finished_successfully(self):
-        """ Reads outmol file and checks if job completed or failed.
+        """Reads outmol file and checks if job completed or failed.
 
         Returns
         -------
@@ -182,7 +188,7 @@ class DMol3(FileIOCalculator):
 
         """
         finished = False
-        message = ""
+        message = ''
         for line in self._outmol_lines():
             if line.rfind('Message: DMol3 job finished successfully') > -1:
                 finished = True
@@ -212,21 +218,26 @@ class DMol3(FileIOCalculator):
 
         if np.all(self.atoms.pbc):  # [True, True, True]
             dmol_atoms = self.read_atoms_from_outmol()
-            if (np.linalg.norm(self.atoms.positions - dmol_atoms.positions) <
-                    tol) and (np.linalg.norm(self.atoms.cell -
-                                             dmol_atoms.cell) < tol):
+            if (
+                np.linalg.norm(self.atoms.positions - dmol_atoms.positions)
+                < tol
+            ) and (np.linalg.norm(self.atoms.cell - dmol_atoms.cell) < tol):
                 self.internal_transformation = False
             else:
                 R, err = find_transformation(dmol_atoms, self.atoms)
                 if abs(np.linalg.det(R) - 1.0) > tol:
-                    raise RuntimeError('Error: transformation matrix does'
-                                       ' not have determinant 1.0')
+                    raise RuntimeError(
+                        'Error: transformation matrix does'
+                        ' not have determinant 1.0'
+                    )
                 if err < tol:
                     self.internal_transformation = True
                     self.rotation_matrix = R
                 else:
-                    raise RuntimeError('Error: Could not find dmol'
-                                       ' coordinate transformation')
+                    raise RuntimeError(
+                        'Error: Could not find dmol'
+                        ' coordinate transformation'
+                    )
         elif not np.any(self.atoms.pbc):  # [False,False,False]
             try:
                 data = np.loadtxt(self.label + '.rot')
@@ -237,7 +248,7 @@ class DMol3(FileIOCalculator):
                 self.rotation_matrix = data[1:].transpose()
 
     def read_atoms_from_outmol(self):
-        """ Reads atomic positions and cell from outmol file and returns atoms
+        """Reads atomic positions and cell from outmol file and returns atoms
         object.
 
         If no cell vectors are found in outmol the cell is set to np.eye(3) and
@@ -270,8 +281,9 @@ class DMol3(FileIOCalculator):
 
         for i, line in enumerate(lines):
             if pattern_translation_vectors.match(line):
-                cell[int(line.split()[3]) - 1, :] = \
-                    np.array([float(x) for x in line.split()[-3:]])
+                cell[int(line.split()[3]) - 1, :] = np.array(
+                    [float(x) for x in line.split()[-3:]]
+                )
                 found_cell = True
             if pattern_atomic_coordinates.match(line):
                 for ind, j in enumerate(range(i + 2, i + 2 + len(self.atoms))):
@@ -290,7 +302,7 @@ class DMol3(FileIOCalculator):
         return atoms
 
     def read_energy(self):
-        """ Find and return last occurrence of Ef in outmole file. """
+        """Find and return last occurrence of Ef in outmole file."""
         energy_regex = re.compile(r'^Ef\s+(\S+)Ha')
         found = False
         for line in self._outmol_lines():
@@ -303,8 +315,8 @@ class DMol3(FileIOCalculator):
         self.results['energy'] = energy * Hartree
 
     def read_forces(self):
-        """ Read forces from .grad file. Applies self.rotation_matrix if
-        self.internal_transformation is True. """
+        """Read forces from .grad file. Applies self.rotation_matrix if
+        self.internal_transformation is True."""
         with open(self.label + '.grad') as fd:
             lines = fd.readlines()
 
@@ -313,8 +325,9 @@ class DMol3(FileIOCalculator):
             if line.startswith('$gradients'):
                 for j in range(i + 1, i + 1 + len(self.atoms)):
                     # force = - grad(Epot)
-                    forces.append(np.array(
-                        [-float(x) for x in lines[j].split()[1:4]]))
+                    forces.append(
+                        np.array([-float(x) for x in lines[j].split()[1:4]])
+                    )
 
         forces = np.array(forces) * Hartree / Bohr
         if self.internal_transformation:
@@ -369,7 +382,6 @@ class DMol3(FileIOCalculator):
         lines = self._outmol_lines()
         pattern_kpts = re.compile(r'Eigenvalues for kvector\s+%d' % (kpt + 1))
         for n, line in enumerate(lines):
-
             # 1. We have no kpts
             if line.split() == ['state', 'eigenvalue', 'occupation']:
                 spin_key = '+'
@@ -413,7 +425,7 @@ class DMol3(FileIOCalculator):
             return fd.readlines()
 
     def read_kpts(self, mode='ibz_k_points'):
-        """ Returns list of kpts coordinates or kpts weights.  """
+        """Returns list of kpts coordinates or kpts weights."""
 
         assert mode in ['ibz_k_points', 'k_point_weights']
         lines = self._outmol_ines()
@@ -422,8 +434,7 @@ class DMol3(FileIOCalculator):
         for n, line in enumerate(lines):
             if line.startswith('Eigenvalues for kvector'):
                 if mode == 'ibz_k_points':
-                    values.append([float(k_i)
-                                   for k_i in lines[n].split()[4:7]])
+                    values.append([float(k_i) for k_i in lines[n].split()[4:7]])
                 if mode == 'k_point_weights':
                     values.append(float(lines[n].split()[8]))
         if values == []:
@@ -464,22 +475,41 @@ class DMol3(FileIOCalculator):
             if line.startswith('Energy components'):
                 m = n + 1
                 while not lines[m].strip() == '':
-                    energies[lines[m].split('=')[0].strip()] = \
-                        float(re.findall(
-                            r"[-+]?\d*\.\d+|\d+", lines[m])[0]) * Hartree
+                    energies[lines[m].split('=')[0].strip()] = (
+                        float(re.findall(r'[-+]?\d*\.\d+|\d+', lines[m])[0])
+                        * Hartree
+                    )
                     m += 1
         return energies
 
     def clean(self):
-        """ Cleanup after dmol calculation
+        """Cleanup after dmol calculation
 
         Only removes dmol files in self.directory,
         does not remove the directory itself
         """
-        file_extensions = ['basis', 'car', 'err', 'grad', 'input', 'inatm',
-                           'incoor', 'kpoints', 'monitor', 'occup', 'outmol',
-                           'outatom', 'rot', 'sdf', 'sym', 'tpotl', 'tpdensk',
-                           'torder', 'out', 'parameters.ase']
+        file_extensions = [
+            'basis',
+            'car',
+            'err',
+            'grad',
+            'input',
+            'inatm',
+            'incoor',
+            'kpoints',
+            'monitor',
+            'occup',
+            'outmol',
+            'outatom',
+            'rot',
+            'sdf',
+            'sym',
+            'tpotl',
+            'tpdensk',
+            'torder',
+            'out',
+            'parameters.ase',
+        ]
         files_to_clean = ['DMol3.log', 'stdouterr.txt', 'mpd.hosts']
 
         files = [os.path.join(self.directory, f) for f in files_to_clean]
@@ -495,8 +525,9 @@ class DMol3(FileIOCalculator):
 # Helper functions
 # ------------------
 
+
 def find_transformation(atoms1, atoms2, verbose=False, only_cell=False):
-    """ Solves Ax = B where A and B are cell and positions from atoms objects.
+    """Solves Ax = B where A and B are cell and positions from atoms objects.
 
     Uses numpys least square solver to solve the problem Ax = B where A and
     B are cell vectors and positions for atoms1 and atoms2 respectively.
@@ -557,7 +588,7 @@ def find_transformation(atoms1, atoms2, verbose=False, only_cell=False):
 
 
 def grd_to_file(atoms, grd_file, new_file):
-    """ Reads grd_file and converts data to cube format and writes to
+    """Reads grd_file and converts data to cube format and writes to
     cube_file.
 
     Note: content of grd_file and atoms object are assumed to match with the
@@ -580,7 +611,7 @@ def grd_to_file(atoms, grd_file, new_file):
 
 
 def read_grd(filename):
-    """ Reads .grd file
+    """Reads .grd file
 
     Notes
     -----
@@ -599,9 +630,11 @@ def read_grd(filename):
     data = np.empty(grid)
 
     origin_data = [int(fld) for fld in lines[4].split()[1:]]
-    origin_xyz = cell[0] * (-float(origin_data[0]) - 0.5) / (grid[0] - 1) + \
-        cell[1] * (-float(origin_data[2]) - 0.5) / (grid[1] - 1) + \
-        cell[2] * (-float(origin_data[4]) - 0.5) / (grid[2] - 1)
+    origin_xyz = (
+        cell[0] * (-float(origin_data[0]) - 0.5) / (grid[0] - 1)
+        + cell[1] * (-float(origin_data[2]) - 0.5) / (grid[1] - 1)
+        + cell[2] * (-float(origin_data[4]) - 0.5) / (grid[2] - 1)
+    )
 
     # Fastest index describes which index ( x or y ) varies fastest
     # 1: x  , 3: y

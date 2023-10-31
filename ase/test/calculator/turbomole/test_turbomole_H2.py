@@ -8,7 +8,7 @@ from ase import Atoms
 from ase.calculators.turbomole import Turbomole
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope='function')
 def atoms():
     return Atoms('H2', positions=[(0, 0, 0), (0, 0, 1.1)])
 
@@ -24,9 +24,7 @@ def test_turbomole_H2_rhf_singlet(atoms):
 
 
 def test_turbomole_H2_uhf_singlet(atoms):
-    atoms.calc = Turbomole(**{
-        "multiplicity": 1, "uhf": True, "use dft": True
-    })
+    atoms.calc = Turbomole(**{'multiplicity': 1, 'uhf': True, 'use dft': True})
 
     # Run turbomole
     assert np.isclose(atoms.get_potential_energy(), -30.828865, atol=1e-5)
@@ -34,13 +32,13 @@ def test_turbomole_H2_uhf_singlet(atoms):
     # check that it performed a DFT calculation (i.e. basic inputs were most
     # likely understood, cf. issue #735)
     dft_in_output = False
-    with open("ASE.TM.dscf.out") as fd:
+    with open('ASE.TM.dscf.out') as fd:
         for line in fd:
-            if "density functional" in line:
+            if 'density functional' in line:
                 dft_in_output = True
     assert dft_in_output
 
     # also check that UHF was understood (alpha and beta files present)
-    assert os.path.exists("alpha")
-    assert os.path.exists("beta")
-    assert not os.path.exists("mos")
+    assert os.path.exists('alpha')
+    assert os.path.exists('beta')
+    assert not os.path.exists('mos')

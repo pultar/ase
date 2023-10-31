@@ -9,14 +9,17 @@ from ase.vibrations.vibrations import AtomicDisplacements, Vibrations
 
 
 class RamanCalculatorBase(IOContext):
-    def __init__(self, atoms,  # XXX do we need atoms at this stage ?
-                 *args,
-                 name='raman',
-                 exext='.alpha',
-                 txt='-',
-                 verbose=False,
-                 comm=world,
-                 **kwargs):
+    def __init__(
+        self,
+        atoms,  # XXX do we need atoms at this stage ?
+        *args,
+        name='raman',
+        exext='.alpha',
+        txt='-',
+        verbose=False,
+        comm=world,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -72,15 +75,18 @@ class StaticRamanPhononsCalculator(StaticRamanCalculatorBase, Phonons):
 
 
 class RamanBase(AtomicDisplacements, IOContext):
-    def __init__(self, atoms,  # XXX do we need atoms at this stage ?
-                 *args,
-                 name='raman',
-                 exname=None,
-                 exext='.alpha',
-                 txt='-',
-                 verbose=False,
-                 comm=world,
-                 **kwargs):
+    def __init__(
+        self,
+        atoms,  # XXX do we need atoms at this stage ?
+        *args,
+        name='raman',
+        exname=None,
+        exext='.alpha',
+        txt='-',
+        verbose=False,
+        comm=world,
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -112,10 +118,13 @@ class RamanBase(AtomicDisplacements, IOContext):
 class RamanData(RamanBase):
     """Base class to evaluate Raman spectra from pre-computed data"""
 
-    def __init__(self, atoms,  # XXX do we need atoms at this stage ?
-                 *args,
-                 exname=None,      # name for excited state calculations
-                 **kwargs):
+    def __init__(
+        self,
+        atoms,  # XXX do we need atoms at this stage ?
+        *args,
+        exname=None,  # name for excited state calculations
+        **kwargs,
+    ):
         """
         Parameters
         ----------
@@ -197,7 +206,8 @@ class RamanData(RamanBase):
         raman intensity, unit Ang**4/amu
         """
         alpha2_r, gamma2_r, delta2_r = self._invariants(
-            self.electronic_me_Qcc(**kwargs))
+            self.electronic_me_Qcc(**kwargs)
+        )
         return 45 * alpha2_r + delta * delta2_r + 7 * gamma2_r
 
     def intensity(self, *args, **kwargs):
@@ -224,20 +234,20 @@ class RamanData(RamanBase):
         alpha2_r, gamma2_r, delta2_r = self._invariants(alpha_Qcc)
 
         if self.observation['geometry'] == '-Z(XX)Z':  # Porto's notation
-            return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.
+            return (45 * alpha2_r + 5 * delta2_r + 4 * gamma2_r) / 45.0
         elif self.observation['geometry'] == '-Z(XY)Z':  # Porto's notation
-            return gamma2_r / 15.
+            return gamma2_r / 15.0
         elif self.observation['scattered'] == 'Z':
             # scattered light in direction of incoming light
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.0
         elif self.observation['scattered'] == 'parallel':
             # scattered light perendicular and
             # polarization in plane
-            return 6 * gamma2_r / 45.
+            return 6 * gamma2_r / 45.0
         elif self.observation['scattered'] == 'perpendicular':
             # scattered light perendicular and
             # polarization out of plane
-            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.
+            return (45 * alpha2_r + 5 * delta2_r + 7 * gamma2_r) / 45.0
         else:
             raise NotImplementedError
 
@@ -258,18 +268,34 @@ class RamanData(RamanBase):
         mean polarizability, anisotropy, asymmetric anisotropy
         """
         m2 = Raman.m2
-        alpha2_r = m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] +
-                      alpha_Qcc[:, 2, 2]) / 9.
-        delta2_r = 3 / 4. * (
-            m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0]) +
-            m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0]) +
-            m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1]))
-        gamma2_r = (3 / 4. * (m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0]) +
-                              m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0]) +
-                              m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])) +
-                    (m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1]) +
-                     m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2]) +
-                     m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])) / 2)
+        alpha2_r = (
+            m2(alpha_Qcc[:, 0, 0] + alpha_Qcc[:, 1, 1] + alpha_Qcc[:, 2, 2])
+            / 9.0
+        )
+        delta2_r = (
+            3
+            / 4.0
+            * (
+                m2(alpha_Qcc[:, 0, 1] - alpha_Qcc[:, 1, 0])
+                + m2(alpha_Qcc[:, 0, 2] - alpha_Qcc[:, 2, 0])
+                + m2(alpha_Qcc[:, 1, 2] - alpha_Qcc[:, 2, 1])
+            )
+        )
+        gamma2_r = (
+            3
+            / 4.0
+            * (
+                m2(alpha_Qcc[:, 0, 1] + alpha_Qcc[:, 1, 0])
+                + m2(alpha_Qcc[:, 0, 2] + alpha_Qcc[:, 2, 0])
+                + m2(alpha_Qcc[:, 1, 2] + alpha_Qcc[:, 2, 1])
+            )
+            + (
+                m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 1, 1])
+                + m2(alpha_Qcc[:, 0, 0] - alpha_Qcc[:, 2, 2])
+                + m2(alpha_Qcc[:, 1, 1] - alpha_Qcc[:, 2, 2])
+            )
+            / 2
+        )
         return alpha2_r, gamma2_r, delta2_r
 
     def summary(self, log='-'):
@@ -282,7 +308,7 @@ class RamanData(RamanBase):
         hnu = self.get_energies()
         intensities = self.get_absolute_intensities()
         te = int(np.log10(intensities.max())) - 2
-        scale = 10**(-te)
+        scale = 10 ** (-te)
 
         if not te:
             ts = ''
@@ -302,9 +328,11 @@ class RamanData(RamanBase):
             else:
                 c = ' '
                 e = e.real
-            print('%3d %6.1f%s  %7.1f%s  %9.2f' %
-                  (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
-                  file=log)
+            print(
+                '%3d %6.1f%s  %7.1f%s  %9.2f'
+                % (n, 1000 * e, c, e / u.invcm, c, intensities[n] * scale),
+                file=log,
+            )
         print('-------------------------------------', file=log)
         # XXX enable this in phonons
         # parprint('Zero-point energy: %.3f eV' %
@@ -332,12 +360,13 @@ class Raman(RamanData):
 
         self.im_r = self.vibrations.im
         self.modes_Qq = self.vibrations.modes
-        self.om_Q = self.vibrations.hnu.real    # energies in eV
-        self.H = self.vibrations.H   # XXX used in albrecht.py
+        self.om_Q = self.vibrations.hnu.real  # energies in eV
+        self.H = self.vibrations.H  # XXX used in albrecht.py
         # pre-factors for one vibrational excitation
         with np.errstate(divide='ignore'):
-            self.vib01_Q = np.where(self.om_Q > 0,
-                                    1. / np.sqrt(2 * self.om_Q), 0)
+            self.vib01_Q = np.where(
+                self.om_Q > 0, 1.0 / np.sqrt(2 * self.om_Q), 0
+            )
         # -> sqrt(amu) * Angstrom
         self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr
 
@@ -376,18 +405,19 @@ class RamanPhonons(RamanData):
 
         if not hasattr(self, 'im_r'):
             omega_kl, u_kl = self.vibrations.band_structure(
-                self.kpts_kc, modes=True, verbose=self.verbose)
+                self.kpts_kc, modes=True, verbose=self.verbose
+            )
 
             self.im_r = self.vibrations.m_inv_x
-            self.om_Q = omega_kl.ravel().real   # energies in eV
-            self.modes_Qq = u_kl.reshape(len(self.om_Q),
-                                         3 * len(self.atoms))
+            self.om_Q = omega_kl.ravel().real  # energies in eV
+            self.modes_Qq = u_kl.reshape(len(self.om_Q), 3 * len(self.atoms))
             self.modes_Qq /= self.im_r
             self.om_v = self.om_Q
 
             # pre-factors for one vibrational excitation
             with np.errstate(divide='ignore', invalid='ignore'):
                 self.vib01_Q = np.where(
-                    self.om_Q > 0, 1. / np.sqrt(2 * self.om_Q), 0)
+                    self.om_Q > 0, 1.0 / np.sqrt(2 * self.om_Q), 0
+                )
             # -> sqrt(amu) * Angstrom
             self.vib01_Q *= np.sqrt(u.Ha * u._me / u._amu) * u.Bohr

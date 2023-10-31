@@ -34,8 +34,7 @@ def read_sys(fileobj):
     while line:
         # The units column is ignored.
         a, symlabel, spec, x, y, z = line.split()[0:6]
-        positions.append([float(x) * Bohr, float(y) * Bohr,
-                         float(z) * Bohr])
+        positions.append([float(x) * Bohr, float(y) * Bohr, float(z) * Bohr])
         sym = reg.split(str(symlabel))
         symbols.append(sym[0])
         line = fileobj.readline()
@@ -66,6 +65,9 @@ def write_sys(fileobj, atoms):
     for i, s in enumerate(set(ch_sym)):
         fileobj.write(('species {}{} {}.xml \n').format(s, an[i], s))
     for i, (S, Z, (x, y, z)) in enumerate(zip(ch_sym, atm_nm, a_pos)):
-        fileobj.write(('atom {:5} {:5}  {:12.6f} {:12.6f} {:12.6f}\
-        bohr\n').format(S + str(i + 1), S + str(Z), x / Bohr, y / Bohr,
-                        z / Bohr))
+        fileobj.write(
+            (
+                'atom {:5} {:5}  {:12.6f} {:12.6f} {:12.6f}\
+        bohr\n'
+            ).format(S + str(i + 1), S + str(Z), x / Bohr, y / Bohr, z / Bohr)
+        )

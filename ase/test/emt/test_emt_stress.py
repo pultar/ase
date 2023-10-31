@@ -6,11 +6,10 @@ def test_emt_stress():
 
     a = bulk('Cu', 'fcc')
     a.calc = EMT()
-    a.set_cell(np.dot(a.cell,
-                      [[1.02, 0, 0.03],
-                       [0, 0.99, -0.02],
-                       [0.1, -0.01, 1.03]]),
-               scale_atoms=True)
+    a.set_cell(
+        np.dot(a.cell, [[1.02, 0, 0.03], [0, 0.99, -0.02], [0.1, -0.01, 1.03]]),
+        scale_atoms=True,
+    )
     a *= (1, 2, 3)
     a.rattle()
     # Verify analytical stress tensor against numerical value

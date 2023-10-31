@@ -23,8 +23,8 @@ class UnitError(Exception):
     """Exception raised when wrong units are specified"""
 
 
-def force_temperature(atoms: Atoms, temperature: float, unit: str = "K"):
-    """ force (nucl.) temperature to have a precise value
+def force_temperature(atoms: Atoms, temperature: float, unit: str = 'K'):
+    """force (nucl.) temperature to have a precise value
 
     Parameters:
     atoms: ase.Atoms
@@ -35,9 +35,9 @@ def force_temperature(atoms: Atoms, temperature: float, unit: str = "K"):
         'K' or 'eV' as unit for the temperature
     """
 
-    if unit == "K":
+    if unit == 'K':
         E_temp = temperature * units.kB
-    elif unit == "eV":
+    elif unit == 'eV':
         E_temp = temperature
     else:
         raise UnitError(f"'{unit}' is not supported, use 'K' or 'eV'.")
@@ -124,11 +124,11 @@ def MaxwellBoltzmannDistribution(
     momenta = _maxwellboltzmanndistribution(masses, temp, communicator, rng)
     atoms.set_momenta(momenta)
     if force_temp:
-        force_temperature(atoms, temperature=temp, unit="eV")
+        force_temperature(atoms, temperature=temp, unit='eV')
 
 
 def Stationary(atoms: Atoms, preserve_temperature: bool = True):
-    "Sets the center-of-mass momentum to zero."
+    'Sets the center-of-mass momentum to zero.'
 
     # Save initial temperature
     temp0 = atoms.get_temperature()
@@ -147,7 +147,7 @@ def Stationary(atoms: Atoms, preserve_temperature: bool = True):
 
 
 def ZeroRotation(atoms: Atoms, preserve_temperature: float = True):
-    "Sets the total angular momentum to zero by counteracting rigid rotations."
+    'Sets the total angular momentum to zero by counteracting rigid rotations.'
 
     # Save initial temperature
     temp0 = atoms.get_temperature()
@@ -285,7 +285,7 @@ def phonon_harmonics(
     temp = units.kB * process_temperature(temp, temperature_K, 'eV')
 
     # Build dynamical matrix
-    rminv = (masses ** -0.5).repeat(3)
+    rminv = (masses**-0.5).repeat(3)
     dynamical_matrix = force_constants * rminv[:, None] * rminv[None, :]
 
     # Solve eigenvalue problem to compute phonon spectrum and eigenvectors
@@ -296,13 +296,13 @@ def phonon_harmonics(
         zeros = w2_s[:3]
         worst_zero = np.abs(zeros).max()
         if worst_zero > 1e-3:
-            msg = "Translational deviate from 0 significantly: "
-            raise ValueError(msg + f"{w2_s[:3]}")
+            msg = 'Translational deviate from 0 significantly: '
+            raise ValueError(msg + f'{w2_s[:3]}')
 
         w2min = w2_s[3:].min()
         if w2min < 0:
-            msg = "Dynamical matrix has negative eigenvalues such as "
-            raise ValueError(msg + f"{w2min}")
+            msg = 'Dynamical matrix has negative eigenvalues such as '
+            raise ValueError(msg + f'{w2min}')
 
     # First three modes are translational so ignore:
     nw = len(w2_s) - 3

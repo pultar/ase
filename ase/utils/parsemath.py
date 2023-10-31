@@ -69,37 +69,37 @@ operators = {
     ast.Pow: power,
     ast.USub: op.neg,
     ast.Mod: op.mod,
-    ast.FloorDiv: op.ifloordiv
+    ast.FloorDiv: op.ifloordiv,
 }
 
 # Take all functions from math module as allowed functions
 allowed_math_fxn = {
-    "sin": math.sin,
-    "cos": math.cos,
-    "tan": math.tan,
-    "asin": math.asin,
-    "acos": math.acos,
-    "atan": math.atan,
-    "atan2": math.atan2,
-    "hypot": math.hypot,
-    "sinh": math.sinh,
-    "cosh": math.cosh,
-    "tanh": math.tanh,
-    "asinh": math.asinh,
-    "acosh": math.acosh,
-    "atanh": math.atanh,
-    "radians": math.radians,
-    "degrees": math.degrees,
-    "sqrt": math.sqrt,
-    "log": math.log,
-    "log10": math.log10,
-    "log2": math.log2,
-    "fmod": math.fmod,
-    "abs": math.fabs,
-    "ceil": math.ceil,
-    "floor": math.floor,
-    "round": round,
-    "exp": exp,
+    'sin': math.sin,
+    'cos': math.cos,
+    'tan': math.tan,
+    'asin': math.asin,
+    'acos': math.acos,
+    'atan': math.atan,
+    'atan2': math.atan2,
+    'hypot': math.hypot,
+    'sinh': math.sinh,
+    'cosh': math.cosh,
+    'tanh': math.tanh,
+    'asinh': math.asinh,
+    'acosh': math.acosh,
+    'atanh': math.atanh,
+    'radians': math.radians,
+    'degrees': math.degrees,
+    'sqrt': math.sqrt,
+    'log': math.log,
+    'log10': math.log10,
+    'log2': math.log2,
+    'fmod': math.fmod,
+    'abs': math.fabs,
+    'ceil': math.ceil,
+    'floor': math.floor,
+    'round': round,
+    'exp': exp,
 }
 
 
@@ -112,7 +112,7 @@ def get_function(node):
     elif isinstance(node.func, ast.Attribute):
         return node.func.attr
     else:
-        raise TypeError("node.func is of the wrong type")
+        raise TypeError('node.func is of the wrong type')
 
 
 def limit(max_=None):
@@ -155,17 +155,18 @@ def _eval(node):
         evaled_args = [_eval(arg) for arg in node.args]
         return allowed_math_fxn[func](*evaled_args)
     elif isinstance(node, ast.Name):
-        if node.id.lower() == "pi":
+        if node.id.lower() == 'pi':
             return math.pi
-        elif node.id.lower() == "e":
+        elif node.id.lower() == 'e':
             return math.e
-        elif node.id.lower() == "tau":
+        elif node.id.lower() == 'tau':
             return math.pi * 2.0
         else:
             raise TypeError(
-                "Found a str in the expression, either param_dct/the "
-                "expression has a mistake in the parameter names or "
-                "attempting to parse non-mathematical code")
+                'Found a str in the expression, either param_dct/the '
+                'expression has a mistake in the parameter names or '
+                'attempting to parse non-mathematical code'
+            )
     else:
         raise TypeError(node)
 
@@ -177,16 +178,16 @@ def eval_expression(expression, param_dct=dict()):
 
     """
     if not isinstance(expression, str):
-        raise TypeError("The expression must be a string")
+        raise TypeError('The expression must be a string')
     if len(expression) > 1e4:
-        raise ValueError("The expression is too long.")
+        raise ValueError('The expression is too long.')
 
     expression_rep = expression.strip()
 
-    if "()" in expression_rep:
-        raise ValueError("Invalid operation in expression")
+    if '()' in expression_rep:
+        raise ValueError('Invalid operation in expression')
 
     for key, val in param_dct.items():
         expression_rep = expression_rep.replace(key, str(val))
 
-    return _eval(ast.parse(expression_rep, mode="eval").body)
+    return _eval(ast.parse(expression_rep, mode='eval').body)

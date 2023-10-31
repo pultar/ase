@@ -15,8 +15,15 @@ def get_band_gap(calc, direct=False, spin=None, output='-'):
     return gap, k1, k2
 
 
-def bandgap(calc=None, direct=False, spin=None, output='-',
-            eigenvalues=None, efermi=None, kpts=None):
+def bandgap(
+    calc=None,
+    direct=False,
+    spin=None,
+    output='-',
+    eigenvalues=None,
+    efermi=None,
+    kpts=None,
+):
     """Calculates the band-gap.
 
     Parameters:
@@ -59,9 +66,12 @@ def bandgap(calc=None, direct=False, spin=None, output='-',
         kpts = calc.get_ibz_k_points()
         nk = len(kpts)
         ns = calc.get_number_of_spins()
-        eigenvalues = np.array([[calc.get_eigenvalues(kpt=k, spin=s)
-                                 for k in range(nk)]
-                                for s in range(ns)])
+        eigenvalues = np.array(
+            [
+                [calc.get_eigenvalues(kpt=k, spin=s) for k in range(nk)]
+                for s in range(ns)
+            ]
+        )
         if efermi is None:
             efermi = calc.get_fermi_level()
 
@@ -85,7 +95,8 @@ def bandgap(calc=None, direct=False, spin=None, output='-',
             if kpts is None:
                 return f'(s={s}, k={k}, n={n})'
             return '(s={}, k={}, n={}, [{:.2f}, {:.2f}, {:.2f}])'.format(
-                s, k, n, *kpts[k])
+                s, k, n, *kpts[k]
+            )
 
         if spin is not None:
             p(f'spin={spin}: ', end='')
@@ -132,9 +143,12 @@ def _bandgap(e_skn, spin, direct):
     if (N_sk == 0).any() or (N_sk == nb).any():
         raise ValueError('Too few bands!')
 
-    e_skn = np.array([[e_skn[s, k, N_sk[s, k] - 1:N_sk[s, k] + 1]
-                       for k in range(nk)]
-                      for s in range(ns)])
+    e_skn = np.array(
+        [
+            [e_skn[s, k, N_sk[s, k] - 1 : N_sk[s, k] + 1] for k in range(nk)]
+            for s in range(ns)
+        ]
+    )
     ev_sk = e_skn[:, :, 0]  # valence band
     ec_sk = e_skn[:, :, 1]  # conduction band
 

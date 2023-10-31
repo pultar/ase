@@ -6,18 +6,19 @@ def test_dmol():
     from ase.io import read, write
 
     def check(atoms, ref_atoms, dist_tol=1e-6):
-
         # check pbc conditions
         assert all(atoms.pbc == ref_atoms.pbc), (atoms.pbc, ref_atoms.pbc)
 
         # check cell
         if all(atoms.pbc):
-            assert abs(atoms.cell - ref_atoms.cell).max() < dist_tol, \
-                (atoms.cell - ref_atoms.cell)
+            assert abs(atoms.cell - ref_atoms.cell).max() < dist_tol, (
+                atoms.cell - ref_atoms.cell
+            )
 
         # check positions
-        assert abs(atoms.positions - ref_atoms.positions).max() < dist_tol, \
-            (atoms.positions - ref_atoms.positions)
+        assert abs(atoms.positions - ref_atoms.positions).max() < dist_tol, (
+            atoms.positions - ref_atoms.positions
+        )
 
         # check symbols
         assert atoms.get_chemical_symbols() == ref_atoms.get_chemical_symbols()

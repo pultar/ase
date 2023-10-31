@@ -6,9 +6,11 @@ from subprocess import PIPE, Popen
 import numpy as np
 
 import ase.units as units
-from ase.calculators.calculator import (Calculator,
-                                        PropertyNotImplementedError,
-                                        all_changes)
+from ase.calculators.calculator import (
+    Calculator,
+    PropertyNotImplementedError,
+    all_changes,
+)
 from ase.stress import full_3x3_to_voigt_6_stress
 from ase.utils import IOContext
 
@@ -28,12 +30,15 @@ class IPIProtocol:
         self.socket = socket
 
         if txt is None:
+
             def log(*args):
                 pass
         else:
+
             def log(*args):
                 print('Driver:', *args, file=txt)
                 txt.flush()
+
         self.log = log
 
     def sendmsg(self, msg):
@@ -119,11 +124,16 @@ class IPIProtocol:
         virial = self.recv((3, 3), np.float64).T.copy()
         nmorebytes = self.recv(1, np.int32)[0]
         morebytes = self.recv(nmorebytes, np.byte)
-        return (e * units.Ha, (units.Ha / units.Bohr) * forces,
-                units.Ha * virial, morebytes)
+        return (
+            e * units.Ha,
+            (units.Ha / units.Bohr) * forces,
+            units.Ha * virial,
+            morebytes,
+        )
 
-    def sendforce(self, energy, forces, virial,
-                  morebytes=np.zeros(1, dtype=np.byte)):
+    def sendforce(
+        self, energy, forces, virial, morebytes=np.zeros(1, dtype=np.byte)
+    ):
         assert np.array([energy]).size == 1
         assert forces.shape[1] == 3
         assert virial.shape == (3, 3)
@@ -184,10 +194,7 @@ class IPIProtocol:
         msg = self.status()
         assert msg == 'HAVEDATA', msg
         e, forces, virial, morebytes = self.sendrecv_force()
-        r = dict(energy=e,
-                 forces=forces,
-                 virial=virial,
-                 morebytes=morebytes)
+        r = dict(energy=e, forces=forces, virial=virial, morebytes=morebytes)
         return r
 
 
@@ -210,8 +217,7 @@ def bind_unixsocket(socketfile):
 @contextmanager
 def bind_inetsocket(port):
     serversocket = socket.socket(socket.AF_INET)
-    serversocket.setsockopt(socket.SOL_SOCKET,
-                            socket.SO_REUSEADDR, 1)
+    serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serversocket.bind(('', port))
     with serversocket:
         yield serversocket
@@ -234,11 +240,13 @@ class FileIOSocketClientLauncher:
             else:
                 argv = profile.socketio_argv_inet(port=port)
             import os
+
             return Popen(argv, cwd=cwd, env=os.environ)
         else:
             # Old FileIOCalculator:
-            self.calc.write_input(atoms, properties=properties,
-                                  system_changes=all_changes)
+            self.calc.write_input(
+                atoms, properties=properties, system_changes=all_changes
+            )
             cmd = self.calc.command.replace('PREFIX', self.calc.prefix)
             cmd = cmd.format(port=port, unixsocket=unixsocket)
             return Popen(cmd, shell=True, cwd=cwd)
@@ -247,9 +255,13 @@ class FileIOSocketClientLauncher:
 class SocketServer(IOContext):
     default_port = 31415
 
-    def __init__(self,  # launch_client=None,
-                 port=None, unixsocket=None, timeout=None,
-                 log=None):
+    def __init__(
+        self,  # launch_client=None,
+        port=None,
+        unixsocket=None,
+        timeout=None,
+        log=None,
+    ):
         """Create server and listen for connections.
 
         Parameters:
@@ -331,8 +343,10 @@ class SocketServer(IOContext):
                 if self.proc is not None:
                     status = self.proc.poll()
                     if status is not None:
-                        raise OSError('Subprocess terminated unexpectedly'
-                                      ' with status {}'.format(status))
+                        raise OSError(
+                            'Subprocess terminated unexpectedly'
+                            ' with status {}'.format(status)
+                        )
             else:
                 break
 
@@ -341,7 +355,7 @@ class SocketServer(IOContext):
 
         if log:
             # For unix sockets, address is b''.
-            source = ('client' if self.address == b'' else self.address)
+            source = 'client' if self.address == b'' else self.address
             print(f'Accepted connection from {source}', file=log)
 
         self.protocol = IPIProtocol(self.clientsocket, txt=log)
@@ -369,8 +383,9 @@ class SocketServer(IOContext):
                 # Quantum Espresso seems to always exit with status 128,
                 # even if successful.
                 # Should investigate at some point
-                warnings.warn('Subprocess exited with status {}'
-                              .format(exitcode))
+                warnings.warn(
+                    'Subprocess exited with status {}'.format(exitcode)
+                )
         # self.log('IPI server closed')
 
     def calculate(self, atoms):
@@ -388,8 +403,15 @@ class SocketServer(IOContext):
 
 
 class SocketClient:
-    def __init__(self, host='localhost', port=None,
-                 unixsocket=None, timeout=None, log=None, comm=None):
+    def __init__(
+        self,
+        host='localhost',
+        port=None,
+        unixsocket=None,
+        timeout=None,
+        log=None,
+        comm=None,
+    ):
         """Create client and connect to server.
 
         Parameters:
@@ -414,6 +436,7 @@ class SocketClient:
             Atoms objects."""
         if comm is None:
             from ase.parallel import world
+
             comm = world
 
         # Only rank0 actually does the socket work.
@@ -548,9 +571,16 @@ class SocketIOCalculator(Calculator, IOContext):
     implemented_properties = ['energy', 'free_energy', 'forces', 'stress']
     supported_changes = {'positions', 'cell'}
 
-    def __init__(self, calc=None, port=None,
-                 unixsocket=None, timeout=None, log=None, *,
-                 launch_client=None):
+    def __init__(
+        self,
+        calc=None,
+        port=None,
+        unixsocket=None,
+        timeout=None,
+        log=None,
+        *,
+        launch_client=None,
+    ):
         """Initialize socket I/O calculator.
 
         This calculator launches a server which passes atomic
@@ -633,40 +663,48 @@ class SocketIOCalculator(Calculator, IOContext):
             self.server = self.launch_server()
 
     def todict(self):
-        d = {'type': 'calculator',
-             'name': 'socket-driver'}
+        d = {'type': 'calculator', 'name': 'socket-driver'}
         # if self.calc is not None:
         #    d['calc'] = self.calc.todict()
         return d
 
     def launch_server(self):
-        return self.closelater(SocketServer(
-            # launch_client=launch_client,
-            port=self._port,
-            unixsocket=self._unixsocket,
-            timeout=self.timeout, log=self.log,
-        ))
+        return self.closelater(
+            SocketServer(
+                # launch_client=launch_client,
+                port=self._port,
+                unixsocket=self._unixsocket,
+                timeout=self.timeout,
+                log=self.log,
+            )
+        )
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes):
-        bad = [change for change in system_changes
-               if change not in self.supported_changes]
+    def calculate(
+        self, atoms=None, properties=['energy'], system_changes=all_changes
+    ):
+        bad = [
+            change
+            for change in system_changes
+            if change not in self.supported_changes
+        ]
 
         # First time calculate() is called, system_changes will be
         # all_changes.  After that, only positions and cell may change.
         if self.atoms is not None and any(bad):
             raise PropertyNotImplementedError(
                 'Cannot change {} through IPI protocol.  '
-                'Please create new socket calculator.'
-                .format(bad if len(bad) > 1 else bad[0]))
+                'Please create new socket calculator.'.format(
+                    bad if len(bad) > 1 else bad[0]
+                )
+            )
 
         self.atoms = atoms.copy()
 
         if self.server is None:
             self.server = self.launch_server()
-            proc = self.launch_client(atoms, properties,
-                                      port=self._port,
-                                      unixsocket=self._unixsocket)
+            proc = self.launch_client(
+                atoms, properties, port=self._port, unixsocket=self._unixsocket
+            )
             self.server.proc = proc  # XXX nasty hack
 
         results = self.server.calculate(atoms)
@@ -692,14 +730,17 @@ class PySocketIOClient:
 
         # We pickle everything first, so we won't need to bother with the
         # process as long as it succeeds.
-        transferbytes = pickle.dumps([
-            dict(unixsocket=unixsocket, port=port),
-            atoms.copy(),
-            self._calculator_factory,
-        ])
+        transferbytes = pickle.dumps(
+            [
+                dict(unixsocket=unixsocket, port=port),
+                atoms.copy(),
+                self._calculator_factory,
+            ]
+        )
 
-        proc = Popen([sys.executable, '-m', 'ase.calculators.socketio'],
-                     stdin=PIPE)
+        proc = Popen(
+            [sys.executable, '-m', 'ase.calculators.socketio'], stdin=PIPE
+        )
 
         proc.stdin.write(transferbytes)
         proc.stdin.close()
@@ -712,9 +753,11 @@ class PySocketIOClient:
 
         socketinfo, atoms, get_calculator = pickle.load(sys.stdin.buffer)
         atoms.calc = get_calculator()
-        client = SocketClient(host='localhost',
-                              unixsocket=socketinfo.get('unixsocket'),
-                              port=socketinfo.get('port'))
+        client = SocketClient(
+            host='localhost',
+            unixsocket=socketinfo.get('unixsocket'),
+            port=socketinfo.get('port'),
+        )
         # XXX In principle we could avoid calculating stress until
         # someone requests the stress, could we not?
         # Which would make use_stress boolean unnecessary.

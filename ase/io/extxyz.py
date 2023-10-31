@@ -27,18 +27,21 @@ from ase.utils import reader
 
 __all__ = ['read_xyz', 'write_xyz', 'iread_xyz']
 
-PROPERTY_NAME_MAP = {'positions': 'pos',
-                     'numbers': 'Z',
-                     'charges': 'charge',
-                     'symbols': 'species'}
+PROPERTY_NAME_MAP = {
+    'positions': 'pos',
+    'numbers': 'Z',
+    'charges': 'charge',
+    'symbols': 'species',
+}
 
-REV_PROPERTY_NAME_MAP = dict(zip(PROPERTY_NAME_MAP.values(),
-                                 PROPERTY_NAME_MAP.keys()))
+REV_PROPERTY_NAME_MAP = dict(
+    zip(PROPERTY_NAME_MAP.values(), PROPERTY_NAME_MAP.keys())
+)
 
-KEY_QUOTED_VALUE = re.compile(r'([A-Za-z_]+[A-Za-z0-9_-]*)'
-                              + r'\s*=\s*["\{\}]([^"\{\}]+)["\{\}]\s*')
-KEY_VALUE = re.compile(r'([A-Za-z_]+[A-Za-z0-9_]*)\s*='
-                       + r'\s*([^\s]+)\s*')
+KEY_QUOTED_VALUE = re.compile(
+    r'([A-Za-z_]+[A-Za-z0-9_-]*)' + r'\s*=\s*["\{\}]([^"\{\}]+)["\{\}]\s*'
+)
+KEY_VALUE = re.compile(r'([A-Za-z_]+[A-Za-z0-9_]*)\s*=' + r'\s*([^\s]+)\s*')
 KEY_RE = re.compile(r'([A-Za-z_]+[A-Za-z0-9_-]*)\s*')
 
 UNPROCESSED_KEYS = ['uid']
@@ -65,16 +68,12 @@ def key_val_str_to_dict(string, sep=None):
 
     """
     # store the closing delimiters to match opening ones
-    delimiters = {
-        "'": "'",
-        '"': '"',
-        '{': '}',
-        '[': ']'
-    }
+    delimiters = {"'": "'", '"': '"', '{': '}', '[': ']'}
 
     # Make pairs and process afterwards
     kv_pairs = [
-        [[]]]  # List of characters for each entry, add a new list for new value
+        [[]]
+    ]  # List of characters for each entry, add a new list for new value
     cur_delimiter = None  # push and pop closing delimiters
     escaped = False  # add escaped sequences verbatim
 
@@ -115,8 +114,10 @@ def key_val_str_to_dict(string, sep=None):
         elif len(kv_pair) == 1:  # default to True
             key, value = ''.join(kv_pair[0]), 'T'
         else:  # Smush anything else with kv-splitter '=' between them
-            key, value = ''.join(kv_pair[0]), '='.join(
-                ''.join(x) for x in kv_pair[1:])
+            key, value = (
+                ''.join(kv_pair[0]),
+                '='.join(''.join(x) for x in kv_pair[1:]),
+            )
 
         if key.lower() not in UNPROCESSED_KEYS:
             # Try to convert to (arrays of) floats, ints
@@ -136,9 +137,11 @@ def key_val_str_to_dict(string, sep=None):
             # convert special 3x3 matrices
             if key in SPECIAL_3_3_KEYS:
                 if not isinstance(value, np.ndarray) or value.shape != (9,):
-                    raise ValueError("Got info item {}, expecting special 3x3 "
-                                     "matrix, but value is not in the form of "
-                                     "a 9-long numerical vector".format(key))
+                    raise ValueError(
+                        'Got info item {}, expecting special 3x3 '
+                        'matrix, but value is not in the form of '
+                        'a 9-long numerical vector'.format(key)
+                    )
                 value = np.array(value).reshape((3, 3), order='F')
 
             # parse special strings as boolean or JSON
@@ -150,12 +153,20 @@ def key_val_str_to_dict(string, sep=None):
                 # Cannot use `.lower()` to reduce `str_to_bool` mapping because
                 # 't'/'f' not accepted
                 str_to_bool = {
-                    'T': True, 'F': False, 'true': True, 'false': False,
-                    'True': True, 'False': False, 'TRUE': True, 'FALSE': False
+                    'T': True,
+                    'F': False,
+                    'true': True,
+                    'false': False,
+                    'True': True,
+                    'False': False,
+                    'TRUE': True,
+                    'FALSE': False,
                 }
                 try:
-                    boolvalue = [str_to_bool[vpart] for vpart in
-                                 re.findall(r'[^\s,]+', value)]
+                    boolvalue = [
+                        str_to_bool[vpart]
+                        for vpart in re.findall(r'[^\s,]+', value)
+                    ]
 
                     if len(boolvalue) == 1:
                         value = boolvalue[0]
@@ -163,8 +174,8 @@ def key_val_str_to_dict(string, sep=None):
                         value = boolvalue
                 except KeyError:
                     # Try to parse JSON
-                    if value.startswith("_JSON "):
-                        d = json.loads(value.replace("_JSON ", "", 1))
+                    if value.startswith('_JSON '):
+                        d = json.loads(value.replace('_JSON ', '', 1))
                         value = np.array(d)
                         if value.dtype.kind not in ['i', 'f', 'b']:
                             value = d
@@ -196,7 +207,7 @@ def key_val_str_to_dict_regex(s):
             s = KEY_QUOTED_VALUE.sub('', s, 1)
 
         if m is None:
-            break        # No more matches
+            break  # No more matches
 
         key = m.group(1)
         try:
@@ -215,7 +226,7 @@ def key_val_str_to_dict_regex(s):
                     else:
                         numvalue.append(float(x))
                 if len(numvalue) == 1:
-                    numvalue = numvalue[0]         # Only one number
+                    numvalue = numvalue[0]  # Only one number
                 elif len(numvalue) == 9:
                     # special case: 3x3 matrix, fortran ordering
                     numvalue = np.array(numvalue).reshape((3, 3), order='F')
@@ -242,10 +253,15 @@ def key_val_str_to_dict_regex(s):
 
 
 def escape(string):
-    if (' ' in string or
-            '"' in string or "'" in string or
-            '{' in string or '}' in string or
-            '[' in string or ']' in string):
+    if (
+        ' ' in string
+        or '"' in string
+        or "'" in string
+        or '{' in string
+        or '}' in string
+        or '[' in string
+        or ']' in string
+    ):
         string = string.replace('"', '\\"')
         string = f'"{string}"'
     return string
@@ -304,17 +320,18 @@ def key_val_dict_to_str(dct, sep=' '):
                 val = '_JSON ' + json.dumps(val)
                 # if this fails, let give up
             except TypeError:
-                warnings.warn('Skipping unhashable information '
-                              '{}'.format(key))
+                warnings.warn(
+                    'Skipping unhashable information ' '{}'.format(key)
+                )
                 continue
 
         key = escape(key)  # escape and quote key
-        eq = "="
+        eq = '='
         # Should this really be setting empty value that's going to be
         # interpreted as bool True?
         if val is None:
-            val = ""
-            eq = ""
+            val = ''
+            eq = ''
         val = escape(val)  # escape and quote val
 
         string += f'{key}{eq}{val}{sep}'
@@ -343,17 +360,18 @@ def parse_properties(prop_str):
         """
         Parse bool to string
         """
-        return {'T': True, 'F': False,
-                'True': True, 'False': False}.get(x)
+        return {'T': True, 'F': False, 'True': True, 'False': False}.get(x)
 
-    fmt_map = {'R': ('d', float),
-               'I': ('i', int),
-               'S': (object, str),
-               'L': ('bool', parse_bool)}
+    fmt_map = {
+        'R': ('d', float),
+        'I': ('i', int),
+        'S': (object, str),
+        'L': ('bool', parse_bool),
+    }
 
-    for name, ptype, cols in zip(fields[::3],
-                                 fields[1::3],
-                                 [int(x) for x in fields[2::3]]):
+    for name, ptype, cols in zip(
+        fields[::3], fields[1::3], [int(x) for x in fields[2::3]]
+    ):
         if ptype not in ('R', 'I', 'S', 'L'):
             raise ValueError('Unknown property type: ' + ptype)
         ase_name = REV_PROPERTY_NAME_MAP.get(name, name)
@@ -374,8 +392,9 @@ def parse_properties(prop_str):
     return properties, properties_list, dtype, converters
 
 
-def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
-                    nvec=0):
+def _read_xyz_frame(
+    lines, natoms, properties_parser=key_val_str_to_dict, nvec=0
+):
     # comment line
     line = next(lines).strip()
     if nvec > 0:
@@ -414,8 +433,11 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
         try:
             line = next(lines)
         except StopIteration:
-            raise XYZError('ase.io.extxyz: Frame has {} atoms, expected {}'
-                           .format(len(data), natoms))
+            raise XYZError(
+                'ase.io.extxyz: Frame has {} atoms, expected {}'.format(
+                    len(data), natoms
+                )
+            )
         vals = line.split()
         row = tuple([conv(val) for conv, val in zip(convs, vals)])
         data.append(row)
@@ -423,8 +445,9 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
     try:
         data = np.array(data, dtype)
     except TypeError:
-        raise XYZError('Badly formatted data '
-                       'or end of file reached before end of frame')
+        raise XYZError(
+            'Badly formatted data ' 'or end of file reached before end of frame'
+        )
 
     # Read VEC entries if present
     if nvec > 0:
@@ -432,8 +455,10 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             try:
                 line = next(lines)
             except StopIteration:
-                raise XYZError('ase.io.adfxyz: Frame has {} cell vectors, '
-                               'expected {}'.format(len(cell), nvec))
+                raise XYZError(
+                    'ase.io.adfxyz: Frame has {} cell vectors, '
+                    'expected {}'.format(len(cell), nvec)
+                )
             entry = line.split()
 
             if not entry[0].startswith('VEC'):
@@ -442,11 +467,11 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             try:
                 n = int(entry[0][3:])
             except ValueError as e:
-                raise XYZError('Expected VEC{}, got VEC{}'
-                               .format(ln + 1, entry[0][3:])) from e
+                raise XYZError(
+                    'Expected VEC{}, got VEC{}'.format(ln + 1, entry[0][3:])
+                ) from e
             if n != ln + 1:
-                raise XYZError('Expected VEC{}, got VEC{}'
-                               .format(ln + 1, n))
+                raise XYZError('Expected VEC{}, got VEC{}'.format(ln + 1, n))
 
             cell[ln] = np.array([float(x) for x in entry[1:]])
             pbc[ln] = True
@@ -460,8 +485,7 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
         if cols == 1:
             value = data[name]
         else:
-            value = np.vstack([data[name + str(c)]
-                               for c in range(cols)]).T
+            value = np.vstack([data[name + str(c)] for c in range(cols)]).T
         arrays[ase_name] = value
 
     symbols = None
@@ -488,13 +512,15 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
         positions = arrays['positions']
         del arrays['positions']
 
-    atoms = Atoms(symbols=symbols,
-                  positions=positions,
-                  numbers=numbers,
-                  charges=initial_charges,
-                  cell=cell,
-                  pbc=pbc,
-                  info=info)
+    atoms = Atoms(
+        symbols=symbols,
+        positions=positions,
+        numbers=numbers,
+        charges=initial_charges,
+        cell=cell,
+        pbc=pbc,
+        info=info,
+    )
 
     # Read and set constraints
     if 'move_mask' in arrays:
@@ -524,16 +550,23 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             # special case for stress- convert to Voigt 6-element form
             if key == 'stress' and results[key].shape == (3, 3):
                 stress = results[key]
-                stress = np.array([stress[0, 0],
-                                   stress[1, 1],
-                                   stress[2, 2],
-                                   stress[1, 2],
-                                   stress[0, 2],
-                                   stress[0, 1]])
+                stress = np.array(
+                    [
+                        stress[0, 0],
+                        stress[1, 1],
+                        stress[2, 2],
+                        stress[1, 2],
+                        stress[0, 2],
+                        stress[0, 1],
+                    ]
+                )
                 results[key] = stress
     for key in list(atoms.arrays.keys()):
-        if (key in per_atom_properties and len(value.shape) >= 1
-                and value.shape[0] == len(atoms)):
+        if (
+            key in per_atom_properties
+            and len(value.shape) >= 1
+            and value.shape[0] == len(atoms)
+        ):
             results[key] = atoms.arrays[key]
     if results != {}:
         calculator = SinglePointCalculator(atoms, **results)
@@ -714,8 +747,9 @@ def read_xyz(fileobj, index=-1, properties_parser=key_val_str_to_dict):
         try:
             natoms = int(line)
         except ValueError as err:
-            raise XYZError('ase.io.extxyz: Expected xyz header but got: {}'
-                           .format(err))
+            raise XYZError(
+                'ase.io.extxyz: Expected xyz header but got: {}'.format(err)
+            )
         fileobj.readline()  # read comment line
         for i in range(natoms):
             fileobj.readline()
@@ -745,25 +779,27 @@ def read_xyz(fileobj, index=-1, properties_parser=key_val_str_to_dict):
         yield _read_xyz_frame(fileobj, natoms, properties_parser, nvec)
 
 
-def output_column_format(atoms, columns, arrays,
-                         write_info=True, results=None):
+def output_column_format(atoms, columns, arrays, write_info=True, results=None):
     """
     Helper function to build extended XYZ comment line
     """
-    fmt_map = {'d': ('R', '%16.8f'),
-               'f': ('R', '%16.8f'),
-               'i': ('I', '%8d'),
-               'O': ('S', '%s'),
-               'S': ('S', '%s'),
-               'U': ('S', '%-2s'),
-               'b': ('L', ' %.1s')}
+    fmt_map = {
+        'd': ('R', '%16.8f'),
+        'f': ('R', '%16.8f'),
+        'i': ('I', '%8d'),
+        'O': ('S', '%s'),
+        'S': ('S', '%s'),
+        'U': ('S', '%-2s'),
+        'b': ('L', ' %.1s'),
+    }
 
     # NB: Lattice is stored as tranpose of ASE cell,
     # with Fortran array ordering
-    lattice_str = ('Lattice="'
-                   + ' '.join([str(x) for x in np.reshape(atoms.cell.T,
-                                                          9, order='F')]) +
-                   '"')
+    lattice_str = (
+        'Lattice="'
+        + ' '.join([str(x) for x in np.reshape(atoms.cell.T, 9, order='F')])
+        + '"'
+    )
 
     property_names = []
     property_types = []
@@ -780,8 +816,9 @@ def output_column_format(atoms, columns, arrays,
         property_names.append(property_name)
         property_types.append(property_type)
 
-        if (len(array.shape) == 1
-                or (len(array.shape) == 2 and array.shape[1] == 1)):
+        if len(array.shape) == 1 or (
+            len(array.shape) == 2 and array.shape[1] == 1
+        ):
             ncol = 1
             dtypes.append((column, dtype))
         else:
@@ -792,10 +829,16 @@ def output_column_format(atoms, columns, arrays,
         formats.extend([fmt] * ncol)
         property_ncols.append(ncol)
 
-    props_str = ':'.join([':'.join(x) for x in
-                          zip(property_names,
-                              property_types,
-                              [str(nc) for nc in property_ncols])])
+    props_str = ':'.join(
+        [
+            ':'.join(x)
+            for x in zip(
+                property_names,
+                property_types,
+                [str(nc) for nc in property_ncols],
+            )
+        ]
+    )
 
     comment_str = ''
     if atoms.cell.any():
@@ -816,10 +859,17 @@ def output_column_format(atoms, columns, arrays,
     return comment_str, property_ncols, dtype, fmt
 
 
-def write_xyz(fileobj, images, comment='', columns=None,
-              write_info=True,
-              write_results=True, plain=False, vec_cell=False,
-              append=False):
+def write_xyz(
+    fileobj,
+    images,
+    comment='',
+    columns=None,
+    write_info=True,
+    write_results=True,
+    plain=False,
+    vec_cell=False,
+    append=False,
+):
     """
     Write output in extended XYZ format
 
@@ -853,10 +903,12 @@ def write_xyz(fileobj, images, comment='', columns=None,
             fr_cols = columns[:]
 
         if fr_cols is None:
-            fr_cols = (['symbols', 'positions']
-                       + [key for key in atoms.arrays.keys() if
-                          key not in ['symbols', 'positions', 'numbers',
-                                      'species', 'pos']])
+            fr_cols = ['symbols', 'positions'] + [
+                key
+                for key in atoms.arrays.keys()
+                if key
+                not in ['symbols', 'positions', 'numbers', 'species', 'pos']
+            ]
 
         if vec_cell:
             plain = True
@@ -870,15 +922,19 @@ def write_xyz(fileobj, images, comment='', columns=None,
         per_atom_results = {}
         if write_results:
             calculator = atoms.calc
-            if (calculator is not None
-                    and isinstance(calculator, BaseCalculator)):
+            if calculator is not None and isinstance(
+                calculator, BaseCalculator
+            ):
                 for key in all_properties:
                     value = calculator.results.get(key, None)
                     if value is None:
                         # skip missing calculator results
                         continue
-                    if (key in per_atom_properties and len(value.shape) >= 1
-                            and value.shape[0] == len(atoms)):
+                    if (
+                        key in per_atom_properties
+                        and len(value.shape) >= 1
+                        and value.shape[0] == len(atoms)
+                    ):
                         # per-atom quantities (forces, energies, stresses)
                         per_atom_results[key] = value
                     elif key in per_config_properties:
@@ -888,7 +944,8 @@ def write_xyz(fileobj, images, comment='', columns=None,
                         if key == 'stress':
                             xx, yy, zz, yz, xz, xy = value
                             value = np.array(
-                                [(xx, xy, xz), (xy, yy, yz), (xz, yz, zz)])
+                                [(xx, xy, xz), (xy, yy, yz), (xz, yz, zz)]
+                            )
                         per_frame_results[key] = value
 
         # Move symbols and positions to first two properties
@@ -930,7 +987,8 @@ def write_xyz(fileobj, images, comment='', columns=None,
                 natoms += nPBC
                 if pos.shape != (natoms, 3) or pos.dtype.kind != 'f':
                     raise ValueError(
-                        'Pseudo Atoms containing cell have bad coords')
+                        'Pseudo Atoms containing cell have bad coords'
+                    )
 
         # Move mask
         if 'move_mask' in fr_cols:
@@ -969,16 +1027,16 @@ def write_xyz(fileobj, images, comment='', columns=None,
                 if key not in fr_cols:
                     fr_cols += [key]
                 else:
-                    warnings.warn('write_xyz() overwriting array "{}" present '
-                                  'in atoms.arrays with stored results '
-                                  'from calculator'.format(key))
+                    warnings.warn(
+                        'write_xyz() overwriting array "{}" present '
+                        'in atoms.arrays with stored results '
+                        'from calculator'.format(key)
+                    )
             arrays.update(per_atom_results)
 
-        comm, ncols, dtype, fmt = output_column_format(atoms,
-                                                       fr_cols,
-                                                       arrays,
-                                                       write_info,
-                                                       per_frame_results)
+        comm, ncols, dtype, fmt = output_column_format(
+            atoms, fr_cols, arrays, write_info, per_frame_results
+        )
 
         if plain or comment != '':
             # override key/value pairs with user-speficied comment string

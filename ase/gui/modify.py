@@ -21,8 +21,9 @@ class ModifyAtoms:
         win = ui.Window(_('Modify'), wmtype='utility')
         element = Element(callback=self.set_element)
         win.add(element)
-        win.add(ui.Button(_('Change element'),
-                          partial(self.set_element, element)))
+        win.add(
+            ui.Button(_('Change element'), partial(self.set_element, element))
+        )
         self.tag = ui.SpinBox(0, -1000, 1000, 1, self.set_tag)
         win.add([_('Tag'), self.tag])
         self.magmom = ui.SpinBox(0.0, -10, 10, 0.1, self.set_magmom)
@@ -42,7 +43,7 @@ class ModifyAtoms:
             self.magmom.value = round(magmoms[0], 2)
 
     def selection(self):
-        return self.gui.images.selected[:len(self.gui.atoms)]
+        return self.gui.images.selected[: len(self.gui.atoms)]
 
     def set_element(self, element):
         self.gui.atoms.numbers[self.selection()] = element.Z

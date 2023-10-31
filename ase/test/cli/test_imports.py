@@ -15,6 +15,8 @@ def test_imports():
         max_nonstdlib_module_count = 200  # this depends on the environment
     else:
         max_nonstdlib_module_count = None
-    check_imports("from ase.cli.main import main; main(args=[])",
-                  forbidden_modules=forbidden_modules,
-                  max_nonstdlib_module_count=max_nonstdlib_module_count)
+    check_imports(
+        'from ase.cli.main import main; main(args=[])',
+        forbidden_modules=forbidden_modules,
+        max_nonstdlib_module_count=max_nonstdlib_module_count,
+    )

@@ -11,8 +11,9 @@ def test_eon_masses():
     # Error tolerance.
     TOL = 1e-8
 
-    data = ase.lattice.compounds.B2(['Cs', 'Cl'], latticeconstant=4.123,
-                                    size=(3, 3, 3))
+    data = ase.lattice.compounds.B2(
+        ['Cs', 'Cl'], latticeconstant=4.123, size=(3, 3, 3)
+    )
 
     m_Cs = ase.data.atomic_masses[ase.data.atomic_numbers['Cs']]
     m_Cl = ase.data.atomic_masses[ase.data.atomic_numbers['Cl']]

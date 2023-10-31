@@ -62,15 +62,18 @@ def minority_element_segregate(atoms, layer_tag=1, rng=np.random):
 
 
 def same_layer_comp(atoms, rng=np.random):
-    unique_syms, comp = np.unique(sorted(atoms.get_chemical_symbols()),
-                                  return_counts=True)
+    unique_syms, comp = np.unique(
+        sorted(atoms.get_chemical_symbols()), return_counts=True
+    )
     layer = get_layer_comps(atoms)
-    sym_dict = {s: int(np.array(c) / len(layer))
-                for s, c in zip(unique_syms, comp)}
+    sym_dict = {
+        s: int(np.array(c) / len(layer)) for s, c in zip(unique_syms, comp)
+    }
     for la in layer:
         correct_by = sym_dict.copy()
         lcomp = dict(
-            zip(*np.unique([atoms[i].symbol for i in la], return_counts=True)))
+            zip(*np.unique([atoms[i].symbol for i in la], return_counts=True))
+        )
         for s, num in lcomp.items():
             correct_by[s] -= num
         to_add, to_rem = get_add_remove_lists(**correct_by)
@@ -104,10 +107,13 @@ def get_ordered_composition(syms, pools=None):
                 for sym in set(syms):
                     if sym in pool:
                         pool_index[sym] = i
-    syms = [(sym, pool_index[sym], c)
-            for sym, c in zip(*np.unique(syms, return_counts=True))]
+    syms = [
+        (sym, pool_index[sym], c)
+        for sym, c in zip(*np.unique(syms, return_counts=True))
+    ]
     unique_syms, pn, comp = zip(
-        *sorted(syms, key=lambda k: (k[1] - k[2], k[0])))
+        *sorted(syms, key=lambda k: (k[1] - k[2], k[0]))
+    )
     return (unique_syms, pn, comp)
 
 
@@ -116,11 +122,15 @@ def dummy_func(*args):
 
 
 class SlabOperator(OffspringCreator):
-    def __init__(self, verbose=False, num_muts=1,
-                 allowed_compositions=None,
-                 distribution_correction_function=None,
-                 element_pools=None,
-                 rng=np.random):
+    def __init__(
+        self,
+        verbose=False,
+        num_muts=1,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        element_pools=None,
+        rng=np.random,
+    ):
         OffspringCreator.__init__(self, verbose, num_muts=num_muts, rng=rng)
 
         self.allowed_compositions = allowed_compositions
@@ -139,8 +149,7 @@ class SlabOperator(OffspringCreator):
             return syms
 
         unique_syms, counts = np.unique(syms, return_counts=True)
-        comp, unique_syms = zip(*sorted(zip(counts, unique_syms),
-                                        reverse=True))
+        comp, unique_syms = zip(*sorted(zip(counts, unique_syms), reverse=True))
 
         for cc in self.allowed_compositions:
             comp += (0,) * (len(cc) - len(comp))
@@ -149,7 +158,8 @@ class SlabOperator(OffspringCreator):
 
         comp_diff = self.get_closest_composition_diff(comp)
         to_add, to_rem = get_add_remove_lists(
-            **dict(zip(unique_syms, comp_diff)))
+            **dict(zip(unique_syms, comp_diff))
+        )
         for add, rem in zip(to_add, to_rem):
             tbc = [i for i in range(len(syms)) if syms[i] == rem]
             ai = self.rng.choice(tbc)
@@ -160,7 +170,8 @@ class SlabOperator(OffspringCreator):
         if self.element_pools is None or self.allowed_compositions is None:
             return [], []
         unique_syms, pool_number, comp = get_ordered_composition(
-            syms, self.element_pools)
+            syms, self.element_pools
+        )
         stay_comp, stay_syms = [], []
         add_rem = {}
         per_pool = len(self.allowed_compositions[0]) / len(self.element_pools)
@@ -198,10 +209,12 @@ class SlabOperator(OffspringCreator):
         return np.array(c2) - c1
 
     def get_possible_mutations(self, a):
-        unique_syms, comp = np.unique(sorted(a.get_chemical_symbols()),
-                                      return_counts=True)
-        min_num = min([i for i in np.ravel(list(self.allowed_compositions))
-                       if i > 0])
+        unique_syms, comp = np.unique(
+            sorted(a.get_chemical_symbols()), return_counts=True
+        )
+        min_num = min(
+            [i for i in np.ravel(list(self.allowed_compositions)) if i > 0]
+        )
         muts = set()
         for i, n in enumerate(comp):
             if n != 0:
@@ -229,15 +242,26 @@ class SlabOperator(OffspringCreator):
 
 
 class CutSpliceSlabCrossover(SlabOperator):
-    def __init__(self, allowed_compositions=None, element_pools=None,
-                 verbose=False,
-                 num_muts=1, tries=1000, min_ratio=0.25,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              element_pools=element_pools,
-                              rng=rng)
+    def __init__(
+        self,
+        allowed_compositions=None,
+        element_pools=None,
+        verbose=False,
+        num_muts=1,
+        tries=1000,
+        min_ratio=0.25,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            element_pools=element_pools,
+            rng=rng,
+        )
 
         self.tries = tries
         self.min_ratio = min_ratio
@@ -249,10 +273,13 @@ class CutSpliceSlabCrossover(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f, m))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parents {} {}'.format(f.info['confid'],
-                                                  m.info['confid'])
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        parent_message = ': Parents {} {}'.format(
+            f.info['confid'], m.info['confid']
+        )
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, f, m):
         child = f.copy()
@@ -268,9 +295,13 @@ class CutSpliceSlabCrossover(SlabOperator):
             # Determine cut plane
             theta = self.rng.random() * 2 * np.pi  # 0,2pi
             phi = self.rng.random() * np.pi  # 0,pi
-            e = np.array((np.sin(phi) * np.cos(theta),
-                          np.sin(theta) * np.sin(phi),
-                          np.cos(phi)))
+            e = np.array(
+                (
+                    np.sin(phi) * np.cos(theta),
+                    np.sin(theta) * np.sin(phi),
+                    np.cos(phi),
+                )
+            )
 
             # Cut structures
             d2fp = np.dot(fp - midpoint, e)
@@ -278,8 +309,9 @@ class CutSpliceSlabCrossover(SlabOperator):
             ratio = float(np.count_nonzero(fpart)) / len(f)
             if ratio < self.min_ratio or ratio > 1 - self.min_ratio:
                 continue
-            syms = np.where(fpart, f.get_chemical_symbols(),
-                            m.get_chemical_symbols())
+            syms = np.where(
+                fpart, f.get_chemical_symbols(), m.get_chemical_symbols()
+            )
             dists2plane = abs(d2fp)
 
             # Correct the composition
@@ -288,8 +320,11 @@ class CutSpliceSlabCrossover(SlabOperator):
 
             # Change elements closest to the cut plane
             for add, rem in zip(to_add, to_rem):
-                tbc = [(dists2plane[i], i)
-                       for i in range(len(syms)) if syms[i] == rem]
+                tbc = [
+                    (dists2plane[i], i)
+                    for i in range(len(syms))
+                    if syms[i] == rem
+                ]
                 ai = sorted(tbc)[0][1]
                 syms[ai] = add
 
@@ -303,6 +338,7 @@ class CutSpliceSlabCrossover(SlabOperator):
 
 # Mutations: Random, MoveUp/Down/Left/Right, six or all elements
 
+
 class RandomCompositionMutation(SlabOperator):
     """Change the current composition to another of the allowed compositions.
     The allowed compositions should be input in the same order as the element
@@ -312,14 +348,24 @@ class RandomCompositionMutation(SlabOperator):
     means that there can be 5 or 6 Au and Cu, and 2 or 3 In and Bi.
     """
 
-    def __init__(self, verbose=False, num_muts=1, element_pools=None,
-                 allowed_compositions=None,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              element_pools=element_pools,
-                              rng=rng)
+    def __init__(
+        self,
+        verbose=False,
+        num_muts=1,
+        element_pools=None,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            element_pools=element_pools,
+            rng=rng,
+        )
 
         self.descriptor = 'RandomCompositionMutation'
 
@@ -338,22 +384,25 @@ class RandomCompositionMutation(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, atoms):
         allowed_comps = self.allowed_compositions
         if allowed_comps is None:
             n_elems = len(set(atoms.get_chemical_symbols()))
             n_atoms = len(atoms)
-            allowed_comps = [c for c in permutations(range(1, n_atoms),
-                                                     n_elems)
-                             if sum(c) == n_atoms]
+            allowed_comps = [
+                c
+                for c in permutations(range(1, n_atoms), n_elems)
+                if sum(c) == n_atoms
+            ]
 
         # Sorting the composition to have the same order as in element_pools
         syms = atoms.get_chemical_symbols()
-        unique_syms, _, comp = get_ordered_composition(syms,
-                                                       self.element_pools)
+        unique_syms, _, comp = get_ordered_composition(syms, self.element_pools)
 
         # Choose the composition to change to
         for i, allowed in enumerate(allowed_comps):
@@ -365,7 +414,8 @@ class RandomCompositionMutation(SlabOperator):
 
         # Get difference from current composition
         to_add, to_rem = get_add_remove_lists(
-            **dict(zip(unique_syms, comp_diff)))
+            **dict(zip(unique_syms, comp_diff))
+        )
 
         # Correct current composition
         syms = atoms.get_chemical_symbols()
@@ -380,14 +430,24 @@ class RandomCompositionMutation(SlabOperator):
 
 
 class RandomElementMutation(SlabOperator):
-    def __init__(self, element_pools, verbose=False, num_muts=1,
-                 allowed_compositions=None,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              element_pools=element_pools,
-                              rng=rng)
+    def __init__(
+        self,
+        element_pools,
+        verbose=False,
+        num_muts=1,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            element_pools=element_pools,
+            rng=rng,
+        )
 
         self.descriptor = 'RandomElementMutation'
 
@@ -399,8 +459,10 @@ class RandomElementMutation(SlabOperator):
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
         parent_message = ': Parent {}'.format(f.info['confid'])
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, atoms):
         poss_muts = self.get_all_element_mutations(atoms)
@@ -411,14 +473,24 @@ class RandomElementMutation(SlabOperator):
 
 
 class NeighborhoodElementMutation(SlabOperator):
-    def __init__(self, element_pools, verbose=False, num_muts=1,
-                 allowed_compositions=None,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              element_pools=element_pools,
-                              rng=rng)
+    def __init__(
+        self,
+        element_pools,
+        verbose=False,
+        num_muts=1,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            element_pools=element_pools,
+            rng=rng,
+        )
 
         self.descriptor = 'NeighborhoodElementMutation'
 
@@ -431,8 +503,10 @@ class NeighborhoodElementMutation(SlabOperator):
         indi = self.operate(indi)
 
         parent_message = ': Parent {}'.format(f.info['confid'])
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, atoms):
         least_diff = 1e22
@@ -453,15 +527,26 @@ class NeighborhoodElementMutation(SlabOperator):
 class SymmetrySlabPermutation(SlabOperator):
     """Permutes the atoms in the slab until it has a higher symmetry number."""
 
-    def __init__(self, verbose=False, num_muts=1, sym_goal=100, max_tries=50,
-                 allowed_compositions=None,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              rng=rng)
+    def __init__(
+        self,
+        verbose=False,
+        num_muts=1,
+        sym_goal=100,
+        max_tries=50,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            rng=rng,
+        )
         if spglib is None:
-            print("SymmetrySlabPermutation needs spglib to function")
+            print('SymmetrySlabPermutation needs spglib to function')
 
         assert sym_goal >= 1
         self.sym_goal = sym_goal
@@ -474,15 +559,18 @@ class SymmetrySlabPermutation(SlabOperator):
         if len(set(f.get_chemical_symbols())) == 1:
             f = parents[1]
             if len(set(f.get_chemical_symbols())) == 1:
-                return None, '{1} not possible in {0}'.format(f.info['confid'],
-                                                              self.descriptor)
+                return None, '{1} not possible in {0}'.format(
+                    f.info['confid'], self.descriptor
+                )
 
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
         parent_message = ': Parent {}'.format(f.info['confid'])
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, atoms):
         # Do the operation
@@ -494,7 +582,8 @@ class SymmetrySlabPermutation(SlabOperator):
                     permute2(atoms, rng=self.rng)
                 self.dcf(atoms)
                 sym_num = spglib.get_symmetry_dataset(
-                    atoms_to_spglib_cell(atoms))['number']
+                    atoms_to_spglib_cell(atoms)
+                )['number']
                 if sym_num >= sg:
                     break
             sg -= 1
@@ -502,13 +591,22 @@ class SymmetrySlabPermutation(SlabOperator):
 
 
 class RandomSlabPermutation(SlabOperator):
-    def __init__(self, verbose=False, num_muts=1,
-                 allowed_compositions=None,
-                 distribution_correction_function=None, rng=np.random):
-        SlabOperator.__init__(self, verbose, num_muts,
-                              allowed_compositions,
-                              distribution_correction_function,
-                              rng=rng)
+    def __init__(
+        self,
+        verbose=False,
+        num_muts=1,
+        allowed_compositions=None,
+        distribution_correction_function=None,
+        rng=np.random,
+    ):
+        SlabOperator.__init__(
+            self,
+            verbose,
+            num_muts,
+            allowed_compositions,
+            distribution_correction_function,
+            rng=rng,
+        )
 
         self.descriptor = 'RandomSlabPermutation'
 
@@ -518,8 +616,9 @@ class RandomSlabPermutation(SlabOperator):
         if len(set(f.get_chemical_symbols())) == 1:
             f = parents[1]
             if len(set(f.get_chemical_symbols())) == 1:
-                return None, '{1} not possible in {0}'.format(f.info['confid'],
-                                                              self.descriptor)
+                return None, '{1} not possible in {0}'.format(
+                    f.info['confid'], self.descriptor
+                )
 
         indi = self.initialize_individual(f, f)
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
@@ -527,8 +626,10 @@ class RandomSlabPermutation(SlabOperator):
         indi = self.operate(indi)
 
         parent_message = ': Parent {}'.format(f.info['confid'])
-        return (self.finalize_individual(indi),
-                self.descriptor + parent_message)
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + parent_message,
+        )
 
     def operate(self, atoms):
         # Do the operation

@@ -66,6 +66,7 @@ class FortranFile(file):
 
     def _get_header_length(self):
         return numpy.dtype(self._header_prec).itemsize
+
     _header_length = property(fget=_get_header_length)
 
     def _set_endian(self, c):
@@ -84,6 +85,7 @@ class FortranFile(file):
 
     def _get_endian(self):
         return self._endian
+
     ENDIAN = property(
         fset=_set_endian,
         fget=_get_endian,
@@ -98,6 +100,7 @@ class FortranFile(file):
 
     def _get_header_prec(self):
         return self._header_prec
+
     HEADER_PREC = property(
         fset=_set_header_prec,
         fget=_get_header_prec,
@@ -135,8 +138,10 @@ class FortranFile(file):
             else:
                 read_data = self.read(num_bytes - L)
             if read_data == b'':
-                raise OSError('Could not read enough data.'
-                              '  Wanted %d bytes, got %d.' % (num_bytes, L))
+                raise OSError(
+                    'Could not read enough data.'
+                    '  Wanted %d bytes, got %d.' % (num_bytes, L)
+                )
             data += read_data
 
     def _read_check(self):
@@ -147,9 +152,12 @@ class FortranFile(file):
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
-        self.write(numpy.array(
-            number_of_bytes, dtype=self.ENDIAN + self.HEADER_PREC,
-        ).tostring())
+        self.write(
+            numpy.array(
+                number_of_bytes,
+                dtype=self.ENDIAN + self.HEADER_PREC,
+            ).tostring()
+        )
 
     def readRecord(self):
         """Read a single fortran record"""

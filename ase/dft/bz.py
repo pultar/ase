@@ -7,6 +7,7 @@ import numpy as np
 def bz_vertices(icell, dim=3):
     """See https://xkcd.com/1421 ..."""
     from scipy.spatial import Voronoi
+
     icell = icell.copy()
     if dim < 3:
         icell[2, 2] = 1e-3
@@ -20,7 +21,7 @@ def bz_vertices(icell, dim=3):
     for vertices, points in zip(vor.ridge_vertices, vor.ridge_points):
         if -1 not in vertices and 13 in points:
             normal = G[points].sum(0)
-            normal /= (normal**2).sum()**0.5
+            normal /= (normal**2).sum() ** 0.5
             bz1.append((vor.vertices[vertices], normal))
     return bz1
 
@@ -42,12 +43,17 @@ class FlatPlot:
         ax.set_aspect('equal')
 
     def draw_arrow(self, ax, vector, **kwargs):
-        ax.arrow(0, 0, vector[0], vector[1],
-                 lw=1,
-                 length_includes_head=True,
-                 head_width=0.03,
-                 head_length=0.05,
-                 **kwargs)
+        ax.arrow(
+            0,
+            0,
+            vector[0],
+            vector[1],
+            lw=1,
+            length_includes_head=True,
+            head_width=0.03,
+            head_length=0.05,
+            **kwargs,
+        )
 
     def label_options(self, point):
         ha_s = ['right', 'left', 'right']
@@ -61,12 +67,14 @@ class FlatPlot:
 
 class SpacePlot:
     """Helper class for ordinary (3D) Brillouin zone plots."""
+
     axis_dim = 3
     point_options: Dict[str, Any] = {}
 
     def __init__(self, *, elev=None):
         from matplotlib.patches import FancyArrowPatch
         from mpl_toolkits.mplot3d import Axes3D, proj3d
+
         Axes3D  # silence pyflakes
 
         class Arrow3D(FancyArrowPatch):
@@ -77,8 +85,9 @@ class SpacePlot:
 
             def draw(self, renderer):
                 xs3d, ys3d, zs3d = self._verts3d
-                xs, ys, zs = proj3d.proj_transform(xs3d, ys3d,
-                                                   zs3d, self.ax.axes.M)
+                xs, ys, zs = proj3d.proj_transform(
+                    xs3d, ys3d, zs3d, self.ax.axes.M
+                )
                 self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
                 FancyArrowPatch.draw(self, renderer)
 
@@ -103,14 +112,17 @@ class SpacePlot:
         return fig.add_subplot(projection='3d')
 
     def draw_arrow(self, ax, vector, **kwargs):
-        ax.add_artist(self.arrow3d(
-            ax,
-            [0, vector[0]],
-            [0, vector[1]],
-            [0, vector[2]],
-            mutation_scale=20,
-            arrowstyle='-|>',
-            **kwargs))
+        ax.add_artist(
+            self.arrow3d(
+                ax,
+                [0, vector[0]],
+                [0, vector[1]],
+                [0, vector[2]],
+                mutation_scale=20,
+                arrowstyle='-|>',
+                **kwargs,
+            )
+        )
 
     def adjust_view(self, ax, minp, maxp):
         import matplotlib.pyplot as plt
@@ -151,6 +163,7 @@ def normalize_name(name):
 
     if len(name) > 1:
         import re
+
         m = re.match(r'^(\D+?)(\d*)$', name)
         if m is None:
             raise ValueError(f'Bad label: {name}')
@@ -160,9 +173,18 @@ def normalize_name(name):
     return name
 
 
-def bz_plot(cell, vectors=False, paths=None, points=None,
-            elev=None, scale=1, interactive=False,
-            pointstyle=None, ax=None, show=False):
+def bz_plot(
+    cell,
+    vectors=False,
+    paths=None,
+    points=None,
+    elev=None,
+    scale=1,
+    interactive=False,
+    pointstyle=None,
+    ax=None,
+    show=False,
+):
     import matplotlib.pyplot as plt
 
     if pointstyle is None:
@@ -196,7 +218,7 @@ def bz_plot(cell, vectors=False, paths=None, points=None,
             if normal @ plotter.view < 0 and not interactive:
                 ls = ':'
 
-        ax.plot(*xyz[:plotter.axis_dim], c='k', ls=ls)
+        ax.plot(*xyz[: plotter.axis_dim], c='k', ls=ls)
         maxp = max(maxp, points.max())
         minp = min(minp, points.min())
 
@@ -212,18 +234,22 @@ def bz_plot(cell, vectors=False, paths=None, points=None,
 
     if paths is not None:
         for names, points in paths:
-            coords = np.array(points).T[:plotter.axis_dim, :]
+            coords = np.array(points).T[: plotter.axis_dim, :]
             ax.plot(*coords, c='r', ls='-')
 
             for name, point in zip(names, points):
                 name = normalize_name(name)
-                point = point[:plotter.axis_dim]
-                ax.text(*point, rf'$\mathrm{{{name}}}$',
-                        color='g', **plotter.label_options(point))
+                point = point[: plotter.axis_dim]
+                ax.text(
+                    *point,
+                    rf'$\mathrm{{{name}}}$',
+                    color='g',
+                    **plotter.label_options(point),
+                )
 
     if kpoints is not None:
         kw = {'c': 'b', **plotter.point_options, **pointstyle}
-        ax.scatter(*kpoints[:, :plotter.axis_dim].T, **kw)
+        ax.scatter(*kpoints[:, : plotter.axis_dim].T, **kw)
 
     ax.set_axis_off()
 

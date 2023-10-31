@@ -4,8 +4,7 @@ import pytest
 from ase.build import bulk
 from ase.io import Trajectory, read
 from ase.md import Andersen, Langevin, VelocityVerlet
-from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
-                                         Stationary)
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
 from ase.units import fs
 
 
@@ -73,13 +72,17 @@ def test_verlet_thermostats_asap(asap3, testdir, allraise):
 
                 def recorder():
                     temp.append(a_md.get_temperature())
+
                 md.attach(recorder, interval=1)
                 md.run(7000)
                 temp = np.array(temp)
                 avgtemp = np.mean(temp)
                 fluct = np.std(temp)
-                print("Temperature is {:.2f} K +/- {:.2f} K".format(avgtemp,
-                                                                    fluct))
+                print(
+                    'Temperature is {:.2f} K +/- {:.2f} K'.format(
+                        avgtemp, fluct
+                    )
+                )
                 assert abs(avgtemp - T_high) < 10.0
 
 
@@ -91,6 +94,7 @@ def prepare_md(atoms, calculator):
 
 
 def thermalize(temp, atoms, rng):
-    MaxwellBoltzmannDistribution(atoms, temperature_K=temp, force_temp=True,
-                                 rng=rng)
+    MaxwellBoltzmannDistribution(
+        atoms, temperature_K=temp, force_temp=True, rng=rng
+    )
     Stationary(atoms)

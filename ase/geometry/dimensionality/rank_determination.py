@@ -70,7 +70,6 @@ def bfs(adjacency, start):
         cvisited[c].append(p)
 
         for nc, offset in adjacency[c]:
-
             nbrpos = (p[0] + offset[0], p[1] + offset[1], p[2] + offset[2])
             nbrnode = (nc, nbrpos)
             if nbrnode in visited:
@@ -97,7 +96,7 @@ def traverse_component_graphs(adjacency):
 def build_adjacency_list(parents, bonds):
     graph = np.unique(parents)
     adjacency = {e: set() for e in graph}
-    for (i, j, offset) in bonds:
+    for i, j, offset in bonds:
         component_a = parents[i]
         component_b = parents[j]
         adjacency[component_a].add((component_b, offset))
@@ -136,7 +135,6 @@ def merge_mutual_visits(all_visited, ranks, graph):
 
 
 class RDA:
-
     def __init__(self, num_atoms):
         """
         Initializes the RDA class.
@@ -171,7 +169,7 @@ class RDA:
         """
         roffset = tuple(-np.array(offset))
 
-        if offset == (0, 0, 0):    # only want bonds in aperiodic unit cell
+        if offset == (0, 0, 0):  # only want bonds in aperiodic unit cell
             self.graph.union(i, j)
         else:
             self.bonds += [(i, j, offset)]
@@ -187,8 +185,7 @@ class RDA:
         Returns:
         hist : tuple         Dimensionality histogram.
         """
-        adjacency = build_adjacency_list(self.graph.find_all(),
-                                         self.bonds)
+        adjacency = build_adjacency_list(self.graph.find_all(), self.bonds)
         if adjacency == self.adjacency:
             return self.hcached
 

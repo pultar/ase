@@ -25,7 +25,7 @@ class Andersen(MolecularDynamics):
         rng=random,
         append_trajectory: bool = False,
     ):
-        """"
+        """ "
         Parameters:
 
         atoms: Atoms object
@@ -83,9 +83,15 @@ class Andersen(MolecularDynamics):
         if communicator is None:
             communicator = DummyMPI()
         self.communicator = communicator
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
+        MolecularDynamics.__init__(
+            self,
+            atoms,
+            timestep,
+            trajectory,
+            logfile,
+            loginterval,
+            append_trajectory=append_trajectory,
+        )
 
     def set_temperature(self, temperature_K):
         self.temp = units.kB * temperature_K
@@ -99,13 +105,13 @@ class Andersen(MolecularDynamics):
     def boltzmann_random(self, width, size):
         x = self.rng.random_sample(size=size)
         y = self.rng.random_sample(size=size)
-        z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
+        z = width * cos(2 * pi * x) * (-2 * log(1 - y)) ** 0.5
         return z
 
     def get_maxwell_boltzmann_velocities(self):
         natoms = len(self.atoms)
         masses = repeat(self.masses, 3).reshape(natoms, 3)
-        width = (self.temp / masses)**0.5
+        width = (self.temp / masses) ** 0.5
         velos = self.boltzmann_random(width, size=(natoms, 3))
         return velos  # [[x, y, z],] components for each atom
 
@@ -125,9 +131,10 @@ class Andersen(MolecularDynamics):
 
         if self.fix_com:
             # add random velocity to center of mass to prepare Andersen
-            width = (self.temp / sum(self.masses))**0.5
-            self.random_com_velocity = (ones(self.v.shape)
-                                        * self.boltzmann_random(width, (3)))
+            width = (self.temp / sum(self.masses)) ** 0.5
+            self.random_com_velocity = ones(
+                self.v.shape
+            ) * self.boltzmann_random(width, (3))
             self.communicator.broadcast(self.random_com_velocity, 0)
             self.v += self.random_com_velocity
 
@@ -138,8 +145,9 @@ class Andersen(MolecularDynamics):
         self.andersen_chance = self.rng.random_sample(size=self.v.shape)
         self.communicator.broadcast(self.random_velocity, 0)
         self.communicator.broadcast(self.andersen_chance, 0)
-        self.v[self.andersen_chance <= self.andersen_prob] \
-            = self.random_velocity[self.andersen_chance <= self.andersen_prob]
+        self.v[
+            self.andersen_chance <= self.andersen_prob
+        ] = self.random_velocity[self.andersen_chance <= self.andersen_prob]
 
         x = atoms.get_positions()
         if self.fix_com:

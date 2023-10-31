@@ -14,18 +14,17 @@ def test_lammps_units_conversions(factory):
     ref_energy = -2 * _e * 1e10 / (4 * pi * _eps0 * distance)
     ref_force = 2 * _e * 1e10 / (4 * pi * _eps0 * distance**2)
 
-    atoms = Atoms(['H', 'O'], [(0.1, 0.1, 0.1),
-                               (0.1, 0.1, 0.1 + distance)])
+    atoms = Atoms(['H', 'O'], [(0.1, 0.1, 0.1), (0.1, 0.1, 0.1 + distance)])
     atoms.set_initial_charges([1, -2])
     atoms.center(10.1)
 
     for units in ['real', 'metal', 'electron', 'nano']:
         with factory.calc(
-                specorder=['H', 'O'],
-                pair_style='coul/cut 10.0',
-                pair_coeff=['* *'],
-                atom_style='charge',
-                units=units
+            specorder=['H', 'O'],
+            pair_style='coul/cut 10.0',
+            pair_coeff=['* *'],
+            atom_style='charge',
+            units=units,
         ) as calc:
             atoms.calc = calc
             energy = atoms.get_potential_energy()

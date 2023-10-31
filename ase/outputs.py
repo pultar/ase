@@ -102,9 +102,9 @@ ShapeSpec = Union[str, int]
 
 
 def _defineprop(
-        name: str,
-        dtype: type = float,
-        shape: Union[ShapeSpec, Sequence[ShapeSpec]] = ()
+    name: str,
+    dtype: type = float,
+    shape: Union[ShapeSpec, Sequence[ShapeSpec]] = (),
 ) -> Property:
     """Create, register, and return a property."""
 

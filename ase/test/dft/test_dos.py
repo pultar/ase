@@ -1,7 +1,9 @@
 def test_dos():
     from ase.atoms import Atoms
-    from ase.calculators.singlepoint import (SinglePointDFTCalculator,
-                                             SinglePointKPoint)
+    from ase.calculators.singlepoint import (
+        SinglePointDFTCalculator,
+        SinglePointKPoint,
+    )
     from ase.dft.dos import DOS
 
     atoms = Atoms('H')

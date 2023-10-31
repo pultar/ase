@@ -9,37 +9,37 @@ from ase.md.verlet import VelocityVerlet
 
 @pytest.fixture
 def atoms_fcc_Ni_with_H_at_center():
-    atoms = bulk("Ni", cubic=True)
-    atoms += Atom("H", position=atoms.cell.diagonal() / 2)
+    atoms = bulk('Ni', cubic=True)
+    atoms += Atom('H', position=atoms.cell.diagonal() / 2)
     return atoms
 
 
 @pytest.fixture
 def lammps_data_file_Fe(datadir):
-    return datadir / "lammpslib_simple_input.data"
+    return datadir / 'lammpslib_simple_input.data'
 
 
 @pytest.fixture
 def calc_params_Fe(lammps_data_file_Fe):
     calc_params = {}
-    calc_params["lammps_header"] = [
-        "units           real",
-        "atom_style      full",
-        "boundary        p p p",
-        "box tilt        large",
-        "pair_style      lj/cut/coul/long 12.500",
-        "bond_style      harmonic",
-        "angle_style     harmonic",
-        "kspace_style    ewald 0.0001",
-        "kspace_modify   gewald 0.01",
-        f"read_data      {lammps_data_file_Fe}",
+    calc_params['lammps_header'] = [
+        'units           real',
+        'atom_style      full',
+        'boundary        p p p',
+        'box tilt        large',
+        'pair_style      lj/cut/coul/long 12.500',
+        'bond_style      harmonic',
+        'angle_style     harmonic',
+        'kspace_style    ewald 0.0001',
+        'kspace_modify   gewald 0.01',
+        f'read_data      {lammps_data_file_Fe}',
     ]
-    calc_params["lmpcmds"] = []
-    calc_params["atom_types"] = {"Fe": 1}
-    calc_params["create_atoms"] = False
-    calc_params["create_box"] = False
-    calc_params["boundary"] = False
-    calc_params["log_file"] = "test.log"
+    calc_params['lmpcmds'] = []
+    calc_params['atom_types'] = {'Fe': 1}
+    calc_params['create_atoms'] = False
+    calc_params['create_box'] = False
+    calc_params['boundary'] = False
+    calc_params['log_file'] = 'test.log'
     return calc_params
 
 
@@ -47,14 +47,14 @@ def calc_params_Fe(lammps_data_file_Fe):
 def atoms_Fe(lammps_data_file_Fe):
     return ase.io.read(
         lammps_data_file_Fe,
-        format="lammps-data",
+        format='lammps-data',
         Z_of_type={1: 26},
-        units="real",
+        units='real',
     )
 
 
 @pytest.mark.calculator_lite
-@pytest.mark.calculator("lammpslib")
+@pytest.mark.calculator('lammpslib')
 def test_lammpslib_simple(
     factory,
     calc_params_NiH,
@@ -76,9 +76,9 @@ def test_lammpslib_simple(
     F = NiH.get_forces()
     S = NiH.get_stress()
 
-    print("Energy: ", E)
-    print("Forces:", F)
-    print("Stress: ", S)
+    print('Energy: ', E)
+    print('Forces:', F)
+    print('Stress: ', S)
     print()
 
     E = NiH.get_potential_energy()
@@ -101,10 +101,10 @@ def test_lammpslib_simple(
     F3 = NiH.get_forces()
     S3 = NiH.get_stress()
 
-    print("rattled atoms")
-    print("Energy: ", E3)
-    print("Forces:", F3)
-    print("Stress: ", S3)
+    print('rattled atoms')
+    print('Energy: ', E3)
+    print('Forces:', F3)
+    print('Stress: ', S3)
     print()
 
     assert not np.allclose(E, E3)
@@ -112,7 +112,7 @@ def test_lammpslib_simple(
     assert not np.allclose(S, S3)
 
     # Add another H
-    NiH += Atom("H", position=NiH.cell.diagonal() / 4)
+    NiH += Atom('H', position=NiH.cell.diagonal() / 4)
     E4 = NiH.get_potential_energy()
     F4 = NiH.get_forces()
     S4 = NiH.get_stress()
@@ -126,12 +126,12 @@ def test_lammpslib_simple(
     NiH = atoms_fcc_Ni_with_H_at_center
     calc = factory.calc(**calc_params_NiH)
     NiH.calc = calc
-    print("Energy ", NiH.get_potential_energy())
+    print('Energy ', NiH.get_potential_energy())
 
 
-@pytest.mark.parametrize("keep_alive", [False, True])
+@pytest.mark.parametrize('keep_alive', [False, True])
 @pytest.mark.calculator_lite
-@pytest.mark.calculator("lammpslib")
+@pytest.mark.calculator('lammpslib')
 def test_read_data(
     factory,
     calc_params_Fe,

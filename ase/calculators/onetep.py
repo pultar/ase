@@ -8,9 +8,11 @@ from os import environ
 from pathlib import Path
 from subprocess import check_call
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           read_stdout)
+from ase.calculators.genericfileio import (
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+    read_stdout,
+)
 from ase.io import read, write
 
 
@@ -39,12 +41,16 @@ class OnetepProfile:
 
     def run(self, directory, inputfile, outputfile, errorfile, append):
         mode = 'a' if append else 'w'
-        with open(directory / outputfile, mode) as fd, \
-                open(directory / errorfile, 'w') as fe:
-            check_call(self.argv.split() + [str(inputfile)], stdout=fd,
-                       stderr=fe,
-                       env=environ,
-                       cwd=directory)
+        with open(directory / outputfile, mode) as fd, open(
+            directory / errorfile, 'w'
+        ) as fe:
+            check_call(
+                self.argv.split() + [str(inputfile)],
+                stdout=fd,
+                stderr=fe,
+                env=environ,
+                cwd=directory,
+            )
 
 
 class OnetepTemplate(CalculatorTemplate):
@@ -55,7 +61,9 @@ class OnetepTemplate(CalculatorTemplate):
                 'energy',
                 'free_energy',
                 'forces',
-                'stress'])
+                'stress',
+            ],
+        )
         self.label = label
         self.input = label + '.dat'
         self.output = label + '.out'
@@ -63,8 +71,7 @@ class OnetepTemplate(CalculatorTemplate):
         self.append = append
 
     def execute(self, directory, profile):
-        profile.run(directory, self.input, self.output, self.error,
-                    self.append)
+        profile.run(directory, self.input, self.output, self.error, self.append)
 
     def read_results(self, directory):
         output_path = directory / self.output
@@ -73,8 +80,13 @@ class OnetepTemplate(CalculatorTemplate):
 
     def write_input(self, directory, atoms, parameters, properties):
         input_path = directory / self.input
-        write(input_path, atoms, format='onetep-in',
-              properties=properties, **parameters)
+        write(
+            input_path,
+            atoms,
+            format='onetep-in',
+            properties=properties,
+            **parameters,
+        )
 
 
 class Onetep(GenericFileIOCalculator):
@@ -140,14 +152,15 @@ class Onetep(GenericFileIOCalculator):
     """
 
     def __init__(
-            self,
-            label='onetep',
-            directory='.',
-            profile=None,
-            append=False,
-            autorestart=True,
-            atoms=None,
-            **kwargs):
+        self,
+        label='onetep',
+        directory='.',
+        profile=None,
+        append=False,
+        autorestart=True,
+        atoms=None,
+        **kwargs,
+    ):
         if 'ASE_ONETEP_COMMAND' in environ:
             self.cmd = environ['ASE_ONETEP_COMMAND']
         else:
@@ -163,9 +176,12 @@ class Onetep(GenericFileIOCalculator):
         kwargs['autorestart'] = self.autorestart
         kwargs['directory'] = self.directory
         kwargs['label'] = self.label
-        super().__init__(profile=profile, template=self.template,
-                         directory=directory,
-                         parameters=kwargs)
+        super().__init__(
+            profile=profile,
+            template=self.template,
+            directory=directory,
+            parameters=kwargs,
+        )
         # Copy is probably not needed, but just in case
         if atoms is not None:
             self.atoms = atoms.copy()

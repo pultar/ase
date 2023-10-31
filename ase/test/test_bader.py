@@ -6,7 +6,8 @@ from ase.io.bader import attach_charges
 
 def test_bader(testdir):
     fname = 'ACF.dat'
-    Path(fname).write_text("""
+    Path(fname).write_text(
+        """
        #         X           Y           Z        CHARGE     MIN DIST
      ----------------------------------------------------------------
        1      7.0865      8.5038      9.0672      9.0852      1.3250
@@ -14,7 +15,8 @@ def test_bader(testdir):
        3      7.0865      7.0615      7.9403      0.4574      0.3159
      ----------------------------------------------------------------
       NUMBER OF ELECTRONS:        9.99999
-    """)
+    """
+    )
 
     atoms = molecule('H2O')
     atoms.set_cell([7.5, 9, 9])

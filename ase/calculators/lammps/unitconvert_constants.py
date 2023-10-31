@@ -44,14 +44,14 @@ femtosecond_si = 1e-15  # [s] femtosecond
 
 # Density units
 gram_per_centimetercu_si = (
-    gram_si / centimeter_si ** 3
+    gram_si / centimeter_si**3
 )  # [kg/m^3] gram/centimeter^3
-amu_per_bohrcu_si = amu_si / bohr_si ** 3  # [kg/m^3] amu/bohr^3
+amu_per_bohrcu_si = amu_si / bohr_si**3  # [kg/m^3] amu/bohr^3
 picogram_per_micrometercu_si = (
-    picogram_si / micrometer_si ** 3
+    picogram_si / micrometer_si**3
 )  # [kg/m^3] picogram/micrometer^3
 attogram_per_nanometercu_si = (
-    attogram_si / nanometer_si ** 3
+    attogram_si / nanometer_si**3
 )  # [kg/m^3] attogram/nanometer^3
 
 # Energy/torque units
@@ -73,10 +73,10 @@ kcal_per_mole_si = kcal_si / Nav  # [J] kcal/mole
 erg_si = 1e-7  # [J] erg
 dyne_centimeter_si = 1e-7  # [J[ dyne*centimeter
 picogram_micrometersq_per_microsecondsq_si = (
-    picogram_si * micrometer_si ** 2 / microsecond_si ** 2
+    picogram_si * micrometer_si**2 / microsecond_si**2
 )  # [J] picogram*micrometer^2/microsecond^2
 attogram_nanometersq_per_nanosecondsq_si = (
-    attogram_si * nanometer_si ** 2 / nanosecond_si ** 2
+    attogram_si * nanometer_si**2 / nanosecond_si**2
 )  # [J] attogram*nanometer^2/nanosecond^2
 
 # Velocity units
@@ -105,10 +105,10 @@ ev_per_angstrom_si = ev_si / angstrom_si  # [N] eV/Angstrom
 dyne_si = dyne_centimeter_si / centimeter_si  # [N] dyne
 hartree_per_bohr_si = hartree_si / bohr_si  # [N] hartree/bohr
 picogram_micrometer_per_microsecondsq_si = (
-    picogram_si * micrometer_si / microsecond_si ** 2
+    picogram_si * micrometer_si / microsecond_si**2
 )  # [N] picogram*micrometer/microsecond^2
 attogram_nanometer_per_nanosecondsq_si = (
-    attogram_si * nanometer_si / nanosecond_si ** 2
+    attogram_si * nanometer_si / nanosecond_si**2
 )  # [N] attogram*nanometer/nanosecond^2
 
 # Temperature units
@@ -119,13 +119,13 @@ pascal_si = 1.0
 atmosphere_si = 101325.0  # [Pa] standard atmosphere (NIST value)
 bar_si = 1e5  # [Pa] bar
 dyne_per_centimetersq_si = (
-    dyne_centimeter_si / centimeter_si ** 3
+    dyne_centimeter_si / centimeter_si**3
 )  # [Pa] dyne/centimeter^2
 picogram_per_micrometer_microsecondsq_si = picogram_si / (
-    micrometer_si * microsecond_si ** 2
+    micrometer_si * microsecond_si**2
 )  # [Pa] picogram/(micrometer*microsecond^2)
 attogram_per_nanometer_nanosecondsq_si = attogram_si / (
-    nanometer_si * nanosecond_si ** 2
+    nanometer_si * nanosecond_si**2
 )  # [Pa] attogram/(nanometer*nanosecond^2)
 
 # Viscosity units

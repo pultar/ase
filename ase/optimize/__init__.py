@@ -13,7 +13,17 @@ from ase.optimize.optimize import RestartError
 
 QuasiNewton = BFGSLineSearch
 
-__all__ = ['MDMin', 'FIRE', 'LBFGS',
-           'LBFGSLineSearch', 'BFGSLineSearch', 'BFGS',
-           'GoodOldQuasiNewton', 'QuasiNewton', 'GPMin',
-           'Berny', 'ODE12r', 'RestartError']
+__all__ = [
+    'MDMin',
+    'FIRE',
+    'LBFGS',
+    'LBFGSLineSearch',
+    'BFGSLineSearch',
+    'BFGS',
+    'GoodOldQuasiNewton',
+    'QuasiNewton',
+    'GPMin',
+    'Berny',
+    'ODE12r',
+    'RestartError',
+]

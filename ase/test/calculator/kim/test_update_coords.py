@@ -5,8 +5,7 @@ from ase import Atoms
 
 
 def squeeze_dimer(atoms, d):
-    """Squeeze the atoms together by the absolute distance ``d`` (Angstroms)
-    """
+    """Squeeze the atoms together by the absolute distance ``d`` (Angstroms)"""
     pos = atoms.get_positions()
     pos[0] += np.asarray([d, 0, 0])
     atoms.set_positions(pos)
@@ -33,7 +32,7 @@ def test_update_coords(KIM, testdir):
     """
 
     # We know that ex_model_Ar_P_Morse_07C has a cutoff of 8.15 Angstroms
-    model = "ex_model_Ar_P_Morse_07C"
+    model = 'ex_model_Ar_P_Morse_07C'
     model_cutoff = 8.15  # Angstroms
 
     # Create a dimer centered in a small box that's small enough so
@@ -41,8 +40,9 @@ def test_update_coords(KIM, testdir):
     box_len = 0.5 * model_cutoff
     dimer_separation = model_cutoff * 0.3
 
-    atoms = Atoms("Ar" * 2, cell=[[box_len, 0, 0],
-                  [0, box_len, 0], [0, 0, box_len]])
+    atoms = Atoms(
+        'Ar' * 2, cell=[[box_len, 0, 0], [0, box_len, 0], [0, 0, box_len]]
+    )
 
     # Create calculator.  Either the kimpy neighbor list library or
     # ASE's native neighbor lists should suffice to check this since
@@ -50,7 +50,7 @@ def test_update_coords(KIM, testdir):
     # Here, we'll use the default mode (kimpy neighbor list).
     neigh_skin_ratio = 0.2
     skin = neigh_skin_ratio * model_cutoff
-    calc = KIM(model, options={"neigh_skin_ratio": neigh_skin_ratio})
+    calc = KIM(model, options={'neigh_skin_ratio': neigh_skin_ratio})
     atoms.calc = calc
 
     squeezed_energies_ref = {
@@ -59,7 +59,6 @@ def test_update_coords(KIM, testdir):
     }
 
     for pbc in [False, True]:
-
         # Reset dimer positions to original configuration
         set_positions_to_orig(atoms, box_len, dimer_separation)
 

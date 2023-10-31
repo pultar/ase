@@ -11,14 +11,18 @@ def write_py(fileobj, images):
     fileobj.write('images = [\n')
 
     for image in images:
-        fileobj.write("    Atoms(symbols='%s',\n"
-                      "          pbc=np.array(%s),\n"
-                      "          cell=np.array(\n%s),\n"
-                      "          positions=np.array(\n%s)),\n" % (
-                          image.get_chemical_formula(mode='reduce'),
-                          array_to_string(image.pbc, 0),
-                          array_to_string(image.cell),
-                          array_to_string(image.positions)))
+        fileobj.write(
+            "    Atoms(symbols='%s',\n"
+            '          pbc=np.array(%s),\n'
+            '          cell=np.array(\n%s),\n'
+            '          positions=np.array(\n%s)),\n'
+            % (
+                image.get_chemical_formula(mode='reduce'),
+                array_to_string(image.pbc, 0),
+                array_to_string(image.cell),
+                array_to_string(image.positions),
+            )
+        )
 
     fileobj.write(']\n')
 
@@ -26,8 +30,11 @@ def write_py(fileobj, images):
 def array_to_string(array, indent=14):
     """Converts given numpy array to a string, which when printed will pass
     flake8 tests."""
-    text = np.array2string(array, separator=', ', suppress_small=False,
-                           formatter={'float': '{:.8f}'.format,
-                                      'bool': '{}'.format})
+    text = np.array2string(
+        array,
+        separator=', ',
+        suppress_small=False,
+        formatter={'float': '{:.8f}'.format, 'bool': '{}'.format},
+    )
     text = ' ' * indent + text.replace('\n', '\n' + ' ' * indent)
     return text

@@ -20,15 +20,18 @@ class NoisyLennardJones(LennardJones):
         self.rng = rng
         LennardJones.__init__(self, *args, **kwargs)
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=['energy'], system_changes=all_changes
+    ):
         LennardJones.calculate(self, atoms, properties, system_changes)
         if 'forces' in self.results:
             self.results['forces'] += 1e-4 * self.rng.normal(
-                size=self.results['forces'].shape, )
+                size=self.results['forces'].shape,
+            )
         if 'stress' in self.results:
             self.results['stress'] += 1e-4 * self.rng.normal(
-                size=self.results['stress'].shape, )
+                size=self.results['stress'].shape,
+            )
 
 
 def setup_cell():
@@ -58,17 +61,17 @@ def symmetrized_optimisation(at_init, filter):
     at.calc = NoisyLennardJones(rng=rng)
 
     at_cell = filter(at)
-    print("Initial Energy", at.get_potential_energy(), at.get_volume())
+    print('Initial Energy', at.get_potential_energy(), at.get_volume())
     with PreconLBFGS(at_cell, precon=None) as dyn:
         dyn.run(steps=300, fmax=0.001)
-        print("n_steps", dyn.get_number_of_steps())
-    print("Final Energy", at.get_potential_energy(), at.get_volume())
-    print("Final forces\n", at.get_forces())
-    print("Final stress\n", at.get_stress())
+        print('n_steps', dyn.get_number_of_steps())
+    print('Final Energy', at.get_potential_energy(), at.get_volume())
+    print('Final forces\n', at.get_forces())
+    print('Final stress\n', at.get_stress())
 
-    print("initial symmetry at 1e-6")
+    print('initial symmetry at 1e-6')
     di = check_symmetry(at_init, 1.0e-6, verbose=True)
-    print("final symmetry at 1e-6")
+    print('final symmetry at 1e-6')
     df = check_symmetry(at, 1.0e-6, verbose=True)
     return di, df
 
@@ -81,53 +84,66 @@ def filter(request):
 @pytest.mark.filterwarnings('ignore:ASE Atoms-like input is deprecated')
 @pytest.mark.filterwarnings('ignore:Armijo linesearch failed')
 def test_no_symmetrization(filter):
-    print("NO SYM")
+    print('NO SYM')
     at_init, at_rot = setup_cell()
     at_unsym = at_init.copy()
     di, df = symmetrized_optimisation(at_unsym, filter)
-    assert di["number"] == 229 and not is_subgroup(sub_data=di, sup_data=df)
+    assert di['number'] == 229 and not is_subgroup(sub_data=di, sup_data=df)
 
 
 @pytest.mark.filterwarnings('ignore:ASE Atoms-like input is deprecated')
 @pytest.mark.filterwarnings('ignore:Armijo linesearch failed')
 def test_no_sym_rotated(filter):
-    print("NO SYM ROT")
+    print('NO SYM ROT')
     at_init, at_rot = setup_cell()
     at_unsym_rot = at_rot.copy()
     di, df = symmetrized_optimisation(at_unsym_rot, filter)
-    assert di["number"] == 229 and not is_subgroup(sub_data=di, sup_data=df)
+    assert di['number'] == 229 and not is_subgroup(sub_data=di, sup_data=df)
 
 
 @pytest.mark.filterwarnings('ignore:ASE Atoms-like input is deprecated')
 @pytest.mark.filterwarnings('ignore:Armijo linesearch failed')
 def test_sym_adj_cell(filter):
-    print("SYM POS+CELL")
+    print('SYM POS+CELL')
     at_init, at_rot = setup_cell()
     at_sym_3 = at_init.copy()
     at_sym_3.set_constraint(
-        FixSymmetry(at_sym_3, adjust_positions=True, adjust_cell=True))
+        FixSymmetry(at_sym_3, adjust_positions=True, adjust_cell=True)
+    )
     di, df = symmetrized_optimisation(at_sym_3, filter)
-    assert di["number"] == 229 and is_subgroup(sub_data=di, sup_data=df)
+    assert di['number'] == 229 and is_subgroup(sub_data=di, sup_data=df)
 
 
 @pytest.mark.filterwarnings('ignore:ASE Atoms-like input is deprecated')
 @pytest.mark.filterwarnings('ignore:Armijo linesearch failed')
 def test_sym_rot_adj_cell(filter):
-    print("SYM POS+CELL ROT")
+    print('SYM POS+CELL ROT')
     at_init, at_rot = setup_cell()
     at_sym_3_rot = at_init.copy()
     at_sym_3_rot.set_constraint(
-        FixSymmetry(at_sym_3_rot, adjust_positions=True, adjust_cell=True))
+        FixSymmetry(at_sym_3_rot, adjust_positions=True, adjust_cell=True)
+    )
     di, df = symmetrized_optimisation(at_sym_3_rot, filter)
-    assert di["number"] == 229 and is_subgroup(sub_data=di, sup_data=df)
+    assert di['number'] == 229 and is_subgroup(sub_data=di, sup_data=df)
 
 
 @pytest.mark.filterwarnings('ignore:ASE Atoms-like input is deprecated')
 def test_fix_symmetry_shuffle_indices():
     atoms = Atoms(
-        'AlFeAl6', cell=[6] * 3,
-        positions=[[0, 0, 0], [2.9, 2.9, 2.9], [0, 0, 3], [0, 3, 0],
-                   [0, 3, 3], [3, 0, 0], [3, 0, 3], [3, 3, 0]], pbc=True)
+        'AlFeAl6',
+        cell=[6] * 3,
+        positions=[
+            [0, 0, 0],
+            [2.9, 2.9, 2.9],
+            [0, 0, 3],
+            [0, 3, 0],
+            [0, 3, 3],
+            [3, 0, 0],
+            [3, 0, 3],
+            [3, 3, 0],
+        ],
+        pbc=True,
+    )
     atoms.set_constraint(FixSymmetry(atoms))
     at_permut = atoms[[0, 2, 3, 4, 5, 6, 7, 1]]
     pos0 = atoms.get_positions()

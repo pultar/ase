@@ -26,7 +26,8 @@ def test_insert_into(cli, dbfile):
     out = Path(dbfile).with_name('x1.db')
     # Insert 1 row:
     cli.ase(
-        *f'db {dbfile} --limit 1 --insert-into {out} --progress-bar'.split())
+        *f'db {dbfile} --limit 1 --insert-into {out} --progress-bar'.split()
+    )
     # Count:
     txt = cli.ase(*f'db {out} --count'.split())
     num = int(txt.split()[0])

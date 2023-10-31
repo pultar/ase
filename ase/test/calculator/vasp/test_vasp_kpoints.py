@@ -28,6 +28,7 @@ def check_kpoints_line(n, contents):
 @pytest.fixture
 def write_kpoints(atoms):
     """Helper fixture to write the input kpoints file"""
+
     def _write_kpoints(factory, **kwargs):
         calc = factory.calc(**kwargs)
         calc.initialize(atoms)
@@ -92,20 +93,22 @@ def test_weighted(atoms, testdir):
     # Explicit weighted points with nested lists, Cartesian if not specified
     string = format_kpoints(
         atoms=atoms,
-        kpts=[[0.1, 0.2, 0.3, 2], [0.0, 0.0, 0.0, 1],
-              [0.0, 0.5, 0.5, 2]])
+        kpts=[[0.1, 0.2, 0.3, 2], [0.0, 0.0, 0.0, 1], [0.0, 0.5, 0.5, 2]],
+    )
 
     with open('KPOINTS', 'w') as fd:
         fd.write(string)
 
     with open('KPOINTS.ref', 'w') as fd:
-        fd.write("""KPOINTS created by Atomic Simulation Environment
+        fd.write(
+            """KPOINTS created by Atomic Simulation Environment
     3 \n\
     Cartesian
     0.100000 0.200000 0.300000 2.000000 \n\
     0.000000 0.000000 0.000000 1.000000 \n\
     0.000000 0.500000 0.500000 2.000000 \n\
-    """)
+    """
+        )
 
     assert filecmp_ignore_whitespace('KPOINTS', 'KPOINTS.ref')
 
@@ -115,18 +118,21 @@ def test_explicit_auto_weight(atoms, testdir):
     string = format_kpoints(
         atoms=atoms,
         kpts=[(0.1, 0.2, 0.3), (0.0, 0.0, 0.0), (0.0, 0.5, 0.5)],
-        reciprocal=True)
+        reciprocal=True,
+    )
 
     with open('KPOINTS', 'w') as fd:
         fd.write(string)
 
     with open('KPOINTS.ref', 'w') as fd:
-        fd.write("""KPOINTS created by Atomic Simulation Environment
+        fd.write(
+            """KPOINTS created by Atomic Simulation Environment
     3 \n\
     Reciprocal
     0.100000 0.200000 0.300000 1.0 \n\
     0.000000 0.000000 0.000000 1.0 \n\
     0.000000 0.500000 0.500000 1.0 \n\
-    """)
+    """
+        )
 
     assert filecmp_ignore_whitespace('KPOINTS', 'KPOINTS.ref')

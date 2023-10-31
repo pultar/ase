@@ -8,14 +8,18 @@ from ase.io import read
 
 
 def make_STO_atoms():
-    atoms = Atoms(['O', 'O', 'O', 'Sr', 'Ti'],
-                  scaled_positions=[[0.5, 0.5, 0],
-                                    [0.5, 0, 0.5],
-                                    [0, 0.5, 0.5],
-                                    [0, 0, 0],
-                                    [0.5, 0.5, 0.5]],
-                  cell=[3.905, 3.905, 3.905],
-                  pbc=True)
+    atoms = Atoms(
+        ['O', 'O', 'O', 'Sr', 'Ti'],
+        scaled_positions=[
+            [0.5, 0.5, 0],
+            [0.5, 0, 0.5],
+            [0, 0.5, 0.5],
+            [0, 0, 0],
+            [0.5, 0.5, 0.5],
+        ],
+        cell=[3.905, 3.905, 3.905],
+        pbc=True,
+    )
 
     return atoms
 
@@ -36,11 +40,9 @@ def test_mustem_several_elements():
         atoms.write(filename, keV=300)
 
     with pytest.raises(TypeError):
-        atoms.write(filename,
-                    debye_waller_factors=STO_DW_dict)
+        atoms.write(filename, debye_waller_factors=STO_DW_dict)
 
-    atoms.write(filename, keV=300,
-                debye_waller_factors=STO_DW_dict)
+    atoms.write(filename, keV=300, debye_waller_factors=STO_DW_dict)
 
     atoms2 = read(filename, format='mustem')
     atoms3 = read(filename)
@@ -51,29 +53,39 @@ def test_mustem_several_elements():
 
     with pytest.raises(ValueError):
         # Raise an error if there is a missing key.
-        atoms.write(filename, keV=300,
-                    debye_waller_factors=STO_DW_dict_Ti_missing)
+        atoms.write(
+            filename, keV=300, debye_waller_factors=STO_DW_dict_Ti_missing
+        )
 
-    atoms.write(filename, keV=300,
-                debye_waller_factors=STO_DW_dict,
-                occupancies={'Sr': 1.0, 'O': 0.5, 'Ti': 0.9})
+    atoms.write(
+        filename,
+        keV=300,
+        debye_waller_factors=STO_DW_dict,
+        occupancies={'Sr': 1.0, 'O': 0.5, 'Ti': 0.9},
+    )
 
     with pytest.raises(ValueError):
         # Raise an error if there is a missing key.
-        atoms.write(filename, keV=300,
-                    debye_waller_factors=STO_DW_dict,
-                    occupancies={'O': 0.5, 'Ti': 0.9})
+        atoms.write(
+            filename,
+            keV=300,
+            debye_waller_factors=STO_DW_dict,
+            occupancies={'O': 0.5, 'Ti': 0.9},
+        )
 
     with pytest.raises(ValueError):
         # Raise an error if the unit cell is not defined.
-        atoms4 = Atoms(['Sr', 'Ti', 'O', 'O', 'O'],
-                       positions=[[0, 0, 0],
-                                  [0.5, 0.5, 0.5],
-                                  [0.5, 0.5, 0],
-                                  [0.5, 0, 0.5],
-                                  [0, 0.5, 0.5]])
-        atoms4.write(filename, keV=300,
-                     debye_waller_factors=STO_DW_dict)
+        atoms4 = Atoms(
+            ['Sr', 'Ti', 'O', 'O', 'O'],
+            positions=[
+                [0, 0, 0],
+                [0.5, 0.5, 0.5],
+                [0.5, 0.5, 0],
+                [0.5, 0, 0.5],
+                [0, 0.5, 0.5],
+            ],
+        )
+        atoms4.write(filename, keV=300, debye_waller_factors=STO_DW_dict)
 
     atoms5 = make_STO_atoms()
     atoms5.set_array('occupancies', np.ones(5))
@@ -101,7 +113,7 @@ def test_mustem_several_elements():
         np.testing.assert_allclose(
             atoms7.arrays['debye_waller_factors'][atoms7.numbers == number],
             atoms8.arrays['debye_waller_factors'][atoms8.numbers == number],
-            rtol=1e-2
+            rtol=1e-2,
         )
 
 
@@ -117,8 +129,9 @@ def test_mustem_single_elements():
     np.testing.assert_allclose(Si_atoms.positions, Si_atoms2.positions)
     np.testing.assert_allclose(Si_atoms.cell, Si_atoms2.cell)
     np.testing.assert_allclose(Si_atoms2.arrays['occupancies'], np.ones(8))
-    np.testing.assert_allclose(Si_atoms2.arrays['debye_waller_factors'],
-                               np.ones(8) * DW, rtol=1e-2)
+    np.testing.assert_allclose(
+        Si_atoms2.arrays['debye_waller_factors'], np.ones(8) * DW, rtol=1e-2
+    )
 
     Si_atoms3 = bulk('Si', cubic=True)
     Si_atoms3.set_array('occupancies', np.ones(8) * 0.9)
@@ -128,11 +141,14 @@ def test_mustem_single_elements():
     Si_atoms4 = read(filename)
     np.testing.assert_allclose(Si_atoms3.positions, Si_atoms4.positions)
     np.testing.assert_allclose(Si_atoms3.cell, Si_atoms4.cell)
-    np.testing.assert_allclose(Si_atoms3.arrays['occupancies'],
-                               Si_atoms4.arrays['occupancies'])
-    np.testing.assert_allclose(Si_atoms3.arrays['debye_waller_factors'],
-                               Si_atoms4.arrays['debye_waller_factors'],
-                               rtol=1e-2)
+    np.testing.assert_allclose(
+        Si_atoms3.arrays['occupancies'], Si_atoms4.arrays['occupancies']
+    )
+    np.testing.assert_allclose(
+        Si_atoms3.arrays['debye_waller_factors'],
+        Si_atoms4.arrays['debye_waller_factors'],
+        rtol=1e-2,
+    )
 
     Si_atoms5 = bulk('Si', cubic=True)
     debye_waller_factors = np.ones(8) * DW

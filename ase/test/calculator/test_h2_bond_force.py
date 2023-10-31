@@ -66,5 +66,6 @@ def test_h2_bond(factory, atoms):
     # Not very strict for a bond length, but parameters are not consistent:
     assert xmin == pytest.approx(0.77, rel=0.05)
     assert k_from_energy == pytest.approx(k_from_forces, rel=0.05)
-    assert k_from_energy == pytest.approx(k_refs.get(factory.name, k_ref_0),
-                                          rel=0.05)
+    assert k_from_energy == pytest.approx(
+        k_refs.get(factory.name, k_ref_0), rel=0.05
+    )

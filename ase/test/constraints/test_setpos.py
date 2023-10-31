@@ -15,7 +15,7 @@ def test_setpos():
     pos1 = m.get_positions()
     # shift z-coordinates by 1.
     pos = m.get_positions()
-    pos[:, 2] += 1.
+    pos[:, 2] += 1.0
 
     m.set_positions(pos)
     # note that set_positions fails silently to set the new positions

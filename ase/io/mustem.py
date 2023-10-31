@@ -76,11 +76,17 @@ def read_mustem(fd):
 
 
 class XtlmuSTEMWriter:
-    """See the docstring of the `write_mustem` function.
-    """
+    """See the docstring of the `write_mustem` function."""
 
-    def __init__(self, atoms, keV, debye_waller_factors=None,
-                 comment=None, occupancies=None, fit_cell_to_atoms=False):
+    def __init__(
+        self,
+        atoms,
+        keV,
+        debye_waller_factors=None,
+        comment=None,
+        occupancies=None,
+        fit_cell_to_atoms=False,
+    ):
         verify_cell_for_export(atoms.get_cell())
 
         self.atoms = atoms.copy()
@@ -98,10 +104,12 @@ class XtlmuSTEMWriter:
     def _get_occupancies(self, occupancies):
         if occupancies is None:
             if 'occupancies' in self.atoms.arrays:
-                occupancies = {element:
-                               self._parse_array_from_atoms(
-                                   'occupancies', element, True)
-                               for element in self.atom_types}
+                occupancies = {
+                    element: self._parse_array_from_atoms(
+                        'occupancies', element, True
+                    )
+                    for element in self.atom_types
+                }
             else:
                 occupancies = 1.0
         if np.isscalar(occupancies):
@@ -114,15 +122,21 @@ class XtlmuSTEMWriter:
     def _get_RMS(self, DW):
         if DW is None:
             if 'debye_waller_factors' in self.atoms.arrays:
-                DW = {element: self._parse_array_from_atoms(
-                    'debye_waller_factors', element, True) / (8 * np.pi**2)
-                    for element in self.atom_types}
+                DW = {
+                    element: self._parse_array_from_atoms(
+                        'debye_waller_factors', element, True
+                    )
+                    / (8 * np.pi**2)
+                    for element in self.atom_types
+                }
         elif np.isscalar(DW):
             if len(self.atom_types) > 1:
-                raise ValueError('This cell contains more then one type of '
-                                 'atoms and the Debye-Waller factor needs to '
-                                 'be provided for each atom using a '
-                                 'dictionary.')
+                raise ValueError(
+                    'This cell contains more then one type of '
+                    'atoms and the Debye-Waller factor needs to '
+                    'be provided for each atom using a '
+                    'dictionary.'
+                )
             DW = {self.atom_types[0]: DW / (8 * np.pi**2)}
         elif isinstance(DW, dict):
             verify_dictionary(self.atoms, DW, 'debye_waller_factors')
@@ -130,11 +144,13 @@ class XtlmuSTEMWriter:
                 DW[key] = value / (8 * np.pi**2)
 
         if DW is None:
-            raise ValueError('Missing Debye-Waller factors. It can be '
-                             'provided as a dictionary with symbols as key or '
-                             'if the cell contains only a single type of '
-                             'element, the Debye-Waller factor can also be '
-                             'provided as float.')
+            raise ValueError(
+                'Missing Debye-Waller factors. It can be '
+                'provided as a dictionary with symbols as key or '
+                'if the cell contains only a single type of '
+                'element, the Debye-Waller factor can also be '
+                'provided as float.'
+            )
 
         return DW
 
@@ -168,7 +184,7 @@ class XtlmuSTEMWriter:
             if np.unique(sliced_array).size > 1:
                 raise ValueError(
                     "All the '{}' values for element '{}' must be "
-                    "equal.".format(name, chemical_symbols[element])
+                    'equal.'.format(name, chemical_symbols[element])
                 )
             sliced_array = sliced_array[0]
 
@@ -176,51 +192,53 @@ class XtlmuSTEMWriter:
 
     def _get_position_array_single_atom_type(self, number):
         # Get the scaled (reduced) position for a single atom type
-        return self.atoms.get_scaled_positions()[
-            self.atoms.numbers == number]
+        return self.atoms.get_scaled_positions()[self.atoms.numbers == number]
 
     def _get_file_header(self):
         # 1st line: comment line
         if self.comment is None:
-            s = "{} atoms with chemical formula: {}\n".format(
-                len(self.atoms),
-                self.atoms.get_chemical_formula())
+            s = '{} atoms with chemical formula: {}\n'.format(
+                len(self.atoms), self.atoms.get_chemical_formula()
+            )
         else:
             s = self.comment
         # 2nd line: lattice parameter
-        s += "{} {} {} {} {} {}\n".format(
-            *self.atoms.cell.cellpar().tolist())
+        s += '{} {} {} {} {} {}\n'.format(*self.atoms.cell.cellpar().tolist())
         # 3td line: acceleration voltage
-        s += f"{self.keV}\n"
+        s += f'{self.keV}\n'
         # 4th line: number of different atom
-        s += f"{len(self.atom_types)}\n"
+        s += f'{len(self.atom_types)}\n'
         return s
 
-    def _get_element_header(self, atom_type, number, atom_type_number,
-                            occupancy, RMS):
-        return "{}\n{} {} {} {:.3g}\n".format(atom_type,
-                                              number,
-                                              atom_type_number,
-                                              occupancy,
-                                              RMS)
+    def _get_element_header(
+        self, atom_type, number, atom_type_number, occupancy, RMS
+    ):
+        return '{}\n{} {} {} {:.3g}\n'.format(
+            atom_type, number, atom_type_number, occupancy, RMS
+        )
 
     def _get_file_end(self):
-        return "Orientation\n   1 0 0\n   0 1 0\n   0 0 1\n"
+        return 'Orientation\n   1 0 0\n   0 1 0\n   0 0 1\n'
 
     def write_to_file(self, fd):
         if isinstance(fd, str):
             fd = open(fd, 'w')
 
         fd.write(self._get_file_header())
-        for atom_type, number, occupancy in zip(self.atom_types,
-                                                self.numbers,
-                                                self.occupancies):
+        for atom_type, number, occupancy in zip(
+            self.atom_types, self.numbers, self.occupancies
+        ):
             positions = self._get_position_array_single_atom_type(number)
             atom_type_number = positions.shape[0]
-            fd.write(self._get_element_header(atom_type, atom_type_number,
-                                              number,
-                                              self.occupancies[atom_type],
-                                              self.RMS[atom_type]))
+            fd.write(
+                self._get_element_header(
+                    atom_type,
+                    atom_type_number,
+                    number,
+                    self.occupancies[atom_type],
+                    self.RMS[atom_type],
+                )
+            )
             np.savetxt(fname=fd, X=positions, fmt='%.6g', newline='\n')
 
         fd.write(self._get_file_end())

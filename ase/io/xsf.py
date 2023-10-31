@@ -40,7 +40,7 @@ def write_xsf(fileobj, images, data=None, origin=None, span_vectors=None):
     for n, atoms in enumerate(images):
         anim_token = ' %d' % (n + 1) if is_anim else ''
         if pbc.any():
-            write_cell = (n == 0 or cell_variable)
+            write_cell = n == 0 or cell_variable
             if write_cell:
                 if cell_variable:
                     fileobj.write(f'PRIMVEC{anim_token}\n')
@@ -56,9 +56,10 @@ def write_xsf(fileobj, images, data=None, origin=None, span_vectors=None):
 
         # Get the forces if it's not too expensive:
         calc = atoms.calc
-        if (calc is not None and
-            (hasattr(calc, 'calculation_required') and
-             not calc.calculation_required(atoms, ['forces']))):
+        if calc is not None and (
+            hasattr(calc, 'calculation_required')
+            and not calc.calculation_required(atoms, ['forces'])
+        ):
             forces = atoms.get_forces() / Hartree
         else:
             forces = None
@@ -102,8 +103,9 @@ def write_xsf(fileobj, images, data=None, origin=None, span_vectors=None):
         # What's with the strange division?
         # This disagrees with the output of Octopus.  Investigate
         if span_vectors is None:
-            fileobj.write('  %f %f %f\n' %
-                          tuple(cell[i] * (shape[i] + 1) / shape[i]))
+            fileobj.write(
+                '  %f %f %f\n' % tuple(cell[i] * (shape[i] + 1) / shape[i])
+            )
         else:
             fileobj.write('  %f %f %f\n' % tuple(span_vectors[i]))
 
@@ -132,6 +134,7 @@ def iread_xsf(fileobj, read_data=False):
      list of numpy arrays, if data is returned.
 
     Presently supports only a single 3D datagrid."""
+
     def _line_generator_func():
         for line in fileobj:
             line = line.strip()

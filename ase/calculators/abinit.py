@@ -9,8 +9,10 @@ from pathlib import Path
 from subprocess import check_call, check_output
 
 import ase.io.abinit as io
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator)
+from ase.calculators.genericfileio import (
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+)
 
 
 def get_abinit_version(command):
@@ -18,9 +20,11 @@ def get_abinit_version(command):
     # This allows trailing stuff like betas, rc and so
     m = re.match(r'\s*(\d\.\d\.\d)', txt)
     if m is None:
-        raise RuntimeError('Cannot recognize abinit version. '
-                           'Start of output: {}'
-                           .format(txt[:40]))
+        raise RuntimeError(
+            'Cannot recognize abinit version. ' 'Start of output: {}'.format(
+                txt[:40]
+            )
+        )
     return m.group(1)
 
 
@@ -43,8 +47,14 @@ class AbinitTemplate(CalculatorTemplate):
     def __init__(self):
         super().__init__(
             name='abinit',
-            implemented_properties=['energy', 'free_energy',
-                                    'forces', 'stress', 'magmom'])
+            implemented_properties=[
+                'energy',
+                'free_energy',
+                'forces',
+                'stress',
+                'magmom',
+            ],
+        )
 
         # XXX superclass should require inputname and outputname
 
@@ -60,18 +70,16 @@ class AbinitTemplate(CalculatorTemplate):
         pp_paths = parameters.pop('pp_paths', None)
         assert pp_paths is not None
 
-        kw = dict(
-            xc='LDA',
-            smearing=None,
-            kpts=None,
-            raw=None,
-            pps='fhi')
+        kw = dict(xc='LDA', smearing=None, kpts=None, raw=None, pps='fhi')
         kw.update(parameters)
 
         io.prepare_abinit_input(
             directory=directory,
-            atoms=atoms, properties=properties, parameters=kw,
-            pp_paths=pp_paths)
+            atoms=atoms,
+            properties=properties,
+            parameters=kw,
+            pp_paths=pp_paths,
+        )
 
     def read_results(self, directory):
         return io.read_abinit_outputs(directory, self._label)
@@ -120,7 +128,9 @@ class Abinit(GenericFileIOCalculator):
         if profile is None:
             profile = AbinitProfile(['abinit'])
 
-        super().__init__(template=AbinitTemplate(),
-                         profile=profile,
-                         directory=directory,
-                         parameters=kwargs)
+        super().__init__(
+            template=AbinitTemplate(),
+            profile=profile,
+            directory=directory,
+            parameters=kwargs,
+        )

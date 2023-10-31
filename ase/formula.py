@@ -10,13 +10,15 @@ Tree = Union[str, Tuple['Tree', int], List['Tree']]
 
 
 class Formula:
-    def __init__(self,
-                 formula: Union[str, 'Formula'] = '',
-                 *,
-                 strict: bool = False,
-                 format: str = '',
-                 _tree: Tree = None,
-                 _count: Dict[str, int] = None):
+    def __init__(
+        self,
+        formula: Union[str, 'Formula'] = '',
+        *,
+        strict: bool = False,
+        format: str = '',
+        _tree: Tree = None,
+        _count: Dict[str, int] = None,
+    ):
         """Chemical formula object.
 
         Parameters
@@ -59,8 +61,15 @@ class Formula:
 
         if format:
             assert _tree is None and _count is None
-            if format not in {'hill', 'metal', 'abc', 'reduce', 'ab2', 'a2b',
-                              'periodic'}:
+            if format not in {
+                'hill',
+                'metal',
+                'abc',
+                'reduce',
+                'ab2',
+                'a2b',
+                'periodic',
+            }:
                 raise ValueError(f'Illegal format: {format}')
             formula = Formula(formula).format(format)
 
@@ -122,8 +131,7 @@ class Formula:
         c = ord('A')
         count2 = {}
         count3 = {}
-        for n, symb in sorted((n, symb)
-                              for symb, n in count1.items()):
+        for n, symb in sorted((n, symb) for symb, n in count1.items()):
             count2[chr(c)] = n
             count3[symb] = n
             c += 1
@@ -188,18 +196,24 @@ class Formula:
 
         if fmt == 'a2b':
             _, f, N = self.stoichiometry()
-            return dict2str({symb: -n * N
-                             for n, symb
-                             in sorted([(-n, symb) for symb, n
-                                        in f._count.items()])})
+            return dict2str(
+                {
+                    symb: -n * N
+                    for n, symb in sorted(
+                        [(-n, symb) for symb, n in f._count.items()]
+                    )
+                }
+            )
 
         if fmt == 'periodic':
             count = self.count()
             order = periodic_table_order()
-            items = sorted(count.items(),
-                           key=lambda item: order.get(item[0], 0))
-            return ''.join(symb + (str(n) if n > 1 else '')
-                           for symb, n in items)
+            items = sorted(
+                count.items(), key=lambda item: order.get(item[0], 0)
+            )
+            return ''.join(
+                symb + (str(n) if n > 1 else '') for symb, n in items
+            )
 
         if fmt == 'reduce':
             symbols = list(self)
@@ -242,15 +256,16 @@ class Formula:
                 raise ValueError(f'Bad dictionary: {dct}')
             if n > 0:  # filter out n=0 symbols
                 dct2[symb] = n
-        return Formula(dict2str(dct2),
-                       _tree=[([(symb, n) for symb, n in dct2.items()], 1)],
-                       _count=dct2)
+        return Formula(
+            dict2str(dct2),
+            _tree=[([(symb, n) for symb, n in dct2.items()], 1)],
+            _count=dct2,
+        )
 
     @staticmethod
     def from_list(symbols: Sequence[str]) -> 'Formula':
         """Convert list of chemical symbols to Formula."""
-        return Formula(''.join(symbols),
-                       _tree=[(symbols[:], 1)])  # type: ignore[list-item]
+        return Formula(''.join(symbols), _tree=[(symbols[:], 1)])  # type: ignore[list-item]
 
     def __len__(self) -> int:
         """Number of atoms."""
@@ -308,14 +323,12 @@ class Formula:
         """Repeat formula `N` times."""
         if N == 0:
             return Formula('')
-        return self.from_dict({symb: n * N
-                               for symb, n in self._count.items()})
+        return self.from_dict({symb: n * N for symb, n in self._count.items()})
 
     def __rmul__(self, N: int):  # -> Formula
         return self * N
 
-    def __divmod__(self,
-                   other: Union['Formula', str]) -> Tuple[int, 'Formula']:
+    def __divmod__(self, other: Union['Formula', str]) -> Tuple[int, 'Formula']:
         """Return the tuple (self // other, self % other).
 
         Invariant::
@@ -404,8 +417,7 @@ def dict2str(dct: Dict[str, int]) -> str:
     >>> dict2str({'A': 1, 'B': 2})
     'AB2'
     """
-    return ''.join(symb + (str(n) if n > 1 else '')
-                   for symb, n in dct.items())
+    return ''.join(symb + (str(n) if n > 1 else '') for symb, n in dct.items())
 
 
 def parse(f: str) -> Tree:
@@ -445,7 +457,7 @@ def parse2(f: str) -> Tree:
             else:
                 raise ValueError
             f2 = f[1:i]
-            n, f = strip_number(f[i + 1:])
+            n, f = strip_number(f[i + 1 :])
             unit = (parse2(f2), n)
         else:
             m = re.match('([A-Z][a-z]?)([0-9]*)', f)
@@ -457,7 +469,7 @@ def parse2(f: str) -> Tree:
                 unit = (symb, int(number))
             else:
                 unit = symb
-            f = f[m.end():]
+            f = f[m.end() :]
         units.append(unit)
     if len(units) == 1:
         return unit
@@ -474,11 +486,10 @@ def strip_number(s: str) -> Tuple[int, str]:
     """
     m = re.match('[0-9]*', s)
     assert m is not None
-    return int(m.group() or 1), s[m.end():]
+    return int(m.group() or 1), s[m.end() :]
 
 
-def tree2str(tree: Tree,
-             sub1: str, sub2: str) -> str:
+def tree2str(tree: Tree, sub1: str, sub2: str) -> str:
     """Helper function for html, latex and rest formats."""
     if isinstance(tree, str):
         return tree
@@ -508,23 +519,50 @@ def count_tree(tree: Tree) -> Dict[str, int]:
 
 
 # non metals, half-metals/metalloid, halogen, noble gas:
-non_metals = ['H', 'He', 'B', 'C', 'N', 'O', 'F', 'Ne',
-              'Si', 'P', 'S', 'Cl', 'Ar',
-              'Ge', 'As', 'Se', 'Br', 'Kr',
-              'Sb', 'Te', 'I', 'Xe',
-              'Po', 'At', 'Rn']
+non_metals = [
+    'H',
+    'He',
+    'B',
+    'C',
+    'N',
+    'O',
+    'F',
+    'Ne',
+    'Si',
+    'P',
+    'S',
+    'Cl',
+    'Ar',
+    'Ge',
+    'As',
+    'Se',
+    'Br',
+    'Kr',
+    'Sb',
+    'Te',
+    'I',
+    'Xe',
+    'Po',
+    'At',
+    'Rn',
+]
 
 
 @lru_cache()
 def periodic_table_order() -> Dict[str, int]:
     """Create dict for sorting after period first then row."""
-    return {symbol: n for n, symbol in enumerate(chemical_symbols[87:] +
-                                                 chemical_symbols[55:87] +
-                                                 chemical_symbols[37:55] +
-                                                 chemical_symbols[19:37] +
-                                                 chemical_symbols[11:19] +
-                                                 chemical_symbols[3:11] +
-                                                 chemical_symbols[1:3])}
+    return {
+        symbol: n
+        for n, symbol in enumerate(
+            chemical_symbols[87:]
+            + chemical_symbols[55:87]
+            + chemical_symbols[37:55]
+            + chemical_symbols[19:37]
+            + chemical_symbols[11:19]
+            + chemical_symbols[3:11]
+            + chemical_symbols[1:3]
+        )
+    }
 
 
 # Backwards compatibility:

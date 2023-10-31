@@ -4,14 +4,20 @@ import pytest
 
 from ase.build import add_adsorbate, fcc100
 from ase.calculators.emt import EMT
-from ase.cli.template import (MapFormatter, Table, TableFormat, prec_round,
-                              slice_split, sym2num)
+from ase.cli.template import (
+    MapFormatter,
+    Table,
+    TableFormat,
+    prec_round,
+    slice_split,
+    sym2num,
+)
 from ase.constraints import FixAtoms, FixedPlane
 from ase.io import read
 from ase.optimize import QuasiNewton
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def traj(tmp_path_factory):
     slab = fcc100('Al', size=(2, 2, 3))
     add_adsorbate(slab, 'Au', 1.7, 'hollow')
@@ -22,7 +28,7 @@ def traj(tmp_path_factory):
     slab.set_constraint([fixlayers, plane])
     slab.calc = EMT()
 
-    temp_path = tmp_path_factory.mktemp("data")
+    temp_path = tmp_path_factory.mktemp('data')
     trajectory = temp_path / 'AlAu.traj'
     with QuasiNewton(slab, trajectory=str(trajectory)) as qn:
         qn.run(fmax=0.02)
@@ -41,7 +47,7 @@ def test_singleFile_falseCalc_multipleImages(cli, traj):
             if (rowcount == r) & (colcount == c):
                 val = col
                 break
-    assert float(val) == 0.
+    assert float(val) == 0.0
 
 
 def test_singleFile_trueCalc_multipleImages(cli, traj):
@@ -61,13 +67,22 @@ def test_twoFiles_falseCalc_multipleImages(cli, traj):
 
 
 def test_twoFiles_trueCalc_multipleImages(cli, traj):
-    stdout = cli.ase('diff', f'{traj}@:2', f'{traj}@2:4', '-c',
-                     '--rank-order', 'dfx', '--as-csv')
+    stdout = cli.ase(
+        'diff',
+        f'{traj}@:2',
+        f'{traj}@2:4',
+        '-c',
+        '--rank-order',
+        'dfx',
+        '--as-csv',
+    )
     stdout = [row.split(',') for row in stdout.split('\n')]
     stdout = [row for row in stdout if len(row) > 4]
 
     header = stdout[0]
-    body = stdout[1:len(stdout) // 2 - 1]  # note tables are appended in stdout
+    body = stdout[
+        1 : len(stdout) // 2 - 1
+    ]  # note tables are appended in stdout
     for c in range(len(header)):
         if header[c] == 'Δfx':
             break
@@ -78,8 +93,14 @@ def test_twoFiles_trueCalc_multipleImages(cli, traj):
 
 def test_cli_opt(cli, traj):
     # template command line options
-    stdout = cli.ase('diff', f'{traj}@:1', f'{traj}@:2', '-c',
-                     '--template', 'p1x,p2x,dx,f1x,f2x,dfx')
+    stdout = cli.ase(
+        'diff',
+        f'{traj}@:1',
+        f'{traj}@:2',
+        '-c',
+        '--template',
+        'p1x,p2x,dx,f1x,f2x,dfx',
+    )
     stdout = stdout.split('\n')
 
     for counter, row in enumerate(stdout):
@@ -89,9 +110,17 @@ def test_cli_opt(cli, traj):
     header = re.sub(r'\s+', ',', header).split(',')[1:-1]
     assert header == ['p1x', 'p2x', 'Δx', 'f1x', 'f2x', 'Δfx']
 
-    cli.ase('diff', traj, '-c', '--template',
-            'p1x,f1x,p1y,f1y:0:-1,p1z,f1z,p1,f1',
-            '--max-lines', '6', '--summary-functions', 'rmsd')
+    cli.ase(
+        'diff',
+        traj,
+        '-c',
+        '--template',
+        'p1x,f1x,p1y,f1y:0:-1,p1z,f1z,p1,f1',
+        '--max-lines',
+        '6',
+        '--summary-functions',
+        'rmsd',
+    )
 
 
 def test_template_functions():

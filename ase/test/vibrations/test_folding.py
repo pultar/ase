@@ -15,9 +15,12 @@ def test_folding(testdir):
     freqs = ir.get_frequencies().real
 
     for folding in ['Gaussian', 'Lorentzian']:
-        x, y = ir.get_spectrum(start=freqs.min() - 100,
-                               end=freqs.max() + 100,
-                               type=folding,
-                               normalize=True)
+        x, y = ir.get_spectrum(
+            start=freqs.min() - 100,
+            end=freqs.max() + 100,
+            type=folding,
+            normalize=True,
+        )
         assert ir.intensities.sum() == pytest.approx(
-            y.sum() * (x[1] - x[0]), 1e-2)
+            y.sum() * (x[1] - x[0]), 1e-2
+        )

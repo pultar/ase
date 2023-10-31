@@ -8,15 +8,22 @@ from ase.ga.offspring_creator import OffspringCreator
 
 def chunks(line, n):
     """split a list into smaller chunks"""
-    return [line[i:i + n] for i in range(0, len(line), n)]
+    return [line[i : i + n] for i in range(0, len(line), n)]
 
 
 class ElementMutation(OffspringCreator):
     """The base class for all operators where the elements
     of the atoms objects are mutated"""
 
-    def __init__(self, element_pool, max_diff_elements,
-                 min_percentage_elements, verbose, num_muts=1, rng=np.random):
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements,
+        min_percentage_elements,
+        verbose,
+        num_muts=1,
+        rng=np.random,
+    ):
         OffspringCreator.__init__(self, verbose, num_muts=num_muts, rng=rng)
         if not isinstance(element_pool[0], (list, np.ndarray)):
             self.element_pools = [element_pool]
@@ -56,13 +63,17 @@ class ElementMutation(OffspringCreator):
             for i, e in enumerate(self.element_pools):
                 if atoms[itbm].symbol in e:
                     elems = e[:]
-                    elems_in, indices_in = zip(*[(a.symbol, a.index)
-                                                 for a in atoms
-                                                 if a.symbol in elems])
+                    elems_in, indices_in = zip(
+                        *[
+                            (a.symbol, a.index)
+                            for a in atoms
+                            if a.symbol in elems
+                        ]
+                    )
                     max_diff_elem = self.max_diff_elements[i]
                     min_percent_elem = self.min_percentage_elements[i]
                     if min_percent_elem == 0:
-                        min_percent_elem = 1. / len(elems_in)
+                        min_percent_elem = 1.0 / len(elems_in)
                     break
             else:
                 itbm_ok = False
@@ -78,18 +89,23 @@ class ElementMutation(OffspringCreator):
         else:
             # Fewer or too many different elements already
             if self.verbose:
-                print(int(min_percent_elem * len(elems_in)),
-                      min_percent_elem, len(elems_in))
-            all_chunks = chunks(indices_in,
-                                int(min_percent_elem * len(elems_in)))
+                print(
+                    int(min_percent_elem * len(elems_in)),
+                    min_percent_elem,
+                    len(elems_in),
+                )
+            all_chunks = chunks(
+                indices_in, int(min_percent_elem * len(elems_in))
+            )
             itbm_num_of_elems = 0
             for a in atoms:
                 if a.index == itbm:
                     break
                 if a.symbol in elems:
                     itbm_num_of_elems += 1
-            ltbm = all_chunks[itbm_num_of_elems //
-                              (int(min_percent_elem * len(elems_in))) - 1]
+            ltbm = all_chunks[
+                itbm_num_of_elems // (int(min_percent_elem * len(elems_in))) - 1
+            ]
 
         elems.remove(atoms[itbm].symbol)
 
@@ -128,12 +144,24 @@ class RandomElementMutation(ElementMutation):
         An individual could be "D,B,B,C,x,x,x,x,z,z,z,z"
     """
 
-    def __init__(self, element_pool, max_diff_elements=None,
-                 min_percentage_elements=None, verbose=False,
-                 num_muts=1, rng=np.random):
-        ElementMutation.__init__(self, element_pool, max_diff_elements,
-                                 min_percentage_elements, verbose,
-                                 num_muts=num_muts, rng=rng)
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements=None,
+        min_percentage_elements=None,
+        verbose=False,
+        num_muts=1,
+        rng=np.random,
+    ):
+        ElementMutation.__init__(
+            self,
+            element_pool,
+            max_diff_elements,
+            min_percentage_elements,
+            verbose,
+            num_muts=num_muts,
+            rng=rng,
+        )
         self.descriptor = 'RandomElementMutation'
 
     def get_new_individual(self, parents):
@@ -150,29 +178,34 @@ class RandomElementMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + ': Parent {}'.format(f.info['confid']),
+        )
 
 
 def mendeleiev_table():
     r"""
-        Returns the mendeleiev table as a python list of lists.
-        Each cell contains either None or a pair (symbol, atomic number),
-        or a list of pairs for the cells \* and \**.
+    Returns the mendeleiev table as a python list of lists.
+    Each cell contains either None or a pair (symbol, atomic number),
+    or a list of pairs for the cells \* and \**.
     """
     import re
+
     elems = 'HHeLiBeBCNOFNeNaMgAlSiPSClArKCaScTiVCrMnFeCoNiCuZnGaGeAsSeBrKrRb'
     elems += 'SrYZrNbMoTcRuRhPdAgCdInSnSbTeIXeCsBaLaCePrNdPmSmEuGdTbDyHoErTm'
     elems += 'YbLuHfTaWReOsIrPtAuHgTlPbBiPoAtRnFrRaAcThPaUNpPuAmCmBkCfEsFmMd'
     elems += 'NoLrRfDbSgBhHsMtDsRgUubUutUuqUupUuhUusUuo'
-    L = [(e, i + 1)
-         for (i, e) in enumerate(re.compile('[A-Z][a-z]*').findall(elems))]
+    L = [
+        (e, i + 1)
+        for (i, e) in enumerate(re.compile('[A-Z][a-z]*').findall(elems))
+    ]
     for i, j in ((88, 103), (56, 71)):
         L[i] = L[i:j]
-        L[i + 1:] = L[j:]
+        L[i + 1 :] = L[j:]
     for i, j in ((12, 10), (4, 10), (1, 16)):
         L[i:i] = [None] * j
-    return [L[18 * i:18 * (i + 1)] for i in range(7)]
+    return [L[18 * i : 18 * (i + 1)] for i in range(7)]
 
 
 def get_row_column(element):
@@ -239,12 +272,24 @@ class MoveDownMutation(ElementMutation):
         An individual could be "D,B,B,C,x,x,x,x,z,z,z,z"
     """
 
-    def __init__(self, element_pool, max_diff_elements=None,
-                 min_percentage_elements=None, verbose=False,
-                 num_muts=1, rng=np.random):
-        ElementMutation.__init__(self, element_pool, max_diff_elements,
-                                 min_percentage_elements, verbose,
-                                 num_muts=num_muts, rng=rng)
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements=None,
+        min_percentage_elements=None,
+        verbose=False,
+        num_muts=1,
+        rng=np.random,
+    ):
+        ElementMutation.__init__(
+            self,
+            element_pool,
+            max_diff_elements,
+            min_percentage_elements,
+            verbose,
+            num_muts=num_muts,
+            rng=rng,
+        )
         self.descriptor = 'MoveDownMutation'
 
     def get_new_individual(self, parents):
@@ -271,9 +316,9 @@ class MoveDownMutation(ElementMutation):
         used_descriptor = self.descriptor
         if len(choices) == 0:
             msg = '{0},{2} cannot be mutated by {1}, '
-            msg = msg.format(f.info['confid'],
-                             self.descriptor,
-                             f[ltbm[0]].symbol)
+            msg = msg.format(
+                f.info['confid'], self.descriptor, f[ltbm[0]].symbol
+            )
             msg += 'doing random mutation instead'
             if self.verbose:
                 print(msg)
@@ -292,8 +337,10 @@ class MoveDownMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + ': Parent {}'.format(f.info['confid']),
+        )
 
 
 class MoveUpMutation(ElementMutation):
@@ -333,12 +380,24 @@ class MoveUpMutation(ElementMutation):
         An individual could be "D,B,B,C,x,x,x,x,z,z,z,z"
     """
 
-    def __init__(self, element_pool, max_diff_elements=None,
-                 min_percentage_elements=None, verbose=False, num_muts=1,
-                 rng=np.random):
-        ElementMutation.__init__(self, element_pool, max_diff_elements,
-                                 min_percentage_elements, verbose,
-                                 num_muts=num_muts, rng=rng)
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements=None,
+        min_percentage_elements=None,
+        verbose=False,
+        num_muts=1,
+        rng=np.random,
+    ):
+        ElementMutation.__init__(
+            self,
+            element_pool,
+            max_diff_elements,
+            min_percentage_elements,
+            verbose,
+            num_muts=num_muts,
+            rng=rng,
+        )
         self.descriptor = 'MoveUpMutation'
 
     def get_new_individual(self, parents):
@@ -366,9 +425,9 @@ class MoveUpMutation(ElementMutation):
         used_descriptor = self.descriptor
         if len(choices) == 0:
             msg = '{0},{2} cannot be mutated by {1}, '
-            msg = msg.format(f.info['confid'],
-                             self.descriptor,
-                             f[ltbm[0]].symbol)
+            msg = msg.format(
+                f.info['confid'], self.descriptor, f[ltbm[0]].symbol
+            )
             msg += 'doing random mutation instead'
             if self.verbose:
                 print(msg)
@@ -387,8 +446,10 @@ class MoveUpMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + ': Parent {}'.format(f.info['confid']),
+        )
 
 
 class MoveRightMutation(ElementMutation):
@@ -428,12 +489,24 @@ class MoveRightMutation(ElementMutation):
         An individual could be "D,B,B,C,x,x,x,x,z,z,z,z"
     """
 
-    def __init__(self, element_pool, max_diff_elements=None,
-                 min_percentage_elements=None, verbose=False, num_muts=1,
-                 rng=np.random):
-        ElementMutation.__init__(self, element_pool, max_diff_elements,
-                                 min_percentage_elements, verbose,
-                                 num_muts=num_muts, rng=rng)
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements=None,
+        min_percentage_elements=None,
+        verbose=False,
+        num_muts=1,
+        rng=np.random,
+    ):
+        ElementMutation.__init__(
+            self,
+            element_pool,
+            max_diff_elements,
+            min_percentage_elements,
+            verbose,
+            num_muts=num_muts,
+            rng=rng,
+        )
         self.descriptor = 'MoveRightMutation'
 
     def get_new_individual(self, parents):
@@ -460,9 +533,9 @@ class MoveRightMutation(ElementMutation):
         used_descriptor = self.descriptor
         if len(choices) == 0:
             msg = '{0},{2} cannot be mutated by {1}, '
-            msg = msg.format(f.info['confid'],
-                             self.descriptor,
-                             f[ltbm[0]].symbol)
+            msg = msg.format(
+                f.info['confid'], self.descriptor, f[ltbm[0]].symbol
+            )
             msg += 'doing random mutation instead'
             if self.verbose:
                 print(msg)
@@ -480,8 +553,10 @@ class MoveRightMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + ': Parent {}'.format(f.info['confid']),
+        )
 
 
 class MoveLeftMutation(ElementMutation):
@@ -521,12 +596,24 @@ class MoveLeftMutation(ElementMutation):
         An individual could be "D,B,B,C,x,x,x,x,z,z,z,z"
     """
 
-    def __init__(self, element_pool, max_diff_elements=None,
-                 min_percentage_elements=None, verbose=False, num_muts=1,
-                 rng=np.random):
-        ElementMutation.__init__(self, element_pool, max_diff_elements,
-                                 min_percentage_elements, verbose,
-                                 num_muts=num_muts, rng=rng)
+    def __init__(
+        self,
+        element_pool,
+        max_diff_elements=None,
+        min_percentage_elements=None,
+        verbose=False,
+        num_muts=1,
+        rng=np.random,
+    ):
+        ElementMutation.__init__(
+            self,
+            element_pool,
+            max_diff_elements,
+            min_percentage_elements,
+            verbose,
+            num_muts=num_muts,
+            rng=rng,
+        )
         self.descriptor = 'MoveLeftMutation'
 
     def get_new_individual(self, parents):
@@ -553,9 +640,9 @@ class MoveLeftMutation(ElementMutation):
         used_descriptor = self.descriptor
         if len(choices) == 0:
             msg = '{0},{2} cannot be mutated by {1}, '
-            msg = msg.format(f.info['confid'],
-                             self.descriptor,
-                             f[ltbm[0]].symbol)
+            msg = msg.format(
+                f.info['confid'], self.descriptor, f[ltbm[0]].symbol
+            )
             msg += 'doing random mutation instead'
             if self.verbose:
                 print(msg)
@@ -573,8 +660,10 @@ class MoveLeftMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + ':Parent {}'.format(f.info['confid']),
+        )
 
 
 class FullElementMutation(OffspringCreator):
@@ -624,5 +713,7 @@ class FullElementMutation(OffspringCreator):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + ': Parent {}'.format(f.info['confid']),
+        )

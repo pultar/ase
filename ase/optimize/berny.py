@@ -62,17 +62,19 @@ class Berny(Optimizer):
         Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
 
         # Only works with actual Atoms objects since it needs chemical symbols
-        geom = Geometry(self.optimizable.atoms.get_chemical_symbols(),
-                        self.optimizable.get_positions())
+        geom = Geometry(
+            self.optimizable.atoms.get_chemical_symbols(),
+            self.optimizable.get_positions(),
+        )
         self._berny = _Berny(
             geom,
             debug=True,
             restart=self._restart_data,
             maxsteps=10000000000,  # TODO copied from ase.optimize.Optimizer
-            gradientmax=0.,
-            gradientrms=0.,
-            stepmax=0.,
-            steprms=0.,
+            gradientmax=0.0,
+            gradientrms=0.0,
+            stepmax=0.0,
+            steprms=0.0,
             dihedral=dihedral,
         )
 

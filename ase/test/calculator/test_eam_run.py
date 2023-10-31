@@ -12,8 +12,8 @@ def test_eam_run(factory):
     slab = fcc111('Pt', size=(4, 4, 2), vacuum=10.0)
     slab.calc = eam
 
-    assert abs(-164.277599313 - slab.get_potential_energy()) < 1E-8
-    assert abs(6.36379627645 - np.linalg.norm(slab.get_forces())) < 1E-8
+    assert abs(-164.277599313 - slab.get_potential_energy()) < 1e-8
+    assert abs(6.36379627645 - np.linalg.norm(slab.get_forces())) < 1e-8
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,7 @@ def test_eam_run(factory):
         ('NiAlH_jea.eam.alloy', 'Ni'),
         ('NiAlH_jea.eam.fs', 'Ni'),
         ('AlCu.adp', 'Al'),
-    )
+    ),
 )
 @pytest.mark.calculator('eam')
 @pytest.mark.calculator_lite

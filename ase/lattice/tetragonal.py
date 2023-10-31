@@ -5,15 +5,17 @@ The following lattice creators are defined:
     CenteredTetragonal
 """
 
-from ase.lattice.orthorhombic import (BodyCenteredOrthorhombicFactory,
-                                      SimpleOrthorhombicFactory)
+from ase.lattice.orthorhombic import (
+    BodyCenteredOrthorhombicFactory,
+    SimpleOrthorhombicFactory,
+)
 
 
 class _Tetragonalize:
-    "A mixin class for implementing tetragonal crystals as orthorhombic ones."
+    'A mixin class for implementing tetragonal crystals as orthorhombic ones.'
 
     # The name of the crystal structure in ChemicalElements
-    xtal_name = "tetragonal"
+    xtal_name = 'tetragonal'
 
     def make_crystal_basis(self):
         lattice = self.latticeconstant
@@ -24,22 +26,26 @@ class _Tetragonalize:
                 lattice = (lattice[0], lattice[0], lattice[1])
             else:
                 raise ValueError(
-                    'Improper lattice constants for tetragonal crystal.')
+                    'Improper lattice constants for tetragonal crystal.'
+                )
         self.latticeconstant = lattice
         self.orthobase.make_crystal_basis(self)
 
 
 class SimpleTetragonalFactory(_Tetragonalize, SimpleOrthorhombicFactory):
-    "A factory for creating simple tetragonal lattices."
+    'A factory for creating simple tetragonal lattices.'
+
     orthobase = SimpleOrthorhombicFactory
 
 
 SimpleTetragonal = SimpleTetragonalFactory()
 
 
-class CenteredTetragonalFactory(_Tetragonalize,
-                                BodyCenteredOrthorhombicFactory):
-    "A factory for creating centered tetragonal lattices."
+class CenteredTetragonalFactory(
+    _Tetragonalize, BodyCenteredOrthorhombicFactory
+):
+    'A factory for creating centered tetragonal lattices.'
+
     orthobase = BodyCenteredOrthorhombicFactory
 
 

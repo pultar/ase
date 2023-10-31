@@ -9,19 +9,25 @@ from ase.spacegroup import Spacegroup
 
 
 class ClusterFactory(ClusterBase):
-    directions = [[1, 0, 0],
-                  [0, 1, 0],
-                  [0, 0, 1]]
+    directions = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 
-    atomic_basis = np.array([[0., 0., 0.]])
+    atomic_basis = np.array([[0.0, 0.0, 0.0]])
 
     element_basis: Optional[List[int]] = None
 
     # Make it possible to change the class of the object returned.
     Cluster = Cluster
 
-    def __call__(self, symbols, surfaces, layers, latticeconstant=None,
-                 center=None, vacuum=0.0, debug=0):
+    def __call__(
+        self,
+        symbols,
+        surfaces,
+        layers,
+        latticeconstant=None,
+        center=None,
+        vacuum=0.0,
+        debug=0,
+    ):
         self.debug = debug
 
         # Interpret symbol
@@ -33,24 +39,25 @@ class ClusterFactory(ClusterBase):
                 self.lattice_constant = self.get_lattice_constant()
             else:
                 raise ValueError(
-                    "A lattice constant must be specified for a compound")
+                    'A lattice constant must be specified for a compound'
+                )
         else:
             self.lattice_constant = latticeconstant
 
         self.set_basis()
 
         if self.debug:
-            print("Lattice constant(s):", self.lattice_constant)
-            print("Lattice basis:\n", self.lattice_basis)
-            print("Resiprocal basis:\n", self.resiproc_basis)
-            print("Atomic basis:\n", self.atomic_basis)
+            print('Lattice constant(s):', self.lattice_constant)
+            print('Lattice basis:\n', self.lattice_basis)
+            print('Resiprocal basis:\n', self.resiproc_basis)
+            print('Atomic basis:\n', self.atomic_basis)
 
         self.set_surfaces_layers(surfaces, layers)
         self.set_lattice_size(center)
 
         if self.debug:
-            print("Center position:", self.center.round(2))
-            print("Base lattice size:", self.size)
+            print('Center position:', self.center.round(2))
+            print('Base lattice size:', self.size)
 
         cluster = self.make_cluster(vacuum)
         cluster.symmetry = self.xtal_name
@@ -75,8 +82,8 @@ class ClusterFactory(ClusterBase):
         numbers = np.zeros(len(positions))
         n = len(atomic_basis)
         for i, trans in enumerate(translations):
-            positions[n * i:n * (i + 1)] = atomic_basis + trans
-            numbers[n * i:n * (i + 1)] = self.atomic_numbers
+            positions[n * i : n * (i + 1)] = atomic_basis + trans
+            numbers[n * i : n * (i + 1)] = self.atomic_numbers
 
         # Remove all atoms that is outside the defined surfaces
         for s, l in zip(self.surfaces, self.layers):
@@ -87,7 +94,7 @@ class ClusterFactory(ClusterBase):
             mask = np.less(r, rmax)
 
             if self.debug > 1:
-                print("Cutting %s at %i layers ~ %.3f A" % (s, l, rmax))
+                print('Cutting %s at %i layers ~ %.3f A' % (s, l, rmax))
 
             positions = positions[mask]
             numbers = numbers[mask]
@@ -100,7 +107,7 @@ class ClusterFactory(ClusterBase):
         return atoms
 
     def set_atomic_numbers(self, symbols):
-        "Extract atomic number from element"
+        'Extract atomic number from element'
         # The types that can be elements: integers and strings
         atomic_numbers = []
         if self.element_basis is None:
@@ -109,8 +116,10 @@ class ClusterFactory(ClusterBase):
             elif isinstance(symbols, int):
                 atomic_numbers.append(symbols)
             else:
-                raise TypeError("The symbol argument must be a " +
-                                "string or an atomic number.")
+                raise TypeError(
+                    'The symbol argument must be a '
+                    + 'string or an atomic number.'
+                )
             element_basis = [0] * len(self.atomic_basis)
         else:
             if isinstance(symbols, (list, tuple)):
@@ -120,9 +129,11 @@ class ClusterFactory(ClusterBase):
 
             nelement_basis = max(self.element_basis) + 1
             if nsymbols != nelement_basis:
-                raise TypeError("The symbol argument must be a sequence " +
-                                "of length %d" % (nelement_basis,) +
-                                " (one for each kind of lattice position")
+                raise TypeError(
+                    'The symbol argument must be a sequence '
+                    + 'of length %d' % (nelement_basis,)
+                    + ' (one for each kind of lattice position'
+                )
 
             for s in symbols:
                 if isinstance(s, str):
@@ -130,8 +141,10 @@ class ClusterFactory(ClusterBase):
                 elif isinstance(s, int):
                     atomic_numbers.append(s)
                 else:
-                    raise TypeError("The symbol argument must be a " +
-                                    "string or an atomic number.")
+                    raise TypeError(
+                        'The symbol argument must be a '
+                        + 'string or an atomic number.'
+                    )
             element_basis = self.element_basis
 
         self.atomic_numbers = [atomic_numbers[n] for n in element_basis]
@@ -144,7 +157,8 @@ class ClusterFactory(ClusterBase):
             offset = np.array(center)
             if (offset > 1.0).any() or (offset < 0.0).any():
                 raise ValueError(
-                    "Center offset must lie within the lattice unit cell.")
+                    'Center offset must lie within the lattice unit cell.'
+                )
 
         max = np.ones(3)
         min = -np.ones(3)
@@ -160,8 +174,8 @@ class ClusterFactory(ClusterBase):
 
             if self.debug > 1:
                 print(
-                    "Spaning %i layers in %s in lattice basis ~ %s" %
-                    (l, s, k))
+                    'Spaning %i layers in %s in lattice basis ~ %s' % (l, s, k)
+                )
 
             max[k > max] = k[k > max]
             min[k < min] = k[k < min]
@@ -172,8 +186,9 @@ class ClusterFactory(ClusterBase):
     def set_surfaces_layers(self, surfaces, layers):
         if len(surfaces) != len(layers):
             raise ValueError(
-                "Improper size of surface and layer arrays: %i != %i"
-                % (len(surfaces), len(layers)))
+                'Improper size of surface and layer arrays: %i != %i'
+                % (len(surfaces), len(layers))
+            )
 
         sg = Spacegroup(self.spacegroup)
         surfaces = np.array(surfaces)
@@ -194,7 +209,8 @@ class ClusterFactory(ClusterBase):
                 # then append it.
                 if not np.equal(es, surfaces_full).all(axis=1).any():
                     surfaces_full = np.append(
-                        surfaces_full, es.reshape(1, 3), axis=0)
+                        surfaces_full, es.reshape(1, 3), axis=0
+                    )
                     layers_full = np.append(layers_full, l)
 
         self.surfaces = surfaces_full.copy()
@@ -205,18 +221,27 @@ class ClusterFactory(ClusterBase):
         k = 1 / np.dot(basis[0], cross(basis[1], basis[2]))
 
         # The same as the inversed basis matrix transposed
-        return k * np.array([cross(basis[1], basis[2]),
-                             cross(basis[2], basis[0]),
-                             cross(basis[0], basis[1])])
+        return k * np.array(
+            [
+                cross(basis[1], basis[2]),
+                cross(basis[2], basis[0]),
+                cross(basis[0], basis[1]),
+            ]
+        )
+
 
 # Helping functions
 
 
 def cross(a, b):
     """The cross product of two vectors."""
-    return np.array([a[1] * b[2] - b[1] * a[2],
-                     a[2] * b[0] - b[2] * a[0],
-                     a[0] * b[1] - b[0] * a[1]])
+    return np.array(
+        [
+            a[1] * b[2] - b[1] * a[2],
+            a[2] * b[0] - b[2] * a[0],
+            a[0] * b[1] - b[0] * a[1],
+        ]
+    )
 
 
 def GCD(a, b):

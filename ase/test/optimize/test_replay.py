@@ -14,10 +14,9 @@ from ase.visualize import view
 def test_replay(testdir):
     # Distance between Cu atoms on a (100) surface:
     d = 3.6 / sqrt(2)
-    a = Atoms('Cu',
-              positions=[(0, 0, 0)],
-              cell=(d, d, 1.0),
-              pbc=(True, True, False))
+    a = Atoms(
+        'Cu', positions=[(0, 0, 0)], cell=(d, d, 1.0), pbc=(True, True, False)
+    )
     a *= (2, 2, 1)  # 2x2 (100) surface-cell
 
     # Approximate height of Ag atom on Cu(100) surfece:

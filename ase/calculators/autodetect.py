@@ -6,31 +6,36 @@ from ase.calculators.calculator import names
 
 builtins = {'eam', 'emt', 'ff', 'lj', 'morse', 'tip3p', 'tip4p'}
 
-required_envvars = {'abinit': ['ABINIT_PP_PATH'],
-                    'elk': ['ELK_SPECIES_PATH'],
-                    'openmx': ['OPENMX_DFT_DATA_PATH']}
+required_envvars = {
+    'abinit': ['ABINIT_PP_PATH'],
+    'elk': ['ELK_SPECIES_PATH'],
+    'openmx': ['OPENMX_DFT_DATA_PATH'],
+}
 
-default_executables = {'abinit': ['abinit'],
-                       'cp2k': ['cp2k_shell', 'cp2k_shell.psmp',
-                                'cp2k_shell.popt', 'cp2k_shell.ssmp',
-                                'cp2k_shell.sopt'],
-                       'dftb': ['dftb+'],
-                       'elk': ['elk', 'elk-lapw'],
-                       'espresso': ['pw.x'],
-                       'gamess_us': ['rungms'],
-                       'gromacs': ['gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d'],
-                       'lammpsrun': ['lammps', 'lmp', 'lmp_mpi', 'lmp_serial'],
-                       'mopac': ['mopac', 'run_mopac7'],  # run_mopac7: debian
-                       'nwchem': ['nwchem'],
-                       'octopus': ['octopus'],
-                       'openmx': ['openmx'],
-                       'psi4': ['psi4'],
-                       'siesta': ['siesta'],
-                       }
+default_executables = {
+    'abinit': ['abinit'],
+    'cp2k': [
+        'cp2k_shell',
+        'cp2k_shell.psmp',
+        'cp2k_shell.popt',
+        'cp2k_shell.ssmp',
+        'cp2k_shell.sopt',
+    ],
+    'dftb': ['dftb+'],
+    'elk': ['elk', 'elk-lapw'],
+    'espresso': ['pw.x'],
+    'gamess_us': ['rungms'],
+    'gromacs': ['gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d'],
+    'lammpsrun': ['lammps', 'lmp', 'lmp_mpi', 'lmp_serial'],
+    'mopac': ['mopac', 'run_mopac7'],  # run_mopac7: debian
+    'nwchem': ['nwchem'],
+    'octopus': ['octopus'],
+    'openmx': ['openmx'],
+    'psi4': ['psi4'],
+    'siesta': ['siesta'],
+}
 
-python_modules = {'gpaw': 'gpaw',
-                  'asap': 'asap3',
-                  'lammpslib': 'lammps'}
+python_modules = {'gpaw': 'gpaw', 'asap': 'asap3', 'lammpslib': 'lammps'}
 
 
 def get_executable_env_var(name):

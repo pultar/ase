@@ -6,44 +6,48 @@ from ase.spacegroup import Spacegroup, crystal, utils
 from ase.spacegroup.spacegroup import SpacegroupValueError
 
 
-@pytest.fixture(params=[
-    # Use lambda's to not crash during collection if there's an error
-    lambda: {
-        'atoms': bulk('NaCl', crystalstructure='rocksalt', a=4.1),
-        'spacegroup': 225,
-        'expected': [[0, 0, 0], [0.5, 0.5, 0.5]]
-    },
-    # diamond
-    lambda: {
-        'atoms':
-        crystal('C', [(0, 0, 0)],
+@pytest.fixture(
+    params=[
+        # Use lambda's to not crash during collection if there's an error
+        lambda: {
+            'atoms': bulk('NaCl', crystalstructure='rocksalt', a=4.1),
+            'spacegroup': 225,
+            'expected': [[0, 0, 0], [0.5, 0.5, 0.5]],
+        },
+        # diamond
+        lambda: {
+            'atoms': crystal(
+                'C',
+                [(0, 0, 0)],
                 spacegroup=227,
                 cellpar=[4, 4, 4, 90, 90, 90],
-                primitive_cell=True),
-        'spacegroup':
-        227,
-        'expected': [[0, 0, 0]]
-    },
-    lambda: {
-        'atoms':
-        crystal('Mg', [(1 / 3, 2 / 3, 3 / 4)],
+                primitive_cell=True,
+            ),
+            'spacegroup': 227,
+            'expected': [[0, 0, 0]],
+        },
+        lambda: {
+            'atoms': crystal(
+                'Mg',
+                [(1 / 3, 2 / 3, 3 / 4)],
                 spacegroup=194,
-                cellpar=[3.21, 3.21, 5.21, 90, 90, 120]),
-        'spacegroup':
-        194,
-        'expected': [(1 / 3, 2 / 3, 3 / 4)]
-    },
-    lambda: {
-        'atoms':
-        crystal(['Ti', 'O'],
+                cellpar=[3.21, 3.21, 5.21, 90, 90, 120],
+            ),
+            'spacegroup': 194,
+            'expected': [(1 / 3, 2 / 3, 3 / 4)],
+        },
+        lambda: {
+            'atoms': crystal(
+                ['Ti', 'O'],
                 basis=[(0, 0, 0), (0.3, 0.3, 0.0)],
                 spacegroup=136,
-                cellpar=[4, 4, 6, 90, 90, 90]),
-        'spacegroup':
-        Spacegroup(136),
-        'expected': [(0, 0, 0), (0.3, 0.3, 0.0)]
-    },
-])
+                cellpar=[4, 4, 6, 90, 90, 90],
+            ),
+            'spacegroup': Spacegroup(136),
+            'expected': [(0, 0, 0), (0.3, 0.3, 0.0)],
+        },
+    ]
+)
 def basis_tests(request):
     """Fixture which returns a dictionary with some test inputs and
     expected values for testing the `get_basis` function."""

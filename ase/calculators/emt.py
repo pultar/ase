@@ -4,9 +4,11 @@ from math import exp, log, sqrt
 
 import numpy as np
 
-from ase.calculators.calculator import (Calculator,
-                                        PropertyNotImplementedError,
-                                        all_changes)
+from ase.calculators.calculator import (
+    Calculator,
+    PropertyNotImplementedError,
+    all_changes,
+)
 from ase.data import atomic_numbers, chemical_symbols
 from ase.neighborlist import NeighborList
 from ase.units import Bohr
@@ -25,7 +27,8 @@ parameters = {
     'H': (-3.21, 1.31, 0.132, 2.652, 2.790, 3.892, 0.00547),
     'C': (-3.50, 1.81, 0.332, 1.652, 2.790, 1.892, 0.01322),
     'N': (-5.10, 1.88, 0.132, 1.652, 2.790, 1.892, 0.01222),
-    'O': (-4.60, 1.95, 0.332, 1.652, 2.790, 1.892, 0.00850)}
+    'O': (-4.60, 1.95, 0.332, 1.652, 2.790, 1.892, 0.00850),
+}
 
 beta = 1.809  # (16 * pi / 3)**(1.0 / 3) / 2**0.5, preserve historical rounding
 
@@ -50,8 +53,16 @@ class EMT(Calculator):
     older EMT implementations, although the results are not
     bitwise identical.
     """
-    implemented_properties = ['energy', 'free_energy', 'energies', 'forces',
-                              'stress', 'magmom', 'magmoms']
+
+    implemented_properties = [
+        'energy',
+        'free_energy',
+        'energies',
+        'forces',
+        'stress',
+        'magmom',
+        'magmoms',
+    ]
 
     nolabel = True
 
@@ -83,8 +94,9 @@ class EMT(Calculator):
             if Z not in self.par:
                 sym = chemical_symbols[Z]
                 if sym not in parameters:
-                    raise NotImplementedError('No EMT-potential for {}'
-                                              .format(sym))
+                    raise NotImplementedError(
+                        'No EMT-potential for {}'.format(sym)
+                    )
                 p = parameters[sym]
                 s0 = p[1] * Bohr
                 eta2 = p[3] / Bohr
@@ -98,16 +110,18 @@ class EMT(Calculator):
                     gamma1 += x * exp(-eta2 * (r - beta * s0))
                     gamma2 += x * exp(-kappa / beta * (r - beta * s0))
 
-                self.par[Z] = {'E0': p[0],
-                               's0': s0,
-                               'V0': p[2],
-                               'eta2': eta2,
-                               'kappa': kappa,
-                               'lambda': p[5] / Bohr,
-                               'n0': p[6] / Bohr**3,
-                               'rc': rc,
-                               'gamma1': gamma1,
-                               'gamma2': gamma2}
+                self.par[Z] = {
+                    'E0': p[0],
+                    's0': s0,
+                    'V0': p[2],
+                    'eta2': eta2,
+                    'kappa': kappa,
+                    'lambda': p[5] / Bohr,
+                    'n0': p[6] / Bohr**3,
+                    'rc': rc,
+                    'gamma1': gamma1,
+                    'gamma2': gamma2,
+                }
 
         self.ksi = {}
         for s1, p1 in self.par.items():
@@ -121,11 +135,13 @@ class EMT(Calculator):
         self.sigma1 = np.empty(len(atoms))
         self.deds = np.empty(len(atoms))
 
-        self.nl = NeighborList([0.5 * self.rc_list] * len(atoms),
-                               self_interaction=False)
+        self.nl = NeighborList(
+            [0.5 * self.rc_list] * len(atoms), self_interaction=False
+        )
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=['energy'], system_changes=all_changes
+    ):
         Calculator.calculate(self, atoms, properties, system_changes)
 
         if 'numbers' in system_changes:
@@ -172,8 +188,9 @@ class EMT(Calculator):
             x = p['lambda'] * ds
             y = exp(-x)
             z = 6 * p['V0'] * exp(-p['kappa'] * ds)
-            self.deds[a] = ((x * y * p['E0'] * p['lambda'] + p['kappa'] * z) /
-                            (self.sigma1[a] * beta * p['eta2']))
+            self.deds[a] = (x * y * p['E0'] * p['lambda'] + p['kappa'] * z) / (
+                self.sigma1[a] * beta * p['eta2']
+            )
             E = p['E0'] * ((1 + x) * y - 1) + z
             self.energy += E
             self.energies[a] += E
@@ -208,32 +225,74 @@ class EMT(Calculator):
     def interact1(self, a1, a2, d, r, p1, p2, ksi):
         x = exp(self.acut * (r - self.rc))
         theta = 1.0 / (1.0 + x)
-        y1 = (0.5 * p1['V0'] * exp(-p2['kappa'] * (r / beta - p2['s0'])) *
-              ksi / p1['gamma2'] * theta)
-        y2 = (0.5 * p2['V0'] * exp(-p1['kappa'] * (r / beta - p1['s0'])) /
-              ksi / p2['gamma2'] * theta)
+        y1 = (
+            0.5
+            * p1['V0']
+            * exp(-p2['kappa'] * (r / beta - p2['s0']))
+            * ksi
+            / p1['gamma2']
+            * theta
+        )
+        y2 = (
+            0.5
+            * p2['V0']
+            * exp(-p1['kappa'] * (r / beta - p1['s0']))
+            / ksi
+            / p2['gamma2']
+            * theta
+        )
         self.energy -= y1 + y2
         self.energies[a1] -= (y1 + y2) / 2
         self.energies[a2] -= (y1 + y2) / 2
-        f = ((y1 * p2['kappa'] + y2 * p1['kappa']) / beta +
-             (y1 + y2) * self.acut * theta * x) * d / r
+        f = (
+            (
+                (y1 * p2['kappa'] + y2 * p1['kappa']) / beta
+                + (y1 + y2) * self.acut * theta * x
+            )
+            * d
+            / r
+        )
         self.forces[a1] += f
         self.forces[a2] -= f
         self.stress -= np.outer(f, d)
-        self.sigma1[a1] += (exp(-p2['eta2'] * (r - beta * p2['s0'])) *
-                            ksi * theta / p1['gamma1'])
-        self.sigma1[a2] += (exp(-p1['eta2'] * (r - beta * p1['s0'])) /
-                            ksi * theta / p2['gamma1'])
+        self.sigma1[a1] += (
+            exp(-p2['eta2'] * (r - beta * p2['s0']))
+            * ksi
+            * theta
+            / p1['gamma1']
+        )
+        self.sigma1[a2] += (
+            exp(-p1['eta2'] * (r - beta * p1['s0']))
+            / ksi
+            * theta
+            / p2['gamma1']
+        )
 
     def interact2(self, a1, a2, d, r, p1, p2, ksi):
         x = exp(self.acut * (r - self.rc))
         theta = 1.0 / (1.0 + x)
-        y1 = (exp(-p2['eta2'] * (r - beta * p2['s0'])) *
-              ksi / p1['gamma1'] * theta * self.deds[a1])
-        y2 = (exp(-p1['eta2'] * (r - beta * p1['s0'])) /
-              ksi / p2['gamma1'] * theta * self.deds[a2])
-        f = ((y1 * p2['eta2'] + y2 * p1['eta2']) +
-             (y1 + y2) * self.acut * theta * x) * d / r
+        y1 = (
+            exp(-p2['eta2'] * (r - beta * p2['s0']))
+            * ksi
+            / p1['gamma1']
+            * theta
+            * self.deds[a1]
+        )
+        y2 = (
+            exp(-p1['eta2'] * (r - beta * p1['s0']))
+            / ksi
+            / p2['gamma1']
+            * theta
+            * self.deds[a2]
+        )
+        f = (
+            (
+                (y1 * p2['eta2'] + y2 * p1['eta2'])
+                + (y1 + y2) * self.acut * theta * x
+            )
+            * d
+            / r
+        )
         self.forces[a1] -= f
         self.forces[a2] += f
         self.stress += np.outer(f, d)
@@ -243,6 +302,7 @@ def main():
     import sys
 
     from ase.io import read, write
+
     inputfile = sys.argv[1]
     outputfile = sys.argv[2]
     atoms = read(inputfile)

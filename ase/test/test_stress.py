@@ -8,7 +8,7 @@ from ase.optimize import BFGS
 
 # Theoretical infinite-cutoff LJ FCC unit cell parameters
 vol0 = 4 * 0.91615977036  # theoretical minimum
-a0 = vol0**(1 / 3)
+a0 = vol0 ** (1 / 3)
 
 
 @pytest.fixture
@@ -38,11 +38,12 @@ def test_stress_voigt_shape(atoms):
 def test_stress(atoms):
     cell0 = atoms.get_cell()
 
-    atoms.set_cell(np.dot(atoms.cell,
-                          [[1.02, 0, 0.03],
-                           [0, 0.99, -0.02],
-                           [0.1, -0.01, 1.03]]),
-                   scale_atoms=True)
+    atoms.set_cell(
+        np.dot(
+            atoms.cell, [[1.02, 0, 0.03], [0, 0.99, -0.02], [0.1, -0.01, 1.03]]
+        ),
+        scale_atoms=True,
+    )
 
     atoms *= (1, 2, 3)
     cell0 *= np.array([1, 2, 3])[:, np.newaxis]
@@ -54,9 +55,9 @@ def test_stress(atoms):
     s_numerical = atoms.calc.calculate_numerical_stress(atoms, 1e-5)
     s_p_err = 100 * (s_numerical - s_analytical) / s_numerical
 
-    print("Analytical stress:\n", s_analytical)
-    print("Numerical stress:\n", s_numerical)
-    print("Percent error in stress:\n", s_p_err)
+    print('Analytical stress:\n', s_analytical)
+    print('Numerical stress:\n', s_numerical)
+    print('Percent error in stress:\n', s_p_err)
     assert np.all(abs(s_p_err) < 1e-5)
 
     # Minimize unit cell
@@ -68,7 +69,7 @@ def test_stress(atoms):
     g_theory = np.dot(cell0, cell0.T)
     g_p_err = 100 * (g_minimized - g_theory) / g_theory
 
-    print("Minimized Niggli tensor:\n", g_minimized)
-    print("Theoretical Niggli tensor:\n", g_theory)
-    print("Percent error in Niggli tensor:\n", g_p_err)
+    print('Minimized Niggli tensor:\n', g_minimized)
+    print('Theoretical Niggli tensor:\n', g_theory)
+    print('Percent error in Niggli tensor:\n', g_p_err)
     assert np.all(abs(g_p_err) < 1)

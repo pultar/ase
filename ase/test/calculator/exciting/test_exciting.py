@@ -175,11 +175,17 @@ LDA_VWN_AR_INFO_OUT = """
 @pytest.fixture
 def nitrogen_trioxide_atoms():
     """Pytest fixture that creates ASE Atoms cell for other tests."""
-    return ase.Atoms('NO3',
-                     cell=[[2, 2, 0], [0, 4, 0], [0, 0, 6]],
-                     scaled_positions=[(0, 0, 0), (0.25, 0.25, 0),
-                                       (0, 0, 0.75), (0.5, 0.5, 0.5)],
-                     pbc=True)
+    return ase.Atoms(
+        'NO3',
+        cell=[[2, 2, 0], [0, 4, 0], [0, 0, 6]],
+        scaled_positions=[
+            (0, 0, 0),
+            (0.25, 0.25, 0),
+            (0, 0, 0.75),
+            (0.5, 0.5, 0.5),
+        ],
+        pbc=True,
+    )
 
 
 def test_exciting_profile_init(excitingtools):
@@ -190,20 +196,23 @@ def test_exciting_profile_init(excitingtools):
     # method tries to query what exciting version is present.
     with pytest.raises(FileNotFoundError):
         ase.calculators.exciting.exciting.ExcitingProfile(
-            exciting_root=exciting_root, species_path=species_path)
+            exciting_root=exciting_root, species_path=species_path
+        )
 
 
 def test_ground_state_template_init(excitingtools):
     """Test initialization of the ExcitingGroundStateTemplate class."""
     gs_template_obj = (
-        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate())
+        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate()
+    )
     assert gs_template_obj.name == 'exciting'
     assert len(gs_template_obj.implemented_properties) == 2
     assert 'energy' in gs_template_obj.implemented_properties
 
 
 def test_ground_state_template_write_input(
-        tmp_path, nitrogen_trioxide_atoms, excitingtools):
+    tmp_path, nitrogen_trioxide_atoms, excitingtools
+):
     """Test the write input method of ExcitingGroundStateTemplate.
 
     Args:
@@ -215,19 +224,23 @@ def test_ground_state_template_write_input(
     expected_path = tmp_path / 'input.xml'
 
     gs_template_obj = (
-        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate())
+        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate()
+    )
     gs_template_obj.write_input(
-        directory=tmp_path, atoms=nitrogen_trioxide_atoms,
+        directory=tmp_path,
+        atoms=nitrogen_trioxide_atoms,
         parameters={
-            "title": None,
-            "species_path": tmp_path,
-            "ground_state_input": {
-                "rgkmax": 8.0,
-                "do": "fromscratch",
-                "ngridk": [6, 6, 6],
-                "xctype": "GGA_PBE_SOL",
-                "vkloff": [0, 0, 0]},
-        })
+            'title': None,
+            'species_path': tmp_path,
+            'ground_state_input': {
+                'rgkmax': 8.0,
+                'do': 'fromscratch',
+                'ngridk': [6, 6, 6],
+                'xctype': 'GGA_PBE_SOL',
+                'vkloff': [0, 0, 0],
+            },
+        },
+    )
     # Let's assert the file we just wrote exists.
     assert expected_path.exists()
     # Let's assert it's what we expect.
@@ -237,11 +250,15 @@ def test_ground_state_template_write_input(
     # the ASE Atoms object like species data but this is tested already in
     # test/io/exciting/test_exciting.py.
     coords_list = element_tree.findall('./structure/species/atom')
-    positions = np.array([[float(x)
-                           for x in coords_list[i].get('coord').split()]
-                          for i in range(len(coords_list))])
+    positions = np.array(
+        [
+            [float(x) for x in coords_list[i].get('coord').split()]
+            for i in range(len(coords_list))
+        ]
+    )
     assert positions == pytest.approx(
-        nitrogen_trioxide_atoms.get_scaled_positions())
+        nitrogen_trioxide_atoms.get_scaled_positions()
+    )
 
     # Ensure that the exciting calculator properites (e.g. functional type have
     # been set).
@@ -257,15 +274,20 @@ def test_ground_state_template_read_results(tmp_path, excitingtools):
     # we copy an example exciting INFO.out file into the global variable
     # LDA_VWN_AR_INFO_OUT.
     output_file_path = tmp_path / 'info.xml'
-    with open(output_file_path, "w", encoding="utf8") as xml_file:
+    with open(output_file_path, 'w', encoding='utf8') as xml_file:
         xml_file.write(LDA_VWN_AR_INFO_OUT)
 
     gs_template_obj = (
-        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate())
+        ase.calculators.exciting.exciting.ExcitingGroundStateTemplate()
+    )
     results = gs_template_obj.read_results(tmp_path)
-    final_scl_iteration = list(results["scl"].keys())[-1]
-    assert pytest.approx(float(results["scl"][
-        final_scl_iteration]["Hartree energy"])) == 205.65454603
+    final_scl_iteration = list(results['scl'].keys())[-1]
+    assert (
+        pytest.approx(
+            float(results['scl'][final_scl_iteration]['Hartree energy'])
+        )
+        == 205.65454603
+    )
 
 
 def test_get_total_energy_and_bandgap(excitingtools):
@@ -274,21 +296,19 @@ def test_get_total_energy_and_bandgap(excitingtools):
     # and only contains values for the total energy and bandgap.
     results_dict = {
         'scl': {
-            '1':
-                {
-                    'Total energy': '-240.3',
-                    'Estimated fundamental gap': 2.0,
-                },
-            '2':
-                {
-                    'Total energy': '-242.3',
-                    'Estimated fundamental gap': 3.1,
-                }
+            '1': {
+                'Total energy': '-240.3',
+                'Estimated fundamental gap': 2.0,
+            },
+            '2': {
+                'Total energy': '-242.3',
+                'Estimated fundamental gap': 3.1,
+            },
         }
-
     }
     results_obj = ase.calculators.exciting.exciting.ExcitingGroundStateResults(
-        results_dict)
+        results_dict
+    )
     assert pytest.approx(results_obj.total_energy()) == -242.3
     assert pytest.approx(results_obj.band_gap()) == 3.1
 
@@ -296,13 +316,17 @@ def test_get_total_energy_and_bandgap(excitingtools):
 def test_ground_state_calculator_init(tmpdir, excitingtools):
     """Test initiliazation of the ExcitingGroundStateCalculator"""
     ground_state_input_dict = {
-        "rgkmax": 8.0,
-        "do": "fromscratch",
-        "ngridk": [6, 6, 6],
-        "xctype": "GGA_PBE_SOL",
-        "vkloff": [0, 0, 0]}
+        'rgkmax': 8.0,
+        'do': 'fromscratch',
+        'ngridk': [6, 6, 6],
+        'xctype': 'GGA_PBE_SOL',
+        'vkloff': [0, 0, 0],
+    }
     calc_obj = ase.calculators.exciting.exciting.ExcitingGroundStateCalculator(
         runner=ase.calculators.exciting.runner.SimpleBinaryRunner(
-            "exciting_serial", ['./'], 1, tmpdir, ['']),
-        ground_state_input=ground_state_input_dict, directory=tmpdir)
-    assert calc_obj.parameters["ground_state_input"]["rgkmax"] == 8.0
+            'exciting_serial', ['./'], 1, tmpdir, ['']
+        ),
+        ground_state_input=ground_state_input_dict,
+        directory=tmpdir,
+    )
+    assert calc_obj.parameters['ground_state_input']['rgkmax'] == 8.0

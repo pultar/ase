@@ -4,9 +4,11 @@ import sys
 
 def main():
     import matplotlib.pyplot as plt
+
     task, data = pickle.load(sys.stdin.buffer)
     if task == 'eos':
         from ase.eos import plot
+
         plot(*data)
     elif task == 'neb':
         forcefit = data
@@ -16,6 +18,7 @@ def main():
         data.plot()
     elif task == 'graph':
         from ase.gui.graphs import make_plot
+
         make_plot(show=False, *data)
     else:
         print(f'Invalid task {task}')

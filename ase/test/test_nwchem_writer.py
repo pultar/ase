@@ -15,29 +15,25 @@ def atomic_configuration():
 
 @pytest.fixture
 def calculator_parameters():
-    params = dict(memory='1024 mb',
-                  dft=dict(xc='b3lyp',
-                           mult=1,
-                           maxiter=300),
-                  basis='6-311G*')
+    params = dict(
+        memory='1024 mb',
+        dft=dict(xc='b3lyp', mult=1, maxiter=300),
+        basis='6-311G*',
+    )
     return params
 
 
 def test_echo(atomic_configuration, calculator_parameters, tmpdir):
     fd = tmpdir.mkdir('sub').join('nwchem.in')
     write_nwchem_in(
-        fd,
-        atomic_configuration,
-        echo=False,
-        **calculator_parameters)
+        fd, atomic_configuration, echo=False, **calculator_parameters
+    )
     content = [line.rstrip('\n') for line in fd.readlines()]
     assert 'echo' not in content
 
     write_nwchem_in(
-        fd,
-        atomic_configuration,
-        echo=True,
-        **calculator_parameters)
+        fd, atomic_configuration, echo=True, **calculator_parameters
+    )
     content = [line.rstrip('\n') for line in fd.readlines()]
     assert 'echo' in content
 

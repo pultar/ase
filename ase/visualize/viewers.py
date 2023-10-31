@@ -66,7 +66,7 @@ class PyViewer(AbstractViewer):
 
     def _viewfunc(self):
         """Return the function used for viewing the atoms"""
-        return getattr(self.module, "view_" + self.name, None)
+        return getattr(self.module, 'view_' + self.name, None)
 
     @property
     def module(self):
@@ -74,7 +74,7 @@ class PyViewer(AbstractViewer):
             return import_module(self.module_name)
         except ImportError as err:
             raise UnknownViewerError(
-                f"Viewer not recognized: {self.name}.  Error: {err}"
+                f'Viewer not recognized: {self.name}.  Error: {err}'
             ) from err
 
     def view(self, atoms, *args, **kwargs):
@@ -96,18 +96,18 @@ class CLIViewer(AbstractViewer):
     @contextmanager
     def mktemp(self, atoms, data=None):
         ioformat = self.ioformat
-        suffix = "." + ioformat.extensions[0]
+        suffix = '.' + ioformat.extensions[0]
 
         if ioformat.isbinary:
-            mode = "wb"
+            mode = 'wb'
         else:
-            mode = "w"
+            mode = 'w'
 
-        with tempfile.TemporaryDirectory(prefix="ase-view-") as dirname:
+        with tempfile.TemporaryDirectory(prefix='ase-view-') as dirname:
             # We use a tempdir rather than a tempfile because it's
             # less hassle to handle the cleanup on Windows (files
             # cannot be open on multiple processes).
-            path = Path(dirname) / f"atoms{suffix}"
+            path = Path(dirname) / f'atoms{suffix}'
             with path.open(mode) as fd:
                 if data is None:
                     write(fd, atoms, format=self.fmt)
@@ -131,8 +131,8 @@ class CLIViewer(AbstractViewer):
             atoms = atoms.repeat(repeat)
 
         proc = subprocess.Popen(
-            [sys.executable, "-m", "ase.visualize.viewers"],
-            stdin=subprocess.PIPE
+            [sys.executable, '-m', 'ase.visualize.viewers'],
+            stdin=subprocess.PIPE,
         )
 
         pickle.dump((self, atoms, data), proc.stdin)
@@ -145,11 +145,11 @@ VIEWERS = {}
 
 def _pipe_to_ase_gui(atoms, repeat, **kwargs):
     buf = BytesIO()
-    write(buf, atoms, format="traj")
+    write(buf, atoms, format='traj')
 
-    args = [sys.executable, "-m", "ase", "gui", "-"]
+    args = [sys.executable, '-m', 'ase', 'gui', '-']
     if repeat:
-        args.append("--repeat={},{},{}".format(*repeat))
+        args.append('--repeat={},{},{}'.format(*repeat))
 
     proc = subprocess.Popen(args, stdin=subprocess.PIPE)
     proc.stdin.write(buf.getvalue())
@@ -163,11 +163,11 @@ def define_viewer(
     if not external:
         if module is None:
             module = name
-        module = "ase.visualize." + module
+        module = 'ase.visualize.' + module
     if cli:
         fmt = CLIViewer(name, fmt, argv)
     else:
-        if name == "ase":
+        if name == 'ase':
             # Special case if the viewer is named `ase` then we use
             # the _pipe_to_ase_gui as the viewer method
             fmt = PyViewer(name, desc, module_name=None)
@@ -183,19 +183,18 @@ def define_external_viewer(entry_point):
 
     viewer_def = entry_point.load()
     if entry_point.name in VIEWERS:
-        raise ValueError(f"Format {entry_point.name} already defined")
+        raise ValueError(f'Format {entry_point.name} already defined')
     if not isinstance(viewer_def, ExternalViewer):
         raise TypeError(
-            "Wrong type for registering external IO formats "
-            f"in format {entry_point.name}, expected "
-            "ExternalViewer"
+            'Wrong type for registering external IO formats '
+            f'in format {entry_point.name}, expected '
+            'ExternalViewer'
         )
-    define_viewer(entry_point.name, **viewer_def._asdict(),
-                  external=True)
+    define_viewer(entry_point.name, **viewer_def._asdict(), external=True)
 
 
 def register_external_viewer_formats(group):
-    if hasattr(entry_points(), "select"):
+    if hasattr(entry_points(), 'select'):
         viewer_entry_points = entry_points().select(group=group)
     else:
         viewer_entry_points = entry_points().get(group, ())
@@ -205,56 +204,65 @@ def register_external_viewer_formats(group):
             define_external_viewer(entry_point)
         except Exception as exc:
             warnings.warn(
-                "Failed to register external "
-                f"Viewer {entry_point.name}: {exc}"
+                'Failed to register external '
+                f'Viewer {entry_point.name}: {exc}'
             )
 
 
-define_viewer("ase", "View atoms using ase gui.")
-define_viewer("ngl", "View atoms using nglview.")
-define_viewer("mlab", "View atoms using matplotlib.")
-define_viewer("sage", "View atoms using sage.")
-define_viewer("x3d", "View atoms using x3d.")
+define_viewer('ase', 'View atoms using ase gui.')
+define_viewer('ngl', 'View atoms using nglview.')
+define_viewer('mlab', 'View atoms using matplotlib.')
+define_viewer('sage', 'View atoms using sage.')
+define_viewer('x3d', 'View atoms using x3d.')
 
 # CLI viweers that are internally supported
 define_viewer(
-    "avogadro", "View atoms using avogradro.", cli=True, fmt="cube",
-    argv=["avogadro"]
+    'avogadro',
+    'View atoms using avogradro.',
+    cli=True,
+    fmt='cube',
+    argv=['avogadro'],
 )
 define_viewer(
-    "ase_gui_cli", "View atoms using ase gui.", cli=True, fmt="traj",
+    'ase_gui_cli',
+    'View atoms using ase gui.',
+    cli=True,
+    fmt='traj',
     argv=[sys.executable, '-m', 'ase.gui'],
 )
 define_viewer(
-    "gopenmol",
-    "View atoms using gopenmol.",
+    'gopenmol',
+    'View atoms using gopenmol.',
     cli=True,
-    fmt="extxyz",
-    argv=["runGOpenMol"],
+    fmt='extxyz',
+    argv=['runGOpenMol'],
 )
 define_viewer(
-    "rasmol",
-    "View atoms using rasmol.",
+    'rasmol',
+    'View atoms using rasmol.',
     cli=True,
-    fmt="proteindatabank",
-    argv=["rasmol", "-pdb"],
+    fmt='proteindatabank',
+    argv=['rasmol', '-pdb'],
 )
-define_viewer("vmd", "View atoms using vmd.", cli=True, fmt="cube",
-              argv=["vmd"])
 define_viewer(
-    "xmakemol",
-    "View atoms using xmakemol.",
+    'vmd', 'View atoms using vmd.', cli=True, fmt='cube', argv=['vmd']
+)
+define_viewer(
+    'xmakemol',
+    'View atoms using xmakemol.',
     cli=True,
-    fmt="extxyz",
-    argv=["xmakemol", "-f"],
+    fmt='extxyz',
+    argv=['xmakemol', '-f'],
 )
 
-register_external_viewer_formats("ase.visualize")
+register_external_viewer_formats('ase.visualize')
 
-CLI_VIEWERS = {key: value for key, value in VIEWERS.items()
-               if isinstance(value, CLIViewer)}
-PY_VIEWERS = {key: value for key, value in VIEWERS.items()
-              if isinstance(value, PyViewer)}
+CLI_VIEWERS = {
+    key: value for key, value in VIEWERS.items() if isinstance(value, CLIViewer)
+}
+PY_VIEWERS = {
+    key: value for key, value in VIEWERS.items() if isinstance(value, PyViewer)
+}
 
 
 def cli_main():
@@ -266,5 +274,5 @@ def cli_main():
     cli_viewer.view_blocking(atoms, data)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     cli_main()

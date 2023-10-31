@@ -19,4 +19,5 @@ from ase.atoms import Atoms
 # import ase.parallel early to avoid circular import problems when
 # ase.parallel does "from gpaw.mpi import world":
 import ase.parallel  # noqa
+
 ase.parallel  # silence pyflakes

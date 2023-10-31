@@ -62,28 +62,45 @@ def do_test_stress(do_test_parser):
     return _do_test_stress
 
 
-@pytest.mark.parametrize('stress, expected', [([1, 2, 3, 4, 5, 6], [
-    -0.00062415, -0.0012483, -0.00187245, -0.00312075, -0.00374491, -0.0024966
-])])
+@pytest.mark.parametrize(
+    'stress, expected',
+    [
+        (
+            [1, 2, 3, 4, 5, 6],
+            [
+                -0.00062415,
+                -0.0012483,
+                -0.00187245,
+                -0.00312075,
+                -0.00374491,
+                -0.0024966,
+            ],
+        )
+    ],
+)
 def test_convert_stress(stress, expected):
     """Test the stress conversion function"""
     assert np.allclose(vop.convert_vasp_outcar_stress(stress), expected)
 
 
-L1 = ("  in kB      -4.29429    -4.58894    -4.50342 "
-      "    0.50047    -0.94049     0.36481")
-L2 = ("  in kB     -47.95544   -39.91706   -34.79627  "
-      "   9.20266   -15.74132    -1.85167")
+L1 = (
+    '  in kB      -4.29429    -4.58894    -4.50342 '
+    '    0.50047    -0.94049     0.36481'
+)
+L2 = (
+    '  in kB     -47.95544   -39.91706   -34.79627  '
+    '   9.20266   -15.74132    -1.85167'
+)
 
 
 @pytest.mark.parametrize(
     'line, expected',
     [
-        (L1,
-         [-4.29429, -4.58894, -4.50342, 0.50047, -0.94049, 0.36481]),
-        (L2,
-         [-47.95544, -39.91706, -34.79627, 9.20266, -15.74132, -1.85167])],
-    ids=['stress1', 'stress2'])
+        (L1, [-4.29429, -4.58894, -4.50342, 0.50047, -0.94049, 0.36481]),
+        (L2, [-47.95544, -39.91706, -34.79627, 9.20266, -15.74132, -1.85167]),
+    ],
+    ids=['stress1', 'stress2'],
+)
 def test_stress(line, expected, do_test_stress):
     """Test reading a particular line for parsing stress"""
     do_test_stress(line, vop.convert_vasp_outcar_stress(expected))
@@ -93,10 +110,13 @@ def test_stress(line, expected, do_test_stress):
     'line, expected',
     [
         # Problematic line
-        ("  in kB  358197.07841357849.97016357508.47884 19769.97820-30359.31165-19835.82336",
-         None),
+        (
+            '  in kB  358197.07841357849.97016357508.47884 19769.97820-30359.31165-19835.82336',
+            None,
+        ),
     ],
-    ids=['stress1'])
+    ids=['stress1'],
+)
 def test_stress_problematic(line, expected, do_test_stress):
     with pytest.warns(UserWarning):
         do_test_stress(line, expected)
@@ -264,7 +284,7 @@ def test_kpoints():
         'nbands': 2,
         'spinpol': True,
         'nkpts': 2,
-        'kpt_weights': [1, 0.75]
+        'kpt_weights': [1, 0.75],
     }
 
     parser = vop.Kpoints(header=header)
@@ -297,9 +317,9 @@ def test_kpoints():
 
 def test_kpoints_header_multiple_lines():
     # Correct line
-    line1 = "k-points           NKPTS =      2   k-points in BZ     NKDIM =      2   number of bands    NBANDS=    336"
+    line1 = 'k-points           NKPTS =      2   k-points in BZ     NKDIM =      2   number of bands    NBANDS=    336'
     # Wrong line (unclear when this is written.)
-    line2 = "k-points           NKPTS =      1   k-points in BZ     NKDIM ="
+    line2 = 'k-points           NKPTS =      1   k-points in BZ     NKDIM ='
 
     parser = vop.KpointHeader()
 
@@ -384,43 +404,142 @@ k-points in reciprocal lattice and weights: KPOINTS created by Atomic Simulation
     lines = lines.splitlines()
     cursor = 1
     expected = {
-        'nkpts':
-        63,
-        'nbands':
-        32,
-        'ibzkpts':
-        np.array([[0., 0., 0.], [0.2, 0., 0.], [0.4, 0., 0.], [0., 0.2, 0.],
-                  [0.2, 0.2, 0.], [0.4, 0.2, 0.], [-0.4, 0.2, 0.],
-                  [-0.2, 0.2, 0.], [0., 0.4, 0.], [0.2, 0.4,
-                                                   0.], [0.4, 0.4, 0.],
-                  [-0.4, 0.4, 0.], [-0.2, 0.4, 0.], [0., 0., 0.2],
-                  [0.2, 0., 0.2], [0.4, 0., 0.2], [-0.4, 0., 0.2],
-                  [-0.2, 0., 0.2], [0., 0.2, 0.2], [0.2, 0.2, 0.2],
-                  [0.4, 0.2, 0.2], [-0.4, 0.2, 0.2], [-0.2, 0.2, 0.2],
-                  [0., 0.4, 0.2], [0.2, 0.4, 0.2], [0.4, 0.4, 0.2],
-                  [-0.4, 0.4, 0.2], [-0.2, 0.4, 0.2], [0., -0.4, 0.2],
-                  [0.2, -0.4, 0.2], [0.4, -0.4, 0.2], [-0.4, -0.4, 0.2],
-                  [-0.2, -0.4, 0.2], [0., -0.2, 0.2], [0.2, -0.2, 0.2],
-                  [0.4, -0.2, 0.2], [-0.4, -0.2, 0.2], [-0.2, -0.2, 0.2],
-                  [0., 0., 0.4], [0.2, 0., 0.4], [0.4, 0., 0.4],
-                  [-0.4, 0., 0.4], [-0.2, 0., 0.4], [0., 0.2, 0.4],
-                  [0.2, 0.2, 0.4], [0.4, 0.2, 0.4], [-0.4, 0.2, 0.4],
-                  [-0.2, 0.2, 0.4], [0., 0.4, 0.4], [0.2, 0.4, 0.4],
-                  [0.4, 0.4, 0.4], [-0.4, 0.4, 0.4], [-0.2, 0.4, 0.4],
-                  [0., -0.4, 0.4], [0.2, -0.4, 0.4], [0.4, -0.4, 0.4],
-                  [-0.4, -0.4, 0.4], [-0.2, -0.4, 0.4], [0., -0.2, 0.4],
-                  [0.2, -0.2, 0.4], [0.4, -0.2, 0.4], [-0.4, -0.2, 0.4],
-                  [-0.2, -0.2, 0.4]]),
-        'kpt_weights':
-        np.array([
-            0.008, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016,
-            0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016, 0.016
-        ])
+        'nkpts': 63,
+        'nbands': 32,
+        'ibzkpts': np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [0.2, 0.0, 0.0],
+                [0.4, 0.0, 0.0],
+                [0.0, 0.2, 0.0],
+                [0.2, 0.2, 0.0],
+                [0.4, 0.2, 0.0],
+                [-0.4, 0.2, 0.0],
+                [-0.2, 0.2, 0.0],
+                [0.0, 0.4, 0.0],
+                [0.2, 0.4, 0.0],
+                [0.4, 0.4, 0.0],
+                [-0.4, 0.4, 0.0],
+                [-0.2, 0.4, 0.0],
+                [0.0, 0.0, 0.2],
+                [0.2, 0.0, 0.2],
+                [0.4, 0.0, 0.2],
+                [-0.4, 0.0, 0.2],
+                [-0.2, 0.0, 0.2],
+                [0.0, 0.2, 0.2],
+                [0.2, 0.2, 0.2],
+                [0.4, 0.2, 0.2],
+                [-0.4, 0.2, 0.2],
+                [-0.2, 0.2, 0.2],
+                [0.0, 0.4, 0.2],
+                [0.2, 0.4, 0.2],
+                [0.4, 0.4, 0.2],
+                [-0.4, 0.4, 0.2],
+                [-0.2, 0.4, 0.2],
+                [0.0, -0.4, 0.2],
+                [0.2, -0.4, 0.2],
+                [0.4, -0.4, 0.2],
+                [-0.4, -0.4, 0.2],
+                [-0.2, -0.4, 0.2],
+                [0.0, -0.2, 0.2],
+                [0.2, -0.2, 0.2],
+                [0.4, -0.2, 0.2],
+                [-0.4, -0.2, 0.2],
+                [-0.2, -0.2, 0.2],
+                [0.0, 0.0, 0.4],
+                [0.2, 0.0, 0.4],
+                [0.4, 0.0, 0.4],
+                [-0.4, 0.0, 0.4],
+                [-0.2, 0.0, 0.4],
+                [0.0, 0.2, 0.4],
+                [0.2, 0.2, 0.4],
+                [0.4, 0.2, 0.4],
+                [-0.4, 0.2, 0.4],
+                [-0.2, 0.2, 0.4],
+                [0.0, 0.4, 0.4],
+                [0.2, 0.4, 0.4],
+                [0.4, 0.4, 0.4],
+                [-0.4, 0.4, 0.4],
+                [-0.2, 0.4, 0.4],
+                [0.0, -0.4, 0.4],
+                [0.2, -0.4, 0.4],
+                [0.4, -0.4, 0.4],
+                [-0.4, -0.4, 0.4],
+                [-0.2, -0.4, 0.4],
+                [0.0, -0.2, 0.4],
+                [0.2, -0.2, 0.4],
+                [0.4, -0.2, 0.4],
+                [-0.4, -0.2, 0.4],
+                [-0.2, -0.2, 0.4],
+            ]
+        ),
+        'kpt_weights': np.array(
+            [
+                0.008,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+                0.016,
+            ]
+        ),
     }
 
     parser = vop.KpointHeader()
@@ -438,7 +557,8 @@ k-points in reciprocal lattice and weights: KPOINTS created by Atomic Simulation
         (' POTCAR:    PAW_PBE H1.25 07Sep2000', ['H']),
         # Non-PBE potential
         (' POTCAR:    PAW Ca_sv_GW 31Mar2010', ['Ca']),
-    ])
+    ],
+)
 def test_parse_potcar_in_outcar(line, expected, do_test_header_parser):
     cursor = 0
     lines = [line]
@@ -452,7 +572,8 @@ def test_parse_potcar_in_outcar(line, expected, do_test_header_parser):
     [
         ' POTCAR:    PAW_PBE Nis 02Aug2007',  # Purely made-up typo in the element
         ' POTCAR:    PAW_PBE M 02Aug2007',  # Purely made-up typo in the element
-    ])
+    ],
+)
 def test_parse_potcar_parse_error(line):
     """Test that we raise a ParseError for a corrupted POTCAR line.
     Note, that this line is purely made-up, just to test a crash"""
@@ -470,7 +591,8 @@ def test_parse_potcar_parse_error(line):
         ('   ions per type =               2   4', (2, 4)),
     ],
     # Add ID, as the line is a little long, looks quite verbose
-    ids=['ions1', 'ions2'])
+    ids=['ions1', 'ions2'],
+)
 def test_ions_per_species(line, expected, do_test_header_parser):
     cursor = 0  # single line, cursor always starts at 0
     lines = [line]
@@ -577,7 +699,7 @@ def test_vasp6_kpoints_reading():
         'nbands': 2,
         'spinpol': True,
         'nkpts': 2,
-        'kpt_weights': [1, 0.75]
+        'kpt_weights': [1, 0.75],
     }
 
     parser = vop.Kpoints(header=header)
@@ -589,7 +711,7 @@ def test_vasp6_kpoints_reading():
     exp_s = [0, 0, 1, 1]  # spin
     exp_w = 2 * [1, 0.75]  # weights
     exp_eps_n = [
-        [-10, 0.],
+        [-10, 0.0],
         [-10, -5],
         [-10, 0],
         [-10, -5],

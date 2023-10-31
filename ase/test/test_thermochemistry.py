@@ -6,18 +6,22 @@ from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
-from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
-                                 IdealGasThermo)
+from ase.thermochemistry import (
+    CrystalThermo,
+    HarmonicThermo,
+    HinderedThermo,
+    IdealGasThermo,
+)
 from ase.vibrations import Vibrations
 
 
 def test_ideal_gas_thermo_n2(testdir):
-    "We do a basic test on N2"
-    atoms = Atoms("N2", positions=[(0, 0, 0), (0, 0, 1.1)])
+    'We do a basic test on N2'
+    atoms = Atoms('N2', positions=[(0, 0, 0), (0, 0, 1.1)])
     atoms.calc = EMT()
     QuasiNewton(atoms).run(fmax=0.01)
     energy = atoms.get_potential_energy()
-    vib = Vibrations(atoms, name="igt-vib1")
+    vib = Vibrations(atoms, name='igt-vib1')
     vib.run()
     vib_energies = vib.get_energies()
     assert len(vib_energies) == 6
@@ -36,7 +40,7 @@ def test_ideal_gas_thermo_n2(testdir):
     # ---------------------
     thermo = IdealGasThermo(
         vib_energies=vib_energies,
-        geometry="linear",
+        geometry='linear',
         atoms=atoms,
         symmetrynumber=2,
         spin=0,
@@ -44,7 +48,7 @@ def test_ideal_gas_thermo_n2(testdir):
     )
     assert len(thermo.vib_energies) == 1
     assert thermo.vib_energies[0] == vib_energies[-1]
-    assert thermo.geometry == "linear"
+    assert thermo.geometry == 'linear'
     assert thermo.get_ZPE_correction() == pytest.approx(0.07632373926263808)
     assert thermo.get_enthalpy(1000) == pytest.approx(0.6719935644272014)
     assert thermo.get_entropy(1000, 1e8) == pytest.approx(0.0017861226676818658)
@@ -55,7 +59,7 @@ def test_ideal_gas_thermo_n2(testdir):
 
 def ideal_gas_thermo_ch3(
     vib_energies,
-    geometry="nonlinear",
+    geometry='nonlinear',
     atoms=None,
     symmetrynumber=6,
     potentialenergy=0.0,
@@ -63,7 +67,7 @@ def ideal_gas_thermo_ch3(
     ignore_imag_modes=False,
 ):
     if atoms is None:
-        atoms = molecule("CH3")
+        atoms = molecule('CH3')
     return IdealGasThermo(
         vib_energies=vib_energies,
         geometry=geometry,
@@ -76,10 +80,10 @@ def ideal_gas_thermo_ch3(
 
 
 CH3_THERMO = {
-    "ZPE": 1.185,
-    "enthalpy": 10.610695269124156,
-    "entropy": 0.0019310086280219891,
-    "gibbs": 8.678687641495167,
+    'ZPE': 1.185,
+    'enthalpy': 10.610695269124156,
+    'entropy': 0.0019310086280219891,
+    'gibbs': 8.678687641495167,
 }
 
 
@@ -101,10 +105,10 @@ def test_ideal_gas_thermo_ch3(testdir):
     )
     assert len(thermo.vib_energies) == 6
     assert list(thermo.vib_energies) == [0.12, 0.2, 0.3, 0.35, 0.4, 1.0]
-    assert thermo.geometry == "nonlinear"
-    assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
-    assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.geometry == 'nonlinear'
+    assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO['ZPE'])
+    assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO['enthalpy'])
+    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO['entropy'])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -123,10 +127,10 @@ def test_ideal_gas_thermo_ch3_v2(testdir):
     )
     assert len(thermo.vib_energies) == 6
     assert list(thermo.vib_energies) == [0.12, 0.2, 0.3, 0.35, 0.4, 1.0]
-    assert thermo.geometry == "nonlinear"
-    assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO["ZPE"])
-    assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO["enthalpy"])
-    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO["entropy"])
+    assert thermo.geometry == 'nonlinear'
+    assert thermo.get_ZPE_correction() == pytest.approx(CH3_THERMO['ZPE'])
+    assert thermo.get_enthalpy(1000) == pytest.approx(CH3_THERMO['enthalpy'])
+    assert thermo.get_entropy(1000, 1e8) == pytest.approx(CH3_THERMO['entropy'])
     assert thermo.get_gibbs_energy(1000, 1e8) == pytest.approx(
         thermo.get_enthalpy(1000) - 1000 * thermo.get_entropy(1000, 1e8)
     )
@@ -181,8 +185,9 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
     # Same as above, but let's try ignoring the
     # imag modes. This should just use: 507.9, 547.2, 547.7
     with pytest.warns(UserWarning):
-        thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies,
-                                      ignore_imag_modes=True)
+        thermo = ideal_gas_thermo_ch3(
+            vib_energies=vib_energies, ignore_imag_modes=True
+        )
     assert list(thermo.vib_energies) == [507.9, 547.2, 547.7]
     assert thermo.n_imag == 3
 
@@ -193,9 +198,9 @@ def test_ideal_gas_thermo_ch3_v4(testdir):
     Again, this is not a minimum or TS and has several
     imaginary modes.
     """
-    atoms = molecule("CH3")
+    atoms = molecule('CH3')
     atoms.calc = EMT()
-    vib = Vibrations(atoms, name="igt-vib2")
+    vib = Vibrations(atoms, name='igt-vib2')
     vib.run()
     vib_energies = vib.get_energies()
     assert len(vib_energies) == 12
@@ -246,14 +251,14 @@ HELMHOLTZ_HARMONIC = 4.060698673180732
 
 
 def test_harmonic_thermo(testdir):
-    "Basic test of harmonic thermochemistry"
+    'Basic test of harmonic thermochemistry'
     thermo = harmonic_thermo()
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_HARMONIC)
 
 
 def test_harmonic_thermo_v2(testdir):
-    "Test with a reversed list giving the same results"
+    'Test with a reversed list giving the same results'
     vib_energies = list(VIB_ENERGIES_HARMONIC)
     vib_energies.sort(reverse=True)
     thermo = harmonic_thermo(vib_energies=vib_energies)
@@ -263,17 +268,17 @@ def test_harmonic_thermo_v2(testdir):
 
 
 def test_harmonic_thermo_v3(testdir):
-    "Test that a proper error is raised with imag modes"
+    'Test that a proper error is raised with imag modes'
     with pytest.raises(ValueError):
         harmonic_thermo(vib_energies=[10j])
 
 
 def test_harmonic_thermo_v4(testdir):
-    "Test that a proper warning is raised with non-crucial imag modes"
+    'Test that a proper warning is raised with non-crucial imag modes'
     with pytest.warns(UserWarning):
         thermo = harmonic_thermo(
             vib_energies=list(VIB_ENERGIES_HARMONIC) + [10j],
-            ignore_imag_modes=True
+            ignore_imag_modes=True,
         )
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_HARMONIC)
@@ -281,7 +286,7 @@ def test_harmonic_thermo_v4(testdir):
 
 
 def test_crystal_thermo(asap3, testdir):
-    atoms = bulk("Al", "fcc", a=4.05)
+    atoms = bulk('Al', 'fcc', a=4.05)
     calc = asap3.EMT()
     atoms.calc = calc
     energy = atoms.get_potential_energy()
@@ -391,11 +396,11 @@ def test_hindered_thermo2():
 
 
 def test_hindered_thermo3():
-    "Now add an imaginary mode and make sure it is removed"
+    'Now add an imaginary mode and make sure it is removed'
     with pytest.warns(UserWarning):
         thermo = hindered_thermo(
             vib_energies=list(VIB_ENERGIES_HINDERED) + [10j],
-            ignore_imag_modes=True
+            ignore_imag_modes=True,
         )
     assert thermo.get_helmholtz_energy(temperature=298.15) == pytest.approx(
         HELMHOLTZ_HINDERED
@@ -404,13 +409,13 @@ def test_hindered_thermo3():
 
 
 def test_hindered_thermo4():
-    "Make sure a ValueError is raised if imag modes are present"
+    'Make sure a ValueError is raised if imag modes are present'
     with pytest.raises(ValueError):
         hindered_thermo(vib_energies=[100 + 0.1j] * 24)
 
 
 def test_hindered_thermo5():
-    "Make sure appropriate amount are cut"
-    atoms = bulk("Cu") * (2, 2, 2)
+    'Make sure appropriate amount are cut'
+    atoms = bulk('Cu') * (2, 2, 2)
     thermo = hindered_thermo(atoms=atoms)
     assert len(thermo.vib_energies) == 3 * len(atoms) - 3

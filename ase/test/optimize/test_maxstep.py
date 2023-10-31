@@ -6,9 +6,10 @@ from ase.optimize import MDMin
 
 
 def test_mdmin_maxstep():
-    atoms = molecule("N2", vacuum=10)
-    calc = ForceConstantCalculator(np.eye(6) * 100,
-                                   atoms.copy(), np.zeros((2, 3)))
+    atoms = molecule('N2', vacuum=10)
+    calc = ForceConstantCalculator(
+        np.eye(6) * 100, atoms.copy(), np.zeros((2, 3))
+    )
     atoms.calc = calc
     atoms.positions[1] += np.array([1.0, 1.0, 1.0])
     initial_positions = atoms.positions.copy()
@@ -18,5 +19,7 @@ def test_mdmin_maxstep():
     opt = MDMin(atoms, dt=1.0)
     opt.run(steps=1)
 
-    assert np.max(
-        np.linalg.norm(atoms.positions - initial_positions, axis=1)) <= 0.2
+    assert (
+        np.max(np.linalg.norm(atoms.positions - initial_positions, axis=1))
+        <= 0.2
+    )

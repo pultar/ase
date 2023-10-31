@@ -10,25 +10,29 @@ def rng():
     return np.random.RandomState(seed=42)
 
 
-@pytest.fixture(params=[
-    bulk("NaCl", crystalstructure="rocksalt", a=4.0),
-    bulk("NaCl", crystalstructure="rocksalt", a=4.0, cubic=True),
-    bulk("Au", crystalstructure="fcc", a=4.0),
-])
+@pytest.fixture(
+    params=[
+        bulk('NaCl', crystalstructure='rocksalt', a=4.0),
+        bulk('NaCl', crystalstructure='rocksalt', a=4.0, cubic=True),
+        bulk('Au', crystalstructure='fcc', a=4.0),
+    ]
+)
 def prim(request):
     return request.param
 
 
-@pytest.fixture(params=[
-    3 * np.diag([1, 1, 1]),
-    4 * np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1]]),
-    3 * np.diag([1, 2, 1]),
-])
+@pytest.fixture(
+    params=[
+        3 * np.diag([1, 1, 1]),
+        4 * np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1]]),
+        3 * np.diag([1, 2, 1]),
+    ]
+)
 def P(request):
     return request.param
 
 
-@pytest.fixture(params=["cell-major", "atom-major"])
+@pytest.fixture(params=['cell-major', 'atom-major'])
 def order(request):
     return request.param
 
@@ -38,9 +42,9 @@ def test_make_supercell(prim, P, order):
     expected = n * len(prim)
     sc = make_supercell(prim, P, order=order)
     assert len(sc) == expected
-    if order == "cell-major":
+    if order == 'cell-major':
         symbols_expected = list(prim.symbols) * n
-    elif order == "atom-major":
+    elif order == 'atom-major':
         symbols_expected = [s for s in prim.symbols for _ in range(n)]
     assert list(sc.symbols) == symbols_expected
 
@@ -56,22 +60,25 @@ def test_make_supercells_arrays(prim, P, order, rng):
     sc = make_supercell(prim, P, order=order)
 
     assert reps * len(prim) == len(sc.get_tags())
-    if order == "cell-major":
+    if order == 'cell-major':
         assert all(sc.get_tags() == np.tile(tags, reps))
-        assert np.allclose(sc[:len(prim)].get_momenta(), prim.get_momenta())
+        assert np.allclose(sc[: len(prim)].get_momenta(), prim.get_momenta())
         assert np.allclose(sc.get_momenta(), np.tile(momenta, (reps, 1)))
-    elif order == "atom-major":
+    elif order == 'atom-major':
         assert all(sc.get_tags() == np.repeat(tags, reps))
         assert np.allclose(sc[::reps].get_momenta(), prim.get_momenta())
         assert np.allclose(sc.get_momenta(), np.repeat(momenta, reps, axis=0))
 
 
-@pytest.mark.parametrize('rep', [
-    (1, 1, 1),
-    (1, 2, 1),
-    (4, 5, 6),
-    (40, 19, 42),
-])
+@pytest.mark.parametrize(
+    'rep',
+    [
+        (1, 1, 1),
+        (1, 2, 1),
+        (4, 5, 6),
+        (40, 19, 42),
+    ],
+)
 def test_make_supercell_vs_repeat(prim, rep):
     P = np.diag(rep)
 

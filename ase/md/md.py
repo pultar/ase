@@ -43,8 +43,10 @@ def process_temperature(
     Return value: Temperature in Kelvin.
     """
     if (temperature is not None) + (temperature_K is not None) != 1:
-        raise TypeError("Exactly one of the parameters 'temperature',"
-                        + " and 'temperature_K', must be given")
+        raise TypeError(
+            "Exactly one of the parameters 'temperature',"
+            + " and 'temperature_K', must be given"
+        )
     if temperature is not None:
         w = "Specify the temperature in K using the 'temperature_K' argument"
         if orig_unit == 'K':
@@ -53,7 +55,7 @@ def process_temperature(
             warnings.warn(FutureWarning(w))
             return temperature / units.kB
         else:
-            raise ValueError("Unknown temperature unit " + orig_unit)
+            raise ValueError('Unknown temperature unit ' + orig_unit)
 
     assert temperature_K is not None
     return temperature_K
@@ -108,15 +110,18 @@ class MolecularDynamics(Dynamics):
         # Are the atoms always Atoms, or can they be filter?
         # We assume here they are always Atoms
         from ase import Atoms
+
         assert isinstance(atoms, Atoms)
         self.atoms = atoms
         self.masses = self.atoms.get_masses()
         self.max_steps = 0  # to be updated in run or irun
 
         if 0 in self.masses:
-            warnings.warn('Zero mass encountered in atoms; this will '
-                          'likely lead to errors if the massless atoms '
-                          'are unconstrained.')
+            warnings.warn(
+                'Zero mass encountered in atoms; this will '
+                'likely lead to errors if the massless atoms '
+                'are unconstrained.'
+            )
 
         self.masses.shape = (-1, 1)
 
@@ -127,7 +132,7 @@ class MolecularDynamics(Dynamics):
         # to respect the loginterval argument.
         if trajectory is not None:
             if isinstance(trajectory, str):
-                mode = "a" if append_trajectory else "w"
+                mode = 'a' if append_trajectory else 'w'
                 trajectory = self.closelater(
                     Trajectory(trajectory, mode=mode, atoms=atoms)
                 )
@@ -135,21 +140,24 @@ class MolecularDynamics(Dynamics):
 
         if logfile:
             logger = self.closelater(
-                MDLogger(dyn=self, atoms=atoms, logfile=logfile))
+                MDLogger(dyn=self, atoms=atoms, logfile=logfile)
+            )
             self.attach(logger, loginterval)
 
     def todict(self):
-        return {'type': 'molecular-dynamics',
-                'md-type': self.__class__.__name__,
-                'timestep': self.dt}
+        return {
+            'type': 'molecular-dynamics',
+            'md-type': self.__class__.__name__,
+            'timestep': self.dt,
+        }
 
     def irun(self, steps=50):
-        """ Call Dynamics.irun and adjust max_steps """
+        """Call Dynamics.irun and adjust max_steps"""
         self.max_steps = steps + self.nsteps
         return Dynamics.irun(self)
 
     def run(self, steps=50):
-        """ Call Dynamics.run and adjust max_steps """
+        """Call Dynamics.run and adjust max_steps"""
         self.max_steps = steps + self.nsteps
         return Dynamics.run(self)
 
@@ -157,7 +165,7 @@ class MolecularDynamics(Dynamics):
         return self.nsteps * self.dt
 
     def converged(self):
-        """ MD is 'converged' when number of maximum steps is reached. """
+        """MD is 'converged' when number of maximum steps is reached."""
         return self.nsteps >= self.max_steps
 
     def _get_com_velocity(self, velocity):

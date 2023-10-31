@@ -18,8 +18,13 @@ def test_read_gpaw_out(datadir):
     assert calc.parameters['calculator'] == 'gpaw'
 
     for contribution in [
-            'kinetic', 'potential', 'external', 'xc',
-            'entropy (-st)', 'local']:
+        'kinetic',
+        'potential',
+        'external',
+        'xc',
+        'entropy (-st)',
+        'local',
+    ]:
         assert contribution in calc.energy_contributions
 
 

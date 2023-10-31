@@ -34,51 +34,59 @@ __all__ = ['read_cp2k_dcd', 'iread_cp2k_dcd', 'read_cp2k_restart']
 #   f8  = float64 (double precision)
 #   S80 = string of length 80 (80 chars)
 _HEADER_TYPES = [
-    ('blk0-0', 'i4'),       # 84 (start of first block, size=84 bytes)
-    ('hdr', 'S4'),          # 'CORD'
-    ('9int', ('i4', 9)),    # 9 ints, mostly 0
-    ('timestep', 'f4'),     # timestep (float32)
+    ('blk0-0', 'i4'),  # 84 (start of first block, size=84 bytes)
+    ('hdr', 'S4'),  # 'CORD'
+    ('9int', ('i4', 9)),  # 9 ints, mostly 0
+    ('timestep', 'f4'),  # timestep (float32)
     ('10int', ('i4', 10)),  # 10 ints, mostly 0, last is 24
-    ('blk0-1', 'i4'),       # 84
-    ('blk1-0', 'i4'),       # 164
-    ('ntitle', 'i4'),       # 2
-    ('remark1', 'S80'),     # remark1
-    ('remark2', 'S80'),     # remark2
-    ('blk1-1', 'i4'),       # 164
-    ('blk2-0', 'i4'),       # 4 (4 bytes = int32)
-    ('natoms', 'i4'),       # natoms (int32)
-    ('blk2-1', 'i4'),       # 4
+    ('blk0-1', 'i4'),  # 84
+    ('blk1-0', 'i4'),  # 164
+    ('ntitle', 'i4'),  # 2
+    ('remark1', 'S80'),  # remark1
+    ('remark2', 'S80'),  # remark2
+    ('blk1-1', 'i4'),  # 164
+    ('blk2-0', 'i4'),  # 4 (4 bytes = int32)
+    ('natoms', 'i4'),  # natoms (int32)
+    ('blk2-1', 'i4'),  # 4
 ]
 
 _HEADER_DTYPE = np.dtype(_HEADER_TYPES)
 
 
 def _bytes_per_timestep(natoms):
-    return (4 + 6 * 8 + 7 * 4 + 3 * 4 * natoms)
+    return 4 + 6 * 8 + 7 * 4 + 3 * 4 * natoms
 
 
 def _read_metainfo(fileobj):
     if not hasattr(fileobj, 'seek'):
-        raise TypeError("You should have passed a fileobject opened in binary "
-                        "mode, it seems you did not.")
+        raise TypeError(
+            'You should have passed a fileobject opened in binary '
+            'mode, it seems you did not.'
+        )
     fileobj.seek(0)
     header = np.fromfile(fileobj, _HEADER_DTYPE, 1)[0]
     natoms = header['natoms']
     remark1 = str(header['remark1'])  # taken from CP2Ks source/motion_utils.F
     if 'CP2K' not in remark1:
-        raise ValueError("Header should contain mention of CP2K, are you sure "
-                         "this file was created by CP2K?")
+        raise ValueError(
+            'Header should contain mention of CP2K, are you sure '
+            'this file was created by CP2K?'
+        )
 
     # dtype for fromfile: nStep times dtype of a timestep data block
-    dtype = np.dtype([('x0', 'i4'),
-                      ('x1', 'f8', (6,)),
-                      ('x2', 'i4', (2,)),
-                      ('x3', 'f4', (natoms,)),
-                      ('x4', 'i4', (2,)),
-                      ('x5', 'f4', (natoms,)),
-                      ('x6', 'i4', (2,)),
-                      ('x7', 'f4', (natoms,)),
-                      ('x8', 'i4')])
+    dtype = np.dtype(
+        [
+            ('x0', 'i4'),
+            ('x1', 'f8', (6,)),
+            ('x2', 'i4', (2,)),
+            ('x3', 'f4', (natoms,)),
+            ('x4', 'i4', (2,)),
+            ('x5', 'f4', (natoms,)),
+            ('x6', 'i4', (2,)),
+            ('x7', 'f4', (natoms,)),
+            ('x8', 'i4'),
+        ]
+    )
 
     fd_pos = fileobj.tell()
     header_end = fd_pos
@@ -95,8 +103,9 @@ def _read_metainfo(fileobj):
     # 3*4*natoms - float32 cartesian coords
     nsteps = fd_rest / _bytes_per_timestep(natoms)
     if fd_rest % _bytes_per_timestep(natoms) != 0:
-        raise ValueError("Calculated number of steps is not int, "
-                         "cannot read file")
+        raise ValueError(
+            'Calculated number of steps is not int, ' 'cannot read file'
+        )
     nsteps = int(nsteps)
     return dtype, natoms, nsteps, header_end
 
@@ -111,8 +120,9 @@ class DCDChunk:
 
     def build(self):
         """Convert unprocessed chunk into Atoms."""
-        return _read_cp2k_dcd_frame(self.chunk, self.dtype, self.natoms,
-                                    self.symbols, self.aligned)
+        return _read_cp2k_dcd_frame(
+            self.chunk, self.dtype, self.natoms, self.symbols, self.aligned
+        )
 
 
 def idcdchunks(fd, ref_atoms, aligned):
@@ -149,14 +159,19 @@ class DCDImageIterator:
 
     def _getslice(self, fd, indices):
         try:
-            iterator = islice(self.ichunks(fd, self.ref_atoms, self.aligned),
-                              indices.start, indices.stop, indices.step)
+            iterator = islice(
+                self.ichunks(fd, self.ref_atoms, self.aligned),
+                indices.start,
+                indices.stop,
+                indices.step,
+            )
         except ValueError:
             # Negative indices. Adjust slice to positive numbers.
             dtype, natoms, nsteps, header_end = _read_metainfo(fd)
             indices_tuple = indices.indices(nsteps + 1)
-            iterator = islice(self.ichunks(fd, self.ref_atoms, self.aligned),
-                              *indices_tuple)
+            iterator = islice(
+                self.ichunks(fd, self.ref_atoms, self.aligned), *indices_tuple
+            )
         return iterator
 
 
@@ -164,7 +179,7 @@ iread_cp2k_dcd = DCDImageIterator(idcdchunks)
 
 
 def read_cp2k_dcd(fileobj, index=-1, ref_atoms=None, aligned=False):
-    """ Read a DCD file created by CP2K.
+    """Read a DCD file created by CP2K.
 
     To yield one Atoms object at a time use ``iread_cp2k_dcd``.
 
@@ -185,15 +200,17 @@ def read_cp2k_dcd(fileobj, index=-1, ref_atoms=None, aligned=False):
     else:
         symbols = ['X' for i in range(natoms)]
     if natoms != len(symbols):
-        raise ValueError("Length of ref_atoms does not match natoms "
-                         "from dcd file")
+        raise ValueError(
+            'Length of ref_atoms does not match natoms ' 'from dcd file'
+        )
     trbl = index2range(index, nsteps)
 
     for index in trbl:
         frame_pos = int(header_end + index * bytes_per_timestep)
         fileobj.seek(frame_pos)
-        yield _read_cp2k_dcd_frame(fileobj, dtype, natoms, symbols,
-                                   aligned=aligned)
+        yield _read_cp2k_dcd_frame(
+            fileobj, dtype, natoms, symbols, aligned=aligned
+        )
 
 
 def _read_cp2k_dcd_frame(fileobj, dtype, natoms, symbols, aligned=False):
@@ -255,7 +272,7 @@ def read_cp2k_restart(fileobj):
                 found = True
                 break
         if not found:
-            raise RuntimeError(f"No {section_header} section found!")
+            raise RuntimeError(f'No {section_header} section found!')
 
     def _read_cell(data):
         """Helper to read cell data, returns cell and pbc"""
@@ -272,7 +289,7 @@ def read_cp2k_restart(fileobj):
                     cell[idx] = [float(x) for x in line.split()[1:]]
                     pbc[idx] = True
             if not {len(v) for v in cell} == {3}:
-                raise RuntimeError("Bad Cell Definition found.")
+                raise RuntimeError('Bad Cell Definition found.')
         return cell, pbc
 
     def _read_geometry(content):
@@ -282,7 +299,7 @@ def read_cp2k_restart(fileobj):
             entry = entry.split()
             # Get letters for element symbol
             el = [char.lower() for char in entry[0] if char.isalpha()]
-            el = "".join(el).capitalize()
+            el = ''.join(el).capitalize()
             # Get positions
             pos = [float(x) for x in entry[1:4]]
             if el in atomic_numbers.keys():

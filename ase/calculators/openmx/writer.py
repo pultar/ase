@@ -23,18 +23,35 @@ import numpy as np
 
 from ase.calculators.calculator import kpts2sizeandoffsets
 from ase.calculators.openmx import parameters as param
-from ase.calculators.openmx.reader import (get_file_name, get_standard_key,
-                                           read_electron_valency)
+from ase.calculators.openmx.reader import (
+    get_file_name,
+    get_standard_key,
+    read_electron_valency,
+)
 from ase.units import Bohr, Ha, Ry, fs, m, s
 
-keys = [param.tuple_integer_keys, param.tuple_float_keys,
-        param.tuple_bool_keys, param.integer_keys, param.float_keys,
-        param.string_keys, param.bool_keys, param.list_int_keys,
-        param.list_bool_keys, param.list_float_keys, param.matrix_keys]
+keys = [
+    param.tuple_integer_keys,
+    param.tuple_float_keys,
+    param.tuple_bool_keys,
+    param.integer_keys,
+    param.float_keys,
+    param.string_keys,
+    param.bool_keys,
+    param.list_int_keys,
+    param.list_bool_keys,
+    param.list_float_keys,
+    param.matrix_keys,
+]
 
 
-def write_openmx(label=None, atoms=None, parameters=None, properties=None,
-                 system_changes=None):
+def write_openmx(
+    label=None,
+    atoms=None,
+    parameters=None,
+    properties=None,
+    system_changes=None,
+):
     """
     From atom image, 'images', write '.dat' file.
     First, set
@@ -47,13 +64,27 @@ def write_openmx(label=None, atoms=None, parameters=None, properties=None,
         - system_changes : List of properties changed since last run.
     """
     from ase.calculators.openmx import parameters as param
-    filtered_keywords = parameters_to_keywords(label=label, atoms=atoms,
-                                               parameters=parameters,
-                                               properties=properties,
-                                               system_changes=system_changes)
-    keys = ['string', 'bool', 'integer', 'float',
-            'tuple_integer', 'tuple_float', 'tuple_bool',
-            'matrix', 'list_int', 'list_bool', 'list_float']
+
+    filtered_keywords = parameters_to_keywords(
+        label=label,
+        atoms=atoms,
+        parameters=parameters,
+        properties=properties,
+        system_changes=system_changes,
+    )
+    keys = [
+        'string',
+        'bool',
+        'integer',
+        'float',
+        'tuple_integer',
+        'tuple_float',
+        'tuple_bool',
+        'matrix',
+        'list_int',
+        'list_bool',
+        'list_float',
+    ]
     # Start writing the file
     filename = get_file_name('.dat', label)
     with open(filename, 'w') as fd:
@@ -67,8 +98,13 @@ def write_openmx(label=None, atoms=None, parameters=None, properties=None,
                         write(fd, omx_keyword, filtered_keywords[fltrd_keyword])
 
 
-def parameters_to_keywords(label=None, atoms=None, parameters=None,
-                           properties=None, system_changes=None):
+def parameters_to_keywords(
+    label=None,
+    atoms=None,
+    parameters=None,
+    properties=None,
+    system_changes=None,
+):
     """
     Before writing `label.dat` file, set up the ASE variables to OpenMX
     keywords. First, It initializes with given openmx keywords and reconstruct
@@ -80,17 +116,25 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     """
     from collections import OrderedDict
 
-    from ase.calculators.openmx.parameters import (matrix_keys,
-                                                   unit_dat_keywords)
+    from ase.calculators.openmx.parameters import matrix_keys, unit_dat_keywords
+
     keywords = OrderedDict()
     sequence = [
-        'system_currentdirectory', 'system_name', 'data_path',
+        'system_currentdirectory',
+        'system_name',
+        'data_path',
         'level_of_fileout',
-        'species_number', 'definition_of_atomic_species',
-        'atoms_number', 'atoms_speciesandcoordinates_unit',
-        'atoms_speciesandcoordinates', 'atoms_unitvectors_unit',
-        'atoms_unitvectors', 'band_dispersion', 'band_nkpath',
-        'band_kpath']
+        'species_number',
+        'definition_of_atomic_species',
+        'atoms_number',
+        'atoms_speciesandcoordinates_unit',
+        'atoms_speciesandcoordinates',
+        'atoms_unitvectors_unit',
+        'atoms_unitvectors',
+        'band_dispersion',
+        'band_nkpath',
+        'band_kpath',
+    ]
 
     directory, prefix = os.path.split(label)
     curdir = os.path.join(os.getcwd(), prefix)
@@ -109,12 +153,21 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
         'scf_mixing_type': 'mixer',
         'scf_electronic_temperature': 'smearing',
         'scf_system_charge': 'charge',
-        'scf_eigenvaluesolver': 'eigensolver'
+        'scf_eigenvaluesolver': 'eigensolver',
     }
-    standard_units = {'eV': 1, 'Ha': Ha, 'Ry': Ry, 'Bohr': Bohr, 'fs': fs,
-                      'K': 1, 'GV / m': 1e9 / 1.6e-19 / m,
-                      'Ha/Bohr': Ha / Bohr,
-                      'm/s': m / s, '_amu': 1, 'Tesla': 1}
+    standard_units = {
+        'eV': 1,
+        'Ha': Ha,
+        'Ry': Ry,
+        'Bohr': Bohr,
+        'fs': fs,
+        'K': 1,
+        'GV / m': 1e9 / 1.6e-19 / m,
+        'Ha/Bohr': Ha / Bohr,
+        'm/s': m / s,
+        '_amu': 1,
+        'Tesla': 1,
+    }
     unit_dict = {get_standard_key(k): v for k, v in unit_dat_keywords.items()}
 
     for key in sequence:
@@ -192,9 +245,13 @@ def parameters_to_keywords(label=None, atoms=None, parameters=None,
     for key in matrix_keys:
         get_matrix_key = globals()['get_' + get_standard_key(key)]
         keywords[get_standard_key(key)] = get_matrix_key(atoms, parameters)
-    return OrderedDict([(k, v)for k, v in keywords.items()
-                        if not (v is None or
-                                (isinstance(v, list) and v == []))])
+    return OrderedDict(
+        [
+            (k, v)
+            for k, v in keywords.items()
+            if not (v is None or (isinstance(v, list) and v == []))
+        ]
+    )
 
 
 def get_species(symbols):
@@ -232,8 +289,11 @@ def get_vps(xc):
 
 def get_scf_kgrid(atoms, parameters):
     kpts, scf_kgrid = parameters.get('kpts'), parameters.get('scf_kgrid')
-    if isinstance(kpts, (tuple, list, np.ndarray)) and len(
-            kpts) == 3 and isinstance(kpts[0], int):
+    if (
+        isinstance(kpts, (tuple, list, np.ndarray))
+        and len(kpts) == 3
+        and isinstance(kpts[0], int)
+    ):
         return kpts
     elif isinstance(kpts, (float, int)):
         return tuple(kpts2sizeandoffsets(atoms=atoms, density=kpts)[0])
@@ -243,27 +303,27 @@ def get_scf_kgrid(atoms, parameters):
 
 def get_definition_of_atomic_species(atoms, parameters):
     """
-    Using atoms and parameters, Returns the list `definition_of_atomic_species`
-    where matrix of strings contains the information between keywords.
-    For example,
-     definition_of_atomic_species =
-         [['H','H5.0-s1>1p1>1','H_CA13'],
-          ['C','C5.0-s1>1p1>1','C_CA13']]
-    Goes to,
-      <Definition.of.Atomic.Species
-        H   H5.0-s1>1p1>1      H_CA13
-        C   C5.0-s1>1p1>1      C_CA13
-      Definition.of.Atomic.Species>
-    Further more, you can specify the wannier information here.
-    A. Define local functions for projectors
-      Since the pseudo-atomic orbitals are used for projectors,
-      the specification of them is the same as for the basis functions.
-      An example setting, for silicon in diamond structure, is as following:
-   Species.Number          2
-      <Definition.of.Atomic.Species
-        Si       Si7.0-s2p2d1    Si_CA13
-        proj1    Si5.5-s1p1d1f1  Si_CA13
-      Definition.of.Atomic.Species>
+     Using atoms and parameters, Returns the list `definition_of_atomic_species`
+     where matrix of strings contains the information between keywords.
+     For example,
+      definition_of_atomic_species =
+          [['H','H5.0-s1>1p1>1','H_CA13'],
+           ['C','C5.0-s1>1p1>1','C_CA13']]
+     Goes to,
+       <Definition.of.Atomic.Species
+         H   H5.0-s1>1p1>1      H_CA13
+         C   C5.0-s1>1p1>1      C_CA13
+       Definition.of.Atomic.Species>
+     Further more, you can specify the wannier information here.
+     A. Define local functions for projectors
+       Since the pseudo-atomic orbitals are used for projectors,
+       the specification of them is the same as for the basis functions.
+       An example setting, for silicon in diamond structure, is as following:
+    Species.Number          2
+       <Definition.of.Atomic.Species
+         Si       Si7.0-s2p2d1    Si_CA13
+         proj1    Si5.5-s1p1d1f1  Si_CA13
+       Definition.of.Atomic.Species>
     """
     if parameters.get('definition_of_atomic_species') is not None:
         return parameters['definition_of_atomic_species']
@@ -302,8 +362,10 @@ def get_dft_data_year(parameters):
     if year is not None:
         return year
     else:
-        raise ValueError('DFT_DATA year can not be found. Please specify '
-                         '`dft_data_year` as year of pseudo potential relesed')
+        raise ValueError(
+            'DFT_DATA year can not be found. Please specify '
+            '`dft_data_year` as year of pseudo potential relesed'
+        )
 
 
 def get_cutoff_radius_and_orbital(element=None, orbital=None):
@@ -315,12 +377,13 @@ def get_cutoff_radius_and_orbital(element=None, orbital=None):
     change the default_settings.py directly.
     """
     from ase.calculators.openmx import default_settings
+
     orbital = element
     orbital_letters = ['s', 'p', 'd', 'f', 'g', 'h']
     default_dictionary = default_settings.default_dictionary
     orbital_numbers = default_dictionary[element]['orbitals used']
     cutoff_radius = default_dictionary[element]['cutoff radius']
-    orbital += "%.1f" % float(cutoff_radius) + '-'
+    orbital += '%.1f' % float(cutoff_radius) + '-'
     for i, orbital_number in enumerate(orbital_numbers):
         orbital += orbital_letters[i] + str(orbital_number)
     return orbital
@@ -336,6 +399,7 @@ def get_pseudo_potential_suffix(element=None, xc=None, year='13'):
     depending on pseudo potential generation year
     """
     from ase.calculators.openmx import default_settings
+
     default_dictionary = default_settings.default_dictionary
     pseudo_potential_suffix = element
     vps = get_vps(xc)
@@ -412,16 +476,20 @@ def get_up_down_spin(magmom, element, xc, data_path, year):
     suffix = get_pseudo_potential_suffix(element, xc, year)
     filename = os.path.join(data_path, 'VPS/' + suffix + '.vps')
     valence_electron = float(read_electron_valency(filename))
-    return [valence_electron / 2 + magmom / 2,
-            valence_electron / 2 - magmom / 2]
+    return [
+        valence_electron / 2 + magmom / 2,
+        valence_electron / 2 - magmom / 2,
+    ]
 
 
 def get_spin_direction(magmoms):
-    '''
+    """
     From atoms.magmom, returns the spin direction of phi and theta
-    '''
-    if np.array(magmoms).dtype == float or \
-       np.array(magmoms).dtype is np.float64:
+    """
+    if (
+        np.array(magmoms).dtype == float
+        or np.array(magmoms).dtype is np.float64
+    ):
         return []
     else:
         magmoms = np.array(magmoms)
@@ -447,17 +515,23 @@ def get_lda_u_switches():
 
 
 def get_spinpol(atoms, parameters):
-    ''' Judgeds the keyword 'scf.SpinPolarization'
-     If the keyword is not None, spinpol gets the keyword by following priority
-       1. standard_spinpol
-       2. scf_spinpolarization
-       3. magnetic moments of atoms
-    '''
+    """Judgeds the keyword 'scf.SpinPolarization'
+    If the keyword is not None, spinpol gets the keyword by following priority
+      1. standard_spinpol
+      2. scf_spinpolarization
+      3. magnetic moments of atoms
+    """
     standard_spinpol = parameters.get('spinpol', None)
     scf_spinpolarization = parameters.get('scf_spinpolarization', None)
     m = atoms.get_initial_magnetic_moments()
-    syn = {True: 'On', False: None, 'on': 'On', 'off': None,
-           None: None, 'nc': 'NC'}
+    syn = {
+        True: 'On',
+        False: None,
+        'on': 'On',
+        'off': None,
+        None: None,
+        'nc': 'NC',
+    }
     spinpol = np.any(m >= 0.1)
     if scf_spinpolarization is not None:
         spinpol = scf_spinpolarization
@@ -564,26 +638,32 @@ def get_kpath(self, kpts=None, symbols=None, band_kpath=None, eps=1e-5):
      Band.kpath>
     """
     if kpts is None:
-        kx_linspace = np.linspace(band_kpath[0]['start_point'][0],
-                                  band_kpath[0]['end_point'][0],
-                                  band_kpath[0][0])
-        ky_linspace = np.linspace(band_kpath[0]['start_point'][1],
-                                  band_kpath[0]['end_point'][1],
-                                  band_kpath[0]['kpts'])
-        kz_linspace = np.linspace(band_kpath[0]['start_point'][2],
-                                  band_kpath[0]['end_point'][2],
-                                  band_kpath[0]['kpts'])
+        kx_linspace = np.linspace(
+            band_kpath[0]['start_point'][0],
+            band_kpath[0]['end_point'][0],
+            band_kpath[0][0],
+        )
+        ky_linspace = np.linspace(
+            band_kpath[0]['start_point'][1],
+            band_kpath[0]['end_point'][1],
+            band_kpath[0]['kpts'],
+        )
+        kz_linspace = np.linspace(
+            band_kpath[0]['start_point'][2],
+            band_kpath[0]['end_point'][2],
+            band_kpath[0]['kpts'],
+        )
         kpts = np.array([kx_linspace, ky_linspace, kz_linspace]).T
         for path in band_kpath[1:]:
-            kx_linspace = np.linspace(path['start_point'][0],
-                                      path['end_point'][0],
-                                      path['kpts'])
-            ky_linspace = np.linspace(path['start_point'][1],
-                                      path['end_point'][1],
-                                      path['kpts'])
-            kz_linspace = np.linspace(path['start_point'][2],
-                                      path['end_point'][2],
-                                      path['kpts'])
+            kx_linspace = np.linspace(
+                path['start_point'][0], path['end_point'][0], path['kpts']
+            )
+            ky_linspace = np.linspace(
+                path['start_point'][1], path['end_point'][1], path['kpts']
+            )
+            kz_linspace = np.linspace(
+                path['start_point'][2], path['end_point'][2], path['kpts']
+            )
             k_lin = np.array([kx_linspace, ky_linspace, kz_linspace]).T
             kpts = np.append(kpts, k_lin, axis=0)
         return kpts
@@ -596,74 +676,80 @@ def get_kpath(self, kpts=None, symbols=None, band_kpath=None, eps=1e-5):
         indices = [0]
         indices.extend(np.arange(1, N - 1)[kinks])
         indices.append(N - 1)
-        for start, end, s_sym, e_sym in zip(indices[1:], indices[:-1],
-                                            symbols[1:], symbols[:-1]):
-            band_kpath.append({'start_point': start, 'end_point': end,
-                               'kpts': 20,
-                               'path_symbols': (s_sym, e_sym)})
+        for start, end, s_sym, e_sym in zip(
+            indices[1:], indices[:-1], symbols[1:], symbols[:-1]
+        ):
+            band_kpath.append(
+                {
+                    'start_point': start,
+                    'end_point': end,
+                    'kpts': 20,
+                    'path_symbols': (s_sym, e_sym),
+                }
+            )
     else:
         raise KeyError('You should specify band_kpath or kpts')
         return band_kpath
 
 
 def write_string(fd, key, value):
-    fd.write("        ".join([key, value]))
-    fd.write("\n")
+    fd.write('        '.join([key, value]))
+    fd.write('\n')
 
 
 def write_tuple_integer(fd, key, value):
-    fd.write("        ".join([key, "%d %d %d" % value]))
-    fd.write("\n")
+    fd.write('        '.join([key, '%d %d %d' % value]))
+    fd.write('\n')
 
 
 def write_tuple_float(fd, key, value):
-    fd.write("        ".join([key, "%.4f %.4f %.4f" % value]))
-    fd.write("\n")
+    fd.write('        '.join([key, '%.4f %.4f %.4f' % value]))
+    fd.write('\n')
 
 
 def write_tuple_bool(fd, key, value):
     omx_bl = {True: 'On', False: 'Off'}
-    fd.write("        ".join([key, "%s %s %s" % [omx_bl[bl] for bl in value]]))
-    fd.write("\n")
+    fd.write('        '.join([key, '%s %s %s' % [omx_bl[bl] for bl in value]]))
+    fd.write('\n')
 
 
 def write_integer(fd, key, value):
-    fd.write("        ".join([key, "%d" % value]))
-    fd.write("\n")
+    fd.write('        '.join([key, '%d' % value]))
+    fd.write('\n')
 
 
 def write_float(fd, key, value):
-    fd.write("        ".join([key, "%.8g" % value]))
-    fd.write("\n")
+    fd.write('        '.join([key, '%.8g' % value]))
+    fd.write('\n')
 
 
 def write_bool(fd, key, value):
     omx_bl = {True: 'On', False: 'Off'}
-    fd.write("        ".join([key, f"{omx_bl[value]}"]))
-    fd.write("\n")
+    fd.write('        '.join([key, f'{omx_bl[value]}']))
+    fd.write('\n')
 
 
 def write_list_int(fd, key, value):
-    fd.write("".join(key) + ' ' + "     ".join(map(str, value)))
+    fd.write(''.join(key) + ' ' + '     '.join(map(str, value)))
 
 
 def write_list_bool(fd, key, value):
     omx_bl = {True: 'On', False: 'Off'}
-    fd.write("".join(key) + ' ' + "     ".join([omx_bl[bl] for bl in value]))
+    fd.write(''.join(key) + ' ' + '     '.join([omx_bl[bl] for bl in value]))
 
 
 def write_list_float(fd, key, value):
-    fd.write("".join(key) + ' ' + "     ".join(map(str, value)))
+    fd.write(''.join(key) + ' ' + '     '.join(map(str, value)))
 
 
 def write_matrix(fd, key, value):
     fd.write('<' + key)
-    fd.write("\n")
+    fd.write('\n')
     for line in value:
-        fd.write("    " + "  ".join(map(str, line)))
-        fd.write("\n")
+        fd.write('    ' + '  '.join(map(str, line)))
+        fd.write('\n')
     fd.write(key + '>')
-    fd.write("\n\n")
+    fd.write('\n\n')
 
 
 def get_openmx_key(key):

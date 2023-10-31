@@ -16,8 +16,7 @@ class CalculatorInputs:
 
     def __repr__(self):
         cls = type(self)
-        return '{}({}, {})'.format(cls.__name__,
-                                   self.name, self.parameters)
+        return '{}({}, {})'.format(cls.__name__, self.name, self.parameters)
 
     def calc(self):
         cls = get_calculator_class(self.name)
@@ -37,12 +36,13 @@ def _calculate(code, name):
 
 
 @pytest.mark.parametrize(
-    "spec",
+    'spec',
     [
         inputs('gamess_us', label='ch4'),
         inputs('gaussian', xc='lda', basis='3-21G'),
     ],
-    ids=lambda spec: spec.name)
+    ids=lambda spec: spec.name,
+)
 def test_ch4(tmp_path, spec):
     # XXX Convert to string since pytest can sometimes gives us tmp_path
     # as a pathlib2 path.
@@ -65,12 +65,25 @@ filterwarnings = pytest.mark.filterwarnings
 @calc('aims')
 @calc('cp2k')
 @calc('espresso', ecutwfc=300 / Ry)
-@calc('gpaw', symmetry='off', mode='pw', txt='gpaw.txt', mixer={'beta': 0.6},
-      marks=[filterwarnings('ignore:.*?ignore_bad_restart_file'),
-             filterwarnings('ignore:convert_string_to_fd')])
+@calc(
+    'gpaw',
+    symmetry='off',
+    mode='pw',
+    txt='gpaw.txt',
+    mixer={'beta': 0.6},
+    marks=[
+        filterwarnings('ignore:.*?ignore_bad_restart_file'),
+        filterwarnings('ignore:convert_string_to_fd'),
+    ],
+)
 @calc('nwchem')
-@calc('octopus', Spacing='0.25 * angstrom', BoxShape='minimum',
-      convreldens=1e-3, Radius='3.5 * angstrom')
+@calc(
+    'octopus',
+    Spacing='0.25 * angstrom',
+    BoxShape='minimum',
+    convreldens=1e-3,
+    Radius='3.5 * angstrom',
+)
 @calc('openmx')
 @calc('siesta', marks=pytest.mark.xfail)
 def test_ch4_reaction(factory):

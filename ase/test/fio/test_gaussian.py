@@ -8,17 +8,25 @@ from ase.atoms import Atoms
 from ase.calculators.calculator import InputError
 from ase.calculators.gaussian import Gaussian
 from ase.io import ParseError
-from ase.io.gaussian import (_get_atoms_info, _get_cartesian_atom_coords,
-                             _get_zmatrix_line, _re_chgmult, _re_link0,
-                             _re_method_basis, _re_nuclear_props,
-                             _re_output_type, _validate_symbol_string,
-                             read_gaussian_in)
+from ase.io.gaussian import (
+    _get_atoms_info,
+    _get_cartesian_atom_coords,
+    _get_zmatrix_line,
+    _re_chgmult,
+    _re_link0,
+    _re_method_basis,
+    _re_nuclear_props,
+    _re_output_type,
+    _validate_symbol_string,
+    read_gaussian_in,
+)
 
 
 @pytest.fixture
 def fd_cartesian():
     # make an example input string with cartesian coords:
-    fd_cartesian = StringIO('''
+    fd_cartesian = StringIO(
+        """
     %chk=example.chk
     %Nprocshared=16
     # N B3LYP/6-31G(d',p') ! ASE formatted method and basis
@@ -34,11 +42,12 @@ def fd_cartesian():
     TV         0.0000000000       10.0000000000        0.0000000000
     TV         0.0000000000        0.0000000000       10.0000000000
 
-    ''')
+    """
+    )
     return fd_cartesian
 
 
-_basis_set_text = '''H     0
+_basis_set_text = """H     0
 S    2   1.00
     0.5447178000D+01       0.1562849787D+00
     0.8245472400D+00       0.9046908767D+00
@@ -58,14 +67,15 @@ SP   2   1.00
     0.1576200000D+01       0.1221561761D+01       0.8539553735D+00
 SP   1   1.00
     0.3736840000D+00       0.1000000000D+01       0.1000000000D+01
-****'''
+****"""
 
 
 @pytest.fixture
 def fd_cartesian_basis_set():
     # make an example input string with cartesian coords and a basis set
     # definition:
-    fd_cartesian_basis_set = StringIO('''
+    fd_cartesian_basis_set = StringIO(
+        """
     %chk=example.chk
     %Nprocshared=16
     %Save
@@ -88,12 +98,15 @@ def fd_cartesian_basis_set():
     ! test comment
 
 
-''' + _basis_set_text + '\n')
+"""
+        + _basis_set_text
+        + '\n'
+    )
 
     return fd_cartesian_basis_set
 
 
-_zmatrix_file_text = '''
+_zmatrix_file_text = """
     %chk=example.chk
     %Nprocshared=16
     # T B3LYP/Gen
@@ -126,7 +139,7 @@ _zmatrix_file_text = '''
 
     @basis-set-filename.gbs
 
-    '''
+    """
 
 
 @pytest.fixture
@@ -140,7 +153,7 @@ def fd_zmatrix():
 def fd_incorrect_zmatrix_var():
     # Make an example input string with a z-matrix with
     # incorrect variable definitions
-    incorrect_zmatrix_text = ""
+    incorrect_zmatrix_text = ''
     for i, line in enumerate(_zmatrix_file_text.split('\n')):
         if i == 10:
             # add in variable name that isn't defined:
@@ -156,7 +169,7 @@ def fd_incorrect_zmatrix_var():
 def fd_incorrect_zmatrix_symbol():
     # Make an example input string with a z-matrix with
     # an unrecognised symbol
-    incorrect_zmatrix_text = ""
+    incorrect_zmatrix_text = ''
     for i, line in enumerate(_zmatrix_file_text.split('\n')):
         if i == 10:
             # add in variable name that isn't defined:
@@ -169,7 +182,7 @@ def fd_incorrect_zmatrix_symbol():
 
 def fd_unsupported_option():
     # Make an example string with an unsupported route option:
-    unsupported_text = ""
+    unsupported_text = ''
     for i, line in enumerate(_zmatrix_file_text.split('\n')):
         if i == 4:
             # add in unsupported setting:
@@ -182,7 +195,7 @@ def fd_unsupported_option():
 
 def fd_no_charge_mult():
     # Make an example input string without specifying charge and multiplicity:
-    unsupported_text = ""
+    unsupported_text = ''
     for i, line in enumerate(_zmatrix_file_text.split('\n')):
         if i == 8:
             # add in unsupported setting:
@@ -196,7 +209,7 @@ def fd_no_charge_mult():
 @pytest.fixture
 def fd_command_set():
     # Make an example input string where command is set in link0:
-    unsupported_text = ""
+    unsupported_text = ''
     for i, line in enumerate(_zmatrix_file_text.split('\n')):
         if i == 1:
             # add in unsupported setting:
@@ -208,9 +221,9 @@ def fd_command_set():
 
 
 def _test_write_gaussian(atoms, params_expected, properties=None):
-    '''Writes atoms to gaussian input file, reads this back in and
+    """Writes atoms to gaussian input file, reads this back in and
     checks that the resulting atoms object is equal to atoms and
-    the calculator has parameters params_expected'''
+    the calculator has parameters params_expected"""
 
     atoms.calc.label = 'gaussian_input_file'
     out_file = atoms.calc.label + '.com'
@@ -227,8 +240,8 @@ def _test_write_gaussian(atoms, params_expected, properties=None):
 
 
 def _check_atom_properties(atoms, atoms_new, params):
-    ''' Checks that the properties of atoms is equal to the properties
-    of atoms_new, and the parameters of atoms_new.calc is equal to params.'''
+    """Checks that the properties of atoms is equal to the properties
+    of atoms_new, and the parameters of atoms_new.calc is equal to params."""
     assert np.all(atoms_new.numbers == atoms.numbers)
     assert np.allclose(atoms_new.get_masses(), atoms.get_masses())
     assert np.allclose(atoms_new.positions, atoms.positions, atol=1e-3)
@@ -241,21 +254,21 @@ def _check_atom_properties(atoms, atoms_new, params):
 
     if 'basis_set' in params:
         # Makes sure both basis sets are formatted comparably for the test:
-        params_to_check['basis_set'] = params_to_check['basis_set'].split(
-            '\n')
-        params_to_check['basis_set'] = [line.strip() for line in
-                                        params_to_check['basis_set']]
-        new_params_to_check['basis_set'] = new_params_to_check[
-            'basis_set'].strip().split('\n')
+        params_to_check['basis_set'] = params_to_check['basis_set'].split('\n')
+        params_to_check['basis_set'] = [
+            line.strip() for line in params_to_check['basis_set']
+        ]
+        new_params_to_check['basis_set'] = (
+            new_params_to_check['basis_set'].strip().split('\n')
+        )
     for key, value in new_params_to_check.items():
-        params_equal = new_params_to_check.get(
-            key) == params_to_check.get(key)
+        params_equal = new_params_to_check.get(key) == params_to_check.get(key)
         if isinstance(params_equal, np.ndarray):
-            assert (new_params_to_check.get(key)
-                    == params_to_check.get(key)).all()
+            assert (
+                new_params_to_check.get(key) == params_to_check.get(key)
+            ).all()
         else:
-            assert (new_params_to_check.get(key)
-                    == params_to_check.get(key))
+            assert new_params_to_check.get(key) == params_to_check.get(key)
 
 
 def _get_iso_masses(atoms):
@@ -265,31 +278,41 @@ def _get_iso_masses(atoms):
 
 @pytest.fixture
 def cartesian_setup():
-    positions = [[-0.464, 0.177, 0.0],
-                 [-0.464, 1.137, 0.0],
-                 [0.441, -0.143, 0.0]]
-    cell = [[10., 0., 0.], [0., 10., 0.], [0., 0., 10.]]
+    positions = [
+        [-0.464, 0.177, 0.0],
+        [-0.464, 1.137, 0.0],
+        [0.441, -0.143, 0.0],
+    ]
+    cell = [[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 10.0]]
     masses = [15.999, 0.1134289259, 2]
 
-    atoms = Atoms('OH2', cell=cell, positions=positions,
-                  masses=masses, pbc=True)
+    atoms = Atoms(
+        'OH2', cell=cell, positions=positions, masses=masses, pbc=True
+    )
 
-    params = {'chk': 'example.chk', 'nprocshared': '16',
-              'output_type': 'n', 'method': 'b3lyp',
-              'basis': "6-31g(d',p')", 'opt': 'tight, maxcyc=100',
-              'integral': 'ultrafine', 'charge': 0, 'mult': 1,
-              'isolist': np.array([None, 0.1134289259, 2])}
+    params = {
+        'chk': 'example.chk',
+        'nprocshared': '16',
+        'output_type': 'n',
+        'method': 'b3lyp',
+        'basis': "6-31g(d',p')",
+        'opt': 'tight, maxcyc=100',
+        'integral': 'ultrafine',
+        'charge': 0,
+        'mult': 1,
+        'isolist': np.array([None, 0.1134289259, 2]),
+    }
 
     return atoms, params
 
 
 def test_read_write_gaussian_cartesian(fd_cartesian, cartesian_setup):
-    '''Tests the read_gaussian_in and write_gaussian_in methods.
+    """Tests the read_gaussian_in and write_gaussian_in methods.
     For the input text given by each fixture we do the following:
     - Check reading in the text generates the Atoms object and Calculator that
       we would expect to get.
     - Check that writing out the resulting Atoms object and reading it back in
-      generates the same Atoms object and parameters. '''
+      generates the same Atoms object and parameters."""
 
     # Tests reading a Gaussian input file with:
     # - Cartesian coordinates for the atom positions.
@@ -316,8 +339,9 @@ def test_read_write_gaussian_cartesian(fd_cartesian, cartesian_setup):
     _test_write_gaussian(atoms_new, params)
 
 
-def test_read_write_gaussian_cartesian_basis_set(fd_cartesian_basis_set,
-                                                 cartesian_setup):
+def test_read_write_gaussian_cartesian_basis_set(
+    fd_cartesian_basis_set, cartesian_setup
+):
     # Tests reading a Gaussian input file with:
     # - Cartesian coordinates for the atom positions.
     # - ASE formatted method and basis
@@ -353,25 +377,37 @@ def test_read_write_gaussian_zmatrix(fd_zmatrix):
     # - Masses defined using 'ReadIso'
     # - Method and basis not formatted by ASE
     # - Basis file used instead of standard basis set.
-    positions = np.array([
-        [+0.000, +0.000, +0.000],
-        [+1.310, +0.000, +0.000],
-        [-0.160, +1.300, +0.000],
-        [+1.150, +1.300, +0.000],
-        [-0.394, -0.446, +1.031],
-        [-0.394, -0.446, -1.031],
-        [+1.545, +1.746, -1.031],
-        [+1.545, +1.746, +1.031],
-    ])
+    positions = np.array(
+        [
+            [+0.000, +0.000, +0.000],
+            [+1.310, +0.000, +0.000],
+            [-0.160, +1.300, +0.000],
+            [+1.150, +1.300, +0.000],
+            [-0.394, -0.446, +1.031],
+            [-0.394, -0.446, -1.031],
+            [+1.545, +1.746, -1.031],
+            [+1.545, +1.746, +1.031],
+        ]
+    )
     masses = [None] * 8
     masses[1] = 0.1134289259
     atoms = Atoms('BH2BH4', positions=positions, masses=masses)
 
-    params = {'chk': 'example.chk', 'nprocshared': '16', 'output_type': 't',
-              'b3lyp': None, 'gen': None, 'opt': 'tight, maxcyc=100',
-              'freq': None, 'integral': 'ultrafine', 'charge': 0, 'mult': 1,
-              'temperature': '300', 'pressure': '1.0',
-              'basisfile': '@basis-set-filename.gbs'}
+    params = {
+        'chk': 'example.chk',
+        'nprocshared': '16',
+        'output_type': 't',
+        'b3lyp': None,
+        'gen': None,
+        'opt': 'tight, maxcyc=100',
+        'freq': None,
+        'integral': 'ultrafine',
+        'charge': 0,
+        'mult': 1,
+        'temperature': '300',
+        'pressure': '1.0',
+        'basisfile': '@basis-set-filename.gbs',
+    }
     params['isolist'] = np.array(masses)
 
     # Note that although the freq is set to ReadIso in the input text,
@@ -397,8 +433,8 @@ def test_read_write_gaussian_zmatrix(fd_zmatrix):
 
 
 def test_incorrect_mol_spec(fd_incorrect_zmatrix_var):
-    ''' Tests that incorrect lines in the molecule
-    specification fail to be read.'''
+    """Tests that incorrect lines in the molecule
+    specification fail to be read."""
     # checks parse error raised when freezecode set:
     freeze_code_line = 'H 1 1.0 2.0 3.0'
     symbol, pos = _get_atoms_info(freeze_code_line)
@@ -427,9 +463,14 @@ def test_incorrect_mol_spec(fd_incorrect_zmatrix_var):
             read_gaussian_in(fd_incorrect_zmatrix_var, True)
 
 
-@pytest.mark.parametrize("unsupported_file", [fd_incorrect_zmatrix_symbol(),
-                                              fd_unsupported_option(),
-                                              fd_no_charge_mult()])
+@pytest.mark.parametrize(
+    'unsupported_file',
+    [
+        fd_incorrect_zmatrix_symbol(),
+        fd_unsupported_option(),
+        fd_no_charge_mult(),
+    ],
+)
 def test_read_gaussian_in_errors(fd_command_set, unsupported_file):
     with pytest.raises(ParseError):
         read_gaussian_in(unsupported_file, True)
@@ -443,19 +484,28 @@ def test_read_gaussian_in_command(fd_command_set):
 
 
 def test_write_gaussian_calc():
-    ''' Tests writing an input file for a Gaussian calculator. Reads this
+    """Tests writing an input file for a Gaussian calculator. Reads this
     back in and checks that we get the parameters we expect.
 
     This allows testing of 'addsec', 'extra', 'ioplist',
-    which we weren't able to test by reading and then writing files.'''
+    which we weren't able to test by reading and then writing files."""
 
     # Generate an atoms object and calculator to test writing to a gaussian
     # input file:
     atoms = Atoms('H2', [[0, 0, 0], [0, 0, 0.74]])
-    params = {'mem': '1GB', 'charge': 0, 'mult': 1, 'xc': 'PBE',
-              'save': None, 'basis': 'EPR-III', 'scf': 'qc',
-              'ioplist': ['1/2', '2/3'], 'freq': 'readiso',
-              'addsec': '297 3 1', 'extra': 'Opt = Tight'}
+    params = {
+        'mem': '1GB',
+        'charge': 0,
+        'mult': 1,
+        'xc': 'PBE',
+        'save': None,
+        'basis': 'EPR-III',
+        'scf': 'qc',
+        'ioplist': ['1/2', '2/3'],
+        'freq': 'readiso',
+        'addsec': '297 3 1',
+        'extra': 'Opt = Tight',
+    }
     atoms.calc = Gaussian(**params)
 
     # Here we generate the params we expect to read back from the
@@ -518,8 +568,9 @@ def test_write_gaussian_calc():
     basisfilename = 'basis.txt'
     with open(basisfilename, 'w+') as fd:
         fd.write(_basis_set_text)
-    calc = Gaussian(basisfile=basisfilename, output_type='p',
-                    mult=0, charge=1, basis='gen')
+    calc = Gaussian(
+        basisfile=basisfilename, output_type='p', mult=0, charge=1, basis='gen'
+    )
     atoms.calc = calc
     params_expected = calc.parameters
     params_expected['basis_set'] = _basis_set_text
@@ -527,7 +578,7 @@ def test_write_gaussian_calc():
 
 
 def test_read_gaussian_regex():
-    ''' Test regex used in read_gaussian_in'''
+    """Test regex used in read_gaussian_in"""
     # Test link0 regex:
     link0_line = '%chk=example.chk'
     link0_match = _re_link0.match(link0_line)
@@ -568,5 +619,4 @@ def test_read_gaussian_regex():
     # Test nuclear properties regex:
     nuclear_props = '(iso=0.1134289259, NMagM=-8.89, ZEff=-1)'
     nuclear_prop_line = f'1{nuclear_props}, -0.464,   1.137,   0.0'
-    assert (_re_nuclear_props.search(nuclear_prop_line).group(0)
-            == nuclear_props)
+    assert _re_nuclear_props.search(nuclear_prop_line).group(0) == nuclear_props

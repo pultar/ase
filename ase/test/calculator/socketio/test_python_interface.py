@@ -22,8 +22,9 @@ def test_socketio_python():
     client = PySocketIOClient(EMT)
 
     pid = os.getpid()
-    with SocketIOCalculator(launch_client=client,
-                            unixsocket=f'ase-python-{pid}') as atoms.calc:
+    with SocketIOCalculator(
+        launch_client=client, unixsocket=f'ase-python-{pid}'
+    ) as atoms.calc:
         with BFGS(FrechetCellFilter(atoms)) as opt:
             opt.run(fmax=fmax)
 

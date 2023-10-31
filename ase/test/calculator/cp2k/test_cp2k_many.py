@@ -48,8 +48,9 @@ def test_h2_lda(cp2k_factory, atoms):
 def test_h2_libxc(cp2k_factory, atoms):
     calc = cp2k_factory.calc(
         xc='XC_GGA_X_PBE XC_GGA_C_PBE',
-        pseudo_potential="GTH-PBE",
-        label='test_H2_libxc')
+        pseudo_potential='GTH-PBE',
+        label='test_H2_libxc',
+    )
     atoms.calc = calc
     energy = atoms.get_potential_energy()
     energy_ref = -31.591716529642
@@ -88,8 +89,9 @@ def test_md(cp2k_factory):
     atoms = Atoms('HH', positions=positions, calculator=calc)
     atoms.center(vacuum=2.0)
 
-    MaxwellBoltzmannDistribution(atoms, temperature_K=0.5 * 300,
-                                 force_temp=True)
+    MaxwellBoltzmannDistribution(
+        atoms, temperature_K=0.5 * 300, force_temp=True
+    )
     energy_start = atoms.get_potential_energy() + atoms.get_kinetic_energy()
     with VelocityVerlet(atoms, 0.5 * units.fs) as dyn:
         dyn.run(20)
@@ -100,8 +102,12 @@ def test_md(cp2k_factory):
 
 def test_o2(cp2k_factory):
     calc = cp2k_factory.calc(
-        label='test_O2', uks=True, cutoff=150 * units.Rydberg,
-        basis_set="SZV-MOLOPT-SR-GTH", multiplicity=3)
+        label='test_O2',
+        uks=True,
+        cutoff=150 * units.Rydberg,
+        basis_set='SZV-MOLOPT-SR-GTH',
+        multiplicity=3,
+    )
     o2 = molecule('O2', calculator=calc)
     o2.center(vacuum=2.0)
     energy = o2.get_potential_energy()

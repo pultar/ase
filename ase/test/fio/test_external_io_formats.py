@@ -32,17 +32,17 @@ def reset_ioformats_after_test():
 VALID_IO_FORMAT = ExternalIOFormat(
     desc='Test IO format',
     code='1F',
-    module='ase.test.fio.test_external_io_formats'
+    module='ase.test.fio.test_external_io_formats',
 )
 
 
 # These are dummy functions for reading and writing the dummy io format
 def read_dummy(file):
-    return "Atoms dummy"
+    return 'Atoms dummy'
 
 
 def write_dummy(file, atoms):
-    file.write("dummy output")
+    file.write('dummy output')
 
 
 def test_external_ioformat_valid(tmp_path):
@@ -54,7 +54,8 @@ def test_external_ioformat_valid(tmp_path):
     test_entry_point = EntryPoint(
         name='dummy',
         value='ase.test.fio.test_external_io_formats:VALID_IO_FORMAT',
-        group='ase.ioformats')
+        group='ase.ioformats',
+    )
 
     define_external_io_format(test_entry_point)
 
@@ -80,7 +81,8 @@ def test_external_ioformat_already_existing():
     test_entry_point = EntryPoint(
         name='xyz',
         value='ase.test.fio.test_external_io_formats:VALID_IO_FORMAT',
-        group='ase.ioformats')
+        group='ase.ioformats',
+    )
 
     with pytest.raises(ValueError, match='Format xyz already defined'):
         define_external_io_format(test_entry_point)
@@ -93,7 +95,7 @@ def test_external_ioformat_already_existing():
 INVALID_IO_FORMAT = {
     'desc': 'Test IO format',
     'code': '1F',
-    'module': 'ase.test.fio.test_external_io_formats'
+    'module': 'ase.test.fio.test_external_io_formats',
 }
 
 
@@ -107,10 +109,12 @@ def test_external_ioformat_wrong_type():
     test_entry_point = EntryPoint(
         name='dummy',
         value='ase.test.fio.test_external_io_formats:INVALID_IO_FORMAT',
-        group='ase.ioformats')
+        group='ase.ioformats',
+    )
 
-    with pytest.raises(TypeError,
-                       match='Wrong type for registering external IO formats'):
+    with pytest.raises(
+        TypeError, match='Wrong type for registering external IO formats'
+    ):
         define_external_io_format(test_entry_point)
 
     assert 'dummy' not in formats.ioformats
@@ -125,7 +129,8 @@ def test_external_ioformat_import_error():
     test_entry_point = EntryPoint(
         name='dummy',
         value='ase.test.fio.test_external_io_formats:NOT_EXISTING',
-        group='ase.ioformats')
+        group='ase.ioformats',
+    )
 
     with pytest.raises(AttributeError):
         define_external_io_format(test_entry_point)

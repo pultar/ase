@@ -13,49 +13,93 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         add = parser.add_argument
-        add('-v', '--verbose', action='store_true',
-            help='Print names of converted files')
+        add(
+            '-v',
+            '--verbose',
+            action='store_true',
+            help='Print names of converted files',
+        )
         add('input', nargs='+', metavar='input-file')
-        add('-i', '--input-format', metavar='FORMAT',
-            help='Specify input FORMAT')
+        add(
+            '-i',
+            '--input-format',
+            metavar='FORMAT',
+            help='Specify input FORMAT',
+        )
         add('output', metavar='output-file')
-        add('-o', '--output-format', metavar='FORMAT',
-            help='Specify output FORMAT')
-        add('-f', '--force', action='store_true',
-            help='Overwrite an existing file')
-        add('-n', '--image-number',
-            default=':', metavar='NUMBER',
+        add(
+            '-o',
+            '--output-format',
+            metavar='FORMAT',
+            help='Specify output FORMAT',
+        )
+        add(
+            '-f',
+            '--force',
+            action='store_true',
+            help='Overwrite an existing file',
+        )
+        add(
+            '-n',
+            '--image-number',
+            default=':',
+            metavar='NUMBER',
             help='Pick images from trajectory.  NUMBER can be a '
             'single number (use a negative number to count from '
             'the back) or a range: start:stop:step, where the '
             '":step" part can be left out - default values are '
-            '0:nimages:1.')
-        add('-e', '--exec-code',
+            '0:nimages:1.',
+        )
+        add(
+            '-e',
+            '--exec-code',
             help='Python code to execute on each atoms before '
             'writing it to output file. The Atoms object is '
             'available as `atoms`. Set `atoms.info["_output"] = False` '
-            'to suppress output of this frame.')
-        add('-E', '--exec-file',
+            'to suppress output of this frame.',
+        )
+        add(
+            '-E',
+            '--exec-file',
             help='Python source code file to execute on each '
-            'frame, usage is as for -e/--exec-code.')
-        add('-a', '--arrays',
+            'frame, usage is as for -e/--exec-code.',
+        )
+        add(
+            '-a',
+            '--arrays',
             help='Comma-separated list of atoms.arrays entries to include '
-            'in output file. Default is all entries.')
-        add('-I', '--info',
+            'in output file. Default is all entries.',
+        )
+        add(
+            '-I',
+            '--info',
             help='Comma-separated list of atoms.info entries to include '
-            'in output file. Default is all entries.')
-        add('-s', '--split-output', action='store_true',
+            'in output file. Default is all entries.',
+        )
+        add(
+            '-s',
+            '--split-output',
+            action='store_true',
             help='Write output frames to individual files. '
             'Output file name should be a format string with '
-            'a single integer field, e.g. out-{:0>5}.xyz')
-        add('--read-args', nargs='+', action='store',
-            default={}, metavar="KEY=VALUE",
-            help='Additional keyword arguments to pass to '
-            '`ase.io.read()`.')
-        add('--write-args', nargs='+', action='store',
-            default={}, metavar="KEY=VALUE",
-            help='Additional keyword arguments to pass to '
-            '`ase.io.write()`.')
+            'a single integer field, e.g. out-{:0>5}.xyz',
+        )
+        add(
+            '--read-args',
+            nargs='+',
+            action='store',
+            default={},
+            metavar='KEY=VALUE',
+            help='Additional keyword arguments to pass to ' '`ase.io.read()`.',
+        )
+        add(
+            '--write-args',
+            nargs='+',
+            action='store',
+            default={},
+            metavar='KEY=VALUE',
+            help='Additional keyword arguments to pass to ' '`ase.io.write()`.',
+        )
 
     @staticmethod
     def run(args, parser):
@@ -74,16 +118,20 @@ class CLICommand:
             if args.verbose:
                 print('Filtering to include info: ', ', '.join(args.info))
         if args.read_args:
-            args.read_args = eval("dict({})"
-                                  .format(', '.join(args.read_args)))
+            args.read_args = eval('dict({})'.format(', '.join(args.read_args)))
         if args.write_args:
-            args.write_args = eval("dict({})"
-                                   .format(', '.join(args.write_args)))
+            args.write_args = eval(
+                'dict({})'.format(', '.join(args.write_args))
+            )
 
         configs = []
         for filename in args.input:
-            atoms = read(filename, args.image_number,
-                         format=args.input_format, **args.read_args)
+            atoms = read(
+                filename,
+                args.image_number,
+                format=args.input_format,
+                **args.read_args,
+            )
             if isinstance(atoms, list):
                 configs.extend(atoms)
             else:
@@ -99,9 +147,10 @@ class CLICommand:
                 # avoid exec() for Py 2+3 compat.
                 eval(compile(args.exec_code, '<string>', 'exec'))
             if args.exec_file:
-                eval(compile(open(args.exec_file).read(), args.exec_file,
-                             'exec'))
-            if "_output" not in atoms.info or atoms.info["_output"]:
+                eval(
+                    compile(open(args.exec_file).read(), args.exec_file, 'exec')
+                )
+            if '_output' not in atoms.info or atoms.info['_output']:
                 new_configs.append(atoms)
         configs = new_configs
 
@@ -110,8 +159,16 @@ class CLICommand:
 
         if args.split_output:
             for i, atoms in enumerate(configs):
-                write(args.output.format(i), atoms,
-                      format=args.output_format, **args.write_args)
+                write(
+                    args.output.format(i),
+                    atoms,
+                    format=args.output_format,
+                    **args.write_args,
+                )
         else:
-            write(args.output, configs, format=args.output_format,
-                  **args.write_args)
+            write(
+                args.output,
+                configs,
+                format=args.output_format,
+                **args.write_args,
+            )

@@ -47,15 +47,17 @@ all_modules = filenames2modules(glob_modules())
 deprecated_modules = {'ase.dft.band_structure'}
 
 ignore_imports = {
-    'flask', 'psycopg2', 'kimpy', 'pymysql', 'IPython',
+    'flask',
+    'psycopg2',
+    'kimpy',
+    'pymysql',
+    'IPython',
     'docutils',
     'gpaw',  # ase.vibrations.placzek
     'gpaw.lrtddft',  # ase.vibrations.placzek
 }
 
-newpy_only_modules = {
-    'ase.utils.build_web_page'
-}
+newpy_only_modules = {'ase.utils.build_web_page'}
 
 
 @pytest.mark.filterwarnings('ignore:Moved to')
@@ -64,8 +66,10 @@ def test_imports():
         with contextlib.ExitStack() as ignored_warnings:
             if module in deprecated_modules:
                 ignored_warnings.enter_context(
-                    pytest.warns((DeprecationWarning,
-                                  VisibleDeprecationWarning)))
+                    pytest.warns(
+                        (DeprecationWarning, VisibleDeprecationWarning)
+                    )
+                )
 
             try:
                 import_module(module)

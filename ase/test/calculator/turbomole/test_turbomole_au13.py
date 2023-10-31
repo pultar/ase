@@ -21,13 +21,13 @@ def test_turbomole_au13():
         'use resolution of identity': True,
         'ri memory': 1000,
         'use fermi smearing': True,
-        'fermi initial temperature': 500.,
-        'fermi final temperature': 100.,
+        'fermi initial temperature': 500.0,
+        'fermi final temperature': 100.0,
         'fermi annealing factor': 0.9,
         'fermi homo-lumo gap criterion': 0.09,
         'fermi stopping criterion': 0.002,
-        'scf energy convergence': 1.e-4,
-        'scf iterations': 250
+        'scf energy convergence': 1.0e-4,
+        'scf iterations': 250,
     }
 
     calc = Turbomole(**params)
@@ -42,10 +42,7 @@ def test_turbomole_au13():
 
     # test restart
 
-    params = {
-        'task': 'gradient',
-        'scf energy convergence': 1.e-6
-    }
+    params = {'task': 'gradient', 'scf energy convergence': 1.0e-6}
 
     calc = Turbomole(restart=True, **params)
     assert calc.converged

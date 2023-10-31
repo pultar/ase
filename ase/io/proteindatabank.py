@@ -26,8 +26,7 @@ def read_atom_line(line_full):
     """
     line = line_full.rstrip('\n')
     type_atm = line[0:6]
-    if type_atm == "ATOM  " or type_atm == "HETATM":
-
+    if type_atm == 'ATOM  ' or type_atm == 'HETATM':
         name = line[12:16].strip()
 
         altloc = line[16]
@@ -43,11 +42,12 @@ def read_atom_line(line_full):
 
         # atomic coordinates
         try:
-            coord = np.array([float(line[30:38]),
-                              float(line[38:46]),
-                              float(line[46:54])], dtype=np.float64)
+            coord = np.array(
+                [float(line[30:38]), float(line[38:46]), float(line[46:54])],
+                dtype=np.float64,
+            )
         except ValueError:
-            raise ValueError("Invalid or missing coordinate(s)")
+            raise ValueError('Invalid or missing coordinate(s)')
 
         # occupancy & B factor
         try:
@@ -56,7 +56,7 @@ def read_atom_line(line_full):
             occupancy = None  # Rather than arbitrary zero or one
 
         if occupancy is not None and occupancy < 0:
-            warnings.warn("Negative occupancy in one or more atoms")
+            warnings.warn('Negative occupancy in one or more atoms')
 
         try:
             bfactor = float(line[60:66])
@@ -68,7 +68,7 @@ def read_atom_line(line_full):
         symbol = line[76:78].strip().upper()
 
     else:
-        raise ValueError("Only ATOM and HETATM supported")
+        raise ValueError('Only ATOM and HETATM supported')
 
     return symbol, name, altloc, resname, coord, occupancy, bfactor, resseq
 
@@ -91,44 +91,51 @@ def read_proteindatabank(fileobj, index=-1, read_arrays=True):
     pbc = None
 
     def build_atoms():
-        atoms = Atoms(symbols=symbols,
-                      cell=cell, pbc=pbc,
-                      positions=positions)
+        atoms = Atoms(symbols=symbols, cell=cell, pbc=pbc, positions=positions)
 
         if not read_arrays:
             return atoms
 
-        info = {'occupancy': occ,
-                'bfactor': bfactor,
-                'residuenames': residuenames,
-                'atomtypes': atomtypes,
-                'residuenumbers': residuenumbers}
+        info = {
+            'occupancy': occ,
+            'bfactor': bfactor,
+            'residuenames': residuenames,
+            'atomtypes': atomtypes,
+            'residuenumbers': residuenumbers,
+        }
         for name, array in info.items():
             if len(array) == 0:
                 pass
             elif len(array) != len(atoms):
-                warnings.warn('Length of {} array, {}, '
-                              'different from number of atoms {}'.
-                              format(name, len(array), len(atoms)))
+                warnings.warn(
+                    'Length of {} array, {}, '
+                    'different from number of atoms {}'.format(
+                        name, len(array), len(atoms)
+                    )
+                )
             else:
                 atoms.set_array(name, np.array(array))
         return atoms
 
     for line in fileobj.readlines():
         if line.startswith('CRYST1'):
-            cellpar = [float(line[6:15]),  # a
-                       float(line[15:24]),  # b
-                       float(line[24:33]),  # c
-                       float(line[33:40]),  # alpha
-                       float(line[40:47]),  # beta
-                       float(line[47:54])]  # gamma
+            cellpar = [
+                float(line[6:15]),  # a
+                float(line[15:24]),  # b
+                float(line[24:33]),  # c
+                float(line[33:40]),  # alpha
+                float(line[40:47]),  # beta
+                float(line[47:54]),
+            ]  # gamma
             cell = Cell.new(cellpar)
             pbc = True
         for c in range(3):
             if line.startswith('ORIGX' + '123'[c]):
-                orig[c] = [float(line[10:20]),
-                           float(line[20:30]),
-                           float(line[30:40])]
+                orig[c] = [
+                    float(line[10:20]),
+                    float(line[20:30]),
+                    float(line[30:40]),
+                ]
                 trans[c] = float(line[45:55])
 
         if line.startswith('ATOM') or line.startswith('HETATM'):
@@ -190,8 +197,9 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
         images = [images]
 
     #     1234567 123 6789012345678901   89   67   456789012345678901234567 890
-    format = ('ATOM  %5d %4s %4s %4d    %8.3f%8.3f%8.3f%6.2f%6.2f'
-              '          %2s  \n')
+    format = (
+        'ATOM  %5d %4s %4s %4d    %8.3f%8.3f%8.3f%6.2f%6.2f' '          %2s  \n'
+    )
 
     # RasMol complains if the atom index exceeds 100000. There might
     # be a limit of 5 digit numbers in this field.
@@ -208,8 +216,17 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
             # ignoring Z-value, using P1 since we have all atoms defined
             # explicitly
             cellformat = 'CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1\n'
-            fileobj.write(cellformat % (cellpar[0], cellpar[1], cellpar[2],
-                                        cellpar[3], cellpar[4], cellpar[5]))
+            fileobj.write(
+                cellformat
+                % (
+                    cellpar[0],
+                    cellpar[1],
+                    cellpar[2],
+                    cellpar[3],
+                    cellpar[4],
+                    cellpar[5],
+                )
+            )
         fileobj.write('MODEL     ' + str(n + 1) + '\n')
         p = atoms.get_positions()
         if rot_t is not None:
@@ -237,6 +254,19 @@ def write_proteindatabank(fileobj, images, write_arrays=True):
             resname = residuenames[a].ljust(4)
             resseq = residuenumbers[a]
             name = names[a]
-            fileobj.write(format % ((a + 1) % MAXNUM, name, resname, resseq,
-                                    x, y, z, occ, bf, symbols[a].upper()))
+            fileobj.write(
+                format
+                % (
+                    (a + 1) % MAXNUM,
+                    name,
+                    resname,
+                    resseq,
+                    x,
+                    y,
+                    z,
+                    occ,
+                    bf,
+                    symbols[a].upper(),
+                )
+            )
         fileobj.write('ENDMDL\n')

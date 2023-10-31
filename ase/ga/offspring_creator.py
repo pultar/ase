@@ -86,7 +86,7 @@ class OperationSelector:
                 return i
 
     def get_new_individual(self, candidate_list):
-        """Choose operator and use it on the candidate. """
+        """Choose operator and use it on the candidate."""
         to_use = self.__get_index__()
         return self.oplist[to_use].get_new_individual(candidate_list)
 
@@ -113,7 +113,7 @@ class CombinationMutation(OffspringCreator):
         self.descriptor = 'CombinationMutation'
 
         # Check that a combination mutation makes sense
-        msg = "Too few operators supplied to a CombinationMutation"
+        msg = 'Too few operators supplied to a CombinationMutation'
         assert len(mutations) > 1, msg
 
         self.operators = mutations
@@ -128,8 +128,7 @@ class CombinationMutation(OffspringCreator):
         indi = self.initialize_individual(f, indi)
         indi.info['data']['parents'] = [f.info['confid']]
 
-        return (self.finalize_individual(indi),
-                f'mutation: {self.descriptor}')
+        return (self.finalize_individual(indi), f'mutation: {self.descriptor}')
 
     def mutate(self, atoms):
         """Perform the mutations one at a time."""

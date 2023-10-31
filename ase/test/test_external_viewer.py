@@ -48,7 +48,7 @@ viewers = [
 
 # At the moment nglview raises a DeprecationWarning.
 # https://github.com/nglviewer/nglview/issues/1074
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')
 @pytest.mark.parametrize('viewer', viewers)
 def test_good_viewer(atoms, viewer):
     """Test if `viewer` can at least be called without errors."""

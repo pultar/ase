@@ -17,18 +17,24 @@ def test_write_read_cycle_xyz_prismatic():
     atoms.set_array('debye_waller_factors', 0.62 + 0.1 * rng.random(len(atoms)))
 
     filename = 'SI100.XYZ'
-    atoms.write(filename=filename, format='prismatic',
-                comments='one unit cell of 100 silicon')
+    atoms.write(
+        filename=filename,
+        format='prismatic',
+        comments='one unit cell of 100 silicon',
+    )
 
     atoms_loaded = read(filename=filename, format='prismatic')
 
     np.testing.assert_allclose(atoms.positions, atoms_loaded.positions)
     np.testing.assert_allclose(atoms.cell, atoms_loaded.cell)
-    np.testing.assert_allclose(atoms.get_array('occupancies'),
-                               atoms_loaded.get_array('occupancies'))
-    np.testing.assert_allclose(atoms.get_array('debye_waller_factors'),
-                               atoms_loaded.get_array('debye_waller_factors'),
-                               rtol=1E-5)
+    np.testing.assert_allclose(
+        atoms.get_array('occupancies'), atoms_loaded.get_array('occupancies')
+    )
+    np.testing.assert_allclose(
+        atoms.get_array('debye_waller_factors'),
+        atoms_loaded.get_array('debye_waller_factors'),
+        rtol=1e-5,
+    )
 
 
 def test_write_error():
@@ -42,31 +48,40 @@ def test_write_error():
         atoms_Si100.write(filename, format='prismatic')
 
     # Write file with DW provided as scalar
-    atoms_Si100.write(filename, format='prismatic',
-                      debye_waller_factors=0.076)
+    atoms_Si100.write(filename, format='prismatic', debye_waller_factors=0.076)
 
     # Write file with DW provided as dict
-    atoms_Si100.write(filename, format='prismatic',
-                      debye_waller_factors={'Si': 0.076})
+    atoms_Si100.write(
+        filename, format='prismatic', debye_waller_factors={'Si': 0.076}
+    )
 
     STO_DW_dict = {'Sr': 0.62, 'O': 0.73, 'Ti': 0.43}
     STO_DW_dict_Ti_missing = {key: STO_DW_dict[key] for key in ['Sr', 'O']}
 
     with pytest.raises(ValueError):
         # DW missing keys
-        atoms_STO.write(filename, format='prismatic',
-                        debye_waller_factors=STO_DW_dict_Ti_missing)
+        atoms_STO.write(
+            filename,
+            format='prismatic',
+            debye_waller_factors=STO_DW_dict_Ti_missing,
+        )
 
-    atoms_STO.write(filename, format='prismatic',
-                    debye_waller_factors=STO_DW_dict)
+    atoms_STO.write(
+        filename, format='prismatic', debye_waller_factors=STO_DW_dict
+    )
 
     with pytest.raises(ValueError):
         # Raise an error if the unit cell is not defined.
-        atoms4 = Atoms(['Sr', 'Ti', 'O', 'O', 'O'],
-                       positions=[[0, 0, 0],
-                                  [0.5, 0.5, 0.5],
-                                  [0.5, 0.5, 0],
-                                  [0.5, 0, 0.5],
-                                  [0, 0.5, 0.5]])
-        atoms4.write(filename, format='prismatic',
-                     debye_waller_factors=STO_DW_dict)
+        atoms4 = Atoms(
+            ['Sr', 'Ti', 'O', 'O', 'O'],
+            positions=[
+                [0, 0, 0],
+                [0.5, 0.5, 0.5],
+                [0.5, 0.5, 0],
+                [0.5, 0, 0.5],
+                [0, 0.5, 0.5],
+            ],
+        )
+        atoms4.write(
+            filename, format='prismatic', debye_waller_factors=STO_DW_dict
+        )

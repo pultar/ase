@@ -79,6 +79,7 @@ class VaspChargeDensity:
 
         """
         import ase.io.vasp as aiv
+
         fd = open(filename)
         self.atoms = []
         self.chg = []
@@ -151,35 +152,48 @@ class VaspChargeDensity:
         if format.lower() == 'chg':
             # Write all but the last row
             for ii in range((len(chgtmp) - 1) // 10):
-                fobj.write(' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G\
- %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G\n' % chgtmp[ii * 10:(ii + 1) * 10])
+                fobj.write(
+                    ' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G\
+ %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G\n'
+                    % chgtmp[ii * 10 : (ii + 1) * 10]
+                )
             # If the last row contains 10 values then write them without a
             # newline
             if len(chgtmp) % 10 == 0:
-                fobj.write(' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G'
-                           ' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G' %
-                           chgtmp[len(chgtmp) - 10:len(chgtmp)])
+                fobj.write(
+                    ' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G'
+                    ' %#11.5G %#11.5G %#11.5G %#11.5G %#11.5G'
+                    % chgtmp[len(chgtmp) - 10 : len(chgtmp)]
+                )
             # Otherwise write fewer columns without a newline
             else:
                 for ii in range(len(chgtmp) % 10):
-                    fobj.write((' %#11.5G') %
-                               chgtmp[len(chgtmp) - len(chgtmp) % 10 + ii])
+                    fobj.write(
+                        (' %#11.5G')
+                        % chgtmp[len(chgtmp) - len(chgtmp) % 10 + ii]
+                    )
         # Other formats - 5 columns
         else:
             # Write all but the last row
             for ii in range((len(chgtmp) - 1) // 5):
-                fobj.write(' %17.10E %17.10E %17.10E %17.10E %17.10E\n' %
-                           chgtmp[ii * 5:(ii + 1) * 5])
+                fobj.write(
+                    ' %17.10E %17.10E %17.10E %17.10E %17.10E\n'
+                    % chgtmp[ii * 5 : (ii + 1) * 5]
+                )
             # If the last row contains 5 values then write them without a
             # newline
             if len(chgtmp) % 5 == 0:
-                fobj.write(' %17.10E %17.10E %17.10E %17.10E %17.10E' %
-                           chgtmp[len(chgtmp) - 5:len(chgtmp)])
+                fobj.write(
+                    ' %17.10E %17.10E %17.10E %17.10E %17.10E'
+                    % chgtmp[len(chgtmp) - 5 : len(chgtmp)]
+                )
             # Otherwise write fewer columns without a newline
             else:
                 for ii in range(len(chgtmp) % 5):
-                    fobj.write((' %17.10E') %
-                               chgtmp[len(chgtmp) - len(chgtmp) % 5 + ii])
+                    fobj.write(
+                        (' %17.10E')
+                        % chgtmp[len(chgtmp) - len(chgtmp) % 5 + ii]
+                    )
         # Write a newline whatever format it is
         fobj.write('\n')
 
@@ -194,6 +208,7 @@ class VaspChargeDensity:
 
         """
         import ase.io.vasp as aiv
+
         if format is None:
             if filename.lower().find('chgcar') != -1:
                 format = 'chgcar'
@@ -207,10 +222,9 @@ class VaspChargeDensity:
             for ii, chg in enumerate(self.chg):
                 if format == 'chgcar' and ii != len(self.chg) - 1:
                     continue  # Write only the last image for CHGCAR
-                aiv.write_vasp(fd,
-                               self.atoms[ii],
-                               direct=True,
-                               long_format=False)
+                aiv.write_vasp(
+                    fd, self.atoms[ii], direct=True, long_format=False
+                )
                 fd.write('\n')
                 for dim in chg.shape:
                     fd.write(' %4i' % dim)
@@ -282,13 +296,13 @@ class VaspDos:
     def _get_efermi(self):
         return self._efermi
 
-    efermi = property(_get_efermi, _set_efermi, None, "Fermi energy.")
+    efermi = property(_get_efermi, _set_efermi, None, 'Fermi energy.')
 
     def _get_energy(self):
         """Return the array with the energies."""
         return self._total_dos[0, :]
 
-    energy = property(_get_energy, None, None, "Array of energies")
+    energy = property(_get_energy, None, None, 'Array of energies')
 
     def site_dos(self, atom, orbital):
         """Return an NDOSx1 array with dos for the chosen atom and orbital.
@@ -320,6 +334,7 @@ class VaspDos:
         n = self._site_dos.shape[1]
 
         from .vasp_data import PDOS_orbital_names_and_DOSCAR_column
+
         norb = PDOS_orbital_names_and_DOSCAR_column[n]
 
         return self._site_dos[atom, norb[orbital.lower()], :]
@@ -338,10 +353,11 @@ class VaspDos:
         elif self._total_dos.shape[0] == 5:
             return self._total_dos[3:5, :]
 
-    integrated_dos = property(_get_integrated_dos, None, None,
-                              'Integrated average DOS in cell')
+    integrated_dos = property(
+        _get_integrated_dos, None, None, 'Integrated average DOS in cell'
+    )
 
-    def read_doscar(self, fname="DOSCAR"):
+    def read_doscar(self, fname='DOSCAR'):
         """Read a VASP DOSCAR file"""
         fd = open(fname)
         natoms = int(fd.readline().split()[0])

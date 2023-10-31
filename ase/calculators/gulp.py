@@ -26,8 +26,7 @@ class GULPOptimizer:
         self.calc = calc
 
     def todict(self):
-        return {'type': 'optimization',
-                'optimizer': 'GULPOptimizer'}
+        return {'type': 'optimization', 'optimizer': 'GULPOptimizer'}
 
     def run(self, fmax=None, steps=None, **gulp_kwargs):
         if fmax is not None:
@@ -50,26 +49,39 @@ class GULP(FileIOCalculator):
         keywords='conp gradients',
         options=[],
         shel=[],
-        library="ffsioh.lib",
-        conditions=None)
+        library='ffsioh.lib',
+        conditions=None,
+    )
 
     def get_optimizer(self, atoms):
         gulp_keywords = self.parameters.keywords.split()
         if 'opti' not in gulp_keywords:
-            raise ValueError('Can only create optimizer from GULP calculator '
-                             'with "opti" keyword.  Current keywords: {}'
-                             .format(gulp_keywords))
+            raise ValueError(
+                'Can only create optimizer from GULP calculator '
+                'with "opti" keyword.  Current keywords: {}'.format(
+                    gulp_keywords
+                )
+            )
 
         opt = GULPOptimizer(atoms, self)
         return opt
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='gulp', atoms=None, optimized=None,
-                 Gnorm=1000.0, steps=1000, conditions=None, **kwargs):
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='gulp',
+        atoms=None,
+        optimized=None,
+        Gnorm=1000.0,
+        steps=1000,
+        conditions=None,
+        **kwargs,
+    ):
         """Construct GULP-calculator object."""
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+        FileIOCalculator.__init__(
+            self, restart, ignore_bad_restart_file, label, atoms, **kwargs
+        )
         self.optimized = optimized
         self.Gnorm = Gnorm
         self.steps = steps
@@ -94,8 +106,10 @@ class GULP(FileIOCalculator):
         if all(self.atoms.pbc):
             cell_params = self.atoms.cell.cellpar()
             # Formating is necessary since Gulp max-line-length restriction
-            s += 'cell\n{:9.6f} {:9.6f} {:9.6f} ' \
-                 '{:8.5f} {:8.5f} {:8.5f}\n'.format(*cell_params)
+            s += (
+                'cell\n{:9.6f} {:9.6f} {:9.6f} '
+                '{:8.5f} {:8.5f} {:8.5f}\n'.format(*cell_params)
+            )
             s += 'frac\n'
             coords = self.atoms.get_scaled_positions()
         else:
@@ -110,11 +124,13 @@ class GULP(FileIOCalculator):
             labels = self.atoms.get_chemical_symbols()
 
         for xyz, symbol in zip(coords, labels):
-            s += ' {:2} core' \
-                 ' {:10.7f}  {:10.7f}  {:10.7f}\n' .format(symbol, *xyz)
+            s += ' {:2} core' ' {:10.7f}  {:10.7f}  {:10.7f}\n'.format(
+                symbol, *xyz
+            )
             if symbol in p.shel:
-                s += ' {:2} shel' \
-                     ' {:10.7f}  {:10.7f}  {:10.7f}\n' .format(symbol, *xyz)
+                s += ' {:2} shel' ' {:10.7f}  {:10.7f}  {:10.7f}\n'.format(
+                    symbol, *xyz
+                )
 
         if p.library:
             s += f'\nlibrary {p.library}\n'
@@ -156,9 +172,9 @@ class GULP(FileIOCalculator):
                 forces = []
                 while True:
                     s = s + 1
-                    if lines[s].find("------------") != -1:
+                    if lines[s].find('------------') != -1:
                         break
-                    if lines[s].find(" s ") != -1:
+                    if lines[s].find(' s ') != -1:
                         continue
                     g = lines[s].split()[3:6]
                     G = [-float(x) * eV / Ang for x in g]
@@ -171,7 +187,7 @@ class GULP(FileIOCalculator):
                 forces = []
                 while True:
                     s = s + 1
-                    if lines[s].find("------------") != -1:
+                    if lines[s].find('------------') != -1:
                         break
                     g = lines[s].split()[3:6]
 
@@ -180,7 +196,7 @@ class GULP(FileIOCalculator):
                     # numbers. This prevents the code to break if numbers are
                     # too big.
 
-                    '''for t in range(3-len(g)):
+                    """for t in range(3-len(g)):
                         g.append(' ')
                     for j in range(2):
                         min_index=[i+1 for i,e in enumerate(g[j][1:])
@@ -197,7 +213,7 @@ class GULP(FileIOCalculator):
                                 break
                         if j==1 and len(min_index) != 0:
                             g[2]=g[1][min_index[0]:]
-                            g[1]=g[1][:min_index[0]]'''
+                            g[1]=g[1][:min_index[0]]"""
 
                     G = [-float(x) * eV / Ang for x in g]
                     forces.append(G)
@@ -209,9 +225,9 @@ class GULP(FileIOCalculator):
                 positions = []
                 while True:
                     s = s + 1
-                    if lines[s].find("------------") != -1:
+                    if lines[s].find('------------') != -1:
                         break
-                    if lines[s].find(" s ") != -1:
+                    if lines[s].find(' s ') != -1:
                         continue
                     xyz = lines[s].split()[3:6]
                     XYZ = [float(x) * Ang for x in xyz]
@@ -220,7 +236,7 @@ class GULP(FileIOCalculator):
                 self.atoms.set_positions(positions)
 
             elif line.find('Final stress tensor components') != -1:
-                res = [0., 0., 0., 0., 0., 0.]
+                res = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                 for j in range(3):
                     var = lines[i + j + 3].split()[1]
                     res[j] = float(var)
@@ -239,18 +255,18 @@ class GULP(FileIOCalculator):
                 self.atoms.set_cell(lattice_vectors)
                 if self.fractional_coordinates is not None:
                     self.fractional_coordinates = np.array(
-                        self.fractional_coordinates)
-                    self.atoms.set_scaled_positions(
-                        self.fractional_coordinates)
+                        self.fractional_coordinates
+                    )
+                    self.atoms.set_scaled_positions(self.fractional_coordinates)
 
             elif line.find('Final fractional coordinates of atoms') != -1:
                 s = i + 5
                 scaled_positions = []
                 while True:
                     s = s + 1
-                    if lines[s].find("------------") != -1:
+                    if lines[s].find('------------') != -1:
                         break
-                    if lines[s].find(" s ") != -1:
+                    if lines[s].find(' s ') != -1:
                         continue
                     xyz = lines[s].split()[3:6]
                     XYZ = [float(x) for x in xyz]
@@ -271,8 +287,10 @@ class GULP(FileIOCalculator):
     def library_check(self):
         if self.parameters['library'] is not None:
             if 'GULP_LIB' not in os.environ:
-                raise RuntimeError("Be sure to have set correctly $GULP_LIB "
-                                   "or to have the force field library.")
+                raise RuntimeError(
+                    'Be sure to have set correctly $GULP_LIB '
+                    'or to have the force field library.'
+                )
 
 
 class Conditions:
@@ -292,9 +310,15 @@ class Conditions:
         self.atoms_labels = atoms.get_chemical_symbols()
         self.atom_types = []
 
-    def min_distance_rule(self, sym1, sym2,
-                          ifcloselabel1=None, ifcloselabel2=None,
-                          elselabel1=None, max_distance=3.0):
+    def min_distance_rule(
+        self,
+        sym1,
+        sym2,
+        ifcloselabel1=None,
+        ifcloselabel2=None,
+        elselabel1=None,
+        max_distance=3.0,
+    ):
         """Find pairs of atoms to label based on proximity.
 
         This is for, e.g., the ffsioh or catlow force field, where we
@@ -345,19 +369,23 @@ class Conditions:
                 dist_12 = 1000
                 index_assigned_sym2.append(i)
                 for t in range(len(self.atoms_symbols)):
-                    if (self.atoms_symbols[t] == sym1
+                    if (
+                        self.atoms_symbols[t] == sym1
                         and dist_mat[i, t] < dist_12
-                            and t not in index_assigned_sym1):
+                        and t not in index_assigned_sym1
+                    ):
                         dist_12 = dist_mat[i, t]
                         closest_sym1_index = t
                 index_assigned_sym1.append(closest_sym1_index)
 
         for i1, i2 in zip(index_assigned_sym1, index_assigned_sym2):
             if dist_mat[i1, i2] > max_distance:
-                raise ValueError('Cannot unambiguously apply minimum-distance '
-                                 'rule because pairings are not obvious.  '
-                                 'If you wish to ignore this, then increase '
-                                 'max_distance.')
+                raise ValueError(
+                    'Cannot unambiguously apply minimum-distance '
+                    'rule because pairings are not obvious.  '
+                    'If you wish to ignore this, then increase '
+                    'max_distance.'
+                )
 
         for s in range(len(self.atoms_symbols)):
             if s in index_assigned_sym1:

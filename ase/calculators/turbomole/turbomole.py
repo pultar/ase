@@ -15,8 +15,11 @@ from math import floor, log10
 
 import numpy as np
 
-from ase.calculators.calculator import (FileIOCalculator,
-                                        PropertyNotImplementedError, ReadError)
+from ase.calculators.calculator import (
+    FileIOCalculator,
+    PropertyNotImplementedError,
+    ReadError,
+)
 from ase.calculators.turbomole import reader
 from ase.calculators.turbomole.executor import execute, get_output_filename
 from ase.calculators.turbomole.parameters import TurbomoleParameters
@@ -33,8 +36,7 @@ class TurbomoleOptimizer:
         self.atoms.calc = self.calc
 
     def todict(self):
-        return {'type': 'optimization',
-                'optimizer': 'TurbomoleOptimizer'}
+        return {'type': 'optimization', 'optimizer': 'TurbomoleOptimizer'}
 
     def run(self, fmax=None, steps=None):
         if fmax is not None:
@@ -51,23 +53,59 @@ class TurbomoleOptimizer:
 class Turbomole(FileIOCalculator):
 
     """constants"""
+
     name = 'Turbomole'
 
-    implemented_properties = ['energy', 'forces', 'dipole', 'free_energy',
-                              'charges']
+    implemented_properties = [
+        'energy',
+        'forces',
+        'dipole',
+        'free_energy',
+        'charges',
+    ]
 
     tm_files = [
-        'control', 'coord', 'basis', 'auxbasis', 'energy', 'gradient', 'mos',
-        'alpha', 'beta', 'statistics', 'GEO_OPT_CONVERGED', 'GEO_OPT_FAILED',
-        'not.converged', 'nextstep', 'hessapprox', 'job.last', 'job.start',
-        'optinfo', 'statistics', 'converged', 'vibspectrum',
-        'vib_normal_modes', 'hessian', 'dipgrad', 'dscf_problem', 'pc.txt',
-        'pc_gradients.txt'
+        'control',
+        'coord',
+        'basis',
+        'auxbasis',
+        'energy',
+        'gradient',
+        'mos',
+        'alpha',
+        'beta',
+        'statistics',
+        'GEO_OPT_CONVERGED',
+        'GEO_OPT_FAILED',
+        'not.converged',
+        'nextstep',
+        'hessapprox',
+        'job.last',
+        'job.start',
+        'optinfo',
+        'statistics',
+        'converged',
+        'vibspectrum',
+        'vib_normal_modes',
+        'hessian',
+        'dipgrad',
+        'dscf_problem',
+        'pc.txt',
+        'pc_gradients.txt',
     ]
     tm_tmp_files = [
-        'errvec', 'fock', 'oldfock', 'dens', 'ddens', 'diff_densmat',
-        'diff_dft_density', 'diff_dft_oper', 'diff_fockmat', 'diis_errvec',
-        'diis_oldfock', 'dh'
+        'errvec',
+        'fock',
+        'oldfock',
+        'dens',
+        'ddens',
+        'diff_densmat',
+        'diff_dft_density',
+        'diff_dft_oper',
+        'diff_fockmat',
+        'diis_errvec',
+        'diis_oldfock',
+        'dh',
     ]
 
     # initialize attributes
@@ -91,11 +129,20 @@ class Turbomole(FileIOCalculator):
     hostname = None
     pcpot = None
 
-    def __init__(self, label=None, calculate_energy='dscf',
-                 calculate_forces='grad', post_HF=False, atoms=None,
-                 restart=False, define_str=None, control_kdg=None,
-                 control_input=None, reset_tolerance=1e-2, **kwargs):
-
+    def __init__(
+        self,
+        label=None,
+        calculate_energy='dscf',
+        calculate_forces='grad',
+        post_HF=False,
+        atoms=None,
+        restart=False,
+        define_str=None,
+        control_kdg=None,
+        control_input=None,
+        reset_tolerance=1e-2,
+        **kwargs,
+    ):
         super().__init__(label=label)
         self.parameters = TurbomoleParameters()
 
@@ -180,8 +227,8 @@ class Turbomole(FileIOCalculator):
         self.results = {}
         self.results['calculation parameters'] = {}
         ase_files = [
-            f for f in os.listdir(
-                self.directory) if f.startswith('ASE.TM.')]
+            f for f in os.listdir(self.directory) if f.startswith('ASE.TM.')
+        ]
         for f in self.tm_files + self.tm_tmp_files + ase_files:
             if os.path.exists(f):
                 os.remove(f)
@@ -328,6 +375,7 @@ class Turbomole(FileIOCalculator):
     def normal_mode_analysis(self, atoms=None):
         """execute normal mode analysis with modules aoforce or NumForce"""
         from ase.constraints import FixAtoms
+
         if atoms is None:
             atoms = self.atoms
         self.set_atoms(atoms)
@@ -396,7 +444,7 @@ class Turbomole(FileIOCalculator):
             self.read_vibrational_spectrum,
             self.read_charges,
             self.read_point_charges,
-            self.read_run_parameters
+            self.read_run_parameters,
         ]
         for method in read_methods:
             try:
@@ -564,21 +612,21 @@ class Turbomole(FileIOCalculator):
             'forces': 'forces',
             'dipole': 'dipole',
             'free_energy': 'e_total',
-            'charges': 'charges'
+            'charges': 'charges',
         }
         property_getter = {
             'energy': self.get_potential_energy,
             'forces': self.get_forces,
             'dipole': self.get_dipole_moment,
             'free_energy': self.get_potential_energy,
-            'charges': self.get_charges
+            'charges': self.get_charges,
         }
         getter_args = {
             'energy': [atoms],
             'forces': [atoms],
             'dipole': [atoms],
             'free_energy': [atoms, True],
-            'charges': [atoms]
+            'charges': [atoms],
         }
 
         if allow_calculation:
@@ -622,8 +670,7 @@ class Turbomole(FileIOCalculator):
                 add_data_group('point_charges', 'file=pc.txt')
             if len(read_data_group('point_charge_gradients')) == 0:
                 add_data_group(
-                    'point_charge_gradients',
-                    'file=pc_gradients.txt'
+                    'point_charge_gradients', 'file=pc_gradients.txt'
                 )
             drvopt = read_data_group('drvopt')
             if 'point charges' not in drvopt:
@@ -636,9 +683,12 @@ class Turbomole(FileIOCalculator):
             with open('pc.txt', 'w') as pcfile:
                 pcfile.write('$point_charges nocheck list\n')
                 for (x, y, z), charge in zip(
-                        self.pcpot.mmpositions, self.pcpot.mmcharges):
-                    pcfile.write('%20.14f  %20.14f  %20.14f  %20.14f\n'
-                                 % (x / Bohr, y / Bohr, z / Bohr, charge))
+                    self.pcpot.mmpositions, self.pcpot.mmcharges
+                ):
+                    pcfile.write(
+                        '%20.14f  %20.14f  %20.14f  %20.14f\n'
+                        % (x / Bohr, y / Bohr, z / Bohr, charge)
+                    )
                 pcfile.write('$end \n')
             self.pcpot.updated = False
 
@@ -650,7 +700,7 @@ class Turbomole(FileIOCalculator):
 
     def embed(self, charges=None, positions=None):
         """embed atoms in an array of point-charges; function used in
-            qmmm calculations."""
+        qmmm calculations."""
         self.pcpot = PointChargePotential(charges, positions)
         return self.pcpot
 

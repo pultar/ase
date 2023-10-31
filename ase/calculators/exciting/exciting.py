@@ -17,10 +17,14 @@ from typing import Any, Mapping
 
 import ase.io.exciting
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.exciting.runner import (SimpleBinaryRunner,
-                                             SubprocessRunResults)
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator)
+from ase.calculators.exciting.runner import (
+    SimpleBinaryRunner,
+    SubprocessRunResults,
+)
+from ase.calculators.genericfileio import (
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+)
 
 
 class ExcitingProfile:
@@ -34,6 +38,7 @@ class ExcitingProfile:
 
     def __init__(self, exciting_root, species_path):
         from excitingtools.input.base_class import query_exciting_version
+
         self.version = query_exciting_version(exciting_root)
         self.species_path = species_path
 
@@ -46,6 +51,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         * execute
         * read_results
     """
+
     program_name = 'exciting'
     parser = {'info.xml': ase.io.exciting.parse_output}
     output_names = list(parser)
@@ -62,8 +68,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         super().__init__(self.program_name, self.implemented_properties)
 
     @staticmethod
-    def _require_forces(
-            input_parameters):
+    def _require_forces(input_parameters):
         """Expect ASE always wants forces, enforce setting in input_parameters.
 
         :param input_parameters: exciting ground state input parameters, either
@@ -77,11 +82,13 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         input_parameters.tforce = True
         return input_parameters
 
-    def write_input(self,
-                    directory: PathLike,
-                    atoms: ase.Atoms,
-                    parameters: dict,
-                    properties=None):
+    def write_input(
+        self,
+        directory: PathLike,
+        atoms: ase.Atoms,
+        parameters: dict,
+        properties=None,
+    ):
         """Write an exciting input.xml file based on the input args.
 
         :param directory: Directory in which to run calculator.
@@ -98,19 +105,23 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         # modify the callers dictionary.
         parameters_dict = parameters
         assert set(parameters_dict.keys()) == {
-            'title', 'species_path', 'ground_state_input'}, \
-            'Keys should be defined by ExcitingGroundState calculator'
+            'title',
+            'species_path',
+            'ground_state_input',
+        }, 'Keys should be defined by ExcitingGroundState calculator'
         file_name = Path(directory) / 'input.xml'
         species_path = parameters_dict.pop('species_path')
         title = parameters_dict.pop('title')
 
         ase.io.exciting.write_input_xml_file(
-            file_name, atoms, parameters_dict['ground_state_input'],
-            species_path, title)
+            file_name,
+            atoms,
+            parameters_dict['ground_state_input'],
+            species_path,
+            title,
+        )
 
-    def execute(
-            self, directory: PathLike,
-            profile) -> SubprocessRunResults:
+    def execute(self, directory: PathLike, profile) -> SubprocessRunResults:
         """Given an exciting calculation profile, execute the calculation.
 
         :param directory: Directory in which to execute the calculator
@@ -147,21 +158,23 @@ class ExcitingGroundStateResults:
 
     def __init__(self, results: dict) -> None:
         self.results = results
-        self.final_scl_iteration = list(results["scl"].keys())[-1]
+        self.final_scl_iteration = list(results['scl'].keys())[-1]
 
     def total_energy(self) -> float:
         """Return total energy of system."""
         # TODO(Alex) We should a common list of keys somewhere
         # such that parser -> results -> getters are consistent
         return float(
-            self.results['scl'][self.final_scl_iteration][
-                'Total energy'])
+            self.results['scl'][self.final_scl_iteration]['Total energy']
+        )
 
     def band_gap(self) -> float:
         """Return the estimated fundamental gap from the exciting sim."""
         return float(
             self.results['scl'][self.final_scl_iteration][
-                'Estimated fundamental gap'])
+                'Estimated fundamental gap'
+            ]
+        )
 
     def forces(self):
         """Return forces present on the system.
@@ -203,21 +216,25 @@ class ExcitingGroundStateCalculator(GenericFileIOCalculator):
             atoms: Atoms)
     """
 
-    def __init__(self, *,
-                 runner: SimpleBinaryRunner,
-                 ground_state_input,
-                 directory='./',
-                 species_path='./',
-                 title='ASE-generated input'):
-
+    def __init__(
+        self,
+        *,
+        runner: SimpleBinaryRunner,
+        ground_state_input,
+        directory='./',
+        species_path='./',
+        title='ASE-generated input',
+    ):
         self.runner = runner
         # Package data to be passed to
         # ExcitingGroundStateTemplate.write_input(..., input_parameters, ...)
         # Structure not included, as it's passed when one calls .calculate
         # method directly
         self.exciting_inputs = {
-            'title': title, 'species_path': species_path,
-            'ground_state_input': ground_state_input}
+            'title': title,
+            'species_path': species_path,
+            'ground_state_input': ground_state_input,
+        }
         self.directory = Path(directory)
 
         # GenericFileIOCalculator expects a `profile`
@@ -231,4 +248,5 @@ class ExcitingGroundStateCalculator(GenericFileIOCalculator):
             profile=runner,
             template=ExcitingGroundStateTemplate(),
             parameters=self.exciting_inputs,
-            directory=directory)
+            directory=directory,
+        )

@@ -12,7 +12,7 @@ from ase.utils import reader, writer
 
 @reader
 def read_gromacs(fd):
-    """ From:
+    """From:
     http://manual.gromacs.org/current/online/gro.html
     C format
     "%5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f"
@@ -36,16 +36,18 @@ def read_gromacs(fd):
     gromacs_atomtypes = []
     sym2tag = {}
     tag = 0
-    for line in (lines[2:-1]):
+    for line in lines[2:-1]:
         # print(line[0:5]+':'+line[5:11]+':'+line[11:15]+':'+line[15:20])
         # it is not a good idea to use the split method with gromacs input
         # since the fields are defined by a fixed column number. Therefore,
         # they may not be space between the fields
         # inp = line.split()
 
-        floatvect = float(line[20:28]) * 10.0, \
-            float(line[28:36]) * 10.0, \
-            float(line[36:44]) * 10.0
+        floatvect = (
+            float(line[20:28]) * 10.0,
+            float(line[28:36]) * 10.0,
+            float(line[36:44]) * 10.0,
+        )
         positions.append(floatvect)
 
         # read velocities
@@ -59,7 +61,7 @@ def read_gromacs(fd):
                 try:
                     velocities[iv] = float(vxyz)
                 except ValueError:
-                    raise ValueError("can not convert velocity to float")
+                    raise ValueError('can not convert velocity to float')
             else:
                 velocities = None
 
@@ -87,7 +89,7 @@ def read_gromacs(fd):
             # not an atomic symbol
             # if we can not determine the symbol, we use
             # the dummy symbol X
-            symbols.append("X")
+            symbols.append('X')
 
         gromacs_atomtypes.append(line[11:16].strip())
 
@@ -97,7 +99,7 @@ def read_gromacs(fd):
     if len(gromacs_velocities) == len(atoms):
         atoms.set_velocities(gromacs_velocities)
     elif len(gromacs_velocities) != 0:
-        raise ValueError("Some atoms velocities were not specified!")
+        raise ValueError('Some atoms velocities were not specified!')
 
     if not atoms.has('residuenumbers'):
         atoms.new_array('residuenumbers', gromacs_residuenumbers, int)
@@ -125,7 +127,7 @@ def read_gromacs(fd):
     if len(grocell) >= 9:
         cell.flat[[1, 2, 3, 5, 6, 7]] = grocell[3:9]
 
-    atoms.cell = cell * 10.
+    atoms.cell = cell * 10.0
     atoms.pbc = True
     return atoms
 
@@ -176,17 +178,27 @@ def write_gromacs(fileobj, atoms):
     # manual.gromacs.org/documentation/current/user-guide/file-formats.html#gro
     # (EDH: link seems broken as of 2020-02-21)
     #    1WATER  OW1    1   0.126   1.624   1.679  0.1227 -0.0580  0.0434
-    for (resnb, resname, atomtype, xyz,
-         vxyz) in zip(residuenumbers, gromacs_residuenames,
-                      gromacs_atomtypes, pos, vel):
-
+    for resnb, resname, atomtype, xyz, vxyz in zip(
+        residuenumbers, gromacs_residuenames, gromacs_atomtypes, pos, vel
+    ):
         # THIS SHOULD BE THE CORRECT, PYTHON FORMATTING, EQUIVALENT TO THE
         # C FORMATTING GIVEN IN THE GROMACS DOCUMENTATION:
         # >>> %5d%-5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f <<<
-        line = ("{:>5d}{:<5s}{:>5s}{:>5d}{:>8.3f}{:>8.3f}{:>8.3f}"
-                "{:>8.4f}{:>8.4f}{:>8.4f}\n"
-                .format(resnb, resname, atomtype, count,
-                        xyz[0], xyz[1], xyz[2], vxyz[0], vxyz[1], vxyz[2]))
+        line = (
+            '{:>5d}{:<5s}{:>5s}{:>5d}{:>8.3f}{:>8.3f}{:>8.3f}'
+            '{:>8.4f}{:>8.4f}{:>8.4f}\n'.format(
+                resnb,
+                resname,
+                atomtype,
+                count,
+                xyz[0],
+                xyz[1],
+                xyz[2],
+                vxyz[0],
+                vxyz[1],
+                vxyz[2],
+            )
+        )
 
         fileobj.write(line)
         count += 1
@@ -204,4 +216,4 @@ def write_gromacs(fileobj, atoms):
         fileobj.write(''.join([f'{x:10.5f}' for x in grocell]))
     else:
         # When we do not have a cell, the cell is specified as an empty line
-        fileobj.write("\n")
+        fileobj.write('\n')

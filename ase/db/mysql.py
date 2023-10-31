@@ -34,10 +34,23 @@ class Connection:
         added for binary values.
     """
 
-    def __init__(self, host=None, user=None, passwd=None, port=3306,
-                 db_name=None, binary_prefix=False):
-        self.con = connect(host=host, user=user, passwd=passwd, db=db_name,
-                           binary_prefix=binary_prefix, port=port)
+    def __init__(
+        self,
+        host=None,
+        user=None,
+        passwd=None,
+        port=3306,
+        db_name=None,
+        binary_prefix=False,
+    ):
+        self.con = connect(
+            host=host,
+            user=user,
+            passwd=passwd,
+            db=db_name,
+            binary_prefix=binary_prefix,
+            port=port,
+        )
 
     def cursor(self):
         return MySQLCursor(self.con.cursor())
@@ -59,23 +72,26 @@ class MySQLCursor:
     because ASE DB uses some field names that are reserved words in MySQL.
     Thus, these has to mapped onto other field names.
     """
+
     sql_replace = [
         (' key TEXT', ' attribute_key TEXT'),
         ('(key TEXT', '(attribute_key TEXT'),
         ('SELECT key FROM', 'SELECT attribute_key FROM'),
-        ('SELECT DISTINCT key FROM keys',
-         'SELECT DISTINCT attribute_key FROM attribute_keys'),
+        (
+            'SELECT DISTINCT key FROM keys',
+            'SELECT DISTINCT attribute_key FROM attribute_keys',
+        ),
         ('?', '%s'),
         (' keys ', ' attribute_keys '),
         (' key=', ' attribute_key='),
         ('table.key', 'table.attribute_key'),
-        (' IF NOT EXISTS', '')]
+        (' IF NOT EXISTS', ''),
+    ]
 
     def __init__(self, cur):
         self.cur = cur
 
     def execute(self, sql, params=None):
-
         # Replace external table key -> attribute_key
         for substibution in self.sql_replace:
             sql = sql.replace(substibution[0], substibution[1])
@@ -130,13 +146,14 @@ class MySQLDatabase(SQLite3Database):
     serial: bool
         See SQLite
     """
+
     type = 'mysql'
     default = 'DEFAULT'
 
-    def __init__(self, url=None, create_indices=True,
-                 use_lock_file=False, serial=False):
-        super().__init__(
-            url, create_indices, use_lock_file, serial)
+    def __init__(
+        self, url=None, create_indices=True, use_lock_file=False, serial=False
+    ):
+        super().__init__(url, create_indices, use_lock_file, serial)
 
         self.host = None
         self.username = None
@@ -165,9 +182,14 @@ class MySQLDatabase(SQLite3Database):
         self.db_name = splitted[1]
 
     def _connect(self):
-        return Connection(host=self.host, user=self.username,
-                          passwd=self.passwd, db_name=self.db_name,
-                          port=self.port, binary_prefix=True)
+        return Connection(
+            host=self.host,
+            user=self.username,
+            passwd=self.passwd,
+            db_name=self.db_name,
+            port=self.port,
+            binary_prefix=True,
+        )
 
     def _initialize(self, con):
         if self.initialized:
@@ -178,7 +200,7 @@ class MySQLDatabase(SQLite3Database):
         information_exists = True
         self._metadata = {}
         try:
-            cur.execute("SELECT 1 FROM information")
+            cur.execute('SELECT 1 FROM information')
         except ProgrammingError:
             information_exists = False
 
@@ -187,8 +209,9 @@ class MySQLDatabase(SQLite3Database):
             # MySQL require that id is explicitly set as primary key
             # in the systems table
             init_statements_cpy = deepcopy(init_statements)
-            init_statements_cpy[0] = init_statements_cpy[0][:-1] + \
-                ', PRIMARY KEY(id))'
+            init_statements_cpy[0] = (
+                init_statements_cpy[0][:-1] + ', PRIMARY KEY(id))'
+            )
 
             statements = schema_update(init_statements_cpy)
             for statement in statements:
@@ -225,11 +248,18 @@ class MySQLDatabase(SQLite3Database):
         last_id = cur.fetchone()[0]
         return last_id
 
-    def create_select_statement(self, keys, cmps,
-                                sort=None, order=None, sort_table=None,
-                                what='systems.*'):
+    def create_select_statement(
+        self,
+        keys,
+        cmps,
+        sort=None,
+        order=None,
+        sort_table=None,
+        what='systems.*',
+    ):
         sql, value = super().create_select_statement(
-            keys, cmps, sort, order, sort_table, what)
+            keys, cmps, sort, order, sort_table, what
+        )
 
         for subst in MySQLCursor.sql_replace:
             sql = sql.replace(subst[0], subst[1])
@@ -244,9 +274,13 @@ class MySQLDatabase(SQLite3Database):
 
 def schema_update(statements):
     for i, statement in enumerate(statements):
-        for a, b in [('REAL', 'DOUBLE'),
-                     ('INTEGER PRIMARY KEY AUTOINCREMENT',
-                      'INT NOT NULL AUTO_INCREMENT')]:
+        for a, b in [
+            ('REAL', 'DOUBLE'),
+            (
+                'INTEGER PRIMARY KEY AUTOINCREMENT',
+                'INT NOT NULL AUTO_INCREMENT',
+            ),
+        ]:
             statements[i] = statement.replace(a, b)
 
     # MySQL does not support UNIQUE constraint on TEXT
@@ -263,18 +297,22 @@ def schema_update(statements):
 
     for column in txt2jsonb:
         statements[0] = statements[0].replace(
-            f'{column} TEXT,',
-            f'{column} JSON,')
+            f'{column} TEXT,', f'{column} JSON,'
+        )
 
     statements[0] = statements[0].replace('data BLOB,', 'data JSON,')
 
-    tab_with_key_field = ['attribute_keys', 'number_key_values',
-                          'text_key_values']
+    tab_with_key_field = [
+        'attribute_keys',
+        'number_key_values',
+        'text_key_values',
+    ]
 
     # key is a reserved word in MySQL redefine this to attribute_key
     for i, statement in enumerate(statements):
         for tab in tab_with_key_field:
             if tab in statement:
                 statements[i] = statement.replace(
-                    'key TEXT', 'attribute_key TEXT')
+                    'key TEXT', 'attribute_key TEXT'
+                )
     return statements

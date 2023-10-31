@@ -48,45 +48,57 @@ def read_v_sim(fd):
         p = re_comment.match(line)
         if p is not None:
             # remove comment character at the beginning of line
-            line = line[p.end():].replace(',', ' ').lower()
-            if line[:8] == "keyword:":
+            line = line[p.end() :].replace(',', ' ').lower()
+            if line[:8] == 'keyword:':
                 keywords.extend(line[8:].split())
 
         elif re_node.match(line):
             unit = 1.0
-            if "reduced" not in keywords:
-                if (("bohr" in keywords) or ("bohrd0" in keywords) or
-                        ("atomic" in keywords) or ("atomicd0" in keywords)):
+            if 'reduced' not in keywords:
+                if (
+                    ('bohr' in keywords)
+                    or ('bohrd0' in keywords)
+                    or ('atomic' in keywords)
+                    or ('atomicd0' in keywords)
+                ):
                     unit = units.Bohr
 
             fields = line.split()
-            positions.append([unit * float(fields[0]),
-                              unit * float(fields[1]),
-                              unit * float(fields[2])])
+            positions.append(
+                [
+                    unit * float(fields[0]),
+                    unit * float(fields[1]),
+                    unit * float(fields[2]),
+                ]
+            )
             symbols.append(fields[3])
 
     # create atoms object based on the information
-    if "angdeg" in keywords:
+    if 'angdeg' in keywords:
         cell = cellpar_to_cell(box)
     else:
         unit = 1.0
-        if (("bohr" in keywords) or ("bohrd0" in keywords) or
-                ("atomic" in keywords) or ("atomicd0" in keywords)):
+        if (
+            ('bohr' in keywords)
+            or ('bohrd0' in keywords)
+            or ('atomic' in keywords)
+            or ('atomicd0' in keywords)
+        ):
             unit = units.Bohr
         cell = np.zeros((3, 3))
         cell.flat[[0, 3, 4, 6, 7, 8]] = box[:6]
         cell *= unit
 
-    if "reduced" in keywords:
+    if 'reduced' in keywords:
         atoms = Atoms(cell=cell, scaled_positions=positions)
     else:
         atoms = Atoms(cell=cell, positions=positions)
 
-    if "periodic" in keywords:
+    if 'periodic' in keywords:
         atoms.pbc = [True, True, True]
-    elif "freebc" in keywords:
+    elif 'freebc' in keywords:
         atoms.pbc = [False, False, False]
-    elif "surface" in keywords:
+    elif 'surface' in keywords:
         atoms.pbc = [True, False, True]
     else:  # default is periodic boundary conditions
         atoms.pbc = [True, True, True]
@@ -112,8 +124,10 @@ def write_v_sim(fd, atoms):
     dyx, dyy = cell[1, 0:2]
     dzx, dzy, dzz = cell[2, 0:3]
 
-    fd.write('===== v_sim input file created using the'
-             ' Atomic Simulation Environment (ASE) ====\n')
+    fd.write(
+        '===== v_sim input file created using the'
+        ' Atomic Simulation Environment (ASE) ====\n'
+    )
     fd.write(f'{dxx} {dyx} {dyy}\n')
     fd.write(f'{dzx} {dzy} {dzz}\n')
 
@@ -130,10 +144,15 @@ def write_v_sim(fd, atoms):
         raise Exception(
             'Only supported boundary conditions are full PBC,'
             ' no periodic boundary, and surface which is free in y direction'
-            ' (i.e. Atoms.pbc = [True, False, True]).')
+            ' (i.e. Atoms.pbc = [True, False, True]).'
+        )
 
     # Add atoms (scaled positions)
-    for position, symbol in zip(atoms.get_scaled_positions(),
-                                atoms.get_chemical_symbols()):
-        fd.write('{} {} {} {}\n'.format(
-            position[0], position[1], position[2], symbol))
+    for position, symbol in zip(
+        atoms.get_scaled_positions(), atoms.get_chemical_symbols()
+    ):
+        fd.write(
+            '{} {} {} {}\n'.format(
+                position[0], position[1], position[2], symbol
+            )
+        )
