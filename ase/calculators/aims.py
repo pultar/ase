@@ -281,4 +281,3 @@ class AimsCube:
         if self.ncubes() > 1:
             for i in range(self.ncubes() - 1):
                 file.write('output cube ' + self.plots[i + 1] + '\n')
-
