@@ -167,7 +167,8 @@ class DiffusionCoefficient:
                         sym_index = self.types_of_atoms.index(
                             seg[image_no].symbols[atom_no])
                         xyz_disp[sym_index] += np.square(
-                            seg[image_no].positions[atom_no] - seg[0].positions[atom_no])
+                            seg[image_no].positions[atom_no] -
+                            seg[0].positions[atom_no])
 
                 # Calculating for group of atoms (molecule) and work out squared
                 # displacement
@@ -185,14 +186,15 @@ class DiffusionCoefficient:
                     # for each axes over entire segment
                     denominator = (2 * self.no_of_atoms[sym_index])
                     for xyz in range(3):
-                        self.xyz_segment_ensemble_average[segment_no][sym_index][xyz][image_no] = (
+                        self.xyz_segment_ensemble_average[segment_no][
+                            sym_index][xyz][image_no] = (
                             xyz_disp[sym_index][xyz] / denominator)
 
             # We've collected all the data for this entire segment, so now to
             # fit the data.
             for sym_index in range(self.no_of_types_of_atoms):
-                self.slopes[sym_index][segment_no], self.intercepts[sym_index][segment_no] = self._fit_data(self.timesteps[start:end],
-                                                                                                            self.xyz_segment_ensemble_average[segment_no][sym_index])
+                self.slopes[sym_index][segment_no], self.intercepts[sym_index][segment_no] = self._fit_data(
+                    self.timesteps[start:end], self.xyz_segment_ensemble_average[segment_no][sym_index])
 
     def _fit_data(self, x, y):
         """
@@ -284,8 +286,13 @@ class DiffusionCoefficient:
                             self.types_of_atoms[sym_index], xyz_labels[xyz])
                     # Add scatter graph  for the mean square displacement data
                     # in this segment
-                    ax.scatter(graph_timesteps[start:end], self.xyz_segment_ensemble_average[segment_no][sym_index][xyz],
-                               color=color_list[sym_index], marker=xyz_markers[xyz], label=label, linewidth=1, edgecolor='grey')
+                    ax.scatter(
+                        graph_timesteps[start: end],
+                        self.xyz_segment_ensemble_average[segment_no]
+                        [sym_index][xyz],
+                        color=color_list[sym_index],
+                        marker=xyz_markers[xyz],
+                        label=label, linewidth=1, edgecolor='grey')
 
                 # Print the line of best fit for segment
                 line = np.mean(self.slopes[sym_index][segment_no]) * fs_conversion * \
@@ -348,12 +355,23 @@ class DiffusionCoefficient:
             print(r'Species: %4s' % self.types_of_atoms[sym_index])
             print('---')
             for segment_no in range(self.no_of_segments):
-                print(r'Segment   %3d:         Diffusion Coefficient = %.10f Å^2/fs; Intercept = %.10f Å^2;' %
-                      (segment_no, np.mean(self.slopes[sym_index][segment_no]) * fs_conversion, np.mean(self.intercepts[sym_index][segment_no])))
+                print(
+                    r'Segment   %3d:         Diffusion Coefficient = %.10f Å^2/fs; Intercept = %.10f Å^2;' %
+                    (segment_no,
+                     np.mean(
+                         self.slopes[sym_index][segment_no]) *
+                        fs_conversion,
+                        np.mean(
+                         self.intercepts[sym_index][segment_no])))
 
         # Print average overall data.
         print('---')
         for sym_index in range(self.no_of_types_of_atoms):
-            print('Mean Diffusion Coefficient (X, Y and Z) : %s = %.10f Å^2/fs; Std. Dev. = %.10f Å^2/fs' %
-                  (self.types_of_atoms[sym_index], slopes[sym_index] * fs_conversion, std[sym_index] * fs_conversion))
+            print(
+                'Mean Diffusion Coefficient (X, Y and Z) : %s = %.10f Å^2/fs; Std. Dev. = %.10f Å^2/fs' %
+                (self.types_of_atoms[sym_index],
+                 slopes[sym_index] *
+                    fs_conversion,
+                    std[sym_index] *
+                    fs_conversion))
         print('---')

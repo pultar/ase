@@ -18,6 +18,6 @@ def test_bandstructure_json(testdir):
     bs1 = read_json('bs.json')
     bs2 = BandStructure.read('bs.json')
     path1 = read_json('path.json')
-    assert type(bs1) == type(bs)  # noqa
-    assert type(bs2) == type(bs)  # noqa
-    assert type(path1) == type(bs.path)  # noqa
+    assert isinstance(bs1, type(bs))  # noqa
+    assert isinstance(bs2, type(bs))  # noqa
+    assert isinstance(path1, type(bs.path))  # noqa

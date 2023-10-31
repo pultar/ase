@@ -39,7 +39,7 @@ def next_bond(atoms):
     kmax = 0
     rs = covalent_radii[atoms.get_atomic_numbers()]
     seen = set()
-    while 1:
+    while True:
         # Expand the scope of the neighbor list.
         kmax += 2
         nl = NeighborList(kmax * rs, skin=0, self_interaction=False)

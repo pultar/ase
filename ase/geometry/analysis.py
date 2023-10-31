@@ -167,8 +167,10 @@ class Analysis:
                     # iterate over second neighbors of iAtom
                     for kAtom in secNeighs:
                         relevantFirstNeighs = [
-                            idx for idx in firstNeighs if kAtom in self.all_bonds[imI][idx]]
-                        # iterate over all atoms that are connected to iAtom and kAtom
+                            idx for idx in firstNeighs
+                            if kAtom in self.all_bonds[imI][idx]]
+                        # iterate over all atoms that are connected to iAtom and
+                        # kAtom
                         for jAtom in relevantFirstNeighs:
                             self._cache['allAngles'][-1][-1].append(
                                 (jAtom, kAtom))
@@ -202,11 +204,16 @@ class Analysis:
                         secondNeighs = [angle[-1] for angle in anglesI]
                         firstNeighs = [angle[0] for angle in anglesI]
                         relevantSecondNeighs = [
-                            idx for idx in secondNeighs if lAtom in self.all_bonds[imI][idx]]
+                            idx for idx in secondNeighs
+                            if lAtom in self.all_bonds[imI][idx]]
                         relevantFirstNeighs = [
-                            firstNeighs[secondNeighs.index(idx)] for idx in relevantSecondNeighs]
-                        # iterate over all atoms that are connected to iAtom and lAtom
-                        for jAtom, kAtom in zip(relevantFirstNeighs, relevantSecondNeighs):
+                            firstNeighs
+                            [secondNeighs.index(idx)]
+                            for idx in relevantSecondNeighs]
+                        # iterate over all atoms that are connected to iAtom and
+                        # lAtom
+                        for jAtom, kAtom in zip(
+                                relevantFirstNeighs, relevantSecondNeighs):
                             # remove dihedrals in circles
                             tupl = (jAtom, kAtom, lAtom)
                             if len(set((iAtom, ) + tupl)) != 4:
@@ -312,7 +319,8 @@ class Analysis:
     def _get_symbol_idxs(self, imI, sym):
         """Get list of indices of element *sym*"""
         if isinstance(imI, int):
-            return [idx for idx in range(len(self.images[imI])) if self.images[imI][idx].symbol == sym]
+            return [idx for idx in range(
+                len(self.images[imI])) if self.images[imI][idx].symbol == sym]
         else:
             return [idx for idx in range(len(imI)) if imI[idx].symbol == sym]
 
@@ -429,8 +437,13 @@ class Analysis:
             cIdxs = self._get_symbol_idxs(imI, C)
             dIdxs = self._get_symbol_idxs(imI, D)
             for aIdx in aIdxs:
-                dihedrals = [(aIdx, ) + d for d in self.all_dihedrals[imI][aIdx]
-                             if (d[0] in bIdxs) and (d[1] in cIdxs) and (d[2] in dIdxs)]
+                dihedrals = [
+                    (aIdx,
+                     ) +
+                    d for d in self.all_dihedrals[imI][aIdx] if (
+                        d[0] in bIdxs) and (
+                        d[1] in cIdxs) and (
+                        d[2] in dIdxs)]
                 if not unique:
                     dihedrals += [d[::-1] for d in dihedrals]
                 r[-1].extend(dihedrals)
@@ -457,7 +470,8 @@ class Analysis:
         return: float
             Value returned by image.get_distance.
         """
-        return self.images[imIdx].get_distance(idxs[0], idxs[1], mic=mic, **kwargs)
+        return self.images[imIdx].get_distance(
+            idxs[0], idxs[1], mic=mic, **kwargs)
 
     def get_angle_value(self, imIdx, idxs, mic=True, **kwargs):
         """Get angle.
@@ -479,7 +493,8 @@ class Analysis:
         return: float
             Value returned by image.get_angle.
         """
-        return self.images[imIdx].get_angle(idxs[0], idxs[1], idxs[2], mic=True, **kwargs)
+        return self.images[imIdx].get_angle(
+            idxs[0], idxs[1], idxs[2], mic=True, **kwargs)
 
     def get_dihedral_value(self, imIdx, idxs, mic=True, **kwargs):
         """Get dihedral.
@@ -501,7 +516,8 @@ class Analysis:
         return: float
             Value returned by image.get_dihedral.
         """
-        return self.images[imIdx].get_dihedral(idxs[0], idxs[1], idxs[2], idxs[3], mic=mic, **kwargs)
+        return self.images[imIdx].get_dihedral(
+            idxs[0], idxs[1], idxs[2], idxs[3], mic=mic, **kwargs)
 
     def get_values(self, inputList, imageIdx=None, mic=True, **kwargs):
         """Get Bond/Angle/Dihedral values.
@@ -551,14 +567,16 @@ class Analysis:
             if len(inputList) == 1 and len(self.nl) == 1:
                 singleNL = True
             else:
-                raise RuntimeError("Length of inputList does not match length of \
+                raise RuntimeError(
+                    "Length of inputList does not match length of \
                         images requested, but it also is not one item long.")
 
         r = []
         for inputIdx, image in enumerate(self.images[sl]):
             imageIdx = self.images.index(image)
             r.append([])
-            # always use first list from input if only a single neighborlist was used
+            # always use first list from input if only a single neighborlist was
+            # used
             if singleNL:
                 inputIdx = 0
             for tupl in inputList[inputIdx]:
@@ -569,8 +587,8 @@ class Analysis:
     def get_max_volume_estimate(self):
         return get_max_volume_estimate(self.images)
 
-    def get_rdf(self, rmax, nbins, imageIdx=None, elements=None, return_dists=False,
-                volume: Optional[float] = None):
+    def get_rdf(self, rmax, nbins, imageIdx=None, elements=None,
+                return_dists=False, volume: Optional[float] = None):
         """Get RDF.
 
         Wrapper for :meth:`ase.ga.utilities.get_rdf` with more selection possibilities.
@@ -642,8 +660,14 @@ class Analysis:
                 raise ValueError(
                     "Unsupported type of elements given in ase.geometry.analysis.Analysis.get_rdf!")
 
-            rdf = get_rdf(tmp_image, rmax, nbins, elements=el, no_dists=(not return_dists),
-                          volume=volume)
+            rdf = get_rdf(
+                tmp_image,
+                rmax,
+                nbins,
+                elements=el,
+                no_dists=(
+                    not return_dists),
+                volume=volume)
             ls_rdf.append(rdf)
 
         return ls_rdf
