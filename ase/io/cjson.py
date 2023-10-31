@@ -12,7 +12,7 @@ from ase.cell import Cell
 
 # contract and lower case string
 def contract(dictionary):
-    dcopy = {key.replace(' ', '').lower(): dictionary[key] for key in 
+    dcopy = {key.replace(' ', '').lower(): dictionary[key] for key in
              dictionary}
     return dcopy
 
