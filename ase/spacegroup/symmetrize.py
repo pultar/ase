@@ -211,11 +211,13 @@ class FixSymmetry(FixConstraint):
         max_delta_deform_grad = np.max(np.abs(delta_deform_grad))
         if max_delta_deform_grad > 0.25:
             raise RuntimeError(
-                f'FixSymmetry adjust_cell does not work properly with large deformation gradient step {max_delta_deform_grad} > 0.25'
+                f'FixSymmetry adjust_cell does not work properly with large '
+                f'deformation gradient step {max_delta_deform_grad} > 0.25'
             )
         elif max_delta_deform_grad > 0.15:
             warnings.warn(
-                f'FixSymmetry adjust_cell may be ill behaved with large deformation gradient step {max_delta_deform_grad}'
+                f'FixSymmetry adjust_cell may be ill behaved with large '
+                f'deformation gradient step {max_delta_deform_grad}'
             )
 
         symmetrized_delta_deform_grad = symmetrize_rank2(cur_cell, cur_cell_inv,

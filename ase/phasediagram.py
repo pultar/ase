@@ -349,7 +349,8 @@ class PhaseDiagram:
 
         if not references:
             raise ValueError(
-                f"You must provide a non-empty list of references for the phase diagram! You have provided '{references}'"
+                f"You must provide a non-empty list of references for the phase"
+                f"diagram! You have provided '{references}'"
             )
         filter = parse_formula(filter)[0]
 

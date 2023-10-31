@@ -929,7 +929,8 @@ class PrimitiveNeighborList:
 
         if len(self.cutoffs) != len(coordinates):
             raise ValueError(
-                f'Wrong number of cutoff radii: {len(self.cutoffs)} != {len(coordinates)}'
+                f'Wrong number of cutoff radii: {len(self.cutoffs)} != '
+                f'{len(coordinates)}'
             )
 
         if len(self.cutoffs) > 0:

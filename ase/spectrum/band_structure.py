@@ -29,7 +29,9 @@ def calculate_band_structure(atoms, path=None, scf_kwargs=None,
     cell_err = celldiff(path.cell, atoms.cell.uncomplete(atoms.pbc))
     if cell_err > cell_tol:
         raise ValueError(
-            f'Atoms and band path have different unit cells.  Please reduce atoms to standard form.  Cell lengths and angles are {atoms.cell.cellpar()} vs {path.cell.cellpar()}'
+            f'Atoms and band path have different unit cells.  '
+            f'Please reduce atoms to standard form.  Cell lengths and angles '
+            f'are {atoms.cell.cellpar()} vs {path.cell.cellpar()}'
         )
 
     calc = atoms.calc

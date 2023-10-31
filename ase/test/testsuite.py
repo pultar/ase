@@ -127,7 +127,9 @@ class CLICommand:
             type=int,
             metavar='N',
             default=MULTIPROCESSING_AUTO,
-            help=f'number of worker processes.  If pytest-xdist is available, defaults to all available processors up to a maximum of {MULTIPROCESSING_MAX_WORKERS}.  0 disables multiprocessing',
+            help=(f'number of worker processes.  If pytest-xdist is available, '
+                 f'defaults to all available processors up to a maximum of '
+                 f'{MULTIPROCESSING_MAX_WORKERS}.  0 disables multiprocessing')
         )
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='write test outputs to stdout.  '

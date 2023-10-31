@@ -28,5 +28,6 @@ def test_kpts2kpts(lat):
     print('Produced by kpts2kpts', bandpath2)
     sp = set(bandpath.special_points)
     sp2 = set(bandpath2.special_points)
-    msg = f'Input and output bandpath from kpts2kpts dont agree!\nInput: {bandpath}\n Output: {bandpath2}'
+    msg = (f'Input and output bandpath from kpts2kpts dont agree!'
+           f'\nInput: {bandpath}\n Output: {bandpath2}')
     assert sp == sp2, msg
