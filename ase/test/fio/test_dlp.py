@@ -8,7 +8,8 @@ from ase import io as aseIO
 from ase.io.dlp4 import iread_dlp_history
 
 # Test HISTORY reading with no frames count
-fd = StringIO("""                                                                             tes
+fd = StringIO(
+    """                                                                             tes
          2         3         2
 timestep         1         2         2         3    0.000500
    23.01     -0.3943E-01  0.4612E-01
@@ -163,7 +164,8 @@ def test_dlp3():
 
 
 # Test REVCON reading
-fd2 = StringIO("""                                                                           ch3cl
+fd2 = StringIO(
+    """                                                                           ch3cl
          2         0         5   103.350212873
 c1               1
     0.1843387826E-03    0.9416060951E-04     1.246412527

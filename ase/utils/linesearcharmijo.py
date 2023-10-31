@@ -190,8 +190,9 @@ class LineSearchArmijo:
         self.func = func
 
         if not (0 < c1 < 0.5):
-            logger.error("c1 outside of allowed interval (0, 0.5). Replacing with "
-                         "default value.")
+            logger.error(
+                "c1 outside of allowed interval (0, 0.5). Replacing with "
+                "default value.")
             print("Warning: C1 outside of allowed interval. Replacing with "
                   "default value.")
             c1 = 0.1
@@ -369,8 +370,9 @@ class LineSearchArmijo:
             a_max = 2.0
 
         if a_max < self.tol:
-            logger.warning("a_max too small relative to tol. Reverting to "
-                           "default value a_max = 2.0 (twice the <ideal> step).")
+            logger.warning(
+                "a_max too small relative to tol. Reverting to "
+                "default value a_max = 2.0 (twice the <ideal> step).")
             a_max = 2.0    # THIS ASSUMES NEWTON/BFGS TYPE BEHAVIOUR!
 
         if self.a_min is None:
@@ -404,8 +406,9 @@ class LineSearchArmijo:
                          "a1 = 1.0")
             a1 = 1.0
         if a1 is None or a1 < self.tol:
-            logger.debug("a1 is None or a1 < self.tol. Reverting to default value "
-                         "a1 = 1.0")
+            logger.debug(
+                "a1 is None or a1 < self.tol. Reverting to default value "
+                "a1 = 1.0")
             a1 = 1.0
         if a1 is None or a1 < self.a_min:
             logger.debug("a1 is None or a1 < a_min. Reverting to default value "

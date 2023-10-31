@@ -185,8 +185,8 @@ def get_morse_potential_hessian(atoms, morse, spectral=False):
 
     exp = np.exp(-morse.alpha * (dij - morse.r0))
 
-    Hr = (2.0 * morse.D * morse.alpha * exp * (morse.alpha * (2.0 * exp - 1.0) * Pij
-                                               + (1.0 - exp) / dij * Qij))
+    Hr = (2.0 * morse.D * morse.alpha * exp *
+          (morse.alpha * (2.0 * exp - 1.0) * Pij + (1.0 - exp) / dij * Qij))
 
     Hx = np.dot(Mx.T, np.dot(Hr, Mx))
 
@@ -450,22 +450,21 @@ def get_angle_potential_hessian(atoms, angle, morses=None, spectral=False):
     Hr = np.zeros((6, 6))
     if angle.cos and np.abs(sina) > 0.001:
         factor = 1.0 - 2.0 * cosa * cosa + cosa * cosa0
-        Hr[0:3, 0:3] = (angle.k * (factor * QijPkjQij / sina
-                                   - sina * da * (-ctga * QijPkjQij / sina + np.dot(Qij, Pki)
-                                                  - np.dot(Pij, Pki) * 2.0 + (Pik + P))) / sina / dij2)
-        Hr[0:3, 3:6] = (angle.k * (factor * QijPkiQkj / sina
-                                   - sina * da * (-ctga * QijPkiQkj / sina
-                                                  - np.dot(Qij, Qkj))) / sina / dijdkj)
+        Hr[0: 3, 0: 3] = (angle.k *
+                          (factor * QijPkjQij / sina - sina * da *
+                           (-ctga * QijPkjQij / sina + np.dot(Qij, Pki) - np.dot(Pij, Pki) * 2.0
+                            + (Pik + P))) / sina / dij2)
+        Hr[0: 3, 3: 6] = (angle.k *
+                          (factor * QijPkiQkj / sina - sina * da *
+                           (-ctga * QijPkiQkj / sina - np.dot(Qij, Qkj))) / sina / dijdkj)
         Hr[3:6, 0:3] = Hr[0:3, 3:6].T
-        Hr[3:6, 3:6] = (angle.k * (factor * QkjPijQkj / sina
-                                   - sina * da * (-ctga * QkjPijQkj / sina
-                                                  + np.dot(Qkj, Pik) -
-                                                  np.dot(Pkj, Pik)
-                                                  * 2.0 + (Pki + P))) / sina / dkj2)
+        Hr[3: 6, 3: 6] = (angle.k *
+                          (factor * QkjPijQkj / sina - sina * da *
+                           (-ctga * QkjPijQkj / sina + np.dot(Qkj, Pik) - np.dot(Pkj, Pik) * 2.0
+                            + (Pki + P))) / sina / dkj2)
     elif np.abs(sina) > 0.001:
-        Hr[0:3, 0:3] = (angle.k * (QijPkjQij / sina
-                                   + da * (-ctga * QijPkjQij / sina + np.dot(Qij, Pki)
-                                           - np.dot(Pij, Pki) * 2.0 + (Pik + P))) / sina / dij2)
+        Hr[0:3, 0:3] = (angle.k * (QijPkjQij / sina + da * (-ctga * QijPkjQij / sina + np.dot(
+            Qij, Pki) - np.dot(Pij, Pki) * 2.0 + (Pik + P))) / sina / dij2)
         Hr[0:3, 3:6] = (angle.k * (QijPkiQkj / sina
                                    + da * (-ctga * QijPkiQkj / sina
                                            - np.dot(Qij, Qkj))) / sina / dijdkj)
@@ -812,8 +811,9 @@ def get_dihedral_potential_reduced_hessian_test(atoms, dihedral):
         Hx = np.tensordot(gx, gx, axes=0) / v / 2.0
     else:
         arg = dihedral.n * dihedral.d - dihedral.d0
-        Hx = (np.tensordot(gx, gx, axes=0) / dihedral.k / np.sin(arg) / np.sin(arg)
-              * np.cos(arg))
+        Hx = (
+            np.tensordot(gx, gx, axes=0) / dihedral.k / np.sin(arg) / np.sin(arg)
+            * np.cos(arg))
 
     return i, j, k, l, Hx
 

@@ -309,14 +309,8 @@ def test_header_transfer_initial_atoms(
         empty_calc_chunk.initial_atoms.positions,
         initial_positions)
     assert np.all(["Na", "Cl"] == empty_calc_chunk.initial_atoms.symbols)
-    assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                empty_calc_chunk.constraints, empty_calc_chunk.initial_atoms.constraints
-            )
-        ]
-    )
+    assert all([str(const_1) == str(const_2) for const_1, const_2 in zip(
+        empty_calc_chunk.constraints, empty_calc_chunk.initial_atoms.constraints)])
 
 
 def test_header_transfer_electronic_temperature(empty_calc_chunk):
@@ -1148,12 +1142,11 @@ def test_molecular_calc_atoms(molecular_calc_chunk, molecular_positions):
 
 def test_molecular_calc_forces(molecular_calc_chunk):
     forces = np.array(
-        [
-            [0.502371357164392e-03, 0.518627676606471e-03, 0.000000000000000e00],
-            [-0.108826758257187e-03, -0.408128912334209e-03, -0.649037698626122e-27],
-            [-0.393544598907207e-03, -0.110498764272267e-03, -0.973556547939183e-27],
-        ]
-    )
+        [[0.502371357164392e-03, 0.518627676606471e-03, 0.000000000000000e00],
+         [-0.108826758257187e-03, -0.408128912334209e-03, -
+          0.649037698626122e-27],
+         [-0.393544598907207e-03, -0.110498764272267e-03, -
+          0.973556547939183e-27],])
     assert np.allclose(molecular_calc_chunk.forces, forces)
     assert np.allclose(molecular_calc_chunk.atoms.get_forces(), forces)
     assert np.allclose(molecular_calc_chunk.results["forces"], forces)
@@ -1229,8 +1222,8 @@ def test_molecular_calc_hirshfeld_charges(
         molecular_calc_chunk.hirshfeld_charges, molecular_hirshfeld_charges
     )
     assert np.allclose(
-        molecular_calc_chunk.results["hirshfeld_charges"], molecular_hirshfeld_charges
-    )
+        molecular_calc_chunk.results["hirshfeld_charges"],
+        molecular_hirshfeld_charges)
 
 
 def test_molecular_calc_hirshfeld_volumes(molecular_calc_chunk):
@@ -1263,9 +1256,8 @@ def test_molecular_calc_hirshfeld_atomic_dipoles(molecular_calc_chunk):
 def test_molecular_calc_hirshfeld_dipole(
     molecular_calc_chunk, molecular_hirshfeld_charges, molecular_positions
 ):
-    hirshfeld_dipole = np.sum(
-        molecular_hirshfeld_charges.reshape((-1, 1)) * molecular_positions, axis=1
-    )
+    hirshfeld_dipole = np.sum(molecular_hirshfeld_charges.reshape(
+        (-1, 1)) * molecular_positions, axis=1)
     assert np.allclose(molecular_calc_chunk.hirshfeld_dipole, hirshfeld_dipole)
     assert np.allclose(
         molecular_calc_chunk.results["hirshfeld_dipole"], hirshfeld_dipole

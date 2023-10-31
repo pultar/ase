@@ -86,10 +86,12 @@ class STM:
         # tip and surface greenfunction
         self.selfenergy1 = LeadSelfEnergy(hs1_dii, hs1_dij, hs1_dim, self.eta1)
         self.selfenergy2 = LeadSelfEnergy(hs2_dii, hs2_dij, hs2_dim, self.eta2)
-        self.greenfunction1 = GreenFunction(self.h1 - self.bias * self.w * self.s1, self.s1,
-                                            [self.selfenergy1], self.eta1)
-        self.greenfunction2 = GreenFunction(self.h2 - self.bias * (self.w - 1) * self.s2, self.s2,
-                                            [self.selfenergy2], self.eta2)
+        self.greenfunction1 = GreenFunction(
+            self.h1 - self.bias * self.w * self.s1, self.s1, [self.selfenergy1], self.eta1)
+        self.greenfunction2 = GreenFunction(
+            self.h2 - self.bias * (self.w - 1) * self.s2, self.s2,
+            [self.selfenergy2],
+            self.eta2)
 
         # Shift the bands due to the bias.
         bias_shift1 = -bias * self.w
