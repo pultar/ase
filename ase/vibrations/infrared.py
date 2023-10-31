@@ -3,8 +3,9 @@
 from math import sqrt
 from sys import stdout
 
-import ase.units as units
 import numpy as np
+
+import ase.units as units
 from ase.parallel import paropen, parprint
 from ase.vibrations.vibrations import Vibrations
 
@@ -317,7 +318,7 @@ class Infrared(Vibrations):
         outdata.T[1] = spectrum
         outdata.T[2] = spectrum2
         with open(out, 'w') as fd:
-            fd.write('# %s folded, width=%g cm^-1\n' % (type.title(), width))
+            fd.write(f'# {type.title()} folded, width={width:g} cm^-1\n')
             iu, iu_string = self.intensity_prefactor(intensity_unit)
             if normalize:
                 iu_string = 'cm ' + iu_string

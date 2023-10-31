@@ -9,6 +9,7 @@ computem software.
 """
 
 import numpy as np
+
 from ase.atoms import Atoms, symbols2numbers
 from ase.utils import reader
 
@@ -107,7 +108,7 @@ class XYZPrismaticWriter:
     def _get_file_header(self):
         # 1st line: comment line
         if self.comments is None:
-            s = "{0} atoms with chemical formula: {1}.".format(
+            s = "{} atoms with chemical formula: {}.".format(
                 len(self.atoms),
                 self.atoms.get_chemical_formula())
         else:

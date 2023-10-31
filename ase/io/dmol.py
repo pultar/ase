@@ -49,6 +49,7 @@ multiple images of car format separated with $end
 from datetime import datetime
 
 import numpy as np
+
 from ase import Atom, Atoms
 from ase.geometry.cell import cell_to_cellpar, cellpar_to_cell
 from ase.units import Bohr
@@ -155,11 +156,11 @@ def write_dmol_incoor(fd, atoms, bohr=True):
         positions = atoms.positions
 
     fd.write('$cell vectors\n')
-    fd.write('            %18.14f  %18.14f  %18.14f\n' % (
+    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
         cell[0, 0], cell[0, 1], cell[0, 2]))
-    fd.write('            %18.14f  %18.14f  %18.14f\n' % (
+    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
         cell[1, 0], cell[1, 1], cell[1, 2]))
-    fd.write('            %18.14f  %18.14f  %18.14f\n' % (
+    fd.write('            {:18.14f}  {:18.14f}  {:18.14f}\n'.format(
         cell[2, 0], cell[2, 1], cell[2, 2]))
 
     fd.write('$coordinates\n')

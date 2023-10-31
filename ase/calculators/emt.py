@@ -3,6 +3,7 @@
 from math import exp, log, sqrt
 
 import numpy as np
+
 from ase.calculators.calculator import (Calculator,
                                         PropertyNotImplementedError,
                                         all_changes)
@@ -82,7 +83,7 @@ class EMT(Calculator):
             if Z not in self.par:
                 sym = chemical_symbols[Z]
                 if sym not in parameters:
-                    raise NotImplementedError('No EMT-potential for {0}'
+                    raise NotImplementedError('No EMT-potential for {}'
                                               .format(sym))
                 p = parameters[sym]
                 s0 = p[1] * Bohr

@@ -1,13 +1,13 @@
 import configparser
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Mapping
 
 import pytest
 
-from ase.calculators.calculator import (names as calculator_names,
-                                        get_calculator_class)
+from ase.calculators.calculator import get_calculator_class
+from ase.calculators.calculator import names as calculator_names
 from ase.calculators.genericfileio import read_stdout
 
 
@@ -47,7 +47,7 @@ def make_factory_fixture(name):
         factories.require(name)
         return factories[name]
 
-    _factory.__name__ = '{}_factory'.format(name)
+    _factory.__name__ = f'{name}_factory'
     return _factory
 
 
@@ -293,13 +293,14 @@ class EspressoFactory:
 @factory('exciting')
 class ExcitingFactory:
     """Factory to run exciting tests."""
+
     def __init__(self, executable):
         self.executable = executable
 
     def calc(self, **kwargs):
         """Get instance of Exciting Ground state calculator."""
-        from ase.calculators.exciting.exciting import (
-            ExcitingGroundStateCalculator)
+        from ase.calculators.exciting.exciting import \
+            ExcitingGroundStateCalculator
         return ExcitingGroundStateCalculator(
             ground_state_input=kwargs, species_path=self.species_path)
 
@@ -333,10 +334,11 @@ class MOPACFactory:
         return cls(config.executables['mopac'])
 
     def version(self):
-        from ase import Atoms
+        import tempfile
         from os import chdir
         from pathlib import Path
-        import tempfile
+
+        from ase import Atoms
 
         cwd = Path('.').absolute()
         with tempfile.TemporaryDirectory() as directory:
@@ -363,6 +365,7 @@ class VaspFactory:
 
     def calc(self, **kwargs):
         from ase.calculators.vasp import Vasp
+
         # XXX We assume the user has set VASP_PP_PATH
         if Vasp.VASP_PP_PATH not in os.environ:
             # For now, we skip with a message that we cannot run the test
@@ -592,7 +595,7 @@ class SiestaFactory:
 
     def calc(self, **kwargs):
         from ase.calculators.siesta import Siesta
-        command = '{} < PREFIX.fdf > PREFIX.out'.format(self.executable)
+        command = f'{self.executable} < PREFIX.fdf > PREFIX.out'
         return Siesta(command=command,
                       pseudo_path=str(self.pseudo_path),
                       **kwargs)
@@ -842,7 +845,7 @@ class CalculatorInputs:
 
     def __repr__(self):
         cls = type(self)
-        return '{}({}, {})'.format(cls.__name__, self.name, self.parameters)
+        return f'{cls.__name__}({self.name}, {self.parameters})'
 
     def new(self, **kwargs):
         kw = dict(self.parameters)

@@ -1,17 +1,18 @@
 """Test the ase.vibrations.Vibrations object using a harmonic calculator."""
 import os
 from pathlib import Path
-import pytest
+
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
-from ase import units, Atoms
 import ase.io
+from ase import Atoms, units
+from ase.build import add_adsorbate, fcc111
 from ase.calculators.qmmm import ForceConstantCalculator
-from ase.vibrations import Vibrations, VibrationsData
-from ase.thermochemistry import IdealGasThermo
 from ase.constraints import FixAtoms, FixCartesian
-from ase.build import fcc111, add_adsorbate
+from ase.thermochemistry import IdealGasThermo
+from ase.vibrations import Vibrations, VibrationsData
 
 
 @pytest.fixture
@@ -167,7 +168,7 @@ def test_vibrations_methods(testdir, random_dimer):
     with open(logfilename, 'w') as fd:
         vib.summary(log=fd)
 
-    with open(logfilename, 'rt') as fd:
+    with open(logfilename) as fd:
         log_txt = fd.read()
         assert log_txt == '\n'.join(
             VibrationsData._tabulate_from_energies(vib_energies)) + '\n'
@@ -180,7 +181,7 @@ def test_vibrations_methods(testdir, random_dimer):
 
     vib.write_mode(n=3, nimages=5)
     for i in range(3):
-        assert not Path('vib.{}.traj'.format(i)).is_file()
+        assert not Path(f'vib.{i}.traj').is_file()
     mode_traj = ase.io.read('vib.3.traj', index=':')
     assert len(mode_traj) == 5
 

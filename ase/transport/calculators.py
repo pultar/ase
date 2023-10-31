@@ -1,10 +1,11 @@
 import numpy as np
+from numpy import linalg
+
 from ase.transport.greenfunction import GreenFunction
 from ase.transport.selfenergy import BoxProbe, LeadSelfEnergy
 from ase.transport.tools import (cutcoupling, dagger, fermidistribution,
                                  rotate_matrix, subdiagonalize)
 from ase.units import kB
-from numpy import linalg
 
 
 class TransportCalculator:
@@ -293,7 +294,7 @@ class TransportCalculator:
         sa_ii = self.greenfunction.S[:pl1, :pl1]
         c1 = np.abs(h_ii - ha_ii).max()
         c2 = np.abs(s_ii - sa_ii).max()
-        print('Conv (h,s)=%.2e, %2.e' % (c1, c2))
+        print(f'Conv (h,s)={c1:.2e}, {c2:2.e}')
 
     def plot_pl_convergence(self):
         self.initialize()

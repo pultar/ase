@@ -3,11 +3,12 @@ import pytest
 import ase
 from ase.build import bulk
 from ase.calculators.lj import LennardJones
-from ase.optimize.precon import PreconLBFGS, Exp
-from ase.filters import UnitCellFilter, FrechetCellFilter, Filter
+from ase.filters import Filter, FrechetCellFilter, UnitCellFilter
+from ase.optimize.precon import Exp, PreconLBFGS
 
 
 # @pytest.mark.skip('FAILS WITH PYAMG')
+@pytest.mark.optimize
 @pytest.mark.slow
 # Ignore UserWarning by failure of Armijo line search in PreconLBFGS
 @pytest.mark.filterwarnings('ignore::UserWarning')

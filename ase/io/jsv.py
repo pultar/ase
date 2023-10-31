@@ -8,8 +8,9 @@ By Jesper Friis, Jan. 2012
 
 import re
 
-import ase
 import numpy as np
+
+import ase
 from ase.geometry import cell_to_cellpar, cellpar_to_cell
 from ase.spacegroup import Spacegroup, crystal
 
@@ -74,7 +75,7 @@ def read_jsv(f):
         elif tag == 'origin':
             origin = NotImplemented
         else:
-            raise ValueError('Unknown tag: "%s"' % tag)
+            raise ValueError(f'Unknown tag: "{tag}"')
 
     if headline == 'asymmetric_unit_cell':
         atoms = crystal(symbols=symbols,
@@ -95,7 +96,7 @@ def read_jsv(f):
                           )
         atoms.info['spacegroup'] = Spacegroup(spacegroup)
     else:
-        raise ValueError('Invalid JSV file type: "%s"' % headline)
+        raise ValueError(f'Invalid JSV file type: "{headline}"')
 
     atoms.info['title'] = title
     atoms.info['labels'] = labels

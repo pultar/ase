@@ -1,12 +1,13 @@
 """van der Waals correction schemes for DFT"""
 import numpy as np
+from scipy.special import erfc, erfinv
+
 from ase.calculators.calculator import Calculator
 from ase.calculators.polarizability import StaticPolarizabilityCalculator
 from ase.neighborlist import neighbor_list
 from ase.parallel import myslice, world
 from ase.units import Bohr, Hartree
 from ase.utils import IOContext
-from scipy.special import erfc, erfinv
 
 # dipole polarizabilities and C6 values from
 # X. Chu and A. Dalgarno, J. Chem. Phys. 121 (2004) 4083
@@ -181,7 +182,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
             except KeyError:
                 raise ValueError(
                     'Tkatchenko-Scheffler dispersion correction not ' +
-                    'implemented for %s functional' % xc_name)
+                    f'implemented for {xc_name} functional')
         else:
             self.sR = sR
         self.d = 20
@@ -246,9 +247,9 @@ class vdWTkatchenko09prl(Calculator, IOContext):
 
         # correction for effective C6
         na = len(atoms)
-        C6eff_a = np.empty((na))
-        alpha_a = np.empty((na))
-        R0eff_a = np.empty((na))
+        C6eff_a = np.empty(na)
+        alpha_a = np.empty(na)
+        R0eff_a = np.empty(na)
         for a, atom in enumerate(atoms):
             # free atom values
             alpha_a[a], C6eff_a[a] = self.vdWDB_alphaC6[atom.symbol]
@@ -406,8 +407,8 @@ def calculate_ts09_polarizability(atoms):
     volume_ratios = calc.hirshfeld.get_effective_volume_ratios()
 
     na = len(atoms)
-    alpha_a = np.empty((na))
-    alpha_eff_a = np.empty((na))
+    alpha_a = np.empty(na)
+    alpha_eff_a = np.empty(na)
     for a, atom in enumerate(atoms):
         # free atom values
         alpha_a[a], _ = calc.vdWDB_alphaC6[atom.symbol]

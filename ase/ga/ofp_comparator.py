@@ -2,9 +2,10 @@ from itertools import combinations_with_replacement
 from math import erf
 
 import numpy as np
+from scipy.spatial.distance import cdist
+
 from ase.neighborlist import NeighborList
 from ase.utils import pbc2pbc
-from scipy.spatial.distance import cdist
 
 
 class OFPComparator:
@@ -508,7 +509,7 @@ class OFPComparator:
 
         for key, val in fp.items():
             plt.plot(x, val)
-            suffix = "_fp_{0}_{1}.png".format(key[0], key[1])
+            suffix = f"_fp_{key[0]}_{key[1]}.png"
             plt.savefig(prefix + suffix)
             plt.clf()
 
@@ -535,6 +536,6 @@ class OFPComparator:
             for key2, val2 in val.items():
                 plt.plot(x, val2)
                 plt.ylim([-1, 10])
-                suffix = "_individual_fp_{0}_{1}.png".format(key, key2)
+                suffix = f"_individual_fp_{key}_{key2}.png"
                 plt.savefig(prefix + suffix)
                 plt.clf()

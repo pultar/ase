@@ -1,8 +1,8 @@
+import argparse
 import os
 import sys
-from pathlib import Path
 import warnings
-import argparse
+from pathlib import Path
 
 from ase.cli.main import CLIError
 
@@ -43,7 +43,7 @@ def test(calculators=tuple(), jobs=0, verbose=False,
     if calculators:
         args += ['--calculators={}'.format(','.join(calculators))]
     if jobs:
-        args += '--jobs={}'.format(jobs)
+        args += f'--jobs={jobs}'
 
     main(args=args)
 
@@ -151,6 +151,7 @@ class CLICommand:
     @staticmethod
     def run(args):
         from subprocess import Popen
+
         from ase.calculators.names import names as calc_names
 
         if args.help_calculators:
@@ -175,7 +176,7 @@ class CLICommand:
 
         jobs = choose_how_many_workers(args.jobs)
         if jobs:
-            add_args('--numprocesses={}'.format(jobs))
+            add_args(f'--numprocesses={jobs}')
 
         if args.fast:
             add_args('-m', 'not slow')

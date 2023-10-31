@@ -6,10 +6,11 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
-from setuptools.command.build_py import build_py as _build_py
 from glob import glob
 from os.path import join
+
+from setuptools import find_packages, setup
+from setuptools.command.build_py import build_py as _build_py
 
 python_min_version = (3, 6)
 python_requires = '>=' + '.'.join(str(num) for num in python_min_version)
@@ -65,6 +66,7 @@ package_data = {'ase': ['spacegroup/spacegroup.dat',
 
 class build_py(_build_py):
     """Custom command to build translations."""
+
     def __init__(self, *args, **kwargs):
         _build_py.__init__(self, *args, **kwargs)
         # Keep list of files to appease bdist_rpm.  We have to keep track of
@@ -83,7 +85,7 @@ class build_py(_build_py):
                     os.makedirs(dirname)
                 mofile = join(dirname, 'ag.mo')
                 print()
-                print('Compile {}'.format(pofile))
+                print(f'Compile {pofile}')
                 status = os.system('%s -cv %s --output-file=%s 2>&1' %
                                    (msgfmt, pofile, mofile))
                 assert status == 0, 'msgfmt failed!'

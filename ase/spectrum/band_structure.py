@@ -1,5 +1,6 @@
-import ase  # Annotations
 import numpy as np
+
+import ase  # Annotations
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.utils import jsonable
 
@@ -300,6 +301,7 @@ class BandStructure:
 
     BandStructure objects support JSON I/O.
     """
+
     def __init__(self, path, energies, reference=0.0):
         self._path = path
         self._energies = np.asarray(energies)

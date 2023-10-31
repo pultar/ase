@@ -8,9 +8,10 @@ import os.path as op
 import shutil
 import subprocess
 
+import numpy as np
+
 import ase.data
 import ase.io
-import numpy as np
 from ase.calculators.calculator import (FileIOCalculator, Parameters,
                                         ReadError, all_changes, equal)
 from ase.units import Bohr, Hartree
@@ -137,7 +138,7 @@ class Demon(FileIOCalculator):
         # Setup the run command
         command = parameters['command']
         if command is None:
-            command = os.environ.get('DEMON_COMMAND')
+            command = self.cfg.get('DEMON_COMMAND')
 
         if command is None:
             mess = 'The "DEMON_COMMAND" environment is not defined.'
@@ -145,7 +146,6 @@ class Demon(FileIOCalculator):
         else:
             parameters['command'] = command
 
-        # Call the base class.
         FileIOCalculator.__init__(
             self,
             **parameters)
@@ -194,7 +194,7 @@ class Demon(FileIOCalculator):
                        todir + '/' + filename)
         else:
             raise RuntimeError(
-                "{0} doesn't exist".format(fromdir + '/' + filename))
+                "{} doesn't exist".format(fromdir + '/' + filename))
 
     def calculate(self,
                   atoms=None,
@@ -211,15 +211,14 @@ class Demon(FileIOCalculator):
 
         self.write_input(self.atoms, properties, system_changes)
         if self.command is None:
-            raise RuntimeError('Please set $%s environment variable ' %
-                               ('DEMON_COMMAND') +
-                               'or supply the command keyword')
+            raise RuntimeError(f'Please set ${"DEMON_COMMAND"} environment '
+                               'variable or supply the command keyword')
         command = self.command  # .replace('PREFIX', self.prefix)
 
         # basis path
         basis_path = self.parameters['basis_path']
         if basis_path is None:
-            basis_path = os.environ.get('DEMON_BASIS_PATH')
+            basis_path = self.cfg.get('DEMON_BASIS_PATH')
 
         if basis_path is None:
             raise RuntimeError('Please set basis_path keyword,' +
@@ -243,7 +242,7 @@ class Demon(FileIOCalculator):
                             self.directory + '/deMon.rst')
             else:
                 raise RuntimeError(
-                    "{0} doesn't exist".format(abspath + '/deMon.rst'))
+                    "{} doesn't exist".format(abspath + '/deMon.rst'))
 
         abspath = op.abspath(basis_path)
 
@@ -255,7 +254,7 @@ class Demon(FileIOCalculator):
         try:
             self.read_results()
         except Exception:  # XXX Which kind of exception?
-            with open(self.directory + '/deMon.out', 'r') as fd:
+            with open(self.directory + '/deMon.out') as fd:
                 lines = fd.readlines()
             debug_lines = 10
             print('##### %d last lines of the deMon.out' % debug_lines)
@@ -381,7 +380,7 @@ class Demon(FileIOCalculator):
         self.set_label(restart_path)
 
         if not op.exists(restart_path + '/deMon.inp'):
-            raise ReadError('The restart_path file {0} does not exist'
+            raise ReadError('The restart_path file {} does not exist'
                             .format(restart_path))
 
         self.atoms = self.deMon_inp_to_atoms(restart_path + '/deMon.inp')
@@ -457,12 +456,12 @@ class Demon(FileIOCalculator):
 
             mass = atoms.get_masses()[i]
 
-            line = '{0:6s}'.format(chem_symbol).rjust(10) + ' '
-            line += '{0:.5f}'.format(xyz[0]).rjust(10) + ' '
-            line += '{0:.5f}'.format(xyz[1]).rjust(10) + ' '
-            line += '{0:.5f}'.format(xyz[2]).rjust(10) + ' '
-            line += '{0:5s}'.format(nuc_charge).rjust(10) + ' '
-            line += '{0:.5f}'.format(mass).rjust(10) + ' '
+            line = f'{chem_symbol:6s}'.rjust(10) + ' '
+            line += f'{xyz[0]:.5f}'.rjust(10) + ' '
+            line += f'{xyz[1]:.5f}'.rjust(10) + ' '
+            line += f'{xyz[2]:.5f}'.rjust(10) + ' '
+            line += f'{nuc_charge:5s}'.rjust(10) + ' '
+            line += f'{mass:.5f}'.rjust(10) + ' '
 
             fd.write(line)
             fd.write('\n')
@@ -479,11 +478,11 @@ class Demon(FileIOCalculator):
         """
 
         # basis for all atoms
-        line = '{0}'.format(string).ljust(10)
+        line = f'{string}'.ljust(10)
 
         if 'all' in basis:
             default_basis = basis['all']
-            line += '({0})'.format(default_basis).rjust(16)
+            line += f'({default_basis})'.rjust(16)
 
         fd.write(line)
         fd.write('\n')
@@ -496,8 +495,8 @@ class Demon(FileIOCalculator):
             symbol = chemical_symbols_set.pop()
 
             if symbol in basis:
-                line = '{0}'.format(symbol).ljust(10)
-                line += '({0})'.format(basis[symbol]).rjust(16)
+                line = f'{symbol}'.ljust(10)
+                line += f'({basis[symbol]})'.rjust(16)
                 fd.write(line)
                 fd.write('\n')
 
@@ -508,8 +507,8 @@ class Demon(FileIOCalculator):
                 symbol = str(chemical_symbols[i])
                 symbol += str(i + 1)
 
-                line = '{0}'.format(symbol).ljust(10)
-                line += '({0})'.format(basis[i]).rjust(16)
+                line = f'{symbol}'.ljust(10)
+                line += f'({basis[i]})'.rjust(16)
                 fd.write(line)
                 fd.write('\n')
 
@@ -524,7 +523,7 @@ class Demon(FileIOCalculator):
 
     def read_energy(self):
         """Read energy from deMon's text-output file."""
-        with open(self.label + '/deMon.out', 'r') as fd:
+        with open(self.label + '/deMon.out') as fd:
             text = fd.read().upper()
 
         lines = iter(text.split('\n'))
@@ -543,7 +542,7 @@ class Demon(FileIOCalculator):
         filename = self.label + '/deMon.out'
 
         if op.isfile(filename):
-            with open(filename, 'r') as fd:
+            with open(filename) as fd:
                 lines = fd.readlines()
 
                 # find line where the orbitals start
@@ -567,7 +566,7 @@ class Demon(FileIOCalculator):
         assert os.access(self.label + '/deMon.out', os.F_OK)
 
         # Read eigenvalues
-        with open(self.label + '/deMon.out', 'r') as fd:
+        with open(self.label + '/deMon.out') as fd:
             lines = fd.readlines()
 
         # try  PRINT MOE
@@ -636,7 +635,7 @@ class Demon(FileIOCalculator):
     def read_dipole(self):
         """Read dipole moment."""
         dipole = np.zeros(3)
-        with open(self.label + '/deMon.out', 'r') as fd:
+        with open(self.label + '/deMon.out') as fd:
             lines = fd.readlines()
 
             for i in range(len(lines)):
@@ -658,7 +657,7 @@ class Demon(FileIOCalculator):
         filename = self.label + '/deMon.out'
         core_IP = None
         if op.isfile(filename):
-            with open(filename, 'r') as fd:
+            with open(filename) as fd:
                 lines = fd.readlines()
 
             for i in range(len(lines)):
@@ -683,7 +682,7 @@ class Demon(FileIOCalculator):
     def deMon_inp_to_atoms(self, filename):
         """Routine to read deMon.inp and convert it to an atoms object."""
 
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             lines = fd.readlines()
 
         # find line where geometry starts
@@ -730,7 +729,7 @@ class Demon(FileIOCalculator):
                 raise RuntimeError
 
         if coord_units == 'Bohr':
-            xyz = xyz * Bohr
+            xyz *= Bohr
 
         natoms = len(chemical_symbols)
 

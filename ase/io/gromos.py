@@ -5,6 +5,7 @@ its procedure src/gmxlib/confio.c (write_g96_conf)
 """
 
 import numpy as np
+
 from ase import Atoms
 from ase.data import chemical_symbols
 from ase.utils import reader, writer
@@ -121,5 +122,5 @@ def write_gromos(fileobj, atoms):
         fileobj.write('BOX\n')
         mycell = atoms.get_cell()
         grocell = mycell.flat[[0, 4, 8, 1, 2, 3, 5, 6, 7]] * 0.1
-        fileobj.write(''.join(['{:15.9f}'.format(x) for x in grocell]))
+        fileobj.write(''.join([f'{x:15.9f}' for x in grocell]))
         fileobj.write('\nEND\n')

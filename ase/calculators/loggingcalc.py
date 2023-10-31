@@ -9,6 +9,7 @@ import time
 from typing import Any, Dict
 
 import numpy as np
+
 from ase.calculators.calculator import Calculator, all_properties
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ class LoggingCalculator(Calculator):
                        'energy_count': self.energy_count}, fd)
 
     def read_json(self, filename, append=False, label=None):
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             dct = json.load(fd)
 
         labels = dct['fmax'].keys()

@@ -9,12 +9,13 @@ from math import pi, sqrt
 from time import time
 
 import numpy as np
+from scipy.linalg import qr
+
 from ase.dft.bandgap import bandgap
 from ase.dft.kpoints import get_monkhorst_pack_size_and_offset
 from ase.io.jsonio import read_json, write_json
 from ase.parallel import paropen
 from ase.transport.tools import dagger, normalize
-from scipy.linalg import qr
 
 dag = dagger
 
@@ -92,7 +93,7 @@ def steepest_descent(func, step=.005, tolerance=1e-6, log=silent, **kwargs):
         func.step(dF * step, **kwargs)
         fvalue = func.get_functional_value()
         count += 1
-        log('SteepestDescent: iter=%s, value=%s' % (count, fvalue))
+        log(f'SteepestDescent: iter={count}, value={fvalue}')
 
 
 def md_min(func, step=.25, tolerance=1e-6, max_iter=10000,
@@ -560,8 +561,8 @@ class Wannier:
         # Compute the number of extra degrees of freedom (EDF)
         self.edf_k = self.nwannier - self.fixedstates_k
 
-        self.log('Wannier: Fixed states            : %s' % self.fixedstates_k)
-        self.log('Wannier: Extra degrees of freedom: %s' % self.edf_k)
+        self.log(f'Wannier: Fixed states            : {self.fixedstates_k}')
+        self.log(f'Wannier: Extra degrees of freedom: {self.edf_k}')
 
         self.kklst_dk, k0_dkc = get_kklst(self.kpt_kc, self.Gdir_dc)
 
