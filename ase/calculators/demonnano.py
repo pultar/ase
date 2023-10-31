@@ -264,8 +264,8 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                'The deMonNano output file for ASE {} does not exist' .format(epath))
 
         filename = self.label + '/deMon.ase'
 
@@ -285,8 +285,8 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                'The deMonNano output file for ASE {} does not exist' .format(epath))
 
         filename = self.label + '/deMon.ase'
 

@@ -11,18 +11,18 @@ Zheng, Zhao and Truhler, "J. Chem. Theo. Comput.", 5:808-821, 2009
 
 from ase.atoms import Atoms
 
-dbh24 = ['dbh24_H', 'dbh24_N2O', 'dbh24_OH', 'dbh24_N2', 'dbh24_tst_H_N2O__OH_N2',
-         'dbh24_HCl', 'dbh24_tst_H_ClH__HCl_H',
-         'dbh24_CH3', 'dbh24_FCl', 'dbh24_CH3F', 'dbh24_Cl', 'dbh24_tst_CH3_FCl__CH3F_Cl',
-         'dbh24_Cl-ion_CH3Cl', 'dbh24_tst_Cl-ion_CH3Cl',
-         'dbh24_F-ion_CH3Cl', 'dbh24_Cl-ion_CH3F', 'dbh24_tst-Cl-ion_CH3F__F_ion_CH3Cl',
-         'dbh24_OH-ion', 'dbh24_CH3OH', 'dbh24_F-ion', 'dbh24_tst-OH-ion_CH3F__F_ion_CH3OH',
-         'dbh24_HN2', 'dbh24_tst_H_N2__HN2',
-         'dbh24_C2H4', 'dbh24_CH3CH2', 'dbh24_tst_H_C2H4__CH3CH2',
-         'dbh24_HCN', 'dbh24_HNC', 'dbh24_tst_HCN__HNC',
-         'dbh24_CH4', 'dbh24_H2O', 'dbh24_tst_OH_CH4__CH3_H2O',
-         'dbh24_H2', 'dbh24_O', 'dbh24_tst_H_OH__O_H2',
-         'dbh24_H2S', 'dbh24_HS', 'dbh24_tst_H_H2S__H2_HS']
+dbh24 = [
+    'dbh24_H', 'dbh24_N2O', 'dbh24_OH', 'dbh24_N2', 'dbh24_tst_H_N2O__OH_N2',
+    'dbh24_HCl', 'dbh24_tst_H_ClH__HCl_H', 'dbh24_CH3', 'dbh24_FCl',
+    'dbh24_CH3F', 'dbh24_Cl', 'dbh24_tst_CH3_FCl__CH3F_Cl',
+    'dbh24_Cl-ion_CH3Cl', 'dbh24_tst_Cl-ion_CH3Cl', 'dbh24_F-ion_CH3Cl',
+    'dbh24_Cl-ion_CH3F', 'dbh24_tst-Cl-ion_CH3F__F_ion_CH3Cl', 'dbh24_OH-ion',
+    'dbh24_CH3OH', 'dbh24_F-ion', 'dbh24_tst-OH-ion_CH3F__F_ion_CH3OH',
+    'dbh24_HN2', 'dbh24_tst_H_N2__HN2', 'dbh24_C2H4', 'dbh24_CH3CH2',
+    'dbh24_tst_H_C2H4__CH3CH2', 'dbh24_HCN', 'dbh24_HNC', 'dbh24_tst_HCN__HNC',
+    'dbh24_CH4', 'dbh24_H2O', 'dbh24_tst_OH_CH4__CH3_H2O', 'dbh24_H2',
+    'dbh24_O', 'dbh24_tst_H_OH__O_H2', 'dbh24_H2S', 'dbh24_HS',
+    'dbh24_tst_H_H2S__H2_HS']
 
 dbh24_reaction_list = {
     'dbh24_r1': {
