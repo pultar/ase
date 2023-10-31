@@ -16,8 +16,7 @@ class CalculatorInputs:
 
     def __repr__(self):
         cls = type(self)
-        return '{}({}, {})'.format(cls.__name__,
-                                   self.name, self.parameters)
+        return f'{cls.__name__}({self.name}, {self.parameters})'
 
     def calc(self):
         cls = get_calculator_class(self.name)

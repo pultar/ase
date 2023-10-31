@@ -25,10 +25,10 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         from ase.calculators.names import names
-        parser.add_argument('calculator',
-                            help='Name of calculator to use.  '
-                            'Must be one of: {}.'
-                            .format(', '.join(names)))
+        parser.add_argument(
+            'calculator',
+            help=f"Name of calculator to use.  Must be one of: {', '.join(names)}.",
+        )
         CLICommand.add_more_arguments(parser)
 
     @staticmethod

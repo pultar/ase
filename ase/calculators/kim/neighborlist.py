@@ -61,19 +61,14 @@ class NeighborList:
             print(f"Calculator skin: {self.skin}")
             print(f"Model influence distance: {model_influence_dist}")
             print(
-                "Calculator influence distance (including skin distance): {}"
-                "".format(self.influence_dist)
+                f"Calculator influence distance (including skin distance): {self.influence_dist}"
             )
             print(f"Number of cutoffs: {model_cutoffs.size}")
             print(f"Model cutoffs: {model_cutoffs}")
             print(
-                "Calculator cutoffs (including skin distance): {}"
-                "".format(self.cutoffs)
-            )
+                f"Calculator cutoffs (including skin distance): {self.cutoffs}")
             print(
-                "Model needs neighbors of padding atoms: {}"
-                "".format(self.padding_need_neigh)
-            )
+                f"Model needs neighbors of padding atoms: {self.padding_need_neigh}")
             print()
 
         # Attributes to be set by subclasses
@@ -329,9 +324,7 @@ class ASENeighborList(NeighborList):
                 species_map[s] for s in new_atoms.get_chemical_symbols()
             ]
         except KeyError as e:
-            raise RuntimeError(
-                "Species not supported by KIM model; {}".format(
-                    str(e)))
+            raise RuntimeError(f"Species not supported by KIM model; {str(e)}")
 
         self.last_update_positions = orig_atoms.get_positions()
 
@@ -417,9 +410,7 @@ class KimpyNeighborList(NeighborList):
                 dtype=c_int
             )
         except KeyError as e:
-            raise RuntimeError(
-                "Species not supported by KIM model; {}".format(
-                    str(e)))
+            raise RuntimeError(f"Species not supported by KIM model; {str(e)}")
 
         if pbc.any():  # Need padding atoms
             # Create padding atoms

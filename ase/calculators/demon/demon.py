@@ -194,8 +194,7 @@ class Demon(FileIOCalculator):
             os.symlink(fromdir + '/' + filename,
                        todir + '/' + filename)
         else:
-            raise RuntimeError(
-                "{} doesn't exist".format(fromdir + '/' + filename))
+            raise RuntimeError(f"{fromdir + '/' + filename} doesn't exist")
 
     def calculate(self,
                   atoms=None,
@@ -212,8 +211,9 @@ class Demon(FileIOCalculator):
 
         self.write_input(self.atoms, properties, system_changes)
         if self.command is None:
-            raise RuntimeError(f'Please set ${"DEMON_COMMAND"} environment '
-                               'variable or supply the command keyword')
+            raise RuntimeError(
+                f'Please set $DEMON_COMMAND environment variable or supply the command keyword'
+            )
         command = self.command  # .replace('PREFIX', self.prefix)
 
         # basis path
@@ -242,8 +242,7 @@ class Demon(FileIOCalculator):
                 shutil.copy(abspath + '/deMon.mem',
                             self.directory + '/deMon.rst')
             else:
-                raise RuntimeError(
-                    "{} doesn't exist".format(abspath + '/deMon.rst'))
+                raise RuntimeError(f"{abspath + '/deMon.rst'} doesn't exist")
 
         abspath = op.abspath(basis_path)
 
@@ -381,8 +380,8 @@ class Demon(FileIOCalculator):
         self.set_label(restart_path)
 
         if not op.exists(restart_path + '/deMon.inp'):
-            raise ReadError('The restart_path file {} does not exist'
-                            .format(restart_path))
+            raise ReadError(
+                f'The restart_path file {restart_path} does not exist')
 
         self.atoms = self.deMon_inp_to_atoms(restart_path + '/deMon.inp')
 

@@ -465,18 +465,16 @@ class DimerControl(MinModeControl):
         """Log the parameters of the eigenmode search."""
         if self.logfile is not None:
             if parameter is not None:
-                l = 'DIM:CONTROL: Updated Parameter: {} = {}\n'.format(
-                    parameter, str(self.get_parameter(parameter)))
+                l = f'DIM:CONTROL: Updated Parameter: {parameter} = {str(self.get_parameter(parameter))}\n'
             else:
                 l = 'MINMODE:METHOD: Dimer\n'
                 l += 'DIM:CONTROL: Search Parameters:\n'
                 l += 'DIM:CONTROL: ------------------\n'
                 for key in self.parameters:
-                    l += 'DIM:CONTROL: {} = {}\n'.format(
-                        key, str(self.get_parameter(key)))
+                    l += f'DIM:CONTROL: {key} = {str(self.get_parameter(key))}\n'
                 l += 'DIM:CONTROL: ------------------\n'
                 l += 'DIM:ROT: OPT-STEP ROT-STEP CURVATURE ROT-ANGLE ' + \
-                     'ROT-FORCE\n'
+                    'ROT-FORCE\n'
             self.logfile.write(l)
             self.logfile.flush()
 
@@ -957,8 +955,7 @@ class MinModeAtoms:
             mod_para = False
             for key in parameters:
                 if parameters[key] != self.control.get_parameter(key):
-                    lp += 'MINMODE:DISP: {} = {}\n'.format(str(key),
-                                                           str(parameters[key]))
+                    lp += f'MINMODE:DISP: {str(key)} = {str(parameters[key])}\n'
                     mod_para = True
             if mod_para:
                 l = lp

@@ -125,8 +125,7 @@ class OnePointElementCrossover(ElementCrossover):
         for a in f[:cut] + m[cut:]:
             indi.append(a)
 
-        parent_message = ':Parents {} {}'.format(f.info['confid'],
-                                                 m.info['confid'])
+        parent_message = f":Parents {f.info['confid']} {m.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 

@@ -53,23 +53,17 @@ class CLICommand:
                     token = fd.readline().strip()
             except OSError as err:  # py2/3 discrepancy
                 from ase.cli.main import CLIError
-                msg = ('Could not find authentication token in {}.  '
-                       'Use the --token option to specify a token.  '
-                       'Original error: {}'
-                       .format(tokenfile, err))
+                msg = f'Could not find authentication token in {tokenfile}.  Use the --token option to specify a token.  Original error: {err}'
                 raise CLIError(msg)
 
-        cmd = ('tar cf - {} | '
-               'curl -XPUT -# -HX-Token:{} '
-               '-N -F file=@- http://nomad-repository.eu:8000 | '
-               'xargs echo').format(' '.join(args.folders), token)
+        cmd = f"tar cf - {' '.join(args.folders)} | curl -XPUT -# -HX-Token:{token} -N -F file=@- http://nomad-repository.eu:8000 | xargs echo"
 
         if not args.folders:
             print('No folders specified -- another job well done!')
         elif args.dry_run:
             print(cmd)
         else:
-            print('Uploading {} folder{} ...'
-                  .format(len(args.folders),
-                          's' if len(args.folders) != 1 else ''))
+            print(
+                f"Uploading {len(args.folders)} folder{'s' if len(args.folders) != 1 else ''} ..."
+            )
             subprocess.check_call(cmd, shell=True)

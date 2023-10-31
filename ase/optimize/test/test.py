@@ -163,10 +163,14 @@ def main():
         description='Test ASE optimizers')
 
     parser.add_argument('systems', help='File containing test systems.')
-    parser.add_argument('optimizer', nargs='*',
-                        help='Optimizer name(s).  Choose from: {}. '
-                        .format(', '.join(all_optimizers)) +
-                        'Default is all optimizers.')
+    parser.add_argument(
+        'optimizer',
+        nargs='*',
+        help=(
+            f"Optimizer name(s).  Choose from: {', '.join(all_optimizers)}. "
+            + 'Default is all optimizers.'
+        ),
+    )
     parser.add_argument('-e', '--egg-box', type=float, default=0.0,
                         help='Fake egg-box error in eV.')
 

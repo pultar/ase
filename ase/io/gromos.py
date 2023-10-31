@@ -44,8 +44,8 @@ def read_gromos(fileobj):
                 else:
                     symbols.append(symbol[0].lower().capitalize())
             if symbols[-1] not in chemical_symbols:
-                raise RuntimeError("Symbol '{}' not in chemical symbols"
-                                   .format(symbols[-1]))
+                raise RuntimeError(
+                    f"Symbol '{symbols[-1]}' not in chemical symbols")
         if read_box:
             try:
                 grocell = list(map(float, line.split()))

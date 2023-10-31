@@ -41,7 +41,7 @@ def test(calculators=tuple(), jobs=0, verbose=False,
     if verbose:
         args += ['--verbose']
     if calculators:
-        args += ['--calculators={}'.format(','.join(calculators))]
+        args += [f"--calculators={','.join(calculators)}"]
     if jobs:
         args += f'--jobs={jobs}'
 
@@ -122,12 +122,13 @@ class CLICommand:
         parser.add_argument('--list-calculators', action='store_true',
                             help='print all calculator names and exit')
         parser.add_argument(
-            '-j', '--jobs', type=int, metavar='N',
+            '-j',
+            '--jobs',
+            type=int,
+            metavar='N',
             default=MULTIPROCESSING_AUTO,
-            help='number of worker processes.  If pytest-xdist is available,'
-            ' defaults to all available processors up to a maximum of {}.  '
-            '0 disables multiprocessing'
-            .format(MULTIPROCESSING_MAX_WORKERS))
+            help=f'number of worker processes.  If pytest-xdist is available, defaults to all available processors up to a maximum of {MULTIPROCESSING_MAX_WORKERS}.  0 disables multiprocessing',
+        )
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='write test outputs to stdout.  '
                             'Mostly useful when inspecting a single test')

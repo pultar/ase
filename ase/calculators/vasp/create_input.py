@@ -1077,8 +1077,9 @@ class GenerateVaspInput:
             pass
         elif xc not in self.xc_defaults:
             xc_allowed = ', '.join(self.xc_defaults.keys())
-            raise ValueError('{} is not supported for xc! Supported xc values'
-                             'are: {}'.format(xc, xc_allowed))
+            raise ValueError(
+                f'{xc} is not supported for xc! Supported xc valuesare: {xc_allowed}'
+            )
         else:
             # XC defaults to PBE pseudopotentials
             if 'pp' not in self.xc_defaults[xc]:
@@ -1222,8 +1223,9 @@ class GenerateVaspInput:
             elif str(m) in setups:
                 special_setup_index = str(m)  # type: ignore[assignment]
             else:
-                raise Exception("Having trouble with special setup index {}."
-                                " Please use an int.".format(m))
+                raise Exception(
+                    f"Having trouble with special setup index {m}. Please use an int."
+                )
             potcar = join(pp_folder, setups[special_setup_index], 'POTCAR')
             for path in pppaths:
                 filename = join(path, potcar)
@@ -1428,11 +1430,8 @@ class GenerateVaspInput:
 
             if not src or not isfile(src):
                 warnings.warn(
-                    ('vdW has been enabled, however no'
-                     ' location for the {} file'
-                     ' has been specified.'
-                     ' Set {} environment variable to'
-                     ' copy the vdW kernel.').format(kernel, vdw_env))
+                    f'vdW has been enabled, however no location for the {kernel} file has been specified. Set {vdw_env} environment variable to copy the vdW kernel.'
+                )
             else:
                 shutil.copyfile(src, dst)
 
@@ -1543,9 +1542,7 @@ class GenerateVaspInput:
                 pass
             elif key == 'magmom':
                 if not len(val) == len(atoms):
-                    msg = ('Expected length of magmom tag to be'
-                           ' {}, i.e. 1 value per atom, but got {}').format(
-                               len(atoms), len(val))
+                    msg = f'Expected length of magmom tag to be {len(atoms)}, i.e. 1 value per atom, but got {len(val)}'
                     raise ValueError(msg)
 
                 # Check if user remembered to specify ispin
@@ -1641,8 +1638,7 @@ class GenerateVaspInput:
         # reliably and easily identify such non-standard entries
         custom_kv_pairs = p.get('custom')
         for key, value in custom_kv_pairs.items():
-            incar.write(' {} = {}  # <Custom ASE key>\n'.format(
-                key.upper(), value))
+            incar.write(f' {key.upper()} = {value}  # <Custom ASE key>\n')
         incar.close()
 
     def write_kpoints(self, atoms=None, directory='./', **kwargs):
@@ -1656,9 +1652,9 @@ class GenerateVaspInput:
             if self.float_params['kspacing'] > 0:
                 return
             else:
-                raise ValueError("KSPACING value {} is not allowable. "
-                                 "Please use None or a positive number."
-                                 "".format(self.float_params['kspacing']))
+                raise ValueError(
+                    f"KSPACING value {self.float_params['kspacing']} is not allowable. Please use None or a positive number."
+                )
 
         kpointstring = format_kpoints(
             kpts=self.input_params['kpts'],

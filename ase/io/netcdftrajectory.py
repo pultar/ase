@@ -292,9 +292,9 @@ class NetCDFTrajectory:
                     # This field exists but is per file data. Check that the
                     # data remains consistent.
                     if np.any(self._get_variable(array) != data):
-                        raise ValueError('Trying to write Atoms object with '
-                                         'incompatible data for the {} '
-                                         'array.'.format(array))
+                        raise ValueError(
+                            f'Trying to write Atoms object with incompatible data for the {array} array.'
+                        )
                 else:
                     self._add_array(atoms, array, data.dtype, data.shape)
                     self._get_variable(array)[i] = data
@@ -317,9 +317,9 @@ class NetCDFTrajectory:
                 # This field exists but is per file data. Check that the
                 # data remains consistent.
                 if np.any(self._get_variable(array) != data):
-                    raise ValueError('Trying to write Atoms object with '
-                                     'incompatible data for the {} '
-                                     'array.'.format(array))
+                    raise ValueError(
+                        f'Trying to write Atoms object with incompatible data for the {array} array.'
+                    )
             else:
                 self._add_array(atoms, array, data.dtype, data.shape)
                 self._get_variable(array)[frame] = data
@@ -413,8 +413,9 @@ class NetCDFTrajectory:
                         self.nc.createDimension(self._Voigt_dim, 6)
                     dims += [self._Voigt_dim]
                 else:
-                    raise TypeError("Don't know how to dump array of shape {}"
-                                    " into NetCDF trajectory.".format(shape))
+                    raise TypeError(
+                        f"Don't know how to dump array of shape {shape} into NetCDF trajectory."
+                    )
             if hasattr(type, 'char'):
                 t = self.dtype_conv.get(type.char, type)
             else:
@@ -428,14 +429,14 @@ class NetCDFTrajectory:
                     return self.nc.variables[n]
             if exc:
                 raise RuntimeError(
-                    'None of the variables {} was found in the '
-                    'NetCDF trajectory.'.format(', '.join(name)))
+                    f"None of the variables {', '.join(name)} was found in the NetCDF trajectory."
+                )
         else:
             if name in self.nc.variables:
                 return self.nc.variables[name]
             if exc:
-                raise RuntimeError('Variables {} was found in the NetCDF '
-                                   'trajectory.'.format(name))
+                raise RuntimeError(
+                    f'Variables {name} was found in the NetCDF trajectory.')
         return None
 
     def _has_variable(self, name):

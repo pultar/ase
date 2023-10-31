@@ -208,9 +208,9 @@ def read_cfg(fd):
 
     # Sanity check
     if current_atom != nat:
-        raise RuntimeError('Number of atoms reported for CFG file (={}) and '
-                           'number of atoms actually read (={}) differ.'
-                           .format(nat, current_atom))
+        raise RuntimeError(
+            f'Number of atoms reported for CFG file (={nat}) and number of atoms actually read (={current_atom}) differ.'
+        )
 
     if np.any(eta != 0):
         raise NotImplementedError('eta != 0 not yet implemented for CFG '

@@ -158,8 +158,9 @@ class PureDFTD3(FileIOCalculator):
         # user know that we don't understand what they're asking for.
         unknown_kwargs = set(kwargs) - set(self.default_parameters)
         if unknown_kwargs:
-            warn('WARNING: Ignoring the following unknown keywords: {}'
-                 ''.format(', '.join(unknown_kwargs)))
+            warn(
+                f"WARNING: Ignoring the following unknown keywords: {', '.join(unknown_kwargs)}"
+            )
 
         changed_parameters.update(FileIOCalculator.set(self, **kwargs))
 
@@ -219,12 +220,9 @@ class PureDFTD3(FileIOCalculator):
             # dftd3 executable & depend on XC functional.
             missing_damppars = valid_damppars - damppars
             if missing_damppars and missing_damppars != valid_damppars:
-                raise ValueError('An incomplete set of custom damping '
-                                 'parameters for the {} damping method was '
-                                 'provided! Expected: {}; got: {}'
-                                 ''.format(damping,
-                                           ', '.join(valid_damppars),
-                                           ', '.join(damppars)))
+                raise ValueError(
+                    f"An incomplete set of custom damping parameters for the {damping} damping method was provided! Expected: {', '.join(valid_damppars)}; got: {', '.join(damppars)}"
+                )
 
             # If a user provides damping parameters that are not used in the
             # selected damping method, let them know that we're ignoring them.
@@ -233,18 +231,17 @@ class PureDFTD3(FileIOCalculator):
             # the previous check will raise an error, so we don't need to
             # worry about that here.
             if damppars - valid_damppars:
-                warn('WARNING: The following damping parameters are not '
-                     'valid for the {} damping method and will be ignored: {}'
-                     ''.format(damping,
-                               ', '.join(damppars)))
+                warn(
+                    f"WARNING: The following damping parameters are not valid for the {damping} damping method and will be ignored: {', '.join(damppars)}"
+                )
 
         # The default XC functional is PBE, but this is only set if the user
         # did not provide their own value for xc or any custom damping
         # parameters.
         if self.parameters['xc'] and self.custom_damp:
-            warn('WARNING: Custom damping parameters will be used '
-                 'instead of those parameterized for {}!'
-                 ''.format(self.parameters['xc']))
+            warn(
+                f"WARNING: Custom damping parameters will be used instead of those parameterized for {self.parameters['xc']}!"
+            )
 
         if changed_parameters:
             self.results.clear()
@@ -464,10 +461,7 @@ class DFTD3Output:
                                'for the list of known functionals '
                                'and their spelling.')
                 else:
-                    message = ('dftd3 failed! Please check the {} '
-                               'output file and report any errors '
-                               'to the ASE developers.'
-                               ''.format(outname))
+                    message = f'dftd3 failed! Please check the {outname} output file and report any errors to the ASE developers.'
                 raise RuntimeError(message)
 
             if line.startswith(' Edisp'):
@@ -481,8 +475,9 @@ class DFTD3Output:
                 e_dftd3 = float(parts[index]) * Hartree
                 return e_dftd3
 
-        raise RuntimeError('Could not parse energy from dftd3 '
-                           'output, see file {}'.format(outname))
+        raise RuntimeError(
+            f'Could not parse energy from dftd3 output, see file {outname}'
+        )
 
     def parse_forces(self, fd):
         forces = []

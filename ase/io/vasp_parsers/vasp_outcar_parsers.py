@@ -156,8 +156,7 @@ class VaspChunkPropertyParser(VaspPropertyParser, ABC):
             return self.header[key]
         except KeyError:
             raise ParseError(
-                'Parser requested unavailable key "{}" from header'.format(
-                    key))
+                f'Parser requested unavailable key "{key}" from header')
 
 
 class VaspHeaderPropertyParser(VaspPropertyParser, ABC):
@@ -668,8 +667,7 @@ class OutcarChunkParser(ChunkParser):
                 atoms_kwargs[prop] = results.pop(prop)
             except KeyError:
                 raise ParseError(
-                    'Did not find required property {} during parse.'.format(
-                        prop))
+                    f'Did not find required property {prop} during parse.')
         atoms = Atoms(**atoms_kwargs)
 
         kpts = results.pop('kpts', None)
@@ -712,16 +710,15 @@ class OutcarHeaderParser(HeaderParser):
         for required_key in ('ion_types', 'species'):
             if required_key not in results:
                 raise ParseError(
-                    'Did not find required key "{}" in parsed header results.'.
-                    format(required_key))
+                    f'Did not find required key "{required_key}" in parsed header results.'
+                )
 
         ion_types = results.pop('ion_types')
         species = results.pop('species')
         if len(ion_types) != len(species):
             raise ParseError(
-                ('Expected length of ion_types to be same as species, '
-                 'but got ion_types={} and species={}').format(
-                     len(ion_types), len(species)))
+                f'Expected length of ion_types to be same as species, but got ion_types={len(ion_types)} and species={len(species)}'
+            )
 
         # Expand the symbols list
         symbols = []

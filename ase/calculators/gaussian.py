@@ -20,8 +20,9 @@ class GaussianDynamics:
             self.calc = calc
         else:
             if self.atoms.calc is None:
-                raise ValueError("{} requires a valid Gaussian calculator "
-                                 "object!".format(self.__class__.__name__))
+                raise ValueError(
+                    f"{self.__class__.__name__} requires a valid Gaussian calculator object!"
+                )
 
             self.calc = self.atoms.calc
 
@@ -110,8 +111,7 @@ class Gaussian(FileIOCalculator):
                     self.command = self.command.replace('GAUSSIAN', gau)
                     break
             else:
-                raise OSError('Missing Gaussian executable {}'
-                              .format(gaussians))
+                raise OSError(f'Missing Gaussian executable {gaussians}')
 
         FileIOCalculator.calculate(self, *args, **kwargs)
 

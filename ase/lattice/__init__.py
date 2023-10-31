@@ -222,7 +222,7 @@ special_points={GNPSS1XYY1Z}, kpts=[51x3])
         for name in self.parameters:
             value = self._parameters[name]
             tokens.append(template.format(name, value))
-        return '{}({})'.format(self.name, ', '.join(tokens))
+        return f"{self.name}({', '.join(tokens)})"
 
     def __str__(self) -> str:
         return self.__format__('')
@@ -442,8 +442,7 @@ class BCT(BravaisLattice):
 
 def check_orc(a, b, c):
     if not a < b < c:
-        raise UnconventionalLattice('Expected a < b < c, got {}, {}, {}'
-                                    .format(a, b, c))
+        raise UnconventionalLattice(f'Expected a < b < c, got {a}, {b}, {c}')
 
 
 class Orthorhombic(BravaisLattice):
@@ -620,8 +619,8 @@ class RHL(BravaisLattice):
 
     def __init__(self, a, alpha):
         if alpha >= 120:
-            raise UnconventionalLattice('Need alpha < 120 degrees, got {}'
-                                        .format(alpha))
+            raise UnconventionalLattice(
+                f'Need alpha < 120 degrees, got {alpha}')
         super().__init__(a=a, alpha=alpha)
 
     def _cell(self, a, alpha):
@@ -671,9 +670,9 @@ class RHL(BravaisLattice):
 
 def check_mcl(a, b, c, alpha):
     if not (b <= c and alpha < 90):
-        raise UnconventionalLattice('Expected b <= c, alpha < 90; '
-                                    'got a={}, b={}, c={}, alpha={}'
-                                    .format(a, b, c, alpha))
+        raise UnconventionalLattice(
+            f'Expected b <= c, alpha < 90; got a={a}, b={b}, c={c}, alpha={alpha}'
+        )
 
 
 @bravaisclass('primitive monoclinic', 'monoclinic', 'monoclinic', 'mP',
@@ -1267,9 +1266,9 @@ class LatticeChecker:
             if lat:
                 return lat
         else:
-            raise RuntimeError('Could not find lattice type for cell '
-                               'with lengths and angles {}'
-                               .format(self.cell.cellpar().tolist()))
+            raise RuntimeError(
+                f'Could not find lattice type for cell with lengths and angles {self.cell.cellpar().tolist()}'
+            )
 
     def query(self, latname):
         """Match cell against named Bravais lattice.

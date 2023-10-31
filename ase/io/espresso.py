@@ -719,8 +719,8 @@ def ibrav_to_cell(system):
                          [b_over_a * cosab, b_over_a * sinab, 0.0],
                          v3]) * alat
     else:
-        raise NotImplementedError('ibrav = {} is not implemented'
-                                  ''.format(system['ibrav']))
+        raise NotImplementedError(
+            f"ibrav = {system['ibrav']} is not implemented")
 
     return Cell(cell)
 
@@ -1166,8 +1166,7 @@ def label_to_symbol(label):
     if test_symbol in chemical_symbols:
         return test_symbol
     else:
-        raise KeyError('Could not parse species from label {}.'
-                       ''.format(label))
+        raise KeyError(f'Could not parse species from label {label}.')
 
 
 def infix_float(text):
@@ -1383,7 +1382,7 @@ def construct_namelist(parameters=None, warn=False, **kwargs):
             unused_keys.append(key)
 
     if warn and unused_keys:
-        warnings.warn('Unused keys: {}'.format(', '.join(unused_keys)))
+        warnings.warn(f"Unused keys: {', '.join(unused_keys)}")
 
     return input_namelist
 

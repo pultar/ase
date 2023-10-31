@@ -805,8 +805,7 @@ class FixCartesian(IndexedConstraint):
         forces[self.index] *= self.mask[None, :]
 
     def __repr__(self):
-        return 'FixCartesian(indices={}, mask={})'.format(
-            self.index.tolist(), list(~self.mask))
+        return f'FixCartesian(indices={self.index.tolist()}, mask={list(~self.mask)})'
 
     def todict(self):
         return {'name': 'FixCartesian',

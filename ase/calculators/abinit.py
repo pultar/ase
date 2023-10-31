@@ -18,9 +18,9 @@ def get_abinit_version(command):
     # This allows trailing stuff like betas, rc and so
     m = re.match(r'\s*(\d\.\d\.\d)', txt)
     if m is None:
-        raise RuntimeError('Cannot recognize abinit version. '
-                           'Start of output: {}'
-                           .format(txt[:40]))
+        raise RuntimeError(
+            f'Cannot recognize abinit version. Start of output: {txt[:40]}'
+        )
     return m.group(1)
 
 

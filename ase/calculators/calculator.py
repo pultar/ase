@@ -479,8 +479,8 @@ class BaseCalculator(GetPropertiesMixin):
 
     def get_property(self, name, atoms=None, allow_calculation=True):
         if name not in self.implemented_properties:
-            raise PropertyNotImplementedError('{} property not implemented'
-                                              .format(name))
+            raise PropertyNotImplementedError(
+                f'{name} property not implemented')
 
         if atoms is None:
             atoms = self.atoms
@@ -504,8 +504,8 @@ class BaseCalculator(GetPropertiesMixin):
         if name not in self.results:
             # For some reason the calculator was not able to do what we want,
             # and that is OK.
-            raise PropertyNotImplementedError('{} not present in this '
-                                              'calculation'.format(name))
+            raise PropertyNotImplementedError(
+                f'{name} not present in this calculation')
 
         result = self.results[name]
         if isinstance(result, np.ndarray):
@@ -622,10 +622,9 @@ class Calculator(BaseCalculator):
                 # or not at all
                 self.label = '/'.join((self.directory, label))
             else:
-                raise ValueError('Directory redundantly specified though '
-                                 'directory="{}" and label="{}".  '
-                                 'Please omit "/" in label.'
-                                 .format(self.directory, label))
+                raise ValueError(
+                    f'Directory redundantly specified though directory="{self.directory}" and label="{label}".  Please omit "/" in label.'
+                )
 
         if self.parameters is None:
             # Use default parameters if they were not read from file:
@@ -906,9 +905,11 @@ class FileIOCalculator(Calculator):
     def execute(self):
         if self.command is None:
             raise CalculatorSetupError(
-                'Please set ${} environment variable '
-                .format('ASE_' + self.name.upper() + '_COMMAND') +
-                'or supply the command keyword')
+                (
+                    f"Please set ${'ASE_' + self.name.upper() + '_COMMAND'} environment variable "
+                    + 'or supply the command keyword'
+                )
+            )
         command = self.command
         if 'PREFIX' in command:
             command = command.replace('PREFIX', self.prefix)
@@ -927,9 +928,7 @@ class FileIOCalculator(Calculator):
 
         if errorcode:
             path = os.path.abspath(self.directory)
-            msg = ('Calculator "{}" failed with command "{}" failed in '
-                   '{} with error code {}'.format(self.name, command,
-                                                  path, errorcode))
+            msg = f'Calculator "{self.name}" failed with command "{command}" failed in {path} with error code {errorcode}'
             raise CalculationFailed(msg)
 
     def write_input(self, atoms, properties=None, system_changes=None):

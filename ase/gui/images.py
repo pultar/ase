@@ -119,7 +119,7 @@ class Images:
             from ase.io.formats import parse_filename
 
             if '@' in filename and 'postgres' not in filename or \
-               'postgres' in filename and filename.count('@') == 2:
+                    'postgres' in filename and filename.count('@') == 2:
                 actual_filename, index = parse_filename(filename, None)
             else:
                 actual_filename, index = parse_filename(filename,
@@ -149,8 +149,7 @@ class Images:
                 step = 1
             for i, img in enumerate(imgs):
                 if isinstance(start, int):
-                    names.append('{}@{}'.format(
-                        actual_filename, start + i * step))
+                    names.append(f'{actual_filename}@{start + i * step}')
                 else:
                     names.append(f'{actual_filename}@{start}')
 

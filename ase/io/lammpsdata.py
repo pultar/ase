@@ -359,9 +359,7 @@ def _read_atoms_section(fileobj, natoms: int, style: str = None):
                 travel_in[atom_id] = tuple(int(fields[_]) for _ in (6, 7, 8))
         else:
             raise RuntimeError(
-                "Style '{}' not supported or invalid "
-                "number of fields {}"
-                "".format(style, len(fields))
+                f"Style '{style}' not supported or invalid number of fields {len(fields)}"
             )
     return mol_id_in, type_in, charge_in, pos_in, travel_in
 

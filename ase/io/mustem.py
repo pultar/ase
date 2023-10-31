@@ -167,8 +167,7 @@ class XtlmuSTEMWriter:
             # all the value must be equal
             if np.unique(sliced_array).size > 1:
                 raise ValueError(
-                    "All the '{}' values for element '{}' must be "
-                    "equal.".format(name, chemical_symbols[element])
+                    f"All the '{name}' values for element '{chemical_symbols[element]}' must be equal."
                 )
             sliced_array = sliced_array[0]
 
@@ -182,9 +181,7 @@ class XtlmuSTEMWriter:
     def _get_file_header(self):
         # 1st line: comment line
         if self.comment is None:
-            s = "{} atoms with chemical formula: {}\n".format(
-                len(self.atoms),
-                self.atoms.get_chemical_formula())
+            s = f"{len(self.atoms)} atoms with chemical formula: {self.atoms.get_chemical_formula()}\n"
         else:
             s = self.comment
         # 2nd line: lattice parameter

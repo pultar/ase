@@ -56,10 +56,9 @@ class PBSQueueRun:
         self.dc.mark_as_queued(a)
         if not os.path.isdir(self.tmp_folder):
             os.mkdir(self.tmp_folder)
-        fname = '{}/cand{}.traj'.format(self.tmp_folder,
-                                        a.info['confid'])
+        fname = f"{self.tmp_folder}/cand{a.info['confid']}.traj"
         write(fname, a)
-        job_name = '{}_{}'.format(self.job_prefix, a.info['confid'])
+        job_name = f"{self.job_prefix}_{a.info['confid']}"
         fd = open('tmp_job_file.job', 'w')
         fd.write(self.job_template_generator(job_name, fname))
         fd.close()
@@ -91,8 +90,7 @@ class PBSQueueRun:
             submitted to the queing system. """
         confs = self.dc.get_all_candidates_in_queue()
         for c in confs:
-            fdone = '{}/cand{}_done.traj'.format(self.tmp_folder,
-                                                 c)
+            fdone = f'{self.tmp_folder}/cand{c}_done.traj'
             if os.path.isfile(fdone) and os.path.getsize(fdone) > 0:
                 try:
                     a = []

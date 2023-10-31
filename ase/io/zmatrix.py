@@ -48,8 +48,7 @@ class _ZMatrixToAtoms:
             return float(value)
         out = self.known_units[kind].get(value.lower())
         if out is None:
-            raise ValueError("Unknown {} units: {}"
-                             .format(kind, value))
+            raise ValueError(f"Unknown {kind} units: {value}")
         return out
 
     def set_defs(self, defs: Union[Dict[str, float], str,
@@ -75,8 +74,8 @@ class _ZMatrixToAtoms:
         except ValueError as e:
             val_out = self.defs.get(val.lstrip('+-'))
             if val_out is None:
-                raise ValueError('Invalid value encountered in Z-matrix: {}'
-                                 .format(val)) from e
+                raise ValueError(
+                    f'Invalid value encountered in Z-matrix: {val}') from e
         return val_out * (-1 if val.startswith('-') else 1)
 
     def get_index(self, name: str) -> int:
@@ -85,8 +84,8 @@ class _ZMatrixToAtoms:
             return int(name) - 1
         except ValueError as e:
             if self.name_to_index is None or name not in self.name_to_index:
-                raise ValueError('Failed to determine index for name "{}"'
-                                 .format(name)) from e
+                raise ValueError(
+                    f'Failed to determine index for name "{name}"') from e
         return self.name_to_index[name]
 
     def set_index(self, name: str) -> None:
@@ -105,16 +104,14 @@ class _ZMatrixToAtoms:
     def validate_indices(self, *indices: int) -> None:
         """Raises an error if indices in a Z-matrix row are invalid."""
         if any(np.array(indices) >= self.nrows):
-            raise ValueError('An invalid Z-matrix was provided! Row {} refers '
-                             'to atom indices {}, at least one of which '
-                             "hasn't been defined yet!"
-                             .format(self.nrows, indices))
+            raise ValueError(
+                f"An invalid Z-matrix was provided! Row {self.nrows} refers to atom indices {indices}, at least one of which hasn't been defined yet!"
+            )
 
         if len(indices) != len(set(indices)):
-            raise ValueError('An atom index has been used more than once a '
-                             'row of the Z-matrix! Row numbers {}, '
-                             'referred indices: {}'
-                             .format(self.nrows, indices))
+            raise ValueError(
+                f'An atom index has been used more than once a row of the Z-matrix! Row numbers {self.nrows}, referred indices: {indices}'
+            )
 
     def parse_row(self, row: str) -> Tuple[
             str, Union[_ZMatrixRow, ThreeFloats],

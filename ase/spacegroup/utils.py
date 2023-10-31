@@ -131,8 +131,8 @@ def get_basis(atoms: Atoms,
     ALLOWED_METHODS = ('auto', 'ase', 'spglib')
 
     if method not in ALLOWED_METHODS:
-        raise ValueError('Expected one of {} methods, got {}'.format(
-            ALLOWED_METHODS, method))
+        raise ValueError(
+            f'Expected one of {ALLOWED_METHODS} methods, got {method}')
 
     if method == 'auto':
         # Figure out which implementation we want to use automatically

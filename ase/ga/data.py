@@ -421,8 +421,8 @@ class PrepareDB:
 
     def __init__(self, db_file_name, simulation_cell=None, **kwargs):
         if os.path.exists(db_file_name):
-            raise OSError('DB file {} already exists'
-                          .format(os.path.abspath(db_file_name)))
+            raise OSError(
+                f'DB file {os.path.abspath(db_file_name)} already exists')
         self.db_file_name = db_file_name
         if simulation_cell is None:
             simulation_cell = Atoms()

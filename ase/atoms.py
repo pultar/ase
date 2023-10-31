@@ -1022,10 +1022,9 @@ class Atoms:
             tokens.append(f'constraint={repr(constraint)}')
 
         if self._calc is not None:
-            tokens.append('calculator={}(...)'
-                          .format(self._calc.__class__.__name__))
+            tokens.append(f'calculator={self._calc.__class__.__name__}(...)')
 
-        return '{}({})'.format(self.__class__.__name__, ', '.join(tokens))
+        return f"{self.__class__.__name__}({', '.join(tokens)})"
 
     def __add__(self, other):
         atoms = self.copy()
@@ -1102,9 +1101,9 @@ class Atoms:
             # if i is a mask
             if i.dtype == bool:
                 if len(i) != len(self):
-                    raise IndexError('Length of mask {} must equal '
-                                     'number of atoms {}'
-                                     .format(len(i), len(self)))
+                    raise IndexError(
+                        f'Length of mask {len(i)} must equal number of atoms {len(self)}'
+                    )
                 i = np.arange(len(self))[i]
 
         import copy
@@ -1932,8 +1931,8 @@ class Atoms:
         """Get volume of unit cell."""
         if self.cell.rank != 3:
             raise ValueError(
-                'You have {} lattice vectors: volume not defined'
-                .format(self.cell.rank))
+                f'You have {self.cell.rank} lattice vectors: volume not defined'
+            )
         return self.cell.volume
 
     def _get_positions(self):

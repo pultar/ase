@@ -214,7 +214,7 @@ class Dftb(FileIOCalculator):
                     path = os.path.join(self.slako_dir,
                                         '{0}-{0}.skf'.format(symbol))
                     l = read_max_angular_momentum(path)
-                    params[s + symbol] = '"{}"'.format('spdf'[l])
+                    params[s + symbol] = f""""{'spdf'[l]}\""""
 
         # --------MAIN KEYWORDS-------
         previous_key = 'dummy_'

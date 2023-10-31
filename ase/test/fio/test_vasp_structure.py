@@ -32,8 +32,7 @@ class TestXdatcarRoundtrip(unittest.TestCase):
 
         if len(system_changes) > 0:
             raise AssertionError(
-                'Atoms objects differ by {}'.format(', '.join(system_changes))
-            )
+                f"Atoms objects differ by {', '.join(system_changes)}")
 
     def assert_trajectory_almost_equal(self, traj1, traj2):
         self.assertEqual(len(traj1), len(traj2))

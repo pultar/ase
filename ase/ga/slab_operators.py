@@ -249,8 +249,7 @@ class CutSpliceSlabCrossover(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f, m))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parents {} {}'.format(f.info['confid'],
-                                                  m.info['confid'])
+        parent_message = f": Parents {f.info['confid']} {m.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -325,7 +324,7 @@ class RandomCompositionMutation(SlabOperator):
 
     def get_new_individual(self, parents):
         f = parents[0]
-        parent_message = ': Parent {}'.format(f.info['confid'])
+        parent_message = f": Parent {f.info['confid']}"
 
         if self.allowed_compositions is None:
             if len(set(f.get_chemical_symbols())) == 1:
@@ -398,7 +397,7 @@ class RandomElementMutation(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parent {}'.format(f.info['confid'])
+        parent_message = f": Parent {f.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -430,7 +429,7 @@ class NeighborhoodElementMutation(SlabOperator):
 
         indi = self.operate(indi)
 
-        parent_message = ': Parent {}'.format(f.info['confid'])
+        parent_message = f": Parent {f.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -480,7 +479,7 @@ class SymmetrySlabPermutation(SlabOperator):
         indi = self.initialize_individual(f, self.operate(f))
         indi.info['data']['parents'] = [i.info['confid'] for i in parents]
 
-        parent_message = ': Parent {}'.format(f.info['confid'])
+        parent_message = f": Parent {f.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 
@@ -526,7 +525,7 @@ class RandomSlabPermutation(SlabOperator):
 
         indi = self.operate(indi)
 
-        parent_message = ': Parent {}'.format(f.info['confid'])
+        parent_message = f": Parent {f.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 

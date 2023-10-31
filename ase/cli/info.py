@@ -44,7 +44,7 @@ class CLICommand:
                 for message in format_configs(configs):
                     print(f'  {message}')
                 print()
-                print('Available: {}'.format(','.join(sorted(configs))))
+                print(f"Available: {','.join(sorted(configs))}")
             return
 
         n = max(len(filename) for filename in args.filename) + 2
@@ -105,10 +105,8 @@ def print_formats():
 
         moreinfo = [infostring]
         if fmt.extensions:
-            moreinfo.append('ext={}'.format('|'.join(fmt.extensions)))
+            moreinfo.append(f"ext={'|'.join(fmt.extensions)}")
         if fmt.globs:
-            moreinfo.append('glob={}'.format('|'.join(fmt.globs)))
+            moreinfo.append(f"glob={'|'.join(fmt.globs)}")
 
-        print('  {} [{}]: {}'.format(fmt.name,
-                                     ', '.join(moreinfo),
-                                     fmt.description))
+        print(f"  {fmt.name} [{', '.join(moreinfo)}]: {fmt.description}")

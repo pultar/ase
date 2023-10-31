@@ -157,8 +157,8 @@ def create_units(codata_version):
     try:
         u = Units(CODATA[codata_version])
     except KeyError:
-        raise NotImplementedError('CODATA version "{}" not implemented'
-                                  .format(codata_version))
+        raise NotImplementedError(
+            f'CODATA version {codata_version} not implemented')
 
     # derived from the CODATA values
     u['_eps0'] = (1 / u['_mu0'] / u['_c']**2)  # permittivity of vacuum

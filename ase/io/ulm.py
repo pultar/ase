@@ -598,8 +598,7 @@ class Reader:
             if verbose and isinstance(value, NDArrayReader):
                 value = value.read()
             if isinstance(value, NDArrayReader):
-                s = '<ndarray shape={} dtype={}>'.format(value.shape,
-                                                         value.dtype)
+                s = f'<ndarray shape={value.shape} dtype={value.dtype}>'
             elif isinstance(value, Reader):
                 s = value.tostr(verbose, indent + '    ')
             else:
@@ -685,8 +684,7 @@ def print_ulm_info(filename, index=None, verbose=False):
         indices = range(len(b))
     else:
         indices = [index]
-    print('{}  (tag: "{}", {})'.format(filename, b.get_tag(),
-                                       plural(len(b), 'item')))
+    print(f"""{filename}  (tag: "{b.get_tag()}", {plural(len(b), 'item')})""")
     for i in indices:
         print(f'item #{i}:')
         print(b[i].tostr(verbose))

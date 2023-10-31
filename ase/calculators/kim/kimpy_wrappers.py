@@ -99,12 +99,7 @@ class ModelCollections:
         try:
             model_type = check_call(self.collection.get_item_type, model_name)
         except KimpyError:
-            msg = (
-                "Could not find model {} installed in any of the KIM API "
-                "model collections on this system.  See "
-                "https://openkim.org/doc/usage/obtaining-models/ for "
-                "instructions on installing models.".format(model_name)
-            )
+            msg = f"Could not find model {model_name} installed in any of the KIM API model collections on this system.  See https://openkim.org/doc/usage/obtaining-models/ for instructions on installing models."
             raise KIMModelNotFound(msg)
 
         return model_type
@@ -709,8 +704,7 @@ class SimulatorModel:
             get_number_of_supported_species()
         if num_supported_species == 0:
             raise KIMModelInitializationError(
-                "Unable to determine supported species of "
-                "simulator model {}.".format(self.model_name)
+                f"Unable to determine supported species of simulator model {self.model_name}."
             )
         return num_supported_species
 
@@ -750,8 +744,7 @@ class SimulatorModel:
             supported_units = self.metadata["units"][0]
         except (KeyError, IndexError):
             raise KIMModelInitializationError(
-                "Unable to determine supported units of "
-                "simulator model {}.".format(self.model_name)
+                f"Unable to determine supported units of simulator model {self.model_name}."
             )
 
         return supported_units

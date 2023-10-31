@@ -28,10 +28,9 @@ class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
         for kw, val in self.mandatory_input.items():
             if kw in kwargs and val != kwargs[kw]:
-                raise ValueError('Keyword {} cannot be overridden! '
-                                 'It must have have value {}, but {} '
-                                 'was provided instead.'.format(kw, val,
-                                                                kwargs[kw]))
+                raise ValueError(
+                    f'Keyword {kw} cannot be overridden! It must have have value {val}, but {kwargs[kw]} was provided instead.'
+                )
         kwargs.update(self.mandatory_input)
 
         for kw, val in self.default_input.items():
@@ -110,8 +109,9 @@ class VaspInteractive(GenerateVaspInput, Calculator):  # type: ignore[misc]
         # new positions, meaning it either exited without error unexpectedly,
         # or it exited with an error. Either way, we need to raise an error.
 
-        raise RuntimeError("VASP exited unexpectedly with exit code {}"
-                           "".format(self.process.poll()))
+        raise RuntimeError(
+            f"VASP exited unexpectedly with exit code {self.process.poll()}"
+        )
 
     def close(self):
         if self.process is None:

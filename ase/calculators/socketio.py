@@ -331,8 +331,8 @@ class SocketServer(IOContext):
                 if self.proc is not None:
                     status = self.proc.poll()
                     if status is not None:
-                        raise OSError('Subprocess terminated unexpectedly'
-                                      ' with status {}'.format(status))
+                        raise OSError(
+                            f'Subprocess terminated unexpectedly with status {status}')
             else:
                 break
 
@@ -369,8 +369,7 @@ class SocketServer(IOContext):
                 # Quantum Espresso seems to always exit with status 128,
                 # even if successful.
                 # Should investigate at some point
-                warnings.warn('Subprocess exited with status {}'
-                              .format(exitcode))
+                warnings.warn(f'Subprocess exited with status {exitcode}')
         # self.log('IPI server closed')
 
     def calculate(self, atoms):
@@ -656,9 +655,8 @@ class SocketIOCalculator(Calculator, IOContext):
         # all_changes.  After that, only positions and cell may change.
         if self.atoms is not None and any(bad):
             raise PropertyNotImplementedError(
-                'Cannot change {} through IPI protocol.  '
-                'Please create new socket calculator.'
-                .format(bad if len(bad) > 1 else bad[0]))
+                f'Cannot change {bad if len(bad) > 1 else bad[0]} through IPI protocol.  Please create new socket calculator.'
+            )
 
         self.atoms = atoms.copy()
 

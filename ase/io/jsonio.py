@@ -18,9 +18,9 @@ def default(obj):
         dct = obj.todict()
 
         if not isinstance(dct, dict):
-            raise RuntimeError('todict() of {} returned object of type {} '
-                               'but should have returned dict'
-                               .format(obj, type(dct)))
+            raise RuntimeError(
+                f'todict() of {obj} returned object of type {type(dct)} but should have returned dict'
+            )
         if hasattr(obj, 'ase_objtype'):
             # We modify the dictionary, so it is wise to take a copy.
             dct = dct.copy()
@@ -116,8 +116,9 @@ def create_ase_object(objtype, dct):
         from ase.vibrations import VibrationsData
         obj = VibrationsData.fromdict(dct)
     else:
-        raise ValueError('Do not know how to decode object type {} '
-                         'into an actual object'.format(objtype))
+        raise ValueError(
+            f'Do not know how to decode object type {objtype} into an actual object'
+        )
     assert obj.ase_objtype == objtype
     return obj
 

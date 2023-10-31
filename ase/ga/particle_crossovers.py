@@ -150,8 +150,7 @@ class CutSpliceCrossover(Crossover):
         for atom in chain(tmpf, tmpm):
             indi.append(atom)
 
-        parent_message = ':Parents {} {}'.format(f.info['confid'],
-                                                 m.info['confid'])
+        parent_message = f":Parents {f.info['confid']} {m.info['confid']}"
         return (self.finalize_individual(indi),
                 self.descriptor + parent_message)
 

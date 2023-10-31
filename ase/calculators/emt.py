@@ -83,8 +83,7 @@ class EMT(Calculator):
             if Z not in self.par:
                 sym = chemical_symbols[Z]
                 if sym not in parameters:
-                    raise NotImplementedError('No EMT-potential for {}'
-                                              .format(sym))
+                    raise NotImplementedError(f'No EMT-potential for {sym}')
                 p = parameters[sym]
                 s0 = p[1] * Bohr
                 eta2 = p[3] / Bohr

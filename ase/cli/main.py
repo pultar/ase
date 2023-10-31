@@ -111,8 +111,7 @@ def main(prog='ase', description='ASE command line tool.',
                 raise
             else:
                 l1 = f'{x.__class__.__name__}: {x}\n'
-                l2 = ('To get a full traceback, use: {} -T {} ...'
-                      .format(prog, args.command))
+                l2 = f'To get a full traceback, use: {prog} -T {args.command} ...'
                 parser.error(l1 + l2)
 
 

@@ -554,9 +554,8 @@ class View:
 
     def draw_frame_number(self):
         x, y = self.window.size
-        self.window.text(x, y, '{}/{}'.format(self.frame + 1,
-                                              len(self.images)),
-                         anchor='SE')
+        self.window.text(
+            x, y, f'{self.frame + 1}/{len(self.images)}', anchor='SE')
 
     def release(self, event):
         if event.button in [4, 5]:

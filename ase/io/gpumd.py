@@ -73,9 +73,9 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
             all_indices = [i for group in grouping for i in group]
             if len(all_indices) != len(atoms) or\
                     set(all_indices) != set(range(len(atoms))):
-                raise ValueError('The indices listed in grouping method {} are'
-                                 ' not compatible with the input'
-                                 ' structure!'.format(g))
+                raise ValueError(
+                    f'The indices listed in grouping method {g} are not compatible with the input structure!'
+                )
 
     # If not specified, estimate the maximum_neighbors
     if maximum_neighbors is None:
@@ -98,9 +98,9 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
         triclinic = 0
     else:
         triclinic = 1
-    lines.append('{} {} {} {} {} {}'.format(len(atoms), maximum_neighbors,
-                                            cutoff, triclinic, has_velocity,
-                                            number_of_grouping_methods))
+    lines.append(
+        f'{len(atoms)} {maximum_neighbors} {cutoff} {triclinic} {has_velocity} {number_of_grouping_methods}'
+    )
     if triclinic:
         lines.append((' {}' * 12)[1:].format(*atoms.pbc.astype(int),
                                              *atoms.cell[:].flatten()))
@@ -226,8 +226,9 @@ def load_xyz_input_gpumd(fd, species=None, isotope_masses=None):
                 symbol = type_symbol_map[atom_type]
         else:
             if atom_type > len(species):
-                raise Exception('There is no entry for atom type {} in the '
-                                'species list!'.format(atom_type))
+                raise Exception(
+                    f'There is no entry for atom type {atom_type} in the species list!'
+                )
             symbol = species[atom_type]
         symbols.append(symbol)
 

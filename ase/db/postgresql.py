@@ -73,7 +73,7 @@ class Cursor:
         else:
             q = ', '.join('?' * N)
         statement = statement.replace(f'({q})', '%s')
-        q = '({})'.format(q.replace('?', '%s'))
+        q = f"({q.replace('?', '%s')})"
 
         execute_values(self.cur, statement.replace('?', '%s'),
                        argslist=args[0], template=q, page_size=len(args[0]))

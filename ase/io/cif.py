@@ -132,8 +132,9 @@ def parse_cif_loop_data(lines: List[str],
             for i, token in enumerate(tokens):
                 columns[i].append(convert_value(token))
         else:
-            warnings.warn('Wrong number {} of tokens, expected {}: {}'
-                          .format(len(tokens), ncolumns, tokens))
+            warnings.warn(
+                f'Wrong number {len(tokens)} of tokens, expected {ncolumns}: {tokens}'
+            )
 
         # (Due to continue statements we cannot move this to start of loop)
         tokens = []

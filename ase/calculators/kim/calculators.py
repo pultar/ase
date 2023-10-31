@@ -135,9 +135,7 @@ def LAMMPSLibCalculator(model_name, supported_species,
     for i_s, s in enumerate(supported_species):
         atom_types[s] = i_s + 1
 
-    kim_interactions = [
-        "kim_interactions {}".format(
-            (" ").join(supported_species))]
+    kim_interactions = [f'kim_interactions {" ".join(supported_species)}']
 
     # Return LAMMPSlib calculator
     return LAMMPSlib(
@@ -178,28 +176,23 @@ def ASAPCalculator(model_name, model_type, options, **kwargs):
         # Verify units (ASAP models are expected to work with "ase" units)
         if supported_units != "ase":
             raise KIMCalculatorError(
-                'KIM Simulator Model units are "{}", but expected to '
-                'be "ase" for ASAP.'.format(supported_units)
+                f'KIM Simulator Model units are "{supported_units}", but expected to be "ase" for ASAP.'
             )
 
         # Check model_defn to make sure there's only one element in it
         # that is a non-empty string
         if len(model_defn) == 0:
             raise KIMCalculatorError(
-                "model-defn is an empty list in metadata file of "
-                "Simulator Model {}".format(model_name)
+                f"model-defn is an empty list in metadata file of Simulator Model {model_name}"
             )
         elif len(model_defn) > 1:
             raise KIMCalculatorError(
-                "model-defn should contain only one entry for an ASAP "
-                "model (found {} lines)".format(len(model_defn))
+                f"model-defn should contain only one entry for an ASAP model (found {len(model_defn)} lines)"
             )
 
         if "" in model_defn:
             raise KIMCalculatorError(
-                "model-defn contains an empty string in metadata "
-                "file of Simulator "
-                "Model {}".format(model_name)
+                f"model-defn contains an empty string in metadata file of Simulator Model {model_name}"
             )
 
         model_defn = model_defn[0].strip()
@@ -230,8 +223,7 @@ def ASAPCalculator(model_name, model_type, options, **kwargs):
 
         if not model_defn_is_valid:
             raise KIMCalculatorError(
-                'Unknown model "{}" requested for simulator asap.'.format(
-                    model_defn)
+                f'Unknown model "{model_defn}" requested for simulator asap.'
             )
 
         # Disable undocumented feature for the EMT self.calculators to
@@ -253,11 +245,6 @@ def _check_conflict_options(options, options_not_allowed, simulator):
     if common:
         options_in_not_allowed = ", ".join([f'"{s}"' for s in common])
 
-        msg = (
-            'Simulator "{}" does not support argument(s): '
-            '{} provided in "options", '
-            "because it is (they are) determined internally within the KIM "
-            "calculator".format(simulator, options_in_not_allowed)
-        )
+        msg = f'Simulator "{simulator}" does not support argument(s): {options_in_not_allowed} provided in "options", because it is (they are) determined internally within the KIM calculator'
 
         raise KIMCalculatorError(msg)

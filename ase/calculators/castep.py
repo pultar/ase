@@ -1610,8 +1610,8 @@ End CASTEP Interface Documentation
         if not os.path.isdir(self._castep_pp_path):
             if self._pedantic:
                 warnings.warn(
-                    'Cannot search directory: {} Folder does not exist'
-                    .format(self._castep_pp_path))
+                    f'Cannot search directory: {self._castep_pp_path} Folder does not exist'
+                )
             return
 
         # translate the bash wildcard syntax to regex
@@ -1641,16 +1641,15 @@ End CASTEP Interface Documentation
                     pps.append(f)
             if not pps:
                 if self._pedantic:
-                    warnings.warn('Pseudopotential for species {} not found!'
-                                  .format(elem))
+                    warnings.warn(
+                        f'Pseudopotential for species {elem} not found!')
             elif not len(pps) == 1:
                 raise RuntimeError(
-                    'Pseudopotential for species ''{} not unique!\n'
-                    .format(elem)
-                    + 'Found the following files in {}\n'
-                    .format(self._castep_pp_path)
-                    + '\n'.join([f'    {pp}' for pp in pps]) +
-                    '\nConsider a stricter search pattern in `find_pspots()`.')
+                    f'Pseudopotential for species {elem} not unique!\n'
+                    f'Found the following files in {self._castep_pp_path}\n'
+                    '\n'.join([f'    {pp}' for pp in pps])
+                    '\nConsider a stricter search pattern in `find_pspots()`.'
+                )
             else:
                 self.cell.species_pot = (elem, pps[0])
 
@@ -1948,9 +1947,9 @@ End CASTEP Interface Documentation
         self._calls += 1
 
         # run castep itself
-        stdout, stderr = shell_stdouterr('{} {}'.format(self._castep_command,
-                                                        self._seed),
-                                         cwd=self._directory)
+        stdout, stderr = shell_stdouterr(
+            f'{self._castep_command} {self._seed}', cwd=self._directory
+        )
         if stdout:
             print(f'castep call stdout:\n{stdout}')
         if stderr:
@@ -2161,11 +2160,9 @@ End CASTEP Interface Documentation
             return
         write_param(os.path.join(temp_dir, f'{seed}.param'), self.param, )
 
-        stdout, stderr = shell_stdouterr(('{} {} {}'.format(
-            self._castep_command,
-            seed,
-            dryrun_flag)),
-            cwd=temp_dir)
+        stdout, stderr = shell_stdouterr(
+            f'{self._castep_command} {seed} {dryrun_flag}', cwd=temp_dir
+        )
 
         if stdout:
             print(stdout)

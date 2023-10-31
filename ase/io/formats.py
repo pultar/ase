@@ -67,14 +67,14 @@ class IOFormat:
         if mode not in list('rwa'):
             raise ValueError("Only modes allowed are 'r', 'w', and 'a'")
         if mode == 'r' and not self.can_read:
-            raise NotImplementedError('No reader implemented for {} format'
-                                      .format(self.name))
+            raise NotImplementedError(
+                f'No reader implemented for {self.name} format')
         if mode == 'w' and not self.can_write:
-            raise NotImplementedError('No writer implemented for {} format'
-                                      .format(self.name))
+            raise NotImplementedError(
+                f'No writer implemented for {self.name} format')
         if mode == 'a' and not self.can_append:
-            raise NotImplementedError('Appending not supported by {} format'
-                                      .format(self.name))
+            raise NotImplementedError(
+                f'Appending not supported by {self.name} format')
 
         if self.isbinary:
             mode += 'b'
@@ -133,7 +133,7 @@ class IOFormat:
     def __repr__(self) -> str:
         tokens = [f'{name}={repr(value)}'
                   for name, value in vars(self).items()]
-        return 'IOFormat({})'.format(', '.join(tokens))
+        return f"IOFormat({', '.join(tokens)})"
 
     def __getitem__(self, i):
         # For compatibility.
@@ -705,8 +705,7 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
 
     if io.single:
         if len(images) > 1:
-            raise ValueError('{}-format can only store 1 Atoms object.'
-                             .format(format))
+            raise ValueError(f'{format}-format can only store 1 Atoms object.')
         images = images[0]
 
     if not io.can_write:
@@ -735,14 +734,13 @@ def _write(filename, fd, format, io, images, parallel=None, append=False,
                 fd.close()
     else:
         if fd is not None:
-            raise ValueError("Can't write {}-format to file-descriptor"
-                             .format(format))
+            raise ValueError(f"Can't write {format}-format to file-descriptor")
         if io.can_append:
             return io.write(filename, images, append=append, **kwargs)
         elif append:
-            raise ValueError("Cannot append to {}-format, write-function "
-                             "does not support the append keyword."
-                             .format(format))
+            raise ValueError(
+                f"Cannot append to {format}-format, write-function does not support the append keyword."
+            )
         else:
             return io.write(filename, images, **kwargs)
 

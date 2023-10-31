@@ -125,10 +125,9 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             warn(('Specifying directory in "label" is deprecated, '
                   'use "directory" instead.'), np.VisibleDeprecationWarning)
             if self.directory != '.':
-                raise ValueError('Directory redundantly specified though '
-                                 'directory="{}" and label="{}".  '
-                                 'Please omit "/" in label.'.format(
-                                     self.directory, label))
+                raise ValueError(
+                    f'Directory redundantly specified though directory="{self.directory}" and label="{label}".  Please omit "/" in label.'
+                )
             self.label = label
         else:
             self.prefix = label  # The label should only contain the prefix
@@ -186,10 +185,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
                         cmd = ' '.join([exe, cmd])
                     break
             else:
-                msg = ('Please set either command in calculator'
-                       ' or one of the following environment '
-                       'variables (prioritized as follows): {}').format(
-                           ', '.join(self.env_commands))
+                msg = f"Please set either command in calculator or one of the following environment variables (prioritized as follows): {', '.join(self.env_commands)}"
                 raise calculator.CalculatorSetupError(msg)
         return cmd
 
@@ -285,8 +281,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
             elif hasattr(txt, 'write'):
                 out = txt
             else:
-                raise RuntimeError('txt should either be a string'
-                                   'or an I/O stream, got {}'.format(txt))
+                raise RuntimeError(
+                    f'txt should either be a stringor an I/O stream, got {txt}')
 
         try:
             if open_and_close:
@@ -1337,5 +1333,5 @@ def check_atoms_type(atoms: ase.Atoms) -> None:
     """
     if not isinstance(atoms, ase.Atoms):
         raise calculator.CalculatorSetupError(
-            'Expected an Atoms object, '
-            'instead got object of type {}'.format(type(atoms)))
+            f'Expected an Atoms object, instead got object of type {type(atoms)}'
+        )

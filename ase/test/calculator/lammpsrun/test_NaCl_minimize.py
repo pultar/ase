@@ -22,8 +22,10 @@ def test_NaCl_minimize(factory):
     pair_coeff = ['1 1 3796.9 0.2603 124.90']
     pair_coeff += ['2 2 1227.2 0.3214 124.90']
     pair_coeff += ['1 2 4117.9 0.3048 0.0']
-    masses = ['1 {}'.format(atomic_masses[atomic_numbers['Na']]),
-              '2 {}'.format(atomic_masses[atomic_numbers['Cl']])]
+    masses = [
+        f"1 {atomic_masses[atomic_numbers['Na']]}",
+        f"2 {atomic_masses[atomic_numbers['Cl']]}",
+    ]
 
     with factory.calc(
             specorder=['Na', 'Cl'],

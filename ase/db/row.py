@@ -126,8 +126,7 @@ class AtomsRow:
         setattr(self, key, value)
 
     def __str__(self):
-        return '<AtomsRow: formula={}, keys={}>'.format(
-            self.formula, ','.join(self._keys))
+        return f"<AtomsRow: formula={self.formula}, keys={','.join(self._keys)}>"
 
     @property
     def constraints(self):

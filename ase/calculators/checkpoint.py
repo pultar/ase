@@ -99,14 +99,12 @@ class Checkpoint:
             self.checkpoint_id += [1]
         else:
             self.checkpoint_id[-1] += 1
-        self.logfile.write('Entered checkpoint region '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(f'Entered checkpoint region {self.checkpoint_id}.\n')
 
         self.in_checkpointed_region = True
 
     def _decrease_checkpoint_id(self):
-        self.logfile.write('Leaving checkpoint region '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(f'Leaving checkpoint region {self.checkpoint_id}.\n')
         if not self.in_checkpointed_region:
             self.checkpoint_id = self.checkpoint_id[:-1]
             assert len(self.checkpoint_id) >= 1
@@ -155,8 +153,8 @@ class Checkpoint:
                     retvals += [data[f'{self._value_prefix}{i}']]
                 i += 1
 
-        self.logfile.write('Successfully restored checkpoint '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            f'Successfully restored checkpoint {self.checkpoint_id}.\n')
         self._decrease_checkpoint_id()
         if len(retvals) == 1:
             return retvals[0]
@@ -195,8 +193,8 @@ class Checkpoint:
             db.write(atoms, checkpoint_id=self._mangled_checkpoint_id(),
                      data=data)
 
-        self.logfile.write('Successfully stored checkpoint '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            f'Successfully stored checkpoint {self.checkpoint_id}.\n')
 
     def flush(self, *args, **kwargs):
         """
@@ -273,8 +271,8 @@ class CheckpointCalculator(Calculator):
             except AssertionError:
                 raise AssertionError('mismatch between current atoms and '
                                      'those read from checkpoint file')
-            self.logfile.write('retrieved results for {} from checkpoint\n'
-                               .format(properties))
+            self.logfile.write(
+                f'retrieved results for {properties} from checkpoint\n')
             # save results in calculator for next time
             if isinstance(self.calculator, Calculator):
                 if not hasattr(self.calculator, 'results'):
@@ -282,14 +280,16 @@ class CheckpointCalculator(Calculator):
                 self.calculator.results.update(dict(zip(properties, results)))
         except NoCheckpoint:
             if isinstance(self.calculator, Calculator):
-                self.logfile.write('doing calculation of {} with new-style '
-                                   'calculator interface\n'.format(properties))
+                self.logfile.write(
+                    f'doing calculation of {properties} with new-style calculator interface\n'
+                )
                 self.calculator.calculate(atoms, properties, system_changes)
                 results = [self.calculator.results[prop]
                            for prop in properties]
             else:
-                self.logfile.write('doing calculation of {} with old-style '
-                                   'calculator interface\n'.format(properties))
+                self.logfile.write(
+                    f'doing calculation of {properties} with old-style calculator interface\n'
+                )
                 results = []
                 for prop in properties:
                     method_name = self.property_to_method_name[prop]

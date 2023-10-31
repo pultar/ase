@@ -150,8 +150,10 @@ class RandomElementMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f": Parent {f.info['confid']}",
+        )
 
 
 def mendeleiev_table():
@@ -292,8 +294,10 @@ class MoveDownMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + f": Parent {f.info['confid']}",
+        )
 
 
 class MoveUpMutation(ElementMutation):
@@ -387,8 +391,10 @@ class MoveUpMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + f": Parent {f.info['confid']}",
+        )
 
 
 class MoveRightMutation(ElementMutation):
@@ -480,8 +486,10 @@ class MoveRightMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + f": Parent {f.info['confid']}",
+        )
 
 
 class MoveLeftMutation(ElementMutation):
@@ -573,8 +581,10 @@ class MoveLeftMutation(ElementMutation):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                used_descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            used_descriptor + f":Parent {f.info['confid']}",
+        )
 
 
 class FullElementMutation(OffspringCreator):
@@ -624,5 +634,7 @@ class FullElementMutation(OffspringCreator):
                 a.symbol = new_element
             indi.append(a)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ': Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f": Parent {f.info['confid']}",
+        )

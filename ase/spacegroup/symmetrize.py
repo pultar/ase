@@ -210,13 +210,13 @@ class FixSymmetry(FixConstraint):
         # gradient
         max_delta_deform_grad = np.max(np.abs(delta_deform_grad))
         if max_delta_deform_grad > 0.25:
-            raise RuntimeError('FixSymmetry adjust_cell does not work properly'
-                               ' with large deformation gradient step {} > 0.25'
-                               .format(max_delta_deform_grad))
+            raise RuntimeError(
+                f'FixSymmetry adjust_cell does not work properly with large deformation gradient step {max_delta_deform_grad} > 0.25'
+            )
         elif max_delta_deform_grad > 0.15:
-            warnings.warn('FixSymmetry adjust_cell may be ill behaved with'
-                          ' large deformation gradient step {}'
-                          .format(max_delta_deform_grad))
+            warnings.warn(
+                f'FixSymmetry adjust_cell may be ill behaved with large deformation gradient step {max_delta_deform_grad}'
+            )
 
         symmetrized_delta_deform_grad = symmetrize_rank2(cur_cell, cur_cell_inv,
                                                          delta_deform_grad,
@@ -253,10 +253,9 @@ class FixSymmetry(FixConstraint):
 
     def index_shuffle(self, atoms, ind):
         if len(atoms) != len(ind) or len(set(ind)) != len(ind):
-            raise RuntimeError("FixSymmetry can only accomodate atom"
-                               " permutions, and len(Atoms) == {} "
-                               "!= len(ind) == {} or ind has duplicates"
-                               .format(len(atoms), len(ind)))
+            raise RuntimeError(
+                f"FixSymmetry can only accomodate atom permutions, and len(Atoms) == {len(atoms)} != len(ind) == {len(ind)} or ind has duplicates"
+            )
 
         ind_reversed = np.zeros((len(ind)), dtype=int)
         ind_reversed[ind] = range(len(ind))

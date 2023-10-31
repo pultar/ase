@@ -136,9 +136,9 @@ def key_val_str_to_dict(string, sep=None):
             # convert special 3x3 matrices
             if key in SPECIAL_3_3_KEYS:
                 if not isinstance(value, np.ndarray) or value.shape != (9,):
-                    raise ValueError("Got info item {}, expecting special 3x3 "
-                                     "matrix, but value is not in the form of "
-                                     "a 9-long numerical vector".format(key))
+                    raise ValueError(
+                        f"Got info item {key}, expecting special 3x3 matrix, but value is not in the form of a 9-long numerical vector"
+                    )
                 value = np.array(value).reshape((3, 3), order='F')
 
             # parse special strings as boolean or JSON
@@ -414,8 +414,9 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
         try:
             line = next(lines)
         except StopIteration:
-            raise XYZError('ase.io.extxyz: Frame has {} atoms, expected {}'
-                           .format(len(data), natoms))
+            raise XYZError(
+                f'ase.io.extxyz: Frame has {len(data)} atoms, expected {natoms}'
+            )
         vals = line.split()
         row = tuple([conv(val) for conv, val in zip(convs, vals)])
         data.append(row)
@@ -432,8 +433,9 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             try:
                 line = next(lines)
             except StopIteration:
-                raise XYZError('ase.io.adfxyz: Frame has {} cell vectors, '
-                               'expected {}'.format(len(cell), nvec))
+                raise XYZError(
+                    f'ase.io.adfxyz: Frame has {len(cell)} cell vectors, expected {nvec}'
+                )
             entry = line.split()
 
             if not entry[0].startswith('VEC'):
@@ -442,11 +444,10 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             try:
                 n = int(entry[0][3:])
             except ValueError as e:
-                raise XYZError('Expected VEC{}, got VEC{}'
-                               .format(ln + 1, entry[0][3:])) from e
+                raise XYZError(
+                    f'Expected VEC{ln + 1}, got VEC{entry[0][3:]}') from e
             if n != ln + 1:
-                raise XYZError('Expected VEC{}, got VEC{}'
-                               .format(ln + 1, n))
+                raise XYZError(f'Expected VEC{ln + 1}, got VEC{n}')
 
             cell[ln] = np.array([float(x) for x in entry[1:]])
             pbc[ln] = True
@@ -714,8 +715,7 @@ def read_xyz(fileobj, index=-1, properties_parser=key_val_str_to_dict):
         try:
             natoms = int(line)
         except ValueError as err:
-            raise XYZError('ase.io.extxyz: Expected xyz header but got: {}'
-                           .format(err))
+            raise XYZError(f'ase.io.extxyz: Expected xyz header but got: {err}')
         fileobj.readline()  # read comment line
         for i in range(natoms):
             fileobj.readline()
@@ -969,9 +969,9 @@ def write_xyz(fileobj, images, comment='', columns=None,
                 if key not in fr_cols:
                     fr_cols += [key]
                 else:
-                    warnings.warn('write_xyz() overwriting array "{}" present '
-                                  'in atoms.arrays with stored results '
-                                  'from calculator'.format(key))
+                    warnings.warn(
+                        f'write_xyz() overwriting array "{key}" present in atoms.arrays with stored results from calculator'
+                    )
             arrays.update(per_atom_results)
 
         comm, ncols, dtype, fmt = output_column_format(atoms,

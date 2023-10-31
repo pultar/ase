@@ -291,8 +291,9 @@ def verify_cell_for_export(cell, check_orthorhombric=True):
         raise ValueError('To export to this format, the cell needs to be '
                          'orthorhombic.')
     if cell.rank < 3:
-        raise ValueError('To export to this format, the cell size needs '
-                         'to be set: current cell is {}.'.format(cell))
+        raise ValueError(
+            f'To export to this format, the cell size needs to be set: current cell is {cell}.'
+        )
 
 
 def verify_dictionary(atoms, dictionary, dictionary_name):
@@ -318,5 +319,6 @@ def verify_dictionary(atoms, dictionary, dictionary_name):
     # Check if we have enough key
     for key in set(atoms.symbols):
         if key not in dictionary:
-            raise ValueError('Missing the {} key in the `{}` dictionary.'
-                             ''.format(key, dictionary_name))
+            raise ValueError(
+                f'Missing the {key} key in the `{dictionary_name}` dictionary.'
+            )

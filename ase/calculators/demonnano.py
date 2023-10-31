@@ -181,8 +181,7 @@ class DemonNano(FileIOCalculator):
         rpath = pl.Path(restart_path)
 
         if not (rpath / 'deMon.inp').exists():
-            raise ReadError('The restart_path file {} does not exist'
-                            .format(rpath))
+            raise ReadError(f'The restart_path file {rpath} does not exist')
 
         self.atoms = self.deMon_inp_to_atoms(rpath / 'deMon.inp')
 
@@ -264,8 +263,8 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                f'The deMonNano output file for ASE {epath} does not exist')
 
         filename = self.label + '/deMon.ase'
 
@@ -285,8 +284,8 @@ class DemonNano(FileIOCalculator):
         epath = pl.Path(self.label)
 
         if not (epath / 'deMon.ase').exists():
-            raise ReadError('The deMonNano output file for ASE {} does not exist'
-                            .format(epath))
+            raise ReadError(
+                f'The deMonNano output file for ASE {epath} does not exist')
 
         filename = self.label + '/deMon.ase'
 

@@ -423,9 +423,12 @@ class CLICommand:
         parser.add_argument('-p', '--plot', action='store_true',
                             help='Plot EOS fit.  Default behaviour is '
                             'to write results of fit.')
-        parser.add_argument('-t', '--type', default='sj',
-                            help='Type of fit.  Must be one of {}.'
-                            .format(', '.join(eos_names)))
+        parser.add_argument(
+            '-t',
+            '--type',
+            default='sj',
+            help=f"Type of fit.  Must be one of {', '.join(eos_names)}.",
+        )
 
     @staticmethod
     def run(args):

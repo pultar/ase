@@ -188,8 +188,9 @@ class VibrationsData:
                 and hessian.shape == tuple(ref_shape)):
             return n_atoms
         else:
-            raise ValueError("Hessian for these atoms should be a "
-                             "{} numpy array.".format(ref_shape_txt))
+            raise ValueError(
+                f"Hessian for these atoms should be a {ref_shape_txt} numpy array."
+            )
 
     def get_atoms(self) -> Atoms:
         return self._atoms.copy()

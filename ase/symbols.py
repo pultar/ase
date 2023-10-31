@@ -121,8 +121,8 @@ class Symbols(collections.abc.Sequence):
         See documentation of ase.atoms.Atoms.get_chemical_formula()."""
         # XXX Delegate the work to the Formula object!
         if mode in ('reduce', 'all') and empirical:
-            warnings.warn("Empirical chemical formula not available "
-                          "for mode '{}'".format(mode))
+            warnings.warn(
+                f"Empirical chemical formula not available for mode '{mode}'")
 
         if len(self) == 0:
             return ''

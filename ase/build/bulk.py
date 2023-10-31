@@ -116,9 +116,9 @@ def bulk(
     natoms = len(string2symbols(name))
     natoms0 = structures[crystalstructure]
     if natoms != natoms0:
-        raise ValueError('Please specify {} for {} and not {}'
-                         .format(plural(natoms0, 'atom'),
-                                 crystalstructure, natoms))
+        raise ValueError(
+            f"Please specify {plural(natoms0, 'atom')} for {crystalstructure} and not {natoms}"
+        )
 
     if alpha is None:
         alpha = ref.get('alpha')

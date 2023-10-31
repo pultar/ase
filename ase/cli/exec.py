@@ -53,8 +53,7 @@ class CLICommand:
             parser.error("At least one of '-e' or '-E' must be provided")
 
         if args.read_args:
-            args.read_args = eval("dict({})"
-                                  .format(', '.join(args.read_args)))
+            args.read_args = eval(f"dict({', '.join(args.read_args)})")
 
         configs = []
         for filename in args.input:

@@ -75,11 +75,10 @@ def _read_fdf_lines(file):
                         lines += [' '.join(x) for x in fdf[label]]
                         lines.append('%%endblock %s' % label)
                     else:
-                        lines.append('{} {}'.format(
-                            label, ' '.join(fdf[label])))
-                # else:
-                #    label unresolved!
-                #    One should possibly issue a warning about this!
+                        lines.append(f"{label} {' '.join(fdf[label])}")
+                        # else:
+                        #    label unresolved!
+                        #    One should possibly issue a warning about this!
         else:
             # Simple include line L
             lines.append(L)

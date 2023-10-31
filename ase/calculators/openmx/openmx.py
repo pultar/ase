@@ -119,9 +119,9 @@ class OpenMX(FileIOCalculator):
             for key in pbs:
                 if key not in self.default_pbs:
                     allowed = ', '.join(list(self.default_pbs.keys()))
-                    raise TypeError('Unexpected keyword "{}" in "pbs" '
-                                    'dictionary.  Must be one of: {}'
-                                    .format(key, allowed))
+                    raise TypeError(
+                        f'Unexpected keyword "{key}" in "pbs" dictionary.  Must be one of: {allowed}'
+                    )
             # Put dictionary into python variable
             self.pbs.update(pbs)
             self.__dict__.update(self.pbs)
@@ -134,9 +134,9 @@ class OpenMX(FileIOCalculator):
             for key in mpi:
                 if key not in self.default_mpi:
                     allowed = ', '.join(list(self.default_mpi.keys()))
-                    raise TypeError('Unexpected keyword "{}" in "mpi" '
-                                    'dictionary.  Must be one of: {}'
-                                    .format(key, allowed))
+                    raise TypeError(
+                        f'Unexpected keyword "{key}" in "mpi" dictionary.  Must be one of: {allowed}'
+                    )
             # Put dictionary into python variable
             self.mpi.update(mpi)
             self.__dict__.update(self.mpi)
@@ -424,9 +424,9 @@ class OpenMX(FileIOCalculator):
                 for subkey in kwargs[key]:
                     if subkey not in default_dict:
                         allowed = ', '.join(list(default_dict.keys()))
-                        raise TypeError('Unknown subkeyword "{}" of keyword '
-                                        '"{}".  Must be one of: {}'
-                                        .format(subkey, key, allowed))
+                        raise TypeError(
+                            f'Unknown subkeyword "{subkey}" of keyword "{key}".  Must be one of: {allowed}'
+                        )
 
         # Find out what parameter has been changed
         changed_parameters = {}

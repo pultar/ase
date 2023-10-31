@@ -109,8 +109,10 @@ class RandomMutation(Mutation):
         for atom in to_mut:
             indi.append(atom)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
     @classmethod
     def random_vector(cls, length, rng=np.random):
@@ -151,8 +153,10 @@ class RandomPermutation(Mutation):
         for atom in f:
             indi.append(atom)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
     @classmethod
     def mutate(cls, atoms, elements=None, rng=np.random):
@@ -215,8 +219,10 @@ class COM2surfPermutation(Mutation):
         for atom in f:
             indi.append(atom)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
     @classmethod
     def mutate(cls, atoms, elements, min_ratio, rng=np.random):
@@ -366,8 +372,10 @@ class Poor2richPermutation(_NeighborhoodPermutation):
         for atom in f:
             indi.append(atom)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
     @classmethod
     def mutate(cls, atoms, elements, rng=np.random):
@@ -422,8 +430,10 @@ class Rich2poorPermutation(_NeighborhoodPermutation):
         for atom in f:
             indi.append(atom)
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
     @classmethod
     def mutate(cls, atoms, elements, rng=np.random):
@@ -469,8 +479,10 @@ class SymmetricSubstitute(Mutation):
         indi = self.initialize_individual(f, indi)
         indi.info['data']['parents'] = [f.info['confid']]
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )
 
 
 class RandomSubstitute(Mutation):
@@ -505,5 +517,7 @@ class RandomSubstitute(Mutation):
         indi = self.initialize_individual(f, indi)
         indi.info['data']['parents'] = [f.info['confid']]
 
-        return (self.finalize_individual(indi),
-                self.descriptor + ':Parent {}'.format(f.info['confid']))
+        return (
+            self.finalize_individual(indi),
+            self.descriptor + f":Parent {f.info['confid']}",
+        )

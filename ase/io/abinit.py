@@ -246,8 +246,8 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
     fd.write(f'{1.0:.14f} {1.0:.14f} {1.0:.14f} Angstrom\n')
     fd.write('rprim\n')
     if atoms.cell.rank != 3:
-        raise RuntimeError('Abinit requires a 3D cell, but cell is {}'
-                           .format(atoms.cell))
+        raise RuntimeError(
+            f'Abinit requires a 3D cell, but cell is {atoms.cell}')
     for v in atoms.cell:
         fd.write('%.14f %.14f %.14f\n' % tuple(v))
 
@@ -255,7 +255,7 @@ def write_abinit_in(fd, atoms, param=None, species=None, pseudos=None):
 
     fd.write('#Definition of the atom types\n')
     fd.write('ntypat %d\n' % (len(species)))
-    fd.write('znucl {}\n'.format(' '.join(str(Z) for Z in species)))
+    fd.write(f"znucl {' '.join(str(Z) for Z in species)}\n")
     fd.write('#Enumerate different atomic species\n')
     fd.write('typat')
     fd.write('\n')
@@ -731,10 +731,9 @@ def get_ppp_list(atoms, species, raise_exception, xc, pps,
                 break
 
         if not found:
-            ppp_list.append("Provide {}.{}.{}?".format(symbol, '*', pps))
+            ppp_list.append(f"Provide {symbol}.{'*'}.{pps}?")
             if raise_exception:
-                msg = ('Could not find {} pseudopotential {} for {} in {}'
-                       .format(xcname.lower(), pps, symbol, search_paths))
+                msg = f'Could not find {xcname.lower()} pseudopotential {pps} for {symbol} in {search_paths}'
                 raise RuntimeError(msg)
 
     return ppp_list

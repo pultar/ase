@@ -370,9 +370,8 @@ class VaspFactory:
         if Vasp.VASP_PP_PATH not in os.environ:
             # For now, we skip with a message that we cannot run the test
             pytest.skip(
-                'No VASP pseudopotential path set. '
-                'Set the ${} environment variable to enable.'
-                .format(Vasp.VASP_PP_PATH))
+                f'No VASP pseudopotential path set. Set the ${Vasp.VASP_PP_PATH} environment variable to enable.'
+            )
         return Vasp(command=self.executable, **kwargs)
 
     @classmethod

@@ -110,7 +110,7 @@ def test_basic_example_main_run(seed, testdir):
     while da.get_number_of_unrelaxed_candidates() > 0:
         a = da.get_an_unrelaxed_candidate()
         a.calc = EMT()
-        print('Relaxing starting candidate {}'.format(a.info['confid']))
+        print(f"Relaxing starting candidate {a.info['confid']}")
         with BFGS(a, trajectory=None, logfile=None) as dyn:
             dyn.run(fmax=0.05, steps=100)
         set_raw_score(a, -a.get_potential_energy())

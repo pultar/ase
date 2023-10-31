@@ -38,18 +38,13 @@ def lammps_create_atoms(fileobj, parameters, atoms, prismobj):
                                         "distance", "ASE", parameters.units)
 
     if parameters["always_triclinic"] or prismobj.is_skewed():
-        fileobj.write(
-            "region asecell prism 0.0 {} 0.0 {} 0.0 {} ".format(
-                xhi, yhi, zhi
-            )
-        )
+        fileobj.write(f"region asecell prism 0.0 {xhi} 0.0 {yhi} 0.0 {zhi} ")
         fileobj.write(
             f"{xy} {xz} {yz} side in units box\n"
         )
     else:
         fileobj.write(
-            "region asecell block 0.0 {} 0.0 {} 0.0 {} "
-            "side in units box\n".format(xhi, yhi, zhi)
+            f"region asecell block 0.0 {xhi} 0.0 {yhi} 0.0 {zhi} side in units box\n"
         )
 
     symbols = atoms.get_chemical_symbols()
@@ -62,9 +57,7 @@ def lammps_create_atoms(fileobj, parameters, atoms, prismobj):
 
     species_i = {s: i + 1 for i, s in enumerate(species)}
 
-    fileobj.write(
-        "create_box {} asecell\n" "".format(len(species))
-    )
+    fileobj.write(f"create_box {len(species)} asecell\n")
     for sym, pos in zip(symbols, atoms.get_positions()):
         # Convert position from ASE units to LAMMPS units
         pos = convert(pos, "distance", "ASE", parameters.units)

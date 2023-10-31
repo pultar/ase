@@ -291,10 +291,7 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
         box_hi = [xhi, yhi, zhi]
 
         if change:
-            cell_cmd = ('change_box all     '
-                        'x final 0 {} y final 0 {} z final 0 {}      '
-                        'xy final {} xz final {} yz final {} units box'
-                        ''.format(xhi, yhi, zhi, xy, xz, yz))
+            cell_cmd = f'change_box all     x final 0 {xhi} y final 0 {yhi} z final 0 {zhi}      xy final {xy} xz final {xz} yz final {yz} units box'
             if self.parameters.post_changebox_cmds is not None:
                 for cmd in self.parameters.post_changebox_cmds:
                     self.lmp.command(cmd)
@@ -589,8 +586,7 @@ xz and yz are the tilt of the lattice vectors, all to be edited.
             cmd = f"create_atoms 1 random {n_diff} 1 NULL"
             self.lmp.command(cmd)
         elif n_diff < 0:
-            cmd = "group delatoms id {}:{}".format(
-                len(atoms.numbers) + 1, len(self.previous_atoms_numbers))
+            cmd = f"group delatoms id {len(atoms.numbers) + 1}:{len(self.previous_atoms_numbers)}"
             self.lmp.command(cmd)
             cmd = "delete_atoms group delatoms"
             self.lmp.command(cmd)

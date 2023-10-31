@@ -108,9 +108,7 @@ class XYZPrismaticWriter:
     def _get_file_header(self):
         # 1st line: comment line
         if self.comments is None:
-            s = "{} atoms with chemical formula: {}.".format(
-                len(self.atoms),
-                self.atoms.get_chemical_formula())
+            s = f"{len(self.atoms)} atoms with chemical formula: {self.atoms.get_chemical_formula()}."
         else:
             s = self.comments
 

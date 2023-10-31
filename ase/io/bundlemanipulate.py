@@ -38,7 +38,7 @@ def copy_frames(inbundle, outbundle, start=0, end=None, step=1,
         raise OSError("Input BundleTrajectory uses the 'pickle' backend.  " +
                       "This is not longer supported for security reasons")
     else:
-        raise OSError("Unknown backend type '{}'".format(metadata['backend']))
+        raise OSError(f"Unknown backend type '{metadata['backend']}'")
 
     if start < 0:
         start += nframes
@@ -156,8 +156,9 @@ def read_bundle_info(name):
                 "Found obsolete metadata in unsecure Pickle format.  "
                 "Refusing to load.")
         else:
-            raise OSError("'{}' does not appear to be a BundleTrajectory "
-                          "(no {})".format(name, metaname))
+            raise OSError(
+                f"'{name}' does not appear to be a BundleTrajectory (no {metaname})"
+            )
 
     with open(metaname) as fd:
         mdata = json.load(fd)

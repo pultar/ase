@@ -39,7 +39,7 @@ class SinglePointCalculator(Calculator):
             else:
                 txt = f'{key}=...'
             tokens.append(txt)
-        return '{}({})'.format(self.__class__.__name__, ', '.join(tokens))
+        return f"{self.__class__.__name__}({', '.join(tokens)})"
 
     def get_property(self, name, atoms=None, allow_calculation=True):
         if atoms is None:

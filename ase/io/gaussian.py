@@ -139,12 +139,7 @@ def _check_problem_methods(method):
     ''' Check method string for problem methods and warn appropriately'''
     if method.lower() in _problem_methods:
         warnings.warn(
-            'The requested method, {}, is a composite method. Composite '
-            'methods do not have well-defined potential energy surfaces, '
-            'so the energies, forces, and other properties returned by '
-            'ASE may not be meaningful, or they may correspond to a '
-            'different geometry than the one provided. '
-            'Please use these methods with caution.'.format(method)
+            f'The requested method, {method}, is a composite method. Composite methods do not have well-defined potential energy surfaces, so the energies, forces, and other properties returned by ASE may not be meaningful, or they may correspond to a different geometry than the one provided. Please use these methods with caution.'
         )
 
 
@@ -180,11 +175,11 @@ def _pop_link0_params(params):
 def _format_method_basis(output_type, method, basis, fitting_basis):
     output_string = ""
     if basis and method and fitting_basis:
-        output_string = '{} {}/{}/{} ! ASE formatted method and basis'.format(
-            output_type, method, basis, fitting_basis)
+        output_string = f'{output_type} {method}/{basis}/{fitting_basis} ! ASE formatted method and basis'
     elif basis and method:
-        output_string = '{} {}/{} ! ASE formatted method and basis'.format(
-            output_type, method, basis)
+        output_string = (
+            f'{output_type} {method}/{basis} ! ASE formatted method and basis'
+        )
     else:
         output_string = f'{output_type}'
         for value in [method, basis]:
@@ -204,7 +199,7 @@ def _format_route_params(params):
         if not val or (isinstance(val, str) and key.lower() == val.lower()):
             out.append(key)
         elif not isinstance(val, str) and isinstance(val, Iterable):
-            out.append('{}({})'.format(key, ','.join(val)))
+            out.append(f"{key}({','.join(val)})")
         else:
             out.append(f'{key}({val})')
     return out
@@ -705,11 +700,9 @@ def _read_zmatrix(zmatrix_contents, zmatrix_vars=None):
         raise ParseError("Failed to read Z-matrix from "
                          "Gaussian input file: ", e)
     except KeyError as e:
-        raise ParseError("Failed to read Z-matrix from "
-                         "Gaussian input file, as symbol: {}"
-                         "could not be recognised. Please make "
-                         "sure you use element symbols, not "
-                         "atomic numbers in the element labels.".format(e))
+        raise ParseError(
+            f"Failed to read Z-matrix from Gaussian input file, as symbol: {e}could not be recognised. Please make sure you use element symbols, not atomic numbers in the element labels."
+        )
     positions = atoms.positions
     symbols = atoms.get_chemical_symbols()
     return positions, symbols
@@ -807,9 +800,9 @@ def _get_atoms_from_molspec(molspec_section):
     try:
         atoms = Atoms(symbols, positions, pbc=pbc, cell=cell)
     except (IndexError, ValueError, KeyError) as e:
-        raise ParseError("ERROR: Could not read the Gaussian input file, "
-                         "due to a problem with the molecule "
-                         "specification: {}".format(e))
+        raise ParseError(
+            f"ERROR: Could not read the Gaussian input file, due to a problem with the molecule specification: {e}"
+        )
 
     nuclear_props = _get_nuclear_props_for_all_atoms(nuclear_props)
 
@@ -917,16 +910,15 @@ def _validate_params(parameters):
         for v in parameters.values():
             if v is not None and s in str(v):
                 raise ParseError(
-                    "ERROR: Could not read the Gaussian input file"
-                    ", as the option: {} is currently unsupported."
-                    .format(s))
+                    f"ERROR: Could not read the Gaussian input file, as the option: {s} is currently unsupported."
+                )
 
     for k in list(parameters.keys()):
         if "popt" in k:
             parameters["opt"] = parameters.pop(k)
-            warnings.warn("The option {} is currently unsupported. "
-                          "This has been replaced with {}."
-                          .format("POpt", "opt"))
+            warnings.warn(
+                f'The option {"POpt"} is currently unsupported. This has been replaced with {"opt"}.'
+            )
             return
 
 

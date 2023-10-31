@@ -295,17 +295,19 @@ def row2str(row) -> str:
     S.append('')
 
     if 'stress' in t:
-        S += ['Stress tensor (xx, yy, zz, zy, zx, yx) in eV/Ang^3:',
-              '   {}\n'.format(t['stress'])]
+        S += [
+            'Stress tensor (xx, yy, zz, zy, zx, yx) in eV/Ang^3:',
+            f"   {t['stress']}\n",
+        ]
 
     if 'dipole' in t:
-        S.append('Dipole moment in e*Ang: ({})\n'.format(t['dipole']))
+        S.append(f"Dipole moment in e*Ang: ({t['dipole']})\n")
 
     if 'constraints' in t:
-        S.append('Constraints: {}\n'.format(t['constraints']))
+        S.append(f"Constraints: {t['constraints']}\n")
 
     if 'data' in t:
-        S.append('Data: {}\n'.format(t['data']))
+        S.append(f"Data: {t['data']}\n")
 
     width0 = max(max(len(row[0]) for row in t['table']), 3)
     width1 = max(max(len(row[1]) for row in t['table']), 11)

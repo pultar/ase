@@ -23,15 +23,14 @@ def calculate_band_structure(atoms, path=None, scf_kwargs=None,
 
     from ase.lattice import celldiff  # Should this be a method on cell?
     if any(path.cell.any(1) != atoms.pbc):
-        raise ValueError('The band path\'s cell, {}, does not match the '
-                         'periodicity {} of the atoms'
-                         .format(path.cell, atoms.pbc))
+        raise ValueError(
+            f"The band path\'s cell, {path.cell}, does not match the periodicity {atoms.pbc} of the atoms"
+        )
     cell_err = celldiff(path.cell, atoms.cell.uncomplete(atoms.pbc))
     if cell_err > cell_tol:
-        raise ValueError('Atoms and band path have different unit cells.  '
-                         'Please reduce atoms to standard form.  '
-                         'Cell lengths and angles are {} vs {}'
-                         .format(atoms.cell.cellpar(), path.cell.cellpar()))
+        raise ValueError(
+            f'Atoms and band path have different unit cells.  Please reduce atoms to standard form.  Cell lengths and angles are {atoms.cell.cellpar()} vs {path.cell.cellpar()}'
+        )
 
     calc = atoms.calc
     if calc is None:
@@ -78,9 +77,9 @@ def calculate_band_structure(atoms, path=None, scf_kwargs=None,
     ibzkpts = calc.get_ibz_k_points()
     kpts_err = np.abs(path.kpts - ibzkpts).max()
     if kpts_err > kpts_tol:
-        raise RuntimeError('Kpoints of calculator differ from those '
-                           'of the band path we just used; '
-                           'err={} > tol={}'.format(kpts_err, kpts_tol))
+        raise RuntimeError(
+            f'Kpoints of calculator differ from those of the band path we just used; err={kpts_err} > tol={kpts_tol}'
+        )
 
     bs = get_band_structure(atoms, path=path, reference=eref)
     return bs

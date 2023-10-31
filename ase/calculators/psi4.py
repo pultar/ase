@@ -106,7 +106,7 @@ class Psi4(Calculator):
         # Generate the atomic input
         geomline = '{}\t{:.15f}\t{:.15f}\t{:.15f}'
         geom = [geomline.format(atom.symbol, *atom.position) for atom in atoms]
-        geom.append('symmetry {}'.format(self.parameters['symmetry']))
+        geom.append(f"symmetry {self.parameters['symmetry']}")
         geom.append('units angstrom')
 
         charge = self.parameters.get('charge')
@@ -136,12 +136,9 @@ class Psi4(Calculator):
         with open(filename) as fd:
             txt = fd.read()
         if '!ASE Information\n' not in txt:
-            raise Exception('The output file {} could not be read because '
-                            'the file does not contain the "!ASE Information"'
-                            ' lines inserted by this calculator. This likely'
-                            ' means the output file was not made using this '
-                            'ASE calculator or has since been modified and '
-                            'thus cannot be read.'.format(filename))
+            raise Exception(
+                f'The output file {filename} could not be read because the file does not contain the "!ASE Information" lines inserted by this calculator. This likely means the output file was not made using this ASE calculator or has since been modified and thus cannot be read.'
+            )
         info = txt.split('!ASE Information\n')[1]
         info = info.split('!')[0]
         saved_dict = json.loads(info)

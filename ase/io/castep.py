@@ -260,26 +260,21 @@ def write_castep_cell(fd, atoms, positions_frac=False, force_write=False,
             if mass_dict:
                 # no custom species need to be created
                 if len(mass_dict) == 1 and not default:
-                    mass_block.append('{} {}'.format(
-                        el, list(mass_dict.keys())[0]))
-                # for each custom mass, create new species and change names to
-                # match in 'elems' list
+                    mass_block.append(f'{el} {list(mass_dict.keys())[0]}')
                 else:
                     warnings.warn(
-                        'Custom mass specified for '
-                        'standard species {}, creating custom species'
-                        .format(el))
+                        f'Custom mass specified for standard species {el}, creating custom species'
+                    )
 
                     for i, vals in enumerate(mass_dict.items()):
                         mass_val, idxs = vals
                         custom_species_name = f"{el}:{i}"
                         warnings.warn(
-                            'Creating custom species {} with mass {}'.format(
-                                custom_species_name, str(mass_dict)))
+                            f'Creating custom species {custom_species_name} with mass {str(mass_dict)}'
+                        )
                         for idx in idxs:
                             elems[idx] = custom_species_name
-                        mass_block.append('{} {}'.format(
-                            custom_species_name, mass_val))
+                        mass_block.append(f'{custom_species_name} {mass_val}')
 
         setattr(cell, 'species_mass', mass_block)
 

@@ -104,8 +104,8 @@ def readHSX(fname):
 
     sum_row2nnzero = np.sum(row2nnzero)
     if (sum_row2nnzero != nonzero):
-        raise ValueError('sum_row2nnzero != nonzero: {} != {}'
-                         .format(sum_row2nnzero, nonzero))
+        raise ValueError(
+            f'sum_row2nnzero != nonzero: {sum_row2nnzero} != {nonzero}')
 
     row2displ = np.zeros((norbitals), dtype=int)
 

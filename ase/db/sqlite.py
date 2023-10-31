@@ -244,9 +244,9 @@ class SQLite3Database(Database):
                     self._metadata = json.loads(results[0][0])
 
         if self.version > VERSION:
-            raise OSError('Can not read new ase.db format '
-                          '(version {}).  Please update to latest ASE.'
-                          .format(self.version))
+            raise OSError(
+                f'Can not read new ase.db format (version {self.version}).  Please update to latest ASE.'
+            )
         if self.version < 5 and not self._allow_reading_old_format:
             raise OSError('Please convert to new format. ' +
                           'Use: python -m ase.db.convert ' + self.filename)
@@ -590,8 +590,7 @@ class SQLite3Database(Database):
                 elif isinstance(value, bool):
                     jsonop = '->>'
                     value = str(value).lower()
-                where.append("systems.key_value_pairs {} '{}'{}?"
-                             .format(jsonop, key, op))
+                where.append(f"systems.key_value_pairs {jsonop} '{key}'{op}?")
                 args.append(str(value))
 
             elif isinstance(value, str):
@@ -747,8 +746,9 @@ class SQLite3Database(Database):
     def _delete(self, cur, ids, tables=None):
         tables = tables or all_tables[::-1]
         for table in tables:
-            cur.execute('DELETE FROM {} WHERE id in ({});'.
-                        format(table, ', '.join([str(id) for id in ids])))
+            cur.execute(
+                f"DELETE FROM {table} WHERE id in ({', '.join([str(id) for id in ids])});"
+            )
 
     def vacuum(self):
         if not self.type == 'db':
@@ -807,8 +807,7 @@ class SQLite3Database(Database):
 
         taken_names = set(all_tables + all_properties + self.columnnames)
         if name in taken_names:
-            raise ValueError("External table can not be any of {}"
-                             "".format(taken_names))
+            raise ValueError(f"External table can not be any of {taken_names}")
 
         if self._external_table_exists(name):
             return
@@ -859,10 +858,9 @@ class SQLite3Database(Database):
         dtype = self._guess_type(entries)
         expected_dtype = self._get_value_type_of_table(cursor, name)
         if dtype != expected_dtype:
-            raise ValueError("The provided data type for table {} "
-                             "is {}, while it is initialized to "
-                             "be of type {}"
-                             "".format(name, dtype, expected_dtype))
+            raise ValueError(
+                f"The provided data type for table {name} is {dtype}, while it is initialized to be of type {expected_dtype}"
+            )
 
         # First we check if entries already exists
         cursor.execute(f"SELECT key FROM {name} WHERE id=?", (id,))
@@ -891,8 +889,9 @@ class SQLite3Database(Database):
         all_types = [type(v) for v in values]
         if any(t != all_types[0] for t in all_types):
             typenames = [t.__name__ for t in all_types]
-            raise ValueError("Inconsistent datatypes in the table. "
-                             "given types: {}".format(typenames))
+            raise ValueError(
+                f"Inconsistent datatypes in the table. given types: {typenames}"
+            )
 
         val = values[0]
         if isinstance(val, int) or np.issubdtype(type(val), np.integer):
