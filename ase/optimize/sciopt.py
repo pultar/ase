@@ -41,11 +41,11 @@ class SciPyOptimizer(Optimizer):
         trajectory: string
             Pickle file used to store trajectory of atomic movement.
 
-        logfile: file object or str
+        logfile: file object or string
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
 
-        callback_always: book
+        callback_always: boolean
             Should the callback be run after each force call (also in the
             linesearch)
 
@@ -64,6 +64,19 @@ class SciPyOptimizer(Optimizer):
             extrapolated to 0 K).  By default (force_consistent=None) uses
             force-consistent energies if available in the calculator, but
             falls back to force_consistent=False if not.
+        
+        method: string or callable object or None
+            Defaults to 'BFGS'. If a string is supplied, it must correspond
+            to a valid value for the `method` parameter of 
+            `scipy.optimize.minimize`. If a callable object is supplied, it
+            will be called as `method(fun, x0, args, **kwargs, **options)`
+            where `fun = self.f`, `x0 = self.x0()`, `args = ()`,
+            `options = self.options`, and `kwargs` contains the remaining
+            keyword arguments passed to `scipy.optimizer.minimize` in
+            `SciPyOptimizer.run`.
+        options: dictionary or None
+            Defaults to an empty dictionary. Specify any additional keyword
+            arguments to pass to the function specified by `method`.
         """
         restart = None
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
@@ -71,6 +84,8 @@ class SciPyOptimizer(Optimizer):
         self.force_calls = 0
         self.callback_always = callback_always
         self.H0 = alpha
+        self.method = method or 'BFGS'
+        self.options = options or {}
 
     def x0(self):
         """Return x0 in a way SciPy can use
@@ -136,53 +151,85 @@ class SciPyOptimizer(Optimizer):
         pass
 
     def call_fmin(self, fmax, steps):
-        raise NotImplementedError
+        if self.method != 'TNC':
+            self.options['maxiter'] = steps
+        if 'gtol' in self.options and self.options['gtol'] is None:
+            self.options['gtol'] = fmax * 0.1
+            opt.fmin_cg
+
+        output = opt.minimize(
+            fun=self.f,
+            x0=self.x0(),
+            method=self.method,
+            jac=self.fprime,
+            callback=self.callback,
+            options=self.options
+        )
+        if not output.success:
+            if output.message != 'Maximum number of iterations has been exceeded.':
+                raise OptimizerConvergenceError(
+                    f'Warning: Desired error not necessarily achieved: {output.message}'
+                    )
 
 
 class SciPyFminCG(SciPyOptimizer):
     """Non-linear (Polak-Ribiere) conjugate gradient algorithm"""
 
-    def call_fmin(self, fmax, steps):
-        output = opt.fmin_cg(self.f,
-                             self.x0(),
-                             fprime=self.fprime,
-                             # args=(),
-                             gtol=fmax * 0.1,  # Should never be reached
-                             norm=np.inf,
-                             # epsilon=
-                             maxiter=steps,
-                             full_output=1,
-                             disp=0,
-                             # retall=0,
-                             callback=self.callback)
-        warnflag = output[-1]
-        if warnflag == 2:
-            raise OptimizerConvergenceError(
-                'Warning: Desired error not necessarily achieved '
-                'due to precision loss')
+    def __init__(self,
+                 atoms,
+                 logfile='-',
+                 trajectory=None,
+                 callback_always=False,
+                 alpha=70,
+                 master=None,
+                 force_consistent=None,
+                 gtol = None,
+                 disp = False,
+                 norm = np.inf):
+        options = {
+            'gtol': gtol,
+            'norm': norm,
+            'disp': disp,
+        }
+        super().__init__(atoms,
+                         logfile,
+                         trajectory,
+                         callback_always,
+                         alpha,
+                         master,
+                         force_consistent,
+                         'CG',
+                         options)
 
 
 class SciPyFminBFGS(SciPyOptimizer):
     """Quasi-Newton method (Broydon-Fletcher-Goldfarb-Shanno)"""
 
-    def call_fmin(self, fmax, steps):
-        output = opt.fmin_bfgs(self.f,
-                               self.x0(),
-                               fprime=self.fprime,
-                               # args=(),
-                               gtol=fmax * 0.1,  # Should never be reached
-                               norm=np.inf,
-                               # epsilon=1.4901161193847656e-08,
-                               maxiter=steps,
-                               full_output=1,
-                               disp=0,
-                               # retall=0,
-                               callback=self.callback)
-        warnflag = output[-1]
-        if warnflag == 2:
-            raise OptimizerConvergenceError(
-                'Warning: Desired error not necessarily achieved '
-                'due to precision loss')
+    def __init__(self,
+                 atoms,
+                 logfile='-',
+                 trajectory=None,
+                 callback_always=False,
+                 alpha=70,
+                 master=None,
+                 force_consistent=None,
+                 gtol = None,
+                 disp = False,
+                 norm = np.inf):
+        options = {
+            'gtol': gtol,
+            'norm': norm,
+            'disp': disp,
+        }
+        super().__init__(atoms,
+                         logfile,
+                         trajectory,
+                         callback_always,
+                         alpha,
+                         master,
+                         force_consistent,
+                         'BFGS',
+                         options)
 
 
 class SciPyGradientlessOptimizer(Optimizer):
