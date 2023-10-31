@@ -2242,7 +2242,7 @@ class FixExternals:
     def __init__(
             self,
             atoms: Atoms,
-            indices: list[int]):
+            indices: list):
 
         """atoms : ase.atoms.Atoms object
            An Atoms object
