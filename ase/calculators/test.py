@@ -146,7 +146,8 @@ class FreeElectrons(Calculator):
         icell = atoms.cell.reciprocal() * 2 * np.pi * Bohr
         n = self.parameters.gridsize
         offsets = np.indices((n, n, n)).T.reshape((n**3, 1, 3)) - n // 2
-        eps = sorted(0.5 * (np.dot(self.kpts + offsets, icell)**2).sum(2).T)
+        eps = 0.5 * (np.dot(self.kpts + offsets, icell)**2).sum(2).T
+        eps.sort()
         self.eigenvalues = eps[:, :self.parameters.nbands] * Ha
         self.results = {'energy': 0.0}
 
