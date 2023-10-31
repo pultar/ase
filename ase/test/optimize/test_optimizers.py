@@ -146,6 +146,7 @@ def test_run_twice(optcls, atoms, kwargs):
     assert opt.max_steps == 2 * steps
 
 
+@pytest.mark.optimize
 @pytest.mark.parametrize('optcls,max_steps', product(optclasses, range(-1,2)))
 def test_should_respect_steps_limit(
     optcls, max_steps, atoms, testdir, kwargs, to_catch
