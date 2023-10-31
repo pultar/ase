@@ -132,7 +132,7 @@ def get_recommended_r_max(cell: Cell, pbc: List[bool]) -> float:
         if pbc[i]:
             axb = np.cross(
                 cell[(i + 1) % 3, :],  # type: ignore[index]
-                cell[(i + 2) % 3, :],
+                cell[(i + 2) % 3, :],  # type: ignore[index]
             )  # type: ignore[index]
             h = vol / np.linalg.norm(axb)
             assert isinstance(h, float)  # mypy
