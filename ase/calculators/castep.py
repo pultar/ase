@@ -1645,11 +1645,12 @@ End CASTEP Interface Documentation
                         f'Pseudopotential for species {elem} not found!')
             elif not len(pps) == 1:
                 raise RuntimeError(
-                    f'Pseudopotential for species {elem} not unique!\n'
-                    f'Found the following files in {self._castep_pp_path}\n'
-                    '\n'.join([f'    {pp}' for pp in pps])'
-                    '\nConsider a stricter search pattern in `find_pspots()`.'
-                )
+                    'Pseudopotential for species ''{} not unique!\n'
+                    .format(elem)
+                    + 'Found the following files in {}\n'
+                    .format(self._castep_pp_path)
+                    + '\n'.join([f'    {pp}' for pp in pps]) +
+                    '\nConsider a stricter search pattern in `find_pspots()`.')
             else:
                 self.cell.species_pot = (elem, pps[0])
 
