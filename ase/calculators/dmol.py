@@ -381,9 +381,7 @@ class DMol3(FileIOCalculator):
                     val_index = -1
                 values = []
                 m = n + 3
-                while True:
-                    if lines[m].strip() == '':
-                        break
+                while not lines[m].strip() == '':
                     flds = lines[m].split()
                     if flds[1] == spin_key:
                         values.append(float(flds[val_index]))
@@ -400,9 +398,7 @@ class DMol3(FileIOCalculator):
                     val_index += 1
                 values = []
                 m = n + 2
-                while True:
-                    if lines[m].strip() == '':
-                        break
+                while not lines[m].strip() == '':
                     values.append(float(lines[m].split()[val_index]))
                     m += 1
                 return np.array(values)

@@ -190,9 +190,7 @@ def read_dmol_incoor(fd, bohr=True):
                 cell[j, :] = [float(fld) for fld in line.split()]
         if line.startswith('$coordinates'):
             j = i + 1
-            while True:
-                if lines[j].startswith('$end'):
-                    break
+            while not lines[j].startswith('$end'):
                 flds = lines[j].split()
                 symbols.append(flds[0])
                 positions.append(flds[1:4])

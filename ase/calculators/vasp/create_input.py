@@ -1762,9 +1762,7 @@ class GenerateVaspInput:
                     if key == 'magmom':
                         lst = []
                         i = 2
-                        while i < len(data):
-                            if data[i] in ["#", "!"]:
-                                break
+                        while i < len(data) and not data[i] in ["#", "!"]:
                             if data[i] == "*":
                                 b = lst.pop()
                                 i += 1

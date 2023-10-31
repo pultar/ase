@@ -36,9 +36,7 @@ def read_dacapo_text(fd):
         except ValueError:
             pass
         else:
-            while i2 > i:
-                if lines[i2].startswith(' DFT:'):
-                    break
+            while i2 > i and not lines[i2].startswith(' DFT:'):
                 i2 -= 1
             energy = float(lines[i2].split()[column])
             atoms.calc = SinglePointCalculator(atoms, energy=energy)

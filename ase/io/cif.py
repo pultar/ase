@@ -167,9 +167,7 @@ def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
     """Parse a CIF data items and return a dict with all tags."""
     tags: Dict[str, CIFData] = {}
 
-    while True:
-        if not lines:
-            break
+    while not not lines:
         line = lines.pop().strip()
         if not line:
             continue
