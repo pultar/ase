@@ -65,10 +65,11 @@ class EMT(Calculator):
         self.rc = 0.0
         self.numbers = atoms.get_atomic_numbers()
         if self.parameters.asap_cutoff:
-            relevant_pars = {}
-            for symb, p in parameters.items():
-                if atomic_numbers[symb] in self.numbers:
-                    relevant_pars[symb] = p
+            relevant_pars = {
+                symb: p
+                for symb, p in parameters.items()
+                if atomic_numbers[symb] in self.numbers
+            }
         else:
             relevant_pars = parameters
         maxseq = max(par[1] for par in relevant_pars.values()) * Bohr
