@@ -1102,7 +1102,8 @@ class Atoms:
             if i.dtype == bool:
                 if len(i) != len(self):
                     raise IndexError(
-                        f'Length of mask {len(i)} must equal number of atoms {len(self)}'
+                        f'Length of mask {len(i)} must equal number of atoms '
+                        f'{len(self)}'
                     )
                 i = np.arange(len(self))[i]
 
