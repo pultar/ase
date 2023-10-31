@@ -46,7 +46,8 @@ class CRYSTAL(FileIOCalculator):
     """ A crystal calculator with ase-FileIOCalculator nomenclature
     """
 
-    implemented_properties = ['energy', 'forces', 'stress', 'charges',
+    implemented_properties = ['energy', 'free_energy',
+                              'forces', 'stress', 'charges',
                               'dipole']
 
     def __init__(self, restart=None,
@@ -275,6 +276,7 @@ class CRYSTAL(FileIOCalculator):
         energy -= e_coul  # e_coul already in eV.
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         # Force line indexes
         fstring = 'CARTESIAN FORCES'
         gradients = []

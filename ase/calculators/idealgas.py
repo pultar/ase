@@ -15,7 +15,7 @@ class IdealGas(Calculator):
     This calculator is probably only useful for testing purposes.
     """
 
-    implemented_properties = ['energy', 'energies', 'forces',
+    implemented_properties = ['energy', 'free_energy', 'energies', 'forces',
                               'stress', 'stresses']
 
     def calculate(self, atoms=None, properties=[],
@@ -25,6 +25,7 @@ class IdealGas(Calculator):
         n = len(self.atoms)
         self.results = {
             'energy': 0.0,
+            'free_energy': 0.0,
             'energies': np.zeros(n),
             'forces': np.zeros((n, 3)),
             'stress': np.zeros(6),

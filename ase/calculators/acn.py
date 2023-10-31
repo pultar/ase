@@ -38,7 +38,7 @@ def combine_lj_lorenz_berthelot(sigma, epsilon):
 
 
 class ACN(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     nolabel = True
 
     def __init__(self, rc=5.0, width=1.0):
@@ -151,6 +151,7 @@ class ACN(Calculator):
             self.forces += f
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = self.forces
 
     def redistribute_forces(self, forces):

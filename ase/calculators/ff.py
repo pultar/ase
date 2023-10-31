@@ -5,7 +5,7 @@ from ase.utils import ff
 
 
 class ForceField(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     nolabel = True
 
     def __init__(self, morses=None, bonds=None, angles=None, dihedrals=None,
@@ -48,8 +48,8 @@ class ForceField(Calculator):
     def calculate(self, atoms, properties, system_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
         if system_changes:
-            for name in ['energy', 'forces', 'hessian']:
-                self.results.pop(name, None)
+            self.results.clear()
+
         if 'energy' not in self.results:
             energy = 0.0
             for morse in self.morses:
@@ -72,6 +72,7 @@ class ForceField(Calculator):
                 i, j, e = ff.get_coulomb_potential_value(atoms, coulomb)
                 energy += e
             self.results['energy'] = energy
+            self.results['free_energy'] = energy
         if 'forces' not in self.results:
             forces = np.zeros(3 * len(atoms))
             for morse in self.morses:

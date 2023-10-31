@@ -52,7 +52,7 @@ class DemonNanoParameters(Parameters):
 class DemonNano(FileIOCalculator):
     """Calculator interface to the deMon-nano code. """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, **kwargs):
         """ASE interface to the deMon-nano code.
@@ -275,7 +275,9 @@ class DemonNano(FileIOCalculator):
 
         for i in range(len(lines)):
             if lines[i].startswith(' DFTB total energy [Hartree]'):
-                self.results['energy'] = float(lines[i + 1]) * Hartree
+                energy = float(lines[i + 1]) * Hartree
+                self.results['energy'] = energy
+                self.results['free_energy'] = energy
                 break
 
     def read_forces(self, atoms):

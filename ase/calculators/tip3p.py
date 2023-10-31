@@ -14,7 +14,7 @@ thetaHOH = 104.52 / 180 * np.pi  # we keep this for backwards compatibility
 
 
 class TIP3P(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     nolabel = True
     pcpot = None
 
@@ -106,6 +106,7 @@ class TIP3P(Calculator):
             forces += f
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces
 
     def embed(self, charges):

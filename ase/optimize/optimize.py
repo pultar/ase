@@ -41,12 +41,13 @@ class OptimizableAtoms(Optimizable):
         try:
             self.atoms.get_potential_energy(force_consistent=True)
         except PropertyNotImplementedError:
-            # warnings.warn(
-            #     'Could not get force consistent energy (\'free_energy\').  '
-            #     'Please make sure calculator provides \'free_energy\', even '
-            #     'if equal to the ordinary energy.  '
-            #     'This will raise an error in future versions of ASE.',
-            #     FutureWarning)
+            warnings.warn(
+                'Could not get force consistent energy (\'free_energy\') '
+                f'from {self.atoms.calc}.  '
+                'Please make sure calculator provides \'free_energy\', even '
+                'if equal to the ordinary energy.  '
+                'This will raise an error in future versions of ASE.',
+                FutureWarning)
             return False
         else:
             return True

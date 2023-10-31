@@ -21,7 +21,7 @@ class Dftb(FileIOCalculator):
     else:
         command = 'dftb+ > PREFIX.out'
 
-    implemented_properties = ['energy', 'forces', 'charges',
+    implemented_properties = ['energy', 'free_energy', 'forces', 'charges',
                               'stress', 'dipole']
     discard_results_on_any_change = True
 
@@ -313,6 +313,7 @@ class Dftb(FileIOCalculator):
         if charges is not None:
             self.results['charges'] = charges
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         if dipole is not None:
             self.results['dipole'] = dipole
         if self.do_forces:

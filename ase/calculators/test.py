@@ -101,7 +101,7 @@ class TestCalculator:
 
 
 class TestPotential(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def calculate(self, atoms, properties, system_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
@@ -116,7 +116,7 @@ class TestPotential(Calculator):
             d[a] = 1
             F -= (x / d)[:, None] * D
         energy = 0.25 * E
-        self.results = {'energy': energy, 'forces': F}
+        self.results = {'energy': energy, 'free_energy': energy, 'forces': F}
 
 
 class FreeElectrons(Calculator):
@@ -134,7 +134,7 @@ class FreeElectrons(Calculator):
     >>> calc = FreeElectrons(nvalence=1, kpts={'path': 'GXL'})
     """
 
-    implemented_properties = ['energy']
+    implemented_properties = ['energy', 'free_energy']
     default_parameters = {'kpts': np.zeros((1, 3)),
                           'nvalence': 0.0,
                           'nbands': 20,
@@ -149,7 +149,7 @@ class FreeElectrons(Calculator):
         eps = 0.5 * (np.dot(self.kpts + offsets, icell)**2).sum(2).T
         eps.sort()
         self.eigenvalues = eps[:, :self.parameters.nbands] * Ha
-        self.results = {'energy': 0.0}
+        self.results = {'energy': 0.0, 'free_energy': 0.0}
 
     def get_eigenvalues(self, kpt, spin=0):
         assert spin == 0

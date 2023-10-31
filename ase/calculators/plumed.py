@@ -45,7 +45,7 @@ def restart_from_trajectory(prev_traj, *args, prev_steps=None, atoms=None,
 
 
 class Plumed(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, calc, input, timestep, atoms=None, kT=1., log='',
                  restart=False, use_charge=False, update_charge=False):
@@ -165,7 +165,9 @@ class Plumed(Calculator):
                                               self.istep)
         energy, forces = comp
         self.istep += 1
-        self.results['energy'], self. results['forces'] = energy, forces
+        self.results['energy'] = energy
+        self.results['free_energy'] = energy
+        self.results['forces'] = forces
 
     def compute_energy_and_forces(self, pos, istep):
         unbiased_energy = self.calc.get_potential_energy(self.atoms)

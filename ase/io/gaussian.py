@@ -1259,7 +1259,8 @@ def read_gaussian_out(fd, index=-1):
                     logger.warning('Configuration geometry is not in the input'
                                    f'orientation. It is {orientation}')
                 atoms.calc = SinglePointCalculator(
-                    atoms, energy=energy, dipole=dipole, forces=forces,
+                    atoms, energy=energy, free_energy=energy,
+                    dipole=dipole, forces=forces,
                 )
                 _compare_merge_configs(configs, atoms)
             atoms = None

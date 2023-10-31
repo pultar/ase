@@ -29,7 +29,7 @@ class Amber(FileIOCalculator):
         &end
     """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     discard_results_on_any_change = True
 
     def __init__(self, restart=None,
@@ -243,8 +243,9 @@ class Amber(FileIOCalculator):
         """ read total energy from amber file """
         with open(filename) as fd:
             lines = fd.readlines()
-        self.results['energy'] = \
-            float(lines[16].split()[2]) * units.kcal / units.mol
+        energy = float(lines[16].split()[2]) * units.kcal / units.mol
+        self.results['energy'] = energy
+        self.results['free_energy'] = energy
 
     def read_forces(self, filename='mdfrc'):
         """ read forces from amber file """
@@ -329,7 +330,7 @@ class SANDER(Calculator):
 
     Requires sander Python bindings from http://ambermd.org/
     """
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, atoms=None, label=None, top=None, crd=None,
                  mm_options=None, qm_options=None, permutation=None, **kwargs):
@@ -357,7 +358,9 @@ class SANDER(Calculator):
                                  [self.permutation[0, :]], (1, len(atoms), 3))
             sander.set_positions(crd)
             e, f = sander.energy_forces()
-            self.results['energy'] = e.tot * units.kcal / units.mol
+            energy = e.tot * units.kcal / units.mol
+            self.results['energy'] = energy
+            self.results['free_energy'] = energy
             if self.permutation is None:
                 self.results['forces'] = (np.reshape(np.array(f),
                                                      (len(atoms), 3)) *

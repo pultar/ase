@@ -50,7 +50,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
     parser = {'info.xml': ase.io.exciting.parse_output}
     output_names = list(parser)
     # Use frozenset since the CalculatorTemplate enforces it.
-    implemented_properties = frozenset(['energy', 'tforce'])
+    implemented_properties = frozenset(['energy', 'free_energy', 'tforce'])
 
     def __init__(self):
         """Initialise with constant class attributes.

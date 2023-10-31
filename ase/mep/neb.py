@@ -962,7 +962,7 @@ class IDPP(Calculator):
         Chem. Phys. 140, 214106 (2014)
     """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, target, mic):
         Calculator.__init__(self)
@@ -992,7 +992,7 @@ class IDPP(Calculator):
         e = 0.5 * (dd ** 2 / d4).sum()
         f = -2 * ((dd * (1 - 2 * dd / d) / d ** 5)[..., np.newaxis] * D).sum(
             0)
-        self.results = {'energy': e, 'forces': f}
+        self.results = {'energy': e, 'free_energy': e, 'forces': f}
 
 
 @deprecated("SingleCalculatorNEB is deprecated. "

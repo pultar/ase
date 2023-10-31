@@ -71,7 +71,7 @@ class Gromacs(FileIOCalculator):
         CALC_MM_RELAX.set_own_params_runs('force_field', 'oplsaa')
     """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     discard_results_on_any_change = True
 
     default_parameters = dict(
@@ -402,6 +402,7 @@ class Gromacs(FileIOCalculator):
             energy = float(lastline.split()[1])
         # We go for ASE units !
         self.results['energy'] = energy * units.kJ / units.mol
+        self.results['free_energy'] = self.results['energy']
         # energies are about 100 times bigger in Gromacs units
         # when compared to ase units
 

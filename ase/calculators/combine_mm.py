@@ -10,7 +10,7 @@ k_c = units.Hartree * units.Bohr
 
 
 class CombineMM(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, idx, apm1, apm2, calc1, calc2,
                  sig1, eps1, sig2, eps2, rc=7.0, width=1.0):
@@ -128,7 +128,9 @@ class CombineMM(Calculator):
         f12[self.mask] += fi1
         f12[~self.mask] += fi2
 
-        self.results['energy'] = e_c + e_lj + e1 + e2
+        energy = e_c + e_lj + e1 + e2
+        self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = f_c + f_lj + f12
 
     def get_virtual_charges(self, atoms):
