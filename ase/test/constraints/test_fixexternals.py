@@ -1,57 +1,125 @@
-def test_fixexternals():
-    import numpy as np
-    from ase.calculators.emt import EMT
-    from ase.optimize import BFGS
-    from ase.constraints import FixExternals
-    from ase.build import fcc111, add_adsorbate, molecule
+import numpy as np
+from ase.calculators.emt import EMT
+from ase.optimize import BFGS
+from ase.constraints import FixExternals, FixAtoms
+from ase.build import fcc111, add_adsorbate, molecule
+import pytest
 
-    def sort_ivec(ivec):
-        tmp_ivec = np.zeros([3, 3])
-        cartesian_basis = np.diag(np.ones(3))
-        for i in range(3):
-            d1 = np.dot(ivec[:, 0], cartesian_basis[:, i])
-            d2 = np.dot(ivec[:, 1], cartesian_basis[:, i])
-            d3 = np.dot(ivec[:, 2], cartesian_basis[:, i])
-            if abs(d1) > abs(d2) and abs(d1) > abs(d3):
-                if d1 <= 0:
-                    tmp_ivec[:, i] = -ivec[:, 0]
-                else:
-                    tmp_ivec[:, i] = ivec[:, 0]
-                ivec[:, 0] = 0
-            if abs(d2) > abs(d1) and abs(d2) > abs(d3):
-                if d2 <= 0:
-                    tmp_ivec[:, i] = -ivec[:, 1]
-                else:
-                    tmp_ivec[:, i] = ivec[:, 1]
-                ivec[:, 1] = 0
-            if abs(d3) > abs(d2) and abs(d3) > abs(d1):
-                if d3 <= 0:
-                    tmp_ivec[:, i] = -ivec[:, 2]
-                else:
-                    tmp_ivec[:, i] = ivec[:, 2]
-                ivec[:, 2] = 0
-        return tmp_ivec
 
-    size = [3, 3, 4]
-    syst = fcc111(symbol='Cu', size=size, a=3.58)
+def setup_atoms():
+    atoms = fcc111(symbol='Cu', size=[3, 3, 4], a=3.58)
     adsorbate = molecule('CH3OH')
-    add_adsorbate(syst, adsorbate, 2.5, 'ontop')
-    syst.center(vacuum=8.5, axis=2)
-    indices = [36, 37, 38, 39, 40, 41]
-    init_ads = syst[indices].copy()
-    init_ads_ivecval = init_ads.get_moments_of_inertia(vectors=True)
-    init_ads_ivec = sort_ivec(np.transpose(init_ads_ivecval[1]))
-    init_ads_com = init_ads.get_center_of_mass()
-    c = FixExternals(syst, indices)
-    syst.set_constraint(c)
-    syst.calc = EMT()
-    dyn = BFGS(syst)
-    dyn.run(fmax=0.05)
-    final = syst.copy()
-    del final.constraints
-    final_ads = final[indices]
-    final_ads_ivecval = final_ads.get_moments_of_inertia(vectors=True)
-    final_ads_ivec = sort_ivec(np.transpose(final_ads_ivecval[1]))
-    final_ads_com = final_ads.get_center_of_mass()
-    assert np.max(abs(final_ads_ivec - init_ads_ivec)) < 1e-8
-    assert np.max(abs(final_ads_com - init_ads_com)) < 1e-8
+    add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
+    atoms.center(vacuum=8.5, axis=2)
+    return atoms
+
+
+def setup_list_of_indices():
+    indices = []
+    indices.append([36, 37, 38, 39, 40, 41])
+    indices.append([36, 37, 38, 39, 40])
+    indices.append([38, 36, 41, 40, 37])
+    indices.append([36, 37, 38, 39])
+    indices.append([37, 38, 39])
+    return indices
+
+
+def setup_fixexternals():
+    atoms = setup_atoms()
+    indices = setup_list_of_indices()
+    constraint_list = []
+    fix_surface = \
+        FixAtoms(indices=[atom.index for atom in atoms if atom.symbol == 'Cu'])
+    for i in range(len(indices)):
+        tmp_c = FixExternals(atoms, indices[i])
+        constraint_list.append(tmp_c)
+    return atoms, constraint_list, fix_surface
+
+
+def displace_atoms_randomly(atoms, c):
+    shape = np.shape(atoms[c.indices].positions)
+    dx = np.random.rand(shape[0], shape[1])
+    displaced_atoms = atoms.copy()
+    displaced_atoms.positions[c.indices, :] += dx
+    return displaced_atoms
+
+
+def test_fixexternals():
+    atoms, constraint_list, fix_surface = setup_fixexternals()
+    for i in range(len(constraint_list)):
+        tmp_atoms = atoms.copy()
+        c = constraint_list[i]
+        indices = c.indices
+        tmp_atoms.set_constraint([c, fix_surface])
+        tmp_atoms.calc = EMT()
+        dyn = BFGS(tmp_atoms)
+        dyn.run(steps=3)
+        inertia_info = \
+            tmp_atoms[indices].get_moments_of_inertia(vectors=True)
+        final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
+        final_com = tmp_atoms[indices].get_center_of_mass()
+        assert np.max(final_pa - c.principle_axes) == \
+            pytest.approx(0, rel=1e-8, abs=1e-8)
+        assert np.max(final_com - c.center_of_mass) == \
+            pytest.approx(0, rel=1e-8, abs=1e-8)
+
+
+def test_sort_principle_axes():
+    atoms, constraint_list, fix_surface = setup_fixexternals()
+    for i in range(len(constraint_list)):
+        tmp_atoms = atoms.copy()
+        c = constraint_list[i]
+        displace_atoms_randomly(tmp_atoms, c)
+        inertia_info = tmp_atoms[c.indices].get_moments_of_inertia(vectors=True)
+        final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
+        dot00 = \
+            abs(np.dot(np.transpose(final_pa[:, 0]), c.principle_axes[:, 0]))
+        dot10 = \
+            abs(np.dot(np.transpose(final_pa[:, 1]), c.principle_axes[:, 0]))
+        dot20 = \
+            abs(np.dot(np.transpose(final_pa[:, 2]), c.principle_axes[:, 0]))
+        dot11 = \
+            abs(np.dot(np.transpose(final_pa[:, 1]), c.principle_axes[:, 1]))
+        dot21 = \
+            abs(np.dot(np.transpose(final_pa[:, 2]), c.principle_axes[:, 1]))
+        assert dot00 > dot10 and dot00 > dot20
+        assert dot11 > dot21
+
+
+def test_adjust_rotation():
+    atoms, constraint_list, fix_surface = setup_fixexternals()
+    for i in range(len(constraint_list)):
+        tmp_atoms = atoms.copy()
+        c = constraint_list[i]
+        indices = c.indices
+        atoms = displace_atoms_randomly(tmp_atoms, c)
+        tmp_atoms.positions[indices, :] = \
+            np.copy(c.adjust_rotation(tmp_atoms[indices]))
+        inertia_info = tmp_atoms[indices].get_moments_of_inertia(vectors=True)
+        final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
+        final_com = tmp_atoms[indices].get_center_of_mass()
+        assert np.max(final_pa - c.principle_axes) == \
+            pytest.approx(0, rel=1e-8, abs=1e-8)
+        assert np.max(final_com - c.center_of_mass) == \
+            pytest.approx(0, rel=1e-8, abs=1e-8)
+
+
+def test_subspace():
+    atoms, constraint_list, fix_surface = setup_fixexternals()
+    for j in range(len(constraint_list)):
+        tmp_atoms = atoms.copy()
+        c = constraint_list[j]
+        indices = c.indices
+        J_sub = c.get_subspace(tmp_atoms[indices])
+        for i in range(np.shape(J_sub)[1]):
+            tmpi_atoms = tmp_atoms.copy()
+            tmpi_atoms.positions[indices, :] += \
+                1e-8 * c.dx * J_sub[:, i].reshape(-1, 3)
+            inertia_info = \
+                tmpi_atoms[indices].get_moments_of_inertia(vectors=True)
+            final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
+            final_com = tmpi_atoms[indices].get_center_of_mass()
+            assert np.max(final_pa - c.principle_axes) == \
+                pytest.approx(0, rel=1e-8, abs=1e-8)
+            assert np.max(final_com - c.center_of_mass) == \
+                pytest.approx(0, rel=1e-8, abs=1e-8)

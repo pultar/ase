@@ -430,22 +430,22 @@ well as the center of mass are fixed.
 This constraint was originally envisioned to be used to constrain an adsorbate
 on a metal surface, but can be used on any system as long as the number of
 constrained atoms is greater than 2. Below is a hypothetical example where methanol
-is placed over a copper surface and is relaxed using BFGS as the
+is placed over a fixed copper surface and is relaxed using BFGS as the
 optimizer and EMT as the calculator::
 
   from ase.calculators.emt import EMT
   from ase.optimize import BFGS
-  from ase.constraints import FixExternals
+  from ase.constraints import FixExternals, FixAtoms
   from ase.build import fcc111, add_adsorbate, molecule
 
-  size = [3, 3, 4]
-  atoms = fcc111(symbol='Cu', size=size, a=3.58)
+  atoms = fcc111(symbol='Cu', size=[3, 3, 4], a=3.58)
   adsorbate = molecule('CH3OH')
   add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
   atoms.center(vacuum=8.5, axis=2)
   indices = [36, 37, 38, 39, 40, 41]
-  c = FixExternals(atoms, indices)
-  atoms.set_constraint(c)
+  c1 = FixExternals(atoms, indices)
+  c2 = FixAtoms(indices=[atom.index for atom in atoms if atom.symbol == 'Cu'])
+  atoms.set_constraint([c1, c2])
   atoms.calc = EMT()
   dyn = BFGS(atoms)
   dyn.run(fmax=0.05)
