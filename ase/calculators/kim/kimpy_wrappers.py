@@ -8,7 +8,6 @@ University of Minnesota
 import functools
 from abc import ABC
 
-import kimpy
 import numpy as np
 
 from .exceptions import (KIMModelInitializationError, KIMModelNotFound,
@@ -62,18 +61,31 @@ def check_call_wrapper(func):
 
 
 # kimpy methods
-collections_create = functools.partial(check_call, kimpy.collections.create)
-model_create = functools.partial(check_call, kimpy.model.create)
-simulator_model_create = functools.partial(
-    check_call, kimpy.simulator_model.create)
-get_species_name = functools.partial(
-    check_call, kimpy.species_name.get_species_name)
-get_number_of_species_names = functools.partial(
-    check_call, kimpy.species_name.get_number_of_species_names
-)
+try:
+    import kimpy
 
-# kimpy attributes (here to avoid importing kimpy in higher-level modules)
-collection_item_type_portableModel = kimpy.collection_item_type.portableModel
+    collections_create = functools.partial(check_call, kimpy.collections.create)
+    model_create = functools.partial(check_call, kimpy.model.create)
+    simulator_model_create = functools.partial(
+        check_call, kimpy.simulator_model.create)
+    get_species_name = functools.partial(
+        check_call, kimpy.species_name.get_species_name)
+    get_number_of_species_names = functools.partial(
+        check_call, kimpy.species_name.get_number_of_species_names
+    )
+
+    # kimpy attributes (here to avoid importing kimpy in higher-level modules)
+    collection_item_type_portableModel = \
+        kimpy.collection_item_type.portableModel
+
+    def check_kimpy():
+        pass
+
+except ImportError:
+
+    def check_kimpy():
+        raise NotImplementedError("To use KIM calculator, please "
+                                  "install kimpy package")
 
 
 class ModelCollections:
@@ -87,6 +99,7 @@ class ModelCollections:
     """
 
     def __init__(self):
+        check_kimpy()
         self.collection = collections_create()
 
     def __enter__(self):
@@ -119,6 +132,7 @@ class PortableModel:
     interface to it"""
 
     def __init__(self, model_name, debug):
+        check_kimpy()
         self.model_name = model_name
         self.debug = debug
 
@@ -558,6 +572,7 @@ class ComputeArguments:
     forces, etc."""
 
     def __init__(self, kim_model_wrapped, debug):
+        check_kimpy()
         self.kim_model_wrapped = kim_model_wrapped
         self.debug = debug
 
@@ -683,6 +698,7 @@ class SimulatorModel:
     """
 
     def __init__(self, model_name):
+        check_kimpy()
         # Create a KIM API Simulator Model object for this model
         self.model_name = model_name
         self.simulator_model = simulator_model_create(self.model_name)
