@@ -298,6 +298,10 @@ class Plugins(Listing):
     def __repr__(self):
         return f"<ASE plugins from: {self.namespace_package}>"
 
+    def info(self, prefix='', opts={}):
+        return "Plugins:\n"\
+               "--------\n" + super().info(prefix, opts)
+
 
 class Plugin:
     """ A class, that encapsulates a plugin package """
