@@ -1,6 +1,6 @@
 def calculators():
     from ase.calculators.demon.demon import Demon
-    #from ase.calculators.kim.kim import KIM
+    from ase.calculators.kim.kim import KIM
     from ase.calculators.openmx.openmx import OpenMX
     from ase.calculators.siesta.siesta import Siesta
     from ase.calculators.turbomole.turbomole import Turbomole
