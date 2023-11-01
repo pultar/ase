@@ -88,7 +88,7 @@ def print_info():
                 ('python-' + sys.version.split()[0], sys.executable)]
 
     for name, path in versions + all_dependencies():
-        print('{:24} {}'.format(name, path))
+        print(f'{name:24} {path}')
 
 
 def print_calculators():
