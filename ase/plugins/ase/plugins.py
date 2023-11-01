@@ -319,8 +319,8 @@ class Plugin:
     def get_module(self, class_type):
         """ Return a module for a given type, e.g. calculator, io, viewer... """
         if class_type not in self.modules:
-            mod = importlib.util.find_spec(self.package.__name__ + '.' +
-                                           class_type,
+            name = self.package.__name__
+            mod = importlib.util.find_spec(name + '.' + class_type,
                                            self.package.__path__)
             if not mod:
                 self.modules[class_type] = None
