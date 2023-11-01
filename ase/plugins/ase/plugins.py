@@ -203,6 +203,9 @@ class Instances(Listing):
             out=self.find_by('lowercase_names', name.lower())
         return out
 
+    def __getitem__(self, name):
+        return super.__getitem__(name)()
+
 
 class CalculatorInstance(Instance):
 
