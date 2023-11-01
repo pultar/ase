@@ -45,6 +45,13 @@ def calculators():
     from ase.calculators.qmmm import ForceQMMM
     from ase.calculators.tip3p import TIP3P
     from ase.calculators.tip4p import TIP4P
+
+    from .nonexistent_calculator import mock_if_not_exists
+    asap=mock_if_not_exists('asap3', 'EMT')
+    gpaw=mock_if_not_exists('gpaw', 'GPAW')
+    hobbit=mock_if_not_exists('hobbit', 'Calculator')
+    del mock_if_not_exists
+
     out = locals()
     out = {k:v for k,v in out.items() if not k.startswith('_')}
     return out
