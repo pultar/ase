@@ -24,7 +24,7 @@ def calculators():
     from ase.calculators.espresso import Espresso
     from ase.calculators.ff import ForceField
     from ase.calculators.gamess_us import GAMESSUS
-    #from ase.calculators.gaussian import GaussianDynamics
+    from ase.calculators.gaussian import GaussianDynamics
     from ase.calculators.gromacs import Gromacs
     from ase.calculators.lammpslib import LAMMPSlib
     from ase.calculators.lammpsrun import LAMMPS
@@ -47,14 +47,15 @@ def calculators():
     from ase.calculators.tip4p import TIP4P
 
     from .nonexistent_calculator import mock_if_not_exists
-    asap=mock_if_not_exists('asap3', 'EMT')
-    gpaw=mock_if_not_exists('gpaw', 'GPAW')
-    hobbit=mock_if_not_exists('hobbit', 'Calculator')
+    asap = mock_if_not_exists('asap3', 'EMT')
+    gpaw = mock_if_not_exists('gpaw', 'GPAW')
+    hobbit = mock_if_not_exists('hobbit', 'Calculator')
     del mock_if_not_exists
 
     out = locals()
-    out = {k:v for k,v in out.items() if not k.startswith('_')}
+    out = {k: v for k, v in out.items() if not k.startswith('_')}
     return out
+
 
 #  just expose all the calculators imported above
 _calculators = calculators()

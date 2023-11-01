@@ -12,20 +12,33 @@ The structure is as follows
 |         |      package)       |                              |
 ^^^^^^^^^^                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |                                           |
-   1:n  for each type                         1:n - plugin can return lists of instances
-    |   (i.e viewer, calculator)                | of each instance type (calculators, viewers)
+   1:n  for each type                         1:n - plugin can return lists
+    |   (i.e viewer, calculator)                | of instances
+    |                                           | of each instance type
+    |                                           | (calculator, viewer)
+    |                                           | that it provides
+    |                                           |
     |                                           |
     |                                           |
 -------------------------                ------------------------
 |                       |                |                      |
-|    Instances:         |                |    Instance:         |       _______________________
-|      list all the     |------1:n-------|    holds inform.     |       |                     |
-|   available 'items'   |                |    about just one    |--1:1--|   Implementation:   |
-|   (calcs, viewers)    |                |    calculator        |       |   e.g. a Calculator |
-|   of the given type   |                |    or viewer         |       |   subclass          |
-|                       |                |                      |       |                     |
-^^^^^^^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^^^^^^^^^^       ^^^^^^^^^^^^^^^^^^^^^^^
-
+|    Instances:         |                |    Instance:         |
+|      list all the     |------1:n-------|    holds inform.     |
+|   available 'items'   |                |    about just one    |
+|   (calcs, viewers)    |                |    calculator        |
+|   of the given type   |                |    or viewer         |
+|                       |                |                      |
+^^^^^^^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^^^^^^^^^^
+                                                  |
+                                                 1:1
+                                                  |
+                                         ------------------------
+                                         |                      |
+                                         |   Implementation     |
+                                         |   (e.g. a Calculator |
+                                         |    subclass)         |
+                                         |                      |
+                                         """"""""""""""""""""""""
 """
 
 import importlib
@@ -38,22 +51,25 @@ from typing import Dict
 
 def import_module(name, path):
     try:
-      module=importlib.import_module(name)
-      return module
+        module = importlib.import_module(name)
+        return module
     except ImportError:
-      warnings.warn(f"Can not import {name} in {path}. Probably broken ASE plugin.")
+        warnings.warn(f"Can not import {name} in {path}."
+                      " Probably broken ASE plugin.")
 
 
 class Listing(Mapping):
 
-    def info(self, prefix:str='', opts:Dict={})->str:
+    def info(self, prefix: str = '', opts: Dict = {}) -> str:
         """
         Parameters
         ----------
         prefix
-          Prefix, which should be prepended before each line. E.g. indentation.
+            Prefix, which should be prepended before each line.
+            E.g. indentation.
         opts
-          Dictionary, that can holds options, what info to print and which not.
+            Dictionary, that can holds options,
+            what info to print and which not.
 
         Returns
         -------
@@ -61,7 +77,7 @@ class Listing(Mapping):
           Information about the object and (if applicable) contained items.
         """
 
-        out=[i.info(prefix) for i in self.sorted()]
+        out = [i.info(prefix) for i in self.sorted()]
         return '  \n'.join(out)
 
     @staticmethod
@@ -78,7 +94,7 @@ class Listing(Mapping):
         return len(self.items)
 
     def __getitem__(self, name):
-        out=self.find_by_name(name)
+        out = self.find_by_name(name)
         if not out:
             raise KeyError(f"There is no {name} in {self}")
         return out
@@ -95,7 +111,7 @@ class Instance:
     def __init__(self, plugin, class_type, name, cls):
         self.plugin = plugin
         self.class_type = class_type
-        self.name=name
+        self.name = name
         self.cls = cls
 
     @property
@@ -115,12 +131,12 @@ class Instance:
 
     @lazyproperty
     def names(self):
-        name=getattr(self.cls, 'name', None)
+        name = getattr(self.cls, 'name', None)
         if isinstance(name, str):
-            name=[name]
-        if isinstance(name,(list,set,tuple)):
+            name = [name]
+        if isinstance(name, (list, set, tuple)):
             if self.name not in name:
-               name.append(self.name)
+                name.append(self.name)
         else:
             name = [self.name]
 
@@ -133,9 +149,9 @@ class Instance:
         return {i.lower() for i in self.names}
 
     def info(self, prefix='', opts={}):
-        out =f"{prefix}{self.name}"
+        out = f"{prefix}{self.name}"
         if opts.get('plugin', True):
-            out+= f"    (from plugin {self.plugin.name})"
+            out += f"    (from plugin {self.plugin.name})"
         return out
 
 
@@ -145,7 +161,7 @@ class Instances(Listing):
 
     child_class = Instance
 
-    def __init__(self, plugin_list:'Plugins', class_type: str):
+    def __init__(self, plugin_list: 'Plugins', class_type: str):
         self.plugins = plugin_list
         self.class_type = class_type
 
@@ -168,10 +184,10 @@ class Instances(Listing):
 
     @staticmethod
     def instance_has_attribute(obj, attribute, value):
-        v=getattr(obj, attribute, None)
+        v = getattr(obj, attribute, None)
         if value == v:
             return True
-        if isinstance(v, (list,set)):
+        if isinstance(v, (list, set)):
             for i in v:
                 if i == value:
                     return True
@@ -198,9 +214,9 @@ class Instances(Listing):
         return f"<ASE list of {self.class_type}>"
 
     def find_by_name(self, name):
-        out=self.find_by('names', name.lower())
+        out = self.find_by('names', name.lower())
         if not out:
-            out=self.find_by('lowercase_names', name.lower())
+            out = self.find_by('lowercase_names', name.lower())
         return out
 
     def __getitem__(self, name):
@@ -222,7 +238,7 @@ class CalculatorInstance(Instance):
 class CalculatorInstances(Instances):
     """ Just a few specialities for instances of calculators """
 
-    child_class=CalculatorInstance
+    child_class = CalculatorInstance
 
     def info(self, prefix='', opts={}):
         return f"{prefix}Calculators:\n" \
@@ -230,7 +246,8 @@ class CalculatorInstances(Instances):
 
 
 class Plugins(Listing):
-    """ A class, that holds all the installed plugins in the given namespace package."""
+    """ A class, that holds all the installed plugins in
+        the given namespace package."""
 
     """ This information is just for initial creating of the instances """
     _instance_types = {
@@ -242,17 +259,24 @@ class Plugins(Listing):
         self._instances = {}
 
     def packages(self):
-        """ Return all plugin packages, that are in the given namespace package """
+        """ Return all the plugin packages, that are in the
+        given namespace package (so that are in 'ase.plugins') """
         modules = []
-        package=importlib.import_module(self.namespace_package)
-        modules = (import_module(self.namespace_package + '.' + mod.name, mod.module_finder.path) for mod in pkgutil.iter_modules(package.__path__))
+        package = importlib.import_module(self.namespace_package)
+
+        def mod_name(mod):
+            return self.namespace_package + '.' + mod.name
+
+        modules = (import_module(mod_name(mod), mod.module_finder.path)
+                   for mod in pkgutil.iter_modules(package.__path__))
 
         modules = (i for i in modules if i)
         return modules
 
     @lazyproperty
     def plugins(self):
-        return {p.__name__.rsplit('.',1)[-1]:Plugin(self, p) for p in self.packages()}
+        return {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
+                for p in self.packages()}
 
     @property
     def items(self):
@@ -260,7 +284,7 @@ class Plugins(Listing):
 
     def instances_of(self, class_type):
         if class_type not in self._instances:
-            it=self._instance_types.get(class_type, Instances)
+            it = self._instance_types.get(class_type, Instances)
             self._instances[class_type] = it(self, class_type)
         return self._instances[class_type]
 
@@ -289,9 +313,11 @@ class Plugin:
         return self.package.__name__[12:]   # get rig 'ase.plugins'
 
     def get_module(self, class_type):
-        """ Return a module for a given type, e.g. calculator, io, viewer.... """
+        """ Return a module for a given type, e.g. calculator, io, viewer... """
         if class_type not in self.modules:
-            mod = importlib.util.find_spec(self.package.__name__ + '.' + class_type, self.package.__path__)
+            mod = importlib.util.find_spec(self.package.__name__ + '.' +
+                                           class_type,
+                                           self.package.__path__)
             if not mod:
                 self.modules[class_type] = None
             else:
@@ -309,16 +335,17 @@ class Plugin:
         if hasattr(module, "__all__"):
             names = module.__all__
         else:
-            name = module.__name__.rsplit(',',1)[-1]
+            name = module.__name__.rsplit(',', 1)[-1]
             # camelize
             name = ''.join([i.title() for i in name.split('_')])
             names = [name]
         for i in names:
             try:
-              out = instance_type(self, class_type, i, getattr(module, i))
-              yield out
+                out = instance_type(self, class_type, i, getattr(module, i))
+                yield out
             except AttributeError:
-              warnings.warn(f"Can not import {i} from {module.__name__}. Probably broken ASE plugin.")
+                warnings.warn(f"Can not import {i} from {module.__name__}. "
+                              "Probably broken ASE plugin.")
 
     def instances_of(self, class_type):
         if class_type not in self._instances:
@@ -326,9 +353,9 @@ class Plugin:
         return self._instances[class_type]
 
     def info(self, prefix='', opts={}):
-        info=f'{prefix}{self.name}'
+        info = f'{prefix}{self.name}'
 
-        prefix+='  '
+        prefix += '  '
         opts = opts.copy()
         opts['plugin'] = False
 
@@ -338,7 +365,7 @@ class Plugin:
             if inst:
                 p = f'\n{prefix}{instances.singular_name}: '
                 for i in inst:
-                    info+= i.info(p, opts)
+                    info += i.info(p, opts)
         return info
 
     def __repr__(self):
