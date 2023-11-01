@@ -26,8 +26,6 @@ from ase.calculators.singlepoint import (SinglePointDFTCalculator,
 from ase.dft.kpoints import kpoint_convert
 from ase.constraints import FixAtoms, FixCartesian, FixExternals
 from ase.data import chemical_symbols
-
-from ase.cell import Cell
 from ase.units import create_units
 from ase.utils import iofunction
 
