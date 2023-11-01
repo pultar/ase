@@ -21,8 +21,9 @@ class CLICommand:
         parser.add_argument('--formats', action='store_true',
                             help='List file formats known to ASE.')
         parser.add_argument('--calculators', action='store_true',
-                            help='List calculators known to ASE '
-                            'and whether they appear to be installed.')
+                            help='List calculators known to ASE. ')
+        parser.add_argument('--plugins', action='store_true',
+                            help='List the installed plugins.')
 
     @staticmethod
     def run(args):
@@ -37,14 +38,10 @@ class CLICommand:
                 print_formats()
             if args.calculators:
                 print()
-                from ase.calculators.autodetect import (detect_calculators,
-                                                        format_configs)
-                configs = detect_calculators()
-                print('Calculators:')
-                for message in format_configs(configs):
-                    print('  {}'.format(message))
+                print_calculators()
+            if args.plugins:
                 print()
-                print('Available: {}'.format(','.join(sorted(configs))))
+                print_plugins()
             return
 
         n = max(len(filename) for filename in args.filename) + 2
@@ -76,6 +73,11 @@ class CLICommand:
         raise SystemExit(nfiles_not_found)
 
 
+def print_plugins():
+    from ase.plugins import plugins
+    print(plugins.info())
+
+
 def print_info():
     import platform
     import sys
@@ -87,6 +89,11 @@ def print_info():
 
     for name, path in versions + all_dependencies():
         print('{:24} {}'.format(name, path))
+
+
+def print_calculators():
+    from ase.plugins import calculators
+    print(calculators.info())
 
 
 def print_formats():
