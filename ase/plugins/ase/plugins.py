@@ -1,5 +1,32 @@
 """ This module contains the classes for listing plugins and
-the instances (Calculators, IOs, etc...) provided by the plugins """
+the instances (Calculators, IOs, etc...) provided by the plugins.
+
+
+The structure is as follows
+
+
+-----------                     --------------------------------
+|         |                     |                              |
+| Plugins |--------1:n----------|   Plugin (can provide some   |
+|         |  (for each plugin   |   calculator, formats...)    |
+|         |      package)       |                              |
+^^^^^^^^^^                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |                                           |
+   1:n  for each type                         1:n - plugin can return lists of instances
+    |   (i.e viewer, calculator)                | of each instance type (calculators, viewers)
+    |                                           |
+    |                                           |
+-------------------------                ------------------------
+|                       |                |                      |
+|    Instances:         |                |    Instance:         |       _______________________
+|      list all the     |------1:n-------|    holds inform.     |       |                     |
+|   available 'items'   |                |    about just one    |--1:1--|   Implementation:   |
+|   (calcs, viewers)    |                |    calculator        |       |   e.g. a Calculator |
+|   of the given type   |                |    or viewer         |       |   subclass          |
+|                       |                |                      |       |                     |
+^^^^^^^^^^^^^^^^^^^^^^^^^                ^^^^^^^^^^^^^^^^^^^^^^^^       ^^^^^^^^^^^^^^^^^^^^^^^
+
+"""
 
 import importlib
 import pkgutil
@@ -70,6 +97,10 @@ class Instance:
         self.class_type = class_type
         self.name=name
         self.cls = cls
+
+    @property
+    def implementation(self):
+        return self()
 
     def __call__(self):
         return self.cls
