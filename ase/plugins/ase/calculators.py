@@ -57,6 +57,6 @@ def calculators():
     return out
 
 #  just expose all the calculators imported above
-calculators = calculators()
-locals().update(calculators)
-__all__ = list(calculators.keys())
+_calculators = calculators()
+locals().update(_calculators)
+__all__ = list(_calculators.keys())
