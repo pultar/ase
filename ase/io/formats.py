@@ -64,11 +64,12 @@ class IOFormat(BaseInstance):
         out = self.__dict__.copy()
         if 'plugin' in out:
             out['plugin'] = out['plugin'].name
+        return out
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         if 'plugin' in state:
-            self.plugin = ase_plugins.plugins[self.name]
+            self.plugin = ase_plugins.plugins[self.plugin]
 
     def open(self, fname, mode: str = 'r') -> IO:
         # We might want append mode, too
