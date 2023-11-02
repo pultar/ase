@@ -73,11 +73,6 @@ class CLICommand:
         raise SystemExit(nfiles_not_found)
 
 
-def print_plugins():
-    from ase.plugins import plugins
-    print(plugins.info())
-
-
 def print_info():
     import platform
     import sys
@@ -97,25 +92,10 @@ def print_calculators():
 
 
 def print_formats():
-    from ase.io.formats import ioformats
+    from ase.plugins import io_formats
+    print(io_formats.info())
 
-    print('Supported formats:')
-    for fmtname in sorted(ioformats):
-        fmt = ioformats[fmtname]
 
-        infos = [fmt.modes, 'single' if fmt.single else 'multi']
-        if fmt.isbinary:
-            infos.append('binary')
-        if fmt.encoding is not None:
-            infos.append(fmt.encoding)
-        infostring = '/'.join(infos)
-
-        moreinfo = [infostring]
-        if fmt.extensions:
-            moreinfo.append('ext={}'.format('|'.join(fmt.extensions)))
-        if fmt.globs:
-            moreinfo.append('glob={}'.format('|'.join(fmt.globs)))
-
-        print('  {} [{}]: {}'.format(fmt.name,
-                                     ', '.join(moreinfo),
-                                     fmt.description))
+def print_plugins():
+    from ase.plugins import plugins
+    print(plugins.info())
