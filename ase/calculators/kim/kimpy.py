@@ -31,6 +31,9 @@ class KimpyLazyFunctions:
 class Kimpy:
     """ Just a wrapper, that wraps kimpy to allow a lazy import """
 
+    # just a hack to make lazyproperty do not interfere with __getattr__
+    _lazy_cache = {}
+
     @property
     def kimpy(self):
         try:
