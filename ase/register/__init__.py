@@ -1,5 +1,5 @@
-import ase.io.formats as ioformats
 from ase.register.plugins import get_currently_registered_plugin
+from ase.io import formats as ioformats
 
 
 def register(where, cls: str, name=None):
