@@ -20,6 +20,8 @@ class CLICommand:
                             help='Show more information about files.')
         parser.add_argument('--formats', action='store_true',
                             help='List file formats known to ASE.')
+        parser.add_argument('--config', action='store_true',
+                            help='List configured calculators')
         parser.add_argument('--calculators', action='store_true',
                             help='List calculators known to ASE. ')
         parser.add_argument('--plugins', action='store_true',
@@ -31,11 +33,15 @@ class CLICommand:
         from ase.io.formats import UnknownFileTypeError, filetype, ioformats
         from ase.io.ulm import print_ulm_info
 
+        from ase.config import cfg
         if not args.filename:
             print_info()
             if args.formats:
                 print()
                 print_formats()
+            if args.config:
+                print()
+                cfg.print_everything()
             if args.calculators:
                 print()
                 print_calculators()
