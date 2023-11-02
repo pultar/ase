@@ -88,6 +88,18 @@ except ImportError:
                                   "install kimpy package")
 
 
+def is_portable_model(model_name):
+    """
+    Returns True if the model specified is a KIM Portable Model (if it
+    is not, then it must be a KIM Simulator Model -- there are no other
+    types of models in KIM)
+    """
+    with ModelCollections() as col:
+        model_type = col.get_item_type(model_name)
+
+    return model_type == kimpy.collection_item_type.portableModel
+
+
 class ModelCollections:
     """
     KIM Portable Models and Simulator Models are installed/managed into
