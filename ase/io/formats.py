@@ -857,3 +857,7 @@ def index2range(index, length):
     if isinstance(obj, numbers.Integral):
         obj = range(obj, obj + 1)
     return obj
+
+
+# Just to ensure that the formats are loaded
+from ase.plugins import io_formats  # NOQA: F401,E402
