@@ -60,6 +60,16 @@ class IOFormat(BaseInstance):
         self.magic: List[str] = []
         self.magic_regex: Optional[bytes] = None
 
+    def __getstate__(self):
+        out = self.__dict__.copy()
+        if 'plugin' in out:
+            out['plugin'] = out['plugin'].name
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if 'plugin' in state:
+            self.plugin = ase_plugins.plugins[self.name]
+
     def open(self, fname, mode: str = 'r') -> IO:
         # We might want append mode, too
         # We can allow more flags as needed (buffering etc.)
@@ -859,5 +869,5 @@ def index2range(index, length):
     return obj
 
 
-# Just to ensure that the formats are loaded
-from ase.plugins import io_formats  # NOQA: F401,E402
+# Just here, to avoid circular imports
+import ase.plugins as ase_plugins  # NOQA: F401,E402
