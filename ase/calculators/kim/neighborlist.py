@@ -7,18 +7,7 @@ from ase.neighborlist import neighbor_list
 
 from .kimpy_wrappers import c_double, c_int, check_call_wrapper
 
-try:
-    import kimpy
-    from kimpy import neighlist
-
-    def check_kimpy():
-        pass
-
-except ImportError:
-
-    def check_kimpy():
-        raise NotImplementedError("To use KIM calculator, please "
-                                  "install kimpy package")
+from .kimpy import kimpy
 
 
 class NeighborList:
@@ -57,7 +46,6 @@ class NeighborList:
         padding_not_require_neigh,
         debug,
     ):
-        check_kimpy()
         self.set_neigh_parameters(
             neigh_skin_ratio,
             model_influence_dist,
@@ -369,11 +357,11 @@ class KimpyNeighborList(NeighborList):
             debug,
         )
 
-        self.neigh = neighlist.NeighList()
+        self.neigh = kimpy.neighlist.NeighList()
 
         compute_args.set_callback_pointer(
             kimpy.compute_callback_name.GetNeighborList,
-            neighlist.get_neigh_kim(),
+            kimpy.neighlist.get_neigh_kim(),
             self.neigh,
         )
 
@@ -392,7 +380,7 @@ class KimpyNeighborList(NeighborList):
         pbc = np.asarray(pbc, dtype=c_int)
         contributing_coords = np.asarray(contributing_coords, dtype=c_double)
 
-        return neighlist.create_paddings(
+        return kimpy.neighlist.create_paddings(
             self.influence_dist,
             cell,
             pbc,
