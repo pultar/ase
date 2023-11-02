@@ -1,4 +1,5 @@
 from ase.utils import lazyproperty
+from typing import Dict
 
 
 class KimpyLazyFunction:
@@ -32,7 +33,7 @@ class Kimpy:
     """ Just a wrapper, that wraps kimpy to allow a lazy import """
 
     # just a hack to make lazyproperty do not interfere with __getattr__
-    _lazy_cache = {}
+    _lazy_cache: Dict = {}
 
     @property
     def kimpy(self):
