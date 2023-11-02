@@ -1,4 +1,5 @@
 from functools import partial
+from itertools import product
 
 import pytest
 from ase.build import bulk
