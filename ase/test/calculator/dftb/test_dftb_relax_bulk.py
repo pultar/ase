@@ -2,6 +2,10 @@ from ase.build import bulk
 from ase.filters import FrechetCellFilter
 from ase.optimize import QuasiNewton
 
+from ase.calculators.dftb import Dftb
+
+def test_init():
+    assert Dftb()
 
 def test_dftb_relax_bulk(dftb_factory):
     calc = dftb_factory.calc(
