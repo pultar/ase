@@ -92,6 +92,9 @@ class OpenMX(FileIOCalculator):
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, command, **kwargs)
 
+        # Used throughput the calculator
+        self.command = command
+
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as
         calculator[key] rather than calculator.parameters[key]
