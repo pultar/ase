@@ -1552,3 +1552,97 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # DONE!
     fd.write(''.join(pwi))
+
+
+def split_nonequivalent_hubbard(atoms, magmom, onsite_hubbard):
+    """
+    assigns neglibly different magmoms to atoms that in input have
+    same symbol. same magmom but different onsite hubbard terms. This helps
+    assigning different labeled species in the case magnetic calculations with 
+    on site hubbard correction. 
+    Parameters:
+    ----------------------------------------------
+    atoms: ase.Atoms 
+    magmom: list of floats
+            list of the magnetic moments from  atoms
+    onsite_hubbard: tuple 
+                    with hubbard parameters for each of the atoms site
+    ------------------------------------------------
+    Returns:
+    magmoms_: list of floats 
+              the neglibly changed magnetic moments 
+    """
+    magmom_ = [_ for _ in magmom]
+    count = 0
+    sites = OrderedDict() 
+    for atom in zip([a.symbol for a in atoms], magmom_, onsite_hubbard):
+        sites[tuple(atom)] = sites.get(tuple(atom),[]) + [count,]
+        count +=1 
+    for s in enumerate(sites):
+        for s2 in enumerate(sites):
+            if s2[0]>s[0]:
+                if magmom_[sites[s2[1]][0]] == magmom_[sites[s[1]][0]]:
+                    for index in sites[s2[1]]:
+                        magmom_[index] += 1.e-4*s2[0]*np.sign(magmom_[index])
+    return magmom_	
+
+
+
+def get_split_atomic_cards(atoms, masks, sites, species_info, crystal_coordinates):
+    """
+    generates different species labels for atoms with the same symbol but different site properties. 
+    Parameters
+    ------------------------------------------------
+    atoms: ase.Atoms 
+    masks: str describes atomic constraints for relaxation or dynamics
+    sites: list same len as atoms, contains the info of the site specific property
+    species_info: dict 
+    crystal_coordinates: bool if True atoms will be written in crystal coordinates 
+    """
+	atomic_species_str = []
+	atomic_positions_str = []
+	atomic_species_ = OrderedDict()
+	for atom, mask, site in zip(atoms, masks, sites):
+		pseudo_ = species_info[atom.symbol]['pseudo']
+		print (atom.symbol, site,
+				 (atom.symbol, site) in atomic_species_) 
+		if (atom.symbol, site) not in atomic_species_:
+			print (atom.symbol, site)
+			#index in atomic species list
+			sidx = len(atomic_species_) + 1
+			#index for that atomic type no index for first
+			tidx = sum(atom.symbol == x[0] for x in atomic_species_) or ' '
+			atomic_species_[atom.symbol, site] = (sidx, tidx)
+			atomic_species_str.append(
+				f"{atom.symbol}{tidx}  {atom.mass}  {pseudo_}\n"
+			)
+		#lookup tidx to append to name
+		(sidx, tidx) = atomic_species_[atom.symbol, site]
+		if crystal_coordinates:
+			coords = [atom.a, atom.b, atom.c]
+		else:
+			coords = atom.position
+		coords_str = "".join([f"{coords[i]:.10f} " for i in range(3)]) 
+		atomic_positions_str.append(
+			f"{atom.symbol}{tidx}  "  f"{coords_str}" f"{mask}\n"
+		)
+	return atomic_species_str, atomic_positions_str
+
+	
+def onsite_hubbard_card(onsite_hubbard, atomic_positions_str):
+    Udata = filter(
+        lambda s: s[0][0] is not None, 
+        filter(lambda s: s[0] is not None,
+        zip(onsite_hubbard,atomic_positions_str))
+        )
+	U_str = [f"U  {s[1].split()[0]}-{s[0][2]} {s[0][0]:.3f}\n" for s in Udata]
+	Jdata = filter(
+		lambda s: s[0][1] is not None, 
+        filter(lambda s: s[0] is not None,
+        zip(onsite_hubbard,atomic_positions_str))
+        )
+	J_str = [f"J  {s[1].split()[0]}-{s[0][2]} {s[0][1]:.3f}\n" for s in Jdata]
+	res = list(set(U_str + J_str))
+	res = res if len(res) > 0 else None
+	return res  
+	
