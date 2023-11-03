@@ -24,6 +24,7 @@ from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
 from ase.constraints import FixAtoms, FixCartesian
+from ase import symbols as atomic_symbols
 from ase.data import chemical_symbols
 from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
@@ -1313,7 +1314,8 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     - Conversion of :class:`ase.constraints.FixAtoms` and
                     :class:`ase.constraints.FixCartesian`.
-    - `starting_magnetization` derived from the `mgmoms` and pseudopotentials
+    - `starting_magnetization` derived from the `magmoms` and pseudopontial valences
+       given in input
       (searches default paths for pseudo files.)
     - Automatic assignment of options to their correct sections.
 
@@ -1337,6 +1339,16 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     pseudopotentials: dict
         A filename for each atomic species, e.g.
         {'O': 'O.pbe-rrkjus.UPF', 'H': 'H.pbe-rrkjus.UPF'}.
+        or 
+        a dict for each atomic species with at least a filename key, 
+        other parsed keys are:
+        valence, cutoff_wfc, cutoff_rho, e.g.
+        {'O':{'filename': 'O.pbe-rrkjus.UPF',
+              'valence': 6,
+              'cutoff_wfc': 50
+              'cutoff_rho': 400
+              }
+        }
         A dummy name will be used if none are given.
     kspacing: float
         Generate a grid of k-points with this as the minimum distance,
@@ -1419,7 +1431,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     atomic_species = OrderedDict()
     atomic_species_str = []
     atomic_positions_str = []
-
     nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
     noncolin = input_parameters['system'].get('noncolin', False)
     rescale_magmom = kwargs.get('rescale_magmom', False)
@@ -1452,16 +1463,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                 if rescale_magmom:
                     fspin = fspin / species_info[atoms.symbols[posidx]]['valence']
                 input_parameters['system'][mag_str] = fspin
-                species_pseudo = species_info[atom.symbol]['pseudo']
-                atomic_species_str.append(
-                    f"{atom.symbol}{tidx} {atom.mass} {species_pseudo}\n")
-            # lookup tidx to append to name
-            sidx, tidx = atomic_species[(atom.symbol, magmom)]
-            # construct line for atomic positions
-            atomic_positions_str.append(
-                format_atom_position(
-                    atom, crystal_coordinates, mask=mask, tidx=tidx)
-            )
     else:
         # Do nothing about magnetisation and split using hubbard labels if any
         on_site_hubbard_ = [None]*len(atoms) if on_site_hubbard is None else on_site_hubbard
@@ -1473,7 +1474,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         
 
 
-    # Add computed parameters
     # different magnetisms means different types
     input_parameters['system']['ntyp'] = len(atomic_species)
     input_parameters['system']['nat'] = len(atoms)
