@@ -1617,34 +1617,34 @@ def get_split_atomic_cards(atoms, masks, sites, species_info, crystal_coordinate
     species_info: dict 
     crystal_coordinates: bool if True atoms will be written in crystal coordinates 
     """
-	atomic_species_str = []
-	atomic_positions_str = []
-	atomic_species_ = OrderedDict()
-	for atom, mask, site in zip(atoms, masks, sites):
-		pseudo_ = species_info[atom.symbol]['pseudo']
-		print (atom.symbol, site,
+    atomic_species_str = []
+    atomic_positions_str = []
+    atomic_species_ = OrderedDict()
+    for atom, mask, site in zip(atoms, masks, sites):
+        pseudo_ = species_info[atom.symbol]['pseudo']
+        print (atom.symbol, site,
 				 (atom.symbol, site) in atomic_species_) 
-		if (atom.symbol, site) not in atomic_species_:
-			print (atom.symbol, site)
+        if (atom.symbol, site) not in atomic_species_:
+            print (atom.symbol, site)
 			#index in atomic species list
-			sidx = len(atomic_species_) + 1
+            sidx = len(atomic_species_) + 1
 			#index for that atomic type no index for first
-			tidx = sum(atom.symbol == x[0] for x in atomic_species_) or ' '
-			atomic_species_[atom.symbol, site] = (sidx, tidx)
-			atomic_species_str.append(
+            tidx = sum(atom.symbol == x[0] for x in atomic_species_) or ' '
+            atomic_species_[atom.symbol, site] = (sidx, tidx)
+            atomic_species_str.append(
 				f"{atom.symbol}{tidx}  {atom.mass}  {pseudo_}\n"
 			)
 		#lookup tidx to append to name
-		(sidx, tidx) = atomic_species_[atom.symbol, site]
-		if crystal_coordinates:
-			coords = [atom.a, atom.b, atom.c]
-		else:
-			coords = atom.position
-		coords_str = "".join([f"{coords[i]:.10f} " for i in range(3)]) 
-		atomic_positions_str.append(
+        (sidx, tidx) = atomic_species_[atom.symbol, site]
+        if crystal_coordinates:
+            coords = [atom.a, atom.b, atom.c]
+        else:
+            coords = atom.position
+        coords_str = "".join([f"{coords[i]:.10f} " for i in range(3)]) 
+        atomic_positions_str.append(
 			f"{atom.symbol}{tidx}  "  f"{coords_str}" f"{mask}\n"
 		)
-	return atomic_species_str, atomic_positions_str
+    return atomic_species_str, atomic_positions_str
 
 	
 def onsite_hubbard_card(onsite_hubbard, atomic_positions_str):
@@ -1653,14 +1653,14 @@ def onsite_hubbard_card(onsite_hubbard, atomic_positions_str):
         filter(lambda s: s[0] is not None,
         zip(onsite_hubbard,atomic_positions_str))
         )
-	U_str = [f"U  {s[1].split()[0]}-{s[0][2]} {s[0][0]:.3f}\n" for s in Udata]
-	Jdata = filter(
+    U_str = [f"U  {s[1].split()[0]}-{s[0][2]} {s[0][0]:.3f}\n" for s in Udata]
+    Jdata = filter(
 		lambda s: s[0][1] is not None, 
         filter(lambda s: s[0] is not None,
         zip(onsite_hubbard,atomic_positions_str))
         )
-	J_str = [f"J  {s[1].split()[0]}-{s[0][2]} {s[0][1]:.3f}\n" for s in Jdata]
-	res = list(set(U_str + J_str))
-	res = res if len(res) > 0 else None
-	return res  
+    J_str = [f"J  {s[1].split()[0]}-{s[0][2]} {s[0][1]:.3f}\n" for s in Jdata]
+    res = list(set(U_str + J_str))
+    res = res if len(res) > 0 else None
+    return res  
 	
