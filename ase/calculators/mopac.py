@@ -73,7 +73,8 @@ class MOPAC(FileIOCalculator):
         >>> atoms.calc.get_homo_lumo_levels()
 
         """
-        # Removing self.command created issues, keeping it to see if it still works
+        # Removing self.command created issues, keeping it to see if
+        # it still works
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, self.command, **kwargs)
 
