@@ -58,7 +58,7 @@ class ListingView(Mapping):
         return len(self.map)
 
 
-class Listing(Mapping):
+class BaseListing(Mapping):
     """ Class, that lists something, e.g. Plugins or Plugables
     (of calculators or formats etc...).
     The added items are required to have a name attribute.
@@ -66,9 +66,6 @@ class Listing(Mapping):
     The difference against dict is, that Listing iterates the
     values by default, use keys() to iterate the keys.
     """
-
-    def __init__(self):
-        self._items = {}
 
     def add(self, item):
         """ Add an item """
@@ -93,6 +90,11 @@ class Listing(Mapping):
 
         out = [i.info(prefix) for i in self.sorted]
         return '  \n'.join(out)
+
+    def filter(self, filter):
+        """ Return a mapping with only the items thas pass through
+        the filter """
+        return LazyListing({k: v for k, v in self._items if filter(v)})
 
     @staticmethod
     def _sorting_key(i):
@@ -148,3 +150,19 @@ class Listing(Mapping):
 
     def view_by(self, name, mapping=None) -> ListingView:
         return ListingView(self, name, mapping)
+
+
+class Listing(BaseListing):
+    """ Listing holds its own datas """
+    def __init__(self):
+        self._items = {}
+
+
+class LazyListing(BaseListing):
+
+    def __init__(self, lazy):
+        self._lazy = lazy
+
+    @lazyproperty
+    def _items(self):
+        return self._lazy()
