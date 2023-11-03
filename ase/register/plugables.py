@@ -36,6 +36,19 @@ class Plugable(BasePlugable):
         self.name = name
         self.cls = cls
 
+    def __getstate__(self):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        out = self.__dict__.copy()
+        out['plugin'] = out['plugin'].name
+        return out
+
+    def __setstate__(self, state):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        from ase import plugins as ase_plugins  # NOQA E402
+        self.__dict__.update(state)
+        if 'plugin' in state:
+            self.plugin = ase_plugins.plugins[self.plugin]
+
     @lazyproperty
     def implementation(self):
         module, cls = self.cls.rsplit(',', 1)
@@ -78,12 +91,24 @@ class Plugables(Listing):
     """ This class holds all the Plugables (Calculators, Viewers, ...)
     of one type, that can be used by user """
 
-    item_type = Plugable
+    item_type: type = Plugable
 
     def __init__(self, plugin_list, class_type: str):
         super().__init__()
         self.plugins = plugin_list
         self.class_type = class_type
+
+    def __getstate__(self):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        out = self.__dict__.copy()
+        del out['plugins']
+        return out
+
+    def __setstate__(self, state):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        from ase import plugins as ase_plugins  # NOQA E402
+        self.__dict__.update(state)
+        self.plugins = ase_plugins
 
     @lazyproperty
     def singular_name(self):
@@ -94,18 +119,11 @@ class Plugables(Listing):
         """
         return self.class_type[:-1].replace('_', ' ')
 
-    def find_by_name(self, name):
-        """ Plugables can be found by their lowercased name (and ), too """
-        out = self.find_by('names', name.lower())
-        if not out:
-            out = self.find_by('lowercase_names', name.lower())
-        return out
-
     def __repr__(self):
         return f"<ASE list of {self.class_type}>"
 
     def __getitem__(self, name):
-        return super.__getitem__(name).implementation
+        return super().__getitem__(name).implementation
 
 
 class CalculatorPlugable(Plugable):
@@ -121,6 +139,13 @@ class CalculatorPlugables(Plugables):
     """ Just a few specialities for plugables calculators """
 
     item_type = CalculatorPlugable
+
+    def find_by_name(self, name):
+        """ Plugables can be found by their lowercased name (and ), too """
+        out = self.find_by('names', name.lower())
+        if not out:
+            out = self.find_by('lowercase_names', name.lower())
+        return out
 
     def info(self, prefix='', opts={}):
         return f"{prefix}Calculators:\n" \

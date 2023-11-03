@@ -118,8 +118,8 @@ class Plugins(Listing):
         return modules
 
     def populate(self):
-        self.items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
-                      for p in self.packages()}
+        self._items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
+                       for p in self.packages()}
 
     def plugables_of(self, class_type):
         return self._plugables[class_type]

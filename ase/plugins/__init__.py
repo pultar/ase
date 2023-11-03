@@ -11,8 +11,8 @@ plugins = Plugins('ase.plugins', {
 })
 
 plugins.register()
-calculators = plugins.calculators
-io_formats = plugins.io_formats
+calculators: CalculatorPlugables = plugins.calculators
+io_formats: IOFormatPlugables = plugins.io_formats
 
 __all__ = [
     'plugins',

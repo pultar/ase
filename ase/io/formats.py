@@ -22,11 +22,10 @@ import re
 import sys
 import warnings
 from pathlib import Path, PurePath
-from typing import (IO, Any, Dict, Iterable, List, Optional, Sequence, Tuple,
-                    Union)
+from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple, Union)
 from ase.utils import lazyproperty
 from ase.register.plugables import BasePlugable, Plugables
-
+from ase.register.listing import ListingView
 from importlib import import_module
 
 from ase.atoms import Atoms
@@ -298,11 +297,6 @@ class IOFormatPlugables(Plugables):
                f"{prefix}-----------\n" + super().info(prefix + '  ', opts)
 
 
-ioformats: Dict[str, IOFormat] = {}  # These will be filled at run-time.
-extension2format = {}
-
-
-all_formats = ioformats  # Aliased for compatibility only.  Please do not use.
 format2modulename = {}  # Left for compatibility only.
 
 
@@ -333,13 +327,6 @@ def define_io_format(name, desc, code, *, module=None, ext=None,
 
     if magic_regex is not None:
         fmt.magic_regex = magic_regex
-
-    for ext in fmt.extensions:
-        if ext in extension2format:
-            raise ValueError(f'extension "{ext}" already registered')
-        extension2format[ext] = fmt
-
-    ioformats[name] = fmt
 
     return fmt
 
@@ -845,21 +832,20 @@ def filetype(
     except UnknownFileTypeError:
         pass
 
-    format = None
-    if ext in extension2format:
-        format = extension2format[ext].name
+    format = extension2format.get(ext, None)
+    if format is not None:
+        format_name = format.name
+    elif guess:
+        format_name = ext
+        if format_name is None:
+            # Do quick xyz check:
+            lines = data.splitlines()
+            if lines and lines[0].strip().isdigit():
+                return extension2format['xyz'].name
 
-    if format is None and guess:
-        format = ext
-    if format is None:
-        # Do quick xyz check:
-        lines = data.splitlines()
-        if lines and lines[0].strip().isdigit():
-            return extension2format['xyz'].name
-
-        raise UnknownFileTypeError('Could not guess file type')
-    assert isinstance(format, str)
-    return format
+            raise UnknownFileTypeError('Could not guess file type')
+        assert isinstance(format_name, str)
+    return format_name
 
 
 def index2range(index, length):
@@ -874,3 +860,8 @@ def index2range(index, length):
 
 # Just here, to avoid circular imports
 import ase.plugins as ase_plugins  # NOQA: F401,E402
+
+ioformats: IOFormatPlugables = ase_plugins.io_formats
+all_formats = ioformats  # Aliased for compatibility only.  Please do not use.
+extension2format: ListingView = \
+    ioformats.view_by('extensions')
