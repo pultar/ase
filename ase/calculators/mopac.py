@@ -23,6 +23,7 @@ from ase.units import Debye, kcal, mol
 class MOPAC(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole',
                               'magmom', 'free_energy']
+    command = 'mopac PREFIX.mop 2> /dev/null'
     discard_results_on_any_change = True
 
     default_parameters = dict(
@@ -72,11 +73,9 @@ class MOPAC(FileIOCalculator):
         >>> atoms.calc.get_homo_lumo_levels()
 
         """
-        command = kwargs.pop("command", None)
-        if command is None:
-            command = 'mopac PREFIX.mop 2> /dev/null'
+        # Removing self.command created issues, keeping it to see if it still works
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, command, **kwargs)
+                                  label, atoms, self.command, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
