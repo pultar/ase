@@ -577,13 +577,16 @@ def read_espresso_in(fileobj):
         magmom = data["system"].get(magnet_key, 0.0)
         species_info[symbol] = {"weight": weight, "pseudo": pseudo,
                                 "magmom": magmom}
-
     positions_card = get_atomic_positions(
         card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
-    magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
+    import pdb
+    try:
+        magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
+    except KeyError:
+        pdb.set_trace()
 
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
@@ -1453,9 +1456,9 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             atoms, masks, initial_magmom, species_info, crystal_coordinates)
             for pwspecies in [_.split()[0] for _ in atomic_species_str]:
                 posidx = [_.split()[0] for _ in atomic_positions_str].index(pwspecies)
-                spidx  = [_.split()[0] for _ in atomic_species_str].index[pwspecies] 
+                spidx  = [_.split()[0] for _ in atomic_species_str].index(pwspecies) 
                 fspin = atoms.get_initial_magnetic_moments()[posidx]
-                mag_str = f"starting_magnetizations({spidx})"
+                mag_str = f"starting_magnetization({spidx + 1})"
                 # QE v7.2 and older need magnetization between -1 and +1, initial
                 # magnetic moments are rescaled with pseudopotential valence charge
                 # for QE newer that 7.2 it is non necessary to set rescale_magnom=True
@@ -1475,7 +1478,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
 
     # different magnetisms means different types
-    input_parameters['system']['ntyp'] = len(atomic_species)
+    input_parameters['system']['ntyp'] = len(atomic_species_str)
     input_parameters['system']['nat'] = len(atoms)
 
     # Use cell as given or fit to a specific ibrav
@@ -1621,11 +1624,11 @@ def get_split_atomic_cards(atoms, masks, sites, species_info, crystal_coordinate
     atomic_positions_str = []
     atomic_species_ = OrderedDict()
     for atom, mask, site in zip(atoms, masks, sites):
-        pseudo_ = species_info[atom.symbol]['pseudo']
-        print (atom.symbol, site,
-				 (atom.symbol, site) in atomic_species_) 
+        try:
+            pseudo_ = species_info[atom.symbol]['pseudo']
+        except KeyError:
+            pseudo_ = "pseudo_not_provided" 
         if (atom.symbol, site) not in atomic_species_:
-            print (atom.symbol, site)
 			#index in atomic species list
             sidx = len(atomic_species_) + 1
 			#index for that atomic type no index for first
