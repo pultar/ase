@@ -4,6 +4,8 @@ from copy import deepcopy
 from os.path import basename, dirname, isfile
 from pathlib import Path
 
+import time
+
 import numpy as np
 
 from ase.atoms import Atoms
@@ -34,6 +36,7 @@ ONETEP_TOTAL_ENERGY = "*** NGWF optimisation converged ***"
 ONETEP_FORCE = "* Forces *"
 ONETEP_MULLIKEN = "Mulliken Atomic Populations"
 ONETEP_IBFGS_ITER = "starting iteration"
+ONETEP_SPIN = "Down spin density "
 ONETEP_POSITION = "Cell Contents"
 ONETEP_FIRST_POSITION = "%BLOCK POSITIONS_"
 ONETEP_WRONG_FIRST_POSITION = '%block positions_'
@@ -105,6 +108,7 @@ def read_onetep_in(fd, **kwargs):
         Atoms object with cell and a Onetep calculator
         attached which contains the keywords dictionary
     """
+
     fdi_lines = fd.readlines()
 
     try:
@@ -548,8 +552,11 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     structure: Atoms|list of Atoms
     """
     # Put everything in memory
+    start_time = time.time()
     fdo_lines = fd.readlines()
     n_lines = len(fdo_lines)
+
+    freg = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+\-]?\d+)?")
 
     # Used to store index of important elements
     output = {
@@ -557,6 +564,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         ONETEP_STOP: [],
         ONETEP_TOTAL_ENERGY: [],
         ONETEP_FORCE: [],
+        ONETEP_SPIN: [],
         ONETEP_MULLIKEN: [],
         ONETEP_POSITION: [],
         ONETEP_FIRST_POSITION: [],
@@ -752,7 +760,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 tmp_charges = np.loadtxt(
                     fdo_lines[idx + offset:idx + n - 1],
                     usecols=3)
-                return tmp_charges
+                return np.reshape(tmp_charges, -1)
             n += 1
         return None
     #  In ONETEP there is no way to differentiate electronic entropy
@@ -772,6 +780,20 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             # Something is wrong with this ONETEP output
             if len(energies) > 2:
                 raise RuntimeError('something is wrong with this ONETEP output')
+            n += 1
+        return None
+    
+    def parse_fermi_level(idx):
+        n = 0
+        fermi_levels = None
+        while idx + n < len(fdo_lines):
+            if 'Fermi_level' in fdo_lines[idx + n]:
+                tmp = '\n'.join(fdo_lines[idx + n:idx + n + 1])
+                fermi_level = re.findall(freg, tmp)
+                fermi_levels = \
+                    [float(i)*units['Hartree'] for i in fermi_level]
+            if 'CALCULATION SUMMARY' in fdo_lines[idx + n]:
+                return fermi_levels
             n += 1
         return None
 
@@ -883,7 +905,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                         usecols=4)
                 except ValueError:
                     tmp_spins = None
-                return tmp_spins
+                return np.reshape(tmp_spins, -1)
             n += 1
         return None
 
@@ -926,6 +948,11 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     for idx in output_corr[ONETEP_TOTAL_ENERGY]:
         energy = parse_energy(idx) if idx else None
         energies.append(energy)
+
+    fermi_levels = []
+    for idx in output_corr[ONETEP_TOTAL_ENERGY]:
+        fermi_level = parse_fermi_level(idx) if idx else None
+        fermi_levels.append(fermi_level)
 
     magmoms = []
     for idx in output_corr[ONETEP_MULLIKEN]:
@@ -983,6 +1010,16 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         magmoms = [magmoms[i] for i in range(n_pos) if c[i]]
 
     n_pos = len(positions)
+    # We take care of properties that only show up at
+    # the beginning of onetep calculation
+    spin = np.full((n_pos), 1)
+    for sp in output[ONETEP_SPIN]:
+        output[ONETEP_START] = np.append(output[ONETEP_START], n_lines)
+        iter = zip(output[ONETEP_START], output[ONETEP_START][1:])
+        for past, future in iter:
+            if past < sp < future:
+                p = (past < ipositions) & (ipositions < future)
+                spin[p] = 2
 
     # Prepare atom objects with all the properties
     if isinstance(index, int):
@@ -1014,5 +1051,6 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             charges=charges[idx] if charges else None,
             magmoms=magmoms[idx] if magmoms else None,
         )
+        calc.kpts = [(0, 0, 0) for _ in range(spin[idx])]
         positions[idx].calc = calc
         yield positions[idx]
