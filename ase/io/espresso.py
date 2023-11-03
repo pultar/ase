@@ -1472,7 +1472,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             [None] * len(atoms) if on_site_hubbard is None else on_site_hubbard
         )
         atomic_species_str, atomic_positions_str = get_split_atomic_cards(
-            atoms, masks, on_site_hubbard, species_info, crystal_coordinates)
+            atoms, masks, on_site_hubbard_, species_info, crystal_coordinates)
     hubbard_cards_str = (
         onsite_hubbard_card(on_site_hubbard_, atomic_positions_str)
         if on_site_hubbard is not None else None)
