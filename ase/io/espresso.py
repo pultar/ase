@@ -1431,21 +1431,26 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             nspin = 2
 
     if nspin == 2 or noncolin:
-        # Magnetic calculation on
-        for atom, mask, magmom in zip(
-                atoms, masks, atoms.get_initial_magnetic_moments()):
-            if (atom.symbol, magmom) not in atomic_species:
-                # for qe version 7.2 or older magmon must be rescale by
-                # about a factor 10 to assume sensible values
-                # since qe-v7.3 magmom values will be provided unscaled
-                fspin = float(magmom) / rescale_magmom_fac
-                # Index in the atomic species list
-                sidx = len(atomic_species) + 1
-                # Index for that atom type; no index for first one
-                tidx = sum(atom.symbol == x[0] for x in atomic_species) or ' '
-                atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
-                # Add magnetization to the input file
-                mag_str = f"starting_magnetization({sidx})"
+        if on_site_hubbard is not None:
+            initial_magmom = split_nonequivalent_hubbard(
+                atoms, atoms.get_initial_magnetic_moments(), on_site_hubbard
+                )
+        else:
+            initial_magmom = atoms.get_initial_magnetic_moments() 
+        # Magnetic calculation on: split with magmom
+            atomic_species_str, atomic_positions_str = get_split_atomic_cards(
+            atoms, masks, initial_magmom, species_info, crystal_coordinates)
+            for pwspecies in [_.split()[0] for _ in atomic_species_str]:
+                posidx = [_.split()[0] for _ in atomic_positions_str].index(pwspecies)
+                spidx  = [_.split()[0] for _ in atomic_species_str].index[pwspecies] 
+                fspin = atoms.get_initial_magnetic_moments()[posidx]
+                mag_str = f"starting_magnetizations({spidx})"
+                # QE v7.2 and older need magnetization between -1 and +1, initial
+                # magnetic moments are rescaled with pseudopotential valence charge
+                # for QE newer that 7.2 it is non necessary to set rescale_magnom=True
+                # but still works 
+                if rescale_magmom:
+                    fspin = fspin / species_info[atoms.symbols[posidx]]['valence']
                 input_parameters['system'][mag_str] = fspin
                 species_pseudo = species_info[atom.symbol]['pseudo']
                 atomic_species_str.append(
@@ -1458,17 +1463,15 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                     atom, crystal_coordinates, mask=mask, tidx=tidx)
             )
     else:
-        # Do nothing about magnetisation
-        for atom, mask in zip(atoms, masks):
-            if atom.symbol not in atomic_species:
-                atomic_species[atom.symbol] = True  # just a placeholder
-                species_pseudo = species_info[atom.symbol]['pseudo']
-                atomic_species_str.append(
-                    f"{atom.symbol} {atom.mass} {species_pseudo}\n")
-            # construct line for atomic positions
-            atomic_positions_str.append(
-                format_atom_position(atom, crystal_coordinates, mask=mask)
-            )
+        # Do nothing about magnetisation and split using hubbard labels if any
+        on_site_hubbard_ = [None]*len(atoms) if on_site_hubbard is None else on_site_hubbard
+        atomic_species_str, atomic_positions_str = get_split_atomic_cards(
+            atoms, masks, on_site_hubbard, species_info, crystal_coordinates)
+    hubbard_cards_str = onsite_hubbard_card(
+        on_site_hubbard_, atomic_positions_str
+        ) if on_site_hubbard is not None else None 
+        
+
 
     # Add computed parameters
     # different magnetisms means different types
@@ -1560,7 +1563,11 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         pwi.append('ATOMIC_POSITIONS angstrom\n')
     pwi.extend(atomic_positions_str)
     pwi.append('\n')
-
+    if hubbard_cards_str is not None:
+        hubbard_projection = kwargs.get('hubbard_projections',"ortho-atomic")
+        pwi.append(f"Hubbard ({hubbard_projection})\n")
+        pwi.extend(hubbard_cards_str)
+        pwi.append('\n') 
     # DONE!
     fd.write(''.join(pwi))
 
