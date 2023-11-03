@@ -4,19 +4,23 @@ and which is supposed to be used via plugins mechanism.
 """
 from ase.register import register_calculator
 from ase.io.formats import define_io_format
+from ase.visualise.viewer import define_viewer
 from ase.register.plugins import get_currently_registered_plugin
+import sys
 
 """
 note: ase.register.register_io_format is just a wrapper
 to define_io_format. We call here define_io_format to
 retain the old order of the parameters (since register
-begins as all register_.... functions with implementation)
+begins as all register_.... functions with implementation).
+The same holds for the viewers.
 """
 
 
 def ase_register():
     register_calculators()
     register_formats()
+    register_viewers()
 
 
 def register_calculators():
@@ -68,6 +72,18 @@ def register_calculators():
     register_calculator("ase.calculators.tip4p.TIP4P")
 
 
+def define_to_register(fce):
+
+    plugin = get_currently_registered_plugin()
+
+    def register(*args, **kwargs):
+        out = fce(*args, **kwargs)
+        out.plugin = plugin
+        out.register()
+
+    return register
+
+
 def register_formats():
     # We define all the IO formats below.  Each IO format has a code,
     # such as '1F', which defines some of the format's properties:
@@ -78,13 +94,7 @@ def register_formats():
     # S=needs a file-name str
     # B=like F, but opens in binary mode
 
-    plugin = get_currently_registered_plugin()
-
-    def F(*args, **kwargs):
-        fmt = define_io_format(*args, **kwargs)
-        fmt.plugin = plugin
-        fmt.register()
-
+    F = define_to_register(define_io_format)
     F('abinit-gsr', 'ABINIT GSR file', '1S',
       module='abinit', glob='*o_GSR.nc')
     F('abinit-in', 'ABINIT input file', '1F',
@@ -251,3 +261,45 @@ def register_formats():
     # xyz: No `ext='xyz'` in the definition below.
     #      The .xyz files are handled by the extxyz module by default.
     F('xyz', 'XYZ-file', '+F')
+
+
+def register_viewers():
+    F = define_to_register(define_viewer)
+
+    F("ase", "View atoms using ase gui.")
+    F("ngl", "View atoms using nglview.")
+    F("mlab", "View atoms using matplotlib.")
+    F("sage", "View atoms using sage.")
+    F("x3d", "View atoms using x3d.")
+
+    # CLI viweers that are internally supported
+    F(
+        "avogadro", "View atoms using avogradro.", cli=True, fmt="cube",
+        argv=["avogadro"]
+    )
+    F(
+        "ase_gui_cli", "View atoms using ase gui.", cli=True, fmt="traj",
+        argv=[sys.executable, '-m', 'ase.gui'],
+    )
+    F(
+        "gopenmol",
+        "View atoms using gopenmol.",
+        cli=True,
+        fmt="extxyz",
+        argv=["runGOpenMol"],
+    )
+    F(
+        "rasmol",
+        "View atoms using rasmol.",
+        cli=True,
+        fmt="proteindatabank",
+        argv=["rasmol", "-pdb"],
+    )
+    F("vmd", "View atoms using vmd.", cli=True, fmt="cube", argv=["vmd"])
+    F(
+        "xmakemol",
+        "View atoms using xmakemol.",
+        cli=True,
+        fmt="extxyz",
+        argv=["xmakemol", "-f"],
+    )

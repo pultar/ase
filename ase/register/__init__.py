@@ -1,8 +1,9 @@
 from ase.register.plugins import get_currently_registered_plugin
 from ase.io import formats as ioformats
+from ase.visualise import viewers
 
 
-def register(plugable_type: str, cls: str, name=None):
+def _register(plugable_type: str, cls: str, name=None):
     """ Register a calculator or other plugable exposed by a plugin.
     The name can be derived from the cls name
 
@@ -29,7 +30,7 @@ def register_calculator(cls: str, name=None):
     """ Register a calculator exposed by a plugin.
     The name can be derived from the cls name
     """
-    register('calculators', cls, name)
+    _register('calculators', cls, name)
 
 
 def register_io_format(module, desc, code, *, name=None, ext=None,
@@ -51,3 +52,13 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
                                      external=True)
     fmt.plugin = get_currently_registered_plugin()
     return fmt
+
+
+def register_viewer(name, desc, *, module=None, cli=False, fmt=None, argv=None):
+    view = viewers.define_viewer(name, desc, module=module, cli=cli,
+                                 fmt=fmt, argv=argv, external=True)
+    view.plugin = get_currently_registered_plugin()
+    return view
+
+
+__all__ = ['register_viewer', 'register_io_format', 'register_calculator']
