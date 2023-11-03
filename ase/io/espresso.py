@@ -582,12 +582,7 @@ def read_espresso_in(fileobj):
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
-    import pdb
-    try:
-        magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
-    except KeyError:
-        pdb.set_trace()
-
+    magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
     atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True,
