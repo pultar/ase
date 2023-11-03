@@ -1314,7 +1314,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                     :class:`ase.constraints.FixCartesian`.
     - `starting_magnetization` derived from the `magmoms` and
        pseudopontial valences given in input
-      (searches default paths for pseudo files.)
+       (searches default paths for pseudo files.)
     - Automatic assignment of options to their correct sections.
 
     Not implemented:
