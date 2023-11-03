@@ -16,10 +16,11 @@ from ase.units import Bohr, Hartree
 
 
 class Dftb(FileIOCalculator):
-    if 'DFTB_COMMAND' in FileIOCalculator.cfg:
-        command = FileIOCalculator.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
-    else:
-        command = 'dftb+ > PREFIX.out'
+    # TARP self.command is getting deprecated
+    # if 'DFTB_COMMAND' in FileIOCalculator.cfg:
+    #     command = FileIOCalculator.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
+    # else:
+    #     command = 'dftb+ > PREFIX.out'
 
     implemented_properties = ['energy', 'forces', 'charges',
                               'stress', 'dipole']
@@ -118,11 +119,14 @@ class Dftb(FileIOCalculator):
         self.outfilename = 'dftb.out'
 
         # Pull out the `command` as a specific kwarg
-        self.command = kwargs.get('command') or self.command
+        command = (
+            kwargs.get('command') or
+            f'{FileIOCalculator.cfg.get("DFTB_COMMAND", "dftb+")} > PREFIX.out'
+        )
         kwargs.pop('command', None)
 
         super().__init__(restart, ignore_bad_restart_file,
-                         label, atoms, command=self.command,
+                         label, atoms, command=command,
                          profile=profile, **kwargs)
 
         # Determine number of spin channels

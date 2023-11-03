@@ -7,7 +7,6 @@ from ase.io.elk import ElkReader
 
 
 class ELK(FileIOCalculator, GetOutputsMixin):
-    command = 'elk > elk.out'
     implemented_properties = ['energy', 'forces']
     ignored_changes = {'pbc'}
     discard_results_on_any_change = True
@@ -19,8 +18,10 @@ class ELK(FileIOCalculator, GetOutputsMixin):
         keywords: 'xc', 'kpts' and 'smearing' or any of ELK'
         native keywords.
         """
-
-        super().__init__(**kwargs)
+        command = kwargs.pop("command", None)
+        if command is None:
+            command = 'elk > elk.out'
+        super().__init__(command=command, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)

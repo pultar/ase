@@ -1,6 +1,8 @@
 from ase.calculators.calculator import PropertyNotImplementedError
+from ase.utils import deprecated
 
 
+@deprecated("This style of Calculator is deprecated", DeprecationWarning)
 class Calculator:
     "Deprecated!!!!"
 

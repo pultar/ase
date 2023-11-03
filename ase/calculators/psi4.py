@@ -35,6 +35,7 @@ class Psi4(Calculator):
         "basis": "aug-cc-pvtz",
         "method": "hf",
         'symmetry': 'c1'}
+    # This is a Calculator class, command needs to stay
 
     def __init__(self, restart=None, ignore_bad_restart=False,
                  label='psi4-calc', atoms=None, command=None,

@@ -36,6 +36,7 @@ import numpy as np
 from ase.calculators.calculator import Calculator, all_changes
 from ase.calculators.lammps import (CALCULATION_END_MARK, Prism, convert,
                                     write_lammps_in)
+from ase.config import cfg
 from ase.data import atomic_masses, chemical_symbols
 from ase.io.lammpsdata import write_lammps_data
 from ase.io.lammpsrun import read_lammps_dump
@@ -210,7 +211,7 @@ class LAMMPS(Calculator):
         cmd = self.parameters.get('command')
         if cmd is None:
             envvar = f'ASE_{self.name.upper()}_COMMAND'
-            cmd = os.environ.get(envvar)
+            cmd = cfg.get(envvar)
 
         if cmd is None:
             cmd = 'lammps'

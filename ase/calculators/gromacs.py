@@ -125,6 +125,7 @@ class Gromacs(FileIOCalculator):
         """
 
         gmxes = ('gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d')
+        # Keeping as is as command is used in calculate
         if command is not None:
             self.command = command
         else:

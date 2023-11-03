@@ -7,7 +7,6 @@ from ase.io.gamess_us import clean_userscr, get_userscr
 
 class GAMESSUS(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole']
-    command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
     discard_results_on_any_change = True
 
     def __init__(self, restart=None,
@@ -69,6 +68,11 @@ class GAMESSUS(FileIOCalculator):
         ecp: dict
             A per-index or per-element dictionary of ECP specifications.
         """
+        if command is None:
+            command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
+
+        # Used in calculate
+        self.command = command
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, command, **kwargs)
         self.userscr = userscr
