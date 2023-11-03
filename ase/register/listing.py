@@ -1,10 +1,20 @@
 from collections.abc import Mapping
+from ase.utils import lazyproperty
 from typing import Dict
 
 
 class Listing(Mapping):
-    """ Class, that lists something, e.g. Plugins or Instances
-    (of calculators or formats etc...) """
+    """ Class, that lists something, e.g. Plugins or Plugables
+    (of calculators or formats etc...).
+    The added items are required to have a name attribute.
+    """
+
+    def __init__(self):
+        self.items = {}
+
+    def add(self, item):
+        """ Add an item """
+        self.items[item.name] = item
 
     def info(self, prefix: str = '', opts: Dict = {}) -> str:
         """
@@ -23,17 +33,18 @@ class Listing(Mapping):
           Information about the object and (if applicable) contained items.
         """
 
-        out = [i.info(prefix) for i in self.sorted()]
+        out = [i.info(prefix) for i in self.sorted]
         return '  \n'.join(out)
 
     @staticmethod
-    def sorting_key(i):
+    def _sorting_key(i):
         return i.name.lower()
 
+    @lazyproperty
     def sorted(self):
-        ins = self.items
-        ins = ins.copy() if isinstance(self.items, list) else list(ins)
-        ins.sort(key=self.sorting_key)
+        """ Return items in the listing, sorted by a predefined criteria """
+        ins = list(self.items.values())
+        ins.sort(key=self._sorting_key)
         return ins
 
     def __len__(self):
@@ -46,7 +57,7 @@ class Listing(Mapping):
         return out
 
     def __iter__(self):
-        return iter(self.items)
+        return iter(self.items.values())
 
     def find_by(self, attribute, value):
         """ Find plugin according the given attribute.
@@ -54,7 +65,7 @@ class Listing(Mapping):
         or not at all - in this case, the default value for the attribute
         will be used """
         for i in self:
-            if Listing.item_has_attribute(i, attribute, value):
+            if Listing._item_has_attribute(i, attribute, value):
                 return i
 
     def find_all_by(self, attribute, value):
@@ -62,11 +73,11 @@ class Listing(Mapping):
         The attribute can be given by list of alternative values,
         or not at all - in this case, the default value for the attribute
         will be used """
-        return (i for i in self.plugins if
-                Listing.item_has_attribute(i, attribute, value))
+        return (i for i in self if
+                Listing._item_has_attribute(i, attribute, value))
 
     @staticmethod
-    def item_has_attribute(obj, attribute, value):
+    def _item_has_attribute(obj, attribute, value):
         v = getattr(obj, attribute, None)
         if value == v:
             return True
@@ -77,4 +88,4 @@ class Listing(Mapping):
         return False
 
     def find_by_name(self, name):
-        return self.find_by('name', name)
+        return self.items.get(name, None)

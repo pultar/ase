@@ -1,5 +1,5 @@
 """ This module contains the classes for listing plugins and
-the instances (Calculators, IOs, etc...) provided by the plugins.
+the plugables (Calculators, IOs, etc...) provided by the plugins.
 
 
 The structure is as follows
@@ -13,8 +13,8 @@ The structure is as follows
 ^^^^^^^^^^                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |                                           |
    1:n  for each type                         1:n - plugin can return lists
-    |   (i.e viewer, calculator)                | of instances
-    |                                           | of each instance type
+    |   (i.e viewer, calculator)                | of plugables
+    |                                           | of each plugable type
     |                                           | (calculator, viewer)
     |                                           | that it provides
     |                                           |
@@ -22,7 +22,7 @@ The structure is as follows
     |                                           |
 -------------------------                ------------------------
 |                       |                |                      |
-|    Instances:         |                |    Instance:         |
+|    Plugables:         |                |    Plugable:         |
 |      list all the     |------1:n-------|    holds inform.     |
 |   available 'items'   |                |    about just one    |
 |   (calcs, viewers)    |                |    calculator        |
@@ -52,6 +52,15 @@ _current_plugin = None
 
 @contextmanager
 def within_the_plugin(plugin):
+    """ When a plugin register() function is called,
+    the registered plugin would have to say which plugin
+    am I.
+    This can lead to errors, so importing of the plugin
+    is enclosed by this helper, due to the
+    :func:get_currently_registered_plugin
+    can say, which plugin is currently imported.
+    """
+
     global _current_plugin
     ocp = _current_plugin
     _current_plugin = plugin
@@ -60,6 +69,12 @@ def within_the_plugin(plugin):
 
 
 def get_currently_registered_plugin():
+    """
+    Which plugin is imported and so to which plugin
+    belongs currently imported Plugables
+
+    See the :func:within_the_plugin
+    """
     plugin = _current_plugin
     if not plugin:
         import ase.plugins as ase_plugins
@@ -67,26 +82,16 @@ def get_currently_registered_plugin():
     return plugin
 
 
-def import_module(name, path):
-    try:
-        module = importlib.import_module(name)
-        return module
-    except ImportError:
-        raise
-        warnings.warn(f"Can not import {name} in {path}."
-                      " Probably broken ASE plugin.")
-
-
 class Plugins(Listing):
     """ A class, that holds all the installed plugins in
         the given namespace package."""
 
-    """ This information is just for initial creating of the instances """
-    def __init__(self, namespace_package, instance_types):
+    """ This information is just for initial creating of the plugables """
+    def __init__(self, namespace_package, plugable_types):
         self.namespace_package = namespace_package
-        self._instances = {
+        self._plugables = {
             k: cls(self, k)
-            for k, cls in instance_types.items()
+            for k, cls in plugable_types.items()
         }
 
     def packages(self):
@@ -98,34 +103,37 @@ class Plugins(Listing):
         def mod_name(mod):
             return self.namespace_package + '.' + mod.name
 
-        modules = (import_module(mod_name(mod), mod.module_finder.path)
+        def import_plugin_module(name, path):
+            try:
+                module = importlib.import_module(name)
+                return module
+            except ImportError:
+                warnings.warn(f"Can not import {name} in {path}."
+                              " Probably broken ASE plugin.")
+
+        modules = (import_plugin_module(mod_name(mod), mod.module_finder.path)
                    for mod in pkgutil.iter_modules(package.__path__))
 
         modules = (i for i in modules if i)
         return modules
 
-    @lazyproperty
-    def plugins(self):
-        return {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
-                for p in self.packages()}
+    def populate(self):
+        self.items = {p.__name__.rsplit('.', 1)[-1]: Plugin(self, p)
+                      for p in self.packages()}
 
-    @property
-    def items(self):
-        return self.plugins.values()
+    def plugables_of(self, class_type):
+        return self._plugables[class_type]
 
-    def instances_of(self, class_type):
-        return self._instances[class_type]
-
-    def all_instances(self):
-        return self._instances.values()
+    def all_plugables(self):
+        return self._plugables.values()
 
     @lazyproperty
     def calculators(self):
-        return self.instances_of('calculators')
+        return self.plugables_of('calculators')
 
     @lazyproperty
     def io_formats(self):
-        return self.instances_of('io_formats')
+        return self.plugables_of('io_formats')
 
     def __repr__(self):
         return f"<ASE plugins from: {self.namespace_package}>"
@@ -135,6 +143,12 @@ class Plugins(Listing):
                "--------\n" + super().info(prefix, opts)
 
     def register(self):
+        """
+        Register all the installed plugables. To do so
+        - import all plugin packages
+        - register all the plugables from the plugins
+        """
+        self.populate()
         for i in self:
             i.register()
 
@@ -145,18 +159,26 @@ class Plugin:
     def __init__(self, plugins, package):
         self.plugins = plugins
         self.package = package
-        self.instances = {
-            i.class_type: {} for i in plugins.all_instances()
+        self.plugables = {
+            i.class_type: {} for i in plugins.all_plugables()
         }
         self.modules = {}
-        self._instances = {}
+        self._plugables = {}
         self.registered = False
+
+    def add_plugable(self, plugable):
+        """ Called by Plugable.register() """
+        self.plugables[plugable.class_type][plugable.name] = plugable
 
     @property
     def name(self):
         return self.package.__name__[12:]   # get rig 'ase.plugins'
 
     def register(self):
+        """ Register the plugables in the plugin:
+        Call the ase_register function from the
+        __init__.py of the plugin package
+        """
         if not self.registered:
             if hasattr(self.package, 'ase_register'):
                 with within_the_plugin(self):
@@ -170,11 +192,11 @@ class Plugin:
         opts = opts.copy()
         opts['plugin'] = False
 
-        for instances in self.plugins.all_instances():
-            itype = instances.class_type
-            inst = self.instances[itype]
+        for plugables in self.plugins.all_plugables():
+            itype = plugables.class_type
+            inst = self.plugables[itype]
             if inst:
-                p = f'\n{prefix}{instances.singular_name}: '
+                p = f'\n{prefix}{plugables.singular_name}: '
                 for i in inst.values():
                     info += i.info(p, opts)
         return info

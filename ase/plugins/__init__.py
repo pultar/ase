@@ -2,12 +2,12 @@
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
 from ase.register.plugins import Plugins
-from ase.register.instances import CalculatorInstances
-from ase.io.formats import IOFormatInstances
+from ase.register.plugables import CalculatorPlugables
+from ase.io.formats import IOFormatPlugables
 
 plugins = Plugins('ase.plugins', {
-    'calculators': CalculatorInstances,
-    'io_formats': IOFormatInstances
+    'calculators': CalculatorPlugables,
+    'io_formats': IOFormatPlugables
 })
 
 plugins.register()

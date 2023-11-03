@@ -25,7 +25,7 @@ from pathlib import Path, PurePath
 from typing import (IO, Any, Dict, Iterable, List, Optional, Sequence, Tuple,
                     Union)
 from ase.utils import lazyproperty
-from ase.register.instances import BaseInstance, Instances
+from ase.register.plugables import BasePlugable, Plugables
 
 from importlib import import_module
 
@@ -39,7 +39,7 @@ class UnknownFileTypeError(Exception):
     pass
 
 
-class IOFormat(BaseInstance):
+class IOFormat(BasePlugable):
 
     class_type = 'io_formats'
 
@@ -61,12 +61,14 @@ class IOFormat(BaseInstance):
         self.magic_regex: Optional[bytes] = None
 
     def __getstate__(self):
+        """ Just avoid de/serializing the plugin, save its name instead """
         out = self.__dict__.copy()
         if 'plugin' in out:
             out['plugin'] = out['plugin'].name
         return out
 
     def __setstate__(self, state):
+        """ Just avoid de/serializing the plugin, save its name instead """
         self.__dict__.update(state)
         if 'plugin' in state:
             self.plugin = ase_plugins.plugins[self.plugin]
@@ -279,7 +281,7 @@ class IOFormat(BaseInstance):
 
     @lazyproperty
     def implementation(self):
-        """ Io format is implemented (in terms of beeing an `Instance` provided
+        """ Io format is implemented (in terms of beeing an `Plugable` provided
         by a Plugin) by himself -- the read/write functions imported from the
         underlined module are wrapped by this class and
         should not be used directly.
@@ -287,7 +289,7 @@ class IOFormat(BaseInstance):
         return self
 
 
-class IOFormatInstances(Instances):
+class IOFormatPlugables(Plugables):
 
     item_type = IOFormat
 
