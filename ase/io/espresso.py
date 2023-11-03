@@ -1390,16 +1390,26 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             mask = ''
         masks.append(mask)
 
-    # Species info holds the information on the pseudopotential and
+    # Species info holds the information on the pseudopotential 
     # associated for each element
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
     for species in set(atoms.get_chemical_symbols()):
+        znum  = atomic_symbols.atomic_numbers[species]
         # Look in all possible locations for the pseudos and try to figure
         # out the number of valence electrons
         pseudo = pseudopotentials.get(species, None)
-        species_info[species] = {'pseudo': pseudo}
+        if isinstance(pseudo, str):
+            species_info[species] = {'pseudo': pseudo,
+                                     'valence':SSSP_VALENCE[znum]}
+        elif isinstance(pseudo, dict):
+            species_info[species] ={'pseudo': pseudo.get('filename', None),
+                                    'valence': pseudo.get('valence', 
+                                                          SSSP_VALENCE[znum]),
+                                     'cutoff_wfc': pseudo.get('cutoff_wfc',0),
+                                     'cutoff_rho': pseudo.get('cutoff_rho',0),                     
+                                    }
 
     # Convert atoms into species.
     # Each different magnetic moment needs to be a separate type even with
@@ -1412,9 +1422,10 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
     noncolin = input_parameters['system'].get('noncolin', False)
-    rescale_magmom_fac = kwargs.get('rescale_magmom_fac', 1.0)
+    rescale_magmom = kwargs.get('rescale_magmom', False)
+    on_site_hubbard = kwargs.get('on_site_hubbard', None) 
     if any(atoms.get_initial_magnetic_moments()):
-        if nspin == 1 and not noncolin:
+        if  nspin == 1 and not noncolin:
             # Force spin on
             input_parameters['system']['nspin'] = 2
             nspin = 2
