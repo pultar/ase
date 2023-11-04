@@ -1,5 +1,4 @@
 from itertools import product
-import math
 from typing import Any, Callable, Dict, List, Tuple
 import pytest
 
@@ -161,21 +160,16 @@ class TestCallObservers:
         lines = output.splitlines()
         observer_outputs_present = []
         for i, _ in enumerate(dynamics.observers):
-            observer_outputs_present.append(
-                all(f"Observer {i}" not in line for line in lines)
-            )
+            observer_outputs_present.append(f"Observer {i}" in lines[i])
         assert all(observer_outputs_present)
 
     @staticmethod
     def test_should_call_observers_in_order_of_position_in_list(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: List[Tuple[Callable, int, int, str]],
-        interval: int,
+        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
     ) -> None:
-        # should have multiple observers with interval == 1
-        # nsteps should be 0
-        dynamics.nsteps = math.abs(interval)
+        _ = insert_observers(intervals=[1] * 3)
         dynamics.call_observers()
         captured: str = capsys.readouterr().out
         messages_in_order = []
