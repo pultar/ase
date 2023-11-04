@@ -71,16 +71,6 @@ class TestDynamics:
 
 class TestCallObservers:
     @staticmethod
-    @pytest.fixture(name="observers")
-    def fixture_observers():
-        ...
-
-    @staticmethod
-    @pytest.fixture(name="step")
-    def fixture_step() -> int:
-        ...
-
-    @staticmethod
     @pytest.fixture(name="insert_observers")
     def fixture_insert_observers(
         dynamics: Dynamics,
