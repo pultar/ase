@@ -94,7 +94,8 @@ class BaseListing(Mapping):
     def filter(self, filter):
         """ Return a mapping with only the items thas pass through
         the filter """
-        return LazyListing({k: v for k, v in self._items if filter(v)})
+        return LazyListing(lambda: {k: v for k, v in self._items.items()
+                                    if filter(v)})
 
     @staticmethod
     def _sorting_key(i):

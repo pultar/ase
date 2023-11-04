@@ -33,6 +33,8 @@ class UnknownViewerError(Exception):
 
 class AbstractPlugableViewer(BasePlugable):
 
+    class_type = 'viewers'
+
     def __init__(self, name):
         self.name = name
 
@@ -181,7 +183,6 @@ def define_viewer(
             fmt.view = _pipe_to_ase_gui
         else:
             fmt = PyViewer(name, desc, module_name=module)
-    VIEWERS[name] = fmt
     return fmt
 
 

@@ -132,6 +132,10 @@ class Plugins(Listing):
         return self.plugables_of('calculators')
 
     @lazyproperty
+    def viewers(self):
+        return self.plugables_of('viewers')
+
+    @lazyproperty
     def io_formats(self):
         return self.plugables_of('io_formats')
 

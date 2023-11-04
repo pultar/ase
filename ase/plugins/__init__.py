@@ -17,5 +17,6 @@ io_formats: IOFormatPlugables = plugins.io_formats
 __all__ = [
     'plugins',
     'calculators',
-    'io_formats'
+    'io_formats',
+    'viewers'
 ]

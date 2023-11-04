@@ -30,7 +30,7 @@ import sys
 import warnings
 from ase.register import register_calculator
 from ase.io.formats import define_io_format
-from ase.io.viewers import define_viewer
+from ase.visualize.viewers import define_viewer
 from ase.utils.plugins import ExternalIOFormat
 from ase.register.plugins import get_currently_registered_plugin
 from ase.utils.plugins import ExternalViewer

@@ -2,9 +2,10 @@
 This module contains the functionality, that is built-in into ASE
 and which is supposed to be used via plugins mechanism.
 """
+
 from ase.register import register_calculator
 from ase.io.formats import define_io_format
-from ase.visualise.viewer import define_viewer
+from ase.visualize.viewers import define_viewer
 from ase.register.plugins import get_currently_registered_plugin
 import sys
 
