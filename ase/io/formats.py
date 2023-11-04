@@ -26,6 +26,7 @@ from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple, Union)
 from ase.utils import lazyproperty
 from ase.register.plugables import BasePlugable, Plugables
 from importlib import import_module
+from ase.register.listing import ListingView
 
 from ase.atoms import Atoms
 from ase.parallel import parallel_function, parallel_generator
@@ -854,8 +855,9 @@ def index2range(index, length):
 
 # these two will be assigned later (from ase.plugins.__init__)
 # to avoid circular import
-ioformats = None
-extension2format = None
+ioformats: IOFormatPlugables = None     # type: ignore[assignment]
+extension2format: ListingView = None    # type: ignore[assignment]
+all_formats: IOFormatPlugables = None   # type: ignore[assignment]
 
 # Just here, to avoid circular imports - force load the formats
 import ase.plugins as ase_plugins  # NOQA: F401,E402

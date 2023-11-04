@@ -19,7 +19,7 @@ import tempfile
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
-
+from ase.register.listing import LazyListing
 from importlib import import_module
 
 import ase.io
@@ -197,6 +197,12 @@ def cli_main():
 if __name__ == "__main__":
     cli_main()
 
+# Will be inited by ase.plugins.__init__ to avoid a circular imports
+# Deprecatd, will preffered way is to access the viewers by
+# ase.plugins.viewers
+VIEWERS: ViewerPlugables = None     # type: ignore[assignment]
+CLI_VIEWERS: LazyListing = None     # type: ignore[assignment]
+PY_VIEWERS: LazyListing = None      # type: ignore[assignment]
 
 # Just here, to avoid circular imports
 # Force load the plugins

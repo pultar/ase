@@ -5,7 +5,6 @@ from ase.register.plugins import Plugins
 from ase.register.plugables import CalculatorPlugables
 from ase.io import formats as _formats
 from ase.visualize import viewers as _viewers
-from ase.register.listing import ListingView
 
 plugins = Plugins('ase.plugins', {
     'calculators': CalculatorPlugables,
@@ -28,13 +27,11 @@ __all__ = [
 
 # set up the legacy ways how to get the pluggables
 # it has to be here to avoid circular import
-_viewers.VIEWERS: _viewers.ViewerPlugables = viewers
-_viewers.CLI_VIEWERS = \
-    viewers.filter(lambda item: isinstance(item, _viewers.CLIViewer))
-_viewers.PY_VIEWERS = \
-    viewers.filter(lambda item: isinstance(item, _viewers.PyViewer))
+_viewers.VIEWERS = viewers
+_viewers = viewers.filter(lambda item: isinstance(item, _viewers.CLIViewer))
+_viewers = viewers.filter(lambda item: isinstance(item, _viewers.PyViewer))
 
-_formats.ioformats: _formats.IOFormatPlugables = io_formats
+_formats.ioformats = io_formats
 # Aliased for compatibility only. Please do not use.
 _formats.all_formats = io_formats
-_formats.extension2format: ListingView = io_formats.view_by('extensions')
+_formats.extension2format = io_formats.view_by('extensions')
