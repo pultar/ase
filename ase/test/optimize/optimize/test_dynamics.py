@@ -1,4 +1,6 @@
-from typing import Any, Dict
+from itertools import product
+import math
+from typing import Any, Callable, Dict, List, Tuple
 import pytest
 
 from ase import Atoms
@@ -44,7 +46,7 @@ class TestDynamics:
         for k, v in observer.items():
             if k != "position":
                 attributes_in_observer.append(v in inserted_observer)
-        
+
         assert all(attributes_in_observer)
 
     @staticmethod
@@ -55,32 +57,139 @@ class TestDynamics:
         dynamics.insert_observer(**observer)
         assert dynamics.observers[0][0] == dynamics.optimizable.atoms.write
 
-
-class TestCallObserver:
-    @staticmethod
-    def test_should_call_inserted_observer():
-        ...
-
     @staticmethod
     def test_should_attach_callback_function():
         ...
 
     @staticmethod
+    def test_should_raise_not_implemented_error_when_calling_dynamics_todict(
+        dynamics: Dynamics, observer: Dict[str, Any]
+    ) -> None:
+        with pytest.raises(NotImplementedError):
+            _ = dynamics.todict()
+
+
+class TestCallObservers:
+    @staticmethod
+    @pytest.fixture(name="observers")
+    def fixture_observers():
+        ...
+
+    @staticmethod
+    @pytest.fixture(name="step")
+    def fixture_step() -> int:
+        ...
+
+    @staticmethod
+    @pytest.fixture(name="insert_observers")
+    def fixture_insert_observers(
+        request: pytest.FixtureRequest, dynamics: Dynamics
+    ) -> List[Tuple[Callable, int, int, str]]:
+        intervals = [1]
+
+        marker = request.node.get_closest_marker("intervals")
+
+        if marker is not None and marker.args:
+            intervals: list[int] = marker.args
+
+        inserted_observers: List[Tuple[Callable, int, int, str]] = []
+        for i, interval in enumerate(intervals):
+            observer = (print, i, interval, f"Observer {i}")
+            inserted_observers.append(observer)
+            dynamics.insert_observer(*observer)
+
+        return inserted_observers
+
+    @staticmethod
+    @pytest.fixture(name="call_observers")
+    def fixture_call_observers(
+        insert_observers: List[Tuple[Callable, int, int, str]],
+        dynamics: Dynamics,
+        step: int,
+    ) -> None:
+        dynamics.nstep = step
+        dynamics.call_observers()
+
+    @staticmethod
+    def test_should_call_inserted_observers(
+        dynamics: Dynamics, capsys: pytest.CaptureFixture, call_observers: None
+    ) -> None:
+        output: str = capsys.readouterr().out
+        lines = output.splitlines()
+        observer_outputs_present = []
+        for i, _ in enumerate(dynamics.observers):
+            observer_outputs_present.append(f"Observer {i}" in lines[i])
+        assert all(observer_outputs_present)
+
+    @staticmethod
+    @pytest.mark.parametrize("interval,multiple", product([1, 2], [1, 2]))
+    def test_should_call_observer_every_positive_interval(
+        dynamics: Dynamics,
+        capsys: pytest.CaptureFixture,
+        call_observers: None,
+        interval: int,
+        multiple: int,
+    ) -> None:
+        # observer should have positive interval
+        # nsteps should be set to a multiple of the interval
+        dynamics.nsteps = interval * multiple
+        dynamics.call_observers()
+        captured = capsys.readouterr()
+        observer_outputs_present = []
+        for i, _ in enumerate(dynamics.observers):
+            observer_outputs_present.append(f"Observer {i}" in captured)
+        assert all(observer_outputs_present)
+
+    @staticmethod
+    @pytest.mark.parametrize("interval,multiple", product([-1, 2, 3], [1, 2]))
+    def test_should_not_call_observer_if_not_specified_interval(
+        dynamics: Dynamics,
+        capsys: pytest.CaptureFixture,
+        insert_observers: List[Tuple[Callable, int, int, str]],
+        interval: int,
+        multiple: int,
+    ) -> None:
+        # observer can have any interval except +1
+        # nsteps should not be multiple of interval
+        dynamics.nsteps = interval * multiple + 1
+        dynamics.call_observers()
+        captured = capsys.readouterr()
+        assert "Observer 1" not in captured.out
+
+    @staticmethod
+    @pytest.mark.parametrize("interval", ([-1, -2, -3],))
+    def test_should_only_call_observer_on_specified_step_if_interval_negative(
+        dynamics: Dynamics,
+        capsys: pytest.CaptureFixture,
+        insert_observers: List[Tuple[Callable, int, int, str]],
+        interval: int,
+    ) -> None:
+        # observer should have any interval <= 0
+        # nsteps should be equal to |interval|
+        dynamics.nsteps = math.abs(interval)
+        dynamics.call_observers()
+        captured = capsys.readouterr()
+        assert "Observer 1" in captured.out
+
+    @staticmethod
+    def test_should_call_observers_in_order_of_position_in_list(
+        dynamics: Dynamics,
+        capsys: pytest.CaptureFixture,
+        insert_observers: List[Tuple[Callable, int, int, str]],
+        interval: int,
+    ) -> None:
+        # should have multiple observers with interval == 1
+        # nsteps should be 0
+        dynamics.nsteps = math.abs(interval)
+        dynamics.call_observers()
+        captured: str = capsys.readouterr().out
+        messages_in_order = []
+        for i, line in enumerate(captured.splitlines()):
+            message = dynamics.observers[i][2][0]
+            messages_in_order.append(line == message)
+
+        assert all(messages_in_order)
+
+    @staticmethod
     def test_should_call_attached_callback_function():
-        ...
-
-    @staticmethod
-    def test_should_call_observer_every_positive_interval():
-        ...
-
-    @staticmethod
-    def test_should_not_call_observer_if_not_specified_interval():
-        ...
-
-    @staticmethod
-    def test_should_call_observer_only_once_if_interval_negative():
-        ...
-
-    @staticmethod
-    def test_should_only_call_observer_on_negative_interval():
         ...
