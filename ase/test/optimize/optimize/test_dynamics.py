@@ -247,7 +247,9 @@ class TestIrun:
 
     @staticmethod
     @pytest.mark.parametrize("steps", [0, 1, 4])
-    def test_should_run_until_step_limit_if_not_converged(steps: int, dynamics: Dynamics):
+    def test_should_run_until_step_limit_if_not_converged(
+        steps: int, dynamics: Dynamics
+    ):
         start_step = dynamics.nsteps
         for _ in dynamics.irun(steps=steps):
             pass
