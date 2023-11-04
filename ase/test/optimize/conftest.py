@@ -6,7 +6,7 @@ from ase.calculators.emt import EMT
 
 
 ATOMS = [
-    bulk("Au"),
+    bulk("Au") * 2,
     molecule("CO"),
 ]
 
@@ -28,6 +28,7 @@ def fixture_reference_energy(reference_atoms: Atoms) -> float:
 def fixture_rattled_atoms(reference_atoms: Atoms) -> Atoms:
     rattled_atoms = reference_atoms.copy()
     rattled_atoms.rattle(stdev=0.1, seed=42)
+    rattled_atoms.calc = EMT()
     return rattled_atoms
 
 
