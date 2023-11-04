@@ -57,15 +57,21 @@ class TestDynamics:
         assert dynamics.observers[0][0] == dynamics.optimizable.atoms.write
 
     @staticmethod
-    def test_should_attach_callback_function():
-        ...
-
-    @staticmethod
     def test_should_raise_not_implemented_error_when_calling_dynamics_todict(
         dynamics: Dynamics, observer: Dict[str, Any]
     ) -> None:
         with pytest.raises(NotImplementedError):
             _ = dynamics.todict()
+
+    @staticmethod
+    def test_should_attach_callback_function_if_callable_and_without_set_description():
+        ...
+
+    @staticmethod
+    def test_should_call_set_description_if_callback_attached_has_set_description():...
+    
+    @staticmethod
+    def test_should_attach_write_method_if_function_not_callable():...
 
 
 class TestCallObservers:
