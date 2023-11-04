@@ -151,9 +151,10 @@ class TestCallObservers:
     def test_should_call_observer_on_specified_step_if_interval_negative(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: List[Tuple[Callable, int, int, str]],
+        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
         interval: int,
     ) -> None:
+        _ = insert_observers(intervals=[interval])
         dynamics.nsteps = abs(interval)
         dynamics.call_observers()
         output: str = capsys.readouterr().out
