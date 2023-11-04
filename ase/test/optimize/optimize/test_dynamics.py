@@ -1,10 +1,11 @@
-from typing import Callable
+from typing import Any, Dict
 import pytest
 
+from ase import Atoms
 from ase.optimize.optimize import Dynamics
 
 
-class DummyDynamics:
+class DummyDynamics(Dynamics):
     def step(self):
         ...
 
@@ -13,27 +14,46 @@ class DummyDynamics:
 
 
 @pytest.fixture(name="dynamics")
-def fixture_dynamics() -> Dynamics:
-    return DummyDynamics()
+def fixture_dynamics(atoms: Atoms) -> Dynamics:
+    return DummyDynamics(atoms=atoms)
 
 
 class TestDynamics:
     @staticmethod
-    def fixture_observer() -> tuple[Callable, int, list, dict]:
-        observer = (print, 1, None, None)
+    @pytest.fixture(name="observer", scope="function")
+    def fixture_observer() -> Dict[str, Any]:
+        observer = {
+            "function": print,
+            "position": 0,
+            "interval": 1,
+        }
         return observer
 
     @staticmethod
-    def test_should_return_zero_after_instantiation(dynamics: Dynamics):
+    def test_should_return_zero_steps_after_instantiation(dynamics: Dynamics):
         assert dynamics.get_number_of_steps() == 0
 
-    # parametrize w.r.t. position
     @staticmethod
     def test_should_insert_observer(
-        observer: tuple[Callable, int, list, dict], dynamics: Dynamics
+        observer: Dict[str, Any], dynamics: Dynamics
     ) -> None:
-        dynamics.insert_observer(*observer)
-        assert dynamics.observers[0] == observer
+        dynamics.insert_observer(**observer)
+        inserted_observer = dynamics.observers[observer["position"]]
+
+        attributes_in_observer = []
+        for k, v in observer.items():
+            if k != "position":
+                attributes_in_observer.append(v in inserted_observer)
+        
+        assert all(attributes_in_observer)
+
+    @staticmethod
+    def test_should_insert_observer_with_write_method_of_non_callable(
+        dynamics: Dynamics, observer: Dict[str, Any]
+    ) -> None:
+        observer["function"] = dynamics.optimizable.atoms
+        dynamics.insert_observer(**observer)
+        assert dynamics.observers[0][0] == dynamics.optimizable.atoms.write
 
 
 class TestCallObserver:
