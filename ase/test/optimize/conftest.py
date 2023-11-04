@@ -10,12 +10,19 @@ ATOMS = [
     molecule("CO"),
 ]
 
-@pytest.fixture(name="atoms", params=ATOMS)
-def fixture_atoms(request: pytest.FixtureRequest) -> Atoms:
-    atoms: Atoms = request.param
-    atoms.calc = EMT()
-    _ = atoms.get_potential_energy()
-    return atoms
+@pytest.fixture(name="reference_atoms", params=ATOMS)
+def fixture_reference_atoms(request: pytest.FixtureRequest) -> Atoms:
+    reference_atoms: Atoms = request.param
+    reference_atoms.calc = EMT()
+    _ = reference_atoms.get_potential_energy()
+    return reference_atoms
+
+
+@pytest.fixture(name="rattled_atoms")
+def fixture_rattled_atoms(reference_atoms: Atoms) -> Atoms:
+    rattled_atoms = reference_atoms.copy()
+    rattled_atoms.rattle(stdev=0.1, seed=42)
+    return rattled_atoms
 
 
 # atoms, NEB, filter, dimer

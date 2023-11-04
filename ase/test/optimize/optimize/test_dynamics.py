@@ -15,8 +15,8 @@ class DummyDynamics(Dynamics):
 
 
 @pytest.fixture(name="dynamics")
-def fixture_dynamics(atoms: Atoms) -> Dynamics:
-    return DummyDynamics(atoms=atoms)
+def fixture_dynamics(rattled_atoms: Atoms) -> Dynamics:
+    return DummyDynamics(atoms=rattled_atoms)
 
 
 class TestDynamics:
