@@ -134,20 +134,27 @@ class TestCallObservers:
         assert all(observer_outputs_present)
 
     @staticmethod
-    @pytest.mark.parametrize("interval,multiple", product([-1, 2, 3], [1, 2]))
+    @pytest.mark.parametrize(
+        "interval,step", [(i, i * j + 1) for i, j in product([-1, 2, 3], [1, 2])]
+    )
     def test_should_not_call_observer_if_not_specified_interval(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: List[Tuple[Callable, int, int, str]],
+        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
         interval: int,
-        multiple: int,
+        step: int,
     ) -> None:
-        # observer can have any interval except +1
-        # nsteps should not be multiple of interval
-        dynamics.nsteps = interval * multiple + 1
+        _ = insert_observers(intervals=[interval])
+        dynamics.nsteps = step
         dynamics.call_observers()
-        captured = capsys.readouterr()
-        assert "Observer 1" not in captured.out
+        output: str = capsys.readouterr().out
+        lines = output.splitlines()
+        observer_outputs_present = []
+        for i, _ in enumerate(dynamics.observers):
+            observer_outputs_present.append(
+                all(f"Observer {i}" not in line for line in lines)
+            )
+        assert all(observer_outputs_present)
 
     @staticmethod
     @pytest.mark.parametrize("interval", ([-1, -2, -3],))
