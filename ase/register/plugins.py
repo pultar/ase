@@ -109,7 +109,7 @@ class Plugins(Listing):
                 return module
             except ImportError:
                 warnings.warn(f"Can not import {name} in {path}."
-                              " Probably broken ASE plugin.")
+                              " This ASE plugin is probably broken.")
 
         modules = (import_plugin_module(mod_name(mod), mod.module_finder.path)
                    for mod in pkgutil.iter_modules(package.__path__))
