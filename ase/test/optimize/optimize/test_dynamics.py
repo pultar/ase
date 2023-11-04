@@ -58,10 +58,19 @@ class TestDynamics:
 
     @staticmethod
     def test_should_raise_not_implemented_error_when_calling_dynamics_todict(
-        dynamics: Dynamics, observer: Dict[str, Any]
+        dynamics: Dynamics
     ) -> None:
-        with pytest.raises(NotImplementedError):
-            _ = dynamics.todict()
+        with pytest.raises(NotImplementedError) as excinfo:
+            _ = Dynamics.todict(dynamics)
+        
+        assert excinfo.type is NotImplementedError
+
+    @staticmethod
+    def test_should_raise_runtime_error_when_calling_dynamics_step(
+        dynamics: Dynamics
+    ) -> None:
+        with pytest.raises(RuntimeError):
+            _ = Dynamics.step(dynamics)
 
     @staticmethod
     def test_should_attach_callback_function_if_callable_and_without_set_description():
@@ -188,3 +197,9 @@ class TestCallObservers:
     @staticmethod
     def test_should_call_attached_callback_function():
         ...
+
+
+class TestIrun:...
+
+
+class TestRun:...
