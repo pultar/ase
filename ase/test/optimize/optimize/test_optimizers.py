@@ -1,10 +1,11 @@
 from functools import partial
 from itertools import product
+from typing import Any, Dict, Type
+import pathlib
 
 import pytest
-from ase.build import bulk
-from ase.calculators.emt import EMT
-from ase.cluster import Icosahedron
+
+from ase import Atoms
 from ase.optimize import (
     BFGS,
     FIRE,
@@ -17,6 +18,7 @@ from ase.optimize import (
     MDMin,
     ODE12r,
 )
+from ase.optimize.optimize import Dynamics
 from ase.optimize.precon import PreconFIRE, PreconLBFGS, PreconODE12r
 from ase.optimize.sciopt import (
     OptimizerConvergenceError,
@@ -41,38 +43,6 @@ optclasses = [
     ODE12r,
     PreconODE12r,
 ]
-
-
-@pytest.fixture(name="ref_atoms", scope="module")
-def fixture_ref_atoms(optcls):
-    if optcls is Berny:
-        ref_atoms = Icosahedron("Ag", 2, 3.82975)
-        ref_atoms.calc = EMT()
-        return ref_atoms
-
-    ref_atoms = bulk("Au")
-    ref_atoms.calc = EMT()
-    ref_atoms.get_potential_energy()
-    return ref_atoms
-
-
-@pytest.fixture(name="atoms", scope="module")
-def fixture_atoms(ref_atoms, optcls):
-    if optcls is Berny:
-        atoms = ref_atoms.copy()
-        floor = 7
-        optcls = partial(optcls, dihedral=False)
-        optcls.__name__ = Berny.__name__
-    else:
-        atoms = ref_atoms * (2, 2, 2)
-        floor = 0.45
-
-    atoms.calc = EMT()
-    atoms.rattle(stdev=0.1, seed=7)
-    e_unopt = atoms.get_potential_energy()
-    assert e_unopt > floor
-    assert e_unopt > floor
-    return atoms
 
 
 @pytest.fixture(name="optcls", scope="module", params=optclasses)
@@ -104,17 +74,25 @@ def fixture_kwargs(optcls):
 
 @pytest.mark.optimize
 @pytest.mark.filterwarnings("ignore: estimate_mu")
-def test_optimize(optcls, atoms, ref_atoms, testdir, kwargs):
+def test_optimize(
+    optcls: Type[Dynamics],
+    rattled_atoms: Atoms,
+    reference_atoms: Atoms,
+    testdir: pathlib.Path,
+    kwargs: Dict[str, Any],
+):
     fmax = 0.01
-    with optcls(atoms, logfile=testdir / "opt.log", **kwargs) as opt:
+    with optcls(rattled_atoms, logfile=testdir / "opt.log", **kwargs) as opt:
         is_converged = opt.run(fmax=fmax)
     assert is_converged  # check if opt.run() returns True when converged
 
-    forces = atoms.get_forces()
+    forces = rattled_atoms.get_forces()
     final_fmax = max((forces**2).sum(axis=1) ** 0.5)
     final_fmax = max((forces**2).sum(axis=1) ** 0.5)
-    ref_energy = ref_atoms.get_potential_energy()
-    e_opt = atoms.get_potential_energy() * len(ref_atoms) / len(atoms)
+    ref_energy = reference_atoms.get_potential_energy()
+    e_opt = (
+        rattled_atoms.get_potential_energy() * len(reference_atoms) / len(rattled_atoms)
+    )
     e_err = abs(e_opt - ref_energy)
     print()
     print(
