@@ -27,7 +27,9 @@ class TestOptimizableAtoms:
         assert (optimizable_atoms.get_forces() == atoms.get_forces()).all()
 
     @staticmethod
-    def test_should_get_potential_energy(optimizable_atoms: OptimizableAtoms, atoms: Atoms):
+    def test_should_get_potential_energy(
+        optimizable_atoms: OptimizableAtoms, atoms: Atoms
+    ):
         assert optimizable_atoms.get_potential_energy() == atoms.get_potential_energy()
 
     @staticmethod
@@ -35,5 +37,7 @@ class TestOptimizableAtoms:
         assert next(optimizable_atoms.iterimages()) == atoms
 
     @staticmethod
-    def test_should_get_chemical_symbols(optimizable_atoms: OptimizableAtoms, atoms: Atoms):
+    def test_should_get_chemical_symbols(
+        optimizable_atoms: OptimizableAtoms, atoms: Atoms
+    ):
         assert optimizable_atoms.get_chemical_symbols() == atoms.get_chemical_symbols()
