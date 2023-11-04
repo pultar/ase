@@ -113,22 +113,24 @@ class TestCallObservers:
         assert all(observer_outputs_present)
 
     @staticmethod
-    @pytest.mark.parametrize("interval,multiple", product([1, 2], [1, 2]))
+    @pytest.mark.parametrize(
+        "interval,step", [(i, i * j) for i, j in product([1, 2], repeat=2)]
+    )
     def test_should_call_observer_every_positive_interval(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        call_observers: None,
+        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
         interval: int,
-        multiple: int,
+        step: int,
     ) -> None:
-        # observer should have positive interval
-        # nsteps should be set to a multiple of the interval
-        dynamics.nsteps = interval * multiple
+        _ = insert_observers(intervals=[interval])
+        dynamics.nsteps = step
         dynamics.call_observers()
-        captured = capsys.readouterr()
+        output: str = capsys.readouterr().out
+        lines = output.splitlines()
         observer_outputs_present = []
         for i, _ in enumerate(dynamics.observers):
-            observer_outputs_present.append(f"Observer {i}" in captured)
+            observer_outputs_present.append(f"Observer {i}" in lines[i])
         assert all(observer_outputs_present)
 
     @staticmethod
