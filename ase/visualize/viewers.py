@@ -42,6 +42,19 @@ class AbstractPlugableViewer(BasePlugable):
     def implementation(self):
         return self.view
 
+    def __getstate__(self):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        out = self.__dict__.copy()
+        if 'plugin' in out:
+            out['plugin'] = out['plugin'].name
+        return out
+
+    def __setstate__(self, state):
+        """ Just avoid de/serializing the plugin, save its name instead """
+        self.__dict__.update(state)
+        if 'plugin' in state:
+            self.plugin = ase.plugins.plugins[self.plugin]
+
 
 class PyViewer(AbstractPlugableViewer):
     def __init__(self, name: str, desc: str, module_name: str):
