@@ -83,37 +83,28 @@ class TestCallObservers:
     @staticmethod
     @pytest.fixture(name="insert_observers")
     def fixture_insert_observers(
-        request: pytest.FixtureRequest, dynamics: Dynamics
-    ) -> List[Tuple[Callable, int, int, str]]:
-        intervals = [1]
-
-        marker = request.node.get_closest_marker("intervals")
-
-        if marker is not None and marker.args:
-            intervals: list[int] = marker.args
-
-        inserted_observers: List[Tuple[Callable, int, int, str]] = []
-        for i, interval in enumerate(intervals):
-            observer = (print, i, interval, f"Observer {i}")
-            inserted_observers.append(observer)
-            dynamics.insert_observer(*observer)
-
-        return inserted_observers
-
-    @staticmethod
-    @pytest.fixture(name="call_observers")
-    def fixture_call_observers(
-        insert_observers: List[Tuple[Callable, int, int, str]],
         dynamics: Dynamics,
-        step: int,
-    ) -> None:
-        dynamics.nstep = step
-        dynamics.call_observers()
+    ) -> Callable[[List[int]], List[Tuple[Callable, int, int, str]]]:
+        inserted_observers: List[Tuple[Callable, int, int, str]] = []
+
+        def _insert_observer(*, intervals) -> List[Tuple[Callable, int, int, str]]:
+            for i, interval in enumerate(intervals):
+                observer = (print, i, interval, f"Observer {i}")
+                inserted_observers.append(observer)
+                dynamics.insert_observer(*observer)
+
+            return inserted_observers
+
+        return _insert_observer
 
     @staticmethod
     def test_should_call_inserted_observers(
-        dynamics: Dynamics, capsys: pytest.CaptureFixture, call_observers: None
+        dynamics: Dynamics,
+        capsys: pytest.CaptureFixture,
+        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
     ) -> None:
+        _ = insert_observers(intervals=[1])
+        dynamics.call_observers()
         output: str = capsys.readouterr().out
         lines = output.splitlines()
         observer_outputs_present = []
