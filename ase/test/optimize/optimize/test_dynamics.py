@@ -206,8 +206,13 @@ class TestCallObservers:
 
 class TestIrun:
     @staticmethod
-    def test_should_increase_maxsteps_according_to_steps():
-        ...
+    @pytest.mark.parametrize("steps", [-1, 0, 1, 4])
+    def test_should_increase_maxsteps_according_to_steps(
+        steps: int, dynamics: Dynamics
+    ) -> None:
+        start_step = dynamics.nsteps
+        _ = next(dynamics.irun(steps=steps))
+        assert dynamics.max_steps == start_step + steps
 
     @staticmethod
     def test_should_log_initial_step_when_nsteps_is_zero():
@@ -226,19 +231,42 @@ class TestIrun:
         ...
 
     @staticmethod
+    def test_should_return_true_if_converged():
+        ...
+
+    @staticmethod
+    def test_should_return_false_if_unconverged(dynamics: Dynamics):
+        steps_unconverged: List[bool] = []
+        for converged in dynamics.irun(steps=10):
+            steps_unconverged.append(not converged)
+        assert all(steps_unconverged)
+
+    @staticmethod
     def test_should_not_step_if_nsteps_not_less_than_maxsteps():
         ...
+
+    @staticmethod
+    @pytest.mark.parametrize("steps", [0, 1, 4])
+    def test_should_run_until_step_limit_if_not_converged(steps: int, dynamics: Dynamics):
+        start_step = dynamics.nsteps
+        for _ in dynamics.irun(steps=steps):
+            pass
+
+        assert (dynamics.nsteps - start_step) == steps
 
     @staticmethod
     def test_should_log_initial_state():
         ...
 
     @staticmethod
-    def test_should_yield_in_initial_state():...
+    def test_should_yield_in_initial_state():
+        ...
 
     @staticmethod
-    @pytest.mark.parametrize('steps,start_step', product([0, 1, 4], [-1, 0, 1]))
-    def test_should_increment_nsteps_to_match_total_iterations(steps: int, start_step: int, dynamics: Dynamics) -> None:
+    @pytest.mark.parametrize("steps,start_step", product([0, 1, 4], [-1, 0, 1]))
+    def test_should_increment_nsteps_to_match_total_iterations(
+        steps: int, start_step: int, dynamics: Dynamics
+    ) -> None:
         steps_match: List[int] = []
         dynamics.nsteps = start_step
 

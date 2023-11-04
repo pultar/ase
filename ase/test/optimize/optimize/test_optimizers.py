@@ -1,5 +1,4 @@
 from functools import partial
-from itertools import product
 from typing import Any, Dict, Type
 import pathlib
 
@@ -103,48 +102,3 @@ def test_optimize(
 
     assert final_fmax < fmax
     assert e_err < 1.75e-5  # (This tolerance is arbitrary)
-
-
-@pytest.mark.optimize
-def test_unconverged(optcls, atoms, kwargs):
-    """Test if things work properly when forces are not converged."""
-    fmax = 1e-9  # small value to not get converged
-    with optcls(atoms, **kwargs) as opt:
-        opt.run(fmax=fmax, steps=1)  # only one step to not get converged
-    assert not opt.converged()
-
-
-def test_run_twice(optcls, atoms, kwargs):
-    """Test if `steps` increments `max_steps` when `run` is called twice."""
-    fmax = 1e-9  # small value to not get converged
-    steps = 5
-    with optcls(atoms, **kwargs) as opt:
-        opt.run(fmax=fmax, steps=steps)
-        opt.run(fmax=fmax, steps=steps)
-    assert opt.nsteps == 2 * steps
-    assert opt.max_steps == 2 * steps
-
-
-@pytest.mark.optimize
-@pytest.mark.parametrize('optcls,max_steps', product(optclasses, range(-1,2)))
-def test_should_respect_steps_limit(
-    optcls, max_steps, atoms, testdir, kwargs, to_catch
-):
-    fmax = 0.01
-    with optcls(atoms, logfile=testdir / "opt.log", **kwargs) as opt:
-        try:
-            opt.run(fmax=fmax, steps=max_steps)
-        except to_catch:
-            pass
-
-    with open(testdir / "opt.log", encoding="utf-8") as file:
-        lines = file.readlines()
-
-    steps_ran = int(lines[-1].split()[1].strip("[]"))
-
-    if optcls in (ODE12r, PreconODE12r):
-        steps_ran -= 1  # ODE12r and PreconODE12r repeat the first step
-
-    max_steps = max_steps if max_steps >= 0 else 0
-
-    assert steps_ran <= max_steps
