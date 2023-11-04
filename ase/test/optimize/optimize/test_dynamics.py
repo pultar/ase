@@ -58,16 +58,16 @@ class TestDynamics:
 
     @staticmethod
     def test_should_raise_not_implemented_error_when_calling_dynamics_todict(
-        dynamics: Dynamics
+        dynamics: Dynamics,
     ) -> None:
         with pytest.raises(NotImplementedError) as excinfo:
             _ = Dynamics.todict(dynamics)
-        
+
         assert excinfo.type is NotImplementedError
 
     @staticmethod
     def test_should_raise_runtime_error_when_calling_dynamics_step(
-        dynamics: Dynamics
+        dynamics: Dynamics,
     ) -> None:
         with pytest.raises(RuntimeError):
             _ = Dynamics.step(dynamics)
@@ -77,10 +77,12 @@ class TestDynamics:
         ...
 
     @staticmethod
-    def test_should_call_set_description_if_callback_attached_has_set_description():...
-    
+    def test_should_call_set_description_if_callback_attached_has_set_description():
+        ...
+
     @staticmethod
-    def test_should_attach_write_method_if_function_not_callable():...
+    def test_should_attach_write_method_if_function_not_callable():
+        ...
 
 
 class TestCallObservers:
@@ -201,39 +203,51 @@ class TestCallObservers:
 
 class TestIrun:
     @staticmethod
-    def test_should_increase_maxsteps_according_to_steps():...
+    def test_should_increase_maxsteps_according_to_steps():
+        ...
 
     @staticmethod
-    def test_should_log_initial_step_when_nsteps_is_zero():...
+    def test_should_log_initial_step_when_nsteps_is_zero():
+        ...
 
     @staticmethod
-    def test_should_not_log_initial_step_when_steps_is_nonzero():...
+    def test_should_not_log_initial_step_when_steps_is_nonzero():
+        ...
 
     @staticmethod
-    def test_should_write_trajectory_if_none():...
+    def test_should_write_trajectory_if_none():
+        ...
 
     @staticmethod
-    def test_should_not_step_if_converged_already():...
+    def test_should_not_step_if_converged_already():
+        ...
 
     @staticmethod
-    def test_should_not_step_if_nsteps_not_less_than_maxsteps():...
+    def test_should_not_step_if_nsteps_not_less_than_maxsteps():
+        ...
 
     @staticmethod
-    def test_should_log_initial_state():...
+    def test_should_log_initial_state():
+        ...
 
     @staticmethod
-    def test_should_increment_nsteps():...
+    def test_should_increment_nsteps():
+        ...
 
 
 class TestRun:
     @staticmethod
-    def test_should_not_run_if_steps_is_zero():...
-    
+    def test_should_not_run_if_steps_is_zero():
+        ...
+
     @staticmethod
-    def test_should_run_until_step_limit_if_not_converged():...
-    
+    def test_should_run_until_step_limit_if_not_converged():
+        ...
+
     @staticmethod
-    def test_should_return_false_if_not_converged():...
-    
+    def test_should_return_false_if_not_converged():
+        ...
+
     @staticmethod
-    def test_should_return_true_if_not_converged():...
+    def test_should_return_true_if_not_converged():
+        ...
