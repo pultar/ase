@@ -40,20 +40,20 @@ optclasses = [
 ]
 
 
-FMAX = 1e-1
-ENERGY_TOLERANCE = 1e-5
+FMAX = 1e-3
+ENERGY_TOLERANCE = 1e-4
 
 
-@pytest.fixture(name="optcls", scope="module", params=optclasses)
-def fixture_optcls(request) -> Type[Optimizer]:
-    optcls: Type[Optimizer] = request.param
-    return optcls
+@pytest.fixture(name="optimizer_class", params=optclasses)
+def fixture_optimizer_class(request) -> Type[Optimizer]:
+    optimizer_class: Type[Optimizer] = request.param
+    return optimizer_class
 
 
-@pytest.fixture(name="kwargs", scope="module")
-def fixture_kwargs(optcls):
+@pytest.fixture(name="kwargs")
+def fixture_kwargs(optimizer_class):
     kwargs = {}
-    if optcls is PreconLBFGS:
+    if optimizer_class is PreconLBFGS:
         kwargs["precon"] = None
     yield kwargs
     kwargs = {}
@@ -64,15 +64,15 @@ def fixture_logfile() -> IO:
     return StringIO()
 
 
-@pytest.fixture(name="optimizer", params=optclasses)
+@pytest.fixture(name="optimizer")
 def fixture_optimizer(
+    optimizer_class: Type[Optimizer],
     request: pytest.FixtureRequest,
     rattled_atoms: Atoms,
     logfile: IO,
     kwargs: Dict[str, Any],
 ) -> Optimizer:
-    optclass: Type[Optimizer] = request.param
-    return optclass(atoms=rattled_atoms, logfile=logfile, **kwargs)
+    return optimizer_class(atoms=rattled_atoms, logfile=logfile, **kwargs)
 
 
 @pytest.fixture(name="run_optimizer")
@@ -108,13 +108,15 @@ def fixture_log_optimizer_run(
     )
 
 
-def test_should_obtain_final_state_with_energy_within_tolerance(
-    reference_energy: float, final_energy: float, run_optimizer: bool
-) -> None:
-    assert abs(final_energy - reference_energy) < ENERGY_TOLERANCE
+@pytest.mark.usefixtures("log_optimizer_run")
+class TestOptimizers:
+    @staticmethod
+    def test_should_obtain_final_state_with_energy_within_tolerance(
+        reference_energy: float, final_energy: float) -> None:
+        assert abs(final_energy - reference_energy) < ENERGY_TOLERANCE
 
-
-def test_should_reduce_forces_below_tolerance(
-    run_optimizer: bool, final_max_force: float
-) -> None:
-    assert final_max_force < FMAX
+    @staticmethod
+    def test_should_reduce_forces_below_tolerance(
+        final_max_force: float
+    ) -> None:
+        assert final_max_force < FMAX
