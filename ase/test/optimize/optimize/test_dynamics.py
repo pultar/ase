@@ -7,11 +7,14 @@ from ase.optimize.optimize import Dynamics
 
 
 class DummyDynamics(Dynamics):
-    def step(self):
+    def step(self) -> None:
         ...
 
-    def log(self):
-        ...
+    def log(self) -> None:
+        print(f"Step {self.nsteps}")
+
+    def converged(self) -> bool:
+        return False
 
 
 @pytest.fixture(name="dynamics")
@@ -231,8 +234,18 @@ class TestIrun:
         ...
 
     @staticmethod
-    def test_should_increment_nsteps():
-        ...
+    def test_should_yield_in_initial_state():...
+
+    @staticmethod
+    @pytest.mark.parametrize('steps,start_step', product([0, 1, 4], [-1, 0, 1]))
+    def test_should_increment_nsteps_to_match_total_iterations(steps: int, start_step: int, dynamics: Dynamics) -> None:
+        steps_match: List[int] = []
+        dynamics.nsteps = start_step
+
+        for i, _ in enumerate(dynamics.irun(steps=steps)):
+            steps_match.append(i + start_step == dynamics.nsteps)
+
+        assert all(steps_match)
 
 
 class TestRun:
