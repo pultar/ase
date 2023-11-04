@@ -25,7 +25,6 @@ from pathlib import Path, PurePath
 from typing import (IO, Any, Iterable, List, Optional, Sequence, Tuple, Union)
 from ase.utils import lazyproperty
 from ase.register.plugables import BasePlugable, Plugables
-from ase.register.listing import ListingView
 from importlib import import_module
 
 from ase.atoms import Atoms
@@ -168,6 +167,10 @@ class IOFormat(BasePlugable):
     def _writefunc(self):
         return getattr(self.module, 'write_' + self._formatname, None)
 
+    @lazyproperty
+    def implementation(self):
+        return self._readfunc(), self._writefunc()
+
     @property
     def read(self):
         if not self.can_read:
@@ -277,15 +280,6 @@ class IOFormat(BasePlugable):
 
         return f'{prefix}{self.name} [{", ".join(moreinfo)}]:'\
                f' {self.description}   (from {self.plugin.name})'
-
-    @lazyproperty
-    def implementation(self):
-        """ Io format is implemented (in terms of beeing an `Plugable` provided
-        by a Plugin) by himself -- the read/write functions imported from the
-        underlined module are wrapped by this class and
-        should not be used directly.
-        """
-        return self
 
 
 class IOFormatPlugables(Plugables):
@@ -858,10 +852,10 @@ def index2range(index, length):
     return obj
 
 
-# Just here, to avoid circular imports
-import ase.plugins as ase_plugins  # NOQA: F401,E402
+# these two will be assigned later (from ase.plugins.__init__)
+# to avoid circular import
+ioformats = None
+extension2format = None
 
-ioformats: IOFormatPlugables = ase_plugins.io_formats
-all_formats = ioformats  # Aliased for compatibility only.  Please do not use.
-extension2format: ListingView = \
-    ioformats.view_by('extensions')
+# Just here, to avoid circular imports - force load the formats
+import ase.plugins as ase_plugins  # NOQA: F401,E402

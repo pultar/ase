@@ -22,8 +22,7 @@ from pathlib import Path
 
 from importlib import import_module
 
-from ase.io import write
-from ase.io.formats import ioformats
+import ase.io
 from ase.register.plugables import BasePlugable, Plugables
 
 
@@ -94,7 +93,7 @@ class CLIViewer(AbstractPlugableViewer):
 
     @property
     def ioformat(self):
-        return ioformats[self.fmt]
+        return ase.plugins.io_formats[self.fmt]
 
     @contextmanager
     def mktemp(self, atoms, data=None):
@@ -113,10 +112,10 @@ class CLIViewer(AbstractPlugableViewer):
             path = Path(dirname) / f"atoms{suffix}"
             with path.open(mode) as fd:
                 if data is None:
-                    write(fd, atoms, format=self.fmt)
+                    ase.io.write(fd, atoms, format=self.fmt)
                 else:
-                    write(fd, atoms, format=self.fmt, data=data)
-            d path
+                    ase.io.write(fd, atoms, format=self.fmt, data=data)
+            yield path
 
     def view_blocking(self, atoms, data=None):
         with self.mktemp(atoms, data) as path:
@@ -154,7 +153,7 @@ class ViewerPlugables(Plugables):
 
 def _pipe_to_ase_gui(atoms, repeat, **kwargs):
     buf = BytesIO()
-    write(buf, atoms, format="traj")
+    ase.io.write(buf, atoms, format="traj")
 
     args = [sys.executable, "-m", "ase", "gui", "-"]
     if repeat:
@@ -200,8 +199,5 @@ if __name__ == "__main__":
 
 
 # Just here, to avoid circular imports
-import ase.plugins as ase_plugins  # NOQA: F401,E402
-
-VIEWERS: ViewerPlugables = ase_plugins.io_formats
-CLI_VIEWERS = VIEWERS.filter(lambda item: isinstance(item, CLIViewer))
-PY_VIEWERS = VIEWERS.filter(lambda item: isinstance(item, PyViewer))
+# Force load the plugins
+import ase.plugins  # NOQA: F401,E402

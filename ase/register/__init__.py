@@ -1,6 +1,8 @@
 from ase.register.plugins import get_currently_registered_plugin
-from ase.io import formats as ioformats
-from ase.visualise import viewers
+
+# import them later to avoid a circular import
+define_io_format = None
+define_viewer = None
 
 
 def _register(plugable_type: str, cls: str, name=None):
@@ -40,23 +42,28 @@ def register_io_format(module, desc, code, *, name=None, ext=None,
     The order of parameters is however slightly different here,
     to be as much as possible similiar to the :func:`register_calculator`
     """
+    global define_io_format
+    if not define_io_format:
+        from ase.io.formats import define_io_format
     if not name:
         name = module.rsplit(".", 1)[-1]
-    fmt = ioformats.define_io_format(name, desc, code,
-                                     module=module,
-                                     ext=ext,
-                                     glob=glob,
-                                     magic=magic,
-                                     encoding=encoding,
-                                     magic_regex=magic_regex,
-                                     external=True)
+    fmt = define_io_format(name, desc, code,
+                           module=module,
+                           ext=ext,
+                           glob=glob,
+                           magic=magic,
+                           encoding=encoding,
+                           magic_regex=magic_regex,
+                           external=True)
     fmt.plugin = get_currently_registered_plugin()
     return fmt
 
 
 def register_viewer(name, desc, *, module=None, cli=False, fmt=None, argv=None):
-    view = viewers.define_viewer(name, desc, module=module, cli=cli,
-                                 fmt=fmt, argv=argv, external=True)
+    if not define_viewer:
+        from ase.visualize.viewers import define_viewer
+    view = define_viewer(name, desc, module=module, cli=cli,
+                         fmt=fmt, argv=argv, external=True)
     view.plugin = get_currently_registered_plugin()
     return view
 
