@@ -49,12 +49,6 @@ class Plugable(BasePlugable):
         if 'plugin' in state:
             self.plugin = ase_plugins.plugins[self.plugin]
 
-    @lazyproperty
-    def implementation(self):
-        module, cls = self.cls.rsplit(',', 1)
-        module = importlib.import_module(module)
-        return module.cls
-
     def __call__(self):
         self.implementation
 
@@ -122,17 +116,17 @@ class Plugables(Listing):
     def __repr__(self):
         return f"<ASE list of {self.class_type}>"
 
-    def __getitem__(self, name):
-        return super().__getitem__(name).implementation
-
 
 class CalculatorPlugable(Plugable):
-    """ Calculators plugable has now no special implementation,
-    but with an introdution of Configuration, there should be
-    a better info() method (that shows whether the calculator
-    is configured or not)
-    """
-    pass
+
+    @lazyproperty
+    def implementation(self):
+        module, cls = self.cls.rsplit(',', 1)
+        module = importlib.import_module(module)
+        return module.cls
+
+    def __getitem__(self, name):
+        return super().__getitem__(name).implementation
 
 
 class CalculatorPlugables(Plugables):

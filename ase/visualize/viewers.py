@@ -39,6 +39,9 @@ class AbstractPlugableViewer(BasePlugable):
     def view(self, *args, **kwargss):
         raise NotImplementedError()
 
+    def implementation(self):
+        return self.view
+
 
 class PyViewer(AbstractPlugableViewer):
     def __init__(self, name: str, desc: str, module_name: str):
