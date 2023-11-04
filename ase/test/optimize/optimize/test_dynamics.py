@@ -157,19 +157,23 @@ class TestCallObservers:
         assert all(observer_outputs_present)
 
     @staticmethod
-    @pytest.mark.parametrize("interval", ([-1, -2, -3],))
-    def test_should_only_call_observer_on_specified_step_if_interval_negative(
+    @pytest.mark.parametrize("interval", (0, -1, -2, -3))
+    def test_should_call_observer_on_specified_step_if_interval_negative(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
         insert_observers: List[Tuple[Callable, int, int, str]],
         interval: int,
     ) -> None:
-        # observer should have any interval <= 0
-        # nsteps should be equal to |interval|
-        dynamics.nsteps = math.abs(interval)
+        dynamics.nsteps = abs(interval)
         dynamics.call_observers()
-        captured = capsys.readouterr()
-        assert "Observer 1" in captured.out
+        output: str = capsys.readouterr().out
+        lines = output.splitlines()
+        observer_outputs_present = []
+        for i, _ in enumerate(dynamics.observers):
+            observer_outputs_present.append(
+                all(f"Observer {i}" not in line for line in lines)
+            )
+        assert all(observer_outputs_present)
 
     @staticmethod
     def test_should_call_observers_in_order_of_position_in_list(
