@@ -22,6 +22,7 @@ from pathlib import Path
 from ase.register.listing import LazyListing
 from importlib import import_module
 
+from ase.utils import lazyproperty
 import ase.io
 from ase.register.plugables import BasePlugable, Plugables
 
@@ -149,6 +150,14 @@ class ViewerPlugables(Plugables):
     def info(self, prefix='', opts={}):
         return f"{prefix}IO Formats:\n" \
                f"{prefix}-----------\n" + super().info(prefix + '  ', opts)
+
+    @lazyproperty
+    def cli_viewers(self):
+        return self.filter(lambda item: isinstance(item, CLIViewer))
+
+    @lazyproperty
+    def python_viewers(self):
+        return self.filter(lambda item: isinstance(item, PyViewer))
 
 
 def _pipe_to_ase_gui(atoms, repeat, **kwargs):

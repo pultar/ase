@@ -28,10 +28,11 @@ __all__ = [
 # set up the legacy ways how to get the pluggables
 # it has to be here to avoid circular import
 _viewers.VIEWERS = viewers
-_viewers = viewers.filter(lambda item: isinstance(item, _viewers.CLIViewer))
-_viewers = viewers.filter(lambda item: isinstance(item, _viewers.PyViewer))
+_viewers.CLI_VIEWERS = viewers.cli_viewers
+_viewers.PY_VIEWERS = viewers.python_viewers
 
 _formats.ioformats = io_formats
 # Aliased for compatibility only. Please do not use.
 _formats.all_formats = io_formats
-_formats.extension2format = io_formats.view_by('extensions')
+_formats.extension2format = io_formats.by_extension
+io_formats.view_by('extensions')

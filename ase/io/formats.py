@@ -291,6 +291,10 @@ class IOFormatPlugables(Plugables):
         return f"{prefix}IO Formats:\n" \
                f"{prefix}-----------\n" + super().info(prefix + '  ', opts)
 
+    @lazyproperty
+    def by_extension(self):
+        return self.view_by('extensions')
+
 
 format2modulename = {}  # Left for compatibility only.
 
