@@ -1,13 +1,13 @@
 import pytest
 
 from ase import Atoms
-from ase.build import bulk  #, molecule
+from ase.build import bulk
 from ase.calculators.emt import EMT
 
 
 ATOMS = [
     bulk("Au") * 2,
-    # molecule("CO", cell=[5, 5, 5], pbc=True),
+    Atoms("CO", positions=[[0, 0, 0], [1.0559702954160726, 0, 0]], cell=[5, 5, 5]),
 ]
 
 
