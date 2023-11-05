@@ -279,8 +279,10 @@ class IOFormat(BasePlugable):
         if self.globs:
             moreinfo.append('glob={}'.format('|'.join(self.globs)))
 
-        return f'{prefix}{self.name} [{", ".join(moreinfo)}]:'\
-               f' {self.description}   (from {self.plugin.name})'
+        out = f'{prefix}{self.name} [{", ".join(moreinfo)}]: {self.description}'
+        if getattr(opts, 'plugin', True):
+            out += f'  (from plugin {self.plugin.name})'
+        return out
 
 
 class IOFormatPlugables(Plugables):

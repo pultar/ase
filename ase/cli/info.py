@@ -18,12 +18,14 @@ class CLICommand:
                             help='Name of file to determine format for.')
         parser.add_argument('-v', '--verbose', action='store_true',
                             help='Show more information about files.')
-        parser.add_argument('--formats', action='store_true',
-                            help='List file formats known to ASE.')
         parser.add_argument('--config', action='store_true',
                             help='List configured calculators')
+        parser.add_argument('--formats', action='store_true', dest='io_formats',
+                            help='List file formats known to ASE.')
         parser.add_argument('--calculators', action='store_true',
                             help='List calculators known to ASE. ')
+        parser.add_argument('--viewers', action='store_true',
+                            help='List viewers known to ASE. ')
         parser.add_argument('--plugins', action='store_true',
                             help='List the installed plugins.')
 
@@ -36,18 +38,13 @@ class CLICommand:
         from ase.config import cfg
         if not args.filename:
             print_info()
-            if args.formats:
-                print()
-                print_formats()
             if args.config:
                 print()
                 cfg.print_everything()
-            if args.calculators:
-                print()
-                print_calculators()
-            if args.plugins:
-                print()
-                print_plugins()
+            for i in ('io_formats', 'calculators', 'viewers', 'plugins'):
+                if getattr(args, i):
+                    print()
+                    print_plugables(i)
             return
 
         n = max(len(filename) for filename in args.filename) + 2
@@ -92,16 +89,7 @@ def print_info():
         print(f'{name:24} {path}')
 
 
-def print_calculators():
-    from ase.plugins import calculators
-    print(calculators.info())
-
-
-def print_formats():
-    from ase.plugins import io_formats
-    print(io_formats.info())
-
-
-def print_plugins():
-    from ase.plugins import plugins
-    print(plugins.info())
+def print_plugables(i):
+    import ase.plugins as plugins
+    to_print = getattr(plugins, i)
+    print(to_print.info())

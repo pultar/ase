@@ -17,14 +17,17 @@ class BasePlugable:
         self.plugin.add_plugable(self)
         self.plugin.plugins.plugables_of(self.class_type).add(self)
 
-    def info(self, prefix: str = '', opts={}):
-        raise NotImplementedError()
-
     @lazyproperty
     def lowercase_names(self):
         """ Some plugables can be found not only by the name of the plugable,
         but e.g. by the name of the implementing class """
         return (self.name.lower(),)
+
+    def info(self, prefix='', opts={}):
+        out = f"{prefix}{self.name}"
+        if opts.get('plugin', True):
+            out += f"    (from plugin {self.plugin.name})"
+        return out
 
 
 class Plugable(BasePlugable):
@@ -73,12 +76,6 @@ class Plugable(BasePlugable):
     @lazyproperty
     def lowercase_names(self):
         return {i.lower() for i in self.names}
-
-    def info(self, prefix='', opts={}):
-        out = f"{prefix}{self.name}"
-        if opts.get('plugin', True):
-            out += f"    (from plugin {self.plugin.name})"
-        return out
 
 
 class Plugables(Listing):
