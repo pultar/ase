@@ -4,13 +4,14 @@
 """Atomic Simulation Environment."""
 
 import sys
+from importlib.metadata import version
 
 if sys.version_info[0] == 2:
     raise ImportError('ASE requires Python3. This is Python2.')
 
 
 __all__ = ['Atoms', 'Atom']
-__version__ = '3.23.0b1'
+__version__ = version("ase")
 
 
 from ase.atom import Atom
@@ -19,4 +20,5 @@ from ase.atoms import Atoms
 # import ase.parallel early to avoid circular import problems when
 # ase.parallel does "from gpaw.mpi import world":
 import ase.parallel  # noqa
+
 ase.parallel  # silence pyflakes
