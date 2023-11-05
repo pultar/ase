@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List
 import pytest
 
 from ase import Atoms
@@ -93,16 +93,11 @@ class TestCallObservers:
     @pytest.fixture(name="insert_observers")
     def fixture_insert_observers(
         dynamics: Dynamics,
-    ) -> Callable[[List[int]], List[Tuple[Callable, int, int, str]]]:
-        inserted_observers: List[Tuple[Callable, int, int, str]] = []
-
-        def _insert_observer(*, intervals) -> List[Tuple[Callable, int, int, str]]:
+    ) -> Callable[[List[int]], None]:
+        def _insert_observer(*, intervals: List[int]) -> None:
             for i, interval in enumerate(intervals):
                 observer = (print, i, interval, f"Observer {i}")
-                inserted_observers.append(observer)
                 dynamics.insert_observer(*observer)
-
-            return inserted_observers
 
         return _insert_observer
 
@@ -110,9 +105,9 @@ class TestCallObservers:
     def test_should_call_inserted_observers(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
+        insert_observers: Callable[[List[int]], None],
     ) -> None:
-        _ = insert_observers(intervals=[1])
+        insert_observers(intervals=[1])
         dynamics.call_observers()
         output: str = capsys.readouterr().out
         lines = output.splitlines()
@@ -128,11 +123,11 @@ class TestCallObservers:
     def test_should_call_observer_every_positive_interval(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
+        insert_observers: Callable[[List[int]], None],
         interval: int,
         step: int,
     ) -> None:
-        _ = insert_observers(intervals=[interval])
+        insert_observers(intervals=[interval])
         dynamics.nsteps = step
         dynamics.call_observers()
         output: str = capsys.readouterr().out
@@ -149,11 +144,11 @@ class TestCallObservers:
     def test_should_not_call_observer_if_not_specified_interval(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
+        insert_observers: Callable[[List[int]], None],
         interval: int,
         step: int,
     ) -> None:
-        _ = insert_observers(intervals=[interval])
+        insert_observers(intervals=[interval])
         dynamics.nsteps = step
         dynamics.call_observers()
         output: str = capsys.readouterr().out
@@ -170,10 +165,10 @@ class TestCallObservers:
     def test_should_call_observer_on_specified_step_if_interval_negative(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
+        insert_observers: Callable[[List[int]], None],
         interval: int,
     ) -> None:
-        _ = insert_observers(intervals=[interval])
+        insert_observers(intervals=[interval])
         dynamics.nsteps = abs(interval)
         dynamics.call_observers()
         output: str = capsys.readouterr().out
@@ -187,14 +182,16 @@ class TestCallObservers:
     def test_should_call_observers_in_order_of_position_in_list(
         dynamics: Dynamics,
         capsys: pytest.CaptureFixture,
-        insert_observers: Callable[[List[int]], List[Tuple[Callable, int, int, str]]],
+        insert_observers: Callable[[List[int]], None],
     ) -> None:
-        _ = insert_observers(intervals=[1] * 3)
+        insert_observers(intervals=[1] * 3)
         dynamics.call_observers()
         captured: str = capsys.readouterr().out
         messages_in_order = []
         for i, line in enumerate(captured.splitlines()):
-            message = dynamics.observers[i][2][0]
+            observer = dynamics.observers[i]
+            args = observer[2]
+            message = args[0]
             messages_in_order.append(line == message)
 
         assert all(messages_in_order)
