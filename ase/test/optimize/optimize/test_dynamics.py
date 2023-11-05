@@ -98,7 +98,7 @@ class TestCallObservers:
     def fixture_insert_observers(
         dynamics: Dynamics,
     ) -> Callable[[List[int]], None]:
-        def _insert_observer(*, intervals: List[int]) -> None:
+        def _insert_observer(intervals: List[int]) -> None:
             for i, interval in enumerate(intervals):
                 observer = (print, i, interval, f"Observer {i}")
                 dynamics.insert_observer(*observer)
@@ -111,7 +111,7 @@ class TestCallObservers:
         capsys: pytest.CaptureFixture,
         insert_observers: Callable[[List[int]], None],
     ) -> None:
-        insert_observers(intervals=[1])
+        insert_observers([1])
         dynamics.call_observers()
         output: str = capsys.readouterr().out
         lines = output.splitlines()
