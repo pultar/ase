@@ -3,6 +3,66 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "ase"
+description = "Atomic Simulation Environment"
+authors = [
+    {name = "ASE-community", email = "ase-users@listserv.fysik.dtu.dk"},
+]
+license = {text = "LGPLv2.1+"}
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.18.5",
+    "scipy>=1.4.1",
+    "matplotlib>=3.3.4",
+]
+classifiers = [
+    "Development Status :: 6 - Mature",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dynamic = ["version"]
+
+[project.entry-points]
+ase = "ase.cli.main:main"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "sphinx_rtd_theme",
+    "pillow",
+]
+test = [
+    "pytest>=6.2.5",
+    "pytest-xdist>2.1.0",
+]
+
+[project.urls]  # how are these parsed by Sphinx?
+Homepage = "https://wiki.fysik.dtu.dk/ase"
+Documentation = "https://wiki.fysik.dtu.dk/ase"
+Repository = "https://gitlab.com/ase/ase"  # need .git extension?
+Changelog = "https://gitlab.com/ase/ase/doc/releasenotes.rst"
+
+[tool.setuptools]  # how to interact with?
+platforms = ["unix"]
+packages = []
+package_data = []
+long_description = ""
+
+[tool.setuptools.package-data]
+ase = [
+    "spacegroup/spacegroup.dat",
+    "collections/*.json",
+    "db/templates/*",
+    "db/static/*",
+    # make ASE a PEP 561 compliant package so that
+    # other packages can use ASE's type hints:
+    "py.typed",
+]
+"ase.test" = [
+    "pytest.ini", "testdata/*", "testdata/*/*", "testdata/*/*/*"
+]
 
 [tool.setuptools_scm]
