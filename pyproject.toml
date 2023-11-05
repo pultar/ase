@@ -25,7 +25,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 
-[project.entry-points]
+[project.scripts]
 ase = "ase.cli.main:main"
 
 [project.optional-dependencies]
