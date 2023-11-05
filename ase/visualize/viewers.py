@@ -19,9 +19,9 @@ import tempfile
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
-from ase.register.listing import LazyListing
 from importlib import import_module
 
+from ase.register.listing import LazyListing
 from ase.utils import lazyproperty
 import ase.io
 from ase.register.plugables import BasePlugable, Plugables
