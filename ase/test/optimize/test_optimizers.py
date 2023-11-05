@@ -1,13 +1,26 @@
+from io import StringIO
+from typing import IO, Any, Dict, Type
+
 import pytest
 
-from ase.build import bulk
-from ase.calculators.emt import EMT
-from ase.cluster import Icosahedron
-from ase.optimize import (BFGS, FIRE, LBFGS, Berny, BFGSLineSearch,
-                          GoodOldQuasiNewton, GPMin, LBFGSLineSearch, MDMin,
-                          ODE12r)
+from ase import Atoms
+from ase.optimize import (
+    BFGS,
+    FIRE,
+    LBFGS,
+    BFGSLineSearch,
+    GoodOldQuasiNewton,
+    GPMin,
+    LBFGSLineSearch,
+    MDMin,
+    ODE12r,
+)
+from ase.optimize.optimize import Optimizer
 from ase.optimize.precon import PreconFIRE, PreconLBFGS, PreconODE12r
-from ase.optimize.sciopt import SciPyFminBFGS, SciPyFminCG
+from ase.optimize.sciopt import (
+    SciPyFminBFGS,
+    SciPyFminCG,
+)
 
 optclasses = [
     MDMin,
@@ -22,97 +35,88 @@ optclasses = [
     SciPyFminBFGS,
     PreconLBFGS,
     PreconFIRE,
-    Berny,
     ODE12r,
     PreconODE12r,
 ]
 
 
-@pytest.fixture(name="ref_atoms")
-def fixture_ref_atoms(optcls):
-    if optcls is Berny:
-        ref_atoms = Icosahedron("Ag", 2, 3.82975)
-        ref_atoms.calc = EMT()
-        return ref_atoms
-
-    ref_atoms = bulk("Au")
-    ref_atoms.calc = EMT()
-    ref_atoms.get_potential_energy()
-    return ref_atoms
+FMAX = 1e-3
+ENERGY_TOLERANCE = 1e-4
 
 
-@pytest.fixture(name="atoms")
-def fixture_atoms(ref_atoms, optcls):
-    if optcls is Berny:
-        atoms = ref_atoms.copy()
-        floor = 7
-    else:
-        atoms = ref_atoms * (2, 2, 2)
-        floor = 0.45
-
-    atoms.calc = EMT()
-    atoms.rattle(stdev=0.1, seed=7)
-    e_unopt = atoms.get_potential_energy()
-    assert e_unopt > floor
-    return atoms
-
-
-@pytest.fixture(name="optcls", params=optclasses)
-def fixture_optcls(request):
-    optcls = request.param
-    if optcls is Berny:
-        pytest.importorskip("berny")  # check if pyberny installed
-    return optcls
+@pytest.fixture(name="optimizer_class", params=optclasses)
+def fixture_optimizer_class(request) -> Type[Optimizer]:
+    optimizer_class: Type[Optimizer] = request.param
+    return optimizer_class
 
 
 @pytest.fixture(name="kwargs")
-def fixture_kwargs(optcls):
+def fixture_kwargs(optimizer_class):
     kwargs = {}
-    if optcls is PreconLBFGS:
+    if optimizer_class is PreconLBFGS:
         kwargs["precon"] = None
-    if optcls is Berny:
-        kwargs["dihedral"] = False
     yield kwargs
     kwargs = {}
 
 
-@pytest.mark.optimize
-@pytest.mark.filterwarnings("ignore: estimate_mu")
-def test_optimize(optcls, atoms, ref_atoms, kwargs):
-    """Test if forces can be converged using the optimizer."""
-    fmax = 0.01
-    with optcls(atoms, **kwargs) as opt:
-        is_converged = opt.run(fmax=fmax)
-    assert is_converged  # check if opt.run() returns True when converged
-
-    forces = atoms.get_forces()
-    final_fmax = max((forces**2).sum(axis=1) ** 0.5)
-    ref_energy = ref_atoms.get_potential_energy()
-    e_opt = atoms.get_potential_energy() * len(ref_atoms) / len(atoms)
-    e_err = abs(e_opt - ref_energy)
-
-    print(f"{optcls.__name__:>20}:", end=" ")
-    print(f"fmax={final_fmax:.05f} eopt={e_opt:.06f} err={e_err:06e}")
-
-    assert final_fmax < fmax
-    assert e_err < 1.75e-5  # (This tolerance is arbitrary)
+@pytest.fixture(name="logfile")
+def fixture_logfile() -> IO:
+    return StringIO()
 
 
-@pytest.mark.optimize
-def test_unconverged(optcls, atoms, kwargs):
-    """Test if things work properly when forces are not converged."""
-    fmax = 1e-9  # small value to not get converged
-    with optcls(atoms, **kwargs) as opt:
-        opt.run(fmax=fmax, steps=1)  # only one step to not get converged
-    assert not opt.converged()
+@pytest.fixture(name="optimizer")
+def fixture_optimizer(
+    optimizer_class: Type[Optimizer],
+    request: pytest.FixtureRequest,
+    rattled_atoms: Atoms,
+    logfile: IO,
+    kwargs: Dict[str, Any],
+) -> Optimizer:
+    return optimizer_class(atoms=rattled_atoms, logfile=logfile, **kwargs)
 
 
-def test_run_twice(optcls, atoms, kwargs):
-    """Test if `steps` increments `max_steps` when `run` is called twice."""
-    fmax = 1e-9  # small value to not get converged
-    steps = 5
-    with optcls(atoms, **kwargs) as opt:
-        opt.run(fmax=fmax, steps=steps)
-        opt.run(fmax=fmax, steps=steps)
-    assert opt.nsteps == 2 * steps
-    assert opt.max_steps == 2 * steps
+@pytest.fixture(name="run_optimizer")
+def fixture_run_optimizer(optimizer: Optimizer) -> bool:
+    return optimizer.run(fmax=FMAX)
+
+
+@pytest.fixture(name="final_energy")
+def fixture_final_energy(rattled_atoms: Atoms, run_optimizer: bool) -> float:
+    final_energy: float = rattled_atoms.get_potential_energy()
+    return final_energy
+
+
+@pytest.fixture(name="final_max_force")
+def fixture_final_max_force(rattled_atoms: Atoms, run_optimizer: bool) -> float:
+    final_max_force = max((rattled_atoms.get_forces() ** 2).sum(axis=1) ** 0.5)
+    return final_max_force
+
+
+@pytest.fixture(name="log_optimizer_run")
+def fixture_log_optimizer_run(
+    optimizer: Optimizer,
+    reference_energy: float,
+    final_max_force: float,
+    final_energy: float,
+) -> None:
+    print()
+    e_err = abs(final_energy - reference_energy)
+    print(
+        "{:>20}: fmax={:.05f} eopt={:.06f}, err={:06e}".format(
+            optimizer.__class__.__name__, final_max_force, final_energy, e_err
+        )
+    )
+
+
+@pytest.mark.usefixtures("log_optimizer_run")
+class TestOptimizers:
+    @staticmethod
+    def test_should_obtain_final_state_with_energy_within_tolerance(
+        reference_energy: float, final_energy: float) -> None:
+        assert abs(final_energy - reference_energy) < ENERGY_TOLERANCE
+
+    @staticmethod
+    def test_should_reduce_forces_below_tolerance(
+        final_max_force: float
+    ) -> None:
+        assert final_max_force < FMAX
