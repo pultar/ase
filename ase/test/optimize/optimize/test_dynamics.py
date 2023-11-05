@@ -7,13 +7,13 @@ from ase.optimize.optimize import Dynamics
 
 
 class DummyDynamics(Dynamics):
-    def step(self) -> None:
+    def step(self):
         ...
 
-    def log(self) -> None:
+    def log(self):
         print(f"Step {self.nsteps}")
 
-    def converged(self) -> bool:
+    def converged(self):
         return False
 
 
@@ -34,7 +34,7 @@ class TestDynamics:
         return observer
 
     @staticmethod
-    def test_should_return_zero_steps_after_instantiation(dynamics: Dynamics):
+    def test_should_return_zero_steps_after_instantiation(dynamics: Dynamics) -> None:
         assert dynamics.get_number_of_steps() == 0
 
     @staticmethod
@@ -76,15 +76,19 @@ class TestDynamics:
             _ = Dynamics.step(dynamics)
 
     @staticmethod
-    def test_should_attach_callback_function_if_callable_and_without_set_description():
+    def test_should_attach_callback_function_if_callable_and_without_set_description() -> (
+        None
+    ):
         ...
 
     @staticmethod
-    def test_should_call_set_description_if_callback_attached_has_set_description():
+    def test_should_call_set_description_if_callback_attached_has_set_description() -> (
+        None
+    ):
         ...
 
     @staticmethod
-    def test_should_attach_write_method_if_function_not_callable():
+    def test_should_attach_write_method_if_function_not_callable() -> None:
         ...
 
 
@@ -197,7 +201,7 @@ class TestCallObservers:
         assert all(messages_in_order)
 
     @staticmethod
-    def test_should_call_attached_callback_function():
+    def test_should_call_attached_callback_function() -> None:
         ...
 
 
@@ -212,41 +216,41 @@ class TestIrun:
         assert dynamics.max_steps == start_step + steps
 
     @staticmethod
-    def test_should_log_initial_step_when_nsteps_is_zero():
+    def test_should_log_initial_step_when_nsteps_is_zero() -> None:
         ...
 
     @staticmethod
-    def test_should_not_log_initial_step_when_steps_is_nonzero():
+    def test_should_not_log_initial_step_when_steps_is_nonzero() -> None:
         ...
 
     @staticmethod
-    def test_should_write_trajectory_if_none():
+    def test_should_write_trajectory_if_none() -> None:
         ...
 
     @staticmethod
-    def test_should_not_step_if_converged_already():
+    def test_should_not_step_if_converged_already() -> None:
         ...
 
     @staticmethod
-    def test_should_return_true_if_converged():
+    def test_should_return_true_if_converged() -> None:
         ...
 
     @staticmethod
-    def test_should_return_false_if_unconverged(dynamics: Dynamics):
+    def test_should_return_false_if_unconverged(dynamics: Dynamics) -> None:
         steps_unconverged: List[bool] = []
         for converged in dynamics.irun(steps=10):
             steps_unconverged.append(not converged)
         assert all(steps_unconverged)
 
     @staticmethod
-    def test_should_not_step_if_nsteps_not_less_than_maxsteps():
+    def test_should_not_step_if_nsteps_not_less_than_maxsteps() -> None:
         ...
 
     @staticmethod
     @pytest.mark.parametrize("steps", [0, 1, 4])
     def test_should_run_until_step_limit_if_not_converged(
         steps: int, dynamics: Dynamics
-    ):
+    ) -> None:
         start_step = dynamics.nsteps
         for _ in dynamics.irun(steps=steps):
             pass
@@ -254,11 +258,11 @@ class TestIrun:
         assert (dynamics.nsteps - start_step) == steps
 
     @staticmethod
-    def test_should_log_initial_state():
+    def test_should_log_initial_state() -> None:
         ...
 
     @staticmethod
-    def test_should_yield_in_initial_state():
+    def test_should_yield_in_initial_state() -> None:
         ...
 
     @staticmethod
@@ -277,17 +281,17 @@ class TestIrun:
 
 class TestRun:
     @staticmethod
-    def test_should_not_run_if_steps_is_zero():
+    def test_should_not_run_if_steps_is_zero() -> None:
         ...
 
     @staticmethod
-    def test_should_run_until_step_limit_if_not_converged():
+    def test_should_run_until_step_limit_if_not_converged() -> None:
         ...
 
     @staticmethod
-    def test_should_return_false_if_not_converged():
+    def test_should_return_false_if_not_converged() -> None:
         ...
 
     @staticmethod
-    def test_should_return_true_if_not_converged():
+    def test_should_return_true_if_not_converged() -> None:
         ...
