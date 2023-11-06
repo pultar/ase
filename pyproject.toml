@@ -47,9 +47,6 @@ Changelog = "https://gitlab.com/ase/ase/doc/releasenotes.rst"
 
 [tool.setuptools]  # how to interact with?
 platforms = ["unix"]
-packages = []
-package_data = []
-long_description = ""
 
 [tool.setuptools.package-data]
 ase = [
