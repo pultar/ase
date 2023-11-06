@@ -10,5 +10,6 @@ exclude appveyor.yml
 exclude mypy.ini
 
 prune doc
+prune tools
 
 prune .gitlab/
