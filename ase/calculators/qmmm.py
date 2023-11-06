@@ -12,7 +12,7 @@ from ase.utils import IOContext
 class SimpleQMMM(Calculator):
     """Simple QMMM calculator."""
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, selection, qmcalc, mmcalc1, mmcalc2, vacuum=None):
         """SimpleQMMM object.
@@ -86,12 +86,13 @@ class SimpleQMMM(Calculator):
         forces[self.selection] -= self.mmcalc1.get_forces(self.qmatoms)
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces
 
 
 class EIQMMM(Calculator, IOContext):
     """Explicit interaction QMMM calculator."""
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, selection, qmcalc, mmcalc, interaction,
                  vacuum=None, embedding=None, output=None):
@@ -208,6 +209,7 @@ class EIQMMM(Calculator, IOContext):
         forces[~self.mask] = mmforces + immforces
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces
 
 
@@ -539,7 +541,7 @@ class RescaledCalculator(Calculator):
     See T. D. Swinburne and J. R. Kermode, Phys. Rev. B 96, 144102 (2017)
     for a derivation of the scaling constants.
     """
-    implemented_properties = ['forces', 'energy', 'stress']
+    implemented_properties = ['forces', 'energy', 'free_energy', 'stress']
 
     def __init__(self, mm_calc,
                  qm_lattice_constant, qm_bulk_modulus,
@@ -561,9 +563,10 @@ class RescaledCalculator(Calculator):
 
         results = {}
 
-        if 'energy' in properties:
+        if 'energy' in properties or 'free_energy' in properties:
             energy = self.mm_calc.get_potential_energy(scaled_atoms)
             results['energy'] = energy / self.beta
+            results['free_energy'] = energy / self.beta
 
         if 'forces' in properties:
             forces = self.mm_calc.get_forces(scaled_atoms)
@@ -583,7 +586,7 @@ class ForceConstantCalculator(Calculator):
     Useful with `ForceQMMM` to do harmonic QM/MM using force constants
     of QM method.
     """
-    implemented_properties = ['forces', 'energy']
+    implemented_properties = ['forces', 'energy', 'free_energy']
 
     def __init__(self, D, ref, f0):
         """
@@ -614,6 +617,7 @@ class ForceConstantCalculator(Calculator):
         forces[:, :] = f.reshape(self.size, 3)
         self.results['forces'] = forces + self.f0
         self.results['energy'] = 0.0
+        self.results['free_energy'] = 0.0
 
 
 class ForceQMMM(Calculator):
@@ -630,7 +634,7 @@ class ForceQMMM(Calculator):
     Rep. Prog. Phys. 72, 026501 (2009)
     and T. D. Swinburne and J. R. Kermode, Phys. Rev. B 96, 144102 (2017).
     """
-    implemented_properties = ['forces', 'energy']
+    implemented_properties = ['forces', 'energy', 'free_energy']
 
     def __init__(self,
                  atoms,
@@ -781,6 +785,7 @@ class ForceQMMM(Calculator):
 
         self.results['forces'] = forces
         self.results['energy'] = 0.0
+        self.results['free_energy'] = 0.0
 
     def get_region_from_masks(self, atoms=None, print_mapping=False):
         """

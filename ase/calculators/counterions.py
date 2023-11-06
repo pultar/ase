@@ -7,7 +7,7 @@ k_c = units.Hartree * units.Bohr
 
 
 class AtomicCounterIon(Calculator):
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, charge, epsilon, sigma, sites_per_mol=1,
                  rc=7.0, width=1.0):
@@ -87,4 +87,5 @@ class AtomicCounterIon(Calculator):
             forces[m + 1:] += F
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces

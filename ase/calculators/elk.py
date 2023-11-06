@@ -8,7 +8,7 @@ from ase.io.elk import ElkReader
 
 class ELK(FileIOCalculator, GetOutputsMixin):
     command = 'elk > elk.out'
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     ignored_changes = {'pbc'}
     discard_results_on_any_change = True
 

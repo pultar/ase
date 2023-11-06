@@ -63,6 +63,7 @@ class Demon(FileIOCalculator):
 
     implemented_properties = [
         'energy',
+        'free_energy',
         'forces',
         'dipole',
         'eigenvalues']
@@ -530,7 +531,9 @@ class Demon(FileIOCalculator):
 
         for line in lines:
             if line.startswith(' TOTAL ENERGY                ='):
-                self.results['energy'] = float(line.split()[-1]) * Hartree
+                energy = float(line.split()[-1]) * Hartree
+                self.results['energy'] = energy
+                self.results['free_energy'] = energy
                 break
         else:
             raise RuntimeError

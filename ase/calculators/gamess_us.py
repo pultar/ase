@@ -6,7 +6,7 @@ from ase.io.gamess_us import clean_userscr, get_userscr
 
 
 class GAMESSUS(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'dipole']
+    implemented_properties = ['energy', 'free_energy', 'forces', 'dipole']
     command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
     discard_results_on_any_change = True
 

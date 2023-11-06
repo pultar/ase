@@ -28,7 +28,7 @@ class Psi4(Calculator):
     also note that you can always use the in-built psi4 module through:
     calc.psi4
     """
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     discard_results_on_any_change = True
 
     default_parameters = {
@@ -185,6 +185,7 @@ class Psi4(Calculator):
             # energy comes for free
             energy = wf.energy()
             self.results['energy'] = energy * Hartree
+            self.results['free_energy'] = self.results['energy']
             # convert to eV/A
             # also note that the gradient is -1 * forces
             self.results['forces'] = -1 * np.array(grad) * Hartree / Bohr
@@ -193,6 +194,7 @@ class Psi4(Calculator):
                                       molecule=self.molecule)
             # convert to eV
             self.results['energy'] = energy * Hartree
+            self.results['free_energy'] = self.results['energy']
 
         # dump the calculator info to the psi4 file
         save_atoms = self.atoms.copy()

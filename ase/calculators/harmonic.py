@@ -14,7 +14,7 @@ class HarmonicCalculator(BaseCalculator):
     See :class:`HarmonicForceField` and the literature. [1]_
     """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
 
     def __init__(self, harmonicforcefield):
         """
@@ -30,6 +30,7 @@ class HarmonicCalculator(BaseCalculator):
         self.atoms = atoms.copy()  # for caching of results
         energy, forces_x = self.harmonicforcefield.get_energy_forces(atoms)
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces_x
 
 

@@ -41,8 +41,8 @@ class OctopusTemplate(CalculatorTemplate):
     def __init__(self):
         super().__init__(
             name='octopus',
-            implemented_properties=['energy', 'forces', 'dipole', 'stress'],
-        )
+            implemented_properties=['energy', 'free_energy', 'forces',
+                                    'dipole', 'stress'])
 
     def read_results(self, directory):
         """Read octopus output files and extract data."""

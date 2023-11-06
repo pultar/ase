@@ -34,7 +34,7 @@ class MorsePotential(Calculator):
     Default values chosen to be similar as Lennard-Jones.
     """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     default_parameters = {'epsilon': 1.0,
                           'rho0': 6.0,
                           'r0': 1.0,
@@ -85,4 +85,5 @@ class MorsePotential(Calculator):
                                          minlength=len(atoms))
 
         self.results['energy'] = energy
+        self.results['free_energy'] = energy
         self.results['forces'] = forces

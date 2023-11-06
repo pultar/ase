@@ -88,7 +88,7 @@ from ase.units import Bohr, Hartree
 class DMol3(FileIOCalculator):
     """ DMol3 calculator object. """
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     default_parameters = {'functional': 'pbe',
                           'symmetry': 'on'}
     discard_results_on_any_change = True
@@ -301,6 +301,7 @@ class DMol3(FileIOCalculator):
         if not found:
             raise RuntimeError('Could not read energy from outmol')
         self.results['energy'] = energy * Hartree
+        self.results['free_energy'] = self.results['energy']
 
     def read_forces(self):
         """ Read forces from .grad file. Applies self.rotation_matrix if

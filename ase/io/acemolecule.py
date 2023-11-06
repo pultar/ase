@@ -102,6 +102,7 @@ def read_acemolecule_out(filename):
 
     results = {}
     results['energy'] = energy
+    results['free_energy'] = energy
     results['atoms'] = atoms
     results['forces'] = forces
     results['excitation-energy'] = excitation_energy

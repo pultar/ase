@@ -10,7 +10,7 @@ class QChem(FileIOCalculator):
     """
     name = 'QChem'
 
-    implemented_properties = ['energy', 'forces']
+    implemented_properties = ['energy', 'free_energy', 'forces']
     command = 'qchem PREFIX.inp PREFIX.out'
 
     # Following the minimal requirements given in
@@ -82,7 +82,9 @@ class QChem(FileIOCalculator):
                     raise SCFError()
                 elif ' Total energy in the final basis set =' in line:
                     convert = ase.units.Hartree
-                    self.results['energy'] = float(line.split()[8]) * convert
+                    energy = float(line.split()[8]) * convert
+                    self.results['energy'] = energy
+                    self.results['free_energy'] = energy
                 elif ' Gradient of SCF Energy' in line:
                     # Read gradient as 3 by N array and transpose at the end
                     gradient = [[] for _ in range(3)]

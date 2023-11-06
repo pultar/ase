@@ -95,7 +95,7 @@ class GaussianIRC(GaussianDynamics):
 
 
 class Gaussian(FileIOCalculator):
-    implemented_properties = ['energy', 'forces', 'dipole']
+    implemented_properties = ['energy', 'free_energy', 'forces', 'dipole']
     command = 'GAUSSIAN < PREFIX.com > PREFIX.log'
     discard_results_on_any_change = True
 

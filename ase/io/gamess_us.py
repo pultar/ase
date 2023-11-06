@@ -174,6 +174,7 @@ def read_gamess_us_out(fd):
             dipole *= Debye
 
     atoms.calc = SinglePointCalculator(atoms, energy=energy,
+                                       free_energy=energy,
                                        forces=forces, dipole=dipole)
     return atoms
 

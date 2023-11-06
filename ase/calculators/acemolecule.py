@@ -12,7 +12,8 @@ class ACE(FileIOCalculator):
     And parameters' type = list of dictionaries
     '''
     name = 'ace'
-    implemented_properties = ['energy', 'forces', 'excitation-energy']
+    implemented_properties = ['energy', 'free_energy',
+                              'forces', 'excitation-energy']
     basic_list = [{
         'Type': 'Scaling', 'Scaling': '0.35', 'Basis': 'Sinc',
                   'Grid': 'Sphere',
