@@ -4,12 +4,19 @@
 # Please see the accompanying LICENSE file for further information.
 
 import os
+import sys
 from glob import glob
 from os.path import join
 
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 from setuptools_scm import ScmVersion
+
+python_min_version = (3, 8)
+python_requires = '>=' + '.'.join(str(num) for num in python_min_version)
+
+if sys.version_info < python_min_version:
+    raise SystemExit(f'Python {python_requires} is required!')
 
 # Optional: spglib >= 1.9
 
