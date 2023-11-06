@@ -11,9 +11,9 @@ authors = [
 license = {text = "LGPLv2.1+"}
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.18.5",
-    "scipy>=1.4.1",
-    "matplotlib>=3.3.4",
+    "numpy>=1.18.5",  # June 2020
+    "scipy>=1.4.1",  # December 2019
+    "matplotlib>=3.3.4",  # January 2021 (3.3.0 is July 2020)
 ]
 classifiers = [
     "Development Status :: 6 - Mature",
