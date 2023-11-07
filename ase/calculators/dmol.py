@@ -95,7 +95,8 @@ class DMol3(FileIOCalculator):
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='dmol_calc/tmp', atoms=None, **kwargs):
+                 label='dmol_calc/tmp', atoms=None,
+                 command=None, **kwargs):
         """ Construct DMol3 calculator. """
 
         command = kwargs.pop("command", None)

@@ -1,7 +1,6 @@
 import copy
 import os
 from collections.abc import Iterable
-from shutil import which
 from typing import Dict, Optional
 
 from ase.calculators.calculator import FileIOCalculator
@@ -96,7 +95,6 @@ class GaussianIRC(GaussianDynamics):
 
 class Gaussian(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole']
-    command = 'GAUSSIAN < PREFIX.com > PREFIX.log'
     discard_results_on_any_change = True
 
     def __init__(self, *args, label='Gaussian', **kwargs):
@@ -119,7 +117,7 @@ class Gaussian(FileIOCalculator):
         FileIOCalculator.calculate(self, *args, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
-        FileIOCalculator.write_input(self, atoms, properties, system_changes)
+        super().write_input(atoms, properties, system_changes)
         write(self.label + '.com', atoms, properties=properties,
               format='gaussian-in', parallel=False, **self.parameters)
 

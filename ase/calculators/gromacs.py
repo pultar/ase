@@ -19,12 +19,12 @@ To be done:
 import os
 import subprocess
 from glob import glob
-from shutil import which
 
 import numpy as np
 
 from ase import units
-from ase.calculators.calculator import FileIOCalculator, all_changes
+from ase.calculators.calculator import (
+    FileIOCalculator, all_changes, CalculatorSetupError)
 from ase.io.gromos import read_gromos, write_gromos
 
 
@@ -155,7 +155,8 @@ class Gromacs(FileIOCalculator):
         self.atoms = None
 
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, self.command, **kwargs)
+                                  label, atoms, command=command,
+                                  **kwargs)
         self.set(**kwargs)
         # default values for runtime parameters
         # can be changed by self.set_own_params_runs('key', 'value')
@@ -191,7 +192,7 @@ class Gromacs(FileIOCalculator):
         if self.command:
             subprocess.check_call(self.command + ' ' + command, shell=True)
         else:
-            raise OSError(self.missing_gmx)
+            raise CalculatorSetupError('Missing gromacs executable')
 
     def generate_g96file(self):
         """ from current coordinates (self.structure_file)

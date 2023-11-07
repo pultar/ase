@@ -28,8 +28,11 @@ class Dftb(FileIOCalculator):
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='dftb', atoms=None, kpts=None, slako_dir=None,
-                 profile=None, **kwargs):
+                 label='dftb', atoms=None, kpts=None,
+                 slako_dir=None,
+                 command=None,
+                 profile=None,
+                 **kwargs):
         """
         All keywords for the dftb_in.hsd input file (see the DFTB+ manual)
         can be set by ASE. Consider the following input file block::
@@ -88,6 +91,12 @@ class Dftb(FileIOCalculator):
         pcpot: PointCharge object
             An external point charge potential (for QM/MM calculations)
         """
+
+        if command is None:
+            if 'DFTB_COMMAND' in self.cfg:
+                command = self.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
+            else:
+                command = 'dftb+ > PREFIX.out'
 
         if slako_dir is None:
             slako_dir = self.cfg.get('DFTB_PREFIX', './')
