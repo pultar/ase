@@ -1,10 +1,9 @@
-import pytest
 import numpy as np
+import pytest
 
 from ase.build import bulk
-
+from ase.filters import FrechetCellFilter
 from ase.optimize import BFGS
-from ase.filters import ExpCellFilter
 from ase.units import Ry
 
 
@@ -16,10 +15,16 @@ def test_socketio_espresso(factory):
     atoms = bulk('Si')
     atoms.rattle(stdev=.2, seed=42)
 
-    with BFGS(ExpCellFilter(atoms)) as opt, \
+    with BFGS(FrechetCellFilter(atoms)) as opt, \
             pytest.warns(UserWarning, match='Subprocess exited'), \
             factory.socketio(unixsocket=f'ase_test_socketio_{factory.name}',
                              kpts=[2, 2, 2]) as atoms.calc:
+        if (
+            hasattr(atoms.calc, "profile") and
+            hasattr(atoms.calc.profile, "parallel")
+        ):
+            atoms.calc.profile.parallel = False
+            atoms.calc.profile.parallel_info = {}
 
         for _ in opt.irun(fmax=0.05):
             e = atoms.get_potential_energy()

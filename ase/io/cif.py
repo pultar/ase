@@ -6,22 +6,21 @@ global blocks, nested loops and multi-data values are not supported.
 The "latin-1" encoding is required by the IUCR specification.
 """
 
+import collections.abc
 import io
 import re
 import shlex
 import warnings
-from typing import Dict, List, Tuple, Optional, Union, Iterator, Any, Sequence
-import collections.abc
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from ase import Atoms
 from ase.cell import Cell
-from ase.spacegroup import crystal
-from ase.spacegroup.spacegroup import spacegroup_from_data, Spacegroup
 from ase.io.cif_unicode import format_unicode, handle_subscripts
+from ase.spacegroup import crystal
+from ase.spacegroup.spacegroup import Spacegroup, spacegroup_from_data
 from ase.utils import iofunction
-
 
 rhombohedral_spacegroups = {146, 148, 155, 160, 161, 166, 167}
 
@@ -51,7 +50,7 @@ def convert_value(value: str) -> CIFDataValue:
         return float(value[:value.index('(')])  # strip off uncertainties
     elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+$',
                   value):
-        warnings.warn('Badly formed number: "{0}"'.format(value))
+        warnings.warn(f'Badly formed number: "{value}"')
         return float(value[:value.index('(')])  # strip off uncertainties
     else:
         return handle_subscripts(value)
@@ -158,7 +157,7 @@ def parse_loop(lines: List[str]) -> Dict[str, List[CIFDataValue]]:
     columns_dict = {}
     for i, header in enumerate(headers):
         if header in columns_dict:
-            warnings.warn('Duplicated loop tags: {0}'.format(header))
+            warnings.warn(f'Duplicated loop tags: {header}')
         else:
             columns_dict[header] = columns[i]
     return columns_dict
@@ -189,7 +188,7 @@ def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
         elif line.startswith(';'):
             parse_multiline_string(lines, line)
         else:
-            raise ValueError('Unexpected CIF file entry: "{0}"'.format(line))
+            raise ValueError(f'Unexpected CIF file entry: "{line}"')
     return tags
 
 
@@ -393,7 +392,8 @@ class CIFBlock(collections.abc.Mapping):
                     setting = 2
                 else:
                     warnings.warn(
-                        'unexpected crystal system %r for space group %r' % (
+                        'unexpected crystal system {!r} '
+                        'for space group {!r}'.format(
                             setting_name, spacegroup))
             # FIXME - check for more crystal systems...
             else:
@@ -658,7 +658,7 @@ def format_cell(cell: Cell) -> str:
     assert cell.rank == 3
     lines = []
     for name, value in zip(CIFBlock.cell_tags, cell.cellpar()):
-        line = '{:20} {}\n'.format(name, value)
+        line = f'{name:20} {value}\n'
         lines.append(line)
     assert len(lines) == 6
     return ''.join(lines)

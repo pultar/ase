@@ -1,18 +1,17 @@
 import errno
 import functools
-import os
 import io
+import os
 import pickle
+import re
+import string
 import sys
 import time
-import string
 import warnings
+from contextlib import ExitStack, contextmanager
 from importlib import import_module
-from math import sin, cos, radians, atan2, degrees
-from contextlib import contextmanager, ExitStack
-from math import gcd
-from pathlib import PurePath, Path
-import re
+from math import atan2, cos, degrees, gcd, radians, sin
+from pathlib import Path, PurePath
 
 import numpy as np
 
@@ -80,6 +79,8 @@ def seterr(**kwargs):
 
 def plural(n, word):
     """Use plural for n!=1.
+
+    >>> from ase.utils import plural
 
     >>> plural(0, 'egg'), plural(1, 'egg'), plural(2, 'egg')
     ('0 eggs', '1 egg', '2 eggs')
@@ -304,7 +305,7 @@ def search_current_git_hash(arg, world=None):
     HEAD_file = os.path.join(git_dpath, 'HEAD')
     if not os.path.isfile(HEAD_file):
         return None
-    with open(HEAD_file, 'r') as fd:
+    with open(HEAD_file) as fd:
         line = fd.readline().strip()
     if line.startswith('ref: '):
         ref = line[5:]
@@ -314,7 +315,7 @@ def search_current_git_hash(arg, world=None):
         ref_file = HEAD_file
     if not os.path.isfile(ref_file):
         return None
-    with open(ref_file, 'r') as fd:
+    with open(ref_file) as fd:
         line = fd.readline().strip()
     if all(c in string.hexdigits for c in line):
         return line
@@ -460,7 +461,7 @@ def workdir(path, mkdir=False):
         path.mkdir(parents=True, exist_ok=True)
 
     olddir = os.getcwd()
-    os.chdir(str(path))  # py3.6 allows chdir(path) but we still need 3.5
+    os.chdir(path)
     try:
         yield  # Yield the Path or dirname maybe?
     finally:
@@ -664,4 +665,4 @@ def get_python_package_path_description(
         else:
             return default
     except Exception as ex:
-        return "{:} ({:})".format(default, ex)
+        return f"{default} ({ex})"

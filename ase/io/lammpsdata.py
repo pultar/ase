@@ -2,6 +2,7 @@ import re
 import warnings
 
 import numpy as np
+
 from ase.atoms import Atoms
 from ase.calculators.lammps import Prism, convert
 from ase.data import atomic_masses, atomic_numbers
@@ -159,13 +160,13 @@ def read_lammps_data(
                 # elif field == "atom types":
                 #     N_types = int(val)
                 elif field == "xlo xhi":
-                    (xlo, xhi) = [float(x) for x in val.split()]
+                    (xlo, xhi) = (float(x) for x in val.split())
                 elif field == "ylo yhi":
-                    (ylo, yhi) = [float(x) for x in val.split()]
+                    (ylo, yhi) = (float(x) for x in val.split())
                 elif field == "zlo zhi":
-                    (zlo, zhi) = [float(x) for x in val.split()]
+                    (zlo, zhi) = (float(x) for x in val.split())
                 elif field == "xy xz yz":
-                    (xy, xz, yz) = [float(x) for x in val.split()]
+                    (xy, xz, yz) = (float(x) for x in val.split())
 
         if section is not None:
             fields = line.split()
@@ -533,9 +534,9 @@ def write_lammps_data(
                     " mol-id dtype must be subtype of np.integer, and"
                     " not {:s}.").format(str(molecules.dtype)))
             if (len(molecules) != len(atoms)) or (molecules.ndim != 1):
-                raise TypeError((
+                raise TypeError(
                     "If 'atoms' object has 'mol-id' array, then"
-                    " each atom must have exactly one mol-id."))
+                    " each atom must have exactly one mol-id.")
         else:
             # Assigning each atom to a distinct molecule id would seem
             # preferableabove assigning all atoms to a single molecule

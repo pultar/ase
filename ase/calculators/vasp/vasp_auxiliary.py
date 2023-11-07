@@ -1,5 +1,6 @@
-import re
 import os
+import re
+
 import numpy as np
 
 
@@ -87,7 +88,7 @@ class VaspChargeDensity:
         while True:
             try:
                 atoms = aiv.read_vasp(fd)
-            except (IOError, ValueError, IndexError):
+            except (OSError, ValueError, IndexError):
                 # Probably an empty line, or we tried to read the
                 # augmentation occupancies in CHGCAR
                 break
@@ -260,7 +261,7 @@ class VaspDos:
         self.sort = []
         self.resort = []
         if os.path.isfile('ase-sort.dat'):
-            file = open('ase-sort.dat', 'r')
+            file = open('ase-sort.dat')
             lines = file.readlines()
             file.close()
             for line in lines:

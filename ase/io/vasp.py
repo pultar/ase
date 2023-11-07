@@ -10,10 +10,11 @@ from typing import List
 import numpy as np
 
 from ase import Atoms
-from ase.utils import reader, writer
 from ase.io import ParseError
 from ase.io.formats import string2index
 from ase.io.utils import ImageIterator
+from ase.utils import reader, writer
+
 from .vasp_parsers import vasp_outcar_parsers as vop
 
 __all__ = [
@@ -244,7 +245,7 @@ def read_vasp(filename='CONTCAR'):
 
 def set_constraints(atoms: Atoms, selective_flags: np.ndarray):
     """Set constraints based on selective_flags"""
-    from ase.constraints import FixConstraint, FixAtoms, FixScaled
+    from ase.constraints import FixAtoms, FixConstraint, FixScaled
 
     constraints: List[FixConstraint] = []
     indices = []
@@ -302,7 +303,7 @@ def read_vasp_xdatcar(filename='XDATCAR', index=-1):
     images = []
 
     cell = np.eye(3)
-    atomic_formula = str()
+    atomic_formula = ''
 
     while True:
         comment_line = fd.readline()
@@ -322,7 +323,7 @@ def read_vasp_xdatcar(filename='XDATCAR', index=-1):
             numbers = [int(n) for n in fd.readline().split()]
             total = sum(numbers)
 
-            atomic_formula = ''.join('{:s}{:d}'.format(sym, numbers[n])
+            atomic_formula = ''.join(f'{sym:s}{numbers[n]:d}'
                                      for n, sym in enumerate(symbols))
 
             fd.readline()
@@ -387,11 +388,12 @@ def read_vasp_xml(filename='vasprun.xml', index=-1):
     """
 
     import xml.etree.ElementTree as ET
-    from ase.constraints import FixAtoms, FixScaled
+    from collections import OrderedDict
+
     from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                              SinglePointKPoint)
+    from ase.constraints import FixAtoms, FixScaled
     from ase.units import GPa
-    from collections import OrderedDict
 
     tree = ET.iterparse(filename, events=['start', 'end'])
 
@@ -677,7 +679,7 @@ def _write_xdatcar_config(fd, atoms, index):
         index (int): configuration number written to block header
 
     """
-    fd.write("Direct configuration={:6d}\n".format(index))
+    fd.write(f"Direct configuration={index:6d}\n")
     float_string = '{:11.8f}'
     scaled_positions = atoms.get_scaled_positions()
     for row in scaled_positions:
@@ -725,11 +727,11 @@ def _write_symbol_count(fd, sc, vasp5=True):
     """
     if vasp5:
         for sym, _ in sc:
-            fd.write(' {:3s}'.format(sym))
+            fd.write(f' {sym:3s}')
         fd.write('\n')
 
     for _, count in sc:
-        fd.write(' {:3d}'.format(count))
+        fd.write(f' {count:3d}')
     fd.write('\n')
 
 
@@ -752,7 +754,7 @@ def write_vasp(filename,
     atomic species, e.g. 'C N H Cu'.
     """
 
-    from ase.constraints import FixAtoms, FixScaled, FixedPlane, FixedLine
+    from ase.constraints import FixAtoms, FixedLine, FixedPlane, FixScaled
 
     fd = filename  # @writer decorator ensures this arg is a file descriptor
 

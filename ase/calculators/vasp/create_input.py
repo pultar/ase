@@ -19,9 +19,9 @@ http://cms.mpi.univie.ac.at/vasp/
 """
 
 import os
-import warnings
 import shutil
-from os.path import join, isfile, islink
+import warnings
+from os.path import isfile, islink, join
 from typing import List, Sequence, Tuple
 
 import numpy as np
@@ -29,6 +29,66 @@ import numpy as np
 import ase
 from ase.calculators.calculator import kpts2ndarray
 from ase.calculators.vasp.setups import get_default_setups
+from ase.config import cfg
+
+FLOAT_FORMAT = '5.6f'
+EXP_FORMAT = '5.2e'
+
+
+def get_pp_setup(setup) -> Tuple[dict, Sequence[int]]:
+    """
+    Get the pseudopotential mapping based on the "setpus" input.
+
+    Parameters
+    ----------
+    setup : [str, dict]
+        The setup to use for the calculation. This can be a string
+        shortcut, or a dict of atom identities and suffixes.
+        In the dict version it is also possible to select a base setup
+        e.g.: {'base': 'minimal', 'Ca': '_sv', 2: 'O_s'}
+        If the key is an integer, this means an atom index.
+        For the string version, 'minimal', 'recommended' and 'GW' are
+        available. The default is 'minimal
+
+    Returns
+    -------
+    setups : dict
+        The setup dictionary, with atom indices as keys and suffixes
+        as values.
+    special_setups : list
+        A list of atom indices that have a special setup.
+    """
+    special_setups = []
+
+    # Avoid mutating the module dictionary, so we use a copy instead
+    # Note, it is a nested dict, so a regular copy is not enough
+    setups_defaults = get_default_setups()
+
+    # Default to minimal basis
+    if setup is None:
+        setup = {'base': 'minimal'}
+
+    # String shortcuts are initialised to dict form
+    elif isinstance(setup, str):
+        if setup.lower() in setups_defaults.keys():
+            setup = {'base': setup}
+
+    # Dict form is then queried to add defaults from setups.py.
+    if 'base' in setup:
+        setups = setups_defaults[setup['base'].lower()]
+    else:
+        setups = {}
+
+    # Override defaults with user-defined setups
+    if setup is not None:
+        setups.update(setup)
+
+    for m in setups:
+        try:
+            special_setups.append(int(m))
+        except ValueError:
+            pass
+    return setups, special_setups
 
 
 def format_kpoints(kpts, atoms, reciprocal=False, gamma=False):
@@ -299,6 +359,7 @@ int_keys = [
     'icharg',  # charge: 0-WAVECAR 1-CHGCAR 2-atom 10-const
     'idipol',  # monopol/dipol and quadropole corrections
     'images',  # number of images for NEB calculation
+    'imix',  # specifies density mixing
     'iniwav',  # initial electr wf. : 0-lowe 1-rand
     'isif',  # calculate stress and what to relax
     'ismear',  # part. occupancies: -5 Blochl -4-tet -1-fermi 0-gaus >0 MP
@@ -1068,6 +1129,16 @@ class GenerateVaspInput:
             # Custom key-value pairs, written to INCAR with *no* type checking
             'custom': {},
         }
+        # warning message for pw91
+        self.pw91_warning_msg =\
+            "The PW91 (potpaw_GGA) pseudopotential set is " \
+            "from 2006 and not recommended for use.\nWe will " \
+            "remove support for it in a future release, " \
+            "and use the current PBE (potpaw_PBE) set instead.\n" \
+            "Note that this still allows for PW91 calculations, " \
+            "since VASP recalculates the exchange-correlation\n" \
+            "energy inside the PAW sphere and corrects the atomic " \
+            "energies given by the POTCAR file."
 
     def set_xc_params(self, xc):
         """Set parameters corresponding to XC functional"""
@@ -1076,9 +1147,14 @@ class GenerateVaspInput:
             pass
         elif xc not in self.xc_defaults:
             xc_allowed = ', '.join(self.xc_defaults.keys())
-            raise ValueError('{0} is not supported for xc! Supported xc values'
-                             'are: {1}'.format(xc, xc_allowed))
+            raise ValueError('{} is not supported for xc! Supported xc values'
+                             'are: {}'.format(xc, xc_allowed))
         else:
+            # print future warning in case pw91 is selected:
+            if xc == 'pw91':
+                warnings.warn(
+                    self.pw91_warning_msg, FutureWarning
+                )
             # XC defaults to PBE pseudopotentials
             if 'pp' not in self.xc_defaults[xc]:
                 self.set(pp='PBE')
@@ -1142,6 +1218,10 @@ class GenerateVaspInput:
                 p.update({'pp': 'lda'})
             elif self.string_params['gga'] == '91':
                 p.update({'pp': 'pw91'})
+                warnings.warn(
+                    self.pw91_warning_msg, FutureWarning
+                )
+
             elif self.string_params['gga'] == 'PE':
                 p.update({'pp': 'pbe'})
             else:
@@ -1187,6 +1267,14 @@ class GenerateVaspInput:
             resrt[srt[n]] = n
         return srt, resrt
 
+    def _set_spinpol(self, atoms):
+        if self.int_params['ispin'] is None:
+            self.spinpol = atoms.get_initial_magnetic_moments().any()
+        else:
+            # VASP runs non-spin-polarized calculations when `ispin=1`,
+            # regardless if `magmom` is specified or not.
+            self.spinpol = (self.int_params['ispin'] == 2)
+
     def _build_pp_list(self,
                        atoms,
                        setups=None,
@@ -1196,7 +1284,7 @@ class GenerateVaspInput:
         p = self.input_params
 
         if setups is None:
-            setups, special_setups = self._get_setups()
+            setups, special_setups = get_pp_setup(p['setups'])
 
         symbols, _ = count_symbols(atoms, exclude=special_setups)
 
@@ -1208,8 +1296,8 @@ class GenerateVaspInput:
         else:
             pp_folder = p['pp']
 
-        if self.VASP_PP_PATH in os.environ:
-            pppaths = os.environ[self.VASP_PP_PATH].split(':')
+        if self.VASP_PP_PATH in cfg:
+            pppaths = cfg[self.VASP_PP_PATH].split(':')
         else:
             pppaths = []
         ppp_list = []
@@ -1221,7 +1309,7 @@ class GenerateVaspInput:
             elif str(m) in setups:
                 special_setup_index = str(m)  # type: ignore[assignment]
             else:
-                raise Exception("Having trouble with special setup index {0}."
+                raise Exception("Having trouble with special setup index {}."
                                 " Please use an int.".format(m))
             potcar = join(pp_folder, setups[special_setup_index], 'POTCAR')
             for path in pppaths:
@@ -1265,65 +1353,6 @@ class GenerateVaspInput:
                 raise RuntimeError(msg)
         return ppp_list
 
-    def _get_setups(self):
-        p = self.input_params
-
-        special_setups = []
-
-        # Default setup lists are available: 'minimal', 'recommended' and 'GW'
-        # These may be provided as a string e.g.::
-        #
-        #     calc = Vasp(setups='recommended')
-        #
-        # or in a dict with other specifications e.g.::
-        #
-        #    calc = Vasp(setups={'base': 'minimal', 'Ca': '_sv', 2: 'O_s'})
-        #
-        # Where other keys are either atom identities or indices, and the
-        # corresponding values are suffixes or the full name of the setup
-        # folder, respectively.
-
-        # Avoid mutating the module dictionary, so we use a copy instead
-        # Note, it is a nested dict, so a regular copy is not enough
-        setups_defaults = get_default_setups()
-
-        # Default to minimal basis
-        if p['setups'] is None:
-            p['setups'] = {'base': 'minimal'}
-
-        # String shortcuts are initialised to dict form
-        elif isinstance(p['setups'], str):
-            if p['setups'].lower() == 'materialsproject':
-                warnings.warn('`materialsproject` setup will be'
-                              'removed in a future release.', FutureWarning)
-            if p['setups'].lower() in setups_defaults.keys():
-                p['setups'] = {'base': p['setups']}
-
-        # Dict form is then queried to add defaults from setups.py.
-        if 'base' in p['setups']:
-            setups = setups_defaults[p['setups']['base'].lower()]
-        else:
-            setups = {}
-
-        # Override defaults with user-defined setups
-        if p['setups'] is not None:
-            setups.update(p['setups'])
-
-        for m in setups:
-            try:
-                special_setups.append(int(m))
-            except ValueError:
-                pass
-        return setups, special_setups
-
-    def _set_spinpol(self, atoms):
-        if self.int_params['ispin'] is None:
-            self.spinpol = atoms.get_initial_magnetic_moments().any()
-        else:
-            # VASP runs non-spin-polarized calculations when `ispin=1`,
-            # regardless if `magmom` is specified or not.
-            self.spinpol = (self.int_params['ispin'] == 2)
-
     def initialize(self, atoms):
         """Initialize a VASP calculation
 
@@ -1349,7 +1378,7 @@ class GenerateVaspInput:
 
         self._set_spinpol(atoms)
 
-        setups, special_setups = self._get_setups()
+        setups, special_setups = get_pp_setup(self.input_params['setups'])
 
         # Determine the number of atoms of each atomic species
         # sorted after atomic species
@@ -1422,8 +1451,8 @@ class GenerateVaspInput:
 
         if self.bool_params['luse_vdw']:
             src = None
-            if vdw_env in os.environ:
-                src = os.path.join(os.environ[vdw_env], kernel)
+            if vdw_env in cfg:
+                src = os.path.join(cfg[vdw_env], kernel)
 
             if not src or not isfile(src):
                 warnings.warn(
@@ -1490,21 +1519,21 @@ class GenerateVaspInput:
                     nelect_from_charge = default_nelect - charge
                     if val is not None and val != nelect_from_charge:
                         raise ValueError('incompatible input parameters: '
-                                         'nelect=%s, but charge=%s '
-                                         '(neutral nelect is %s)' %
-                                         (val, charge, default_nelect))
+                                         f'nelect={val}, but charge={charge} '
+                                         '(neutral nelect is '
+                                         f'{default_nelect})')
                     val = nelect_from_charge
             if val is not None:
-                incar.write(' %s = %5.6f\n' % (key.upper(), val))
+                incar.write(f' {key.upper()} = {val:{FLOAT_FORMAT}}\n')
         for key, val in self.exp_params.items():
             if val is not None:
-                incar.write(' %s = %5.2e\n' % (key.upper(), val))
+                incar.write(f' {key.upper()} = {val:{EXP_FORMAT}}\n')
         for key, val in self.string_params.items():
             if val is not None:
-                incar.write(' %s = %s\n' % (key.upper(), val))
+                incar.write(f' {key.upper()} = {val}\n')
         for key, val in self.int_params.items():
             if val is not None:
-                incar.write(' %s = %d\n' % (key.upper(), val))
+                incar.write(f' {key.upper()} = {val}\n')
                 if key == 'ichain' and val > 0:
                     incar.write(' IBRION = 3\n POTIM = 0.0\n')
                     for key, val in self.int_params.items():
@@ -1520,9 +1549,11 @@ class GenerateVaspInput:
             if val is None:
                 pass
             else:
-                incar.write(' %s = ' % key.upper())
-                [incar.write('%s ' % _to_vasp_bool(x)) for x in val]
-                incar.write('\n')
+                line = f' {key.upper()} ='
+                for x in val:
+                    line += f' {_to_vasp_bool(x)}'
+                line += '\n'
+                incar.write(line)
 
         for key, val in self.list_int_params.items():
             if val is None:
@@ -1530,8 +1561,8 @@ class GenerateVaspInput:
             elif key == 'ldaul' and (self.dict_params['ldau_luj'] is not None):
                 pass
             else:
-                incar.write(' %s = ' % key.upper())
-                [incar.write('%d ' % x) for x in val]
+                incar.write(f' {key.upper()} = ')
+                [incar.write(f'{x} ') for x in val]
                 incar.write('\n')
 
         for key, val in self.list_float_params.items():
@@ -1553,7 +1584,7 @@ class GenerateVaspInput:
                     self.spinpol = True
                     incar.write(' ispin = 2\n'.upper())
 
-                incar.write(' %s = ' % key.upper())
+                line = f' {key.upper()} = '
                 magmom_written = True
                 # Work out compact a*x b*y notation and write in this form
                 # Assume 1 magmom per atom, ordered as our atoms object
@@ -1567,32 +1598,29 @@ class GenerateVaspInput:
                         lst[-1][0] += 1
                     else:
                         lst.append([1, val[n]])
-                incar.write(' '.join(
-                    ['{:d}*{:.4f}'.format(mom[0], mom[1]) for mom in lst]))
-                incar.write('\n')
+                line += ' '.join([f'{mom[0]:d}*{mom[1]:.4f}'
+                                  for mom in lst]) + '\n'
+                incar.write(line)
             else:
-                incar.write(' %s = ' % key.upper())
-                [incar.write('%.4f ' % x) for x in val]
-                incar.write('\n')
+                line = f' {key.upper()} = '
+                line += ' '.join([f'{x:.4f}' for x in val])
+                line += '\n'
+                incar.write(line)
 
         for key, val in self.bool_params.items():
             if val is not None:
-                incar.write(' %s = ' % key.upper())
-                if val:
-                    incar.write('.TRUE.\n')
-                else:
-                    incar.write('.FALSE.\n')
+                incar.write(f' {key.upper()} = {_to_vasp_bool(val)}\n')
+
         for key, val in self.special_params.items():
             if val is not None:
-                incar.write(' %s = ' % key.upper())
+                line = f' {key.upper()} = '
                 if key == 'lreal':
                     if isinstance(val, str):
-                        incar.write(val + '\n')
+                        line += val + '\n'
                     elif isinstance(val, bool):
-                        if val:
-                            incar.write('.TRUE.\n')
-                        else:
-                            incar.write('.FALSE.\n')
+                        line += f'{_to_vasp_bool(val)}\n'
+                incar.write(line)
+
         for key, val in self.dict_params.items():
             if val is not None:
                 if key == 'ldau_luj':
@@ -1609,9 +1637,9 @@ class GenerateVaspInput:
                         llist += ' %i' % luj['L']
                         ulist += ' %.3f' % luj['U']
                         jlist += ' %.3f' % luj['J']
-                    incar.write(' LDAUL =%s\n' % llist)
-                    incar.write(' LDAUU =%s\n' % ulist)
-                    incar.write(' LDAUJ =%s\n' % jlist)
+                    incar.write(f' LDAUL ={llist}\n')
+                    incar.write(f' LDAUU ={ulist}\n')
+                    incar.write(f' LDAUJ ={jlist}\n')
 
         if (self.spinpol and not magmom_written
                 # We don't want to write magmoms if they are all 0.
@@ -1655,7 +1683,7 @@ class GenerateVaspInput:
             if self.float_params['kspacing'] > 0:
                 return
             else:
-                raise ValueError("KSPACING value {0} is not allowable. "
+                raise ValueError("KSPACING value {} is not allowable. "
                                  "Please use None or a positive number."
                                  "".format(self.float_params['kspacing']))
 
@@ -1696,7 +1724,7 @@ class GenerateVaspInput:
         Typically named INCAR."""
 
         self.spinpol = False
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             lines = fd.readlines()
 
         for line in lines:
@@ -1825,10 +1853,10 @@ class GenerateVaspInput:
                         else:
                             self.special_params[key] = data[2]
             except KeyError:
-                raise IOError('Keyword "%s" in INCAR is'
+                raise OSError('Keyword "%s" in INCAR is'
                               'not known by calculator.' % key)
             except IndexError:
-                raise IOError('Value missing for keyword "%s".' % key)
+                raise OSError(f'Value missing for keyword "{key}".')
 
     def read_kpoints(self, filename):
         """Read kpoints file, typically named KPOINTS."""
@@ -1837,7 +1865,7 @@ class GenerateVaspInput:
             # Don't update kpts array
             return
 
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             lines = fd.readlines()
 
         ktype = lines[2].split()[0].lower()[0]
@@ -1864,7 +1892,7 @@ class GenerateVaspInput:
 
         # Search for key 'LEXCH' in POTCAR
         xc_flag = None
-        with open(filename, 'r') as fd:
+        with open(filename) as fd:
             for line in fd:
                 key = line.split()[0].upper()
                 if key == 'LEXCH':
@@ -1927,7 +1955,7 @@ def _from_vasp_bool(x):
     elif x.lower() == '.false.' or x.lower() == 'f':
         return False
     else:
-        raise ValueError('Value "%s" not recognized as bool' % x)
+        raise ValueError(f'Value "{x}" not recognized as bool')
 
 
 def _to_vasp_bool(x):
@@ -1956,11 +1984,11 @@ def open_potcar(filename):
     """
     import gzip
     if filename.endswith('R'):
-        return open(filename, 'r')
+        return open(filename)
     elif filename.endswith('.Z'):
         return gzip.open(filename)
     else:
-        raise ValueError('Invalid POTCAR filename: "%s"' % filename)
+        raise ValueError(f'Invalid POTCAR filename: "{filename}"')
 
 
 def read_potcar_numbers_of_electrons(file_obj):

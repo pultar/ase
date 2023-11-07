@@ -1,11 +1,13 @@
 import re
 from collections import OrderedDict
+
 import numpy as np
 
 from ase import Atoms
-from ase.units import Hartree, Bohr
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
+from ase.units import Bohr, Hartree
+
 from .parser import _define_pattern
 
 # Note to the reader of this code: Here and below we use the function
@@ -563,9 +565,9 @@ def _get_pw_kpts(chunk):
 # SinglePointKPoint objects.
 class NWChemKpts:
     def __init__(self):
-        self.data = dict()
-        self.ibz_kpts = dict()
-        self.weights = dict()
+        self.data = {}
+        self.ibz_kpts = {}
+        self.weights = {}
 
     def add_ibz_kpt(self, index, raw_kpt):
         kpt = np.array([float(x.strip('>')) for x in raw_kpt.split()[1:4]])
@@ -573,7 +575,7 @@ class NWChemKpts:
 
     def add_eval(self, index, spin, energy, occ):
         if index not in self.data:
-            self.data[index] = dict()
+            self.data[index] = {}
         if spin not in self.data[index]:
             self.data[index][spin] = []
         self.data[index][spin].append((energy, occ))

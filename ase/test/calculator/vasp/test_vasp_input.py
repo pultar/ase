@@ -1,12 +1,12 @@
-import pytest
 from unittest import mock
 
 import numpy as np
-from ase.calculators.vasp.create_input import GenerateVaspInput
-from ase.calculators.vasp.create_input import _args_without_comment
-from ase.calculators.vasp.create_input import _to_vasp_bool, _from_vasp_bool
+import pytest
 
 from ase.build import bulk
+from ase.calculators.vasp.create_input import (GenerateVaspInput,
+                                               _args_without_comment,
+                                               _from_vasp_bool, _to_vasp_bool)
 
 
 def dict_is_subset(d1, d2):
@@ -223,14 +223,15 @@ def test_vasp_xc(vaspinput_factory):
     assert calc_hse.bool_params['lhfcalc'] is True
     assert dict_is_subset({'gga': 'RE'}, calc_hse.string_params)
 
-    calc_pw91 = vaspinput_factory(xc='pw91',
-                                  kpts=(2, 2, 2),
-                                  gamma=True,
-                                  lreal='Auto')
-    assert dict_is_subset(
-        {
-            'pp': 'PW91',
-            'kpts': (2, 2, 2),
-            'gamma': True,
-            'reciprocal': False
-        }, calc_pw91.input_params)
+    with pytest.warns(FutureWarning):
+        calc_pw91 = vaspinput_factory(xc='pw91',
+                                      kpts=(2, 2, 2),
+                                      gamma=True,
+                                      lreal='Auto')
+        assert dict_is_subset(
+            {
+                'pp': 'PW91',
+                'kpts': (2, 2, 2),
+                'gamma': True,
+                'reciprocal': False
+            }, calc_pw91.input_params)

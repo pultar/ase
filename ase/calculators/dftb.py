@@ -7,18 +7,15 @@ Initial development: markus.kaukonen@iki.fi
 """
 
 import os
+
 import numpy as np
+
 from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
                                         kpts2sizeandoffsets)
-from ase.units import Hartree, Bohr
+from ase.units import Bohr, Hartree
 
 
 class Dftb(FileIOCalculator):
-    if 'DFTB_COMMAND' in os.environ:
-        command = os.environ['DFTB_COMMAND'] + ' > PREFIX.out'
-    else:
-        command = 'dftb+ > PREFIX.out'
-
     implemented_properties = ['energy', 'forces', 'charges',
                               'stress', 'dipole']
     discard_results_on_any_change = True
@@ -27,6 +24,8 @@ class Dftb(FileIOCalculator):
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
                  label='dftb', atoms=None, kpts=None,
                  slako_dir=None,
+                 command=None,
+                 profile=None,
                  **kwargs):
         """
         All keywords for the dftb_in.hsd input file (see the DFTB+ manual)
@@ -87,8 +86,14 @@ class Dftb(FileIOCalculator):
             An external point charge potential (for QM/MM calculations)
         """
 
+        if command is None:
+            if 'DFTB_COMMAND' in self.cfg:
+                command = self.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
+            else:
+                command = 'dftb+ > PREFIX.out'
+
         if slako_dir is None:
-            slako_dir = os.environ.get('DFTB_PREFIX', './')
+            slako_dir = self.cfg.get('DFTB_PREFIX', './')
             if not slako_dir.endswith('/'):
                 slako_dir += '/'
 
@@ -116,9 +121,9 @@ class Dftb(FileIOCalculator):
         self.do_forces = False
         self.outfilename = 'dftb.out'
 
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms,
-                                  **kwargs)
+        super().__init__(restart, ignore_bad_restart_file,
+                         label, atoms, command=command,
+                         profile=profile, **kwargs)
 
         # Determine number of spin channels
         try:
@@ -303,7 +308,7 @@ class Dftb(FileIOCalculator):
             It will be destroyed after it is read to avoid
             reading it once again after some runtime error """
 
-        with open(os.path.join(self.directory, 'results.tag'), 'r') as fd:
+        with open(os.path.join(self.directory, 'results.tag')) as fd:
             self.lines = fd.readlines()
 
         self.atoms = self.atoms_input
@@ -321,7 +326,7 @@ class Dftb(FileIOCalculator):
         # stress stuff begins
         sstring = 'stress'
         have_stress = False
-        stress = list()
+        stress = []
         for iline, line in enumerate(self.lines):
             if sstring in line:
                 have_stress = True
@@ -349,7 +354,7 @@ class Dftb(FileIOCalculator):
 
     def read_forces(self):
         """Read Forces from dftb output file (results.tag)."""
-        from ase.units import Hartree, Bohr
+        from ase.units import Bohr, Hartree
 
         # Initialise the indices so their scope
         # reaches outside of the for loop
@@ -377,7 +382,7 @@ class Dftb(FileIOCalculator):
         """Get partial charges on atoms
             in case we cannot find charges they are set to None
         """
-        with open(os.path.join(self.directory, 'detailed.out'), 'r') as fd:
+        with open(os.path.join(self.directory, 'detailed.out')) as fd:
             lines = fd.readlines()
 
         for line in lines:
@@ -534,8 +539,8 @@ class PointChargePotential:
 
     def read_forces_on_pointcharges(self):
         """Read Forces from dftb output file (results.tag)."""
-        from ase.units import Hartree, Bohr
-        with open(os.path.join(self.directory, 'detailed.out'), 'r') as fd:
+        from ase.units import Bohr, Hartree
+        with open(os.path.join(self.directory, 'detailed.out')) as fd:
             lines = fd.readlines()
 
         external_forces = []
@@ -558,7 +563,7 @@ def read_max_angular_momentum(path):
 
     See dftb.org for A detailed description of the Slater-Koster file format.
     """
-    with open(path, 'r') as fd:
+    with open(path) as fd:
         line = fd.readline()
         if line[0] == '@':
             # Extended format
