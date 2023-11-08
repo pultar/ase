@@ -131,7 +131,6 @@ class PureDFTD3(FileIOCalculator):
     This class is an implementation detail."""
 
     name = 'puredftd3'
-    command = 'dftd3'
 
     dftd3_properties = {'energy', 'free_energy', 'forces', 'stress'}
     implemented_properties = list(dftd3_properties)
@@ -149,6 +148,10 @@ class PureDFTD3(FileIOCalculator):
                          command=command,
                          **kwargs)
 
+        # TARP: This is done because the calculator does not call
+        # FileIOCalculator.calculate, but Calculator.calculate and does not
+        # use the profile defined in FileIOCalculator.__init__
+        self.command = command or "dftd3"
         self.comm = comm
 
     def set(self, **kwargs):
@@ -280,7 +283,7 @@ class PureDFTD3(FileIOCalculator):
                 errorcode = subprocess.call(command,
                                             cwd=self.directory, stdout=fd)
 
-        errorcode = self.comm.sum(errorcode)
+        errorcode = self.comm.sum_scalar(errorcode)
 
         if errorcode:
             raise RuntimeError('%s returned an error: %d' %

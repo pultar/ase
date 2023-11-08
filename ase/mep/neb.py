@@ -264,9 +264,8 @@ class NEBOptimizable(Optimizable):
     def get_forces(self):
         return self.neb.get_forces()
 
-    def get_potential_energy(self, force_consistent):
-        return self.neb.get_potential_energy(
-            force_consistent=force_consistent)
+    def get_potential_energy(self):
+        return self.neb.get_potential_energy()
 
     def is_neb(self):
         return True
@@ -544,10 +543,8 @@ class BaseNEB:
             raise RuntimeError("get_residual() called before get_forces()")
         return np.max(self.residuals)
 
-    def get_potential_energy(self, force_consistent=False):
-        """Return the maximum potential energy along the band.
-        Note that the force_consistent keyword is ignored and is only
-        present for compatibility with ase.Atoms.get_potential_energy."""
+    def get_potential_energy(self):
+        """Return the maximum potential energy along the band."""
         return self.emax
 
     def set_calculators(self, calculators):
@@ -865,8 +862,7 @@ class NEBOptimizer(Optimizer):
         super().__init__(atoms=neb, restart=restart,
                          logfile=logfile, trajectory=trajectory,
                          master=master,
-                         append_trajectory=append_trajectory,
-                         force_consistent=False)
+                         append_trajectory=append_trajectory)
         self.neb = neb
 
         method = method.lower()
@@ -1230,8 +1226,3 @@ class NEBtools(NEBTools):
 @deprecated('Please use NEBTools.plot_band_from_fit.')
 def plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None):
     NEBTools.plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None)
-
-
-def fit0(*args, **kwargs):
-    raise DeprecationWarning('fit0 is deprecated. Use `fit_raw` from '
-                             '`ase.utils.forcecurve` instead.')

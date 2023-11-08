@@ -16,11 +16,6 @@ from ase.units import Bohr, Hartree
 
 
 class Dftb(FileIOCalculator):
-    if 'DFTB_COMMAND' in FileIOCalculator.cfg:
-        command = FileIOCalculator.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
-    else:
-        command = 'dftb+ > PREFIX.out'
-
     implemented_properties = ['energy', 'forces', 'charges',
                               'stress', 'dipole']
     discard_results_on_any_change = True
@@ -29,6 +24,8 @@ class Dftb(FileIOCalculator):
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
                  label='dftb', atoms=None, kpts=None,
                  slako_dir=None,
+                 command=None,
+                 profile=None,
                  **kwargs):
         """
         All keywords for the dftb_in.hsd input file (see the DFTB+ manual)
@@ -89,6 +86,12 @@ class Dftb(FileIOCalculator):
             An external point charge potential (for QM/MM calculations)
         """
 
+        if command is None:
+            if 'DFTB_COMMAND' in self.cfg:
+                command = self.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
+            else:
+                command = 'dftb+ > PREFIX.out'
+
         if slako_dir is None:
             slako_dir = self.cfg.get('DFTB_PREFIX', './')
             if not slako_dir.endswith('/'):
@@ -118,9 +121,9 @@ class Dftb(FileIOCalculator):
         self.do_forces = False
         self.outfilename = 'dftb.out'
 
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms,
-                                  **kwargs)
+        super().__init__(restart, ignore_bad_restart_file,
+                         label, atoms, command=command,
+                         profile=profile, **kwargs)
 
         # Determine number of spin channels
         try:

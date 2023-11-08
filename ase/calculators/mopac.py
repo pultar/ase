@@ -23,7 +23,7 @@ from ase.units import Debye, kcal, mol
 class MOPAC(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole',
                               'magmom', 'free_energy']
-    command = 'mopac PREFIX.mop 2> /dev/null'
+    _legacy_default_command = 'mopac PREFIX.mop 2> /dev/null'
     discard_results_on_any_change = True
 
     default_parameters = dict(

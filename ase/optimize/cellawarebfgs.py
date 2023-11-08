@@ -69,9 +69,9 @@ class CellAwareBFGS(BFGS):
         self.bulk_modulus = bulk_modulus
         self.poisson_ratio = poisson_ratio
         self.long_output = long_output
-        BFGS.__init__(self, atoms, restart, logfile,
-                      trajectory,
-                      maxstep, master, alpha)
+        BFGS.__init__(self, atoms=atoms, restart=restart, logfile=logfile,
+                      trajectory=trajectory, maxstep=maxstep, master=master,
+                      alpha=alpha)
         assert not isinstance(atoms, Atoms)
         if hasattr(atoms, 'exp_cell_factor'):
             assert atoms.exp_cell_factor == 1.0
@@ -106,9 +106,7 @@ class CellAwareBFGS(BFGS):
         if forces is None:
             forces = self.atoms.atoms.get_forces()
         fmax = (forces ** 2).sum(axis=1).max() ** 0.5
-        e = self.optimizable.get_potential_energy(
-            force_consistent=self.force_consistent
-        )
+        e = self.optimizable.get_potential_energy()
         T = time.localtime()
         smax = abs(self.atoms.atoms.get_stress()).max()
         volume = self.atoms.atoms.cell.volume

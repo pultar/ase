@@ -7,7 +7,7 @@ Author: Ole Schuett <ole.schuett@mat.ethz.ch>
 
 import os
 import os.path
-from subprocess import PIPE, Popen
+import subprocess
 from warnings import warn
 
 import numpy as np
@@ -117,9 +117,10 @@ class CP2K(Calculator):
     max_scf: int
         Maximum number of SCF iteration to be performed for
         one optimization. Default is ``50``.
-    multiplicity: int
+    multiplicity: int, default=None
         Select the multiplicity of the system
         (two times the total spin plus one).
+        If None, multiplicity is not explicitly given in the input file.
     poisson_solver: str
         The poisson solver to be used. Currently, the only supported
         values are ``auto`` and ``None``. Default is ``auto``.
@@ -167,7 +168,7 @@ class CP2K(Calculator):
         force_eval_method="Quickstep",
         inp='',
         max_scf=50,
-        multiplicity=1,
+        multiplicity=None,
         potential_file='POTENTIAL',
         pseudo_potential='auto',
         stress_tensor=True,
@@ -485,8 +486,9 @@ class Cp2kShell:
         assert 'cp2k_shell' in command
         if self._debug:
             print(command)
-        self._child = Popen(command, shell=True, universal_newlines=True,
-                            stdin=PIPE, stdout=PIPE, bufsize=1)
+        self._child = subprocess.Popen(
+            command, shell=True, universal_newlines=True,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1)
         self.expect('* READY')
 
         # check version of shell
@@ -515,9 +517,10 @@ class Cp2kShell:
             rtncode = self._child.wait()
             assert rtncode == 0  # child process exited properly?
         else:
-            warn("CP2K-shell not ready, sending SIGTERM.", RuntimeWarning)
-            self._child.terminate()
-            self._child.communicate()
+            if hasattr(self, '_child'):
+                warn('CP2K-shell not ready, sending SIGTERM.', RuntimeWarning)
+                self._child.terminate()
+                self._child.communicate()
         self._child = None
         self.version = None
         self.isready = False

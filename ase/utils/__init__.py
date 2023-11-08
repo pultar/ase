@@ -200,7 +200,7 @@ def _opencew(filename, world=None):
             closelater.append(fd)
 
         # Synchronize:
-        error = parallel.broadcast(error, 0, world)
+        error = world.sum_scalar(error)
         if error == errno.EEXIST:
             return None
         if error:
@@ -461,7 +461,7 @@ def workdir(path, mkdir=False):
         path.mkdir(parents=True, exist_ok=True)
 
     olddir = os.getcwd()
-    os.chdir(str(path))  # py3.6 allows chdir(path) but we still need 3.5
+    os.chdir(path)
     try:
         yield  # Yield the Path or dirname maybe?
     finally:
