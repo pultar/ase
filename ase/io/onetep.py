@@ -356,6 +356,8 @@ def write_onetep_in(
     if species_maybe:
         if set(species_maybe) != set(elements):
             species = np.array(species_maybe)
+        else:
+            species = elements
     else:
         formatted_tags = np.array(['' if i == 0 else str(i) for i in tags])
         species = np.char.add(elements, formatted_tags)
