@@ -648,26 +648,27 @@ def write_vasp_xdatcar(fd, images, label=None):
 
     symbol_count = _symbol_count_from_symbols(image.get_chemical_symbols())
 
-    if label is None:
-        label = ' '.join([s for s, _ in symbol_count])
-    fd.write(label + '\n')
-
-    # Not using lattice constants, set it to 1
-    fd.write('           1\n')
-
-    # Lattice vectors; use first image
+    # Lattice vectors change every frame if volume relaxation 
+    # (e.g. NPT ensemble) is applied
     float_string = '{:11.6f}'
-    for row_i in range(3):
-        fd.write('  ')
-        fd.write(' '.join(float_string.format(x) for x in image.cell[row_i]))
-        fd.write('\n')
 
-    _write_symbol_count(fd, symbol_count)
-    _write_xdatcar_config(fd, image, index=1)
     for i, image in enumerate(images):
-        # Index is off by 2: 1-indexed file vs 0-indexed Python;
-        # and we already wrote the first block.
-        _write_xdatcar_config(fd, image, i + 2)
+
+        if label is None:
+            label = ' '.join([s for s, _ in symbol_count])
+        fd.write(label + '\n')
+
+        # Not using lattice constants, set it to 1
+        fd.write('           1\n')
+
+        for row_i in range(3):
+            fd.write('  ')
+            fd.write(' '.join(float_string.format(x) for x in image.cell[row_i]))
+            fd.write('\n')
+
+        _write_symbol_count(fd, symbol_count)
+        # Index is off by 1: 1-indexed file vs 0-indexed Python
+        _write_xdatcar_config(fd, image, index=i+1)
 
 
 def _write_xdatcar_config(fd, atoms, index):
