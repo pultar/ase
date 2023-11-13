@@ -24,6 +24,7 @@ from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
 from ase.constraints import FixAtoms, FixCartesian
+from ase import symbols as atomic_symbols
 from ase.data import chemical_symbols
 from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
@@ -576,14 +577,12 @@ def read_espresso_in(fileobj):
         magmom = data["system"].get(magnet_key, 0.0)
         species_info[symbol] = {"weight": weight, "pseudo": pseudo,
                                 "magmom": magmom}
-
     positions_card = get_atomic_positions(
         card_lines, n_atoms=data['system']['nat'], cell=cell, alat=alat)
 
     symbols = [label_to_symbol(position[0]) for position in positions_card]
     positions = [position[1] for position in positions_card]
     magmoms = [species_info[symbol]["magmom"] for symbol in symbols]
-
     # TODO: put more info into the atoms object
     # e.g magmom, forces.
     atoms = Atoms(symbols=symbols, positions=positions, cell=cell, pbc=True,
@@ -1313,8 +1312,9 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     - Conversion of :class:`ase.constraints.FixAtoms` and
                     :class:`ase.constraints.FixCartesian`.
-    - `starting_magnetization` derived from the `mgmoms` and pseudopotentials
-      (searches default paths for pseudo files.)
+    - `starting_magnetization` derived from the `magmoms` and
+       pseudopontial valences given in input
+       (searches default paths for pseudo files.)
     - Automatic assignment of options to their correct sections.
 
     Not implemented:
@@ -1337,6 +1337,15 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     pseudopotentials: dict
         A filename for each atomic species, e.g.
         {'O': 'O.pbe-rrkjus.UPF', 'H': 'H.pbe-rrkjus.UPF'}.
+        or a dict for each atomic species with at least a filename key,
+        other parsed keys are:
+        valence, cutoff_wfc, cutoff_rho, e.g.
+        {'O':{'filename': 'O.pbe-rrkjus.UPF',
+              'valence': 6,
+              'cutoff_wfc': 50
+              'cutoff_rho': 400
+              }
+        }
         A dummy name will be used if none are given.
     kspacing: float
         Generate a grid of k-points with this as the minimum distance,
@@ -1390,29 +1399,38 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             mask = ''
         masks.append(mask)
 
-    # Species info holds the information on the pseudopotential and
+    # Species info holds the information on the pseudopotential
     # associated for each element
     if pseudopotentials is None:
         pseudopotentials = {}
     species_info = {}
     for species in set(atoms.get_chemical_symbols()):
+        znum = atomic_symbols.atomic_numbers[species]
         # Look in all possible locations for the pseudos and try to figure
         # out the number of valence electrons
         pseudo = pseudopotentials.get(species, None)
-        species_info[species] = {'pseudo': pseudo}
+        if isinstance(pseudo, str):
+            species_info[species] = {'pseudo': pseudo,
+                                     'valence': SSSP_VALENCE[znum]}
+        elif isinstance(pseudo, dict):
+            species_info[species] = {'pseudo': pseudo.get('filename', None),
+                                     'valence': pseudo.get('valence',
+                                                           SSSP_VALENCE[znum]),
+                                     'cutoff_wfc': pseudo.get('cutoff_wfc', 0),
+                                     'cutoff_rho': pseudo.get('cutoff_rho', 0)
+                                     }
 
     # Convert atoms into species.
     # Each different magnetic moment needs to be a separate type even with
     # the same pseudopotential (e.g. an up and a down for AFM).
     # if any magmom are > 0 or nspin == 2 then use species labels.
     # Rememeber: magnetisation uses 1 based indexes
-    atomic_species = OrderedDict()
     atomic_species_str = []
     atomic_positions_str = []
-
     nspin = input_parameters['system'].get('nspin', 1)  # 1 is the default
     noncolin = input_parameters['system'].get('noncolin', False)
-    rescale_magmom_fac = kwargs.get('rescale_magmom_fac', 1.0)
+    rescale_magmom = kwargs.get('rescale_magmom', False)
+    on_site_hubbard = kwargs.get('on_site_hubbard', None)
     if any(atoms.get_initial_magnetic_moments()):
         if nspin == 1 and not noncolin:
             # Force spin on
@@ -1420,48 +1438,42 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             nspin = 2
 
     if nspin == 2 or noncolin:
-        # Magnetic calculation on
-        for atom, mask, magmom in zip(
-                atoms, masks, atoms.get_initial_magnetic_moments()):
-            if (atom.symbol, magmom) not in atomic_species:
-                # for qe version 7.2 or older magmon must be rescale by
-                # about a factor 10 to assume sensible values
-                # since qe-v7.3 magmom values will be provided unscaled
-                fspin = float(magmom) / rescale_magmom_fac
-                # Index in the atomic species list
-                sidx = len(atomic_species) + 1
-                # Index for that atom type; no index for first one
-                tidx = sum(atom.symbol == x[0] for x in atomic_species) or ' '
-                atomic_species[(atom.symbol, magmom)] = (sidx, tidx)
-                # Add magnetization to the input file
-                mag_str = f"starting_magnetization({sidx})"
+        if on_site_hubbard is not None:
+            initial_magmom = split_nonequivalent_hubbard(
+                atoms, atoms.get_initial_magnetic_moments(), on_site_hubbard)
+        else:
+            initial_magmom = atoms.get_initial_magnetic_moments()
+        # Magnetic calculation on: split with magmom
+            atomic_species_str, atomic_positions_str = get_split_atomic_cards(
+                atoms, masks, initial_magmom, species_info, crystal_coordinates)
+            for pwspecies in [_.split()[0] for _ in atomic_species_str]:
+                posidx = [
+                    _.split()[0] for _ in atomic_positions_str].index(pwspecies)
+                spidx = [
+                    _.split()[0] for _ in atomic_species_str].index(pwspecies)
+                fspin = atoms.get_initial_magnetic_moments()[posidx]
+                mag_str = f"starting_magnetization({spidx + 1})"
+                # QE v7.2 and older need magnetization between -1 and +1,
+                # initial magnetic moments are rescaled with pseudopotential
+                #  valence charge for QE newer that 7.2 it is non necessary to
+                # set rescale_magnom = True but still works
+                if rescale_magmom:
+                    fspin = fspin / species_info[
+                        atoms.symbols[posidx]]['valence']
                 input_parameters['system'][mag_str] = fspin
-                species_pseudo = species_info[atom.symbol]['pseudo']
-                atomic_species_str.append(
-                    f"{atom.symbol}{tidx} {atom.mass} {species_pseudo}\n")
-            # lookup tidx to append to name
-            sidx, tidx = atomic_species[(atom.symbol, magmom)]
-            # construct line for atomic positions
-            atomic_positions_str.append(
-                format_atom_position(
-                    atom, crystal_coordinates, mask=mask, tidx=tidx)
-            )
     else:
-        # Do nothing about magnetisation
-        for atom, mask in zip(atoms, masks):
-            if atom.symbol not in atomic_species:
-                atomic_species[atom.symbol] = True  # just a placeholder
-                species_pseudo = species_info[atom.symbol]['pseudo']
-                atomic_species_str.append(
-                    f"{atom.symbol} {atom.mass} {species_pseudo}\n")
-            # construct line for atomic positions
-            atomic_positions_str.append(
-                format_atom_position(atom, crystal_coordinates, mask=mask)
-            )
+        # Do nothing about magnetisation and split using hubbard labels if any
+        on_site_hubbard_ = (
+            [None] * len(atoms) if on_site_hubbard is None else on_site_hubbard
+        )
+        atomic_species_str, atomic_positions_str = get_split_atomic_cards(
+            atoms, masks, on_site_hubbard_, species_info, crystal_coordinates)
+    hubbard_cards_str = (
+        onsite_hubbard_card(on_site_hubbard_, atomic_positions_str)
+        if on_site_hubbard is not None else None)
 
-    # Add computed parameters
     # different magnetisms means different types
-    input_parameters['system']['ntyp'] = len(atomic_species)
+    input_parameters['system']['ntyp'] = len(atomic_species_str)
     input_parameters['system']['nat'] = len(atoms)
 
     # Use cell as given or fit to a specific ibrav
@@ -1549,6 +1561,106 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         pwi.append('ATOMIC_POSITIONS angstrom\n')
     pwi.extend(atomic_positions_str)
     pwi.append('\n')
-
+    if hubbard_cards_str is not None:
+        hubbard_projection = kwargs.get('hubbard_projections', "ortho-atomic")
+        pwi.append(f"Hubbard ({hubbard_projection})\n")
+        pwi.extend(hubbard_cards_str)
+        pwi.append('\n')
     # DONE!
     fd.write(''.join(pwi))
+
+
+def split_nonequivalent_hubbard(atoms, magmom, onsite_hubbard):
+    """
+    assigns neglibly different magmoms to atoms that in input have
+    same symbol. same magmom but different onsite hubbard terms. This helps
+    assigning different labeled species in the case magnetic calculations with
+    on site hubbard correction.
+    Parameters:
+    ----------------------------------------------
+    atoms: ase.Atoms
+    magmom: list of floats
+            list of the magnetic moments from  atoms
+    onsite_hubbard: tuple
+                    with hubbard parameters for each of the atoms site
+    ------------------------------------------------
+    Returns:
+    magmoms_: list of floats
+              the neglibly changed magnetic moments
+    """
+    magmom_ = [_ for _ in magmom]
+    count = 0
+    sites = OrderedDict()
+    for atom in zip([a.symbol for a in atoms], magmom_, onsite_hubbard):
+        sites[tuple(atom)] = sites.get(tuple(atom), []) + [count, ]
+        count += 1
+    for s in enumerate(sites):
+        for s2 in enumerate(sites):
+            if s2[0] > s[0]:
+                if magmom_[sites[s2[1]][0]] == magmom_[sites[s[1]][0]]:
+                    for index in sites[s2[1]]:
+                        magmom_[index] += 1.e-4 * s2[0] * (
+                            np.sign(magmom_[index]))
+    return magmom_
+
+
+def get_split_atomic_cards(atoms, masks, sites, species_info,
+                           crystal_coordinates):
+    """
+    generates different species labels for atoms with the same symbol but
+    different site properties.
+    Parameters
+    ------------------------------------------------
+    atoms: ase.Atoms
+    masks: str describes atomic constraints for relaxation or dynamics
+    sites: list same len as atoms, contains the info of the site specific
+    property
+    species_info: dict
+    crystal_coordinates: bool if True atoms will be written in crystal
+    coordinates
+    """
+    atomic_species_str = []
+    atomic_positions_str = []
+    atomic_species_ = OrderedDict()
+    for atom, mask, site in zip(atoms, masks, sites):
+        try:
+            pseudo_ = species_info[atom.symbol]['pseudo']
+        except KeyError:
+            pseudo_ = "pseudo_not_provided"
+        if (atom.symbol, site) not in atomic_species_:
+            # index in atomic species list
+            sidx = len(atomic_species_) + 1
+            # index for that atomic type no index for first
+            tidx = sum(atom.symbol == x[0] for x in atomic_species_) or ' '
+            atomic_species_[atom.symbol, site] = (sidx, tidx)
+            atomic_species_str.append(
+                f"{atom.symbol}{tidx}  {atom.mass}  {pseudo_}\n")
+        # lookup tidx to append to name
+        (sidx, tidx) = atomic_species_[atom.symbol, site]
+        if crystal_coordinates:
+            coords = [atom.a, atom.b, atom.c]
+        else:
+            coords = atom.position
+        coords_str = "".join([f"{coords[i]:.10f} " for i in range(3)])
+        atomic_positions_str.append(
+            f"{atom.symbol}{tidx}  "  f"{coords_str}" f"{mask}\n"
+        )
+    return atomic_species_str, atomic_positions_str
+
+
+def onsite_hubbard_card(onsite_hubbard, atomic_positions_str):
+    Udata = filter(
+        lambda s: s[0][0] is not None,
+        filter(lambda s: s[0] is not None,
+               zip(onsite_hubbard, atomic_positions_str))
+    )
+    U_str = [f"U  {s[1].split()[0]}-{s[0][2]} {s[0][0]:.3f}\n" for s in Udata]
+    Jdata = filter(
+        lambda s: s[0][1] is not None,
+        filter(lambda s: s[0] is not None,
+               zip(onsite_hubbard, atomic_positions_str))
+    )
+    J_str = [f"J  {s[1].split()[0]}-{s[0][2]} {s[0][1]:.3f}\n" for s in Jdata]
+    res = list(set(U_str + J_str))
+    res = res if len(res) > 0 else None
+    return res
