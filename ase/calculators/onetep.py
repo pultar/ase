@@ -4,24 +4,12 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 
 https://onetep.org"""
 
-from pathlib import Path
+from os import environ
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
-                                           read_stdout,
-                                           BaseProfile)
+                                           read_stdout)
 from ase.io import read, write
-
-# TARP: New setup exc should be the onetep binary itself
-# def find_onetep_command(cmd):
-#     exploded_cmd = cmd.split()
-#     n_cmd = len(exploded_cmd)
-#     if n_cmd == 1:
-#         return cmd
-#     for substring in exploded_cmd:
-#         if 'onetep' in substring:
-#             return substring
-#     return None
 
 
 class OnetepProfile(BaseProfile):
@@ -57,6 +45,7 @@ class OnetepTemplate(CalculatorTemplate):
         self.append = append
 
     def execute(self, directory, profile):
+        self.input = 'water.out'
         profile.run(directory, self.input, self.output, self.error,
                     self.append)
 
@@ -65,7 +54,7 @@ class OnetepTemplate(CalculatorTemplate):
         atoms = read(output_path, format='onetep-out')
         return dict(atoms.calc.properties())
 
-    def write_input(self, directory, atoms, parameters, properties):
+    def write_input(self, profile, directory, atoms, parameters, properties):
         input_path = directory / self.input
         write(input_path, atoms, format='onetep-in',
               properties=properties, **parameters)
@@ -139,36 +128,28 @@ class Onetep(GenericFileIOCalculator):
     # to them
     def __init__(
             self,
-            label='onetep',
-            directory='.',
+            *,
             profile=None,
-            append=False,
-            autorestart=True,
-            atoms=None,
+            directory='.',
             parallel_info=None,
             parallel=True,
             **kwargs):
 
-        self.directory = Path(directory)
-        self.autorestart = autorestart
-        self.label = label
         self.keywords = kwargs.get('keywords', None)
-        self.append = append
-        self.template = OnetepTemplate(label, append=self.append)
+        self.template = OnetepTemplate(
+            kwargs.get('label', 'onetep'),
+            append=kwargs.pop('append', False)
+        )
 
-        kwargs['autorestart'] = self.autorestart
-        kwargs['directory'] = self.directory
-        kwargs['label'] = self.label
+        if 'ASE_ONETEP_COMMAND' in environ and profile is None:
+            import warnings
+            warnings.warn("using ASE_ONETEP_COMMAND env is \
+                          deprecated, please use OnetepProfile",
+                          FutureWarning)
+            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'])
+
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
                          parameters=kwargs,
                          parallel=parallel,
                          parallel_info=parallel_info)
-        # Copy is probably not needed, but just in case
-        if atoms is not None:
-            self.atoms = atoms.copy()
-            if atoms.calc is not None:
-                # TARP: Does this make sense? Why append the previous
-                # calculators results to a new calculator. Especially
-                # without checking if the parameters are the same as well.
-                self.results = atoms.calc.results.copy()

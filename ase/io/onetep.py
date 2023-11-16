@@ -4,8 +4,6 @@ from copy import deepcopy
 from os.path import basename, dirname, isfile
 from pathlib import Path
 
-import time
-
 import numpy as np
 
 from ase.atoms import Atoms
@@ -31,29 +29,37 @@ units = {
 
 # Want to add a functionality? add a global constant below
 ONETEP_START = \
-    r"(?i)^\s*\|\s*Linear-Scaling\s*Ab\s*Initio\s*Total\s*Energy\s*Program\s*\|\s*$"
+    re.compile(r"(?i)^\s*\|\s*Linear-Scaling\s*Ab\s*"
+               r"Initio\s*Total\s*Energy\s*Program\s*\|\s*$")
 ONETEP_STOP = \
-    r"(?i)^\s*-+\s*TIMING\s*INFORMATION\s*-+\s*$"
+    re.compile(r"(?i)^\s*-+\s*TIMING\s*INFORMATION\s*-+\s*$")
 ONETEP_TOTAL_ENERGY = \
-    re.compile(r"(?i)^\s*\|\s*\*{3}\s*NGWF\s*optimisation\s*converged\s*\*{3}\s*\|\s*$")
-#ONETEP_FORCE = 25*"*" + "Forces" + 25*"*"
-ONETEP_FORCE = r"(?i)^\s*\*+\s*Forces\s*\*+\s*$"
-ONETEP_MULLIKEN = r"(?i)^\s*Mulliken\s*Atomic\s*Populations\s*$"
-ONETEP_SPIN = r"(?i)^\s*Down\s*spin\s*density"
-ONETEP_POSITION = r"(?i)^\s*Cell\s*Contents\s*$"
-ONETEP_FIRST_POSITION = r"^\s*%BLOCK\s*POSITIONS_(ABS|FRAC)\s*$"
-ONETEP_WRONG_FIRST_POSITION = r'^\s*%block\s*positions_(abs|frac)\s*$'
-ONETEP_RESUMING_GEOM = r'(?i)$\s*Resuming\s*previous\s*ONETEP\s*Geometry\s*Optimisation\s*^'
+    re.compile(r"(?i)^\s*\|\s*\*{3}\s*NGWF\s*"
+               r"optimisation\s*converged\s*\*{3}\s*\|\s*$")
+ONETEP_FORCE = re.compile(r"(?i)^\s*\*+\s*Forces\s*\*+\s*$")
+ONETEP_MULLIKEN = re.compile(r"(?i)^\s*Mulliken\s*Atomic\s*Populations\s*$")
+ONETEP_SPIN = re.compile(r"(?i)^\s*Down\s*spin\s*density")
+ONETEP_POSITION = re.compile(r"(?i)^\s*Cell\s*Contents\s*$")
+ONETEP_FIRST_POSITION = re.compile(r"^\s*%BLOCK\s*POSITIONS_(ABS|FRAC)\s*$")
+ONETEP_WRONG_FIRST_POSITION = \
+    re.compile(r'^\s*%block\s*positions_(abs|frac)\s*$')
+ONETEP_RESUMING_GEOM = \
+    re.compile(r"(?i)$\s*Resuming\s*previous\s*ONETEP"
+               r"\s*Geometry\s*Optimisation\s*^")
 # ONETEP_CELL = "NOT IMPLEMENTED YET"
 # ONETEP_STRESS = "NOT IMPLEMENTED YET"
-ONETEP_ATOM_COUNT = r"(?i)^Totals\s*:\s*\d+$"
-ONETEP_IBFGS_ITER = r"(?i)^\s*BFGS\s*:\s*starting\s*iteration"
-ONETEP_IBFGS_IMPROVE = r"(?i)^\s*BFGS\s*:\s*improving\s*iteration"
-ONETEP_START_GEOM = r"(?i)^<+\s*Starting\s*ONETEP\s*Geometry\s*Optimisation\s*>+$"
-ONETEP_SPECIES = r"(?i)^\s*%BLOCK\s*SPECIES\s*$"
-#ONETEP_SPECIESL = "%block species "
-ONETEP_FIRST_CELL = r"(?i)^\s*%BLOCK\s*LATTICE_CART\s*$"
-ONETEP_STRESS_CELL = r"(?i)^\s*stress_calculation:\s*cell\s*geometry\s*$"
+ONETEP_ATOM_COUNT = re.compile(r"(?i)^Totals\s*:\s*\d+$")
+ONETEP_IBFGS_ITER = re.compile(r"(?i)^\s*BFGS\s*:\s*starting\s*iteration")
+ONETEP_IBFGS_IMPROVE = re.compile(r"(?i)^\s*BFGS\s*:\s*improving\s*iteration")
+ONETEP_START_GEOM = \
+    re.compile(r"(?i)^<+\s*Starting\s*ONETEP\s*Geometry\s*Optimisation\s*>+$")
+
+ONETEP_SPECIES = re.compile(r"(?i)^\s*%BLOCK\s*SPECIES\s*$")
+# ONETEP_SPECIESL = "%block species "
+ONETEP_FIRST_CELL = re.compile(r"(?i)^\s*%BLOCK\s*LATTICE_CART\s*$")
+ONETEP_STRESS_CELL = \
+    re.compile(r"(?i)^\s*stress_calculation:\s*cell\s*geometry\s*$")
+
 
 def get_onetep_keywords(path):
 
@@ -568,9 +574,9 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         ONETEP_START_GEOM: [],
         ONETEP_RESUMING_GEOM: [],
         ONETEP_SPECIES: [],
-        #ONETEP_SPECIESL: [],
+        # ONETEP_SPECIESL: [],
         ONETEP_FIRST_CELL: [],
-        #ONETEP_FIRST_CELLL: [],
+        # ONETEP_FIRST_CELLL: [],
         ONETEP_STRESS_CELL: []
     }
 
@@ -580,7 +586,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     # Core properties that will be used in Yield
     properties = [ONETEP_TOTAL_ENERGY, ONETEP_FORCE,
                   ONETEP_MULLIKEN, ONETEP_FIRST_CELL]
-    
+
     # Find all matches append them to the dictionary
     for idx, line in enumerate(fdo_lines):
         match = False
@@ -612,7 +618,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     # In onetep species can have arbritary names,
     # We want to map them to real element names
     # Via the species block
-    #species = np.concatenate((output[ONETEP_SPECIES],
+    # species = np.concatenate((output[ONETEP_SPECIES],
     #                          output[ONETEP_SPECIESL])).astype(np.int32)
     species = output[ONETEP_SPECIES]
 
@@ -765,16 +771,17 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             if re.search(r'^\s*\|\s*Total\s*:.*\|\s*$', fdo_lines[idx + n]):
                 energies.append(
                     float(re.search(freg, fdo_lines[idx + n]).group(0))
-                    )
-            if re.search(r'^\s*-{6}\s*LOCAL\s*ENERGY\s*COMPONENTS' + \
-            r'\s*FROM\s*MATRIX\s*TRACES\s*-{6}\s*$', fdo_lines[idx + n]):
+                )
+            if re.search(r'^\s*-{6}\s*LOCAL\s*ENERGY\s*COMPONENTS' +
+                         r'\s*FROM\s*MATRIX\s*TRACES\s*-{6}\s*$',
+                         fdo_lines[idx + n]):
                 return energies[-1] * units['Hartree']
             # Something is wrong with this ONETEP output
             if len(energies) > 2:
                 raise RuntimeError('something is wrong with this ONETEP output')
             n += 1
         return None
-    
+
     def parse_fermi_level(idx):
         n = 0
         fermi_levels = None
@@ -783,9 +790,9 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 tmp = '\n'.join(fdo_lines[idx + n:idx + n + 1])
                 fermi_level = re.findall(freg, tmp)
                 fermi_levels = \
-                    [float(i)*units['Hartree'] for i in fermi_level]
+                    [float(i) * units['Hartree'] for i in fermi_level]
             if re.search(r'^\s*<{5}\s*CALCULATION\s*SUMMARY\s*>{5}\s*$',
-                fdo_lines[idx + n]):
+                         fdo_lines[idx + n]):
                 return fermi_levels
             n += 1
         return None
@@ -797,7 +804,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             if re.search(r'(?i)^\s*ang\s*$', fdo_lines[idx + n]):
                 offset += 1
             if re.search(r'^\s*%ENDBLOCK\s*LATTICE_CART\s*$',
-                fdo_lines[idx + n]):
+                         fdo_lines[idx + n]):
                 cell = np.loadtxt(
                     fdo_lines[idx + offset:idx + n]
                 )
@@ -881,7 +888,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         while idx + n < len(fdo_lines):
             sep = fdo_lines[idx + n].split()
             if re.search(r"(?i)^\s*%ENDBLOCK\s*SPECIES\s*$",
-                fdo_lines[idx + n]):
+                         fdo_lines[idx + n]):
                 return element_map
             element_map[sep[0]] = sep[1]
             n += 1
@@ -1044,6 +1051,6 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             charges=charges[idx] if charges else None,
             magmoms=magmoms[idx] if magmoms else None,
         )
-        #calc.kpts = [(0, 0, 0) for _ in range(spin[idx])]
+        # calc.kpts = [(0, 0, 0) for _ in range(spin[idx])]
         positions[idx].calc = calc
         yield positions[idx]
