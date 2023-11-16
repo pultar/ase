@@ -40,23 +40,25 @@ ONETEP_FORCE = re.compile(r"(?i)^\s*\*+\s*Forces\s*\*+\s*$")
 ONETEP_MULLIKEN = re.compile(r"(?i)^\s*Mulliken\s*Atomic\s*Populations\s*$")
 ONETEP_SPIN = re.compile(r"(?i)^\s*Down\s*spin\s*density")
 ONETEP_POSITION = re.compile(r"(?i)^\s*Cell\s*Contents\s*$")
-ONETEP_FIRST_POSITION = re.compile(r"^\s*%BLOCK\s*POSITIONS_(ABS|FRAC)\s*$")
+ONETEP_FIRST_POSITION = \
+    re.compile(r"^\s*%BLOCK\s*POSITIONS\s*_?\s*(ABS|FRAC)\s*:?\s*([*#!].*)?$")
 ONETEP_WRONG_FIRST_POSITION = \
-    re.compile(r'^\s*%block\s*positions_(abs|frac)\s*$')
+    re.compile(r'^\s*%block\s*positions\s*_?\s*(abs|frac)\s*:?\s*([*#!].*)?$')
 ONETEP_RESUMING_GEOM = \
     re.compile(r"(?i)$\s*Resuming\s*previous\s*ONETEP"
                r"\s*Geometry\s*Optimisation\s*^")
 # ONETEP_CELL = "NOT IMPLEMENTED YET"
 # ONETEP_STRESS = "NOT IMPLEMENTED YET"
-ONETEP_ATOM_COUNT = re.compile(r"(?i)^Totals\s*:\s*\d+$")
+ONETEP_ATOM_COUNT = re.compile(r"(?i)^\s*Totals\s*:\s*(\d+\s*)*$")
 ONETEP_IBFGS_ITER = re.compile(r"(?i)^\s*BFGS\s*:\s*starting\s*iteration")
 ONETEP_IBFGS_IMPROVE = re.compile(r"(?i)^\s*BFGS\s*:\s*improving\s*iteration")
 ONETEP_START_GEOM = \
     re.compile(r"(?i)^<+\s*Starting\s*ONETEP\s*Geometry\s*Optimisation\s*>+$")
 
-ONETEP_SPECIES = re.compile(r"(?i)^\s*%BLOCK\s*SPECIES\s*$")
+ONETEP_SPECIES = re.compile(r"(?i)^\s*%BLOCK\s*SPECIES\s*:?\s*([*#!].*)?$")
 # ONETEP_SPECIESL = "%block species "
-ONETEP_FIRST_CELL = re.compile(r"(?i)^\s*%BLOCK\s*LATTICE_CART\s*$")
+ONETEP_FIRST_CELL = \
+    re.compile(r"(?i)^\s*%BLOCK\s*LATTICE\s*_?\s*CART\s*:?\s*([*#!].*)?$")
 ONETEP_STRESS_CELL = \
     re.compile(r"(?i)^\s*stress_calculation:\s*cell\s*geometry\s*$")
 
@@ -688,6 +690,19 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             # way to make everything work
             ipositions = np.hstack(([0], output[ONETEP_IBFGS_ITER]))
         else:
+            # Small trick to debug this case
+            """
+            forces = []
+            print(output[ONETEP_ATOM_COUNT][0])
+            fake_atoms_count = \
+                int(fdo_lines[output[ONETEP_ATOM_COUNT][0]].split()[1])
+            fake_atoms = Atoms(symbols=['H'] * fake_atoms_count,
+                                 positions=np.zeros((fake_atoms_count, 3)),
+                                 cell=np.zeros((3, 3)))
+            ipositions = output[ONETEP_WRONG_FIRST_POSITION]
+            print(ipositions)
+            positions = [fake_atoms]
+            """
             if has_hash:
                 raise RuntimeError(no_positions_error)
             raise RuntimeError(unable_to_read)
@@ -766,19 +781,10 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
 
     def parse_energy(idx):
         n = 0
-        energies = []
         while idx + n < len(fdo_lines):
             if re.search(r'^\s*\|\s*Total\s*:.*\|\s*$', fdo_lines[idx + n]):
-                energies.append(
-                    float(re.search(freg, fdo_lines[idx + n]).group(0))
-                )
-            if re.search(r'^\s*-{6}\s*LOCAL\s*ENERGY\s*COMPONENTS' +
-                         r'\s*FROM\s*MATRIX\s*TRACES\s*-{6}\s*$',
-                         fdo_lines[idx + n]):
-                return energies[-1] * units['Hartree']
-            # Something is wrong with this ONETEP output
-            if len(energies) > 2:
-                raise RuntimeError('something is wrong with this ONETEP output')
+                energy_str = re.search(freg, fdo_lines[idx + n]).group(0)
+                return float(energy_str) * units['Hartree']
             n += 1
         return None
 
@@ -801,9 +807,11 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         n = 0
         offset = 1
         while idx + n < len(fdo_lines):
-            if re.search(r'(?i)^\s*ang\s*$', fdo_lines[idx + n]):
+            if re.search(r'(?i)^\s*"?\s*ang\s*"?\s*([*#!].*)?$',
+                         fdo_lines[idx + n]):
                 offset += 1
-            if re.search(r'^\s*%ENDBLOCK\s*LATTICE_CART\s*$',
+            if re.search(r"(?i)^\s*%ENDBLOCK\s*LATTICE"
+                         r"\s*_?\s*CART\s*:?\s*([*#!].*)?$",
                          fdo_lines[idx + n]):
                 cell = np.loadtxt(
                     fdo_lines[idx + offset:idx + n]
@@ -816,7 +824,8 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         n = 0
         offset = 1
         while idx + n < len(fdo_lines):
-            if re.search(r'(?i)^\s*ang\s*$', fdo_lines[idx + n]):
+            if re.search(r'(?i)^\s*"?\s*ang\s*"?\s*([*#!].*)?$',
+                         fdo_lines[idx + n]):
                 offset += 1
             if re.search(r'^\s*%ENDBLOCK\s*POSITIONS_', fdo_lines[idx + n]):
                 if 'FRAC' in fdo_lines[idx + n]:
@@ -862,7 +871,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         offset = 7
         stop = 0
         while idx + n < len(fdo_lines):
-            if re.search(r'^\s*x{60}\s*$', fdo_lines[idx + n]):
+            if re.search(r'^\s*x{60,}\s*$', fdo_lines[idx + n]):
                 stop += 1
             if stop == 2:
                 tmp = np.loadtxt(fdo_lines[idx + offset:idx + n],
@@ -887,10 +896,14 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         element_map = {}
         while idx + n < len(fdo_lines):
             sep = fdo_lines[idx + n].split()
-            if re.search(r"(?i)^\s*%ENDBLOCK\s*SPECIES\s*$",
+            if re.search(r"(?i)^\s*%ENDBLOCK\s*SPECIES\s*:?\s*([*#!].*)?$",
                          fdo_lines[idx + n]):
                 return element_map
-            element_map[sep[0]] = sep[1]
+            to_skip = \
+                re.search(r'(?i)^\s*(ang|bohr)\s*([*#!].*)?$',
+                          fdo_lines[idx + n])
+            if not to_skip:
+                element_map[sep[0]] = sep[1]
             n += 1
         return None
 
@@ -1012,14 +1025,23 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     n_pos = len(positions)
     # We take care of properties that only show up at
     # the beginning of onetep calculation
+    whole = np.append(output[ONETEP_START], n_lines)
+
     spin = np.full((n_pos), 1)
     for sp in output[ONETEP_SPIN]:
-        output[ONETEP_START] = np.append(output[ONETEP_START], n_lines)
-        itr = zip(output[ONETEP_START], output[ONETEP_START][1:])
-        for past, future in itr:
+        tmp = zip(whole, whole[1:])
+        for past, future in tmp:
             if past < sp < future:
                 p = (past < ipositions) & (ipositions < future)
                 spin[p] = 2
+
+    cells_all = np.ones((n_pos, 3, 3))
+    for idx, cell in enumerate(output[ONETEP_FIRST_CELL]):
+        tmp = zip(whole, whole[1:])
+        for past, future in tmp:
+            if past < cell < future:
+                p = (past < ipositions) & (ipositions < future)
+                cells_all[p] = cells[idx]
 
     # Prepare atom objects with all the properties
     if isinstance(index, int):
@@ -1028,20 +1050,11 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         indices = range(n_pos)[index]
 
     for idx in indices:
-        if cells:
-            tmp = ipositions[idx] - icells
-            p, = np.where(tmp >= 0)
-            tmp = tmp[p]
-            closest_cell = np.argmin(tmp)
-            cell = cells[p[closest_cell]]
-            positions[idx].set_cell(cell)
-            if ipositions[idx] in is_frac_positions:
-                positions[idx].set_scaled_positions(
-                    positions[idx].get_positions()
-                )
-        else:
-            raise RuntimeError(
-                'No cell found, are you sure this is a onetep output?')
+        positions[idx].set_cell(cells_all[idx])
+        if ipositions[idx] in is_frac_positions:
+            positions[idx].set_scaled_positions(
+                positions[idx].get_positions()
+            )
         positions[idx].set_initial_charges(charges[idx])
         calc = SinglePointDFTCalculator(
             positions[idx],
