@@ -33,7 +33,7 @@ stages:
 # With older python, pytest-xdist jumbles the tests differently
 # on different codes, then complains.  So we use -j 0.
 oldlibs:
-  image: registry.gitlab.com/yannick.couzinie/ase:ase-oldlibs
+  image: registry.gitlab.com/ase/ase:ase-oldlibs
   extends: .database-configuration
   script:
     - pip install --no-deps .
@@ -117,11 +117,11 @@ main:
 # Encompasses those tests marked as @pytest.mark.calculator_lite.
 # Please make sure these tests are cheap.
 calculators-lite:
-  image: registry.gitlab.com/yannick.couzinie/ase:ase-full-monty
+  image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
     - >
-      ase test calculator --calculators=kim,lammpslib,lammpsrun --coverage
+      ase test calculator --calculators=auto --coverage
       --pytest -m calculator_lite --color=yes --durations=20 -v
       --junit-xml=report.xml -r s
       -W "ignore:The --rsyncdir command line argument"
@@ -145,12 +145,12 @@ calculators-lite:
 #
 # It would be great if someone could enable more calculators with this.
 calculators:
-  image: registry.gitlab.com/yannick.couzinie/ase:ase-full-monty
+  image: registry.gitlab.com/ase/ase:ase-full-monty
   script:
     - pip install --no-deps --editable .
     - ase info --calculators
     - >
-      ase test calculator --calculators kim,lammpslib,lammpsrun
+      ase test calculator --calculators abinit,asap,cp2k,dftb,espresso,gpaw,kim,lammpslib,lammpsrun,mopac,nwchem,octopus,siesta
       --coverage --pytest --color=yes --durations 20 --junit-xml=report.xml
       -W "ignore:The --rsyncdir command line argument"
     - coverage xml --data-file ase/test/.coverage
