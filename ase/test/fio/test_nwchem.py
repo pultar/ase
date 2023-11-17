@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
-from ase.build import molecule
+
 from ase import io
+from ase.build import molecule
+from ase.io.nwchem.nwreader import _get_multipole
 
 
 @pytest.fixture()
@@ -140,7 +142,6 @@ def test_nwchem_trailing_space(datadir):
     """Checks that parsing of NWChem input files works when trailing spaces
     are present in the output file.
     """
-    from ase.io.nwchem.nwreader import _get_multipole
 
     chunk1 = (datadir / 'nwchem/snippet_multipole_7.0.2-gcc.nwo').read_text()
     chunk2 = (datadir / 'nwchem/snippet_multipole_7.0.2-intel.nwo').read_text()

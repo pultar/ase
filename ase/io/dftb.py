@@ -1,6 +1,7 @@
 from typing import Sequence, Union
 
 import numpy as np
+
 from ase.atoms import Atoms
 from ase.utils import reader, writer
 
@@ -107,6 +108,7 @@ def read_dftb_velocities(atoms, filename):
     """Method to read velocities (AA/ps) from DFTB+ output file geo_end.xyz
     """
     from ase.units import second
+
     # AA/ps -> ase units
     AngdivPs2ASE = 1.0 / (1e-12 * second)
 
@@ -190,6 +192,7 @@ def write_dftb_velocities(atoms, filename):
        to a file to be read by dftb+
     """
     from ase.units import AUT, Bohr
+
     # ase units -> atomic units
     ASE2au = Bohr / AUT
 

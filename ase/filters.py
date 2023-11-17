@@ -1,16 +1,55 @@
 """Filters"""
-from warnings import warn
 from itertools import product
+from warnings import warn
 
 import numpy as np
+
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
-from ase.utils import deprecated
+from ase.utils import deprecated, lazyproperty
+from ase.utils.abc import Optimizable
 
 __all__ = [
     'Filter', 'StrainFilter', 'UnitCellFilter', 'FrechetCellFilter',
     'ExpCellFilter'
 ]
+
+
+class OptimizableFilter(Optimizable):
+    def __init__(self, filterobj):
+        self.filterobj = filterobj
+
+    def get_positions(self):
+        return self.filterobj.get_positions()
+
+    def set_positions(self, positions):
+        self.filterobj.set_positions(positions)
+
+    def get_forces(self):
+        return self.filterobj.get_forces()
+
+    @lazyproperty
+    def _use_force_consistent_energy(self):
+        # This boolean is in principle invalidated if the
+        # calculator changes.  This can lead to weird things
+        # in multi-step optimizations.
+        try:
+            self.filterobj.get_potential_energy(force_consistent=True)
+        except PropertyNotImplementedError:
+            return False
+        else:
+            return True
+
+    def get_potential_energy(self):
+        force_consistent = self._use_force_consistent_energy
+        return self.filterobj.get_potential_energy(
+            force_consistent=force_consistent)
+
+    def __len__(self):
+        return len(self.filterobj)
+
+    def iterimages(self):
+        return self.filterobj.iterimages()
 
 
 class Filter:
@@ -165,6 +204,9 @@ class Filter:
         'Return an atom.'
         return self.atoms[self.index[i]]
 
+    def __ase_optimizable__(self):
+        return OptimizableFilter(self)
+
 
 class StrainFilter(Filter):
     """Modify the supercell while keeping the scaled positions fixed.
@@ -204,7 +246,7 @@ class StrainFilter(Filter):
         else:
             mask = np.array(mask)
 
-        Filter.__init__(self, atoms, mask=mask)
+        Filter.__init__(self, atoms=atoms, mask=mask)
         self.mask = mask
         self.origcell = atoms.get_cell()
 
@@ -238,6 +280,7 @@ class UnitCellFilter(Filter):
                  cell_factor=None,
                  hydrostatic_strain=False,
                  constant_volume=False,
+                 orig_cell=None,
                  scalar_pressure=0.0):
         """Create a filter that returns the atomic forces and unit cell
         stresses together, so they can simultaneously be minimized.
@@ -312,9 +355,12 @@ class UnitCellFilter(Filter):
             breaks energy/force consistency.
         """
 
-        Filter.__init__(self, atoms, indices=range(len(atoms)))
+        Filter.__init__(self, atoms=atoms, indices=range(len(atoms)))
         self.atoms = atoms
-        self.orig_cell = atoms.get_cell()
+        if orig_cell is None:
+            self.orig_cell = atoms.get_cell()
+        else:
+            self.orig_cell = orig_cell
         self.stress = None
 
         if mask is None:
@@ -531,14 +577,14 @@ class FrechetCellFilter(UnitCellFilter):
         https://github.com/lan496/lan496.github.io/blob/main/notes/cell_grad.pdf
         """
 
-        Filter.__init__(self, atoms, indices=range(len(atoms)))
-        UnitCellFilter.__init__(self, atoms, mask=mask,
+        Filter.__init__(self, atoms=atoms, indices=range(len(atoms)))
+        UnitCellFilter.__init__(self, atoms=atoms, mask=mask,
                                 hydrostatic_strain=hydrostatic_strain,
                                 constant_volume=constant_volume,
                                 scalar_pressure=scalar_pressure)
 
         # We defer the scipy import to avoid high immediate import overhead
-        from scipy.linalg import expm, logm, expm_frechet
+        from scipy.linalg import expm, expm_frechet, logm
         self.expm = expm
         self.logm = logm
         self.expm_frechet = expm_frechet
@@ -740,10 +786,16 @@ class ExpCellFilter(UnitCellFilter):
 
             \nabla E(U) / \nabla U_ij =  [L(U, S exp(-U))]_ij
         """
-        Filter.__init__(self, atoms, indices=range(len(atoms)))
-        UnitCellFilter.__init__(self, atoms, mask, cell_factor,
-                                hydrostatic_strain,
-                                constant_volume, scalar_pressure)
+        warn(
+            'Use FrechetCellFilter for better convergence wrt cell variables.',
+            DeprecationWarning
+        )
+        Filter.__init__(self, atoms=atoms, indices=range(len(atoms)))
+        UnitCellFilter.__init__(self, atoms=atoms, mask=mask,
+                                cell_factor=cell_factor,
+                                hydrostatic_strain=hydrostatic_strain,
+                                constant_volume=constant_volume,
+                                scalar_pressure=scalar_pressure)
         if cell_factor is not None:
             # cell_factor used in UnitCellFilter does not affect on gradients of
             # ExpCellFilter.

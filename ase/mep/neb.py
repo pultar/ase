@@ -1,26 +1,26 @@
 import sys
 import threading
+import time
 import warnings
 from abc import ABC, abstractmethod
-import time
 
 import numpy as np
-
-from scipy.interpolate import CubicSpline
 from scipy.integrate import cumtrapz
+from scipy.interpolate import CubicSpline
 
 import ase.parallel
 from ase.build import minimize_rotation_and_translation
 from ase.calculators.calculator import Calculator
 from ase.calculators.singlepoint import SinglePointCalculator
-from ase.optimize import MDMin
-from ase.optimize.optimize import Optimizer
-from ase.optimize.sciopt import OptimizerConvergenceError
 from ase.geometry import find_mic
-from ase.utils import lazyproperty, deprecated
-from ase.utils.forcecurve import fit_images
-from ase.optimize.precon import Precon, PreconImages
+from ase.optimize import MDMin
 from ase.optimize.ode import ode12r
+from ase.optimize.optimize import DEFAULT_MAX_STEPS, Optimizer
+from ase.optimize.precon import Precon, PreconImages
+from ase.optimize.sciopt import OptimizerConvergenceError
+from ase.utils import deprecated, lazyproperty
+from ase.utils.abc import Optimizable
+from ase.utils.forcecurve import fit_images
 
 
 class Spring:
@@ -257,6 +257,32 @@ def get_neb_method(neb, method):
         raise ValueError(f'Bad method: {method}')
 
 
+class NEBOptimizable(Optimizable):
+    def __init__(self, neb):
+        self.neb = neb
+
+    def get_forces(self):
+        return self.neb.get_forces()
+
+    def get_potential_energy(self):
+        return self.neb.get_potential_energy()
+
+    def is_neb(self):
+        return True
+
+    def get_positions(self):
+        return self.neb.get_positions()
+
+    def set_positions(self, positions):
+        self.neb.set_positions(positions)
+
+    def __len__(self):
+        return len(self.neb)
+
+    def iterimages(self):
+        return self.neb.iterimages()
+
+
 class BaseNEB:
     def __init__(self, images, k=0.1, climb=False, parallel=False,
                  remove_rotation_and_translation=False, world=None,
@@ -314,6 +340,9 @@ class BaseNEB:
         self.real_forces = None  # ndarray of shape (nimages, natom, 3)
         self.energies = None  # ndarray of shape (nimages,)
         self.residuals = None  # ndarray of shape (nimages,)
+
+    def __ase_optimizable__(self):
+        return NEBOptimizable(self)
 
     @property
     def natoms(self):
@@ -450,9 +479,7 @@ class BaseNEB:
                 self.world.broadcast(forces[i - 1], root)
 
         # if this is the first force call, we need to build the preconditioners
-        if (self.precon is None or isinstance(self.precon, str) or
-                isinstance(self.precon, Precon) or
-                isinstance(self.precon, list)):
+        if self.precon is None or isinstance(self.precon, (str, Precon, list)):
             self.precon = PreconImages(self.precon, images)
 
         # apply preconditioners to transform forces
@@ -516,10 +543,8 @@ class BaseNEB:
             raise RuntimeError("get_residual() called before get_forces()")
         return np.max(self.residuals)
 
-    def get_potential_energy(self, force_consistent=False):
-        """Return the maximum potential energy along the band.
-        Note that the force_consistent keyword is ignored and is only
-        present for compatibility with ase.Atoms.get_potential_energy."""
+    def get_potential_energy(self):
+        """Return the maximum potential energy along the band."""
         return self.emax
 
     def set_calculators(self, calculators):
@@ -837,8 +862,7 @@ class NEBOptimizer(Optimizer):
         super().__init__(atoms=neb, restart=restart,
                          logfile=logfile, trajectory=trajectory,
                          master=master,
-                         append_trajectory=append_trajectory,
-                         force_consistent=False)
+                         append_trajectory=append_trajectory)
         self.neb = neb
 
         method = method.lower()
@@ -909,7 +933,7 @@ class NEBOptimizer(Optimizer):
             self.callback(X)
         return False
 
-    def run(self, fmax=0.05, steps=None, method=None):
+    def run(self, fmax=0.05, steps=DEFAULT_MAX_STEPS, method=None):
         """
         Optimize images to obtain the minimum energy path
 
@@ -918,8 +942,7 @@ class NEBOptimizer(Optimizer):
         fmax - desired force tolerance
         steps - maximum number of steps
         """
-        if steps:
-            self.max_steps = steps
+        self.max_steps = steps
         if method is None:
             method = self.method
         if method == 'ode':
@@ -1035,7 +1058,7 @@ def interpolate(images, mic=False, interpolate_cell=False,
                                                images[i].positions)
                 except AssertionError:
                     raise RuntimeError(f"Constraint(s) in image number {i} \n"
-                                       f"affect the interpolation results.\n"
+                                       "affect the interpolation results.\n"
                                        "Please specify if you want to \n"
                                        "apply or ignore the constraints \n"
                                        "during the interpolation \n"
@@ -1203,8 +1226,3 @@ class NEBtools(NEBTools):
 @deprecated('Please use NEBTools.plot_band_from_fit.')
 def plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None):
     NEBTools.plot_band_from_fit(s, E, Sfit, Efit, lines, ax=None)
-
-
-def fit0(*args, **kwargs):
-    raise DeprecationWarning('fit0 is deprecated. Use `fit_raw` from '
-                             '`ase.utils.forcecurve` instead.')

@@ -1,11 +1,12 @@
 """Tests for FixCom."""
 import pytest
+
 from ase import Atoms
 from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixCom
-from ase.optimize import BFGS
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.optimize import BFGS
 
 
 @pytest.fixture(name="atoms")
@@ -17,6 +18,7 @@ def fixture_atoms() -> Atoms:
     return atoms
 
 
+@pytest.mark.optimize
 def test_center_of_mass_position(atoms: Atoms):
     """Test if the center of mass does not move."""
     cold = atoms.get_center_of_mass()
@@ -30,6 +32,7 @@ def test_center_of_mass_position(atoms: Atoms):
     assert max(abs(cnew - cold)) < 1e-8
 
 
+@pytest.mark.optimize
 def test_center_of_mass_velocity(atoms: Atoms):
     """Test if the center-of-mass veloeicty is zero."""
     atoms.set_constraint(FixCom())

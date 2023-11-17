@@ -1,14 +1,14 @@
 """ Read/Write DL_POLY_4 CONFIG files """
-import re
 import itertools
-from typing import IO, Tuple, List, Union, Optional, Generator, Iterable
+import re
+from typing import IO, Generator, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 
 from ase.atoms import Atoms
-from ase.units import _auf, _amu, _auv
-from ase.data import chemical_symbols
 from ase.calculators.singlepoint import SinglePointCalculator
+from ase.data import chemical_symbols
+from ase.units import _amu, _auf, _auv
 from ase.utils import reader, writer
 
 __all__ = ["read_dlp4", "write_dlp4"]
@@ -145,7 +145,7 @@ def read_single_image(fd: IO, levcfg: int, imcon: int,
     for i, line in enumerate(itertools.islice(fd, natoms), 1):
         match = re.match(r"\s*([A-Za-z][a-z]?)(\S*)", line)
         if not match:
-            raise IOError(f"Line {line} does not match valid format.")
+            raise OSError(f"Line {line} does not match valid format.")
 
         symbol, label = match.group(1, 2)
         symbol = symbol.capitalize()

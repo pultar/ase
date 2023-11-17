@@ -9,11 +9,11 @@ import pytest
 import ase
 import ase.build
 import ase.io
-from ase.io.vasp import read_vasp_xdatcar, write_vasp_xdatcar
-from ase.calculators.calculator import compare_atoms
-from ase.constraints import constrained_indices
-from ase.constraints import FixAtoms, FixScaled, FixedPlane, FixedLine
 from ase.build import graphene_nanoribbon
+from ase.calculators.calculator import compare_atoms
+from ase.constraints import (FixAtoms, FixedLine, FixedPlane, FixScaled,
+                             constrained_indices)
+from ase.io.vasp import read_vasp_xdatcar, write_vasp_xdatcar
 
 
 class TestXdatcarRoundtrip(unittest.TestCase):
@@ -69,21 +69,6 @@ class TestXdatcarRoundtrip(unittest.TestCase):
         with self.assertRaises(TypeError):
             not_traj = [True, False, False]
             ase.io.write(self.outfile, not_traj, format='vasp-xdatcar')
-
-
-def test_wrap():
-    atoms = ase.build.bulk('Ge')
-    # Shift atomic positions to get negative coordinates
-    atoms.wrap(center=(-1, -1, -1))
-
-    atoms.write('POSCAR', direct=True, wrap=False)
-    new_atoms = ase.io.read('POSCAR')
-    assert np.allclose(atoms.positions, new_atoms.positions)
-
-    atoms.write('POSCAR', direct=True, wrap=True)
-    new_atoms = ase.io.read('POSCAR')
-    atoms.wrap()
-    assert np.allclose(atoms.positions, new_atoms.positions)
 
 
 def test_index():

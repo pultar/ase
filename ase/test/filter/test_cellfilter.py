@@ -4,12 +4,13 @@ import numpy as np
 import pytest
 
 import ase
-from ase.units import GPa
 from ase.build import bulk
 from ase.calculators.test import gradient_test
-from ase.filters import UnitCellFilter, FrechetCellFilter, Filter, ExpCellFilter
-from ase.optimize import LBFGS, MDMin
+from ase.filters import (ExpCellFilter, Filter, FrechetCellFilter,
+                         UnitCellFilter)
 from ase.io import Trajectory
+from ase.optimize import LBFGS, MDMin
+from ase.units import GPa
 
 
 @pytest.fixture
@@ -22,6 +23,7 @@ def atoms(asap3) -> ase.Atoms:
     return atoms
 
 
+@pytest.mark.optimize
 @pytest.mark.filterwarnings("ignore:Use FrechetCellFilter")
 @pytest.mark.parametrize(
     'cellfilter', [UnitCellFilter, FrechetCellFilter, ExpCellFilter]
@@ -131,7 +133,7 @@ def test_constant_volume(atoms: ase.Atoms, cellfilter):
     atoms_opt = atoms.copy()
     atoms_opt.calc = atoms.calc
     filter: Filter = cellfilter(atoms_opt, constant_volume=True)
-    opt = LBFGS(filter)
+    opt = LBFGS(filter)  # type: ignore[arg-type]
     opt.run()
 
     # Check if volume is conserved
@@ -140,6 +142,7 @@ def test_constant_volume(atoms: ase.Atoms, cellfilter):
 
 
 # XXX This test should have some assertions!  --askhl
+@pytest.mark.optimize
 def test_unitcellfilter(asap3, testdir):
     cu = bulk('Cu') * (6, 6, 6)
     cu.calc = asap3.EMT()
@@ -152,6 +155,7 @@ def test_unitcellfilter(asap3, testdir):
     # No assertions??
 
 
+@pytest.mark.optimize
 def test_unitcellfilter_hcp(asap3, testdir):
     cu = bulk('Cu', 'hcp', a=3.6 / 2.0**0.5)
     cu.cell[1, 0] -= 0.05
