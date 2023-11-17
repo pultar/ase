@@ -99,12 +99,12 @@ def grid_2d_slice(spacings, array, u, v, o=(0, 0, 0), step=0.02,
 
     det = (u[0] * v[1] - v[0] * u[1])
 
-    if det != 0:
+    if det == 0:
+        zoff = 0
+    else:
         zoff = ((0 - o[1]) * (u[0] * v[2] - v[0] * u[2]) -
                 (0 - o[0]) * (u[1] * v[2] - v[1] * u[2])) \
             / det + o[2]
-    else:
-        zoff = 0
 
     zoff = np.dot(B, [0, 0, zoff])[-1]
 
