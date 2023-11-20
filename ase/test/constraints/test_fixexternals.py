@@ -3,6 +3,8 @@ from ase.calculators.emt import EMT
 from ase.optimize import BFGS
 from ase.constraints import FixExternals, FixAtoms
 from ase.build import fcc111, add_adsorbate, molecule
+from ase.md.verlet import VelocityVerlet
+from ase import units
 import pytest
 
 
@@ -44,7 +46,7 @@ def displace_atoms_randomly(atoms, c):
     return displaced_atoms
 
 
-def test_fixexternals():
+def test_fixexternals_BFGS():
     atoms, constraint_list, fix_surface = setup_fixexternals()
     for i in range(len(constraint_list)):
         tmp_atoms = atoms.copy()
@@ -59,9 +61,29 @@ def test_fixexternals():
         final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
         final_com = tmp_atoms[indices].get_center_of_mass()
         assert np.max(final_pa - c.principle_axes) == \
-            pytest.approx(0, rel=1e-8, abs=1e-8)
+            pytest.approx(0)
         assert np.max(final_com - c.center_of_mass) == \
-            pytest.approx(0, rel=1e-8, abs=1e-8)
+            pytest.approx(0)
+
+
+def test_fixexternals_VelocityVerlet():
+    atoms, constraint_list, fix_surface = setup_fixexternals()
+    for i in range(len(constraint_list)):
+        tmp_atoms = atoms.copy()
+        c = constraint_list[i]
+        indices = c.indices
+        tmp_atoms.set_constraint([c, fix_surface])
+        tmp_atoms.calc = EMT()
+        dyn = VelocityVerlet(tmp_atoms, timestep=5 * units.fs)
+        dyn.run(steps=3)
+        inertia_info = \
+            tmp_atoms[indices].get_moments_of_inertia(vectors=True)
+        final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
+        final_com = tmp_atoms[indices].get_center_of_mass()
+        assert np.max(final_pa - c.principle_axes) == \
+            pytest.approx(0)
+        assert np.max(final_com - c.center_of_mass) == \
+            pytest.approx(0)
 
 
 def test_sort_principle_axes():
@@ -99,9 +121,9 @@ def test_adjust_rotation():
         final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
         final_com = tmp_atoms[indices].get_center_of_mass()
         assert np.max(final_pa - c.principle_axes) == \
-            pytest.approx(0, rel=1e-8, abs=1e-8)
+            pytest.approx(0)
         assert np.max(final_com - c.center_of_mass) == \
-            pytest.approx(0, rel=1e-8, abs=1e-8)
+            pytest.approx(0)
 
 
 def test_subspace():
@@ -120,6 +142,6 @@ def test_subspace():
             final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
             final_com = tmpi_atoms[indices].get_center_of_mass()
             assert np.max(final_pa - c.principle_axes) == \
-                pytest.approx(0, rel=1e-8, abs=1e-8)
+                pytest.approx(0)
             assert np.max(final_com - c.center_of_mass) == \
-                pytest.approx(0, rel=1e-8, abs=1e-8)
+                pytest.approx(0)

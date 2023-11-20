@@ -2237,7 +2237,7 @@ class MirrorTorque(FixConstraint):
                            'min_angle': self.min_angle, 'fmax': self.fmax}}
 
 
-class FixExternals:
+class FixExternals(FixConstraint):
     """This constraint is used to constrain the principle axes of inertia as
     well as the center of mass of a chosen set of atoms"""
 
@@ -2265,12 +2265,6 @@ class FixExternals:
         self.center_of_mass = atoms[self.indices].get_center_of_mass()
         self.dx = 0.2
         self.space_orthogonal_to_constraint = np.identity(3 * len(self.indices))
-
-    def __repr__(self):
-        return 'FixExternals'
-
-    def index_shuffle(self, atoms, ind):
-        raise NotImplementedError
 
     def rot_x(self, x):
         """These three functions return the rotational matrices for rotation
