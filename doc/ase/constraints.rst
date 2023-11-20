@@ -416,22 +416,9 @@ symmetry.
 The FixExternals class
 ======================
 
-For a given set of N atoms, where N>2, there exist 3N-6 internal degrees of
-freedom, and 6 external degrees of freedom. The internal degrees of freedom are
-defined in terms of bond lengths, bond angles, and dihedral angles. Here, the six
-external degrees of freedom are defined in terms of the three euler angles
-formed between the principle axes and the coordinate system, as well as the
-three components of the atoms’ center of mass. This class constrains a set
-of atoms to travel in directions in which the principle axes of inertia, as
-well as the center of mass are fixed.
-
 .. autoclass:: ase.constraints.FixExternals
 
-This constraint was originally envisioned to be used to constrain an adsorbate
-on a metal surface, but can be used on any system as long as the number of
-constrained atoms is greater than 2. Below is a hypothetical example where methanol
-is placed over a fixed copper surface and is relaxed using BFGS as the
-optimizer and EMT as the calculator::
+Example of use::
 
   from ase.calculators.emt import EMT
   from ase.optimize import BFGS

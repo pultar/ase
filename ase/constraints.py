@@ -2239,8 +2239,16 @@ class MirrorTorque(FixConstraint):
 
 class FixExternals(FixConstraint):
     """This constraint is used to constrain the principle axes of inertia as
-    well as the center of mass of a chosen set of atoms"""
-
+    well as the center of mass of a chosen set of atoms. For a given set of N
+    atoms, where N>2, there exist 3N-6 internal degrees of freedom, and 6
+    external degrees of freedom. The internal degrees of freedom are defined in
+    terms of bond lengths, bond angles, and dihedral angles. Here, the six
+    external degrees of freedom are defined in terms of the three euler angles
+    formed between the principle axes and the coordinate system, as well as the
+    three components of the atoms’ center of mass. This class constrains a set
+    of atoms to travel in directions in which the principle axes of inertia, as
+    well as the center of mass are fixed.
+    """
     def __init__(
             self,
             atoms: Atoms,
@@ -2255,7 +2263,9 @@ class FixExternals(FixConstraint):
             If True, all other atoms not in indices will be fixed.
 
             If False, all other atoms not in indices will not have an additional
-            constraint placed on them."""
+            constraint placed on them.
+        """
+
         self.atoms = atoms
         self.indices = indices
         if len(self.indices) < 2:
@@ -2362,6 +2372,32 @@ class FixExternals(FixConstraint):
         it to a linear space that changes with each geometry step.
 
         adsorbate : ase.atoms.Atoms object
+
+        This constraint was originally envisioned to be used to constrain an
+        adsorbate on a metal surface, but can be used on any system as long as
+        the number of constrained atoms is greater than 2. Below is a
+        hypothetical example where methanol is placed over a fixed copper
+        surface and is relaxed using BFGS as the optimizer and EMT as the
+        calculator:
+
+        >>> from ase.calculators.emt import EMT
+        >>> from ase.optimize import BFGS
+        >>> from ase.constraints import FixExternals, FixAtoms
+        >>> from ase.build import fcc111, add_adsorbate, molecule
+
+        >>> atoms = fcc111(symbol='Cu', size=[3, 3, 4], a=3.58)
+        >>> adsorbate = molecule('CH3OH')
+        >>> add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
+        >>> atoms.center(vacuum=8.5, axis=2)
+        >>> indices = [36, 37, 38, 39, 40, 41]
+        >>> c1 = FixExternals(atoms, indices)
+        >>> c2 = FixAtoms(indices=[atom.index for atom in\
+        >>>        atoms if atom.symbol == 'Cu'])
+        >>> atoms.set_constraint([c1, c2])
+        >>> atoms.calc = EMT()
+        >>> dyn = BFGS(atoms)
+        >>> dyn.run(fmax=0.05)
+
         """
         h = 1e-8 * self.dx
         com = adsorbate.get_center_of_mass()
