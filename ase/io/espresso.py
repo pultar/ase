@@ -23,9 +23,9 @@ from ase.atoms import Atoms
 from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
-from ase.dft.kpoints import kpoint_convert
-from ase.constraints import FixAtoms, FixCartesian, FixExternals
+from ase.constraints import FixAtoms, FixCartesian
 from ase.data import chemical_symbols
+from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import iofunction
 
@@ -1383,8 +1383,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
             constraint_mask[constraint.index] = 0
         elif isinstance(constraint, FixCartesian):
             constraint_mask[constraint.a] = constraint.mask
-        elif isinstance(constraint, FixExternals):
-            constraint_mask = np.ones((len(atoms), 3), dtype='int')
         else:
             warnings.warn(f'Ignored unknown constraint {constraint}')
     masks = []
