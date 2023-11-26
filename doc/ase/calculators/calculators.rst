@@ -164,7 +164,7 @@ As of November 2023, there are two ways in which a calculator can be implemented
 
 The calculators that are implemented in the modern way can be configured using the config file. It should have a `.ini`
 format and reside in a place specified by ``ASE_CONFIG_PATH`` environmental variable. If the variable is not set, then the
-default path is used, which is ``~/.config/ase/config.ini``.
+default path is used, which is ``~/.config/ase/ase.conf``.
 
 The config file should have a ``[parallel]`` section, which defines the machine-specific parallel environment, and the
 calculator sections, that define the machine-specific calculator parameters, like binary and pseudopotential locations.
