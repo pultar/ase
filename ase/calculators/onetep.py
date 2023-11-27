@@ -13,9 +13,10 @@ from ase.io import read, write
 
 
 class OnetepProfile(BaseProfile):
-    def __init__(self, binary, **kwargs):
+    def __init__(self, binary, old = False, **kwargs):
         super().__init__(**kwargs)
         self.binary = binary
+        self.old = old
 
     def version(self):
         # onetep_exec = find_onetep_command(self.argv)
@@ -26,7 +27,10 @@ class OnetepProfile(BaseProfile):
         return '1.0.0'
 
     def get_calculator_command(self, inputfile):
-        return [self.binary, str(inputfile)]
+        if self.old:
+            return self.binary.split() + [str(inputfile)]
+        else:
+            return [self.binary, str(inputfile)]
 
 
 class OnetepTemplate(CalculatorTemplate):
@@ -45,7 +49,6 @@ class OnetepTemplate(CalculatorTemplate):
         self.append = append
 
     def execute(self, directory, profile):
-        self.input = 'water.out'
         profile.run(directory, self.input, self.output, self.error,
                     self.append)
 
@@ -146,7 +149,7 @@ class Onetep(GenericFileIOCalculator):
             warnings.warn("using ASE_ONETEP_COMMAND env is \
                           deprecated, please use OnetepProfile",
                           FutureWarning)
-            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'])
+            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old = True)
 
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
