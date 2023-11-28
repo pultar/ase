@@ -46,22 +46,21 @@ class QChem(FileIOCalculator):
             path to file containing the effective core potential. Use in
             combination with ecp='gen' keyword argument.
         """
-
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
-
         # Augment the command by various flags
         if pbs:
-            self.command = 'qchem -pbs '
+            command = 'qchem -pbs '
         else:
-            self.command = 'qchem '
+            command = 'qchem '
         if np != 1:
-            self.command += '-np %d ' % np
+            command += '-np %d ' % np
         if nt != 1:
-            self.command += '-nt %d ' % nt
-        self.command += 'PREFIX.inp PREFIX.out'
+            command += '-nt %d ' % nt
+        command += 'PREFIX.inp PREFIX.out'
         if scratch is not None:
-            self.command += f' {scratch}'
+            command += f' {scratch}'
+
+        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
+                                  label, atoms, command=command, **kwargs)
 
         self.basisfile = basisfile
         self.ecpfile = ecpfile

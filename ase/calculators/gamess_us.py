@@ -69,6 +69,11 @@ class GAMESSUS(FileIOCalculator):
         ecp: dict
             A per-index or per-element dictionary of ECP specifications.
         """
+        if command is None:
+            command = 'rungms PREFIX.inp > PREFIX.log 2> PREFIX.err'
+
+        # Used in calculate
+        self.command = command
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, command, **kwargs)
         self.userscr = userscr

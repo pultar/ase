@@ -283,12 +283,6 @@ class Siesta(FileIOCalculator):
         # Put in the default arguments.
         parameters = self.default_parameters.__class__(**kwargs)
 
-        # Call the base class.
-        FileIOCalculator.__init__(
-            self,
-            command=command,
-            **parameters)
-
         # For compatibility with old variable name:
         commandvar = self.cfg.get('SIESTA_COMMAND')
         if commandvar is not None:
@@ -303,7 +297,7 @@ class Siesta(FileIOCalculator):
             runfile = self.prefix + '.fdf'
             outfile = self.prefix + '.out'
             try:
-                self.command = commandvar % (runfile, outfile)
+                command = commandvar % (runfile, outfile)
             except TypeError:
                 raise ValueError(
                     "The 'SIESTA_COMMAND' environment must " +
@@ -311,6 +305,13 @@ class Siesta(FileIOCalculator):
                     " with two string arguments.\n" +
                     "Example : 'siesta < %s > %s'.\n" +
                     f"Got '{commandvar}'")
+
+        command = command or 'siesta < PREFIX.fdf > PREFIX.out'
+        # Call the base class.
+        FileIOCalculator.__init__(
+            self,
+            command=command,
+            **parameters)
 
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as

@@ -99,13 +99,13 @@ class DMol3(FileIOCalculator):
                  command=None, **kwargs):
         """ Construct DMol3 calculator. """
 
-        if command is None:
-            if 'DMOL_COMMAND' in self.cfg:
-                command = self.cfg['DMOL_COMMAND'] + ' PREFIX > PREFIX.out'
+        command = kwargs.pop("command", None)
+        if command is None and 'DMOL_COMMAND' in FileIOCalculator.cfg:
+            command = FileIOCalculator.cfg['DMOL_COMMAND']
+            command += ' PREFIX > PREFIX.out'
 
-        super().__init__(restart, ignore_bad_restart_file,
-                         label, atoms, command=command,
-                         **kwargs)
+        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
+                                  label, atoms, command=command, **kwargs)
 
         # tracks if DMol transformed coordinate system
         self.internal_transformation = False

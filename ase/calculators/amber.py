@@ -76,6 +76,8 @@ class Amber(FileIOCalculator):
         self.positions = None
         self.atoms = None
 
+        command = kwargs.pop("command", None)
+
         self.set(**kwargs)
 
         self.amber_exe = amber_exe

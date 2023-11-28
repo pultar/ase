@@ -16,6 +16,12 @@ from ase.units import Bohr, Hartree
 
 
 class Dftb(FileIOCalculator):
+    # TARP self.command is getting deprecated
+    # if 'DFTB_COMMAND' in FileIOCalculator.cfg:
+    #     command = FileIOCalculator.cfg['DFTB_COMMAND'] + ' > PREFIX.out'
+    # else:
+    #     command = 'dftb+ > PREFIX.out'
+
     implemented_properties = ['energy', 'forces', 'charges',
                               'stress', 'dipole']
     discard_results_on_any_change = True
@@ -120,6 +126,13 @@ class Dftb(FileIOCalculator):
         self.atoms_input = None
         self.do_forces = False
         self.outfilename = 'dftb.out'
+
+        # Pull out the `command` as a specific kwarg
+        command = (
+            kwargs.get('command') or
+            f'{FileIOCalculator.cfg.get("DFTB_COMMAND", "dftb+")} > PREFIX.out'
+        )
+        kwargs.pop('command', None)
 
         super().__init__(restart, ignore_bad_restart_file,
                          label, atoms, command=command,

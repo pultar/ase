@@ -68,8 +68,11 @@ class GULP(FileIOCalculator):
                  label='gulp', atoms=None, optimized=None,
                  Gnorm=1000.0, steps=1000, conditions=None, **kwargs):
         """Construct GULP-calculator object."""
+        command = kwargs.pop("command", None)
+        if command is None:
+            command = 'gulp < PREFIX.gin > PREFIX.got'
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, **kwargs)
+                                  label, atoms, command=command, **kwargs)
         self.optimized = optimized
         self.Gnorm = Gnorm
         self.steps = steps

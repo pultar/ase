@@ -19,6 +19,9 @@ from ase.config import cfg
 from ase.units import Rydberg
 
 
+# TARP: CP2K is not even a FileIOCalculator, command is needed here
+
+
 class CP2K(Calculator):
     """ASE-Calculator for CP2K.
 

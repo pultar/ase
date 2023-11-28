@@ -124,6 +124,19 @@ class Gromacs(FileIOCalculator):
             ('gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d')
         """
 
+        gmxes = ('gmx', 'gmx_d', 'gmx_mpi', 'gmx_mpi_d')
+        # Keeping as is as command is used in calculate
+        if command is not None:
+            self.command = command
+        else:
+            for command in gmxes:
+                if which(command):
+                    self.command = command
+                    break
+            else:
+                self.command = None
+                self.missing_gmx = f'missing gromacs executable {gmxes}'
+
         self.do_qmmm = do_qmmm
         self.water_model = water_model
         self.force_field = force_field

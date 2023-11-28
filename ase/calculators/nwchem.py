@@ -163,6 +163,8 @@ class NWChem(FileIOCalculator):
             place an "ignore" task directive between each step so that
             convergence errors in intermediate steps do not halt execution.
         """
+        if command is None:
+            command = 'nwchem PREFIX.nwi > PREFIX.nwo'
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                   label, atoms, command, **kwargs)
         self.calc = None

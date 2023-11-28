@@ -1,6 +1,7 @@
 import copy
 import os
 from collections.abc import Iterable
+from shutil import which
 from typing import Dict, Optional
 
 from ase.calculators.calculator import FileIOCalculator
@@ -98,7 +99,23 @@ class Gaussian(FileIOCalculator):
     discard_results_on_any_change = True
 
     def __init__(self, *args, label='Gaussian', **kwargs):
-        super().__init__(*args, label=label, **kwargs)
+        # Used in caclculate
+        self.command = kwargs.pop("command", None) or self.command
+        FileIOCalculator.__init__(self, *args, label=label,
+                                  command=self.command, **kwargs)
+
+    def calculate(self, *args, **kwargs):
+        gaussians = ('g16', 'g09', 'g03')
+        if 'GAUSSIAN' in self.command:
+            for gau in gaussians:
+                if which(gau):
+                    self.command = self.command.replace('GAUSSIAN', gau)
+                    break
+            else:
+                raise OSError('Missing Gaussian executable {}'
+                              .format(gaussians))
+
+        FileIOCalculator.calculate(self, *args, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         super().write_input(atoms, properties, system_changes)

@@ -19,8 +19,10 @@ class ELK(FileIOCalculator, GetOutputsMixin):
         keywords: 'xc', 'kpts' and 'smearing' or any of ELK'
         native keywords.
         """
-
-        super().__init__(**kwargs)
+        command = kwargs.pop("command", None)
+        if command is None:
+            command = 'elk > elk.out'
+        super().__init__(command=command, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
