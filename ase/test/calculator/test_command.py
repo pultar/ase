@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import pytest
@@ -48,6 +49,7 @@ calculators = {
     'demonnano': dict(input_arguments={},
                       basis_path='hello'),
     'dftb': {},
+    'dftd3': {},
     'dmol': {},
     'elk': {},
     'gamess_us': {},
@@ -139,6 +141,7 @@ envvars = {
     'demon': 'ASE_DEMON_COMMAND',
     'demonnano': 'ASE_DEMONNANO_COMMAND',
     'dftb': 'DFTB_COMMAND',
+    'dftd3': 'ASE_DFTD3_COMMAND',
     'dmol': 'DMOL_COMMAND',  # XXX Crashes when it runs along other tests
     'elk': 'ASE_ELK_COMMAND',
     'gamess_us': 'ASE_GAMESSUS_COMMAND',
@@ -158,6 +161,10 @@ envvars = {
 }
 
 
+dftd3_boilerplate = (
+    'ase_dftd3.POSCAR -func pbe -grad -pbc -cnthr 40.0 -cutoff 95.0 -zero')
+
+
 def get_expected_command(command, name, tmp_path, from_envvar):
     if name == 'castep':
         return f'{command} castep'  # crazy
@@ -165,6 +172,9 @@ def get_expected_command(command, name, tmp_path, from_envvar):
     if name == 'dftb' and from_envvar:
         # dftb modifies DFTB_COMMAND from envvar but not if given as keyword
         return f'{command} > dftb.out'
+
+    if name == 'dftd3':
+        return f'{command} {dftd3_boilerplate}'.split()
 
     if name == 'dmol' and from_envvar:
         return f'{command} tmp > tmp.out'
@@ -184,7 +194,7 @@ def get_expected_command(command, name, tmp_path, from_envvar):
     if name == 'openmx':
         # openmx converts the stream target to an abspath, so the command
         # will vary depending on the tempdir we're running in.
-        return f'{command} openmx.dat > {tmp_path}/openmx.log'
+        return f'{command} openmx.dat > {os.path.join(tmp_path, "openmx.log")}'
 
     return command
 
@@ -199,7 +209,8 @@ def test_envvar_command(monkeypatch, name, tmp_path):
     expected_command = get_expected_command(command, name, tmp_path,
                                             from_envvar=True)
     monkeypatch.setenv(envvars[name], command)
-    assert intercept_command(name) == expected_command
+    actual_command = intercept_command(name)
+    assert actual_command == expected_command
 
 
 def keyword_calculator_list():
@@ -239,6 +250,7 @@ default_commands = {
     'castep': 'castep castep',  # wth?
     'cp2k': 'cp2k_shell',
     'dftb': 'dftb+ > dftb.out',
+    'dftd3': f'dftd3 {dftd3_boilerplate}'.split(),
     'elk': 'elk > elk.out',
     'gamess_us': 'rungms gamess_us.inp > gamess_us.log 2> gamess_us.err',
     'gulp': 'gulp < gulp.gin > gulp.got',
