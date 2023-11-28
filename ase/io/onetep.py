@@ -45,8 +45,8 @@ ONETEP_FIRST_POSITION = \
 ONETEP_WRONG_FIRST_POSITION = \
     re.compile(r'^\s*%block\s*positions\s*_?\s*(abs|frac)\s*:?\s*([*#!].*)?$')
 ONETEP_RESUMING_GEOM = \
-    re.compile(r"(?i)$\s*Resuming\s*previous\s*ONETEP"
-               r"\s*Geometry\s*Optimisation\s*^")
+    re.compile(r"(?i)^\s*Resuming\s*previous\s*ONETEP"
+               r"\s*Geometry\s*Optimisation\s*$")
 # ONETEP_CELL = "NOT IMPLEMENTED YET"
 # ONETEP_STRESS = "NOT IMPLEMENTED YET"
 ONETEP_ATOM_COUNT = re.compile(r"(?i)^\s*Totals\s*:\s*(\d+\s*)*$")
@@ -54,6 +54,8 @@ ONETEP_IBFGS_ITER = re.compile(r"(?i)^\s*BFGS\s*:\s*starting\s*iteration")
 ONETEP_IBFGS_IMPROVE = re.compile(r"(?i)^\s*BFGS\s*:\s*improving\s*iteration")
 ONETEP_START_GEOM = \
     re.compile(r"(?i)^<+\s*Starting\s*ONETEP\s*Geometry\s*Optimisation\s*>+$")
+ONETEP_END_GEOM = \
+    re.compile(r'(?i)^\s*BFGS\s*:\s*Final\s*Configuration:\s*$')
 
 ONETEP_SPECIES = re.compile(r"(?i)^\s*%BLOCK\s*SPECIES\s*:?\s*([*#!].*)?$")
 # ONETEP_SPECIESL = "%block species "
@@ -575,6 +577,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         ONETEP_IBFGS_ITER: [],
         ONETEP_START_GEOM: [],
         ONETEP_RESUMING_GEOM: [],
+        ONETEP_END_GEOM: [],
         ONETEP_SPECIES: [],
         # ONETEP_SPECIESL: [],
         ONETEP_FIRST_CELL: [],
@@ -590,32 +593,32 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                   ONETEP_MULLIKEN, ONETEP_FIRST_CELL]
 
     # Find all matches append them to the dictionary
+    breg = '|'.join([i.pattern.replace('(?i)', '') for i in output.keys()])
+    prematch = {}
+
     for idx, line in enumerate(fdo_lines):
-        match = False
-        for key in output:
-            # The second condition is for species block where
-            #  we have to make sure there is nothing after the word
-            # 'species' but sometimes no trailing space will
-            # be present.
-            if bool(re.match(key, line)):
-                match = key
+        matches = re.search(breg, line)
+        if matches:
+            prematch[idx] = matches.group(0)
+
+    for key, value in prematch.items():
+        for reg in output.keys():
+            if re.search(reg, value):
+                output[reg].append(key)
                 break
-        if match:
-            output[match].append(idx)
-            # output[match].append(idx)
-        # If a calculation died in the middle of nowhere...
-        # Might be needed, keeping it here
-        # if len(output[ONETEP_START]) - len(output[ONETEP_STOP]) > 1:
-        #    output[ONETEP_STOP].append(i - 1)
-    # Everything is numpy
+
     output = {key: np.array(value) for key, value in output.items()}
     # Conveniance notation (pointers: no overhead, no additional memory)
-    ibfgs_iter = output[ONETEP_IBFGS_ITER]
+    ibfgs_iter = np.hstack(
+        (output[ONETEP_IBFGS_ITER],
+         output[ONETEP_END_GEOM])
+    )
     ibfgs_start = output[ONETEP_START_GEOM]
     ibfgs_improve = output[ONETEP_IBFGS_IMPROVE]
     ibfgs_resume = output[ONETEP_RESUMING_GEOM]
     i_first_positions = output[ONETEP_FIRST_POSITION]
-    is_frac_positions = [i for i in i_first_positions if 'FRAC' in fdo_lines[i]]
+    is_frac_positions = [
+        i for i in i_first_positions if 'FRAC' in fdo_lines[i]]
 
     # In onetep species can have arbritary names,
     # We want to map them to real element names
@@ -716,6 +719,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     # atomic configuration (hopefully).
     # Past is the index of the current atomic conf, future is the
     # index of the next one.
+
     for idx, (past, future) in enumerate(
             zip(ipositions, np.hstack((ipositions[1:], [n_lines])))):
         if has_bfgs:
@@ -836,9 +840,9 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                                  dtype='str').reshape(-1, 4)
                 els = np.char.array(tmp[:, 0])
                 if offset == 2:
-                    pos = tmp[:, 1:].astype(np.float32)
+                    pos = tmp[:, 1:].astype(np.float64)
                 else:
-                    pos = tmp[:, 1:].astype(np.float32) * conv_factor
+                    pos = tmp[:, 1:].astype(np.float64) * conv_factor
                 try:
                     atoms = Atoms(els, pos)
                 # ASE doesn't recognize names used in ONETEP
@@ -877,7 +881,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 tmp = np.loadtxt(fdo_lines[idx + offset:idx + n],
                                  dtype='str', usecols=(1, 3, 4, 5))
                 els = np.char.array(tmp[:, 0])
-                pos = tmp[:, 1:].astype(np.float32) * units['Bohr']
+                pos = tmp[:, 1:].astype(np.float64) * units['Bohr']
                 try:
                     atoms = Atoms(els, pos)
                 # ASE doesn't recognize names used in ONETEP

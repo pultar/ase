@@ -13,7 +13,7 @@ from ase.io import read, write
 
 
 class OnetepProfile(BaseProfile):
-    def __init__(self, binary, old = False, **kwargs):
+    def __init__(self, binary, old=False, **kwargs):
         super().__init__(**kwargs)
         self.binary = binary
         self.old = old
@@ -129,6 +129,7 @@ class Onetep(GenericFileIOCalculator):
     """
     # TARP: I thought GenericFileIO calculators no longer had  atoms attached
     # to them
+
     def __init__(
             self,
             *,
@@ -149,7 +150,7 @@ class Onetep(GenericFileIOCalculator):
             warnings.warn("using ASE_ONETEP_COMMAND env is \
                           deprecated, please use OnetepProfile",
                           FutureWarning)
-            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old = True)
+            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old=True)
 
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
