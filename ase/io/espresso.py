@@ -1296,7 +1296,7 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
     return astr
 
 
-def namelist_to_string(pwi, input_parameters):
+def namelist_to_string(input_parameters):
     pwi = []
     for section in input_parameters:
         pwi.append(f'&{section.upper()}\n')
