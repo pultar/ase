@@ -458,7 +458,7 @@ def write_onetep_in(
     # most of them are ONETEP default, except write_forces
     # which is always turned on.
     default_keywords = {
-        "xc_functional": "pbe",
+        "xc_functional": xc,
         "edft": edft,
         "cutoff_energy": 20,
         "paw": False,
