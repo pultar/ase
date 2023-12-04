@@ -192,13 +192,14 @@ def read_onetep_in(fd, **kwargs):
 
         if re.search(r'^\s*%endblock', line_lower):
             if re.search(r'\s*positions_', line_lower):
-                if re.search(r'^\s*ang\s*$', fdi_lines[block_start]):
-                    to_read = fdi_lines[block_start + 1:n]
-                    positions = np.loadtxt(to_read, usecols=(1, 2, 3))
-                else:
-                    to_read = fdi_lines[block_start:n]
-                    positions = np.loadtxt(to_read, usecols=(1, 2, 3))
-                    positions *= units['Bohr']
+                head = re.search(r'(?i)^\s*(\S*)\s*$',
+                                 fdi_lines[block_start])
+                head = head.group(1).lower() if head else ''
+                conv = 1 if head == 'ang' else units['Bohr']
+                head = int(bool(head))
+                to_read = fdi_lines[block_start + head:n]
+                positions = np.loadtxt(to_read, usecols=(1, 2, 3))
+                positions *= conv
                 symbols = np.loadtxt(to_read, usecols=(0), dtype='str')
                 if re.search(r'.*frac$', line_lower):
                     fractional = True
