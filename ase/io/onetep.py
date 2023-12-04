@@ -196,8 +196,8 @@ def read_onetep_in(fd, **kwargs):
                                  fdi_lines[block_start])
                 head = head.group(1).lower() if head else ''
                 conv = 1 if head == 'ang' else units['Bohr']
-                head = int(bool(head))
-                to_read = fdi_lines[block_start + head:n]
+                # Skip one line if head is True
+                to_read = fdi_lines[block_start + int(bool(head)):n]
                 positions = np.loadtxt(to_read, usecols=(1, 2, 3))
                 positions *= conv
                 symbols = np.loadtxt(to_read, usecols=(0), dtype='str')
