@@ -1310,6 +1310,7 @@ def namelist_to_string(input_parameters):
     ----------
     input_parameters : Namelist | dict
         Expecting a nested dictionary of sections and key-value data.
+
     Returns
     -------
     pwi : List[str]
