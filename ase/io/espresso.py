@@ -16,9 +16,9 @@ import operator as op
 import re
 import warnings
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
-
 from ase.atoms import Atoms
 from ase.calculators.calculator import kpts2ndarray, kpts2sizeandoffsets
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
@@ -1107,7 +1107,7 @@ SSSP_VALENCE = [
     15.0, 32.0, 19.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0]
 
 
-def construct_namelist(parameters=None, keys=KEYS, warn=False, **kwargs):
+def construct_namelist(parameters=None, keys=None, warn=False, **kwargs):
     """
     Construct an ordered Namelist containing all the parameters given (as
     a dictionary or kwargs). Keys will be inserted into their appropriate
@@ -1132,6 +1132,8 @@ def construct_namelist(parameters=None, keys=KEYS, warn=False, **kwargs):
     ----------
     parameters: dict
         Flat or nested set of input parameters.
+    keys: Namelist | dict-like
+        Namelist to use as a template for the output.
     warn: bool
         Enable warnings for unused keys.
 
@@ -1141,6 +1143,9 @@ def construct_namelist(parameters=None, keys=KEYS, warn=False, **kwargs):
         pw.x compatible namelist of input parameters.
 
     """
+
+    if keys is None:
+        keys = deepcopy(KEYS)
     # Convert everything to Namelist early to make case-insensitive
     if parameters is None:
         parameters = Namelist()
@@ -1297,6 +1302,19 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
 
 
 def namelist_to_string(input_parameters):
+    """Format a Namelist object as a string for writing to a file.
+    Assume sections are ordered (taken care of in namelist construction)
+    and that repr converts to a QE readable representation (except bools)
+
+    Parameters
+    ----------
+    input_parameters : Namelist | dict-like
+        Expecting a nested dictionary of sections and key-value data.
+    Returns
+    -------
+    pwi : List[str]
+        Input line for the namelist
+    """
     pwi = []
     for section in input_parameters:
         pwi.append(f'&{section.upper()}\n')
@@ -1497,9 +1515,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # Construct input file into this
     pwi = namelist_to_string(input_parameters)
-
-    # Assume sections are ordered (taken care of in namelist construction)
-    # and that repr converts to a QE readable representation (except bools)
 
     # Pseudopotentials
     pwi.append('ATOMIC_SPECIES\n')
