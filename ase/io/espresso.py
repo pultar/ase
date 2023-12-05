@@ -1132,7 +1132,7 @@ def construct_namelist(parameters=None, keys=None, warn=False, **kwargs):
     ----------
     parameters: dict
         Flat or nested set of input parameters.
-    keys: Namelist | dict-like
+    keys: Namelist | dict
         Namelist to use as a template for the output.
     warn: bool
         Enable warnings for unused keys.
@@ -1308,7 +1308,7 @@ def namelist_to_string(input_parameters):
 
     Parameters
     ----------
-    input_parameters : Namelist | dict-like
+    input_parameters : Namelist | dict
         Expecting a nested dictionary of sections and key-value data.
     Returns
     -------
