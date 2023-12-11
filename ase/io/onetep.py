@@ -856,7 +856,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                     )
                     atoms = Atoms(real_elements, pos)
                     atoms.set_tags(tags)
-                atoms.info['onetep_species'] = list(els)
+                    atoms.info['onetep_species'] = list(els)
                 return atoms
             n += 1
         return None
@@ -891,7 +891,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                     tags, real_elements = find_correct_species(els, idx)
                     atoms = Atoms(real_elements, pos)
                     atoms.set_tags(tags)
-                atoms.info['onetep_species'] = list(els)
+                    atoms.info['onetep_species'] = list(els)
                 return atoms
             n += 1
         return None
