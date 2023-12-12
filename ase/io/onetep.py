@@ -45,8 +45,8 @@ ONETEP_FIRST_POSITION = \
 ONETEP_WRONG_FIRST_POSITION = \
     re.compile(r'^\s*%block\s*positions\s*_?\s*(abs|frac)\s*:?\s*([*#!].*)?$')
 ONETEP_RESUMING_GEOM = \
-    re.compile(r"(?i)^\s*Resuming\s*previous\s*ONETEP"
-               r"\s*Geometry\s*Optimisation\s*$")
+    re.compile(r"(?i)^\s*<{16}\s*Resuming\s*previous"
+               r"\s*ONETEP\s*Geometry\s*Optimisation\s*>{16}\s*$")
 # ONETEP_CELL = "NOT IMPLEMENTED YET"
 # ONETEP_STRESS = "NOT IMPLEMENTED YET"
 ONETEP_ATOM_COUNT = re.compile(r"(?i)^\s*Totals\s*:\s*(\d+\s*)*$")
@@ -617,6 +617,18 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     ibfgs_start = output[ONETEP_START_GEOM]
     ibfgs_improve = output[ONETEP_IBFGS_IMPROVE]
     ibfgs_resume = output[ONETEP_RESUMING_GEOM]
+
+    onetep_start = output[ONETEP_START]
+    onetep_stop = output[ONETEP_STOP]
+
+    bfgs_keywords = np.hstack((ibfgs_improve, ibfgs_resume, ibfgs_iter))
+    bfgs_keywords = np.sort(bfgs_keywords)
+
+    core_keywords = np.hstack((ibfgs_iter, ibfgs_start, ibfgs_improve,
+                                 ibfgs_resume, ibfgs_iter,
+                                 onetep_start, onetep_stop))
+    core_keywords = np.sort(core_keywords)
+
     i_first_positions = output[ONETEP_FIRST_POSITION]
     is_frac_positions = [
         i for i in i_first_positions if 'FRAC' in fdo_lines[i]]
@@ -657,14 +669,34 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                     return True
         return False
 
+    def where_in_bfgs(idx):
+        for past, future in zip(core_keywords,
+                                np.hstack((core_keywords[1:], [n_lines]))):
+
+            if past < idx < future:
+                if past in onetep_start:
+                    if future in ibfgs_start or \
+                       future in ibfgs_resume:
+                        return 'resume'
+                    continue
+                # Are we in start or resume or improve
+                if past in ibfgs_start:
+                    return 'start'
+                elif past in ibfgs_resume:
+                    return 'resume'
+                elif past in ibfgs_improve:
+                    return 'improve'
+
+        return False
+
     # If onetep has bfgs, the first atomic positions
     # Will be printed multiple times, we don't add them
-    if has_bfgs:
-        to_del = []
-        for idx, tmp in enumerate(i_first_positions):
-            if is_in_bfgs(tmp):
-                to_del.append(idx)
-        i_first_positions = np.delete(i_first_positions, to_del)
+    #if has_bfgs:
+    #    to_del = []
+    #    for idx, tmp in enumerate(i_first_positions):
+    #        if is_in_bfgs(tmp):
+    #            to_del.append(idx)
+    #    i_first_positions = np.delete(i_first_positions, to_del)
 
     ipositions = np.hstack((output[ONETEP_POSITION],
                             i_first_positions)).astype(np.int32)
@@ -675,41 +707,11 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     # Some ONETEP files will not have any positions
     # due to how the software is coded. As a last
     # resort we look for a geom file with the same label.
+
     if n_pos == 0:
-        name = fd.name
-        label_maybe = basename(name).split('.')[0]
-        geom_maybe = label_maybe + '.geom'
-        if isfile(geom_maybe):
-            from ase.io import read
-            positions = read(geom_maybe, index="::",
-                             format='castep-geom',
-                             units={
-                                 'Eh': units['Hartree'],
-                                 'a0': units['Bohr']
-                             }
-                             )
-            forces = [i.get_forces() for i in positions]
-            has_bfgs = False
-            has_bfgs_improve = False
-            # way to make everything work
-            ipositions = np.hstack(([0], output[ONETEP_IBFGS_ITER]))
-        else:
-            # Small trick to debug this case
-            """
-            forces = []
-            print(output[ONETEP_ATOM_COUNT][0])
-            fake_atoms_count = \
-                int(fdo_lines[output[ONETEP_ATOM_COUNT][0]].split()[1])
-            fake_atoms = Atoms(symbols=['H'] * fake_atoms_count,
-                                 positions=np.zeros((fake_atoms_count, 3)),
-                                 cell=np.zeros((3, 3)))
-            ipositions = output[ONETEP_WRONG_FIRST_POSITION]
-            print(ipositions)
-            positions = [fake_atoms]
-            """
-            if has_hash:
-                raise RuntimeError(no_positions_error)
-            raise RuntimeError(unable_to_read)
+        if has_hash:
+            raise RuntimeError(no_positions_error)
+        raise RuntimeError(unable_to_read)
 
     to_del = []
 
@@ -724,8 +726,19 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
     for idx, (past, future) in enumerate(
             zip(ipositions, np.hstack((ipositions[1:], [n_lines])))):
         if has_bfgs:
-            # BFGS resume prints the configuration at the beggining,
-            # we don't want it
+
+            which_bfgs = where_in_bfgs(past)
+
+            if which_bfgs == 'resume':
+                to_del.append(idx)
+                continue
+
+            if not improving:
+                if which_bfgs == 'improve':
+                    to_del.append(idx)
+                    continue
+            
+            """
             if has_bfgs_resume:
                 closest_resume = np.min(np.abs(past - ibfgs_resume))
                 closest_starting = np.min(np.abs(past - ibfgs_iter))
@@ -746,6 +759,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 if closest_improve < closest:
                     to_del.append(idx)
                     continue
+            """
 
         # We append None if no properties in contained for
         # one specific atomic configurations.
@@ -756,8 +770,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
             else:
                 output_corr[prop].extend(output[prop][tmp[:1]])
 
-    # We effectively delete unwanted atomic configurations
-    if to_del:
+    if to_del and len(to_del) != n_pos:
         new_indices = np.setdiff1d(np.arange(n_pos), to_del)
         ipositions = ipositions[new_indices]
 
@@ -983,25 +996,23 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         real_specie = parse_species(idx)
         real_species.append(real_specie)
 
-    # If you are here and n_pos == 0 then it
-    # means you read a CASTEP geom file (see line ~ 522)
-    if n_pos > 0:
-        positions, forces = [], []
-        for idx in ipositions:
-            if idx in i_first_positions:
-                position = parse_first_positions(idx)
-            else:
-                position = parse_positions(idx)
-            if position:
-                positions.append(position)
-            else:
-                n_pos -= 1
-                break
-        for idx in output_corr[ONETEP_FORCE]:
-            force = parse_force(idx) if idx else None
-            forces.append(force)
+    positions, forces = [], []
+    for idx in ipositions:
+        if idx in i_first_positions:
+            position = parse_first_positions(idx)
+        else:
+            position = parse_positions(idx)
+        if position:
+            positions.append(position)
+        else:
+            n_pos -= 1
+            break
+    for idx in output_corr[ONETEP_FORCE]:
+        force = parse_force(idx) if idx else None
+        forces.append(force)
 
     n_pos = len(positions)
+
     # Numpy trick to get rid of configuration that are essentially the same
     # in a regular geometry optimisation with internal BFGS, the first
     # configuration is printed three time, we get rid of it
@@ -1027,10 +1038,15 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         magmoms = [magmoms[i] for i in range(n_pos) if c[i]]
         positions = [positions[i] for i in range(n_pos) if c[i]]
         ipositions = [ipositions[i] for i in range(n_pos) if c[i]]
+
     n_pos = len(positions)
+
     # We take care of properties that only show up at
     # the beginning of onetep calculation
     whole = np.append(output[ONETEP_START], n_lines)
+
+    if n_pos == 0:
+        raise RuntimeError(unable_to_read)
 
     spin = np.full((n_pos), 1)
     for sp in output[ONETEP_SPIN]:
