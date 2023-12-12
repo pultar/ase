@@ -674,8 +674,8 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         + len(output[ONETEP_RESUMING_GEOM])
     )
 
-    has_bfgs_improve = len(ibfgs_improve)
-    has_bfgs_resume = len(ibfgs_resume)
+    len(ibfgs_improve)
+    len(ibfgs_resume)
     # When the input block position is written in lowercase
     # ONETEP does not print the initial position but a hash
     # of it, might be needed
