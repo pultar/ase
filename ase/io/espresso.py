@@ -1325,6 +1325,81 @@ KEYS = Namelist(
     )
 )
 
+PH_KEYS = Namelist(
+    {
+        "INPUTPH": [
+            "amass",
+            "outdir",
+            "prefix",
+            "niter_ph",
+            "tr2_ph",
+            "alpha_mix",
+            "nmix_ph",
+            "verbosity",
+            "reduce_io",
+            "max_seconds",
+            "dftd3_hess",
+            "fildyn",
+            "fildrho",
+            "fildvscf",
+            "epsil",
+            "lrpa",
+            "lnoloc",
+            "trans",
+            "lraman",
+            "eth_rps",
+            "eth_ns",
+            "dek",
+            "recover",
+            "low_directory_check",
+            "only_init",
+            "qplot",
+            "q2d",
+            "q_in_band_form",
+            "electron_phonon",
+            "el_ph_nsigma",
+            "el_ph_sigma",
+            "ahc_dir",
+            "ahc_nbnd",
+            "ahc_nbndskip",
+            "skip_upperfan",
+            "lshift_q",
+            "zeu",
+            "zue",
+            "elop",
+            "fpol",
+            "ldisp",
+            "nogg",
+            "asr",
+            "ldiag",
+            "lqdir",
+            "search_sym",
+            "nq1",
+            "nq2",
+            "nq3",
+            "nk1",
+            "nk2",
+            "nk3",
+            "k1",
+            "k2",
+            "k3",
+            "diagonalization",
+            "read_dns_bare",
+            "ldvscf_interpolate",
+            "wpot_dir",
+            "do_long_range",
+            "do_charge_neutral",
+            "start_irr",
+            "last_irr",
+            "nat_todo",
+            "modenum",
+            "start_q",
+            "last_q",
+            "dvscf_star",
+            "drho_star",
+        ]
+    }
+)
 
 # Number of valence electrons in the pseudopotentials recommended by
 # http://materialscloud.org/sssp/. These are just used as a fallback for
@@ -1914,7 +1989,7 @@ def write_espresso_in(
     fd.write("".join(pwi))
 
 
-def write_espresso_ph(fd, input_data={}, qpts=None, nat_todo=None) -> None:
+def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None) -> None:
     """
     Function that write the input file for a ph.x calculation. Normal namelist
     cards are passed in the input_data dictionary. Which can be either nested
@@ -1949,7 +2024,9 @@ def write_espresso_ph(fd, input_data={}, qpts=None, nat_todo=None) -> None:
     None
     """
 
-    input_ph = input_data.get("inputph", {})
+    input_data = construct_namelist(input_data, keys=PH_KEYS)
+
+    input_ph = input_data["inputph"]
 
     qplot = input_ph.get("qplot", False)
     ldisp = input_ph.get("ldisp", False)
