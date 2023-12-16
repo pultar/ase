@@ -5,7 +5,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 from ase.io.espresso import (read_espresso_ph,
-                             write_espresso_ph, read_fortran_namelist)
+                             write_espresso_ph, read_fortran_namelist,
+                             construct_namelist, PH_KEYS)
 
 
 def test_write_espresso_ph_single():
@@ -15,9 +16,17 @@ def test_write_espresso_ph_single():
         "prefix": "prefix",
         "outdir": "/path/to/outdir",
         "eth_rps": 0.1,
+        "qplot": False,
+        "ldisp": True,
+        "trans": True,
+        "tr2_ph": 1e-12,
+        "alpha_mix(1)": 0.1,
+        "nat_todo": 0,
     }
 
     qpts = (0.5, -0.1, 1 / 3)
+
+    input_data = construct_namelist(input_data, PH_KEYS)
 
     string_io = StringIO()
 
@@ -29,7 +38,13 @@ def test_write_espresso_ph_single():
         "   amass(2)         = 2.0\n"
         "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
+        "   tr2_ph           = 1e-12\n"
+        "   alpha_mix(1)     = 0.1\n"
+        "   trans            = .true.\n"
         "   eth_rps          = 0.1\n"
+        "   qplot            = .false.\n"
+        "   ldisp            = .true.\n"
+        "   nat_todo         = 0\n"
         "/\n"
         "0.50000000 -0.10000000 0.33333333\n"
     )
@@ -56,6 +71,8 @@ def test_write_espresso_ph_list():
     qpts = [(0.5, -0.1, 1 / 3, 2), (0.1, 0.2, 0.3, 10), (0.2, 0.3, 0.4, 1)]
 
     string_io = StringIO()
+
+    input_data = construct_namelist(input_data, PH_KEYS)
 
     write_espresso_ph(string_io, input_data=input_data, qpts=qpts)
 
@@ -91,11 +108,13 @@ def test_write_espresso_ph_nat_todo():
         "outdir": "/path/to/outdir",
         "eth_rps": 0.1,
         "qplot": True,
-        "nat_todo": True,
+        "nat_todo": 3,
         "ldisp": True,
     }
 
     qpts = [(0.5, -0.1, 1 / 3, 1), (0.1, 0.2, 0.3, -1), (0.2, 0.3, 0.4, 4)]
+
+    input_data = construct_namelist(input_data, PH_KEYS)
 
     string_io = StringIO()
 
@@ -110,7 +129,7 @@ def test_write_espresso_ph_nat_todo():
         "   eth_rps          = 0.1\n"
         "   qplot            = .true.\n"
         "   ldisp            = .true.\n"
-        "   nat_todo         = .true.\n"
+        "   nat_todo         = 3\n"
         "/\n"
         "3\n"
         "0.50000000 -0.10000000 0.33333333 1\n"
@@ -212,7 +231,7 @@ simple_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7De
 
      init_run     :      0.24s CPU      0.35s WALL (       1 calls)"""
 
-def test_read_espresso_ph_all(i):
+def test_read_espresso_ph_all():
     fd = StringIO(simple_ph_output)
     read_espresso_ph(fd)
 
@@ -600,8 +619,18 @@ def test_read_espresso_ph_complex():
     assert len(results[(0, 0, 0)]["eqpoints"]) == 1
     assert results[(0, 0, 0)]["atoms"].symbols == ["Al"]
 
-    assert (0.75, -0.25, 0.75) in results
-    assert np.unique(results[(0.75, -0.25, 0.75)]["freqs"]).shape[0] == 3
-    assert np.unique(results[(0.75, -0.25, 0.75)]["freqs"])[2] == 8.791383
-    assert len(results[(0.75, -0.25, 0.75)]["eqpoints"]) == 24
-    assert results[(0.75, -0.25, 0.75)]["atoms"].symbols == ["Al"]
+    assert (-0.25, 0.25, -0.25) in results
+    assert np.unique(results[(-0.25, 0.25, -0.25)]["freqs"]).shape[0] == 2
+    assert np.unique(results[(-0.25, 0.25, -0.25)]["freqs"])[1] == 6.338040
+    assert len(results[(-0.25, 0.25, -0.25)]["eqpoints"]) == 8
+    assert results[(-0.25, 0.25, -0.25)]["atoms"].symbols == ["Al"]
+
+    for i in np.arange(0.005, 0.055, 0.005):
+        assert results[(-0.25, 0.25, -0.25)]["ep_data"][i]
+
+    assert results[(-0.25, 0.25, -0.25)]["ep_data"][0.005] == {
+        "dos": 1.339210,
+        "fermi": 8.321793,
+        "lambdas": [0.0023, 0.0023, 0.0285],
+        "gammas": [0.04, 0.04, 1.47],
+    }

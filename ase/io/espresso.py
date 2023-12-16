@@ -2028,28 +2028,18 @@ def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None) -> None:
 
     input_ph = input_data["inputph"]
 
-    qplot = input_ph.get("qplot", False)
-    ldisp = input_ph.get("ldisp", False)
-    trans = input_ph.get("trans", True)
-    prefix = input_ph.get("prefix", "pwscf")
-    tr2_ph = input_ph.get("tr2_ph", 1e-12)
-    alpha_mix = input_ph.get("alpha_mix(1)", 0.7)
     inp_nat_todo = input_ph.get("nat_todo", 0)
-
     qpts = qpts or (0, 0, 0)
-
-    input_ph["qplot"] = qplot
-    input_ph["ldisp"] = ldisp
-    input_ph["trans"] = trans
-    input_ph["prefix"] = prefix
-    input_ph["tr2_ph"] = tr2_ph
-    input_ph["alpha_mix(1)"] = alpha_mix
-    input_ph["nat_todo"] = inp_nat_todo
 
     input_data["inputph"] = input_ph
 
+    input_data = construct_namelist(input_data, keys=PH_KEYS)
+
     pwi = namelist_to_string(input_data)[:-1]
     fd.write("".join(pwi))
+
+    qplot = input_ph.get("qplot", False)
+    ldisp = input_ph.get("ldisp", False)
 
     if qplot and ldisp:
         fd.write(f"{len(qpts)}\n")
@@ -2329,7 +2319,7 @@ def read_espresso_ph(fd):
                     results[current]["gammas"] = gammas
                     lambdas = []
                     gammas = []
-                current = broad_match[1]
+                current = float(broad_match[1])
                 results[current] = {}
             elif dos_match:
                 results[current]["dos"] = float(dos_match[1])
