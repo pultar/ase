@@ -13,13 +13,30 @@ from ase.io import read, write
 
 
 class OnetepProfile(BaseProfile):
+    """
+    ONETEP profile class, additional "old" parameter
+    is automatically passed for now if the user uses the
+    now deprecated "ASE_ONETEP_COMMAND".
+    """
+
     def __init__(self, binary, old=False, **kwargs):
+        """
+        Parameters
+        ----------
+        binary: str
+            Path to the ONETEP binary.
+        old: bool
+            If True, will use the old ONETEP command line
+            interface.
+        **kwargs: dict
+            Additional kwargs are passed to the BaseProfile
+            class.
+        """
         super().__init__(**kwargs)
         self.binary = binary
         self.old = old
 
     def version(self):
-        # onetep_exec = find_onetep_command(self.argv)
         lines = read_stdout(self.binary)
         return self.parse_version(lines)
 

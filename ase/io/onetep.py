@@ -46,8 +46,7 @@ ONETEP_RESUMING_GEOM = re.compile(
     r"(?i)^\s*<{16}\s*Resuming\s*previous"
     r"\s*ONETEP\s*Geometry\s*Optimisation\s*>{16}\s*$"
 )
-# ONETEP_CELL = "NOT IMPLEMENTED YET"
-# ONETEP_STRESS = "NOT IMPLEMENTED YET"
+
 ONETEP_ATOM_COUNT = re.compile(r"(?i)^\s*Totals\s*:\s*(\d+\s*)*$")
 ONETEP_IBFGS_ITER = re.compile(r"(?i)^\s*BFGS\s*:\s*starting\s*iteration")
 ONETEP_IBFGS_IMPROVE = re.compile(r"(?i)^\s*BFGS\s*:\s*improving\s*iteration")
@@ -57,7 +56,7 @@ ONETEP_START_GEOM = re.compile(
 ONETEP_END_GEOM = re.compile(r"(?i)^\s*BFGS\s*:\s*Final\s*Configuration:\s*$")
 
 ONETEP_SPECIES = re.compile(r"(?i)^\s*%BLOCK\s*SPECIES\s*:?\s*([*#!].*)?$")
-# ONETEP_SPECIESL = "%block species "
+
 ONETEP_FIRST_CELL = re.compile(
     r"(?i)^\s*%BLOCK\s*LATTICE\s*_?\s*CART\s*:?\s*([*#!].*)?$"
 )
@@ -597,9 +596,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         ONETEP_RESUMING_GEOM: [],
         ONETEP_END_GEOM: [],
         ONETEP_SPECIES: [],
-        # ONETEP_SPECIESL: [],
         ONETEP_FIRST_CELL: [],
-        # ONETEP_FIRST_CELLL: [],
         ONETEP_STRESS_CELL: [],
     }
 
@@ -674,8 +671,6 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         + len(output[ONETEP_RESUMING_GEOM])
     )
 
-    len(ibfgs_improve)
-    len(ibfgs_resume)
     # When the input block position is written in lowercase
     # ONETEP does not print the initial position but a hash
     # of it, might be needed
@@ -714,15 +709,6 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                     return "improve"
 
         return False
-
-    # If onetep has bfgs, the first atomic positions
-    # Will be printed multiple times, we don't add them
-    # if has_bfgs:
-    #    to_del = []
-    #    for idx, tmp in enumerate(i_first_positions):
-    #        if is_in_bfgs(tmp):
-    #            to_del.append(idx)
-    #    i_first_positions = np.delete(i_first_positions, to_del)
 
     ipositions = np.hstack((output[ONETEP_POSITION], i_first_positions)).astype(
         np.int32
@@ -764,29 +750,6 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 if which_bfgs == "improve":
                     to_del.append(idx)
                     continue
-
-            """
-            if has_bfgs_resume:
-                closest_resume = np.min(np.abs(past - ibfgs_resume))
-                closest_starting = np.min(np.abs(past - ibfgs_iter))
-                if closest_resume < closest_starting:
-                    to_del.append(idx)
-                    continue
-            if has_bfgs_improve and not improving:
-                # Find closest improve iteration index
-                closest_improve = np.min(np.abs(past - ibfgs_improve))
-                # Find closest normal iteration index
-                closest_iter = np.min(np.abs(past - ibfgs_iter))
-                if len(ibfgs_start):
-                    closest_starting = np.min(np.abs(past - ibfgs_start))
-                    closest = np.min([closest_iter, closest_starting])
-                else:
-                    closest = closest_iter
-                # If improve is closer we delete
-                if closest_improve < closest:
-                    to_del.append(idx)
-                    continue
-            """
 
         # We append None if no properties in contained for
         # one specific atomic configurations.
