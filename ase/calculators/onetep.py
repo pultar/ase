@@ -144,8 +144,6 @@ class Onetep(GenericFileIOCalculator):
            via the keyword dictionary, it is the user responsibility that they
            are valid ONETEP keywords.
     """
-    # TARP: I thought GenericFileIO calculators no longer had  atoms attached
-    # to them
 
     def __init__(
             self,
