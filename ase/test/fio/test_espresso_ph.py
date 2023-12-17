@@ -1,12 +1,8 @@
-import gzip
 from io import StringIO
-from pathlib import Path
 
 import numpy as np
-import pytest
-from ase.io.espresso import (read_espresso_ph,
-                             write_espresso_ph, read_fortran_namelist,
-                             construct_namelist, PH_KEYS)
+from ase.io.espresso import (PH_KEYS, construct_namelist, read_espresso_ph,
+                             read_fortran_namelist, write_espresso_ph)
 
 
 def test_write_espresso_ph_single():
@@ -118,7 +114,14 @@ def test_write_espresso_ph_nat_todo():
 
     string_io = StringIO()
 
-    write_espresso_ph(string_io, input_data=input_data, qpts=qpts, nat_todo=[1, 2, 3])
+    write_espresso_ph(
+        string_io,
+        input_data=input_data,
+        qpts=qpts,
+        nat_todo=[
+            1,
+            2,
+            3])
 
     expected = (
         "&INPUTPH\n"
@@ -145,17 +148,19 @@ def test_write_espresso_ph_nat_todo():
     assert recycled_input_data == input_data
     assert string_io.getvalue() == expected
 
-simple_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7Dec2016 at 13:16:14 
 
-     Calculation of q =    0.0000000   0.0000000   1.0000000                                                 
+simple_ph_output = """
+     Program PHONON v.6.0 (svn rev. 13188M) starts on  7Dec2016 at 13:16:14
+
+     Calculation of q =    0.0000000   0.0000000   1.0000000
 
      celldm(1)=   6.650000  celldm(2)=   0.000000  celldm(3)=   0.000000
      celldm(4)=   0.000000  celldm(5)=   0.000000  celldm(6)=   0.000000
 
      crystal axes: (cart. coord. in units of alat)
-               a(1) = (  -0.500000   0.000000   0.500000 )  
-               a(2) = (   0.000000   0.500000   0.500000 )  
-               a(3) = (  -0.500000   0.500000   0.000000 )  
+               a(1) = (  -0.500000   0.000000   0.500000 )
+               a(2) = (   0.000000   0.500000   0.500000 )
+               a(3) = (  -0.500000   0.500000   0.000000 )
 
    Cartesian axes
 
@@ -174,18 +179,18 @@ simple_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7De
      celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
 
      crystal axes: (cart. coord. in units of alat)
-               a(1) = ( -0.5000  0.0000  0.5000 )  
-               a(2) = (  0.0000  0.5000  0.5000 )  
-               a(3) = ( -0.5000  0.5000  0.0000 )  
+               a(1) = ( -0.5000  0.0000  0.5000 )
+               a(2) = (  0.0000  0.5000  0.5000 )
+               a(3) = ( -0.5000  0.5000  0.0000 )
 
-     Atoms inside the unit cell: 
+     Atoms inside the unit cell:
 
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
         1     Ni  58.6934   tau(    1) = (    0.00000    0.00000    0.00000  )
 
-     Computing dynamical matrix for 
+     Computing dynamical matrix for
                     q = (   0.0000000   0.0000000   1.0000000 )
 
      number of k points=   216  Marzari-Vanderbilt smearing, width (Ry)=  0.0200
@@ -215,7 +220,7 @@ simple_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7De
 
      Diagonalizing the dynamical matrix
 
-     q = (    0.000000000   0.000000000   1.000000000 ) 
+     q = (    0.000000000   0.000000000   1.000000000 )
 
  **************************************************************************
      freq (    1) =       6.382312 [THz] =     212.891027 [cm-1]
@@ -225,22 +230,25 @@ simple_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7De
 
      Mode symmetry, D_2h (mmm)  [C_2h (2/m) ] magnetic point group:
 
-     freq (  1 -  1) =        212.9  [cm-1]   --> B_2u               
-     freq (  2 -  2) =        212.9  [cm-1]   --> B_3u               
-     freq (  3 -  3) =        297.1  [cm-1]   --> B_1u               
+     freq (  1 -  1) =        212.9  [cm-1]   --> B_2u
+     freq (  2 -  2) =        212.9  [cm-1]   --> B_3u
+     freq (  3 -  3) =        297.1  [cm-1]   --> B_1u
 
      init_run     :      0.24s CPU      0.35s WALL (       1 calls)"""
+
 
 def test_read_espresso_ph_all():
     fd = StringIO(simple_ph_output)
     read_espresso_ph(fd)
 
-complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7Dec2016 at 10:43: 7 
+
+complex_ph_output = """
+     Program PHONON v.6.0 (svn rev. 13188M) starts on  7Dec2016 at 10:43: 7
 
 
      Dynamical matrices for ( 4, 4, 4)  uniform grid of q-points
      (   8q-points):
-       N         xq(1)         xq(2)         xq(3) 
+       N         xq(1)         xq(2)         xq(3)
        1   0.000000000   0.000000000   0.000000000
        2  -0.250000000   0.250000000  -0.250000000
        3   0.500000000  -0.500000000   0.500000000
@@ -252,7 +260,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      Calculation of q =    0.0000000   0.0000000   0.0000000
 
-     Electron-phonon coefficients for Al                                        
+     Electron-phonon coefficients for Al
 
      bravais-lattice index     =            2
      lattice parameter (alat)  =       7.5000  a.u.
@@ -271,24 +279,24 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
      celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
 
      crystal axes: (cart. coord. in units of alat)
-               a(1) = ( -0.5000  0.0000  0.5000 )  
-               a(2) = (  0.0000  0.5000  0.5000 )  
-               a(3) = ( -0.5000  0.5000  0.0000 )  
+               a(1) = ( -0.5000  0.0000  0.5000 )
+               a(2) = (  0.0000  0.5000  0.5000 )
+               a(3) = ( -0.5000  0.5000  0.0000 )
 
      reciprocal axes: (cart. coord. in units 2 pi/alat)
-               b(1) = ( -1.0000 -1.0000  1.0000 )  
-               b(2) = (  1.0000  1.0000  1.0000 )  
-               b(3) = ( -1.0000  1.0000 -1.0000 )  
+               b(1) = ( -1.0000 -1.0000  1.0000 )
+               b(2) = (  1.0000  1.0000  1.0000 )
+               b(3) = ( -1.0000  1.0000 -1.0000 )
 
 
-     Atoms inside the unit cell: 
+     Atoms inside the unit cell:
 
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
         1     Al  26.9800   tau(    1) = (    0.00000    0.00000    0.00000  )
 
-     Computing dynamical matrix for 
+     Computing dynamical matrix for
                     q = (   0.0000000   0.0000000   0.0000000 )
 
      49 Sym.Ops. (with q -> -q+G )
@@ -316,7 +324,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      Diagonalizing the dynamical matrix
 
-     q = (    0.000000000   0.000000000   0.000000000 ) 
+     q = (    0.000000000   0.000000000   0.000000000 )
 
  **************************************************************************
      freq (    1) =       0.173268 [THz] =       5.779601 [cm-1]
@@ -326,7 +334,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      Mode symmetry, O_h (m-3m)  point group:
 
-     freq (  1 -  3) =          5.8  [cm-1]   --> T_1u G_15  G_4- I  
+     freq (  1 -  3) =          5.8  [cm-1]   --> T_1u G_15  G_4- I
      electron-phonon interaction  ...
 
      Gaussian Broadening:   0.005 Ry, ngauss=   0
@@ -392,14 +400,14 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
      MD5 check sum: 614279c88ff8d45c90147292d03ed420
      Pseudo is Norm-conserving, Zval =  3.0
      Generated by new atomic code, or converted to UPF format
-     Using radial grid of  171 points,  2 beta functions with: 
+     Using radial grid of  171 points,  2 beta functions with:
                 l(1) =   0
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
         Al             3.00    26.98000     Al( 1.00)
 
-     48 Sym. Ops., with inversion, found                        
+     48 Sym. Ops., with inversion, found
 
      bravais-lattice index     =            2
      lattice parameter (alat)  =       7.5000  a.u.
@@ -418,24 +426,24 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
      celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
 
      crystal axes: (cart. coord. in units of alat)
-               a(1) = ( -0.5000  0.0000  0.5000 )  
-               a(2) = (  0.0000  0.5000  0.5000 )  
-               a(3) = ( -0.5000  0.5000  0.0000 )  
+               a(1) = ( -0.5000  0.0000  0.5000 )
+               a(2) = (  0.0000  0.5000  0.5000 )
+               a(3) = ( -0.5000  0.5000  0.0000 )
 
      reciprocal axes: (cart. coord. in units 2 pi/alat)
-               b(1) = ( -1.0000 -1.0000  1.0000 )  
-               b(2) = (  1.0000  1.0000  1.0000 )  
-               b(3) = ( -1.0000  1.0000 -1.0000 )  
+               b(1) = ( -1.0000 -1.0000  1.0000 )
+               b(2) = (  1.0000  1.0000  1.0000 )
+               b(3) = ( -1.0000  1.0000 -1.0000 )
 
 
-     Atoms inside the unit cell: 
+     Atoms inside the unit cell:
 
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
         1     Al  26.9800   tau(    1) = (    0.00000    0.00000    0.00000  )
 
-     Computing dynamical matrix for 
+     Computing dynamical matrix for
                     q = (  -0.2500000   0.2500000  -0.2500000 )
 
       6 Sym.Ops. (no q -> -q+G )
@@ -450,7 +458,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
      MD5 check sum: 614279c88ff8d45c90147292d03ed420
      Pseudo is Norm-conserving, Zval =  3.0
      Generated by new atomic code, or converted to UPF format
-     Using radial grid of  171 points,  2 beta functions with: 
+     Using radial grid of  171 points,  2 beta functions with:
                 l(1) =   0
                 l(2) =   1
 
@@ -495,7 +503,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      End of self-consistent calculation
 
-     Convergence has been achieved 
+     Convergence has been achieved
 
 
      Representation #  2 modes #   2  3
@@ -513,7 +521,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      End of self-consistent calculation
 
-     Convergence has been achieved 
+     Convergence has been achieved
 
      Number of q in the star =    8
      List of q in the star:
@@ -528,7 +536,7 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      Diagonalizing the dynamical matrix
 
-     q = (   -0.250000000   0.250000000  -0.250000000 ) 
+     q = (   -0.250000000   0.250000000  -0.250000000 )
 
  **************************************************************************
      freq (    1) =       3.512771 [THz] =     117.173427 [cm-1]
@@ -538,8 +546,8 @@ complex_ph_output = """     Program PHONON v.6.0 (svn rev. 13188M) starts on  7D
 
      Mode symmetry, C_3v (3m)   point group:
 
-     freq (  1 -  2) =        117.2  [cm-1]   --> E    L_3           
-     freq (  3 -  3) =        211.4  [cm-1]   --> A_1  L_1           
+     freq (  1 -  2) =        117.2  [cm-1]   --> E    L_3
+     freq (  3 -  3) =        211.4  [cm-1]   --> A_1  L_1
      electron-phonon interaction  ...
 
      Gaussian Broadening:   0.005 Ry, ngauss=   0
