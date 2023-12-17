@@ -26,7 +26,7 @@ class OnetepProfile(BaseProfile):
         binary: str
             Path to the ONETEP binary.
         old: bool
-            If True, will use the old ONETEP command line
+            If True, will use the old ASE_ONETEP_COMMAND
             interface.
         **kwargs: dict
             Additional kwargs are passed to the BaseProfile
