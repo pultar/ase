@@ -153,9 +153,9 @@ def read_onetep_in(fd, **kwargs):
             block_start = n + 1
             if re.search(r"lattice_cart$", line_lower):
                 if re.search(r"^\s*ang\s*$", fdi_lines[block_start]):
-                    cell = np.loadtxt(fdi_lines[n + 2 : n + 5])
+                    cell = np.loadtxt(fdi_lines[n + 2: n + 5])
                 else:
-                    cell = np.loadtxt(fdi_lines[n + 1 : n + 4])
+                    cell = np.loadtxt(fdi_lines[n + 1: n + 4])
                     cell *= Bohr
 
         if not block_start:
@@ -184,7 +184,7 @@ def read_onetep_in(fd, **kwargs):
                     if re.search(r"^\s*include_file$", sep[0]):
                         raise ValueError("nested include_file")
                 fdi_lines[:] = (
-                    fdi_lines[: n + 1] + new_lines + fdi_lines[n + 1 :]
+                    fdi_lines[: n + 1] + new_lines + fdi_lines[n + 1:]
                 )
                 include_files.append(new_path)
                 continue
@@ -195,7 +195,7 @@ def read_onetep_in(fd, **kwargs):
                 head = head.group(1).lower() if head else ""
                 conv = 1 if head == "ang" else units["Bohr"]
                 # Skip one line if head is True
-                to_read = fdi_lines[block_start + int(bool(head)) : n]
+                to_read = fdi_lines[block_start + int(bool(head)): n]
                 positions = np.loadtxt(to_read, usecols=(1, 2, 3))
                 positions *= conv
                 symbols = np.loadtxt(to_read, usecols=(0), dtype="str")
@@ -777,7 +777,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         while idx + n < len(fdo_lines):
             if not fdo_lines[idx + n].strip():
                 tmp_charges = np.loadtxt(
-                    fdo_lines[idx + offset : idx + n - 1], usecols=3
+                    fdo_lines[idx + offset: idx + n - 1], usecols=3
                 )
                 return np.reshape(tmp_charges, -1)
             n += 1
@@ -802,7 +802,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         fermi_levels = None
         while idx + n < len(fdo_lines):
             if "Fermi_level" in fdo_lines[idx + n]:
-                tmp = "\n".join(fdo_lines[idx + n : idx + n + 1])
+                tmp = "\n".join(fdo_lines[idx + n: idx + n + 1])
                 fermi_level = re.findall(freg, tmp)
                 fermi_levels = [
                     float(i) * units["Hartree"] for i in fermi_level
@@ -828,7 +828,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 r"\s*_?\s*CART\s*:?\s*([*#!].*)?$",
                 fdo_lines[idx + n],
             ):
-                cell = np.loadtxt(fdo_lines[idx + offset : idx + n])
+                cell = np.loadtxt(fdo_lines[idx + offset: idx + n])
                 return cell if offset == 2 else cell * units["Bohr"]
             n += 1
         return None
@@ -847,7 +847,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 else:
                     conv_factor = units["Bohr"]
                 tmp = np.loadtxt(
-                    fdo_lines[idx + offset : idx + n], dtype="str"
+                    fdo_lines[idx + offset: idx + n], dtype="str"
                 ).reshape(-1, 4)
                 els = np.char.array(tmp[:, 0])
                 if offset == 2:
@@ -874,7 +874,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
         while idx + n < len(fdo_lines):
             if re.search(r"(?i)^\s*\*\s*TOTAL:.*\*\s*$", fdo_lines[idx + n]):
                 tmp = np.loadtxt(
-                    fdo_lines[idx + 6 : idx + n - 2],
+                    fdo_lines[idx + 6: idx + n - 2],
                     dtype=np.float64,
                     usecols=(3, 4, 5),
                 )
@@ -891,7 +891,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 stop += 1
             if stop == 2:
                 tmp = np.loadtxt(
-                    fdo_lines[idx + offset : idx + n],
+                    fdo_lines[idx + offset: idx + n],
                     dtype="str",
                     usecols=(1, 3, 4, 5),
                 )
@@ -936,7 +936,7 @@ def read_onetep_out(fd, index=-1, improving=False, **kwargs):
                 # If no spin is present we return None
                 try:
                     tmp_spins = np.loadtxt(
-                        fdo_lines[idx + offset : idx + n - 1], usecols=4
+                        fdo_lines[idx + offset: idx + n - 1], usecols=4
                     )
                     return np.reshape(tmp_spins, -1)
                 except ValueError:
