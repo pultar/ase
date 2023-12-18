@@ -634,7 +634,7 @@ def test_read_espresso_ph_complex():
     assert results[(-0.25, 0.25, -0.25)]["atoms"].symbols == ["Al"]
 
     for i in np.arange(0.005, 0.055, 0.005):
-        assert results[(-0.25, 0.25, -0.25)]["ep_data"][i]
+        assert results[(-0.25, 0.25, -0.25)]["ep_data"][round(i, 3)]
 
     assert results[(-0.25, 0.25, -0.25)]["ep_data"][0.005] == {
         "dos": 1.339210,
