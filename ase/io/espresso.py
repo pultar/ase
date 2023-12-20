@@ -59,26 +59,6 @@ ibrav_error_message = (
     'of your system because the CELL_PARAMETERS are defined '
     'to a high level of precision.')
 
-
-class Namelist(OrderedDict):
-    """Case insensitive dict that emulates Fortran Namelists."""
-
-    def __contains__(self, key):
-        return super().__contains__(key.lower())
-
-    def __delitem__(self, key):
-        return super().__delitem__(key.lower())
-
-    def __getitem__(self, key):
-        return super().__getitem__(key.lower())
-
-    def __setitem__(self, key, value):
-        super().__setitem__(key.lower(), value)
-
-    def get(self, key, default=None):
-        return super().get(key.lower(), default)
-
-
 @reader
 def read_espresso_out(fileobj, index=slice(None), results_required=True):
     """Reads Quantum ESPRESSO output files.
@@ -2122,3 +2102,46 @@ def read_espresso_ph(fd):
             results[qpoint]["atoms"] = atoms
 
     return results
+
+def write_espresso_io(fd, input_data = None, binary = None, additional_fields = None) -> None:
+    """
+    Function which writes input for simple espresso binaries.
+    List of supported binaries are in the espresso_keys.py file.
+    Non-exhaustive list (to complete)
+
+    Note: "EOF" is appended at the end of the file.
+    (https://lists.quantum-espresso.org/pipermail/users/2020-November/046269.html)
+
+    Additional fields are written 'as is' in the input file. It is expected
+    to be a string or a list of strings.
+
+    Parameters
+    ----------
+    fd
+        The file descriptor of the input file.
+
+    kwargs
+        kwargs dictionary possibly containing the following keys:
+
+        - input_data: dict
+
+    Returns
+    -------
+    None
+    """
+    if binary:
+        input_data = construct_namelist(input_data, keys=ALL_KEYS[binary])
+    
+    pwi = namelist_to_string(input_data)[:-1]
+
+    fd.write("".join(pwi))
+
+    if additional_fields:
+        
+        if isinstance(additional_fields, list):
+            additional_fields = "\n".join(additional_fields)
+        
+        fd.write(additional_fields)
+
+    fd.write("EOF")
+        
