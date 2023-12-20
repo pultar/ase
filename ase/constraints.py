@@ -2472,22 +2472,40 @@ class FixExternals(FixConstraint):
 class Filter(FilterOld):
     @deprecated('Import Filter from ase.filters')
     def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``Filter`` from :mod:`ase.filters`
+        """
         super().__init__(*args, **kwargs)
 
 
 class StrainFilter(StrainFilterOld):
     @deprecated('Import StrainFilter from ase.filters')
     def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``StrainFilter`` from :mod:`ase.filters`
+        """
         super().__init__(*args, **kwargs)
 
 
 class UnitCellFilter(UnitCellFilterOld):
     @deprecated('Import UnitCellFilter from ase.filters')
     def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``UnitCellFilter`` from :mod:`ase.filters`
+        """
         super().__init__(*args, **kwargs)
 
 
 class ExpCellFilter(ExpCellFilterOld):
     @deprecated('Import ExpCellFilter from ase.filters')
     def __init__(self, *args, **kwargs):
+        """
+        .. deprecated:: 3.23.0
+            Import ``ExpCellFilter`` from :mod:`ase.filters`
+            or use :class:`~ase.filters.FrechetCellFilter` for better
+            convergence w.r.t. cell variables
+        """
         super().__init__(*args, **kwargs)
