@@ -31,6 +31,8 @@ from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import reader, writer
 
+from .espresso_keys import ALL_KEYS
+
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
 
@@ -1083,133 +1085,6 @@ def infix_float(text):
         text = text.replace(middle, f'{eval_no_bracket_expr(middle)}')
 
     return float(eval_no_bracket_expr(text))
-
-###
-# Input file writing
-###
-
-
-# Ordered and case insensitive
-KEYS = Namelist((
-    ('CONTROL', [
-        'calculation', 'title', 'verbosity', 'restart_mode', 'wf_collect',
-        'nstep', 'iprint', 'tstress', 'tprnfor', 'dt', 'outdir', 'wfcdir',
-        'prefix', 'lkpoint_dir', 'max_seconds', 'etot_conv_thr',
-        'forc_conv_thr', 'disk_io', 'pseudo_dir', 'tefield', 'dipfield',
-        'lelfield', 'nberrycyc', 'lorbm', 'lberry', 'gdir', 'nppstr',
-        'lfcpopt', 'monopole']),
-    ('SYSTEM', [
-        'ibrav', 'nat', 'ntyp', 'nbnd', 'tot_charge', 'tot_magnetization',
-        'starting_magnetization', 'ecutwfc', 'ecutrho', 'ecutfock', 'nr1',
-        'nr2', 'nr3', 'nr1s', 'nr2s', 'nr3s', 'nosym', 'nosym_evc', 'noinv',
-        'no_t_rev', 'force_symmorphic', 'use_all_frac', 'occupations',
-        'one_atom_occupations', 'starting_spin_angle', 'degauss', 'smearing',
-        'nspin', 'noncolin', 'ecfixed', 'qcutz', 'q2sigma', 'input_dft',
-        'exx_fraction', 'screening_parameter', 'exxdiv_treatment',
-        'x_gamma_extrapolation', 'ecutvcut', 'nqx1', 'nqx2', 'nqx3',
-        'lda_plus_u', 'lda_plus_u_kind', 'Hubbard_U', 'Hubbard_J0',
-        'Hubbard_alpha', 'Hubbard_beta', 'Hubbard_J',
-        'starting_ns_eigenvalue', 'U_projection_type', 'edir',
-        'emaxpos', 'eopreg', 'eamp', 'angle1', 'angle2',
-        'constrained_magnetization', 'fixed_magnetization', 'lambda',
-        'report', 'lspinorb', 'assume_isolated', 'esm_bc', 'esm_w',
-        'esm_efield', 'esm_nfit', 'fcp_mu', 'vdw_corr', 'london',
-        'london_s6', 'london_c6', 'london_rvdw', 'london_rcut',
-        'ts_vdw_econv_thr', 'ts_vdw_isolated', 'xdm', 'xdm_a1', 'xdm_a2',
-        'space_group', 'uniqueb', 'origin_choice', 'rhombohedral', 'zmon',
-        'realxz', 'block', 'block_1', 'block_2', 'block_height']),
-    ('ELECTRONS', [
-        'electron_maxstep', 'scf_must_converge', 'conv_thr', 'adaptive_thr',
-        'conv_thr_init', 'conv_thr_multi', 'mixing_mode', 'mixing_beta',
-        'mixing_ndim', 'mixing_fixed_ns', 'diagonalization', 'ortho_para',
-        'diago_thr_init', 'diago_cg_maxiter', 'diago_david_ndim',
-        'diago_full_acc', 'efield', 'efield_cart', 'efield_phase',
-        'startingpot', 'startingwfc', 'tqr']),
-    ('IONS', [
-        'ion_dynamics', 'ion_positions', 'pot_extrapolation',
-        'wfc_extrapolation', 'remove_rigid_rot', 'ion_temperature', 'tempw',
-        'tolp', 'delta_t', 'nraise', 'refold_pos', 'upscale', 'bfgs_ndim',
-        'trust_radius_max', 'trust_radius_min', 'trust_radius_ini', 'w_1',
-        'w_2']),
-    ('CELL', [
-        'cell_dynamics', 'press', 'wmass', 'cell_factor', 'press_conv_thr',
-        'cell_dofree'])))
-
-PH_KEYS = Namelist(
-    {
-        "INPUTPH": [
-            "amass",
-            "outdir",
-            "prefix",
-            "niter_ph",
-            "tr2_ph",
-            "alpha_mix",
-            "nmix_ph",
-            "verbosity",
-            "reduce_io",
-            "max_seconds",
-            "dftd3_hess",
-            "fildyn",
-            "fildrho",
-            "fildvscf",
-            "epsil",
-            "lrpa",
-            "lnoloc",
-            "trans",
-            "lraman",
-            "eth_rps",
-            "eth_ns",
-            "dek",
-            "recover",
-            "low_directory_check",
-            "only_init",
-            "qplot",
-            "q2d",
-            "q_in_band_form",
-            "electron_phonon",
-            "el_ph_nsigma",
-            "el_ph_sigma",
-            "ahc_dir",
-            "ahc_nbnd",
-            "ahc_nbndskip",
-            "skip_upperfan",
-            "lshift_q",
-            "zeu",
-            "zue",
-            "elop",
-            "fpol",
-            "ldisp",
-            "nogg",
-            "asr",
-            "ldiag",
-            "lqdir",
-            "search_sym",
-            "nq1",
-            "nq2",
-            "nq3",
-            "nk1",
-            "nk2",
-            "nk3",
-            "k1",
-            "k2",
-            "k3",
-            "diagonalization",
-            "read_dns_bare",
-            "ldvscf_interpolate",
-            "wpot_dir",
-            "do_long_range",
-            "do_charge_neutral",
-            "start_irr",
-            "last_irr",
-            "nat_todo",
-            "modenum",
-            "start_q",
-            "last_q",
-            "dvscf_star",
-            "drho_star",
-        ]
-    }
-)
 
 # Number of valence electrons in the pseudopotentials recommended by
 # http://materialscloud.org/sssp/. These are just used as a fallback for
