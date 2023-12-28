@@ -15,7 +15,7 @@ ESPRESSO.
 import operator as op
 import re
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 
@@ -31,7 +31,8 @@ from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import reader, writer
 
-from .espresso_keys import ALL_KEYS
+from .espresso_namelist.namelist import Namelist
+from .espresso_namelist.keys import ALL_KEYS
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
@@ -873,92 +874,6 @@ def str_to_value(string):
         return string.strip("'")
 
 
-def read_fortran_namelist(fileobj):
-    """Takes a fortran-namelist formatted file and returns nested
-    dictionaries of sections and key-value data, followed by a list
-    of lines of text that do not fit the specifications.
-
-    Behaviour is taken from Quantum ESPRESSO 5.3. Parses fairly
-    convoluted files the same way that QE should, but may not get
-    all the MANDATORY rules and edge cases for very non-standard files:
-        Ignores anything after '!' in a namelist, split pairs on ','
-        to include multiple key=values on a line, read values on section
-        start and end lines, section terminating character, '/', can appear
-        anywhere on a line.
-        All of these are ignored if the value is in 'quotes'.
-
-    Parameters
-    ----------
-    fileobj : file
-        An open file-like object.
-
-    Returns
-    -------
-    data : dict of dict
-        Dictionary for each section in the namelist with key = value
-        pairs of data.
-    card_lines : list of str
-        Any lines not used to create the data, assumed to belong to 'cards'
-        in the input file.
-
-    """
-    # Espresso requires the correct order
-    data = Namelist()
-    card_lines = []
-    in_namelist = False
-    section = 'none'  # can't be in a section without changing this
-
-    for line in fileobj:
-        # leading and trailing whitespace never needed
-        line = line.strip()
-        if line.startswith('&'):
-            # inside a namelist
-            section = line.split()[0][1:].lower()  # case insensitive
-            if section in data:
-                # Repeated sections are completely ignored.
-                # (Note that repeated keys overwrite within a section)
-                section = "_ignored"
-            data[section] = Namelist()
-            in_namelist = True
-        if not in_namelist and line:
-            # Stripped line is Truthy, so safe to index first character
-            if line[0] not in ('!', '#'):
-                card_lines.append(line)
-        if in_namelist:
-            # parse k, v from line:
-            key = []
-            value = None
-            in_quotes = False
-            for character in line:
-                if character == ',' and value is not None and not in_quotes:
-                    # finished value:
-                    data[section][''.join(key).strip()] = str_to_value(
-                        ''.join(value).strip())
-                    key = []
-                    value = None
-                elif character == '=' and value is None and not in_quotes:
-                    # start writing value
-                    value = []
-                elif character == "'":
-                    # only found in value anyway
-                    in_quotes = not in_quotes
-                    value.append("'")
-                elif character == '!' and not in_quotes:
-                    break
-                elif character == '/' and not in_quotes:
-                    in_namelist = False
-                    break
-                elif value is not None:
-                    value.append(character)
-                else:
-                    key.append(character)
-            if value is not None:
-                data[section][''.join(key).strip()] = str_to_value(
-                    ''.join(value).strip())
-
-    return data, card_lines
-
-
 def ffloat(string):
     """Parse float from fortran compatible float definitions.
 
@@ -1100,115 +1015,6 @@ SSSP_VALENCE = [
     15.0, 32.0, 19.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0]
 
 
-def construct_namelist(parameters=None, keys=None, warn=False, **kwargs):
-    """
-    Construct an ordered Namelist containing all the parameters given (as
-    a dictionary or kwargs). Keys will be inserted into their appropriate
-    section in the namelist and the dictionary may contain flat and nested
-    structures. Any kwargs that match input keys will be incorporated into
-    their correct section. All matches are case-insensitive, and returned
-    Namelist object is a case-insensitive dict.
-
-    If a key is not known to ase, but in a section within `parameters`,
-    it will be assumed that it was put there on purpose and included
-    in the output namelist. Anything not in a section will be ignored (set
-    `warn` to True to see ignored keys).
-
-    Keys with a dimension (e.g. Hubbard_U(1)) will be incorporated as-is
-    so the `i` should be made to match the output.
-
-    The priority of the keys is:
-        kwargs[key] > parameters[key] > parameters[section][key]
-    Only the highest priority item will be included.
-
-    Parameters
-    ----------
-    parameters: dict
-        Flat or nested set of input parameters.
-    keys: Namelist | dict
-        Namelist to use as a template for the output.
-    warn: bool
-        Enable warnings for unused keys.
-
-    Returns
-    -------
-    input_namelist: Namelist
-        pw.x compatible namelist of input parameters.
-
-    """
-
-    if keys is None:
-        keys = deepcopy(KEYS)
-    # Convert everything to Namelist early to make case-insensitive
-    if parameters is None:
-        parameters = Namelist()
-    else:
-        # Maximum one level of nested dict
-        # Don't modify in place
-        parameters_namelist = Namelist()
-        for key, value in parameters.items():
-            if isinstance(value, dict):
-                parameters_namelist[key] = Namelist(value)
-            else:
-                parameters_namelist[key] = value
-        parameters = parameters_namelist
-
-    # Just a dict
-    kwargs = Namelist(kwargs)
-
-    # Final parameter set
-    input_namelist = Namelist()
-
-    # Collect
-    for section in keys:
-        sec_list = Namelist()
-        for key in keys[section]:
-            # Check all three separately and pop them all so that
-            # we can check for missing values later
-            value = None
-
-            if key in parameters.get(section, {}):
-                value = parameters[section].pop(key)
-            if key in parameters:
-                value = parameters.pop(key)
-            if key in kwargs:
-                value = kwargs.pop(key)
-
-            if value is not None:
-                sec_list[key] = value
-
-            # Check if there is a key(i) version (no extra parsing)
-            for arg_key in list(parameters.get(section, {})):
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = parameters[section].pop(arg_key)
-            cp_parameters = parameters.copy()
-            for arg_key in cp_parameters:
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = parameters.pop(arg_key)
-            cp_kwargs = kwargs.copy()
-            for arg_key in cp_kwargs:
-                if arg_key.split('(')[0].strip().lower() == key.lower():
-                    sec_list[arg_key] = kwargs.pop(arg_key)
-
-        # Add to output
-        input_namelist[section] = sec_list
-
-    unused_keys = list(kwargs)
-    # pass anything else already in a section
-    for key, value in parameters.items():
-        if key in keys and isinstance(value, dict):
-            input_namelist[key].update(value)
-        elif isinstance(value, dict):
-            unused_keys.extend(list(value))
-        else:
-            unused_keys.append(key)
-
-    if warn and unused_keys:
-        warnings.warn('Unused keys: {}'.format(', '.join(unused_keys)))
-
-    return input_namelist
-
-
 def kspacing_to_grid(atoms, spacing, calculated_spacing=None):
     """
     Calculate the kpoint mesh that is equivalent to the given spacing
@@ -1294,39 +1100,6 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
     return astr
 
 
-def namelist_to_string(input_parameters):
-    """Format a Namelist object as a string for writing to a file.
-    Assume sections are ordered (taken care of in namelist construction)
-    and that repr converts to a QE readable representation (except bools)
-
-    Parameters
-    ----------
-    input_parameters : Namelist | dict
-        Expecting a nested dictionary of sections and key-value data.
-
-    Returns
-    -------
-    pwi : List[str]
-        Input line for the namelist
-    """
-    pwi = []
-    for section in input_parameters:
-        pwi.append(f'&{section.upper()}\n')
-        for key, value in input_parameters[section].items():
-            if value is True:
-                pwi.append(f'   {key:16} = .true.\n')
-            elif value is False:
-                pwi.append(f'   {key:16} = .false.\n')
-            elif isinstance(value, Path):
-                pwi.append(f'   {key:16} = "{value}"\n')
-            else:
-                # repr format to get quotes around strings
-                pwi.append(f'   {key:16} = {value!r}\n')
-        pwi.append('/\n')  # terminate section
-    pwi.append('\n')
-    return pwi
-
-
 @writer
 def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                       kspacing=None, kpts=None, koffset=(0, 0, 0),
@@ -1404,7 +1177,8 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # Convert to a namelist to make working with parameters much easier
     # Note that the name ``input_data`` is chosen to prevent clash with
     # ``parameters`` in Calculator objects
-    input_parameters = construct_namelist(input_data, **kwargs)
+    input_parameters = Namelist(input_data)
+    input_parameters.construct_namelist(**kwargs)
 
     # Convert ase constraints to QE constraints
     # Nx3 array of force multipliers matches what QE uses
@@ -1443,7 +1217,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # the same pseudopotential (e.g. an up and a down for AFM).
     # if any magmom are > 0 or nspin == 2 then use species labels.
     # Rememeber: magnetisation uses 1 based indexes
-    atomic_species = OrderedDict()
+    atomic_species = {}
     atomic_species_str = []
     atomic_positions_str = []
 
@@ -1511,7 +1285,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         input_parameters['system']['ibrav'] = 0
 
     # Construct input file into this
-    pwi = namelist_to_string(input_parameters)
+    pwi = input_parameters.to_string()
 
     # Pseudopotentials
     pwi.append('ATOMIC_SPECIES\n')
@@ -1611,14 +1385,16 @@ def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None) -> None:
     None
     """
 
-    input_data = construct_namelist(input_data, keys=PH_KEYS)
+    input_data = Namelist(input_data)
+    input_data.construct_namelist(keys=ALL_KEYS["ph"])
 
     input_ph = input_data["inputph"]
 
     inp_nat_todo = input_ph.get("nat_todo", 0)
     qpts = qpts or (0, 0, 0)
 
-    pwi = namelist_to_string(input_data)[:-1]
+    pwi = input_data.to_string()
+    
     fd.write("".join(pwi))
 
     qplot = input_ph.get("qplot", False)
@@ -1978,7 +1754,94 @@ def read_espresso_ph(fd):
 
     return results
 
-def write_espresso_io(fd, input_data = None, binary = None, additional_fields = None) -> None:
+
+def read_fortran_namelist(fileobj):
+    """Takes a fortran-namelist formatted file and returns nested
+    dictionaries of sections and key-value data, followed by a list
+    of lines of text that do not fit the specifications.
+
+    Behaviour is taken from Quantum ESPRESSO 5.3. Parses fairly
+    convoluted files the same way that QE should, but may not get
+    all the MANDATORY rules and edge cases for very non-standard files:
+        Ignores anything after '!' in a namelist, split pairs on ','
+        to include multiple key=values on a line, read values on section
+        start and end lines, section terminating character, '/', can appear
+        anywhere on a line.
+        All of these are ignored if the value is in 'quotes'.
+
+    Parameters
+    ----------
+    fileobj : file
+        An open file-like object.
+
+    Returns
+    -------
+    data : dict of dict
+        Dictionary for each section in the namelist with key = value
+        pairs of data.
+    card_lines : list of str
+        Any lines not used to create the data, assumed to belong to 'cards'
+        in the input file.
+
+    """
+    # Espresso requires the correct order
+    data = Namelist()
+    card_lines = []
+    in_namelist = False
+    section = 'none'  # can't be in a section without changing this
+
+    for line in fileobj:
+        # leading and trailing whitespace never needed
+        line = line.strip()
+        if line.startswith('&'):
+            # inside a namelist
+            section = line.split()[0][1:].lower()  # case insensitive
+            if section in data:
+                # Repeated sections are completely ignored.
+                # (Note that repeated keys overwrite within a section)
+                section = "_ignored"
+            data[section] = Namelist()
+            in_namelist = True
+        if not in_namelist and line:
+            # Stripped line is Truthy, so safe to index first character
+            if line[0] not in ('!', '#'):
+                card_lines.append(line)
+        if in_namelist:
+            # parse k, v from line:
+            key = []
+            value = None
+            in_quotes = False
+            for character in line:
+                if character == ',' and value is not None and not in_quotes:
+                    # finished value:
+                    data[section][''.join(key).strip()] = str_to_value(
+                        ''.join(value).strip())
+                    key = []
+                    value = None
+                elif character == '=' and value is None and not in_quotes:
+                    # start writing value
+                    value = []
+                elif character == "'":
+                    # only found in value anyway
+                    in_quotes = not in_quotes
+                    value.append("'")
+                elif character == '!' and not in_quotes:
+                    break
+                elif character == '/' and not in_quotes:
+                    in_namelist = False
+                    break
+                elif value is not None:
+                    value.append(character)
+                else:
+                    key.append(character)
+            if value is not None:
+                data[section][''.join(key).strip()] = str_to_value(
+                    ''.join(value).strip())
+
+    return data, card_lines
+
+
+def write_fortran_namelist(fd, input_data = None, binary = None, additional_fields = None, **kwargs) -> None:
     """
     Function which writes input for simple espresso binaries.
     List of supported binaries are in the espresso_keys.py file.
@@ -1994,27 +1857,29 @@ def write_espresso_io(fd, input_data = None, binary = None, additional_fields = 
     ----------
     fd
         The file descriptor of the input file.
-
-    kwargs
-        kwargs dictionary possibly containing the following keys:
-
-        - input_data: dict
+    input_data: dict
+        A flat or nested dictionary with input parameters for the binary.x
+    binary: str
+        Name of the binary
+    additional_fields: str | list[str]
+        Additional fields to be written at the end of the input file, after
+        the namelist. It is expected to be a string or a list of strings.
 
     Returns
     -------
     None
     """
-    if binary:
-        input_data = construct_namelist(input_data, keys=ALL_KEYS[binary])
-    
-    pwi = namelist_to_string(input_data)[:-1]
+    input_data = Namelist(input_data)
+    input_data.construct_namelist(keys = ALL_KEYS[binary], **kwargs)
+
+    pwi = input_data.to_string()
 
     fd.write("".join(pwi))
 
     if additional_fields:
-        
         if isinstance(additional_fields, list):
             additional_fields = "\n".join(additional_fields)
+            additional_fields += "\n"
         
         fd.write(additional_fields)
 
