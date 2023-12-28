@@ -1350,7 +1350,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     fd.write(''.join(pwi))
 
 
-def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None) -> None:
+def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None, **kwargs) -> None:
     """
     Function that write the input file for a ph.x calculation. Normal namelist
     cards are passed in the input_data dictionary. Which can be either nested
@@ -1386,7 +1386,7 @@ def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None) -> None:
     """
 
     input_data = Namelist(input_data)
-    input_data.construct_namelist(keys=ALL_KEYS["ph"])
+    input_data.construct_namelist(binary='ph', **kwargs)
 
     input_ph = input_data["inputph"]
 
@@ -1841,7 +1841,7 @@ def read_fortran_namelist(fileobj):
     return data, card_lines
 
 
-def write_fortran_namelist(fd, input_data = None, binary = None, additional_fields = None, **kwargs) -> None:
+def write_fortran_namelist(fd, input_data = None, binary = 'pw', additional_fields = None, **kwargs) -> None:
     """
     Function which writes input for simple espresso binaries.
     List of supported binaries are in the espresso_keys.py file.
@@ -1870,7 +1870,7 @@ def write_fortran_namelist(fd, input_data = None, binary = None, additional_fiel
     None
     """
     input_data = Namelist(input_data)
-    input_data.construct_namelist(keys = ALL_KEYS[binary], **kwargs)
+    input_data.construct_namelist(binary=binary, **kwargs)
 
     pwi = input_data.to_string()
 

@@ -1,8 +1,10 @@
 from io import StringIO
 
 import numpy as np
-from ase.io.espresso import (ALL_KEYS, construct_namelist, read_espresso_ph,
+from ase.io.espresso import (read_espresso_ph,
                              read_fortran_namelist, write_espresso_ph)
+
+from ase.io.espresso import Namelist
 
 
 def test_write_espresso_ph_single():
@@ -22,7 +24,8 @@ def test_write_espresso_ph_single():
 
     qpts = (0.5, -0.1, 1 / 3)
 
-    input_data = construct_namelist(input_data, ALL_KEYS['ph'])
+    input_data = Namelist(input_data)
+    input_data.construct_namelist(binary='ph')
 
     string_io = StringIO()
 
@@ -32,14 +35,14 @@ def test_write_espresso_ph_single():
         "&INPUTPH\n"
         "   amass(1)         = 1.0\n"
         "   amass(2)         = 2.0\n"
-        "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
-        "   tr2_ph           = 1e-12\n"
-        "   alpha_mix(1)     = 0.1\n"
-        "   trans            = .true.\n"
+        "   outdir           = '/path/to/outdir'\n"
         "   eth_rps          = 0.1\n"
         "   qplot            = .false.\n"
         "   ldisp            = .true.\n"
+        "   trans            = .true.\n"
+        "   tr2_ph           = 1e-12\n"
+        "   alpha_mix(1)     = 0.1\n"
         "   nat_todo         = 0\n"
         "/\n"
         "0.50000000 -0.10000000 0.33333333\n"
@@ -68,7 +71,8 @@ def test_write_espresso_ph_list():
 
     string_io = StringIO()
 
-    input_data = construct_namelist(input_data, ALL_KEYS['ph'])
+    input_data = Namelist(input_data)
+    input_data.construct_namelist(binary='ph')
 
     write_espresso_ph(string_io, input_data=input_data, qpts=qpts)
 
@@ -76,8 +80,8 @@ def test_write_espresso_ph_list():
         "&INPUTPH\n"
         "   amass(1)         = 1.0\n"
         "   amass(2)         = 2.0\n"
-        "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
+        "   outdir           = '/path/to/outdir'\n"
         "   eth_rps          = 0.1\n"
         "   qplot            = .true.\n"
         "   ldisp            = .true.\n"
@@ -110,7 +114,8 @@ def test_write_espresso_ph_nat_todo():
 
     qpts = [(0.5, -0.1, 1 / 3, 1), (0.1, 0.2, 0.3, -1), (0.2, 0.3, 0.4, 4)]
 
-    input_data = construct_namelist(input_data, ALL_KEYS['ph'])
+    input_data = Namelist(input_data)
+    input_data.construct_namelist(binary='ph')
 
     string_io = StringIO()
 
@@ -127,12 +132,12 @@ def test_write_espresso_ph_nat_todo():
         "&INPUTPH\n"
         "   amass(1)         = 1.0\n"
         "   amass(2)         = 2.0\n"
-        "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
+        "   outdir           = '/path/to/outdir'\n"
         "   eth_rps          = 0.1\n"
         "   qplot            = .true.\n"
-        "   ldisp            = .true.\n"
         "   nat_todo         = 3\n"
+        "   ldisp            = .true.\n"
         "/\n"
         "3\n"
         "0.50000000 -0.10000000 0.33333333 1\n"

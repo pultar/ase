@@ -34,7 +34,7 @@ class Namelist(dict):
         super().__delitem__(key.lower())
 
     def __repr__(self):
-        return "".join(self.to_string(self))
+        return "".join(self.to_string())
 
     @staticmethod
     def search_key(to_find, keys):
@@ -78,7 +78,7 @@ class Namelist(dict):
                     pwi.append(f"   {key:16} = {value!r}\n")
         return pwi
 
-    def construct_namelist(self, keys=None, warn=False, **kwargs):
+    def construct_namelist(self, binary = 'pw', warn=False, **kwargs):
         """
         Construct an ordered Namelist containing all the parameters given (as
         a dictionary or kwargs). Keys will be inserted into their appropriate
@@ -115,7 +115,7 @@ class Namelist(dict):
 
         """
 
-        keys = keys or self.KEYS
+        keys = ALL_KEYS[binary]
         keys = Namelist(keys)
 
         constructed_namelist = {section: self.pop(section, {}) for section in keys}
@@ -126,7 +126,7 @@ class Namelist(dict):
             value = self.pop(arg_key)
             if search:
                 section, key = search
-                constructed_namelist[section][key] = value
+                constructed_namelist[section][arg_key] = value
             else:
                 unused_keys.append(arg_key)
 
@@ -135,7 +135,7 @@ class Namelist(dict):
             value = kwargs.pop(arg_key)
             if search:
                 section, key = search
-                constructed_namelist[section][key] = value
+                constructed_namelist[section][arg_key] = value
             else:
                 unused_keys.append(arg_key)
 
