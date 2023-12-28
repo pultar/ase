@@ -62,6 +62,7 @@ ibrav_error_message = (
     'of your system because the CELL_PARAMETERS are defined '
     'to a high level of precision.')
 
+
 @reader
 def read_espresso_out(fileobj, index=slice(None), results_required=True):
     """Reads Quantum ESPRESSO output files.
@@ -1001,6 +1002,7 @@ def infix_float(text):
 
     return float(eval_no_bracket_expr(text))
 
+
 # Number of valence electrons in the pseudopotentials recommended by
 # http://materialscloud.org/sssp/. These are just used as a fallback for
 # calculating initial magetization values which are given as a fraction
@@ -1350,7 +1352,12 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     fd.write(''.join(pwi))
 
 
-def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None, **kwargs) -> None:
+def write_espresso_ph(
+        fd,
+        input_data=None,
+        qpts=None,
+        nat_todo=None,
+        **kwargs) -> None:
     """
     Function that write the input file for a ph.x calculation. Normal namelist
     cards are passed in the input_data dictionary. Which can be either nested
@@ -1394,7 +1401,7 @@ def write_espresso_ph(fd, input_data=None, qpts=None, nat_todo=None, **kwargs) -
     qpts = qpts or (0, 0, 0)
 
     pwi = input_data.to_string()
-    
+
     fd.write("".join(pwi))
 
     qplot = input_ph.get("qplot", False)
@@ -1841,7 +1848,12 @@ def read_fortran_namelist(fileobj):
     return data, card_lines
 
 
-def write_fortran_namelist(fd, input_data = None, binary = 'pw', additional_fields = None, **kwargs) -> None:
+def write_fortran_namelist(
+        fd,
+        input_data=None,
+        binary='pw',
+        additional_fields=None,
+        **kwargs) -> None:
     """
     Function which writes input for simple espresso binaries.
     List of supported binaries are in the espresso_keys.py file.
@@ -1880,8 +1892,7 @@ def write_fortran_namelist(fd, input_data = None, binary = 'pw', additional_fiel
         if isinstance(additional_fields, list):
             additional_fields = "\n".join(additional_fields)
             additional_fields += "\n"
-        
+
         fd.write(additional_fields)
 
     fd.write("EOF")
-        

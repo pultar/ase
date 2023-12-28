@@ -459,7 +459,12 @@ MOLECULARPDOS_KEYS = {
 }
 
 
-IMPORTEXPORT_BINARY_KEYS = {"INPUTPP": ["prefix", "outdir", "direction", "newoutdir"]}
+IMPORTEXPORT_BINARY_KEYS = {
+    "INPUTPP": [
+        "prefix",
+        "outdir",
+        "direction",
+        "newoutdir"]}
 
 
 OSCDFT_PP_KEYS = {"OSCDFT_PP_NAMELIST": ["prefix", "outdir"]}
@@ -584,7 +589,12 @@ TURBO_LANCZOS_KEYS = {
         "d0psi_rs",
         "lshift_d0psi",
     ],
-    "LR_POST": ["omeg", "epsil", "beta_gamma_z_prefix", "w_t_npol", "plot_type"],
+    "LR_POST": [
+        "omeg",
+        "epsil",
+        "beta_gamma_z_prefix",
+        "w_t_npol",
+        "plot_type"],
 }
 
 

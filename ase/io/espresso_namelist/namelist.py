@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .keys import ALL_KEYS
 
+
 class Namelist(dict):
 
     KEYS = ALL_KEYS["pw"]
@@ -78,7 +79,7 @@ class Namelist(dict):
                     pwi.append(f"   {key:16} = {value!r}\n")
         return pwi
 
-    def construct_namelist(self, binary = 'pw', warn=False, **kwargs):
+    def construct_namelist(self, binary='pw', warn=False, **kwargs):
         """
         Construct an ordered Namelist containing all the parameters given (as
         a dictionary or kwargs). Keys will be inserted into their appropriate
@@ -118,7 +119,10 @@ class Namelist(dict):
         keys = ALL_KEYS[binary]
         keys = Namelist(keys)
 
-        constructed_namelist = {section: self.pop(section, {}) for section in keys}
+        constructed_namelist = {
+            section: self.pop(
+                section,
+                {}) for section in keys}
 
         unused_keys = []
         for arg_key in list(self):
