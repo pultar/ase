@@ -68,9 +68,9 @@ class Namelist(UserDict):
     def to_nested(self, binary='pw', warn=False, **kwargs):
         keys = ALL_KEYS[binary]
 
-        constructed_namelist = Namelist({
+        constructed_namelist = {
             section: self.pop(section, {}) for section in keys
-        })
+        }
 
         unused_keys = []
         for arg_key in list(self):
@@ -95,4 +95,16 @@ class Namelist(UserDict):
                 UserWarning,
             )
 
-        super().update(constructed_namelist)
+        for section in constructed_namelist:
+            sorted_section = {}
+
+            def sorting_rule(item):
+                return keys[section].index(item.split('(')[0]) if item.split(
+                    '(')[0] in keys[section] else float('inf')
+
+            for key in sorted(constructed_namelist[section], key=sorting_rule):
+                sorted_section[key] = constructed_namelist[section][key]
+
+            constructed_namelist[section] = sorted_section
+
+        super().update(Namelist(constructed_namelist))

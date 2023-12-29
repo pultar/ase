@@ -411,7 +411,7 @@ def test_write_fortran_namelist_pw():
     assert result.endswith("EOF")
     fd.seek(0)
     reread = read_fortran_namelist(fd)
-    print(reread[0]['control']['calculation'])
+    assert reread != input_data
 
 
 def test_write_fortran_namelist_fields():
@@ -431,10 +431,10 @@ def test_write_fortran_namelist_fields():
         additional_fields="test1\ntest2\ntest3\n")
     result = fd.getvalue()
     expected = ("&INPUT\n"
+                "   flfrc            = 'silicon.fc'\n"
                 "   amass            = 28.0855\n"
                 "   niter_ph         = 50\n"
                 "   tr2_ph           = 1e-06\n"
-                "   flfrc            = 'silicon.fc'\n"
                 "/\n"
                 "test1\n"
                 "test2\n"
