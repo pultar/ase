@@ -29,7 +29,7 @@ from ase.dft.kpoints import kpoint_convert
 from ase.units import create_units
 from ase.utils import reader, writer
 
-from .espresso_namelist.namelist import Namelist
+from ase.io.espresso_namelist.namelist import Namelist
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
