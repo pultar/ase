@@ -4,7 +4,7 @@ from collections import UserDict
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from .keys import ALL_KEYS
+from ase.io.espresso_namelist.keys import ALL_KEYS
 
 
 class Namelist(UserDict):
