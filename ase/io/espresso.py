@@ -16,8 +16,6 @@ import operator as op
 import re
 import warnings
 from collections import defaultdict
-from copy import deepcopy
-from pathlib import Path
 
 import numpy as np
 
@@ -32,7 +30,6 @@ from ase.units import create_units
 from ase.utils import reader, writer
 
 from .espresso_namelist.namelist import Namelist
-from .espresso_namelist.keys import ALL_KEYS
 
 # Quantum ESPRESSO uses CODATA 2006 internally
 units = create_units('2006')
@@ -1180,7 +1177,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # Note that the name ``input_data`` is chosen to prevent clash with
     # ``parameters`` in Calculator objects
     input_parameters = Namelist(input_data)
-    input_parameters.construct_namelist(**kwargs)
+    input_parameters.to_nested('pw', **kwargs)
 
     # Convert ase constraints to QE constraints
     # Nx3 array of force multipliers matches what QE uses
@@ -1287,7 +1284,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         input_parameters['system']['ibrav'] = 0
 
     # Construct input file into this
-    pwi = input_parameters.to_string()
+    pwi = input_parameters.to_string(list_form=True)
 
     # Pseudopotentials
     pwi.append('ATOMIC_SPECIES\n')
@@ -1393,7 +1390,7 @@ def write_espresso_ph(
     """
 
     input_data = Namelist(input_data)
-    input_data.construct_namelist(binary='ph', **kwargs)
+    input_data.to_nested('ph', **kwargs)
 
     input_ph = input_data["inputph"]
 
@@ -1402,7 +1399,7 @@ def write_espresso_ph(
 
     pwi = input_data.to_string()
 
-    fd.write("".join(pwi))
+    fd.write(pwi)
 
     qplot = input_ph.get("qplot", False)
     ldisp = input_ph.get("ldisp", False)
@@ -1791,8 +1788,8 @@ def read_fortran_namelist(fileobj):
         in the input file.
 
     """
-    # Espresso requires the correct order
-    data = Namelist()
+
+    data = {}
     card_lines = []
     in_namelist = False
     section = 'none'  # can't be in a section without changing this
@@ -1807,7 +1804,7 @@ def read_fortran_namelist(fileobj):
                 # Repeated sections are completely ignored.
                 # (Note that repeated keys overwrite within a section)
                 section = "_ignored"
-            data[section] = Namelist()
+            data[section] = {}
             in_namelist = True
         if not in_namelist and line:
             # Stripped line is Truthy, so safe to index first character
@@ -1845,7 +1842,7 @@ def read_fortran_namelist(fileobj):
                 data[section][''.join(key).strip()] = str_to_value(
                     ''.join(value).strip())
 
-    return data, card_lines
+    return Namelist(data), card_lines
 
 
 def write_fortran_namelist(
@@ -1882,11 +1879,11 @@ def write_fortran_namelist(
     None
     """
     input_data = Namelist(input_data)
-    input_data.construct_namelist(binary=binary, **kwargs)
+    input_data.to_nested(binary, **kwargs)
 
     pwi = input_data.to_string()
 
-    fd.write("".join(pwi))
+    fd.write(pwi)
 
     if additional_fields:
         if isinstance(additional_fields, list):

@@ -1,5 +1,5 @@
-PW_KEYS = {
-    "CONTROL": [
+pw_keys = {
+    "control": [
         "calculation",
         "title",
         "verbosity",
@@ -30,7 +30,7 @@ PW_KEYS = {
         "lfcpopt",
         "monopole",
     ],
-    "SYSTEM": [
+    "system": [
         "ibrav",
         "nat",
         "ntyp",
@@ -74,13 +74,13 @@ PW_KEYS = {
         "nqx3",
         "lda_plus_u",
         "lda_plus_u_kind",
-        "Hubbard_U",
-        "Hubbard_J0",
-        "Hubbard_alpha",
-        "Hubbard_beta",
-        "Hubbard_J",
+        "hubbard_u",
+        "hubbard_j0",
+        "hubbard_alpha",
+        "hubbard_beta",
+        "hubbard_j",
         "starting_ns_eigenvalue",
-        "U_projection_type",
+        "u_projection_type",
         "edir",
         "emaxpos",
         "eopreg",
@@ -120,7 +120,7 @@ PW_KEYS = {
         "block_2",
         "block_height",
     ],
-    "ELECTRONS": [
+    "electrons": [
         "electron_maxstep",
         "scf_must_converge",
         "conv_thr",
@@ -144,7 +144,7 @@ PW_KEYS = {
         "startingwfc",
         "tqr",
     ],
-    "IONS": [
+    "ions": [
         "ion_dynamics",
         "ion_positions",
         "pot_extrapolation",
@@ -164,7 +164,7 @@ PW_KEYS = {
         "w_1",
         "w_2",
     ],
-    "CELL": [
+    "cell": [
         "cell_dynamics",
         "press",
         "wmass",
@@ -175,8 +175,8 @@ PW_KEYS = {
 }
 
 
-PH_KEYS = {
-    "INPUTPH": [
+ph_keys = {
+    "inputph": [
         "amass",
         "outdir",
         "prefix",
@@ -249,8 +249,8 @@ PH_KEYS = {
     ]
 }
 
-PP_KEYS = {
-    "INPUTPP": [
+pp_keys = {
+    "inputpp": [
         "prefix",
         "outdir",
         "filplot",
@@ -274,7 +274,7 @@ PP_KEYS = {
         "spin_component",
         "spin_component",
     ],
-    "PLOT": [
+    "plot": [
         "nfile",
         "filepp",
         "weight",
@@ -303,8 +303,8 @@ PP_KEYS = {
     ],
 }
 
-MATDYN_KEYS = {
-    "INPUT": [
+matdyn_keys = {
+    "input": [
         "flfrc",
         "asr",
         "huang",
@@ -343,8 +343,8 @@ MATDYN_KEYS = {
 }
 
 
-DYNMAT_KEYS = {
-    "INPUT": [
+dynmat_keys = {
+    "input": [
         "fildyn",
         "q",
         "amass",
@@ -364,10 +364,10 @@ DYNMAT_KEYS = {
 }
 
 
-Q2R_KEYS = {"INPUT": ["fildyn", "flfrc", "zasr", "loto_2d", "write_lr"]}
+q2r_keys = {"input": ["fildyn", "flfrc", "zasr", "loto_2d", "write_lr"]}
 
-DOS_KEYS = {
-    "&DOS": [
+dos_keys = {
+    "&dos": [
         "prefix",
         "outdir",
         "bz_sum",
@@ -381,8 +381,8 @@ DOS_KEYS = {
 }
 
 
-BANDS_KEYS = {
-    "&BANDS": [
+bands_keys = {
+    "&bands": [
         "prefix",
         "outdir",
         "filband",
@@ -399,8 +399,8 @@ BANDS_KEYS = {
 }
 
 
-BAND_INTERPOLATION_KEYS = {
-    "INTERPOLATION": [
+band_interpolation_keys = {
+    "interpolation": [
         "method",
         "miller_max",
         "check_periodicity",
@@ -410,8 +410,8 @@ BAND_INTERPOLATION_KEYS = {
 }
 
 
-PROJWFC_KEYS = {
-    "PROJWFC": [
+projwfc_keys = {
+    "projwfc": [
         "prefix",
         "outdir",
         "ngauss",
@@ -436,8 +436,8 @@ PROJWFC_KEYS = {
 }
 
 
-MOLECULARPDOS_KEYS = {
-    "INPUTMOPDOS": [
+molecularpdos_keys = {
+    "inputmopdos": [
         "xmlfile_full",
         "xmlfile_part",
         "i_atmwfc_beg_full",
@@ -459,18 +459,18 @@ MOLECULARPDOS_KEYS = {
 }
 
 
-IMPORTEXPORT_BINARY_KEYS = {
-    "INPUTPP": [
+importexport_binary_keys = {
+    "inputpp": [
         "prefix",
         "outdir",
         "direction",
         "newoutdir"]}
 
 
-OSCDFT_PP_KEYS = {"OSCDFT_PP_NAMELIST": ["prefix", "outdir"]}
+oscdft_pp_keys = {"oscdft_pp_namelist": ["prefix", "outdir"]}
 
-KCW_KEYS = {
-    "CONTROL": [
+kcw_keys = {
+    "control": [
         "prefix",
         "outdir",
         "calculation",
@@ -487,7 +487,7 @@ KCW_KEYS = {
         "mp3",
         "lrpa",
     ],
-    "WANNIER": [
+    "wannier": [
         "seedname",
         "num_wann_occ",
         "num_wann_emp",
@@ -495,13 +495,13 @@ KCW_KEYS = {
         "has_disentangle",
         "check_ks",
     ],
-    "SCREEN": ["niter", "nmix", "tr2", "i_orb", "eps_inf", "check_spread"],
-    "HAM": ["do_bands", "use_ws_distance", "write_hr", "on_site_only"],
+    "screen": ["niter", "nmix", "tr2", "i_orb", "eps_inf", "check_spread"],
+    "ham": ["do_bands", "use_ws_distance", "write_hr", "on_site_only"],
 }
 
 
-CPPP_KEYS = {
-    "INPUTPP": [
+cppp_keys = {
+    "inputpp": [
         "prefix",
         "fileout",
         "output",
@@ -521,8 +521,8 @@ CPPP_KEYS = {
 }
 
 
-PPACF_KEYS = {
-    "PPACF": [
+ppacf_keys = {
+    "ppacf": [
         "prefix",
         "outdir",
         "n_lambda",
@@ -536,8 +536,8 @@ PPACF_KEYS = {
 }
 
 
-ALL_CURRENTS_KEYS = {
-    "ENERGY_CURRENT": [
+all_currents_keys = {
+    "energy_current": [
         "delta_t",
         "file_output",
         "trajdir",
@@ -566,8 +566,8 @@ ALL_CURRENTS_KEYS = {
 }
 
 
-TURBO_LANCZOS_KEYS = {
-    "LR_INPUT": [
+turbo_lanczos_keys = {
+    "lr_input": [
         "prefix",
         "outdir",
         "wfcdir",
@@ -576,7 +576,7 @@ TURBO_LANCZOS_KEYS = {
         "lr_verbosity",
         "disk_io",
     ],
-    "LR_CONTROL": [
+    "lr_control": [
         "itermax",
         "ipol",
         "n_ipol",
@@ -589,7 +589,7 @@ TURBO_LANCZOS_KEYS = {
         "d0psi_rs",
         "lshift_d0psi",
     ],
-    "LR_POST": [
+    "lr_post": [
         "omeg",
         "epsil",
         "beta_gamma_z_prefix",
@@ -598,8 +598,8 @@ TURBO_LANCZOS_KEYS = {
 }
 
 
-TURBO_SPECTRUM_KEYS = {
-    "LR_INPUT": [
+turbo_spectrum_keys = {
+    "lr_input": [
         "prefix",
         "outdir",
         "verbosity",
@@ -620,8 +620,8 @@ TURBO_SPECTRUM_KEYS = {
 }
 
 
-TURBO_DAVIDSON_KEYS = {
-    "LR_INPUT": [
+turbo_davidson_keys = {
+    "lr_input": [
         "prefix",
         "outdir",
         "wfcdir",
@@ -630,7 +630,7 @@ TURBO_DAVIDSON_KEYS = {
         "lr_verbosity",
         "disk_io",
     ],
-    "LR_DAV": [
+    "lr_dav": [
         "num_eign",
         "num_init",
         "if_random_init",
@@ -659,8 +659,8 @@ TURBO_DAVIDSON_KEYS = {
 }
 
 
-TURBO_MAGNON_KEYS = {
-    "LR_INPUT": [
+turbo_magnon_keys = {
+    "lr_input": [
         "prefix",
         "outdir",
         "restart",
@@ -668,7 +668,7 @@ TURBO_MAGNON_KEYS = {
         "lr_verbosity",
         "disk_io",
     ],
-    "LR_CONTROL": [
+    "lr_control": [
         "itermax",
         "pseudo_hermitian",
         "approximation",
@@ -680,8 +680,8 @@ TURBO_MAGNON_KEYS = {
 }
 
 
-TURBO_EELS_KEYS = {
-    "LR_INPUT": [
+turbo_eels_keys = {
+    "lr_input": [
         "prefix",
         "outdir",
         "restart",
@@ -689,7 +689,7 @@ TURBO_EELS_KEYS = {
         "lr_verbosity",
         "disk_io",
     ],
-    "LR_CONTROL": [
+    "lr_control": [
         "approximation",
         "q1",
         "q2",
@@ -708,8 +708,8 @@ TURBO_EELS_KEYS = {
 }
 
 
-OSCDFT_ET_KEYS = {
-    "OSCDFT_ET_NAMELIST": [
+oscdft_et_keys = {
+    "oscdft_et_namelist": [
         "initial_prefix",
         "final_prefix",
         "initial_dir",
@@ -721,9 +721,9 @@ OSCDFT_ET_KEYS = {
 }
 
 
-PPRISM_KEYS = {
-    "INPUTPP": ["prefix", "outdir", "filplot", "lpunch"],
-    "PLOT": [
+pprism_keys = {
+    "inputpp": ["prefix", "outdir", "filplot", "lpunch"],
+    "plot": [
         "iflag",
         "output_format",
         "fileout",
@@ -753,8 +753,8 @@ PPRISM_KEYS = {
 }
 
 
-PWCOND_KEYS = {
-    "INPUTCOND": [
+pwcond_keys = {
+    "inputcond": [
         "outdir",
         "prefixt",
         "prefixl",
@@ -796,8 +796,8 @@ PWCOND_KEYS = {
 }
 
 
-PW2BGW_KEYS = {
-    "INPUT_PW2BGW": [
+pw2bgw_keys = {
+    "input_pw2bgw": [
         "prefix",
         "outdir",
         "real_or_complex",
@@ -838,8 +838,8 @@ PW2BGW_KEYS = {
 }
 
 
-BGW2PW_KEYS = {
-    "INPUT_BGW2PW": [
+bgw2pw_keys = {
+    "input_bgw2pw": [
         "prefix",
         "outdir",
         "real_or_complex",
@@ -852,8 +852,8 @@ BGW2PW_KEYS = {
 }
 
 
-HP_KEYS = {
-    "INPUTHP": [
+hp_keys = {
+    "inputhp": [
         "prefix",
         "outdir",
         "iverbosity",
@@ -887,8 +887,8 @@ HP_KEYS = {
 }
 
 
-CP_KEYS = {
-    "CONTROL": [
+cp_keys = {
+    "control": [
         "calculation",
         "title",
         "verbosity",
@@ -914,7 +914,7 @@ CP_KEYS = {
         "pseudo_dir",
         "tefield",
     ],
-    "SYSTEM": [
+    "system": [
         "ibrav",
         "celldm",
         "a",
@@ -958,7 +958,7 @@ CP_KEYS = {
         "ts_vdw_isolated",
         "assume_isolated",
     ],
-    "ELECTRONS": [
+    "electrons": [
         "electron_maxstep",
         "electron_dynamics",
         "conv_thr",
@@ -987,7 +987,7 @@ CP_KEYS = {
         "grease",
         "ampre",
     ],
-    "IONS": [
+    "ions": [
         "ion_dynamics",
         "ion_positions",
         "ion_velocities",
@@ -1009,7 +1009,7 @@ CP_KEYS = {
         "amprp",
         "greasp",
     ],
-    "CELL": [
+    "cell": [
         "cell_parameters",
         "cell_dynamics",
         "cell_velocities",
@@ -1023,7 +1023,7 @@ CP_KEYS = {
         "greash",
         "cell_dofree",
     ],
-    "PRESS_AI": [
+    "press_ai": [
         "abivol",
         "abisur",
         "p_ext",
@@ -1034,7 +1034,7 @@ CP_KEYS = {
         "rho_thr",
         "dthr",
     ],
-    "WANNIER": [
+    "wannier": [
         "wf_efield",
         "wf_switch",
         "sw_len",
@@ -1070,8 +1070,8 @@ CP_KEYS = {
 }
 
 
-LD1_KEYS = {
-    "INPUT": [
+ld1_keys = {
+    "input": [
         "title",
         "zed",
         "atom",
@@ -1106,7 +1106,7 @@ LD1_KEYS = {
         "rel_dist",
         "write_coulomb",
     ],
-    "INPUTP": [
+    "inputp": [
         "zval",
         "pseudotype",
         "file_pseudopw",
@@ -1135,7 +1135,7 @@ LD1_KEYS = {
         "file_wfcncgen",
         "file_wfcusgen",
     ],
-    "TEST": [
+    "test": [
         "nconf",
         "file_pseudo",
         "ecutmin",
@@ -1150,10 +1150,10 @@ LD1_KEYS = {
 }
 
 
-D3HESS_KEYS = {"INPUT": ["prefix", "outdir", "filhess", "step"]}
+d3hess_keys = {"input": ["prefix", "outdir", "filhess", "step"]}
 
-NEB_KEYS = {
-    "PATH": [
+neb_keys = {
+    "path": [
         "string_method",
         "restart_mode",
         "nstep_path",
@@ -1176,38 +1176,37 @@ NEB_KEYS = {
     ]
 }
 
-
 ALL_KEYS = {
-    "pw": PW_KEYS,
-    "ph": PH_KEYS,
-    "pp": PP_KEYS,
-    "matdyn": MATDYN_KEYS,
-    "dynmat": DYNMAT_KEYS,
-    "q2r": Q2R_KEYS,
-    "dos": DOS_KEYS,
-    "bands": BANDS_KEYS,
-    "bands_interpolation": BAND_INTERPOLATION_KEYS,
-    "projwfc": PROJWFC_KEYS,
-    "molecularpdos": MOLECULARPDOS_KEYS,
-    "importexport_binary": IMPORTEXPORT_BINARY_KEYS,
-    "oscdft_pp": OSCDFT_PP_KEYS,
-    "kcw": KCW_KEYS,
-    "cppp": CPPP_KEYS,
-    "ppacf": PPACF_KEYS,
-    "all_currents": ALL_CURRENTS_KEYS,
-    "turbo_lanczos": TURBO_LANCZOS_KEYS,
-    "turbo_spectrum": TURBO_SPECTRUM_KEYS,
-    "turbo_davidson": TURBO_DAVIDSON_KEYS,
-    "turbo_magnon": TURBO_MAGNON_KEYS,
-    "turbo_eels": TURBO_EELS_KEYS,
-    "oscdft_et": OSCDFT_ET_KEYS,
-    "pprism": PPRISM_KEYS,
-    "pwcond": PWCOND_KEYS,
-    "pw2bgw": PW2BGW_KEYS,
-    "bgw2pw": BGW2PW_KEYS,
-    "hp": HP_KEYS,
-    "cp": CP_KEYS,
-    "ld1": LD1_KEYS,
-    "d3hess": D3HESS_KEYS,
-    "neb": NEB_KEYS,
+    "pw": pw_keys,
+    "ph": ph_keys,
+    "pp": pp_keys,
+    "matdyn": matdyn_keys,
+    "dynmat": dynmat_keys,
+    "q2r": q2r_keys,
+    "dos": dos_keys,
+    "bands": bands_keys,
+    "bands_interpolation": band_interpolation_keys,
+    "projwfc": projwfc_keys,
+    "molecularpdos": molecularpdos_keys,
+    "importexport_binary": importexport_binary_keys,
+    "oscdft_pp": oscdft_pp_keys,
+    "kcw": kcw_keys,
+    "cppp": cppp_keys,
+    "ppacf": ppacf_keys,
+    "all_currents": all_currents_keys,
+    "turbo_lanczos": turbo_lanczos_keys,
+    "turbo_spectrum": turbo_spectrum_keys,
+    "turbo_davidson": turbo_davidson_keys,
+    "turbo_magnon": turbo_magnon_keys,
+    "turbo_eels": turbo_eels_keys,
+    "oscdft_et": oscdft_et_keys,
+    "pprism": pprism_keys,
+    "pwcond": pwcond_keys,
+    "pw2bgw": pw2bgw_keys,
+    "bgw2pw": bgw2pw_keys,
+    "hp": hp_keys,
+    "cp": cp_keys,
+    "ld1": ld1_keys,
+    "d3hess": d3hess_keys,
+    "neb": neb_keys,
 }

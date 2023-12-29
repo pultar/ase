@@ -25,7 +25,7 @@ def test_write_espresso_ph_single():
     qpts = (0.5, -0.1, 1 / 3)
 
     input_data = Namelist(input_data)
-    input_data.construct_namelist(binary='ph')
+    input_data.to_nested('ph')
 
     string_io = StringIO()
 
@@ -72,7 +72,7 @@ def test_write_espresso_ph_list():
     string_io = StringIO()
 
     input_data = Namelist(input_data)
-    input_data.construct_namelist(binary='ph')
+    input_data.to_nested('ph')
 
     write_espresso_ph(string_io, input_data=input_data, qpts=qpts)
 
@@ -115,7 +115,7 @@ def test_write_espresso_ph_nat_todo():
     qpts = [(0.5, -0.1, 1 / 3, 1), (0.1, 0.2, 0.3, -1), (0.2, 0.3, 0.4, 4)]
 
     input_data = Namelist(input_data)
-    input_data.construct_namelist(binary='ph')
+    input_data.to_nested('ph')
 
     string_io = StringIO()
 
