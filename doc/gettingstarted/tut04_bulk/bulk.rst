@@ -192,7 +192,7 @@ shortcuts to make this easier with common calculators)::
   calc = GPAW('groundstate.gpw')
   atoms = calc.get_atoms()
   path = atoms.cell.bandpath(<...>)
-  calc = calc.fixed_density(kpts=path, symmetry='off')
+  calc.set(kpts=path, symmetry='off', fixdensity=True)
 
 We have here told GPAW to use our bandpath for k-points, not to
 perform symmetry-reduction of the k-points, and to fix the electron
