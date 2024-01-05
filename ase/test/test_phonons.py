@@ -73,3 +73,27 @@ def test_get_band_structure_with_modes(testdir):
     assert band_structure is not None, "Band structure should not be None"
     assert modes is not None, "Modes should not be None"
     assert modes.ndim == 4, "Modes should be a 4-dimensional numpy array"
+
+
+def test_serialize_deserialize():
+    import tempfile
+    import os
+
+    atoms = bulk('Al', 'fcc', a=4.05)
+    N = 7
+
+    ph = Phonons(atoms, EMT(), supercell=(N, N, N), delta=0.05)
+
+    # Serialize the object to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        ph.serialize(tmp.name)
+        temp_file_name = tmp.name
+
+    deserialized_ph = Phonons.deserialize(temp_file_name)
+
+    for attr in dir(ph):
+        original_value = getattr(ph, attr, None)
+        deserialized_value = getattr(deserialized_ph, attr, None)
+        assert original_value == deserialized_value, f"Attribute {attr} does not match"
+
+    os.remove(temp_file_name)
