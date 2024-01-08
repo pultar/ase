@@ -105,5 +105,4 @@ def test_phonons_from_file(testdir):
     assert np.array_equal(dos.get_weights(), dos_read.get_weights())
 
     # Check that method can be called properly
-    if ph_read.write_modes([0.0, 0.0, 0.0]) == None:
-        assert True
+    assert ph_read.write_modes([0.0, 0.0, 0.0]) is None
