@@ -1,6 +1,6 @@
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
-from ase.phonons import Phonons
+from ase.phonons import Phonons, PhononsFromFile
 
 
 def check_set_atoms(atoms, set_atoms, expected_atoms):
@@ -75,25 +75,34 @@ def test_get_band_structure_with_modes(testdir):
     assert modes.ndim == 4, "Modes should be a 4-dimensional numpy array"
 
 
-def test_serialize_deserialize():
-    import tempfile
-    import os
+def test_phonons_from_file(testdir):
+    import numpy as np
 
     atoms = bulk('Al', 'fcc', a=4.05)
     N = 7
-
     ph = Phonons(atoms, EMT(), supercell=(N, N, N), delta=0.05)
+    ph.run()
+    ph.read(acoustic=True)
+    ph.clean()
 
-    # Serialize the object to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        ph.serialize(tmp.name)
-        temp_file_name = tmp.name
+    path = atoms.cell.bandpath('GXULGK', npoints=100)
+    bs = ph.get_band_structure(path, verbose=False)
+    dos = ph.get_dos()
 
-    deserialized_ph = Phonons.deserialize(temp_file_name)
+    savefile = "phonons.results.npz"
+    ph.save_run_results(filename=savefile)
 
-    for attr in dir(ph):
-        original_value = getattr(ph, attr, None)
-        deserialized_value = getattr(deserialized_ph, attr, None)
-        assert original_value == deserialized_value, f"Attribute {attr} does not match"
+    ph_read = PhononsFromFile(savefile, atoms=atoms)
+    bs_read = ph_read.get_band_structure(path, verbose=False)
+    dos_read = ph_read.get_dos()
 
-    os.remove(temp_file_name)
+    assert np.array_equal(ph_read.C_N, ph.C_N)
+    assert np.array_equal(ph_read.D_N, ph.D_N)
+    assert np.array_equal(ph_read.Z_avv, ph.Z_avv)
+    assert np.array_equal(ph_read.eps_vv, ph.eps_vv)
+
+    assert np.array_equal(bs.energies, bs_read.energies)
+    assert np.array_equal(dos.get_weights(), dos_read.get_weights())
+
+    # Check that method can be called properly
+    assert ph_read.write_modes([0.0, 0.0, 0.0]) == None
