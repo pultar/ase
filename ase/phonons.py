@@ -877,6 +877,7 @@ class Phonons(Displacement):
                                          mode_Nav).real)
                     traj.write(atoms)
 
+
     def save_run_results(self, filename="phonons.results.npz"):
         """Save results from :meth:`~ase.Phonons.run` then :meth:`~ase.Phonons.read` call.
 
