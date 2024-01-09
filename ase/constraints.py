@@ -2240,14 +2240,15 @@ class MirrorTorque(FixConstraint):
 class FixExternals(FixConstraint):
     """This constraint is used to constrain the principle axes of inertia as
     well as the center of mass of a chosen set of atoms. For a given set of N
-    atoms, where N>2, there exist 3N-6 internal degrees of freedom, and 6
-    external degrees of freedom. The internal degrees of freedom are defined in
-    terms of bond lengths, bond angles, and dihedral angles. Here, the six
-    external degrees of freedom are defined in terms of the three euler angles
-    formed between the principle axes and the coordinate system, as well as the
-    three components of the atoms’ center of mass. This class constrains a set
-    of atoms to travel in directions in which the principle axes of inertia, as
-    well as the center of mass are fixed.
+    atoms, where N>1, there exist 3N-6 internal degrees of freedom
+    (3N-5 if linear), and 6 external degrees of freedom (5 if linear). The
+    internal degrees of freedom are defined in terms of bond lengths, bond
+    angles, and dihedral angles. Here, the six external degrees of freedom are
+    defined in terms of the three angles formed between the principle axes and
+    the coordinate system, as well as the three components of the atoms’
+    center of mass. This class constrains a set of atoms to travel in directions
+    in which the principle axes of inertia, as well as the center of mass are
+    fixed.
     """
     def __init__(
             self,
@@ -2258,18 +2259,37 @@ class FixExternals(FixConstraint):
            An Atoms object
         indices : list
             A list of indices that will be constrained by FixExternals.
-            This list should contain 3 or more atoms.
-        fix_all_other_indices : bool
-            If True, all other atoms not in indices will be fixed.
+            This list should contain 2 or more atoms.
 
-            If False, all other atoms not in indices will not have an additional
-            constraint placed on them.
+        This constraint was originally envisioned to be used to constrain an
+        adsorbate on a metal surface, but can be used on any system as long as
+        the number of constrained atoms is greater than 1. Below is a
+        hypothetical example where methanol is placed over a fixed copper
+        surface and is relaxed using BFGS as the optimizer and EMT as the
+        calculator:
+
+        >>> from ase.calculators.emt import EMT
+        >>> from ase.optimize import BFGS
+        >>> from ase.constraints import FixExternals, FixAtoms
+        >>> from ase.build import fcc111, add_adsorbate, molecule
+
+        >>> atoms = fcc111(symbol='Cu', size=[3, 3, 4], a=3.58)
+        >>> adsorbate = molecule('CH3OH')
+        >>> add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
+        >>> atoms.center(vacuum=8.5, axis=2)
+        >>> indices = [36, 37, 38, 39, 40, 41]
+        >>> c1 = FixExternals(atoms, indices)
+        >>> c2 = FixAtoms(indices=[atom.index for atom in atoms if atom.symbol == 'Cu'])
+        >>> atoms.set_constraint([c1, c2])
+        >>> atoms.calc = EMT()
+        >>> dyn = BFGS(atoms)
+        >>> dyn.run(fmax=0.05)
         """
 
         self.atoms = atoms
         self.indices = indices
         if len(self.indices) < 2:
-            raise ValueError('Atoms object must contain 3 or more atoms')
+            raise ValueError('Atoms object must contain 2 or more atoms')
         inertia_info = atoms[self.indices].get_moments_of_inertia(vectors=True)
         self.principle_axes = np.transpose(inertia_info[1])
         self.center_of_mass = atoms[self.indices].get_center_of_mass()
@@ -2372,34 +2392,8 @@ class FixExternals(FixConstraint):
         it to a linear space that changes with each geometry step.
 
         adsorbate : ase.atoms.Atoms object
-
-        This constraint was originally envisioned to be used to constrain an
-        adsorbate on a metal surface, but can be used on any system as long as
-        the number of constrained atoms is greater than 2. Below is a
-        hypothetical example where methanol is placed over a fixed copper
-        surface and is relaxed using BFGS as the optimizer and EMT as the
-        calculator:
-
-        >>> from ase.calculators.emt import EMT
-        >>> from ase.optimize import BFGS
-        >>> from ase.constraints import FixExternals, FixAtoms
-        >>> from ase.build import fcc111, add_adsorbate, molecule
-
-        >>> atoms = fcc111(symbol='Cu', size=[3, 3, 4], a=3.58)
-        >>> adsorbate = molecule('CH3OH')
-        >>> add_adsorbate(atoms, adsorbate, 2.5, 'ontop')
-        >>> atoms.center(vacuum=8.5, axis=2)
-        >>> indices = [36, 37, 38, 39, 40, 41]
-        >>> c1 = FixExternals(atoms, indices)
-        >>> c2 = FixAtoms(indices=[atom.index for atom in\
-        >>>        atoms if atom.symbol == 'Cu'])
-        >>> atoms.set_constraint([c1, c2])
-        >>> atoms.calc = EMT()
-        >>> dyn = BFGS(atoms)
-        >>> dyn.run(fmax=0.05)
-
         """
-        h = 1e-8 * self.dx
+        h = 1e-4
         com = adsorbate.get_center_of_mass()
         pos = adsorbate.get_positions()
         pos_com = pos - com
@@ -2434,7 +2428,10 @@ class FixExternals(FixConstraint):
                 J[11, (3 * i + j)] = (ff_Ivec[2, 2] - fi_Ivec[2, 2]) / (2. * h)
 
         u, s, v = svd(J)
-        rcond = np.mean(s[5:7]) / s[0]
+        if len(self.indices) == 2:
+            rcond = np.mean(s[4:6]) / s[0]
+        else:
+            rcond = np.mean(s[5:7]) / s[0]
         J_sub = null_space(J, rcond)
         self.space_orthogonal_to_constraint = J_sub
         return J_sub
@@ -2443,13 +2440,31 @@ class FixExternals(FixConstraint):
         """First this function identifies the step that was taken in 3N space
         and projects out the portion of the step that was taken outside of the
         current steps constrained space. This step is critical when using second
-        order optimizers! The resulting structure is then rotated such
-        that its principle axes are identical to the initial structure."""
+        order optimizers! The identified step is then scaled down and rotated
+        such that its principle axes are identical to the initial structure and
+        the that the largest atomic displacement after rotation remains
+        smaller than 0.2 angstroms"""
         indx = self.indices
-        dpos = newpositions - atoms.positions
+        dpos = np.copy(newpositions - atoms.positions)
+        dpos_1D = dpos[indx, :].reshape(-1)
+        tmp_dpos = np.zeros(3 * len(indx))
+        for i in range(np.shape(self.space_orthogonal_to_constraint)[1]):
+            coef = np.copy(np.dot(
+                self.space_orthogonal_to_constraint[:, i], dpos_1D))
+            tmp_dpos += (coef * self.space_orthogonal_to_constraint[:, i])
+        dpos[indx, :] = tmp_dpos.reshape(-1, 3)
         ads_ref = atoms[indx].copy()
         ads_ref.positions += dpos[indx, :]
-        ads_ref.positions = self.adjust_rotation(ads_ref)
+        ads_ref.positions = np.copy(self.adjust_rotation(ads_ref))
+        maxstep = np.max(abs(ads_ref.positions - atoms.positions[indx]))
+        dxstep = 0
+        while maxstep >= 0.2:
+            scale = (0.2 / maxstep)
+            dxstep += 1
+            dpos *= scale
+            ads_ref.positions = np.copy(atoms.positions[indx] + dpos[indx])
+            ads_ref.positions = np.copy(self.adjust_rotation(ads_ref))
+            maxstep = np.max(abs(ads_ref.positions - atoms.positions[indx]))
         newpositions[indx] = ads_ref.positions
         self.dx = np.mean(abs(newpositions - atoms.positions))
         return newpositions

@@ -23,6 +23,8 @@ def setup_list_of_indices():
     indices.append([38, 36, 41, 40, 37])
     indices.append([36, 37, 38, 39])
     indices.append([37, 38, 39])
+    indices.append([37, 38])
+    indices.append([38, 39])
     return indices
 
 
