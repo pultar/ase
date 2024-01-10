@@ -127,8 +127,9 @@ def test_adjust_rotation():
         assert np.max(final_com - c.center_of_mass) == \
             pytest.approx(0, 1e-6)
 
-
-def test_subspace():
+a = 1
+#def test_subspace():
+if a == 1: 
     atoms, constraint_list, fix_surface = setup_fixexternals()
     for j in range(len(constraint_list)):
         tmp_atoms = atoms.copy()
@@ -143,7 +144,8 @@ def test_subspace():
                 tmpi_atoms[indices].get_moments_of_inertia(vectors=True)
             final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
             final_com = tmpi_atoms[indices].get_center_of_mass()
+            print(np.max(final_pa - c.principle_axes))
             assert np.max(final_pa - c.principle_axes) == \
-                pytest.approx(0, 1e-6)
+                pytest.approx(0, 1e-12)
             assert np.max(final_com - c.center_of_mass) == \
-                pytest.approx(0, 1e-6)
+                pytest.approx(0, 1e-12)
