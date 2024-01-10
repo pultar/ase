@@ -18,8 +18,7 @@ from ase.dft.kpoints import KPointsABC, RegularGridKPoints, WeightedKPoints
 from ase.outputs import Properties, all_outputs
 
 # Import KPoints for backward-compatibility; it used to be defined here
-# noqa: F401
-from ase.dft.kpoints import KPoints
+from ase.dft.kpoints import KPoints  # noqa: F401
 
 from .names import names
 

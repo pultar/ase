@@ -10,7 +10,8 @@ from itertools import cycle
 import os
 
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple
+from typing import Union  # noqa: F401
 
 from ase.calculators.calculator import (FileIOCalculator,
                                         kpts2kpts,
@@ -164,7 +165,7 @@ class Dftb(FileIOCalculator):
 
             for i, (x, y, z) in enumerate(supercell):
                 parameters[f'{initkey}empty{i:03d}'] = f'{x} {y} {z}'
-            key = f'{initkey}empty{i+1:03d}'
+            key = f'{initkey}empty{i + 1:03d}'
             parameters[key] = '{} {} {}'.format(*offset)
 
         else:

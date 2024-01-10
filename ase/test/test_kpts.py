@@ -9,6 +9,7 @@ from ase.dft.kpoints import bandpath
 def test_bandpath():
     print(bandpath('GX,GX', np.eye(3), 6))
 
+
 def test_weighted_kpts():
     kpts = np.random.random([4, 3])
     weights = np.random.random(4)
