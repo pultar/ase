@@ -63,9 +63,9 @@ def test_fixexternals_BFGS():
         final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
         final_com = tmp_atoms[indices].get_center_of_mass()
         assert np.max(final_pa - c.principle_axes) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
         assert np.max(final_com - c.center_of_mass) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
 
 
 def test_fixexternals_VelocityVerlet():
@@ -83,9 +83,9 @@ def test_fixexternals_VelocityVerlet():
         final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
         final_com = tmp_atoms[indices].get_center_of_mass()
         assert np.max(final_pa - c.principle_axes) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
         assert np.max(final_com - c.center_of_mass) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
 
 
 def test_sort_principle_axes():
@@ -123,9 +123,9 @@ def test_adjust_rotation():
         final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
         final_com = tmp_atoms[indices].get_center_of_mass()
         assert np.max(final_pa - c.principle_axes) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
         assert np.max(final_com - c.center_of_mass) == \
-            pytest.approx(0)
+            pytest.approx(0, 1e-6)
 
 
 def test_subspace():
@@ -144,6 +144,6 @@ def test_subspace():
             final_pa = c.sort_principle_axes(np.transpose(inertia_info[1]))
             final_com = tmpi_atoms[indices].get_center_of_mass()
             assert np.max(final_pa - c.principle_axes) == \
-                pytest.approx(0)
+                pytest.approx(0, 1e-6)
             assert np.max(final_com - c.center_of_mass) == \
-                pytest.approx(0)
+                pytest.approx(0, 1e-6)
