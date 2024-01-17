@@ -23,6 +23,7 @@ import ase.units
 from ase.constraints import FixAtoms, FixCartesian, FixedLine, FixedPlane
 from ase.geometry.cell import cellpar_to_cell
 from ase.io.castep.castep_reader import read_castep_castep
+from ase.io.formats import string2index
 from ase.parallel import paropen
 from ase.spacegroup import Spacegroup
 from ase.utils import atoms_to_spglib_cell, reader, writer
@@ -759,7 +760,8 @@ def read_castep_cell(fd, index=None, calculator_args={}, find_spg=False,
     return atoms
 
 
-def read_castep_geom(fd, index=None, units=units_CODATA2002):
+@reader
+def read_castep_geom(fd, index=-1, units=units_CODATA2002):
     """Reads a .geom file produced by the CASTEP GeometryOptimization task and
     returns an atoms  object.
     The information about total free energy and forces of each atom for every
@@ -777,6 +779,9 @@ def read_castep_geom(fd, index=None, units=units_CODATA2002):
     read_geom() that behaves like previous versions did.
     """
     from ase.calculators.singlepoint import SinglePointCalculator
+
+    if isinstance(index, str):
+        index = string2index(index)
 
     # fd is closed by embracing read() routine
     txt = fd.readlines()
@@ -816,10 +821,7 @@ def read_castep_geom(fd, index=None, units=units_CODATA2002):
                 atoms=image, energy=energy, forces=forces)
             traj.append(image)
 
-    if index is None:
-        return traj
-    else:
-        return traj[index]
+    return traj[index]
 
 
 def read_phonon(filename, index=None, read_vib_data=False,
@@ -951,14 +953,17 @@ def read_castep_phonon(fd, index=None, read_vib_data=False,
         return atoms
 
 
-def read_castep_md(fd, index=None, return_scalars=False,
-                   units=units_CODATA2002):
+@reader
+def read_castep_md(fd, index=-1, return_scalars=False, units=units_CODATA2002):
     """Reads a .md file written by a CASTEP MolecularDynamics task
     and returns the trajectory stored therein as a list of atoms object.
 
     Note that the index argument has no effect as of now."""
 
     from ase.calculators.singlepoint import SinglePointCalculator
+
+    if isinstance(index, str):
+        index = string2index(index)
 
     factors = {
         't': units['t0'] * 1E15,     # fs
@@ -1081,16 +1086,11 @@ def read_castep_md(fd, index=None, return_scalars=False,
             forces.append([factors['F'] * Fi for Fi in F])
             continue
 
-    if index is None:
-        pass
-    else:
-        traj = traj[index]
-
     if return_scalars:
         data = [times, energies, temperatures, pressures]
-        return data, traj
+        return data, traj[index]
     else:
-        return traj
+        return traj[index]
 
 
 # Routines that only the calculator requires
