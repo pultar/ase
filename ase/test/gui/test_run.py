@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +7,6 @@ import ase.gui.ui as ui
 from ase import Atoms
 from ase.build import bulk, molecule
 from ase.calculators.singlepoint import SinglePointCalculator
-from ase.gui.gui import GUI
 from ase.gui.i18n import _
 from ase.gui.quickinfo import info
 from ase.gui.save import save_dialog
@@ -24,18 +22,6 @@ def mock_gui_error(title, text=None):
     raise GUIError(title, text)
 
 
-@pytest.fixture
-def display():
-    pytest.importorskip('tkinter')
-    if not os.environ.get('DISPLAY'):
-        raise pytest.skip('no display')
-
-
-@pytest.fixture
-def gui(guifactory):
-    return guifactory(None)
-
-
 @pytest.fixture(autouse=True)
 def no_blocking_errors_monkeypatch(monkeypatch):
     # If there's an unexpected error in one of the tests, we don't
@@ -49,20 +35,6 @@ def no_blocking_errors_monkeypatch(monkeypatch):
     # ui.showinfo = mock_ugi_error
     # yield
     # ui.error = orig_ui_error
-
-
-@pytest.fixture
-def guifactory(display):
-    guis = []
-
-    def factory(images):
-        gui = GUI(images)
-        guis.append(gui)
-        return gui
-    yield factory
-
-    for gui in guis:
-        gui.exit()
 
 
 @pytest.fixture

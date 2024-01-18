@@ -89,10 +89,13 @@ class ColorWindow:
             mx = np.max(scalars)
             self.gui.colormode_data = None, mn, mx
 
+            # define all possible colormap names
             cmaps = ['default', 'old']
             try:
-                import pylab as plt
-                cmaps += [m for m in plt.cm.datad if not m.endswith("_r")]
+                import matplotlib as mpl
+                cmaps += [
+                    m.name for m in mpl.colormaps.values()
+                    if not m.name.endswith("_r")]
             except ImportError:
                 pass
             self.cmaps = [_('cmap:'),
@@ -137,13 +140,12 @@ class ColorWindow:
         self.toggle(mode)
 
     def update_colormap(self, cmap=None, N=26):
-        "Called by gui when colormap has changed"
+        "Called by gui object when colormap has changed"
         if cmap is None:
             cmap = self.cmaps[1].value
-        try:
+        if hasattr(self.cmaps[3], 'widget'):
             N = int(self.cmaps[3].value)
-        except AttributeError:
-            N = 26
+
         colorscale, mn, mx = self.gui.colormode_data
         if cmap == 'default':
             colorscale = ['#{0:02X}80{0:02X}'.format(int(red))
@@ -153,13 +155,16 @@ class ColorWindow:
                           for red in np.linspace(0, 230, N)]
         else:
             try:
-                import matplotlib
-                import pylab as plt
-                cmap = plt.cm.get_cmap(cmap)
+                import matplotlib.cm
+                mplcmap = matplotlib.cm.get_cmap(cmap)
                 colorscale = [matplotlib.colors.rgb2hex(c[:3]) for c in
-                              cmap(np.linspace(0, 1, N))]
+                              mplcmap(np.linspace(0, 1, N))]
             except (ImportError, ValueError) as e:
                 raise RuntimeError('Can not load colormap {}: {}'.format(
                     cmap, str(e)))
+
+        if hasattr(self.cmaps[1], 'widget'):
+            self.cmaps[1].value = cmap
+
         self.gui.colormode_data = colorscale, mn, mx
         self.gui.draw()
