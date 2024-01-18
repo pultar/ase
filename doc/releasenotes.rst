@@ -9,8 +9,12 @@ Git master branch
 
 :git:`master <>`.
 
+* Added :func:`~ase.io.castep.write_castep_geom` and
+  :func:`~ase.io.castep.write_castep_md` (:mr:`3229`)
+
 * Improved :func:`~ase.build.find_optimal_cell_shape` to be rotationally
   invariant (:mr:`3404`)
+
 * Added :class:`ase.md.bussi.Bussi` (:mr:`3350`)
 
 
