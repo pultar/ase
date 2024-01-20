@@ -475,13 +475,21 @@ class BaseCalculator(GetPropertiesMixin):
     # any other object (such as None).
     _deprecated = object()
 
-    def __init__(self, parameters=None, use_cache=True):
+    def __init__(self, parameters=None, use_cache=True, restart_from=None):
         if parameters is None:
             parameters = {}
 
         self.parameters = dict(parameters)
-        self.atoms = None
-        self.results = {}
+
+        try:
+            self.results = restart_from.calc.results.copy()
+            self.atoms = restart_from.copy()
+            self.restarted = True
+        except AttributeError:
+            self.results = {}
+            self.atoms = None
+            self.restarted = False
+
         self.use_cache = use_cache
 
     def calculate_properties(self, atoms, properties):

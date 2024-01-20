@@ -325,6 +325,7 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
         parameters=None,
         parallel_info=None,
         parallel=True,
+        restart_from=None,
     ):
         self.template = template
         if profile is None:
@@ -346,7 +347,7 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
         # Maybe we should allow directory to be a factory, so
         # calculators e.g. produce new directories on demand.
         self.directory = Path(directory)
-        super().__init__(parameters)
+        super().__init__(parameters, restart_from=restart_from)
 
     def set(self, *args, **kwargs):
         raise RuntimeError(
