@@ -108,7 +108,13 @@ class BaseProfile(ABC):
         ...
 
     def run(
-        self, directory, inputfile, outputfile, errorfile=None, append=False
+        self,
+        directory,
+        inputfile,
+        outputfile,
+        errorfile=None,
+        append=False,
+        timeout=None,
     ):
         """
         Run the command in the given directory.
@@ -125,6 +131,8 @@ class BaseProfile(ABC):
             the stderror file
         append: bool
             if True then use append mode
+        timeout: int
+            timeout in seconds
         """
 
         from subprocess import check_call
@@ -145,6 +153,7 @@ class BaseProfile(ABC):
                 stdout=fd_out,
                 stderr=fd_err,
                 env=os.environ,
+                timeout=timeout,
             )
 
     @abstractmethod
