@@ -1,11 +1,12 @@
 # flake8: noqa
-import numpy as np
+from pathlib import Path
 
-from ase.io import read
+import numpy as np
+import pytest
+
+from ase.io import ParseError, read
 from ase.io.aims import read_aims_results
 from ase.stress import full_3x3_to_voigt_6_stress
-from numpy.linalg import norm
-from pathlib import Path
 
 parent = Path(__file__).parents[2]
 
@@ -155,6 +156,7 @@ def test_parse_dfpt_dielectric(testdir):
 
     assert np.allclose(diel, diel_0)
 
+
 def test_parse_polarization(testdir):
     outfile = parent / "testdata/aims/polarization.out"
     atoms = read(outfile, format="aims-output")
@@ -164,3 +166,21 @@ def test_parse_polarization(testdir):
     polar_0 = [-51.045557E-03, -51.045557E-03, -51.458008E-03]
 
     assert np.allclose(polar, polar_0)
+
+
+def test_preamble_failed(testdir):
+    outfile = parent / "testdata/aims/preamble_fail.out"
+    with pytest.raises(ParseError, match='No SCF steps'):
+        read(outfile, format="aims-output")
+
+
+def test_numerical_stress(testdir):
+    outfile = parent / "testdata/aims/numerical_stress.out"
+
+    atoms = read(outfile, format="aims-output")
+    stress = atoms.get_stress()
+    stress_actual = [
+        0.00244726, 0.00267442, 0.00258710, 0.00000005, -0.00000026, -0.00000007
+    ]
+
+    assert np.allclose(stress, stress_actual)
