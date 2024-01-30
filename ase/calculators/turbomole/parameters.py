@@ -21,7 +21,8 @@ class TurbomoleParameters(dict):
         'lh07t-svwn', 'lh07s-svwn', 'lh12ct-ssirpw92', 'lh12ct-ssifpw92',
         'lh14t-calpbe', 'lh20t', 'b2-plyp', 'hse06', 'cam-b3lyp', 'wb97x', 
         'wb97x-d', 'wb97x-v', 'wb97m-v', 'm11', 'revm11', 'mn12-sx', 'mn15',
-        'm15-l', 'revtpss', 'pkzb', 'r2scan', 'r2scan-3c', 'scan-libxc'
+        'm15-l', 'revtpss', 'pkzb', 'r2scan', 'r2scan-3c', 'scan-libxc', 
+        'r2scan-libxc', 'r2scan-3c-libxc'
     ]
 
     # nested dictionary with parameters attributes
@@ -566,6 +567,10 @@ class TurbomoleParameters(dict):
                 raise NotImplementedError('Explicit basis set definition')
             if self['point group'] != 'c1':
                 raise NotImplementedError('Point group not impemeneted')
+
+        numforce_functionals = ['b97-d', 'pbeh-3c', 'b97-3c', 'revtpss','r2scan', 'r2scan-3c']
+        if self['density functional'] in numforce_functionals:
+            self.update({"numerical hessian": {'delta': 0.02}})
 
     def get_define_str(self, natoms):
         """construct a define string from the parameters dictionary"""
