@@ -66,8 +66,14 @@ class OnetepTemplate(CalculatorTemplate):
         self.append = append
 
     def execute(self, directory, profile):
-        profile.run(directory, self.input, self.output, self.error,
-                    self.append)
+        profile.run(
+            directory,
+            self.input,
+            directory /
+            self.output,
+            directory /
+            self.error,
+            self.append)
 
     def read_results(self, directory):
         output_path = directory / self.output
