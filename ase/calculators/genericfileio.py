@@ -393,11 +393,3 @@ class GenericFileIOCalculator(BaseCalculator, GetOutputsMixin):
             profile=self.profile,
             **socketkwargs,
         )
-
-    def todict(self):
-        dct = {}
-        for key, value in self.parameters.items():
-            if hasattr(value, "todict"):
-                value = value.todict()
-            dct[key] = value
-        return dct
