@@ -1,7 +1,10 @@
-import numpy as np
 from itertools import combinations_with_replacement
 from math import erf
+
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.spatial.distance import cdist
+
 from ase.neighborlist import NeighborList
 from ase.utils import pbc2pbc
 
@@ -10,13 +13,11 @@ class OFPComparator:
     """Implementation of comparison using Oganov's fingerprint (OFP)
     functions, based on:
 
-      * `Oganov, Valle, J. Chem. Phys. 130, 104504 (2009)`__
+      * :doi:`Oganov, Valle, J. Chem. Phys. 130, 104504 (2009)
+        <10.1063/1.3079326>`
 
-        __ https://doi.org/10.1063/1.3079326
-
-      * `Lyakhov, Oganov, Valle, Comp. Phys. Comm. 181 (2010) 1623-1632`__
-
-        __ https://doi.org/10.1016/j.cpc.2010.06.007
+      * :doi:`Lyakhov, Oganov, Valle, Comp. Phys. Comm. 181 (2010) 1623-1632
+        <10.1016/j.cpc.2010.06.007>`
 
     Parameters:
 
@@ -420,19 +421,20 @@ class OFPComparator:
         """ Returns a list with the local order for every atom,
         using the definition of local order from
         Lyakhov, Oganov, Valle, Comp. Phys. Comm. 181 (2010) 1623-1632
-        https://doi.org/10.1016/j.cpc.2010.06.007"""
+        :doi:`10.1016/j.cpc.2010.06.007`"""
 
         # total number of atoms:
         n_tot = sum([len(typedic[key]) for key in typedic])
+        inv_n_tot = 1. / n_tot
 
         local_orders = []
-        for index, fingerprints in individual_fingerprints.items():
+        for fingerprints in individual_fingerprints.values():
             local_order = 0
             for unique_type, fingerprint in fingerprints.items():
                 term = np.linalg.norm(fingerprint)**2
                 term *= self.binwidth
-                term *= (volume * 1. / n_tot)**3
-                term *= len(typedic[unique_type]) * 1. / n_tot
+                term *= (volume * inv_n_tot)**(-1 / 3)
+                term *= len(typedic[unique_type]) * inv_n_tot
                 local_order += term
             local_orders.append(np.sqrt(local_order))
 
@@ -490,11 +492,6 @@ class OFPComparator:
     def plot_fingerprints(self, a, prefix=''):
         """ Function for quickly plotting all the fingerprints.
         Prefix = a prefix you want to give to the resulting PNG file."""
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            Warning("Matplotlib could not be loaded - plotting won't work")
-            raise
 
         if 'fingerprints' in a.info and not self.recalculate:
             fp, typedic = a.info['fingerprints']
@@ -509,19 +506,13 @@ class OFPComparator:
 
         for key, val in fp.items():
             plt.plot(x, val)
-            suffix = "_fp_{0}_{1}.png".format(key[0], key[1])
+            suffix = f"_fp_{key[0]}_{key[1]}.png"
             plt.savefig(prefix + suffix)
             plt.clf()
 
     def plot_individual_fingerprints(self, a, prefix=''):
         """ Function for plotting all the individual fingerprints.
         Prefix = a prefix for the resulting PNG file."""
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            Warning("Matplotlib could not be loaded - plotting won't work")
-            raise
-
         if 'individual_fingerprints' in a.info and not self.recalculate:
             fp, typedic = a.info['individual_fingerprints']
         else:
@@ -536,6 +527,6 @@ class OFPComparator:
             for key2, val2 in val.items():
                 plt.plot(x, val2)
                 plt.ylim([-1, 10])
-                suffix = "_individual_fp_{0}_{1}.png".format(key, key2)
+                suffix = f"_individual_fp_{key}_{key2}.png"
                 plt.savefig(prefix + suffix)
                 plt.clf()

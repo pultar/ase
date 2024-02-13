@@ -1,11 +1,12 @@
-from ase.units import fs
+import numpy as np
+
 from ase.build import bulk
 from ase.md import Langevin
 from ase.md.fix import FixRotation
-from ase.utils import seterr
 from ase.md.velocitydistribution import (MaxwellBoltzmannDistribution,
                                          Stationary)
-import numpy as np
+from ase.units import fs
+from ase.utils import seterr
 
 
 def check_inertia(atoms):
@@ -18,7 +19,7 @@ def check_inertia(atoms):
     for a in v:
         if (abs(a[0]) < delta
             and abs(a[1]) < delta
-            and abs(abs(a[2]) - 1.0) < delta):
+                and abs(abs(a[2]) - 1.0) < delta):
 
             print("Vector along z:", a)
             n += 1
@@ -40,6 +41,7 @@ def test_fixrotation_asap(asap3):
                                      rng=rng)
         Stationary(atoms)
         check_inertia(atoms)
+        com = atoms.get_center_of_mass()
         with Langevin(
                 atoms,
                 timestep=20 * fs,
@@ -53,3 +55,7 @@ def test_fixrotation_asap(asap3):
             md.attach(fx)
             md.run(steps=1000)
         check_inertia(atoms)
+        # Test for issue #977 (it is free to do so here).
+        delta = np.linalg.norm(atoms.get_center_of_mass() - com)
+        print("Change in center of mass:", delta)
+        assert delta < 1e-9

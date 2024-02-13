@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase import Atom, Atoms
 from ase.io.nwchem import write_nwchem_in
 
@@ -24,11 +25,19 @@ def calculator_parameters():
 
 def test_echo(atomic_configuration, calculator_parameters, tmpdir):
     fd = tmpdir.mkdir('sub').join('nwchem.in')
-    write_nwchem_in(fd, atomic_configuration, echo=False, **calculator_parameters)
+    write_nwchem_in(
+        fd,
+        atomic_configuration,
+        echo=False,
+        **calculator_parameters)
     content = [line.rstrip('\n') for line in fd.readlines()]
     assert 'echo' not in content
 
-    write_nwchem_in(fd, atomic_configuration, echo=True, **calculator_parameters)
+    write_nwchem_in(
+        fd,
+        atomic_configuration,
+        echo=True,
+        **calculator_parameters)
     content = [line.rstrip('\n') for line in fd.readlines()]
     assert 'echo' in content
 

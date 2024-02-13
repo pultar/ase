@@ -1,25 +1,24 @@
-import pytest
-import numpy as np
 import sys
+from pathlib import Path
 from subprocess import check_call, check_output
 
-from pathlib import Path
+import numpy as np
+import pytest
 
 from ase.build import bulk
-from ase.io import read, write
-from ase.io.pickletrajectory import PickleTrajectory
 from ase.calculators.calculator import compare_atoms
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
+from ase.io import read, write
 from ase.io.bundletrajectory import (BundleTrajectory,
                                      print_bundletrajectory_info)
-
+from ase.io.pickletrajectory import PickleTrajectory
 
 trajname = 'pickletraj.traj'
 
 
 def test_raises():
-    with pytest.raises(DeprecationWarning):
+    with pytest.raises(RuntimeError):
         PickleTrajectory(trajname, 'w')
 
 
@@ -96,7 +95,7 @@ def test_append_pickle(images, trajfile):
 def test_append_bundle(images, bundletraj):
     traj = BundleTrajectory(bundletraj, mode='a')
     assert len(read(bundletraj, ':')) == 2
-    #write(bundletraj, images, append=True)
+    # write(bundletraj, images, append=True)
     for atoms in images:
         traj.write(atoms)
     traj.close()

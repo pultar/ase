@@ -46,9 +46,10 @@ def read_turbomole(fd):
                     myconstraints.append(False)
             else:
                 myconstraints.append(False)
-    
+
     # convert Turbomole ghost atom Q to X
-    atom_symbols = [element if element != 'Q' else 'X' for element in atom_symbols]
+    atom_symbols = [element if element !=
+                    'Q' else 'X' for element in atom_symbols]
     atoms = Atoms(positions=atoms_pos, symbols=atom_symbols, pbc=False)
     c = FixAtoms(mask=myconstraints)
     atoms.set_constraint(c)
@@ -91,7 +92,7 @@ def read_turbomole_gradient(fd, index=-1):
     del lines[end - 1 - start:]
 
     # Interpret $grad section
-    from ase import Atoms, Atom
+    from ase import Atom, Atoms
     from ase.calculators.singlepoint import SinglePointCalculator
     from ase.units import Bohr, Hartree
     images = []
@@ -156,7 +157,7 @@ def write_turbomole(fd, atoms):
 
     coord = atoms.get_positions()
     symbols = atoms.get_chemical_symbols()
-    
+
     # convert X to Q for Turbomole ghost atoms
     symbols = [element if element != 'X' else 'Q' for element in symbols]
 

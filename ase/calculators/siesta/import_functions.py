@@ -21,12 +21,12 @@ def read_rho(fname):
     # Read (but ignore) unit cell vectors
     x = fh.readReals('d')
     if len(x) != 3 * 3:
-        raise IOError('Failed to read cell vectors')
+        raise OSError('Failed to read cell vectors')
 
     # Read number of grid points and spin components
     x = fh.readInts()
     if len(x) != 4:
-        raise IOError('Failed to read grid size')
+        raise OSError('Failed to read grid size')
     gpts = x  # number of 'X', 'Y', 'Z', 'spin' gridpoints
 
     rho = np.zeros(gpts)
@@ -35,47 +35,13 @@ def read_rho(fname):
             for n2 in range(gpts[1]):
                 x = fh.readReals('f')
                 if len(x) != gpts[0]:
-                    raise IOError('Failed to read RHO[:,%i,%i,%i]' %
+                    raise OSError('Failed to read RHO[:,%i,%i,%i]' %
                                   (n2, n3, ispin))
                 rho[:, n2, n3, ispin] = x
 
     fh.close()
 
     return rho
-
-
-def get_valence_charge(filename):
-    """ Read the valence charge from '.psf'-file."""
-    with open(filename, 'r') as fd:
-        fd.readline()
-        fd.readline()
-        fd.readline()
-        valence = -float(fd.readline().split()[-1])
-
-    return valence
-
-
-def read_vca_synth_block(filename, species_number=None):
-    """ Read the SyntheticAtoms block from the output of the
-    'fractional' siesta utility.
-
-    Parameters:
-        - filename: String with '.synth' output from fractional.
-        - species_number: Optional argument to replace override the
-                          species number in the text block.
-
-    Returns: A string that can be inserted into the main '.fdf-file'.
-    """
-    with open(filename, 'r') as fd:
-        lines = fd.readlines()
-    lines = lines[1:-1]
-
-    if species_number is not None:
-        lines[0] = '%d\n' % species_number
-
-    block = ''.join(lines).strip()
-
-    return block
 
 
 def readHSX(fname):
@@ -104,7 +70,7 @@ def readHSX(fname):
 
     sum_row2nnzero = np.sum(row2nnzero)
     if (sum_row2nnzero != nonzero):
-        raise ValueError('sum_row2nnzero != nonzero: {0} != {1}'
+        raise ValueError('sum_row2nnzero != nonzero: {} != {}'
                          .format(sum_row2nnzero, nonzero))
 
     row2displ = np.zeros((norbitals), dtype=int)
@@ -114,7 +80,7 @@ def readHSX(fname):
 
     max_nonzero = np.max(row2nnzero)
     int_buff = np.zeros((max_nonzero), dtype=int)
-    sparse_ind2column = np.zeros((nonzero))
+    sparse_ind2column = np.zeros(nonzero)
 
     # Fill the rows for each index in *_sparse arrays
     for irow in range(norbitals):
@@ -210,7 +176,7 @@ def readPLD(fname, norbitals, natoms):
     orb2ao = np.zeros((norbitals), dtype=int)
     orb2uorb = np.zeros((norbitals), dtype=int)
     orb2occ = np.zeros((norbitals), dtype=float)
-    
+
     max_rcut = fh.readReals('d')
     for iorb in range(norbitals):
         dat = fh.readRecord()
@@ -224,7 +190,7 @@ def readPLD(fname, norbitals, natoms):
     atm2shift = np.zeros((natoms + 1), dtype=int)
     for iatm in range(natoms):
         atm2sp[iatm] = fh.readInts('i')[0]
-    
+
     for iatm in range(natoms + 1):
         atm2shift[iatm] = fh.readInts('i')[0]
 
@@ -233,7 +199,7 @@ def readPLD(fname, norbitals, natoms):
     for i in range(3):
         cell[i, :] = fh.readReals('d')
     nunit_cells = fh.readInts('i')
-    
+
     coord_sc = np.zeros((natoms, 3), dtype=float)
     for iatm in range(natoms):
         coord_sc[iatm, :] = fh.readReals('d')
@@ -317,17 +283,17 @@ def readWFSX(fname):
             if (ispin_in > nspin - 1):
                 msg = 'siesta_get_wfsx: err: ispin_in>nspin\n \
                      siesta_get_wfsx: ikpoint, ispin, ispin_in = \
-                     {0}  {1}  {2}\n siesta_get_wfsx'.format(ikpoint,
-                                                             ispin, ispin_in)
+                     {}  {}  {}\n siesta_get_wfsx'.format(ikpoint,
+                                                          ispin, ispin_in)
                 raise ValueError(msg)
-            
+
             norbitals_in = fh.readInts('i')[0]
             if (norbitals_in > norbitals):
                 msg = 'siesta_get_wfsx: err: norbitals_in>norbitals\n \
                      siesta_get_wfsx: ikpoint, norbitals, norbitals_in = \
-                     {0}  {1}  {2}\n siesta_get_wfsx'.format(ikpoint,
-                                                             norbitals,
-                                                             norbitals_in)
+                     {}  {}  {}\n siesta_get_wfsx'.format(ikpoint,
+                                                          norbitals,
+                                                          norbitals_in)
                 raise ValueError(msg)
 
             for imolecular_orb in range(norbitals_in):
@@ -336,7 +302,7 @@ def readWFSX(fname):
                     msg = """
                         siesta_get_wfsx: err: imolecular_orb_in>norbitals\n
                         siesta_get_wfsx: ikpoint, norbitals,
-                        imolecular_orb_in = {0}  {1}  {2}\n
+                        imolecular_orb_in = {}  {}  {}\n
                         siesta_get_wfsx""".format(ikpoint, norbitals,
                                                   imolecular_orb_in)
                     raise ValueError(msg)
@@ -354,7 +320,7 @@ def readWFSX(fname):
                 msg = 'siesta_get_wfsx: warn: .not. all(mo_spin_k_2_is_read)'
                 print('mo_spin_kpoint_2_is_read = ', mo_spin_kpoint_2_is_read)
                 raise ValueError(msg)
- 
+
     fh.close()
     return WFSX_tuple(nkpoints, nspin, norbitals, gamma, orb2atm,
                       orb2strspecies, orb2ao, orb2n, orb2strsym,

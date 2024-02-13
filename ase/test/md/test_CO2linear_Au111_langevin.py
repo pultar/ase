@@ -1,12 +1,14 @@
-from math import pi, cos, sin
+from math import cos, pi, sin
+
 import numpy as np
 import pytest
+
+import ase.units as units
 from ase import Atoms
+from ase.build import add_adsorbate, fcc111
 from ase.calculators.emt import EMT
 from ase.constraints import FixLinearTriatomic
 from ase.md import Langevin
-from ase.build import fcc111, add_adsorbate
-import ase.units as units
 
 
 @pytest.mark.slow
@@ -15,7 +17,7 @@ def test_CO2linear_Au111_langevin(testdir):
     triatomic molecules"""
 
     rng = np.random.RandomState(0)
-    eref = 3.133526
+    eref = 3.131939
 
     zpos = cos(134.3 / 2.0 * pi / 180.0) * 1.197
     xpos = sin(134.3 / 2.0 * pi / 180.0) * 1.19
@@ -56,5 +58,7 @@ def test_CO2linear_Au111_langevin(testdir):
 
     # If the energy differs from the reference energy
     # it is most probable that the redistribution of
-    # random forces in Langevin is not working properly
+    # random forces in Langevin is not working properly.
+    # This is an AWFUL test, as it depends on the randomness
+    # in Langevin being bitwise reproducible.
     assert abs(slab.get_potential_energy() - eref) < 1e-4

@@ -26,12 +26,12 @@ def surface(lattice, indices, layers, vacuum=None, tol=1e-10, periodic=False):
     indices = np.asarray(indices)
 
     if indices.shape != (3,) or not indices.any() or indices.dtype != int:
-        raise ValueError('%s is an invalid surface type' % indices)
+        raise ValueError(f'{indices} is an invalid surface type')
 
     if isinstance(lattice, str):
         lattice = bulk(lattice, cubic=True)
 
-    h, k, l = indices
+    h, k, l = indices  # noqa (E741, the variable l)
     h0, k0, l0 = (indices == 0)
 
     if h0 and k0 or h0 and l0 or k0 and l0:  # if two indices are zero

@@ -1,13 +1,15 @@
 # type: ignore
 """turbomole parameters management classes and functions"""
 
-import re
 import os
-from math import log10, floor
+import re
+from math import floor, log10
+
 import numpy as np
-from ase.units import Ha, Bohr
+
+from ase.calculators.turbomole.reader import parse_data_group, read_data_group
 from ase.calculators.turbomole.writer import add_data_group, delete_data_group
-from ase.calculators.turbomole.reader import read_data_group, parse_data_group
+from ase.units import Bohr, Ha
 
 
 class TurbomoleParameters(dict):
@@ -80,6 +82,15 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': True
         },
+        'default eht atomic orbitals': {
+            'comment': None,
+            'default': None,
+            'group': None,
+            'key': None,
+            'type': bool,
+            'units': None,
+            'updateable': False
+        },
         'density convergence': {
             'comment': None,
             'default': None,
@@ -124,6 +135,16 @@ class TurbomoleParameters(dict):
             'type': float,
             'units': 'eV',
             'updateable': True
+        },
+        'esp fit': {
+            'comment': 'ESP fit',
+            'default': None,
+            'group': 'esp_fit',
+            'key': 'esp_fit',
+            'type': str,
+            'units': None,
+            'updateable': True,
+            'non-define': True
         },
         'fermi annealing factor': {
             'comment': None,
@@ -263,6 +284,15 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': True
         },
+        'numerical hessian': {
+            'comment': 'NumForce will be used if dictionary exists',
+            'default': None,
+            'group': None,
+            'key': None,
+            'type': dict,
+            'units': None,
+            'updateable': True
+        },
         'point group': {
             'comment': 'only c1 supported',
             'default': 'c1',
@@ -342,6 +372,16 @@ class TurbomoleParameters(dict):
             'units': None,
             'updateable': False
         },
+        'transition vector': {
+            'comment': 'vector for transition state optimization',
+            'default': None,
+            'group': 'statpt',
+            'key': 'itrvec',
+            'type': int,
+            'units': None,
+            'updateable': True,
+            'non-define': True
+        },
         'uhf': {
             'comment': None,
             'default': None,
@@ -395,25 +435,6 @@ class TurbomoleParameters(dict):
             'type': bool,
             'units': None,
             'updateable': False
-        },
-        'numerical hessian': {
-            'comment': 'NumForce will be used if dictionary exists',
-            'default': None,
-            'group': None,
-            'key': None,
-            'type': dict,
-            'units': None,
-            'updateable': True
-        },
-        'esp fit': {
-            'comment': 'ESP fit',
-            'default': None,
-            'group': 'esp_fit',
-            'key': 'esp_fit',
-            'type': str,
-            'units': None,
-            'updateable': True,
-            'non-define': True
         }
     }
 
@@ -523,19 +544,20 @@ class TurbomoleParameters(dict):
 
     def update_no_define_parameters(self):
         """process key parameters that are not written with define"""
-        for p in list(self.keys()):
-            if p in list(self.parameter_no_define.keys()):
-                if self.parameter_no_define[p]:
-                    if self[p]:
-                        if p in list(self.parameter_mapping.keys()):
-                            fun = self.parameter_mapping[p]['to_control']
-                            val = fun(self[p])
-                        else:
-                            val = self[p]
-                        delete_data_group(self.parameter_group[p])
-                        add_data_group(self.parameter_group[p], str(val))
+        for p, v in self.items():
+            if p in self.parameter_no_define and self.parameter_no_define[p]:
+                if v:
+                    if p in self.parameter_mapping:
+                        fun = self.parameter_mapping[p]['to_control']
+                        val = fun(v)
                     else:
-                        delete_data_group(self.parameter_group[p])
+                        val = v
+                    delete_data_group(self.parameter_group[p])
+                    if self.parameter_group[p] != self.parameter_key[p]:
+                        val = '\n ' + self.parameter_key[p] + ' ' + str(val)
+                    add_data_group(self.parameter_group[p], str(val))
+                else:
+                    delete_data_group(self.parameter_group[p])
 
     def verify(self):
         """detect wrong or not implemented parameters"""
@@ -580,8 +602,8 @@ class TurbomoleParameters(dict):
 
         define_str_tpl = (
             '\n__title__\na coord\n__inter__\n'
-            'bb all __basis_set__\n*\neht\ny\n__charge_str____occ_str__'
-            '__single_atom_str____norb_str____dft_str____ri_str__'
+            'bb all __basis_set__\n*\neht\n__eht_aos_str__y\n__charge_str__'
+            '__occ_str____single_atom_str____norb_str____dft_str____ri_str__'
             '__scfiterlimit____fermi_str____damp_str____dsp_str__q\n'
         )
 
@@ -675,6 +697,8 @@ class TurbomoleParameters(dict):
                 damp_str += par_str + '\n'
             damp_str += '\n'
 
+        eht_aos_str = 'y\n' if params['default eht atomic orbitals'] else ''
+
         dsp_str = ''
         if params['dispersion correction']:
             # Adjusting dispersion corrections to specficic needs of particular functionals
@@ -707,6 +731,7 @@ class TurbomoleParameters(dict):
         define_str = re.sub('__scfiterlimit__', scfiter_str, define_str)
         define_str = re.sub('__fermi_str__', fermi_str, define_str)
         define_str = re.sub('__damp_str__', damp_str, define_str)
+        define_str = re.sub('__eht_aos_str__', eht_aos_str, define_str)
         define_str = re.sub('__dsp_str__', dsp_str, define_str)
 
         return define_str
@@ -766,7 +791,7 @@ class TurbomoleParameters(dict):
         # non-group or non-key parameters
 
         # per-element and per-atom basis sets not implemented in calculator
-        basis_sets = set([bs['nickname'] for bs in results['basis set']])
+        basis_sets = {bs['nickname'] for bs in results['basis set']}
         assert len(basis_sets) == 1
         params['basis set name'] = list(basis_sets)[0]
         params['basis set definition'] = results['basis set']
@@ -801,15 +826,17 @@ class TurbomoleParameters(dict):
 
         # task-related parameters
         if os.path.exists('job.start'):
-            with open('job.start', 'r') as log:
+            with open('job.start') as log:
                 lines = log.readlines()
             for line in lines:
                 if 'CRITERION FOR TOTAL SCF-ENERGY' in line:
-                    en = int(re.search(r'10\*{2}\(-(\d+)\)', line).group(1))
-                    params['energy convergence'] = en
+                    en = int(re.search(r'10\*{2}\((-\d+)\)', line).group(1))
+                    mapp = self.parameter_mapping['energy convergence']
+                    params['energy convergence'] = mapp['from_control'](10**en)
                 if 'CRITERION FOR MAXIMUM NORM OF SCF-ENERGY GRADIENT' in line:
-                    gr = int(re.search(r'10\*{2}\(-(\d+)\)', line).group(1))
-                    params['force convergence'] = gr
+                    gr = int(re.search(r'10\*{2}\((-\d+)\)', line).group(1))
+                    mapp = self.parameter_mapping['force convergence']
+                    params['force convergence'] = mapp['from_control'](10**gr)
                 if 'AN OPTIMIZATION WITH MAX' in line:
                     cy = int(re.search(r'MAX. (\d+) CYCLES', line).group(1))
                     params['geometry optimization iterations'] = cy
@@ -820,6 +847,6 @@ class TurbomoleParameters(dict):
         """update parameters after a restart"""
         nulst = [k for k in dct.keys() if not self.parameter_updateable[k]]
         if len(nulst) != 0:
-            raise ValueError('parameters '+str(nulst)+' cannot be changed')
+            raise ValueError(f'parameters {nulst} cannot be changed')
         self.update(dct)
         self.update_data_groups(dct)

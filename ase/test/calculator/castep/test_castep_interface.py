@@ -1,13 +1,15 @@
 import os
 
-import pytest
 import numpy as np
-import ase
+import pytest
+
+from ase.build import bulk
+from ase.dft.kpoints import BandPath
+from ase.calculators.castep import (Castep, CastepCell, CastepKeywords,
+                                    CastepOption, CastepParam, make_cell_dict,
+                                    make_param_dict)
 import ase.lattice.cubic
-from ase.calculators.castep import (Castep, CastepOption,
-                                    CastepParam, CastepCell,
-                                    make_cell_dict, make_param_dict,
-                                    CastepKeywords)
+
 
 calc = pytest.mark.calculator
 
@@ -28,10 +30,10 @@ def testing_keywords():
         kwtlow = kwt.lower().replace(' ', '_')
         if 'Boolean' in kwt:
             kwtlow = 'boolean'
-        kw = 'test_{0}_kw'.format(kwtlow)
+        kw = f'test_{kwtlow}_kw'
 
         kw_data[kw] = {
-            'docstring': 'A fake {0} keyword'.format(kwt),
+            'docstring': f'A fake {kwt} keyword',
             'option_type': kwt,
             'keyword': kw,
             'level': 'Dummy'
@@ -45,7 +47,7 @@ def testing_keywords():
     param_kw_data = {}
     for (pkw, t) in param_kws:
         param_kw_data[pkw] = {
-            'docstring': 'Dummy {0} keyword'.format(pkw),
+            'docstring': f'Dummy {pkw} keyword',
             'option_type': t,
             'keyword': pkw,
             'level': 'Dummy'
@@ -67,7 +69,7 @@ def testing_keywords():
     cell_kw_data = {}
     for (ckw, t) in cell_kws:
         cell_kw_data[ckw] = {
-            'docstring': 'Dummy {0} keyword'.format(ckw),
+            'docstring': f'Dummy {ckw} keyword',
             'option_type': t,
             'keyword': ckw,
             'level': 'Dummy'
@@ -88,7 +90,7 @@ def pspot_tmp_path(tmp_path):
     os.mkdir(path)
 
     for el in ase.data.chemical_symbols:
-        with open(os.path.join(path, '{0}_test.usp'.format(el)), 'w') as fd:
+        with open(os.path.join(path, f'{el}_test.usp'), 'w') as fd:
             fd.write('Fake PPOT')
 
     return path
@@ -121,7 +123,7 @@ def test_fundamental_params():
 
     # Test special parsers
     mock_cparam.continuation = 'default'
-    with pytest.warns(None):
+    with pytest.warns(UserWarning):
         mock_cparam.reuse = 'default'
     assert mock_cparam.reuse.value is None
 
@@ -188,9 +190,9 @@ He He_test.usp"""
     R = np.array([np.eye(3), -np.eye(3)])
     T = np.zeros((2, 3))
     ccell.symmetry_ops = (R, T)
-    strblock = [l.strip() for l in ccell.symmetry_ops.value.split('\n')
-                if l.strip() != '']
-    fblock = np.array([list(map(float, l.split())) for l in strblock])
+    strblock = [line.strip() for line in ccell.symmetry_ops.value.split('\n')
+                if line.strip() != '']
+    fblock = np.array([list(map(float, line.split())) for line in strblock])
 
     assert np.isclose(fblock[:3], R[0]).all()
     assert np.isclose(fblock[3], T[0]).all()
@@ -213,10 +215,10 @@ He He_test.usp"""
 
         pos_lines = []
         while len(lines) > 0:
-            l = lines.pop(0).strip()
-            if l == '':
+            line = lines.pop(0).strip()
+            if line == '':
                 continue
-            el, x, y, z = l.split()
+            el, x, y, z = line.split()
             xyz = np.array(list(map(float, [x, y, z])))
             pos_lines.append((el, xyz))
 
@@ -272,13 +274,14 @@ def test_castep_param(testing_keywords):
         cparam.basis_precision = 'FINE'
 
 
+@pytest.mark.skipif(os.name == "nt", reason="No symlink on Windows")
 def test_workflow(testing_calculator):
     c = testing_calculator
     c._build_missing_pspots = False
     c._find_pspots = True
     c.set_label('test_label_pspots')
 
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     atoms.calc = c
 
     # Should find them automatically!
@@ -319,14 +322,14 @@ def test_set_kpoints(testing_calculator):
     c.set_kpts({'size': (2, 2, 4), 'even': False})
     assert c.cell.kpoint_mp_grid.value == '3 3 5'
     assert c.cell.kpoint_mp_offset.value == '0.0 0.0 0.0'
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     atoms.calc = c
     c.set_kpts({'density': 10, 'gamma': False, 'even': None})
     assert c.cell.kpoint_mp_grid.value == '27 27 27'
     assert c.cell.kpoint_mp_offset.value == '0.018519 0.018519 0.018519'
     c.set_kpts({'spacing': (1 / (np.pi * 10)),
                 'gamma': False, 'even': True})
-    assert c.cell.kpoint_mp_grid.value == '28 28 28'
+    assert c.cell.kpoint_mp_grid.value == '14 14 14'
     assert c.cell.kpoint_mp_offset.value == '0.0 0.0 0.0'
 
 
@@ -334,9 +337,7 @@ def test_band_structure_setup(testing_calculator):
 
     c = testing_calculator
 
-    from ase.dft.kpoints import BandPath
-
-    atoms = ase.build.bulk('Ag')
+    atoms = bulk('Ag')
     bp = BandPath(cell=atoms.cell,
                   path='GX',
                   special_points={'G': [0, 0, 0], 'X': [0.5, 0, 0.5]})

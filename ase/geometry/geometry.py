@@ -8,11 +8,13 @@ different orientations.
 """
 
 import itertools
+
 import numpy as np
+
+from ase.cell import Cell
 from ase.geometry import complete_cell
 from ase.geometry.minkowski_reduction import minkowski_reduce
 from ase.utils import pbc2pbc
-from ase.cell import Cell
 
 
 def translate_pretty(fractional, pbc):
@@ -120,9 +122,12 @@ def get_layers(atoms, miller, tolerance=0.001):
     Example:
 
     >>> import numpy as np
+
     >>> from ase.spacegroup import crystal
+    >>> from ase.geometry.geometry import get_layers
+
     >>> atoms = crystal('Al', [(0,0,0)], spacegroup=225, cellpar=4.05)
-    >>> np.round(atoms.positions, decimals=5)
+    >>> np.round(atoms.positions, decimals=5)  # doctest: +NORMALIZE_WHITESPACE
     array([[ 0.   ,  0.   ,  0.   ],
            [ 0.   ,  2.025,  2.025],
            [ 2.025,  0.   ,  2.025],
@@ -279,7 +284,7 @@ def get_angles_derivatives(v0, v1, cell=None, pbc=None):
     sin_angles = np.sin(angles)
     cos_angles = np.cos(angles)
     if (sin_angles == 0.).any():  # identify singularities
-        raise ZeroDivisionError('Singularity for angle derivative')
+        raise ZeroDivisionError('Singularity for derivative of a planar angle')
 
     product = nv0 * nv1
     deriv_d0 = (-(v1 / product[:, np.newaxis]  # derivatives by atom 0
@@ -313,7 +318,7 @@ def get_dihedrals(v0, v1, v2, cell=None, pbc=None):
     undefined_v = np.all(v == 0.0, axis=1)
     undefined_w = np.all(w == 0.0, axis=1)
     if np.any([undefined_v, undefined_w]):
-        raise ZeroDivisionError('Undefined dihedral')
+        raise ZeroDivisionError('Undefined dihedral for planar inner angle')
 
     x = np.einsum('ij,ij->i', v, w)
     y = np.einsum('ij,ij->i', np.cross(v1n, v, axis=1), w)
@@ -344,7 +349,9 @@ def get_dihedrals_derivatives(v0, v1, v2, cell=None, pbc=None):
     cos_psi12 = np.einsum('ij,ij->i', v1, v2)
     sin_psi12 = np.sin(np.arccos(cos_psi12))
     if (sin_psi01 == 0.).any() or (sin_psi12 == 0.).any():
-        raise ZeroDivisionError('Undefined derivative for undefined dihedral')
+        msg = ('Undefined derivative for undefined dihedral with planar inner '
+               'angle')
+        raise ZeroDivisionError(msg)
 
     deriv_d0 = -normal_v01 / (nv0 * sin_psi01**2)[:, np.newaxis]  # by atom 0
     deriv_d3 = normal_v12 / (nv2 * sin_psi12**2)[:, np.newaxis]  # by atom 3
@@ -405,7 +412,7 @@ def get_distances_derivatives(v0, cell=None, pbc=None):
     (v0, ), (dists, ) = conditional_find_mic([v0], cell, pbc)
 
     if (dists <= 0.).any():  # identify singularities
-        raise ZeroDivisionError('Singularity for distance derivative')
+        raise ZeroDivisionError('Singularity for derivative of a zero distance')
 
     derivs_d0 = np.einsum('i,ij->ij', -1. / dists, v0)  # derivatives by atom 0
     derivs_d1 = -derivs_d0                              # derivatives by atom 1

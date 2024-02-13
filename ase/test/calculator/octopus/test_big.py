@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
+import pytest
 
-from ase.collections import g2
 from ase.build import bulk, graphene_nanoribbon
+from ase.collections import g2
 
 
 def calculate(factory, system, **kwargs):
@@ -35,8 +35,6 @@ def test_h2o(factory):
     assert pytest.approx(dipole, abs=0.02) == [0, 0, -0.37]
     dipole_err = np.abs(dipole - [0., 0., -0.37]).max()
     assert dipole_err < 0.02, dipole_err
-    #energy_err = abs(-463.5944954 - E)
-    #assert energy_err < 0.01, energy_err
 
 
 @calc('octopus', Spacing='0.2 * angstrom')
@@ -48,10 +46,6 @@ def test_o2(factory):
               BoxShape='parallelepiped',
               SpinComponents='spin_polarized',
               ExtraStates=2)
-    #magmom = calc.get_magnetic_moment()
-    #magmoms = calc.get_magnetic_moments()
-    #print('magmom', magmom)
-    #print('magmoms', magmoms)
 
 
 @calc('octopus')

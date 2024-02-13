@@ -2,7 +2,7 @@ import numpy as np
 
 from ase import units
 from ase.calculators.calculator import Calculator, all_changes
-from ase.calculators.tip3p import rOH, angleHOH, TIP3P
+from ase.calculators.tip3p import TIP3P, angleHOH, rOH
 
 __all__ = ['rOH', 'angleHOH', 'TIP4P', 'sigma0', 'epsilon0']
 
@@ -20,7 +20,7 @@ class TIP4P(TIP3P):
     def __init__(self, rc=7.0, width=1.0):
         """ TIP4P potential for water.
 
-        https://doi.org/10.1063/1.445869
+        :doi:`10.1063/1.445869`
 
         Requires an atoms object of OHH,OHH, ... sequence
         Correct TIP4P charges and LJ parameters set automatically.

@@ -1,7 +1,7 @@
 """A Module to safely parse/evaluate Mathematical Expressions"""
 import ast
-import operator as op
 import math
+import operator as op
 
 from numpy import int64
 
@@ -162,7 +162,10 @@ def _eval(node):
         elif node.id.lower() == "tau":
             return math.pi * 2.0
         else:
-            raise TypeError("Found a str in the expression, either param_dct/the expression has a mistake in the parameter names or attempting to parse non-mathematical code")
+            raise TypeError(
+                "Found a str in the expression, either param_dct/the "
+                "expression has a mistake in the parameter names or "
+                "attempting to parse non-mathematical code")
     else:
         raise TypeError(node)
 

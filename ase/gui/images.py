@@ -1,3 +1,4 @@
+import warnings
 from math import sqrt
 
 import numpy as np
@@ -6,12 +7,10 @@ from ase import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms
 from ase.data import covalent_radii
-from ase.gui.defaults import read_defaults
-from ase.io import read, write, string2index
-from ase.gui.i18n import _
 from ase.geometry import find_mic
-
-import warnings
+from ase.gui.defaults import read_defaults
+from ase.gui.i18n import _
+from ase.io import read, string2index, write
 
 
 class Images:
@@ -75,29 +74,6 @@ class Images:
         if filenames is None:
             filenames = [None] * nimages
         self.filenames = filenames
-
-        #  The below seems to be about "quaternions"
-        if 0:  # XXXXXXXXXXXXXXXXXXXX hasattr(images[0], 'get_shapes'):
-            self.Q = np.empty((nimages, self.natoms, 4))
-            self.shapes = images[0].get_shapes()
-            import os as os
-            if os.path.exists('shapes'):
-                shapesfile = open('shapes')
-                lines = shapesfile.readlines()
-                shapesfile.close()
-                if '#{type:(shape_x,shape_y,shape_z), .....,}' in lines[0]:
-                    shape = eval(lines[1])
-                    shapes = []
-                    for an in images[0].get_atomic_numbers():
-                        shapes.append(shape[an])
-                    self.shapes = np.array(shapes)
-                else:
-                    print('shape file has wrong format')
-            else:
-                print('no shapesfile found: default shapes were used!')
-
-        else:
-            self.shapes = None
 
         warning = False
 
@@ -176,7 +152,7 @@ class Images:
                     names.append('{}@{}'.format(
                         actual_filename, start + i * step))
                 else:
-                    names.append('{}@{}'.format(actual_filename, start))
+                    names.append(f'{actual_filename}@{start}')
 
         self.initialize(images, names)
 
@@ -276,7 +252,8 @@ class Images:
             images.append(atoms)
 
         if constraints_removed:
-            from ase.gui.ui import tk, showwarning
+            from ase.gui.ui import showwarning, tk
+
             # We must be able to show warning before the main GUI
             # has been created.  So we create a new window,
             # then show the warning, then destroy the window.

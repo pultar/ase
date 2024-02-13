@@ -1,12 +1,11 @@
-from ase.gui.i18n import _
-
 import ase.gui.ui as ui
+from ase.gui.i18n import _
 
 
 class Settings:
     def __init__(self, gui):
         self.gui = gui
-        win = ui.Window(_('Settings'))
+        win = ui.Window(_('Settings'), wmtype='utility')
 
         # Constraints
         win.add(_('Constraints:'))

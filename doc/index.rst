@@ -37,7 +37,7 @@ BFGS:   3  19:10:51    -31.492848     0.0023
 Supported :mod:`Calculators <ase.calculators>`
 ==============================================
 
-|abinit| |Asap| |Atomistica| |BigDFT| |CASTEP| |CP2K| |CRYSTAL| |deMon| |dftb|
+|ABACUS| |abinit| |Asap| |Atomistica| |BigDFT| |CASTEP| |CP2K| |CRYSTAL| |DeePMD-kit| |deMon| |dftb|
 |dftd4| |DFTK| |elk| |exciting| |EMT|
 |fhi-aims| |fleur| |gamess_us| |gpaw| |gromacs|
 |hotbit| |jdftx| |kim| |lammps| |nwchem|
@@ -62,6 +62,8 @@ Mopac_
 
 News
 ====
+
+* :ref:`ASE version 3.22.1 <releasenotes>` released (1 December 2021).
 
 * :ref:`ASE version 3.22.0 <releasenotes>` released (24 June 2021).
 
@@ -191,6 +193,9 @@ Contents
     faq
     ASE Workshop 2019 <workshop/workshop>
 
+.. |ABACUS| image:: static/abacus.png
+   :target: https://gitlab.com/1041176461/ase-abacus
+   :align: middle 
 .. |abinit| image:: static/abinit.png
    :target: ase/calculators/abinit.html
    :align: middle
@@ -212,6 +217,10 @@ Contents
 .. |CRYSTAL| image:: static/crystal.png
    :target: ase/calculators/crystal.html
    :align: middle
+.. |DeePMD-kit| image:: static/deepmd-kit.png
+   :target: https://github.com/deepmodeling/deepmd-kit
+   :align: middle
+   :height: 75px
 .. |deMon| image:: static/demon.png
    :target: ase/calculators/demon.html
    :align: middle

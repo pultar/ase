@@ -1,14 +1,14 @@
 import doctest
 import importlib
 
-import pytest
 import numpy as np
-
+import pytest
 
 module_names = """\
 ase.atoms
 ase.build.tools
 ase.cell
+ase.calculators.vasp.vasp
 ase.collections.collection
 ase.dft.kpoints
 ase.eos
@@ -24,8 +24,6 @@ ase.symbols
 """.split()
 
 
-# Fixme: The phasediagram module specifies unknown solver options
-@pytest.mark.filterwarnings('ignore:Unknown solver options')
 @pytest.mark.parametrize('modname', module_names)
 def test_doctest(testdir, modname):
     mod = importlib.import_module(modname)
