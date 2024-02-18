@@ -317,7 +317,9 @@ class CalculatorTemplate(ABC):
             )
 
             with open(directory / self.outputname, 'w') as out_fd:
-                return Popen(argv, stdout=out_fd, cwd=directory, env=os.environ)
+                return Popen(
+                    argv, stdout=out_fd, cwd=directory, env=os.environ
+                )
 
         return SocketIOCalculator(
             launch_client=launch, unixsocket=unixsocket, port=port

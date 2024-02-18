@@ -53,7 +53,7 @@ class OnetepProfile(BaseProfile):
 class OnetepTemplate(CalculatorTemplate):
     _label = 'onetep'
 
-    def __init__(self, append, timeout):
+    def __init__(self, append=False, timeout=None):
         super().__init__(
             'ONETEP',
             implemented_properties=[
