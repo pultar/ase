@@ -341,7 +341,7 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
         if errorcode:
             raise calculator.CalculationFailed(
                 (f'{self.name} in {self.directory} returned '
-                f'an error: {errorcode}')
+                 f'an error: {errorcode}')
             )
 
         # Read results from calculation
