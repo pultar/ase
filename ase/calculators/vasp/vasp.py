@@ -340,8 +340,8 @@ class Vasp(GenerateVaspInput, Calculator):  # type: ignore[misc]
 
         if errorcode:
             raise calculator.CalculationFailed(
-                '{} in {} returned an error: {:d}'.format(
-                    self.name, Path(self.directory).resolve(), errorcode))
+                (f'{self.name} in {self.directory} returned '
+                f'an error: {errorcode}')
 
         # Read results from calculation
         self.update_atoms(atoms)
