@@ -1188,7 +1188,8 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
 @writer
 def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                       kspacing=None, kpts=None, koffset=(0, 0, 0),
-                      crystal_coordinates=False, **kwargs):
+                      crystal_coordinates=False, additional_cards=None,
+                      **kwargs):
     """
     Create an input file for pw.x.
 
@@ -1432,6 +1433,13 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # DONE!
     fd.write(''.join(pwi))
+
+    if additional_cards:
+        if isinstance(additional_cards, list):
+            additional_cards = "\n".join(additional_cards)
+            additional_cards += "\n"
+
+        fd.write(additional_cards)
 
 
 def write_espresso_ph(
@@ -1837,7 +1845,7 @@ def read_espresso_ph(fileobj):
 
     for qnum, (past, future) in enumerate(zip(iblocks[:-1], iblocks[1:])):
         qpoint = _read_qpoints(past)
-        results[qpoint] = {"qnum": qnum + 1}
+        results[qnum + 1] = curr_result = {"qpoint": qpoint}
         for prop in properties:
             p = (past < output[prop]) & (output[prop] < future)
             selected = output[prop][p]
@@ -1845,20 +1853,20 @@ def read_espresso_ph(fileobj):
                 continue
             if unique[prop]:
                 idx = output[prop][p][-1]
-                results[qpoint][names[prop]] = properties[prop](idx)
+                curr_result[names[prop]] = properties[prop](idx)
             else:
                 tmp = {k + 1: 0 for k in range(len(selected))}
                 for k, idx in enumerate(selected):
                     tmp[k + 1] = properties[prop](idx)
-                results[qpoint][names[prop]] = tmp
-        alat = results[qpoint].pop("alat", 1.0)
-        atoms = results[qpoint].pop("positions", None)
-        cell = results[qpoint].pop("cell", np.eye(3))
+                curr_result[names[prop]] = tmp
+        alat = curr_result.pop("alat", 1.0)
+        atoms = curr_result.pop("positions", None)
+        cell = curr_result.pop("cell", np.eye(3))
         if atoms:
             atoms.positions *= alat * units["Bohr"]
             atoms.cell = cell * alat * units["Bohr"]
             atoms.wrap()
-            results[qpoint]["atoms"] = atoms
+            curr_result["atoms"] = atoms
 
     return results
 
