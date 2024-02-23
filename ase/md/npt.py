@@ -630,12 +630,12 @@ class NPT(MolecularDynamics):
         return m[1, 0] == m[2, 0] == m[2, 1] == 0.0
 
     @classmethod
-    def _islowertriangular(cls,m) -> bool:
+    def _islowertriangular(cls, m) -> bool:
         "Check that a matrix is on lower triangular form."
         return cls._isuppertriangular(m.T)
 
     @classmethod
-    def _istriangular(cls,m) -> bool:
+    def _istriangular(cls, m) -> bool:
         "Check that a matrix is on upper or lower triangular form."
         return cls._isuppertriangular(m) or cls._islowertriangular(m)
 
@@ -643,14 +643,13 @@ class NPT(MolecularDynamics):
         "Make an upper/lower triangular matrix from a 6-vector."
         if self._isuppertriangular(self.h):
             return np.array(((sixvector[0], sixvector[5], sixvector[4]),
-                         (0, sixvector[1], sixvector[3]),
-                         (0, 0, sixvector[2])))
+                (0, sixvector[1], sixvector[3]),
+                (0, 0, sixvector[2])))
 
         if self._islowertriangular(self.h):
             return np.array(((sixvector[0], 0, 0),
-                          (sixvector[5], sixvector[1], 0),
-                          (sixvector[4], sixvector[3], sixvector[2])))
-
+                (sixvector[5], sixvector[1], 0),
+                (sixvector[4], sixvector[3], sixvector[2])))
 
     def _calculateconstants(self):
         """(Re)calculate some constants when pfactor,
