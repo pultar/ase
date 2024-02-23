@@ -260,7 +260,6 @@ class NPT(MolecularDynamics):
         (see ``set_mask``), the strain rate along that direction will be
         maintained constantly.
         """
-        #if not (rate.shape == (3, 3) and self._isuppertriangular(rate)):
         if not (rate.shape == (3, 3) and self._triangular(rate)):
             raise ValueError("Strain rate must be an upper triangular matrix.")
         self.eta = rate
@@ -379,16 +378,10 @@ class NPT(MolecularDynamics):
         dt = self.dt
         atoms = self.atoms
         self.h = self._getbox()
-        #if not self._isuppertriangular(self.h):
         if not self._istriangular(self.h):
-            print("I am", self)
-            print("self.h:")
-            print(self.h)
-            # print("Min:", min((self.h[1, 0], self.h[2, 0], self.h[2, 1])))
-            # print("Max:", max((self.h[1, 0], self.h[2, 0], self.h[2, 1])))
             raise NotImplementedError(
-                "Can (so far) only operate on lists of atoms where the "
-                "computational box is an triangular matrix.")
+                f"Can (so far) only operate on lists of atoms where the "
+                f"computational box is a triangular matrix. {self.h}")
         self.inv_h = linalg.inv(self.h)
         # The contents of the q arrays should migrate in parallel simulations.
         # self._make_special_q_arrays()
@@ -636,15 +629,15 @@ class NPT(MolecularDynamics):
         "Check that a matrix is on upper triangular form."
         return m[1, 0] == m[2, 0] == m[2, 1] == 0.0
 
-    @staticmethod
-    def _islowertriangular(m) -> bool:
+    @classmethod
+    def _islowertriangular(cls,m) -> bool:
         "Check that a matrix is on lower triangular form."
-        return m[0, 1] == m[0, 2] == m[1, 2] == 0.0
+        return cls._isuppertriangular(m.T)
 
-    @staticmethod
-    def _istriangular(m) -> bool:
+    @classmethod
+    def _istriangular(cls,m) -> bool:
         "Check that a matrix is on upper or lower triangular form."
-        return (m[1, 0] == m[2, 0] == m[2, 1] == 0.0) or (m[0, 1] == m[0, 2] == m[1, 2] == 0.0)
+        return cls._isuppertriangular(m) or cls._islowertriangular(m)
 
     def _maketriangular(self, sixvector):
         "Make an upper/lower triangular matrix from a 6-vector."
