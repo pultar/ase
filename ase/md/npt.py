@@ -643,13 +643,13 @@ class NPT(MolecularDynamics):
         "Make an upper/lower triangular matrix from a 6-vector."
         if self._isuppertriangular(self.h):
             return np.array(((sixvector[0], sixvector[5], sixvector[4]),
-                (0, sixvector[1], sixvector[3]),
-                (0, 0, sixvector[2])))
+                            (0, sixvector[1], sixvector[3]),
+                            (0, 0, sixvector[2])))
 
         if self._islowertriangular(self.h):
             return np.array(((sixvector[0], 0, 0),
-                (sixvector[5], sixvector[1], 0),
-                (sixvector[4], sixvector[3], sixvector[2])))
+                            (sixvector[5], sixvector[1], 0),
+                            (sixvector[4], sixvector[3], sixvector[2])))
 
     def _calculateconstants(self):
         """(Re)calculate some constants when pfactor,
