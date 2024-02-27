@@ -1,6 +1,7 @@
+from abc import ABC, abstractmethod
 import re
 import warnings
-from typing import Dict
+from typing import Dict, List, Sequence
 
 import numpy as np
 
@@ -246,8 +247,82 @@ def normalize_special_points(special_points):
     return dct
 
 
+class KPointsABC(ABC):
+    @property
+    @abstractmethod
+    def kpts(self) -> np.ndarray:
+        ...
+
+    @abstractmethod
+    def todict(self) -> dict:
+        ...
+
+
+@jsonable('kpoints')
+class KPoints(KPointsABC):
+    def __init__(self, kpts=None):
+        if kpts is None:
+            kpts = np.zeros((1, 3))
+        self._kpts = kpts
+
+    # In this case we can read and write .kpts property, but ABC only promises
+    # that we can read so we need to use @property.
+    @property
+    def kpts(self) -> np.ndarray:
+        return self._kpts
+
+    @kpts.setter
+    def kpts(self, value: np.ndarray) -> None:
+        self._kpts = value
+
+    def todict(self):
+        return vars(self)
+
+
+class WeightedKPoints(KPoints):
+    def __init__(self,
+                 kpts: np.ndarray,
+                 weights: np.ndarray) -> None:
+        self.weights = weights
+        super().__init__(kpts=kpts)
+
+        if len(weights) != len(kpts):
+            raise IndexError("Number of weights does not match number of kpts")
+
+    @classmethod
+    def from_array(cls, data: np.ndarray) -> 'WeightedKPoints':
+        """Construct k-points with weights from Nx4 array"""
+        if data.shape[1] == 4:
+            return cls(kpts=data[:, :3], weights=data[:, 3])
+        else:
+            raise IndexError("Expected Nx4 array of k-points and weights")
+
+
+@jsonable('regulargridkpoints')
+class RegularGridKPoints(KPointsABC):
+    """k-points defined as divisions and offsets of reciprocal lattice vectors
+
+    The specification is stored and can be accessed using "size" and "offset"
+    attributes, while an explicit array of k-points can be obtained on-the-fly
+    by accessing the "kpts" property.
+
+    """
+    def __init__(self,
+                 size: List[int],
+                 offset: Sequence[float] = (0., 0., 0.)) -> None:
+        self.size = size
+        self.offset = list(offset)
+
+    @property
+    def kpts(self) -> np.ndarray:
+        return monkhorst_pack(self.size) + self.offset
+
+    def todict(self) -> dict:
+        return vars(self)
+
+
 @jsonable('bandpath')
-class BandPath:
+class BandPath(KPointsABC):
     """Represents a Brillouin zone path or bandpath.
 
     A band path has a unit cell, a path specification, special points,

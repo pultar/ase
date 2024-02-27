@@ -6,12 +6,17 @@ http://www.dftb.org/
 Initial development: markus.kaukonen@iki.fi
 """
 
+from itertools import cycle
 import os
 
 import numpy as np
+from typing import Tuple
+from typing import Union  # noqa: F401
 
-from ase.calculators.calculator import (FileIOCalculator, kpts2ndarray,
-                                        kpts2sizeandoffsets)
+from ase.calculators.calculator import (FileIOCalculator,
+                                        kpts2kpts,
+                                        WeightedKPoints)
+from ase.dft.kpoints import RegularGridKPoints
 from ase.units import Bohr, Hartree
 
 
@@ -141,65 +146,48 @@ class Dftb(FileIOCalculator):
 
         # kpoint stuff by ase
         self.kpts = kpts
-        self.kpts_coord = None
+        kpts_parameters, kpts_coord = self._get_kpts_parameters(kpts, atoms)
+        self.parameters.update(kpts_parameters)
+        self.kpts_coord = kpts_coord
 
-        if self.kpts is not None:
-            initkey = 'Hamiltonian_KPointsAndWeights'
-            mp_mesh = None
-            offsets = None
+    @staticmethod
+    def _get_kpts_parameters(kpts, atoms) -> Tuple[dict, np.ndarray]:
+        if kpts is None:
+            return ({}, np.array([]))
 
-            if isinstance(self.kpts, dict):
-                if 'path' in self.kpts:
-                    # kpts is path in Brillouin zone
-                    self.parameters[initkey + '_'] = 'Klines '
-                    self.kpts_coord = kpts2ndarray(self.kpts, atoms=atoms)
-                else:
-                    # kpts is (implicit) definition of
-                    # Monkhorst-Pack grid
-                    self.parameters[initkey + '_'] = 'SupercellFolding '
-                    mp_mesh, offsets = kpts2sizeandoffsets(atoms=atoms,
-                                                           **self.kpts)
-            elif np.array(self.kpts).ndim == 1:
-                # kpts is Monkhorst-Pack grid
-                self.parameters[initkey + '_'] = 'SupercellFolding '
-                mp_mesh = self.kpts
-                offsets = [0.] * 3
-            elif np.array(self.kpts).ndim == 2:
-                # kpts is (N x 3) list/array of k-point coordinates
-                # each will be given equal weight
-                self.parameters[initkey + '_'] = ''
-                self.kpts_coord = np.array(self.kpts)
+        parameters = {}
+        kpoints = kpts2kpts(kpts, atoms=atoms)
+
+        initkey = 'Hamiltonian_KPointsAndWeights_'
+
+        if isinstance(kpoints, RegularGridKPoints):
+            parameters[initkey] = 'SupercellFolding '
+            supercell = np.eye(3, dtype=int) * kpoints.size
+
+            # DFTB applies offsets relative to a mesh that is already
+            # Gamma-centered, so we compensate for this
+            size = np.asarray(kpoints.size)
+            offset = size * kpoints.offset + ((size % 2) == 0) * 0.5
+
+            for i, (x, y, z) in enumerate(supercell):
+                parameters[f'{initkey}empty{i:03d}'] = f'{x} {y} {z}'
+            key = f'{initkey}empty{i + 1:03d}'
+            parameters[key] = '{} {} {}'.format(*offset)
+
+        else:
+            if isinstance(kpoints, WeightedKPoints):
+                weights = kpoints.weights  # type: Union[cycle, np.ndarray]
             else:
-                raise ValueError('Illegal kpts definition:' + str(self.kpts))
+                weights = cycle([1.])
 
-            if mp_mesh is not None:
-                eps = 1e-10
-                for i in range(3):
-                    key = initkey + '_empty%03d' % i
-                    val = [mp_mesh[i] if j == i else 0 for j in range(3)]
-                    self.parameters[key] = ' '.join(map(str, val))
-                    offsets[i] *= mp_mesh[i]
-                    assert abs(offsets[i]) < eps or abs(offsets[i] - 0.5) < eps
-                    # DFTB+ uses a different offset convention, where
-                    # the k-point mesh is already Gamma-centered prior
-                    # to the addition of any offsets
-                    if mp_mesh[i] % 2 == 0:
-                        offsets[i] += 0.5
-                key = initkey + '_empty%03d' % 3
-                self.parameters[key] = ' '.join(map(str, offsets))
+            parameters[initkey] = ''
+            for i, ((x, y, z), weight) in enumerate(zip(kpoints.kpts, weights)):
+                parameters[f'{initkey}empty{i:09d}'] = f'{x} {y} {z} {weight}'
 
-            elif self.kpts_coord is not None:
-                for i, c in enumerate(self.kpts_coord):
-                    key = initkey + '_empty%09d' % i
-                    c_str = ' '.join(map(str, c))
-                    if 'Klines' in self.parameters[initkey + '_']:
-                        c_str = '1 ' + c_str
-                    else:
-                        c_str += ' 1.0'
-                    self.parameters[key] = c_str
+        return parameters, kpoints.kpts
 
     def write_dftb_in(self, outfile):
-        """ Write the innput file for the dftb+ calculation.
+        """ Write the input file for the dftb+ calculation.
             Geometry is taken always from the file 'geo_end.gen'.
         """
 
