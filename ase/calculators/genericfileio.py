@@ -114,7 +114,7 @@ class BaseProfile(ABC):
         outputfile: str,
         errorfile: Optional[str] = None,
         append: bool = False,
-        timeout: "int | None" = None,
+        timeout: Optional[int] = None,
     ) -> None:
         """
         Run the command in the given directory.
