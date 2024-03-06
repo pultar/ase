@@ -29,31 +29,35 @@ class Conquest(FileIOCalculator):
         'self_consistent': True,
         'scf_tolerance': 1.0e-6,
         'nspin': 1,
-        'general.pseudopotentialtype': 'Hamann',            
+        'general.pseudopotentialtype': 'Hamann',
         'io.iprint': 1,
         'io.fractionalatomiccoords': True,
         'sc.maxiters': 50,
         'diag.smearingtype': 1,
-        'diag.kt': 0.001,        
+        'diag.kt': 0.001,
         'atommove.typeofrun': 'static',
         'dm.solutionmethod': 'diagon',
         'io.writeouttoasefile': True}
 
     def __init__(self, restart=None, label=None, atoms=None, basis={},
-        **kwargs):
+        	**kwargs):
         """
         ASE-Calculator class for Conquest.
 
-        Parameters        
+        Parameters
         ==========
         atoms: ASE atoms object
-            (mandatory) an atoms object constructed either via ASE or read from an input.
+            (mandatory) an atoms object constructed either via ASE or 
+	    read from an input.
         basis: dict
-            (mandatory) a dictionary specifying the pseudopotential/basis files.
+            (mandatory) a dictionary specifying the pseudopotential/basis
+            files.
         directory: str
-            directory used for storing input/output and calculation files (default None).
+            directory used for storing input/output and calculation files
+            (default None).
         label: str
-            basename for working files (only used by ASE, eg. NEB ; default None).
+            basename for working files (only used by ASE, eg. NEB)
+            (default None)
         kpts: list or tuple 
             k-points grid (default None).
         grid_cutoff: float
@@ -149,8 +153,8 @@ class Conquest(FileIOCalculator):
                         conquest_warn("{} xc {} enforced for basis \
                                       generation".format(species_single,
                                       ion_xc))
-                         
-                        #basis_single[species_single]['xc'] = ion_xc
+
+                        # basis_single[species_single]['xc'] = ion_xc
 
                 print('\nmake_ion_files input:')
                 print(species_single, basis_single[species_single])
@@ -178,7 +182,7 @@ class Conquest(FileIOCalculator):
             fname = dname
 
         if ("directory" in basis[species]):
-            dname_ = basis[species]["directory"]+'/'
+            dname_ = basis[species]["directory"] + '/'
         else:
             dname_ = '.'
 
@@ -194,7 +198,7 @@ class Conquest(FileIOCalculator):
         if (species not in basis):
             basis[species] = {}
 
-        ion_file_path_    = ion_dir.joinpath(Path(dname_ + fname))
+        ion_file_path_ = ion_dir.joinpath(Path(dname_ + fname))
         ion_file_path_lib = ion_dir.joinpath(Path("lib/" + fname))
         ion_file_path = ion_dir.joinpath(Path(fname))
 
@@ -214,7 +218,7 @@ class Conquest(FileIOCalculator):
                          ion_file_path_xc,
                          Path(fname),
                          Path(self.directory).joinpath(fname)]:
-            
+
             print("Try to find {} in {}".format(fname, ion_file), end="")
             if(ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
