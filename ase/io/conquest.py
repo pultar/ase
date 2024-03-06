@@ -14,14 +14,13 @@ from shutil import move, copy
 
 import ase.utils
 
-from ase.atoms import Atoms
 from ase.units import Bohr, Hartree
 from ase.constraints import FixAtoms, FixScaled
 from ase.data import atomic_masses, atomic_numbers
 from ase.calculators.calculator import ReadError
 from ase.dft.kpoints import special_paths, sc_special_points, parse_path_string
 from ase.symbols import Symbols
-from ase.geometry import orthorhombic, is_orthorhombic
+from ase.geometry import is_orthorhombic
 
 
 class error(Exception):
@@ -29,10 +28,12 @@ class error(Exception):
     """
     pass
 
+
 class warning(Warning):
     """Base class for warning in this module
     """
     pass
+
 
 class conquest_err(error):
     """Exceptions related to Conquest I/O
@@ -44,11 +45,12 @@ class conquest_err(error):
     def __init__(self, message):
         self.message = message
 
+
 class conquest_warn(warning):
 
     def __init__(self, message):
         self.message = message
-    
+
         frameinfo = getframeinfo(currentframe().f_back)
 
         print('## ConquestWarning ##')
@@ -105,6 +107,7 @@ class EnvError(Exception):
 
     def __init__(self, message):
         self.message = message
+
 
 def read_conquest_out(fileobj, atoms):
     """
@@ -197,6 +200,7 @@ def read_conquest_out(fileobj, atoms):
     stresses = stresses * Hartree / (atoms.get_cell().trace())
 
     return {'energy': energy, 'forces': force, 'stress': stresses}
+
 
 def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     """
@@ -516,11 +520,11 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
         The CONQUEST structure file contains integer indices instead of atomic
         species, so the species must be supplied in the correct order in
         the read and write functions.
-        e.g. atomic_order=['Bi','Fe','O'])
+        e.g. atomic_order=['Bi','Fe','O']
 
     parameters :: dict
         Contains mandatory flags plus other CONQUEST flags as key/value pairs
-    parameters = {'grid_cutoff'     : 100,                      
+    parameters = {'grid_cutoff'     : 100,
                   'xc'              : 'PBE',
                   'self_consistent' : True,
                   'scf_tolerance'   : 1.0e-6,
@@ -535,10 +539,10 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
     """
 
     # Translation of ASE keys into Conquest XC functionals
-    cq_xc_dict = {'PZ':  1,    # Perdew-Zunger 81 LDA
+    cq_xc_dict = {'PZ': 1,    # Perdew-Zunger 81 LDA
                   'LDA': 3,    # Perdew-Wang 92 LDA
                   'PBE': 101,  # Perdew, Burke, Ernzerhof
-                  'WC':  104   # Wu-Cohen
+                  'WC': 104   # Wu-Cohen
                   }
     cq_input = []
     for key in parameters:

@@ -40,15 +40,15 @@ class Conquest(FileIOCalculator):
         'io.writeouttoasefile': True}
 
     def __init__(self, restart=None, label=None, atoms=None, basis={},
-        	**kwargs):
+                 **kwargs):
         """
         ASE-Calculator class for Conquest.
 
         Parameters
         ==========
         atoms: ASE atoms object
-            (mandatory) an atoms object constructed either via ASE or 
-	    read from an input.
+            (mandatory) an atoms object constructed either via ASE or
+        read from an input.
         basis: dict
             (mandatory) a dictionary specifying the pseudopotential/basis
             files.
@@ -58,14 +58,14 @@ class Conquest(FileIOCalculator):
         label: str
             basename for working files (only used by ASE, eg. NEB)
             (default None)
-        kpts: list or tuple 
+        kpts: list or tuple
             k-points grid (default None).
         grid_cutoff: float
             integration grid in Ha (default 100).
         xc: str
             exchange and correlation functional (default 'PBE').
         self_consistent: bool
-            choose either a SCF or non-SCF    (default True).       
+            choose either a SCF or non-SCF (default True).
         scf_tolerance: float
             Self-consistent-field convergence tolerance in Ha (default 1.0e-6).
         nspin: int
@@ -122,7 +122,6 @@ class Conquest(FileIOCalculator):
             else:
                 ion_xc = 'PBE'
 
-        # 
         gen_basis = []
         for species in self.species_list:
             if ("gen_basis" in basis[species]):
