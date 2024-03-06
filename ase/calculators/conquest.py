@@ -219,14 +219,14 @@ class Conquest(FileIOCalculator):
                          Path(self.directory).joinpath(fname)]:
 
             print("Try to find {} in {}".format(fname, ion_file), end="")
-            if(ion_file.is_file() and ion_file != fullpath):
+            if (ion_file.is_file() and ion_file != fullpath):
                 print("... Found")
                 copy(ion_file, fullpath)
                 conquest_warn("{} copied into {}".format(ion_file, fullpath))
                 count += 1
                 break
 
-            elif(ion_file.is_file() and ion_file == fullpath):
+            elif (ion_file.is_file() and ion_file == fullpath):
                 print("... Found")
                 conquest_warn("{} copied into {}".format(ion_file, fullpath))
                 count += 1
@@ -323,7 +323,7 @@ class Conquest(FileIOCalculator):
 
         with open(cq_out_path, 'r') as cqout_fileobj:
             self.kpoints, self.weights = get_k_points(cqout_fileobj)
-            
+
     # Below functions necessary for ASE band_structure()
     def get_ibz_k_points(self):
         return self.kpoints
