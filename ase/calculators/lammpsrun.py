@@ -25,7 +25,7 @@ import shutil
 import warnings
 from re import IGNORECASE
 from re import compile as re_compile
-from subprocess import PIPE, Popen, TimeoutExpired
+import subprocess
 from tempfile import NamedTemporaryFile, mkdtemp
 from tempfile import mktemp as uns_mktemp
 from threading import Thread
@@ -208,11 +208,14 @@ class LAMMPS(Calculator):
 
     def get_lammps_command(self):
         cmd = self.parameters.get('command')
-        if cmd is None:
-            envvar = f'ASE_{self.name.upper()}_COMMAND'
-            cmd = os.environ.get(envvar)
 
         if cmd is None:
+            from ase.config import cfg
+            envvar = f'ASE_{self.name.upper()}_COMMAND'
+            cmd = cfg.get(envvar)
+
+        if cmd is None:
+            # TODO deprecate and remove guesswork
             cmd = 'lammps'
 
         opts = self.parameters.get('lammps_options')
@@ -260,7 +263,7 @@ class LAMMPS(Calculator):
             # !TODO: handle lammps error codes
             try:
                 self._lmp_handle.communicate(timeout=5)
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 self._lmp_handle.kill()
                 self._lmp_handle.communicate()
             err = self._lmp_handle.poll()
@@ -358,10 +361,10 @@ class LAMMPS(Calculator):
         if not self._lmp_alive():
             command = self.get_lammps_command()
             # Attempt to (re)start lammps
-            self._lmp_handle = Popen(
+            self._lmp_handle = subprocess.Popen(
                 shlex.split(command, posix=(os.name == "posix")),
-                stdin=PIPE,
-                stdout=PIPE,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
                 encoding='ascii',
             )
         lmp_handle = self._lmp_handle

@@ -1,13 +1,12 @@
 from collections import defaultdict
 
+from .kimpy_wrappers import kimpy
 import numpy as np
 
 from ase import Atom
 from ase.neighborlist import neighbor_list
 
 from .kimpy_wrappers import c_double, c_int, check_call_wrapper
-
-from .kimpy import kimpy
 
 
 class NeighborList:
@@ -46,6 +45,7 @@ class NeighborList:
         padding_not_require_neigh,
         debug,
     ):
+
         self.set_neigh_parameters(
             neigh_skin_ratio,
             model_influence_dist,

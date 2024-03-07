@@ -23,7 +23,7 @@ from ase.units import Debye, kcal, mol
 class MOPAC(FileIOCalculator):
     implemented_properties = ['energy', 'forces', 'dipole',
                               'magmom', 'free_energy']
-    command = 'mopac PREFIX.mop 2> /dev/null'
+    _legacy_default_command = 'mopac PREFIX.mop 2> /dev/null'
     discard_results_on_any_change = True
 
     default_parameters = dict(
@@ -35,6 +35,10 @@ class MOPAC(FileIOCalculator):
     methods = ['AM1', 'MNDO', 'MNDOD', 'PM3', 'PM6', 'PM6-D3', 'PM6-DH+',
                'PM6-DH2', 'PM6-DH2X', 'PM6-D3H4', 'PM6-D3H4X', 'PMEP', 'PM7',
                'PM7-TS', 'RM1']
+
+    fileio_rules = FileIOCalculator.ruleset(
+        extend_argv=['{prefix}.mop'],
+        stdout_name='{prefix}.out')
 
     def __init__(self, restart=None,
                  ignore_bad_restart_file=FileIOCalculator._deprecated,
@@ -74,7 +78,7 @@ class MOPAC(FileIOCalculator):
 
         """
         FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, self.command, **kwargs)
+                                  label, atoms, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         FileIOCalculator.write_input(self, atoms, properties, system_changes)

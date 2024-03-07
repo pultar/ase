@@ -1,6 +1,7 @@
 from itertools import combinations_with_replacement
 from math import erf
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist
 
@@ -424,15 +425,16 @@ class OFPComparator:
 
         # total number of atoms:
         n_tot = sum([len(typedic[key]) for key in typedic])
+        inv_n_tot = 1. / n_tot
 
         local_orders = []
-        for index, fingerprints in individual_fingerprints.items():
+        for fingerprints in individual_fingerprints.values():
             local_order = 0
             for unique_type, fingerprint in fingerprints.items():
                 term = np.linalg.norm(fingerprint)**2
                 term *= self.binwidth
-                term *= (volume * 1. / n_tot)**3
-                term *= len(typedic[unique_type]) * 1. / n_tot
+                term *= (volume * inv_n_tot)**(-1 / 3)
+                term *= len(typedic[unique_type]) * inv_n_tot
                 local_order += term
             local_orders.append(np.sqrt(local_order))
 
@@ -490,11 +492,6 @@ class OFPComparator:
     def plot_fingerprints(self, a, prefix=''):
         """ Function for quickly plotting all the fingerprints.
         Prefix = a prefix you want to give to the resulting PNG file."""
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            Warning("Matplotlib could not be loaded - plotting won't work")
-            raise
 
         if 'fingerprints' in a.info and not self.recalculate:
             fp, typedic = a.info['fingerprints']
@@ -516,12 +513,6 @@ class OFPComparator:
     def plot_individual_fingerprints(self, a, prefix=''):
         """ Function for plotting all the individual fingerprints.
         Prefix = a prefix for the resulting PNG file."""
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            Warning("Matplotlib could not be loaded - plotting won't work")
-            raise
-
         if 'individual_fingerprints' in a.info and not self.recalculate:
             fp, typedic = a.info['individual_fingerprints']
         else:

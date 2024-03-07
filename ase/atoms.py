@@ -18,7 +18,7 @@ from ase.cell import Cell
 from ase.data import atomic_masses, atomic_masses_common
 from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
 from ase.symbols import Symbols, symbols2numbers
-from ase.utils import deprecated
+from ase.utils import deprecated, string2index
 
 
 class Atoms:
@@ -268,20 +268,26 @@ class Atoms:
         new_symbols = Symbols.fromsymbols(obj)
         self.numbers[:] = new_symbols.numbers
 
-    @deprecated(DeprecationWarning('Please use atoms.calc = calc'))
+    @deprecated("Please use atoms.calc = calc", DeprecationWarning)
     def set_calculator(self, calc=None):
         """Attach calculator object.
 
-        Please use the equivalent atoms.calc = calc instead of this
-        method."""
+        .. deprecated:: 3.20.0
+            Please use the equivalent ``atoms.calc = calc`` instead of this
+            method.
+        """
+
         self.calc = calc
 
-    @deprecated(DeprecationWarning('Please use atoms.calc'))
+    @deprecated("Please use atoms.calc", DeprecationWarning)
     def get_calculator(self):
         """Get currently attached calculator object.
 
-        Please use the equivalent atoms.calc instead of
-        atoms.get_calculator()."""
+        .. deprecated:: 3.20.0
+            Please use the equivalent ``atoms.calc`` instead of
+            ``atoms.get_calculator()``.
+        """
+
         return self.calc
 
     @property
@@ -296,14 +302,23 @@ class Atoms:
             calc.set_atoms(self)
 
     @calc.deleter
-    @deprecated(DeprecationWarning('Please use atoms.calc = None'))
+    @deprecated('Please use atoms.calc = None', DeprecationWarning)
     def calc(self):
+        """Delete calculator
+
+        .. deprecated:: 3.20.0
+            Please use ``atoms.calc = None``
+        """
         self._calc = None
 
     @property
-    @deprecated('Please use atoms.cell.rank instead')
+    @deprecated('Please use atoms.cell.rank instead', DeprecationWarning)
     def number_of_lattice_vectors(self):
-        """Number of (non-zero) lattice vectors."""
+        """Number of (non-zero) lattice vectors.
+
+        .. deprecated:: 3.21.0
+            Please use ``atoms.cell.rank`` instead
+        """
         return self.cell.rank
 
     def set_constraint(self, constraint=None):
@@ -408,7 +423,7 @@ class Atoms:
 
         return cell
 
-    @deprecated('Please use atoms.cell.cellpar() instead')
+    @deprecated('Please use atoms.cell.cellpar() instead', DeprecationWarning)
     def get_cell_lengths_and_angles(self):
         """Get unit cell parameters. Sequence of 6 numbers.
 
@@ -418,16 +433,22 @@ class Atoms:
             [len(a), len(b), len(c), angle(b,c), angle(a,c), angle(a,b)]
 
         in degrees.
+
+        .. deprecated:: 3.21.0
+            Please use ``atoms.cell.cellpar()`` instead
         """
         return self.cell.cellpar()
 
-    @deprecated('Please use atoms.cell.reciprocal()')
+    @deprecated('Please use atoms.cell.reciprocal()', DeprecationWarning)
     def get_reciprocal_cell(self):
         """Get the three reciprocal lattice vectors as a 3x3 ndarray.
 
         Note that the commonly used factor of 2 pi for Fourier
-        transforms is not included here."""
+        transforms is not included here.
 
+        .. deprecated:: 3.21.0
+            Please use ``atoms.cell.reciprocal()``
+        """
         return self.cell.reciprocal()
 
     @property
@@ -961,14 +982,17 @@ class Atoms:
     def __len__(self):
         return len(self.arrays['positions'])
 
+    @deprecated(
+        "Please use len(self) or, if your atoms are distributed, "
+        "self.get_global_number_of_atoms.",
+        category=FutureWarning,
+    )
     def get_number_of_atoms(self):
-        """Deprecated, please do not use.
-
-        You probably want len(atoms).  Or if your atoms are distributed,
-        use (and see) get_global_number_of_atoms()."""
-        import warnings
-        warnings.warn('Use get_global_number_of_atoms() instead',
-                      np.VisibleDeprecationWarning)
+        """
+        .. deprecated:: 3.18.1
+            You probably want ``len(atoms)``.  Or if your atoms are distributed,
+            use (and see) :func:`get_global_number_of_atoms()`.
+        """
         return len(self)
 
     def get_global_number_of_atoms(self):
@@ -1301,17 +1325,26 @@ class Atoms:
 
         self.positions += translation
 
-    def get_center_of_mass(self, scaled=False):
+    def get_center_of_mass(self, scaled=False, indices=None):
         """Get the center of mass.
 
-        If scaled=True the center of mass in scaled coordinates
-        is returned."""
-        masses = self.get_masses()
-        com = masses @ self.positions / masses.sum()
+        Parameters
+        ----------
+        scaled : bool
+            If True, the center of mass in scaled coordinates is returned.
+        indices : list | slice | str, default: None
+            If specified, the center of mass of a subset of atoms is returned.
+        """
+        if indices is None:
+            indices = slice(None)
+        elif isinstance(indices, str):
+            indices = string2index(indices)
+
+        masses = self.get_masses()[indices]
+        com = masses @ self.positions[indices] / masses.sum()
         if scaled:
             return self.cell.scaled_positions(com)
-        else:
-            return com
+        return com  # Cartesian coordinates
 
     def set_center_of_mass(self, com, scaled=False):
         """Set the center of mass.

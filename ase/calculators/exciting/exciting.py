@@ -17,13 +17,8 @@ from typing import Any, Mapping
 
 import ase.io.exciting
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.exciting.runner import (
-    SimpleBinaryRunner,
-    SubprocessRunResults,
-)
-
-import ase.calculators.exciting.runner
-
+from ase.calculators.exciting.runner import (SimpleBinaryRunner,
+                                             SubprocessRunResults)
 from ase.calculators.genericfileio import (
     BaseProfile,
     CalculatorTemplate,
@@ -80,6 +75,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
     output_names = list(parser)
     # Use frozenset since the CalculatorTemplate enforces it.
     implemented_properties = frozenset(['energy', 'forces'])
+    _label = 'exciting'
 
     def __init__(self):
         """Initialise with constant class attributes.
@@ -89,6 +85,7 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
             calculate/read from output.
         """
         super().__init__('exciting', self.implemented_properties)
+        self.errorname = f'{self._label}.err'
 
     @staticmethod
     def _require_forces(input_parameters):
@@ -123,31 +120,36 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         :param parameters: exciting ground state input parameters, in a
             dictionary. Expect species_path, title and ground_state data,
             either in an object or as dict.
-        :param properties: Currently, unused. Base method's API expects the
-            physical properties expected from a ground state
-            calculation, for example energies and forces.
+        :param properties: Base method's API expects the physical properties
+            expected from a ground state calculation, for example energies
+            and forces. For us this is not used.
         """
         # Create a copy of the parameters dictionary so we don't
         # modify the callers dictionary.
         parameters_dict = parameters
         assert set(parameters_dict.keys()) == {
-            'title',
-            'species_path',
-            'ground_state_input',
-        }, 'Keys should be defined by ExcitingGroundState calculator'
+            'title', 'species_path', 'ground_state_input',
+            'properties_input'}, \
+            'Keys should be defined by ExcitingGroundState calculator'
         file_name = Path(directory) / 'input.xml'
         species_path = parameters_dict.pop('species_path')
         title = parameters_dict.pop('title')
+        # We can also pass additional parameters which are actually called
+        # properties in the exciting input xml. We don't use this term
+        # since ASE use properties to refer to results of a calculation
+        # (e.g. force, energy).
+        if 'properties_input' not in parameters_dict:
+            parameters_dict['properties_input'] = None
 
         ase.io.exciting.write_input_xml_file(
-            file_name,
-            atoms,
-            parameters_dict['ground_state_input'],
-            species_path,
-            title,
-        )
+            file_name=file_name, atoms=atoms,
+            ground_state_input=parameters_dict['ground_state_input'],
+            species_path=species_path, title=title,
+            properties_input=parameters_dict['properties_input'])
 
-    def execute(self, directory: PathLike, profile) -> SubprocessRunResults:
+    def execute(
+            self, directory: PathLike,
+            profile) -> SubprocessRunResults:
         """Given an exciting calculation profile, execute the calculation.
 
         :param directory: Directory in which to execute the calculator
@@ -160,7 +162,8 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
 
         :return: Results of the subprocess.run command.
         """
-        return profile.run(directory, f"{directory}/input.xml")
+        return profile.run(directory, f"{directory}/input.xml", None,
+                           erorrfile=self.errorname)
 
     def read_results(self, directory: PathLike) -> Mapping[str, Any]:
         """Parse results from each ground state output file.
