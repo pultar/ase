@@ -11,6 +11,7 @@ from ase.calculators.abinit import Abinit, AbinitTemplate
 from ase.calculators.aims import Aims, AimsTemplate
 from ase.calculators.calculator import get_calculator_class
 from ase.calculators.castep import Castep, get_castep_version
+from ase.calculators.conquest import Conquest
 from ase.calculators.cp2k import CP2K, Cp2kShell
 from ase.calculators.dftb import Dftb
 from ase.calculators.dftd3 import DFTD3
@@ -57,6 +58,7 @@ tests.""")
         if datafiles is None:
             return ''  # empty configfile
         path = self.datafiles_module.paths.DataFiles().datapath
+        print(path)
         datafile_config = f"""\
 # Dummy parallel section (make this unnecessary)
 [parallel]
@@ -72,6 +74,9 @@ pp_paths =
 
 [dftb]
 skt_paths = {path}/dftb
+
+[conquest]
+pseudo_path = {path}/conquest
 
 [elk]
 species_dir = {path}/elk
@@ -212,6 +217,20 @@ class CastepFactory:
     def calc(self, **kwargs):
         return Castep(castep_command=self.executable, **kwargs)
 
+
+@factory('conquest')
+class ConquestFactory:
+    def __init__(self, cfg):
+        self.executable = cfg.parser['conquest']['binary']
+        self.pseudo_path = str(cfg.parser['conquest']['pseudo_path'])
+        os.environ['CQ_PP_PATH']=self.pseudo_path
+        os.environ['ASE_CONQUEST_COMMAND']=self.executable
+
+    def version(self):
+        return get_conquest_version(self.executable)
+
+    def calc(self, **kwargs):
+        return Conquest(**kwargs)
 
 @factory('dftb')
 class DFTBFactory:
@@ -643,6 +662,7 @@ class Factories:
     # TODO: So far hard-coded but should be automatically detected.
     datafile_calculators = {
         'abinit',
+        'conquest',
         'dftb',
         'elk',
         'espresso',
