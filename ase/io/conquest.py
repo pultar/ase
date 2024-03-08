@@ -222,7 +222,9 @@ def write_conquest(fileobj, atoms, atomic_order, fractional=True):
     if (not is_orthorhombic(atoms.get_cell())):
         raise conquest_err("Conquest can only handle orthorhombic cells")
 
-    cellpar = atoms.get_cell_lengths_and_angles()
+    #cellpar = atoms.get_cell_lengths_and_angles()
+    cellpar = atoms.cell.cellpar()
+    
     # CONQUEST by default works in units of Bohr:
     cellpar[0:3] = cellpar[0:3] / Bohr
     latfmt = '{0:<12.6f}{1:<12.6f}{2:<12.6f}\n'
@@ -574,7 +576,6 @@ def write_conquest_input(fileobj, atoms, atomic_order, parameters,
         # all other keywords
         else:
             cq_input.append(cqip_line(key, parameters[key]))
-
     # - SPIN - # TODO initialise spins? This requires a lot more work!
     #        magmoms = atoms.get_initial_magnetic_moments()
 
