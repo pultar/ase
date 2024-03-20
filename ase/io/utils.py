@@ -1,7 +1,6 @@
 import numpy as np
 from math import sqrt
 from itertools import islice
-from math import sqrt
 from typing import IO
 
 from ase.io.formats import string2index
@@ -12,35 +11,35 @@ from ase.data.colors import jmol_colors
 
 def complete_camera_vectors(look=None, up=None, right=None):
     ''' creates the camera (or look) basis vectors from user input and
-     will autocomplete missing vector non-orthogal vectors using dot products.
-     The look direction will be maintained, up direction has higher priority than right dir
-ection'''
+     will autocomplete missing vector or non-orthogonal vectors using dot
+     products. The look direction will be maintained, up direction has higher
+     priority than right direction'''
 
     # ensure good input
-    if type(look) != type(None):
+    if look is not None:
         assert len(look) == 3
         l = np.array(look)
 
-    if type(up) != type(None):
+    if up is not None:
         assert len(up) == 3
         u = np.array(up)
 
-    if type(right) != type(None):
+    if right is not None:
         assert len(right) == 3
         r = np.array(right)
 
     def normalize(a):
         return np.array(a) / np.linalg.norm(a)
 
-    if type(look) != type(None) and type(up) != type(None):
+    if look is not None and up is not None:
         r = normalize(np.cross(l, u))
         u = normalize(np.cross(r, l))  # ensures complete perpendicularity
         l = normalize(np.cross(u, r))
-    elif type(look) != type(None) and type(right) != type(None):
+    elif look is not None and right is not None:
         u = normalize(np.cross(r, l))
         r = normalize(np.cross(l, u))  # ensures complete perpendicularity
         l = normalize(np.cross(u, r))
-    elif type(up) != type(None) and type(right) != type(None):
+    elif up is not None and right is not None:
         l = normalize(np.cross(u, r))
         r = normalize(np.cross(l, u))  # ensures complete perpendicularity
         u = normalize(np.cross(r, u))
@@ -90,7 +89,7 @@ class PlottingVariables:
                  radii=None, bbox=None, colors=None, scale=20,
                  maxwidth=500, extra_offset=(0., 0.),
                  auto_bbox_size=1.05,
-                 auto_image_plane_z='front_all',  # 'legacy', 'front_all', 'auto_front'
+                 auto_image_plane_z='front_all',
                  ):
 
         assert show_unit_cell in (0, 1, 2, 3)
@@ -136,12 +135,22 @@ class PlottingVariables:
         extra_offset: (float, float)
             Translates the image center in the image plane by (x,y) where x and
             y are the horizontal and vertical shift distances, respectively.
-            (default (0.0, 0.0)) should only be used for small tweaks to the automatically fit image plane
+            (default (0.0, 0.0)) should only be used for small tweaks to the
+            automatically fit image plane
 
         auto_bbox_size: float
             Controls the padding given to the bounding box in the image plane.
             With auto_bbox_size=1.0 the structure touches the edges of the
             image. auto_bbox_size>1.0 gives whitespace padding. (default 1.05)
+
+        auto_image_plane_z: string ('front_all', 'front_auto', 'legacy')
+            After a camera rotation, controls where to put camera image plane
+            relative to the atoms and cell. 'front_all' puts everything in front
+            of the camera. 'front_auto' sets the image plane location to
+            respect the show_unit_cell option so that the atoms or cell can be
+            ignored when setting the image plane. 'legacy' leaves the image
+            plane passing through the origin for backwards compatibility.
+            (default: 'front_all')
         """
 
         self.show_unit_cell = show_unit_cell
@@ -260,6 +269,10 @@ class PlottingVariables:
             offset[2] = bbox_combined[1, 2]  # highest z in image orientation
         elif self.auto_image_plane_z == 'legacy':
             offset[2] = 0
+        elif self.auto_image_plane_z == 'front_auto':
+            offset[2] = bbox_auto[1,2]
+        else:
+            print('bad image plane setting')
 
         self.offset += offset  # since we are moving the origin in the image plane
         # why does the picture size change with extra_offset? seems like a bug
