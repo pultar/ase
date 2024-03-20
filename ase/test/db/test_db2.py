@@ -1,12 +1,12 @@
-import pytest
 import numpy as np
+import pytest
 
 from ase import Atoms
+from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixBondLength
 from ase.db import connect
 from ase.io import read
-from ase.build import molecule
 
 dbtypes = ['json', 'db', 'postgresql', 'mysql', 'mariadb']
 
@@ -56,7 +56,7 @@ def test_db2(testdir, dbtype, get_db_name):
     f3 = c.get_atoms(C=1).get_forces()
     assert abs(f1 - f3).max() < 1e-14
 
-    a = read(name, index='id={}'.format(id))[0]
+    a = read(name, index=f'id={id}')[0]
     f4 = a.get_forces()
     assert abs(f1 - f4).max() < 1e-14
 
@@ -75,7 +75,13 @@ def test_db2(testdir, dbtype, get_db_name):
         c.write(ch4, foo=['bar', 2])  # not int, bool, float or str
 
     with pytest.raises(ValueError):
-        c.write(Atoms(), pi='3.14')  # number as a string
+        c.write(Atoms(), pi='3.14')  # float as a string
+
+    with pytest.raises(ValueError):
+        c.write(Atoms(), pi_rounded='3')  # int as a string
+
+    with pytest.raises(ValueError):
+        c.write(Atoms(), relaxed='False')  # bool as a string
 
     with pytest.raises(ValueError):
         c.write(Atoms(), fmax=0.0)  # reserved word
@@ -108,6 +114,8 @@ def test_db2(testdir, dbtype, get_db_name):
     ids = [row.get('id') for row in c.select()]
     offset = 2
     assert next(c.select(offset=offset)).id == ids[offset]
+
+    assert 'grr' in c.get_all_key_names()
 
 
 def test_sqlite_user(testdir):
