@@ -8,7 +8,6 @@ from ase.data import covalent_radii, atomic_numbers
 from ase.data.colors import jmol_colors
 
 
-
 def complete_camera_vectors(look=None, up=None, right=None):
     ''' creates the camera (or look) basis vectors from user input and
      will autocomplete missing vector non-orthogal vectors using dot products.
@@ -16,33 +15,33 @@ def complete_camera_vectors(look=None, up=None, right=None):
 ection'''
 
     # ensure good input
-    if type(look)!=type(None):
-        assert len(look)==3
+    if type(look) != type(None):
+        assert len(look) == 3
         l = np.array(look)
 
-    if type(up)!=type(None):
-        assert len(up)==3
+    if type(up) != type(None):
+        assert len(up) == 3
         u = np.array(up)
 
-    if type(right)!=type(None):
-        assert len(right)==3
+    if type(right) != type(None):
+        assert len(right) == 3
         r = np.array(right)
 
     def normalize(a):
-        return np.array(a)/np.linalg.norm(a)
+        return np.array(a) / np.linalg.norm(a)
 
-    if type(look)!=type(None) and type(up)!=type(None):
-        r = normalize(np.cross(l,u))
-        u = normalize(np.cross(r,l)) # ensures complete perpendicularity
-        l = normalize(np.cross(u,r))
-    elif type(look)!=type(None) and type(right)!=type(None):
-        u = normalize(np.cross(r,l))
-        r = normalize(np.cross(l,u)) # ensures complete perpendicularity
-        l = normalize(np.cross(u,r))
-    elif type(up)!=type(None) and type(right)!=type(None):
-        l = normalize(np.cross(u,r))
-        r = normalize(np.cross(l,u)) # ensures complete perpendicularity
-        u = normalize(np.cross(r,u))
+    if type(look) != type(None) and type(up) != type(None):
+        r = normalize(np.cross(l, u))
+        u = normalize(np.cross(r, l))  # ensures complete perpendicularity
+        l = normalize(np.cross(u, r))
+    elif type(look) != type(None) and type(right) != type(None):
+        u = normalize(np.cross(r, l))
+        r = normalize(np.cross(l, u))  # ensures complete perpendicularity
+        l = normalize(np.cross(u, r))
+    elif type(up) != type(None) and type(right) != type(None):
+        l = normalize(np.cross(u, r))
+        r = normalize(np.cross(l, u))  # ensures complete perpendicularity
+        u = normalize(np.cross(r, u))
     else:
         print('some kind of error')
     return l, u, r
@@ -71,14 +70,17 @@ def update_line_order_for_atoms(L, T, D, atoms, radii):
             T[n] = -1
     return T
 
-def combine_bboxes(bbox_a,bbox_b):
+
+def combine_bboxes(bbox_a, bbox_b):
     """Combines bboxes using their extrema"""
-    bbox_low  = np.minimum(bbox_a[0], bbox_b[0])
+    bbox_low = np.minimum(bbox_a[0], bbox_b[0])
     bbox_high = np.maximum(bbox_a[1], bbox_b[1])
     return np.array([bbox_low, bbox_high])
 
+
 def has_cell(atoms):
-    return atoms.cell.rank>0
+    return atoms.cell.rank > 0
+
 
 class PlottingVariables:
     # removed writer - self
@@ -86,9 +88,8 @@ class PlottingVariables:
                  radii=None, bbox=None, colors=None, scale=20,
                  maxwidth=500, extra_offset=(0., 0.),
                  auto_bbox_size=1.05,
-                 auto_image_plane_z = 'front_all', #'legacy', 'front_all', 'auto_front'
+                 auto_image_plane_z='front_all',  # 'legacy', 'front_all', 'auto_front'
                  ):
-
 
         assert show_unit_cell in (0, 1, 2, 3)
         """Handles camera/paper space transformations used for rendering, 2D
@@ -145,7 +146,8 @@ class PlottingVariables:
         self.numbers = atoms.get_atomic_numbers()
         self.maxwidth = maxwidth
         self.atoms = atoms
-        self.natoms = len(atoms) # not used in PlottingVariables, keeping for legacy
+        # not used in PlottingVariables, keeping for legacy
+        self.natoms = len(atoms)
 
         self.auto_bbox_size = auto_bbox_size
         self.auto_image_plane_z = auto_image_plane_z
@@ -165,7 +167,6 @@ class PlottingVariables:
         except KeyError:
             pass
 
-
         # colors
         self.colors = colors
         if colors is None:
@@ -183,24 +184,23 @@ class PlottingVariables:
         #  these should be tied together via some @ property so that automatically updated
         self.radii = radii
         self.scale = scale
-        self.d = 2 * scale * radii # diameter in paper space.
+        self.d = 2 * scale * radii  # diameter in paper space.
 
         self.set_rotation(rotation)
         self.update_image_plane_offset_and_size_from_structure(bbox=bbox)
 
     def to_dict(self):
         out = {
-            'bbox' : self.get_bbox(),
-            'rotation': self.rotation,}
+            'bbox': self.get_bbox(),
+            'rotation': self.rotation, }
         return out
 
-    def set_rotation(self,rotation):
+    def set_rotation(self, rotation):
         if rotation is not None:
             if isinstance(rotation, str):
                 rotation = rotate(rotation)
             self.rotation = rotation
         self.update_patch_and_line_vars()
-
 
     def update_image_plane_offset_and_size_from_structure(self, bbox=None):
         '''Updates image size to fit structure according to show_unit_cell
@@ -208,9 +208,9 @@ class PlottingVariables:
         image plane. Note that bbox format is (xlo, ylo, xhi, yhi) for
         compatibility reasons the internal functions use (2,3)'''
 
-        self.offset = np.zeros(3) # zero out the offset so it's not involved in the
+        # zero out the offset so it's not involved in the
+        self.offset = np.zeros(3)
         # to_image_plane_positions() calculations which are used to calcucate the offset
-
 
         # computing the bboxes in self.atoms here makes it easier to follow the
         # various options later
@@ -224,7 +224,7 @@ class PlottingVariables:
             bbox_combined = bbox_atoms
 
         # bbox_auto is the bbox that matches the show_unit_cell option
-        if has_cell(self.atoms) and self.show_unit_cell in (2,3):
+        if has_cell(self.atoms) and self.show_unit_cell in (2, 3):
             if self.show_unit_cell == 2:
                 bbox_auto = bbox_combined
             else:
@@ -239,42 +239,42 @@ class PlottingVariables:
             # should auto_bbox_size pad the z_heght via offset?
 
             if im_size[0] > self.maxwidth:
-                rescale_factor = self.maxwidth/im_size[0]
-                im_size    *= rescale_factor
+                rescale_factor = self.maxwidth / im_size[0]
+                im_size *= rescale_factor
                 self.scale *= rescale_factor
-            offset = middle-im_size/2
+            offset = middle - im_size / 2
         else:
-            width  = (bbox[2] - bbox[0]) * self.scale
+            width = (bbox[2] - bbox[0]) * self.scale
             height = (bbox[3] - bbox[1]) * self.scale
 
-            im_size = np.array([width,height,0])
+            im_size = np.array([width, height, 0])
             offset = np.array([bbox[0], bbox[1], 0]) * self.scale
 
         # this section shifts the image plane up and down parallel to the look
         # direction to match the legacy option, or to force it allways touch the
         # front most objects regardless of the show_unit_cell setting
-        #print(offset, bbox_combined)
+        # print(offset, bbox_combined)
         if self.auto_image_plane_z == 'front_all':
-            offset[2] = bbox_combined[1, 2] # highest z in image orientation
+            offset[2] = bbox_combined[1, 2]  # highest z in image orientation
         elif self.auto_image_plane_z == 'legacy':
             offset[2] = 0
 
-        self.offset += offset #since we are moving the origin in the image plane
+        self.offset += offset  # since we are moving the origin in the image plane
         # why does the picture size change with extra_offset? seems like a bug
-        self.w = im_size[0] #+ self.extra_offset[0]
-        self.h = im_size[1] #+ self.extra_offset[1]
+        self.w = im_size[0]  # + self.extra_offset[0]
+        self.h = im_size[1]  # + self.extra_offset[1]
         # allows extra_offset to be 2D or 3D
         for i in range(len(self.extra_offset)):
-            self.offset[i]-=self.extra_offset[i]
+            self.offset[i] -= self.extra_offset[i]
 
         # we have to update the arcane stuff after every camera update.
         self.update_patch_and_line_vars()
 
-    def center_camera_on_position(self,pos, scaled_position=False):
+    def center_camera_on_position(self, pos, scaled_position=False):
         if scaled_position:
             pos = pos @ self.atoms.cell
         im_pos = self.to_image_plane_positions(pos)
-        cam_pos =self.to_image_plane_positions(self.get_image_plane_center())
+        cam_pos = self.to_image_plane_positions(self.get_image_plane_center())
         in_plane_shift = im_pos - cam_pos
         self.offset[0:2] += in_plane_shift[0:2]
         self.update_patch_and_line_vars()
@@ -284,26 +284,26 @@ class PlottingVariables:
         ylo = self.offset[1]
         xhi = xlo + self.w
         yhi = ylo + self.h
-        return np.array([xlo, ylo, xhi, yhi])/self.scale
+        return np.array([xlo, ylo, xhi, yhi]) / self.scale
 
     def set_rotation_from_camera_directions(self,
-        look=None, up=None, right=None,
-        scaled_position=False):
+                                            look=None, up=None, right=None,
+                                            scaled_position=False):
 
         if scaled_position:
             if look is not None:
-                look = look@self.atoms.cell
+                look = look @ self.atoms.cell
             if right is not None:
-                right = right@self.atoms.cell
+                right = right @ self.atoms.cell
             if up is not None:
-                up = up@self.atoms.cell
+                up = up @ self.atoms.cell
 
         look, up, right = complete_camera_vectors(look, up, right)
 
-        rotation = np.zeros((3,3))
-        rotation[:,0] = right
-        rotation[:,1] = up
-        rotation[:,2] = -look
+        rotation = np.zeros((3, 3))
+        rotation[:, 0] = right
+        rotation[:, 1] = up
+        rotation[:, 2] = -look
         self.rotation = rotation
         self.update_patch_and_line_vars()
 
@@ -313,9 +313,9 @@ class PlottingVariables:
         return irotate(self.rotation)
 
     def get_rotation_angles_string(self, digits=5):
-        fmt='%.{:d}f'.format(digits)
+        fmt = '%.{:d}f'.format(digits)
         angles = self.get_rotation_angles()
-        outstring = (fmt+'x, '+fmt+'y, '+fmt+'z' )%(angles)
+        outstring = (fmt + 'x, ' + fmt + 'y, ' + fmt + 'z') % (angles)
         return outstring
 
     def update_patch_and_line_vars(self):
@@ -385,10 +385,10 @@ class PlottingVariables:
         return np.array([im_low, im_high])
 
     def get_image_plane_center(self):
-        return self.to_atom_positions(np.array([self.w/2, self.h/2, 0]))
+        return self.to_atom_positions(np.array([self.w / 2, self.h / 2, 0]))
 
     def get_atom_direction(self, direction):
-        c0 = self.to_atom_positions([0,0,0]) #self.get_image_plane_center()
+        c0 = self.to_atom_positions([0, 0, 0])  # self.get_image_plane_center()
         c1 = self.to_atom_positions(direction)
         atom_direction = c1 - c0
         return atom_direction / np.linalg.norm(atom_direction)
