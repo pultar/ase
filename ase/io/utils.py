@@ -192,8 +192,9 @@ class PlottingVariables:
         else:
             radii = np.array(radii)
 
-        #  these should be tied together via some @ property so that automatically updated
-        self.radii = radii
+        # TODO: these should be tied together via some @property so that they
+        # are automatically updated together
+        self.radii = radii  # radius in Angstroms
         self.scale = scale
         self.d = 2 * scale * radii  # diameter in paper space.
 
@@ -220,11 +221,12 @@ class PlottingVariables:
         compatibility reasons the internal functions use (2,3)'''
 
         # zero out the offset so it's not involved in the
+        # to_image_plane_positions() calculations which are used to calcucate
+        #  the offset
         self.offset = np.zeros(3)
-        # to_image_plane_positions() calculations which are used to calcucate the offset
 
         # computing the bboxes in self.atoms here makes it easier to follow the
-        # various options later
+        # various options selection/choices later
         bbox_atoms = self.get_bbox_from_atoms(self.atoms, self.d / 2)
         if has_cell(self.atoms):
             cell = self.atoms.get_cell()
@@ -264,20 +266,24 @@ class PlottingVariables:
         # this section shifts the image plane up and down parallel to the look
         # direction to match the legacy option, or to force it allways touch the
         # front most objects regardless of the show_unit_cell setting
-        # print(offset, bbox_combined)
         if self.auto_image_plane_z == 'front_all':
             offset[2] = bbox_combined[1, 2]  # highest z in image orientation
         elif self.auto_image_plane_z == 'legacy':
             offset[2] = 0
         elif self.auto_image_plane_z == 'front_auto':
-            offset[2] = bbox_auto[1,2]
+            offset[2] = bbox_auto[1, 2]
         else:
             print('bad image plane setting')
 
-        self.offset += offset  # since we are moving the origin in the image plane
-        # why does the picture size change with extra_offset? seems like a bug
+        # since we are moving the origin in the image plane (camera coordinates)
+        self.offset += offset
+
+        # Previously, the picture size changed with extra_offset, This is very
+        # counter intuitive and seems like a bug.  Leaving it commented out in
+        # case someone relying on this likely bug needs to revert it.
         self.w = im_size[0]  # + self.extra_offset[0]
         self.h = im_size[1]  # + self.extra_offset[1]
+
         # allows extra_offset to be 2D or 3D
         for i in range(len(self.extra_offset)):
             self.offset[i] -= self.extra_offset[i]
