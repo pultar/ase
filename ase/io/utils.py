@@ -3,7 +3,7 @@ from math import sqrt
 from itertools import islice
 
 from ase.io.formats import string2index
-from ase.utils import rotate
+from ase.utils import rotate, irotate
 from ase.data import covalent_radii, atomic_numbers
 from ase.data.colors import jmol_colors
 
@@ -92,7 +92,8 @@ class PlottingVariables:
 
         assert show_unit_cell in (0, 1, 2, 3)
         """Handles camera/paper space transformations used for rendering, 2D
-        plots, ...and a few legacy features.
+        plots, ...and a few legacy features. after camera rotations, the image
+        plane is set to the front of structure.
 
         atoms: Atoms object
             The Atoms object to render/plot.
@@ -202,9 +203,10 @@ class PlottingVariables:
 
 
     def update_image_plane_offset_and_size_from_structure(self, bbox=None):
-        """Updates image size to fit structure according to show_unit_cell
-        if bbox=None. Otherwise, sets the image size from bbox."""
-        # note the bbox input shape is (xlo, ylo, xhi, yhi), the internal functions use (2,3)
+        '''Updates image size to fit structure according to show_unit_cell
+        if bbox=None. Otherwise, sets the image size from bbox. bbox is in the
+        image plane. Note that bbox format is (xlo, ylo, xhi, yhi) for
+        compatibility reasons the internal functions use (2,3)'''
 
         self.offset = np.zeros(3) # zero out the offset so it's not involved in the
         # to_image_plane_positions() calculations which are used to calcucate the offset
@@ -253,7 +255,7 @@ class PlottingVariables:
         # front most objects regardless of the show_unit_cell setting
         #print(offset, bbox_combined)
         if self.auto_image_plane_z == 'front_all':
-            offset[2] = bbox_combined[1, 2]
+            offset[2] = bbox_combined[1, 2] # highest z in image orientation
         elif self.auto_image_plane_z == 'legacy':
             offset[2] = 0
 
@@ -304,6 +306,17 @@ class PlottingVariables:
         rotation[:,2] = -look
         self.rotation = rotation
         self.update_patch_and_line_vars()
+
+    def get_rotation_angles(self):
+        '''Gets the rotation angles from the rotation matrix in the current
+        PlottingVariables object'''
+        return irotate(self.rotation)
+
+    def get_rotation_angles_string(self, digits=5):
+        fmt='%.{:d}f'.format(digits)
+        angles = self.get_rotation_angles()
+        outstring = (fmt+'x, '+fmt+'y, '+fmt+'z' )%(angles)
+        return outstring
 
     def update_patch_and_line_vars(self):
         '''Updates all the line and path stuff that is still inobvious, this
