@@ -22,7 +22,7 @@ class Andersen(MolecularDynamics):
         logfile: Optional[Union[IO, str]] = None,
         loginterval: int = 1,
         communicator=world,
-        rng=random,
+        rng=random.default_rng(),
         append_trajectory: bool = False,
     ):
         """"
@@ -97,10 +97,59 @@ class Andersen(MolecularDynamics):
         self.dt = timestep
 
     def boltzmann_random(self, width, size):
-        x = self.rng.random_sample(size=size)
-        y = self.rng.random_sample(size=size)
+        x = self.rng.random(size=size)
+        y = self.rng.random(size=size)
         z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
         return z
+    
+    def todict(self):
+        return {
+            "type": "molecular-dynamics",
+            "md-type": self.__class__.__name__,
+            "dt": self.dt,
+            "nsteps": self.nsteps,
+            "temp": self.temp,
+            "andersen_prob": self.andersen_prob,
+            "fix_com": self.fix_com,
+            "nsteps": self.nsteps,
+        }
+    
+    def fromdict(self, d):
+        self.dt = d["dt"]
+        self.temp = d["temp"]
+        self.andersen_prob = d["andersen_prob"]
+        self.fix_com = d["fix_com"]
+        self.nsteps = d["nsteps"]
+
+    @classmethod
+    def fromtraj(cls, traj, **kwargs):
+        from ase.io.trajectory import Trajectory
+        
+        trajectory = Trajectory(traj)
+
+        d = trajectory.description
+
+        d.update(kwargs)
+
+        if d.get("md-type") != cls.__name__:
+            raise ValueError(f"Trajectory is not of type {cls.__name__}")
+        
+        atoms = trajectory[-1]
+
+        dyn = cls(
+            atoms=atoms,
+            timestep=d["dt"],
+            temperature_K=d["temp"] / units.kB,
+            andersen_prob=d["andersen_prob"],
+            fixcm=d["fix_com"],
+            logfile=d.get("logfile"),
+            trajectory=trajectory.filename,
+            loginterval=d.get("loginterval", 1),
+            append_trajectory=d.get("append_trajectory"),
+            communicator=d.get("communicator"),
+        )
+
+        return dyn
 
     def get_maxwell_boltzmann_velocities(self):
         natoms = len(self.atoms)
@@ -108,6 +157,20 @@ class Andersen(MolecularDynamics):
         width = (self.temp / masses)**0.5
         velos = self.boltzmann_random(width, size=(natoms, 3))
         return velos  # [[x, y, z],] components for each atom
+    
+    def integrate(self, atoms):
+        x = atoms.get_positions()
+
+        if self.fix_com:
+            old_com = atoms.get_center_of_mass()
+            self.v -= self._get_com_velocity(self.v)
+        # Step: x^n -> x^(n+1) - this applies constraints if any
+        atoms.set_positions(x + self.v * self.dt)
+        if self.fix_com:
+            atoms.set_center_of_mass(old_com)
+
+        # recalc velocities after RATTLE constraints are applied
+        self.v = (atoms.get_positions() - x) / self.dt
 
     def step(self, forces=None):
         atoms = self.atoms
@@ -135,23 +198,14 @@ class Andersen(MolecularDynamics):
 
         # apply Andersen thermostat
         self.random_velocity = self.get_maxwell_boltzmann_velocities()
-        self.andersen_chance = self.rng.random_sample(size=self.v.shape)
+        self.andersen_chance = self.rng.random(size=self.v.shape)
         self.communicator.broadcast(self.random_velocity, 0)
         self.communicator.broadcast(self.andersen_chance, 0)
         self.v[self.andersen_chance <= self.andersen_prob] \
             = self.random_velocity[self.andersen_chance <= self.andersen_prob]
 
-        x = atoms.get_positions()
-        if self.fix_com:
-            old_com = atoms.get_center_of_mass()
-            self.v -= self._get_com_velocity(self.v)
-        # Step: x^n -> x^(n+1) - this applies constraints if any
-        atoms.set_positions(x + self.v * self.dt)
-        if self.fix_com:
-            atoms.set_center_of_mass(old_com)
+        self.integrate(atoms)
 
-        # recalc velocities after RATTLE constraints are applied
-        self.v = (atoms.get_positions() - x) / self.dt
         forces = atoms.get_forces(md=True)
 
         # Update the velocities

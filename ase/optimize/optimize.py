@@ -168,13 +168,14 @@ class Dynamics(IOContext):
         If *interval <= 0*, after step *interval*, call *function* with
         arguments *args* and keyword arguments *kwargs*.  This is
         currently zero indexed."""
-
+        print(function)
         if hasattr(function, "set_description"):
             d = self.todict()
             d.update(interval=interval)
             function.set_description(d)
         if not isinstance(function, Callable):
             function = function.write
+            print(function)
         self.observers.append((function, interval, args, kwargs))
 
     def call_observers(self):
