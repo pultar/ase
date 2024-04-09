@@ -183,10 +183,10 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
 
     # Write interaction stuff
     fileobj.write("\n### interactions\n")
-    if "kim_interactions" in parameters:
+    if "kim interactions" in parameters:
         fileobj.write(
             "{}\n".format(
-                parameters["kim_interactions"]))
+                parameters["kim interactions"]))
         write_model_post_and_masses(fileobj, parameters)
 
     elif ("pair_style" in parameters) and ("pair_coeff" in parameters):
