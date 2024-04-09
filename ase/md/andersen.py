@@ -1,7 +1,7 @@
 """Andersen dynamics class."""
 from typing import IO, Optional, Union
 
-from numpy import cos, log, ones, pi, random, repeat
+from numpy import cos, log, ones, pi, random, repeat, allclose
 
 from ase import Atoms, units
 from ase.md.md import MolecularDynamics
@@ -17,13 +17,9 @@ class Andersen(MolecularDynamics):
         timestep: float,
         temperature_K: float,
         andersen_prob: float,
-        fixcm: bool = True,
-        trajectory: Optional[str] = None,
-        logfile: Optional[Union[IO, str]] = None,
-        loginterval: int = 1,
+        fix_com: bool = True,
         communicator=world,
         rng=random.default_rng(),
-        append_trajectory: bool = False,
     ):
         """"
         Parameters:
@@ -41,7 +37,7 @@ class Andersen(MolecularDynamics):
             A random collision probability, typically 1e-4 to 1e-1.
             With this probability atoms get assigned random velocity components.
 
-        fixcm: bool (optional)
+        fix_com: bool (optional)
             If True, the position and momentum of the center of mass is
             kept unperturbed.  Default: True.
 
@@ -78,14 +74,12 @@ class Andersen(MolecularDynamics):
         """
         self.temp = units.kB * temperature_K
         self.andersen_prob = andersen_prob
-        self.fix_com = fixcm
+        self.fix_com = fix_com
         self.rng = rng
         if communicator is None:
             communicator = DummyMPI()
         self.communicator = communicator
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
+        MolecularDynamics.__init__(self, atoms, timestep)
 
     def set_temperature(self, temperature_K):
         self.temp = units.kB * temperature_K
@@ -102,7 +96,7 @@ class Andersen(MolecularDynamics):
         z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
         return z
     
-    def todict(self):
+    def save_state(self):
         return {
             "type": "molecular-dynamics",
             "md-type": self.__class__.__name__,
@@ -112,42 +106,34 @@ class Andersen(MolecularDynamics):
             "andersen_prob": self.andersen_prob,
             "fix_com": self.fix_com,
             "nsteps": self.nsteps,
+            "rng": self.rng,
+            "momenta": self.atoms.get_momenta(),
+            "positions": self.atoms.get_positions(),
+            "forces": self.atoms.get_forces(),
+            "max_steps": self.max_steps,
         }
-    
-    def fromdict(self, d):
-        self.dt = d["dt"]
-        self.temp = d["temp"]
-        self.andersen_prob = d["andersen_prob"]
-        self.fix_com = d["fix_com"]
-        self.nsteps = d["nsteps"]
 
     @classmethod
-    def fromtraj(cls, traj, **kwargs):
-        from ase.io.trajectory import Trajectory
+    def from_restart(cls, restart_file, atoms):
+        from ase.optimize.restart import RestartReader
+
+        data = RestartReader(restart_file).load()
         
-        trajectory = Trajectory(traj)
-
-        d = trajectory.description
-
-        d.update(kwargs)
-
-        if d.get("md-type") != cls.__name__:
-            raise ValueError(f"Trajectory is not of type {cls.__name__}")
-        
-        atoms = trajectory[-1]
-
+        # Create a new instance of Andersen
         dyn = cls(
             atoms=atoms,
-            timestep=d["dt"],
-            temperature_K=d["temp"] / units.kB,
-            andersen_prob=d["andersen_prob"],
-            fixcm=d["fix_com"],
-            logfile=d.get("logfile"),
-            trajectory=trajectory.filename,
-            loginterval=d.get("loginterval", 1),
-            append_trajectory=d.get("append_trajectory"),
-            communicator=d.get("communicator"),
+            timestep=data["dt"],
+            temperature_K=data["temp"] / units.kB,
+            andersen_prob=data["andersen_prob"],
+            fix_com=data["fix_com"],
+            rng=data["rng"],
         )
+
+        dyn.nsteps = data["nsteps"]
+        dyn.max_steps = data["max_steps"]
+        #dyn.atoms.set_momenta(data["momenta"])
+
+        dyn.restart_properties["forces"] = data["forces"]
 
         return dyn
 
@@ -157,20 +143,6 @@ class Andersen(MolecularDynamics):
         width = (self.temp / masses)**0.5
         velos = self.boltzmann_random(width, size=(natoms, 3))
         return velos  # [[x, y, z],] components for each atom
-    
-    def integrate(self, atoms):
-        x = atoms.get_positions()
-
-        if self.fix_com:
-            old_com = atoms.get_center_of_mass()
-            self.v -= self._get_com_velocity(self.v)
-        # Step: x^n -> x^(n+1) - this applies constraints if any
-        atoms.set_positions(x + self.v * self.dt)
-        if self.fix_com:
-            atoms.set_center_of_mass(old_com)
-
-        # recalc velocities after RATTLE constraints are applied
-        self.v = (atoms.get_positions() - x) / self.dt
 
     def step(self, forces=None):
         atoms = self.atoms
@@ -204,7 +176,18 @@ class Andersen(MolecularDynamics):
         self.v[self.andersen_chance <= self.andersen_prob] \
             = self.random_velocity[self.andersen_chance <= self.andersen_prob]
 
-        self.integrate(atoms)
+        x = atoms.get_positions()
+
+        if self.fix_com:
+            old_com = atoms.get_center_of_mass()
+            self.v -= self._get_com_velocity(self.v)
+        # Step: x^n -> x^(n+1) - this applies constraints if any
+        atoms.set_positions(x + self.v * self.dt)
+        if self.fix_com:
+            atoms.set_center_of_mass(old_com)
+
+        # recalc velocities after RATTLE constraints are applied
+        self.v = (atoms.get_positions() - x) / self.dt
 
         forces = atoms.get_forces(md=True)
 

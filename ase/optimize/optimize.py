@@ -112,6 +112,8 @@ class Dynamics(IOContext):
         self.nsteps = 0
         self.max_steps = 0  # to be updated in run or irun
 
+        self.restart_properties = {}
+
         if trajectory is not None:
             if isinstance(trajectory, str):
                 from ase.io.trajectory import Trajectory
@@ -168,14 +170,14 @@ class Dynamics(IOContext):
         If *interval <= 0*, after step *interval*, call *function* with
         arguments *args* and keyword arguments *kwargs*.  This is
         currently zero indexed."""
-        print(function)
+
         if hasattr(function, "set_description"):
             d = self.todict()
             d.update(interval=interval)
             function.set_description(d)
         if not isinstance(function, Callable):
             function = function.write
-            print(function)
+
         self.observers.append((function, interval, args, kwargs))
 
     def call_observers(self):
@@ -215,24 +217,6 @@ class Dynamics(IOContext):
         ...     opt1.run()
         """
 
-        # update the maximum number of steps
-        self.max_steps = self.nsteps + steps
-
-        # compute the initial step
-        self.optimizable.get_forces()
-
-        # log the initial step
-        if self.nsteps == 0:
-            self.log()
-
-            # we write a trajectory file if it is None
-            if self.trajectory is None:
-                self.call_observers()
-            # We do not write on restart w/ an existing trajectory file
-            # present. This duplicates the same entry twice
-            elif len(self.trajectory) == 0:
-                self.call_observers()
-
         # check convergence
         is_converged = self.converged()
         yield is_converged
@@ -268,8 +252,56 @@ class Dynamics(IOContext):
         converged : bool
             True if the forces on atoms are converged.
         """
+                # update the maximum number of steps
+        self.max_steps = self.nsteps + steps
+
+        # compute the initial step
+        self.optimizable.get_forces()
+
+        # log the initial step
+        if self.nsteps == 0:
+            self.log()
+
+            # we write a trajectory file if it is None
+            if self.trajectory is None:
+                self.call_observers()
+            # We do not write on restart w/ an existing trajectory file
+            # present. This duplicates the same entry twice
+            elif len(self.trajectory) == 0:
+                self.call_observers()
 
         for converged in Dynamics.irun(self, steps=steps):
+            pass
+        return converged
+    
+    def restart(self):
+        """Restart dynamics algorithm.
+
+        This method will return when the forces on all individual
+        atoms are less than *fmax* or when the number of steps exceeds
+        *steps*.
+
+        Parameters
+        ----------
+        steps : int, default=DEFAULT_MAX_STEPS
+            Number of dynamics steps to be run.
+
+        Returns
+        -------
+        converged : bool
+            True if the forces on atoms are converged.
+        """
+
+        self.step(self.restart_properties.get("forces"))
+
+        self.nsteps += 1
+
+        self.log()
+        self.call_observers()
+
+        remaining_steps = self.max_steps - self.nsteps
+
+        for converged in Dynamics.irun(self, steps=remaining_steps):
             pass
         return converged
 
