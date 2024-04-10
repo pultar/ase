@@ -1188,7 +1188,8 @@ def format_atom_position(atom, crystal_coordinates, mask='', tidx=None):
 @writer
 def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
                       kspacing=None, kpts=None, koffset=(0, 0, 0),
-                      crystal_coordinates=False, **kwargs):
+                      crystal_coordinates=False, additional_cards=None,
+                      **kwargs):
     """
     Create an input file for pw.x.
 
@@ -1432,6 +1433,13 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
 
     # DONE!
     fd.write(''.join(pwi))
+
+    if additional_cards:
+        if isinstance(additional_cards, list):
+            additional_cards = "\n".join(additional_cards)
+            additional_cards += "\n"
+
+        fd.write(additional_cards)
 
 
 def write_espresso_ph(
@@ -1866,7 +1874,7 @@ def read_espresso_ph(fileobj):
 def write_fortran_namelist(
         fd,
         input_data=None,
-        binary='pw',
+        binary=None,
         additional_cards=None,
         **kwargs) -> None:
     """
@@ -1897,7 +1905,9 @@ def write_fortran_namelist(
     None
     """
     input_data = Namelist(input_data)
-    input_data.to_nested(binary, **kwargs)
+
+    if binary:
+        input_data.to_nested(binary, **kwargs)
 
     pwi = input_data.to_string()
 

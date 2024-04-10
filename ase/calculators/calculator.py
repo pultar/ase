@@ -932,10 +932,9 @@ class Calculator(BaseCalculator):
 
 
 class OldShellProfile:
-    def __init__(self, name, command, prefix):
+    def __init__(self, name, command):
         self.name = name
         self.command = command
-        self.prefix = prefix
 
     def execute(self, calc):
         if self.command is None:
@@ -947,7 +946,7 @@ class OldShellProfile:
             )
         command = self.command
         if 'PREFIX' in command:
-            command = command.replace('PREFIX', self.prefix)
+            command = command.replace('PREFIX', calc.prefix)
 
         try:
             proc = subprocess.Popen(command, shell=True, cwd=calc.directory)
@@ -1089,7 +1088,7 @@ class FileIOCalculator(Calculator):
         # Helper method to load configuration.
         # This is used by the tests, do not rely on this as it will change.
         section = cfg.parser[section_name]
-        argv = shlex.split(section['command'])
+        argv = shlex.split(section['binary'])
         return ArgvProfile(section_name, argv)
 
     def _initialize_profile(self, command):
@@ -1110,7 +1109,7 @@ class FileIOCalculator(Calculator):
                 f'No configuration of {self.name}.  '
                 f'Missing section [{self.name}] in configuration')
 
-        return OldShellProfile(self.name, command, self.prefix)
+        return OldShellProfile(self.name, command)
 
     def calculate(
         self, atoms=None, properties=['energy'], system_changes=all_changes
