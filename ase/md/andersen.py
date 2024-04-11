@@ -113,31 +113,27 @@ class Andersen(MolecularDynamics):
         }
 
     @classmethod
-    def fromdict(cls, restart_file):
-        from ase.io.jsonio import read_json
-
-        with open(restart_file) as f:
-            data = read_json(f)
+    def fromdict(cls, dict):
 
         rng = DEFAULT_RNG
-        rng.bit_generator.state = data["rng_state"]
+        rng.bit_generator.state = dict["rng_state"]
 
-        atoms = data["atoms"]
+        atoms = dict["atoms"]
 
         # Create a new instance of Andersen
         dyn = cls(
             atoms=atoms,
-            timestep=data["dt"],
-            temperature_K=data["temp"] / units.kB,
-            andersen_prob=data["andersen_prob"],
-            fix_com=data["fix_com"],
+            timestep=dict["dt"],
+            temperature_K=dict["temp"] / units.kB,
+            andersen_prob=dict["andersen_prob"],
+            fix_com=dict["fix_com"],
             rng=rng,
         )
 
-        dyn.nsteps = data["nsteps"]
-        dyn.max_steps = data["max_steps"]
+        dyn.nsteps = dict["nsteps"]
+        dyn.max_steps = dict["max_steps"]
 
-        dyn.restart_properties["forces"] = data["forces"]
+        dyn.restart_properties["forces"] = dict["forces"]
 
         return dyn
 
