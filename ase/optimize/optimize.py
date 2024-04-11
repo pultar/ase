@@ -292,7 +292,7 @@ class Dynamics(IOContext):
             True if the forces on atoms are converged.
         """
 
-        self.step(self.restart_properties.get("forces"))
+        self.step(self.restart_properties.pop("forces", None))
 
         self.nsteps += 1
 
