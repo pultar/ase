@@ -189,6 +189,7 @@ class Aims(GenericFileIOCalculator):
         directory='.',
         parallel_info=None,
         parallel=True,
+        template=None,
         **kwargs,
     ):
         """Construct the FHI-aims calculator.
@@ -213,9 +214,11 @@ class Aims(GenericFileIOCalculator):
             Any of the base class arguments.
 
         """
+        if template is None:
+            template = AimsTemplate()
 
         super().__init__(
-            template=AimsTemplate(),
+            template=template,
             profile=profile,
             parameters=kwargs,
             parallel_info=parallel_info,
