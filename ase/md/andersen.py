@@ -1,10 +1,10 @@
 """Andersen dynamics class."""
 from typing import IO, Optional, Union
 
-from numpy import cos, log, ones, pi, random, repeat, allclose
+from numpy import cos, log, ones, pi, repeat
 
 from ase import Atoms, units
-from ase.md.md import MolecularDynamics
+from ase.md.md import MolecularDynamics, DEFAULT_RNG
 from ase.parallel import DummyMPI, world
 
 
@@ -19,7 +19,7 @@ class Andersen(MolecularDynamics):
         andersen_prob: float,
         fix_com: bool = True,
         communicator=world,
-        rng=random.default_rng(),
+        rng=DEFAULT_RNG,
     ):
         """"
         Parameters:
@@ -96,7 +96,7 @@ class Andersen(MolecularDynamics):
         z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
         return z
     
-    def save_state(self):
+    def todict(self):
         return {
             "type": "molecular-dynamics",
             "md-type": self.__class__.__name__,
@@ -106,7 +106,7 @@ class Andersen(MolecularDynamics):
             "andersen_prob": self.andersen_prob,
             "fix_com": self.fix_com,
             "nsteps": self.nsteps,
-            "rng": self.rng,
+            "rng_state": self.rng.bit_generator.state,
             "momenta": self.atoms.get_momenta(),
             "positions": self.atoms.get_positions(),
             "forces": self.atoms.get_forces(),
@@ -114,11 +114,15 @@ class Andersen(MolecularDynamics):
         }
 
     @classmethod
-    def from_restart(cls, restart_file, atoms):
-        from ase.optimize.restart import RestartReader
+    def fromdict(cls, restart_file, atoms):
+        from ase.io.jsonio import read_json
 
-        data = RestartReader(restart_file).load()
-        
+        with open(restart_file) as f:
+            data = read_json(f)
+
+        rng = DEFAULT_RNG
+        rng.bit_generator.state = data["rng_state"]
+
         # Create a new instance of Andersen
         dyn = cls(
             atoms=atoms,
@@ -126,12 +130,11 @@ class Andersen(MolecularDynamics):
             temperature_K=data["temp"] / units.kB,
             andersen_prob=data["andersen_prob"],
             fix_com=data["fix_com"],
-            rng=data["rng"],
+            rng=rng,
         )
 
         dyn.nsteps = data["nsteps"]
         dyn.max_steps = data["max_steps"]
-        #dyn.atoms.set_momenta(data["momenta"])
 
         dyn.restart_properties["forces"] = data["forces"]
 
