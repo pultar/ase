@@ -94,7 +94,7 @@ def key_val_str_to_dict(string, sep=None):
         elif char in delimiters:
             cur_delimiter = delimiters[char]  # brackets or quotes
         elif (sep is None and char.isspace()) or char == sep:
-            if kv_pairs == [[[]]] or kv_pairs[-1][-1] == []:  # empty, beginning of string
+            if kv_pairs == [[[]]] or kv_pairs[-1][-1] == []:  # empty
                 continue
             else:
                 kv_pairs.append([[]])

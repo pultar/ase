@@ -34,7 +34,8 @@ class Positions:
 
     def to_use(self):
         """Tells whether this position is at the right side."""
-        if self.distance > 0. and self.origin == 0 or self.distance < 0. and self.origin == 1:
+        if (self.distance > 0. and self.origin == 0 or self.distance < 0
+            and self.origin == 1):
             return True
         else:
             return False
