@@ -442,7 +442,8 @@ def _read_xyz_frame(lines, natoms, properties_parser=key_val_str_to_dict,
             try:
                 n = int(entry[0][3:])
             except ValueError as e:
-                raise XYZError(f'Expected VEC{ln + 1}, got VEC{entry[0][3:]}') from e
+                raise XYZError(
+                    f'Expected VEC{ln + 1}, got VEC{entry[0][3:]}') from e
             if n != ln + 1:
                 raise XYZError(f'Expected VEC{ln + 1}, got VEC{n}')
 

@@ -32,5 +32,6 @@ def test_mpi_unused_on_import():
 
     run([sys.executable,
          '-c',
-         f'{imports}; from ase.parallel import world; assert world.comm is None'],
+         f'{imports}; from ase.parallel import world; assert world.comm '
+         'is None'],
         check=True)

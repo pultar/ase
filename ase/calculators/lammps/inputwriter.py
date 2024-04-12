@@ -108,11 +108,11 @@ def write_lammps_in(lammps_in, parameters, atoms, prismobj,
 
     # Write variables
     fileobj.write(
-        
-            "clear\n"
-            f'variable dump_file string "{lammps_trj}"\n'
-            f'variable data_file string "{lammps_data}"\n'
-        
+
+        "clear\n"
+        f'variable dump_file string "{lammps_trj}"\n'
+        f'variable data_file string "{lammps_data}"\n'
+
     )
 
     if "package" in parameters:

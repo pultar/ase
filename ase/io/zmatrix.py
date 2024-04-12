@@ -74,7 +74,8 @@ class _ZMatrixToAtoms:
         except ValueError as e:
             val_out = self.defs.get(val.lstrip('+-'))
             if val_out is None:
-                raise ValueError(f'Invalid value encountered in Z-matrix: {val}') from e
+                raise ValueError(
+                    f'Invalid value encountered in Z-matrix: {val}') from e
         return val_out * (-1 if val.startswith('-') else 1)
 
     def get_index(self, name: str) -> int:
@@ -83,7 +84,8 @@ class _ZMatrixToAtoms:
             return int(name) - 1
         except ValueError as e:
             if self.name_to_index is None or name not in self.name_to_index:
-                raise ValueError(f'Failed to determine index for name "{name}"') from e
+                raise ValueError(
+                    f'Failed to determine index for name "{name}"') from e
         return self.name_to_index[name]
 
     def set_index(self, name: str) -> None:

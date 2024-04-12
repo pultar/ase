@@ -1557,10 +1557,10 @@ class GenerateVaspInput:
             if not src or not isfile(src):
                 warnings.warn(
                     'vdW has been enabled, however no'
-                     f' location for the {kernel} file'
-                     ' has been specified.'
-                     f' Set {vdw_env} environment variable to'
-                     ' copy the vdW kernel.')
+                    f' location for the {kernel} file'
+                    ' has been specified.'
+                    f' Set {vdw_env} environment variable to'
+                    ' copy the vdW kernel.')
             else:
                 shutil.copyfile(src, dst)
 

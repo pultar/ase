@@ -617,7 +617,8 @@ class RHL(BravaisLattice):
 
     def __init__(self, a, alpha):
         if alpha >= 120:
-            raise UnconventionalLattice(f'Need alpha < 120 degrees, got {alpha}')
+            raise UnconventionalLattice(
+                f'Need alpha < 120 degrees, got {alpha}')
         super().__init__(a=a, alpha=alpha)
 
     def _cell(self, a, alpha):
