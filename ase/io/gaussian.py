@@ -666,7 +666,7 @@ def _get_cartesian_atom_coords(symbol, pos):
     if len(pos) < 3 or (pos[0] == '0' and symbol != 'TV'):
         # In this case, we have a z-matrix definition, so
         # no cartesian coords.
-        return
+        return None
     elif len(pos) > 3:
         raise ParseError("ERROR: Gaussian input file could "
                          "not be read as freeze codes are not"
@@ -896,7 +896,7 @@ def _update_readiso_params(parameters, symbols):
     parameters = _delete_readiso_param(parameters)
     if parameters.get('isolist') is not None:
         if len(parameters['isolist']) < len(symbols):
-            for i in range(0, len(symbols) - len(parameters['isolist'])):
+            for i in range(len(symbols) - len(parameters['isolist'])):
                 parameters['isolist'].append(None)
         if all(m is None for m in parameters['isolist']):
             parameters['isolist'] = None
@@ -1223,8 +1223,7 @@ def _compare_merge_configs(configs, new):
         if np.any(oldres[key] != newres[key]):
             configs.append(new)
             return
-    else:
-        oldres.update(newres)
+    oldres.update(newres)
 
 
 def read_gaussian_out(fd, index=-1):
