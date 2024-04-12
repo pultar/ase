@@ -1972,7 +1972,8 @@ class Atoms:
         """Get volume of unit cell."""
         if self.cell.rank != 3:
             raise ValueError(
-                f'You have {self.cell.rank} lattice vectors: volume not defined')
+                f'You have {self.cell.rank} lattice vectors: volume not defined'
+                ')
         return self.cell.volume
 
     def _get_positions(self):
