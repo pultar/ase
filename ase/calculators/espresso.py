@@ -53,7 +53,9 @@ class EspressoProfile(BaseProfile):
             return None
 
     def get_calculator_command(self, inputfile):
-        return [self.binary, '-in', inputfile]
+        command = self.binary.split()
+        command.extend(['-in', inputfile])
+        return command
 
 
 class EspressoTemplate(CalculatorTemplate):
