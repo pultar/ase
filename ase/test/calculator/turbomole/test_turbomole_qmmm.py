@@ -2,6 +2,7 @@
 from math import cos, pi, sin
 
 import numpy as np
+
 from ase import Atoms
 from ase.calculators.qmmm import EIQMMM, LJInteractions, SimpleQMMM
 from ase.calculators.tip3p import TIP3P, angleHOH, epsilon0, rOH, sigma0
@@ -10,7 +11,7 @@ from ase.constraints import FixInternals
 from ase.optimize import BFGS
 
 
-def test_turbomole_qmmm():
+def test_turbomole_qmmm(turbomole_factory):
     """Test the Turbomole calculator in simple QMMM and
     explicit interaction QMMM simulations."""
 

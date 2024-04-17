@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase.build import fcc111
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
@@ -19,7 +20,7 @@ from ase.optimize import BFGS
 db_file = 'gadb.db'
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_basic_example_main_run(seed, testdir):
     # set up the random number generator
     rng = np.random.RandomState(seed)
@@ -58,7 +59,7 @@ def test_basic_example_main_run(seed, testdir):
     # generate the starting population
     population_size = 5
     starting_population = [sg.get_new_candidate()
-                           for i in range(population_size)]
+                           for _ in range(population_size)]
 
     # from ase.visualize import view   # uncomment these lines
     # view(starting_population)        # to see the starting population
@@ -109,7 +110,7 @@ def test_basic_example_main_run(seed, testdir):
     while da.get_number_of_unrelaxed_candidates() > 0:
         a = da.get_an_unrelaxed_candidate()
         a.calc = EMT()
-        print('Relaxing starting candidate {0}'.format(a.info['confid']))
+        print('Relaxing starting candidate {}'.format(a.info['confid']))
         with BFGS(a, trajectory=None, logfile=None) as dyn:
             dyn.run(fmax=0.05, steps=100)
         set_raw_score(a, -a.get_potential_energy())
@@ -123,7 +124,7 @@ def test_basic_example_main_run(seed, testdir):
 
     # test n_to_test new candidates
     for i in range(n_to_test):
-        print('Now starting configuration number {0}'.format(i))
+        print(f'Now starting configuration number {i}')
         a1, a2 = population.get_two_candidates()
         a3, desc = pairing.get_new_individual([a1, a2])
         if a3 is None:

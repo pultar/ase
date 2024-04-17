@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase.quaternions import Quaternion
 
 TEST_N = 200
@@ -41,7 +42,7 @@ def eulang_rotm(a, b, c, mode='zyz'):
     return np.dot(rotc, np.dot(rotb, rota))
 
 
-@pytest.fixture
+@pytest.fixture()
 def rng():
     return np.random.RandomState(0)
 
@@ -49,7 +50,7 @@ def rng():
 def test_quaternions_rotations(rng):
 
     # First: test that rotations DO work
-    for i in range(TEST_N):
+    for _ in range(TEST_N):
         # n random tests
 
         rotm = rand_rotm(rng)
@@ -81,8 +82,7 @@ def test_quaternions_gimbal(rng):
 def test_quaternions_overload(rng):
 
     # Third: test compound rotations and operator overload
-    for i in range(TEST_N):
-
+    for _ in range(TEST_N):
         rotm1 = rand_rotm(rng)
         rotm2 = rand_rotm(rng)
 
@@ -121,8 +121,7 @@ def test_quaternions_euler(rng: np.random.RandomState, mode: str):
 def test_quaternions_rotm(rng):
 
     # Fifth: test that conversion back to rotation matrices works properly
-    for i in range(TEST_N):
-
+    for _ in range(TEST_N):
         rotm1 = rand_rotm(rng)
         rotm2 = rand_rotm(rng)
 

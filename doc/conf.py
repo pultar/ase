@@ -4,7 +4,6 @@ import sys
 import sphinx_rtd_theme
 
 sys.path.append('.')
-assert sys.version_info >= (3, 6)
 
 extensions = ['ext',
               'sphinx.ext.autodoc',
@@ -13,7 +12,9 @@ extensions = ['ext',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
-              'sphinx.ext.intersphinx']
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.imgconverter']
+
 extlinks = {
     'doi': ('https://doi.org/%s', 'doi: %s'),
     'arxiv': ('https://arxiv.org/abs/%s', 'arXiv: %s'),
@@ -48,6 +49,7 @@ html_last_updated_fmt = '%a, %d %b %Y %H:%M:%S'
 latex_elements = {'papersize': 'a4paper'}
 latex_show_urls = 'inline'
 latex_show_pagerefs = True
+latex_engine = 'xelatex'
 latex_documents = [
     ('index', 'ASE.tex', 'ASE', 'ASE-developers', 'howto', not True)]
 

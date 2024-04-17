@@ -3,10 +3,10 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from ase.io import ParseError, read
 from ase.io.aims import read_aims_results
 from ase.stress import full_3x3_to_voigt_6_stress
-from numpy.linalg import norm
 
 parent = Path(__file__).parents[2]
 
@@ -91,8 +91,8 @@ def test_parse_relax(testdir):
     traj = read(parent / "testdata/aims/relax.out", ":", format="aims-output")
     assert len(traj) == 8
     p0 = [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]]
-    assert all([np.allclose(at.get_scaled_positions(), p0) for at in traj])
-    assert all([np.allclose(at.get_forces(), np.zeros((2, 3))) for at in traj])
+    assert all(np.allclose(at.get_scaled_positions(), p0) for at in traj)
+    assert all(np.allclose(at.get_forces(), np.zeros((2, 3))) for at in traj)
 
     s0 = full_3x3_to_voigt_6_stress(
         [
@@ -156,6 +156,7 @@ def test_parse_dfpt_dielectric(testdir):
 
     assert np.allclose(diel, diel_0)
 
+
 def test_parse_polarization(testdir):
     outfile = parent / "testdata/aims/polarization.out"
     atoms = read(outfile, format="aims-output")
@@ -166,10 +167,12 @@ def test_parse_polarization(testdir):
 
     assert np.allclose(polar, polar_0)
 
+
 def test_preamble_failed(testdir):
     outfile = parent / "testdata/aims/preamble_fail.out"
     with pytest.raises(ParseError, match='No SCF steps'):
         read(outfile, format="aims-output")
+
 
 def test_numerical_stress(testdir):
     outfile = parent / "testdata/aims/numerical_stress.out"

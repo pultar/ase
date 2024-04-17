@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase.build.bulk import bulk
 from ase.build.molecule import molecule
 from ase.calculators.emt import EMT
@@ -10,7 +11,7 @@ from ase.lattice.compounds import L1_2
 from ase.optimize.fire import FIRE
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms_h2():
     return molecule('H2')
 

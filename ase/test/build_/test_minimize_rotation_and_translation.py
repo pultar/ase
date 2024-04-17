@@ -1,9 +1,9 @@
 import numpy as np
-from ase.build import minimize_rotation_and_translation
+
+from ase.build import bulk, minimize_rotation_and_translation, molecule
 
 
 def test_with_pbc():
-    from ase.build import bulk
 
     atoms_start = bulk('Cu', 'fcc', a=3.6, cubic=True)
     # regardless of the structure, we want the test
@@ -24,7 +24,6 @@ def test_with_pbc():
 
 
 def test_without_pbc():
-    from ase.build import molecule
 
     atoms_start = molecule('NH3')
     atoms_end = atoms_start.copy()

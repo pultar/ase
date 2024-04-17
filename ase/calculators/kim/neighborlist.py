@@ -1,12 +1,11 @@
 from collections import defaultdict
 
-import kimpy
 import numpy as np
+
 from ase import Atom
 from ase.neighborlist import neighbor_list
-from kimpy import neighlist
 
-from .kimpy_wrappers import c_double, c_int, check_call_wrapper
+from .kimpy_wrappers import c_double, c_int, check_call_wrapper, kimpy
 
 
 class NeighborList:
@@ -57,14 +56,14 @@ class NeighborList:
 
         if self.debug:
             print()
-            print("Calculator skin: {}".format(self.skin))
+            print(f"Calculator skin: {self.skin}")
             print(f"Model influence distance: {model_influence_dist}")
             print(
                 "Calculator influence distance (including skin distance): {}"
                 "".format(self.influence_dist)
             )
-            print("Number of cutoffs: {}".format(model_cutoffs.size))
-            print("Model cutoffs: {}".format(model_cutoffs))
+            print(f"Number of cutoffs: {model_cutoffs.size}")
+            print(f"Model cutoffs: {model_cutoffs}")
             print(
                 "Calculator cutoffs (including skin distance): {}"
                 "".format(self.cutoffs)
@@ -214,7 +213,7 @@ class ASENeighborList(NeighborList):
         # Loop over all neighbor pairs. Because this loop will generally
         # include image atoms (for periodic systems), we keep track of
         # which atoms/images we've accounted for in the `used` dictionary.
-        used = dict()
+        used = {}
         for neigh_i, neigh_j, rel_pos, offset, dist in zip(
                 neigh_indices_i, neigh_indices_j,
                 relative_pos, neigh_cell_offsets, dists
@@ -246,7 +245,7 @@ class ASENeighborList(NeighborList):
         # Add neighbors of padding atoms if the potential requires them
         if self.padding_need_neigh:
             neighbor_list_size = len(new_atoms)
-            inv_used = dict((v, k) for k, v in used.items())
+            inv_used = {v: k for k, v in used.items()}
             # Loop over all the neighbors (k) and the image of that neighbor
             # in the cell (neigh)
             for k, neigh in enumerate(padding_image_of):
@@ -357,11 +356,11 @@ class KimpyNeighborList(NeighborList):
             debug,
         )
 
-        self.neigh = neighlist.NeighList()
+        self.neigh = kimpy.neighlist.NeighList()
 
         compute_args.set_callback_pointer(
             kimpy.compute_callback_name.GetNeighborList,
-            neighlist.get_neigh_kim(),
+            kimpy.neighlist.get_neigh_kim(),
             self.neigh,
         )
 
@@ -380,7 +379,7 @@ class KimpyNeighborList(NeighborList):
         pbc = np.asarray(pbc, dtype=c_int)
         contributing_coords = np.asarray(contributing_coords, dtype=c_double)
 
-        return neighlist.create_paddings(
+        return kimpy.neighlist.create_paddings(
             self.influence_dist,
             cell,
             pbc,

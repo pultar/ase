@@ -4,6 +4,7 @@ import re
 from typing import IO, Generator, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
+
 from ase.atoms import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.data import chemical_symbols
@@ -144,7 +145,7 @@ def read_single_image(fd: IO, levcfg: int, imcon: int,
     for i, line in enumerate(itertools.islice(fd, natoms), 1):
         match = re.match(r"\s*([A-Za-z][a-z]?)(\S*)", line)
         if not match:
-            raise IOError(f"Line {line} does not match valid format.")
+            raise OSError(f"Line {line} does not match valid format.")
 
         symbol, label = match.group(1, 2)
         symbol = symbol.capitalize()
@@ -237,7 +238,7 @@ def write_dlp4(fd: IO, atoms: Atoms,
                          "Supported pbc are 000, 110, and 111.")
 
     print(f"{title:72s}", file=fd)
-    print(f"{levcfg:10d}{imcon:10d}{natoms:10d}", file=fd)
+    print(f"{levcfg:10d}{imcon:10d} {natoms}", file=fd)
 
     if imcon > 0:
         for row in atoms.get_cell():

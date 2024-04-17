@@ -5,8 +5,9 @@ import weakref
 from functools import partial
 from time import time
 
-import ase.gui.ui as ui
 import numpy as np
+
+import ase.gui.ui as ui
 from ase import Atoms, __version__
 from ase.gui.defaults import read_defaults
 from ase.gui.i18n import _
@@ -297,7 +298,7 @@ class GUI(View, Status):
     def reciprocal(self):
         if self.atoms.cell.rank != 3:
             self.bad_plot(_('Requires 3D cell.'))
-            return
+            return None
 
         cell = self.atoms.cell.uncomplete(self.atoms.pbc)
         bandpath = cell.bandpath(npoints=0)

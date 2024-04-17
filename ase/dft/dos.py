@@ -1,6 +1,7 @@
 from math import pi, sqrt
 
 import numpy as np
+
 from ase.dft.kpoints import get_monkhorst_pack_size_and_offset
 from ase.parallel import world
 from ase.utils.cext import cextension
@@ -242,7 +243,3 @@ def lti_dos1(e, w, energies, dos):
                               f13,
                               f23,
                               f30 + f31 + f32]) * g
-
-
-def ltidos(*args, **kwargs):
-    raise DeprecationWarning('Please use linear_tetrahedron_integration().')

@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 
 class SubprocessRunResults:
     """Results returned from subprocess.run()."""
+
     def __init__(
             self, stdout, stderr, return_code: int,
             process_time: Optional[float] = None):
@@ -75,9 +76,8 @@ class SimpleBinaryRunner:
         time_start: float = time.time()
         result = subprocess.run(execution_list,
                                 env=my_env,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                cwd=self.directory)
+                                capture_output=True,
+                                cwd=self.directory, check=False)
         total_time = time.time() - time_start
         return SubprocessRunResults(
             result.stdout, result.stderr, result.returncode, total_time)

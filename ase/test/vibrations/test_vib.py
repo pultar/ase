@@ -2,19 +2,21 @@
 import os
 from pathlib import Path
 
-import ase.io
 import numpy as np
 import pytest
+from numpy.testing import assert_array_almost_equal
+
+import ase.io
 from ase import Atoms, units
 from ase.build import add_adsorbate, fcc111
+from ase.calculators.calculator import compare_atoms
 from ase.calculators.qmmm import ForceConstantCalculator
 from ase.constraints import FixAtoms, FixCartesian
 from ase.thermochemistry import IdealGasThermo
 from ase.vibrations import Vibrations, VibrationsData
-from numpy.testing import assert_array_almost_equal
 
 
-@pytest.fixture
+@pytest.fixture()
 def random_dimer():
     rng = np.random.RandomState(42)
 
@@ -167,7 +169,7 @@ def test_vibrations_methods(testdir, random_dimer):
     with open(logfilename, 'w') as fd:
         vib.summary(log=fd)
 
-    with open(logfilename, 'rt') as fd:
+    with open(logfilename) as fd:
         log_txt = fd.read()
         assert log_txt == '\n'.join(
             VibrationsData._tabulate_from_energies(vib_energies)) + '\n'
@@ -180,7 +182,7 @@ def test_vibrations_methods(testdir, random_dimer):
 
     vib.write_mode(n=3, nimages=5)
     for i in range(3):
-        assert not Path('vib.{}.traj'.format(i)).is_file()
+        assert not Path(f'vib.{i}.traj').is_file()
     mode_traj = ase.io.read('vib.3.traj', index=':')
     assert len(mode_traj) == 5
 
@@ -283,7 +285,6 @@ class TestVibrationsDataStaticMethods:
     def test_get_jmol_images(self, kwargs, expected):
         # Test the private staticmethod _get_jmol_images
         # used by the public write_jmol_images() method
-        from ase.calculators.calculator import compare_atoms
 
         jmol_images = list(VibrationsData._get_jmol_images(**kwargs))
         assert len(jmol_images) == len(expected)
@@ -298,7 +299,7 @@ class TestVibrationsDataStaticMethods:
                     assert image.info[key] == value
 
 
-@pytest.fixture
+@pytest.fixture()
 def n2_data():
     return {'atoms': Atoms('N2', positions=[[0., 0., 0.05095057],
                                             [0., 0., 1.04904943]]),
@@ -331,7 +332,7 @@ def n2_data():
             }
 
 
-@pytest.fixture
+@pytest.fixture()
 def n2_unstable_data():
     return {'atoms': Atoms('N2', positions=[[0., 0., 0.45],
                                             [0., 0., -0.45]]),
@@ -350,7 +351,7 @@ def n2_unstable_data():
             }
 
 
-@pytest.fixture
+@pytest.fixture()
 def n2_vibdata(n2_data):
     return VibrationsData(n2_data['atoms'], n2_data['hessian'])
 

@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
+
 from ase.cell import Cell
 
 
-@pytest.fixture
+@pytest.fixture()
 def cell():
     return Cell([[1., 0., 0.],
                  [.1, 1., 0.],

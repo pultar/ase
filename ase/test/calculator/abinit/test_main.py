@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
+
 from ase.build import bulk, molecule
+from ase.io.abinit import read_abinit_gsr
 from ase.units import Hartree
 
 calc = pytest.mark.calculator
@@ -31,7 +33,7 @@ def run(atoms):
     return atoms.calc.results
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @calc('abinit')
 def test_si(factory):
     atoms = bulk('Si')
@@ -39,7 +41,7 @@ def test_si(factory):
     run(atoms)
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.parametrize('pps', ['fhi', 'paw'])
 @calc('abinit')
 def test_au(factory, pps):
@@ -57,7 +59,6 @@ def test_au(factory, pps):
     dict_abo = run(atoms)
 
     # test the read_abinit_gsr function
-    from ase.io.abinit import read_abinit_gsr
     dict_gsr = read_abinit_gsr(atoms.calc.directory / 'abinito_GSR.nc')
 
     atoms_gsr = dict_gsr["atoms"]
@@ -71,7 +72,7 @@ def test_au(factory, pps):
         assert dict_gsr[key] == pytest.approx(dict_abo[key], 1e-3)
 
 
-@pytest.fixture
+@pytest.fixture()
 def fe_atoms():
     return bulk('Fe')
 
@@ -80,7 +81,7 @@ def getkwargs(**kw):
     return dict(nbands=8, kpts=[2, 2, 2])
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @calc('abinit', occopt=7, **getkwargs())
 @calc('abinit', spinmagntarget=2.3, **getkwargs())
 def test_fe_magmom(factory, fe_atoms):

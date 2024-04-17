@@ -2,6 +2,7 @@ import re
 from collections import OrderedDict
 
 import numpy as np
+
 from ase import Atoms
 from ase.calculators.singlepoint import (SinglePointDFTCalculator,
                                          SinglePointKPoint)
@@ -43,9 +44,8 @@ def read_nwchem_out(fobj, index=-1):
                 return [parse_gto_chunk(''.join(lines))]
             if _pw_block.match(line):
                 return [parse_pw_chunk(''.join(lines))]
-        else:
-            raise ValueError('This does not appear to be a valid NWChem '
-                             'output file.')
+        raise ValueError('This does not appear to be a valid NWChem '
+                         'output file.')
 
     # First, find each SCF block
     group = []
@@ -78,11 +78,10 @@ def read_nwchem_out(fobj, index=-1):
                 lastparser = parser
             group = []
         parser = next_parser
-    else:
-        if not header:
-            atoms = parser(''.join(group))
-            if atoms is not None:
-                atomslist.append(atoms)
+    if not header:
+        atoms = parser(''.join(group))
+        if atoms is not None:
+            atomslist.append(atoms)
 
     return atomslist[index]
 
@@ -242,7 +241,7 @@ def parse_gto_chunk(chunk):
         atoms = _parse_geomblock(chunk)
 
     if atoms is None:
-        return
+        return None
 
     # SinglePointDFTCalculator doesn't support quadrupole moment currently
     calc = SinglePointDFTCalculator(atoms=atoms,
@@ -417,7 +416,7 @@ _fermi_energy = _define_pattern(
 def parse_pw_chunk(chunk):
     atoms = _parse_geomblock(chunk)
     if atoms is None:
-        return
+        return None
 
     energy = None
     efermi = None
@@ -564,9 +563,9 @@ def _get_pw_kpts(chunk):
 # SinglePointKPoint objects.
 class NWChemKpts:
     def __init__(self):
-        self.data = dict()
-        self.ibz_kpts = dict()
-        self.weights = dict()
+        self.data = {}
+        self.ibz_kpts = {}
+        self.weights = {}
 
     def add_ibz_kpt(self, index, raw_kpt):
         kpt = np.array([float(x.strip('>')) for x in raw_kpt.split()[1:4]])
@@ -574,7 +573,7 @@ class NWChemKpts:
 
     def add_eval(self, index, spin, energy, occ):
         if index not in self.data:
-            self.data[index] = dict()
+            self.data[index] = {}
         if spin not in self.data[index]:
             self.data[index][spin] = []
         self.data[index][spin].append((energy, occ))

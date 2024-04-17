@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from ase import Atoms
 from ase.build import molecule
 from ase.calculators.emt import EMT
@@ -40,12 +41,12 @@ def url(mysql_port):
     return db_url
 
 
-@pytest.fixture
+@pytest.fixture()
 def db(url):
     return connect(url)
 
 
-@pytest.fixture
+@pytest.fixture()
 def h2o():
     return molecule('H2O')
 

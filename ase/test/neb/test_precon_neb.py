@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+
 from ase.build import bulk
 from ase.calculators.morse import MorsePotential
 from ase.constraints import FixBondLength
@@ -11,6 +12,8 @@ from ase.mep.neb import NEBOptimizer
 from ase.optimize import BFGS, ODE12r
 from ase.optimize.precon import Exp
 from ase.utils.forcecurve import fit_images
+
+pytestmark = pytest.mark.optimize
 
 
 def calc():
@@ -70,7 +73,7 @@ def _setup_images_global():
     return neb.images, i1, i2
 
 
-@pytest.fixture
+@pytest.fixture()
 def setup_images(_setup_images_global):
     images, i1, i2 = _setup_images_global
     new_images = [img.copy() for img in images]
@@ -99,7 +102,7 @@ def _ref_vacancy_global(_setup_images_global):
     return Ef_ref, dE_ref, saddle
 
 
-@pytest.fixture
+@pytest.fixture()
 def ref_vacancy(_ref_vacancy_global):
     Ef_ref, dE_ref, saddle = _ref_vacancy_global
     return Ef_ref, dE_ref, saddle.copy()

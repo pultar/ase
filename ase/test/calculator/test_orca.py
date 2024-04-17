@@ -2,26 +2,26 @@ import re
 
 import numpy as np
 import pytest
+
 from ase.atoms import Atoms
+from ase.calculators.orca import get_version_from_orca_header
 from ase.optimize import BFGS
 from ase.units import Hartree
 
 calc = pytest.mark.calculator
 
 
-@pytest.fixture
+@pytest.fixture()
 def txt1():
     return '               Program Version 4.1.2  - RELEASE  -'
 
 
-@pytest.fixture
+@pytest.fixture()
 def ref1():
     return '4.1.2'
 
 
 def test_orca_version_from_string(txt1, ref1):
-    from ase.calculators.orca import get_version_from_orca_header
-
     version = get_version_from_orca_header(txt1)
     assert version == ref1
 
@@ -43,7 +43,7 @@ def test_ohh(factory):
     atoms.calc = factory.calc(orcasimpleinput='BLYP def2-SVP')
 
 
-@pytest.fixture
+@pytest.fixture()
 def water():
     return Atoms('OHH', positions=[(0, 0, 0), (1, 0, 0), (0, 1, 0)])
 

@@ -1,7 +1,8 @@
 import os
 
-import ase.gui.ui as ui
 import numpy as np
+
+import ase.gui.ui as ui
 from ase import Atoms
 from ase.data import atomic_numbers, chemical_symbols
 from ase.gui.i18n import _
@@ -35,8 +36,8 @@ class AddAtoms:
         self._atoms_from_file = None
 
         from ase.collections import g2
-        labels = list(sorted(name for name in g2.names
-                             if len(g2[name]) > 1))
+        labels = sorted(name for name in g2.names
+                        if len(g2[name]) > 1)
         values = labels
 
         combobox = ui.ComboBox(labels, values)

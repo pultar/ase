@@ -5,6 +5,7 @@ from io import StringIO
 
 import numpy as np
 import pytest
+
 from ase.io import read
 
 CONTENTS = """
@@ -27,22 +28,22 @@ Masses
 
 Atoms # full
 
-3 1 1 0 2 0 0
-1 1 1 0 0 0 0
-2 1 1 0 1 0 0
+3 1 1 0 2 0 0  # 3rd
+1 1 1 0 0 0 0  # 1st
+2 1 1 0 1 0 0  # 2nd
 
 Bonds
 
-1 1 1 2
-2 2 2 3
+1 1 1 2  # 1-2
+2 2 2 3  # 2-3
 
 Angles
 
-1 1 1 2 3
+1 1 1 2 3  # 1-2-3
 
 Dihedrals
 
-1 1 1 2 3 1
+1 1 1 2 3 1  # 1-2-3-1
 """
 
 SORTED = {
@@ -79,7 +80,7 @@ REFERENCE = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def fmt():
     return 'lammps-data'
 
@@ -89,7 +90,7 @@ def sort_by_id(request):
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def lammpsdata(fmt, sort_by_id):
     fd = StringIO(CONTENTS)
     return read(fd, format=fmt, sort_by_id=sort_by_id), SORTED[sort_by_id]

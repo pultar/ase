@@ -4,6 +4,7 @@ Provides FixSymmetry class to preserve spacegroup symmetry during optimisation
 import warnings
 
 import numpy as np
+
 from ase.constraints import FixConstraint
 from ase.stress import full_3x3_to_voigt_6_stress, voigt_6_to_full_3x3_stress
 from ase.utils import atoms_to_spglib_cell
@@ -183,6 +184,7 @@ class FixSymmetry(FixConstraint):
 
     def __init__(self, atoms, symprec=0.01, adjust_positions=True,
                  adjust_cell=True, verbose=False):
+        self.symprec = symprec
         self.verbose = verbose
         refine_symmetry(atoms, symprec, self.verbose)  # refine initial symmetry
         sym = prep_symmetry(atoms, symprec, self.verbose)
@@ -267,3 +269,14 @@ class FixSymmetry(FixConstraint):
             new_symm_map.append(new_sm)
 
         self.symm_map = new_symm_map
+
+    def todict(self):
+        return {
+            "name": "FixSymmetry",
+            "kwargs": {
+                "symprec": self.symprec,
+                "adjust_positions": self.do_adjust_positions,
+                "adjust_cell": self.do_adjust_cell,
+                "verbose": self.verbose,
+            },
+        }

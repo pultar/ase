@@ -1,11 +1,12 @@
 import numpy as np
 import pytest
+
 from ase.cell import Cell
 
 testcellpar = (2, 3, 4, 50, 60, 70)
 
 
-@pytest.fixture
+@pytest.fixture()
 def cell():
     return Cell.new(testcellpar)
 
@@ -34,7 +35,7 @@ def test_handedness(cell):
     assert cell.handedness == 0
 
 
-@pytest.fixture
+@pytest.fixture()
 def randcell():
     rng = np.random.RandomState(42)
     return Cell(rng.random((3, 3)))
@@ -66,7 +67,7 @@ def test_area(randcell):
 @pytest.mark.parametrize(
     'zeromask',
     [[], [1], [0, 2], [0, 1, 2]],
-    ids=lambda mask: 'dim={}'.format(3 - len(mask))
+    ids=lambda mask: f'dim={3 - len(mask)}'
 )
 def test_reciprocal_ndim(randcell, zeromask):
     randcell[zeromask] = 0

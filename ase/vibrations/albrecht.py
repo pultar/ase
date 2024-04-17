@@ -1,8 +1,9 @@
 import sys
 from itertools import combinations_with_replacement
 
-import ase.units as u
 import numpy as np
+
+import ase.units as u
 from ase.parallel import paropen, parprint
 from ase.vibrations.franck_condon import (FranckCondonOverlap,
                                           FranckCondonRecursive)
@@ -38,7 +39,7 @@ class Albrecht(ResonantRaman):
         if approx in ['albrecht', 'albrecht b', 'albrecht c', 'albrecht bc']:
             if not self.overlap:
                 raise ValueError('Overlaps are needed')
-        elif not approx == 'albrecht a':
+        elif approx != 'albrecht a':
             raise ValueError('Please use "Albrecht" or "Albrecht A/B/C/BC"')
         self._approx = value
 
@@ -58,7 +59,7 @@ class Albrecht(ResonantRaman):
         ind_v = list(combinations_with_replacement(l_Q, 1))
 
         if self.combinations > 1:
-            if not self.combinations == 2:
+            if self.combinations != 2:
                 raise NotImplementedError
 
             for c in range(2, self.combinations + 1):
@@ -446,7 +447,7 @@ class Albrecht(ResonantRaman):
         parprint('  #    meV     cm^-1      [e^4A^4/eV^2]', file=log)
         parprint('-------------------------------------', file=log)
         for v, e in enumerate(om_v):
-            parprint(self.ind_v[v], '{0:6.1f}   {1:7.1f} {2:9.1f}'.format(
+            parprint(self.ind_v[v], '{:6.1f}   {:7.1f} {:9.1f}'.format(
                 1000 * e, e / u.invcm, 1e9 * intens_v[v]),
                 file=log)
         parprint('-------------------------------------', file=log)

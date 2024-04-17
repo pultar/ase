@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 
 import numpy as np
+
 from ase import Atoms
 from ase.calculators.calculator import Calculator, InputError
 from ase.calculators.gaussian import Gaussian
@@ -12,7 +13,7 @@ from ase.calculators.singlepoint import SinglePointCalculator
 from ase.data import atomic_masses_iupac2016, chemical_symbols
 from ase.io import ParseError
 from ase.io.zmatrix import parse_zmatrix
-from ase.units import Bohr, Hartree
+from ase.units import Bohr, Debye, Hartree
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def _format_output_type(output_type):
     if output_type is None or output_type == '' or 't' in output_type.lower():
         output_type = 'P'
 
-    return '#{}'.format(output_type)
+    return f'#{output_type}'
 
 
 def _check_problem_methods(method):
@@ -160,9 +161,9 @@ def _pop_link0_params(params):
             continue
         val = params.pop(key)
         if not val or (isinstance(val, str) and key.lower() == val.lower()):
-            out.append('%{}'.format(key))
+            out.append(f'%{key}')
         else:
-            out.append('%{}={}'.format(key, val))
+            out.append(f'%{key}={val}')
 
     # These link0 keywords have a slightly different syntax
     for key in _link0_special:
@@ -171,7 +172,7 @@ def _pop_link0_params(params):
         val = params.pop(key)
         if not isinstance(val, str) and isinstance(val, Iterable):
             val = ' '.join(val)
-        out.append('%{} L{}'.format(key, val))
+        out.append(f'%{key} L{val}')
 
     return params, out
 
@@ -185,10 +186,10 @@ def _format_method_basis(output_type, method, basis, fitting_basis):
         output_string = '{} {}/{} ! ASE formatted method and basis'.format(
             output_type, method, basis)
     else:
-        output_string = '{}'.format(output_type)
+        output_string = f'{output_type}'
         for value in [method, basis]:
             if value is not None:
-                output_string += ' {}'.format(value)
+                output_string += f' {value}'
     return output_string
 
 
@@ -205,7 +206,7 @@ def _format_route_params(params):
         elif not isinstance(val, str) and isinstance(val, Iterable):
             out.append('{}({})'.format(key, ','.join(val)))
         else:
-            out.append('{}({})'.format(key, val))
+            out.append(f'{key}({val})')
     return out
 
 
@@ -233,7 +234,7 @@ def _format_basis_set(basis, basisfile, basis_set):
         if basisfile[0] == '@':
             out.append(basisfile)
         else:
-            with open(basisfile, 'r') as fd:
+            with open(basisfile) as fd:
                 out.append(fd.read())
     elif basis_set is not None:
         out.append(basis_set)
@@ -398,7 +399,7 @@ def write_gaussian_in(fd, atoms, properties=['energy'],
 
     # header, charge, and mult
     out += ['', 'Gaussian input prepared by ASE', '',
-            '{:.0f} {:.0f}'.format(charge, mult)]
+            f'{charge:.0f} {mult:.0f}']
 
     # make dict of nuclear properties:
     nuclear_props = {'spin': spinlist, 'zeff': zefflist, 'qmom': qmomlist,
@@ -665,7 +666,7 @@ def _get_cartesian_atom_coords(symbol, pos):
     if len(pos) < 3 or (pos[0] == '0' and symbol != 'TV'):
         # In this case, we have a z-matrix definition, so
         # no cartesian coords.
-        return
+        return None
     elif len(pos) > 3:
         raise ParseError("ERROR: Gaussian input file could "
                          "not be read as freeze codes are not"
@@ -895,7 +896,7 @@ def _update_readiso_params(parameters, symbols):
     parameters = _delete_readiso_param(parameters)
     if parameters.get('isolist') is not None:
         if len(parameters['isolist']) < len(symbols):
-            for i in range(0, len(symbols) - len(parameters['isolist'])):
+            for _ in range(len(symbols) - len(parameters['isolist'])):
                 parameters['isolist'].append(None)
         if all(m is None for m in parameters['isolist']):
             parameters['isolist'] = None
@@ -1222,8 +1223,7 @@ def _compare_merge_configs(configs, new):
         if np.any(oldres[key] != newres[key]):
             configs.append(new)
             return
-    else:
-        oldres.update(newres)
+    oldres.update(newres)
 
 
 def read_gaussian_out(fd, index=-1):
@@ -1310,6 +1310,15 @@ def read_gaussian_out(fd, index=-1):
             # CCSD(T) energy
             energy = float(line.split('=')[-1].strip().replace('D', 'e'))
             energy *= Hartree
+        elif line.startswith('Dipole moment') and energy is not None:
+            # dipole moment in `l601.exe`, printed unless `Pop=None`
+            # Skipped if energy is not printed in the same section.
+            # This happens in the last geometry record when `opt` or `irc` is
+            # specified. In this case, the record is compared with the previous
+            # one in `_compare_merge_configs`, and there the dipole moment
+            # from `l601` conflicts with the previous record from `l716`.
+            line = fd.readline().strip()
+            dipole = np.array([float(_) for _ in line.split()[1:6:2]]) * Debye
         elif _re_l716.match(line):
             # Sometimes Gaussian will print "Rotating derivatives to
             # standard orientation" after the matched line (which looks like

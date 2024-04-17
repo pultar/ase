@@ -1,8 +1,9 @@
 from math import cos, pi, sin
 
-import ase.units as units
 import numpy as np
 import pytest
+
+import ase.units as units
 from ase import Atoms
 from ase.build import add_adsorbate, fcc111
 from ase.calculators.emt import EMT
@@ -10,7 +11,7 @@ from ase.constraints import FixLinearTriatomic
 from ase.md import Langevin
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 def test_CO2linear_Au111_langevin(testdir):
     """Test Langevin with constraints for rigid linear
     triatomic molecules"""

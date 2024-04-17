@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixedLine, FixedPlane
@@ -84,6 +85,7 @@ def test_removed_dof_fixedline(indices, expected):
     assert constraints.get_removed_dof(atoms=mol) == expected
 
 
+@pytest.mark.optimize()
 @pytest.mark.parametrize('indices', [[0], [0, 1]])
 def test_constrained_optimization_fixedline(indices):
     """
@@ -120,6 +122,7 @@ def test_removed_dof_fixedplane(indices, expected):
     assert constraints.get_removed_dof(atoms=mol) == expected
 
 
+@pytest.mark.optimize()
 @pytest.mark.parametrize('indices', [[0], [0, 1]])
 def test_constrained_optimization_fixedplane(indices):
     """

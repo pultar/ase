@@ -1,10 +1,11 @@
 import pytest
+
 from ase import Atoms
 from ase.optimize import BFGS
 
 
 @pytest.mark.xfail(reason='needs update for new dftd+ version')
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.calculator('dftb')
 def test_dftb_relax_dimer(factory):
     calc = factory.calc(

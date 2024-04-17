@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import numpy.testing as npt
+
 from ase.io import read, write
 
 # This reads and writes XSF examples taken from the
@@ -71,7 +72,7 @@ def test_xsf_spec():
              '07-anim-crystal-fixcell': f7,
              '08-anim-crystal-varcell': f8}
 
-    names = list(sorted(files.keys()))
+    names = sorted(files.keys())
 
     for name in names:
         check(name, files[name], check_data=False)

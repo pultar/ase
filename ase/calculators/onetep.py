@@ -5,76 +5,83 @@ T. Demeyere, T.Demeyere@soton.ac.uk (2023)
 https://onetep.org"""
 
 from os import environ
-from pathlib import Path
-from subprocess import check_call
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
                                            GenericFileIOCalculator,
                                            read_stdout)
 from ase.io import read, write
 
 
-def find_onetep_command(cmd):
-    exploded_cmd = cmd.split()
-    n_cmd = len(exploded_cmd)
-    if n_cmd == 1:
-        return cmd
-    for substring in exploded_cmd:
-        if 'onetep' in substring:
-            return substring
-    return None
+class OnetepProfile(BaseProfile):
+    """
+    ONETEP profile class, additional "old" parameter
+    is automatically passed for now if the user uses the
+    now deprecated "ASE_ONETEP_COMMAND".
+    """
 
-
-class OnetepProfile:
-    def __init__(self, argv):
-        self.argv = argv
+    def __init__(self, binary, old=False, **kwargs):
+        """
+        Parameters
+        ----------
+        binary: str
+            Path to the ONETEP binary.
+        old: bool
+            If True, will use the old ASE_ONETEP_COMMAND
+            interface.
+        **kwargs: dict
+            Additional kwargs are passed to the BaseProfile
+            class.
+        """
+        super().__init__(**kwargs)
+        self.binary = binary
+        self.old = old
 
     def version(self):
-        onetep_exec = find_onetep_command(self.argv)
-        lines = read_stdout(onetep_exec)
+        lines = read_stdout(self.binary)
         return self.parse_version(lines)
 
     def parse_version(lines):
         return '1.0.0'
 
-    def run(self, directory, inputfile, outputfile, errorfile, append):
-        mode = 'a' if append else 'w'
-        with open(directory / outputfile, mode) as fd, \
-                open(directory / errorfile, 'w') as fe:
-            check_call(self.argv.split() + [str(inputfile)], stdout=fd,
-                       stderr=fe,
-                       env=environ,
-                       cwd=directory)
+    def get_calculator_command(self, inputfile):
+        if self.old:
+            return self.binary.split() + [str(inputfile)]
+        else:
+            return [self.binary, str(inputfile)]
 
 
 class OnetepTemplate(CalculatorTemplate):
-    def __init__(self, label, append):
+    _label = 'onetep'
+
+    def __init__(self, append):
         super().__init__(
-            name='ONETEP',
+            'ONETEP',
             implemented_properties=[
                 'energy',
                 'free_energy',
                 'forces',
                 'stress'])
-        self.label = label
-        self.input = label + '.dat'
-        self.output = label + '.out'
-        self.error = label + '.err'
+        self.inputname = f'{self._label}.dat'
+        self.outputname = f'{self._label}.out'
+        self.errorname = f'{self._label}.err'
         self.append = append
 
     def execute(self, directory, profile):
-        profile.run(directory, self.input, self.output, self.error,
-                    self.append)
+        profile.run(directory, self.inputname, self.outputname,
+                    self.errorname, append=self.append)
 
     def read_results(self, directory):
-        output_path = directory / self.output
+        output_path = directory / self.outputname
         atoms = read(output_path, format='onetep-out')
         return dict(atoms.calc.properties())
 
-    def write_input(self, directory, atoms, parameters, properties):
-        input_path = directory / self.input
+    def write_input(self, profile, directory, atoms, parameters, properties):
+        input_path = directory / self.inputname
         write(input_path, atoms, format='onetep-in',
               properties=properties, **parameters)
+
+    def load_profile(self, cfg, **kwargs):
+        return OnetepProfile.from_config(cfg, self.name, **kwargs)
 
 
 class Onetep(GenericFileIOCalculator):
@@ -96,8 +103,6 @@ class Onetep(GenericFileIOCalculator):
         keywords with lists as values will be
         treated like blocks, with each element
         of list being a different line.
-    label: str
-        Name used for the ONETEP prefix.
     xc: str
         DFT xc to use e.g (PBE, RPBE, ...).
     ngwfs_count: int|list|dict
@@ -141,33 +146,27 @@ class Onetep(GenericFileIOCalculator):
 
     def __init__(
             self,
-            label='onetep',
-            directory='.',
+            *,
             profile=None,
-            append=False,
-            autorestart=True,
-            atoms=None,
+            directory='.',
+            parallel_info=None,
+            parallel=True,
             **kwargs):
-        if 'ASE_ONETEP_COMMAND' in environ:
-            self.cmd = environ['ASE_ONETEP_COMMAND']
-        else:
-            self.cmd = None
-        self.directory = Path(directory)
-        self.autorestart = autorestart
-        self.label = label
+
         self.keywords = kwargs.get('keywords', None)
-        self.append = append
-        self.template = OnetepTemplate(label, append=self.append)
-        if profile is None:
-            profile = OnetepProfile(self.cmd)
-        kwargs['autorestart'] = self.autorestart
-        kwargs['directory'] = self.directory
-        kwargs['label'] = self.label
+        self.template = OnetepTemplate(
+            append=kwargs.pop('append', False)
+        )
+
+        if 'ASE_ONETEP_COMMAND' in environ and profile is None:
+            import warnings
+            warnings.warn("using ASE_ONETEP_COMMAND env is \
+                          deprecated, please use OnetepProfile",
+                          FutureWarning)
+            profile = OnetepProfile(environ['ASE_ONETEP_COMMAND'], old=True)
+
         super().__init__(profile=profile, template=self.template,
                          directory=directory,
-                         parameters=kwargs)
-        # Copy is probably not needed, but just in case
-        if atoms is not None:
-            self.atoms = atoms.copy()
-            if atoms.calc is not None:
-                self.results = atoms.calc.results.copy()
+                         parameters=kwargs,
+                         parallel=parallel,
+                         parallel_info=parallel_info)

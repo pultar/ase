@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
+
 from ase import Atoms
 from ase.build import bulk, molecule
 from ase.constraints import FixAtoms, FixCartesian
 from ase.io.jsonio import decode, encode
 
 
-@pytest.fixture
+@pytest.fixture()
 def silver_bulk() -> Atoms:
     return bulk('Ag', cubic=True)
 

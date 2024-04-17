@@ -3,6 +3,7 @@ from math import sqrt
 from typing import IO
 
 import numpy as np
+
 from ase.data import atomic_numbers, covalent_radii
 from ase.data.colors import jmol_colors
 from ase.io.formats import string2index
@@ -219,7 +220,6 @@ class ImageChunk:
     def build(self, **kwargs):
         """Construct the atoms object from the stored information,
         and return it"""
-        pass
 
 
 class ImageIterator:
@@ -255,8 +255,8 @@ class ImageIterator:
             # Negative indices.  Go through the whole thing to get the length,
             # which allows us to evaluate the slice, and then read it again
             if not hasattr(fd, 'seekable') or not fd.seekable():
-                raise ValueError(('Negative indices only supported for '
-                                  'seekable streams'))
+                raise ValueError('Negative indices only supported for '
+                                 'seekable streams')
 
             startpos = fd.tell()
             nchunks = 0
@@ -320,3 +320,8 @@ def verify_dictionary(atoms, dictionary, dictionary_name):
         if key not in dictionary:
             raise ValueError('Missing the {} key in the `{}` dictionary.'
                              ''.format(key, dictionary_name))
+
+
+def segment_list(data, segment_size):
+    """Segments a list into sublists of a specified size."""
+    return [data[i:i + segment_size] for i in range(0, len(data), segment_size)]

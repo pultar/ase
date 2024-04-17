@@ -210,7 +210,7 @@ def add_adsorbate(slab, adsorbate, height, position=(0, 0), offset=None,
                             'ase.build function, ' +
                             'position cannot be a name.')
         if position not in info['sites']:
-            raise TypeError('Adsorption site %s not supported.' % position)
+            raise TypeError(f'Adsorption site {position} not supported.')
         spos += info['sites'][position]
     else:
         pos += position
@@ -279,8 +279,8 @@ def _surface(symbol, structure, face, size, a, c, vacuum, periodic,
     if a is None:
         sym = reference_states[Z]['symmetry']
         if sym != structure:
-            raise ValueError("Can't guess lattice constant for %s-%s!" %
-                             (structure, symbol))
+            raise ValueError(
+                f"Can't guess lattice constant for {structure}-{symbol}!")
         a = reference_states[Z]['a']
 
     if structure == 'hcp' and c is None:
@@ -531,8 +531,22 @@ def graphene(formula='C2', a=2.460, thickness=0.0,
 
 def _all_surface_functions():
     # Convenient for debugging.
-    d = {}
-    for func in [fcc100, fcc110, bcc100, bcc110, bcc111, fcc111, hcp0001,
-                 hcp10m10, diamond100, diamond111, fcc111, mx2, graphene]:
-        d[func.__name__] = func
+    d = {
+        func.__name__: func
+        for func in [
+            fcc100,
+            fcc110,
+            bcc100,
+            bcc110,
+            bcc111,
+            fcc111,
+            hcp0001,
+            hcp10m10,
+            diamond100,
+            diamond111,
+            fcc111,
+            mx2,
+            graphene,
+        ]
+    }
     return d

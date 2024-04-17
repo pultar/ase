@@ -40,7 +40,7 @@ class SetupNanotube:
         win.add(self.element)
         win.add([_('Bond length: '),
                  self.bondlength,
-                 _(u'Å')])
+                 _('Å')])
         win.add(_('Select roll-up vector (n,m) and tube length:'))
         win.add(['n:', self.n,
                  'm:', self.m,
@@ -59,7 +59,7 @@ class SetupNanotube:
             self.atoms = None
             self.python = None
             self.description.text = ''
-            return
+            return None
 
         n = self.n.value
         m = self.m.value

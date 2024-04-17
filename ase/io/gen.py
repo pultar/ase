@@ -21,22 +21,16 @@ def read_gen(fileobj):
     pb_flag = line[1]
     if line[1] not in ['C', 'F', 'S']:
         if line[1] == 'H':
-            raise IOError('Error in line #1: H (Helical) is valid but not '
+            raise OSError('Error in line #1: H (Helical) is valid but not '
                           'supported. Only C (Cluster), S (Supercell) '
                           'or F (Fraction) are supported options')
         else:
-            raise IOError('Error in line #1: only C (Cluster), S (Supercell) '
+            raise OSError('Error in line #1: only C (Cluster), S (Supercell) '
                           'or F (Fraction) are supported options')
 
     # Read atomic symbols
     line = lines[1].split()
-    # Define a dictionary with symbols-id
-    symboldict = dict()
-    symbolid = 1
-    for symb in line:
-        symboldict[symbolid] = symb
-        symbolid += 1
-
+    symboldict = {symbolid: symb for symbolid, symb in enumerate(line, start=1)}
     # Read atoms (GEN format supports only single snapshot)
     del lines[:2]
     positions = []

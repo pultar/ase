@@ -4,6 +4,7 @@ Check the many ways of specifying KPOINTS
 import os
 
 import pytest
+
 from ase.build import bulk
 from ase.calculators.vasp.create_input import format_kpoints
 
@@ -12,19 +13,19 @@ from .filecmp_ignore_whitespace import filecmp_ignore_whitespace
 calc = pytest.mark.calculator
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms():
     return bulk('Al', 'fcc', a=4.5, cubic=True)
 
 
 def check_kpoints_line(n, contents):
     """Assert the contents of a line"""
-    with open('KPOINTS', 'r') as fd:
+    with open('KPOINTS') as fd:
         lines = fd.readlines()
     assert lines[n].strip() == contents
 
 
-@pytest.fixture
+@pytest.fixture()
 def write_kpoints(atoms):
     """Helper fixture to write the input kpoints file"""
     def _write_kpoints(factory, **kwargs):
@@ -46,6 +47,7 @@ def test_vasp_kpoints_111(atoms):
 def test_vasp_kpoints_3_tuple(atoms):
     string = format_kpoints(gamma=False, kpts=(4, 4, 4), atoms=atoms)
     lines = string.split('\n')
+    assert lines[1] == '0'
     assert lines[2] == 'Monkhorst-Pack'
     assert lines[3] == '4 4 4'
 
@@ -56,7 +58,6 @@ def check_kpoints_string(string, lineno, value):
 
 def test_vasp_kpoints_auto(atoms):
     string = format_kpoints(atoms=atoms, kpts=20)
-
     check_kpoints_string(string, 1, '0')
     check_kpoints_string(string, 2, 'Auto')
     check_kpoints_string(string, 3, '20')
@@ -76,8 +77,8 @@ def test_kspacing_supress_kpoints_file(factory, write_kpoints):
     Al, calc = write_kpoints(factory, kspacing=0.23)
     calc.write_incar(Al)
     assert not os.path.isfile('KPOINTS')
-    with open('INCAR', 'r') as fd:
-        assert ' KSPACING = 0.230000\n' in fd.readlines()
+    with open('INCAR') as fd:
+        assert ' KSPACING = 0.230000' in fd.readlines()
 
 
 @calc('vasp')
@@ -129,3 +130,12 @@ def test_explicit_auto_weight(atoms, testdir):
     """)
 
     assert filecmp_ignore_whitespace('KPOINTS', 'KPOINTS.ref')
+
+
+def test_bandpath(atoms):
+    bandpath = atoms.cell.bandpath('GXMGRX,MR', npoints=100)
+    string = format_kpoints(atoms=atoms, kpts=bandpath.kpts, reciprocal=True)
+    check_kpoints_string(string, 1, '100')
+    check_kpoints_string(string, 2, 'Reciprocal')
+    check_kpoints_string(string, 3, '0.000000 0.000000 0.000000 1.0')
+    check_kpoints_string(string, 102, '0.500000 0.500000 0.500000 1.0')

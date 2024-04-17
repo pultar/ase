@@ -2,9 +2,10 @@ import contextlib
 from importlib import import_module
 from pathlib import Path
 
-import ase
 import pytest
 from numpy import VisibleDeprecationWarning
+
+import ase
 
 # This test imports modules.
 #
@@ -46,10 +47,7 @@ all_modules = filenames2modules(glob_modules())
 deprecated_modules = {'ase.dft.band_structure'}
 
 ignore_imports = {
-    'flask', 'psycopg2', 'kimpy', 'pymysql', 'IPython',
-    'docutils',
-    'gpaw',  # ase.vibrations.placzek
-    'gpaw.lrtddft',  # ase.vibrations.placzek
+    'flask', 'psycopg2', 'pymysql', 'docutils',
 }
 
 newpy_only_modules = {

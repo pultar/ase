@@ -3,6 +3,7 @@ reporting the same values as in the ContourExploration object."""
 
 import numpy as np
 import pytest
+
 from ase import io
 from ase.md.contour_exploration import ContourExploration
 
@@ -46,7 +47,7 @@ def test_logging(testdir):
         # these print statements, mirror the log file.
         # print(energy_target, dyn.curvature, dyn.step_size, dev)
 
-        for i in range(0, 5):
+        for i in range(5):
             energy_target = initial_energy + de * i
 
             dyn.energy_target = energy_target
@@ -65,7 +66,7 @@ def test_logging(testdir):
         length = len(fd.readlines())
     assert length == 7, length
 
-    with io.Trajectory(traj_name, 'r') as traj, open(log_name, 'r') as fd:
+    with io.Trajectory(traj_name, 'r') as traj, open(log_name) as fd:
         # skip the first line because it's a small initialization step
         lines = fd.readlines()[1:]
         for i, (im, line) in enumerate(zip(traj, lines)):

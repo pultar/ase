@@ -1,4 +1,5 @@
 import numpy as np
+
 from ase.data import covalent_radii
 from ase.neighborlist import NeighborList
 
@@ -52,5 +53,4 @@ def next_bond(atoms):
 
         # Yield the bonds which we have not previously generated.
         seen.update(new_bonds)
-        for b in sorted(new_bonds, key=lambda x: x[0]):
-            yield b
+        yield from sorted(new_bonds, key=lambda x: x[0])

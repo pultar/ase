@@ -2,11 +2,12 @@
 import sys
 
 import pytest
+
 from ase.calculators.turbomole import Turbomole
 from ase.calculators.turbomole.executor import execute
 
 
-@pytest.fixture
+@pytest.fixture()
 def default_params():
     return {'multiplicity': 1}
 

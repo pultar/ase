@@ -1,11 +1,10 @@
 # flake8: noqa
 import numpy as np
 import pytest
-from ase.io import read
+
 from ase.io.aims import (LINE_NOT_FOUND, AimsOutCalcChunk, AimsOutChunk,
                          AimsOutHeaderChunk, AimsParseError)
 from ase.stress import full_3x3_to_voigt_6_stress
-from numpy.linalg import norm
 
 eps_hp = 1e-15  # The espsilon value used to compare numbers that are high-precision
 eps_lp = 1e-7  # The espsilon value used to compare numbers that are low-precision
@@ -173,7 +172,7 @@ def test_header_constraints(header_chunk):
     assert len(header_chunk.constraints) == 2
     assert header_chunk.constraints[0].index == 0
     assert header_chunk.constraints[1].index == 1
-    assert np.all(header_chunk.constraints[0].mask == [False, False, True])
+    assert np.all(header_chunk.constraints[0].mask == [True, True, False])
 
 
 def test_header_initial_atoms(header_chunk, initial_cell, initial_positions):
@@ -185,12 +184,10 @@ def test_header_initial_atoms(header_chunk, initial_cell, initial_positions):
     assert np.allclose(header_chunk.initial_atoms.positions, initial_positions)
     assert np.all(["Na", "Cl"] == header_chunk.initial_atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                header_chunk.constraints, header_chunk.initial_atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            header_chunk.constraints, header_chunk.initial_atoms.constraints
+        )
     )
 
 
@@ -291,7 +288,7 @@ def test_header_transfer_constraints(empty_calc_chunk):
     assert len(empty_calc_chunk.constraints) == 2
     assert empty_calc_chunk.constraints[0].index == 0
     assert empty_calc_chunk.constraints[1].index == 1
-    assert np.all(empty_calc_chunk.constraints[0].mask == [False, False, True])
+    assert np.all(empty_calc_chunk.constraints[0].mask == [True, True, False])
 
 
 def test_header_transfer_initial_cell(empty_calc_chunk, initial_cell):
@@ -311,12 +308,11 @@ def test_header_transfer_initial_atoms(
         initial_positions)
     assert np.all(["Na", "Cl"] == empty_calc_chunk.initial_atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                empty_calc_chunk.constraints, empty_calc_chunk.initial_atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            empty_calc_chunk.constraints,
+            empty_calc_chunk.initial_atoms.constraints,
+        )
     )
 
 
@@ -601,6 +597,7 @@ def calc_chunk(header_chunk):
         lines[ll] = line.strip()
     return AimsOutCalcChunk(lines, header_chunk)
 
+
 @pytest.fixture
 def numerical_stress_chunk(header_chunk):
     lines = """
@@ -805,6 +802,7 @@ def numerical_stress_chunk(header_chunk):
         lines[ll] = line.strip()
     return AimsOutCalcChunk(lines, header_chunk)
 
+
 @pytest.fixture
 def eigenvalues_occupancies():
     eigenvalues_occupancies = np.arange(8 * 3 * 4).reshape((8, 3, 2, 2))
@@ -821,12 +819,10 @@ def test_calc_atoms(calc_chunk, initial_cell, initial_positions):
     assert np.allclose(calc_chunk.atoms.positions, initial_positions)
     assert np.all(["Na", "Cl"] == calc_chunk.atoms.symbols)
     assert all(
-        [
-            str(const_1) == str(const_2)
-            for const_1, const_2 in zip(
-                calc_chunk.constraints, calc_chunk.atoms.constraints
-            )
-        ]
+        str(const_1) == str(const_2)
+        for const_1, const_2 in zip(
+            calc_chunk.constraints, calc_chunk.atoms.constraints
+        )
     )
 
 
@@ -870,6 +866,7 @@ def test_calc_stress(calc_chunk):
     assert np.allclose(calc_chunk.stress, stress)
     assert np.allclose(calc_chunk.atoms.get_stress(), stress)
     assert np.allclose(calc_chunk.results["stress"], stress)
+
 
 def test_calc_num_stress(numerical_stress_chunk):
     stress = full_3x3_to_voigt_6_stress(

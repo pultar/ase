@@ -1,10 +1,12 @@
-import ase
 import pytest
+
+import ase
 from ase.calculators.lj import LennardJones
 from ase.constraints import FixBondLength
 from ase.optimize import FIRE
 
 
+@pytest.mark.optimize()
 @pytest.mark.parametrize('wrap', [False, True])
 def test_fix_bond_length_mic(wrap):
     a = ase.Atoms('CCC',

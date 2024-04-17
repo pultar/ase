@@ -14,6 +14,7 @@ import warnings
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
 from ase import Atoms
 from ase.cell import Cell
 from ase.io.cif_unicode import format_unicode, handle_subscripts
@@ -49,7 +50,7 @@ def convert_value(value: str) -> CIFDataValue:
         return float(value[:value.index('(')])  # strip off uncertainties
     elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+$',
                   value):
-        warnings.warn('Badly formed number: "{0}"'.format(value))
+        warnings.warn(f'Badly formed number: "{value}"')
         return float(value[:value.index('(')])  # strip off uncertainties
     else:
         return handle_subscripts(value)
@@ -116,6 +117,8 @@ def parse_cif_loop_data(lines: List[str],
         if line.startswith('#'):
             continue
 
+        line = line.split(' #')[0]
+
         if line.startswith(';'):
             moretokens = [parse_multiline_string(lines, line)]
         else:
@@ -131,15 +134,16 @@ def parse_cif_loop_data(lines: List[str],
             for i, token in enumerate(tokens):
                 columns[i].append(convert_value(token))
         else:
-            warnings.warn('Wrong number {} of tokens, expected {}: {}'
-                          .format(len(tokens), ncolumns, tokens))
+            warnings.warn(f'Wrong number {len(tokens)} of tokens, '
+                          f'expected {ncolumns}: {tokens}')
 
         # (Due to continue statements we cannot move this to start of loop)
         tokens = []
 
     if tokens:
         assert len(tokens) < ncolumns
-        raise RuntimeError('CIF loop ended unexpectedly with incomplete row')
+        raise RuntimeError('CIF loop ended unexpectedly with incomplete row: '
+                           f'{tokens}, expected {ncolumns} tokens')
 
     return columns
 
@@ -156,7 +160,7 @@ def parse_loop(lines: List[str]) -> Dict[str, List[CIFDataValue]]:
     columns_dict = {}
     for i, header in enumerate(headers):
         if header in columns_dict:
-            warnings.warn('Duplicated loop tags: {0}'.format(header))
+            warnings.warn(f'Duplicated loop tags: {header}')
         else:
             columns_dict[header] = columns[i]
     return columns_dict
@@ -187,7 +191,7 @@ def parse_items(lines: List[str], line: str) -> Dict[str, CIFData]:
         elif line.startswith(';'):
             parse_multiline_string(lines, line)
         else:
-            raise ValueError('Unexpected CIF file entry: "{0}"'.format(line))
+            raise ValueError(f'Unexpected CIF file entry: "{line}"')
     return tags
 
 
@@ -348,22 +352,27 @@ class CIFBlock(collections.abc.Mapping):
 
     def get_spacegroup(self, subtrans_included) -> Spacegroup:
         # XXX The logic in this method needs serious cleaning up!
-        # The setting needs to be passed as either 1 or two, not None (default)
         no = self._get_spacegroup_number()
+        if isinstance(no, str):
+            # If the value was specified as "key  'value'" with ticks,
+            # then "integer values" become strings and we'll have to
+            # manually convert it:
+            no = int(no)
+
         hm_symbol = self._get_spacegroup_name()
         sitesym = self._get_sitesym()
 
-        setting = 1
-        spacegroup = 1
         if sitesym:
             # Special cases: sitesym can be None or an empty list.
             # The empty list could be replaced with just the identity
             # function, but it seems more correct to try to get the
             # spacegroup number and derive the symmetries for that.
             subtrans = [(0.0, 0.0, 0.0)] if subtrans_included else None
+
             spacegroup = spacegroup_from_data(
-                no=no, symbol=hm_symbol, sitesym=sitesym, subtrans=subtrans,
-                setting=setting)
+                no=no, symbol=hm_symbol, sitesym=sitesym,
+                subtrans=subtrans,
+                setting=1)  # should the setting be passed from somewhere?
         elif no is not None:
             spacegroup = no
         elif hm_symbol is not None:
@@ -373,6 +382,7 @@ class CIFBlock(collections.abc.Mapping):
 
         setting_std = self._get_setting()
 
+        setting = 1
         setting_name = None
         if '_symmetry_space_group_setting' in self:
             assert setting_std is not None
@@ -391,14 +401,14 @@ class CIFBlock(collections.abc.Mapping):
                     setting = 2
                 else:
                     warnings.warn(
-                        'unexpected crystal system %r for space group %r' % (
-                            setting_name, spacegroup))
+                        f'unexpected crystal system {setting_name!r} '
+                        f'for space group {spacegroup!r}')
             # FIXME - check for more crystal systems...
             else:
                 warnings.warn(
-                    'crystal system %r is not interpreted for space group %r. '
-                    'This may result in wrong setting!' % (
-                        setting_name, spacegroup))
+                    f'crystal system {setting_name!r} is not '
+                    f'interpreted for space group {spacegroup!r}. '
+                    'This may result in wrong setting!')
 
         spg = Spacegroup(spacegroup, setting)
         if no is not None:
@@ -482,10 +492,10 @@ class CIFBlock(collections.abc.Mapping):
             if kwargs.get('info') is not None:
                 atoms.info.update(kwargs['info'])
             if occupancies is not None:
-                # Compile an occupancies dictionary
-                occ_dict = {}
-                for i, sym in enumerate(atoms.symbols):
-                    occ_dict[str(i)] = {sym: occupancies[i]}
+                occ_dict = {
+                    str(i): {sym: occupancies[i]}
+                    for i, sym in enumerate(atoms.symbols)
+                }
                 atoms.info['occupancy'] = occ_dict
 
         return atoms
@@ -656,7 +666,7 @@ def format_cell(cell: Cell) -> str:
     assert cell.rank == 3
     lines = []
     for name, value in zip(CIFBlock.cell_tags, cell.cellpar()):
-        line = '{:20} {}\n'.format(name, value)
+        line = f'{name:20} {value}\n'
         lines.append(line)
     assert len(lines) == 6
     return ''.join(lines)
@@ -712,7 +722,7 @@ class CIFLoop:
 @iofunction('wb')
 def write_cif(fd, images, cif_format=None,
               wrap=True, labels=None, loop_keys=None) -> None:
-    """Write *images* to CIF file.
+    r"""Write *images* to CIF file.
 
     wrap: bool
         Wrap atoms into unit cell.
@@ -723,8 +733,8 @@ def write_cif(fd, images, cif_format=None,
         it from the element symbol.
 
     loop_keys: dict
-        Add the information from this dictionary to the `loop_`
-        section.  Keys are printed to the `loop_` section preceeded by
+        Add the information from this dictionary to the `loop\_`
+        section.  Keys are printed to the `loop\_` section preceeded by
         ' _'. dict[key] should contain the data printed for each atom,
         so it needs to have the setup `dict[key][i_frame][i_atom] =
         string`. The strings are printed as they are, so take care of

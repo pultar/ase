@@ -1,7 +1,8 @@
 """Tests for the NWChem computations which use more than one task"""
-import ase
 import numpy as np
 import pytest
+
+import ase
 from ase.build import molecule
 
 
@@ -67,7 +68,7 @@ def test_example(factory, atoms, params):
         output = fp.read()
     assert (output.count('Loading old vectors from job with title')
             + output.count('Orbital projection guess')) \
-           == len(params['pretasks'])
+        == len(params['pretasks'])
     assert 'Load of old vectors failed' not in output, input_file
 
     # Get it without

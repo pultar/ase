@@ -1,8 +1,11 @@
+import numpy as np
+
+from ase import Atoms
+from ase.calculators.emt import EMT
+from ase.cell import Cell
+
+
 def test_bravais_orcc_mcl():
-    import numpy as np
-    from ase import Atoms
-    from ase.calculators.emt import EMT
-    from ase.cell import Cell
 
     def get_e(cell):
         atoms = Atoms('Au', cell=cell, pbc=1)

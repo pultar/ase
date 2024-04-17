@@ -167,10 +167,7 @@ class Formula:
 
         if fmt == 'hill':
             count = self.count()
-            count2 = {}
-            for symb in 'CH':
-                if symb in count:
-                    count2[symb] = count.pop(symb)
+            count2 = {symb: count.pop(symb) for symb in 'CH' if symb in count}
             for symb, n in sorted(count.items()):
                 count2[symb] = n
             return dict2str(count2)
@@ -239,7 +236,7 @@ class Formula:
         dct2 = {}
         for symb, n in dct.items():
             if not (isinstance(symb, str) and isinstance(n, int) and n >= 0):
-                raise ValueError('Bad dictionary: {dct}'.format(dct=dct))
+                raise ValueError(f'Bad dictionary: {dct}')
             if n > 0:  # filter out n=0 symbols
                 dct2[symb] = n
         return Formula(dict2str(dct2),
@@ -374,7 +371,7 @@ class Formula:
         return self._formula
 
     def __repr__(self):
-        return 'Formula({!r})'.format(self._formula)
+        return f'Formula({self._formula!r})'
 
     def _reduce(self):
         N = 0
@@ -515,7 +512,7 @@ non_metals = ['H', 'He', 'B', 'C', 'N', 'O', 'F', 'Ne',
               'Po', 'At', 'Rn']
 
 
-@lru_cache()
+@lru_cache
 def periodic_table_order() -> Dict[str, int]:
     """Create dict for sorting after period first then row."""
     return {symbol: n for n, symbol in enumerate(chemical_symbols[87:] +

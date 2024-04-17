@@ -1,6 +1,9 @@
+import numpy as np
+
+from ase import Atom, Atoms
+
+
 def test_build():
-    import numpy as np
-    from ase import Atom, Atoms
 
     a = Atoms([Atom('Cu')])
     a.positions[:] += 1.0

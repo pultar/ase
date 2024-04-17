@@ -1,6 +1,7 @@
 from os.path import exists
 
 import numpy as np
+
 from ase.calculators.calculator import Calculator, all_changes
 from ase.io.trajectory import Trajectory
 from ase.parallel import broadcast, world
@@ -245,7 +246,7 @@ class Plumed(Calculator):
                     read_files['COLVAR'] = np.loadtxt('COLVAR', unpack=True)
                 if exists('HILLS'):
                     read_files['HILLS'] = np.loadtxt('HILLS', unpack=True)
-        assert not len(read_files) == 0, "There are not files for reading"
+        assert len(read_files) != 0, "There are not files for reading"
         return read_files
 
     def __enter__(self):

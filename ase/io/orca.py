@@ -4,6 +4,7 @@ from io import StringIO
 from pathlib import Path
 
 import numpy as np
+
 from ase.io import read
 from ase.units import Bohr, Hartree
 from ase.utils import reader, writer
@@ -40,8 +41,8 @@ def read_geom_orcainp(fd):
 @writer
 def write_orca(fd, atoms, params):
     # conventional filename: '<name>.inp'
-    fd.write("! %s \n" % params['orcasimpleinput'])
-    fd.write("%s \n" % params['orcablocks'])
+    fd.write(f"! {params['orcasimpleinput']} \n")
+    fd.write(f"{params['orcablocks']} \n")
 
     fd.write('*xyz')
     fd.write(" %d" % params['charge'])

@@ -106,7 +106,7 @@ def KIM(model_name, simulator=None, options=None, debug=False):
     """
 
     if options is None:
-        options = dict()
+        options = {}
 
     # If this is a KIM Portable Model (supports KIM API), return
     # support through a KIM-compliant simulator
@@ -188,12 +188,12 @@ def KIM(model_name, simulator=None, options=None, debug=False):
 
             else:
                 raise KIMCalculatorError(
-                    'Unknown LAMMPS calculator: "{}".'.format(simulator)
+                    f'Unknown LAMMPS calculator: "{simulator}".'
                 )
 
         else:
             raise KIMCalculatorError(
-                'Unsupported simulator: "{}".'.format(sm.simulator_name)
+                f'Unsupported simulator: "{sm.simulator_name}".'
             )
 
 
@@ -206,7 +206,8 @@ def _is_portable_model(model_name):
     with kimpy_wrappers.ModelCollections() as col:
         model_type = col.get_item_type(model_name)
 
-    return model_type == kimpy_wrappers.collection_item_type_portableModel
+    return (model_type ==
+            kimpy_wrappers.wrappers.collection_item_type_portableModel)
 
 
 def get_model_supported_species(model_name):

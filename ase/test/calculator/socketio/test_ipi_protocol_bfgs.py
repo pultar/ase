@@ -4,6 +4,7 @@ import threading
 
 import numpy as np
 import pytest
+
 from ase.calculators.emt import EMT
 from ase.calculators.socketio import SocketClient, SocketIOCalculator
 from ase.cluster.icosahedron import Icosahedron
@@ -62,7 +63,7 @@ def run_server(launchclient=True, sockettype='unix'):
     ferr = np.abs(forces - ref_forces).max()
 
     perr = np.abs(refatoms.positions - atoms.positions).max()
-    print('errs e={} f={} pos={}'.format(eerr, ferr, perr))
+    print(f'errs e={eerr} f={ferr} pos={perr}')
     assert eerr < 1e-11, eerr
     assert ferr < 1e-11, ferr
     assert perr < 1e-11, perr
@@ -102,6 +103,7 @@ unix_only = pytest.mark.skipif(os.name != 'posix',
                                reason='requires unix platform')
 
 
+@pytest.mark.optimize()
 @pytest.mark.parametrize('sockettype', [
     'inet',
     pytest.param('unix', marks=unix_only),

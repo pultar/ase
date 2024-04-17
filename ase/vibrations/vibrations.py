@@ -4,10 +4,13 @@ import sys
 from collections import namedtuple
 from math import log, pi, sqrt
 from pathlib import Path
+from typing import Iterator, Tuple
+
+import numpy as np
 
 import ase.io
 import ase.units as units
-import numpy as np
+from ase.atoms import Atoms
 from ase.parallel import paropen, world
 from ase.utils.filecache import get_json_cache
 
@@ -215,12 +218,26 @@ Please remove them and recalculate or run \
         if len(self.cache) == 0 and eq_pickle_path.exists():
             raise RuntimeError(pickle2json_instructions)
 
-    def iterdisplace(self, inplace=False):
-        """Yield name and atoms object for initial and displaced structures.
+    def iterdisplace(self, inplace=False) -> \
+            Iterator[Tuple[Displacement, Atoms]]:
+        """Iterate over initial and displaced structures.
 
         Use this to export the structures for each single-point calculation
         to an external program instead of using ``run()``. Then save the
         calculated gradients to <name>.json and continue using this instance.
+
+        Parameters:
+        ------------
+        inplace: bool
+            If True, the atoms object will be modified in-place. Otherwise a
+            copy will be made.
+
+        Yields:
+        --------
+        disp: Displacement
+            Displacement object with information about the displacement.
+        atoms: Atoms
+            Atoms object with the displaced structure.
         """
         # XXX change of type of disp
         atoms = self.atoms if inplace else self.atoms.copy()
@@ -431,7 +448,7 @@ Please remove them and recalculate or run \
 
     def get_zero_point_energy(self, freq=None):
         if freq:
-            raise NotImplementedError()
+            raise NotImplementedError
         return self.get_vibrations().get_zero_point_energy()
 
     def get_mode(self, n):
@@ -552,7 +569,7 @@ Please remove them and recalculate or run \
         outdata.T[1] = spectrum
 
         with open(out, 'w') as fd:
-            fd.write('# %s folded, width=%g cm^-1\n' % (type.title(), width))
+            fd.write(f'# {type.title()} folded, width={width:g} cm^-1\n')
             fd.write('# [cm^-1] arbitrary\n')
             for row in outdata:
                 fd.write('%.3f  %15.5e\n' %

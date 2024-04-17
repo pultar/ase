@@ -1,9 +1,12 @@
+from collections import OrderedDict
 from io import StringIO
 from pathlib import Path
 
 import numpy as np
 import pytest
+
 from ase.io import read
+from ase.units import GPa
 
 parent = Path(__file__).parents[2]
 
@@ -198,8 +201,6 @@ def test_atoms(vasprun):
 
 def check_calculation(vasprun_record, expected_values, index=-1):
 
-    from ase.units import GPa
-
     atoms = read(StringIO(vasprun_record), index=index,
                  format='vasp-xml')
 
@@ -270,8 +271,6 @@ def test_corrupted_calculation(vasprun, calculation):
 
 
 def test_vasp_parameters(vasprun, calculation):
-
-    from collections import OrderedDict
 
     vasp_parameters = """\
  <kpoints>

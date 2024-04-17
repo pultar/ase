@@ -9,12 +9,13 @@ from math import pi, sqrt
 from time import time
 
 import numpy as np
+from scipy.linalg import qr
+
 from ase.dft.bandgap import bandgap
 from ase.dft.kpoints import get_monkhorst_pack_size_and_offset
 from ase.io.jsonio import read_json, write_json
 from ase.parallel import paropen
 from ase.transport.tools import dagger, normalize
-from scipy.linalg import qr
 
 dag = dagger
 
@@ -92,7 +93,7 @@ def steepest_descent(func, step=.005, tolerance=1e-6, log=silent, **kwargs):
         func.step(dF * step, **kwargs)
         fvalue = func.get_functional_value()
         count += 1
-        log('SteepestDescent: iter=%s, value=%s' % (count, fvalue))
+        log(f'SteepestDescent: iter={count}, value={fvalue}')
 
 
 def md_min(func, step=.25, tolerance=1e-6, max_iter=10000,
@@ -192,7 +193,7 @@ def rotation_from_projection(proj_nw, fixed, ortho=True):
 def search_for_gamma_point(kpts):
     """Returns index of Gamma point in a list of k-points."""
     gamma_idx = np.argmin([np.linalg.norm(kpt) for kpt in kpts])
-    if not np.linalg.norm(kpts[gamma_idx]) < 1e-14:
+    if np.linalg.norm(kpts[gamma_idx]) >= 1e-14:
         gamma_idx = None
     return gamma_idx
 
@@ -251,7 +252,7 @@ def arbitrary_s_orbitals(atoms, Ns, rng=np.random):
     s_pos = tmp_atoms.get_scaled_positions()
 
     orbs = []
-    for i in range(0, Ns):
+    for _ in range(Ns):
         fine = False
         while not fine:
             # Random position
@@ -304,7 +305,7 @@ def init_orbitals(atoms, ntot, rng=np.random):
         Ns = ntot - No
         orbs += arbitrary_s_orbitals(atoms, Ns, rng)
 
-    assert sum([orb[1] * 2 + 1 for orb in orbs]) == ntot
+    assert sum(orb[1] * 2 + 1 for orb in orbs) == ntot
     return orbs
 
 
@@ -341,8 +342,10 @@ def get_kklst(kpt_kc, Gdir_dc):
             # make a sorted list of the kpoint values in this direction
             slist = np.argsort(kpt_kc[:, c], kind='mergesort')
             skpoints_kc = np.take(kpt_kc, slist, axis=0)
-            kdist_c[c] = max([skpoints_kc[n + 1, c] - skpoints_kc[n, c]
-                              for n in range(Nk - 1)])
+            kdist_c[c] = max(
+                skpoints_kc[n + 1, c] - skpoints_kc[n, c]
+                for n in range(Nk - 1)
+            )
 
         for d, Gdir_c in enumerate(Gdir_dc):
             for k, k_c in enumerate(kpt_kc):
@@ -446,7 +449,7 @@ def get_calcdata(calc):
     # Make sure there is no symmetry reduction
     assert len(calc.get_ibz_k_points()) == len(kpt_kc)
     lumo = calc.get_homo_lumo()[1]
-    gap = bandgap(calc=calc, output=None)[0]
+    gap = bandgap(calc=calc)[0]
     return CalcData(
         kpt_kc=kpt_kc,
         atoms=calc.get_atoms(),
@@ -560,8 +563,8 @@ class Wannier:
         # Compute the number of extra degrees of freedom (EDF)
         self.edf_k = self.nwannier - self.fixedstates_k
 
-        self.log('Wannier: Fixed states            : %s' % self.fixedstates_k)
-        self.log('Wannier: Extra degrees of freedom: %s' % self.edf_k)
+        self.log(f'Wannier: Fixed states            : {self.fixedstates_k}')
+        self.log(f'Wannier: Extra degrees of freedom: {self.edf_k}')
 
         self.kklst_dk, k0_dkc = get_kklst(self.kpt_kc, self.Gdir_dc)
 

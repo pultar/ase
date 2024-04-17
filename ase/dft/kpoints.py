@@ -2,8 +2,9 @@ import re
 import warnings
 from typing import Dict
 
-import ase  # Annotations
 import numpy as np
+
+import ase  # Annotations
 from ase.cell import Cell
 from ase.utils import jsonable
 
@@ -11,7 +12,7 @@ from ase.utils import jsonable
 def monkhorst_pack(size):
     """Construct a uniform sampling of k-space of given size."""
     if np.less_equal(size, 0).any():
-        raise ValueError('Illegal size: %s' % list(size))
+        raise ValueError(f'Illegal size: {list(size)}')
     kpts = np.indices(size).transpose((1, 2, 3, 0)).reshape((-1, 3))
     return (kpts + 0.5) / size - 0.5
 
@@ -88,7 +89,7 @@ def _mindistance2monkhorstpack(cell, pbc_c, min_distance, maxperdim, even):
         ranges = [range(step, maxperdim + 1, step)
                   if pbc else range(1, 2) for pbc in pbc_c]
         nkpts_nc = np.column_stack([*map(np.ravel, np.meshgrid(*ranges))])
-        yield from sorted(nkpts_nc, key=lambda nkpts_c: np.prod(nkpts_c))
+        yield from sorted(nkpts_nc, key=np.prod)
 
     try:
         return next(filter(check, generate_mpgrids()))
@@ -196,9 +197,10 @@ def resolve_custom_points(pathspec, special_points, eps):
     def name_generator():
         counter = 0
         while True:
-            name = 'Kpt{}'.format(counter)
+            name = f'Kpt{counter}'
             yield name
             counter += 1
+
     custom_names = name_generator()
 
     labelseq = []
@@ -213,7 +215,7 @@ def resolve_custom_points(pathspec, special_points, eps):
                 continue
 
             kpt = np.asarray(kpt, float)
-            if not kpt.shape == (3,):
+            if kpt.shape != (3,):
                 raise ValueError(f'Not a valid kpoint: {kpt}')
 
             for key, val in special_points.items():
@@ -239,7 +241,7 @@ def normalize_special_points(special_points):
     for name, value in special_points.items():
         if not isinstance(name, str):
             raise TypeError('Expected name to be a string')
-        if not np.shape(value) == (3,):
+        if np.shape(value) != (3,):
             raise ValueError('Expected 3 kpoint coordinates')
         dct[name] = np.asarray(value, float)
     return dct
@@ -267,6 +269,7 @@ class BandPath:
     BandPath(path='GXMGRX,MR', cell=[3x3], special_points={GMRX}, kpts=[40x3])
 
     """
+
     def __init__(self, cell, kpts=None,
                  special_points=None, path=None):
         if kpts is None:
@@ -340,10 +343,9 @@ class BandPath:
         # We should insert a check.
         # I wonder which operations are valid?  They won't be valid
         # if they change lengths, volume etc.
-        special_points = {}
-        for name, value in self.special_points.items():
-            special_points[name] = value @ op
-
+        special_points = {
+            name: value @ op for name, value in self.special_points.items()
+        }
         return BandPath(op.T @ self.cell, kpts=self.kpts @ op,
                         special_points=special_points,
                         path=self.path)
@@ -541,7 +543,7 @@ DEFAULT_KPTS_DENSITY = 5    # points per 1/Angstrom
 
 
 def paths2kpts(paths, cell, npoints=None, density=None):
-    if not (npoints is None or density is None):
+    if npoints is not None and density is not None:
         raise ValueError('You may define npoints or density, but not both.')
     points = np.concatenate(paths)
     dists = points[1:] - points[:-1]

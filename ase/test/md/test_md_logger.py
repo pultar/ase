@@ -1,7 +1,8 @@
 """Test to ensure that md logger and trajectory contain same data"""
-import ase.units as u
 import numpy as np
 import pytest
+
+import ase.units as u
 from ase.calculators.tip3p import TIP3P
 from ase.constraints import FixBondLengths
 from ase.data import s22
@@ -11,7 +12,7 @@ from ase.md.verlet import VelocityVerlet
 from ase.optimize import BFGS, FIRE
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms():
     dimer = s22.create_s22_system("Water_dimer")
     dimer.constraints = FixBondLengths(
@@ -20,7 +21,7 @@ def atoms():
     return dimer
 
 
-@pytest.fixture
+@pytest.fixture()
 def calc():
     return TIP3P(rc=9.0)
 

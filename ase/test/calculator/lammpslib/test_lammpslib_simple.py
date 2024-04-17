@@ -1,24 +1,25 @@
-import ase.io
 import numpy as np
 import pytest
+
+import ase.io
 from ase import Atom, Atoms, units
 from ase.build import bulk
 from ase.md.verlet import VelocityVerlet
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms_fcc_Ni_with_H_at_center():
     atoms = bulk("Ni", cubic=True)
     atoms += Atom("H", position=atoms.cell.diagonal() / 2)
     return atoms
 
 
-@pytest.fixture
+@pytest.fixture()
 def lammps_data_file_Fe(datadir):
     return datadir / "lammpslib_simple_input.data"
 
 
-@pytest.fixture
+@pytest.fixture()
 def calc_params_Fe(lammps_data_file_Fe):
     calc_params = {}
     calc_params["lammps_header"] = [
@@ -42,7 +43,7 @@ def calc_params_Fe(lammps_data_file_Fe):
     return calc_params
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms_Fe(lammps_data_file_Fe):
     return ase.io.read(
         lammps_data_file_Fe,
@@ -52,7 +53,7 @@ def atoms_Fe(lammps_data_file_Fe):
     )
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.calculator("lammpslib")
 def test_lammpslib_simple(
     factory,
@@ -129,7 +130,7 @@ def test_lammpslib_simple(
 
 
 @pytest.mark.parametrize("keep_alive", [False, True])
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 @pytest.mark.calculator("lammpslib")
 def test_read_data(
     factory,

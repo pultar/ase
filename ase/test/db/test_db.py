@@ -1,4 +1,5 @@
 import pytest
+
 from ase.db import connect
 
 cmd = """
@@ -15,7 +16,7 @@ ase -T db -v testase.json "H>0" --delete-keys foo"""
 dbtypes = ['json', 'db', 'postgresql', 'mysql', 'mariadb']
 
 
-@pytest.mark.slow
+@pytest.mark.slow()
 @pytest.mark.parametrize('dbtype', dbtypes)
 def test_db(dbtype, cli, testdir, get_db_name):
     def count(n, *args, **kwargs):
@@ -49,4 +50,4 @@ def test_db(dbtype, cli, testdir, get_db_name):
             count(6, sort='-' + key)
 
         con.delete([id])
-    cli.shell('ase -T gui --terminal -n 3 {}'.format(name))
+    cli.shell(f'ase -T gui --terminal -n 3 {name}')

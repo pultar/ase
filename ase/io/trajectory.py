@@ -5,11 +5,11 @@ import warnings
 from typing import Tuple
 
 import numpy as np
+
 from ase import __version__
 from ase.atoms import Atoms
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.calculators.singlepoint import SinglePointCalculator, all_properties
-from ase.constraints import dict2constraint
 from ase.io.formats import is_compressed
 from ase.io.jsonio import decode, encode
 from ase.io.pickletrajectory import PickleTrajectory
@@ -19,7 +19,8 @@ from ase.utils import tokenize_version
 __all__ = ['Trajectory', 'PickleTrajectory']
 
 
-def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
+def Trajectory(filename, mode='r', atoms=None, properties=None, master=None,
+               comm=world):
     """A Trajectory can be created in read, write or append mode.
 
     Parameters:
@@ -45,19 +46,22 @@ def Trajectory(filename, mode='r', atoms=None, properties=None, master=None):
         Controls which process does the actual writing. The
         default is that process number 0 does this.  If this
         argument is given, processes where it is True will write.
+    comm: Communicator object
+        Communicator to handle parallel file reading and writing.
 
-    The atoms, properties and master arguments are ignores in read mode.
+    The atoms, properties and master arguments are ignored in read mode.
     """
     if mode == 'r':
         return TrajectoryReader(filename)
-    return TrajectoryWriter(filename, mode, atoms, properties, master=master)
+    return TrajectoryWriter(filename, mode, atoms, properties, master=master,
+                            comm=comm)
 
 
 class TrajectoryWriter:
     """Writes Atoms objects to a .traj file."""
 
     def __init__(self, filename, mode='w', atoms=None, properties=None,
-                 extra=[], master=None):
+                 master=None, comm=world):
         """A Trajectory writer, in write or append mode.
 
         Parameters:
@@ -83,14 +87,20 @@ class TrajectoryWriter:
             Controls which process does the actual writing. The
             default is that process number 0 does this.  If this
             argument is given, processes where it is True will write.
+        comm: MPI communicator
+            MPI communicator for this trajectory writer, by default world.
+            Passing a different communicator facilitates writing of
+            different trajectories on different MPI ranks.
         """
         if master is None:
-            master = (world.rank == 0)
+            master = comm.rank == 0
+
         self.filename = filename
         self.mode = mode
         self.atoms = atoms
         self.properties = properties
         self.master = master
+        self.comm = comm
 
         self.description = {}
         self.header_data = None
@@ -199,7 +209,7 @@ class TrajectoryWriter:
             try:
                 encode(value)
             except TypeError:
-                warnings.warn('Skipping "{0}" info.'.format(key))
+                warnings.warn(f'Skipping "{key}" info.')
             else:
                 info[key] = value
         if info:
@@ -212,7 +222,7 @@ class TrajectoryWriter:
         self.backend.close()
 
     def __len__(self):
-        return world.sum(len(self.backend))
+        return self.comm.sum_scalar(len(self.backend))
 
 
 class TrajectoryReader:
@@ -244,7 +254,7 @@ class TrajectoryReader:
     def _read_header(self):
         b = self.backend
         if b.get_tag() != 'ASE-Trajectory':
-            raise IOError('This is not a trajectory file!')
+            raise OSError('This is not a trajectory file!')
 
         if len(b) > 0:
             self.pbc = b.pbc
@@ -342,6 +352,7 @@ def read_atoms(backend,
                header: Tuple = None,
                traj: TrajectoryReader = None,
                _try_except: bool = True) -> Atoms:
+    from ase.constraints import dict2constraint
 
     if _try_except:
         try:

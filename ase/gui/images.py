@@ -2,6 +2,7 @@ import warnings
 from math import sqrt
 
 import numpy as np
+
 from ase import Atoms
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.constraints import FixAtoms
@@ -151,7 +152,7 @@ class Images:
                     names.append('{}@{}'.format(
                         actual_filename, start + i * step))
                 else:
-                    names.append('{}@{}'.format(actual_filename, start))
+                    names.append(f'{actual_filename}@{start}')
 
         self.initialize(images, names)
 

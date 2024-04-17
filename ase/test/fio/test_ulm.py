@@ -1,7 +1,8 @@
 """Test ase.io.ulm file stuff."""
-import ase.io.ulm as ulm
 import numpy as np
 import pytest
+
+import ase.io.ulm as ulm
 
 
 class A:
@@ -15,7 +16,7 @@ class A:
         return a
 
 
-@pytest.fixture
+@pytest.fixture()
 def ulmfile(tmp_path):
     path = tmp_path / 'a.ulm'
 

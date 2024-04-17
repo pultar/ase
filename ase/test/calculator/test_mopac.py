@@ -1,12 +1,14 @@
 import pytest
+from numpy.testing import assert_allclose
+
 from ase.build import molecule
 from ase.calculators.mopac import MOPAC
 from ase.io.trajectory import Trajectory
 from ase.optimize import BFGS
-from numpy.testing import assert_allclose
 
 
-@pytest.mark.calculator
+@pytest.mark.calculator_lite()
+@pytest.mark.calculator()
 def test_mopac(mopac_factory):
     """Test H2 molecule atomization with MOPAC."""
     # Unrestricted Hartree-Fock; enable magmom calc
@@ -30,7 +32,7 @@ def test_mopac(mopac_factory):
                                                         tasks='GRADIENTS'))
     h2o.get_potential_energy()
     print('dipole:', h2o.get_dipole_moment())
-    atoms = MOPAC.read_atoms('h2')
+    atoms = MOPAC.read_atoms('h2', profile=h2o.calc.profile)
     print('magmom:', atoms.calc.get_magnetic_moment())
     print('PM7 homo lumo:', atoms.calc.get_homo_lumo_levels())
     atoms.calc.set(method='AM1')
@@ -40,7 +42,7 @@ def test_mopac(mopac_factory):
     print('magmom:', calc.get_magnetic_moment())
 
 
-@pytest.mark.calculator_lite
+@pytest.mark.calculator_lite()
 def test_mopac_forces_consistent(mopac_factory):
     """Check MOPAC forces follow Newton's 3rd Law"""
 

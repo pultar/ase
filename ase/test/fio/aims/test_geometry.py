@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 import pytest
+from pytest import approx
+
 from ase.atoms import Atoms
 from ase.build import bulk
 from ase.constraints import (FixAtoms, FixCartesian,
@@ -9,19 +11,18 @@ from ase.constraints import (FixAtoms, FixCartesian,
                              FixScaledParametricRelations)
 from ase.io.aims import parse_geometry_lines
 from ase.io.aims import read_aims as read
-from pytest import approx
 
 format = "aims"
 
 file = "geometry.in"
 
 
-@pytest.fixture
+@pytest.fixture()
 def Si():
     return bulk("Si")
 
 
-@pytest.fixture
+@pytest.fixture()
 def H2O():
     return Atoms("H2O", [(0.9584, 0.0, 0.0),
                  (-0.2400, 0.9279, 0.0), (0.0, 0.0, 0.0)])
@@ -30,7 +31,7 @@ def H2O():
 def test_cartesian_Si(Si):
     """write cartesian coords and check if structure was preserved"""
     Si.write(file, format=format)
-    new_atoms = read((file))
+    new_atoms = read(file)
     assert np.allclose(Si.positions, new_atoms.positions)
 
 
@@ -126,7 +127,7 @@ def test_cartesian_H2O(H2O):
     """write cartesian coords and check if structure was preserved for
     molecular systems"""
     H2O.write(file, format=format)
-    new_atoms = read((file))
+    new_atoms = read(file)
     assert np.allclose(H2O.positions, new_atoms.positions)
 
 
@@ -174,7 +175,7 @@ def test_velocities_H2O(H2O):
 def test_info_str(H2O):
     """Confirm that the passed info_str is passed to the geometry.in file"""
     H2O.write(file, format=format, info_str="TEST INFO STR")
-    with open(file, "r") as fd:
+    with open(file) as fd:
         geometry_lines = fd.readlines()
         print(geometry_lines)
         assert "# Additional information:" in geometry_lines[6]

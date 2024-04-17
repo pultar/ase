@@ -4,6 +4,7 @@ from collections import deque
 from os.path import splitext
 
 import numpy as np
+
 from ase.atoms import Atoms
 from ase.calculators.lammps import convert
 from ase.calculators.singlepoint import SinglePointCalculator
@@ -192,7 +193,7 @@ def lammps_data_to_ase_atoms(
             velocities = prismobj.vector_to_ase(velocities)
         out_atoms.set_velocities(velocities)
     if charges is not None:
-        out_atoms.set_initial_charges(charges)
+        out_atoms.set_initial_charges([charge[0] for charge in charges])
     if forces is not None:
         if prismobj:
             forces = prismobj.vector_to_ase(forces)

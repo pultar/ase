@@ -1,13 +1,14 @@
 import sys
 
 import pytest
+
 from ase.build import bulk
 from ase.io import read
 from ase.visualize import view
 from ase.visualize.viewers import CLI_VIEWERS, CLIViewer, PyViewer
 
 
-@pytest.fixture
+@pytest.fixture()
 def atoms():
     return bulk('Au')
 
@@ -92,7 +93,7 @@ def test_cli_viewer_tempfile(atoms, viewer):
     assert not path.exists()
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_viewer():
     return CLIViewer('dummy', 'traj', [sys.executable, '-m', 'ase', 'info'])
 
