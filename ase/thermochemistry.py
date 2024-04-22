@@ -184,10 +184,9 @@ class HarmonicThermoFix(ThermoChem):
         be raised if any imaginary frequencies are present.
     """
 
-    def __init__(self, vib_energies, atoms, potentialenergy=0.,
+    def __init__(self, vib_energies, atoms, potentialenergy=0.,cutoff=50,
                  ignore_imag_modes=False):
         self.ignore_imag_modes = ignore_imag_modes
-
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
             vib_energies, ignore_imag_modes=ignore_imag_modes
@@ -196,17 +195,16 @@ class HarmonicThermoFix(ThermoChem):
         self.n_imag = n_imag
         self.atoms=atoms
         self.potentialenergy = potentialenergy
-        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m
+        self.cutoff=cutoff
+        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m 
         converted=self.vib_energies/e_phot
         wl=1e7/converted #nm
         wl_m=wl*1e-9 #m
         self.frequencies=units._c/(wl_m) #1/s
 
     def head_gordon_damp(self,freq):
-
-        cutoff=50 #cm-1
         alpha=4
-        wl=1e7/cutoff #nm
+        wl=1e7/self.cutoff #nm
         wl_m=wl*1e-9 #m
         cutoff_freq=units._c/(wl_m) #1/s
 
@@ -224,20 +222,16 @@ class HarmonicThermoFix(ThermoChem):
         for n,freq in enumerate(self.frequencies):
             #J/molK #js *1/s #/J/K  ### J/mol
             x= units._hplanck * freq / kT
-
-            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x))
+            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x)) #vibrational components grimme 
                     - np.log(1. - np.exp(-x)))
             x = self.vib_energies[n] / old_kT
-
-            compase=x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
-
+            compase=x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x)) #vibrational components original from ase for comparison
             S_v += self.head_gordon_damp(freq)*comp
             S_vase += compase
-
-
         S_vase *= units.kB
         S_v*=(units.J/units._Nav)
         return S_v
+
     def rotational_entropy_contribution(self, temperature):
         """Calculates the rotation of a rigid rotor for low frequency modes. Returns the entropy
         in eV/K."""
