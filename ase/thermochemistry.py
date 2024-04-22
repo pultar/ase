@@ -17,7 +17,9 @@ class ThermoChem:
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
-
+############################################
+      
+    
     def _vibrational_energy_contribution(self, temperature):
         """Calculates the change in internal energy due to vibrations from
         0K to the specified temperature for a set of vibrations given in
@@ -25,6 +27,7 @@ class ThermoChem:
         in eV."""
         kT = units.kB * temperature
         dU = 0.
+        
         for energy in self.vib_energies:
             dU += energy / (np.exp(energy / kT) - 1.)
         return dU
@@ -36,17 +39,18 @@ class ThermoChem:
         kT = units.kB * temperature
         S_v = 0.
         for energy in self.vib_energies:
-            x = energy / kT
+            x = energy / kT #eV/ eV/K*K
             S_v += x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
         S_v *= units.kB
+        print(S_v)
         return S_v
+############################################
+    
 
     def _vprint(self, text):
         """Print output if verbose flag True."""
         if self.verbose:
             sys.stdout.write(text + os.linesep)
-
-
 class HarmonicThermo(ThermoChem):
     """Class for calculating thermodynamic properties in the approximation
     that all degrees of freedom are treated harmonically. Often used for
@@ -131,6 +135,187 @@ class HarmonicThermo(ThermoChem):
 
         write('-' * 49)
         write(fmt % ('S', S, S * temperature))
+        write('=' * 49)
+        return S
+
+    def get_helmholtz_energy(self, temperature, verbose=True):
+        """Returns the Helmholtz free energy, in eV, in the harmonic
+        approximation at a specified temperature (K)."""
+
+        self.verbose = True
+        write = self._vprint
+
+        U = self.get_internal_energy(temperature, verbose=verbose)
+        write('')
+        S = self.get_entropy(temperature, verbose=verbose)
+        F = U - temperature * S
+
+        write('')
+        write('Free energy components at T = %.2f K:' % temperature)
+        write('=' * 23)
+        fmt = '%5s%15.3f eV'
+        write(fmt % ('U', U))
+        write(fmt % ('-T*S', -temperature * S))
+        write('-' * 23)
+        write(fmt % ('F', F))
+        write('=' * 23)
+        return F
+
+
+class HarmonicThermoFix(ThermoChem):
+    """Class for calculating thermodynamic properties in the approximation
+    that all degrees of freedom are treated harmonically. Often used for
+    adsorbates.
+
+    Inputs:
+
+    vib_energies : list
+        a list of the harmonic energies of the adsorbate (e.g., from
+        ase.vibrations.Vibrations.get_energies). The number of
+        energies should match the number of degrees of freedom of the
+        adsorbate; i.e., 3*n, where n is the number of atoms. Note that
+        this class does not check that the user has supplied the correct
+        number of energies. Units of energies are eV.
+    potentialenergy : float
+        the potential energy in eV (e.g., from atoms.get_potential_energy)
+        (if potentialenergy is unspecified, then the methods of this
+        class can be interpreted as the energy corrections)
+    ignore_imag_modes : bool
+        If True, any imaginary frequencies will be ignored in the calculation
+        of the thermochemical properties. If False (default), an error will
+        be raised if any imaginary frequencies are present.
+    """
+
+    def __init__(self, vib_energies, atoms, potentialenergy=0.,
+                 ignore_imag_modes=False):
+        self.ignore_imag_modes = ignore_imag_modes
+
+        # Check for imaginary frequencies.
+        vib_energies, n_imag = _clean_vib_energies(
+            vib_energies, ignore_imag_modes=ignore_imag_modes
+        )
+        self.vib_energies = vib_energies
+        self.n_imag = n_imag
+        self.atoms=atoms
+        self.potentialenergy = potentialenergy
+        ##############################
+        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m 
+        converted=self.vib_energies/e_phot
+        wl=1e7/converted #nm
+        wl_m=wl*1e-9 #m
+        self.frequencies=units._c/(wl_m) #1/s
+        ##############################
+
+    def head_gordon_damp(self,freq):
+        
+        cutoff=50 #cm-1
+        alpha=4
+        wl=1e7/cutoff #nm
+        wl_m=wl*1e-9 #m
+        cutoff_freq=units._c/(wl_m) #1/s
+
+        return(1/(1+(cutoff_freq/freq)**alpha))
+    
+    def vibrational_entropy_contribution_GRIMME(self, temperature):
+        """Calculates the entropy due to vibrations for a set of vibrations
+        given in eV and a temperature given in Kelvin.  Returns the entropy
+        in eV/K."""
+        R = units._k*units._Nav 
+        kT = units._k * temperature ## J/K*K 
+        S_v = 0.
+        S_vase=0.
+        old_kT=units.kB*temperature
+        for n,freq in enumerate(self.frequencies):
+            #J/molK #js *1/s #/J/K  ### J/mol
+            x= units._hplanck * freq / kT 
+                     
+            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x)) 
+                    - np.log(1. - np.exp(-x)))
+            x = self.vib_energies[n] / old_kT 
+
+            compase=x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
+            
+            S_v += self.head_gordon_damp(freq)*comp
+            S_vase += compase
+                    
+        
+        S_vase *= units.kB
+        S_v*=(units.J/units._Nav)
+        return S_v
+    def rotational_entropy_contribution(self, temperature):
+        """Calculates the rotation of a rigid rotor for low frequency modes. Returns the entropy
+        in eV/K."""
+        kT = units._k * temperature
+        R = units._k*units._Nav
+        inertias = (self.atoms.get_moments_of_inertia() * units._amu / 
+                        ((1e10)**2))  # from amu/A^2 to kg m^2
+        B_av=np.mean(inertias)
+        self._vprint(f"Average moment of inertia: {B_av}")
+    
+        mu=units._hplanck/(8*np.pi**2 * self.frequencies)  
+        mu_prime = (mu * B_av)/(mu + B_av) #kg m^2
+    
+        #rotational entropy
+        S_r_damp = 0.
+        S_r_components = R * (1/2 + np.log((8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2)) #J/(Js)^2 
+
+        for n,freq in enumerate(self.frequencies):
+            S_r_damp+=(1-self.head_gordon_damp(freq))*(S_r_components[n])
+    
+        S_r=sum(S_r_components)
+        S_r_damp*=units.J/units._Nav
+        return(S_r_damp)
+    
+    def get_internal_energy(self, temperature, verbose=True):
+        """Returns the internal energy, in eV, in the harmonic approximation
+        at a specified temperature (K)."""
+
+        self.verbose = verbose
+        write = self._vprint
+        fmt = '%-15s%13.3f eV'
+        write('Internal energy components at T = %.2f K:' % temperature)
+        write('=' * 31)
+
+        U = 0.
+
+        write(fmt % ('E_pot', self.potentialenergy))
+        U += self.potentialenergy
+
+        zpe = self.get_ZPE_correction()
+        write(fmt % ('E_ZPE', zpe))
+        U += zpe
+
+        dU_v = self._vibrational_energy_contribution(temperature)
+        write(fmt % ('Cv_harm (0->T)', dU_v))
+        U += dU_v
+
+        write('-' * 31)
+        write(fmt % ('U', U))
+        write('=' * 31)
+        return U
+
+    def get_entropy(self, temperature, verbose=True):
+        """Returns the entropy, in eV/K, in the harmonic approximation
+        at a specified temperature (K)."""
+
+        self.verbose = verbose
+        write = self._vprint
+        fmt = '%-15s%13.7f eV/K%13.3f eV'
+        write('Entropy components at T = %.2f K:' % temperature)
+        write('=' * 49)
+        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        S = 0.
+        S_r_damp = self.rotational_entropy_contribution(temperature)
+        S += S_r_damp
+        write(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
+
+        S_v = self.vibrational_entropy_contribution_GRIMME(temperature)
+        S += S_v
+        write(fmt % ('S_vib', S_v, S_v * temperature))
+              
+################################
+        write('-' * 49)
+        write(fmt % ('S_tot', S, S * temperature))
         write('=' * 49)
         return S
 
