@@ -540,7 +540,7 @@ def set_calc_and_arrays(atoms, arrays):
                 results[key] = stress
 
     if results:
-        for key in results:
+        for key in results.copy():
             if key not in all_properties:
                 results.pop(key)
         atoms.calc = SinglePointCalculator(atoms, **results)
