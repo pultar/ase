@@ -17,9 +17,7 @@ class ThermoChem:
     def get_ZPE_correction(self):
         """Returns the zero-point vibrational energy correction in eV."""
         return 0.5 * np.sum(self.vib_energies)
-############################################
-      
-    
+
     def _vibrational_energy_contribution(self, temperature):
         """Calculates the change in internal energy due to vibrations from
         0K to the specified temperature for a set of vibrations given in
@@ -27,7 +25,7 @@ class ThermoChem:
         in eV."""
         kT = units.kB * temperature
         dU = 0.
-        
+
         for energy in self.vib_energies:
             dU += energy / (np.exp(energy / kT) - 1.)
         return dU
@@ -42,15 +40,15 @@ class ThermoChem:
             x = energy / kT #eV/ eV/K*K
             S_v += x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
         S_v *= units.kB
-        print(S_v)
         return S_v
-############################################
-    
+
 
     def _vprint(self, text):
         """Print output if verbose flag True."""
         if self.verbose:
             sys.stdout.write(text + os.linesep)
+
+
 class HarmonicThermo(ThermoChem):
     """Class for calculating thermodynamic properties in the approximation
     that all degrees of freedom are treated harmonically. Often used for
@@ -198,16 +196,14 @@ class HarmonicThermoFix(ThermoChem):
         self.n_imag = n_imag
         self.atoms=atoms
         self.potentialenergy = potentialenergy
-        ##############################
-        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m 
+        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m
         converted=self.vib_energies/e_phot
         wl=1e7/converted #nm
         wl_m=wl*1e-9 #m
         self.frequencies=units._c/(wl_m) #1/s
-        ##############################
 
     def head_gordon_damp(self,freq):
-        
+
         cutoff=50 #cm-1
         alpha=4
         wl=1e7/cutoff #nm
@@ -215,30 +211,30 @@ class HarmonicThermoFix(ThermoChem):
         cutoff_freq=units._c/(wl_m) #1/s
 
         return(1/(1+(cutoff_freq/freq)**alpha))
-    
+
     def vibrational_entropy_contribution_GRIMME(self, temperature):
         """Calculates the entropy due to vibrations for a set of vibrations
         given in eV and a temperature given in Kelvin.  Returns the entropy
         in eV/K."""
-        R = units._k*units._Nav 
-        kT = units._k * temperature ## J/K*K 
+        R = units._k*units._Nav
+        kT = units._k * temperature ## J/K*K
         S_v = 0.
         S_vase=0.
         old_kT=units.kB*temperature
         for n,freq in enumerate(self.frequencies):
             #J/molK #js *1/s #/J/K  ### J/mol
-            x= units._hplanck * freq / kT 
-                     
-            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x)) 
+            x= units._hplanck * freq / kT
+
+            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x))
                     - np.log(1. - np.exp(-x)))
-            x = self.vib_energies[n] / old_kT 
+            x = self.vib_energies[n] / old_kT
 
             compase=x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
-            
+
             S_v += self.head_gordon_damp(freq)*comp
             S_vase += compase
-                    
-        
+
+
         S_vase *= units.kB
         S_v*=(units.J/units._Nav)
         return S_v
@@ -247,25 +243,25 @@ class HarmonicThermoFix(ThermoChem):
         in eV/K."""
         kT = units._k * temperature
         R = units._k*units._Nav
-        inertias = (self.atoms.get_moments_of_inertia() * units._amu / 
+        inertias = (self.atoms.get_moments_of_inertia() * units._amu /
                         ((1e10)**2))  # from amu/A^2 to kg m^2
         B_av=np.mean(inertias)
         self._vprint(f"Average moment of inertia: {B_av}")
-    
-        mu=units._hplanck/(8*np.pi**2 * self.frequencies)  
+
+        mu=units._hplanck/(8*np.pi**2 * self.frequencies)
         mu_prime = (mu * B_av)/(mu + B_av) #kg m^2
-    
+
         #rotational entropy
         S_r_damp = 0.
-        S_r_components = R * (1/2 + np.log((8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2)) #J/(Js)^2 
+        S_r_components = R * (1/2 + np.log((8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2)) #J/(Js)^2
 
         for n,freq in enumerate(self.frequencies):
             S_r_damp+=(1-self.head_gordon_damp(freq))*(S_r_components[n])
-    
+
         S_r=sum(S_r_components)
         S_r_damp*=units.J/units._Nav
         return(S_r_damp)
-    
+
     def get_internal_energy(self, temperature, verbose=True):
         """Returns the internal energy, in eV, in the harmonic approximation
         at a specified temperature (K)."""
@@ -312,8 +308,7 @@ class HarmonicThermoFix(ThermoChem):
         S_v = self.vibrational_entropy_contribution_GRIMME(temperature)
         S += S_v
         write(fmt % ('S_vib', S_v, S_v * temperature))
-              
-################################
+
         write('-' * 49)
         write(fmt % ('S_tot', S, S * temperature))
         write('=' * 49)
