@@ -170,26 +170,24 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
     cutoff : float
-        the cutoff vibrational energy threshold in cm^-1, named τ in 10.1039/D1SC00621E
+        the cutoff vibrational energy threshold in cm^-1, named τ in 10.1039/D1SC00621E.
+        Values close or equal to 0 will result in the standard harmonic approximation.
     """
 
-    def __init__(self, atoms, cutoff=50,  *args, **kwargs):
+    def __init__(self, atoms, cutoff=35,  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.atoms=atoms
         self.cutoff=cutoff
+        self.alpha=4 #from paper
+        self.cutoff_freq=units._c*self.cutoff*1e2 #1/s (cutoff to meters)
         e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m 
         converted=self.vib_energies/e_phot
-        wl=1e7/converted #nm
-        wl_m=wl*1e-9 #m
-        self.frequencies=units._c/(wl_m) #1/s
+        self.frequencies=units._c*1e2*converted #1/s (vib energies to per meter frequencies)
 
     def _head_gordon_damp(self,freq):
-        alpha=4
-        wl=1e7/self.cutoff #nm
-        wl_m=wl*1e-9 #m
-        cutoff_freq=units._c/(wl_m) #1/s
+        ret = 1/(1+(self.cutoff_freq/freq)**self.alpha)
 
-        return(1/(1+(cutoff_freq/freq)**alpha))
+        return ret
 
     def _vibrational_entropy_contribution(self, temperature):
         """Overwrite the standard Harmonic one to scale frequencies"""
@@ -208,39 +206,49 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
     def _rotational_entropy_contribution(self, temperature):
         """Calculates the rotation of a rigid rotor for low frequency modes. Returns the entropy
         in eV/K."""
+        #rotational entropy
+        S_r_damp = 0.
         kT = units._k * temperature
         R = units._k*units._Nav
         inertias = (self.atoms.get_moments_of_inertia() * units._amu /
                         ((1e10)**2))  # from amu/A^2 to kg m^2
         B_av=np.mean(inertias)
-        self._vprint(f"Average moment of inertia: {B_av}")
 
         mu=units._hplanck/(8*np.pi**2 * self.frequencies)
         mu_prime = (mu * B_av)/(mu + B_av) #kg m^2
-
-        #rotational entropy
-        S_r_damp = 0.
-        S_r_components = R * (1/2 + np.log((8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2)) #J/(Js)^2
+        x = (8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2
+        #filter zeros out and set them to zero
+        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x!=0))
+        S_r_components = R * (1/2 + log_x) #J/(Js)^2
 
         for n,freq in enumerate(self.frequencies):
             S_r_damp+=(1-self._head_gordon_damp(freq))*(S_r_components[n])
 
         S_r=sum(S_r_components)
         S_r_damp*=units.J/units._Nav
-        return(S_r_damp)
+        return S_r_damp, B_av
 
     def get_entropy(self, temperature, verbose=True):
         """Add rotational contribution."""
-        S = super().get_entropy(self, temperature, verbose)
+        # overwrite verbosity to avoid double printing
+        S = super().get_entropy(temperature, verbose=False)
+        # re-enable verbosity
+        self.verbose = verbose
         write = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
+        write('Entropy components at T = %.2f K:' % temperature)
+        write('=' * 49)
+        write('%15s%13s     %13s' % ('', 'S', 'T*S'))
+        write(fmt % ('S_vib', S, S * temperature))
 
-        S_r_damp = self._rotational_entropy_contribution(temperature)
+        S_r_damp, B_av = self._rotational_entropy_contribution(temperature)
         S += S_r_damp
         write(fmt % ('S_rot', S_r_damp, S_r_damp * temperature))
 
         write('-' * 49)
         write(fmt % ('S_tot', S, S * temperature))
+        write('-' * 49)
+        write(f"Average moment of inertia: {B_av}") #todo remove at the end
         write('=' * 49)
         return S
 
