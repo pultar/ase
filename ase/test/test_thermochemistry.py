@@ -7,7 +7,7 @@ from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
 from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
-                                 IdealGasThermo)
+                                 IdealGasThermo, HarmonicThermo_msRRHO)
 from ase.vibrations import Vibrations
 
 
@@ -301,6 +301,47 @@ def test_crystal_thermo(asap3, testdir):
         formula_units=4,
     )
     thermo.get_helmholtz_energy(temperature=298.15)
+
+
+def msRRHO_thermo(
+    atoms=None,
+    cutoff=35,
+    vib_energies=None,
+    potentialenergy=0.0,
+    ignore_imag_modes=False,
+):
+    return HarmonicThermo_msRRHO(
+        atoms=atoms,
+        cutoff=cutoff,
+        vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
+        potentialenergy=potentialenergy,
+        ignore_imag_modes=ignore_imag_modes,
+    )
+
+
+HELMHOLTZ_msRRHO = -0.05665130354741105
+
+
+def test_msRRHO():
+    #test proper functionality of msRRHO method
+    "Basic test of harmonic thermochemistry"
+    thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
+
+
+def test_msRRHO_converge_to_harmonic():
+    "Test that msRRHO converges to harmonic limit when cutoff is 0"
+    thermo = harmonic_thermo(potentialenergy=0.0)
+    helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
+    thermo_msrrho = msRRHO_thermo(atoms=Atoms('H'), cutoff=0)
+    helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+    # now also test that it actually changes when a higher cutoff is used
+    thermo_msrrho = msRRHO_thermo(atoms=Atoms('H'), cutoff=10)
+    helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
+    with pytest.raises(AssertionError):
+        assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
 
 
 VIB_ENERGIES_HINDERED = (
