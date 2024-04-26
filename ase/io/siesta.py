@@ -7,6 +7,7 @@ import numpy as np
 from ase import Atoms
 from ase.units import Bohr
 from ase.utils import reader
+from ase.calculators.siesta.import_ion_xml import get_ion
 
 _label_strip_re = compile(r'[\s._-]')
 
@@ -228,7 +229,6 @@ def read_siesta_xv(fd):
 @deprecated(
     # This subroutine is not used in the codebase and there's already a class SpeciesInfo that has the same functionality.
     # It is kept here in case someone wants to integrate the fine-tuning of basis sets within ASE.
-    from ase.calculators.siesta.import_ion_xml import get_ion
     
     def read_ion(self, atoms):
         """
