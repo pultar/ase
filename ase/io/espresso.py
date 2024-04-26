@@ -1260,7 +1260,6 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     # ``parameters`` in Calculator objects
     input_parameters = Namelist(input_data)
     input_parameters.to_nested('pw', **kwargs)
-
     # Convert ase constraints to QE constraints
     # Nx3 array of force multipliers matches what QE uses
     # Do this early so it is available when constructing the atoms card
@@ -1364,6 +1363,7 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
         # Just use standard cell block
         input_parameters['system']['ibrav'] = 0
 
+    manual_kpts = input_parameters.pop('k_points', None)
     # Construct input file into this
     pwi = input_parameters.to_string(list_form=True)
 
@@ -1391,23 +1391,36 @@ def write_espresso_in(fd, atoms, input_data=None, pseudopotentials=None,
     if isinstance(koffset, int):
         koffset = (koffset, ) * 3
 
-    # BandPath object or bandpath-as-dictionary:
-    if isinstance(kgrid, dict) or hasattr(kgrid, 'kpts'):
-        pwi.append('K_POINTS crystal_b\n')
-        assert hasattr(kgrid, 'path') or 'path' in kgrid
-        kgrid = kpts2ndarray(kgrid, atoms=atoms)
-        pwi.append(f'{len(kgrid)}\n')
-        for k in kgrid:
-            pwi.append(f"{k[0]:.14f} {k[1]:.14f} {k[2]:.14f} 0\n")
-        pwi.append('\n')
-    elif isinstance(kgrid, str) and (kgrid == "gamma"):
-        pwi.append('K_POINTS gamma\n')
+    if manual_kpts:
+        coord, kpts_list = manual_kpts
+
+        pwi.append(f'K_POINTS {coord}\n')
+        pwi.append(f"{len(kpts_list)}\n")
+
+        for kpt in kpts_list:
+            if isinstance(kpt, str):
+                pwi.append(f"{kpt}\n")
+            elif isinstance(kpt, (list, tuple, np.ndarray)):
+                pwi.append(" ".join([str(x) for x in kpt]) + "\n")
         pwi.append('\n')
     else:
-        pwi.append('K_POINTS automatic\n')
-        pwi.append(f"{kgrid[0]} {kgrid[1]} {kgrid[2]} "
-                   f" {koffset[0]:d} {koffset[1]:d} {koffset[2]:d}\n")
-        pwi.append('\n')
+        # BandPath object or bandpath-as-dictionary:
+        if isinstance(kgrid, dict) or hasattr(kgrid, 'kpts'):
+            pwi.append('K_POINTS crystal_b\n')
+            assert hasattr(kgrid, 'path') or 'path' in kgrid
+            kgrid = kpts2ndarray(kgrid, atoms=atoms)
+            pwi.append(f'{len(kgrid)}\n')
+            for k in kgrid:
+                pwi.append(f"{k[0]:.14f} {k[1]:.14f} {k[2]:.14f} 0\n")
+            pwi.append('\n')
+        elif isinstance(kgrid, str) and (kgrid == "gamma"):
+            pwi.append('K_POINTS gamma\n')
+            pwi.append('\n')
+        else:
+            pwi.append('K_POINTS automatic\n')
+            pwi.append(f"{kgrid[0]} {kgrid[1]} {kgrid[2]} "
+                    f" {koffset[0]:d} {koffset[1]:d} {koffset[2]:d}\n")
+            pwi.append('\n')
 
     # CELL block, if required
     if input_parameters['SYSTEM']['ibrav'] == 0:

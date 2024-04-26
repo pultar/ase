@@ -19,6 +19,9 @@ class Namelist(UserDict):
     to_nested() have been added to convert the dictionary to a nested
     dictionary with the correct structure for the specified binary.
     """
+
+    special_keys = ["k_points"]
+
     def __getitem__(self, key):
         return super().__getitem__(key.lower())
 
@@ -89,6 +92,11 @@ class Namelist(UserDict):
             if isinstance(value, Namelist)
         })
 
+        special_dict = {
+            key: value for key, value in self.items()
+            if key in Namelist.special_keys
+        }
+
         unused_keys = []
         for arg_key in list(self):
             section = Namelist.search_key(arg_key, keys)
@@ -128,5 +136,7 @@ class Namelist(UserDict):
                 sorted_section[key] = constructed_namelist[section][key]
 
             constructed_namelist[section] = sorted_section
+
+        constructed_namelist.update(special_dict)
 
         super().update(Namelist(constructed_namelist))
