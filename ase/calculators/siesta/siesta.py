@@ -21,8 +21,8 @@ from typing import Any, Dict, List
 import numpy as np
 
 from ase import Atoms
-from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 from ase.calculators.siesta.import_ion_xml import get_ion
+from ase.calculators.calculator import FileIOCalculator, Parameters, ReadError
 from ase.calculators.siesta.parameters import PAOBasisBlock, format_fdf
 from ase.data import atomic_numbers
 from ase.io.siesta import read_siesta_xv
