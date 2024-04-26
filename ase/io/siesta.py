@@ -230,8 +230,7 @@ def read_siesta_xv(fd):
 @deprecated(
         "The subroutine 'read_ion' has been deprecated,"
         "and moved to io/siesta in case someone wants to integrate the fine-tuning of basis sets within ASE.",
-        category=FutureWarning,
-        callback=_read_ion,
+        category=FutureWarning
     )
 def read_ion(self, atoms):
     """
