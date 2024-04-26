@@ -224,3 +224,45 @@ def read_siesta_xv(fd):
                   pbc=True)
     assert natoms == len(atoms)
     return atoms
+
+@deprecated(
+    # This subroutine is not used in the codebase and there's already a class SpeciesInfo that has the same functionality.
+    # It is kept here in case someone wants to integrate the fine-tuning of basis sets within ASE.
+    from ase.calculators.siesta.import_ion_xml import get_ion
+    
+    def read_ion(self, atoms):
+        """
+        Read the ion.xml file of each specie
+        """
+        species, species_numbers = self.species(atoms)
+
+        ion_results = {}
+        for species_number, spec in enumerate(species, start=1):
+            symbol = spec['symbol']
+            atomic_number = atomic_numbers[symbol]
+
+            if spec['pseudopotential'] is None:
+                if self.pseudo_qualifier() == '':
+                    label = symbol
+                else:
+                    label = f"{symbol}.{self.pseudo_qualifier()}"
+                pseudopotential = self.getpath(label, 'psf')
+            else:
+                pseudopotential = Path(spec['pseudopotential'])
+                label = pseudopotential.stem
+
+            name = f"{label}.{species_number}"
+            if spec['ghost']:
+                name = f"{name}.ghost"
+                atomic_number = -atomic_number
+
+            label = name.rsplit('.', 2)[0]
+
+            if label not in ion_results:
+                fname = self.getpath(label, 'ion.xml')
+                fname = Path(fname)
+                if fname.is_file():
+                    ion_results[label] = get_ion(fname)
+
+        return ion_results
+)
