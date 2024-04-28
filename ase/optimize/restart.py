@@ -4,7 +4,7 @@ from ase.io.jsonio import write_json
 from ase.utils import IOContext
 
 
-class RestartWriter(IOContext):
+class JsonDumper(IOContext):
 
     def __init__(self, dyn, *args):
         self.dyn = dyn
@@ -12,7 +12,8 @@ class RestartWriter(IOContext):
 
         for object in self.additional_objects:
             if not hasattr(object, "todict"):
-                raise ValueError(f"Object {object} does not have a todict method.")
+                raise ValueError(
+                    f"Object {object} does not have a todict method.")
 
     def __del__(self):
         self.close()
@@ -27,6 +28,6 @@ class RestartWriter(IOContext):
 
         for object in self.additional_objects:
             with open(
-                f"{self.dyn.__class__.__name__}.{self.dyn.nsteps}.json", "w"
+                f"{object.__class__.__name__}.{self.dyn.nsteps}.json", "w"
             ) as f:
                 write_json(f, object.todict())

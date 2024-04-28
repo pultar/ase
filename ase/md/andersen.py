@@ -2,7 +2,6 @@
 from typing import IO, Optional, Union
 
 import numpy as np
-
 from ase import Atoms, units
 from ase.md.md import MolecularDynamics
 from ase.parallel import DummyMPI, world
@@ -18,7 +17,11 @@ class Andersen(MolecularDynamics):
         temperature_K: float,
         andersen_prob: float,
         fix_com: bool = True,
+        trajectory: Optional[str] = None,
+        logfile: Optional[Union[IO, str]] = None,
+        loginterval: int = 1,
         communicator=world,
+        append_trajectory: bool = False,
         rng=np.random.default_rng(),
     ):
         """"
@@ -79,7 +82,9 @@ class Andersen(MolecularDynamics):
         if communicator is None:
             communicator = DummyMPI()
         self.communicator = communicator
-        MolecularDynamics.__init__(self, atoms, timestep)
+        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
+                                   logfile, loginterval,
+                                   append_trajectory=append_trajectory)
 
     def set_temperature(self, temperature_K):
         self.temp = units.kB * temperature_K
@@ -95,19 +100,17 @@ class Andersen(MolecularDynamics):
         y = self.rng.random(size=size)
         z = width * np.cos(2 * np.pi * x) * (-2 * np.log(1 - y))**0.5
         return z
-    
+
     def todict(self):
         return {
             "type": "molecular-dynamics",
             "md-type": self.__class__.__name__,
             "dt": self.dt,
-            "nsteps": self.nsteps,
             "temp": self.temp,
             "andersen_prob": self.andersen_prob,
             "fix_com": self.fix_com,
             "nsteps": self.nsteps,
             "rng_state": self.rng.bit_generator.state,
-            "forces": self.atoms.get_forces(),
             "atoms": self.atoms,
             "max_steps": self.max_steps,
         }
@@ -118,7 +121,7 @@ class Andersen(MolecularDynamics):
         rng.bit_generator.state = dict["rng_state"]
 
         atoms = dict["atoms"]
-        # Create a new instance of Andersen
+
         dyn = cls(
             atoms=atoms,
             timestep=dict["dt"],
@@ -130,8 +133,6 @@ class Andersen(MolecularDynamics):
 
         dyn.nsteps = dict["nsteps"]
         dyn.max_steps = dict["max_steps"]
-
-        dyn.restart_properties["forces"] = dict["forces"]
 
         return dyn
 

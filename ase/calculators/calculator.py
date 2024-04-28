@@ -768,7 +768,7 @@ class Calculator(BaseCalculator):
         dct["atoms"] = self.atoms
         dct["results"] = self.results
 
-        return dct
+        return dct 
 
     def reset(self):
         """Clear all information from old calculation."""
