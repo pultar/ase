@@ -1,10 +1,10 @@
 """Andersen dynamics class."""
 from typing import IO, Optional, Union
 
-from numpy import cos, log, ones, pi, repeat
+import numpy as np
 
 from ase import Atoms, units
-from ase.md.md import MolecularDynamics, DEFAULT_RNG
+from ase.md.md import MolecularDynamics
 from ase.parallel import DummyMPI, world
 
 
@@ -19,7 +19,7 @@ class Andersen(MolecularDynamics):
         andersen_prob: float,
         fix_com: bool = True,
         communicator=world,
-        rng=DEFAULT_RNG,
+        rng=np.random.default_rng(),
     ):
         """"
         Parameters:
@@ -93,7 +93,7 @@ class Andersen(MolecularDynamics):
     def boltzmann_random(self, width, size):
         x = self.rng.random(size=size)
         y = self.rng.random(size=size)
-        z = width * cos(2 * pi * x) * (-2 * log(1 - y))**0.5
+        z = width * np.cos(2 * np.pi * x) * (-2 * np.log(1 - y))**0.5
         return z
     
     def todict(self):
@@ -114,12 +114,10 @@ class Andersen(MolecularDynamics):
 
     @classmethod
     def fromdict(cls, dict):
-
-        rng = DEFAULT_RNG
+        rng = np.random.default_rng()
         rng.bit_generator.state = dict["rng_state"]
 
         atoms = dict["atoms"]
-
         # Create a new instance of Andersen
         dyn = cls(
             atoms=atoms,
@@ -139,7 +137,7 @@ class Andersen(MolecularDynamics):
 
     def get_maxwell_boltzmann_velocities(self):
         natoms = len(self.atoms)
-        masses = repeat(self.masses, 3).reshape(natoms, 3)
+        masses = np.repeat(self.masses, 3).reshape(natoms, 3)
         width = (self.temp / masses)**0.5
         velos = self.boltzmann_random(width, size=(natoms, 3))
         return velos  # [[x, y, z],] components for each atom
@@ -161,7 +159,7 @@ class Andersen(MolecularDynamics):
         if self.fix_com:
             # add random velocity to center of mass to prepare Andersen
             width = (self.temp / sum(self.masses))**0.5
-            self.random_com_velocity = (ones(self.v.shape)
+            self.random_com_velocity = (np.ones(self.v.shape)
                                         * self.boltzmann_random(width, (3)))
             self.communicator.broadcast(self.random_com_velocity, 0)
             self.v += self.random_com_velocity
