@@ -12,13 +12,13 @@ import ase.io.exciting
 from ase.test.calculator.exciting.test_exciting import LDA_VWN_AR_INFO_OUT
 
 
-@pytest.fixture
+@pytest.fixture()
 def excitingtools():
     """If we cannot import excitingtools we skip tests with this fixture."""
     return pytest.importorskip('excitingtools')
 
 
-@pytest.fixture
+@pytest.fixture()
 def nitrogen_trioxide_atoms():
     """Helper fixture to create a NO3 ase atoms object for tests."""
     return ase.Atoms('NO3',
@@ -74,8 +74,8 @@ def test_write_bs_xml(
     This is done so that excitingtools is independent of ASE.
 
     """
-    from excitingtools.input.bandstructure import (
-        band_structure_input_from_ase_atoms_obj)
+    from excitingtools.input.bandstructure import \
+        band_structure_input_from_ase_atoms_obj
     file_path = tmp_path / 'input.xml'
     ground_state_input_dict = {
         "rgkmax": 8.0,
