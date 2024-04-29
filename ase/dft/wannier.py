@@ -449,7 +449,7 @@ def choose_states(calcdata, fixedenergy, fixedstates, Nk, nwannier, log, spin):
     if nwannier < np.max(fixedstates_k):
         raise ValueError('Not enough Wannier functions to cover fixed energy'
                          ' window! For the specified window, there must be at'
-                         f' least {np.max(fixedstates_k)} wannier functions')
+                         f' least {np.max(fixedstates_k)} Wannier functions')
     return fixedstates_k, nwannier, fixedstates_km
 
 
@@ -1211,7 +1211,14 @@ class Wannier:
             if L > 0:
                 # Ctemp now has same dimension as V, the gradient is in the
                 # lower-right (Nb-M) x L block
-                Ctemp_ul = Ctemp_nw[self.nonfixed_kn[k], M:]
+                nonfixed_n = self.nonfixed_kn[k]
+                Ctemp_ul = Ctemp_nw[nonfixed_n, M:]
+                # make sure that edf below and above the fixed energy window
+                # don't mix
+                U1 = np.argmax(~nonfixed_n)  # find index of first fixed band
+                L1 = min(U1, int(L / 2))  # number of wfs below energy window
+                Ctemp_ul[:U1, L1:] = 0
+                Ctemp_ul[U1:, :L1] = 0
                 G_ul = Ctemp_ul - ((C_ul @ dag(C_ul)) @ Ctemp_ul)
                 dC.append(G_ul.ravel())
 
