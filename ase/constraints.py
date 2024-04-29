@@ -24,9 +24,9 @@ __all__ = [
     'FixCartesian', 'FixBondLength', 'FixedMode',
     'FixAtoms', 'FixScaled', 'FixCom', 'FixSubsetCom', 'FixedPlane',
     'FixConstraint', 'FixedLine', 'FixBondLengths', 'FixLinearTriatomic',
-    'FixInternals', 'FixExternals', 'Hookean', 'ExternalForce', 'MirrorForce', 'MirrorTorque',
-    'FixScaledParametricRelations', 'FixCartesianParametricRelations',
-    'FixSymmetry']
+    'FixInternals', 'FixExternals', 'Hookean', 'ExternalForce', 'MirrorForce',
+    'MirrorTorque', 'FixScaledParametricRelations',
+    'FixCartesianParametricRelations', 'FixSymmetry']
 
 
 def dict2constraint(dct):
