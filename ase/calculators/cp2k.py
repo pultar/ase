@@ -9,6 +9,7 @@ import os.path
 import subprocess
 from contextlib import AbstractContextManager
 from warnings import warn
+from select import select
 
 import numpy as np
 
@@ -191,6 +192,7 @@ class CP2K(Calculator, AbstractContextManager):
         xc='LDA',
         print_level='LOW',
         set_pos_file=False,
+        timeout=None
     )
 
     def __init__(self, restart=None,
@@ -217,7 +219,7 @@ class CP2K(Calculator, AbstractContextManager):
 
         super().__init__(restart=restart,
                          ignore_bad_restart_file=ignore_bad_restart_file,
-                         label=label, atoms=atoms, **kwargs)
+                         label=label, atoms=atoms, timeout=timeout, **kwargs)
         if restart is not None:
             self.read(restart)
 
@@ -519,12 +521,13 @@ class CP2K(Calculator, AbstractContextManager):
 class Cp2kShell:
     """Wrapper for CP2K-shell child-process"""
 
-    def __init__(self, command, debug):
+    def __init__(self, command, debug, timeout):
         """Construct CP2K-shell object"""
 
         self.isready = False
         self.version = 1.0  # assume oldest possible version until verified
         self._debug = debug
+        self.timeout = timeout
 
         # launch cp2k_shell child process
         assert 'cp2k_shell' in command
@@ -587,7 +590,14 @@ class Cp2kShell:
     def recv(self):
         """Receive a line from the cp2k_shell"""
         assert self._child.poll() is None  # child process still alive?
-        line = self._child.stdout.readline().strip()
+        result = select([self._child.stdout], [], [], self.timeout)[0]
+        if result == ([], [], []):
+            raise TimeoutError('CP2K did not respond in time')
+        else: 
+            pass
+        import pdb; pdb.set_trace()
+
+        #line = self._child.stdout.readline().strip()
         if self._debug:
             print('Received: ' + line)
         self.isready = line == '* READY'
