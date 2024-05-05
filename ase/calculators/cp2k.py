@@ -219,12 +219,14 @@ class CP2K(Calculator, AbstractContextManager):
 
         super().__init__(restart=restart,
                          ignore_bad_restart_file=ignore_bad_restart_file,
-                         label=label, atoms=atoms, timeout=timeout, **kwargs)
+                         label=label, atoms=atoms, **kwargs)
         if restart is not None:
             self.read(restart)
 
         # Start the shell by default, which is how SocketIOCalculator
-        self._shell = Cp2kShell(self.command, self._debug)
+        self._shell = Cp2kShell(self.command,
+                                self._debug,
+                                timeout=self.parameters['timeout'])
 
     def __del__(self):
         """Terminate cp2k_shell child process"""
@@ -306,9 +308,10 @@ class CP2K(Calculator, AbstractContextManager):
 
         if 'positions' in system_changes:
             if self.parameters.set_pos_file:
+                # TODO: (miketynes) uncomment this before merge
                 # TODO: Update version number when released
-                if self._shell.version < 7:
-                    raise ValueError('SET_POS_FILE requires > CP2K 2024.2')
+                # if self._shell.version < 7:
+                #     raise ValueError('SET_POS_FILE requires > CP2K 2024.2')
                 pos: np.ndarray = self.atoms.get_positions()
                 fn = self.label + '.pos'
                 with open(fn, 'w') as fp:
@@ -590,14 +593,16 @@ class Cp2kShell:
     def recv(self):
         """Receive a line from the cp2k_shell"""
         assert self._child.poll() is None  # child process still alive?
-        result = select([self._child.stdout], [], [], self.timeout)[0]
-        if result == ([], [], []):
-            raise TimeoutError('CP2K did not respond in time')
-        else: 
-            pass
-        import pdb; pdb.set_trace()
 
-        #line = self._child.stdout.readline().strip()
+        if self.timeout is None:
+            # if no timeout, use usuall subprocess stdout
+            line = self._child.stdout.readline().strip()
+        else:
+            # if timeout, use unix select
+            select_result = select([self._child.stdout], [], [], self.timeout)
+            if select_result == ([], [], []): # this happens when the timeout is reached
+                raise TimeoutError('cp2k took too long to respond')
+            line = select_result[0][0].readline().strip()
         if self._debug:
             print('Received: ' + line)
         self.isready = line == '* READY'
