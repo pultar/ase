@@ -444,9 +444,11 @@ def choose_states(calcdata, fixedenergy, fixedstates, Nk, nwannier, log, spin):
 
     # Without user choice just set nwannier fixed states without EDF
     if nwannier == 'auto':
-        nwannier = max([max(fs_m) for fs_m in fixedstates_km]) + 1
+        nwannier = max([fs_m.stop for fs_m in fixedstates_km])
 
-    if nwannier < np.max(fixedstates_k):
+    min_n_wannier = max([fs_m.stop for fs_m in fixedstates_km])\
+        - min([fs_m.start for fs_m in fixedstates_km])
+    if nwannier < min_n_wannier:
         raise ValueError('Not enough Wannier functions to cover fixed energy'
                          ' window! For the specified window, there must be at'
                          f' least {np.max(fixedstates_k)} Wannier functions')
@@ -609,7 +611,25 @@ class Wannier:
             #  edf_start_idx + self.edf_k[k]))
             nonfixed_kn[k, fixedstates_m] = False
         self.nonfixed_kn = nonfixed_kn
+        FW_lowestband = min([fs_m.start for fs_m in self.fixedstates_km])
+        FW_highestband = max([fs_m.stop - 1 for fs_m in self.fixedstates_km])
+        min_n_wannier = FW_highestband - FW_lowestband + 1
+        extra_wannier = nwannier - min_n_wannier
+        c1 = 2 * int(extra_wannier / 4)
+        #  we have more EDF than the minimum required;
+        #  now choose how to divide them between upper and lower spaces
+        # edf_below_k = const + min(FW_km) - FE_lowestband
+        # edf_above_k = edf_k - edf_below_k
+        # if lowest band in fixed window is band 10, we cannot
+        # have more than 10 edf below
+        edf_below_k = [c1 + fs_m.start - FW_lowestband
+                       for fs_m in self.fixedstates_km]\
 
+        edf_above_k = [nwannier - edf_below - fixedstates
+                       for edf_below, fixedstates in
+                       zip(edf_below_k, self.fixedstates_k)]
+        self.edf_below_k = edf_below_k
+        self.edf_above_k = edf_above_k
         self.log(f'Wannier: Fixed states            : {self.fixedstates_k}')
         self.log(f'Wannier: Extra degrees of freedom: {self.edf_k}')
 
@@ -1216,7 +1236,7 @@ class Wannier:
                 # make sure that edf below and above the fixed energy window
                 # don't mix
                 U1 = np.argmax(~nonfixed_n)  # find index of first fixed band
-                L1 = min(U1, int(L / 2))  # number of wfs below energy window
+                L1 = self.edf_below_k[k]  # number of wfs below energy window
                 Ctemp_ul[:U1, L1:] = 0
                 Ctemp_ul[U1:, :L1] = 0
                 G_ul = Ctemp_ul - ((C_ul @ dag(C_ul)) @ Ctemp_ul)
