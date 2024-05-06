@@ -329,7 +329,7 @@ class CP2K(Calculator, AbstractContextManager):
                 for pos in self.atoms.get_positions():
                     self._shell.send('%.18e %.18e %.18e' % tuple(pos))
                 self._shell.send('*END')
-            max_change = float(self._shell.recv())
+            max_change = float(self._shell.recv(timeout=self.parameters['timeout']))
             assert max_change >= 0  # sanity check
             self._shell.expect('* READY')
 
@@ -346,7 +346,7 @@ class CP2K(Calculator, AbstractContextManager):
         nvals = int(self._shell.recv())
         assert nvals == 3 * n_atoms  # sanity check
         for i in range(n_atoms):
-            line = self._shell.recv()
+            line = self._shell.recv(timeout=self.parameters['timeout'])
             forces[i, :] = [float(x) for x in line.split()]
         self._shell.expect('* END')
         self._shell.expect('* READY')
@@ -590,16 +590,16 @@ class Cp2kShell:
         self.isready = False
         self._child.stdin.write(line + '\n')
 
-    def recv(self):
+    def recv(self, timeout=None):
         """Receive a line from the cp2k_shell"""
         assert self._child.poll() is None  # child process still alive?
 
-        if self.timeout is None:
-            # if no timeout, use usuall subprocess stdout
+        if timeout is None:
+            # if no timeout, use usual subprocess stdout
             line = self._child.stdout.readline().strip()
         else:
             # if timeout, use unix select
-            select_result = select([self._child.stdout], [], [], self.timeout)
+            select_result = select([self._child.stdout], [], [], timeout)
             if select_result == ([], [], []): # this happens when the timeout is reached
                 raise TimeoutError('cp2k took too long to respond')
             line = select_result[0][0].readline().strip()
@@ -608,9 +608,9 @@ class Cp2kShell:
         self.isready = line == '* READY'
         return line
 
-    def expect(self, line):
+    def expect(self, line, timeout=None):
         """Receive a line and asserts that it matches the expected one"""
-        received = self.recv()
+        received = self.recv(timeout=timeout)
         assert received == line
 
 
