@@ -716,6 +716,17 @@ class Wannier:
                 self.calc, initialwannier, self.kptgrid,
                 self.edf_k, self.spin)
 
+        # project C_kul down to non-fixed space
+        C_kul = wannier_state.C_kul.copy()
+        for k in range(self.Nk):
+            C_ul = C_kul[k]
+            l1 = self.edf_below_k[k]
+            u1 = self.fixedstates_km[k].start
+            C_ul[:u1, l1:] = 0
+            C_ul[u1:, :l1] = 0
+            gram_schmidt(C_ul)
+            C_kul[k] = C_ul
+        wannier_state.C_kul = C_kul
         self.wannier_state = wannier_state
         self.update()
 
