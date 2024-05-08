@@ -1,6 +1,5 @@
 import gzip
 import struct
-from collections import deque
 from os.path import splitext
 
 import numpy as np
@@ -59,6 +58,7 @@ def read_lammps_dump(infileobj, **kwargs):
         fileobj.close()
 
     return out
+
 
 def lammps_data_to_ase_atoms(
     data,
@@ -218,7 +218,8 @@ def lammps_data_to_ase_atoms(
 
     return out_atoms
 
-def lammps_data_to_ase_atoms_types(
+
+def lammps_data_to_ase_atoms_typed(
     data,
     colnames,
     cell,
@@ -232,9 +233,10 @@ def lammps_data_to_ase_atoms_types(
 ):
     """Extract positions and other per-atom parameters and create Atoms.
 
-    Unlike `lammps_data_to_ase_atoms`, this function assumes the data it is given
-    contains the type of each column. This avoids a large number of type checks and 
-    conversions, but requires that the data is already in the correct format.
+    Unlike `lammps_data_to_ase_atoms`, this function assumes the data it is
+    given contains the type of each column. This avoids a large number of type
+    checks and conversions, but requires that the data is already in the
+    correct format.
 
     :param data: per atom data (numpy structured array)
     :param colnames: list of column names
@@ -275,13 +277,21 @@ def lammps_data_to_ase_atoms_types(
 
     # Add positions or scaled positions
     if "x" in colnames:
-        atoms_dict["positions"] = np.column_stack((data["x"], data["y"], data["z"]))
+        atoms_dict["positions"] = np.column_stack((data["x"],
+                                                   data["y"],
+                                                   data["z"]))
     elif "xs" in colnames:
-        atoms_dict["scaled_positions"] = np.column_stack((data["xs"], data["ys"], data["zs"]))
+        atoms_dict["scaled_positions"] = np.column_stack((data["xs"],
+                                                          data["ys"],
+                                                          data["zs"]))
     elif "xu" in colnames:
-        atoms_dict["positions"] = np.column_stack((data["xu"], data["yu"], data["zu"]))
+        atoms_dict["positions"] = np.column_stack((data["xu"],
+                                                   data["yu"],
+                                                   data["zu"]))
     elif "xsu" in colnames:
-        atoms_dict["scaled_positions"] = np.column_stack((data["xsu"], data["ysu"], data["zsu"]))
+        atoms_dict["scaled_positions"] = np.column_stack((data["xsu"],
+                                                          data["ysu"],
+                                                          data["zsu"]))
     else:
         raise ValueError("No atomic positions found in LAMMPS output")
 
@@ -293,9 +303,11 @@ def lammps_data_to_ase_atoms_types(
         celldisp = prismobj.vector_to_ase(celldisp)
         cell = prismobj.update_cell(cell)
         if "positions" in atoms_dict:
-            atoms_dict["positions"] = prismobj.vector_to_ase(atoms_dict["positions"], wrap=True)
+            atoms_dict["positions"] = prismobj.vector_to_ase(
+                atoms_dict["positions"], wrap=True)
         if "scaled_positions" in atoms_dict:
-            atoms_dict["scaled_positions"] = prismobj.vector_to_ase(atoms_dict["scaled_positions"], wrap=True)
+            atoms_dict["scaled_positions"] = prismobj.vector_to_ase(
+                atoms_dict["scaled_positions"], wrap=True)
 
     # Create the Atoms object
     atoms = atomsobj(cell=cell, celldisp=celldisp, pbc=pbc, **atoms_dict)
@@ -325,10 +337,12 @@ def lammps_data_to_ase_atoms_types(
 
     # Process the extra columns of fixes, variables, and computes
     for colname in colnames:
-        if colname.startswith(("f_", "v_")) or (colname.startswith("c_") and not colname.startswith("c_q[")):
+        if colname.startswith(("f_", "v_")) or\
+           (colname.startswith("c_") and not colname.startswith("c_q[")):
             atoms.new_array(colname, data[colname])
 
     return atoms
+
 
 def construct_cell(diagdisp, offdiag):
     """Help function to create an ASE-cell with displacement vector from
@@ -354,41 +368,48 @@ def construct_cell(diagdisp, offdiag):
 
     return cell, celldisp
 
+
 def get_max_index(index):
     if np.isscalar(index):
         return index
     elif isinstance(index, slice):
         return index.stop if (index.stop is not None) else float("inf")
 
+
 def _process_timestep(args):
     data_bytes, kwargs = args
-    
+
     # Read the timestep data from the data_bytes
     mm = io.BytesIO(data_bytes)
 
     timestep_header = mm.readline().strip()
     if not timestep_header.startswith(b'ITEM: TIMESTEP'):
         raise ValueError("Expected 'ITEM: TIMESTEP' line is missing or invalid")
-    timestep_data = int(mm.readline())
-    
+    # The actual timestep
+    mm.readline()
+
     # Read the number of atoms
     natoms_header = mm.readline().strip()
     if not natoms_header.startswith(b'ITEM: NUMBER OF ATOMS'):
-        raise ValueError("Expected 'ITEM: NUMBER OF ATOMS' line is missing or invalid")
-    natoms_data = int(mm.readline().strip())
-    
+        raise ValueError(
+            "Expected 'ITEM: NUMBER OF ATOMS' line is missing or invalid")
+    # The number of atoms
+    mm.readline()
+
     # Read the box bounds
     bounds_header = mm.readline()
     if not bounds_header.startswith(b'ITEM: BOX BOUNDS'):
-        raise ValueError("Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
-    bounds_data = [list(map(float, mm.readline().strip().split())) for _ in range(3)]
-    
+        raise ValueError(
+            "Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
+    bounds_data = [list(
+        map(float, mm.readline().strip().split())) for _ in range(3)]
+
     # Read the atom data header
     atoms_header = mm.readline()
     if not atoms_header.startswith(b'ITEM: ATOMS'):
         raise ValueError("Expected 'ITEM: ATOMS' line is missing or invalid")
     colnames = atoms_header.split()[2:]
-    
+
     # Determine the data types for each column
     coltypes = []
     decoded_colnames = []
@@ -401,7 +422,9 @@ def _process_timestep(args):
             coltypes.append(float)
 
     # Create a structured numpy array to hold the data
-    np_dtype = [(decoded_colname, coltype) for decoded_colname, coltype in zip(decoded_colnames, coltypes)]
+    np_dtype = [(decoded_colname,
+                 coltype) for decoded_colname, coltype in zip(decoded_colnames,
+                                                              coltypes)]
 
     # Read the data directly into the numpy array using numpy.loadtxt
     data = np.loadtxt(mm, dtype=np_dtype)
@@ -411,14 +434,16 @@ def _process_timestep(args):
     diagdisp = celldata[:, :2].reshape(6, 1).flatten()
     offdiag = celldata[:, 2] if celldata.shape[1] > 2 else (0.0,) * 3
     cell, celldisp = construct_cell(diagdisp, offdiag)
-    
+
     # Assume periodic boundary conditions
     pbc = [True, True, True]
-    
+
     # Convert data to Atoms object
-    atoms = lammps_data_to_ase_atoms_types(data, decoded_colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
-    
+    atoms = lammps_data_to_ase_atoms_typed(
+        data, decoded_colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
+
     return atoms
+
 
 def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     """Process cleartext lammps dumpfiles
@@ -433,48 +458,48 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         # Find the positions of all timesteps in the file
         # Compile the regular expression pattern
         pattern = re.compile(rb'ITEM: TIMESTEP\n')
-        
+
         # Find the positions of all timesteps in the file
         timestep_positions = [m.start() for m in pattern.finditer(mm)]
 
         num_timesteps = len(timestep_positions)
 
-        #Trust me I hate this too
         if isinstance(index, slice):
             start, stop, step = index.indices(num_timesteps)
             indices = np.arange(start, stop, step)
         else:
             if index < 0:
-                indices = [num_timesteps -1]
-            elif index == None:
+                indices = [num_timesteps - 1]
+            elif index is None:
                 indices = np.arange(num_timesteps)
             else:
                 indices = [index]
-    
+
         # Create a multiprocessing pool
         pool = multiprocessing.Pool()
-        
+
         # Read the data for each timestep and send it to the process pool
         timestep_data = []
         for i in indices:
             current_byte = timestep_positions[i]
-            
+
             if i < num_timesteps - 1:
                 last_byte = timestep_positions[i + 1]
             else:
                 last_byte = mm.size()
-            
+
             data_bytes = mm[current_byte:last_byte]
             timestep_data.append((data_bytes, kwargs))
-        
+
         # Process the timesteps in parallel
         results = pool.imap(_process_timestep, timestep_data)
-        
+
         # Close the pool
         pool.close()
         pool.join()
-        
+
         return results
+
 
 def read_lammps_dump_binary(
     fileobj, index=-1, colnames=None, intformat="SMALLBIG", **kwargs
