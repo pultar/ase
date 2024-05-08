@@ -117,6 +117,7 @@ class Espresso(GenericFileIOCalculator):
         self,
         *,
         profile=None,
+        template=None,
         command=GenericFileIOCalculator._deprecated,
         label=GenericFileIOCalculator._deprecated,
         directory='.',
@@ -173,7 +174,7 @@ class Espresso(GenericFileIOCalculator):
 
             warnings.warn(compatibility_msg, FutureWarning)
 
-        template = EspressoTemplate(timeout=kwargs.pop('timeout', None))
+        template = template or EspressoTemplate()
         super().__init__(
             profile=profile,
             template=template,
