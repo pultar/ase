@@ -5,7 +5,6 @@ from os.path import splitext
 import numpy as np
 import re
 import io
-import multiprocessing
 
 from ase.atoms import Atoms
 from ase.calculators.lammps import convert
@@ -475,9 +474,6 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
 
     indices = _get_indices(index, num_timesteps)
 
-    # Create a multiprocessing pool
-    pool = multiprocessing.Pool()
-
     # Read the data for each timestep and send it to the process pool
     timestep_data = []
     for i in indices:
@@ -488,12 +484,9 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
             current_end = len(data)
         timestep_data.append((data[current_start:current_end], kwargs))
 
-    # Process the timesteps in parallel
-    results = pool.map(_process_timestep, timestep_data)
-
-    # Close the pool
-    pool.close()
-    pool.join()
+    results = []
+    for td in timestep_data:
+        results.append(_process_timestep(td))
 
     if len(results) == 1:
         return results[0]
