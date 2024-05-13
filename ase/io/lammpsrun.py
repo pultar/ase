@@ -378,7 +378,6 @@ def get_max_index(index):
 
 def _process_timestep(args):
     data_bytes, kwargs = args
-    print(data_bytes)
     bytes_stream = io.BytesIO(data_bytes) if isinstance(data_bytes,
                                                         bytes) else data_bytes
 
@@ -441,7 +440,7 @@ def _process_timestep(args):
     # Convert data to Atoms object
     atoms = lammps_data_to_ase_atoms_typed(
         data, decoded_colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
-    print(atoms.get_atomic_numbers())
+
     return atoms
 
 
@@ -491,7 +490,7 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     # Close the pool
     pool.close()
     pool.join()
-    print(results)
+
     if isinstance(index, slice):
         return results
     else:
