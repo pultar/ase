@@ -400,6 +400,13 @@ def _process_timestep(args):
     if not bounds_header.startswith(b'ITEM: BOX BOUNDS'):
         raise ValueError(
             "Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
+    if len(bounds_header.split()) > 3:
+        pbc = bounds_header.split(b' ')[3:]
+        pbc = [bc.decode() for bc in pbc]
+        pbc = [bc == 'pp' for bc in pbc]
+    else:
+        # just assume pbc
+        pbc = [True, True, True]
 
     bounds_data = [list(
         map(float, bytes_stream.readline().strip().split())) for _ in range(3)]
@@ -426,10 +433,6 @@ def _process_timestep(args):
 
     # Read the data directly into the numpy array using numpy.loadtxt
     data = np.loadtxt(bytes_stream, dtype=dtype_list)
-
-    pbc = bounds_header.split(b' ')[3:]
-    pbc = [bc.decode() for bc in pbc]
-    pbc = [bc == 'pp' for bc in pbc]
 
     # Construct the cell and celldisp
     celldata = np.array(bounds_data)
