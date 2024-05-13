@@ -3,7 +3,6 @@ import struct
 from os.path import splitext
 
 import numpy as np
-import mmap
 import re
 import io
 import multiprocessing
@@ -255,6 +254,9 @@ def lammps_data_to_ase_atoms_typed(
     :rtype: Atoms
     """
 
+    if data.ndim == 0:
+        data = data[np.newaxis]
+
     # read IDs if given and order if needed
     if "id" in colnames and order:
         sort_order = np.argsort(data["id"])
@@ -272,7 +274,7 @@ def lammps_data_to_ase_atoms_typed(
 
     # Create a dictionary to store the atom properties
     atoms_dict = {
-        "symbols": elements,
+        "symbols": elements
     }
 
     # Add positions or scaled positions
@@ -311,7 +313,6 @@ def lammps_data_to_ase_atoms_typed(
 
     # Create the Atoms object
     atoms = atomsobj(cell=cell, celldisp=celldisp, pbc=pbc, **atoms_dict)
-
     # Add velocities if they exist
     if all(col in colnames for col in ["vx", "vy", "vz"]):
         velocities = np.column_stack((data["vx"], data["vy"], data["vz"]))
@@ -340,7 +341,6 @@ def lammps_data_to_ase_atoms_typed(
         if colname.startswith(("f_", "v_")) or\
            (colname.startswith("c_") and not colname.startswith("c_q[")):
             atoms.new_array(colname, data[colname])
-
     return atoms
 
 
@@ -378,56 +378,59 @@ def get_max_index(index):
 
 def _process_timestep(args):
     data_bytes, kwargs = args
+    print(data_bytes)
+    bytes_stream = io.BytesIO(data_bytes) if isinstance(data_bytes,
+                                                        bytes) else data_bytes
 
-    # Read the timestep data from the data_bytes
-    mm = io.BytesIO(data_bytes)
-
-    timestep_header = mm.readline().strip()
+    timestep_header = bytes_stream.readline().strip()
     if not timestep_header.startswith(b'ITEM: TIMESTEP'):
         raise ValueError("Expected 'ITEM: TIMESTEP' line is missing or invalid")
+
     # The actual timestep
-    mm.readline()
+    bytes_stream.readline()
 
     # Read the number of atoms
-    natoms_header = mm.readline().strip()
+    natoms_header = bytes_stream.readline().strip()
     if not natoms_header.startswith(b'ITEM: NUMBER OF ATOMS'):
         raise ValueError(
             "Expected 'ITEM: NUMBER OF ATOMS' line is missing or invalid")
-    # The number of atoms
-    mm.readline()
+    bytes_stream.readline()
 
     # Read the box bounds
-    bounds_header = mm.readline()
+    bounds_header = bytes_stream.readline().strip()
     if not bounds_header.startswith(b'ITEM: BOX BOUNDS'):
         raise ValueError(
             "Expected 'ITEM: BOX BOUNDS' line is missing or invalid")
+
     bounds_data = [list(
-        map(float, mm.readline().strip().split())) for _ in range(3)]
+        map(float, bytes_stream.readline().strip().split())) for _ in range(3)]
 
     # Read the atom data header
-    atoms_header = mm.readline()
+    atoms_header = bytes_stream.readline().strip()
     if not atoms_header.startswith(b'ITEM: ATOMS'):
         raise ValueError("Expected 'ITEM: ATOMS' line is missing or invalid")
     colnames = atoms_header.split()[2:]
 
     # Determine the data types for each column
-    coltypes = []
+    dtype_list = []
     decoded_colnames = []
     for colname in colnames:
         decoded_colname = colname.decode()
         decoded_colnames.append(decoded_colname)
         if decoded_colname == 'id' or decoded_colname == 'type':
-            coltypes.append(int)
+            dtype_list.append((decoded_colname, int))
+        elif decoded_colname == 'element':
+            # 'U10' for string with maximum length 10
+            dtype_list.append((decoded_colname, 'U10'))
         else:
-            coltypes.append(float)
-
-    # Create a structured numpy array to hold the data
-    np_dtype = [(decoded_colname,
-                 coltype) for decoded_colname, coltype in zip(decoded_colnames,
-                                                              coltypes)]
+            dtype_list.append((decoded_colname, float))
 
     # Read the data directly into the numpy array using numpy.loadtxt
-    data = np.loadtxt(mm, dtype=np_dtype)
+    data = np.loadtxt(bytes_stream, dtype=dtype_list)
+
+    pbc = bounds_header.split(b' ')[3:]
+    pbc = [bc.decode() for bc in pbc]
+    pbc = [bc == 'pp' for bc in pbc]
 
     # Construct the cell and celldisp
     celldata = np.array(bounds_data)
@@ -435,13 +438,10 @@ def _process_timestep(args):
     offdiag = celldata[:, 2] if celldata.shape[1] > 2 else (0.0,) * 3
     cell, celldisp = construct_cell(diagdisp, offdiag)
 
-    # Assume periodic boundary conditions
-    pbc = [True, True, True]
-
     # Convert data to Atoms object
     atoms = lammps_data_to_ase_atoms_typed(
         data, decoded_colnames, cell, celldisp, pbc, atomsobj=Atoms, **kwargs)
-
+    print(atoms.get_atomic_numbers())
     return atoms
 
 
@@ -453,52 +453,61 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     :returns: list of Atoms objects
     :rtype: list
     """
-    # Use memory mapping to efficiently read the file
-    with mmap.mmap(fileobj.fileno(), length=0, access=mmap.ACCESS_READ) as mm:
-        # Find the positions of all timesteps in the file
-        # Compile the regular expression pattern
-        pattern = re.compile(rb'ITEM: TIMESTEP\n')
+    # If string.IO or file-like object
+    if isinstance(fileobj, str):
+        with open(fileobj, "rb") as f:
+            return read_lammps_dump_text(f, index, **kwargs)
 
-        # Find the positions of all timesteps in the file
-        timestep_positions = [m.start() for m in pattern.finditer(mm)]
+    # Convert the input stream to bytes if necessary
+    if isinstance(fileobj, io.TextIOWrapper):
+        data = fileobj.buffer.read()
+    elif isinstance(fileobj, io.StringIO):
+        data = fileobj.read().encode()
+    else:
+        data = fileobj.read()
+    # Find the positions of all timesteps in the data
+    pattern = re.compile(rb'ITEM: TIMESTEP\n')
+    timestep_positions = [m.start() for m in pattern.finditer(data)]
+    num_timesteps = len(timestep_positions)
 
-        num_timesteps = len(timestep_positions)
+    indices = _get_indices(index, num_timesteps)
 
-        if isinstance(index, slice):
-            start, stop, step = index.indices(num_timesteps)
-            indices = np.arange(start, stop, step)
+    # Create a multiprocessing pool
+    pool = multiprocessing.Pool()
+
+    # Read the data for each timestep and send it to the process pool
+    timestep_data = []
+    for i in indices:
+        current_start = timestep_positions[i]
+        if i < num_timesteps - 1:
+            current_end = timestep_positions[i + 1]
         else:
-            if index < 0:
-                indices = [num_timesteps - 1]
-            elif index is None:
-                indices = np.arange(num_timesteps)
-            else:
-                indices = [index]
+            current_end = len(data)
+        timestep_data.append((data[current_start:current_end], kwargs))
 
-        # Create a multiprocessing pool
-        pool = multiprocessing.Pool()
+    # Process the timesteps in parallel
+    results = pool.map(_process_timestep, timestep_data)
 
-        # Read the data for each timestep and send it to the process pool
-        timestep_data = []
-        for i in indices:
-            current_byte = timestep_positions[i]
-
-            if i < num_timesteps - 1:
-                last_byte = timestep_positions[i + 1]
-            else:
-                last_byte = mm.size()
-
-            data_bytes = mm[current_byte:last_byte]
-            timestep_data.append((data_bytes, kwargs))
-
-        # Process the timesteps in parallel
-        results = pool.imap(_process_timestep, timestep_data)
-
-        # Close the pool
-        pool.close()
-        pool.join()
-
+    # Close the pool
+    pool.close()
+    pool.join()
+    print(results)
+    if isinstance(index, slice):
         return results
+    else:
+        return results[0]
+
+
+def _get_indices(index, num_timesteps):
+    if isinstance(index, slice):
+        start, stop, step = index.indices(num_timesteps)
+        return np.arange(start, stop, step)
+    elif index < 0:
+        return [num_timesteps - 1]
+    elif index is None:
+        return np.arange(num_timesteps)
+    else:
+        return [index]
 
 
 def read_lammps_dump_binary(

@@ -35,26 +35,47 @@ def lammpsdump():
                 have_element=True,
                 have_id=False,
                 have_type=True):
+        _element = "element" if have_element else ""
+        _id = "id" if have_id else ""
+        _type = "type" if have_type else ""
 
-        _element = "element" if have_element else "unk0"
-        _id = "id" if have_id else "unk1"
-        _type = "type" if have_type else "unk2"
+        atom_cols = " ".join(filter(None,
+                                    [_element, _id, _type, position_cols]))
+        buf = f"""\\
+ITEM: TIMESTEP
+0
+ITEM: NUMBER OF ATOMS
+3
+ITEM: BOX BOUNDS {bounds}
+0.0e+00 4e+00
+0.0e+00 5.0e+00
+0.0e+00 2.0e+01
+ITEM: ATOMS {atom_cols}
+"""
 
-        buf = f"""\
-        ITEM: TIMESTEP
-        0
-        ITEM: NUMBER OF ATOMS
-        3
-        ITEM: BOX BOUNDS {bounds}
-        0.0e+00 4e+00
-        0.0e+00 5.0e+00
-        0.0e+00 2.0e+01
-        ITEM: ATOMS {_element} {_id} {_type} {position_cols}
-        C  1 1 0.5 0.6 0.7
-        C  3 1 0.6 0.1 1.9
-        Si 2 2 0.45 0.32 0.67
-        """
+        if have_element:
+            buf += "C "
+        if have_id:
+            buf += "1 "
+        if have_type:
+            buf += "1 "
+        buf += "0.5 0.6 0.7\n"
 
+        if have_element:
+            buf += " C "
+        if have_id:
+            buf += "3 "
+        if have_type:
+            buf += "1 "
+        buf += "0.6 0.1 1.9\n"
+
+        if have_element:
+            buf += "Si "
+        if have_id:
+            buf += "2 "
+        if have_type:
+            buf += "2 "
+        buf += "0.45 0.32 0.67\n"
         return buf
 
     return factory
@@ -66,26 +87,35 @@ def lammpsdump_single_atom():
                 position_cols="x y z",
                 have_element=True,
                 have_id=False,
-                have_type=True,
-                have_charge=True):
+                have_type=True):
+        _element = "element" if have_element else ""
+        _id = "id" if have_id else ""
+        _type = "type" if have_type else ""
+        _charge = "q"
 
-        _element = "element" if have_element else "unk0"
-        _id = "id" if have_id else "unk1"
-        _type = "type" if have_type else "unk2"
-        _charge = "q" if have_charge else "unk3"
+        atom_cols = " ".join(filter(None,
+                                    [_element, _id, _type, _charge,
+                                     position_cols]))
 
-        buf = f"""\
-        ITEM: TIMESTEP
-        0
-        ITEM: NUMBER OF ATOMS
-        1
-        ITEM: BOX BOUNDS {bounds}
-        0.0e+00 4e+00
-        0.0e+00 5.0e+00
-        0.0e+00 2.0e+01
-        ITEM: ATOMS {_element} {_id} {_charge} {_type} {position_cols}
-        C  1 1 1.0 0.5 0.6 0.7
-        """
+        buf = f"""\\
+ITEM: TIMESTEP
+0
+ITEM: NUMBER OF ATOMS
+3
+ITEM: BOX BOUNDS {bounds}
+0.0e+00 4e+00
+0.0e+00 5.0e+00
+0.0e+00 2.0e+01
+ITEM: ATOMS {atom_cols}
+"""
+
+        if have_element:
+            buf += "C "
+        if have_id:
+            buf += "1 "
+        if have_type:
+            buf += "1 "
+        buf += "1.0 0.5 0.6 0.7\n"
 
         return buf
 
