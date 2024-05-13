@@ -405,7 +405,7 @@ def _process_timestep(args):
         pbc = [bc.decode() for bc in pbc]
         pbc = [bc == 'pp' for bc in pbc]
     else:
-        # just assume pbc
+        # Just assume pbc
         pbc = [True, True, True]
 
     bounds_data = [list(
@@ -467,6 +467,7 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
         data = fileobj.read().encode()
     else:
         data = fileobj.read()
+
     # Find the positions of all timesteps in the data
     pattern = re.compile(rb'ITEM: TIMESTEP\n')
     timestep_positions = [m.start() for m in pattern.finditer(data)]
@@ -494,10 +495,9 @@ def read_lammps_dump_text(fileobj, index=-1, **kwargs):
     pool.close()
     pool.join()
 
-    if isinstance(index, slice):
-        return results
-    else:
+    if len(results) == 1:
         return results[0]
+    return results
 
 
 def _get_indices(index, num_timesteps):
