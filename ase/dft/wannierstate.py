@@ -20,8 +20,8 @@ def random_orthogonal_matrix(dim, rng=np.random, real=False):
     return ortho_m
 
 
-def _empty():
-    return np.empty(0, complex)
+def _empty(u=0):
+    return np.empty((u, 0), complex)
 
 
 class WannierSpec:
@@ -40,10 +40,11 @@ class WannierSpec:
         C_kul = []
         for U, M, L in zip(U_kww, self.fixedstates_k, edf_k):
             U[:] = np.identity(self.Nw, complex)
+            u = self.Nb - M
             if L > 0:
-                C_kul.append(np.identity(self.Nb - M, complex)[:, :L])
+                C_kul.append(np.identity(u, complex)[:, :L])
             else:
-                C_kul.append(_empty())
+                C_kul.append(_empty(u))
         return WannierState(C_kul, U_kww)
 
     def random(self, rng, edf_k):
@@ -52,11 +53,12 @@ class WannierSpec:
         C_kul = []
         for U, M, L in zip(U_kww, self.fixedstates_k, edf_k):
             U[:] = random_orthogonal_matrix(self.Nw, rng, real=False)
+            u = self.Nb - M
             if L > 0:
                 C_kul.append(random_orthogonal_matrix(
-                    self.Nb - M, rng=rng, real=False)[:, :L])
+                    u, rng=rng, real=False)[:, :L])
             else:
-                C_kul.append(_empty())
+                C_kul.append(_empty(u))
         return WannierState(C_kul, U_kww)
 
     def initial_orbitals(self, calc, orbitals, kptgrid, edf_k, spin):
