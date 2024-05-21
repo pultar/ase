@@ -15,39 +15,39 @@ Dissociation of oxygen on Pt(100)
 Phase diagrams
 ==============
 
-.. |p2| image:: ../ase/phasediagram/ktao-2d.png
+.. |p2| image:: ../modules/phasediagram/ktao-2d.png
    :width: 5cm
-.. |p3| image:: ../ase/phasediagram/ktao-3d.png
+.. |p3| image:: ../modules/phasediagram/ktao-3d.png
    :width: 5cm
 
 |p2| |p3|
 
 :mod:`ase.phasediagram`
-:download:`ktao.py <../ase/phasediagram/ktao.py>`
+:download:`ktao.py <../modules/phasediagram/ktao.py>`
 
 
 Brillouin zones
 ===============
 
-.. |bzcubic| image:: ../ase/dft/00.CUB.svg
+.. |bzcubic| image:: ../modules/dft/00.CUB.svg
    :width: 25%
-.. |bzbcc| image:: ../ase/dft/02.BCC.svg
+.. |bzbcc| image:: ../modules/dft/02.BCC.svg
    :width: 25%
 
 |bzcubic| |bzbcc|
 
 :mod:`ase.dft`
-:download:`bz.py <../ase/dft/bz.py>`
+:download:`bz.py <../modules/dft/bz.py>`
 
 
 Band-structure
 ==============
 
-.. image:: ../ase/dft/cu.png
+.. image:: ../modules/dft/cu.png
    :width: 10cm
 
 :mod:`ase.dft.kpoints`
-:download:`bs.py <../ase/dft/bs.py>`
+:download:`bs.py <../modules/dft/bs.py>`
 
 
 Nudged elastic band calculations
@@ -63,21 +63,21 @@ Nudged elastic band calculations
 Nanoparticle
 ============
 
-.. image:: ../ase/cluster/culayer.png
+.. image:: ../modules/cluster/culayer.png
    :width: 10cm
 
 :mod:`ase.cluster`
-:download:`cluster.py <../ase/cluster/cluster.py>`
+:download:`cluster.py <../modules/cluster/cluster.py>`
 
 
 Pretty pictures
 ===============
 
-.. image:: ../ase/spacegroup/spacegroup-cosb3.png
+.. image:: ../modules/spacegroup/spacegroup-cosb3.png
    :width: 10cm
 
 :mod:`ase.spacegroup`
-:download:`cosb3.py <../ase/spacegroup/spacegroup-cosb3.py>`
+:download:`cosb3.py <../modules/spacegroup/spacegroup-cosb3.py>`
 
 
 Periodic table
