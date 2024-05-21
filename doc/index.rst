@@ -182,7 +182,7 @@ Contents
     install
     gettingstarted/gettingstarted
     tutorials/tutorials
-    ase/ase
+    modules/ase
     cmdline
     tips
     gallery/gallery
