@@ -171,8 +171,8 @@ class HarmonicThermo(ThermoChem):
 
 
 class HarmonicThermo_msRRHO(HarmonicThermo):
-    """Subclass of :class:HarmonicThermo, including Grimme's scaling method
-    based on 10.1002/chem.201200497 and 10.1039/D1SC00621E.
+    """Subclass of :class:`HarmonicThermo`, including Grimme's scaling method
+    based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
     This should behave just as ORCA with default settings.
 
     Inputs:
@@ -180,20 +180,26 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
     cutoff : float
-        the cutoff vibrational energy threshold in cm^-1, named τ in 10.1039/D1SC00621E.
-        Values close or equal to 0 will result in the standard harmonic approximation.
+        the cutoff vibrational energy threshold in :math:`cm^{-1}`, named
+        :math:`τ` in :doi:`10.1039/D1SC00621E`.
+        Values close or equal to 0 will result in the standard harmonic
+        approximation.
 
-    Do not set the :class:HarmonicThermo inputs for treating imaginary modes, they are
-    forced to be treating imaginary modes as Grimme suggests (converting them to real).
+    Do not set the :class:`HarmonicThermo` inputs for treating imaginary modes,
+    they are forced to be treating imaginary modes as Grimme suggests
+    (converting them to real by multiplying them with `-i`).
     """
 
     def __init__(self, atoms, cutoff=35, *args, **kwargs):
         print(kwargs)
         if 'ignore_imag_modes' in kwargs:
-            warn("ignore_imag_modes is overwritten by Grimme's method.", UserWarning)
+            warn("ignore_imag_modes is overwritten by Grimme's method.",
+                 UserWarning)
             del kwargs['ignore_imag_modes']
         if 'imag_modes_handling' in kwargs:
-            warn("imag_modes_handling is overwritten by Grimme's method.", UserWarning)
+            warn(
+                "imag_modes_handling is overwritten by Grimme's method.",
+                UserWarning)
         kwargs['imag_modes_handling'] = 'invert'
         print(kwargs)
         super().__init__(*args, **kwargs)
@@ -203,7 +209,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         # 1/s (cutoff to meters)
         self.cutoff_freq = units._c * self.cutoff * 1e2
         # J*s *m/s /e ## eV*m
-        e_phot = units._hplanck * units._c / units._e * 100 
+        e_phot = units._hplanck * units._c / units._e * 100
         converted = self.vib_energies / e_phot
         # 1/s (vib energies to per meter frequencies)
         self.frequencies = units._c * 1e2 * converted
@@ -221,15 +227,16 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         for n, freq in enumerate(self.frequencies):
             # J/molK #js *1/s #/J/K  ### J/mol
             x = units._hplanck * freq / kT
-            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))  # vibrational components grimme
+            # vibrational components grimme
+            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))
                         - np.log(1. - np.exp(-x)))
             S_v += self._head_gordon_damp(freq) * comp
         S_v *= (units.J / units._Nav)
         return S_v
 
     def _rotational_entropy_contribution(self, temperature):
-        """Calculates the rotation of a rigid rotor for low frequency modes. Returns the entropy
-        in eV/K."""
+        """Calculates the rotation of a rigid rotor for low frequency modes.
+        Returns the entropy in eV/K."""
         # rotational entropy
         S_r_damp = 0.
         kT = units._k * temperature
@@ -597,7 +604,7 @@ class IdealGasThermo(ThermoChem):
         multiplied by -i.
         If None (default), the behaviour is determined by ignore_imag_modes.
         Overwrites ignore_imag_modes.
-        
+
     """
 
     def __init__(self, vib_energies, geometry, potentialenergy=0.,
@@ -947,7 +954,7 @@ def _clean_vib_energies(vib_energies, handling=False):
         If False (default) or 'error', an error will be raised if imaginary
         frequencies are present.
         If 'invert', the imaginary part of the frequencies will be
-        multiplied by -i.
+        multiplied by -i. See :doi:`10.1002/anie.202205735.`
 
     Outputs:
 
@@ -974,7 +981,8 @@ def _clean_vib_energies(vib_energies, handling=False):
         n_imag = 0
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
-        vib_energies = [np.imag(v) if np.iscomplex(v) else v for v in vib_energies]
+        vib_energies = [np.imag(v) if np.iscomplex(
+            v) else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
     vib_energies = np.real(vib_energies)  # clear +0.j
