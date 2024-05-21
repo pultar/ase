@@ -37,11 +37,10 @@ class ThermoChem:
         kT = units.kB * temperature
         S_v = 0.
         for energy in self.vib_energies:
-            x = energy / kT #eV/ eV/K*K
+            x = energy / kT  # eV/ eV/K*K
             S_v += x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
         S_v *= units.kB
         return S_v
-
 
     def _vprint(self, text):
         """Print output if verbose flag True."""
@@ -163,7 +162,7 @@ class HarmonicThermo(ThermoChem):
 class HarmonicThermo_msRRHO(HarmonicThermo):
     """Subclass of :class:HarmonicThermo, including Grimme's scaling method
     based on 10.1002/chem.201200497 and 10.1039/D1SC00621E.
-    This is the same as is implemented in ORCA.
+    This should behave just as ORCA with default settings.
 
     Inputs:
 
@@ -174,58 +173,60 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         Values close or equal to 0 will result in the standard harmonic approximation.
     """
 
-    def __init__(self, atoms, cutoff=35,  *args, **kwargs):
+    def __init__(self, atoms, cutoff=35, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.atoms=atoms
-        self.cutoff=cutoff
-        self.alpha=4 #from paper
-        self.cutoff_freq=units._c*self.cutoff*1e2 #1/s (cutoff to meters)
-        e_phot=units._hplanck*units._c/units._e*100 #J*s *m/s /e ## eV*m 
-        converted=self.vib_energies/e_phot
-        self.frequencies=units._c*1e2*converted #1/s (vib energies to per meter frequencies)
+        self.atoms = atoms
+        self.cutoff = cutoff
+        self.alpha = 4  # from paper
+        self.cutoff_freq = units._c * self.cutoff * \
+            1e2  # 1/s (cutoff to meters)
+        e_phot = units._hplanck * units._c / units._e * 100  # J*s *m/s /e ## eV*m
+        converted = self.vib_energies / e_phot
+        # 1/s (vib energies to per meter frequencies)
+        self.frequencies = units._c * 1e2 * converted
 
-    def _head_gordon_damp(self,freq):
-        ret = 1/(1+(self.cutoff_freq/freq)**self.alpha)
+    def _head_gordon_damp(self, freq):
+        ret = 1 / (1 + (self.cutoff_freq / freq)**self.alpha)
 
         return ret
 
     def _vibrational_entropy_contribution(self, temperature):
         """Overwrite the standard Harmonic one to scale frequencies"""
-        R = units._k*units._Nav
-        kT = units._k * temperature ## J/K*K
+        R = units._k * units._Nav
+        kT = units._k * temperature  # J/K*K
         S_v = 0.
-        for n,freq in enumerate(self.frequencies):
-            #J/molK #js *1/s #/J/K  ### J/mol
-            x= units._hplanck * freq / kT
-            comp=R*((x)*np.exp(-x)/(1 - np.exp(-x)) #vibrational components grimme 
-                    - np.log(1. - np.exp(-x)))
-            S_v += self._head_gordon_damp(freq)*comp
-        S_v*=(units.J/units._Nav)
+        for n, freq in enumerate(self.frequencies):
+            # J/molK #js *1/s #/J/K  ### J/mol
+            x = units._hplanck * freq / kT
+            comp = R * ((x) * np.exp(-x) / (1 - np.exp(-x))  # vibrational components grimme
+                        - np.log(1. - np.exp(-x)))
+            S_v += self._head_gordon_damp(freq) * comp
+        S_v *= (units.J / units._Nav)
         return S_v
-    
+
     def _rotational_entropy_contribution(self, temperature):
         """Calculates the rotation of a rigid rotor for low frequency modes. Returns the entropy
         in eV/K."""
-        #rotational entropy
+        # rotational entropy
         S_r_damp = 0.
         kT = units._k * temperature
-        R = units._k*units._Nav
+        R = units._k * units._Nav
         inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                        ((1e10)**2))  # from amu/A^2 to kg m^2
-        B_av=np.mean(inertias)
+                    ((1e10)**2))  # from amu/A^2 to kg m^2
+        B_av = np.mean(inertias)
 
-        mu=units._hplanck/(8*np.pi**2 * self.frequencies)
-        mu_prime = (mu * B_av)/(mu + B_av) #kg m^2
-        x = (8 * np.pi**3 * mu_prime * kT/(units._hplanck)**2)**1/2
-        #filter zeros out and set them to zero
-        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x!=0))
-        S_r_components = R * (1/2 + log_x) #J/(Js)^2
+        mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
+        mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
+        x = (8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)**1 / 2
+        # filter zeros out and set them to zero
+        log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
+        S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
 
-        for n,freq in enumerate(self.frequencies):
-            S_r_damp+=(1-self._head_gordon_damp(freq))*(S_r_components[n])
+        for n, freq in enumerate(self.frequencies):
+            S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
 
-        S_r=sum(S_r_components)
-        S_r_damp*=units.J/units._Nav
+        sum(S_r_components)
+        S_r_damp *= units.J / units._Nav
         return S_r_damp, B_av
 
     def get_entropy(self, temperature, verbose=True):
@@ -248,7 +249,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         write('-' * 49)
         write(fmt % ('S_tot', S, S * temperature))
         write('-' * 49)
-        write(f"Average moment of inertia: {B_av}") #todo remove at the end
+        write(f"Average moment of inertia: {B_av}")  # todo remove at the end
         write('=' * 49)
         return S
 
