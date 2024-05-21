@@ -308,14 +308,14 @@ def msRRHO_thermo(
     cutoff=35,
     vib_energies=None,
     potentialenergy=0.0,
-    ignore_imag_modes=False,
+    **kwargs
 ):
     return HarmonicThermo_msRRHO(
         atoms=atoms,
         cutoff=cutoff,
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
         potentialenergy=potentialenergy,
-        ignore_imag_modes=ignore_imag_modes,
+        **kwargs
     )
 
 
@@ -325,7 +325,21 @@ HELMHOLTZ_msRRHO = -0.05665130354741105
 def test_msRRHO():
     #test proper functionality of msRRHO method
     "Basic test of harmonic thermochemistry"
-    thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35)
+    thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35, )
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
+
+
+
+def test_msRRHO_imag_warn():
+    #test proper functionality of msRRHO method
+    "Test warning of overwriting ignore_imag_modes"
+    with pytest.warns(UserWarning):
+        thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35,
+                                ignore_imag_modes=False)
+    with pytest.warns(UserWarning):
+        thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35,
+                                imag_modes_handling='error')
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
@@ -342,6 +356,14 @@ def test_msRRHO_converge_to_harmonic():
     helmholtz_msrrho = thermo_msrrho.get_helmholtz_energy(temperature=298.15)
     with pytest.raises(AssertionError):
         assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+
+def test_msRRHO_imag():
+    "Test that the result is the same if one of the modes is imaginary"
+    tmp = list(VIB_ENERGIES_HARMONIC)
+    tmp[0] *= 1.0j
+    thermo = msRRHO_thermo(atoms=Atoms('H'), cutoff=35, vib_energies=tmp)
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
 
 VIB_ENERGIES_HINDERED = (
