@@ -66,30 +66,21 @@ class HarmonicThermo(ThermoChem):
         the potential energy in eV (e.g., from atoms.get_potential_energy)
         (if potentialenergy is unspecified, then the methods of this
         class can be interpreted as the energy corrections)
-    ignore_imag_modes : bool
-        If True, any imaginary frequencies will be ignored in the calculation
-        of the thermochemical properties. If False (default), an error will
-        be raised if any imaginary frequencies are present.
-        Overwritten by imag_modes_handling.
     imag_modes_handling : string
         If 'remove', any imaginary frequencies will be removed in the
         calculation of the thermochemical properties.
         If 'error' (default), an error will be raised if any imaginary
         frequencies are present.
         If 'invert', the imaginary frequencies will be multiplied by -i.
-        If None (default), the behaviour is determined by ignore_imag_modes.
-        Overwrites ignore_imag_modes.
     """
 
     def __init__(self, vib_energies, potentialenergy=0.,
-                 ignore_imag_modes=False, imag_modes_handling=None):
-        self.ignore_imag_modes = ignore_imag_modes
-        if isinstance(imag_modes_handling, str):
-            self.ignore_imag_modes = imag_modes_handling
+                imag_modes_handling='error'):
+        self.imag_modes_handling = imag_modes_handling
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.ignore_imag_modes
+            vib_energies, handling=self.imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
@@ -181,27 +172,26 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         used to calculate rotational moments of inertia and molecular mass
     tau : float
         the vibrational energy threshold in :math:`cm^{-1}`, named
-        :math:`τ` in :doi:`10.1039/D1SC00621E`.
+        :math:`\\tau` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
-        approximation. Defaults to :math:`35cm^{-1}`
+        approximation. Defaults to :math:`35cm^{-1}`.
     nu_scal : float
         Linear scaling factor for the vibrational frequencies. Named
-        :math:`\nu_{scal}` in :doi:`10.1039/D1SC00621E`.
+        :math:`\\nu_{scal}` in :doi:`10.1039/D1SC00621E`.
         Defaults to 1.0, check the `Truhlar group database
         <https://comp.chem.umn.edu/freqscale/index.html>`_
         for values corresponding to your level of theory.
+        Note that for `\\nu_{scal}=1.0` this method is equivalent to
+        the quasi-RRHO method in :doi:`10.1002/chem.201200497`.
 
-    Do not set the :class:`HarmonicThermo` inputs for treating imaginary modes,
-    they are forced to be treating imaginary modes as Grimme suggests
-    (converting them to real by multiplying them with `-i`).
+    Do not set the :class:`HarmonicThermo` ``imag_modes_handling`` for
+    treating imaginary modes, we enforce here treating imaginary
+    modes as Grimme suggests (converting them to real by multiplying them
+    with :math:`-i`).
     """
 
     def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs):
         print(kwargs)
-        if 'ignore_imag_modes' in kwargs:
-            warn("ignore_imag_modes is overwritten by Grimme's method.",
-                UserWarning)
-            del kwargs['ignore_imag_modes']
         if 'imag_modes_handling' in kwargs:
             warn(
                 "imag_modes_handling is overwritten by Grimme's method.",
@@ -353,27 +343,19 @@ class HinderedThermo(ThermoChem):
         For example, propane bound through its end carbon has a symmetry
         number of 1 but propane bound through its middle carbon has a symmetry
         number of 2. (if symmetrynumber is unspecified, then the default is 1)
-    ignore_imag_modes : bool
-        If True, any imaginary frequencies present after the 3N-3 cut will not
-        be included in the calculation of the thermochemical properties. If
-        False (default), an error will be raised if imaginary frequencies are
-        present after the 3N-3 cut.
-        Overwritten by imag_modes_handling.
     imag_modes_handling : string
         If 'remove', any imaginary frequencies present after the 3N-3 cut will
         be removed in the calculation of the thermochemical properties.
-        If 'error', an error will be raised if imaginary frequencies
+        If 'error' (default), an error will be raised if imaginary frequencies
         are present after the 3N-3 cut.
         If 'invert', the imaginary frequencies after the 3N-3 cut will be
         multiplied by -i.
-        If None (default), the behaviour is determined by ignore_imag_modes.
-        Overwrites ignore_imag_modes.
     """
 
     def __init__(self, vib_energies, trans_barrier_energy, rot_barrier_energy,
                  sitedensity, rotationalminima, potentialenergy=0.,
                  mass=None, inertia=None, atoms=None, symmetrynumber=1,
-                 ignore_imag_modes=False, imag_modes_handling=None):
+                 imag_modes_handling='error'):
 
         self.trans_barrier_energy = trans_barrier_energy * units._e
         self.rot_barrier_energy = rot_barrier_energy * units._e
@@ -382,9 +364,7 @@ class HinderedThermo(ThermoChem):
         self.potentialenergy = potentialenergy
         self.atoms = atoms
         self.symmetry = symmetrynumber
-        self.ignore_imag_modes = ignore_imag_modes
-        if isinstance(imag_modes_handling, str):
-            self.ignore_imag_modes = imag_modes_handling
+        self.imag_modes_handling = imag_modes_handling
 
         # Sort the vibrations
         vib_energies = list(vib_energies)
@@ -398,7 +378,7 @@ class HinderedThermo(ThermoChem):
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.ignore_imag_modes
+            vib_energies, handling=self.imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
@@ -612,35 +592,25 @@ class IdealGasThermo(ThermoChem):
         the total electronic spin. (0 for molecules in which all electrons
         are paired, 0.5 for a free radical with a single unpaired electron,
         1.0 for a triplet with two unpaired electrons, such as O_2.)
-    ignore_imag_modes : bool
-        If True, any imaginary frequencies present after the 3N-5/3N-6 cut
-        will not be included in the calculation of the thermochemical
-        properties. If False (default), a ValueError will be raised if
-        any imaginary frequencies remain after the 3N-5/3N-6 cut.
-        Overwritten by imag_modes_handling.
     imag_modes_handling : string
         If 'remove', any imaginary frequencies present after the 3N-5/3N-6 cut
         will be removed in the calculation of the thermochemical properties.
-        If 'error', an error will be raised if imaginary frequencies
+        If 'error' (default), an error will be raised if imaginary frequencies
         are present after the 3N-5/3N-6 cut.
         If 'invert', the imaginary frequencies after the 3N-5/3N-6 cut will be
         multiplied by -i.
-        If None (default), the behaviour is determined by ignore_imag_modes.
-        Overwrites ignore_imag_modes.
 
     """
 
     def __init__(self, vib_energies, geometry, potentialenergy=0.,
                  atoms=None, symmetrynumber=None, spin=None, natoms=None,
-                 ignore_imag_modes=False, imag_modes_handling=None):
+                 imag_modes_handling='error'):
         self.potentialenergy = potentialenergy
         self.geometry = geometry
         self.atoms = atoms
         self.sigma = symmetrynumber
         self.spin = spin
-        self.ignore_imag_modes = ignore_imag_modes
-        if isinstance(imag_modes_handling, str):
-            self.ignore_imag_modes = imag_modes_handling
+        self.imag_modes_handling = imag_modes_handling
         if natoms is None and atoms:
             natoms = len(atoms)
         self.natoms = natoms
@@ -662,7 +632,7 @@ class IdealGasThermo(ThermoChem):
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
-            vib_energies, handling=self.ignore_imag_modes
+            vib_energies, handling=self.imag_modes_handling
         )
         self.vib_energies = vib_energies
         self.n_imag = n_imag
@@ -962,7 +932,7 @@ class CrystalThermo(ThermoChem):
         return F
 
 
-def _clean_vib_energies(vib_energies, handling=False):
+def _clean_vib_energies(vib_energies, handling='error'):
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
@@ -972,9 +942,9 @@ def _clean_vib_energies(vib_energies, handling=False):
     vib_energies : list
         a list of the vibrational energies
 
-    handling : bool or string
-        If True or 'remove', any imaginary frequencies will be removed.
-        If False (default) or 'error', an error will be raised if imaginary
+    handling : string
+        If 'remove', any imaginary frequencies will be removed.
+        If 'error' (default), an error will be raised if imaginary
         frequencies are present.
         If 'invert', the imaginary part of the frequencies will be
         multiplied by -i. See :doi:`10.1002/anie.202205735.`
@@ -987,11 +957,6 @@ def _clean_vib_energies(vib_energies, handling=False):
     n_imag : int
         the number of imaginary frequencies treated.
     """
-    if (isinstance(handling, bool) and handling):
-        return _clean_vib_energies(vib_energies, handling='remove')
-    elif (isinstance(handling, bool) and not handling):
-        return _clean_vib_energies(vib_energies, handling='error')
-
     if handling.lower() == 'remove':
         n_vib_energies = len(vib_energies)
         vib_energies = [v for v in vib_energies if np.real(v) > 0]
@@ -1004,8 +969,8 @@ def _clean_vib_energies(vib_energies, handling=False):
         n_imag = 0
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
-        vib_energies = [np.imag(v) if np.iscomplex(
-            v) else v for v in vib_energies]
+        vib_energies = [np.imag(v) if np.iscomplex(v)
+                        else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
     vib_energies = np.real(vib_energies)  # clear +0.j

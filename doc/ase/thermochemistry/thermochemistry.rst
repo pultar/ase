@@ -63,8 +63,10 @@ interpreted as the Gibbs free energy. This class uses all of the energies
 given to it in the vib_energies list; this is a list as can be generated
 with the .get_energies() method of :class:`ase.vibrations.Vibrations`, but
 the user should take care that all of these energies are real
-(non-imaginary). The class :class:`HarmonicThermo` has the interface
-described below.
+(non-imaginary). If imaginary values are encountered, by default an error is
+raised. By setting ``imag_modes_handling`` to either 'remove' or 'invert', the
+imaginary modes can be deleted or multiplied by `-i`, respectively.
+The class :class:`HarmonicThermo` has the interface described below.
 
 .. autoclass:: HarmonicThermo
    :members:

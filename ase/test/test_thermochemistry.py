@@ -60,7 +60,7 @@ def ideal_gas_thermo_ch3(
     symmetrynumber=6,
     potentialenergy=0.0,
     spin=0.5,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     if atoms is None:
         atoms = molecule("CH3")
@@ -71,7 +71,7 @@ def ideal_gas_thermo_ch3(
         symmetrynumber=symmetrynumber,
         potentialenergy=potentialenergy,
         spin=spin,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -182,7 +182,7 @@ def test_ideal_gas_thermo_ch3_v3(testdir):
     # imag modes. This should just use: 507.9, 547.2, 547.7
     with pytest.warns(UserWarning):
         thermo = ideal_gas_thermo_ch3(vib_energies=vib_energies,
-                                      ignore_imag_modes=True)
+                                      imag_modes_handling='remove')
     assert list(thermo.vib_energies) == [507.9, 547.2, 547.7]
     assert thermo.n_imag == 3
 
@@ -233,12 +233,12 @@ VIB_ENERGIES_HARMONIC = np.array(
 def harmonic_thermo(
     vib_energies=None,
     potentialenergy=4.120517148154894,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     return HarmonicThermo(
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
         potentialenergy=potentialenergy,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -273,7 +273,7 @@ def test_harmonic_thermo_v4(testdir):
     with pytest.warns(UserWarning):
         thermo = harmonic_thermo(
             vib_energies=list(VIB_ENERGIES_HARMONIC) + [10j],
-            ignore_imag_modes=True
+            imag_modes_handling='remove'
         )
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_HARMONIC)
@@ -332,10 +332,7 @@ def test_msRRHO():
 
 
 def test_msRRHO_imag_warn():
-    "Test warning of overwriting ignore_imag_modes"
-    with pytest.warns(UserWarning):
-        thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35,
-                                ignore_imag_modes=False)
+    "Test warning of overwriting imag_modes_handling"
     with pytest.warns(UserWarning):
         thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35,
                                 imag_modes_handling='error')
@@ -418,7 +415,7 @@ def hindered_thermo(
     symmetrynumber=1,
     mass=30.07,
     inertia=73.149,
-    ignore_imag_modes=False,
+    imag_modes_handling='error',
 ):
     return HinderedThermo(
         atoms=atoms,
@@ -430,7 +427,7 @@ def hindered_thermo(
         symmetrynumber=symmetrynumber,
         mass=mass,
         inertia=inertia,
-        ignore_imag_modes=ignore_imag_modes,
+        imag_modes_handling=imag_modes_handling,
     )
 
 
@@ -467,7 +464,7 @@ def test_hindered_thermo3():
     with pytest.warns(UserWarning):
         thermo = hindered_thermo(
             vib_energies=list(VIB_ENERGIES_HINDERED) + [10j],
-            ignore_imag_modes=True
+            imag_modes_handling='remove'
         )
     assert thermo.get_helmholtz_energy(temperature=298.15) == pytest.approx(
         HELMHOLTZ_HINDERED
