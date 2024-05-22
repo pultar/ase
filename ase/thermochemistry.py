@@ -179,35 +179,44 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
 
     atoms: an ASE atoms object
         used to calculate rotational moments of inertia and molecular mass
-    cutoff : float
-        the cutoff vibrational energy threshold in :math:`cm^{-1}`, named
+    tau : float
+        the vibrational energy threshold in :math:`cm^{-1}`, named
         :math:`τ` in :doi:`10.1039/D1SC00621E`.
         Values close or equal to 0 will result in the standard harmonic
-        approximation.
+        approximation. Defaults to :math:`35cm^{-1}`
+    nu_scal : float
+        Linear scaling factor for the vibrational frequencies. Named
+        :math:`\nu_{scal}` in :doi:`10.1039/D1SC00621E`.
+        Defaults to 1.0, check the `Truhlar group database
+        <https://comp.chem.umn.edu/freqscale/index.html>`_
+        for values corresponding to your level of theory.
 
     Do not set the :class:`HarmonicThermo` inputs for treating imaginary modes,
     they are forced to be treating imaginary modes as Grimme suggests
     (converting them to real by multiplying them with `-i`).
     """
 
-    def __init__(self, atoms, cutoff=35, *args, **kwargs):
+    def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs):
         print(kwargs)
         if 'ignore_imag_modes' in kwargs:
             warn("ignore_imag_modes is overwritten by Grimme's method.",
-                 UserWarning)
+                UserWarning)
             del kwargs['ignore_imag_modes']
         if 'imag_modes_handling' in kwargs:
             warn(
                 "imag_modes_handling is overwritten by Grimme's method.",
                 UserWarning)
         kwargs['imag_modes_handling'] = 'invert'
-        print(kwargs)
-        super().__init__(*args, **kwargs)
+        # scale the frequencies (i.e. energies) before passing them on
+        self.nu_scal = nu_scal
+        kwargs['vib_energies'] = np.multiply(kwargs['vib_energies'], self.nu_scal)
+        # perhaps later we can pass the scaling to the class above
+        super().__init__(**kwargs)
         self.atoms = atoms
-        self.cutoff = cutoff
+        self.tau = tau
         self.alpha = 4  # from paper
-        # 1/s (cutoff to meters)
-        self.cutoff_freq = units._c * self.cutoff * 1e2
+        # 1/s (tau to meters)
+        self.tau_freq = units._c * self.tau * 1e2
         # J*s *m/s /e ## eV*m
         e_phot = units._hplanck * units._c / units._e * 100
         converted = self.vib_energies / e_phot
@@ -215,16 +224,24 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         self.frequencies = units._c * 1e2 * converted
 
     def _head_gordon_damp(self, freq):
-        ret = 1 / (1 + (self.cutoff_freq / freq)**self.alpha)
+        """Head-Gordon damping function.
+
+        Equation 8 from :doi:`10.1002/chem.201200497`"""
+        ret = 1 / (1 + (self.tau_freq / freq)**self.alpha)
 
         return ret
 
     def _vibrational_entropy_contribution(self, temperature):
-        """Overwrite the standard Harmonic one to scale frequencies"""
+        """Overwrite the standard Harmonic one to scale frequencies.
+
+        Equation numbers from :doi:`10.1039/D1SC00621E`
+
+        Returns the entropy contribution in eV/K."""
         R = units._k * units._Nav
         kT = units._k * temperature  # J/K*K
         S_v = 0.
         for n, freq in enumerate(self.frequencies):
+            #eq 4
             # J/molK #js *1/s #/J/K  ### J/mol
             x = units._hplanck * freq / kT
             # vibrational components grimme
@@ -236,7 +253,10 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
 
     def _rotational_entropy_contribution(self, temperature):
         """Calculates the rotation of a rigid rotor for low frequency modes.
-        Returns the entropy in eV/K."""
+
+        Equation numbering from :doi:`10.1002/chem.201200497`
+
+        Returns the entropy contribution in eV/K."""
         # rotational entropy
         S_r_damp = 0.
         kT = units._k * temperature
@@ -245,17 +265,20 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
                     ((1e10)**2))  # from amu/A^2 to kg m^2
         B_av = np.mean(inertias)
 
+        #eq 4
         mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
+        #eq 5
         mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
-        x = (8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)**1 / 2
+        #eq 6
+        x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
         # filter zeros out and set them to zero
         log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
         S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
 
+        #eq 7
         for n, freq in enumerate(self.frequencies):
             S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
 
-        sum(S_r_components)
         S_r_damp *= units.J / units._Nav
         return S_r_damp, B_av
 
