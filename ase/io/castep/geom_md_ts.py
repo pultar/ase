@@ -221,6 +221,8 @@ def write_castep_geom(
     fd: TextIO,
     images: Union[Atoms, Sequence[Atoms]],
     units: Optional[Dict[str, float]] = None,
+    *,
+    pressure: float = 0.0,
     sort: bool = False,
 ):
     """Write a CASTEP .geom file.
@@ -242,6 +244,8 @@ def write_castep_geom(
         - ``kB``: Boltzmann constant in eV/K
 
         If None, values based on CODATA2002 are used.
+    pressure : float, default: 0.0
+        External pressure in eV/Å\\ :sup:`3`.
     sort : bool, default: False
         If True, atoms are sorted in ascending order of atomic number.
 
@@ -262,7 +266,7 @@ def write_castep_geom(
         if sort:
             atoms = atoms[atoms.numbers.argsort()]
         _write_convergence_status(fd, index)
-        _write_energies_geom(fd, atoms, units)
+        _write_energies_geom(fd, atoms, units, pressure)
         _write_cell(fd, atoms, units)
         _write_stress(fd, atoms, units)
         _write_positions(fd, atoms, units)
@@ -275,6 +279,8 @@ def write_castep_md(
     fd: TextIO,
     images: Union[Atoms, Sequence[Atoms]],
     units: Optional[Dict[str, float]] = None,
+    *,
+    pressure: float = 0.0,
     sort: bool = False,
 ):
     """Write a CASTEP .md file.
@@ -296,6 +302,8 @@ def write_castep_md(
         - ``kB``: Boltzmann constant in eV/K
 
         If None, values based on CODATA2002 are used.
+    pressure : float, default: 0.0
+        External pressure in eV/Å\\ :sup:`3`.
     sort : bool, default: False
         If True, atoms are sorted in ascending order of atomic number.
 
@@ -316,7 +324,7 @@ def write_castep_md(
         if sort:
             atoms = atoms[atoms.numbers.argsort()]
         _write_time(fd, index)
-        _write_energies_md(fd, atoms, units)
+        _write_energies_md(fd, atoms, units, pressure)
         _write_temperature(fd, atoms, units)
         _write_cell(fd, atoms, units)
         _write_cell_velocities(fd, atoms, units)
@@ -359,7 +367,12 @@ def _write_time(fd: TextIO, index: int):
     fd.write(18 * ' ' + f'   {_format_float(index)}\n')  # So far index.
 
 
-def _write_energies_geom(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
+def _write_energies_geom(
+    fd: TextIO,
+    atoms: Atoms,
+    units: Dict[str, float],
+    pressure: float = 0.0,
+):
     """Write energies (in hartree) in a CASTEP .geom file.
 
     The energy and the enthalpy are printed.
@@ -370,14 +383,20 @@ def _write_energies_geom(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
     if atoms.calc.results.get('free_energy') is None:
         return
     energy = atoms.calc.results.get('free_energy') / hartree
+    pv = pressure * atoms.get_volume() / hartree
     fd.write(18 * ' ')
     fd.write(f'   {_format_float(energy)}')
-    fd.write(f'   {_format_float(energy)}')
+    fd.write(f'   {_format_float(energy + pv)}')
     fd.write(27 * ' ')
     fd.write('  <-- E\n')
 
 
-def _write_energies_md(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
+def _write_energies_md(
+    fd: TextIO,
+    atoms: Atoms,
+    units: Dict[str, float],
+    pressure: float = 0.0,
+):
     """Write energies (in hartree) in a CASTEP .md file.
 
     The potential energy, the total energy or enthalpy, and the kinetic energy
@@ -387,8 +406,8 @@ def _write_energies_md(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
     -----
     For the second item, CASTEP prints the total energy for the NVE and the NVT
     ensembles and the total enthalpy for the NPH and NPT ensembles.
-    For the Nosé–Hoover (chain) thermostat, furthermore, the kinetic energies
-    of the thermostats are also added.
+    For the Nosé–Hoover (chain) thermostat, furthermore, the energies of the
+    thermostats are also added.
 
     """
     hartree = units['Eh']
@@ -398,9 +417,10 @@ def _write_energies_md(fd: TextIO, atoms: Atoms, units: Dict[str, float]):
         return
     potential = atoms.calc.results.get('free_energy') / hartree
     kinetic = atoms.get_kinetic_energy() / hartree
+    pv = pressure * atoms.get_volume() / hartree
     fd.write(18 * ' ')
     fd.write(f'   {_format_float(potential)}')
-    fd.write(f'   {_format_float(potential + kinetic)}')
+    fd.write(f'   {_format_float(potential + kinetic + pv)}')
     fd.write(f'   {_format_float(kinetic)}')
     fd.write('  <-- E\n')
 
