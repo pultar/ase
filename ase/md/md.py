@@ -9,6 +9,7 @@ from ase.io.trajectory import Trajectory
 from ase.md.logger import MDLogger
 from ase.optimize.optimize import Dynamics
 
+
 def process_temperature(
     temperature: Optional[float],
     temperature_K: Optional[float],
