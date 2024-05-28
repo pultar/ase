@@ -196,7 +196,6 @@ class quasiHarmonicThermo(HarmonicThermo):
                 imag_modes_handling='raise',
                 raise_to=100*units.invcm, **kwargs) -> None:
         
-        print("raise_to {}".format(raise_to))
         self.imag_modes_handling = imag_modes_handling
 
         # Raise all imaginary frequencies
