@@ -1,13 +1,14 @@
 import numpy as np
 import pytest
 
-from ase import Atoms
+from ase import Atoms, units
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
 from ase.optimize import QuasiNewton
 from ase.phonons import Phonons
 from ase.thermochemistry import (CrystalThermo, HarmonicThermo, HinderedThermo,
-                                 IdealGasThermo, HarmonicThermo_msRRHO)
+                                 IdealGasThermo, quasiHarmonicThermo,
+                                 HarmonicThermo_msRRHO)
 from ase.vibrations import Vibrations
 
 
@@ -302,6 +303,41 @@ def test_crystal_thermo(asap3, testdir):
     )
     thermo.get_helmholtz_energy(temperature=298.15)
 
+HELMHOLTZ_QUASI_HARMONIC = -0.04644196376152279
+
+def quasi_harmonic_thermo(
+    vib_energies=None,
+    potentialenergy=0.0,
+    imag_modes_handling='raise',
+    raise_to=100*units.invcm
+):
+    return quasiHarmonicThermo(
+        vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
+        potentialenergy=potentialenergy,
+        imag_modes_handling=imag_modes_handling,
+        raise_to=raise_to
+    )
+
+
+def test_quasi_harmonic_thermo():
+    "Basic test of quasi-harmonic thermochemistry"
+    thermo = quasi_harmonic_thermo()
+    helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz == pytest.approx(HELMHOLTZ_QUASI_HARMONIC)
+
+def test_quasi_harmonic_thermo_convergence():
+    "Basic test of quasi-harmonic to harmonic convergence thermochemistry"
+    thermo = harmonic_thermo(potentialenergy=0.0)
+    helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
+    thermo_quasi = quasi_harmonic_thermo(raise_to=0.0)
+    helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
+    assert helmholtz_harm == pytest.approx(helmholtz_quasi)
+    # now also test that it actually changes when a higher value is used
+    thermo_quasi = quasi_harmonic_thermo(raise_to=1000*units.invcm)
+    helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
+    with pytest.raises(AssertionError):
+        assert helmholtz_harm == pytest.approx(helmholtz_quasi)
+
 
 def msRRHO_thermo(
     atoms=None,
@@ -317,6 +353,7 @@ def msRRHO_thermo(
         potentialenergy=potentialenergy,
         **kwargs
     )
+    
 
 
 HELMHOLTZ_msRRHO = -0.05665130354741105

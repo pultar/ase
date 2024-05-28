@@ -160,11 +160,61 @@ class HarmonicThermo(ThermoChem):
         write('=' * 23)
         return F
 
+class quasiHarmonicThermo(HarmonicThermo):
+    """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
+    approximation of Truhlar *et al.* :doi:`10.1021/jp205508z`.
+    
+    Inputs:
+
+    vib_energies : list
+        a list of the harmonic energies of the adsorbate (e.g., from
+        ase.vibrations.Vibrations.get_energies). The number of
+        energies should match the number of degrees of freedom of the
+        adsorbate; i.e., 3*n, where n is the number of atoms. Note that
+        this class does not check that the user has supplied the correct
+        number of energies. Units of energies are eV.
+    potentialenergy : float
+        the potential energy in eV (e.g., from atoms.get_potential_energy)
+        (if potentialenergy is unspecified, then the methods of this
+        class can be interpreted as the energy corrections)
+    imag_modes_handling : string
+        If 'remove', any imaginary frequencies will be removed in the
+        calculation of the thermochemical properties.
+        If 'error', an error will be raised if any imaginary
+        frequencies are present.
+        If 'invert', the imaginary frequencies will be multiplied by -i.
+        If 'raise' (default), the imaginary frequencies will be raised to a
+        certain value, specified by the *raise_to* keyword.
+    raise_to : float
+        The value to which imaginary frequencies will be raised if
+        *imag_modes_handling* is 'raise'. Defaults to :math:`100cm^{-1}`.
+
+    """
+
+    def __init__(self, vib_energies, potentialenergy=0.,
+                imag_modes_handling='raise',
+                raise_to=100*units.invcm, **kwargs):
+        
+        print("raise_to {}".format(raise_to))
+        self.imag_modes_handling = imag_modes_handling
+
+        # Raise all imaginary frequencies
+        vib_energies, n_imag = _clean_vib_energies(
+            vib_energies, handling=self.imag_modes_handling,
+            value=raise_to
+        )
+        self.vib_energies = vib_energies
+        self.n_imag = n_imag
+        # raise the low frequencies to a certain value
+        self.vib_energies = self._raise(raise_to)
+        self.potentialenergy = potentialenergy
+
+    def _raise(self, raise_to):
+        return [ raise_to if x < raise_to else x for x in self.vib_energies ]
 
 class HarmonicThermo_msRRHO(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including Grimme's scaling method
     based on :doi:`10.1002/chem.201200497` and :doi:`10.1039/D1SC00621E`.
-    This should behave just as ORCA with default settings.
 
     Inputs:
 
@@ -191,7 +241,6 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
     """
 
     def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs):
-        print(kwargs)
         if 'imag_modes_handling' in kwargs:
             warn(
                 "imag_modes_handling is overwritten by Grimme's method.",
@@ -932,7 +981,7 @@ class CrystalThermo(ThermoChem):
         return F
 
 
-def _clean_vib_energies(vib_energies, handling='error'):
+def _clean_vib_energies(vib_energies, handling='error', value=None):
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
@@ -948,6 +997,9 @@ def _clean_vib_energies(vib_energies, handling='error'):
         frequencies are present.
         If 'invert', the imaginary part of the frequencies will be
         multiplied by -i. See :doi:`10.1002/anie.202205735.`
+        If 'raise', all imaginary frequencies will be replaced with the value
+        specified by the 'value' argument. See Truhlar et al.
+        :doi:`10.1021/jp205508z`.
 
     Outputs:
 
@@ -970,6 +1022,12 @@ def _clean_vib_energies(vib_energies, handling='error'):
     elif handling.lower() == 'invert':
         n_imag = sum(np.iscomplex(vib_energies))
         vib_energies = [np.imag(v) if np.iscomplex(v)
+                        else v for v in vib_energies]
+    elif handling.lower() == 'raise':
+        if value is None:
+            raise ValueError("Value must be specified when handling='raise'.")
+        n_imag = sum(np.iscomplex(vib_energies))
+        vib_energies = [value if np.iscomplex(v)
                         else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
