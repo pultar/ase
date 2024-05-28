@@ -76,7 +76,7 @@ class HarmonicThermo(ThermoChem):
     """
 
     def __init__(self, vib_energies, potentialenergy=0.,
-                imag_modes_handling='error'):
+                 imag_modes_handling='error'):
         self.imag_modes_handling = imag_modes_handling
 
         # Check for imaginary frequencies.
@@ -161,10 +161,11 @@ class HarmonicThermo(ThermoChem):
         write('=' * 23)
         return F
 
+
 class quasiHarmonicThermo(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
     approximation of Truhlar *et al.* :doi:`10.1021/jp205508z`.
-    
+
     Inputs:
 
     vib_energies : list
@@ -193,9 +194,9 @@ class quasiHarmonicThermo(HarmonicThermo):
     """
 
     def __init__(self, vib_energies, potentialenergy=0.,
-                imag_modes_handling='raise',
-                raise_to=100*units.invcm, **kwargs) -> None:
-        
+                 imag_modes_handling='raise',
+                 raise_to=100 * units.invcm, **kwargs) -> None:
+
         self.imag_modes_handling = imag_modes_handling
 
         # Raise all imaginary frequencies
@@ -210,7 +211,8 @@ class quasiHarmonicThermo(HarmonicThermo):
         self.potentialenergy = potentialenergy
 
     def _raise(self, raise_to) -> List[float]:
-        return [ raise_to if x < raise_to else x for x in self.vib_energies ]
+        return [raise_to if x < raise_to else x for x in self.vib_energies]
+
 
 class HarmonicThermo_msRRHO(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including Grimme's scaling method
@@ -248,7 +250,8 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         kwargs['imag_modes_handling'] = 'invert'
         # scale the frequencies (i.e. energies) before passing them on
         self.nu_scal = nu_scal
-        kwargs['vib_energies'] = np.multiply(kwargs['vib_energies'], self.nu_scal)
+        kwargs['vib_energies'] = np.multiply(
+            kwargs['vib_energies'], self.nu_scal)
         # perhaps later we can pass the scaling to the class above
         super().__init__(**kwargs)
         self.atoms = atoms
@@ -280,7 +283,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         kT = units._k * temperature  # J/K*K
         S_v = 0.
         for n, freq in enumerate(self.frequencies):
-            #eq 4
+            # eq 4
             # J/molK #js *1/s #/J/K  ### J/mol
             x = units._hplanck * freq / kT
             # vibrational components grimme
@@ -304,17 +307,17 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
                     ((1e10)**2))  # from amu/A^2 to kg m^2
         B_av = np.mean(inertias)
 
-        #eq 4
+        # eq 4
         mu = units._hplanck / (8 * np.pi**2 * self.frequencies)
-        #eq 5
+        # eq 5
         mu_prime = (mu * B_av) / (mu + B_av)  # kg m^2
-        #eq 6
+        # eq 6
         x = np.sqrt(8 * np.pi**3 * mu_prime * kT / (units._hplanck)**2)
         # filter zeros out and set them to zero
         log_x = np.log(x, out=np.zeros_like(x, dtype='float64'), where=(x != 0))
         S_r_components = R * (1 / 2 + log_x)  # J/(Js)^2
 
-        #eq 7
+        # eq 7
         for n, freq in enumerate(self.frequencies):
             S_r_damp += (1 - self._head_gordon_damp(freq)) * (S_r_components[n])
 
@@ -323,7 +326,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
 
     def get_entropy(self, temperature, verbose=True) -> float:
         """Calculate the msRRHO entropy (eV/K) at a specified temperature (K)
-        
+
         Inputs:
         temperature : float
             The temperature in Kelvin.
