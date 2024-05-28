@@ -261,7 +261,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         self.tau_freq = units._c * self.tau * 1e2
         # J*s *m/s /e ## eV*m
         e_phot = units._hplanck * units._c / units._e * 100
-        converted = self.vib_energies / e_phot
+        converted = np.array(self.vib_energies) / e_phot
         # 1/s (vib energies to per meter frequencies)
         self.frequencies = units._c * 1e2 * converted
 
@@ -992,7 +992,7 @@ class CrystalThermo(ThermoChem):
         return F
 
 
-def _clean_vib_energies(vib_energies, handling='error', value=None):
+def _clean_vib_energies(vib_energies, handling='error', value=None) -> Tuple[List[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
@@ -1042,6 +1042,6 @@ def _clean_vib_energies(vib_energies, handling='error', value=None):
                         else v for v in vib_energies]
     else:
         raise ValueError(f"Unknown handling option: {handling}")
-    vib_energies = np.real(vib_energies)  # clear +0.j
+    vib_energies = np.real(vib_energies).tolist()  # clear +0.j
 
     return vib_energies, n_imag
