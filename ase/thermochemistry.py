@@ -4,6 +4,7 @@ outputs."""
 import os
 import sys
 from warnings import warn
+from typing import List, Tuple
 
 import numpy as np
 
@@ -193,7 +194,7 @@ class quasiHarmonicThermo(HarmonicThermo):
 
     def __init__(self, vib_energies, potentialenergy=0.,
                 imag_modes_handling='raise',
-                raise_to=100*units.invcm, **kwargs):
+                raise_to=100*units.invcm, **kwargs) -> None:
         
         print("raise_to {}".format(raise_to))
         self.imag_modes_handling = imag_modes_handling
@@ -209,7 +210,7 @@ class quasiHarmonicThermo(HarmonicThermo):
         self.vib_energies = self._raise(raise_to)
         self.potentialenergy = potentialenergy
 
-    def _raise(self, raise_to):
+    def _raise(self, raise_to) -> List[float]:
         return [ raise_to if x < raise_to else x for x in self.vib_energies ]
 
 class HarmonicThermo_msRRHO(HarmonicThermo):
@@ -240,7 +241,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
     with :math:`-i`).
     """
 
-    def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs):
+    def __init__(self, atoms, tau=35, nu_scal=1.0, **kwargs) -> None:
         if 'imag_modes_handling' in kwargs:
             warn(
                 "imag_modes_handling is overwritten by Grimme's method.",
@@ -262,7 +263,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         # 1/s (vib energies to per meter frequencies)
         self.frequencies = units._c * 1e2 * converted
 
-    def _head_gordon_damp(self, freq):
+    def _head_gordon_damp(self, freq) -> float:
         """Head-Gordon damping function.
 
         Equation 8 from :doi:`10.1002/chem.201200497`"""
@@ -270,7 +271,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
 
         return ret
 
-    def _vibrational_entropy_contribution(self, temperature):
+    def _vibrational_entropy_contribution(self, temperature) -> float:
         """Overwrite the standard Harmonic one to scale frequencies.
 
         Equation numbers from :doi:`10.1039/D1SC00621E`
@@ -290,7 +291,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         S_v *= (units.J / units._Nav)
         return S_v
 
-    def _rotational_entropy_contribution(self, temperature):
+    def _rotational_entropy_contribution(self, temperature) -> Tuple[float]:
         """Calculates the rotation of a rigid rotor for low frequency modes.
 
         Equation numbering from :doi:`10.1002/chem.201200497`
@@ -321,8 +322,18 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         S_r_damp *= units.J / units._Nav
         return S_r_damp, B_av
 
-    def get_entropy(self, temperature, verbose=True):
-        """Add rotational contribution."""
+    def get_entropy(self, temperature, verbose=True) -> float:
+        """Calculate the msRRHO entropy (eV/K) at a specified temperature (K)
+        
+        Inputs:
+        temperature : float
+            The temperature in Kelvin.
+        verbose : bool
+            If True, print the entropy components.
+
+        Returns:
+        float : The entropy in eV/K.
+        """
         # overwrite verbosity to avoid double printing
         S = super().get_entropy(temperature, verbose=False)
         # re-enable verbosity
@@ -340,8 +351,6 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
 
         write('-' * 49)
         write(fmt % ('S_tot', S, S * temperature))
-        write('-' * 49)
-        write(f"Average moment of inertia: {B_av}")  # todo remove at the end
         write('=' * 49)
         return S
 
