@@ -303,13 +303,15 @@ def test_crystal_thermo(asap3, testdir):
     )
     thermo.get_helmholtz_energy(temperature=298.15)
 
+
 HELMHOLTZ_QUASI_HARMONIC = -0.04644196376152279
+
 
 def quasi_harmonic_thermo(
     vib_energies=None,
     potentialenergy=0.0,
     imag_modes_handling='raise',
-    raise_to=100*units.invcm
+    raise_to=100 * units.invcm
 ):
     return quasiHarmonicThermo(
         vib_energies=vib_energies if vib_energies else VIB_ENERGIES_HARMONIC,
@@ -325,6 +327,7 @@ def test_quasi_harmonic_thermo():
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_QUASI_HARMONIC)
 
+
 def test_quasi_harmonic_thermo_convergence():
     "Basic test of quasi-harmonic to harmonic convergence thermochemistry"
     thermo = harmonic_thermo(potentialenergy=0.0)
@@ -333,7 +336,7 @@ def test_quasi_harmonic_thermo_convergence():
     helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
     assert helmholtz_harm == pytest.approx(helmholtz_quasi)
     # now also test that it actually changes when a higher value is used
-    thermo_quasi = quasi_harmonic_thermo(raise_to=1000*units.invcm)
+    thermo_quasi = quasi_harmonic_thermo(raise_to=1000 * units.invcm)
     helmholtz_quasi = thermo_quasi.get_helmholtz_energy(temperature=298.15)
     with pytest.raises(AssertionError):
         assert helmholtz_harm == pytest.approx(helmholtz_quasi)
@@ -353,7 +356,6 @@ def msRRHO_thermo(
         potentialenergy=potentialenergy,
         **kwargs
     )
-    
 
 
 HELMHOLTZ_msRRHO = -0.05665130354741105
@@ -366,13 +368,11 @@ def test_msRRHO():
     assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
 
-
-
 def test_msRRHO_imag_warn():
     "Test warning of overwriting imag_modes_handling"
     with pytest.warns(UserWarning):
         thermo = msRRHO_thermo(atoms=Atoms('H'), tau=35,
-                                imag_modes_handling='error')
+                               imag_modes_handling='error')
     helmholtz = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz == pytest.approx(HELMHOLTZ_msRRHO)
 
@@ -393,12 +393,13 @@ def test_msRRHO_converge_to_harmonic():
 
 def test_msRRHO_scaling():
     "Test proper functionality of the scaling factor in the msRRHO method"
-    tmp =np.multiply(VIB_ENERGIES_HARMONIC, 0.25)
+    tmp = np.multiply(VIB_ENERGIES_HARMONIC, 0.25)
     thermo = harmonic_thermo(vib_energies=list(tmp), potentialenergy=0.0)
     helmholtz_harm = thermo.get_helmholtz_energy(temperature=298.15)
     thermo = msRRHO_thermo(atoms=Atoms('H'), tau=0, nu_scal=0.25)
     helmholtz_msrrho = thermo.get_helmholtz_energy(temperature=298.15)
     assert helmholtz_harm == pytest.approx(helmholtz_msrrho)
+
 
 def test_msRRHO_imag():
     "Test that the result is the same if one of the modes is imaginary"

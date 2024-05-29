@@ -293,7 +293,8 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         S_v *= (units.J / units._Nav)
         return S_v
 
-    def _rotational_entropy_contribution(self, temperature) -> Tuple[float, float]:
+    def _rotational_entropy_contribution(
+            self, temperature) -> Tuple[float, float]:
         """Calculates the rotation of a rigid rotor for low frequency modes.
 
         Equation numbering from :doi:`10.1002/chem.201200497`
@@ -992,7 +993,8 @@ class CrystalThermo(ThermoChem):
         return F
 
 
-def _clean_vib_energies(vib_energies, handling='error', value=None) -> Tuple[List[float], int]:
+def _clean_vib_energies(vib_energies, handling='error',
+                        value=None) -> Tuple[List[float], int]:
     """Checks and deal with the presence of imaginary vibrational modes
 
     Also removes +0.j from real vibrational energies.
