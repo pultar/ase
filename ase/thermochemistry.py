@@ -293,7 +293,7 @@ class HarmonicThermo_msRRHO(HarmonicThermo):
         S_v *= (units.J / units._Nav)
         return S_v
 
-    def _rotational_entropy_contribution(self, temperature) -> Tuple[float]:
+    def _rotational_entropy_contribution(self, temperature) -> Tuple[float, float]:
         """Calculates the rotation of a rigid rotor for low frequency modes.
 
         Equation numbering from :doi:`10.1002/chem.201200497`
