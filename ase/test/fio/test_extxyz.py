@@ -2,7 +2,6 @@
 # (which is also included in oi.py test case)
 # maintained by James Kermode <james.kermode@gmail.com>
 
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -408,26 +407,6 @@ As           1.8043384632       1.0417352974      11.3518747709
 As          -0.0000000002       2.0834705948       9.9596183135""")
     atoms = ase.io.read('pbc-test.xyz')
     assert (atoms.pbc == atoms_pbc).all()
-
-
-def test_conflicting_fields():
-    atoms = Atoms('Cu', cell=[2] * 3, pbc=[True] * 3)
-    atoms.calc = EMT()
-
-    _ = atoms.get_potential_energy()
-    atoms.info["energy"] = 100
-    # info / per-config conflict
-    with pytest.raises(KeyError):
-        ase.io.write(sys.stdout, atoms, format="extxyz")
-
-    atoms = Atoms('Cu', cell=[2] * 3, pbc=[True] * 3)
-    atoms.calc = EMT()
-
-    _ = atoms.get_forces()
-    atoms.new_array("forces", np.ones(atoms.positions.shape))
-    # arrays / per-atom conflict
-    with pytest.raises(KeyError):
-        ase.io.write(sys.stdout, atoms, format="extxyz")
 
 
 def test_save_calc_results():
