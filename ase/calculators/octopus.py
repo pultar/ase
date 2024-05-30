@@ -8,9 +8,8 @@ http://tddft.org/programs/octopus/
 
 import numpy as np
 
-from ase.calculators.genericfileio import (CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           BaseProfile)
+from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
+                                           GenericFileIOCalculator)
 from ase.io.octopus.input import generate_input, process_special_kwargs
 from ase.io.octopus.output import read_eigenvalues_file, read_static_info
 
@@ -20,17 +19,14 @@ class OctopusIOError(IOError):
 
 
 class OctopusProfile(BaseProfile):
-    def __init__(self, binary, **kwargs):
-        super().__init__(**kwargs)
-        self.binary = binary
-
     def get_calculator_command(self, inputfile):
-        return [self.binary]
+        return []
 
     def version(self):
         import re
         from subprocess import check_output
-        txt = check_output(self.argv + ['--version']).decode('ascii')
+        txt = check_output([*self._split_command, '--version'],
+                           encoding='ascii')
         match = re.match(r'octopus\s*(.+)', txt)
         # With MPI it prints the line for each rank, but we just match
         # the first line.
@@ -91,7 +87,6 @@ class Octopus(GenericFileIOCalculator):
                  profile=None,
                  directory='.',
                  parallel_info=None,
-                 parallel=True,
                  **kwargs):
         """Create Octopus calculator.
 
@@ -102,8 +97,7 @@ class Octopus(GenericFileIOCalculator):
                          template=OctopusTemplate(),
                          directory=directory,
                          parameters=kwargs,
-                         parallel_info=parallel_info,
-                         parallel=parallel)
+                         parallel_info=parallel_info)
 
     @classmethod
     def recipe(cls, **kwargs):

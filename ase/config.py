@@ -1,12 +1,11 @@
-import os
 import configparser
-from collections.abc import Mapping
-from pathlib import Path
+import os
 import shlex
 import warnings
+from collections.abc import Mapping
+from pathlib import Path
 
-from ase.calculators.names import names, builtin, templates
-
+from ase.calculators.names import builtin, names, templates
 
 ASE_CONFIG_FILE = Path.home() / ".config/ase/config.ini"
 
@@ -22,7 +21,8 @@ class Config(Mapping):
             return shlex.split(argv)
 
         self.parser = configparser.ConfigParser(
-            converters={"argv": argv_converter})
+            converters={"argv": argv_converter},
+            interpolation=configparser.ExtendedInterpolation())
         self.paths = []
 
     def _env(self):
