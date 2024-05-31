@@ -164,7 +164,7 @@ class HarmonicThermo(ThermoChem):
 
 class quasiHarmonicThermo(HarmonicThermo):
     """Subclass of :class:`HarmonicThermo`, including the quasi-harmonic
-    approximation of Truhlar *et al.* :doi:`10.1021/jp205508z`.
+    approximation of Cramer, Truhlar and coworkers :doi:`10.1021/jp205508z`.
 
     Inputs:
 
@@ -1011,7 +1011,7 @@ def _clean_vib_energies(vib_energies, handling='error',
         If 'invert', the imaginary part of the frequencies will be
         multiplied by -i. See :doi:`10.1002/anie.202205735.`
         If 'raise', all imaginary frequencies will be replaced with the value
-        specified by the 'value' argument. See Truhlar et al.
+        specified by the 'value' argument. See Cramer, Truhlar and coworkers.
         :doi:`10.1021/jp205508z`.
 
     Outputs:
