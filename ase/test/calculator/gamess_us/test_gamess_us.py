@@ -10,17 +10,21 @@ def water():
     return molecule('H2O')
 
 
-kwargs = [dict(label='noargs'),
-          dict(label='xc', xc='PBE'),
-          dict(label='dfttyp', contrl=dict(dfttyp='PBE')),
-          dict(label='mp2', contrl=dict(mplevl=2), mp2=dict(mp2prp=True)),
-          dict(label='ccsdt', contrl=dict(cctyp='CCSD(T)'))]
+kwargs = [
+    dict(label='noargs'),
+    dict(label='xc', xc='PBE'),
+    dict(label='dfttyp', contrl=dict(dfttyp='PBE')),
+    dict(label='mp2', contrl=dict(mplevl=2), mp2=dict(mp2prp=True)),
+    dict(label='ccsdt', contrl=dict(cctyp='CCSD(T)')),
+]
 
-erefs = [-2056.7877424926373,
-         -2064.9141313969094,
-         -2064.9141313969094,
-         -2060.091817423073,
-         -2060.3341175255055]
+erefs = [
+    -2056.7877424926373,
+    -2064.9141313969094,
+    -2064.9141313969094,
+    -2060.091817423073,
+    -2060.3341175255055,
+]
 
 
 grad = [True, True, True, True, False]

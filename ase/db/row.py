@@ -4,9 +4,11 @@ from typing import Any, Dict
 import numpy as np
 
 from ase import Atoms
-from ase.calculators.calculator import (PropertyNotImplementedError,
-                                        all_properties,
-                                        kptdensity2monkhorstpack)
+from ase.calculators.calculator import (
+    PropertyNotImplementedError,
+    all_properties,
+    kptdensity2monkhorstpack,
+)
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.data import atomic_masses, chemical_symbols
 from ase.formula import Formula
@@ -33,7 +35,8 @@ def atoms2dict(atoms):
     dct = {
         'numbers': atoms.numbers,
         'positions': atoms.positions,
-        'unique_id': '%x' % randint(16**31, 16**32 - 1)}
+        'unique_id': '%x' % randint(16**31, 16**32 - 1),
+    }
     if atoms.pbc.any():
         dct['pbc'] = atoms.pbc
     if atoms.cell.any():
@@ -78,7 +81,8 @@ class AtomsRow:
                 # parameter dict again and again and again ...
                 while isinstance(dct['calculator_parameters'], str):
                     dct['calculator_parameters'] = decode(
-                        dct['calculator_parameters'])
+                        dct['calculator_parameters']
+                    )
         else:
             dct = atoms2dict(dct)
         assert 'numbers' in dct
@@ -127,12 +131,14 @@ class AtomsRow:
 
     def __str__(self):
         return '<AtomsRow: formula={}, keys={}>'.format(
-            self.formula, ','.join(self._keys))
+            self.formula, ','.join(self._keys)
+        )
 
     @property
     def constraints(self):
         """List of constraints."""
         from ase.constraints import dict2constraint
+
         if not isinstance(self._constraints, list):
             # Lazy decoding:
             cs = decode(self._constraints)
@@ -154,6 +160,7 @@ class AtomsRow:
             self._data = decode(self._data)  # lazy decoding
         elif isinstance(self._data, bytes):
             from ase.db.core import bytes_to_object
+
             self._data = bytes_to_object(self._data)  # lazy decoding
         return FancyDict(self._data)
 
@@ -176,7 +183,7 @@ class AtomsRow:
     def fmax(self):
         """Maximum atomic force."""
         forces = self.constrained_forces
-        return (forces**2).sum(1).max()**0.5
+        return (forces**2).sum(1).max() ** 0.5
 
     @property
     def constrained_forces(self):
@@ -197,7 +204,7 @@ class AtomsRow:
     @property
     def smax(self):
         """Maximum stress tensor component."""
-        return (self.stress**2).max()**0.5
+        return (self.stress**2).max() ** 0.5
 
     @property
     def mass(self):
@@ -224,19 +231,20 @@ class AtomsRow:
             return 0.0
         return charges.sum()
 
-    def toatoms(self,
-                add_additional_information=False):
+    def toatoms(self, add_additional_information=False):
         """Create Atoms object."""
-        atoms = Atoms(self.numbers,
-                      self.positions,
-                      cell=self.cell,
-                      pbc=self.pbc,
-                      magmoms=self.get('initial_magmoms'),
-                      charges=self.get('initial_charges'),
-                      tags=self.get('tags'),
-                      masses=self.get('masses'),
-                      momenta=self.get('momenta'),
-                      constraint=self.constraints)
+        atoms = Atoms(
+            self.numbers,
+            self.positions,
+            cell=self.cell,
+            pbc=self.pbc,
+            magmoms=self.get('initial_magmoms'),
+            charges=self.get('initial_charges'),
+            tags=self.get('tags'),
+            masses=self.get('masses'),
+            momenta=self.get('momenta'),
+            constraint=self.constraints,
+        )
 
         results = {prop: self[prop] for prop in all_properties if prop in self}
         if results:
@@ -263,9 +271,7 @@ def row2dct(row, key_descriptions) -> Dict[str, Any]:
     dct = {}
 
     atoms = Atoms(cell=row.cell, pbc=row.pbc)
-    dct['size'] = kptdensity2monkhorstpack(atoms,
-                                           kptdensity=1.8,
-                                           even=False)
+    dct['size'] = kptdensity2monkhorstpack(atoms, kptdensity=1.8, even=False)
 
     dct['cell'] = [[f'{a:.3f}' for a in axis] for axis in row.cell]
     par = [f'{x:.3f}' for x in cell_to_cellpar(row.cell)]
@@ -288,15 +294,19 @@ def row2dct(row, key_descriptions) -> Dict[str, Any]:
 
     constraints = row.get('constraints')
     if constraints:
-        dct['constraints'] = ', '.join(c.__class__.__name__
-                                       for c in constraints)
+        dct['constraints'] = ', '.join(
+            c.__class__.__name__ for c in constraints
+        )
 
-    keys = ({'id', 'energy', 'fmax', 'smax', 'mass', 'age'} |
-            set(key_descriptions) |
-            set(row.key_value_pairs))
+    keys = (
+        {'id', 'energy', 'fmax', 'smax', 'mass', 'age'}
+        | set(key_descriptions)
+        | set(row.key_value_pairs)
+    )
     dct['table'] = []
 
     from ase.db.project import KeyDescription
+
     for key in keys:
         if key == 'age':
             age = float_to_time_string(now() - row.ctime, True)

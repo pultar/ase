@@ -5,7 +5,7 @@ from ase.io.siesta_output import OutputReader
 
 
 def test_siesta_read_eigenvalues_soc(datadir, config_file, tmp_path):
-    """ In this test, we read a stored siesta.EIG file."""
+    """In this test, we read a stored siesta.EIG file."""
     reader = OutputReader(prefix='siesta', directory=tmp_path)
     assert reader.read_eigenvalues() == {}
 

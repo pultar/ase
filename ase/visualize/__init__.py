@@ -13,7 +13,8 @@ def view(atoms, data=None, viewer='ase', repeat=None, block=False, **kwargs):
     if block and hasattr(handle, 'wait'):
         status = handle.wait()
         if status != 0:
-            raise RuntimeError(f'Viewer "{vwr.name}" failed with status '
-                               '{status}')
+            raise RuntimeError(
+                f'Viewer "{vwr.name}" failed with status ' '{status}'
+            )
 
     return handle

@@ -6,7 +6,8 @@ import numpy as np
 
 spin_error = (
     'The spin keyword is no longer supported.  Please call the function '
-    'with the energies corresponding to the desired spins.')
+    'with the energies corresponding to the desired spins.'
+)
 _deprecated = object()
 
 
@@ -32,9 +33,12 @@ class GapInfo:
         kpts = calc.get_ibz_k_points()
         nk = len(kpts)
         ns = calc.get_number_of_spins()
-        eigenvalues = np.array([[calc.get_eigenvalues(kpt=k, spin=s)
-                                 for k in range(nk)]
-                                for s in range(ns)])
+        eigenvalues = np.array(
+            [
+                [calc.get_eigenvalues(kpt=k, spin=s) for k in range(nk)]
+                for s in range(ns)
+            ]
+        )
 
         efermi = calc.get_fermi_level()
         return cls(eigenvalues - efermi)
@@ -68,7 +72,8 @@ class GapInfo:
             description = 's={}, k={}, n={}'.format(*skn)
             if ibz_kpoints is not None:
                 coordtxt = '[{:.2f}, {:.2f}, {:.2f}]'.format(
-                    *ibz_kpoints[skn[1]])
+                    *ibz_kpoints[skn[1]]
+                )
                 description = f'{description}, [{coordtxt}]'
             return f'({description})'
 
@@ -90,15 +95,23 @@ class GapInfo:
             if skn_direct1[0] == skn_direct2[0]:
                 add(f'Transition at: {skn(skn_direct1)}')
             else:
-                transition = skn((f'{skn_direct1[0]}->{skn_direct2[0]}',
-                                  *skn_direct1[1:]))
+                transition = skn(
+                    (f'{skn_direct1[0]}->{skn_direct2[0]}', *skn_direct1[1:])
+                )
                 add(f'Transition at: {transition}')
 
         return '\n'.join(lines)
 
 
-def bandgap(calc=None, direct=False, spin=_deprecated,
-            eigenvalues=None, efermi=None, output=None, kpts=None):
+def bandgap(
+    calc=None,
+    direct=False,
+    spin=_deprecated,
+    eigenvalues=None,
+    efermi=None,
+    output=None,
+    kpts=None,
+):
     """Calculates the band-gap.
 
     Parameters:
@@ -132,9 +145,12 @@ def bandgap(calc=None, direct=False, spin=_deprecated,
         kpts = calc.get_ibz_k_points()
         nk = len(kpts)
         ns = calc.get_number_of_spins()
-        eigenvalues = np.array([[calc.get_eigenvalues(kpt=k, spin=s)
-                                 for k in range(nk)]
-                                for s in range(ns)])
+        eigenvalues = np.array(
+            [
+                [calc.get_eigenvalues(kpt=k, spin=s) for k in range(nk)]
+                for s in range(ns)
+            ]
+        )
         if efermi is None:
             efermi = calc.get_fermi_level()
 
@@ -179,9 +195,12 @@ def _bandgap(e_skn, direct):
     if (N_sk == 0).any() or (N_sk == nb).any():
         raise ValueError('Too few bands!')
 
-    e_skn = np.array([[e_skn[s, k, N_sk[s, k] - 1:N_sk[s, k] + 1]
-                       for k in range(nk)]
-                      for s in range(ns)])
+    e_skn = np.array(
+        [
+            [e_skn[s, k, N_sk[s, k] - 1 : N_sk[s, k] + 1] for k in range(nk)]
+            for s in range(ns)
+        ]
+    )
     ev_sk = e_skn[:, :, 0]  # valence band
     ec_sk = e_skn[:, :, 1]  # conduction band
 

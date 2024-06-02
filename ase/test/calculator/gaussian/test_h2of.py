@@ -58,10 +58,15 @@ def test_h2of(gaussian_factory):
     with open('def2-svp.gbs', 'w') as bfile:
         bfile.write(basis)
 
-    atoms = Atoms('OH2F', positions=[(-1.853788, -0.071113, 0.000000),
-                                     (-1.892204, 0.888768, 0.000000),
-                                     (-0.888854, -0.232973, 0.000000),
-                                     (1.765870, 0.148285, 0.000000)])
+    atoms = Atoms(
+        'OH2F',
+        positions=[
+            (-1.853788, -0.071113, 0.000000),
+            (-1.892204, 0.888768, 0.000000),
+            (-0.888854, -0.232973, 0.000000),
+            (1.765870, 0.148285, 0.000000),
+        ],
+    )
 
     label = 'h2of-anion'
     calc = Gaussian(
@@ -72,7 +77,7 @@ def test_h2of(gaussian_factory):
         label=label,
         ioplist=['6/80=1', '6/35=4000000'],
         density='current',
-        addsec=['%s.wfx' % label]
+        addsec=['%s.wfx' % label],
     )
     # FIXME: the "addsec" argument above is correctly incorporated into the
     # input file, but it doesn't appear to do anything to the calculation.

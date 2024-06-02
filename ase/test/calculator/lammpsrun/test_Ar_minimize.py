@@ -29,20 +29,34 @@ def test_Ar_minimize(factory, ar_nc, params):
     with factory.calc(specorder=['Ar'], **params) as calc:
         ar_nc.calc = calc
 
-        assert_allclose(ar_nc.get_potential_energy(), -0.468147667942117,
-                        atol=1e-4, rtol=1e-4)
-        assert_allclose(ar_nc.get_forces(),
-                        calc.calculate_numerical_forces(ar_nc),
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            ar_nc.get_potential_energy(),
+            -0.468147667942117,
+            atol=1e-4,
+            rtol=1e-4,
+        )
+        assert_allclose(
+            ar_nc.get_forces(),
+            calc.calculate_numerical_forces(ar_nc),
+            atol=1e-4,
+            rtol=1e-4,
+        )
 
         with LBFGS(ar_nc) as dyn:
-            dyn.run(fmax=1E-6)
+            dyn.run(fmax=1e-6)
 
-        assert_allclose(ar_nc.get_potential_energy(), -0.4791815886953914,
-                        atol=1e-4, rtol=1e-4)
-        assert_allclose(ar_nc.get_forces(),
-                        calc.calculate_numerical_forces(ar_nc),
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            ar_nc.get_potential_energy(),
+            -0.4791815886953914,
+            atol=1e-4,
+            rtol=1e-4,
+        )
+        assert_allclose(
+            ar_nc.get_forces(),
+            calc.calculate_numerical_forces(ar_nc),
+            atol=1e-4,
+            rtol=1e-4,
+        )
 
 
 @pytest.mark.calculator_lite()
@@ -56,10 +70,13 @@ def test_Ar_minimize_multistep(factory, ar_nc, params):
         ar_nc.calc = calc
         F1_numer = calc.calculate_numerical_forces(ar_nc)
 
-        assert_allclose(ar_nc.get_potential_energy(), -0.468147667942117,
-                        atol=1e-4, rtol=1e-4)
-        assert_allclose(ar_nc.get_forces(), F1_numer,
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            ar_nc.get_potential_energy(),
+            -0.468147667942117,
+            atol=1e-4,
+            rtol=1e-4,
+        )
+        assert_allclose(ar_nc.get_forces(), F1_numer, atol=1e-4, rtol=1e-4)
 
         calc.set(minimize='1.0e-15 1.0e-6 2000 4000')
 
@@ -69,8 +86,15 @@ def test_Ar_minimize_multistep(factory, ar_nc, params):
         # get final coordinates after minimization
         ar_nc.set_positions(calc.atoms.positions)
 
-        assert_allclose(ar_nc.get_potential_energy(), -0.4791815887032201,
-                        atol=1e-4, rtol=1e-4)
-        assert_allclose(ar_nc.get_forces(),
-                        calc.calculate_numerical_forces(ar_nc),
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            ar_nc.get_potential_energy(),
+            -0.4791815887032201,
+            atol=1e-4,
+            rtol=1e-4,
+        )
+        assert_allclose(
+            ar_nc.get_forces(),
+            calc.calculate_numerical_forces(ar_nc),
+            atol=1e-4,
+            rtol=1e-4,
+        )

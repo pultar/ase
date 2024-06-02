@@ -24,14 +24,17 @@ def test_mpi_unused_on_import():
     interpreter."""
 
     # Should cover most of ASE:
-    modules = ['ase.optimize',
-               'ase.db',
-               'ase.gui']
+    modules = ['ase.optimize', 'ase.db', 'ase.gui']
 
     imports = 'import ' + ', '.join(modules)
 
-    run([sys.executable,
-         '-c',
-         '{imports}; from ase.parallel import world; assert world.comm is None'
-         .format(imports=imports)],
-        check=True)
+    run(
+        [
+            sys.executable,
+            '-c',
+            '{imports}; from ase.parallel import world; assert world.comm is None'.format(
+                imports=imports
+            ),
+        ],
+        check=True,
+    )

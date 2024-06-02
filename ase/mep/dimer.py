@@ -90,8 +90,9 @@ class DimerEigenmodeSearch:
 
     """
 
-    def __init__(self, dimeratoms, control=None, eigenmode=None, basis=None,
-                 **kwargs):
+    def __init__(
+        self, dimeratoms, control=None, eigenmode=None, basis=None, **kwargs
+    ):
         if hasattr(dimeratoms, 'get_eigenmode'):
             self.dimeratoms = dimeratoms
         else:
@@ -106,8 +107,11 @@ class DimerEigenmodeSearch:
 
         if control is None:
             self.control = DimerControl(**kwargs)
-            w = 'Missing control object in ' + self.__class__.__name__ + \
-                '. Using default: DimerControl()'
+            w = (
+                'Missing control object in '
+                + self.__class__.__name__
+                + '. Using default: DimerControl()'
+            )
             warnings.warn(w, UserWarning)
             if self.control.logfile is not None:
                 self.control.logfile.write('DIM:WARN: ' + w + '\n')
@@ -116,7 +120,7 @@ class DimerEigenmodeSearch:
             self.control = control
             # kwargs must be empty if a control object is supplied
             for key in kwargs:
-                e = f'__init__() got an unexpected keyword argument \'{(key)}\''
+                e = f"__init__() got an unexpected keyword argument '{(key)}'"
                 raise TypeError(e)
 
         self.dR = self.control.get_parameter('dimer_separation')
@@ -153,8 +157,9 @@ class DimerEigenmodeSearch:
 
                 # Get the curvature and its derivative
                 c0 = self.get_curvature()
-                c0d = np.vdot((self.forces2 - self.forces1), rot_unit_A) / \
-                    self.dR
+                c0d = (
+                    np.vdot((self.forces2 - self.forces1), rot_unit_A) / self.dR
+                )
 
                 # Trial rotation (no need to store the curvature)
                 # NYI variable trial angles from [3]
@@ -164,12 +169,14 @@ class DimerEigenmodeSearch:
                 self.forces1B = self.forces1
 
                 # Get the curvature's derivative
-                c1d = np.vdot((self.forces2 - self.forces1), rot_unit_B) / \
-                    self.dR
+                c1d = (
+                    np.vdot((self.forces2 - self.forces1), rot_unit_B) / self.dR
+                )
 
                 # Calculate the Fourier coefficients
-                a1 = c0d * cos(2 * trial_angle) - c1d / \
-                    (2 * sin(2 * trial_angle))
+                a1 = c0d * cos(2 * trial_angle) - c1d / (
+                    2 * sin(2 * trial_angle)
+                )
                 b1 = 0.5 * c0d
                 a0 = 2 * (c0 - a1)
 
@@ -177,8 +184,9 @@ class DimerEigenmodeSearch:
                 rotangle = atan(b1 / a1) / 2.0
 
                 # Make sure that you didn't find a maximum
-                cmin = a0 / 2.0 + a1 * cos(2 * rotangle) + \
-                    b1 * sin(2 * rotangle)
+                cmin = (
+                    a0 / 2.0 + a1 * cos(2 * rotangle) + b1 * sin(2 * rotangle)
+                )
                 if c0 < cmin:
                     rotangle += pi / 2.0
 
@@ -194,11 +202,18 @@ class DimerEigenmodeSearch:
 
                 # Force extrapolation scheme from [4]
                 if extrapolate:
-                    self.forces1E = sin(trial_angle - rotangle) / \
-                        sin(trial_angle) * self.forces1A + sin(rotangle) / \
-                        sin(trial_angle) * self.forces1B + \
-                        (1 - cos(rotangle) - sin(rotangle) *
-                         tan(trial_angle / 2.0)) * self.forces0
+                    self.forces1E = (
+                        sin(trial_angle - rotangle)
+                        / sin(trial_angle)
+                        * self.forces1A
+                        + sin(rotangle) / sin(trial_angle) * self.forces1B
+                        + (
+                            1
+                            - cos(rotangle)
+                            - sin(rotangle) * tan(trial_angle / 2.0)
+                        )
+                        * self.forces0
+                    )
                 else:
                     self.forces1E = None
 
@@ -214,27 +229,35 @@ class DimerEigenmodeSearch:
         # NYI Log for the trial angle
         if self.logfile is not None:
             if angle:
-                l = 'DIM:ROT: %7d %9d %9.4f %9.4f %9.4f\n' % \
-                    (self.control.get_counter('optcount'),
-                     self.control.get_counter('rotcount'),
-                     self.get_curvature(), degrees(angle), norm(f_rot_A))
+                l = 'DIM:ROT: %7d %9d %9.4f %9.4f %9.4f\n' % (
+                    self.control.get_counter('optcount'),
+                    self.control.get_counter('rotcount'),
+                    self.get_curvature(),
+                    degrees(angle),
+                    norm(f_rot_A),
+                )
             else:
-                l = 'DIM:ROT: %7d %9d %9.4f %9s %9.4f\n' % \
-                    (self.control.get_counter('optcount'),
-                     self.control.get_counter('rotcount'),
-                     self.get_curvature(), '---------', norm(f_rot_A))
+                l = 'DIM:ROT: %7d %9d %9.4f %9s %9.4f\n' % (
+                    self.control.get_counter('optcount'),
+                    self.control.get_counter('rotcount'),
+                    self.get_curvature(),
+                    '---------',
+                    norm(f_rot_A),
+                )
             self.logfile.write(l)
             self.logfile.flush()
 
     def get_rotational_force(self):
         """Calculate the rotational force that acts on the dimer."""
-        rot_force = perpendicular_vector((self.forces1 - self.forces2),
-                                         self.eigenmode) / (2.0 * self.dR)
+        rot_force = perpendicular_vector(
+            (self.forces1 - self.forces2), self.eigenmode
+        ) / (2.0 * self.dR)
         if self.basis is not None:
             if (
-                    len(self.basis) == len(self.dimeratoms)
-                    and len(self.basis[0]) == 3
-                    and isinstance(self.basis[0][0], float)):
+                len(self.basis) == len(self.dimeratoms)
+                and len(self.basis[0]) == 3
+                and isinstance(self.basis[0][0], float)
+            ):
                 rot_force = perpendicular_vector(rot_force, self.basis)
             else:
                 for base in self.basis:
@@ -246,8 +269,9 @@ class DimerEigenmodeSearch:
         if curv:
             self.curvature = curv
         else:
-            self.curvature = np.vdot((self.forces2 - self.forces1),
-                                     self.eigenmode) / (2.0 * self.dR)
+            self.curvature = np.vdot(
+                (self.forces2 - self.forces1), self.eigenmode
+            ) / (2.0 * self.dR)
 
     def update_eigenmode(self, eigenmode):
         """Update the eigenmode in the MinModeAtoms object."""
@@ -319,28 +343,34 @@ class MinModeControl(IOContext):
     be overwritten.
 
     """
+
     parameters: Dict[str, Any] = {}
 
-    def __init__(self, logfile='-', eigenmode_logfile=None, comm=world,
-                 **kwargs):
+    def __init__(
+        self, logfile='-', eigenmode_logfile=None, comm=world, **kwargs
+    ):
         # Overwrite the defaults with the input parameters given
         for key in kwargs:
             if key not in self.parameters:
-                e = (f'Invalid parameter >>{key}<< with value >>'
-                     f'{kwargs[key]!s}<< in {self.__class__.__name__}')
+                e = (
+                    f'Invalid parameter >>{key}<< with value >>'
+                    f'{kwargs[key]!s}<< in {self.__class__.__name__}'
+                )
                 raise ValueError(e)
             else:
                 self.set_parameter(key, kwargs[key], log=False)
 
-        self.initialize_logfiles(comm=comm, logfile=logfile,
-                                 eigenmode_logfile=eigenmode_logfile)
+        self.initialize_logfiles(
+            comm=comm, logfile=logfile, eigenmode_logfile=eigenmode_logfile
+        )
         self.counters = {'forcecalls': 0, 'rotcount': 0, 'optcount': 0}
         self.log()
 
     def initialize_logfiles(self, comm, logfile=None, eigenmode_logfile=None):
         self.logfile = self.openfile(file=logfile, comm=comm)
-        self.eigenmode_logfile = self.openfile(file=eigenmode_logfile,
-                                               comm=comm)
+        self.eigenmode_logfile = self.openfile(
+            file=eigenmode_logfile, comm=comm
+        )
 
     def log(self, parameter=None):
         """Log the parameters of the eigenmode search."""
@@ -442,26 +472,29 @@ class DimerControl(MinModeControl):
         The amount of atoms near *displacement_center* to displace.
 
     """
+
     # Default parameters for the Dimer eigenmode search
-    parameters = {'eigenmode_method': 'dimer',
-                  'f_rot_min': 0.1,
-                  'f_rot_max': 1.00,
-                  'max_num_rot': 1,
-                  'trial_angle': pi / 4.0,
-                  'trial_trans_step': 0.001,
-                  'maximum_translation': 0.1,
-                  'cg_translation': True,
-                  'use_central_forces': True,
-                  'dimer_separation': 0.0001,
-                  'initial_eigenmode_method': 'gauss',
-                  'extrapolate_forces': False,
-                  'displacement_method': 'gauss',
-                  'gauss_std': 0.1,
-                  'order': 1,
-                  'mask': None,  # NB mask should not be a "parameter"
-                  'displacement_center': None,
-                  'displacement_radius': None,
-                  'number_of_displacement_atoms': None}
+    parameters = {
+        'eigenmode_method': 'dimer',
+        'f_rot_min': 0.1,
+        'f_rot_max': 1.00,
+        'max_num_rot': 1,
+        'trial_angle': pi / 4.0,
+        'trial_trans_step': 0.001,
+        'maximum_translation': 0.1,
+        'cg_translation': True,
+        'use_central_forces': True,
+        'dimer_separation': 0.0001,
+        'initial_eigenmode_method': 'gauss',
+        'extrapolate_forces': False,
+        'displacement_method': 'gauss',
+        'gauss_std': 0.1,
+        'order': 1,
+        'mask': None,  # NB mask should not be a "parameter"
+        'displacement_center': None,
+        'displacement_radius': None,
+        'number_of_displacement_atoms': None,
+    }
 
     # NB: Can maybe put this in EigenmodeSearch and MinModeControl
     def log(self, parameter=None):
@@ -469,17 +502,21 @@ class DimerControl(MinModeControl):
         if self.logfile is not None:
             if parameter is not None:
                 l = 'DIM:CONTROL: Updated Parameter: {} = {}\n'.format(
-                    parameter, str(self.get_parameter(parameter)))
+                    parameter, str(self.get_parameter(parameter))
+                )
             else:
                 l = 'MINMODE:METHOD: Dimer\n'
                 l += 'DIM:CONTROL: Search Parameters:\n'
                 l += 'DIM:CONTROL: ------------------\n'
                 for key in self.parameters:
                     l += 'DIM:CONTROL: {} = {}\n'.format(
-                        key, str(self.get_parameter(key)))
+                        key, str(self.get_parameter(key))
+                    )
                 l += 'DIM:CONTROL: ------------------\n'
-                l += 'DIM:ROT: OPT-STEP ROT-STEP CURVATURE ROT-ANGLE ' + \
-                     'ROT-FORCE\n'
+                l += (
+                    'DIM:ROT: OPT-STEP ROT-STEP CURVATURE ROT-ANGLE '
+                    + 'ROT-FORCE\n'
+                )
             self.logfile.write(l)
             self.logfile.flush()
 
@@ -521,8 +558,15 @@ class MinModeAtoms:
 
     """
 
-    def __init__(self, atoms, control=None, eigenmodes=None,
-                 random_seed=None, comm=world, **kwargs):
+    def __init__(
+        self,
+        atoms,
+        control=None,
+        eigenmodes=None,
+        random_seed=None,
+        comm=world,
+        **kwargs,
+    ):
         self.minmode_init = True
         self.atoms = atoms
 
@@ -532,8 +576,11 @@ class MinModeAtoms:
 
         if control is None:
             self.control = DimerControl(**kwargs)
-            w = 'Missing control object in ' + self.__class__.__name__ + \
-                '. Using default: DimerControl()'
+            w = (
+                'Missing control object in '
+                + self.__class__.__name__
+                + '. Using default: DimerControl()'
+            )
             warnings.warn(w, UserWarning)
             if self.control.logfile is not None:
                 self.control.logfile.write('DIM:WARN: ' + w + '\n')
@@ -549,8 +596,9 @@ class MinModeAtoms:
                     mlogfile = kwargs[key]
                 else:
                     self.control.set_parameter(key, kwargs[key])
-            self.control.initialize_logfiles(comm=comm, logfile=logfile,
-                                             eigenmode_logfile=mlogfile)
+            self.control.initialize_logfiles(
+                comm=comm, logfile=logfile, eigenmode_logfile=mlogfile
+            )
 
         # Seed the randomness
         if random_seed is None:
@@ -583,37 +631,42 @@ class MinModeAtoms:
         # NB: Would be nice if atoms.copy() took care of this.
         if self.calc is not None:
             # Hack because some calculators do not have calculation_required
-            if (hasattr(self.calc, 'calculation_required')
-               and not self.calc.calculation_required(self.atoms,
-               ['energy', 'forces'])) or force_calculation:
+            if (
+                hasattr(self.calc, 'calculation_required')
+                and not self.calc.calculation_required(
+                    self.atoms, ['energy', 'forces']
+                )
+            ) or force_calculation:
                 calc = SinglePointCalculator(
                     self.atoms0,
                     energy=self.atoms.get_potential_energy(),
-                    forces=self.atoms.get_forces())
+                    forces=self.atoms.get_forces(),
+                )
                 self.atoms0.calc = calc
 
-    def initialize_eigenmodes(self, method=None, eigenmodes=None,
-                              gauss_std=None):
+    def initialize_eigenmodes(
+        self, method=None, eigenmodes=None, gauss_std=None
+    ):
         """Make an initial guess for the eigenmode."""
         if eigenmodes is None:
             pos = self.get_positions()
             old_pos = self.get_original_positions()
             if method is None:
-                method = \
-                    self.control.get_parameter('initial_eigenmode_method')
+                method = self.control.get_parameter('initial_eigenmode_method')
             if method.lower() == 'displacement' and (pos - old_pos).any():
                 eigenmode = normalize(pos - old_pos)
             elif method.lower() == 'gauss':
-                self.displace(log=False, gauss_std=gauss_std,
-                              method=method)
+                self.displace(log=False, gauss_std=gauss_std, method=method)
                 new_pos = self.get_positions()
                 eigenmode = normalize(new_pos - pos)
                 self.set_positions(pos)
             else:
-                e = 'initial_eigenmode must use either \'gauss\' or ' + \
-                    '\'displacement\', if the latter is used the atoms ' + \
-                    'must have moved away from the original positions.' + \
-                    f'You have requested \'{method}\'.'
+                e = (
+                    "initial_eigenmode must use either 'gauss' or "
+                    + "'displacement', if the latter is used the atoms "
+                    + 'must have moved away from the original positions.'
+                    + f"You have requested '{method}'."
+                )
                 raise NotImplementedError(e)  # NYI
             eigenmodes = [eigenmode]
 
@@ -622,8 +675,7 @@ class MinModeAtoms:
             if len(eigenmodes) == 1:
                 for _ in range(1, self.order):
                     pos = self.get_positions()
-                    self.displace(log=False, gauss_std=gauss_std,
-                                  method=method)
+                    self.displace(log=False, gauss_std=gauss_std, method=method)
                     new_pos = self.get_positions()
                     eigenmode = normalize(new_pos - pos)
                     self.set_positions(pos)
@@ -695,8 +747,11 @@ class MinModeAtoms:
             if k > 0:
                 self.ensure_eigenmode_orthogonality(k + 1)
             search = DimerEigenmodeSearch(
-                self, self.control,
-                eigenmode=self.eigenmodes[k], basis=self.eigenmodes[:k])
+                self,
+                self.control,
+                eigenmode=self.eigenmodes[k],
+                basis=self.eigenmodes[:k],
+            )
             search.converge_to_eigenmode()
             search.set_up_for_optimization_step()
             self.eigenmodes[k] = search.get_eigenmode()
@@ -730,8 +785,10 @@ class MinModeAtoms:
             dimer_energy = self.get_potential_energy()
             return dimer_energy - original_energy
         except RuntimeError:
-            w = 'The potential energy is not available, without further ' + \
-                'calculations, most likely at the original state.'
+            w = (
+                'The potential energy is not available, without further '
+                + 'calculations, most likely at the original state.'
+            )
             warnings.warn(w, UserWarning)
             return np.nan
 
@@ -779,9 +836,18 @@ class MinModeAtoms:
     def __len__(self):
         return len(self.atoms)
 
-    def displace(self, displacement_vector=None, mask=None, method=None,
-                 displacement_center=None, radius=None, number_of_atoms=None,
-                 gauss_std=None, mic=True, log=True):
+    def displace(
+        self,
+        displacement_vector=None,
+        mask=None,
+        method=None,
+        displacement_center=None,
+        radius=None,
+        number_of_atoms=None,
+        gauss_std=None,
+        mic=True,
+        log=True,
+    ):
         """Move the atoms away from their current position.
 
         This is one of the essential parts of minimum mode searches.
@@ -826,27 +892,38 @@ class MinModeAtoms:
         if gauss_std is None:
             gauss_std = self.control.get_parameter('gauss_std')
         if displacement_center is None:
-            displacement_center = \
-                self.control.get_parameter('displacement_center')
+            displacement_center = self.control.get_parameter(
+                'displacement_center'
+            )
         if radius is None:
             radius = self.control.get_parameter('displacement_radius')
         if number_of_atoms is None:
-            number_of_atoms = \
-                self.control.get_parameter('number_of_displacement_atoms')
+            number_of_atoms = self.control.get_parameter(
+                'number_of_displacement_atoms'
+            )
 
         # Check for conflicts
         if displacement_vector is not None and method.lower() != 'vector':
-            e = 'displacement_vector was supplied but a different method ' + \
-                f'(\'{method!s}\') was chosen.\n'
+            e = (
+                'displacement_vector was supplied but a different method '
+                + f"('{method!s}') was chosen.\n"
+            )
             raise ValueError(e)
         elif displacement_vector is None and method.lower() == 'vector':
-            e = 'A displacement_vector must be supplied when using ' + \
-                f'method = \'{method!s}\'.\n'
+            e = (
+                'A displacement_vector must be supplied when using '
+                + f"method = '{method!s}'.\n"
+            )
             raise ValueError(e)
-        elif displacement_center is not None and radius is None and \
-                number_of_atoms is None:
-            e = 'When displacement_center is chosen, either radius or ' + \
-                'number_of_atoms must be supplied.\n'
+        elif (
+            displacement_center is not None
+            and radius is None
+            and number_of_atoms is None
+        ):
+            e = (
+                'When displacement_center is chosen, either radius or '
+                + 'number_of_atoms must be supplied.\n'
+            )
             raise ValueError(e)
 
         # Set up the center of displacement mask (c_mask)
@@ -857,17 +934,23 @@ class MinModeAtoms:
             if isinstance(c, int):
                 # Parse negative indexes
                 c = displacement_center % len(self)
-                d = [(k, self.get_distance(k, c, mic=mic)) for k in
-                     range(len(self))]
+                d = [
+                    (k, self.get_distance(k, c, mic=mic))
+                    for k in range(len(self))
+                ]
             # The center is a position in 3D space
             elif len(c) == 3 and [type(c_k) for c_k in c] == [float] * 3:
                 # NB: MIC is not considered.
-                d = [(k, norm(self.get_positions()[k] - c))
-                     for k in range(len(self))]
+                d = [
+                    (k, norm(self.get_positions()[k] - c))
+                    for k in range(len(self))
+                ]
             else:
-                e = 'displacement_center must be either the number of an ' + \
-                    'atom in MinModeAtoms object or a 3D position ' + \
-                    '(3-tuple of floats).'
+                e = (
+                    'displacement_center must be either the number of an '
+                    + 'atom in MinModeAtoms object or a 3D position '
+                    + '(3-tuple of floats).'
+                )
                 raise ValueError(e)
 
             # Set up the mask
@@ -892,8 +975,10 @@ class MinModeAtoms:
         if mask is None:
             mask = [True for _ in range(len(self))]
             if c_mask is None:
-                w = 'It was not possible to figure out which atoms to ' + \
-                    'displace, Will try to displace all atoms.\n'
+                w = (
+                    'It was not possible to figure out which atoms to '
+                    + 'displace, Will try to displace all atoms.\n'
+                )
                 warnings.warn(w, UserWarning)
                 if self.logfile is not None:
                     self.logfile.write('MINMODE:WARN: ' + w + '\n')
@@ -911,8 +996,9 @@ class MinModeAtoms:
                     for _ in range(3):
                         if method.lower() == 'gauss':
                             if not gauss_std:
-                                gauss_std = \
-                                    self.control.get_parameter('gauss_std')
+                                gauss_std = self.control.get_parameter(
+                                    'gauss_std'
+                                )
                             diff = self.random_state.normal(0.0, gauss_std)
                         else:
                             e = f'Invalid displacement method >>{method!s}<<'
@@ -932,24 +1018,31 @@ class MinModeAtoms:
             pos0 = self.get_positions()
         self.set_positions(self.get_positions() + displacement_vector)
         if log:
-            parameters = {'mask': mask,
-                          'displacement_method': method,
-                          'gauss_std': gauss_std,
-                          'displacement_center': displacement_center,
-                          'displacement_radius': radius,
-                          'number_of_displacement_atoms': number_of_atoms}
+            parameters = {
+                'mask': mask,
+                'displacement_method': method,
+                'gauss_std': gauss_std,
+                'displacement_center': displacement_center,
+                'displacement_radius': radius,
+                'number_of_displacement_atoms': number_of_atoms,
+            }
             self.displacement_log(self.get_positions() - pos0, parameters)
 
     def eigenmode_log(self):
         """Log the eigenmodes (eigenmode estimates)"""
         if self.mlogfile is not None:
-            l = 'MINMODE:MODE: Optimization Step: %i\n' % \
-                (self.control.get_counter('optcount'))
+            l = 'MINMODE:MODE: Optimization Step: %i\n' % (
+                self.control.get_counter('optcount')
+            )
             for m_num, mode in enumerate(self.eigenmodes):
                 l += 'MINMODE:MODE: Order: %i\n' % m_num
                 for k in range(len(mode)):
                     l += 'MINMODE:MODE: %7i %15.8f %15.8f %15.8f\n' % (
-                        k, mode[k][0], mode[k][1], mode[k][2])
+                        k,
+                        mode[k][0],
+                        mode[k][1],
+                        mode[k][2],
+                    )
             self.mlogfile.write(l)
             self.mlogfile.flush()
 
@@ -960,8 +1053,9 @@ class MinModeAtoms:
             mod_para = False
             for key in parameters:
                 if parameters[key] != self.control.get_parameter(key):
-                    lp += 'MINMODE:DISP: {} = {}\n'.format(str(key),
-                                                           str(parameters[key]))
+                    lp += 'MINMODE:DISP: {} = {}\n'.format(
+                        str(key), str(parameters[key])
+                    )
                     mod_para = True
             if mod_para:
                 l = lp
@@ -970,8 +1064,10 @@ class MinModeAtoms:
             for k in range(len(displacement_vector)):
                 l += 'MINMODE:DISP: %7i %15.8f %15.8f %15.8f\n' % (
                     k,
-                    displacement_vector[k][0], displacement_vector[k][1],
-                    displacement_vector[k][2])
+                    displacement_vector[k][0],
+                    displacement_vector[k][1],
+                    displacement_vector[k][2],
+                )
             self.logfile.write(l)
             self.logfile.flush()
 
@@ -1008,8 +1104,10 @@ class MinModeTranslate(Optimizer):
         if self.logfile is not None:
             l = ''
             if isinstance(self.control, DimerControl):
-                l = 'MinModeTranslate: STEP      TIME          ENERGY    ' + \
-                    'MAX-FORCE     STEPSIZE    CURVATURE  ROT-STEPS\n'
+                l = (
+                    'MinModeTranslate: STEP      TIME          ENERGY    '
+                    + 'MAX-FORCE     STEPSIZE    CURVATURE  ROT-STEPS\n'
+                )
             self.logfile.write(l)
             self.logfile.flush()
 
@@ -1066,8 +1164,9 @@ class MinModeTranslate(Optimizer):
         old_norm = np.vdot(self.direction_old, self.direction_old)
         # Polak-Ribiere Conjugate Gradient
         if old_norm != 0.0:
-            betaPR = np.vdot(direction, (direction - self.direction_old)) / \
-                old_norm
+            betaPR = (
+                np.vdot(direction, (direction - self.direction_old)) / old_norm
+            )
         else:
             betaPR = 0.0
         if betaPR < 0.0:
@@ -1089,18 +1188,40 @@ class MinModeTranslate(Optimizer):
             l = ''
             if stepsize:
                 if isinstance(self.control, DimerControl):
-                    l = '%s: %4d  %02d:%02d:%02d %15.6f %12.4f %12.6f ' \
-                        '%12.6f %10d\n' % (
-                            'MinModeTranslate', self.nsteps,
-                            T[3], T[4], T[5], e, fmax, stepsize, curvature,
-                            rotsteps)
+                    l = (
+                        '%s: %4d  %02d:%02d:%02d %15.6f %12.4f %12.6f '
+                        '%12.6f %10d\n'
+                        % (
+                            'MinModeTranslate',
+                            self.nsteps,
+                            T[3],
+                            T[4],
+                            T[5],
+                            e,
+                            fmax,
+                            stepsize,
+                            curvature,
+                            rotsteps,
+                        )
+                    )
             else:
                 if isinstance(self.control, DimerControl):
-                    l = '%s: %4d  %02d:%02d:%02d %15.6f %12.4f %s ' \
-                        '%12.6f %10d\n' % (
-                            'MinModeTranslate', self.nsteps,
-                            T[3], T[4], T[5], e, fmax, '    --------',
-                            curvature, rotsteps)
+                    l = (
+                        '%s: %4d  %02d:%02d:%02d %15.6f %12.4f %s '
+                        '%12.6f %10d\n'
+                        % (
+                            'MinModeTranslate',
+                            self.nsteps,
+                            T[3],
+                            T[4],
+                            T[5],
+                            e,
+                            fmax,
+                            '    --------',
+                            curvature,
+                            rotsteps,
+                        )
+                    )
             self.logfile.write(l)
             self.logfile.flush()
 

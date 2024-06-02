@@ -1,6 +1,5 @@
 "Module for displaying information about the system."
 
-
 import warnings
 
 import numpy as np
@@ -46,8 +45,9 @@ def info(gui):
         add()
         add(_('Unit cell [Å]:'))
         add(ucellformat.format(*atoms.cell.ravel()))
-        periodic = [[_('no'), _('yes')][int(periodic)]
-                    for periodic in atoms.pbc]
+        periodic = [
+            [_('no'), _('yes')][int(periodic)] for periodic in atoms.pbc
+        ]
         # TRANSLATORS: This has the form Periodic: no, no, yes
         add(_('Periodic: {}, {}, {}').format(*periodic))
         add()
@@ -93,8 +93,10 @@ def info(gui):
                         quantity = get_quantity()
                 except Exception as err:
                     quantity = None
-                    errmsg = ('An error occurred while retrieving {} '
-                              'from the calculator: {}'.format(name, err))
+                    errmsg = (
+                        'An error occurred while retrieving {} '
+                        'from the calculator: {}'.format(name, err)
+                    )
                     warnings.warn(errmsg)
                 return quantity
 
@@ -103,6 +105,7 @@ def info(gui):
             # name of a code even if they are just cached results.
             add()
             from ase.calculators.singlepoint import SinglePointCalculator
+
             if isinstance(calc, SinglePointCalculator):
                 add(_('Calculator: {} (cached)').format(calc.name))
             else:

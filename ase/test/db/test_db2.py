@@ -26,23 +26,26 @@ def test_db2(testdir, dbtype, get_db_name):
     a = c.get_atoms(id)
     c.write(Atoms())
     ch4 = molecule('CH4', calculator=EMT())
-    ch4.constraints = [FixAtoms(indices=[1]),
-                       FixBondLength(0, 2)]
+    ch4.constraints = [FixAtoms(indices=[1]), FixBondLength(0, 2)]
     f1 = ch4.get_forces()
     print(f1)
 
     c.delete([d.id for d in c.select(C=1)])
     chi = np.array([1 + 0.5j, 0.5])
     if 'db' in name:
-        kvp = {'external_tables':
-               {'blabla': {'a': 1, 'b': 2, 'c': 3},
-                'lala': {'a': 0.01, 'b': 0.02, 'c': 0.0}}}
+        kvp = {
+            'external_tables': {
+                'blabla': {'a': 1, 'b': 2, 'c': 3},
+                'lala': {'a': 0.01, 'b': 0.02, 'c': 0.0},
+            }
+        }
 
     else:
         kvp = {'a': 1}
 
-    id = c.write(ch4, key_value_pairs=kvp,
-                 data={'1-butyne': 'bla-bla', 'chi': chi})
+    id = c.write(
+        ch4, key_value_pairs=kvp, data={'1-butyne': 'bla-bla', 'chi': chi}
+    )
 
     row = c.get(id)
     print(row.data['1-butyne'], row.data.chi)
@@ -89,13 +92,15 @@ def test_db2(testdir, dbtype, get_db_name):
     with pytest.raises(ValueError):
         c.write(Atoms(), S=42)  # chemical symbol as key
 
-    id = c.write(Atoms(),
-                 b=np.bool_(True),
-                 i=np.int64(42),
-                 n=np.nan,
-                 x=np.inf,
-                 s='NaN2',
-                 A=42)
+    id = c.write(
+        Atoms(),
+        b=np.bool_(True),
+        i=np.int64(42),
+        n=np.nan,
+        x=np.inf,
+        s='NaN2',
+        A=42,
+    )
     row = c[id]
     assert isinstance(row.b, bool)
     assert isinstance(row.i, int)

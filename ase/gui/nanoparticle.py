@@ -1,5 +1,5 @@
-"""nanoparticle.py - Window for setting up crystalline nanoparticles.
-"""
+"""nanoparticle.py - Window for setting up crystalline nanoparticles."""
+
 from copy import copy
 
 import numpy as np
@@ -88,22 +88,32 @@ class SetupNanoparticle:
         'bcc': _('Body centered cubic (bcc)'),
         'sc': _('Simple cubic (sc)'),
         'hcp': _('Hexagonal closed-packed (hcp)'),
-        'graphite': _('Graphite')}
+        'graphite': _('Graphite'),
+    }
 
     needs_4index = {  # 3 or 4 index dimension
-        'fcc': False, 'bcc': False, 'sc': False,
-        'hcp': True, 'graphite': True}
+        'fcc': False,
+        'bcc': False,
+        'sc': False,
+        'hcp': True,
+        'graphite': True,
+    }
 
     needs_2lat = {  # 1 or 2 lattice parameters
-        'fcc': False, 'bcc': False, 'sc': False,
-        'hcp': True, 'graphite': True}
+        'fcc': False,
+        'bcc': False,
+        'sc': False,
+        'hcp': True,
+        'graphite': True,
+    }
 
     structure_factories = {
         'fcc': FaceCenteredCubic,
         'bcc': BodyCenteredCubic,
         'sc': SimpleCubic,
         'hcp': HexagonalClosedPacked,
-        'graphite': Graphite}
+        'graphite': Graphite,
+    }
 
     # A list of import statements for the Python window.
     import_names = {
@@ -111,22 +121,17 @@ class SetupNanoparticle:
         'bcc': 'from ase.cluster.cubic import BodyCenteredCubic',
         'sc': 'from ase.cluster.cubic import SimpleCubic',
         'hcp': 'from ase.cluster.hexagonal import HexagonalClosedPacked',
-        'graphite': 'from ase.cluster.hexagonal import Graphite'}
+        'graphite': 'from ase.cluster.hexagonal import Graphite',
+    }
 
     # Default layer specifications for the different structures.
-    default_layers = {'fcc': [((1, 0, 0), 6),
-                              ((1, 1, 0), 9),
-                              ((1, 1, 1), 5)],
-                      'bcc': [((1, 0, 0), 6),
-                              ((1, 1, 0), 9),
-                              ((1, 1, 1), 5)],
-                      'sc': [((1, 0, 0), 6),
-                             ((1, 1, 0), 9),
-                             ((1, 1, 1), 5)],
-                      'hcp': [((0, 0, 0, 1), 5),
-                              ((1, 0, -1, 0), 5)],
-                      'graphite': [((0, 0, 0, 1), 5),
-                                   ((1, 0, -1, 0), 5)]}
+    default_layers = {
+        'fcc': [((1, 0, 0), 6), ((1, 1, 0), 9), ((1, 1, 1), 5)],
+        'bcc': [((1, 0, 0), 6), ((1, 1, 0), 9), ((1, 1, 1), 5)],
+        'sc': [((1, 0, 0), 6), ((1, 1, 0), 9), ((1, 1, 1), 5)],
+        'hcp': [((0, 0, 0, 1), 5), ((1, 0, -1, 0), 5)],
+        'graphite': [((0, 0, 0, 1), 5), ((1, 0, -1, 0), 5)],
+    }
 
     def __init__(self, gui):
         self.atoms = None
@@ -137,8 +142,7 @@ class SetupNanoparticle:
         win.add(ui.Text(introtext))
 
         self.element = Element('', self.apply)
-        lattice_button = ui.Button(_('Get structure'),
-                                   self.set_structure_data)
+        lattice_button = ui.Button(_('Get structure'), self.set_structure_data)
         self.elementinfo = ui.Label(' ')
         win.add(self.element)
         win.add(self.elementinfo)
@@ -151,7 +155,8 @@ class SetupNanoparticle:
             labels.append(name)
             values.append(abbrev)
         self.structure_cb = ui.ComboBox(
-            labels=labels, values=values, callback=self.update_structure)
+            labels=labels, values=values, callback=self.update_structure
+        )
         win.add([_('Structure:'), self.structure_cb])
 
         self.a = ui.SpinBox(3.0, 0.0, 1000.0, 0.01, self.update)
@@ -162,7 +167,8 @@ class SetupNanoparticle:
         self.method_cb = ui.ComboBox(
             labels=[_('Layer specification'), _('Wulff construction')],
             values=['layers', 'wulff'],
-            callback=self.update_gui_method)
+            callback=self.update_gui_method,
+        )
         win.add([_('Method: '), self.method_cb])
 
         self.layerlabel = ui.Label('Missing text')  # Filled in later
@@ -178,10 +184,12 @@ class SetupNanoparticle:
 
         # Information
         win.add(_('Information about the created cluster:'))
-        self.info = [_('Number of atoms: '),
-                     ui.Label('-'),
-                     _('   Approx. diameter: '),
-                     ui.Label('-')]
+        self.info = [
+            _('Number of atoms: '),
+            ui.Label('-'),
+            _('   Approx. diameter: '),
+            ui.Label('-'),
+        ]
         win.add(self.info)
 
         # Finalize setup
@@ -192,10 +200,14 @@ class SetupNanoparticle:
         self.auto = ui.CheckButton(_('Automatic Apply'))
         win.add(self.auto)
 
-        win.add([pybutton(_('Creating a nanoparticle.'), self.makeatoms),
-                 ui.helpbutton(helptext),
-                 ui.Button(_('Apply'), self.apply),
-                 ui.Button(_('OK'), self.ok)])
+        win.add(
+            [
+                pybutton(_('Creating a nanoparticle.'), self.makeatoms),
+                ui.helpbutton(helptext),
+                ui.Button(_('Apply'), self.apply),
+                ui.Button(_('OK'), self.ok),
+            ]
+        )
 
         self.gui = gui
         self.smaller_button = None
@@ -204,7 +216,7 @@ class SetupNanoparticle:
         self.element.grab_focus()
 
     def default_direction_table(self):
-        'Set default directions and values for the current crystal structure.'
+        "Set default directions and values for the current crystal structure."
         self.direction_table = []
         struct = self.structure_cb.value
         for direction, layers in self.default_layers[struct]:
@@ -228,8 +240,9 @@ class SetupNanoparticle:
         down = ui.Button(_('Down'), self.row_swap_next, i)
         delete = ui.Button(_('Delete'), self.row_delete, i)
 
-        self.direction_table_rows.add([str(direction) + ':',
-                                       spin, up, down, delete])
+        self.direction_table_rows.add(
+            [str(direction) + ':', spin, up, down, delete]
+        )
         up.active = i > 0
         down.active = False
         delete.active = i > 0
@@ -270,23 +283,29 @@ class SetupNanoparticle:
             self.size_radio = ui.RadioButtons(
                 [_('Number of atoms'), _('Diameter')],
                 ['natoms', 'diameter'],
-                self.update_gui_size)
-            self.size_natoms = ui.SpinBox(100, 1, 100000, 1,
-                                          self.update_size_natoms)
-            self.size_diameter = ui.SpinBox(5.0, 0, 100.0, 0.1,
-                                            self.update_size_diameter)
+                self.update_gui_size,
+            )
+            self.size_natoms = ui.SpinBox(
+                100, 1, 100000, 1, self.update_size_natoms
+            )
+            self.size_diameter = ui.SpinBox(
+                5.0, 0, 100.0, 0.1, self.update_size_diameter
+            )
             self.round_radio = ui.RadioButtons(
                 [_('above  '), _('below  '), _('closest  ')],
                 ['above', 'below', 'closest'],
-                callback=self.update)
+                callback=self.update,
+            )
             self.smaller_button = ui.Button(_('Smaller'), self.wulff_smaller)
             self.larger_button = ui.Button(_('Larger'), self.wulff_larger)
             rows.add(_('Choose size using:'))
             rows.add(self.size_radio)
-            rows.add([_('atoms'), self.size_natoms,
-                      _('Å³'), self.size_diameter])
             rows.add(
-                _('Rounding: If exact size is not possible, choose the size:'))
+                [_('atoms'), self.size_natoms, _('Å³'), self.size_diameter]
+            )
+            rows.add(
+                _('Rounding: If exact size is not possible, choose the size:')
+            )
             rows.add(self.round_radio)
             rows.add([self.smaller_button, self.larger_button])
             self.update_gui_size()
@@ -295,7 +314,7 @@ class SetupNanoparticle:
             self.larger_button = None
 
     def update_structure(self, s=None):
-        'Called when the user changes the structure.'
+        "Called when the user changes the structure."
         s = self.structure_cb.value
         if s != self.old_structure:
             old4 = self.needs_4index[self.old_structure]
@@ -309,19 +328,20 @@ class SetupNanoparticle:
         self.update()
 
     def update_gui_method(self, *args):
-        'Switch between layer specification and Wulff construction.'
+        "Switch between layer specification and Wulff construction."
         self.update_direction_table()
         self.update_new_direction_and_size_stuff()
         if self.method_cb.value == 'wulff':
             self.layerlabel.text = _(
-                'Surface energies (as energy/area, NOT per atom):')
+                'Surface energies (as energy/area, NOT per atom):'
+            )
         else:
             self.layerlabel.text = _('Number of layers:')
 
         self.update()
 
     def wulff_smaller(self, widget=None):
-        'Make a smaller Wulff construction.'
+        "Make a smaller Wulff construction."
         n = len(self.atoms)
         self.size_radio.value = 'natoms'
         self.size_natoms.value = n - 1
@@ -329,7 +349,7 @@ class SetupNanoparticle:
         self.apply()
 
     def wulff_larger(self, widget=None):
-        'Make a larger Wulff construction.'
+        "Make a larger Wulff construction."
         n = len(self.atoms)
         self.size_radio.value = 'natoms'
         self.size_natoms.value = n + 1
@@ -337,18 +357,22 @@ class SetupNanoparticle:
         self.apply()
 
     def row_add(self, widget=None):
-        'Add a row to the list of directions.'
+        "Add a row to the list of directions."
         if self.needs_4index[self.structure_cb.value]:
             n = 4
         else:
             n = 3
-        idx = tuple(a.value for a in self.new_direction[1:1 + 2 * n:2])
+        idx = tuple(a.value for a in self.new_direction[1 : 1 + 2 * n : 2])
         if not any(idx):
             ui.error(_('At least one index must be non-zero'), '')
             return
         if n == 4 and sum(idx) != 0:
-            ui.error(_('Invalid hexagonal indices',
-                       'The sum of the first three numbers must be zero'))
+            ui.error(
+                _(
+                    'Invalid hexagonal indices',
+                    'The sum of the first three numbers must be zero',
+                )
+            )
             return
         new = [idx, 5, 1.0]
         if self.method_cb.value == 'wulff':
@@ -369,14 +393,15 @@ class SetupNanoparticle:
         self.update_direction_table()
 
     def update_gui_size(self, widget=None):
-        'Update gui when the cluster size specification changes.'
+        "Update gui when the cluster size specification changes."
         self.size_natoms.active = self.size_radio.value == 'natoms'
         self.size_diameter.active = self.size_radio.value == 'diameter'
 
     def update_size_natoms(self, widget=None):
         at_vol = self.get_atomic_volume()
-        dia = 2.0 * (3 * self.size_natoms.value * at_vol /
-                     (4 * np.pi))**(1 / 3)
+        dia = 2.0 * (3 * self.size_natoms.value * at_vol / (4 * np.pi)) ** (
+            1 / 3
+        )
         self.size_diameter.value = dia
         self.update()
 
@@ -401,7 +426,7 @@ class SetupNanoparticle:
         self.makeinfo()
 
     def set_structure_data(self, *args):
-        'Called when the user presses [Get structure].'
+        "Called when the user presses [Get structure]."
         z = self.element.Z
         if z is None:
             return
@@ -412,9 +437,12 @@ class SetupNanoparticle:
             structure = ref['symmetry']
 
         if ref is None or structure not in self.structure_names:
-            ui.error(_('Unsupported or unknown structure'),
-                     _('Element = {0}, structure = {1}')
-                     .format(self.element.symbol, structure))
+            ui.error(
+                _('Unsupported or unknown structure'),
+                _('Element = {0}, structure = {1}').format(
+                    self.element.symbol, structure
+                ),
+            )
             return
 
         self.structure_cb.value = self.structure_names[structure]
@@ -431,7 +459,7 @@ class SetupNanoparticle:
         self.update_structure()
 
     def makeatoms(self, *args):
-        'Make the atoms according to the current specification.'
+        "Make the atoms according to the current specification."
         symbol = self.element.symbol
         if symbol is None:
             self.clearatoms()
@@ -440,8 +468,7 @@ class SetupNanoparticle:
         struct = self.structure_cb.value
         if self.needs_2lat[struct]:
             # a and c lattice constants
-            lc = {'a': self.a.value,
-                  'c': self.c.value}
+            lc = {'a': self.a.value, 'c': self.c.value}
             lc_str = str(lc)
         else:
             lc = self.a.value
@@ -449,36 +476,45 @@ class SetupNanoparticle:
         if self.method_cb.value == 'wulff':
             # Wulff construction
             surfaces = [x[0] for x in self.direction_table]
-            surfaceenergies = [x[1].value
-                               for x in self.direction_table_rows.rows]
+            surfaceenergies = [
+                x[1].value for x in self.direction_table_rows.rows
+            ]
             self.update_size_diameter(update=False)
             rounding = self.round_radio.value
-            self.atoms = wulff_construction(symbol,
-                                            surfaces,
-                                            surfaceenergies,
-                                            self.size_natoms.value,
-                                            self.structure_factories[struct],
-                                            rounding, lc)
-            python = py_template_wulff % {'element': symbol,
-                                          'surfaces': str(surfaces),
-                                          'energies': str(surfaceenergies),
-                                          'latconst': lc_str,
-                                          'natoms': self.size_natoms.value,
-                                          'structure': struct,
-                                          'rounding': rounding}
+            self.atoms = wulff_construction(
+                symbol,
+                surfaces,
+                surfaceenergies,
+                self.size_natoms.value,
+                self.structure_factories[struct],
+                rounding,
+                lc,
+            )
+            python = py_template_wulff % {
+                'element': symbol,
+                'surfaces': str(surfaces),
+                'energies': str(surfaceenergies),
+                'latconst': lc_str,
+                'natoms': self.size_natoms.value,
+                'structure': struct,
+                'rounding': rounding,
+            }
         else:
             # Layer-by-layer specification
             surfaces = [x[0] for x in self.direction_table]
             layers = [x[1].value for x in self.direction_table_rows.rows]
             self.atoms = self.structure_factories[struct](
-                symbol, copy(surfaces), layers, latticeconstant=lc)
+                symbol, copy(surfaces), layers, latticeconstant=lc
+            )
             imp = self.import_names[struct]
-            python = py_template_layers % {'import': imp,
-                                           'element': symbol,
-                                           'surfaces': str(surfaces),
-                                           'layers': str(layers),
-                                           'latconst': lc_str,
-                                           'factory': imp.split()[-1]}
+            python = py_template_layers % {
+                'import': imp,
+                'element': symbol,
+                'surfaces': str(surfaces),
+                'layers': str(layers),
+                'latconst': lc_str,
+                'factory': imp.split()[-1],
+            }
         self.makeinfo()
 
         return python
@@ -512,7 +548,7 @@ class SetupNanoparticle:
             self.info[3].text = '-'
         else:
             at_vol = self.get_atomic_volume()
-            dia = 2 * (3 * len(self.atoms) * at_vol / (4 * np.pi))**(1 / 3)
+            dia = 2 * (3 * len(self.atoms) * at_vol / (4 * np.pi)) ** (1 / 3)
             self.info[1].text = str(len(self.atoms))
             self.info[3].text = f'{dia:.1f} Å'
 
@@ -527,9 +563,13 @@ class SetupNanoparticle:
             self.gui.new_atoms(self.atoms)
             return True
         else:
-            ui.error(_('No valid atoms.'),
-                     _('You have not (yet) specified a consistent set of '
-                       'parameters.'))
+            ui.error(
+                _('No valid atoms.'),
+                _(
+                    'You have not (yet) specified a consistent set of '
+                    'parameters.'
+                ),
+            )
             return False
 
     def ok(self):

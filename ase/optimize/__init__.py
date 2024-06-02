@@ -1,4 +1,4 @@
-"""Structure optimization. """
+"""Structure optimization."""
 
 from ase.optimize.bfgs import BFGS
 from ase.optimize.bfgslinesearch import BFGSLineSearch
@@ -14,7 +14,18 @@ from ase.optimize.optimize import RestartError
 
 QuasiNewton = BFGSLineSearch
 
-__all__ = ['MDMin', 'FIRE', 'FIRE2', 'LBFGS',
-           'LBFGSLineSearch', 'BFGSLineSearch', 'BFGS',
-           'GoodOldQuasiNewton', 'QuasiNewton', 'GPMin',
-           'CellAwareBFGS', 'ODE12r', 'RestartError']
+__all__ = [
+    'MDMin',
+    'FIRE',
+    'FIRE2',
+    'LBFGS',
+    'LBFGSLineSearch',
+    'BFGSLineSearch',
+    'BFGS',
+    'GoodOldQuasiNewton',
+    'QuasiNewton',
+    'GPMin',
+    'CellAwareBFGS',
+    'ODE12r',
+    'RestartError',
+]

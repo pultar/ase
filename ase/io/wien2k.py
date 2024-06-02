@@ -25,7 +25,7 @@ def read_struct(fd, ase=True):
     nat = int(pip[1][27:30])
     cell = np.zeros(6)
     for i in range(6):
-        cell[i] = float(pip[3][0 + i * 10:10 + i * 10])
+        cell[i] = float(pip[3][0 + i * 10 : 10 + i * 10])
     cell[0:3] = cell[0:3] * Bohr
     if lattice == 'P  ':
         lattice = 'P'
@@ -55,23 +55,47 @@ def read_struct(fd, ase=True):
     for iat in range(nat):
         indifini = indif
         if len(pos) == 0:
-            pos = np.array([[float(pip[iline][12:22]),
-                             float(pip[iline][25:35]),
-                             float(pip[iline][38:48])]])
+            pos = np.array(
+                [
+                    [
+                        float(pip[iline][12:22]),
+                        float(pip[iline][25:35]),
+                        float(pip[iline][38:48]),
+                    ]
+                ]
+            )
         else:
-            pos = np.append(pos, np.array([[float(pip[iline][12:22]),
-                                            float(pip[iline][25:35]),
-                                            float(pip[iline][38:48])]]),
-                            axis=0)
+            pos = np.append(
+                pos,
+                np.array(
+                    [
+                        [
+                            float(pip[iline][12:22]),
+                            float(pip[iline][25:35]),
+                            float(pip[iline][38:48]),
+                        ]
+                    ]
+                ),
+                axis=0,
+            )
         indif += 1
         iline += 1
         neq[iat] = int(pip[iline][15:17])
         iline += 1
         for _ in range(1, int(neq[iat])):
-            pos = np.append(pos, np.array([[float(pip[iline][12:22]),
-                                            float(pip[iline][25:35]),
-                                            float(pip[iline][38:48])]]),
-                            axis=0)
+            pos = np.append(
+                pos,
+                np.array(
+                    [
+                        [
+                            float(pip[iline][12:22]),
+                            float(pip[iline][25:35]),
+                            float(pip[iline][38:48]),
+                        ]
+                    ]
+                ),
+                axis=0,
+            )
             indif += 1
             iline += 1
         for _ in range(indif - indifini):
@@ -100,8 +124,9 @@ def write_struct(fd, atoms2=None, rmt=None, lattice='P', zza=None):
     nat = len(atoms)
     if rmt is None:
         rmt = [2.0] * nat
-    fd.write(lattice +
-             '   LATTICE,NONEQUIV.ATOMS:%3i\nMODE OF CALC=RELA\n' % nat)
+    fd.write(
+        lattice + '   LATTICE,NONEQUIV.ATOMS:%3i\nMODE OF CALC=RELA\n' % nat
+    )
     cell = atoms.get_cell()
     metT = np.dot(cell, np.transpose(cell))
     cell2 = cellconst(metT)
@@ -123,8 +148,10 @@ def write_struct(fd, atoms2=None, rmt=None, lattice='P', zza=None):
             ro = 0.00005
         else:
             ro = 0.0001
-        fd.write('%-10s NPT=%5i  R0=%9.8f RMT=%10.4f   Z:%10.5f\n' %
-                 (atoms.get_chemical_symbols()[ii], 781, ro, rmt[ii], zz))
+        fd.write(
+            '%-10s NPT=%5i  R0=%9.8f RMT=%10.4f   Z:%10.5f\n'
+            % (atoms.get_chemical_symbols()[ii], 781, ro, rmt[ii], zz)
+        )
         fd.write(f'LOCAL ROT MATRIX:    {1.0:9.7f} {0.0:9.7f} {0.0:9.7f}\n')
         fd.write(f'                     {0.0:9.7f} {1.0:9.7f} {0.0:9.7f}\n')
         fd.write(f'                     {0.0:9.7f} {0.0:9.7f} {1.0:9.7f}\n')
@@ -132,7 +159,7 @@ def write_struct(fd, atoms2=None, rmt=None, lattice='P', zza=None):
 
 
 def cellconst(metT):
-    """ metT=np.dot(cell,cell.T) """
+    """metT=np.dot(cell,cell.T)"""
     aa = np.sqrt(metT[0, 0])
     bb = np.sqrt(metT[1, 1])
     cc = np.sqrt(metT[2, 2])
@@ -150,15 +177,23 @@ def coorsys(latconst):
     cbe = np.cos(latconst[4] * np.pi / 180.0)
     cga = np.cos(latconst[5] * np.pi / 180.0)
     sga = np.sin(latconst[5] * np.pi / 180.0)
-    return np.array([[a, b * cga, c * cbe],
-                     [0, b * sga, c * (cal - cbe * cga) / sga],
-                     [0, 0, c * np.sqrt(1 - cal**2 - cbe**2 - cga**2 +
-                                        2 * cal * cbe * cga) / sga]
-                     ]).transpose()
+    return np.array(
+        [
+            [a, b * cga, c * cbe],
+            [0, b * sga, c * (cal - cbe * cga) / sga],
+            [
+                0,
+                0,
+                c
+                * np.sqrt(1 - cal**2 - cbe**2 - cga**2 + 2 * cal * cbe * cga)
+                / sga,
+            ],
+        ]
+    ).transpose()
 
 
 def c2p(lattice):
-    """ apply as eg. cell2 = np.dot(c2p('F'), cell)"""
+    """apply as eg. cell2 = np.dot(c2p('F'), cell)"""
     if lattice == 'P':
         cell = np.eye(3)
     elif lattice == 'F':
@@ -172,9 +207,13 @@ def c2p(lattice):
     elif lattice == 'A':
         cell = np.array([[-1.0, 0.0, 0.0], [0.0, -0.5, 0.5], [0.0, 0.5, 0.5]])
     elif lattice == 'R':
-        cell = np.array([[2.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
-                         [-1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
-                         [-1.0 / 3.0, -2.0 / 3.0, 1.0 / 3.0]])
+        cell = np.array(
+            [
+                [2.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+                [-1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+                [-1.0 / 3.0, -2.0 / 3.0, 1.0 / 3.0],
+            ]
+        )
 
     else:
         raise ValueError('lattice is ' + lattice + '!')

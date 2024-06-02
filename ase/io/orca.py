@@ -23,9 +23,9 @@ def read_geom_orcainp(fd):
         if line[1:].startswith('xyz '):
             startline = index + 1
             stopline = -1
-        elif (line.startswith('end') and stopline == -1):
+        elif line.startswith('end') and stopline == -1:
             stopline = index
-        elif (line.startswith('*') and stopline == -1):
+        elif line.startswith('*') and stopline == -1:
             stopline = index
     # Format and send to read_xyz.
     xyz_text = '%i\n' % (stopline - startline)
@@ -33,7 +33,7 @@ def read_geom_orcainp(fd):
     for line in lines[startline:stopline]:
         xyz_text += line
     atoms = read(StringIO(xyz_text), format='xyz')
-    atoms.set_cell((0., 0., 0.))  # no unit cell defined
+    atoms.set_cell((0.0, 0.0, 0.0))  # no unit cell defined
 
     return atoms
 
@@ -46,8 +46,8 @@ def write_orca(fd, atoms, params):
 
     if 'coords' not in params['orcablocks']:
         fd.write('*xyz')
-        fd.write(" %d" % params['charge'])
-        fd.write(" %d \n" % params['mult'])
+        fd.write(' %d' % params['charge'])
+        fd.write(' %d \n' % params['mult'])
         for atom in atoms:
             if atom.tag == 71:  # 71 is ascii G (Ghost)
                 symbol = atom.symbol + ' : '
@@ -56,11 +56,11 @@ def write_orca(fd, atoms, params):
             fd.write(
                 symbol
                 + str(atom.position[0])
-                + " "
+                + ' '
                 + str(atom.position[1])
-                + " "
+                + ' '
                 + str(atom.position[2])
-                + "\n"
+                + '\n'
             )
         fd.write('*\n')
 
@@ -79,7 +79,7 @@ def read_energy(lines: List[str]) -> Optional[float]:
     energy = None
     for line in lines:
         if 'FINAL SINGLE POINT ENERGY' in line:
-            if "Wavefunction not fully converged" in line:
+            if 'Wavefunction not fully converged' in line:
                 energy = float('nan')
             else:
                 energy = float(line.split()[-1])
@@ -89,7 +89,7 @@ def read_energy(lines: List[str]) -> Optional[float]:
 
 
 def read_center_of_mass(lines: List[str]) -> Optional[np.ndarray]:
-    """ Scan through text for the center of mass """
+    """Scan through text for the center of mass"""
     # Example:
     # 'The origin for moment calculation is the CENTER OF MASS  =
     # ( 0.002150, -0.296255  0.086315)'
@@ -120,7 +120,7 @@ def read_dipole(lines: List[str]) -> Optional[np.ndarray]:
 
 @reader
 def read_orca_output(fd):
-    """ From the ORCA output file: Read Energy and dipole moment
+    """From the ORCA output file: Read Energy and dipole moment
     in the frame of reference of the center of mass "
     """
     lines = fd.readlines()
@@ -153,7 +153,7 @@ def read_orca_engrad(fd):
             gradients = []
             tempgrad = []
             continue
-        if getgrad and "#" not in line:
+        if getgrad and '#' not in line:
             grad = line.split()[-1]
             tempgrad.append(float(grad))
             if len(tempgrad) == 3:

@@ -19,7 +19,8 @@ def installed2():
         if os.getenv(env):
             break
     else:
-        pytest.skip('Neither ASE_VASP_COMMAND, VASP_COMMAND nor '
-                    'VASP_SCRIPT defined')
+        pytest.skip(
+            'Neither ASE_VASP_COMMAND, VASP_COMMAND nor ' 'VASP_SCRIPT defined'
+        )
 
     return True

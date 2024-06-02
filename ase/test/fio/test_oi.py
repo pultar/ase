@@ -19,10 +19,12 @@ def atoms():
     a = 5.0
     d = 1.9
     c = a / 2
-    atoms = Atoms('AuH',
-                  positions=[(0, c, c), (d, c, c)],
-                  cell=(2 * d, a, a),
-                  pbc=(1, 0, 0))
+    atoms = Atoms(
+        'AuH',
+        positions=[(0, c, c), (d, c, c)],
+        cell=(2 * d, a, a),
+        pbc=(1, 0, 0),
+    )
     extra = np.array([2.3, 4.2])
     atoms.set_array('extra', extra)
     atoms *= (2, 1, 1)
@@ -30,23 +32,37 @@ def atoms():
     # attach some results to the Atoms.
     # These are serialised by the extxyz writer.
 
-    spc = SinglePointCalculator(atoms,
-                                energy=-1.0,
-                                stress=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-                                forces=-1.0 * atoms.positions)
+    spc = SinglePointCalculator(
+        atoms,
+        energy=-1.0,
+        stress=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        forces=-1.0 * atoms.positions,
+    )
     atoms.calc = spc
     return atoms
 
 
 def check(a, ref_atoms, format):
-    assert abs(a.positions - ref_atoms.positions).max() < 1e-6, \
-        (a.positions - ref_atoms.positions)
-    if format in ['traj', 'cube', 'cfg', 'struct', 'gen', 'extxyz',
-                  'db', 'json', 'trj']:
+    assert abs(a.positions - ref_atoms.positions).max() < 1e-6, (
+        a.positions - ref_atoms.positions
+    )
+    if format in [
+        'traj',
+        'cube',
+        'cfg',
+        'struct',
+        'gen',
+        'extxyz',
+        'db',
+        'json',
+        'trj',
+    ]:
         assert abs(a.cell - ref_atoms.cell).max() < 1e-6
     if format in ['cfg', 'extxyz']:
-        assert abs(a.get_array('extra') -
-                   ref_atoms.get_array('extra')).max() < 1e-6
+        assert (
+            abs(a.get_array('extra') - ref_atoms.get_array('extra')).max()
+            < 1e-6
+        )
     if format in ['extxyz', 'traj', 'trj', 'db', 'json']:
         assert (a.pbc == ref_atoms.pbc).all()
         assert a.get_potential_energy() == ref_atoms.get_potential_energy()
@@ -108,11 +124,15 @@ def test_ioformat(format, atoms, catch_warnings):
     images = [atoms, atoms]
 
     io = ioformats[format]
-    print('{:20}{}{}{}{}'.format(format,
-                                 ' R'[io.can_read],
-                                 ' W'[io.can_write],
-                                 '+1'[io.single],
-                                 'SF'[io.acceptsfd]))
+    print(
+        '{:20}{}{}{}{}'.format(
+            format,
+            ' R'[io.can_read],
+            ' W'[io.can_write],
+            '+1'[io.single],
+            'SF'[io.acceptsfd],
+        )
+    )
     fname1 = f'io-test.1.{format}'
     fname2 = f'io-test.2.{format}'
     if io.can_write:

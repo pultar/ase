@@ -32,7 +32,7 @@ def surface(lattice, indices, layers, vacuum=None, tol=1e-10, periodic=False):
         lattice = bulk(lattice, cubic=True)
 
     h, k, l = indices  # noqa (E741, the variable l)
-    h0, k0, l0 = (indices == 0)
+    h0, k0, l0 = indices == 0
 
     if h0 and k0 or h0 and l0 or k0 and l0:  # if two indices are zero
         if not h0:
@@ -47,10 +47,12 @@ def surface(lattice, indices, layers, vacuum=None, tol=1e-10, periodic=False):
 
         # constants describing the dot product of basis c1 and c2:
         # dot(c1,c2) = k1+i*k2, i in Z
-        k1 = np.dot(p * (k * a1 - h * a2) + q * (l * a1 - h * a3),
-                    l * a2 - k * a3)
-        k2 = np.dot(l * (k * a1 - h * a2) - k * (l * a1 - h * a3),
-                    l * a2 - k * a3)
+        k1 = np.dot(
+            p * (k * a1 - h * a2) + q * (l * a1 - h * a3), l * a2 - k * a3
+        )
+        k2 = np.dot(
+            l * (k * a1 - h * a2) - k * (l * a1 - h * a3), l * a2 - k * a3
+        )
 
         if abs(k2) > tol:
             i = -int(round(k1 / k2))  # i corresponding to the optimal basis
@@ -77,18 +79,31 @@ def build(lattice, basis, layers, tol, periodic):
     surf *= (1, 1, layers)
 
     a1, a2, a3 = surf.cell
-    surf.set_cell([a1, a2,
-                   np.cross(a1, a2) * np.dot(a3, np.cross(a1, a2)) /
-                   norm(np.cross(a1, a2))**2])
+    surf.set_cell(
+        [
+            a1,
+            a2,
+            np.cross(a1, a2)
+            * np.dot(a3, np.cross(a1, a2))
+            / norm(np.cross(a1, a2)) ** 2,
+        ]
+    )
 
     # Change unit cell to have the x-axis parallel with a surface vector
     # and z perpendicular to the surface:
     a1, a2, a3 = surf.cell
-    surf.set_cell([(norm(a1), 0, 0),
-                   (np.dot(a1, a2) / norm(a1),
-                    np.sqrt(norm(a2)**2 - (np.dot(a1, a2) / norm(a1))**2), 0),
-                   (0, 0, norm(a3))],
-                  scale_atoms=True)
+    surf.set_cell(
+        [
+            (norm(a1), 0, 0),
+            (
+                np.dot(a1, a2) / norm(a1),
+                np.sqrt(norm(a2) ** 2 - (np.dot(a1, a2) / norm(a1)) ** 2),
+                0,
+            ),
+            (0, 0, norm(a3)),
+        ],
+        scale_atoms=True,
+    )
 
     surf.pbc = (True, True, periodic)
 

@@ -22,33 +22,28 @@ def test_directory_and_label():
 
     # We cannot redundantly specify directory
     with pytest.raises(ValueError):
-        calc = Calculator(directory='somedir',
-                          label='anotherdir/label')
+        calc = Calculator(directory='somedir', label='anotherdir/label')
 
     # Test only directory in directory
-    calc = Calculator(directory='somedir',
-                      label='label')
+    calc = Calculator(directory='somedir', label='label')
 
     assert calc.directory == 'somedir'
     assert calc.label == 'somedir/label'
 
     wdir = '/home/somedir'
-    calc = Calculator(directory=wdir,
-                      label='label')
+    calc = Calculator(directory=wdir, label='label')
 
     assert calc.directory == normalize(wdir)
     assert calc.label == normalize(wdir) + '/label'
 
     # Test we can handle pathlib directories
     wdir = Path('/home/somedir')
-    calc = Calculator(directory=wdir,
-                      label='label')
+    calc = Calculator(directory=wdir, label='label')
     assert calc.directory == normalize(wdir)
     assert calc.label == normalize(wdir) + '/label'
 
     with pytest.raises(ValueError):
-        calc = Calculator(directory=wdir,
-                          label='somedir/label')
+        calc = Calculator(directory=wdir, label='somedir/label')
 
     # Passing in empty directories with directories in label should be OK
     for wdir in ['somedir', '/home/directory']:

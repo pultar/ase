@@ -12,8 +12,7 @@ class ELK(FileIOCalculator, GetOutputsMixin):
     ignored_changes = {'pbc'}
     discard_results_on_any_change = True
 
-    fileio_rules = FileIOCalculator.ruleset(
-        stdout_name='elk.out')
+    fileio_rules = FileIOCalculator.ruleset(stdout_name='elk.out')
 
     def __init__(self, **kwargs):
         """Construct ELK calculator.
@@ -33,11 +32,13 @@ class ELK(FileIOCalculator, GetOutputsMixin):
             parameters['tforce'] = True
 
         directory = Path(self.directory)
-        write(directory / 'elk.in', atoms, parameters=parameters,
-              format='elk-in')
+        write(
+            directory / 'elk.in', atoms, parameters=parameters, format='elk-in'
+        )
 
     def read_results(self):
         from ase.outputs import Properties
+
         reader = ElkReader(self.directory)
         dct = dict(reader.read_everything())
 

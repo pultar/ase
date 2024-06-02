@@ -17,8 +17,8 @@ def test_relax(KIM, testdir):
     energy_ref = -0.56  # eV
 
     # Create structure and calculator
-    atoms = Icosahedron("Ar", latticeconstant=3.0, noshells=2)
-    calc = KIM("ex_model_Ar_P_Morse_07C")
+    atoms = Icosahedron('Ar', latticeconstant=3.0, noshells=2)
+    calc = KIM('ex_model_Ar_P_Morse_07C')
     atoms.calc = calc
 
     with BFGS(atoms, maxstep=0.04, alpha=70.0, logfile=None) as opt:

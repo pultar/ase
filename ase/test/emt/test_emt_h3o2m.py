@@ -17,12 +17,16 @@ angle = radians(104.5)
 
 @pytest.fixture()
 def initial():
-    return Atoms('HOHOH',
-                 positions=[(-sin(angle) * doht, 0., cos(angle) * doht),
-                            (0., 0., 0.),
-                            (0., 0., doh),
-                            (0., 0., doo),
-                            (sin(angle) * doht, 0., doo - cos(angle) * doht)])
+    return Atoms(
+        'HOHOH',
+        positions=[
+            (-sin(angle) * doht, 0.0, cos(angle) * doht),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, doh),
+            (0.0, 0.0, doo),
+            (sin(angle) * doht, 0.0, doo - cos(angle) * doht),
+        ],
+    )
 
 
 @pytest.fixture()

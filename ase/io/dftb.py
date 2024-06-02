@@ -59,7 +59,7 @@ def read_dftb(fd):
             if 'TypeNames' in line:
                 col = line.split()
                 for i in range(3, len(col) - 1):
-                    type_names.append(col[i].strip("\""))
+                    type_names.append(col[i].strip('"'))
             elif 'Periodic' in line:
                 if 'Yes' in line:
                     my_pbc = True
@@ -68,12 +68,13 @@ def read_dftb(fd):
                     extraline = lines[iline + imycell + 1]
                     cols = extraline.split()
                     mycell.append(
-                        [float(cols[0]), float(cols[1]), float(cols[2])])
+                        [float(cols[0]), float(cols[1]), float(cols[2])]
+                    )
             else:
                 pass
 
     if not my_pbc:
-        mycell = [0.] * 3
+        mycell = [0.0] * 3
 
     start_reading_coords = False
     stop_reading_coords = False
@@ -86,8 +87,11 @@ def read_dftb(fd):
             if start_reading_coords:
                 if '}' in line:
                     stop_reading_coords = True
-            if (start_reading_coords and not stop_reading_coords
-                    and 'TypesAndCoordinates' not in line):
+            if (
+                start_reading_coords
+                and not stop_reading_coords
+                and 'TypesAndCoordinates' not in line
+            ):
                 typeindexstr, xxx, yyy, zzz = line.split()[:4]
                 typeindex = int(typeindexstr)
                 symbol = type_names[typeindex - 1]
@@ -95,18 +99,22 @@ def read_dftb(fd):
                 atoms_pos.append([float(xxx), float(yyy), float(zzz)])
 
     if fractional:
-        atoms = Atoms(scaled_positions=atoms_pos, symbols=atom_symbols,
-                      cell=mycell, pbc=my_pbc)
+        atoms = Atoms(
+            scaled_positions=atoms_pos,
+            symbols=atom_symbols,
+            cell=mycell,
+            pbc=my_pbc,
+        )
     elif not fractional:
-        atoms = Atoms(positions=atoms_pos, symbols=atom_symbols,
-                      cell=mycell, pbc=my_pbc)
+        atoms = Atoms(
+            positions=atoms_pos, symbols=atom_symbols, cell=mycell, pbc=my_pbc
+        )
 
     return atoms
 
 
 def read_dftb_velocities(atoms, filename):
-    """Method to read velocities (AA/ps) from DFTB+ output file geo_end.xyz
-    """
+    """Method to read velocities (AA/ps) from DFTB+ output file geo_end.xyz"""
     from ase.units import second
 
     # AA/ps -> ase units
@@ -126,9 +134,13 @@ def read_dftb_velocities(atoms, filename):
     last_lines = lines_ok[-natoms:]
     for iline, line in enumerate(last_lines):
         inp = line.split()
-        velocities.append([float(inp[5]) * AngdivPs2ASE,
-                           float(inp[6]) * AngdivPs2ASE,
-                           float(inp[7]) * AngdivPs2ASE])
+        velocities.append(
+            [
+                float(inp[5]) * AngdivPs2ASE,
+                float(inp[6]) * AngdivPs2ASE,
+                float(inp[7]) * AngdivPs2ASE,
+            ]
+        )
 
     atoms.set_velocities(velocities)
     return atoms
@@ -156,15 +168,18 @@ def read_dftb_lattice(fileobj, images=None):
                 try:
                     line = [float(x) for x in line]
                 except ValueError:
-                    raise ValueError('Lattice vector elements should be of '
-                                     'type float.')
+                    raise ValueError(
+                        'Lattice vector elements should be of ' 'type float.'
+                    )
                 vec.extend(line)
             lattices.append(np.array(vec).reshape((3, 3)))
 
     if append:
         if len(images) != len(lattices):
-            raise ValueError('Length of images given does not match number of '
-                             'cell vectors found')
+            raise ValueError(
+                'Length of images given does not match number of '
+                'cell vectors found'
+            )
 
         for i, atoms in enumerate(images):
             atoms.set_cell(lattices[i])
@@ -182,14 +197,15 @@ def write_dftb(
     fractional: bool = False,
 ):
     """Write structure in GEN format (refer to DFTB+ manual).
-       Multiple snapshots are not allowed. """
+    Multiple snapshots are not allowed."""
     from ase.io.gen import write_gen
+
     write_gen(fileobj, images, fractional=fractional)
 
 
 def write_dftb_velocities(atoms, filename):
     """Method to write velocities (in atomic units) from ASE
-       to a file to be read by dftb+
+    to a file to be read by dftb+
     """
     from ase.units import AUT, Bohr
 
@@ -199,7 +215,11 @@ def write_dftb_velocities(atoms, filename):
     with open(filename, 'w') as fd:
         velocities = atoms.get_velocities()
         for velocity in velocities:
-            fd.write(' %19.16f %19.16f %19.16f \n'
-                     % (velocity[0] / ASE2au,
-                        velocity[1] / ASE2au,
-                        velocity[2] / ASE2au))
+            fd.write(
+                ' %19.16f %19.16f %19.16f \n'
+                % (
+                    velocity[0] / ASE2au,
+                    velocity[1] / ASE2au,
+                    velocity[2] / ASE2au,
+                )
+            )

@@ -1,4 +1,5 @@
 """Tests for Zmatrix"""
+
 import os
 
 import pytest
@@ -7,7 +8,7 @@ from ase import Atoms
 from ase.constraints import FixAtoms, FixCartesian, FixedLine, FixedPlane
 
 
-@pytest.fixture(name="atoms")
+@pytest.fixture(name='atoms')
 def fixture_atoms():
     """methane molecule"""
     positions = [
@@ -58,7 +59,7 @@ def test_siesta_zmat(siesta_factory, atoms: Atoms):
     assert any(line.split()[4:9] == ['0', '0', '1', '4', 'H'] for line in lines)
 
 
-@pytest.mark.parametrize("constraint_class", [FixedLine, FixedPlane])
+@pytest.mark.parametrize('constraint_class', [FixedLine, FixedPlane])
 def test_invalid_constraint(siesta_factory, atoms: Atoms, constraint_class):
     """Test if an invalid constraint return RuntimeError."""
 

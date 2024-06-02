@@ -15,11 +15,13 @@ def test_qmmm(factory):
 
     lj = LJInteractions({('O', 'O'): (epsilon0, sigma0)})
 
-    atoms.calc = EIQMMM(selection=[0, 1, 2],
-                        qmcalc=qmcalc,
-                        mmcalc=TIP4P(),
-                        interaction=lj,
-                        output='orca_qmmm.log')
+    atoms.calc = EIQMMM(
+        selection=[0, 1, 2],
+        qmcalc=qmcalc,
+        mmcalc=TIP4P(),
+        interaction=lj,
+        output='orca_qmmm.log',
+    )
 
     e = atoms.get_potential_energy()
 

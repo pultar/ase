@@ -12,9 +12,12 @@ import re
 
 import numpy as np
 
-from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           read_stdout)
+from ase.calculators.genericfileio import (
+    BaseProfile,
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+    read_stdout,
+)
 from ase.io.aims import write_aims, write_control
 
 
@@ -155,8 +158,7 @@ class AimsTemplate(CalculatorTemplate):
         write_control(control, atoms, parameters)
 
     def execute(self, directory, profile):
-        profile.run(directory, None, self.outputname,
-                    errorfile=self.errorname)
+        profile.run(directory, None, self.outputname, errorfile=self.errorname)
 
     def read_results(self, directory):
         from ase.io.aims import read_aims_results
@@ -219,7 +221,7 @@ class Aims(GenericFileIOCalculator):
 
 
 class AimsCube:
-    'Object to ensure the output of cube files, can be attached to Aims object'
+    "Object to ensure the output of cube files, can be attached to Aims object"
 
     def __init__(
         self,

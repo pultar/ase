@@ -1,4 +1,4 @@
-""" test run for gromacs calculator """
+"""test run for gromacs calculator"""
 
 import pytest
 
@@ -79,9 +79,9 @@ def test_gromacs(factory):
         vdwtype='shift',
         rvdw='0.6',
         rvdw_switch='0.55',
-        DispCorr='Ener')
-    calc.set_own_params_runs(
-        'init_structure', GRO_INIT_FILE)
+        DispCorr='Ener',
+    )
+    calc.set_own_params_runs('init_structure', GRO_INIT_FILE)
     calc.generate_topology_and_g96file()
     calc.write_input()
     calc.generate_gromacs_run_file()

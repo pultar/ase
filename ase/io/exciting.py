@@ -17,6 +17,7 @@ excitingtools.exciting_dict_parsers.groundstate_parser.parse_eigval
 Note: excitingtools must be installed using `pip install excitingtools` for
 the exciting io to work.
 """
+
 from pathlib import Path
 from typing import Dict, Optional, Union
 
@@ -38,8 +39,9 @@ def parse_output(info_out_file_path):
         A dictionary containing information about how the calculation was setup
         and results from the calculations SCF cycles.
     """
-    from excitingtools.exciting_dict_parsers.groundstate_parser import \
-        parse_info_out
+    from excitingtools.exciting_dict_parsers.groundstate_parser import (
+        parse_info_out,
+    )
 
     # Check for the file:
     if not Path(info_out_file_path).is_file():
@@ -48,9 +50,13 @@ def parse_output(info_out_file_path):
 
 
 def write_input_xml_file(
-        file_name, atoms: ase.Atoms, ground_state_input: Dict,
-        species_path, title=None,
-        properties_input: Optional[Dict] = None):
+    file_name,
+    atoms: ase.Atoms,
+    ground_state_input: Dict,
+    species_path,
+    title=None,
+    properties_input: Optional[Dict] = None,
+):
     """Write input xml file for exciting calculation.
 
     Args:
@@ -61,8 +67,12 @@ def write_input_xml_file(
             after performing the ground state calculation (e.g. bandstructure
             or DOS.)
     """
-    from excitingtools import (ExcitingGroundStateInput, ExcitingInputXML,
-                               ExcitingPropertiesInput, ExcitingStructure)
+    from excitingtools import (
+        ExcitingGroundStateInput,
+        ExcitingInputXML,
+        ExcitingPropertiesInput,
+        ExcitingStructure,
+    )
 
     # Convert ground state dictionary into expected input object.
     ground_state = ExcitingGroundStateInput(**ground_state_input)
@@ -72,16 +82,19 @@ def write_input_xml_file(
         properties_input = ExcitingPropertiesInput(**properties_input)
     else:
         properties_input = ExcitingPropertiesInput()
-    input_xml = ExcitingInputXML(structure=structure,
-                                 groundstate=ground_state,
-                                 properties=properties_input,
-                                 title=title)
+    input_xml = ExcitingInputXML(
+        structure=structure,
+        groundstate=ground_state,
+        properties=properties_input,
+        title=title,
+    )
 
     input_xml.write(file_name)
 
 
 def ase_atoms_from_exciting_input_xml(
-        input_xml_path: Union[Path, str]) -> ase.Atoms:
+    input_xml_path: Union[Path, str],
+) -> ase.Atoms:
     """Helper function to read structure from input.xml file.
 
     Note, this function operates on the input.xml file that is the input
@@ -99,5 +112,6 @@ def ase_atoms_from_exciting_input_xml(
     """
     from excitingtools.exciting_obj_parsers.input_xml import parse_input_xml
     from excitingtools.structure.ase_utilities import exciting_structure_to_ase
+
     structure = parse_input_xml(input_xml_path).structure
     return exciting_structure_to_ase(structure)

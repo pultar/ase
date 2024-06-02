@@ -4,7 +4,6 @@ from ase.units import Bohr, Hartree, fs, kB, kcal, kJ, mol
 
 
 def test_things():
-
     assert [0, 0, 0] in monkhorst_pack((1, 3, 5)).tolist()
     assert [0, 0, 0] not in monkhorst_pack((1, 3, 6)).tolist()
     assert len(monkhorst_pack((3, 4, 6))) == 3 * 4 * 6

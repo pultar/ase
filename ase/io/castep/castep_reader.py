@@ -63,7 +63,6 @@ def read_castep_castep(fd, index=-1):
     species_pot = []
     castep_warnings = []
     for i, line in enumerate(fd):
-
         if i > line_end:
             break
 
@@ -81,8 +80,9 @@ def read_castep_castep(fd, index=-1):
                 if len(fields) == 0:
                     break
         elif 'Fractional coordinates of atoms' in line:
-            species, custom_species, positions_frac = \
+            species, custom_species, positions_frac = (
                 _read_fractional_coordinates(fd, n_atoms)
+            )
         elif 'Files used for pseudopotentials' in line:
             for line in fd:
                 line = fd.readline()
@@ -241,8 +241,9 @@ def _find_last_record(fd):
     """
     start = -1
     for i, line in enumerate(fd):
-        if (('Welcome' in line or 'Materials Studio' in line)
-                and 'CASTEP' in line):
+        if (
+            'Welcome' in line or 'Materials Studio' in line
+        ) and 'CASTEP' in line:
             start = i
 
     if start < 0:
@@ -277,6 +278,7 @@ def _read_header(out: io.TextIOBase):
     parameters : dict
         Dictionary storing keys and values of a .param file.
     """
+
     def _parse_on_off(_: str):
         return {'on': True, 'off': False}[_]
 
@@ -481,7 +483,7 @@ def _read_stress(out: io.TextIOBase):
     results['stress'] = np.array(stress) * units.GPa
     results['stress'] = results['stress'].reshape(9)[[0, 4, 8, 5, 2, 1]]
     line = out.readline()
-    if "Pressure:" in line:
+    if 'Pressure:' in line:
         results['pressure'] = float(line.split()[-2]) * units.GPa
     return results
 

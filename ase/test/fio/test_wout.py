@@ -1,4 +1,5 @@
 """Test Wannier90 wout format."""
+
 import io
 
 from ase.io import read
@@ -35,5 +36,7 @@ def test_wout_all():
     file = io.StringIO(wout)
     result = read_wout_all(file)
     assert result['spreads'][0] == 0.85842654
-    assert abs(result['centers'] -
-               result['atoms'].get_center_of_mass()).max() < 1e-5
+    assert (
+        abs(result['centers'] - result['atoms'].get_center_of_mass()).max()
+        < 1e-5
+    )

@@ -6,8 +6,13 @@ from ase.io import read, write
 calc = pytest.mark.calculator
 
 
-@calc('aims', sc_accuracy_rho=5.e-3, sc_accuracy_forces=1e-4, xc='LDA',
-      kpts=(1, 1, 1))
+@calc(
+    'aims',
+    sc_accuracy_rho=5.0e-3,
+    sc_accuracy_forces=1e-4,
+    xc='LDA',
+    kpts=(1, 1, 1),
+)
 @calc('gpaw', mode='lcao', basis='sz(dzp)')
 @calc('abinit', 'cp2k', 'emt', 'psi4')
 @calc('vasp', xc='lda', prec='low')

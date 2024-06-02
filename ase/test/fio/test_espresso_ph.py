@@ -2,23 +2,27 @@ from io import StringIO
 
 import numpy as np
 
-from ase.io.espresso import (Namelist, read_espresso_ph, read_fortran_namelist,
-                             write_espresso_ph)
+from ase.io.espresso import (
+    Namelist,
+    read_espresso_ph,
+    read_fortran_namelist,
+    write_espresso_ph,
+)
 
 
 def test_write_espresso_ph_single():
     input_data = {
-        "amass(1)": 1.0,
-        "amass(2)": 2.0,
-        "prefix": "prefix",
-        "outdir": "/path/to/outdir",
-        "eth_rps": 0.1,
-        "qplot": False,
-        "ldisp": False,
-        "trans": True,
-        "tr2_ph": 1e-12,
-        "alpha_mix(1)": 0.1,
-        "nat_todo": 0,
+        'amass(1)': 1.0,
+        'amass(2)': 2.0,
+        'prefix': 'prefix',
+        'outdir': '/path/to/outdir',
+        'eth_rps': 0.1,
+        'qplot': False,
+        'ldisp': False,
+        'trans': True,
+        'tr2_ph': 1e-12,
+        'alpha_mix(1)': 0.1,
+        'nat_todo': 0,
     }
 
     qpts = (0.5, -0.1, 1 / 3)
@@ -31,20 +35,20 @@ def test_write_espresso_ph_single():
     write_espresso_ph(string_io, input_data=input_data, qpts=qpts)
 
     expected = (
-        "&INPUTPH\n"
-        "   amass(1)         = 1.0\n"
-        "   amass(2)         = 2.0\n"
+        '&INPUTPH\n'
+        '   amass(1)         = 1.0\n'
+        '   amass(2)         = 2.0\n'
         "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
-        "   tr2_ph           = 1e-12\n"
-        "   alpha_mix(1)     = 0.1\n"
-        "   trans            = .true.\n"
-        "   eth_rps          = 0.1\n"
-        "   qplot            = .false.\n"
-        "   ldisp            = .false.\n"
-        "   nat_todo         = 0\n"
-        "/\n"
-        "0.50000000 -0.10000000 0.33333333\n"
+        '   tr2_ph           = 1e-12\n'
+        '   alpha_mix(1)     = 0.1\n'
+        '   trans            = .true.\n'
+        '   eth_rps          = 0.1\n'
+        '   qplot            = .false.\n'
+        '   ldisp            = .false.\n'
+        '   nat_todo         = 0\n'
+        '/\n'
+        '0.50000000 -0.10000000 0.33333333\n'
     )
 
     string_io.seek(0)
@@ -57,13 +61,13 @@ def test_write_espresso_ph_single():
 
 def test_write_espresso_ph_list():
     input_data = {
-        "amass(1)": 1.0,
-        "amass(2)": 2.0,
-        "prefix": "prefix",
-        "outdir": "/path/to/outdir",
-        "eth_rps": 0.1,
-        "qplot": True,
-        "ldisp": True,
+        'amass(1)': 1.0,
+        'amass(2)': 2.0,
+        'prefix': 'prefix',
+        'outdir': '/path/to/outdir',
+        'eth_rps': 0.1,
+        'qplot': True,
+        'ldisp': True,
     }
 
     qpts = [(0.5, -0.1, 1 / 3, 2), (0.1, 0.2, 0.3, 10), (0.2, 0.3, 0.4, 1)]
@@ -76,19 +80,19 @@ def test_write_espresso_ph_list():
     write_espresso_ph(string_io, input_data=input_data, qpts=qpts)
 
     expected = (
-        "&INPUTPH\n"
-        "   amass(1)         = 1.0\n"
-        "   amass(2)         = 2.0\n"
+        '&INPUTPH\n'
+        '   amass(1)         = 1.0\n'
+        '   amass(2)         = 2.0\n'
         "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
-        "   eth_rps          = 0.1\n"
-        "   qplot            = .true.\n"
-        "   ldisp            = .true.\n"
-        "/\n"
-        "3\n"
-        "0.50000000 -0.10000000 0.33333333 2\n"
-        "0.10000000 0.20000000 0.30000000 10\n"
-        "0.20000000 0.30000000 0.40000000 1\n"
+        '   eth_rps          = 0.1\n'
+        '   qplot            = .true.\n'
+        '   ldisp            = .true.\n'
+        '/\n'
+        '3\n'
+        '0.50000000 -0.10000000 0.33333333 2\n'
+        '0.10000000 0.20000000 0.30000000 10\n'
+        '0.20000000 0.30000000 0.40000000 1\n'
     )
 
     string_io.seek(0)
@@ -101,14 +105,14 @@ def test_write_espresso_ph_list():
 
 def test_write_espresso_ph_nat_todo():
     input_data = {
-        "amass(1)": 1.0,
-        "amass(2)": 2.0,
-        "prefix": "prefix",
-        "outdir": "/path/to/outdir",
-        "eth_rps": 0.1,
-        "qplot": True,
-        "nat_todo": 3,
-        "ldisp": True,
+        'amass(1)': 1.0,
+        'amass(2)': 2.0,
+        'prefix': 'prefix',
+        'outdir': '/path/to/outdir',
+        'eth_rps': 0.1,
+        'qplot': True,
+        'nat_todo': 3,
+        'ldisp': True,
     }
 
     qpts = [(0.5, -0.1, 1 / 3, 1), (0.1, 0.2, 0.3, -1), (0.2, 0.3, 0.4, 4)]
@@ -119,30 +123,25 @@ def test_write_espresso_ph_nat_todo():
     string_io = StringIO()
 
     write_espresso_ph(
-        string_io,
-        input_data=input_data,
-        qpts=qpts,
-        nat_todo_indices=[
-            1,
-            2,
-            3])
+        string_io, input_data=input_data, qpts=qpts, nat_todo_indices=[1, 2, 3]
+    )
 
     expected = (
-        "&INPUTPH\n"
-        "   amass(1)         = 1.0\n"
-        "   amass(2)         = 2.0\n"
+        '&INPUTPH\n'
+        '   amass(1)         = 1.0\n'
+        '   amass(2)         = 2.0\n'
         "   outdir           = '/path/to/outdir'\n"
         "   prefix           = 'prefix'\n"
-        "   eth_rps          = 0.1\n"
-        "   qplot            = .true.\n"
-        "   ldisp            = .true.\n"
-        "   nat_todo         = 3\n"
-        "/\n"
-        "3\n"
-        "0.50000000 -0.10000000 0.33333333 1\n"
-        "0.10000000 0.20000000 0.30000000 -1\n"
-        "0.20000000 0.30000000 0.40000000 4\n"
-        "1 2 3\n"
+        '   eth_rps          = 0.1\n'
+        '   qplot            = .true.\n'
+        '   ldisp            = .true.\n'
+        '   nat_todo         = 3\n'
+        '/\n'
+        '3\n'
+        '0.50000000 -0.10000000 0.33333333 1\n'
+        '0.10000000 0.20000000 0.30000000 -1\n'
+        '0.20000000 0.30000000 0.40000000 4\n'
+        '1 2 3\n'
     )
 
     string_io.seek(0)
@@ -625,24 +624,24 @@ def test_read_espresso_ph_complex():
     results = read_espresso_ph(fd)
 
     assert len(results) == 3
-    assert results[1]["qpoint"] == (0, 0, 0)
-    assert np.unique(results[1]["freqs"]).shape[0] == 1
-    assert np.unique(results[1]["freqs"])[0] == 0.173268
-    assert len(results[1]["eqpoints"]) == 1
-    assert results[1]["atoms"].symbols == ["Al"]
+    assert results[1]['qpoint'] == (0, 0, 0)
+    assert np.unique(results[1]['freqs']).shape[0] == 1
+    assert np.unique(results[1]['freqs'])[0] == 0.173268
+    assert len(results[1]['eqpoints']) == 1
+    assert results[1]['atoms'].symbols == ['Al']
 
-    assert results[2]["qpoint"] == (-0.25, 0.25, -0.25)
-    assert np.unique(results[2]["freqs"]).shape[0] == 2
-    assert np.unique(results[2]["freqs"])[1] == 6.338040
-    assert len(results[2]["eqpoints"]) == 8
-    assert results[2]["atoms"].symbols == ["Al"]
+    assert results[2]['qpoint'] == (-0.25, 0.25, -0.25)
+    assert np.unique(results[2]['freqs']).shape[0] == 2
+    assert np.unique(results[2]['freqs'])[1] == 6.338040
+    assert len(results[2]['eqpoints']) == 8
+    assert results[2]['atoms'].symbols == ['Al']
 
     for i in np.arange(0.005, 0.055, 0.005):
-        assert results[2]["ep_data"][round(i, 3)]
+        assert results[2]['ep_data'][round(i, 3)]
 
-    assert results[2]["ep_data"][0.005] == {
-        "dos": 1.339210,
-        "fermi": 8.321793,
-        "lambdas": [0.0023, 0.0023, 0.0285],
-        "gammas": [0.04, 0.04, 1.47],
+    assert results[2]['ep_data'][0.005] == {
+        'dos': 1.339210,
+        'fermi': 8.321793,
+        'lambdas': [0.0023, 0.0023, 0.0285],
+        'gammas': [0.04, 0.04, 1.47],
     }

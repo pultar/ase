@@ -68,15 +68,18 @@ def test_read_abinit_output():
     atoms = results.pop('atoms')
     assert all(atoms.symbols == 'OO')
     assert atoms.positions == pytest.approx(
-        np.array([[2.5, 2.5, 3.7], [2.5, 2.5, 2.5]]))
+        np.array([[2.5, 2.5, 3.7], [2.5, 2.5, 2.5]])
+    )
     assert all(atoms.pbc)
     assert atoms.cell[:] == pytest.approx(
-        np.array([[5.0, 0.0, 0.1], [0.0, 6.0, 0.0], [0.0, 0.0, 7.0]]))
+        np.array([[5.0, 0.0, 0.1], [0.0, 6.0, 0.0], [0.0, 0.0, 7.0]])
+    )
 
     ref_stress = pytest.approx([2.3, 2.4, 2.5, 3.1, 3.2, 3.3])
     assert results.pop('stress') / (Hartree / Bohr**3) == ref_stress
     assert results.pop('forces') == pytest.approx(
-        np.array([[-0.1, -0.3, 0.4], [-0.2, -0.4, -0.5]]))
+        np.array([[-0.1, -0.3, 0.4], [-0.2, -0.4, -0.5]])
+    )
 
     for name in 'energy', 'free_energy':
         assert results.pop(name) / Hartree == -42.5
@@ -95,15 +98,11 @@ eig_text = """\
 
 
 def test_parse_eig_with_fermiheader():
-    eigval_ref = np.array([
-        [-0.2, 0.2, 0.3],
-        [-0.3, 0.4, 0.5]
-    ]).reshape(1, 2, 3)  # spin x kpts x bands
+    eigval_ref = np.array([[-0.2, 0.2, 0.3], [-0.3, 0.4, 0.5]]).reshape(
+        1, 2, 3
+    )  # spin x kpts x bands
 
-    kpts_ref = np.array([
-        [0.2, 0.3, 0.4],
-        [0.3, 0.4, 0.5]
-    ])
+    kpts_ref = np.array([[0.2, 0.3, 0.4], [0.3, 0.4, 0.5]])
 
     weights_ref = [0.1, 0.2]
 

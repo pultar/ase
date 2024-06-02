@@ -38,9 +38,9 @@ def run_server(launchclient=True, sockettype='unix'):
         assert sockettype == 'inet'
         port = inet_port
 
-    with SocketIOCalculator(log=sys.stdout, port=port,
-                            unixsocket=unixsocket,
-                            timeout=timeout) as calc:
+    with SocketIOCalculator(
+        log=sys.stdout, port=port, unixsocket=unixsocket, timeout=timeout
+    ) as calc:
         if launchclient:
             thread = launch_client_thread(port=port, unixsocket=unixsocket)
         atoms.calc = calc
@@ -83,9 +83,9 @@ def run_client(port, unixsocket):
 
     try:
         with open('client.log', 'w') as fd:
-            client = SocketClient(log=fd, port=port,
-                                  unixsocket=unixsocket,
-                                  timeout=timeout)
+            client = SocketClient(
+                log=fd, port=port, unixsocket=unixsocket, timeout=timeout
+            )
             client.run(atoms, use_stress=False)
     except BrokenPipeError:
         # I think we can find a way to close sockets so as not to get an
@@ -99,15 +99,19 @@ def launch_client_thread(port, unixsocket):
     return thread
 
 
-unix_only = pytest.mark.skipif(os.name != 'posix',
-                               reason='requires unix platform')
+unix_only = pytest.mark.skipif(
+    os.name != 'posix', reason='requires unix platform'
+)
 
 
 @pytest.mark.optimize()
-@pytest.mark.parametrize('sockettype', [
-    'inet',
-    pytest.param('unix', marks=unix_only),
-])
+@pytest.mark.parametrize(
+    'sockettype',
+    [
+        'inet',
+        pytest.param('unix', marks=unix_only),
+    ],
+)
 def test_ipi_protocol(sockettype, testdir):
     try:
         run_server(sockettype=sockettype)

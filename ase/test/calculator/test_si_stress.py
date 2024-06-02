@@ -8,8 +8,7 @@ from ase.build import bulk
 # stress[4] and [5].
 # These references values are based on "consensus" between codes i.e.
 # whatever it takes to get them to pass this test.
-ref_stress = np.array([-0.22, -0.17, -0.17,
-                       -0.17, 0.18, 0.18])
+ref_stress = np.array([-0.22, -0.17, -0.17, -0.17, 0.18, 0.18])
 
 calc = pytest.mark.calculator
 
@@ -18,10 +17,13 @@ calc = pytest.mark.calculator
 @calc('aims', compute_analytical_stress=True)
 @calc('gpaw', mode={'name': 'pw', 'ecut': 350}, txt=None)
 @calc('abinit', chksymtnons=0, ecut=350)
-@calc('espresso',
-      input_data={"control": {"tprnfor": True,
-                              "tstress": True},
-                  "system": {"ecutwfc": 350 / u.Ry}})
+@calc(
+    'espresso',
+    input_data={
+        'control': {'tprnfor': True, 'tstress': True},
+        'system': {'ecutwfc': 350 / u.Ry},
+    },
+)
 @calc('siesta')
 def test_si_stress(factory):
     atoms = bulk('Si')

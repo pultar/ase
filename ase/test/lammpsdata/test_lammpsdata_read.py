@@ -6,6 +6,7 @@ values that are parsed directly from the data file.
 NOTE: This test currently only works when using a lammps data file
 containing a single atomic species
 """
+
 import ase.io
 
 from .comparison import compare_with_pytest_approx
@@ -32,8 +33,9 @@ def test_lammpsdata_read(lammpsdata_file_path):
 
     # Check masses were read in correctly
     masses_read_in = atoms.get_masses()
-    masses_expected = [expected_values['mass']] * \
-        len(expected_values['positions'])
+    masses_expected = [expected_values['mass']] * len(
+        expected_values['positions']
+    )
     compare_with_pytest_approx(masses_read_in, masses_expected, REL_TOL)
 
     # Check positions were read in correctly

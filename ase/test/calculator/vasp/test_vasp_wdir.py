@@ -28,15 +28,17 @@ def test_vasp_wdir(factory, atoms_co):
     label = os.path.join(testdir, 'vasp')
 
     # Test
-    settings = dict(label=label,
-                    xc='PBE',
-                    prec='Low',
-                    algo='Fast',
-                    ismear=0,
-                    sigma=1.,
-                    istart=0,
-                    lwave=False,
-                    lcharg=False)
+    settings = dict(
+        label=label,
+        xc='PBE',
+        prec='Low',
+        algo='Fast',
+        ismear=0,
+        sigma=1.0,
+        istart=0,
+        lwave=False,
+        lcharg=False,
+    )
 
     # Make 2 copies of the calculator object
     calc = factory.calc(**settings)

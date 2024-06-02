@@ -13,8 +13,12 @@ from warnings import warn
 import numpy as np
 
 import ase.io
-from ase.calculators.calculator import (Calculator, CalculatorSetupError,
-                                        Parameters, all_changes)
+from ase.calculators.calculator import (
+    Calculator,
+    CalculatorSetupError,
+    Parameters,
+    all_changes,
+)
 from ase.config import cfg
 from ase.units import Rydberg
 
@@ -179,7 +183,7 @@ class CP2K(Calculator, AbstractContextManager):
         basis_set_file='BASIS_MOLOPT',
         charge=0,
         cutoff=400 * Rydberg,
-        force_eval_method="Quickstep",
+        force_eval_method='Quickstep',
         inp='',
         max_scf=50,
         multiplicity=None,
@@ -193,10 +197,16 @@ class CP2K(Calculator, AbstractContextManager):
         set_pos_file=False,
     )
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=Calculator._deprecated,
-                 label='cp2k', atoms=None, command=None,
-                 debug=False, **kwargs):
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=Calculator._deprecated,
+        label='cp2k',
+        atoms=None,
+        command=None,
+        debug=False,
+        **kwargs,
+    ):
         """Construct CP2K-calculator object."""
 
         self._debug = debug
@@ -215,9 +225,13 @@ class CP2K(Calculator, AbstractContextManager):
         else:
             self.command = cfg.get('ASE_CP2K_COMMAND', 'cp2k_shell')
 
-        super().__init__(restart=restart,
-                         ignore_bad_restart_file=ignore_bad_restart_file,
-                         label=label, atoms=atoms, **kwargs)
+        super().__init__(
+            restart=restart,
+            ignore_bad_restart_file=ignore_bad_restart_file,
+            label=label,
+            atoms=atoms,
+            **kwargs,
+        )
         if restart is not None:
             self.read(restart)
 
@@ -240,9 +254,11 @@ class CP2K(Calculator, AbstractContextManager):
 
     def set(self, **kwargs):
         """Set parameters like set(key1=value1, key2=value2, ...)."""
-        msg = '"%s" is not a known keyword for the CP2K calculator. ' \
-              'To access all features of CP2K by means of an input ' \
-              'template, consider using the "inp" keyword instead.'
+        msg = (
+            '"%s" is not a known keyword for the CP2K calculator. '
+            'To access all features of CP2K by means of an input '
+            'template, consider using the "inp" keyword instead.'
+        )
         for key in kwargs:
             if key not in self.default_parameters:
                 raise CalculatorSetupError(msg % key)
@@ -252,25 +268,28 @@ class CP2K(Calculator, AbstractContextManager):
             self.reset()
 
     def write(self, label):
-        'Write atoms, parameters and calculated results into restart files.'
+        "Write atoms, parameters and calculated results into restart files."
         if self._debug:
-            print("Writing restart to: ", label)
+            print('Writing restart to: ', label)
         self.atoms.write(label + '_restart.traj')
         self.parameters.write(label + '_params.ase')
         from ase.io.jsonio import write_json
+
         with open(label + '_results.json', 'w') as fd:
             write_json(fd, self.results)
 
     def read(self, label):
-        'Read atoms, parameters and calculated results from restart files.'
+        "Read atoms, parameters and calculated results from restart files."
         self.atoms = ase.io.read(label + '_restart.traj')
         self.parameters = Parameters.read(label + '_params.ase')
         from ase.io.jsonio import read_json
+
         with open(label + '_results.json') as fd:
             self.results = read_json(fd)
 
-    def calculate(self, atoms=None, properties=None,
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=None, system_changes=all_changes
+    ):
         """Do the calculation."""
 
         if not properties:
@@ -282,7 +301,7 @@ class CP2K(Calculator, AbstractContextManager):
             self._shell = Cp2kShell(self.command, self._debug)
 
         if self._debug:
-            print("system_changes:", system_changes)
+            print('system_changes:', system_changes)
 
         if 'numbers' in system_changes:
             self._release_force_env()
@@ -316,9 +335,11 @@ class CP2K(Calculator, AbstractContextManager):
                 self._shell.send(f'SET_POS_FILE {fn} {self._force_env_id}')
             else:
                 if len(atoms) > 100 and 'psmp' in self.command:
-                    warn('ASE may stall when passing large structures'
-                         ' to MPI versions of CP2K.'
-                         ' Consider using `set_pos_file=True`.')
+                    warn(
+                        'ASE may stall when passing large structures'
+                        ' to MPI versions of CP2K.'
+                        ' Consider using `set_pos_file=True`.'
+                    )
                 self._shell.send('SET_POS %d' % self._force_env_id)
                 self._shell.send('%d' % (3 * n_atoms))
                 for pos in self.atoms.get_positions():
@@ -354,8 +375,16 @@ class CP2K(Calculator, AbstractContextManager):
         stress = np.array([float(x) for x in line.split()]).reshape(3, 3)
         assert np.all(stress == np.transpose(stress))  # should be symmetric
         # Convert 3x3 stress tensor to Voigt form as required by ASE
-        stress = np.array([stress[0, 0], stress[1, 1], stress[2, 2],
-                           stress[1, 2], stress[0, 2], stress[0, 1]])
+        stress = np.array(
+            [
+                stress[0, 0],
+                stress[1, 1],
+                stress[2, 2],
+                stress[1, 2],
+                stress[0, 2],
+                stress[0, 1],
+            ]
+        )
         self.results['stress'] = -1.0 * stress  # cp2k uses the opposite sign
 
         if self.parameters.auto_write:
@@ -405,7 +434,7 @@ class CP2K(Calculator, AbstractContextManager):
                 self._shell.send('DESTROY %d' % self._force_env_id)
                 self._shell.expect('* READY')
             else:
-                msg = "CP2K-shell not ready, could not release force_env."
+                msg = 'CP2K-shell not ready, could not release force_env.'
                 warn(msg, RuntimeWarning)
             self._force_env_id = None
 
@@ -420,49 +449,56 @@ class CP2K(Calculator, AbstractContextManager):
             root.add_keyword('FORCE_EVAL', 'METHOD ' + p.force_eval_method)
         if p.stress_tensor:
             root.add_keyword('FORCE_EVAL', 'STRESS_TENSOR ANALYTICAL')
-            root.add_keyword('FORCE_EVAL/PRINT/STRESS_TENSOR',
-                             '_SECTION_PARAMETERS_ ON')
+            root.add_keyword(
+                'FORCE_EVAL/PRINT/STRESS_TENSOR', '_SECTION_PARAMETERS_ ON'
+            )
         if p.basis_set_file:
-            root.add_keyword('FORCE_EVAL/DFT',
-                             'BASIS_SET_FILE_NAME ' + p.basis_set_file)
+            root.add_keyword(
+                'FORCE_EVAL/DFT', 'BASIS_SET_FILE_NAME ' + p.basis_set_file
+            )
         if p.potential_file:
-            root.add_keyword('FORCE_EVAL/DFT',
-                             'POTENTIAL_FILE_NAME ' + p.potential_file)
+            root.add_keyword(
+                'FORCE_EVAL/DFT', 'POTENTIAL_FILE_NAME ' + p.potential_file
+            )
         if p.cutoff:
-            root.add_keyword('FORCE_EVAL/DFT/MGRID',
-                             'CUTOFF [eV] %.18e' % p.cutoff)
+            root.add_keyword(
+                'FORCE_EVAL/DFT/MGRID', 'CUTOFF [eV] %.18e' % p.cutoff
+            )
         if p.max_scf:
             root.add_keyword('FORCE_EVAL/DFT/SCF', 'MAX_SCF %d' % p.max_scf)
             root.add_keyword('FORCE_EVAL/DFT/LS_SCF', 'MAX_SCF %d' % p.max_scf)
 
         if p.xc:
-            legacy_libxc = ""
+            legacy_libxc = ''
             for functional in p.xc.split():
-                functional = functional.replace("LDA", "PADE")  # resolve alias
+                functional = functional.replace('LDA', 'PADE')  # resolve alias
                 xc_sec = root.get_subsection('FORCE_EVAL/DFT/XC/XC_FUNCTIONAL')
                 # libxc input section changed over time
-                if functional.startswith("XC_") and self._shell.version < 3.0:
-                    legacy_libxc += " " + functional  # handled later
-                elif functional.startswith("XC_") and self._shell.version < 5.0:
+                if functional.startswith('XC_') and self._shell.version < 3.0:
+                    legacy_libxc += ' ' + functional  # handled later
+                elif functional.startswith('XC_') and self._shell.version < 5.0:
                     s = InputSection(name='LIBXC')
                     s.keywords.append('FUNCTIONAL ' + functional)
                     xc_sec.subsections.append(s)
-                elif functional.startswith("XC_"):
+                elif functional.startswith('XC_'):
                     s = InputSection(name=functional[3:])
                     xc_sec.subsections.append(s)
                 else:
                     s = InputSection(name=functional.upper())
                     xc_sec.subsections.append(s)
             if legacy_libxc:
-                root.add_keyword('FORCE_EVAL/DFT/XC/XC_FUNCTIONAL/LIBXC',
-                                 'FUNCTIONAL ' + legacy_libxc)
+                root.add_keyword(
+                    'FORCE_EVAL/DFT/XC/XC_FUNCTIONAL/LIBXC',
+                    'FUNCTIONAL ' + legacy_libxc,
+                )
 
         if p.uks:
             root.add_keyword('FORCE_EVAL/DFT', 'UNRESTRICTED_KOHN_SHAM ON')
 
         if p.multiplicity:
-            root.add_keyword('FORCE_EVAL/DFT',
-                             'MULTIPLICITY %d' % p.multiplicity)
+            root.add_keyword(
+                'FORCE_EVAL/DFT', 'MULTIPLICITY %d' % p.multiplicity
+            )
 
         if p.charge and p.charge != 0:
             root.add_keyword('FORCE_EVAL/DFT', 'CHARGE %d' % p.charge)
@@ -492,7 +528,13 @@ class CP2K(Calculator, AbstractContextManager):
         # determine pseudo-potential
         potential = p.pseudo_potential
         if p.pseudo_potential == 'auto':
-            if p.xc and p.xc.upper() in ('LDA', 'PADE', 'BP', 'BLYP', 'PBE',):
+            if p.xc and p.xc.upper() in (
+                'LDA',
+                'PADE',
+                'BP',
+                'BLYP',
+                'PBE',
+            ):
                 potential = 'GTH-' + p.xc.upper()
             else:
                 msg = 'No matching pseudo potential found, using GTH-PBE'
@@ -501,7 +543,7 @@ class CP2K(Calculator, AbstractContextManager):
 
         # write atomic kinds
         subsys = root.get_subsection('FORCE_EVAL/SUBSYS').subsections
-        kinds = {s.params: s for s in subsys if s.name == "KIND"}
+        kinds = {s.params: s for s in subsys if s.name == 'KIND'}
         for elem in set(self.atoms.get_chemical_symbols()):
             if elem not in kinds.keys():
                 s = InputSection(name='KIND', params=elem)
@@ -531,20 +573,27 @@ class Cp2kShell:
         if self._debug:
             print(command)
         self._child = subprocess.Popen(
-            command, shell=True, universal_newlines=True,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1)
+            command,
+            shell=True,
+            universal_newlines=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            bufsize=1,
+        )
         self.expect('* READY')
 
         # check version of shell
         self.send('VERSION')
         line = self.recv()
         if not line.startswith('CP2K Shell Version:'):
-            raise RuntimeError('Cannot determine version of CP2K shell.  '
-                               'Probably the shell version is too old.  '
-                               'Please update to CP2K 3.0 or newer.  '
-                               f'Received: {line}')
+            raise RuntimeError(
+                'Cannot determine version of CP2K shell.  '
+                'Probably the shell version is too old.  '
+                'Please update to CP2K 3.0 or newer.  '
+                f'Received: {line}'
+            )
 
-        shell_version = line.rsplit(":", 1)[1]
+        shell_version = line.rsplit(':', 1)[1]
         self.version = float(shell_version)
         assert self.version >= 1.0
 

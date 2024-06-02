@@ -1,4 +1,5 @@
 """colors.py - select how to color the atoms in the GUI."""
+
 import numpy as np
 
 import ase.gui.ui as ui
@@ -17,25 +18,39 @@ class ColorWindow:
         self.win = ui.Window(_('Colors'), wmtype='utility')
         self.gui = gui
         self.win.add(ui.Label(_('Choose how the atoms are colored:')))
-        values = ['jmol', 'tag', 'force', 'velocity',
-                  'initial charge', 'magmom', 'neighbors']
-        labels = [_('By atomic number, default "jmol" colors'),
-                  _('By tag'),
-                  _('By force'),
-                  _('By velocity'),
-                  _('By initial charge'),
-                  _('By magnetic moment'),
-                  _('By number of neighbors'), ]
+        values = [
+            'jmol',
+            'tag',
+            'force',
+            'velocity',
+            'initial charge',
+            'magmom',
+            'neighbors',
+        ]
+        labels = [
+            _('By atomic number, default "jmol" colors'),
+            _('By tag'),
+            _('By force'),
+            _('By velocity'),
+            _('By initial charge'),
+            _('By magnetic moment'),
+            _('By number of neighbors'),
+        ]
 
-        haveit = ['numbers', 'positions', 'forces', 'momenta',
-                  'initial_charges', 'initial_magmoms']
+        haveit = [
+            'numbers',
+            'positions',
+            'forces',
+            'momenta',
+            'initial_charges',
+            'initial_magmoms',
+        ]
         for key in self.gui.atoms.arrays:
             if key not in haveit:
                 values.append(key)
                 labels.append(f'By user-defined "{key}"')
 
-        self.radio = ui.RadioButtons(labels, values, self.toggle,
-                                     vertical=True)
+        self.radio = ui.RadioButtons(labels, values, self.toggle, vertical=True)
         self.radio.value = gui.colormode
         self.win.add(self.radio)
         self.activate()
@@ -76,15 +91,19 @@ class ColorWindow:
         self.gui.colormode = value
         if value == 'jmol' or value == 'neighbors':
             if hasattr(self, 'mnmx'):
-                "delete the min max fields by creating a new window"
+                'delete the min max fields by creating a new window'
                 del self.mnmx
                 del self.cmaps
                 self.win.close()
                 self.reset(self.gui)
             text = ''
         else:
-            scalars = np.ma.array([self.gui.get_color_scalars(i)
-                                   for i in range(len(self.gui.images))])
+            scalars = np.ma.array(
+                [
+                    self.gui.get_color_scalars(i)
+                    for i in range(len(self.gui.images))
+                ]
+            )
             mn = np.min(scalars)
             mx = np.max(scalars)
             self.gui.colormode_data = None, mn, mx
@@ -92,34 +111,53 @@ class ColorWindow:
             cmaps = ['default', 'old']
             try:
                 import pylab as plt
-                cmaps += [m for m in plt.cm.datad if not m.endswith("_r")]
+
+                cmaps += [m for m in plt.cm.datad if not m.endswith('_r')]
             except ImportError:
                 pass
-            self.cmaps = [_('cmap:'),
-                          ui.ComboBox(cmaps, cmaps, self.update_colormap),
-                          _('N:'),
-                          ui.SpinBox(26, 0, 100, 1, self.update_colormap)]
+            self.cmaps = [
+                _('cmap:'),
+                ui.ComboBox(cmaps, cmaps, self.update_colormap),
+                _('N:'),
+                ui.SpinBox(26, 0, 100, 1, self.update_colormap),
+            ]
             self.update_colormap('default')
 
             try:
-                unit = {'tag': '',
-                        'force': 'eV/Ang',
-                        'velocity': '(eV/amu)^(1/2)',
-                        'charge': '|e|',
-                        'initial charge': '|e|',
-                        'magmom': 'μB'}[value]
+                unit = {
+                    'tag': '',
+                    'force': 'eV/Ang',
+                    'velocity': '(eV/amu)^(1/2)',
+                    'charge': '|e|',
+                    'initial charge': '|e|',
+                    'magmom': 'μB',
+                }[value]
             except KeyError:
                 unit = ''
             text = ''
 
             rng = mx - mn  # XXX what are optimal allowed range and steps ?
-            self.mnmx = [_('min:'),
-                         ui.SpinBox(mn, mn - 10 * rng, mx + rng, rng / 10.,
-                                    self.change_mnmx, width=20),
-                         _('max:'),
-                         ui.SpinBox(mx, mn - 10 * rng, mx + rng, rng / 10.,
-                                    self.change_mnmx, width=20),
-                         _(unit)]
+            self.mnmx = [
+                _('min:'),
+                ui.SpinBox(
+                    mn,
+                    mn - 10 * rng,
+                    mx + rng,
+                    rng / 10.0,
+                    self.change_mnmx,
+                    width=20,
+                ),
+                _('max:'),
+                ui.SpinBox(
+                    mx,
+                    mn - 10 * rng,
+                    mx + rng,
+                    rng / 10.0,
+                    self.change_mnmx,
+                    width=20,
+                ),
+                _(unit),
+            ]
             self.win.close()
             self.reset(self.gui)
 
@@ -139,6 +177,7 @@ class ColorWindow:
     def update_colormap(self, cmap=None, N=26):
         "Called by gui when colormap has changed"
         import matplotlib
+
         if cmap is None:
             cmap = self.cmaps[1].value
         try:
@@ -147,14 +186,19 @@ class ColorWindow:
             N = 26
         colorscale, mn, mx = self.gui.colormode_data
         if cmap == 'default':
-            colorscale = ['#{0:02X}80{0:02X}'.format(int(red))
-                          for red in np.linspace(0, 250, N)]
+            colorscale = [
+                '#{0:02X}80{0:02X}'.format(int(red))
+                for red in np.linspace(0, 250, N)
+            ]
         elif cmap == 'old':
-            colorscale = [f'#{int(red):02X}AA00'
-                          for red in np.linspace(0, 230, N)]
+            colorscale = [
+                f'#{int(red):02X}AA00' for red in np.linspace(0, 230, N)
+            ]
         else:
             cmap_obj = matplotlib.colormaps[cmap]
-            colorscale = [matplotlib.colors.rgb2hex(c[:3]) for c in
-                          cmap_obj(np.linspace(0, 1, N))]
+            colorscale = [
+                matplotlib.colors.rgb2hex(c[:3])
+                for c in cmap_obj(np.linspace(0, 1, N))
+            ]
         self.gui.colormode_data = colorscale, mn, mx
         self.gui.draw()

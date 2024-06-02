@@ -1,4 +1,5 @@
 """Tests for `bulk`"""
+
 import pytest
 
 from ase.build import bulk

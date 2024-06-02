@@ -9,7 +9,6 @@ from ase.io.formats import UnknownFileTypeError, parse_filename
 
 
 def test_readwrite_errors():
-
     atoms = bulk('Au')
     fd = StringIO()
 
@@ -80,7 +79,8 @@ def test_parse_filename_db_entry():
 
 def test_parse_filename_do_not_split():
     # check if do_not_split_by_at_sign flag works
-    filename, index = parse_filename('user@local/file@name',
-                                     do_not_split_by_at_sign=True)
+    filename, index = parse_filename(
+        'user@local/file@name', do_not_split_by_at_sign=True
+    )
     assert filename == 'user@local/file@name'
     assert index is None

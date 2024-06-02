@@ -21,7 +21,7 @@ def test_dftb_bandstructure(dftb_factory):
         kpts=(3, 3, 3),
         Hamiltonian_SCC='Yes',
         Hamiltonian_SCCTolerance=1e-5,
-        Hamiltonian_MaxAngularMomentum_Si='d'
+        Hamiltonian_MaxAngularMomentum_Si='d',
     )
 
     atoms = bulk('Si')
@@ -29,7 +29,7 @@ def test_dftb_bandstructure(dftb_factory):
     atoms.get_potential_energy()
 
     efermi = calc.get_fermi_level()
-    assert abs(efermi - -2.90086680996455) < 1.
+    assert abs(efermi - -2.90086680996455) < 1.0
 
     # DOS does not currently work because of
     # missing "get_k_point_weights" function
@@ -46,7 +46,7 @@ def test_dftb_bandstructure(dftb_factory):
         Hamiltonian_SCC='Yes',
         Hamiltonian_MaxSCCIterations=1,
         Hamiltonian_ReadInitialCharges='Yes',
-        Hamiltonian_MaxAngularMomentum_Si='d'
+        Hamiltonian_MaxAngularMomentum_Si='d',
     )
 
     atoms.calc = calc

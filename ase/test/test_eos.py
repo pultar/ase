@@ -26,7 +26,7 @@ def test_eos():
         eos = EOS(volumes, energies, name)
         v, e, b = eos.fit()
         print(f'{name:20} {v:.8f} {e:.8f} {b:.8f} ')
-        assert abs(v - 3.18658700e+01) < 4e-4
+        assert abs(v - 3.18658700e01) < 4e-4
         assert abs(e - -9.76187802e-03) < 5e-7
         assert abs(b - 2.46812688e-01) < 2e-4
         results.append((v, e, b))

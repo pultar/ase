@@ -57,21 +57,26 @@ def get_version():
 
 
 def main():
-    p = argparse.ArgumentParser(description='Generate new release of ASE.',
-                                epilog='Run from the root directory of ASE.')
-    p.add_argument('version', nargs=1,
-                   help='version number for new release')
+    p = argparse.ArgumentParser(
+        description='Generate new release of ASE.',
+        epilog='Run from the root directory of ASE.',
+    )
+    p.add_argument('version', nargs=1, help='version number for new release')
     # p.add_argument('nextversion', nargs=1,
     #                help='development version after release')
-    p.add_argument('--clean', action='store_true',
-                   help='delete release branch and tag')
+    p.add_argument(
+        '--clean', action='store_true', help='delete release branch and tag'
+    )
     args = p.parse_args()
 
     try:
         current_version = get_version()
     except Exception as err:
-        p.error('Cannot get version: {}.  Are you in the root directory?'
-                .format(err))
+        p.error(
+            'Cannot get version: {}.  Are you in the root directory?'.format(
+                err
+            )
+        )
 
     print(f'Current version: {current_version}')
 
@@ -111,12 +116,12 @@ def main():
     match_and_edit_version(
         versionfile,
         pattern='__version__ = ',
-        replacement=f"__version__ = '{version}'")
+        replacement=f"__version__ = '{version}'",
+    )
 
     match_and_edit_version(
-        pyproject,
-        pattern='version = ',
-        replacement=f"version = '{version}'")
+        pyproject, pattern='version = ', replacement=f"version = '{version}'"
+    )
 
     releasenotes = ase_toplevel / 'doc/releasenotes.rst'
 
@@ -145,8 +150,9 @@ Git master branch
     date = strftime('%d %B %Y').lstrip('0')
     header = f'Version {version}'
     underline = '=' * len(header)
-    replacetxt = replacetxt.format(header=header, version=version,
-                                   underline=underline, date=date)
+    replacetxt = replacetxt.format(
+        header=header, version=version, underline=underline, date=date
+    )
 
     print(f'Editing {releasenotes}')
     with open(releasenotes) as fd:
@@ -187,11 +193,11 @@ News
     with open(installdoc) as fd:
         txt = fd.read()
 
-    txt, nsub = re.subn(r'ase-\d+\.\d+\.\d+',
-                        f'ase-{version}', txt)
+    txt, nsub = re.subn(r'ase-\d+\.\d+\.\d+', f'ase-{version}', txt)
     assert nsub > 0
-    txt, nsub = re.subn(r'git clone -b \d+\.\d+\.\d+',
-                        f'git clone -b {version}', txt)
+    txt, nsub = re.subn(
+        r'git clone -b \d+\.\d+\.\d+', f'git clone -b {version}', txt
+    )
     assert nsub == 1
 
     with open(installdoc, 'w') as fd:
@@ -200,8 +206,7 @@ News
     print(f'Creating new release from branch {branch!r}')
     git(f'checkout -b {branchname}')
 
-    edited_paths = [versionfile, installdoc, pyproject,
-                    frontpage, releasenotes]
+    edited_paths = [versionfile, installdoc, pyproject, frontpage, releasenotes]
 
     git('add {}'.format(' '.join(str(path) for path in edited_paths)))
     git(f'commit -m "ASE version {version}"')
@@ -234,10 +239,12 @@ News
     print(f'git show {version}  # Inspect!')
     print('git checkout master')
     print(f'git merge {branchname}')
-    print('twine upload '
-          'dist/ase-{v}.tar.gz '
-          'dist/ase-{v}-py3-none-any.whl '
-          'dist/ase-{v}.tar.gz.asc'.format(v=version))
+    print(
+        'twine upload '
+        'dist/ase-{v}.tar.gz '
+        'dist/ase-{v}-py3-none-any.whl '
+        'dist/ase-{v}.tar.gz.asc'.format(v=version)
+    )
     print('git push --tags origin master  # Assuming your remote is "origin"')
 
 

@@ -10,12 +10,15 @@ from ase.utils import reader
 def read_dacapo_text(fd):
     lines = fd.readlines()
     i = lines.index(' Structure:             A1           A2            A3\n')
-    cell = np.array([[float(w) for w in line.split()[2:5]]
-                     for line in lines[i + 1:i + 4]]).transpose()
-    i = lines.index(' Structure:  >>         Ionic positions/velocities ' +
-                    'in cartesian coordinates       <<\n')
+    cell = np.array(
+        [[float(w) for w in line.split()[2:5]] for line in lines[i + 1 : i + 4]]
+    ).transpose()
+    i = lines.index(
+        ' Structure:  >>         Ionic positions/velocities '
+        + 'in cartesian coordinates       <<\n'
+    )
     atoms = []
-    for line in lines[i + 4:]:
+    for line in lines[i + 4 :]:
         words = line.split()
         if len(words) != 9:
             break
@@ -26,7 +29,8 @@ def read_dacapo_text(fd):
 
     try:
         i = lines.index(
-            ' DFT:  CPU time                           Total energy\n')
+            ' DFT:  CPU time                           Total energy\n'
+        )
     except ValueError:
         pass
     else:

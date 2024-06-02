@@ -17,20 +17,23 @@ class SimpleCubicFactory(ClusterFactory):
         "Get the lattice constant of an element with cubic crystal structure."
         symmetry = _refstate[self.atomic_numbers[0]]['symmetry']
         if symmetry != self.xtal_name:
-            raise ValueError(f"Cannot guess the {self.xtal_name} " +
-                             "lattice constant of an element with crystal " +
-                             f"structure {symmetry}.")
+            raise ValueError(
+                f'Cannot guess the {self.xtal_name} '
+                + 'lattice constant of an element with crystal '
+                + f'structure {symmetry}.'
+            )
         return _refstate[self.atomic_numbers[0]]['a']
 
     def set_basis(self):
         a = self.lattice_constant
         if not isinstance(a, (int, float)):
             raise ValueError(
-                f"Improper lattice constant for {self.xtal_name} crystal.")
+                f'Improper lattice constant for {self.xtal_name} crystal.'
+            )
 
-        self.lattice_basis = np.array([[a, 0., 0.],
-                                       [0., a, 0.],
-                                       [0., 0., a]])
+        self.lattice_basis = np.array(
+            [[a, 0.0, 0.0], [0.0, a, 0.0], [0.0, 0.0, a]]
+        )
 
         self.resiproc_basis = self.get_resiproc_basis(self.lattice_basis)
 
@@ -43,8 +46,7 @@ class BodyCenteredCubicFactory(SimpleCubicFactory):
 
     xtal_name = 'bcc'
 
-    atomic_basis = np.array([[0., 0., 0.],
-                             [.5, .5, .5]])
+    atomic_basis = np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]])
 
 
 BodyCenteredCubic = BodyCenteredCubicFactory()
@@ -55,10 +57,9 @@ class FaceCenteredCubicFactory(SimpleCubicFactory):
 
     xtal_name = 'fcc'
 
-    atomic_basis = np.array([[0., 0., 0.],
-                             [0., .5, .5],
-                             [.5, 0., .5],
-                             [.5, .5, 0.]])
+    atomic_basis = np.array(
+        [[0.0, 0.0, 0.0], [0.0, 0.5, 0.5], [0.5, 0.0, 0.5], [0.5, 0.5, 0.0]]
+    )
 
 
 FaceCenteredCubic = FaceCenteredCubicFactory()

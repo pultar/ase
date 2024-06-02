@@ -12,13 +12,16 @@ from ase.optimize.precon import Exp, PreconLBFGS
 @pytest.mark.slow()
 # Ignore UserWarning by failure of Armijo line search in PreconLBFGS
 @pytest.mark.filterwarnings('ignore::UserWarning')
-@pytest.mark.parametrize("filter_cls, tol", [
-    (UnitCellFilter, 1e-3),
-    # FrechetCellFilter allows relaxing to lower tolerance
-    (FrechetCellFilter, 1e-7),
-])
+@pytest.mark.parametrize(
+    'filter_cls, tol',
+    [
+        (UnitCellFilter, 1e-3),
+        # FrechetCellFilter allows relaxing to lower tolerance
+        (FrechetCellFilter, 1e-7),
+    ],
+)
 def test_precon(filter_cls, tol: float):
-    cu0: ase.Atoms = bulk("Cu") * (2, 2, 2)
+    cu0: ase.Atoms = bulk('Cu') * (2, 2, 2)
     lj = LennardJones(sigma=cu0.get_distance(0, 1))
 
     ratio = 1.2

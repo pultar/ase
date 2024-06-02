@@ -28,26 +28,28 @@ def _setup_images_global():
     initial *= N_cell
 
     # place vacancy near centre of cell
-    D, D_len = get_distances(np.diag(initial.cell) / 2,
-                             initial.positions,
-                             initial.cell, initial.pbc)
+    D, D_len = get_distances(
+        np.diag(initial.cell) / 2, initial.positions, initial.cell, initial.pbc
+    )
     vac_index = D_len.argmin()
     vac_pos = initial.positions[vac_index]
     del initial[vac_index]
 
     # identify two opposing nearest neighbours of the vacancy
-    D, D_len = get_distances(vac_pos,
-                             initial.positions,
-                             initial.cell, initial.pbc)
+    D, D_len = get_distances(
+        vac_pos, initial.positions, initial.cell, initial.pbc
+    )
     D = D[0, :]
     D_len = D_len[0, :]
 
     nn_mask = np.abs(D_len - D_len.min()) < 1e-8
     i1 = nn_mask.nonzero()[0][0]
-    i2 = ((D + D[i1])**2).sum(axis=1).argmin()
+    i2 = ((D + D[i1]) ** 2).sum(axis=1).argmin()
 
-    print(f'vac_index={vac_index} i1={i1} i2={i2} '
-          f'distance={initial.get_distance(i1, i2, mic=True)}')
+    print(
+        f'vac_index={vac_index} i1={i1} i2={i2} '
+        f'distance={initial.get_distance(i1, i2, mic=True)}'
+    )
 
     final = initial.copy()
     final.positions[i1] = vac_pos
@@ -87,9 +89,11 @@ def _ref_vacancy_global(_setup_images_global):
     # use distance from moving atom to one of its neighbours as reaction coord
     # relax intermediate image to the saddle point using a bondlength constraint
     images, i1, i2 = _setup_images_global
-    initial, saddle, final = (images[0].copy(),
-                              images[2].copy(),
-                              images[4].copy())
+    initial, saddle, final = (
+        images[0].copy(),
+        images[2].copy(),
+        images[4].copy(),
+    )
     initial.calc = calc()
     saddle.calc = calc()
     final.calc = calc()
@@ -110,13 +114,18 @@ def ref_vacancy(_ref_vacancy_global):
 
 @pytest.mark.slow()
 @pytest.mark.filterwarnings('ignore:estimate_mu')
-@pytest.mark.parametrize('method, optimizer, precon, optmethod',
-                         [('aseneb', BFGS, None, None),
-                          ('improvedtangent', BFGS, None, None),
-                          ('spline', NEBOptimizer, None, 'ODE'),
-                          ('string', NEBOptimizer, 'Exp', 'ODE')])
-def test_neb_methods(testdir, method, optimizer, precon,
-                     optmethod, ref_vacancy, setup_images):
+@pytest.mark.parametrize(
+    'method, optimizer, precon, optmethod',
+    [
+        ('aseneb', BFGS, None, None),
+        ('improvedtangent', BFGS, None, None),
+        ('spline', NEBOptimizer, None, 'ODE'),
+        ('string', NEBOptimizer, 'Exp', 'ODE'),
+    ],
+)
+def test_neb_methods(
+    testdir, method, optimizer, precon, optmethod, ref_vacancy, setup_images
+):
     # unpack the reference result
     Ef_ref, dE_ref, saddle_ref = ref_vacancy
 
@@ -142,31 +151,42 @@ def test_neb_methods(testdir, method, optimizer, precon,
 
     nebtools = NEBTools(images)
     Ef, dE = nebtools.get_barrier(fit=False)
-    print(f'{method},{optimizer.__name__},{precon} '
-          f'=> Ef = {Ef:.3f}, dE = {dE:.3f}')
+    print(
+        f'{method},{optimizer.__name__},{precon} '
+        f'=> Ef = {Ef:.3f}, dE = {dE:.3f}'
+    )
 
     forcefit = fit_images(images)
 
-    with open(f'MEP_{method}_{optimizer.__name__}_{optmethod}'
-              f'_{precon}.json', 'w') as fd:
-        json.dump({'fmax_history': fmax_history,
-                   'method': method,
-                   'optmethod': optmethod,
-                   'precon': precon,
-                   'optimizer': optimizer.__name__,
-                   'path': forcefit.path,
-                   'energies': forcefit.energies.tolist(),
-                   'fit_path': forcefit.fit_path.tolist(),
-                   'fit_energies': forcefit.fit_energies.tolist(),
-                   'lines': np.array(forcefit.lines).tolist(),
-                   'Ef': Ef,
-                   'dE': dE}, fd)
+    with open(
+        f'MEP_{method}_{optimizer.__name__}_{optmethod}' f'_{precon}.json', 'w'
+    ) as fd:
+        json.dump(
+            {
+                'fmax_history': fmax_history,
+                'method': method,
+                'optmethod': optmethod,
+                'precon': precon,
+                'optimizer': optimizer.__name__,
+                'path': forcefit.path,
+                'energies': forcefit.energies.tolist(),
+                'fit_path': forcefit.fit_path.tolist(),
+                'fit_energies': forcefit.fit_energies.tolist(),
+                'lines': np.array(forcefit.lines).tolist(),
+                'Ef': Ef,
+                'dE': dE,
+            },
+            fd,
+        )
 
     centre = 2  # we have 5 images total, so central image has index 2
-    vdiff, _ = find_mic(images[centre].positions - saddle_ref.positions,
-                        images[centre].cell)
-    print(f'Ef error {Ef - Ef_ref} dE error {dE - dE_ref} '
-          f'position error at saddle {abs(vdiff).max()}')
+    vdiff, _ = find_mic(
+        images[centre].positions - saddle_ref.positions, images[centre].cell
+    )
+    print(
+        f'Ef error {Ef - Ef_ref} dE error {dE - dE_ref} '
+        f'position error at saddle {abs(vdiff).max()}'
+    )
     assert abs(Ef - Ef_ref) < 1e-2
     assert abs(dE - dE_ref) < 1e-2
     assert abs(vdiff).max() < 1e-2
@@ -264,12 +284,11 @@ def test_integrate_forces(setup_images):
     spline_points = 1000  # it is the default value
     s, E, F = neb.integrate_forces(spline_points=spline_points)
     # check the difference between initial and final images
-    np.testing.assert_allclose(E[0] - E[-1],
-                               forcefit.energies[0] - forcefit.energies[-1],
-                               atol=1.0e-10)
+    np.testing.assert_allclose(
+        E[0] - E[-1], forcefit.energies[0] - forcefit.energies[-1], atol=1.0e-10
+    )
     # assert the maximum Energy value is in the middle
     assert np.argmax(E) == spline_points // 2 - 1
     # check the maximum values (barrier value)
     # tolerance value is rather high since the images are not relaxed
-    np.testing.assert_allclose(E.max(),
-                               forcefit.energies.max(), rtol=2.5e-2)
+    np.testing.assert_allclose(E.max(), forcefit.energies.max(), rtol=2.5e-2)

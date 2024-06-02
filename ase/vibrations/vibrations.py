@@ -32,8 +32,9 @@ class AtomicDisplacements:
         return 3 * len(self.indices)
 
 
-class Displacement(namedtuple('Displacement', ['a', 'i', 'sign', 'ndisp',
-                                               'vib'])):
+class Displacement(
+    namedtuple('Displacement', ['a', 'i', 'sign', 'ndisp', 'vib'])
+):
     @property
     def name(self):
         if self.sign == 0:
@@ -160,8 +161,7 @@ class Vibrations(AtomicDisplacements):
             fixed_indices = list(set(fixed_indices))
             indices = [i for i in range(len(atoms)) if i not in fixed_indices]
         if len(indices) != len(set(indices)):
-            raise ValueError(
-                'one (or more) indices included more than once')
+            raise ValueError('one (or more) indices included more than once')
         self.indices = np.asarray(indices)
 
         self.delta = delta
@@ -200,7 +200,8 @@ class Vibrations(AtomicDisplacements):
             raise RuntimeError(
                 'Cannot run calculation.  '
                 'Cache must be removed or split in order '
-                'to have only one sort of data structure at a time.')
+                'to have only one sort of data structure at a time.'
+            )
 
         self._check_old_pickles()
 
@@ -216,6 +217,7 @@ class Vibrations(AtomicDisplacements):
 
     def _check_old_pickles(self):
         from pathlib import Path
+
         eq_pickle_path = Path(f'{self.name}.eq.pckl')
         pickle2json_instructions = f"""\
 Found old pickle files such as {eq_pickle_path}.  \
@@ -224,8 +226,9 @@ Please remove them and recalculate or run \
         if len(self.cache) == 0 and eq_pickle_path.exists():
             raise RuntimeError(pickle2json_instructions)
 
-    def iterdisplace(self, inplace=False) -> \
-            Iterator[Tuple[Displacement, Atoms]]:
+    def iterdisplace(
+        self, inplace=False
+    ) -> Iterator[Tuple[Displacement, Atoms]]:
         """Iterate over initial and displaced structures.
 
         Use this to export the structures for each single-point calculation
@@ -361,13 +364,12 @@ Please remove them and recalculate or run \
                     fplusplus[a] -= fplusplus.sum(0)
             if self.direction == 'central':
                 if self.nfree == 2:
-                    H[r] = .5 * (fminus - fplus)[self.indices].ravel()
+                    H[r] = 0.5 * (fminus - fplus)[self.indices].ravel()
                 else:
                     assert self.nfree == 4
-                    H[r] = H[r] = (-fminusminus +
-                                   8 * fminus -
-                                   8 * fplus +
-                                   fplusplus)[self.indices].ravel() / 12.0
+                    H[r] = H[r] = (
+                        -fminusminus + 8 * fminus - 8 * fplus + fplusplus
+                    )[self.indices].ravel() / 12.0
             elif self.direction == 'forward':
                 H[r] = (feq - fplus)[self.indices].ravel()
             else:
@@ -379,24 +381,27 @@ Please remove them and recalculate or run \
         self.H = H
         masses = self.atoms.get_masses()
         if any(masses[self.indices] == 0):
-            raise RuntimeError('Zero mass encountered in one or more of '
-                               'the vibrated atoms. Use Atoms.set_masses()'
-                               ' to set all masses to non-zero values.')
+            raise RuntimeError(
+                'Zero mass encountered in one or more of '
+                'the vibrated atoms. Use Atoms.set_masses()'
+                ' to set all masses to non-zero values.'
+            )
 
-        self.im = np.repeat(masses[self.indices]**-0.5, 3)
-        self._vibrations = self.get_vibrations(read_cache=False,
-                                               method=self.method,
-                                               direction=self.direction)
+        self.im = np.repeat(masses[self.indices] ** -0.5, 3)
+        self._vibrations = self.get_vibrations(
+            read_cache=False, method=self.method, direction=self.direction
+        )
 
         omega2, modes = np.linalg.eigh(self.im[:, None] * H * self.im)
         self.modes = modes.T.copy()
 
         # Conversion factor:
         s = units._hbar * 1e10 / sqrt(units._e * units._amu)
-        self.hnu = s * omega2.astype(complex)**0.5
+        self.hnu = s * omega2.astype(complex) ** 0.5
 
-    def get_vibrations(self, method='standard', direction='central',
-                       read_cache=True, **kw):
+    def get_vibrations(
+        self, method='standard', direction='central', read_cache=True, **kw
+    ):
         """Get vibrations as VibrationsData object
 
         If read() has not yet been called, this will be called to assemble data
@@ -419,25 +424,32 @@ Please remove them and recalculate or run \
             return self._vibrations
 
         else:
-            if (self.H is None or method.lower() != self.method or
-                    direction.lower() != self.direction):
+            if (
+                self.H is None
+                or method.lower() != self.method
+                or direction.lower() != self.direction
+            ):
                 self.read(method, direction, **kw)
 
-            return VibrationsData.from_2d(self.atoms, self.H,
-                                          indices=self.indices)
+            return VibrationsData.from_2d(
+                self.atoms, self.H, indices=self.indices
+            )
 
     def get_energies(self, method='standard', direction='central', **kw):
         """Get vibration energies in eV."""
-        return self.get_vibrations(method=method,
-                                   direction=direction, **kw).get_energies()
+        return self.get_vibrations(
+            method=method, direction=direction, **kw
+        ).get_energies()
 
     def get_frequencies(self, method='standard', direction='central'):
         """Get vibration frequencies in cm^-1."""
-        return self.get_vibrations(method=method,
-                                   direction=direction).get_frequencies()
+        return self.get_vibrations(
+            method=method, direction=direction
+        ).get_frequencies()
 
-    def summary(self, method='standard', direction='central', freq=None,
-                log=sys.stdout):
+    def summary(
+        self, method='standard', direction='central', freq=None, log=sys.stdout
+    ):
         if freq is not None:
             energies = freq * units.invcm
         else:
@@ -474,9 +486,9 @@ Please remove them and recalculate or run \
             n %= len(self.get_energies())
 
         with ase.io.Trajectory('%s.%d.traj' % (self.name, n), 'w') as traj:
-            for image in (self.get_vibrations()
-                          .iter_animated_mode(n,
-                                              temperature=kT, frames=nimages)):
+            for image in self.get_vibrations().iter_animated_mode(
+                n, temperature=kT, frames=nimages
+            ):
                 traj.write(image)
 
     def show_as_force(self, n, scale=0.2, show=True):
@@ -502,8 +514,7 @@ Please remove them and recalculate or run \
                 freq[n] = freq[n].real
                 c = ' '
 
-            fd.write('Mode #%d, f = %.1f%s cm^-1'
-                     % (n, float(freq[n].real), c))
+            fd.write('Mode #%d, f = %.1f%s cm^-1' % (n, float(freq[n].real), c))
 
             if self.ir:
                 fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
@@ -512,13 +523,30 @@ Please remove them and recalculate or run \
 
             mode = self.get_mode(n)
             for i, pos in enumerate(self.atoms.positions):
-                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f\n' %
-                         (symbols[i], pos[0], pos[1], pos[2],
-                          mode[i, 0], mode[i, 1], mode[i, 2]))
+                fd.write(
+                    '%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f\n'
+                    % (
+                        symbols[i],
+                        pos[0],
+                        pos[1],
+                        pos[2],
+                        mode[i, 0],
+                        mode[i, 1],
+                        mode[i, 2],
+                    )
+                )
 
-    def fold(self, frequencies, intensities,
-             start=800.0, end=4000.0, npts=None, width=4.0,
-             type='Gaussian', normalize=False):
+    def fold(
+        self,
+        frequencies,
+        intensities,
+        start=800.0,
+        end=4000.0,
+        npts=None,
+        width=4.0,
+        type='Gaussian',
+        normalize=False,
+    ):
         """Fold frequencies and intensities within the given range
         and folding method (Gaussian/Lorentzian).
         The energy unit is cm^-1.
@@ -532,13 +560,13 @@ Please remove them and recalculate or run \
             npts = int((end - start) / width * 10 + 1)
         prefactor = 1
         if lctype == 'lorentzian':
-            intensities = intensities * width * pi / 2.
+            intensities = intensities * width * pi / 2.0
             if normalize:
-                prefactor = 2. / width / pi
+                prefactor = 2.0 / width / pi
         else:
-            sigma = width / 2. / sqrt(2. * log(2.))
+            sigma = width / 2.0 / sqrt(2.0 * log(2.0))
             if normalize:
-                prefactor = 1. / sigma / sqrt(2 * pi)
+                prefactor = 1.0 / sigma / sqrt(2 * pi)
 
         # Make array with spectrum data
         spectrum = np.empty(npts)
@@ -546,18 +574,31 @@ Please remove them and recalculate or run \
         for i, energy in enumerate(energies):
             energies[i] = energy
             if lctype == 'lorentzian':
-                spectrum[i] = (intensities * 0.5 * width / pi /
-                               ((frequencies - energy)**2 +
-                                0.25 * width**2)).sum()
+                spectrum[i] = (
+                    intensities
+                    * 0.5
+                    * width
+                    / pi
+                    / ((frequencies - energy) ** 2 + 0.25 * width**2)
+                ).sum()
             else:
-                spectrum[i] = (intensities *
-                               np.exp(-(frequencies - energy)**2 /
-                                      2. / sigma**2)).sum()
+                spectrum[i] = (
+                    intensities
+                    * np.exp(-((frequencies - energy) ** 2) / 2.0 / sigma**2)
+                ).sum()
         return [energies, prefactor * spectrum]
 
-    def write_dos(self, out='vib-dos.dat', start=800, end=4000,
-                  npts=None, width=10,
-                  type='Gaussian', method='standard', direction='central'):
+    def write_dos(
+        self,
+        out='vib-dos.dat',
+        start=800,
+        end=4000,
+        npts=None,
+        width=10,
+        type='Gaussian',
+        method='standard',
+        direction='central',
+    ):
         """Write out the vibrational density of states to file.
 
         First column is the wavenumber in cm^-1, the second column the
@@ -566,8 +607,9 @@ Please remove them and recalculate or run \
         should be given in cm^-1."""
         frequencies = self.get_frequencies(method, direction).real
         intensities = np.ones(len(frequencies))
-        energies, spectrum = self.fold(frequencies, intensities,
-                                       start, end, npts, width, type)
+        energies, spectrum = self.fold(
+            frequencies, intensities, start, end, npts, width, type
+        )
 
         # Write out spectrum in file.
         outdata = np.empty([len(energies), 2])
@@ -578,5 +620,4 @@ Please remove them and recalculate or run \
             fd.write(f'# {type.title()} folded, width={width:g} cm^-1\n')
             fd.write('# [cm^-1] arbitrary\n')
             for row in outdata:
-                fd.write('%.3f  %15.5e\n' %
-                         (row[0], row[1]))
+                fd.write('%.3f  %15.5e\n' % (row[0], row[1]))

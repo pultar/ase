@@ -1,11 +1,15 @@
 """Tests for NeighborList"""
+
 import numpy as np
 import pytest
 
 from ase import Atoms
 from ase.build import bulk
-from ase.neighborlist import (NeighborList, NewPrimitiveNeighborList,
-                              PrimitiveNeighborList)
+from ase.neighborlist import (
+    NeighborList,
+    NewPrimitiveNeighborList,
+    PrimitiveNeighborList,
+)
 
 
 @pytest.mark.parametrize(
@@ -58,7 +62,7 @@ def count(nl: NeighborList, atoms: Atoms):
         for j in i:
             c[j] += 1
         c[a] += len(i)
-        d += (((R[i] + np.dot(offsets, cell) - R[a])**2).sum(1)**0.5).sum()
+        d += (((R[i] + np.dot(offsets, cell) - R[a]) ** 2).sum(1) ** 0.5).sum()
     return d, c
 
 
@@ -68,10 +72,10 @@ def count(nl: NeighborList, atoms: Atoms):
 @pytest.mark.parametrize('sorted', [False, True])
 def test_supercell(sorted):
     """Test if NeighborList works for a supercell as expected"""
-    atoms = Atoms(numbers=range(10),
-                  cell=[(0.2, 1.2, 1.4),
-                        (1.4, 0.1, 1.6),
-                        (1.3, 2.0, -0.1)])
+    atoms = Atoms(
+        numbers=range(10),
+        cell=[(0.2, 1.2, 1.4), (1.4, 0.1, 1.6), (1.3, 2.0, -0.1)],
+    )
     atoms.set_scaled_positions(3 * np.random.random((10, 3)) - 1)
 
     for p1 in range(2):
@@ -104,9 +108,13 @@ def test_supercell(sorted):
 def test_H2():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
     nl = NeighborList([0.5, 0.5], skin=0.1, sorted=True, self_interaction=False)
-    nl2 = NeighborList([0.5, 0.5], skin=0.1, sorted=True,
-                       self_interaction=False,
-                       primitive=NewPrimitiveNeighborList)
+    nl2 = NeighborList(
+        [0.5, 0.5],
+        skin=0.1,
+        sorted=True,
+        self_interaction=False,
+        primitive=NewPrimitiveNeighborList,
+    )
     assert nl2.update(h2)
     assert nl.update(h2)
     assert not nl.update(h2)
@@ -115,8 +123,10 @@ def test_H2():
     m[0, 1] = 1
     assert np.array_equal(nl.get_connectivity_matrix(sparse=False), m)
     assert np.array_equal(nl.get_connectivity_matrix(sparse=True).todense(), m)
-    assert np.array_equal(nl.get_connectivity_matrix().todense(),
-                          nl2.get_connectivity_matrix().todense())
+    assert np.array_equal(
+        nl.get_connectivity_matrix().todense(),
+        nl2.get_connectivity_matrix().todense(),
+    )
 
     h2[1].z += 0.09
     assert not nl.update(h2)
@@ -130,8 +140,9 @@ def test_H2():
 
 def test_H2_shape_and_type():
     h2 = Atoms('H2', positions=[(0, 0, 0), (0, 0, 1)])
-    nl = NeighborList([0.1, 0.1], skin=0.1, bothways=True,
-                      self_interaction=False)
+    nl = NeighborList(
+        [0.1, 0.1], skin=0.1, bothways=True, self_interaction=False
+    )
     assert nl.update(h2)
     assert nl.get_neighbors(0)[1].shape == (0, 3)
     assert nl.get_neighbors(0)[1].dtype == int
@@ -144,8 +155,9 @@ def test_fcc():
     nl.update(x)
     assert len(nl.get_neighbors(0)[0]) == 12
 
-    nl = NeighborList([0.5] * 27, skin=0.01, bothways=True,
-                      self_interaction=False)
+    nl = NeighborList(
+        [0.5] * 27, skin=0.01, bothways=True, self_interaction=False
+    )
     nl.update(x * (3, 3, 3))
     for a in range(27):
         assert len(nl.get_neighbors(a)[0]) == 12
@@ -155,28 +167,30 @@ def test_fcc():
 def test_use_scaled_positions():
     c = 0.0058
     for NeighborListClass in [PrimitiveNeighborList, NewPrimitiveNeighborList]:
-        nl = NeighborListClass([c, c],
-                               skin=0.0,
-                               sorted=True,
-                               self_interaction=False,
-                               use_scaled_positions=True)
-        nl.update([True, True, True],
-                  np.eye(3) * 7.56,
-                  np.array([[0, 0, 0],
-                            [0, 0, 0.99875]]))
+        nl = NeighborListClass(
+            [c, c],
+            skin=0.0,
+            sorted=True,
+            self_interaction=False,
+            use_scaled_positions=True,
+        )
+        nl.update(
+            [True, True, True],
+            np.eye(3) * 7.56,
+            np.array([[0, 0, 0], [0, 0, 0.99875]]),
+        )
         n0, d0 = nl.get_neighbors(0)
         n1, d1 = nl.get_neighbors(1)
         # != is xor
-        assert (np.all(n0 == [0]) and np.all(d0 == [0, 0, 1])) != \
-            (np.all(n1 == [1]) and np.all(d1 == [0, 0, -1]))
+        assert (np.all(n0 == [0]) and np.all(d0 == [0, 0, 1])) != (
+            np.all(n1 == [1]) and np.all(d1 == [0, 0, -1])
+        )
 
 
 def test_empty_neighbor_list():
     # Test empty neighbor list
     nl = PrimitiveNeighborList([])
-    nl.update([True, True, True],
-              np.eye(3) * 7.56,
-              np.zeros((0, 3)))
+    nl.update([True, True, True], np.eye(3) * 7.56, np.zeros((0, 3)))
 
 
 @pytest.mark.parametrize('bothways', [False, True])
@@ -186,11 +200,14 @@ def test_equivalence_of_primitive_classes(sort, self_interaction, bothways):
     """Test if two primitive neighbor-list classes make the same naighbors"""
     # diamond structure in the primitive cell
     pbc_c = np.array([True, True, True])
-    cell_cv = np.array([[0., 3.37316113, 3.37316113],
-                        [3.37316113, 0., 3.37316113],
-                        [3.37316113, 3.37316113, 0.]])
-    spos_ac = np.array([[0., 0., 0.],
-                        [0.25, 0.25, 0.25]])
+    cell_cv = np.array(
+        [
+            [0.0, 3.37316113, 3.37316113],
+            [3.37316113, 0.0, 3.37316113],
+            [3.37316113, 3.37316113, 0.0],
+        ]
+    )
+    spos_ac = np.array([[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]])
     natoms = len(spos_ac)
 
     cutoff_a = np.array([8.0, 8.0])
@@ -241,12 +258,18 @@ def test_small_cell_and_large_cutoff():
     radii = cutoff * np.ones(len(atoms.get_atomic_numbers()))
 
     neighborhood_new = NeighborList(
-        radii, skin=0.0, self_interaction=False, bothways=True,
-        primitive=NewPrimitiveNeighborList
+        radii,
+        skin=0.0,
+        self_interaction=False,
+        bothways=True,
+        primitive=NewPrimitiveNeighborList,
     )
     neighborhood_old = NeighborList(
-        radii, skin=0.0, self_interaction=False, bothways=True,
-        primitive=PrimitiveNeighborList
+        radii,
+        skin=0.0,
+        self_interaction=False,
+        bothways=True,
+        primitive=PrimitiveNeighborList,
     )
 
     neighborhood_new.update(atoms)

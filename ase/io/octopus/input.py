@@ -101,8 +101,9 @@ def block2list(namespace, lines, header=None):
     for line in lines:
         if line.startswith('%'):  # Could also say line == '%' most likely.
             break
-        tokens = [namespace.evaluate(token)
-                  for token in line.strip().split('|')]
+        tokens = [
+            namespace.evaluate(token) for token in line.strip().split('|')
+        ]
         # XXX will fail for string literals containing '|'
         block.append(tokens)
     return name, block
@@ -111,16 +112,18 @@ def block2list(namespace, lines, header=None):
 class OctNamespace:
     def __init__(self):
         self.names = {}
-        self.consts = {'pi': np.pi,
-                       'angstrom': 1. / Bohr,
-                       'ev': 1. / Hartree,
-                       'yes': True,
-                       'no': False,
-                       't': True,
-                       'f': False,
-                       'i': 1j,  # This will probably cause trouble
-                       'true': True,
-                       'false': False}
+        self.consts = {
+            'pi': np.pi,
+            'angstrom': 1.0 / Bohr,
+            'ev': 1.0 / Hartree,
+            'yes': True,
+            'no': False,
+            't': True,
+            'f': False,
+            'i': 1j,  # This will probably cause trouble
+            'true': True,
+            'false': False,
+        }
 
     def evaluate(self, value):
         value = value.strip()
@@ -151,8 +154,11 @@ class OctNamespace:
         except ValueError:
             pass
 
-        if ('*' in value or '/' in value
-                and not any(char in value for char in '()+')):
+        if (
+            '*' in value
+            or '/' in value
+            and not any(char in value for char in '()+')
+        ):
             floatvalue = 1.0
             op = '*'
             for token in re.split(r'([\*/])', value):
@@ -256,12 +262,14 @@ def kwargs2atoms(kwargs, directory=None):
     # But if we are loading an old file, and it specifies something else,
     # we can be sure that the user wanted that back then.
 
-    coord_keywords = ['coordinates',
-                      'xyzcoordinates',
-                      'pdbcoordinates',
-                      'reducedcoordinates',
-                      'xsfcoordinates',
-                      'xsfcoordinatesanimstep']
+    coord_keywords = [
+        'coordinates',
+        'xyzcoordinates',
+        'pdbcoordinates',
+        'reducedcoordinates',
+        'xsfcoordinates',
+        'xsfcoordinatesanimstep',
+    ]
 
     nkeywords = 0
     for keyword in coord_keywords:
@@ -270,9 +278,11 @@ def kwargs2atoms(kwargs, directory=None):
     if nkeywords == 0:
         raise OctopusParseError('No coordinates')
     elif nkeywords > 1:
-        raise OctopusParseError('Multiple coordinate specifications present.  '
-                                'This may be okay in Octopus, but we do not '
-                                'implement it.')
+        raise OctopusParseError(
+            'Multiple coordinate specifications present.  '
+            'This may be okay in Octopus, but we do not '
+            'implement it.'
+        )
 
     def get_positions_from_block(keyword):
         # %Coordinates or %ReducedCoordinates -> atomic numbers, positions.
@@ -283,7 +293,7 @@ def kwargs2atoms(kwargs, directory=None):
         types = {}
         for row in block:
             assert len(row) in [ndims + 1, ndims + 2]
-            row = row[:ndims + 1]
+            row = row[: ndims + 1]
             sym = row[0]
             assert sym.startswith('"') or sym.startswith("'")
             assert sym[0] == sym[-1]
@@ -329,8 +339,10 @@ def kwargs2atoms(kwargs, directory=None):
             theslice = slice(None, None, 1)
         images = read(fname, theslice, fmt)
         if len(images) != 1:
-            raise OctopusParseError('Expected only one image.  Don\'t know '
-                                    'what to do with %d images.' % len(images))
+            raise OctopusParseError(
+                "Expected only one image.  Don't know "
+                'what to do with %d images.' % len(images)
+            )
         return images[0]
 
     # We will attempt to extract cell and pbc from kwargs if 'lacking'.
@@ -394,17 +406,26 @@ def kwargs2atoms(kwargs, directory=None):
         numbers, pos, tags, info = get_positions_from_block('coordinates')
         pos *= Bohr
         adjust_positions_by_half_cell = True
-        atoms = Atoms(cell=cell, numbers=numbers, positions=pos,
-                      tags=tags, info=info)
+        atoms = Atoms(
+            cell=cell, numbers=numbers, positions=pos, tags=tags, info=info
+        )
     rcoords = kwargs.get('reducedcoordinates')
     if rcoords is not None:
         numbers, spos, tags, info = get_positions_from_block(
-            'reducedcoordinates')
+            'reducedcoordinates'
+        )
         if cell is None:
-            raise ValueError('Cannot figure out what the cell is, '
-                             'and thus cannot interpret reduced coordinates.')
-        atoms = Atoms(cell=cell, numbers=numbers, scaled_positions=spos,
-                      tags=tags, info=info)
+            raise ValueError(
+                'Cannot figure out what the cell is, '
+                'and thus cannot interpret reduced coordinates.'
+            )
+        atoms = Atoms(
+            cell=cell,
+            numbers=numbers,
+            scaled_positions=spos,
+            tags=tags,
+            info=info,
+        )
     if atoms is None:
         raise OctopusParseError('Apparently there are no atoms.')
 
@@ -418,9 +439,12 @@ def kwargs2atoms(kwargs, directory=None):
         pbc[:pdims] = True
         atoms.pbc = pbc
 
-    if (cell is not None and cell.shape == (3,)
-            and adjust_positions_by_half_cell):
-        nonpbc = (atoms.pbc == 0)
+    if (
+        cell is not None
+        and cell.shape == (3,)
+        and adjust_positions_by_half_cell
+    ):
+        nonpbc = atoms.pbc == 0
         atoms.positions[:, nonpbc] += np.array(cell)[None, nonpbc] / 2.0
 
     return atoms, kwargs
@@ -447,14 +471,14 @@ def generate_input(atoms, kwargs):
 
     defaultboxshape = 'parallelepiped' if atoms.cell.rank > 0 else 'minimum'
     boxshape = kwargs.pop('boxshape', defaultboxshape).lower()
-    use_ase_cell = (boxshape == 'parallelepiped')
+    use_ase_cell = boxshape == 'parallelepiped'
     atomskwargs = atoms2kwargs(atoms, use_ase_cell)
 
     setvar('boxshape', boxshape)
 
     if use_ase_cell:
         if 'reducedcoordinates' in atomskwargs:
-            extend(list2block('LatticeParameters', [[1., 1., 1.]]))
+            extend(list2block('LatticeParameters', [[1.0, 1.0, 1.0]]))
             block = list2block('LatticeVectors', atomskwargs['latticevectors'])
         else:
             assert 'lsize' in atomskwargs
@@ -466,8 +490,10 @@ def generate_input(atoms, kwargs):
     pdim = 'periodicdimensions'
     if pdim in kwargs:
         if int(kwargs[pdim]) != int(atomskwargs[pdim]):
-            raise ValueError('Cannot reconcile periodicity in input '
-                             'with that of Atoms object')
+            raise ValueError(
+                'Cannot reconcile periodicity in input '
+                'with that of Atoms object'
+            )
     setvar('periodicdimensions', atomskwargs[pdim])
 
     # We should say that we want the forces if the user requests forces.
@@ -488,8 +514,9 @@ def generate_input(atoms, kwargs):
     append('')
 
     if 'reducedcoordinates' in atomskwargs:
-        coord_block = list2block('ReducedCoordinates',
-                                 atomskwargs['reducedcoordinates'])
+        coord_block = list2block(
+            'ReducedCoordinates', atomskwargs['reducedcoordinates']
+        )
     else:
         coord_block = list2block('Coordinates', atomskwargs['coordinates'])
     extend(coord_block)
@@ -531,17 +558,21 @@ def atoms2kwargs(atoms, use_ase_cell):
         if sym == 'X':
             sym = types.get((sym, tag))
             if sym is None:
-                raise ValueError('Cannot represent atom X without tags and '
-                                 'species info in atoms.info')
+                raise ValueError(
+                    'Cannot represent atom X without tags and '
+                    'species info in atoms.info'
+                )
         coord_block.append([repr(sym)] + [repr(x) for x in pos])
 
     kwargs[coordtype] = coord_block
     npbc = sum(atoms.pbc)
     for c in range(npbc):
         if not atoms.pbc[c]:
-            msg = ('Boundary conditions of Atoms object inconsistent '
-                   'with requirements of Octopus.  pbc must be either '
-                   '000, 100, 110, or 111.')
+            msg = (
+                'Boundary conditions of Atoms object inconsistent '
+                'with requirements of Octopus.  pbc must be either '
+                '000, 100, 110, or 111.'
+            )
             raise ValueError(msg)
     kwargs['periodicdimensions'] = npbc
 

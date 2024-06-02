@@ -13,22 +13,24 @@ def fixture_test_class(request):
 
 
 @pytest.mark.parametrize(
-    'indices', [
+    'indices',
+    [
         0,
         [0],
         [0, 1],
         np.array([0, 1], dtype=np.int64),
-    ]
+    ],
 )
 def test_valid_inputs_indices(fixture_test_class, indices):
     _ = fixture_test_class(indices, [1, 0, 0])
 
 
 @pytest.mark.parametrize(
-    'indices', [
+    'indices',
+    [
         [0, 1, 1],
         [[0, 1], [0, 1]],
-    ]
+    ],
 )
 def test_invalid_inputs_indices(fixture_test_class, indices):
     with pytest.raises(ValueError) as _:
@@ -40,14 +42,14 @@ def test_valid_inputs_direction(fixture_test_class, direction):
     _ = fixture_test_class(0, direction)
 
 
-@pytest.mark.parametrize('direction', [[0, 1], None, "42"])
+@pytest.mark.parametrize('direction', [[0, 1], None, '42'])
 def test_invalid_inputs_direction(fixture_test_class, direction):
     with pytest.raises(Exception) as _:
         _ = FixedLine(0, direction)
 
 
 def _check_simple_constraints(constraints, indices):
-    mol = molecule("butadiene")
+    mol = molecule('butadiene')
     mol.set_constraint(constraints)
 
     assert len(mol.constraints) == 1
@@ -67,20 +69,21 @@ def _check_simple_constraints(constraints, indices):
 @pytest.mark.parametrize('indices', [0, [0], [0, 1]])
 def test_repr_fixedline(fixture_test_class, indices):
     repr(FixedLine(indices, [1, 0, 0])) == (
-        "<FixedLine: "
+        '<FixedLine: '
         "{'indices': " + str(indices) + ", 'direction': [1. 0. 0.]}>"
     )
 
 
 @pytest.mark.parametrize(
-    'indices,expected', [
+    'indices,expected',
+    [
         (0, 2),
         ([0], 2),
         ([0, 1], 4),
-    ]
+    ],
 )
 def test_removed_dof_fixedline(indices, expected):
-    mol = molecule("butadiene")  # `get_removed_dof` requires an `Atoms` object
+    mol = molecule('butadiene')  # `get_removed_dof` requires an `Atoms` object
     constraints = FixedLine(indices, direction=[1, 0, 0])
     assert constraints.get_removed_dof(atoms=mol) == expected
 
@@ -104,20 +107,21 @@ def test_constrained_optimization_fixedline(indices):
 @pytest.mark.parametrize('indices', [0, [0], [0, 1]])
 def test_repr_fixedplane(fixture_test_class, indices):
     repr(FixedPlane(indices, [1, 0, 0])) == (
-        "<FixedPlane: "
+        '<FixedPlane: '
         "{'indices': " + str(indices) + ", 'direction': [1. 0. 0.]}>"
     )
 
 
 @pytest.mark.parametrize(
-    'indices,expected', [
+    'indices,expected',
+    [
         (0, 1),
         ([0], 1),
         ([0, 1], 2),
-    ]
+    ],
 )
 def test_removed_dof_fixedplane(indices, expected):
-    mol = molecule("butadiene")  # `get_removed_dof` requires an `Atoms` object
+    mol = molecule('butadiene')  # `get_removed_dof` requires an `Atoms` object
     constraints = FixedPlane(indices, direction=[1, 0, 0])
     assert constraints.get_removed_dof(atoms=mol) == expected
 

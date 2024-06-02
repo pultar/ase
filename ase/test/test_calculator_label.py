@@ -2,7 +2,6 @@ from ase.calculators.calculator import Calculator
 
 
 def test_calculator_label():
-
     calc = Calculator()
     assert calc.directory == '.'
     assert calc.prefix is None

@@ -13,7 +13,6 @@ from ase.optimize import BFGS
 @pytest.mark.optimize()
 @pytest.mark.skipif(os.name != 'posix', reason='only posix')
 def test_socketio_python():
-
     atoms = bulk('Au') * (2, 2, 2)
     atoms.rattle(stdev=0.05)
     fmax = 0.01
@@ -22,8 +21,9 @@ def test_socketio_python():
     client = PySocketIOClient(EMT)
 
     pid = os.getpid()
-    with SocketIOCalculator(launch_client=client,
-                            unixsocket=f'ase-python-{pid}') as atoms.calc:
+    with SocketIOCalculator(
+        launch_client=client, unixsocket=f'ase-python-{pid}'
+    ) as atoms.calc:
         with BFGS(FrechetCellFilter(atoms)) as opt:
             opt.run(fmax=fmax)
 

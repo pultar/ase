@@ -14,10 +14,7 @@ projectname = 'db-web-test-project'
 
 
 def get_atoms():
-    atoms = Atoms('H2O',
-                  [(0, 0, 0),
-                   (2, 0, 0),
-                   (1, 1, 0)])
+    atoms = Atoms('H2O', [(0, 0, 0), (2, 0, 0), (1, 1, 0)])
     atoms.center(vacuum=5)
     atoms.set_pbc(True)
     return atoms
@@ -32,12 +29,7 @@ def database(tmp_path_factory):
     t2 = [[2, 3], [1, 1], [1, 0]]
 
     atoms = get_atoms()
-    db.write(atoms,
-             foo=42.0,
-             bar='abc',
-             data={'x': x,
-                   't1': t1,
-                   't2': t2})
+    db.write(atoms, foo=42.0, bar='abc', data={'x': x, 't1': t1, 't2': t2})
     db.write(atoms)
 
     return db
@@ -60,8 +52,7 @@ def test_add_columns(database):
     pytest.importorskip('flask')
 
     session = Session('name')
-    project = DatabaseProject.dummyproject(
-        default_columns=['bar'])
+    project = DatabaseProject.dummyproject(default_columns=['bar'])
 
     session.update('query', '', {'query': 'id=2'}, project)
     table = session.create_table(database, 'id', ['foo'])
@@ -81,8 +72,10 @@ def test_db_web(client):
     page = c.get('/').data.decode()
     sid = Session.next_id - 1
     assert 'foo' in page
-    for url in [f'/update/{sid}/query/bla/?query=id=1',
-                f'/{projectname}/row/1']:
+    for url in [
+        f'/update/{sid}/query/bla/?query=id=1',
+        f'/{projectname}/row/1',
+    ]:
         resp = c.get(url)
         assert resp.status_code == 200
 
@@ -109,8 +102,7 @@ def test_paging(database):
     pytest.importorskip('flask')
 
     session = Session('name')
-    project = DatabaseProject.dummyproject(
-        default_columns=['bar'])
+    project = DatabaseProject.dummyproject(default_columns=['bar'])
 
     session.update('query', '', {'query': ''}, project)
     table = session.create_table(database, 'id', ['foo'])

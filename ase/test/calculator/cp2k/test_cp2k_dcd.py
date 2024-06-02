@@ -43,6 +43,7 @@ Missing cp2k configuration.  Requires:
     cp2k_main = /path/to/cp2k
 """)
 
+
 # XXX multi-line skip messages are ugly since they mess up the
 # pytest -r s listing.  Should we write a more terse message?
 # Let's do it when calculator factory reporting is user friendly.
@@ -57,18 +58,22 @@ def test_dcd(factory, cp2k_main):
     h2.set_pbc(True)
     energy = h2.get_potential_energy()
     assert energy is not None
-    subprocess.check_call([cp2k_main, '-i', 'test_dcd.inp', '-o',
-                           'test_dcd.out'])
+    subprocess.check_call(
+        [cp2k_main, '-i', 'test_dcd.inp', '-o', 'test_dcd.out']
+    )
     h2_end = io.read('test_dcd-pos-1.dcd')
     assert (h2_end.symbols == 'X').all()
-    traj = io.read('test_dcd-pos-1.dcd', ref_atoms=h2,
-                   index=slice(0, None), aligned=True)
-    ioITraj = io.iread('test_dcd-pos-1.dcd', ref_atoms=h2,
-                       index=slice(0, None), aligned=True)
+    traj = io.read(
+        'test_dcd-pos-1.dcd', ref_atoms=h2, index=slice(0, None), aligned=True
+    )
+    ioITraj = io.iread(
+        'test_dcd-pos-1.dcd', ref_atoms=h2, index=slice(0, None), aligned=True
+    )
 
     with open('test_dcd-pos-1.dcd', 'rb') as fd:
-        itraj = iread_cp2k_dcd(fd, indices=slice(0, None),
-                               ref_atoms=h2, aligned=True)
+        itraj = iread_cp2k_dcd(
+            fd, indices=slice(0, None), ref_atoms=h2, aligned=True
+        )
         for i, iMol in enumerate(itraj):
             ioIMol = next(ioITraj)
             assert compare_atoms(iMol, traj[i]) == []

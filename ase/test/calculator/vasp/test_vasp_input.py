@@ -4,9 +4,12 @@ import numpy as np
 import pytest
 
 from ase.build import bulk
-from ase.calculators.vasp.create_input import (GenerateVaspInput,
-                                               _args_without_comment,
-                                               _from_vasp_bool, _to_vasp_bool)
+from ase.calculators.vasp.create_input import (
+    GenerateVaspInput,
+    _args_without_comment,
+    _from_vasp_bool,
+    _to_vasp_bool,
+)
 
 
 def dict_is_subset(d1, d2):
@@ -25,8 +28,11 @@ def rng():
 
 @pytest.fixture()
 def nacl(rng):
-    atoms = bulk('NaCl', crystalstructure='rocksalt', a=4.1,
-                 cubic=True) * (3, 3, 3)
+    atoms = bulk('NaCl', crystalstructure='rocksalt', a=4.1, cubic=True) * (
+        3,
+        3,
+        3,
+    )
     rng.shuffle(atoms.symbols)  # Ensure symbols are mixed
     return atoms
 
@@ -35,6 +41,7 @@ def nacl(rng):
 def vaspinput_factory(nacl):
     """Factory for GenerateVaspInput class, which mocks the generation of
     pseudopotentials."""
+
     def _vaspinput_factory(atoms=None, **kwargs) -> GenerateVaspInput:
         if atoms is None:
             atoms = nacl
@@ -122,6 +129,7 @@ def read_magmom_from_file(filename) -> np.ndarray:
 def assert_magmom_equal_to_incar_value():
     """Fixture to compare a pre-made magmom array to the value
     a GenerateVaspInput.write_incar object writes to a file"""
+
     def _assert_magmom_equal_to_incar_value(atoms, expected_magmom, vaspinput):
         assert len(atoms) == len(expected_magmom)
         vaspinput.write_incar(atoms)
@@ -131,16 +139,22 @@ def assert_magmom_equal_to_incar_value():
         resort = vaspinput.resort
         # We round to 4 digits
         assert np.allclose(expected_magmom, new_magmom[resort], atol=1e-3)
-        assert np.allclose(np.array(expected_magmom)[srt],
-                           new_magmom,
-                           atol=1e-3)
+        assert np.allclose(
+            np.array(expected_magmom)[srt], new_magmom, atol=1e-3
+        )
 
     return _assert_magmom_equal_to_incar_value
 
 
 @pytest.mark.parametrize('list_func', [list, tuple, np.array])
-def test_write_magmom(magmoms_factory, list_func, nacl, vaspinput_factory,
-                      assert_magmom_equal_to_incar_value, testdir):
+def test_write_magmom(
+    magmoms_factory,
+    list_func,
+    nacl,
+    vaspinput_factory,
+    assert_magmom_equal_to_incar_value,
+    testdir,
+):
     """Test writing magnetic moments to INCAR, and ensure we can do it
     passing different types of sequences"""
     magmom = magmoms_factory(nacl)
@@ -150,9 +164,13 @@ def test_write_magmom(magmoms_factory, list_func, nacl, vaspinput_factory,
     assert_magmom_equal_to_incar_value(nacl, magmom, vaspinput)
 
 
-def test_atoms_with_initial_magmoms(magmoms_factory, nacl, vaspinput_factory,
-                                    assert_magmom_equal_to_incar_value,
-                                    testdir):
+def test_atoms_with_initial_magmoms(
+    magmoms_factory,
+    nacl,
+    vaspinput_factory,
+    assert_magmom_equal_to_incar_value,
+    testdir,
+):
     """Test passing atoms with initial magnetic moments"""
     magmom = magmoms_factory(nacl)
     assert len(magmom) == len(nacl)
@@ -185,10 +203,14 @@ def test_vasp_to_bool():
         _to_vasp_bool(1)
 
 
-@pytest.mark.parametrize('args, expected_len',
-                         [(['a', 'b', '#', 'c'], 2),
-                          (['a', 'b', '!', 'c', '#', 'd'], 2),
-                          (['#', 'a', 'b', '!', 'c', '#', 'd'], 0)])
+@pytest.mark.parametrize(
+    'args, expected_len',
+    [
+        (['a', 'b', '#', 'c'], 2),
+        (['a', 'b', '!', 'c', '#', 'd'], 2),
+        (['#', 'a', 'b', '!', 'c', '#', 'd'], 0),
+    ],
+)
 def test_vasp_args_without_comment(args, expected_len):
     """Test comment splitting logic"""
     clean_args = _args_without_comment(args)
@@ -203,42 +225,37 @@ def test_vasp_xc(vaspinput_factory):
 
     calc_vdw = vaspinput_factory(xc='optb86b-vdw')
 
-    assert dict_is_subset({
-        'param1': 0.1234,
-        'param2': 1.0
-    }, calc_vdw.float_params)
+    assert dict_is_subset(
+        {'param1': 0.1234, 'param2': 1.0}, calc_vdw.float_params
+    )
     assert calc_vdw.bool_params['luse_vdw'] is True
 
-    calc_hse = vaspinput_factory(xc='hse06',
-                                 hfscreen=0.1,
-                                 gga='RE',
-                                 encut=400,
-                                 sigma=0.5)
+    calc_hse = vaspinput_factory(
+        xc='hse06', hfscreen=0.1, gga='RE', encut=400, sigma=0.5
+    )
 
-    assert dict_is_subset({
-        'hfscreen': 0.1,
-        'encut': 400,
-        'sigma': 0.5
-    }, calc_hse.float_params)
+    assert dict_is_subset(
+        {'hfscreen': 0.1, 'encut': 400, 'sigma': 0.5}, calc_hse.float_params
+    )
     assert calc_hse.bool_params['lhfcalc'] is True
     assert dict_is_subset({'gga': 'RE'}, calc_hse.string_params)
 
     with pytest.warns(FutureWarning):
-        calc_pw91 = vaspinput_factory(xc='pw91',
-                                      kpts=(2, 2, 2),
-                                      gamma=True,
-                                      lreal='Auto')
+        calc_pw91 = vaspinput_factory(
+            xc='pw91', kpts=(2, 2, 2), gamma=True, lreal='Auto'
+        )
         assert dict_is_subset(
             {
                 'pp': 'PW91',
                 'kpts': (2, 2, 2),
                 'gamma': True,
-                'reciprocal': False
-            }, calc_pw91.input_params)
+                'reciprocal': False,
+            },
+            calc_pw91.input_params,
+        )
 
 
 def test_ichain(vaspinput_factory):
-
     with pytest.warns(UserWarning):
         calc_warn = vaspinput_factory(ichain=1, ediffg=-0.01)
         calc_warn.write_incar(nacl)
@@ -254,11 +271,9 @@ def test_ichain(vaspinput_factory):
         calc_wrong.read_incar('INCAR')
         assert calc_wrong.int_params['iopt'] == 1
 
-    calc = vaspinput_factory(ichain=1,
-                             ediffg=-0.01,
-                             iopt=1,
-                             potim=0.0,
-                             ibrion=1)
+    calc = vaspinput_factory(
+        ichain=1, ediffg=-0.01, iopt=1, potim=0.0, ibrion=1
+    )
     calc.write_incar(nacl)
     calc.read_incar('INCAR')
     assert calc.int_params['iopt'] == 1

@@ -42,15 +42,17 @@ positions = [
     [0.679823, 0.854839, 0.343915],
     [0.531660, 0.229024, 0.535688],
     [0.692514, 0.584931, 0.746683],
-    [0.509687, 0.449350, 0.111960]]
+    [0.509687, 0.449350, 0.111960],
+]
 symbols = ['S', 'F', 'F', 'F', 'F', 'F', 'F']
 lat = 4.672816
 
 # Intermediate data structures to test against
 symbol_xyz_list = [[s] + xyz for s, xyz in zip(symbols, positions)]
 symbol_xyz_dict = {i + 1: row for i, row in enumerate(symbol_xyz_list)}
-symbol_xyz_list_ext = [tuple([i + 1] + row + [0, 0, 0, 0])
-                       for i, row in enumerate(symbol_xyz_list)]
+symbol_xyz_list_ext = [
+    tuple([i + 1] + row + [0, 0, 0, 0]) for i, row in enumerate(symbol_xyz_list)
+]
 
 # Target Atoms system
 lat_positions = lat * np.array(positions)
@@ -83,13 +85,13 @@ def test_rmc6f_write_with_order():
     write('output.rmc6f', rmc6f_atoms, order=['F', 'S'])
     readback = read('output.rmc6f')
     reordered_positions = np.vstack(
-        (rmc6f_atoms.positions[1:7], rmc6f_atoms.positions[0]))
+        (rmc6f_atoms.positions[1:7], rmc6f_atoms.positions[0])
+    )
     assert np.allclose(reordered_positions, readback.positions, rtol=tol)
 
 
 def test_rmc6f_write_with_triclinic_system():
-    """Test for writing rmc6f input file for triclinic system
-    """
+    """Test for writing rmc6f input file for triclinic system"""
     tol = 1e-5
     fe4o6 = TRI_Fe2O3(
         symbol=('Fe', 'O'),
@@ -99,8 +101,10 @@ def test_rmc6f_write_with_triclinic_system():
             'c': 14.902,
             'alpha': 90.391,
             'beta': 90.014,
-            'gamma': 89.834},
-        size=(1, 1, 1))
+            'gamma': 89.834,
+        },
+        size=(1, 1, 1),
+    )
 
     # Make sure these are the returned cells (verified correct for rmc6f file)
     va = [5.143, 0.0, 0.0]
@@ -118,12 +122,13 @@ def test_rmc6f_write_with_triclinic_system():
 def test_rmc6f_read_construct_regex():
     """Test for utility function that constructs rmc6f header regex."""
     header_lines = [
-        "Number of atoms:",
-        "  Supercell dimensions:  ",
-        "    Cell (Ang/deg):  ",
-        "      Lattice vectors (Ang):  "]
+        'Number of atoms:',
+        '  Supercell dimensions:  ',
+        '    Cell (Ang/deg):  ',
+        '      Lattice vectors (Ang):  ',
+    ]
     result = rmc6f._read_construct_regex(header_lines)
-    target = "(Number\\s+of\\s+atoms:|Supercell\\s+dimensions:|Cell\\s+\\(Ang/deg\\):|Lattice\\s+vectors\\s+\\(Ang\\):)"  # noqa: E501
+    target = '(Number\\s+of\\s+atoms:|Supercell\\s+dimensions:|Cell\\s+\\(Ang/deg\\):|Lattice\\s+vectors\\s+\\(Ang\\):)'  # noqa: E501
     assert result == target
 
 
@@ -131,7 +136,7 @@ def test_rmc6f_read_line_of_atoms_section_style_no_labels():
     """Test for reading a line of atoms section
     w/ 'no labels' style for rmc6f
     """
-    atom_line = "1 S 0.600452 0.525100 0.442050 1 0 0 0"
+    atom_line = '1 S 0.600452 0.525100 0.442050 1 0 0 0'
     atom_id, props = rmc6f._read_line_of_atoms_section(atom_line.split())
     target_id = 1
     target_props = ['S', 0.600452, 0.5251, 0.44205]
@@ -143,7 +148,7 @@ def test_rmc6f_read_line_of_atoms_section_style_labels():
     """Test for reading a line of atoms section
     w/ 'labels'-included style for rmc6f
     """
-    atom_line = "1 S [1] 0.600452 0.525100 0.442050 1 0 0 0"
+    atom_line = '1 S [1] 0.600452 0.525100 0.442050 1 0 0 0'
     atom_id, props = rmc6f._read_line_of_atoms_section(atom_line.split())
     target_id = 1
     target_props = ['S', 0.600452, 0.5251, 0.44205]
@@ -155,7 +160,7 @@ def test_rmc6f_read_line_of_atoms_section_style_magnetic():
     """Test for reading a line of atoms section
     w/ 'magnetic' style for rmc6f
     """
-    atom_line = "1 S 0.600452 0.525100 0.442050 1 0 0 0 M: 0.1"
+    atom_line = '1 S 0.600452 0.525100 0.442050 1 0 0 0 M: 0.1'
     atom_id, props = rmc6f._read_line_of_atoms_section(atom_line.split())
     target_id = 1
     target_props = ['S', 0.600452, 0.5251, 0.44205, 0.1]
@@ -185,7 +190,7 @@ def test_rmc6f_read_process_rmc6f_lines_to_pos_and_cell_padded_whitespace():
     """
     tol = 1e-5
     lines = rmc6f_input_text.split('\n')
-    lines[14] = f"    {lines[14]}    "  # intentional whitespace
+    lines[14] = f'    {lines[14]}    '  # intentional whitespace
     props, cell = rmc6f._read_process_rmc6f_lines_to_pos_and_cell(lines)
 
     target_cell = np.zeros((3, 3), float)
@@ -210,16 +215,15 @@ def test_rmc6f_write_output_column_format():
     ncols, dtype_obj, fmt = rmc6f._write_output_column_format(cols, arrays)
 
     target_ncols = [1, 1, 3, 1, 3]
-    target_fmt = "%8d %s%14.6f %14.6f %14.6f %8d %8d %8d %8d \n"
+    target_fmt = '%8d %s%14.6f %14.6f %14.6f %8d %8d %8d %8d \n'
 
     assert ncols == target_ncols
     assert fmt == target_fmt
 
 
 def test_rmc6f_write_output():
-    """Test for utility function for writing rmc6f output
-    """
-    fileobj = "output.rmc6f"
+    """Test for utility function for writing rmc6f output"""
+    fileobj = 'output.rmc6f'
     header_lines = [
         '(Version 6f format configuration file)',
         '(Generated by ASE - Atomic Simulation Environment https://wiki.fysik.dtu.dk/ase/ )',  # noqa: E501
@@ -239,7 +243,8 @@ def test_rmc6f_write_output():
         '    4.672816     0.000000     0.000000',
         '    0.000000     4.672816     0.000000',
         '    0.000000     0.000000     4.672816',
-        'Atoms:']
+        'Atoms:',
+    ]
 
     data_array = symbol_xyz_list_ext
     data_dtype = [
@@ -251,8 +256,9 @@ def test_rmc6f_write_output():
         ('ref_num', '<i8'),
         ('ref_cell0', '<i8'),
         ('ref_cell1', '<i8'),
-        ('ref_cell2', '<i8')]
+        ('ref_cell2', '<i8'),
+    ]
     data = np.array(data_array, dtype=data_dtype)
-    fmt = "%8d %s%14.6f %14.6f %14.6f %8d %8d %8d %8d \n"
+    fmt = '%8d %s%14.6f %14.6f %14.6f %8d %8d %8d %8d \n'
     with open('output.rmc6f', 'w') as fileobj:
         rmc6f._write_output(fileobj, header_lines, data, fmt)

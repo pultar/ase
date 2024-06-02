@@ -2,6 +2,7 @@
 Execution of turbomole binaries and scripts:
 define, dscf, grad, ridft, rdgrad, aoforce, jobex, NumForce
 """
+
 import os
 from subprocess import PIPE, Popen
 
@@ -22,8 +23,9 @@ def execute(args, input_str=''):
 
     stdout_file = get_output_filename(os.path.basename(args[0]))
     with open(stdout_file, 'w') as stdout:
-        proc = Popen(args, stdin=PIPE, stderr=PIPE, stdout=stdout,
-                     encoding='ASCII')
+        proc = Popen(
+            args, stdin=PIPE, stderr=PIPE, stdout=stdout, encoding='ASCII'
+        )
         stdout_txt, stderr_txt = proc.communicate(input=input_str)
         check_bad_output(stderr_txt)
     return stdout_file

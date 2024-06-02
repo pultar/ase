@@ -87,7 +87,9 @@ def read_datetime(path):
     """
     datetimes = read_output(
         r'(\d{4}-[01]\d-[0-3]\d([T\s][0-2]\d:[0-5]'
-        r'\d:[0-5]\d\.\d+)?([+-][0-2]\d:[0-5]\d|Z)?)', path)
+        r'\d:[0-5]\d\.\d+)?([+-][0-2]\d:[0-5]\d|Z)?)',
+        path,
+    )
     if len(datetimes) == 0:
         warnings.warn('no turbomole datetime detected')
         datetime = None
@@ -128,8 +130,7 @@ def read_convergence(restart, parameters):
             return False
         if not bool(len(read_data_group('energy'))):
             return False
-        if (os.path.exists('job.start') and
-                os.path.exists('GEO_OPT_FAILED')):
+        if os.path.exists('job.start') and os.path.exists('GEO_OPT_FAILED'):
             return False
         return True
 
@@ -215,7 +216,7 @@ def read_energy(results, post_HF):
 
 
 def read_occupation_numbers(results):
-    """read occupation numbers with module 'eiger' """
+    """read occupation numbers with module 'eiger'"""
     if 'molecular orbitals' not in results.keys():
         return
     mos = results['molecular orbitals']
@@ -235,9 +236,12 @@ def read_occupation_numbers(results):
             else:
                 spin = None
             ar_index = next(
-                index for (index, molecular_orbital) in enumerate(mos)
-                if (molecular_orbital['index'] == orb_index and
-                    molecular_orbital['spin'] == spin)
+                index
+                for (index, molecular_orbital) in enumerate(mos)
+                if (
+                    molecular_orbital['index'] == orb_index
+                    and molecular_orbital['spin'] == spin
+                )
             )
             mos[ar_index]['index by energy'] = int(match.group(1))
             irrep = str(match.group(4))
@@ -276,8 +280,7 @@ def read_mos(results):
                     mos.append(mo)
                     mo = {}
                     orbitals_coefficients_line = []
-                regex = (r'^\s*(\d+)\s+(\S+)\s+'
-                         r'eigenvalue=([\+\-\d\.\w]+)\s')
+                regex = r'^\s*(\d+)\s+(\S+)\s+' r'eigenvalue=([\+\-\d\.\w]+)\s'
                 match = re.search(regex, line)
                 mo['index'] = int(match.group(1))
                 mo['irreducible representation'] = str(match.group(2))
@@ -292,8 +295,11 @@ def read_mos(results):
                 match = re.search(regex, line)
                 if match:
                     flen = int(match.group(1))
-                if ('scfdump' in line or 'expanded' in line or
-                        'scfconv' not in line):
+                if (
+                    'scfdump' in line
+                    or 'expanded' in line
+                    or 'scfconv' not in line
+                ):
                     converged = False
                 continue
             if '$end' in line:
@@ -301,10 +307,10 @@ def read_mos(results):
                     mo['eigenvector'] = orbitals_coefficients_line
                     mos.append(mo)
                 break
-            sfields = [line[i:i + flen]
-                       for i in range(0, len(line), flen)]
-            ffields = [float(f.replace('D', 'E').replace('d', 'E'))
-                       for f in sfields]
+            sfields = [line[i : i + flen] for i in range(0, len(line), flen)]
+            ffields = [
+                float(f.replace('D', 'E').replace('d', 'E')) for f in sfields
+            ]
             orbitals_coefficients_line += ffields
     return converged
 
@@ -442,8 +448,7 @@ def read_ecps(results):
             match = re.search(regex, line)
             if match:
                 ecp['number of core electrons'] = int(match.group(1))
-                ecp['maximum angular momentum number'] = \
-                    int(match.group(2))
+                ecp['maximum angular momentum number'] = int(match.group(2))
                 continue
             match = re.search(r'^(\w(\-\w)?)', line)
             if match:
@@ -457,15 +462,17 @@ def read_ecps(results):
                     # begin group
                 group['title'] = str(match.group(1))
                 continue
-            regex = (r'^\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s+'
-                     r'(\d)\s+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)')
+            regex = (
+                r'^\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s+'
+                r'(\d)\s+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)'
+            )
             match = re.search(regex, line)
             if match:
                 terms.append(
                     {
                         'coefficient': float(match.group(1)),
                         'power of r': float(match.group(3)),
-                        'exponent': float(match.group(4))
+                        'exponent': float(match.group(4)),
                     }
                 )
 
@@ -509,8 +516,8 @@ def read_gradient(results):
     grad_string = read_data_group('grad')
     if len(grad_string) == 0:
         return
-#       try to reuse ase:
-#       structures = read('gradient', index=':')
+    #       try to reuse ase:
+    #       structures = read('gradient', index=':')
     lines = grad_string.split('\n')
     history = []
     image = {}
@@ -601,7 +608,7 @@ def read_hessian(results, noproj=False):
         if key in line:
             continue
         fields = line.split()
-        row.extend(fields[2:len(fields)])
+        row.extend(fields[2 : len(fields)])
         if len(row) == nvibro:
             # check whether it is mass-weighted
             float_row = [float(element) for element in row]
@@ -633,7 +640,7 @@ def read_normal_modes(results, noproj=False):
         if '$end' in line:
             break
         fields = line.split()
-        row.extend(fields[2:len(fields)])
+        row.extend(fields[2 : len(fields)])
         if len(row) == nvibro:
             # check whether it is mass-weighted
             float_row = [float(element) for element in row]
@@ -676,11 +683,11 @@ def read_vibrational_spectrum(results, noproj=False):
             dictionary['irreducible representation'] = str(match.group(2))
             dictionary['frequency'] = {
                 'units': 'cm^-1',
-                'value': float(match.group(3))
+                'value': float(match.group(3)),
             }
             dictionary['infrared intensity'] = {
                 'units': 'km/mol',
-                'value': float(match.group(4))
+                'value': float(match.group(4)),
             }
 
             if match.group(5) == 'YES':
@@ -731,11 +738,11 @@ def read_dipole_moment(results):
     results['electric dipole moment'] = {}
     results['electric dipole moment']['vector'] = {
         'array': dip_vec,
-        'units': 'a.u.'
+        'units': 'a.u.',
     }
     results['electric dipole moment']['absolute value'] = {
         'value': dip_abs_val,
-        'units': 'Debye'
+        'units': 'Debye',
     }
 
 
@@ -748,7 +755,7 @@ def read_charges(filename, natoms):
         oklines = None
         for n, line in enumerate(lines):
             if 'atom  radius/au   charge' in line:
-                oklines = lines[n + 1:n + natoms + 1]
+                oklines = lines[n + 1 : n + natoms + 1]
         if oklines is not None:
             qm_charges = [float(line.split()[3]) for line in oklines]
             charges = np.array(qm_charges)

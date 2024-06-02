@@ -16,18 +16,24 @@ def test_turbomole_h3o2m(turbomole_factory):
     angle = radians(104.5)
     initial = Atoms(
         'HOHOH',
-        positions=[(-sin(angle) * doht, 0., cos(angle) * doht),
-                   (0., 0., 0.),
-                   (0., 0., doh),
-                   (0., 0., doo),
-                   (sin(angle) * doht, 0., doo - cos(angle) * doht)])
+        positions=[
+            (-sin(angle) * doht, 0.0, cos(angle) * doht),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, doh),
+            (0.0, 0.0, doo),
+            (sin(angle) * doht, 0.0, doo - cos(angle) * doht),
+        ],
+    )
     final = Atoms(
         'HOHOH',
-        positions=[(- sin(angle) * doht, 0., cos(angle) * doht),
-                   (0., 0., 0.),
-                   (0., 0., doo - doh),
-                   (0., 0., doo),
-                   (sin(angle) * doht, 0., doo - cos(angle) * doht)])
+        positions=[
+            (-sin(angle) * doht, 0.0, cos(angle) * doht),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, doo - doh),
+            (0.0, 0.0, doo),
+            (sin(angle) * doht, 0.0, doo - cos(angle) * doht),
+        ],
+    )
 
     # Make band:
     images = [initial.copy()]
@@ -37,9 +43,11 @@ def test_turbomole_h3o2m(turbomole_factory):
     neb = NEB(images, climb=True)
 
     # Write all commands for the define command in a string
-    define_str = ('\n\na coord\n\n*\nno\nb all 3-21g '
-                  'hondo\n*\neht\n\n-1\nno\ns\n*\n\ndft\non\nfunc '
-                  'pwlda\n\n\nscf\niter\n300\n\n*')
+    define_str = (
+        '\n\na coord\n\n*\nno\nb all 3-21g '
+        'hondo\n*\neht\n\n-1\nno\ns\n*\n\ndft\non\nfunc '
+        'pwlda\n\n\nscf\niter\n300\n\n*'
+    )
 
     # Set constraints and calculator:
     constraint = FixAtoms(indices=[1, 3])  # fix OO BUG No.1: fixes atom 0 and 1

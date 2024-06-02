@@ -15,11 +15,15 @@ def test_COCu111(testdir):
     # Distance between Cu atoms on a (111) surface:
     a = 3.6
     d = a / sqrt(2)
-    fcc111 = Atoms(symbols='Cu',
-                   cell=[(d, 0, 0),
-                         (d / 2, d * sqrt(3) / 2, 0),
-                         (d / 2, d * sqrt(3) / 6, -a / sqrt(3))],
-                   pbc=True)
+    fcc111 = Atoms(
+        symbols='Cu',
+        cell=[
+            (d, 0, 0),
+            (d / 2, d * sqrt(3) / 2, 0),
+            (d / 2, d * sqrt(3) / 6, -a / sqrt(3)),
+        ],
+        pbc=True,
+    )
     slab = fcc111 * (2, 2, 2)
     slab.set_cell([2 * d, d * sqrt(3), 1])
     slab.set_pbc((1, 1, 0))

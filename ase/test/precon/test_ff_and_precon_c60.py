@@ -50,26 +50,49 @@ def forcefield_params(atoms0):
         for jj in range(len(neighbor_list[i])):
             j = neighbor_list[i][jj]
             if j > i:
-                morses.append(Morse(atomi=i, atomj=j, D=morse_D,
-                                    alpha=morse_alpha, r0=morse_r0))
+                morses.append(
+                    Morse(
+                        atomi=i,
+                        atomj=j,
+                        D=morse_D,
+                        alpha=morse_alpha,
+                        r0=morse_r0,
+                    )
+                )
             vdw_list[i, j] = vdw_list[j, i] = False
             for kk in range(jj + 1, len(neighbor_list[i])):
                 k = neighbor_list[i][kk]
-                angles.append(Angle(atomi=j, atomj=i, atomk=k, k=angle_k,
-                                    a0=angle_a0, cos=True))
+                angles.append(
+                    Angle(
+                        atomi=j,
+                        atomj=i,
+                        atomk=k,
+                        k=angle_k,
+                        a0=angle_a0,
+                        cos=True,
+                    )
+                )
                 vdw_list[j, k] = vdw_list[k, j] = False
                 for ll in range(kk + 1, len(neighbor_list[i])):
                     L = neighbor_list[i][ll]
-                    dihedrals.append(Dihedral(atomi=j, atomj=i, atomk=k,
-                                              atoml=L,
-                                              k=dihedral_k))
+                    dihedrals.append(
+                        Dihedral(
+                            atomi=j, atomj=i, atomk=k, atoml=L, k=dihedral_k
+                        )
+                    )
 
     # create list of van der Waals interactions
     for i in range(len(a)):
         for j in range(i + 1, len(a)):
             if vdw_list[i, j]:
-                vdws.append(VdW(atomi=i, atomj=j, epsilonij=vdw_epsilonij,
-                                rminij=vdw_rminij))
+                vdws.append(
+                    VdW(
+                        atomi=i,
+                        atomj=j,
+                        epsilonij=vdw_epsilonij,
+                        rminij=vdw_rminij,
+                    )
+                )
 
     return dict(morses=morses, angles=angles, dihedrals=dihedrals, vdws=vdws)
 

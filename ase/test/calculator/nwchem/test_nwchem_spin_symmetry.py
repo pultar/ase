@@ -1,4 +1,5 @@
 """Check if spin-symmetry is conserved"""
+
 import pytest
 
 from ase import Atoms
@@ -14,12 +15,12 @@ def test_main(factory):
         cr_atom.set_initial_magnetic_moments([imm])
         calculator = factory.calc(
             task='energy',
-            dft=dict(convergence=dict(energy=1e-3,
-                                      density=1e-2,
-                                      gradient=5e-2)),
+            dft=dict(
+                convergence=dict(energy=1e-3, density=1e-2, gradient=5e-2)
+            ),
             basis='m6-31g*',
             basispar='"ao basis" spherical',
-            charge=0
+            charge=0,
         )
         cr_atom.calc = calculator
         energies.append(cr_atom.get_potential_energy())

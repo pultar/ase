@@ -1,4 +1,5 @@
 """Prism"""
+
 import warnings
 from typing import Sequence
 
@@ -14,10 +15,10 @@ def calc_box_parameters(cell: np.ndarray) -> np.ndarray:
     """
     ax = np.sqrt(cell[0] @ cell[0])
     bx = cell[0] @ cell[1] / ax
-    by = np.sqrt(cell[1] @ cell[1] - bx ** 2)
+    by = np.sqrt(cell[1] @ cell[1] - bx**2)
     cx = cell[0] @ cell[2] / ax
     cy = (cell[1] @ cell[2] - bx * cx) / by
-    cz = np.sqrt(cell[2] @ cell[2] - cx ** 2 - cy ** 2)
+    cz = np.sqrt(cell[2] @ cell[2] - cx**2 - cy**2)
     return np.array((ax, by, cz, bx, cx, cy))
 
 
@@ -202,12 +203,12 @@ class Prism:
         test_residual *= (new_vol / old_vol) ** (1.0 / 3.0)
         test_residual -= new_ase_cell
         if any(
-                np.linalg.norm(test_residual, axis=1)
-                > 0.5 * np.linalg.norm(self.ase_cell, axis=1)
+            np.linalg.norm(test_residual, axis=1)
+            > 0.5 * np.linalg.norm(self.ase_cell, axis=1)
         ):
             warnings.warn(
-                "Significant simulation cell changes from LAMMPS detected. "
-                "Backtransformation to ASE might fail!"
+                'Significant simulation cell changes from LAMMPS detected. '
+                'Backtransformation to ASE might fail!'
             )
         return new_ase_cell
 
@@ -293,7 +294,7 @@ class Prism:
         bool
             True if the lammps cell is skewed.
         """
-        cell_sq = self.cell ** 2
+        cell_sq = self.cell**2
         on_diag = np.sum(np.diag(cell_sq))
         off_diag = np.sum(np.tril(cell_sq, -1))
         return off_diag / on_diag > self.tolerance

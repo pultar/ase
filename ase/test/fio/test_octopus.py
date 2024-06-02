@@ -15,7 +15,8 @@ def test_molecule():
     atoms = molecule('H2O')
     kwargs = atoms2kwargs(atoms, use_ase_cell=False)
     assert atoms.positions == pytest.approx(
-        getcoords(kwargs['coordinates']) * Bohr)
+        getcoords(kwargs['coordinates']) * Bohr
+    )
     # assert 'boxshape' not in kwargs and 'latticevectors' not in kwargs
 
 
@@ -34,9 +35,11 @@ def test_molecule_box():
 
 def compare_scaled(atoms, kwargs):
     assert np.array(kwargs['latticevectors'], float) == pytest.approx(
-        atoms.cell / Bohr)
+        atoms.cell / Bohr
+    )
     assert getcoords(kwargs['reducedcoordinates']) == pytest.approx(
-        atoms.get_scaled_positions())
+        atoms.get_scaled_positions()
+    )
 
 
 def test_2d_surface():

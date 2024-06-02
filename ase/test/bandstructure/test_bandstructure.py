@@ -11,8 +11,7 @@ from ase.spectrum.band_structure import BandStructure
 def test_bandstructure(testdir, plt):
     atoms = bulk('Cu')
     path = special_paths['fcc']
-    atoms.calc = FreeElectrons(nvalence=1,
-                               kpts={'path': path, 'npoints': 200})
+    atoms.calc = FreeElectrons(nvalence=1, kpts={'path': path, 'npoints': 200})
     atoms.get_potential_energy()
     bs = atoms.calc.band_structure()
     coords, labelcoords, labels = bs.get_labels()

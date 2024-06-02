@@ -49,7 +49,7 @@ def test_parse_eigval():
     assert len(occ) == 1
     assert pytest.approx(eig[0]) == [[-1.0, -0.5, 1.0], [1.0, 1.1, 1.2]]
     assert pytest.approx(occ[0]) == [[2.0, 1.5, 0.0], [1.9, 1.8, 1.7]]
-    assert pytest.approx(kpts) == [[0., 0., 0.], [0.0, 0.1, 0.2]]
+    assert pytest.approx(kpts) == [[0.0, 0.0, 0.0], [0.0, 0.1, 0.2]]
 
 
 elk_geometry_out = """
@@ -83,12 +83,20 @@ def test_read_elk():
     atoms = read_elk(io.StringIO(elk_geometry_out))
     assert str(atoms.symbols) == 'Si2'
     assert all(atoms.pbc)
-    assert atoms.cell / Bohr == pytest.approx(np.array([
-        [1.0, 0.1, 0.2],
-        [0.3, 2.0, 0.4],
-        [0.5, 0.6, 3.0],
-    ]))
-    assert atoms.get_scaled_positions() == pytest.approx(np.array([
-        [0.1, 0.2, 0.3],
-        [0.4, 0.5, 0.6],
-    ]))
+    assert atoms.cell / Bohr == pytest.approx(
+        np.array(
+            [
+                [1.0, 0.1, 0.2],
+                [0.3, 2.0, 0.4],
+                [0.5, 0.6, 3.0],
+            ]
+        )
+    )
+    assert atoms.get_scaled_positions() == pytest.approx(
+        np.array(
+            [
+                [0.1, 0.2, 0.3],
+                [0.4, 0.5, 0.6],
+            ]
+        )
+    )

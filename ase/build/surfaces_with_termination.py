@@ -4,36 +4,43 @@ from ase.geometry import get_layers
 from ase.symbols import string2symbols
 
 
-def surfaces_with_termination(lattice, indices, layers, vacuum=None, tol=1e-10,
-                              termination=None, return_all=False,
-                              verbose=False):
+def surfaces_with_termination(
+    lattice,
+    indices,
+    layers,
+    vacuum=None,
+    tol=1e-10,
+    termination=None,
+    return_all=False,
+    verbose=False,
+):
     """Create surface from a given lattice and Miller indices with a given
-        termination
+    termination
 
-        Parameters
-        ==========
-        lattice: Atoms object or str
-            Bulk lattice structure of alloy or pure metal.  Note that the
-            unit-cell must be the conventional cell - not the primitive cell.
-            One can also give the chemical symbol as a string, in which case the
-            correct bulk lattice will be generated automatically.
-        indices: sequence of three int
-            Surface normal in Miller indices (h,k,l).
-        layers: int
-            Number of equivalent layers of the slab. (not the same as the layers
-            you choose from for terminations)
-        vacuum: float
-            Amount of vacuum added on both sides of the slab.
-        termination: str
-            the atoms you wish to be in the top layer. There may be many such
-            terminations, this function returns all terminations with the same
-            atomic composition.
-            e.g. 'O' will return oxygen terminated surfaces.
-            e.g.'TiO' returns surfaces terminated with layers containing both
-            O and Ti
-        Returns:
-        return_surfs: List
-            a list of surfaces that match the specifications given
+    Parameters
+    ==========
+    lattice: Atoms object or str
+        Bulk lattice structure of alloy or pure metal.  Note that the
+        unit-cell must be the conventional cell - not the primitive cell.
+        One can also give the chemical symbol as a string, in which case the
+        correct bulk lattice will be generated automatically.
+    indices: sequence of three int
+        Surface normal in Miller indices (h,k,l).
+    layers: int
+        Number of equivalent layers of the slab. (not the same as the layers
+        you choose from for terminations)
+    vacuum: float
+        Amount of vacuum added on both sides of the slab.
+    termination: str
+        the atoms you wish to be in the top layer. There may be many such
+        terminations, this function returns all terminations with the same
+        atomic composition.
+        e.g. 'O' will return oxygen terminated surfaces.
+        e.g.'TiO' returns surfaces terminated with layers containing both
+        O and Ti
+    Returns:
+    return_surfs: List
+        a list of surfaces that match the specifications given
 
     """
     lats = translate_lattice(lattice, indices)
@@ -54,8 +61,8 @@ def surfaces_with_termination(lattice, indices, layers, vacuum=None, tol=1e-10,
         z_layers, hs = get_layers(surf, (0, 0, 1))  # just z layers matter
         # get the indicies of the atoms in the highest layer
         top_layer = [
-            i for i, val in enumerate(
-                z_layers == max(z_layers)) if val]
+            i for i, val in enumerate(z_layers == max(z_layers)) if val
+        ]
 
         if termination is not None:
             comp = [surf.get_chemical_symbols()[a] for a in top_layer]
@@ -65,8 +72,9 @@ def surfaces_with_termination(lattice, indices, layers, vacuum=None, tol=1e-10,
             # list of atoms in requested termination and not in top layer
             check2 = [a for a in term if a not in comp]
         if len(return_surfs) > 0:
-            pos_diff = [a.get_positions() - surf.get_positions()
-                        for a in return_surfs]
+            pos_diff = [
+                a.get_positions() - surf.get_positions() for a in return_surfs
+            ]
             for i, su in enumerate(pos_diff):
                 similarity_test = su.flatten() < tol * 1000
                 if similarity_test.all():
@@ -112,11 +120,13 @@ def translate_lattice(lattice, indices, tol=10**-3):
     N = np.array(cell[0] / h1 + cell[1] / k1 + cell[2] / l1)
     n = N / np.linalg.norm(N)  # making a unit vector normal to cut plane
     # finding distance from cut plan vector
-    d = [np.round(np.dot(n, (a - pt)) * n, 5) for
-         a in lattice.get_scaled_positions()]
+    d = [
+        np.round(np.dot(n, (a - pt)) * n, 5)
+        for a in lattice.get_scaled_positions()
+    ]
     duplicates = []
     for i, item in enumerate(d):
-        g = [True for a in d[i + 1:] if np.linalg.norm(a - item) < tol]
+        g = [True for a in d[i + 1 :] if np.linalg.norm(a - item) < tol]
         if g != []:
             duplicates.append(i)
     duplicates.reverse()
@@ -124,8 +134,9 @@ def translate_lattice(lattice, indices, tol=10**-3):
         del d[i]
     # put distance to the plane at the end of the array
     for i, item in enumerate(d):
-        d[i] = np.append(item,
-                         np.dot(n, (lattice.get_scaled_positions()[i] - pt)))
+        d[i] = np.append(
+            item, np.dot(n, (lattice.get_scaled_positions()[i] - pt))
+        )
     d = np.array(d)
     d = d[d[:, 3].argsort()]  # sort by distance to the plane
     d = [a[:3] for a in d]  # remove distance
@@ -139,13 +150,11 @@ def translate_lattice(lattice, indices, tol=10**-3):
         too far away, you risk hitting another boundary you did not find.
         """
         lattice1 = lattice.copy()
-        displacement = (h * cell[0] + k * cell[1] + l * cell[2]) \
-            * (i + 10 ** -8)
+        displacement = (h * cell[0] + k * cell[1] + l * cell[2]) * (i + 10**-8)
         lattice1.positions -= displacement
         lattice_list.append(lattice1)
         lattice1 = lattice.copy()
-        displacement = (h * cell[0] + k * cell[1] + l * cell[2]) \
-            * (i - 10 ** -8)
+        displacement = (h * cell[0] + k * cell[1] + l * cell[2]) * (i - 10**-8)
         lattice1.positions -= displacement
         lattice_list.append(lattice1)
     return lattice_list

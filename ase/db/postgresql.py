@@ -4,14 +4,19 @@ import numpy as np
 from psycopg2 import connect
 from psycopg2.extras import execute_values
 
-from ase.db.sqlite import (VERSION, SQLite3Database, index_statements,
-                           init_statements)
+from ase.db.sqlite import (
+    VERSION,
+    SQLite3Database,
+    index_statements,
+    init_statements,
+)
 from ase.io.jsonio import create_ase_object, create_ndarray
 from ase.io.jsonio import encode as ase_encode
 
 jsonb_indices = [
     'CREATE INDEX idxkeys ON systems USING GIN (key_value_pairs);',
-    'CREATE INDEX idxcalc ON systems USING GIN (calculator_parameters);']
+    'CREATE INDEX idxcalc ON systems USING GIN (calculator_parameters);',
+]
 
 
 def remove_nan_and_inf(obj):
@@ -75,21 +80,29 @@ class Cursor:
         statement = statement.replace(f'({q})', '%s')
         q = '({})'.format(q.replace('?', '%s'))
 
-        execute_values(self.cur, statement.replace('?', '%s'),
-                       argslist=args[0], template=q, page_size=len(args[0]))
+        execute_values(
+            self.cur,
+            statement.replace('?', '%s'),
+            argslist=args[0],
+            template=q,
+            page_size=len(args[0]),
+        )
 
 
 def insert_ase_and_ndarray_objects(obj):
     if isinstance(obj, dict):
         objtype = obj.pop('__ase_objtype__', None)
         if objtype is not None:
-            return create_ase_object(objtype,
-                                     insert_ase_and_ndarray_objects(obj))
+            return create_ase_object(
+                objtype, insert_ase_and_ndarray_objects(obj)
+            )
         data = obj.get('__ndarray__')
         if data is not None:
             return create_ndarray(*data)
-        return {key: insert_ase_and_ndarray_objects(value)
-                for key, value in obj.items()}
+        return {
+            key: insert_ase_and_ndarray_objects(value)
+            for key, value in obj.items()
+        }
     if isinstance(obj, list):
         return [insert_ase_and_ndarray_objects(value) for value in obj]
     return obj
@@ -134,17 +147,19 @@ class PostgreSQLDatabase(SQLite3Database):
         self._metadata = {}
 
         cur = con.cursor()
-        cur.execute("show search_path;")
+        cur.execute('show search_path;')
         schema = cur.fetchone()[0].split(', ')
         if schema[0] == '"$user"':
             schema = schema[1]
         else:
             schema = schema[0]
 
-        cur.execute("""
+        cur.execute(
+            """
         SELECT EXISTS(select * from information_schema.tables where
         table_name='information' and table_schema='{}');
-        """.format(schema))
+        """.format(schema)
+        )
 
         if not cur.fetchone()[0]:  # information schema doesn't exist.
             # Initialize database:
@@ -180,13 +195,24 @@ class PostgreSQLDatabase(SQLite3Database):
 
 
 def schema_update(sql):
-    for a, b in [('REAL', 'DOUBLE PRECISION'),
-                 ('INTEGER PRIMARY KEY AUTOINCREMENT',
-                  'SERIAL PRIMARY KEY')]:
+    for a, b in [
+        ('REAL', 'DOUBLE PRECISION'),
+        ('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY'),
+    ]:
         sql = sql.replace(a, b)
 
-    arrays_1D = ['numbers', 'initial_magmoms', 'initial_charges', 'masses',
-                 'tags', 'momenta', 'stress', 'dipole', 'magmoms', 'charges']
+    arrays_1D = [
+        'numbers',
+        'initial_magmoms',
+        'initial_charges',
+        'masses',
+        'tags',
+        'momenta',
+        'stress',
+        'dipole',
+        'magmoms',
+        'charges',
+    ]
 
     arrays_2D = ['positions', 'cell', 'forces']
 
@@ -197,14 +223,11 @@ def schema_update(sql):
             dtype = 'INTEGER'
         else:
             dtype = 'DOUBLE PRECISION'
-        sql = sql.replace(f'{column} BLOB,',
-                          f'{column} {dtype}[],')
+        sql = sql.replace(f'{column} BLOB,', f'{column} {dtype}[],')
     for column in arrays_2D:
-        sql = sql.replace(f'{column} BLOB,',
-                          f'{column} DOUBLE PRECISION[][],')
+        sql = sql.replace(f'{column} BLOB,', f'{column} DOUBLE PRECISION[][],')
     for column in txt2jsonb:
-        sql = sql.replace(f'{column} TEXT,',
-                          f'{column} JSONB,')
+        sql = sql.replace(f'{column} TEXT,', f'{column} JSONB,')
 
     sql = sql.replace('data BLOB,', 'data JSONB,')
 

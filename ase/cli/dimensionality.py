@@ -40,10 +40,18 @@ class CLICommand:
     def add_arguments(parser):
         add = parser.add_argument
         add('filenames', nargs='+', help='input file(s) to analyze')
-        add('--display-all', dest='full', action='store_true',
-            help='display all dimensionality classifications')
-        add('--no-merge', dest='no_merge', action='store_true',
-            help='do not merge k-intervals with same dimensionality')
+        add(
+            '--display-all',
+            dest='full',
+            action='store_true',
+            help='display all dimensionality classifications',
+        )
+        add(
+            '--no-merge',
+            dest='no_merge',
+            action='store_true',
+            help='do not merge k-intervals with same dimensionality',
+        )
 
     @staticmethod
     def run(args, parser):
@@ -56,8 +64,10 @@ class CLICommand:
         files = [os.path.split(path)[1] for path in args.filenames]
         lmax = max(len(f) for f in files) + 2
 
-        print('file'.ljust(lmax) +
-              'type   score     a      b      component counts')
+        print(
+            'file'.ljust(lmax)
+            + 'type   score     a      b      component counts'
+        )
         print('=' * lmax + '===============================================')
 
         merge = not args.no_merge
@@ -81,9 +91,9 @@ class CLICommand:
                         else:
                             name = ' ' * lmax
 
-                        line = ('{}{}' + '   {}' * 4).format(name, dimtype,
-                                                             score, a, b,
-                                                             entry.h)
+                        line = ('{}{}' + '   {}' * 4).format(
+                            name, dimtype, score, a, b, entry.h
+                        )
                         print(line)
 
                     if args.full:

@@ -47,14 +47,15 @@ def test_array_shape(atoms):
 
     ase.io.write('to_new.xyz', atoms, format='extxyz')
     at_new = ase.io.read('to_new.xyz')
-    assert at_new.arrays['ns_extra_data'].shape == (2, )
+    assert at_new.arrays['ns_extra_data'].shape == (2,)
 
 
 # test comment read/write with vec_cell
 def test_comment(atoms):
     atoms.info['comment'] = 'test comment'
-    ase.io.write('comment.xyz', atoms, comment=atoms.info['comment'],
-                 vec_cell=True)
+    ase.io.write(
+        'comment.xyz', atoms, comment=atoms.info['comment'], vec_cell=True
+    )
     r = ase.io.read('comment.xyz')
     assert atoms == r
 
@@ -128,18 +129,26 @@ def test_read_slash():
 
 def test_read_struct():
     struct = Atoms(
-        'H4', pbc=[True, True, True],
-        cell=[[4.00759, 0.0, 0.0],
-              [-2.003795, 3.47067475, 0.0],
-              [3.06349683e-16, 5.30613216e-16, 5.00307]],
-        positions=[[-2.003795e-05, 2.31379473, 0.875437189],
-                   [2.00381504, 1.15688001, 4.12763281],
-                   [2.00381504, 1.15688001, 3.37697219],
-                   [-2.003795e-05, 2.31379473, 1.62609781]],
+        'H4',
+        pbc=[True, True, True],
+        cell=[
+            [4.00759, 0.0, 0.0],
+            [-2.003795, 3.47067475, 0.0],
+            [3.06349683e-16, 5.30613216e-16, 5.00307],
+        ],
+        positions=[
+            [-2.003795e-05, 2.31379473, 0.875437189],
+            [2.00381504, 1.15688001, 4.12763281],
+            [2.00381504, 1.15688001, 3.37697219],
+            [-2.003795e-05, 2.31379473, 1.62609781],
+        ],
     )
-    struct.info = {'dataset': 'deltatest', 'kpoints': np.array([28, 28, 20]),
-                   'identifier': 'deltatest_H_1.00',
-                   'unique_id': '4cf83e2f89c795fb7eaf9662e77542c1'}
+    struct.info = {
+        'dataset': 'deltatest',
+        'kpoints': np.array([28, 28, 20]),
+        'identifier': 'deltatest_H_1.00',
+        'unique_id': '4cf83e2f89c795fb7eaf9662e77542c1',
+    }
     ase.io.write('tmp.xyz', struct)
 
 
@@ -194,8 +203,8 @@ def test_complex_key_val():
 
     expected_dict = {
         'str': 'astring',
-        'quot': "quoted value",
-        'quote_special': "a_to_Z_$%%^&*",
+        'quot': 'quoted value',
+        'quote_special': 'a_to_Z_$%%^&*',
         'escaped_quote': 'esc"aped',
         'true_value': True,
         'false_value': False,
@@ -205,13 +214,13 @@ def test_complex_key_val():
         'float_array': np.array([3.3, 4.4]),
         'virial': np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
         'not_a_3x3_array': np.array([1, 4, 7, 2, 5, 8, 3, 6, 9]),
-        'Lattice': np.array([[4.3, 0.0, 0.0],
-                             [0.0, 3.3, 0.0],
-                             [0.0, 0.0, 7.0]]),
+        'Lattice': np.array(
+            [[4.3, 0.0, 0.0], [0.0, 3.3, 0.0], [0.0, 0.0, 7.0]]
+        ),
         'scientific_float': 1.2e7,
         'scientific_float_2': 5e-6,
         'scientific_float_array': np.array([1.2, 2200, 40, 0.33, 0.02]),
-        'not_array': "1.2 3.4 text",
+        'not_array': '1.2 3.4 text',
         'bool_array': np.array([True, False, True, False]),
         'bool_array_2': np.array([True, False, True]),
         'not_bool_array': 'T F S',
@@ -233,7 +242,7 @@ def test_complex_key_val():
         'f_int_array': np.array([[1, 2], [3, 4]]),
         'f_bool_bare': True,
         'f_bool_value': False,
-        'f_dict': {"a": 1}
+        'f_dict': {'a': 1},
     }
 
     parsed_dict = extxyz.key_val_str_to_dict(complex_xyz_string)
@@ -315,18 +324,25 @@ def test_json_scalars():
     a.write('tmp.xyz')
     with open('tmp.xyz') as fd:
         comment_line = fd.readlines()[1]
-    assert ("val_1=42.0" in comment_line
-            and "val_2=42.0" in comment_line
-            and "val_3=42" in comment_line)
+    assert (
+        'val_1=42.0' in comment_line
+        and 'val_2=42.0' in comment_line
+        and 'val_3=42' in comment_line
+    )
     b = ase.io.read('tmp.xyz')
     assert abs(b.info['val_1'] - 42.0) < 1e-6
     assert abs(b.info['val_2'] - 42.0) < 1e-6
     assert abs(b.info['val_3'] - 42) == 0
 
 
-@pytest.mark.parametrize('constraint', [FixAtoms(indices=(0, 2)),
-                                        FixCartesian(1, mask=(1, 0, 1)),
-                                        [FixCartesian(0), FixCartesian(2)]])
+@pytest.mark.parametrize(
+    'constraint',
+    [
+        FixAtoms(indices=(0, 2)),
+        FixCartesian(1, mask=(1, 0, 1)),
+        [FixCartesian(0), FixCartesian(2)],
+    ],
+)
 def test_constraints(constraint):
     atoms = molecule('H2O')
     atoms.set_constraint(constraint)
@@ -370,10 +386,11 @@ H        0.00000000      -0.76323900      -0.47704700  0""")
 
 
 # test read/write with both initial_charges & charges
-@pytest.mark.parametrize("enable_initial_charges", [True, False])
-@pytest.mark.parametrize("enable_charges", [True, False])
-def test_write_read_charges(atoms, tmpdir, enable_initial_charges,
-                            enable_charges):
+@pytest.mark.parametrize('enable_initial_charges', [True, False])
+@pytest.mark.parametrize('enable_charges', [True, False])
+def test_write_read_charges(
+    atoms, tmpdir, enable_initial_charges, enable_charges
+):
     initial_charges = [1.0, -1.0]
     charges = [-2.0, 2.0]
     if enable_initial_charges:
@@ -390,17 +407,20 @@ def test_write_read_charges(atoms, tmpdir, enable_initial_charges,
         assert np.allclose(r.get_charges(), charges)
 
 
-@pytest.mark.parametrize("pbc,atoms_pbc", (
-    ("True True True", [True, True, True]),
-    ("True True False", [True, True, False]),
-    ("False false T", [False, False, True]),
-    ("True true T", [True, True, True]),
-    ("True false T", [True, False, True]),
-    ("F F F", [False, False, False]),
-    ("T T F", [True, True, False]),
-    ("True", [True, True, True]),
-    ("False", [False, False, False]),
-))
+@pytest.mark.parametrize(
+    'pbc,atoms_pbc',
+    (
+        ('True True True', [True, True, True]),
+        ('True True False', [True, True, False]),
+        ('False false T', [False, False, True]),
+        ('True true T', [True, True, True]),
+        ('True false T', [True, False, True]),
+        ('F F F', [False, False, False]),
+        ('T T F', [True, True, False]),
+        ('True', [True, True, True]),
+        ('False', [False, False, False]),
+    ),
+)
 def test_pbc_property(pbc, atoms_pbc):
     """Test various specifications of the ``pbc`` property."""
     Path('pbc-test.xyz').write_text(f"""2
@@ -416,19 +436,19 @@ def test_conflicting_fields():
     atoms.calc = EMT()
 
     _ = atoms.get_potential_energy()
-    atoms.info["energy"] = 100
+    atoms.info['energy'] = 100
     # info / per-config conflict
     with pytest.raises(KeyError):
-        ase.io.write(sys.stdout, atoms, format="extxyz")
+        ase.io.write(sys.stdout, atoms, format='extxyz')
 
     atoms = Atoms('Cu', cell=[2] * 3, pbc=[True] * 3)
     atoms.calc = EMT()
 
     _ = atoms.get_forces()
-    atoms.new_array("forces", np.ones(atoms.positions.shape))
+    atoms.new_array('forces', np.ones(atoms.positions.shape))
     # arrays / per-atom conflict
     with pytest.raises(KeyError):
-        ase.io.write(sys.stdout, atoms, format="extxyz")
+        ase.io.write(sys.stdout, atoms, format='extxyz')
 
 
 def test_save_calc_results():
@@ -469,12 +489,16 @@ def test_save_calc_results():
 
 
 def test_basic_functionality(tmp_path):
-    atoms = Atoms('Cu2', cell=[4, 2, 2], positions=[[0, 0, 0], [2.05, 0, 0]],
-                  pbc=[True] * 3)
+    atoms = Atoms(
+        'Cu2',
+        cell=[4, 2, 2],
+        positions=[[0, 0, 0], [2.05, 0, 0]],
+        pbc=[True] * 3,
+    )
     atoms.calc = EMT()
     atoms.get_potential_energy()
 
-    atoms.info["REF_energy"] = 5
+    atoms.info['REF_energy'] = 5
 
     ase.io.write(tmp_path / 'test.xyz', atoms)
     with open(tmp_path / 'test.xyz') as fin:
@@ -482,8 +506,9 @@ def test_basic_functionality(tmp_path):
             if line_i == 0:
                 assert line.strip() == str(len(atoms))
             elif line_i == 1:
-                assert ('Properties=species:S:1:pos:R:3:'
-                        'energies:R:1:forces:R:3') in line
+                assert (
+                    'Properties=species:S:1:pos:R:3:' 'energies:R:1:forces:R:3'
+                ) in line
                 assert 'energy=' in line
                 assert 'stress=' in line
                 assert 'REF_energy=' in line

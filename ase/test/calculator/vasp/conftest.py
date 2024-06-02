@@ -22,7 +22,7 @@ def atoms_2co():
     atoms = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)], pbc=True)
     atoms.extend(Atoms('CO', positions=[(0, 2, 0), (0, 2, d)]))
 
-    atoms.center(vacuum=5.)
+    atoms.center(vacuum=5.0)
     return atoms
 
 
@@ -32,8 +32,10 @@ def atoms_nh3():
     d1 = 0.5
     d2 = 0.87
     atoms = Atoms(
-        'NH3', positions=[
-            (0, 0, 0), (0, d1, d2), (0, -d1, d2), (0, 0, -1.)], pbc=True)
+        'NH3',
+        positions=[(0, 0, 0), (0, d1, d2), (0, -d1, d2), (0, 0, -1.0)],
+        pbc=True,
+    )
     atoms.center(vacuum=5)
     return atoms
 

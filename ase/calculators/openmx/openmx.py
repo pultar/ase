@@ -1,21 +1,21 @@
 """
-    The ASE Calculator for OpenMX <http://www.openmx-square.org>
-    A Python interface to the software package for nano-scale
-    material simulations based on density functional theories.
-    Copyright (C) 2017 Charles Thomas Johnson, Jae Hwan Shim and JaeJun Yu
+The ASE Calculator for OpenMX <http://www.openmx-square.org>
+A Python interface to the software package for nano-scale
+material simulations based on density functional theories.
+Copyright (C) 2017 Charles Thomas Johnson, Jae Hwan Shim and JaeJun Yu
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 2.1 of the License, or
-    (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 2.1 of the License, or
+(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with ASE.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Lesser General Public License
+along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
@@ -27,9 +27,13 @@ import warnings
 
 import numpy as np
 
-from ase.calculators.calculator import (Calculator, FileIOCalculator,
-                                        all_changes, equal,
-                                        kptdensity2monkhorstpack)
+from ase.calculators.calculator import (
+    Calculator,
+    FileIOCalculator,
+    all_changes,
+    equal,
+    kptdensity2monkhorstpack,
+)
 from ase.calculators.openmx.default_settings import default_dictionary
 from ase.calculators.openmx.parameters import OpenMXParameters
 from ase.calculators.openmx.reader import get_file_name, read_openmx
@@ -50,7 +54,7 @@ class OpenMX(FileIOCalculator):
     """
 
     implemented_properties = [
-        'free_energy',       # Same value with energy
+        'free_energy',  # Same value with energy
         'energy',
         'energies',
         'forces',
@@ -59,39 +63,47 @@ class OpenMX(FileIOCalculator):
         'chemical_potential',
         'magmom',
         'magmoms',
-        'eigenvalues']
+        'eigenvalues',
+    ]
 
     default_parameters = OpenMXParameters()
 
     default_pbs = {
         'processes': 1,
-        'walltime': "10:00:00",
+        'walltime': '10:00:00',
         'threads': 1,
-        'nodes': 1
+        'nodes': 1,
     }
 
-    default_mpi = {
-        'processes': 1,
-        'threads': 1
-    }
+    default_mpi = {'processes': 1, 'threads': 1}
 
-    default_output_setting = {
-        'nohup': True,
-        'debug': False
-    }
+    default_output_setting = {'nohup': True, 'debug': False}
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='./openmx', atoms=None, command=None, mpi=None,
-                 pbs=None, **kwargs):
-
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='./openmx',
+        atoms=None,
+        command=None,
+        mpi=None,
+        pbs=None,
+        **kwargs,
+    ):
         # Initialize and put the default parameters.
         self.initialize_pbs(pbs)
         self.initialize_mpi(mpi)
         self.initialize_output_setting(**kwargs)
 
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, command, **kwargs)
+        FileIOCalculator.__init__(
+            self,
+            restart,
+            ignore_bad_restart_file,
+            label,
+            atoms,
+            command,
+            **kwargs,
+        )
 
     def __getitem__(self, key):
         """Convenience method to retrieve a parameter as
@@ -120,9 +132,10 @@ class OpenMX(FileIOCalculator):
             for key in pbs:
                 if key not in self.default_pbs:
                     allowed = ', '.join(list(self.default_pbs.keys()))
-                    raise TypeError('Unexpected keyword "{}" in "pbs" '
-                                    'dictionary.  Must be one of: {}'
-                                    .format(key, allowed))
+                    raise TypeError(
+                        'Unexpected keyword "{}" in "pbs" '
+                        'dictionary.  Must be one of: {}'.format(key, allowed)
+                    )
             # Put dictionary into python variable
             self.pbs.update(pbs)
             self.__dict__.update(self.pbs)
@@ -135,9 +148,10 @@ class OpenMX(FileIOCalculator):
             for key in mpi:
                 if key not in self.default_mpi:
                     allowed = ', '.join(list(self.default_mpi.keys()))
-                    raise TypeError('Unexpected keyword "{}" in "mpi" '
-                                    'dictionary.  Must be one of: {}'
-                                    .format(key, allowed))
+                    raise TypeError(
+                        'Unexpected keyword "{}" in "mpi" '
+                        'dictionary.  Must be one of: {}'.format(key, allowed)
+                    )
             # Put dictionary into python variable
             self.mpi.update(mpi)
             self.__dict__.update(self.mpi)
@@ -145,7 +159,7 @@ class OpenMX(FileIOCalculator):
             self.mpi = None
 
     def run(self):
-        '''Check Which Running method we r going to use and run it'''
+        """Check Which Running method we r going to use and run it"""
         if self.pbs is not None:
             run = self.run_pbs
         elif self.mpi is not None:
@@ -156,8 +170,9 @@ class OpenMX(FileIOCalculator):
 
     def run_openmx(self):
         def isRunning(process=None):
-            ''' Check mpi is running'''
+            """Check mpi is running"""
             return process.poll() is None
+
         runfile = get_file_name('.dat', self.label, absolute_directory=False)
         outfile = get_file_name('.log', self.label)
         olddir = os.getcwd()
@@ -173,16 +188,18 @@ class OpenMX(FileIOCalculator):
             self.print_file(file=outfile, running=isRunning, process=p)
         finally:
             os.chdir(olddir)
-        self.prind("Calculation Finished")
+        self.prind('Calculation Finished')
 
     def run_mpi(self):
         """
         Run openmx using MPI method. If keyword `mpi` is declared, it will
         run.
         """
+
         def isRunning(process=None):
-            ''' Check mpi is running'''
+            """Check mpi is running"""
             return process.poll() is None
+
         processes = self.processes
         threads = self.threads
         runfile = get_file_name('.dat', self.label, absolute_directory=False)
@@ -197,7 +214,7 @@ class OpenMX(FileIOCalculator):
             self.print_file(file=outfile, running=isRunning, process=p)
         finally:
             os.chdir(olddir)
-        self.prind("Calculation Finished")
+        self.prind('Calculation Finished')
 
     def run_pbs(self, prefix='test'):
         """
@@ -220,10 +237,14 @@ class OpenMX(FileIOCalculator):
             """
             Check submitted job is still Running
             """
+
             def runCmd(exe):
-                p = subprocess.Popen(exe, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     universal_newlines=True)
+                p = subprocess.Popen(
+                    exe,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    universal_newlines=True,
+                )
                 while True:
                     line = p.stdout.readline()
                     if line != '':
@@ -231,6 +252,7 @@ class OpenMX(FileIOCalculator):
                         yield line.rstrip()
                     else:
                         break
+
             jobs = runCmd('qstat')
             columns = None
             for line in jobs:
@@ -245,29 +267,48 @@ class OpenMX(FileIOCalculator):
         inputfile = self.label + '.dat'
         outfile = self.label + '.log'
 
-        bashArgs = "#!/bin/bash \n cd $PBS_O_WORKDIR\n"
+        bashArgs = '#!/bin/bash \n cd $PBS_O_WORKDIR\n'
         jobName = prefix
-        cmd = bashArgs + \
-            'mpirun -hostfile $PBS_NODEFILE openmx {} > {}'.format(
-                inputfile, outfile)
-        echoArgs = ["echo", f"$' {cmd}'"]
-        qsubArgs = ["qsub", "-N", jobName, "-l", "nodes=%d:ppn=%d" %
-                    (nodes, processes), "-l", "walltime=" + self.walltime]
-        wholeCmd = " ".join(echoArgs) + " | " + " ".join(qsubArgs)
+        cmd = bashArgs + 'mpirun -hostfile $PBS_NODEFILE openmx {} > {}'.format(
+            inputfile, outfile
+        )
+        echoArgs = ['echo', f"$' {cmd}'"]
+        qsubArgs = [
+            'qsub',
+            '-N',
+            jobName,
+            '-l',
+            'nodes=%d:ppn=%d' % (nodes, processes),
+            '-l',
+            'walltime=' + self.walltime,
+        ]
+        wholeCmd = ' '.join(echoArgs) + ' | ' + ' '.join(qsubArgs)
         self.prind(wholeCmd)
-        out = subprocess.Popen(wholeCmd, shell=True,
-                               stdout=subprocess.PIPE, universal_newlines=True)
+        out = subprocess.Popen(
+            wholeCmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+        )
         out = out.communicate()[0]
         jobNum = int(re.match(r'(\d+)', out.split()[0]).group(1))
 
-        self.prind('Queue number is ' + str(jobNum) +
-                   '\nWaiting for the Queue to start')
+        self.prind(
+            'Queue number is '
+            + str(jobNum)
+            + '\nWaiting for the Queue to start'
+        )
         while isRunning(jobNum, status='Q'):
             time.sleep(5)
             self.prind('.')
         self.prind('Start Calculating')
-        self.print_file(file=outfile, running=isRunning,
-                        jobNum=jobNum, status='R', qstat='qstat')
+        self.print_file(
+            file=outfile,
+            running=isRunning,
+            jobNum=jobNum,
+            status='R',
+            qstat='qstat',
+        )
 
         os.chdir(olddir)
         self.prind('Calculation Finished!')
@@ -280,29 +321,38 @@ class OpenMX(FileIOCalculator):
         method is called.
 
         """
-        self.prind("Cleaning Data")
+        self.prind('Cleaning Data')
         fileName = get_file_name('', self.label)
         pbs_Name = get_file_name('', self.label)
         files = [
             # prefix+'.out',#prefix+'.dat',#prefix+'.BAND*',
-            fileName + '.cif', fileName + '.dden.cube', fileName + \
-            '.ene', fileName + '.md', fileName + '.md2',
-            fileName + '.tden.cube', fileName + '.sden.cube', fileName + \
-            '.v0.cube', fileName + '.v1.cube',
-            fileName + '.vhart.cube', fileName + '.den0.cube', fileName + \
-            '.bulk.xyz', fileName + '.den1.cube',
-            fileName + '.xyz', pbs_Name + '.o' + \
-            str(queue_num), pbs_Name + '.e' + str(queue_num)
+            fileName + '.cif',
+            fileName + '.dden.cube',
+            fileName + '.ene',
+            fileName + '.md',
+            fileName + '.md2',
+            fileName + '.tden.cube',
+            fileName + '.sden.cube',
+            fileName + '.v0.cube',
+            fileName + '.v1.cube',
+            fileName + '.vhart.cube',
+            fileName + '.den0.cube',
+            fileName + '.bulk.xyz',
+            fileName + '.den1.cube',
+            fileName + '.xyz',
+            pbs_Name + '.o' + str(queue_num),
+            pbs_Name + '.e' + str(queue_num),
         ]
         for f in files:
             try:
-                self.prind("Removing" + f)
+                self.prind('Removing' + f)
                 os.remove(f)
             except OSError:
-                self.prind("There is no such file named " + f)
+                self.prind('There is no such file named ' + f)
 
-    def calculate(self, atoms=None, properties=None,
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=None, system_changes=all_changes
+    ):
         """
         Capture the RuntimeError from FileIOCalculator.calculate
         and  add a little debug information from the OpenMX output.
@@ -310,18 +360,23 @@ class OpenMX(FileIOCalculator):
         """
         if self.parameters.data_path is None:
             if 'OPENMX_DFT_DATA_PATH' not in cfg:
-                warnings.warn('Please either set OPENMX_DFT_DATA_PATH as an'
-                              'enviroment variable or specify "data_path" as'
-                              'a keyword argument')
+                warnings.warn(
+                    'Please either set OPENMX_DFT_DATA_PATH as an'
+                    'enviroment variable or specify "data_path" as'
+                    'a keyword argument'
+                )
 
-        self.prind("Start Calculation")
+        self.prind('Start Calculation')
         if properties is None:
             properties = self.implemented_properties
         try:
             Calculator.calculate(self, atoms, properties, system_changes)
-            self.write_input(atoms=self.atoms, parameters=self.parameters,
-                             properties=properties,
-                             system_changes=system_changes)
+            self.write_input(
+                atoms=self.atoms,
+                parameters=self.parameters,
+                properties=properties,
+                system_changes=system_changes,
+            )
             self.print_input(debug=self.debug, nohup=self.nohup)
             self.run()
             #  self.read_results()
@@ -346,8 +401,9 @@ class OpenMX(FileIOCalculator):
             except RuntimeError as e:
                 raise e
 
-    def write_input(self, atoms=None, parameters=None,
-                    properties=[], system_changes=[]):
+    def write_input(
+        self, atoms=None, parameters=None, properties=[], system_changes=[]
+    ):
         """Write input (dat)-file.
         See calculator.py for further details.
 
@@ -360,8 +416,13 @@ class OpenMX(FileIOCalculator):
         if atoms is None:
             atoms = self.atoms
         FileIOCalculator.write_input(self, atoms, properties, system_changes)
-        write_openmx(label=self.label, atoms=atoms, parameters=self.parameters,
-                     properties=properties, system_changes=system_changes)
+        write_openmx(
+            label=self.label,
+            atoms=atoms,
+            parameters=self.parameters,
+            properties=properties,
+            system_changes=system_changes,
+        )
 
     def print_input(self, debug=None, nohup=None):
         """
@@ -409,9 +470,9 @@ class OpenMX(FileIOCalculator):
     def set(self, **kwargs):
         """Set all parameters.
 
-            Parameters:
-                -kwargs  : Dictionary containing the keywords defined in
-                           OpenMXParameters.
+        Parameters:
+            -kwargs  : Dictionary containing the keywords defined in
+                       OpenMXParameters.
         """
 
         for key, value in kwargs.items():
@@ -425,9 +486,12 @@ class OpenMX(FileIOCalculator):
                 for subkey in kwargs[key]:
                     if subkey not in default_dict:
                         allowed = ', '.join(list(default_dict.keys()))
-                        raise TypeError('Unknown subkeyword "{}" of keyword '
-                                        '"{}".  Must be one of: {}'
-                                        .format(subkey, key, allowed))
+                        raise TypeError(
+                            'Unknown subkeyword "{}" of keyword '
+                            '"{}".  Must be one of: {}'.format(
+                                subkey, key, allowed
+                            )
+                        )
 
         # Find out what parameter has been changed
         changed_parameters = {}
@@ -448,8 +512,9 @@ class OpenMX(FileIOCalculator):
                 self.results = {}
 
         value = kwargs.get('energy_cutoff')
-        if value is not None and not (isinstance(value, (float, int))
-                                      and value > 0):
+        if value is not None and not (
+            isinstance(value, (float, int)) and value > 0
+        ):
             mess = "'{}' must be a positive number(in eV), \
                 got '{}'".format('energy_cutoff', value)
             raise ValueError(mess)
@@ -473,15 +538,23 @@ class OpenMX(FileIOCalculator):
         if processes is None:
             command += cfg.get('OPENMX_COMMAND')
             if command is None:
-                warnings.warn('Either specify OPENMX_COMMAND as an environment\
-                variable or specify processes as a keyword argument')
+                warnings.warn(
+                    'Either specify OPENMX_COMMAND as an environment\
+                variable or specify processes as a keyword argument'
+                )
         else:  # run with a specified number of processes
             threads_string = ' -nt ' + str(threads)
             if threads is None:
                 threads_string = ''
-            command += 'mpirun -np ' + \
-                str(processes) + ' ' + self.command + \
-                ' %s ' + threads_string + ' |tee %s'
+            command += (
+                'mpirun -np '
+                + str(processes)
+                + ' '
+                + self.command
+                + ' %s '
+                + threads_string
+                + ' |tee %s'
+            )
             # str(processes) + ' openmx %s' + threads_string + ' > %s'
 
         if runfile is None:
@@ -493,11 +566,12 @@ class OpenMX(FileIOCalculator):
             # command += '" > ./%s &' % outfile  # outputs
         except TypeError:  # in case the OPENMX_COMMAND is incompatible
             raise ValueError(
-                "The 'OPENMX_COMMAND' environment must " +
-                "be a format string" +
-                " with four string arguments.\n" +
-                "Example : 'mpirun -np 4 openmx ./%s -nt 2 > ./%s'.\n" +
-                f"Got '{command}'")
+                "The 'OPENMX_COMMAND' environment must "
+                + 'be a format string'
+                + ' with four string arguments.\n'
+                + "Example : 'mpirun -np 4 openmx ./%s -nt 2 > ./%s'.\n"
+                + f"Got '{command}'"
+            )
         return command
 
     def get_stress(self, atoms=None):
@@ -512,11 +586,15 @@ class OpenMX(FileIOCalculator):
     def get_band_structure(self, atoms=None, calc=None):
         """
         This is band structure function. It is compatible to
-        ase dft module """
+        ase dft module"""
         from ase.dft import band_structure
+
         if isinstance(self['kpts'], tuple):
             self['kpts'] = self.get_kpoints(band_kpath=self['band_kpath'])
-            return band_structure.get_band_structure(self.atoms, self, )
+            return band_structure.get_band_structure(
+                self.atoms,
+                self,
+            )
 
     def get_bz_k_points(self):
         kgrid = self['kpts']
@@ -531,9 +609,13 @@ class OpenMX(FileIOCalculator):
                 # Monkhorst Pack Grid [H.J. Monkhorst and J.D. Pack,
                 # Phys. Rev. B 13, 5188 (1976)]
                 for k in range(n3):
-                    bz_k_points.append((0.5 * float(2 * i - n1 + 1) / n1,
-                                        0.5 * float(2 * j - n2 + 1) / n2,
-                                        0.5 * float(2 * k - n3 + 1) / n3))
+                    bz_k_points.append(
+                        (
+                            0.5 * float(2 * i - n1 + 1) / n1,
+                            0.5 * float(2 * j - n2 + 1) / n2,
+                            0.5 * float(2 * k - n3 + 1) / n3,
+                        )
+                    )
         return np.array(bz_k_points)
 
     def get_ibz_k_points(self):
@@ -570,11 +652,17 @@ class OpenMX(FileIOCalculator):
             indices = [0]
             indices.extend(np.arange(1, N - 1)[kinks])
             indices.append(N - 1)
-            for start, end, s_sym, e_sym in zip(indices[1:], indices[:-1],
-                                                symbols[1:], symbols[:-1]):
-                band_kpath.append({'start_point': start, 'end_point': end,
-                                   'kpts': 20,
-                                   'path_symbols': (s_sym, e_sym)})
+            for start, end, s_sym, e_sym in zip(
+                indices[1:], indices[:-1], symbols[1:], symbols[:-1]
+            ):
+                band_kpath.append(
+                    {
+                        'start_point': start,
+                        'end_point': end,
+                        'kpts': 20,
+                        'path_symbols': (s_sym, e_sym),
+                    }
+                )
             return band_kpath
 
     def get_lattice_type(self):
@@ -587,15 +675,18 @@ class OpenMX(FileIOCalculator):
                 return 'cubic'
             elif abs(angles - 60).max() < 1:
                 return 'fcc'
-            elif abs(angles - np.arccos(-1 / 3.) * 180 / np.pi).max < 1:
+            elif abs(angles - np.arccos(-1 / 3.0) * 180 / np.pi).max < 1:
                 return 'bcc'
         elif abs(angles - 90).max() < 1:
             if abs(abc[0] - abc[1]).min() < 0.01 * min_lv:
                 return 'tetragonal'
             else:
                 return 'orthorhombic'
-        elif abs(abc[0] - abc[1]) < 0.01 * min_lv and \
-                abs(angles[2] - 120) < 1 and abs(angles[:2] - 90).max() < 1:
+        elif (
+            abs(abc[0] - abc[1]) < 0.01 * min_lv
+            and abs(angles[2] - 120) < 1
+            and abs(angles[:2] - 90).max() < 1
+        ):
             return 'hexagonal'
         else:
             return 'not special'
@@ -614,9 +705,11 @@ class OpenMX(FileIOCalculator):
             else:
                 if self['scf_spinpolarization'] == 'on':
                     return 2
-                elif self['scf_spinpolarization'] == 'nc' or \
-                        np.any(self['initial_magnetic_moments_euler_angles']) \
-                        is not None:
+                elif (
+                    self['scf_spinpolarization'] == 'nc'
+                    or np.any(self['initial_magnetic_moments_euler_angles'])
+                    is not None
+                ):
                     return 1
         except KeyError:
             return 1
@@ -664,8 +757,9 @@ class OpenMX(FileIOCalculator):
         nx, ny, nz = self['wannier_kpts']
         return ny * nz * (dx % nx) + nz * (dy % ny) + dz % nz
 
-    def get_wannier_localization_matrix(self, nbands, dirG, nextkpoint=None,
-                                        kpoint=None, spin=0, G_I=(0, 0, 0)):
+    def get_wannier_localization_matrix(
+        self, nbands, dirG, nextkpoint=None, kpoint=None, spin=0, G_I=(0, 0, 0)
+    ):
         # only expected to work for no spin polarization
         try:
             self['bloch_overlaps']
@@ -675,9 +769,10 @@ class OpenMX(FileIOCalculator):
         nx, ny, nz = self['wannier_kpts']
         nr3 = nx * ny * nz
         if kpoint is None and nextkpoint is None:
-            return {kpoint: self['bloch_overlaps'
-                                 ][kpoint][dirG][:nbands, :nbands
-                                                 ] for kpoint in range(nr3)}
+            return {
+                kpoint: self['bloch_overlaps'][kpoint][dirG][:nbands, :nbands]
+                for kpoint in range(nr3)
+            }
         if kpoint is None:
             kpoint = (nextkpoint - self.dk(dirG)) % nr3
         if nextkpoint is None:
@@ -687,15 +782,15 @@ class OpenMX(FileIOCalculator):
         return self['bloch_overlaps'][kpoint][dirG][:nbands, :nbands]
 
     def prind(self, line, debug=None):
-        ''' Print the value if debugging mode is on.
-            Otherwise, it just ignored'''
+        """Print the value if debugging mode is on.
+        Otherwise, it just ignored"""
         if debug is None:
             debug = self.debug
         if debug:
             print(line)
 
     def print_file(self, file=None, running=None, **args):
-        ''' Print the file while calculation is running'''
+        """Print the file while calculation is running"""
         prev_position = 0
         last_position = 0
         while not os.path.isfile(file):

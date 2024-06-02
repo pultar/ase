@@ -48,7 +48,7 @@ viewers = [
 
 # At the moment nglview raises a DeprecationWarning.
 # https://github.com/nglviewer/nglview/issues/1074
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')
 @pytest.mark.parametrize('viewer', viewers)
 def test_good_viewer(atoms, viewer):
     """Test if `viewer` can at least be called without errors."""
@@ -95,8 +95,9 @@ def test_cli_viewer_tempfile(atoms, viewer):
 
 @pytest.fixture()
 def mock_viewer():
-    return CLIViewer('dummy', 'traj', [sys.executable, '-m', 'ase', 'info',
-                                       '--files'])
+    return CLIViewer(
+        'dummy', 'traj', [sys.executable, '-m', 'ase', 'info', '--files']
+    )
 
 
 def test_cli_viewer_blocking(atoms, mock_viewer):

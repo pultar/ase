@@ -26,8 +26,7 @@ def test_jsonio():
     print(obj1)
     print(obj2)
 
-    for obj in [0.5 + 1.5j,
-                datetime.now()]:
+    for obj in [0.5 + 1.5j, datetime.now()]:
         s = encode(obj)
         o = decode(s)
         print(obj)

@@ -13,9 +13,8 @@ _setups_defaults = {
         'Ba': '_sv',
         'Fr': '_sv',
         'Ra': '_sv',
-        'Sc': '_sv'
+        'Sc': '_sv',
     },
-
     # VASP recommended
     'recommended': {
         'Li': '_sv',
@@ -64,9 +63,8 @@ _setups_defaults = {
         'Po': '_d',
         'At': '_d',
         'Fr': '_sv',
-        'Ra': '_sv'
+        'Ra': '_sv',
     },
-
     # https://wiki.materialsproject.org/Pseudopotentials_Choice
     'materialsproject':
     # Alkali and alkali-earth
@@ -139,9 +137,8 @@ _setups_defaults = {
         'Er': '_3',
         'Tm': '_3',
         'Yb': '',
-        'Lu': '_3'
+        'Lu': '_3',
     },
-
     #
     'gw': {
         'H': '_GW',
@@ -216,8 +213,8 @@ _setups_defaults = {
         'Bi': '_d_GW',
         'Po': '_d_GW',
         'At': '_d_GW',
-        'Rn': '_d_GW'
-    }
+        'Rn': '_d_GW',
+    },
 }
 
 

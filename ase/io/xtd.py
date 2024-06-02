@@ -49,14 +49,18 @@ def write_xtd(filename, images, connectivity=None, moviespeed=10):
     s = '!BIOSYM archive 3\n'
     if not images[0].pbc.all():
         # Write trajectory
-        SetChild(ATR, 'Trajectory', dict(
-            ID=str(natoms + 3 + len(bonds)),
-            Increment='-1',
-            End=str(len(images)),
-            Type='arc',
-            Speed=str(moviespeed),
-            FrameClassType='Atom',
-        ))
+        SetChild(
+            ATR,
+            'Trajectory',
+            dict(
+                ID=str(natoms + 3 + len(bonds)),
+                Increment='-1',
+                End=str(len(images)),
+                Type='arc',
+                Speed=str(moviespeed),
+                FrameClassType='Atom',
+            ),
+        )
 
         # write frame information file
         s += 'PBC=OFF\n'
@@ -71,14 +75,18 @@ def write_xtd(filename, images, connectivity=None, moviespeed=10):
 
     # periodic system
     else:
-        SetChild(ATR, 'Trajectory', dict(
-            ID=str(natoms + 9 + len(bonds)),
-            Increment='-1',
-            End=str(len(images)),
-            Type='arc',
-            Speed=str(moviespeed),
-            FrameClassType='Atom',
-        ))
+        SetChild(
+            ATR,
+            'Trajectory',
+            dict(
+                ID=str(natoms + 9 + len(bonds)),
+                Increment='-1',
+                End=str(len(images)),
+                Type='arc',
+                Speed=str(moviespeed),
+                FrameClassType='Atom',
+            ),
+        )
 
         # write frame information file
         s += 'PBC=ON\n'
@@ -95,12 +103,16 @@ def write_xtd(filename, images, connectivity=None, moviespeed=10):
             angrad = np.deg2rad(angles)
             cell = np.zeros((3, 3))
             cell[0, :] = [vec[0], 0, 0]
-            cell[1, :] = (np.array([np.cos(angrad[2]), np.sin(angrad[2]), 0])
-                          * vec[1])
+            cell[1, :] = (
+                np.array([np.cos(angrad[2]), np.sin(angrad[2]), 0]) * vec[1]
+            )
             cell[2, 0] = vec[2] * np.cos(angrad[1])
-            cell[2, 1] = ((vec[1] * vec[2] * np.cos(angrad[0])
-                           - cell[1, 0] * cell[2, 0]) / cell[1, 1])
-            cell[2, 2] = np.sqrt(vec[2]**2 - cell[2, 0]**2 - cell[2, 1]**2)
+            cell[2, 1] = (
+                vec[1] * vec[2] * np.cos(angrad[0]) - cell[1, 0] * cell[2, 0]
+            ) / cell[1, 1]
+            cell[2, 2] = np.sqrt(
+                vec[2] ** 2 - cell[2, 0] ** 2 - cell[2, 1] ** 2
+            )
             xyz = np.dot(image.get_scaled_positions(), cell)
             for i in range(natoms):
                 s += _get_atom_str(an[i], xyz[i, :])

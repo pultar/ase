@@ -12,20 +12,36 @@ class CLICommand:
 
     @staticmethod
     def add_arguments(parser):
-        parser.add_argument('--files', nargs='*', metavar='PATH',
-                            help='Print information about specified files.')
-        parser.add_argument('-v', '--verbose', action='store_true',
-                            help='Show additional information about files.')
-        parser.add_argument('--formats', action='store_true',
-                            help='List file formats known to ASE.')
-        parser.add_argument('--calculators', nargs='*', metavar='NAME',
-                            help='List all or specified calculators known to '
-                            'ASE and their configuration.')
+        parser.add_argument(
+            '--files',
+            nargs='*',
+            metavar='PATH',
+            help='Print information about specified files.',
+        )
+        parser.add_argument(
+            '-v',
+            '--verbose',
+            action='store_true',
+            help='Show additional information about files.',
+        )
+        parser.add_argument(
+            '--formats',
+            action='store_true',
+            help='List file formats known to ASE.',
+        )
+        parser.add_argument(
+            '--calculators',
+            nargs='*',
+            metavar='NAME',
+            help='List all or specified calculators known to '
+            'ASE and their configuration.',
+        )
 
     @staticmethod
     def run(args):
         if args.calculators is not None:
             from ase.codes import list_codes, codes
+
             if args.calculators:
                 names = args.calculators
             else:
@@ -47,6 +63,7 @@ def print_file_info(args):
     from ase.io.formats import UnknownFileTypeError, filetype, ioformats
     from ase.io.bundletrajectory import print_bundletrajectory_info
     from ase.io.ulm import print_ulm_info
+
     n = max(len(filename) for filename in args.files) + 2
     nfiles_not_found = 0
     for filename in args.files:
@@ -65,8 +82,7 @@ def print_file_info(args):
             else:
                 description = '?'
 
-        print('{:{}}{} ({})'.format(filename + ':', n,
-                                    description, format))
+        print('{:{}}{} ({})'.format(filename + ':', n, description, format))
         if args.verbose:
             if format == 'traj':
                 print_ulm_info(filename)
@@ -82,8 +98,10 @@ def print_info():
 
     from ase.dependencies import all_dependencies
 
-    versions = [('platform', platform.platform()),
-                ('python-' + sys.version.split()[0], sys.executable)]
+    versions = [
+        ('platform', platform.platform()),
+        ('python-' + sys.version.split()[0], sys.executable),
+    ]
 
     for name, path in versions + all_dependencies():
         print(f'{name:24} {path}')
@@ -109,6 +127,8 @@ def print_formats():
         if fmt.globs:
             moreinfo.append('glob={}'.format('|'.join(fmt.globs)))
 
-        print('  {} [{}]: {}'.format(fmt.name,
-                                     ', '.join(moreinfo),
-                                     fmt.description))
+        print(
+            '  {} [{}]: {}'.format(
+                fmt.name, ', '.join(moreinfo), fmt.description
+            )
+        )

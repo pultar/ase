@@ -45,11 +45,12 @@ def Octahedron(symbol, length, cutoff=0, latticeconstant=None, alloy=False):
 
     # Check length and cutoff
     if length < 1:
-        raise ValueError("The length must be at least one.")
+        raise ValueError('The length must be at least one.')
 
     if cutoff < 0 or length < 2 * cutoff + 1:
         raise ValueError(
-            "The cutoff must fulfill: > 0 and <= (length - 1) / 2.")
+            'The cutoff must fulfill: > 0 and <= (length - 1) / 2.'
+        )
 
     # Create cluster
     surfaces = [(1, 1, 1), (1, 0, 0)]
@@ -62,6 +63,7 @@ def Octahedron(symbol, length, cutoff=0, latticeconstant=None, alloy=False):
 
     if not alloy:
         return FaceCenteredCubic(
-            symbol, surfaces, layers, latticeconstant, center)
+            symbol, surfaces, layers, latticeconstant, center
+        )
     else:
         return L1_2(symbol, surfaces, layers, latticeconstant, center)

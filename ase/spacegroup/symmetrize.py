@@ -1,6 +1,7 @@
 """
 Provides utility functions for FixSymmetry class
 """
+
 from typing import Optional
 
 import numpy as np
@@ -11,10 +12,16 @@ __all__ = ['refine_symmetry', 'check_symmetry']
 
 
 def print_symmetry(symprec, dataset):
-    print("ase.spacegroup.symmetrize: prec", symprec,
-          "got symmetry group number", dataset["number"],
-          ", international (Hermann-Mauguin)", dataset["international"],
-          ", Hall ", dataset["hall"])
+    print(
+        'ase.spacegroup.symmetrize: prec',
+        symprec,
+        'got symmetry group number',
+        dataset['number'],
+        ', international (Hermann-Mauguin)',
+        dataset['international'],
+        ', Hall ',
+        dataset['hall'],
+    )
 
 
 def refine_symmetry(atoms, symprec=0.01, verbose=False):
@@ -44,9 +51,9 @@ class IntermediateDatasetError(Exception):
     This implies a faulty partial symmetrization if not handled by exception."""
 
 
-def get_symmetrized_atoms(atoms,
-                          symprec: float = 0.01,
-                          final_symprec: Optional[float] = None):
+def get_symmetrized_atoms(
+    atoms, symprec: float = 0.01, final_symprec: Optional[float] = None
+):
     """Get new Atoms object with refined symmetries.
 
     Checks internal consistency of the found symmetries.
@@ -68,7 +75,8 @@ def get_symmetrized_atoms(atoms,
     atoms = atoms.copy()
     original_dataset = _check_and_symmetrize_cell(atoms, symprec=symprec)
     intermediate_dataset = _check_and_symmetrize_positions(
-        atoms, symprec=symprec)
+        atoms, symprec=symprec
+    )
     if intermediate_dataset['number'] != original_dataset['number']:
         raise IntermediateDatasetError()
     final_symprec = final_symprec or symprec
@@ -94,6 +102,7 @@ def _symmetrize_cell(atoms, dataset):
 
 def _check_and_symmetrize_positions(atoms, *, symprec, **kwargs):
     import spglib
+
     dataset = check_symmetry(atoms, symprec=symprec, **kwargs)
     # here we are assuming that primitive vectors returned by find_primitive
     #    are compatible with std_lattice returned by get_symmetry_dataset
@@ -110,8 +119,10 @@ def _symmetrize_positions(atoms, dataset, primitive_spglib_cell):
     rot_std_cell = std_cell @ dataset['std_rotation_matrix']
     rot_std_pos = dataset['std_positions'] @ rot_std_cell
     pos = atoms.get_positions()
-    dp0 = (pos[list(dataset['mapping_to_primitive']).index(0)] - rot_std_pos[
-        list(dataset['std_mapping_to_primitive']).index(0)])
+    dp0 = (
+        pos[list(dataset['mapping_to_primitive']).index(0)]
+        - rot_std_pos[list(dataset['std_mapping_to_primitive']).index(0)]
+    )
 
     # create aligned set of standard cell positions to figure out mapping
     rot_prim_cell = prim_cell @ dataset['std_rotation_matrix']
@@ -127,7 +138,7 @@ def _symmetrize_positions(atoms, dataset, primitive_spglib_cell):
         std_i_at = std_mapping_to_primitive.index(mapping_to_primitive[i_at])
         dp = aligned_std_pos[std_i_at] - pos[i_at]
         dp_s = dp @ inv_rot_prim_cell
-        pos[i_at] = (aligned_std_pos[std_i_at] - np.round(dp_s) @ rot_prim_cell)
+        pos[i_at] = aligned_std_pos[std_i_at] - np.round(dp_s) @ rot_prim_cell
     atoms.set_positions(pos)
 
 
@@ -138,8 +149,10 @@ def check_symmetry(atoms, symprec=1.0e-6, verbose=False):
     Prints a summary and returns result of `spglib.get_symmetry_dataset()`
     """
     import spglib
-    dataset = spglib.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
-                                          symprec=symprec)
+
+    dataset = spglib.get_symmetry_dataset(
+        atoms_to_spglib_cell(atoms), symprec=symprec
+    )
     if verbose:
         print_symmetry(symprec, dataset)
     return dataset
@@ -166,15 +179,16 @@ def prep_symmetry(atoms, symprec=1.0e-6, verbose=False):
     """
     import spglib
 
-    dataset = spglib.get_symmetry_dataset(atoms_to_spglib_cell(atoms),
-                                          symprec=symprec)
+    dataset = spglib.get_symmetry_dataset(
+        atoms_to_spglib_cell(atoms), symprec=symprec
+    )
     if verbose:
         print_symmetry(symprec, dataset)
     rotations = dataset['rotations'].copy()
     translations = dataset['translations'].copy()
     symm_map = []
     scaled_pos = atoms.get_scaled_positions()
-    for (rot, trans) in zip(rotations, translations):
+    for rot, trans in zip(rotations, translations):
         this_op_map = [-1] * len(atoms)
         for i_at in range(len(atoms)):
             new_p = rot @ scaled_pos[i_at, :] + trans
@@ -196,7 +210,7 @@ def symmetrize_rank1(lattice, inv_lattice, forces, rot, trans, symm_map):
     scaled_symmetrized_forces_T = np.zeros(forces.T.shape)
 
     scaled_forces_T = np.dot(inv_lattice.T, forces.T)
-    for (r, t, this_op_map) in zip(rot, trans, symm_map):
+    for r, t, this_op_map in zip(rot, trans, symm_map):
         transformed_forces_T = np.dot(r, scaled_forces_T)
         scaled_symmetrized_forces_T[:, this_op_map] += transformed_forces_T
     scaled_symmetrized_forces_T /= len(rot)

@@ -23,10 +23,9 @@ def catch_netcdf4_warning():
 
 @pytest.fixture()
 def co(netCDF4):
-    return Atoms([Atom('C', (0, 0, 0)),
-                  Atom('O', (0, 0, 1.2))],
-                 cell=[3, 3, 3],
-                 pbc=True)
+    return Atoms(
+        [Atom('C', (0, 0, 0)), Atom('O', (0, 0, 1.2))], cell=[3, 3, 3], pbc=True
+    )
 
 
 def test_netcdftrajectory(co):
@@ -140,8 +139,10 @@ def test_netcdftrajectory(co):
 
     traj = NetCDFTrajectory('5.nc', 'r')
     assert np.all(traj[0].numbers == [8, 6])
-    assert np.all(np.abs(traj[0].positions - np.array([[2, 2, 3.7],
-                                                       [2., 2., 2.5]])) < 1e-6)
+    assert np.all(
+        np.abs(traj[0].positions - np.array([[2, 2, 3.7], [2.0, 2.0, 2.5]]))
+        < 1e-6
+    )
     traj.close()
 
     a = read('5.nc')
@@ -159,9 +160,31 @@ def test_netcdf_with_variable_atomic_numbers(netCDF4):
     nc.createDimension('cell_angular', 3)
 
     nc.createVariable('atom_types', 'i', ('atom',))
-    nc.createVariable('coordinates', 'f4', ('frame', 'atom', 'spatial',))
-    nc.createVariable('cell_lengths', 'f4', ('frame', 'cell_spatial',))
-    nc.createVariable('cell_angles', 'f4', ('frame', 'cell_angular',))
+    nc.createVariable(
+        'coordinates',
+        'f4',
+        (
+            'frame',
+            'atom',
+            'spatial',
+        ),
+    )
+    nc.createVariable(
+        'cell_lengths',
+        'f4',
+        (
+            'frame',
+            'cell_spatial',
+        ),
+    )
+    nc.createVariable(
+        'cell_angles',
+        'f4',
+        (
+            'frame',
+            'cell_angular',
+        ),
+    )
 
     r0 = np.array([[1, 2, 3], [4, 5, 6]], dtype=float)
     r1 = 2 * r0
@@ -189,10 +212,39 @@ def test_netcdf_with_nonconsecutive_index(netCDF4):
     nc.createDimension('cell_angular', 3)
 
     nc.createVariable('atom_types', 'i', ('atom',))
-    nc.createVariable('coordinates', 'f4', ('frame', 'atom', 'spatial',))
-    nc.createVariable('cell_lengths', 'f4', ('frame', 'cell_spatial',))
-    nc.createVariable('cell_angles', 'f4', ('frame', 'cell_angular',))
-    nc.createVariable('id', 'i', ('frame', 'atom',))
+    nc.createVariable(
+        'coordinates',
+        'f4',
+        (
+            'frame',
+            'atom',
+            'spatial',
+        ),
+    )
+    nc.createVariable(
+        'cell_lengths',
+        'f4',
+        (
+            'frame',
+            'cell_spatial',
+        ),
+    )
+    nc.createVariable(
+        'cell_angles',
+        'f4',
+        (
+            'frame',
+            'cell_angular',
+        ),
+    )
+    nc.createVariable(
+        'id',
+        'i',
+        (
+            'frame',
+            'atom',
+        ),
+    )
 
     r0 = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=float)
     r1 = 2 * r0
@@ -218,14 +270,15 @@ def test_types_to_numbers_argument(co):
     traj.write()
     traj.close()
     d = {6: 15, 8: 15}
-    traj = NetCDFTrajectory('8.nc', mode="r", types_to_numbers=d)
+    traj = NetCDFTrajectory('8.nc', mode='r', types_to_numbers=d)
     assert np.allclose(traj[-1].get_masses(), 30.974)
     assert (traj[-1].numbers == [15, 15]).all()
     d = {3: 14}
-    traj = NetCDFTrajectory('8.nc', mode="r", types_to_numbers=d)
+    traj = NetCDFTrajectory('8.nc', mode='r', types_to_numbers=d)
     assert (traj[-1].numbers == [6, 8]).all()
-    traj = NetCDFTrajectory('8.nc', 'r',
-                            types_to_numbers=[0, 0, 0, 0, 0, 0, 15])
+    traj = NetCDFTrajectory(
+        '8.nc', 'r', types_to_numbers=[0, 0, 0, 0, 0, 0, 15]
+    )
     assert (traj[-1].numbers == [15, 8]).all()
 
     traj.close()

@@ -2,14 +2,52 @@ import importlib
 from collections.abc import Mapping
 
 # Recognized names of calculators sorted alphabetically:
-names = ['abinit', 'ace', 'aims', 'amber', 'asap', 'castep', 'cp2k',
-         'crystal', 'demon', 'demonnano', 'dftb', 'dftd3', 'dmol', 'eam',
-         'elk', 'emt', 'espresso', 'exciting', 'ff', 'gamess_us',
-         'gaussian', 'gpaw', 'gromacs', 'gulp', 'hotbit', 'kim',
-         'lammpslib', 'lammpsrun', 'lj', 'mopac', 'morse', 'nwchem',
-         'octopus', 'onetep', 'openmx', 'orca',
-         'plumed', 'psi4', 'qchem', 'siesta',
-         'tip3p', 'tip4p', 'turbomole', 'vasp']
+names = [
+    'abinit',
+    'ace',
+    'aims',
+    'amber',
+    'asap',
+    'castep',
+    'cp2k',
+    'crystal',
+    'demon',
+    'demonnano',
+    'dftb',
+    'dftd3',
+    'dmol',
+    'eam',
+    'elk',
+    'emt',
+    'espresso',
+    'exciting',
+    'ff',
+    'gamess_us',
+    'gaussian',
+    'gpaw',
+    'gromacs',
+    'gulp',
+    'hotbit',
+    'kim',
+    'lammpslib',
+    'lammpsrun',
+    'lj',
+    'mopac',
+    'morse',
+    'nwchem',
+    'octopus',
+    'onetep',
+    'openmx',
+    'orca',
+    'plumed',
+    'psi4',
+    'qchem',
+    'siesta',
+    'tip3p',
+    'tip4p',
+    'turbomole',
+    'vasp',
+]
 
 
 builtin = {'eam', 'emt', 'ff', 'lj', 'morse', 'tip3p', 'tip4p'}
@@ -32,9 +70,11 @@ class Templates(Mapping):
         return len(self._dct)
 
 
-templates = Templates({
-    'abinit': 'ase.calculators.abinit.AbinitTemplate',
-    'aims': 'ase.calculators.aims.AimsTemplate',
-    'espresso': 'ase.calculators.espresso.EspressoTemplate',
-    'octopus': 'ase.calculators.octopus.OctopusTemplate',
-})
+templates = Templates(
+    {
+        'abinit': 'ase.calculators.abinit.AbinitTemplate',
+        'aims': 'ase.calculators.aims.AimsTemplate',
+        'espresso': 'ase.calculators.espresso.EspressoTemplate',
+        'octopus': 'ase.calculators.octopus.OctopusTemplate',
+    }
+)

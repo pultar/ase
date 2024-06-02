@@ -25,11 +25,13 @@ from ase.utils import iofunction
 rhombohedral_spacegroups = {146, 148, 155, 160, 161, 166, 167}
 
 
-old_spacegroup_names = {'Abm2': 'Aem2',
-                        'Aba2': 'Aea2',
-                        'Cmca': 'Cmce',
-                        'Cmma': 'Cmme',
-                        'Ccca': 'Ccc1'}
+old_spacegroup_names = {
+    'Abm2': 'Aem2',
+    'Aba2': 'Aea2',
+    'Cmca': 'Cmce',
+    'Cmma': 'Cmme',
+    'Ccca': 'Ccc1',
+}
 
 # CIF maps names to either single values or to multiple values via loops.
 CIFDataValue = Union[str, int, float]
@@ -45,13 +47,15 @@ def convert_value(value: str) -> CIFDataValue:
         return int(value)
     elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$', value):
         return float(value)
-    elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+\)$',
-                  value):
-        return float(value[:value.index('(')])  # strip off uncertainties
-    elif re.match(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+$',
-                  value):
+    elif re.match(
+        r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+\)$', value
+    ):
+        return float(value[: value.index('(')])  # strip off uncertainties
+    elif re.match(
+        r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\(\d+$', value
+    ):
         warnings.warn(f'Badly formed number: "{value}"')
-        return float(value[:value.index('(')])  # strip off uncertainties
+        return float(value[: value.index('(')])  # strip off uncertainties
     else:
         return handle_subscripts(value)
 
@@ -99,18 +103,21 @@ def parse_cif_loop_headers(lines: List[str]) -> Iterator[str]:
             return
 
 
-def parse_cif_loop_data(lines: List[str],
-                        ncolumns: int) -> List[List[CIFDataValue]]:
+def parse_cif_loop_data(
+    lines: List[str], ncolumns: int
+) -> List[List[CIFDataValue]]:
     columns: List[List[CIFDataValue]] = [[] for _ in range(ncolumns)]
 
     tokens = []
     while lines:
         line = lines.pop().strip()
         lowerline = line.lower()
-        if (not line or
-            line.startswith('_') or
-            lowerline.startswith('data_') or
-                lowerline.startswith('loop_')):
+        if (
+            not line
+            or line.startswith('_')
+            or lowerline.startswith('data_')
+            or lowerline.startswith('loop_')
+        ):
             lines.append(line)
             break
 
@@ -134,16 +141,20 @@ def parse_cif_loop_data(lines: List[str],
             for i, token in enumerate(tokens):
                 columns[i].append(convert_value(token))
         else:
-            warnings.warn(f'Wrong number {len(tokens)} of tokens, '
-                          f'expected {ncolumns}: {tokens}')
+            warnings.warn(
+                f'Wrong number {len(tokens)} of tokens, '
+                f'expected {ncolumns}: {tokens}'
+            )
 
         # (Due to continue statements we cannot move this to start of loop)
         tokens = []
 
     if tokens:
         assert len(tokens) < ncolumns
-        raise RuntimeError('CIF loop ended unexpectedly with incomplete row: '
-                           f'{tokens}, expected {ncolumns} tokens')
+        raise RuntimeError(
+            'CIF loop ended unexpectedly with incomplete row: '
+            f'{tokens}, expected {ncolumns} tokens'
+        )
 
     return columns
 
@@ -204,8 +215,14 @@ class CIFBlock(collections.abc.Mapping):
 
     Use this object to query CIF tags or import information as ASE objects."""
 
-    cell_tags = ['_cell_length_a', '_cell_length_b', '_cell_length_c',
-                 '_cell_angle_alpha', '_cell_angle_beta', '_cell_angle_gamma']
+    cell_tags = [
+        '_cell_length_a',
+        '_cell_length_b',
+        '_cell_length_c',
+        '_cell_angle_alpha',
+        '_cell_angle_beta',
+        '_cell_angle_gamma',
+    ]
 
     def __init__(self, name: str, tags: Dict[str, CIFData]):
         self.name = name
@@ -240,9 +257,14 @@ class CIFBlock(collections.abc.Mapping):
         return Cell.new(cellpar)
 
     def _raw_scaled_positions(self) -> Optional[np.ndarray]:
-        coords = [self.get(name) for name in ['_atom_site_fract_x',
-                                              '_atom_site_fract_y',
-                                              '_atom_site_fract_z']]
+        coords = [
+            self.get(name)
+            for name in [
+                '_atom_site_fract_x',
+                '_atom_site_fract_y',
+                '_atom_site_fract_z',
+            ]
+        ]
         # XXX Shall we try to handle mixed coordinates?
         # (Some scaled vs others fractional)
         if None in coords:
@@ -250,9 +272,11 @@ class CIFBlock(collections.abc.Mapping):
         return np.array(coords).T
 
     def _raw_positions(self) -> Optional[np.ndarray]:
-        coords = [self.get('_atom_site_cartn_x'),
-                  self.get('_atom_site_cartn_y'),
-                  self.get('_atom_site_cartn_z')]
+        coords = [
+            self.get('_atom_site_cartn_x'),
+            self.get('_atom_site_cartn_y'),
+            self.get('_atom_site_cartn_z'),
+        ]
         if None in coords:
             return None
         return np.array(coords).T
@@ -271,8 +295,7 @@ class CIFBlock(collections.abc.Mapping):
         return 'cartesian', cartesian
 
     def _get_symbols_with_deuterium(self):
-        labels = self._get_any(['_atom_site_type_symbol',
-                                '_atom_site_label'])
+        labels = self._get_any(['_atom_site_type_symbol', '_atom_site_label'])
         if labels is None:
             raise NoStructureData('No symbols')
 
@@ -291,8 +314,10 @@ class CIFBlock(collections.abc.Mapping):
         return [symbol if symbol != 'D' else 'H' for symbol in symbols]
 
     def _where_deuterium(self):
-        return np.array([symbol == 'D' for symbol
-                         in self._get_symbols_with_deuterium()], bool)
+        return np.array(
+            [symbol == 'D' for symbol in self._get_symbols_with_deuterium()],
+            bool,
+        )
 
     def _get_masses(self) -> Optional[np.ndarray]:
         mask = self._where_deuterium()
@@ -315,23 +340,35 @@ class CIFBlock(collections.abc.Mapping):
         # http://www.iucr.org/resources/cif/dictionaries/cif_sym for a
         # complete list of official keys.  In addition we also try to
         # support some commonly used depricated notations
-        return self._get_any(['_space_group.it_number',
-                              '_space_group_it_number',
-                              '_symmetry_int_tables_number'])
+        return self._get_any(
+            [
+                '_space_group.it_number',
+                '_space_group_it_number',
+                '_symmetry_int_tables_number',
+            ]
+        )
 
     def _get_spacegroup_name(self):
-        hm_symbol = self._get_any(['_space_group_name_h-m_alt',
-                                   '_symmetry_space_group_name_h-m',
-                                   '_space_group.Patterson_name_h-m',
-                                   '_space_group.patterson_name_h-m'])
+        hm_symbol = self._get_any(
+            [
+                '_space_group_name_h-m_alt',
+                '_symmetry_space_group_name_h-m',
+                '_space_group.Patterson_name_h-m',
+                '_space_group.patterson_name_h-m',
+            ]
+        )
 
         hm_symbol = old_spacegroup_names.get(hm_symbol, hm_symbol)
         return hm_symbol
 
     def _get_sitesym(self):
-        sitesym = self._get_any(['_space_group_symop_operation_xyz',
-                                 '_space_group_symop.operation_xyz',
-                                 '_symmetry_equiv_pos_as_xyz'])
+        sitesym = self._get_any(
+            [
+                '_space_group_symop_operation_xyz',
+                '_space_group_symop.operation_xyz',
+                '_symmetry_equiv_pos_as_xyz',
+            ]
+        )
         if isinstance(sitesym, str):
             sitesym = [sitesym]
         return sitesym
@@ -347,7 +384,8 @@ class CIFBlock(collections.abc.Mapping):
         setting = int(setting_str)
         if setting not in [1, 2]:
             raise ValueError(
-                f'Spacegroup setting must be 1 or 2, not {setting}')
+                f'Spacegroup setting must be 1 or 2, not {setting}'
+            )
         return setting
 
     def get_spacegroup(self, subtrans_included) -> Spacegroup:
@@ -370,9 +408,12 @@ class CIFBlock(collections.abc.Mapping):
             subtrans = [(0.0, 0.0, 0.0)] if subtrans_included else None
 
             spacegroup = spacegroup_from_data(
-                no=no, symbol=hm_symbol, sitesym=sitesym,
+                no=no,
+                symbol=hm_symbol,
+                sitesym=sitesym,
                 subtrans=subtrans,
-                setting=1)  # should the setting be passed from somewhere?
+                setting=1,
+            )  # should the setting be passed from somewhere?
         elif no is not None:
             spacegroup = no
         elif hm_symbol is not None:
@@ -402,13 +443,15 @@ class CIFBlock(collections.abc.Mapping):
                 else:
                     warnings.warn(
                         f'unexpected crystal system {setting_name!r} '
-                        f'for space group {spacegroup!r}')
+                        f'for space group {spacegroup!r}'
+                    )
             # FIXME - check for more crystal systems...
             else:
                 warnings.warn(
                     f'crystal system {setting_name!r} is not '
                     f'interpreted for space group {spacegroup!r}. '
-                    'This may result in wrong setting!')
+                    'This may result in wrong setting!'
+                )
 
         spg = Spacegroup(spacegroup, setting)
         if no is not None:
@@ -426,9 +469,9 @@ class CIFBlock(collections.abc.Mapping):
         symbols = self.get_symbols()
         coordtype, coords = self._get_site_coordinates()
 
-        atoms = Atoms(symbols=symbols,
-                      cell=self.get_cell(),
-                      masses=self._get_masses())
+        atoms = Atoms(
+            symbols=symbols, cell=self.get_cell(), masses=self._get_masses()
+        )
 
         if coordtype == 'scaled':
             atoms.set_scaled_positions(coords)
@@ -448,15 +491,21 @@ class CIFBlock(collections.abc.Mapping):
         else:
             return True
 
-    def get_atoms(self, store_tags=False, primitive_cell=False,
-                  subtrans_included=True, fractional_occupancies=True) -> Atoms:
+    def get_atoms(
+        self,
+        store_tags=False,
+        primitive_cell=False,
+        subtrans_included=True,
+        fractional_occupancies=True,
+    ) -> Atoms:
         """Returns an Atoms object from a cif tags dictionary.  See read_cif()
         for a description of the arguments."""
         if primitive_cell and subtrans_included:
             raise RuntimeError(
                 'Primitive cell cannot be determined when sublattice '
                 'translations are included in the symmetry operations listed '
-                'in the CIF file, i.e. when `subtrans_included` is True.')
+                'in the CIF file, i.e. when `subtrans_included` is True.'
+            )
 
         cell = self.get_cell()
         assert cell.rank in [0, 3]
@@ -481,12 +530,14 @@ class CIFBlock(collections.abc.Mapping):
 
         if cell.rank == 3:
             spacegroup = self.get_spacegroup(subtrans_included)
-            atoms = crystal(unsymmetrized_structure,
-                            spacegroup=spacegroup,
-                            setting=spacegroup.setting,
-                            occupancies=occupancies,
-                            primitive_cell=primitive_cell,
-                            **kwargs)
+            atoms = crystal(
+                unsymmetrized_structure,
+                spacegroup=spacegroup,
+                setting=spacegroup.setting,
+                occupancies=occupancies,
+                primitive_cell=primitive_cell,
+                **kwargs,
+            )
         else:
             atoms = unsymmetrized_structure
             if kwargs.get('info') is not None:
@@ -531,10 +582,12 @@ def parse_cif_ase(fileobj) -> Iterator[CIFBlock]:
     data = format_unicode(data)
     lines = [e for e in data.split('\n') if len(e) > 0]
     if len(lines) > 0 and lines[0].rstrip() == '#\\#CIF_2.0':
-        warnings.warn('CIF v2.0 file format detected; `ase` CIF reader might '
-                      'incorrectly interpret some syntax constructions, use '
-                      '`pycodcif` reader instead')
-    lines = [''] + lines[::-1]    # all lines (reversed)
+        warnings.warn(
+            'CIF v2.0 file format detected; `ase` CIF reader might '
+            'incorrectly interpret some syntax constructions, use '
+            '`pycodcif` reader instead'
+        )
+    lines = [''] + lines[::-1]  # all lines (reversed)
 
     while lines:
         line = lines.pop().strip()
@@ -553,8 +606,9 @@ def parse_cif_pycodcif(fileobj) -> Iterator[CIFBlock]:
         from pycodcif import parse
     except ImportError:
         raise ImportError(
-            'parse_cif_pycodcif requires pycodcif ' +
-            '(http://wiki.crystallography.net/cod-tools/pycodcif/)')
+            'parse_cif_pycodcif requires pycodcif '
+            + '(http://wiki.crystallography.net/cod-tools/pycodcif/)'
+        )
 
     data, _, _ = parse(fileobj)
 
@@ -586,9 +640,11 @@ def iread_cif(
             continue
 
         atoms = block.get_atoms(
-            store_tags, primitive_cell,
+            store_tags,
+            primitive_cell,
             subtrans_included,
-            fractional_occupancies=fractional_occupancies)
+            fractional_occupancies=fractional_occupancies,
+        )
         images.append(atoms)
 
     if index is None or index == ':':
@@ -674,15 +730,17 @@ def format_cell(cell: Cell) -> str:
 
 def format_generic_spacegroup_info() -> str:
     # We assume no symmetry whatsoever
-    return '\n'.join([
-        '_space_group_name_H-M_alt    "P 1"',
-        '_space_group_IT_number       1',
-        '',
-        'loop_',
-        '  _space_group_symop_operation_xyz',
-        "  'x, y, z'",
-        '',
-    ])
+    return '\n'.join(
+        [
+            '_space_group_name_H-M_alt    "P 1"',
+            '_space_group_IT_number       1',
+            '',
+            'loop_',
+            '  _space_group_symop_operation_xyz',
+            "  'x, y, z'",
+            '',
+        ]
+    )
 
 
 class CIFLoop:
@@ -697,8 +755,10 @@ class CIFLoop:
         self.formats.append(fmt)
         self.arrays.append(array)
         if len(self.arrays[0]) != len(self.arrays[-1]):
-            raise ValueError(f'Loop data "{name}" has {len(array)} '
-                             'elements, expected {len(self.arrays[0])}')
+            raise ValueError(
+                f'Loop data "{name}" has {len(array)} '
+                'elements, expected {len(self.arrays[0])}'
+            )
 
     def tostring(self):
         lines = []
@@ -720,8 +780,9 @@ class CIFLoop:
 
 
 @iofunction('wb')
-def write_cif(fd, images, cif_format=None,
-              wrap=True, labels=None, loop_keys=None) -> None:
+def write_cif(
+    fd, images, cif_format=None, wrap=True, labels=None, loop_keys=None
+) -> None:
     r"""Write *images* to CIF file.
 
     wrap: bool
@@ -744,9 +805,12 @@ def write_cif(fd, images, cif_format=None,
     """
 
     if cif_format is not None:
-        warnings.warn('The cif_format argument is deprecated and may be '
-                      'removed in the future.  Use loop_keys to customize '
-                      'data written in loop.', FutureWarning)
+        warnings.warn(
+            'The cif_format argument is deprecated and may be '
+            'removed in the future.  Use loop_keys to customize '
+            'data written in loop.',
+            FutureWarning,
+        )
 
     if loop_keys is None:
         loop_keys = {}
@@ -760,10 +824,14 @@ def write_cif(fd, images, cif_format=None,
             blockname = f'data_image{i}\n'
             image_loop_keys = {key: loop_keys[key][i] for key in loop_keys}
 
-            write_cif_image(blockname, atoms, fd,
-                            wrap=wrap,
-                            labels=None if labels is None else labels[i],
-                            loop_keys=image_loop_keys)
+            write_cif_image(
+                blockname,
+                atoms,
+                fd,
+                wrap=wrap,
+                labels=None if labels is None else labels[i],
+                loop_keys=image_loop_keys,
+            )
 
     finally:
         # Using the TextIOWrapper somehow causes the file to close
@@ -786,10 +854,11 @@ def autolabel(symbols: Sequence[str]) -> List[str]:
 
 def chemical_formula_header(atoms):
     counts = atoms.symbols.formula.count()
-    formula_sum = ' '.join(f'{sym}{count}' for sym, count
-                           in counts.items())
-    return (f'_chemical_formula_structural       {atoms.symbols}\n'
-            f'_chemical_formula_sum              "{formula_sum}"\n')
+    formula_sum = ' '.join(f'{sym}{count}' for sym, count in counts.items())
+    return (
+        f'_chemical_formula_structural       {atoms.symbols}\n'
+        f'_chemical_formula_sum              "{formula_sum}"\n'
+    )
 
 
 class BadOccupancies(ValueError):
@@ -808,8 +877,10 @@ def expand_kinds(atoms, coords):
             occ_info_kind = occ_info[str(kind)]
             symbol = symbols[i]
             if symbol not in occ_info_kind:
-                raise BadOccupancies('Occupancies present but no occupancy '
-                                     'info for "{symbol}"')
+                raise BadOccupancies(
+                    'Occupancies present but no occupancy '
+                    'info for "{symbol}"'
+                )
             occupancies[i] = occ_info_kind[symbol]
             # extend the positions array in case of mixed occupancy
             for sym, occ in occ_info[str(kind)].items():
@@ -838,8 +909,9 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
     if labels is None:
         labels = autolabel(symbols)
 
-    coord_headers = [f'_atom_site_{coord_type}_{axisname}'
-                     for axisname in 'xyz']
+    coord_headers = [
+        f'_atom_site_{coord_type}_{axisname}' for axisname in 'xyz'
+    ]
 
     loopdata = {}
     loopdata['_atom_site_label'] = (labels, '{:<8s}')
@@ -850,8 +922,7 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
         loopdata[key] = (_coords[:, i], '{}')
 
     loopdata['_atom_site_type_symbol'] = (symbols, '{:<2s}')
-    loopdata['_atom_site_symmetry_multiplicity'] = (
-        [1.0] * len(symbols), '{}')
+    loopdata['_atom_site_symmetry_multiplicity'] = ([1.0] * len(symbols), '{}')
 
     for key in loop_keys:
         # Should expand the loop_keys like we expand the occupancy stuff.
@@ -862,8 +933,7 @@ def atoms_to_loop_data(atoms, wrap, labels, loop_keys):
     return loopdata, coord_headers
 
 
-def write_cif_image(blockname, atoms, fd, *, wrap,
-                    labels, loop_keys):
+def write_cif_image(blockname, atoms, fd, *, wrap, labels, loop_keys):
     fd.write(blockname)
     fd.write(chemical_formula_header(atoms))
 
@@ -874,11 +944,12 @@ def write_cif_image(blockname, atoms, fd, *, wrap,
         fd.write(format_generic_spacegroup_info())
         fd.write('\n')
     elif rank != 0:
-        raise ValueError('CIF format can only represent systems with '
-                         f'0 or 3 lattice vectors.  Got {rank}.')
+        raise ValueError(
+            'CIF format can only represent systems with '
+            f'0 or 3 lattice vectors.  Got {rank}.'
+        )
 
-    loopdata, coord_headers = atoms_to_loop_data(atoms, wrap, labels,
-                                                 loop_keys)
+    loopdata, coord_headers = atoms_to_loop_data(atoms, wrap, labels, loop_keys)
 
     headers = [
         '_atom_site_type_symbol',

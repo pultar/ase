@@ -5,12 +5,11 @@ import numpy as np
 from ase.cell import Cell
 from ase.utils import pbc2pbc
 
-TOL = 1E-12
-MAX_IT = 100000    # in practice this is not exceeded
+TOL = 1e-12
+MAX_IT = 100000  # in practice this is not exceeded
 
 
 class CycleChecker:
-
     def __init__(self, d):
         assert d in [2, 3]
 
@@ -49,7 +48,7 @@ def reduction_gauss(B, hu, hv):
         if np.dot(u, u) >= np.dot(v, v) or cycle_checker.add_site(site):
             return hv, hu
 
-    raise RuntimeError(f"Gaussian basis not found after {MAX_IT} iterations")
+    raise RuntimeError(f'Gaussian basis not found after {MAX_IT} iterations')
 
 
 def relevant_vectors_2D(u, v):
@@ -64,7 +63,7 @@ def closest_vector(t0, u, v):
     a = np.zeros(2, dtype=int)
     rs, cs = relevant_vectors_2D(u, v)
 
-    dprev = float("inf")
+    dprev = float('inf')
     for _ in range(MAX_IT):
         ds = np.linalg.norm(rs + t, axis=1)
         index = np.argmin(ds)
@@ -77,7 +76,7 @@ def closest_vector(t0, u, v):
         a += kopt * cs[index]
         t = t0 + a[0] * u + a[1] * v
 
-    raise RuntimeError(f"Closest vector not found after {MAX_IT} iterations")
+    raise RuntimeError(f'Closest vector not found after {MAX_IT} iterations')
 
 
 def reduction_full(B):
@@ -114,7 +113,7 @@ def reduction_full(B):
         if norms[2] >= norms[1] or cycle_checker.add_site(H):
             return R, H
 
-    raise RuntimeError(f"Reduced basis not found after {MAX_IT} iterations")
+    raise RuntimeError(f'Reduced basis not found after {MAX_IT} iterations')
 
 
 def is_minkowski_reduced(cell, pbc=True):
@@ -171,25 +170,25 @@ def is_minkowski_reduced(cell, pbc=True):
         norms = np.linalg.norm(cell, axis=1)
         cell = cell[np.argsort(norms)[[1, 2, 0]]]
 
-        A = [[0, 1, 0],
-             [1, -1, 0],
-             [1, 1, 0]]
+        A = [[0, 1, 0], [1, -1, 0], [1, 1, 0]]
         lhs = np.linalg.norm(A @ cell, axis=1)
         norms = np.linalg.norm(cell, axis=1)
         rhs = norms[[0, 1, 1]]
     else:
-        A = [[0, 1, 0],
-             [0, 0, 1],
-             [1, 1, 0],
-             [1, 0, 1],
-             [0, 1, 1],
-             [1, -1, 0],
-             [1, 0, -1],
-             [0, 1, -1],
-             [1, 1, 1],
-             [1, -1, 1],
-             [1, 1, -1],
-             [1, -1, -1]]
+        A = [
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 1, 0],
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, -1, 0],
+            [1, 0, -1],
+            [0, 1, -1],
+            [1, 1, 1],
+            [1, -1, 1],
+            [1, 1, -1],
+            [1, -1, -1],
+        ]
         lhs = np.linalg.norm(A @ cell, axis=1)
         norms = np.linalg.norm(cell, axis=1)
         rhs = norms[[0, 1, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2]]
@@ -232,12 +231,12 @@ def minkowski_reduce(cell, pbc=True):
 
     if dim == 2:
         # permute cell so that first two vectors are the periodic ones
-        perm = np.argsort(pbc, kind='merge')[::-1]    # stable sort
+        perm = np.argsort(pbc, kind='merge')[::-1]  # stable sort
         pcell = cell[perm][:, perm]
 
         # perform gauss reduction
         norms = np.linalg.norm(pcell, axis=1)
-        norms[2] = float("inf")
+        norms[2] = float('inf')
         indices = np.argsort(norms)
         op = op[indices]
         hu, hv = reduction_gauss(pcell, op[0], op[1])
@@ -269,5 +268,5 @@ def minkowski_reduce(cell, pbc=True):
     norms1 = np.sort(np.linalg.norm(cell, axis=1))
     norms2 = np.sort(np.linalg.norm(op @ cell, axis=1))
     if (norms2 > norms1 + TOL).any():
-        raise RuntimeError("Minkowski reduction failed")
+        raise RuntimeError('Minkowski reduction failed')
     return op @ cell, op

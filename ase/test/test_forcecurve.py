@@ -11,8 +11,7 @@ def test_forcecurve(testdir, plt):
     atoms.calc = EMT()
     atoms.rattle(stdev=0.05)
 
-    with VelocityVerlet(atoms, timestep=12.0 * fs,
-                        trajectory='tmp.traj') as md:
+    with VelocityVerlet(atoms, timestep=12.0 * fs, trajectory='tmp.traj') as md:
         md.run(steps=10)
     images = read('tmp.traj', ':')
     force_curve(images)

@@ -3,7 +3,6 @@ from ase.constraints import FixAtoms
 
 
 def test_repeat_FixAtoms():
-
     N = 2
 
     atoms = molecule('CO2')

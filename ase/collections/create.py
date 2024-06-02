@@ -30,27 +30,35 @@ def dcdft():
         atoms = read(filename)
         if symbol in ['Li', 'Na']:
             niggli_reduce(atoms)
-        M = {'Fe': 2.3,
-             'Co': 1.2,
-             'Ni': 0.6,
-             'Cr': 1.5,
-             'O': 1.5,
-             'Mn': 2.0}.get(symbol)
+        M = {
+            'Fe': 2.3,
+            'Co': 1.2,
+            'Ni': 0.6,
+            'Cr': 1.5,
+            'O': 1.5,
+            'Mn': 2.0,
+        }.get(symbol)
         if M is not None:
             magmoms = [M] * len(atoms)
             if symbol in ['Cr', 'O', 'Mn']:
-                magmoms[len(atoms) // 2:] = [-M] * (len(atoms) // 2)
+                magmoms[len(atoms) // 2 :] = [-M] * (len(atoms) // 2)
             atoms.set_initial_magnetic_moments(magmoms)
 
         exp = experiment.get(symbol, [])
         extra = dict(zip(['exp_volume', 'exp_B', 'exp_Bp'], exp))
-        con.write(atoms, name=symbol,
-                  wien2k_B=B, wien2k_Bp=Bp, wien2k_volume=vol,
-                  **extra)
+        con.write(
+            atoms,
+            name=symbol,
+            wien2k_B=B,
+            wien2k_Bp=Bp,
+            wien2k_volume=vol,
+            **extra,
+        )
 
 
 def g2():
     from ase.data.g2 import data
+
     os.environ['USER'] = 'ase'
     con = ase.db.connect('g2.json')
     for name, d in data.items():

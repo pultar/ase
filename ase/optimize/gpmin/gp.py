@@ -6,7 +6,7 @@ from ase.optimize.gpmin.kernel import SquaredExponential
 from ase.optimize.gpmin.prior import ZeroPrior
 
 
-class GaussianProcess():
+class GaussianProcess:
     """Gaussian Process Regression
     It is recommended to be used with other Priors and Kernels from
     ase.optimize.gpmin
@@ -62,8 +62,9 @@ class GaussianProcess():
         self.X = X.copy()  # Store the data in an attribute
         n = self.X.shape[0]
         D = self.X.shape[1]
-        regularization = np.array(n * ([self.noise * self.kernel.l] +
-                                  D * [self.noise]))
+        regularization = np.array(
+            n * ([self.noise * self.kernel.l] + D * [self.noise])
+        )
 
         K = self.kernel.kernel_matrix(X)  # Compute the kernel matrix
         K[range(K.shape[0]), range(K.shape[0])] += regularization**2
@@ -71,8 +72,9 @@ class GaussianProcess():
         self.m = self.prior.prior(X)
         self.a = Y.flatten() - self.m
         self.L, self.lower = cho_factor(K, lower=True, check_finite=True)
-        cho_solve((self.L, self.lower), self.a, overwrite_b=True,
-                  check_finite=True)
+        cho_solve(
+            (self.L, self.lower), self.a, overwrite_b=True, check_finite=True
+        )
 
     def predict(self, x, get_variance=False):
         """Given a trained Gaussian Process, it predicts the value and the
@@ -92,8 +94,9 @@ class GaussianProcess():
         k = self.kernel.kernel_vector(x, self.X, n)
         f = self.prior.prior(x) + np.dot(k, self.a)
         if get_variance:
-            v = solve_triangular(self.L, k.T.copy(), lower=True,
-                                 check_finite=False)
+            v = solve_triangular(
+                self.L, k.T.copy(), lower=True, check_finite=False
+            )
             variance = self.kernel.kernel(x, x)
             # covariance = np.matmul(v.T, v)
             covariance = np.tensordot(v, v, axes=(0, 0))
@@ -119,18 +122,22 @@ class GaussianProcess():
         y = Y.flatten()
 
         # Compute log likelihood
-        logP = (-0.5 * np.dot(y - self.m, self.a) -
-                np.sum(np.log(np.diag(self.L))) -
-                X.shape[0] * 0.5 * np.log(2 * np.pi))
+        logP = (
+            -0.5 * np.dot(y - self.m, self.a)
+            - np.sum(np.log(np.diag(self.L)))
+            - X.shape[0] * 0.5 * np.log(2 * np.pi)
+        )
 
         # Gradient of the loglikelihood
         grad = self.kernel.gradient(X)
 
         # vectorizing the derivative of the log likelihood
-        D_P_input = np.array([np.dot(np.outer(self.a, self.a), g)
-                              for g in grad])
-        D_complexity = np.array([cho_solve((self.L, self.lower), g)
-                                 for g in grad])
+        D_P_input = np.array(
+            [np.dot(np.outer(self.a, self.a), g) for g in grad]
+        )
+        D_complexity = np.array(
+            [cho_solve((self.L, self.lower), g) for g in grad]
+        )
 
         DlogP = 0.5 * np.trace(D_P_input - D_complexity, axis1=1, axis2=2)
         return -logP, -DlogP
@@ -169,15 +176,22 @@ class GaussianProcess():
         else:
             bounds = None
 
-        result = minimize(self.neg_log_likelihood, params, args=arguments,
-                          method='L-BFGS-B', jac=True, bounds=bounds,
-                          options={'gtol': tol, 'ftol': 0.01 * tol})
+        result = minimize(
+            self.neg_log_likelihood,
+            params,
+            args=arguments,
+            method='L-BFGS-B',
+            jac=True,
+            bounds=bounds,
+            options={'gtol': tol, 'ftol': 0.01 * tol},
+        )
 
         if not result.success:
             converged = False
         else:
             converged = True
-            self.hyperparams = np.array([result.x.copy()[0],
-                                         result.x.copy()[1], self.noise])
+            self.hyperparams = np.array(
+                [result.x.copy()[0], result.x.copy()[1], self.noise]
+            )
         self.set_hyperparams(self.hyperparams)
         return {'hyperparameters': self.hyperparams, 'converged': converged}

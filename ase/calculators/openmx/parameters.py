@@ -17,6 +17,7 @@ functional theories.
     You should have received a copy of the GNU Lesser General Public License
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 from typing import Any, Dict, List
 
 from ase.calculators.calculator import Parameters
@@ -28,13 +29,8 @@ tuple_integer_keys = [
     'scf.Kgrid',
     'Dos.Kgrid',
 ]
-tuple_float_keys = [
-    'scf.Electric.Field',
-    'scf.fixed.grid'
-]
-tuple_bool_keys: List[str] = [
-
-]
+tuple_float_keys = ['scf.Electric.Field', 'scf.fixed.grid']
+tuple_bool_keys: List[str] = []
 integer_keys = [
     'level.of.stdout',
     'level.of.fileout',
@@ -60,7 +56,7 @@ integer_keys = [
     'num.HOMOs',
     'num.LUMOs',
     'MO.Nkpoint',
-    'MD.Current.Iter'
+    'MD.Current.Iter',
 ]
 float_keys = [
     'scf.Constraint.NC.Spin.v',
@@ -96,7 +92,7 @@ string_keys = [
     'orbitalOpt.Method',
     'orbitalOpt.StartPulay',
     'MD.Type',
-    'Wannier.Initial.Projectors.Unit'
+    'Wannier.Initial.Projectors.Unit',
 ]
 bool_keys = [
     'scf.partialCoreCorrection',
@@ -116,7 +112,7 @@ bool_keys = [
     'Voronoi.charge',
     'scf.NC.Zeeman.Spin',
     'scf.stress.tensor',
-    'Energy.Decomposition'
+    'Energy.Decomposition',
 ]
 list_int_keys: List[str] = []
 list_bool_keys: List[str] = []
@@ -135,7 +131,7 @@ matrix_keys = [
     'Band.KPath.UnitCell',
     'Band.kpath',
     'MO.kpoint',
-    'Wannier.Initial.Projectors'
+    'Wannier.Initial.Projectors',
 ]
 unit_dat_keywords = {
     'Hubbard.U.Values': 'eV',
@@ -152,7 +148,7 @@ unit_dat_keywords = {
     'MD.Init.Velocity': 'm/s',
     'Dos.Erange': 'eV',
     'scf.NC.Mag.Field.Spin': 'Tesla',
-    'scf.NC.Mag.Field.Orbital': 'Tesla'
+    'scf.NC.Mag.Field.Orbital': 'Tesla',
 }
 
 
@@ -165,7 +161,7 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     level_of_fileout=None,
     species_number=None,
     atoms_number=None,
-    scf_maxiter=None,          # default 40
+    scf_maxiter=None,  # default 40
     scf_mixing_history=None,
     scf_mixing_startpulay=None,
     scf_mixing_everypulay=None,
@@ -194,9 +190,9 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     scf_min_mixing_weight=None,
     scf_max_mixing_weight=None,
     scf_kerker_factor=None,
-    scf_criterion=None,           # Ha unit defualt 1e-6
+    scf_criterion=None,  # Ha unit defualt 1e-6
     scf_system_charge=None,
-    onedfft_energycutoff=None,    # 1Dfft
+    onedfft_energycutoff=None,  # 1Dfft
     orbitalopt_sd_step=None,
     orbitalopt_criterion=None,
     ordern_hoppingranges=None,
@@ -253,8 +249,8 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     xc=None,  # Default is set to 'LDA' as 'scf_xctype' keyword
     maxiter=None,
     energy_cutoff=None,  # Please make sure written in eV unit not Ry
-    kpts=None,           # Default value is set to (4, 4, 4) in 'scf_kgrid'
-    band_kpts=(),   # To separate monkhorst and band kpts
+    kpts=None,  # Default value is set to (4, 4, 4) in 'scf_kgrid'
+    band_kpts=(),  # To separate monkhorst and band kpts
     eigensolver=None,
     spinpol=None,
     convergence=None,
@@ -268,7 +264,8 @@ omx_parameter_defaults: Dict[str, Any] = dict(
     debug=False,
     nohup=True,
     dft_data_dict=None,  # dft_data_year : Pseudo potential generated year
-    dft_data_year=None)  # writting in 'Definition.Of.Atomic.Species'. 13 or 19
+    dft_data_year=None,
+)  # writting in 'Definition.Of.Atomic.Species'. 13 or 19
 
 
 class OpenMXParameters(Parameters):
@@ -290,12 +287,15 @@ class OpenMXParameters(Parameters):
 
     allowed_xc = [
         'LDA',
-        'GGA', 'PBE', 'GGA-PBE',
+        'GGA',
+        'PBE',
+        'GGA-PBE',
         'LSDA',
         'LSDA-PW',
         'LSDA-CA',
         'CA',
-        'PW']
+        'PW',
+    ]
 
     def __init__(self, **kwargs):
         kw = omx_parameter_defaults.copy()
@@ -303,14 +303,17 @@ class OpenMXParameters(Parameters):
         Parameters.__init__(self, **kw)
 
         if self.kpts == (1, 1, 1):
-            print("When only the gamma point is considered, the eigenvalue \
+            print(
+                "When only the gamma point is considered, the eigenvalue \
                   solver is changed to 'Cluster' with the periodic boundary \
-                  condition.")
+                  condition."
+            )
             self.eigensolver = 'Cluster'
             self.mpi = None
             self.pbs = None
 
         from copy import deepcopy
+
         dft_data_dict = deepcopy(default_dictionary)
         if self.dft_data_dict is not None:
             dft_data_dict.update(self.dft_data_dict)

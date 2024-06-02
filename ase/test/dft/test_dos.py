@@ -1,11 +1,12 @@
 from ase.atoms import Atoms
-from ase.calculators.singlepoint import (SinglePointDFTCalculator,
-                                         SinglePointKPoint)
+from ase.calculators.singlepoint import (
+    SinglePointDFTCalculator,
+    SinglePointKPoint,
+)
 from ase.dft.dos import DOS
 
 
 def test_dos():
-
     atoms = Atoms('H')
     eFermi = [0, 1]
     kpts = [SinglePointKPoint(1, 0, 0), SinglePointKPoint(1, 1, 0)]

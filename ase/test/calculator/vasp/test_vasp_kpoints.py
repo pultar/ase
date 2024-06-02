@@ -1,6 +1,7 @@
 """
 Check the many ways of specifying KPOINTS
 """
+
 import os
 
 import pytest
@@ -28,6 +29,7 @@ def check_kpoints_line(n, contents):
 @pytest.fixture()
 def write_kpoints(atoms):
     """Helper fixture to write the input kpoints file"""
+
     def _write_kpoints(factory, **kwargs):
         calc = factory.calc(**kwargs)
         calc.initialize(atoms)
@@ -92,8 +94,8 @@ def test_weighted(atoms, testdir):
     # Explicit weighted points with nested lists, Cartesian if not specified
     string = format_kpoints(
         atoms=atoms,
-        kpts=[[0.1, 0.2, 0.3, 2], [0.0, 0.0, 0.0, 1],
-              [0.0, 0.5, 0.5, 2]])
+        kpts=[[0.1, 0.2, 0.3, 2], [0.0, 0.0, 0.0, 1], [0.0, 0.5, 0.5, 2]],
+    )
 
     with open('KPOINTS', 'w') as fd:
         fd.write(string)
@@ -115,7 +117,8 @@ def test_explicit_auto_weight(atoms, testdir):
     string = format_kpoints(
         atoms=atoms,
         kpts=[(0.1, 0.2, 0.3), (0.0, 0.0, 0.0), (0.0, 0.5, 0.5)],
-        reciprocal=True)
+        reciprocal=True,
+    )
 
     with open('KPOINTS', 'w') as fd:
         fd.write(string)

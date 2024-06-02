@@ -6,7 +6,6 @@ from ase.io import iread, write
 
 
 def test_traj_bytesio():
-
     images = [bulk('Si') + bulk('Fe')] + list(g2)
 
     buf = io.BytesIO()

@@ -13,7 +13,7 @@ TOL = 1e-6
 
 # The corresponding data as an ASE Atoms object.
 DATA = ase.Atoms(
-    "Cu3",
+    'Cu3',
     cell=np.array([[7.22, 0, 0], [1, 10.83, 0], [1, 1, 14.44]]),
     positions=np.array(
         [
@@ -27,63 +27,66 @@ DATA = ase.Atoms(
 
 
 def test_eon_read_single(datadir):
-    box = ase.io.read(f"{datadir}/io/eon/single.con", format="eon")
+    box = ase.io.read(f'{datadir}/io/eon/single.con', format='eon')
     npt.assert_allclose(box.cell, DATA.cell, rtol=TOL, atol=0)
-    assert (box.symbols == ase.symbols.string2symbols("Cu3")).all()
+    assert (box.symbols == ase.symbols.string2symbols('Cu3')).all()
     npt.assert_allclose(box.get_masses(), np.array([63.5459999] * 3), rtol=TOL)
     npt.assert_allclose(box.positions, DATA.positions, rtol=TOL)
 
 
 def test_eon_write_single(datadir):
-    out_file = "out.con"
-    ase.io.write(out_file, DATA, format="eon")
-    data2 = ase.io.read(out_file, format="eon")
+    out_file = 'out.con'
+    ase.io.write(out_file, DATA, format='eon')
+    data2 = ase.io.read(out_file, format='eon')
     npt.assert_allclose(data2.cell, DATA.cell, rtol=TOL, atol=0)
     npt.assert_allclose(data2.positions, DATA.positions, rtol=TOL)
 
 
 def test_eon_roundtrip_multi(datadir):
-    out_file = "out.con"
-    images = ase.io.read(f"{datadir}/io/eon/multi.con", format="eon", index=":")
-    ase.io.write(out_file, images, format="eon")
-    data = ase.io.read(out_file, format="eon", index=":")
+    out_file = 'out.con'
+    images = ase.io.read(f'{datadir}/io/eon/multi.con', format='eon', index=':')
+    ase.io.write(out_file, images, format='eon')
+    data = ase.io.read(out_file, format='eon', index=':')
     assert len(data) == 10
     npt.assert_allclose(
         data[0].constraints[0].get_indices(),
-        np.array([0, 1]), rtol=1e-5, atol=0
+        np.array([0, 1]),
+        rtol=1e-5,
+        atol=0,
     )
     npt.assert_allclose(
-        data[1].constraints[0].get_indices(),
-        np.array([]), rtol=1e-5, atol=0
+        data[1].constraints[0].get_indices(), np.array([]), rtol=1e-5, atol=0
     )
 
 
 def test_eon_read_multi(datadir):
-    images = ase.io.read(f"{datadir}/io/eon/multi.con", format="eon", index=":")
+    images = ase.io.read(f'{datadir}/io/eon/multi.con', format='eon', index=':')
     assert len(images) == 10
     npt.assert_allclose(
         images[0].constraints[0].get_indices(),
-        np.array([0, 1]), rtol=1e-5, atol=0
+        np.array([0, 1]),
+        rtol=1e-5,
+        atol=0,
     )
     npt.assert_allclose(
-        images[1].constraints[0].get_indices(),
-        np.array([]), rtol=1e-5, atol=0
+        images[1].constraints[0].get_indices(), np.array([]), rtol=1e-5, atol=0
     )
 
 
 def test_eon_isotope_fail():
-    out_file = "out.con"
+    out_file = 'out.con'
     DATA.set_masses([33, 31, 22])
     with pytest.raises(RuntimeError):
-        ase.io.write(out_file, DATA, format="eon")
+        ase.io.write(out_file, DATA, format='eon')
 
 
 def test_eon_masses():
     # Error tolerance.
     TOL = 1e-8
 
-    data = ase.lattice.compounds.B2(['Cs', 'Cl'], latticeconstant=4.123,
-                                    size=(3, 3, 3))
+    data = ase.lattice.compounds.B2(
+        ['Cs', 'Cl'], latticeconstant=4.123, size=(3, 3, 3)
+    )
 
     m_Cs = ase.data.atomic_masses[ase.data.atomic_numbers['Cs']]
     m_Cl = ase.data.atomic_masses[ase.data.atomic_numbers['Cl']]

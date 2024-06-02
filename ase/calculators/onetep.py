@@ -6,9 +6,12 @@ https://onetep.org"""
 
 from os import environ
 
-from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
-                                           GenericFileIOCalculator,
-                                           read_stdout)
+from ase.calculators.genericfileio import (
+    BaseProfile,
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+    read_stdout,
+)
 from ase.io import read, write
 
 
@@ -50,15 +53,22 @@ class OnetepTemplate(CalculatorTemplate):
                 'energy',
                 'free_energy',
                 'forces',
-                'stress'])
+                'stress',
+            ],
+        )
         self.inputname = f'{self._label}.dat'
         self.outputname = f'{self._label}.out'
         self.errorname = f'{self._label}.err'
         self.append = append
 
     def execute(self, directory, profile):
-        profile.run(directory, self.inputname, self.outputname,
-                    self.errorname, append=self.append)
+        profile.run(
+            directory,
+            self.inputname,
+            self.outputname,
+            self.errorname,
+            append=self.append,
+        )
 
     def read_results(self, directory):
         output_path = directory / self.outputname
@@ -67,8 +77,13 @@ class OnetepTemplate(CalculatorTemplate):
 
     def write_input(self, profile, directory, atoms, parameters, properties):
         input_path = directory / self.inputname
-        write(input_path, atoms, format='onetep-in',
-              properties=properties, **parameters)
+        write(
+            input_path,
+            atoms,
+            format='onetep-in',
+            properties=properties,
+            **parameters,
+        )
 
     def load_profile(self, cfg, **kwargs):
         return OnetepProfile.from_config(cfg, self.name, **kwargs)
@@ -134,26 +149,24 @@ class Onetep(GenericFileIOCalculator):
            are valid ONETEP keywords.
     """
 
-    def __init__(
-            self,
-            *,
-            profile=None,
-            directory='.',
-            **kwargs):
-
+    def __init__(self, *, profile=None, directory='.', **kwargs):
         self.keywords = kwargs.get('keywords', None)
-        self.template = OnetepTemplate(
-            append=kwargs.pop('append', False)
-        )
+        self.template = OnetepTemplate(append=kwargs.pop('append', False))
 
         if 'ASE_ONETEP_COMMAND' in environ and profile is None:
             import warnings
             import shlex
-            warnings.warn("using ASE_ONETEP_COMMAND env is \
-                          deprecated, please use OnetepProfile",
-                          FutureWarning)
+
+            warnings.warn(
+                'using ASE_ONETEP_COMMAND env is \
+                          deprecated, please use OnetepProfile',
+                FutureWarning,
+            )
             profile = OnetepProfile(shlex.split(environ['ASE_ONETEP_COMMAND']))
 
-        super().__init__(profile=profile, template=self.template,
-                         directory=directory,
-                         parameters=kwargs)
+        super().__init__(
+            profile=profile,
+            template=self.template,
+            directory=directory,
+            parameters=kwargs,
+        )

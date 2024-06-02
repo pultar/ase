@@ -68,14 +68,15 @@ def search_pubchem_raw(search, field, silent=False, mock_test=False):
             ) from e
         except URLError as e:
             raise ValueError(
-                'Couldn\'t reach the pubchem servers, check'
+                "Couldn't reach the pubchem servers, check"
                 ' your internet connection'
             ) from e
 
     # check if there are confomers and warn them if there are
     if field != 'conformers' and not silent:
-        conformer_ids = available_conformer_search(search, field,
-                                                   mock_test=mock_test)
+        conformer_ids = available_conformer_search(
+            search, field, mock_test=mock_test
+        )
         if len(conformer_ids) > 1:
             warnings.warn(
                 f'The structure "{search}" has more than one conformer in '
@@ -105,8 +106,9 @@ def parse_pubchem_raw(data):
 
     """
     if 'PUBCHEM_COMPOUND_CID' not in data:
-        raise Exception('There was a problem with the data returned by '
-                        'PubChem')
+        raise Exception(
+            'There was a problem with the data returned by ' 'PubChem'
+        )
     f_like = StringIO(data)
     atoms = read(f_like, format='sdf')
 
@@ -133,7 +135,7 @@ def parse_pubchem_raw(data):
         # the first entry just contains the number of atoms with charges
         charges = pubchem_data['PUBCHEM_MMFF94_PARTIAL_CHARGES'][1:]
         # each subsequent entry contains the index and charge of the atoms
-        atom_charges = [0.] * len(atoms)
+        atom_charges = [0.0] * len(atoms)
         for charge in charges:
             i, charge = charge.split()
             # indices start at 1
@@ -142,8 +144,9 @@ def parse_pubchem_raw(data):
     return atoms, pubchem_data
 
 
-def analyze_input(name=None, cid=None, smiles=None, conformer=None,
-                  silent=False):
+def analyze_input(
+    name=None, cid=None, smiles=None, conformer=None, silent=False
+):
     """
     helper function to translate keyword arguments from intialization
     and searching into the search and field that is being asked for
@@ -162,18 +165,22 @@ def analyze_input(name=None, cid=None, smiles=None, conformer=None,
     input_fields = ['name', 'cid', 'smiles', 'conformers']
 
     if inputs_check.count(True) > 1:
-        raise ValueError('Only one search term my be entered a time.'
-                         ' Please pass in only one of the following: '
-                         'name, cid, smiles, confomer')
+        raise ValueError(
+            'Only one search term my be entered a time.'
+            ' Please pass in only one of the following: '
+            'name, cid, smiles, confomer'
+        )
     elif inputs_check.count(True) == 1:
         # Figure out which input has been passed in
         index = inputs_check.index(True)
         field = input_fields[index]
         search = inputs[index]
     else:
-        raise ValueError('No search was entered.'
-                         ' Please pass in only one of the following: '
-                         'name, cid, smiles, confomer')
+        raise ValueError(
+            'No search was entered.'
+            ' Please pass in only one of the following: '
+            'name, cid, smiles, confomer'
+        )
 
     return PubchemSearch(search, field)
 
@@ -216,8 +223,10 @@ def available_conformer_search(search, field, mock_test=False):
             )
             raise err from e
         except URLError as e:
-            err = ValueError('Couldn\'t reach the pubchem servers, check'
-                             ' your internet connection')
+            err = ValueError(
+                "Couldn't reach the pubchem servers, check"
+                ' your internet connection'
+            )
             raise err from e
     record = r.read().decode('utf-8')
     record = json.loads(record)
@@ -268,8 +277,9 @@ def pubchem_conformer_search(*args, mock_test=False, **kwargs):
 
     search, field = analyze_input(*args, **kwargs)
 
-    conformer_ids = available_conformer_search(search, field,
-                                               mock_test=mock_test)
+    conformer_ids = available_conformer_search(
+        search, field, mock_test=mock_test
+    )
     return [
         pubchem_search(mock_test=mock_test, conformer=id_)
         for id_ in conformer_ids

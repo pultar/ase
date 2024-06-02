@@ -21,20 +21,21 @@ def test_no_data_file_wrap(factory):
 
     # Make a periodic box and put one atom outside of it
     pos = [[0.0, 0.0, 0.0], [-2.0, 0.0, 0.0]]
-    atoms = Atoms(symbols=["Ar"] * 2, positions=pos, cell=[10.0, 10.0, 10.0],
-                  pbc=True)
+    atoms = Atoms(
+        symbols=['Ar'] * 2, positions=pos, cell=[10.0, 10.0, 10.0], pbc=True
+    )
 
     # Set parameters for calculator
     params = {}
-    params["pair_style"] = "lj/cut 8.0"
-    params["pair_coeff"] = ["1 1 0.0108102 3.345"]
+    params['pair_style'] = 'lj/cut 8.0'
+    params['pair_coeff'] = ['1 1 0.0108102 3.345']
 
     # Don't write a data file string. This will force
     # ase.calculators.lammps.inputwriter.write_lammps_in to write a bunch of
     # 'create_atoms' commands into the LAMMPS input file
-    params["no_data_file"] = True
+    params['no_data_file'] = True
 
-    with factory.calc(specorder=["Ar"], **params) as calc:
+    with factory.calc(specorder=['Ar'], **params) as calc:
         atoms.calc = calc
         atoms.get_potential_energy()
         # assert something?

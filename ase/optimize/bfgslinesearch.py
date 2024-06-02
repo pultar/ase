@@ -91,8 +91,15 @@ class BFGSLineSearch(Optimizer):
         self.no_update = False
         self.replay = False
 
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+        Optimizer.__init__(
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master,
+            force_consistent=force_consistent,
+        )
 
     def read(self):
         self.r0, self.g0, self.e0, self.task, self.H = self.load()
@@ -112,8 +119,10 @@ class BFGSLineSearch(Optimizer):
             forces = optimizable.get_forces()
 
         if optimizable.is_neb():
-            raise TypeError('NEB calculations cannot use the BFGSLineSearch'
-                            ' optimizer. Use BFGS or another optimizer.')
+            raise TypeError(
+                'NEB calculations cannot use the BFGSLineSearch'
+                ' optimizer. Use BFGS or another optimizer.'
+            )
         r = optimizable.get_positions()
         r = r.reshape(-1)
         g = -forces.reshape(-1) / self.alpha
@@ -125,14 +134,23 @@ class BFGSLineSearch(Optimizer):
         self.p = -np.dot(self.H, g)
         p_size = np.sqrt((self.p**2).sum())
         if p_size <= np.sqrt(len(optimizable) * 1e-10):
-            self.p /= (p_size / np.sqrt(len(optimizable) * 1e-10))
+            self.p /= p_size / np.sqrt(len(optimizable) * 1e-10)
         ls = LineSearch()
-        self.alpha_k, e, self.e0, self.no_update = \
-            ls._line_search(self.func, self.fprime, r, self.p, g, e, self.e0,
-                            maxstep=self.maxstep, c1=self.c1,
-                            c2=self.c2, stpmax=self.stpmax)
+        self.alpha_k, e, self.e0, self.no_update = ls._line_search(
+            self.func,
+            self.fprime,
+            r,
+            self.p,
+            g,
+            e,
+            self.e0,
+            maxstep=self.maxstep,
+            c1=self.c1,
+            c2=self.c2,
+            stpmax=self.stpmax,
+        )
         if self.alpha_k is None:
-            raise RuntimeError("LineSearch failed!")
+            raise RuntimeError('LineSearch failed!')
 
         dr = self.alpha_k * self.p
         optimizable.set_positions((r + dr).reshape(len(optimizable), -1))
@@ -150,9 +168,13 @@ class BFGSLineSearch(Optimizer):
             dr = r - r0
             dg = g - g0
             # self.alpha_k can be None!!!
-            if not (((self.alpha_k or 0) > 0 and
-                    abs(np.dot(g, p0)) - abs(np.dot(g0, p0)) < 0) or
-                    self.replay):
+            if not (
+                (
+                    (self.alpha_k or 0) > 0
+                    and abs(np.dot(g, p0)) - abs(np.dot(g0, p0)) < 0
+                )
+                or self.replay
+            ):
                 return
             if self.no_update is True:
                 print('skip update')
@@ -162,14 +184,16 @@ class BFGSLineSearch(Optimizer):
                 rhok = 1.0 / (np.dot(dg, dr))
             except ZeroDivisionError:
                 rhok = 1000.0
-                print("Divide-by-zero encountered: rhok assumed large")
+                print('Divide-by-zero encountered: rhok assumed large')
             if isinf(rhok):  # this is patch for np
                 rhok = 1000.0
-                print("Divide-by-zero encountered: rhok assumed large")
+                print('Divide-by-zero encountered: rhok assumed large')
             A1 = self.I - dr[:, np.newaxis] * dg[np.newaxis, :] * rhok
             A2 = self.I - dg[:, np.newaxis] * dr[np.newaxis, :] * rhok
-            self.H = (np.dot(A1, np.dot(self.H, A2)) +
-                      rhok * dr[:, np.newaxis] * dr[np.newaxis, :])
+            self.H = (
+                np.dot(A1, np.dot(self.H, A2))
+                + rhok * dr[:, np.newaxis] * dr[np.newaxis, :]
+            )
             # self.B = np.linalg.inv(self.H)
 
     def func(self, x):
@@ -186,7 +210,7 @@ class BFGSLineSearch(Optimizer):
         # Remember that forces are minus the gradient!
         # Scale the problem as SciPy uses I as initial Hessian.
         forces = self.optimizable.get_forces().reshape(-1)
-        return - forces / self.alpha
+        return -forces / self.alpha
 
     def replay_trajectory(self, traj):
         """Initialize hessian from old trajectory."""
@@ -196,13 +220,14 @@ class BFGSLineSearch(Optimizer):
         with IOContext() as files:
             if isinstance(traj, str):
                 from ase.io.trajectory import Trajectory
+
                 traj = files.closelater(Trajectory(traj, mode='r'))
 
             r0 = None
             g0 = None
             for i in range(len(traj) - 1):
                 r = traj[i].get_positions().ravel()
-                g = - traj[i].get_forces().ravel() / self.alpha
+                g = -traj[i].get_forces().ravel() / self.alpha
                 self.update(r, g, r0, g0, self.p)
                 self.p = -np.dot(self.H, g)
                 r0 = r.copy()
@@ -221,11 +246,14 @@ class BFGSLineSearch(Optimizer):
         name = self.__class__.__name__
         w = self.logfile.write
         if self.nsteps == 0:
-            w('%s  %4s[%3s] %8s %15s  %12s\n' %
-              (' ' * len(name), 'Step', 'FC', 'Time', 'Energy', 'fmax'))
-        w('%s:  %3d[%3d] %02d:%02d:%02d %15.6f %12.4f\n'
-            % (name, self.nsteps, self.force_calls, T[3], T[4], T[5], e,
-               fmax))
+            w(
+                '%s  %4s[%3s] %8s %15s  %12s\n'
+                % (' ' * len(name), 'Step', 'FC', 'Time', 'Energy', 'fmax')
+            )
+        w(
+            '%s:  %3d[%3d] %02d:%02d:%02d %15.6f %12.4f\n'
+            % (name, self.nsteps, self.force_calls, T[3], T[4], T[5], e, fmax)
+        )
         self.logfile.flush()
 
 
@@ -235,4 +263,5 @@ def wrap_function(function, args):
     def function_wrapper(x):
         ncalls[0] += 1
         return function(x, *args)
+
     return ncalls, function_wrapper

@@ -1,5 +1,6 @@
 """Classes that determine convergence of an algorithm run
 based on population stagnation or max raw score reached"""
+
 from ase.ga import get_raw_score
 
 
@@ -46,8 +47,13 @@ class GenerationRepetitionConvergence(Convergence):
         Default is indefinite.
     """
 
-    def __init__(self, population_instance, number_of_generations,
-                 number_of_individuals=-1, max_generations=100000000):
+    def __init__(
+        self,
+        population_instance,
+        number_of_generations,
+        number_of_individuals=-1,
+        max_generations=100000000,
+    ):
         Convergence.__init__(self, population_instance)
         self.numgens = number_of_generations
         self.numindis = number_of_individuals
@@ -77,7 +83,7 @@ class GenerationRepetitionConvergence(Convergence):
         latest_pop = self.pops[cur_gen_num - 1]
         for i in range(cur_gen_num - 2, -1, -1):
             test_pop = self.pops[i]
-            if test_pop[:self.numindis] == latest_pop[:self.numindis]:
+            if test_pop[: self.numindis] == latest_pop[: self.numindis]:
                 duplicate_gens += 1
             if duplicate_gens >= self.numgens:
                 return True

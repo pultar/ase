@@ -23,22 +23,29 @@ def test_Pt_stress_cellopt(factory):
         atoms.cell += 2 * rng.random((3, 3))
         atoms.calc = calc
 
-        assert_allclose(atoms.get_stress(),
-                        calc.calculate_numerical_stress(atoms),
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            atoms.get_stress(),
+            calc.calculate_numerical_stress(atoms),
+            atol=1e-4,
+            rtol=1e-4,
+        )
 
         with BFGS(FrechetCellFilter(atoms)) as opt:
             for i, _ in enumerate(opt.irun(fmax=0.001)):
                 pass
 
-        cell1_ref = np.array([
-            [0.178351, 3.885347, 3.942046],
-            [4.19978, 0.591071, 5.062568],
-            [4.449044, 3.264038, 0.471548],
-        ])
+        cell1_ref = np.array(
+            [
+                [0.178351, 3.885347, 3.942046],
+                [4.19978, 0.591071, 5.062568],
+                [4.449044, 3.264038, 0.471548],
+            ]
+        )
 
-        assert_allclose(np.asarray(atoms.cell), cell1_ref,
-                        atol=3e-4, rtol=3e-4)
-        assert_allclose(atoms.get_stress(),
-                        calc.calculate_numerical_stress(atoms),
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(np.asarray(atoms.cell), cell1_ref, atol=3e-4, rtol=3e-4)
+        assert_allclose(
+            atoms.get_stress(),
+            calc.calculate_numerical_stress(atoms),
+            atol=1e-4,
+            rtol=1e-4,
+        )

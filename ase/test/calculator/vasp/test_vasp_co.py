@@ -9,16 +9,18 @@ calc = pytest.mark.calculator
 @pytest.fixture()
 def calc_settings():
     """Some simple fast calculation settings"""
-    return dict(xc='lda',
-                prec='Low',
-                algo='Fast',
-                setups='minimal',
-                ismear=0,
-                nelm=1,
-                sigma=1.,
-                istart=0,
-                lwave=False,
-                lcharg=False)
+    return dict(
+        xc='lda',
+        prec='Low',
+        algo='Fast',
+        setups='minimal',
+        ismear=0,
+        nelm=1,
+        sigma=1.0,
+        istart=0,
+        lwave=False,
+        lcharg=False,
+    )
 
 
 @calc('vasp')
@@ -29,6 +31,7 @@ def test_vasp_co(factory, atoms_co, calc_settings):
     environment variables
 
     """
+
     def array_almost_equal(a1, a2, tol=np.finfo(float).eps):
         """Replacement for old numpy.testing.utils.array_almost_equal."""
         return (np.abs(a1 - a2) < tol).all()

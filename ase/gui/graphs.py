@@ -37,10 +37,8 @@ class Graphs:
         self.expr = ui.Entry('', 50, self.plot)
         win.add([self.expr, ui.helpbutton(graph_help_text)])
 
-        win.add([ui.Button(_('Plot'), self.plot, 'xy'),
-                 ' x, y1, y2, ...'], 'w')
-        win.add([ui.Button(_('Plot'), self.plot, 'y'),
-                 ' y1, y2, ...'], 'w')
+        win.add([ui.Button(_('Plot'), self.plot, 'xy'), ' x, y1, y2, ...'], 'w')
+        win.add([ui.Button(_('Plot'), self.plot, 'y'), ' y1, y2, ...'], 'w')
         win.add([ui.Button(_('Save'), self.save)], 'w')
 
         self.gui = gui
@@ -63,8 +61,9 @@ class Graphs:
         self.gui.pipe('graph', pickledata)
 
     def save(self):
-        dialog = ui.SaveFileDialog(self.gui.window.win,
-                                   _('Save data to file ... '))
+        dialog = ui.SaveFileDialog(
+            self.gui.window.win, _('Save data to file ... ')
+        )
         # fix tkinter not automatically setting dialog type
         # remove from Python3.8+
         # see https://github.com/python/cpython/pull/25187
@@ -80,6 +79,7 @@ class Graphs:
 
 def make_plot(data, i, expr, type, show=True):
     import matplotlib.pyplot as plt
+
     basesize = 4
     plt.figure(figsize=(basesize * 2.5**0.5, basesize))
     m = len(data)

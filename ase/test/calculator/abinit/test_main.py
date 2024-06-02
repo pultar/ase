@@ -7,15 +7,17 @@ from ase.units import Hartree
 
 calc = pytest.mark.calculator
 
-required_quantities = {'eigenvalues',
-                       'fermilevel',
-                       'version',
-                       'forces',
-                       'energy',
-                       'free_energy',
-                       'stress',
-                       'ibz_kpoints',
-                       'kpoint_weights'}
+required_quantities = {
+    'eigenvalues',
+    'fermilevel',
+    'version',
+    'forces',
+    'energy',
+    'free_energy',
+    'stress',
+    'ibz_kpoints',
+    'kpoint_weights',
+}
 
 
 def run(atoms):
@@ -61,7 +63,7 @@ def test_au(factory, pps):
     # test the read_abinit_gsr function
     dict_gsr = read_abinit_gsr(atoms.calc.directory / 'abinito_GSR.nc')
 
-    atoms_gsr = dict_gsr["atoms"]
+    atoms_gsr = dict_gsr['atoms']
     assert atoms_gsr.cell == pytest.approx(atoms.cell, 1e-5)
     assert atoms_gsr.positions == pytest.approx(atoms.positions, 1e-5)
     assert atoms_gsr.get_potential_energy() == pytest.approx(dict_gsr['energy'])

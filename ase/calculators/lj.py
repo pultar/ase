@@ -207,10 +207,10 @@ class LennardJones(Calculator):
             # pointing *towards* neighbours
             distance_vectors = positions[neighbors] + cells - positions[ii]
 
-            r2 = (distance_vectors ** 2).sum(1)
-            c6 = (sigma ** 2 / r2) ** 3
-            c6[r2 > rc ** 2] = 0.0
-            c12 = c6 ** 2
+            r2 = (distance_vectors**2).sum(1)
+            c6 = (sigma**2 / r2) ** 3
+            c6[r2 > rc**2] = 0.0
+            c12 = c6**2
 
             if smooth:
                 cutoff_fn = cutoff_function(r2, rc**2, ro**2)
@@ -223,8 +223,8 @@ class LennardJones(Calculator):
                 # order matters, otherwise the pairwise energy is already
                 # modified
                 pairwise_forces = (
-                    cutoff_fn * pairwise_forces + 2 * d_cutoff_fn
-                    * pairwise_energies
+                    cutoff_fn * pairwise_forces
+                    + 2 * d_cutoff_fn * pairwise_energies
                 )
                 pairwise_energies *= cutoff_fn
             else:
@@ -242,8 +242,9 @@ class LennardJones(Calculator):
         # no lattice, no stress
         if self.atoms.cell.rank == 3:
             stresses = full_3x3_to_voigt_6_stress(stresses)
-            self.results['stress'] = stresses.sum(
-                axis=0) / self.atoms.get_volume()
+            self.results['stress'] = (
+                stresses.sum(axis=0) / self.atoms.get_volume()
+            )
             self.results['stresses'] = stresses / self.atoms.get_volume()
 
         energy = energies.sum()
@@ -273,8 +274,9 @@ def cutoff_function(r, rc, ro):
     return np.where(
         r < ro,
         1.0,
-        np.where(r < rc, (rc - r) ** 2 * (rc + 2 *
-                 r - 3 * ro) / (rc - ro) ** 3, 0.0),
+        np.where(
+            r < rc, (rc - r) ** 2 * (rc + 2 * r - 3 * ro) / (rc - ro) ** 3, 0.0
+        ),
     )
 
 

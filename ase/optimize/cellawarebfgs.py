@@ -10,8 +10,9 @@ from ase.optimize.optimize import Dynamics
 from ase.units import GPa
 
 
-def calculate_isotropic_elasticity_tensor(bulk_modulus, poisson_ratio,
-                                          suppress_rotation=0):
+def calculate_isotropic_elasticity_tensor(
+    bulk_modulus, poisson_ratio, suppress_rotation=0
+):
     """
     Parameters:
         bulk_modulus Bulk Modulus of the isotropic system used to set up the
@@ -39,8 +40,10 @@ def calculate_isotropic_elasticity_tensor(bulk_modulus, poisson_ratio,
 
     # Construct 4th rank Elasticity tensor for isotropic systems
     C_ijkl = _lambda * np.einsum('ij,kl->ijkl', g_ij, g_ij)
-    C_ijkl += _mu * (np.einsum('ik,jl->ijkl', g_ij, g_ij) +
-                     np.einsum('il,kj->ijkl', g_ij, g_ij))
+    C_ijkl += _mu * (
+        np.einsum('ik,jl->ijkl', g_ij, g_ij)
+        + np.einsum('il,kj->ijkl', g_ij, g_ij)
+    )
 
     # Supplement the tensor with suppression of pure rotations that are right
     # now 0 eigenvalues.
@@ -48,8 +51,7 @@ def calculate_isotropic_elasticity_tensor(bulk_modulus, poisson_ratio,
     for i, j in ((0, 1), (0, 2), (1, 2)):
         Q = np.zeros((3, 3))
         Q[i, j], Q[j, i] = 1, -1
-        C_ijkl += (np.einsum('ij,kl->ijkl', Q, Q)
-                   * suppress_rotation / 2)
+        C_ijkl += np.einsum('ij,kl->ijkl', Q, Q) * suppress_rotation / 2
 
     return C_ijkl
 
@@ -72,9 +74,17 @@ class CellAwareBFGS(BFGS):
         self.bulk_modulus = bulk_modulus
         self.poisson_ratio = poisson_ratio
         self.long_output = long_output
-        BFGS.__init__(self, atoms=atoms, restart=restart, logfile=logfile,
-                      trajectory=trajectory, maxstep=maxstep, master=master,
-                      alpha=alpha, append_trajectory=append_trajectory)
+        BFGS.__init__(
+            self,
+            atoms=atoms,
+            restart=restart,
+            logfile=logfile,
+            trajectory=trajectory,
+            maxstep=maxstep,
+            master=master,
+            alpha=alpha,
+            append_trajectory=append_trajectory,
+        )
         assert not isinstance(atoms, Atoms)
         if hasattr(atoms, 'exp_cell_factor'):
             assert atoms.exp_cell_factor == 1.0
@@ -82,23 +92,26 @@ class CellAwareBFGS(BFGS):
     def initialize(self):
         BFGS.initialize(self)
         C_ijkl = calculate_isotropic_elasticity_tensor(
-            self.bulk_modulus,
-            self.poisson_ratio,
-            suppress_rotation=self.alpha)
+            self.bulk_modulus, self.poisson_ratio, suppress_rotation=self.alpha
+        )
         cell_H = self.H0[-9:, -9:]
         ind = np.where(self.atoms.mask.ravel() != 0)[0]
-        cell_H[np.ix_(ind, ind)] = C_ijkl.reshape((9, 9))[
-            np.ix_(ind, ind)] * self.atoms.atoms.cell.volume
+        cell_H[np.ix_(ind, ind)] = (
+            C_ijkl.reshape((9, 9))[np.ix_(ind, ind)]
+            * self.atoms.atoms.cell.volume
+        )
 
     def converged(self, forces=None):
         if forces is None:
             forces = self.atoms.atoms.get_forces()
         stress = self.atoms.atoms.get_stress()
-        return np.max(np.sum(forces**2, axis=1))**0.5 < self.fmax and \
-            np.max(np.abs(stress)) < self.smax
+        return (
+            np.max(np.sum(forces**2, axis=1)) ** 0.5 < self.fmax
+            and np.max(np.abs(stress)) < self.smax
+        )
 
     def run(self, fmax=0.05, smax=0.005, steps=None):
-        """ call Dynamics.run and keep track of fmax"""
+        """call Dynamics.run and keep track of fmax"""
         self.fmax = fmax
         self.smax = smax
         if steps is not None:
@@ -108,7 +121,7 @@ class CellAwareBFGS(BFGS):
     def log(self, forces=None):
         if forces is None:
             forces = self.atoms.atoms.get_forces()
-        fmax = (forces ** 2).sum(axis=1).max() ** 0.5
+        fmax = (forces**2).sum(axis=1).max() ** 0.5
         e = self.optimizable.get_potential_energy()
         T = time.localtime()
         smax = abs(self.atoms.atoms.get_stress()).max()
@@ -116,23 +129,48 @@ class CellAwareBFGS(BFGS):
         if self.logfile is not None:
             name = self.__class__.__name__
             if self.nsteps == 0:
-                args = (" " * len(name),
-                        "Step", "Time", "Energy", "fmax", "smax", "volume")
-                msg = "\n%s  %4s %8s %15s  %15s %15s %15s" % args
+                args = (
+                    ' ' * len(name),
+                    'Step',
+                    'Time',
+                    'Energy',
+                    'fmax',
+                    'smax',
+                    'volume',
+                )
+                msg = '\n%s  %4s %8s %15s  %15s %15s %15s' % args
                 if self.long_output:
-                    msg += ("%8s %8s %8s %8s %8s %8s" %
-                            ('A', 'B', 'C', 'α', 'β', 'γ'))
+                    msg += '%8s %8s %8s %8s %8s %8s' % (
+                        'A',
+                        'B',
+                        'C',
+                        'α',
+                        'β',
+                        'γ',
+                    )
                 msg += '\n'
                 self.logfile.write(msg)
 
             ast = ''
-            args = (name, self.nsteps, T[3], T[4], T[5], e, ast, fmax, smax,
-                    volume)
-            msg = ("%s:  %3d %02d:%02d:%02d %15.6f%1s %15.6f %15.6f %15.6f" %
-                   args)
+            args = (
+                name,
+                self.nsteps,
+                T[3],
+                T[4],
+                T[5],
+                e,
+                ast,
+                fmax,
+                smax,
+                volume,
+            )
+            msg = (
+                '%s:  %3d %02d:%02d:%02d %15.6f%1s %15.6f %15.6f %15.6f' % args
+            )
             if self.long_output:
-                msg += ("%8.3f %8.3f %8.3f %8.3f %8.3f %8.3f" %
-                        tuple(cell_to_cellpar(self.atoms.atoms.cell)))
+                msg += '%8.3f %8.3f %8.3f %8.3f %8.3f %8.3f' % tuple(
+                    cell_to_cellpar(self.atoms.atoms.cell)
+                )
             msg += '\n'
             self.logfile.write(msg)
 

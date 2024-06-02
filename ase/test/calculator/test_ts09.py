@@ -3,8 +3,7 @@ import pytest
 from ase import io
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
-from ase.calculators.vdwcorrection import (TS09Polarizability,
-                                           vdWTkatchenko09prl)
+from ase.calculators.vdwcorrection import TS09Polarizability, vdWTkatchenko09prl
 
 
 # fake objects for the test
@@ -42,16 +41,18 @@ def test_ts09(testdir):
     al.calc = c
     al.get_potential_energy()
 
-    assert (al.get_potential_energy(force_consistent=False)
-            == al.get_potential_energy(force_consistent=True))
+    assert al.get_potential_energy(
+        force_consistent=False
+    ) == al.get_potential_energy(force_consistent=True)
 
     fname = 'out.traj'
     al.write(fname)
 
     # check that the output exists
     atoms = io.read(fname)
-    assert (atoms.get_potential_energy()
-            == pytest.approx(al.get_potential_energy()))
+    assert atoms.get_potential_energy() == pytest.approx(
+        al.get_potential_energy()
+    )
 
     p = atoms.calc.parameters
     assert p['calculator'] == cc.name
@@ -74,4 +75,4 @@ def test_ts09_polarizability(testdir):
     # polarizability is a tensor
     assert alpha_cc.shape == (3, 3)
 
-    assert alpha_cc.diagonal() == pytest.approx(0.1523047, .005)
+    assert alpha_cc.diagonal() == pytest.approx(0.1523047, 0.005)

@@ -52,29 +52,37 @@ SORTED = {
 }
 
 REFERENCE = {
-    'positions': np.array([
-        [0, 0, 0],
-        [1, 0, 0],
-        [2, 0, 0],
-    ]),
+    'positions': np.array(
+        [
+            [0, 0, 0],
+            [1, 0, 0],
+            [2, 0, 0],
+        ]
+    ),
     'cell': np.eye(3) * 10,
     'bonds': {
-        'atoms': np.array([
-            [0, 1],
-            [1, 2],
-        ]),
+        'atoms': np.array(
+            [
+                [0, 1],
+                [1, 2],
+            ]
+        ),
         'types': np.array([1, 2]),
     },
     'angles': {
-        'atoms': np.array([
-            [0, 1, 2],
-        ]),
+        'atoms': np.array(
+            [
+                [0, 1, 2],
+            ]
+        ),
         'types': np.array([1]),
     },
     'dihedrals': {
-        'atoms': np.array([
-            [0, 1, 2, 0],
-        ]),
+        'atoms': np.array(
+            [
+                [0, 1, 2, 0],
+            ]
+        ),
         'types': np.array([1]),
     },
 }
@@ -106,14 +114,11 @@ def parse_tuples(atoms, regex, permutation, label):
 
     for i, per_atom in zip(bonded, tuples[bonded]):
         per_atom = np.array(regex.findall(per_atom), int)
-        new_tuples = np.array([
-            np.full(per_atom.shape[0], i, int),
-            *(per_atom[:, :-1].T)
-        ])
+        new_tuples = np.array(
+            [np.full(per_atom.shape[0], i, int), *(per_atom[:, :-1].T)]
+        )
 
-        all_tuples = np.append(all_tuples,
-                               new_tuples[permutation, :].T,
-                               axis=0)
+        all_tuples = np.append(all_tuples, new_tuples[permutation, :].T, axis=0)
         types = np.append(types, per_atom[:, -1])
 
     return all_tuples, types

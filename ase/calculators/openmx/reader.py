@@ -18,6 +18,7 @@ functional theories.
     You should have received a copy of the GNU Lesser General Public License
     along with ASE.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 #  from ase.calculators import SinglePointDFTCalculator
 import os
 import struct
@@ -31,6 +32,7 @@ from ase.units import Bohr, Debye, Ha
 def read_openmx(filename=None, debug=False):
     from ase import Atoms
     from ase.calculators.openmx import OpenMX
+
     """
     Read results from typical OpenMX output files and returns the atom object
     In default mode, it reads every implementd properties we could get from
@@ -55,16 +57,29 @@ def read_openmx(filename=None, debug=False):
     reform the data to fit to data structure of Atom object. While doing this,
     Fix the unit to ASE format.
     """
-    parameters = get_parameters(out_data=out_data, log_data=log_data,
-                                restart_data=restart_data, dat_data=dat_data,
-                                scfout_data=scfout_data, band_data=band_data)
-    atomic_formula = get_atomic_formula(out_data=out_data, log_data=log_data,
-                                        restart_data=restart_data,
-                                        scfout_data=scfout_data,
-                                        dat_data=dat_data)
-    results = get_results(out_data=out_data, log_data=log_data,
-                          restart_data=restart_data, scfout_data=scfout_data,
-                          dat_data=dat_data, band_data=band_data)
+    parameters = get_parameters(
+        out_data=out_data,
+        log_data=log_data,
+        restart_data=restart_data,
+        dat_data=dat_data,
+        scfout_data=scfout_data,
+        band_data=band_data,
+    )
+    atomic_formula = get_atomic_formula(
+        out_data=out_data,
+        log_data=log_data,
+        restart_data=restart_data,
+        scfout_data=scfout_data,
+        dat_data=dat_data,
+    )
+    results = get_results(
+        out_data=out_data,
+        log_data=log_data,
+        restart_data=restart_data,
+        scfout_data=scfout_data,
+        dat_data=dat_data,
+        band_data=band_data,
+    )
 
     atoms = Atoms(**atomic_formula)
 
@@ -73,11 +88,11 @@ def read_openmx(filename=None, debug=False):
     # malicious content that would be interpreted as 'command'
     from ase.calculators.calculator import all_properties
     from ase.calculators.singlepoint import SinglePointDFTCalculator
+
     common_properties = set(all_properties) & set(results)
     results = {key: results[key] for key in common_properties}
 
-    atoms.calc = SinglePointDFTCalculator(
-        atoms, **results)
+    atoms.calc = SinglePointDFTCalculator(atoms, **results)
 
     # atoms.calc = OpenMX(**parameters)
     # atoms.calc.results = results
@@ -93,30 +108,46 @@ def read_file(filename, debug=False):
             example will be written later
     """
     from ase.calculators.openmx import parameters as param
+
     if not os.path.isfile(filename):
         return {}
-    param_keys = ['integer_keys', 'float_keys', 'string_keys', 'bool_keys',
-                  'list_int_keys', 'list_float_keys', 'list_bool_keys',
-                  'tuple_integer_keys', 'tuple_float_keys', 'tuple_float_keys']
+    param_keys = [
+        'integer_keys',
+        'float_keys',
+        'string_keys',
+        'bool_keys',
+        'list_int_keys',
+        'list_float_keys',
+        'list_bool_keys',
+        'tuple_integer_keys',
+        'tuple_float_keys',
+        'tuple_float_keys',
+    ]
     patterns = {
         'Stress tensor': ('stress', read_stress_tensor),
         'Dipole moment': ('dipole', read_dipole),
-        'Fractional coordinates of': ('scaled_positions', read_scaled_positions),
+        'Fractional coordinates of': (
+            'scaled_positions',
+            read_scaled_positions,
+        ),
         'Utot.': ('energy', read_energy),
         'energies in': ('energies', read_energies),
         'Chemical Potential': ('chemical_potential', read_chemical_potential),
         '<coordinates.forces': ('forces', read_forces),
-        'Eigenvalues (Hartree)': ('eigenvalues', read_eigenvalues)}
+        'Eigenvalues (Hartree)': ('eigenvalues', read_eigenvalues),
+    }
     special_patterns = {
-        'Total spin moment': (('magmoms', 'total_magmom'),
-                              read_magmoms_and_total_magmom),
+        'Total spin moment': (
+            ('magmoms', 'total_magmom'),
+            read_magmoms_and_total_magmom,
+        ),
     }
     out_data = {}
     line = '\n'
-    if (debug):
+    if debug:
         print(f'Read results from {filename}')
     with open(filename) as fd:
-        '''
+        """
          Read output file line by line. When the `line` matches the pattern
         of certain keywords in `param.[dtype]_keys`, for example,
 
@@ -131,7 +162,7 @@ def read_file(filename, debug=False):
                 out_data[key] = read_[dtype](line)
 
         After found matched pattern, escape the for loop using `continue`.
-        '''
+        """
         while line != '':
             pattern_matched = False
             line = fd.readline()
@@ -160,7 +191,8 @@ def read_file(filename, debug=False):
             for key in patterns:
                 if key in line:
                     out_data[patterns[key][0]] = patterns[key][1](
-                        line, fd, debug=debug)
+                        line, fd, debug=debug
+                    )
                     pattern_matched = True
                     continue
             if pattern_matched:
@@ -262,6 +294,7 @@ def read_scfout_file(filename=None):
     from numpy import insert as ins
     from numpy import split as spl
     from numpy import sum, zeros
+
     if not os.path.isfile(filename):
         return {}
 
@@ -324,16 +357,30 @@ def read_scfout_file(filename=None):
         atv_ijk = inte(fd.read(4 * 4 * (TCpyCell + 1)), shape=(TCpyCell + 1, 4))
         Total_NumOrbs = np.insert(inte(fd.read(4 * (atomnum))), 0, 1, axis=0)
         FNAN = np.insert(inte(fd.read(4 * (atomnum))), 0, 0, axis=0)
-        natn = ins(spl(inte(fd.read(4 * sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
-                   0, zeros(FNAN[0] + 1), axis=0)[:-1]
-        ncn = ins(spl(inte(fd.read(4 * np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
-                  0, np.zeros(FNAN[0] + 1), axis=0)[:-1]
-        tv = ins(floa(fd.read(8 * 3 * 4), shape=(3, 4)),
-                 0, [0, 0, 0, 0], axis=0)
-        rtv = ins(floa(fd.read(8 * 3 * 4), shape=(3, 4)),
-                  0, [0, 0, 0, 0], axis=0)
-        Gxyz = ins(floa(fd.read(8 * (atomnum) * 4), shape=(atomnum, 4)), 0,
-                   [0., 0., 0., 0.], axis=0)
+        natn = ins(
+            spl(inte(fd.read(4 * sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+            0,
+            zeros(FNAN[0] + 1),
+            axis=0,
+        )[:-1]
+        ncn = ins(
+            spl(inte(fd.read(4 * np.sum(FNAN[1:] + 1))), cum(FNAN[1:] + 1)),
+            0,
+            np.zeros(FNAN[0] + 1),
+            axis=0,
+        )[:-1]
+        tv = ins(
+            floa(fd.read(8 * 3 * 4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0
+        )
+        rtv = ins(
+            floa(fd.read(8 * 3 * 4), shape=(3, 4)), 0, [0, 0, 0, 0], axis=0
+        )
+        Gxyz = ins(
+            floa(fd.read(8 * (atomnum) * 4), shape=(atomnum, 4)),
+            0,
+            [0.0, 0.0, 0.0, 0.0],
+            axis=0,
+        )
         Hks = readHam(SpinP_switch, FNAN, atomnum, Total_NumOrbs, natn, fd)
         iHks = []
         if SpinP_switch == 3:
@@ -349,18 +396,37 @@ def read_scfout_file(filename=None):
         dipole_moment_background = floa(fd.read(8 * 3))
         Valence_Electrons, Total_SpinS = floa(fd.read(8 * 2))
 
-    scf_out = {'atomnum': atomnum, 'SpinP_switch': SpinP_switch,
-               'Catomnum': Catomnum, 'Latomnum': Latomnum, 'Hks': Hks,
-               'Ratomnum': Ratomnum, 'TCpyCell': TCpyCell, 'atv': atv,
-               'Total_NumOrbs': Total_NumOrbs, 'FNAN': FNAN, 'natn': natn,
-               'ncn': ncn, 'tv': tv, 'rtv': rtv, 'Gxyz': Gxyz, 'OLP': OLP,
-               'OLPpox': OLPpox, 'OLPpoy': OLPpoy, 'OLPpoz': OLPpoz,
-               'Solver': Solver, 'ChemP': ChemP, 'E_Temp': E_Temp,
-               'dipole_moment_core': dipole_moment_core, 'iHks': iHks,
-               'dipole_moment_background': dipole_moment_background,
-               'Valence_Electrons': Valence_Electrons, 'atv_ijk': atv_ijk,
-               'Total_SpinS': Total_SpinS, 'DM': DM
-               }
+    scf_out = {
+        'atomnum': atomnum,
+        'SpinP_switch': SpinP_switch,
+        'Catomnum': Catomnum,
+        'Latomnum': Latomnum,
+        'Hks': Hks,
+        'Ratomnum': Ratomnum,
+        'TCpyCell': TCpyCell,
+        'atv': atv,
+        'Total_NumOrbs': Total_NumOrbs,
+        'FNAN': FNAN,
+        'natn': natn,
+        'ncn': ncn,
+        'tv': tv,
+        'rtv': rtv,
+        'Gxyz': Gxyz,
+        'OLP': OLP,
+        'OLPpox': OLPpox,
+        'OLPpoy': OLPpoy,
+        'OLPpoz': OLPpoz,
+        'Solver': Solver,
+        'ChemP': ChemP,
+        'E_Temp': E_Temp,
+        'dipole_moment_core': dipole_moment_core,
+        'iHks': iHks,
+        'dipole_moment_background': dipole_moment_background,
+        'Valence_Electrons': Valence_Electrons,
+        'atv_ijk': atv_ijk,
+        'Total_SpinS': Total_SpinS,
+        'DM': DM,
+    }
     return scf_out
 
 
@@ -540,10 +606,12 @@ def read_eigenvalues(line, fd, debug=False):
     However, if the calculation was conducted only on the gamma point, it will
     raise the 'gamma_flag' as true and it will returns the original samples.
     """
+
     def prind(*line, end='\n'):
         if debug:
             print(*line, end=end)
-    prind("Read eigenvalues output")
+
+    prind('Read eigenvalues output')
     current_line = fd.tell()
     fd.seek(0)  # Seek for the kgrid information
     while line != '':
@@ -580,11 +648,11 @@ def read_eigenvalues(line, fd, debug=False):
             elif len(ll) > 1:
                 if ll[0] == '1':
                     break
-            elif "*****" in line:
+            elif '*****' in line:
                 break
 
         # Break if it reaches the end or next parameters
-        if "*****" in line or line == '':
+        if '*****' in line or line == '':
             break
 
         # Check Number and format is valid
@@ -598,7 +666,7 @@ def read_eigenvalues(line, fd, debug=False):
             float(ll[1])
             float(ll[2])
         except (AssertionError, ValueError):
-            raise ParseError("Cannot read eigenvalues")
+            raise ParseError('Cannot read eigenvalues')
 
         # Read eigenvalues
         eigenvalues[0].append([])
@@ -661,20 +729,41 @@ def read_chemical_potential(line, fd, debug=None):
     return read_float(line)
 
 
-def get_parameters(out_data=None, log_data=None, restart_data=None,
-                   scfout_data=None, dat_data=None, band_data=None):
+def get_parameters(
+    out_data=None,
+    log_data=None,
+    restart_data=None,
+    scfout_data=None,
+    dat_data=None,
+    band_data=None,
+):
     """
     From the given data sets, construct the dictionary 'parameters'. If data
     is in the paramerters, it will save it.
     """
     from ase.calculators.openmx import parameters as param
-    scaned_data = [dat_data, out_data, log_data, restart_data, scfout_data,
-                   band_data]
-    openmx_keywords = [param.tuple_integer_keys, param.tuple_float_keys,
-                       param.tuple_bool_keys, param.integer_keys,
-                       param.float_keys, param.string_keys, param.bool_keys,
-                       param.list_int_keys, param.list_bool_keys,
-                       param.list_float_keys, param.matrix_keys]
+
+    scaned_data = [
+        dat_data,
+        out_data,
+        log_data,
+        restart_data,
+        scfout_data,
+        band_data,
+    ]
+    openmx_keywords = [
+        param.tuple_integer_keys,
+        param.tuple_float_keys,
+        param.tuple_bool_keys,
+        param.integer_keys,
+        param.float_keys,
+        param.string_keys,
+        param.bool_keys,
+        param.list_int_keys,
+        param.list_bool_keys,
+        param.list_float_keys,
+        param.matrix_keys,
+    ]
     parameters = {}
     for scaned_datum in scaned_data:
         for scaned_key in scaned_datum.keys():
@@ -722,11 +811,22 @@ def get_standard_parameters(parameters):
     """
     from ase.calculators.openmx import parameters as param
     from ase.units import Bohr, Ha, Ry, fs, m, s
+
     units = param.unit_dat_keywords
     standard_parameters = {}
-    standard_units = {'eV': 1, 'Ha': Ha, 'Ry': Ry, 'Bohr': Bohr, 'fs': fs,
-                      'K': 1, 'GV / m': 1e9 / 1.6e-19 / m, 'Ha/Bohr': Ha / Bohr,
-                      'm/s': m / s, '_amu': 1, 'Tesla': 1}
+    standard_units = {
+        'eV': 1,
+        'Ha': Ha,
+        'Ry': Ry,
+        'Bohr': Bohr,
+        'fs': fs,
+        'K': 1,
+        'GV / m': 1e9 / 1.6e-19 / m,
+        'Ha/Bohr': Ha / Bohr,
+        'm/s': m / s,
+        '_amu': 1,
+        'Tesla': 1,
+    }
     translated_parameters = {
         'scf.XcType': 'xc',
         'scf.maxIter': 'maxiter',
@@ -737,7 +837,7 @@ def get_standard_parameters(parameters):
         'scf.criterion': 'convergence',
         'scf.Electric.Field': 'external',
         'scf.Mixing.Type': 'mixer',
-        'scf.system.charge': 'charge'
+        'scf.system.charge': 'charge',
     }
 
     for key in parameters.keys():
@@ -749,8 +849,13 @@ def get_standard_parameters(parameters):
     return standard_parameters
 
 
-def get_atomic_formula(out_data=None, log_data=None, restart_data=None,
-                       scfout_data=None, dat_data=None):
+def get_atomic_formula(
+    out_data=None,
+    log_data=None,
+    restart_data=None,
+    scfout_data=None,
+    dat_data=None,
+):
     """_formula'.
     OpenMX results gives following information. Since, we should pick one
     between position/scaled_position, scaled_positions are suppressed by
@@ -766,8 +871,13 @@ def get_atomic_formula(out_data=None, log_data=None, restart_data=None,
                            atom for non-collinear calculations.
     """
     atomic_formula = {}
-    parameters = {'symbols': list, 'positions': list, 'scaled_positions': list,
-                  'magmoms': list, 'cell': list}
+    parameters = {
+        'symbols': list,
+        'positions': list,
+        'scaled_positions': list,
+        'magmoms': list,
+        'cell': list,
+    }
     datas = [out_data, log_data, restart_data, scfout_data, dat_data]
     atoms_unitvectors = None
     atoms_spncrd_unit = 'ang'
@@ -822,14 +932,22 @@ def get_atomic_formula(out_data=None, log_data=None, restart_data=None,
             atomic_formula['cell'] = cell * Bohr
 
     # If `positions` and `scaled_positions` are both given, delete `scaled_..`
-    if atomic_formula.get('scaled_positions') is not None and \
-       atomic_formula.get('positions') is not None:
+    if (
+        atomic_formula.get('scaled_positions') is not None
+        and atomic_formula.get('positions') is not None
+    ):
         del atomic_formula['scaled_positions']
     return atomic_formula
 
 
-def get_results(out_data=None, log_data=None, restart_data=None,
-                scfout_data=None, dat_data=None, band_data=None):
+def get_results(
+    out_data=None,
+    log_data=None,
+    restart_data=None,
+    scfout_data=None,
+    dat_data=None,
+    band_data=None,
+):
     """
     From the gien data sets, construct the dictionary 'results' and return it'
     OpenMX version 3.8 can yield following properties
@@ -844,11 +962,20 @@ def get_results(out_data=None, log_data=None, restart_data=None,
        magmom                    muB  ??  set to 1
     """
     from numpy import array as arr
+
     results = {}
-    implemented_properties = {'free_energy': Ha, 'energy': Ha, 'energies': Ha,
-                              'forces': Ha / Bohr, 'stress': Ha / Bohr**3,
-                              'dipole': Debye, 'chemical_potential': Ha,
-                              'magmom': 1, 'magmoms': 1, 'eigenvalues': Ha}
+    implemented_properties = {
+        'free_energy': Ha,
+        'energy': Ha,
+        'energies': Ha,
+        'forces': Ha / Bohr,
+        'stress': Ha / Bohr**3,
+        'dipole': Debye,
+        'chemical_potential': Ha,
+        'magmom': 1,
+        'magmoms': 1,
+        'eigenvalues': Ha,
+    }
     data = [out_data, log_data, restart_data, scfout_data, dat_data, band_data]
     for datum in data:
         for key in datum.keys():

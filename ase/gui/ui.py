@@ -14,10 +14,29 @@ import numpy as np
 from ase.gui.i18n import _
 
 __all__ = [
-    'error', 'ask_question', 'MainWindow', 'LoadFileDialog', 'SaveFileDialog',
-    'ASEGUIWindow', 'Button', 'CheckButton', 'ComboBox', 'Entry', 'Label',
-    'Window', 'MenuItem', 'RadioButton', 'RadioButtons', 'Rows', 'Scale',
-    'showinfo', 'showwarning', 'SpinBox', 'Text', 'set_windowtype']
+    'error',
+    'ask_question',
+    'MainWindow',
+    'LoadFileDialog',
+    'SaveFileDialog',
+    'ASEGUIWindow',
+    'Button',
+    'CheckButton',
+    'ComboBox',
+    'Entry',
+    'Label',
+    'Window',
+    'MenuItem',
+    'RadioButton',
+    'RadioButtons',
+    'Rows',
+    'Scale',
+    'showinfo',
+    'showwarning',
+    'SpinBox',
+    'Text',
+    'set_windowtype',
+]
 
 
 if sys.platform == 'darwin':
@@ -34,10 +53,12 @@ def error(title, message=None):
 
 
 def about(name, version, webpage):
-    text = [name,
-            '',
-            _('Version') + ': ' + version,
-            _('Web-page') + ': ' + webpage]
+    text = [
+        name,
+        '',
+        _('Version') + ': ' + version,
+        _('Web-page') + ': ' + webpage,
+    ]
     win = Window(_('About'))
     set_windowtype(win.win, 'dialog')
     win.add(Text('\n'.join(text)))
@@ -58,7 +79,7 @@ def set_windowtype(win, wmtype):
     # WM_TYPE, for possible settings see
     # https://specifications.freedesktop.org/wm-spec/wm-spec-latest.html#idm45623487848608
     # you want dialog, normal or utility most likely
-    if win._windowingsystem == "x11":
+    if win._windowingsystem == 'x11':
         win.wm_attributes('-type', wmtype)
 
 
@@ -175,16 +196,14 @@ class Text(Widget):
         for text, tags in self.text:
             widget.insert('insert', text, tags)
         widget.configure(state='disabled', background=parent['bg'])
-        widget.bind("<1>", lambda event: widget.focus_set())
+        widget.bind('<1>', lambda event: widget.focus_set())
         return widget
 
 
 class Button(Widget):
     def __init__(self, text, callback, *args, **kwargs):
         self.callback = partial(callback, *args, **kwargs)
-        self.creator = partial(tk.Button,
-                               text=text,
-                               command=self.callback)
+        self.creator = partial(tk.Button, text=text, command=self.callback)
 
 
 class CheckButton(Widget):
@@ -194,8 +213,9 @@ class CheckButton(Widget):
         self.callback = callback
 
     def create(self, parent):
-        self.check = tk.Checkbutton(parent, text=self.text,
-                                    var=self.var, command=self.callback)
+        self.check = tk.Checkbutton(
+            parent, text=self.text, var=self.var, command=self.callback
+        )
         return self.check
 
     @property
@@ -204,16 +224,19 @@ class CheckButton(Widget):
 
 
 class SpinBox(Widget):
-    def __init__(self, value, start, end, step, callback=None,
-                 rounding=None, width=6):
+    def __init__(
+        self, value, start, end, step, callback=None, rounding=None, width=6
+    ):
         self.callback = callback
         self.rounding = rounding
-        self.creator = partial(tk.Spinbox,
-                               from_=start,
-                               to=end,
-                               increment=step,
-                               command=callback,
-                               width=width)
+        self.creator = partial(
+            tk.Spinbox,
+            from_=start,
+            to=end,
+            increment=step,
+            command=callback,
+            width=width,
+        )
         self.initial = str(value)
 
     def create(self, parent):
@@ -251,8 +274,7 @@ def _set_entry_value(widget, value):
 
 class Entry(Widget):
     def __init__(self, value='', width=20, callback=None):
-        self.creator = partial(tk.Entry,
-                               width=width)
+        self.creator = partial(tk.Entry, width=width)
         if callback is not None:
             self.callback = lambda event: callback()
         else:
@@ -280,11 +302,9 @@ class Scale(Widget):
         def command(val):
             callback(int(val))
 
-        self.creator = partial(tk.Scale,
-                               from_=start,
-                               to=end,
-                               orient='horizontal',
-                               command=command)
+        self.creator = partial(
+            tk.Scale, from_=start, to=end, orient='horizontal', command=command
+        )
         self.initial = value
 
     def create(self, parent):
@@ -306,14 +326,17 @@ class RadioButtons(Widget):
         self.var = tk.IntVar()
 
         if callback:
+
             def callback2():
                 callback(self.value)
         else:
             callback2 = None
 
         self.values = values or list(range(len(labels)))
-        self.buttons = [RadioButton(label, i, self.var, callback2)
-                        for i, label in enumerate(labels)]
+        self.buttons = [
+            RadioButton(label, i, self.var, callback2)
+            for i, label in enumerate(labels)
+        ]
         self.vertical = vertical
 
     def create(self, parent):
@@ -337,27 +360,27 @@ class RadioButtons(Widget):
 
 class RadioButton(Widget):
     def __init__(self, label, i, var, callback):
-        self.creator = partial(tk.Radiobutton,
-                               text=label,
-                               var=var,
-                               value=i,
-                               command=callback)
+        self.creator = partial(
+            tk.Radiobutton, text=label, var=var, value=i, command=callback
+        )
 
 
 if ttk is not None:
+
     class ComboBox(Widget):
         def __init__(self, labels, values=None, callback=None):
             self.values = values or list(range(len(labels)))
             self.callback = callback
-            self.creator = partial(ttk.Combobox,
-                                   values=labels)
+            self.creator = partial(ttk.Combobox, values=labels)
 
         def create(self, parent):
             widget = Widget.create(self, parent)
             widget.current(0)
             if self.callback:
+
                 def callback(event):
                     self.callback(self.value)
+
                 widget.bind('<<ComboboxSelected>>', callback)
 
             return widget
@@ -413,8 +436,16 @@ class Rows(Widget):
 
 
 class MenuItem:
-    def __init__(self, label, callback=None, key=None,
-                 value=None, choices=None, submenu=None, disabled=False):
+    def __init__(
+        self,
+        label,
+        callback=None,
+        key=None,
+        value=None,
+        choices=None,
+        submenu=None,
+        disabled=False,
+    ):
         self.underline = label.find('_')
         self.label = label.replace('_', '')
 
@@ -427,9 +458,11 @@ class MenuItem:
                     'End': '<End>',
                     'Page-Up': '<Prior>',
                     'Page-Down': '<Next>',
-                    'Backspace': '<BackSpace>'}.get(key, key.lower())
+                    'Backspace': '<BackSpace>',
+                }.get(key, key.lower())
 
         if key:
+
             def callback2(event=None):
                 callback(key)
 
@@ -452,11 +485,13 @@ class MenuItem:
             var = tk.BooleanVar(value=self.value)
             stuff[self.callback.__name__.replace('_', '-')] = var
 
-            menu.add_checkbutton(label=self.label,
-                                 underline=self.underline,
-                                 command=self.callback,
-                                 accelerator=self.key,
-                                 var=var)
+            menu.add_checkbutton(
+                label=self.label,
+                underline=self.underline,
+                command=self.callback,
+                accelerator=self.key,
+                var=var,
+            )
 
             def callback(key):  # noqa: F811
                 var.set(not var.get())
@@ -469,26 +504,29 @@ class MenuItem:
             var.set(0)
             stuff[self.callback.__name__.replace('_', '-')] = var
             for i, choice in enumerate(self.choices):
-                submenu.add_radiobutton(label=choice.replace('_', ''),
-                                        underline=choice.find('_'),
-                                        command=self.callback,
-                                        value=i,
-                                        var=var)
+                submenu.add_radiobutton(
+                    label=choice.replace('_', ''),
+                    underline=choice.find('_'),
+                    command=self.callback,
+                    value=i,
+                    var=var,
+                )
         elif self.submenu:
             submenu = tk.Menu(menu)
-            menu.add_cascade(label=self.label,
-                             menu=submenu)
+            menu.add_cascade(label=self.label, menu=submenu)
             for thing in self.submenu:
                 thing.addto(submenu, window)
         else:
             state = 'normal'
             if self.disabled:
                 state = 'disabled'
-            menu.add_command(label=self.label,
-                             underline=self.underline,
-                             command=self.callback,
-                             accelerator=self.key,
-                             state=state)
+            menu.add_command(
+                label=self.label,
+                underline=self.underline,
+                command=self.callback,
+                accelerator=self.key,
+                state=state,
+            )
         if self.key:
             window.bind(self.keyname, callback)
 
@@ -512,9 +550,11 @@ class MainWindow(BaseWindow):
 
         for label, things in menu_description:
             submenu = tk.Menu(menu)
-            menu.add_cascade(label=label.replace('_', ''),
-                             underline=label.find('_'),
-                             menu=submenu)
+            menu.add_cascade(
+                label=label.replace('_', ''),
+                underline=label.find('_'),
+                menu=submenu,
+            )
             for thing in things:
                 thing.addto(submenu, self.win, self.menu)
 
@@ -549,12 +589,14 @@ def bind(callback, modifier=None):
         event.key = event.keysym.lower()
         event.modifier = modifier
         callback(event)
+
     return handle
 
 
 class ASEFileChooser(LoadFileDialog):
     def __init__(self, win, formatcallback=lambda event: None):
         from ase.io.formats import all_formats, get_ioformat
+
         LoadFileDialog.__init__(self, win, _('Open ...'))
         # fix tkinter not automatically setting dialog type
         # remove from Python3.8+
@@ -568,8 +610,7 @@ class ASEFileChooser(LoadFileDialog):
         def key(item):
             return item[1][0]
 
-        for format, (description, code) in sorted(all_formats.items(),
-                                                  key=key):
+        for format, (description, code) in sorted(all_formats.items(), key=key):
             io = get_ioformat(format)
             if io.can_read and description != '?':
                 labels.append(_(description))
@@ -586,14 +627,22 @@ class ASEFileChooser(LoadFileDialog):
 
 
 def show_io_error(filename, err):
-    showerror(_('Read error'),
-              _(f'Could not read {filename}: {err}'))
+    showerror(_('Read error'), _(f'Could not read {filename}: {err}'))
 
 
 class ASEGUIWindow(MainWindow):
-    def __init__(self, close, menu, config,
-                 scroll, scroll_event,
-                 press, move, release, resize):
+    def __init__(
+        self,
+        close,
+        menu,
+        config,
+        scroll,
+        scroll_event,
+        press,
+        move,
+        release,
+        resize,
+    ):
         MainWindow.__init__(self, 'ASE-GUI', close, menu)
 
         self.size = np.array([450, 450])
@@ -601,11 +650,13 @@ class ASEGUIWindow(MainWindow):
         self.fg = config['gui_foreground_color']
         self.bg = config['gui_background_color']
 
-        self.canvas = tk.Canvas(self.win,
-                                width=self.size[0],
-                                height=self.size[1],
-                                bg=self.bg,
-                                highlightthickness=0)
+        self.canvas = tk.Canvas(
+            self.win,
+            width=self.size[0],
+            height=self.size[1],
+            bg=self.bg,
+            highlightthickness=0,
+        )
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self.status = tk.Label(self.win, text='', anchor=tk.W)
@@ -620,11 +671,9 @@ class ASEGUIWindow(MainWindow):
         self.canvas.bind('<Shift-ButtonRelease>', bind(release, 'shift'))
         self.canvas.bind('<Configure>', resize)
         if not config['swap_mouse']:
-            self.canvas.bind(f'<Shift-B{right}-Motion>',
-                             bind(scroll))
+            self.canvas.bind(f'<Shift-B{right}-Motion>', bind(scroll))
         else:
-            self.canvas.bind('<Shift-B1-Motion>',
-                             bind(scroll))
+            self.canvas.bind('<Shift-B1-Motion>', bind(scroll))
 
         self.win.bind('<MouseWheel>', bind(scroll_event))
         self.win.bind('<Key>', bind(scroll))
@@ -653,8 +702,12 @@ class ASEGUIWindow(MainWindow):
         else:
             outline = 'black'
             width = 1
-        self.canvas.create_oval(*tuple(int(x) for x in bbox), fill=color,
-                                outline=outline, width=width)
+        self.canvas.create_oval(
+            *tuple(int(x) for x in bbox),
+            fill=color,
+            outline=outline,
+            width=width,
+        )
 
     def arc(self, color, selected, start, extent, *bbox):
         if selected:
@@ -663,12 +716,14 @@ class ASEGUIWindow(MainWindow):
         else:
             outline = 'black'
             width = 1
-        self.canvas.create_arc(*tuple(int(x) for x in bbox),
-                               start=start,
-                               extent=extent,
-                               fill=color,
-                               outline=outline,
-                               width=width)
+        self.canvas.create_arc(
+            *tuple(int(x) for x in bbox),
+            start=start,
+            extent=extent,
+            fill=color,
+            outline=outline,
+            width=width,
+        )
 
     def line(self, bbox, width=1):
         self.canvas.create_line(*tuple(int(x) for x in bbox), width=width)

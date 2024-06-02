@@ -43,8 +43,9 @@ class LippincottStuttman:
         'S': 0.688,
     }
 
-    def __call__(self, el1: str, el2: str,
-                 length: float) -> Tuple[float, float]:
+    def __call__(
+        self, el1: str, el2: str, length: float
+    ) -> Tuple[float, float]:
         """Bond polarizability
 
         Parameters
@@ -65,17 +66,16 @@ class LippincottStuttman:
         ren1 = self.reduced_eletronegativity[el1]
         ren2 = self.reduced_eletronegativity[el2]
 
-        sigma = 1.
+        sigma = 1.0
         if el1 != el2:
-            sigma = np.exp(- (ren1 - ren2)**2 / 4)
+            sigma = np.exp(-((ren1 - ren2) ** 2) / 4)
 
         # parallel component
-        alphal = sigma * length**4 / (4**4 * alpha1 * alpha2)**(1. / 6)
+        alphal = sigma * length**4 / (4**4 * alpha1 * alpha2) ** (1.0 / 6)
         # XXX consider fractional covalency ?
 
         # prependicular component
-        alphap = ((ren1**2 * alpha1 + ren2**2 * alpha2)
-                  / (ren1**2 + ren2**2))
+        alphap = (ren1**2 * alpha1 + ren2**2 * alpha2) / (ren1**2 + ren2**2)
         # XXX consider fractional covalency ?
 
         return alphal, alphap
@@ -91,8 +91,9 @@ class Linearized:
             'BN': (1.56, 1.58, 4.22, 0.42, 0.90),
         }
 
-    def __call__(self, el1: str, el2: str,
-                 length: float) -> Tuple[float, float]:
+    def __call__(
+        self, el1: str, el2: str, length: float
+    ) -> Tuple[float, float]:
         """Bond polarizability
 
         Parameters
@@ -138,10 +139,8 @@ class BondPolarizability(StaticPolarizabilityCalculator):
         polarizability tensor with unit (e^2 Angstrom^2 / eV).
         Multiply with Bohr * Ha to get (Angstrom^3)
         """
-        radii = np.array([covalent_radii[z]
-                          for z in atoms.numbers])
-        nl = NeighborList(radii * 1.5, skin=0,
-                          self_interaction=False)
+        radii = np.array([covalent_radii[z] for z in atoms.numbers])
+        nl = NeighborList(radii * 1.5, skin=0, self_interaction=False)
         nl.update(atoms)
         pos_ac = atoms.get_positions()
 
@@ -161,6 +160,9 @@ class BondPolarizability(StaticPolarizabilityCalculator):
 
                 eye3 = np.eye(3) / 3
                 alpha += weight * (al + 2 * ap) * eye3
-                alpha += weight * (al - ap) * (
-                    np.outer(dist_c, dist_c) / dist**2 - eye3)
+                alpha += (
+                    weight
+                    * (al - ap)
+                    * (np.outer(dist_c, dist_c) / dist**2 - eye3)
+                )
         return alpha / Bohr / Ha

@@ -7,8 +7,9 @@ def view_sage_jmol(atoms, repeat=None, *args, **kwargs):
         from .sage.plot.plot3d.shapes import ColorCube, Sphere
     except Exception:  # XXX Which kind of exception exactly?
         raise ImportError(
-            'view_sage_jmol requires sage (http://www.sagemath.org/) ' +
-            'and is intended to be used directly in the browser')
+            'view_sage_jmol requires sage (http://www.sagemath.org/) '
+            + 'and is intended to be used directly in the browser'
+        )
 
     if repeat is not None:
         atoms = atoms.repeat(repeat)
@@ -20,7 +21,8 @@ def view_sage_jmol(atoms, repeat=None, *args, **kwargs):
         color = tuple(jmol_colors[atomic_number])
         radius = covalent_radii[atomic_number]
         model += Sphere(radius, color=color).translate(
-            *(atom.position - atoms.cell.diagonal() / 2))
+            *(atom.position - atoms.cell.diagonal() / 2)
+        )
     model.show(aspect_ratio=1, frame=False)
 
 

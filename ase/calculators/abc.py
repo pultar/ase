@@ -34,7 +34,7 @@ class GetPropertiesMixin(ABC):
 
     def get_stresses(self, atoms=None):
         """the calculator should return intensive stresses, i.e., such that
-                stresses.sum(axis=0) == stress
+        stresses.sum(axis=0) == stress
         """
         return self.get_property('stresses', atoms)
 
@@ -62,6 +62,7 @@ class GetOutputsMixin(ABC):
     typically returning self.results, which must be a mapping
     using the naming defined in ase.outputs.Properties.
     """
+
     @abstractmethod
     def _outputmixin_get_results(self) -> Mapping[str, Any]:
         """Return Mapping of names to result value.
@@ -72,6 +73,7 @@ class GetOutputsMixin(ABC):
     def _get(self, name):
         # Cyclic import, should restructure.
         from ase.calculators.calculator import PropertyNotPresent
+
         dct = self._outputmixin_get_results()
         try:
             return dct[name]

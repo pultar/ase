@@ -4,7 +4,7 @@ from ase.lattice import RHL
 
 
 def test_ase_bandstructure(cli, plt, testdir):
-    lat = RHL(3., 70.0)
+    lat = RHL(3.0, 70.0)
     path = lat.bandpath()
     bs = path.free_electron_band_structure()
 
@@ -16,6 +16,7 @@ def test_ase_bandstructure(cli, plt, testdir):
     cli.ase('band-structure', str(bs_path), '--output', str(fig_path))
     # If the CLI tool gave a text output, we could verify it.
     assert fig_path.is_file()
+
 
 # Note: We don't have proper testing of --points, --range etc.  We
 # test here on JSON input but the tool is in principle supposed to

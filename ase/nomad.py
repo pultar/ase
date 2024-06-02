@@ -6,8 +6,10 @@ import ase.units as units
 from ase import Atoms
 from ase.data import chemical_symbols
 
-nomad_api_template = ('https://labdev-nomad.esc.rzg.mpg.de/'
-                      'api/resolve/{hash}?format=recursiveJson')
+nomad_api_template = (
+    'https://labdev-nomad.esc.rzg.mpg.de/'
+    'api/resolve/{hash}?format=recursiveJson'
+)
 
 
 def nmd2https(uri):
@@ -131,10 +133,11 @@ class NomadEntry(dict):
 
 
 def main():
-    uri = "nmd://N9Jqc1y-Bzf7sI1R9qhyyyoIosJDs/C74RJltyQeM9_WFuJYO49AR4gKuJ2"
+    uri = 'nmd://N9Jqc1y-Bzf7sI1R9qhyyyoIosJDs/C74RJltyQeM9_WFuJYO49AR4gKuJ2'
     print(nmd2https(uri))
     entry = download(uri)
     from ase.visualize import view
+
     view(list(entry.iterimages()))
 
 

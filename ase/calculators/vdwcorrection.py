@@ -1,4 +1,5 @@
 """van der Waals correction schemes for DFT"""
+
 import numpy as np
 from scipy.special import erfc, erfinv
 
@@ -49,7 +50,8 @@ vdWDB_Chu04jcp = {
     'Kr': [16.7, 130],
     'Sr': [199, 3175],
     'Te': [40, 445],
-    'I': [35, 385]}
+    'I': [35, 385],
+}
 
 vdWDB_alphaC6 = vdWDB_Chu04jcp
 
@@ -113,19 +115,22 @@ vdWDB_Grimme06jcc = {
     'Sb': [38.44, 1.881],
     'Te': [31.74, 1.892],
     'I': [31.50, 1.892],
-    'Xe': [29.99, 1.881]}
+    'Xe': [29.99, 1.881],
+}
 
 
 # Optimal range parameters sR for different XC functionals
 # to be used with the Tkatchenko-Scheffler scheme
 # Reference: M.A. Caro arXiv:1704.00761 (2017)
-sR_opt = {'PBE': 0.940,
-          'RPBE': 0.590,
-          'revPBE': 0.585,
-          'PBEsol': 1.055,
-          'BLYP': 0.625,
-          'AM05': 0.840,
-          'PW91': 0.965}
+sR_opt = {
+    'PBE': 0.940,
+    'RPBE': 0.590,
+    'revPBE': 0.585,
+    'PBEsol': 1.055,
+    'BLYP': 0.625,
+    'AM05': 0.840,
+    'PW91': 0.965,
+}
 
 
 def get_logging_file_descriptor(calculator):
@@ -142,12 +147,18 @@ def get_logging_file_descriptor(calculator):
 class vdWTkatchenko09prl(Calculator, IOContext):
     """vdW correction after Tkatchenko and Scheffler PRL 102 (2009) 073005."""
 
-    def __init__(self,
-                 hirshfeld=None, vdwradii=None, calculator=None,
-                 Rmax=10.,  # maximal radius for periodic calculations
-                 Ldecay=1.,  # decay length for smoothing in periodic calcs
-                 vdWDB_alphaC6=vdWDB_alphaC6,
-                 txt=None, sR=None, comm=world):
+    def __init__(
+        self,
+        hirshfeld=None,
+        vdwradii=None,
+        calculator=None,
+        Rmax=10.0,  # maximal radius for periodic calculations
+        Ldecay=1.0,  # decay length for smoothing in periodic calcs
+        vdWDB_alphaC6=vdWDB_alphaC6,
+        txt=None,
+        sR=None,
+        comm=world,
+    ):
         """Constructor
 
         Parameters
@@ -181,8 +192,9 @@ class vdWTkatchenko09prl(Calculator, IOContext):
                 self.sR = sR_opt[xc_name]
             except KeyError:
                 raise ValueError(
-                    'Tkatchenko-Scheffler dispersion correction not ' +
-                    f'implemented for {xc_name} functional')
+                    'Tkatchenko-Scheffler dispersion correction not '
+                    + f'implemented for {xc_name} functional'
+                )
         else:
             self.sR = sR
         self.d = 20
@@ -204,13 +216,15 @@ class vdWTkatchenko09prl(Calculator, IOContext):
                 return True
         return False
 
-    def calculate(self, atoms=None, properties=['energy', 'forces'],
-                  system_changes=[]):
+    def calculate(
+        self, atoms=None, properties=['energy', 'forces'], system_changes=[]
+    ):
         Calculator.calculate(self, atoms, properties, system_changes)
         self.update(atoms, properties)
 
-    def update(self, atoms=None,
-               properties=['energy', 'free_energy', 'forces']):
+    def update(
+        self, atoms=None, properties=['energy', 'free_energy', 'forces']
+    ):
         if not self.calculation_required(atoms, properties):
             return
 
@@ -237,7 +251,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
                 self.vdwradii.append(vdWDB_Grimme06jcc[atom.symbol][1])
 
         if self.hirshfeld is None:
-            volume_ratios = [1.] * len(atoms)
+            volume_ratios = [1.0] * len(atoms)
         elif hasattr(self.hirshfeld, '__len__'):  # a list
             assert len(atoms) == len(self.hirshfeld)
             volume_ratios = self.hirshfeld
@@ -254,14 +268,20 @@ class vdWTkatchenko09prl(Calculator, IOContext):
             # free atom values
             alpha_a[a], C6eff_a[a] = self.vdWDB_alphaC6[atom.symbol]
             # correction for effective C6
-            C6eff_a[a] *= Hartree * volume_ratios[a]**2 * Bohr**6
-            R0eff_a[a] = vdwradii[a] * volume_ratios[a]**(1 / 3.)
+            C6eff_a[a] *= Hartree * volume_ratios[a] ** 2 * Bohr**6
+            R0eff_a[a] = vdwradii[a] * volume_ratios[a] ** (1 / 3.0)
         C6eff_aa = np.empty((na, na))
         for a in range(na):
             for b in range(a, na):
-                C6eff_aa[a, b] = (2 * C6eff_a[a] * C6eff_a[b] /
-                                  (alpha_a[b] / alpha_a[a] * C6eff_a[a] +
-                                   alpha_a[a] / alpha_a[b] * C6eff_a[b]))
+                C6eff_aa[a, b] = (
+                    2
+                    * C6eff_a[a]
+                    * C6eff_a[b]
+                    / (
+                        alpha_a[b] / alpha_a[a] * C6eff_a[a]
+                        + alpha_a[a] / alpha_a[b] * C6eff_a[b]
+                    )
+                )
                 C6eff_aa[b, a] = C6eff_aa[a, b]
 
         # New implementation by Miguel Caro
@@ -271,17 +291,16 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         # use the cutoff radius instead
         pbc_c = atoms.get_pbc()
         EvdW = 0.0
-        forces = 0. * self.results['forces']
+        forces = 0.0 * self.results['forces']
         # PBC: we build a neighbor list according to the Reff criterion
         if pbc_c.any():
             # Effective cutoff radius
-            tol = 1.e-5
-            Reff = self.Rmax + self.Ldecay * erfinv(1. - 2. * tol)
+            tol = 1.0e-5
+            Reff = self.Rmax + self.Ldecay * erfinv(1.0 - 2.0 * tol)
             # Build list of neighbors
-            n_list = neighbor_list(quantities="ijdDS",
-                                   a=atoms,
-                                   cutoff=Reff,
-                                   self_interaction=False)
+            n_list = neighbor_list(
+                quantities='ijdDS', a=atoms, cutoff=Reff, self_interaction=False
+            )
             atom_list = [[] for _ in range(len(atoms))]
             d_list = [[] for _ in range(len(atoms))]
             v_list = [[] for _ in range(len(atoms))]
@@ -307,10 +326,15 @@ class vdWTkatchenko09prl(Calculator, IOContext):
             # Do this to avoid double counting
             for i in range(len(atoms)):
                 atom_list.append(range(i + 1, len(atoms)))
-                d_list.append([atoms.get_distance(i, j)
-                               for j in range(i + 1, len(atoms))])
-                v_list.append([atoms.get_distance(i, j, vector=True)
-                               for j in range(i + 1, len(atoms))])
+                d_list.append(
+                    [atoms.get_distance(i, j) for j in range(i + 1, len(atoms))]
+                )
+                v_list.append(
+                    [
+                        atoms.get_distance(i, j, vector=True)
+                        for j in range(i + 1, len(atoms))
+                    ]
+                )
                 # r_list.append( [[0,0,0] for j in range(i+1, len(atoms))])
                 # No PBC means we are in the same cell
 
@@ -323,23 +347,25 @@ class vdWTkatchenko09prl(Calculator, IOContext):
             #                             v_list[i], r_list[i]):
             for j, r, vect in zip(atom_list[i], d_list[i], v_list[i]):
                 r6 = r**6
-                Edamp, Fdamp = self.damping(r,
-                                            R0eff_a[i],
-                                            R0eff_a[j],
-                                            d=self.d,
-                                            sR=self.sR)
+                Edamp, Fdamp = self.damping(
+                    r, R0eff_a[i], R0eff_a[j], d=self.d, sR=self.sR
+                )
                 if pbc_c.any():
                     smooth = 0.5 * erfc((r - self.Rmax) / self.Ldecay)
-                    smooth_der = -1. / np.sqrt(np.pi) / self.Ldecay * np.exp(
-                        -((r - self.Rmax) / self.Ldecay)**2)
+                    smooth_der = (
+                        -1.0
+                        / np.sqrt(np.pi)
+                        / self.Ldecay
+                        * np.exp(-(((r - self.Rmax) / self.Ldecay) ** 2))
+                    )
                 else:
-                    smooth = 1.
-                    smooth_der = 0.
+                    smooth = 1.0
+                    smooth_der = 0.0
                 # Here we compute the contribution to the energy
                 # Self interactions (only possible in PBC) are double counted.
                 # We correct it here
                 if i == j:
-                    EvdW -= (Edamp * C6eff_aa[i, j] / r6) / 2. * smooth
+                    EvdW -= (Edamp * C6eff_aa[i, j] / r6) / 2.0 * smooth
                 else:
                     EvdW -= (Edamp * C6eff_aa[i, j] / r6) * smooth
                 # Here we compute the contribution to the forces
@@ -349,9 +375,17 @@ class vdWTkatchenko09prl(Calculator, IOContext):
                 # Self interactions do not contribute to the forces
                 if i != j:
                     # Force on i due to j
-                    force_ij = -(
-                        (Fdamp - 6 * Edamp / r) * C6eff_aa[i, j] / r6 * smooth
-                        + (Edamp * C6eff_aa[i, j] / r6) * smooth_der) * vect / r
+                    force_ij = (
+                        -(
+                            (Fdamp - 6 * Edamp / r)
+                            * C6eff_aa[i, j]
+                            / r6
+                            * smooth
+                            + (Edamp * C6eff_aa[i, j] / r6) * smooth_der
+                        )
+                        * vect
+                        / r
+                    )
                     # Forces go both ways for every interaction
                     forces[i] += force_ij
                     forces[j] -= force_ij
@@ -365,19 +399,25 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         if self.txt:
             print(('\n' + self.__class__.__name__), file=self.txt)
             print(f'vdW correction: {EvdW}', file=self.txt)
-            print(f'Energy:         {self.results["energy"]}',
-                  file=self.txt)
+            print(f'Energy:         {self.results["energy"]}', file=self.txt)
             print('\nForces in eV/Ang:', file=self.txt)
             symbols = self.atoms.get_chemical_symbols()
             for ia, symbol in enumerate(symbols):
-                print('%3d %-2s %10.5f %10.5f %10.5f' %
-                      ((ia, symbol) + tuple(self.results['forces'][ia])),
-                      file=self.txt)
+                print(
+                    '%3d %-2s %10.5f %10.5f %10.5f'
+                    % ((ia, symbol) + tuple(self.results['forces'][ia])),
+                    file=self.txt,
+                )
             self.txt.flush()
 
-    def damping(self, RAB, R0A, R0B,
-                d=20,   # steepness of the step function for PBE
-                sR=0.94):
+    def damping(
+        self,
+        RAB,
+        R0A,
+        R0B,
+        d=20,  # steepness of the step function for PBE
+        sR=0.94,
+    ):
         """Damping factor.
 
         Standard values for d and sR as given in
@@ -385,7 +425,7 @@ class vdWTkatchenko09prl(Calculator, IOContext):
         scale = 1.0 / (sR * (R0A + R0B))
         x = RAB * scale
         chi = np.exp(-d * (x - 1.0))
-        return 1.0 / (1.0 + chi), d * scale * chi / (1.0 + chi)**2
+        return 1.0 / (1.0 + chi), d * scale * chi / (1.0 + chi) ** 2
 
 
 def calculate_ts09_polarizability(atoms):

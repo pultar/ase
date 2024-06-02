@@ -43,4 +43,5 @@ def test_pickle2json(testdir):
 
     for key in forces_dct:
         assert forces_dct[key]['forces'] == pytest.approx(
-            newforces_dct[key]['forces'])
+            newforces_dct[key]['forces']
+        )

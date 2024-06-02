@@ -20,8 +20,7 @@ def test_matplotlib_plot(plt):
     slab = FaceCenteredCubic('Au', size=(2, 2, 2))
 
     fig, ax = plt.subplots()
-    plot_atoms(slab, ax, radii=0.5, rotation=('10x,10y,10z'),
-               show_unit_cell=0)
+    plot_atoms(slab, ax, radii=0.5, rotation=('10x,10y,10z'), show_unit_cell=0)
 
     assert len(ax.patches) == len(slab)
 
@@ -48,8 +47,9 @@ class TestPlotManager:
         filename = 'plot.png'
         x, y = xy_data
         ax = figure.add_subplot(111)
-        with SimplePlottingAxes(ax=ax, show=False,
-                                filename=filename) as return_ax:
+        with SimplePlottingAxes(
+            ax=ax, show=False, filename=filename
+        ) as return_ax:
             assert return_ax is ax
             ax.plot(x, y)
 

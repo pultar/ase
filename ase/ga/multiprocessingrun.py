@@ -1,6 +1,7 @@
-""" Class for handling several simultaneous jobs.
+"""Class for handling several simultaneous jobs.
 The class has been tested on Niflheim-opteron4.
 """
+
 import time
 from multiprocessing import Pool
 
@@ -24,8 +25,9 @@ class MultiprocessingRun:
     the filename of the relaxed structure.
     """
 
-    def __init__(self, data_connection, relax_function,
-                 tmp_folder, n_simul=None):
+    def __init__(
+        self, data_connection, relax_function, tmp_folder, n_simul=None
+    ):
         self.dc = data_connection
         self.pool = Pool(n_simul)
         self.relax_function = relax_function
@@ -36,11 +38,9 @@ class MultiprocessingRun:
         """Relax the atoms object a by submitting the relaxation
         to the pool of cpus."""
         self.dc.mark_as_queued(a)
-        fname = '{}/cand{}.traj'.format(self.tmp_folder,
-                                        a.info['confid'])
+        fname = '{}/cand{}.traj'.format(self.tmp_folder, a.info['confid'])
         write(fname, a)
-        self.results.append(self.pool.apply_async(self.relax_function,
-                                                  [fname]))
+        self.results.append(self.pool.apply_async(self.relax_function, [fname]))
         self._cleanup()
 
     def _cleanup(self):
@@ -56,4 +56,4 @@ class MultiprocessingRun:
         wait and check again. Return when all are finished."""
         while len(self.results) > 0:
             self._cleanup()
-            time.sleep(2.)
+            time.sleep(2.0)

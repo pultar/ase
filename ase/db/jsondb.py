@@ -24,8 +24,7 @@ class JSONDatabase(Database):
         ids = []
         nextid = 1
 
-        if (isinstance(self.filename, str) and
-                os.path.isfile(self.filename)):
+        if isinstance(self.filename, str) and os.path.isfile(self.filename):
             try:
                 bigdct, ids, nextid = self._read_json()
             except (SyntaxError, ValueError):
@@ -78,9 +77,11 @@ class JSONDatabase(Database):
             if self.filename is not sys.stdin:
                 self.filename.seek(0)
 
-        if not isinstance(bigdct, dict) or ('ids' not in bigdct and 1 not in
-                                            bigdct):
+        if not isinstance(bigdct, dict) or (
+            'ids' not in bigdct and 1 not in bigdct
+        ):
             from ase.io.formats import UnknownFileTypeError
+
             raise UnknownFileTypeError('Does not resemble ASE JSON database')
 
         ids = bigdct.get('ids')
@@ -104,8 +105,9 @@ class JSONDatabase(Database):
             print('{', end='', file=fd)
             for id in ids:
                 dct = bigdct[id]
-                txt = ',\n '.join(f'"{key}": {encode(dct[key])}'
-                                  for key in sorted(dct.keys()))
+                txt = ',\n '.join(
+                    f'"{key}": {encode(dct[key])}' for key in sorted(dct.keys())
+                )
                 print(f'"{id}": {{\n {txt}}},', file=fd)
             if self._metadata is not None:
                 print(f'"metadata": {encode(self.metadata)},', file=fd)
@@ -130,9 +132,18 @@ class JSONDatabase(Database):
         dct['id'] = id
         return AtomsRow(dct)
 
-    def _select(self, keys, cmps, explain=False, verbosity=0,
-                limit=None, offset=0, sort=None, include_data=True,
-                columns='all'):
+    def _select(
+        self,
+        keys,
+        cmps,
+        explain=False,
+        verbosity=0,
+        limit=None,
+        offset=0,
+        sort=None,
+        include_data=True,
+        columns='all',
+    ):
         if explain:
             yield {'explain': (0, 0, 0, 'scan table')}
             return
@@ -160,7 +171,7 @@ class JSONDatabase(Database):
             rows += missing
 
             if limit:
-                rows = rows[offset:offset + limit]
+                rows = rows[offset : offset + limit]
             for key, row in rows:
                 yield row
             return

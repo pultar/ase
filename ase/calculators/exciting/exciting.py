@@ -17,10 +17,15 @@ from typing import Any, Mapping
 
 import ase.io.exciting
 from ase.calculators.calculator import PropertyNotImplementedError
-from ase.calculators.exciting.runner import (SimpleBinaryRunner,
-                                             SubprocessRunResults)
-from ase.calculators.genericfileio import (BaseProfile, CalculatorTemplate,
-                                           GenericFileIOCalculator)
+from ase.calculators.exciting.runner import (
+    SimpleBinaryRunner,
+    SubprocessRunResults,
+)
+from ase.calculators.genericfileio import (
+    BaseProfile,
+    CalculatorTemplate,
+    GenericFileIOCalculator,
+)
 
 
 class ExcitingProfile(BaseProfile):
@@ -31,6 +36,7 @@ class ExcitingProfile(BaseProfile):
        * OnlyTypo fix part of the profile used in the base class is the run
          method, which is part of the BinaryRunner class.
     """
+
     configvars = {'species_path'}
 
     def __init__(self, command, species_path=None, **kwargs):
@@ -125,9 +131,11 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
         # modify the callers dictionary.
         parameters_dict = parameters
         assert set(parameters_dict.keys()) == {
-            'title', 'species_path', 'ground_state_input',
-            'properties_input'}, \
-            'Keys should be defined by ExcitingGroundState calculator'
+            'title',
+            'species_path',
+            'ground_state_input',
+            'properties_input',
+        }, 'Keys should be defined by ExcitingGroundState calculator'
         file_name = Path(directory) / 'input.xml'
         species_path = parameters_dict.pop('species_path')
         title = parameters_dict.pop('title')
@@ -139,14 +147,15 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
             parameters_dict['properties_input'] = None
 
         ase.io.exciting.write_input_xml_file(
-            file_name=file_name, atoms=atoms,
+            file_name=file_name,
+            atoms=atoms,
             ground_state_input=parameters_dict['ground_state_input'],
-            species_path=species_path, title=title,
-            properties_input=parameters_dict['properties_input'])
+            species_path=species_path,
+            title=title,
+            properties_input=parameters_dict['properties_input'],
+        )
 
-    def execute(
-            self, directory: PathLike,
-            profile) -> SubprocessRunResults:
+    def execute(self, directory: PathLike, profile) -> SubprocessRunResults:
         """Given an exciting calculation profile, execute the calculation.
 
         :param directory: Directory in which to execute the calculator
@@ -159,8 +168,9 @@ class ExcitingGroundStateTemplate(CalculatorTemplate):
 
         :return: Results of the subprocess.run command.
         """
-        return profile.run(directory, f"{directory}/input.xml", None,
-                           erorrfile=self.errorname)
+        return profile.run(
+            directory, f'{directory}/input.xml', None, erorrfile=self.errorname
+        )
 
     def read_results(self, directory: PathLike) -> Mapping[str, Any]:
         """Parse results from each ground state output file.

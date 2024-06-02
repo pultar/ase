@@ -14,7 +14,8 @@ def test_filter(testdir):
     atoms.calc = EMT()
     filter = Filter(atoms, indices=[1, 2])
 
-    with QuasiNewton(filter, trajectory='filter-test.traj',
-                     logfile='filter-test.log') as opt:
+    with QuasiNewton(
+        filter, trajectory='filter-test.traj', logfile='filter-test.log'
+    ) as opt:
         opt.run()
     # No assertions=??

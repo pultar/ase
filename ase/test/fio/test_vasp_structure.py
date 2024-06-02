@@ -11,8 +11,13 @@ import ase.build
 import ase.io
 from ase.build import graphene_nanoribbon
 from ase.calculators.calculator import compare_atoms
-from ase.constraints import (FixAtoms, FixedLine, FixedPlane, FixScaled,
-                             constrained_indices)
+from ase.constraints import (
+    FixAtoms,
+    FixedLine,
+    FixedPlane,
+    FixScaled,
+    constrained_indices,
+)
 from ase.io.vasp import read_vasp_xdatcar, write_vasp_xdatcar
 
 
@@ -107,15 +112,15 @@ indices_to_constrain = [0, 2]
 
 @pytest.fixture()
 def graphene_atoms():
-    atoms = graphene_nanoribbon(2, 2, type="armchair", saturated=False)
+    atoms = graphene_nanoribbon(2, 2, type='armchair', saturated=False)
     atoms.cell = [[10, 0, 0], [0, 10, 0], [0, 0, 10]]
     return atoms
 
 
 def poscar_roundtrip(atoms):
     """Write a POSCAR file, read it back and return the new atoms object"""
-    atoms.write("POSCAR", direct=True)
-    return ase.io.read("POSCAR")
+    atoms.write('POSCAR', direct=True)
+    return ase.io.read('POSCAR')
 
 
 def test_FixAtoms(graphene_atoms):

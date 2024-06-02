@@ -97,7 +97,7 @@ class Symbols(collections.abc.Sequence):
         return self.get_chemical_formula('reduce')
 
     def __repr__(self) -> str:
-        return f'Symbols(\'{self}\')'
+        return f"Symbols('{self}')"
 
     def __eq__(self, obj) -> bool:
         if not hasattr(obj, '__len__'):
@@ -112,17 +112,19 @@ class Symbols(collections.abc.Sequence):
         return self.numbers == symbols.numbers
 
     def get_chemical_formula(
-            self,
-            mode: str = 'hill',
-            empirical: bool = False,
+        self,
+        mode: str = 'hill',
+        empirical: bool = False,
     ) -> str:
         """Get chemical formula.
 
         See documentation of ase.atoms.Atoms.get_chemical_formula()."""
         # XXX Delegate the work to the Formula object!
         if mode in ('reduce', 'all') and empirical:
-            warnings.warn("Empirical chemical formula not available "
-                          "for mode '{}'".format(mode))
+            warnings.warn(
+                'Empirical chemical formula not available '
+                "for mode '{}'".format(mode)
+            )
 
         if len(self) == 0:
             return ''
@@ -131,8 +133,9 @@ class Symbols(collections.abc.Sequence):
 
         if mode == 'reduce':
             n = len(numbers)
-            changes = np.concatenate(([0], np.arange(1, n)[numbers[1:] !=
-                                                           numbers[:-1]]))
+            changes = np.concatenate(
+                ([0], np.arange(1, n)[numbers[1:] != numbers[:-1]])
+            )
             symbols = [chemical_symbols[e] for e in numbers[changes]]
             counts = np.append(changes[1:], n) - changes
 
@@ -153,15 +156,17 @@ class Symbols(collections.abc.Sequence):
                 formula = f.format(mode)
             else:
                 raise ValueError(
-                    "Use mode = 'all', 'reduce', 'hill' or 'metal'.")
+                    "Use mode = 'all', 'reduce', 'hill' or 'metal'."
+                )
 
         return formula
 
     def search(self, symbols) -> Integers:
         """Return the indices of elements with given symbol or symbols."""
         numbers = set(symbols2numbers(symbols))
-        indices = [i for i, number in enumerate(self.numbers)
-                   if number in numbers]
+        indices = [
+            i for i, number in enumerate(self.numbers) if number in numbers
+        ]
         return np.array(indices, int)
 
     def species(self) -> Set[str]:

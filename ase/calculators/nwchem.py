@@ -2,6 +2,7 @@
 
 https://nwchemgit.github.io
 """
+
 import os
 from pathlib import Path
 
@@ -14,19 +15,30 @@ from ase.units import Hartree
 
 
 class NWChem(FileIOCalculator):
-    implemented_properties = ['energy', 'free_energy',
-                              'forces', 'stress', 'dipole']
+    implemented_properties = [
+        'energy',
+        'free_energy',
+        'forces',
+        'stress',
+        'dipole',
+    ]
     _legacy_default_command = 'nwchem PREFIX.nwi > PREFIX.nwo'
     accepts_bandpath_keyword = True
     discard_results_on_any_change = True
 
     fileio_rules = FileIOCalculator.ruleset(
-        extend_argv=['{prefix}.nwi'],
-        stdout_name='{prefix}.nwo')
+        extend_argv=['{prefix}.nwi'], stdout_name='{prefix}.nwo'
+    )
 
-    def __init__(self, restart=None,
-                 ignore_bad_restart_file=FileIOCalculator._deprecated,
-                 label='nwchem', atoms=None, command=None, **kwargs):
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart_file=FileIOCalculator._deprecated,
+        label='nwchem',
+        atoms=None,
+        command=None,
+        **kwargs,
+    ):
         """
         NWChem keywords are specified using (potentially nested)
         dictionaries. Consider the following input file block::
@@ -168,8 +180,15 @@ class NWChem(FileIOCalculator):
             place an "ignore" task directive between each step so that
             convergence errors in intermediate steps do not halt execution.
         """
-        FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
-                                  label, atoms, command, **kwargs)
+        FileIOCalculator.__init__(
+            self,
+            restart,
+            ignore_bad_restart_file,
+            label,
+            atoms,
+            command,
+            **kwargs,
+        )
         self.calc = None
 
     def input_filename(self):
@@ -187,9 +206,13 @@ class NWChem(FileIOCalculator):
         os.makedirs(perm, exist_ok=True)
         os.makedirs(scratch, exist_ok=True)
 
-        io.write(Path(self.directory) / self.input_filename(),
-                 atoms, properties=properties,
-                 label=self.label, **self.parameters)
+        io.write(
+            Path(self.directory) / self.input_filename(),
+            atoms,
+            properties=properties,
+            label=self.label,
+            **self.parameters,
+        )
 
     def read_results(self):
         output = io.read(self.output_filename())
@@ -204,10 +227,11 @@ class NWChem(FileIOCalculator):
             beta = np.loadtxt(os.path.join(perm, self.label + '.beta_band'))
             energies = np.array([alpha[:, 1:], beta[:, 1:]]) * Hartree
         else:
-            data = np.loadtxt(os.path.join(perm,
-                                           self.label + '.restricted_band'))
+            data = np.loadtxt(
+                os.path.join(perm, self.label + '.restricted_band')
+            )
             energies = data[np.newaxis, :, 1:] * Hartree
         eref = self.calc.get_fermi_level()
         if eref is None:
-            eref = 0.
+            eref = 0.0
         return BandStructure(self.parameters.bandpath, energies, eref)

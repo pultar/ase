@@ -63,6 +63,7 @@ class NamedPackedCalculator(PackedCalculator):
 
     def unpack_calculator(self):
         from ase.calculators.calculator import get_calculator_class
+
         cls = get_calculator_class(self._name)
         return cls(**self._kwargs)
 
@@ -80,10 +81,12 @@ class MPICommand:
 
     @classmethod
     def parallel(cls, nprocs, mpi_argv=()):
-        return cls(['mpiexec', '-n', str(nprocs)]
-                   + list(mpi_argv)
-                   + cls.python_argv()
-                   + ['mpi4py'])
+        return cls(
+            ['mpiexec', '-n', str(nprocs)]
+            + list(mpi_argv)
+            + cls.python_argv()
+            + ['mpi4py']
+        )
 
     @classmethod
     def serial(cls):
@@ -94,16 +97,24 @@ class MPICommand:
         # without output during startup if os.environ is not passed along.
         # Hence we pass os.environ.  Not sure if this is a machine thing
         # or in general.  --askhl
-        return Popen(self.argv, stdout=PIPE,
-                     stdin=PIPE, env=os.environ)
+        return Popen(self.argv, stdout=PIPE, stdin=PIPE, env=os.environ)
 
 
 def gpaw_process(ncores=1, **kwargs):
     packed = NamedPackedCalculator('gpaw', kwargs)
-    mpicommand = MPICommand([
-        sys.executable, '-m', 'gpaw', '-P', str(ncores), 'python', '-m',
-        'ase.calculators.subprocesscalculator', 'standard',
-    ])
+    mpicommand = MPICommand(
+        [
+            sys.executable,
+            '-m',
+            'gpaw',
+            '-P',
+            str(ncores),
+            'python',
+            '-m',
+            'ase.calculators.subprocesscalculator',
+            'standard',
+        ]
+    )
     return PythonSubProcessCalculator(packed, mpicommand)
 
 
@@ -115,6 +126,7 @@ class PythonSubProcessCalculator(Calculator):
     This calculator runs a subprocess wherein it sets up an
     actual calculator.  Calculations are forwarded through pickle
     to that calculator, which returns results through pickle."""
+
     implemented_properties = list(all_properties)
 
     def __init__(self, calc_input, mpi_command=None):
@@ -133,8 +145,7 @@ class PythonSubProcessCalculator(Calculator):
             raise RuntimeError('No setting things for now, thanks')
 
     def __repr__(self):
-        return '{}({})'.format(type(self).__name__,
-                               self.calc_input)
+        return '{}({})'.format(type(self).__name__, self.calc_input)
 
     def __enter__(self):
         assert self.protocol is None
@@ -223,8 +234,9 @@ def calculate(calc, atoms, properties, system_changes):
     # If we don't clear(), the caching is broken!  For stress.
     # But not for forces.  What dark magic from the depths of the
     # underworld is at play here?
-    calc.calculate(atoms=atoms, properties=properties,
-                   system_changes=system_changes)
+    calc.calculate(
+        atoms=atoms, properties=properties, system_changes=system_changes
+    )
     results = calc.results
     return results
 
@@ -251,19 +263,20 @@ def parallel_startup():
     binary_stdout = sys.stdout.buffer
     sys.stdout = sys.stderr
 
-    return Client(input_fd=sys.stdin.buffer,
-                  output_fd=binary_stdout)
+    return Client(input_fd=sys.stdin.buffer, output_fd=binary_stdout)
 
 
 class Client:
     def __init__(self, input_fd, output_fd):
         from ase.parallel import world
+
         self._world = world
         self.input_fd = input_fd
         self.output_fd = output_fd
 
     def recv(self):
         from ase.parallel import broadcast
+
         if self._world.rank == 0:
             obj = pickle.load(self.input_fd)
         else:
@@ -286,7 +299,8 @@ class Client:
             instruction_data = self.recv()
 
             response_type, value = self.process_instruction(
-                calc, instruction, instruction_data)
+                calc, instruction, instruction_data
+            )
             self.send((response_type, value))
 
     def process_instruction(self, calc, instruction, instruction_data):
@@ -307,6 +321,7 @@ class Client:
             value = function(*args)
         except Exception as ex:
             import traceback
+
             traceback.print_exc()
             response_type = 'raise'
             value = ex

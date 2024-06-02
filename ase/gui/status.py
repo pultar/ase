@@ -33,8 +33,9 @@ class Status:  # Status is used as a mixin in GUI
         # use where here:  XXX
         natoms = len(atoms)
         indices = np.arange(natoms)[self.images.selected[:natoms]]
-        ordered_indices = [i for i in self.images.selected_ordered
-                           if i < len(atoms)]
+        ordered_indices = [
+            i for i in self.images.selected_ordered if i < len(atoms)
+        ]
         n = len(indices)
 
         if n == 0:
@@ -53,8 +54,10 @@ class Status:  # Status is used as a mixin in GUI
                             quantity = get_quantity()
                     except Exception as err:
                         quantity = None
-                        errmsg = ('An error occurred while retrieving {} '
-                                  'from the calculator: {}'.format(name, err))
+                        errmsg = (
+                            'An error occurred while retrieving {} '
+                            'from the calculator: {}'.format(name, err)
+                        )
                         warnings.warn(errmsg)
                     return quantity
 
@@ -75,20 +78,25 @@ class Status:  # Status is used as a mixin in GUI
 
         if n == 1:
             tag = atoms.get_tags()[indices[0]]
-            text = (' #%d %s (%s): %.3f Å, %.3f Å, %.3f Å ' %
-                    ((indices[0], names[Z[0]], symbols[Z[0]]) + tuple(R[0])))
+            text = ' #%d %s (%s): %.3f Å, %.3f Å, %.3f Å ' % (
+                (indices[0], names[Z[0]], symbols[Z[0]]) + tuple(R[0])
+            )
             text += _(' tag=%(tag)s') % dict(tag=tag)
             magmoms = get_magmoms(self.atoms)
             if magmoms.any():
                 # TRANSLATORS: mom refers to magnetic moment
-                text += _(' mom={:1.2f}'.format(
-                    magmoms[indices][0]))
+                text += _(' mom={:1.2f}'.format(magmoms[indices][0]))
             charges = self.atoms.get_initial_charges()
             if charges.any():
-                text += _(' q={:1.2f}'.format(
-                    charges[indices][0]))
-            haveit = ['numbers', 'positions', 'forces', 'momenta',
-                      'initial_charges', 'initial_magmoms']
+                text += _(' q={:1.2f}'.format(charges[indices][0]))
+            haveit = [
+                'numbers',
+                'positions',
+                'forces',
+                'momenta',
+                'initial_charges',
+                'initial_magmoms',
+            ]
             for key in atoms.arrays:
                 if key not in haveit:
                     val = atoms.get_array(key)[indices[0]]
@@ -118,12 +126,14 @@ class Status:  # Status is used as a mixin in GUI
                     else:
                         t3 = pi
                 a.append(t3 * 180 / pi)
-            text = (' %s-%s-%s: %.1f°, %.1f°, %.1f°' %
-                    tuple([symbols[z] for z in Z] + a))
+            text = ' %s-%s-%s: %.1f°, %.1f°, %.1f°' % tuple(
+                [symbols[z] for z in Z] + a
+            )
         elif len(ordered_indices) == 4:
             angle = self.atoms.get_dihedral(*ordered_indices, mic=True)
-            text = ('%s %s → %s → %s → %s: %.1f°' %
-                    tuple([_('dihedral')] + [symbols[z] for z in Z] + [angle]))
+            text = '%s %s → %s → %s → %s: %.1f°' % tuple(
+                [_('dihedral')] + [symbols[z] for z in Z] + [angle]
+            )
         else:
             text = ' ' + formula(Z)
 

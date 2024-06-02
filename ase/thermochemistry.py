@@ -24,9 +24,9 @@ class ThermoChem:
         eV and a temperature given in Kelvin. Returns the energy change
         in eV."""
         kT = units.kB * temperature
-        dU = 0.
+        dU = 0.0
         for energy in self.vib_energies:
-            dU += energy / (np.exp(energy / kT) - 1.)
+            dU += energy / (np.exp(energy / kT) - 1.0)
         return dU
 
     def _vibrational_entropy_contribution(self, temperature):
@@ -34,10 +34,10 @@ class ThermoChem:
         given in eV and a temperature given in Kelvin.  Returns the entropy
         in eV/K."""
         kT = units.kB * temperature
-        S_v = 0.
+        S_v = 0.0
         for energy in self.vib_energies:
             x = energy / kT
-            S_v += x / (np.exp(x) - 1.) - np.log(1. - np.exp(-x))
+            S_v += x / (np.exp(x) - 1.0) - np.log(1.0 - np.exp(-x))
         S_v *= units.kB
         return S_v
 
@@ -71,8 +71,9 @@ class HarmonicThermo(ThermoChem):
         be raised if any imaginary frequencies are present.
     """
 
-    def __init__(self, vib_energies, potentialenergy=0.,
-                 ignore_imag_modes=False):
+    def __init__(
+        self, vib_energies, potentialenergy=0.0, ignore_imag_modes=False
+    ):
         self.ignore_imag_modes = ignore_imag_modes
 
         # Check for imaginary frequencies.
@@ -94,7 +95,7 @@ class HarmonicThermo(ThermoChem):
         write('Internal energy components at T = %.2f K:' % temperature)
         write('=' * 31)
 
-        U = 0.
+        U = 0.0
 
         write(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
@@ -123,7 +124,7 @@ class HarmonicThermo(ThermoChem):
         write('=' * 49)
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
-        S = 0.
+        S = 0.0
 
         S_v = self._vibrational_entropy_contribution(temperature)
         write(fmt % ('S_harm', S_v, S_v * temperature))
@@ -211,14 +212,23 @@ class HinderedThermo(ThermoChem):
         present after the 3N-3 cut.
     """
 
-    def __init__(self, vib_energies, trans_barrier_energy, rot_barrier_energy,
-                 sitedensity, rotationalminima, potentialenergy=0.,
-                 mass=None, inertia=None, atoms=None, symmetrynumber=1,
-                 ignore_imag_modes=False):
-
+    def __init__(
+        self,
+        vib_energies,
+        trans_barrier_energy,
+        rot_barrier_energy,
+        sitedensity,
+        rotationalminima,
+        potentialenergy=0.0,
+        mass=None,
+        inertia=None,
+        atoms=None,
+        symmetrynumber=1,
+        ignore_imag_modes=False,
+    ):
         self.trans_barrier_energy = trans_barrier_energy * units._e
         self.rot_barrier_energy = rot_barrier_energy * units._e
-        self.area = 1. / sitedensity / 100.0**2
+        self.area = 1.0 / sitedensity / 100.0**2
         self.rotationalminima = rotationalminima
         self.potentialenergy = potentialenergy
         self.atoms = atoms
@@ -231,9 +241,9 @@ class HinderedThermo(ThermoChem):
 
         # Keep only the relevant vibrational energies (3N-3)
         if atoms:
-            vib_energies = vib_energies[-(3 * len(atoms) - 3):]
+            vib_energies = vib_energies[-(3 * len(atoms) - 3) :]
         else:
-            vib_energies = vib_energies[-(len(vib_energies) - 3):]
+            vib_energies = vib_energies[-(len(vib_energies) - 3) :]
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
@@ -250,19 +260,29 @@ class HinderedThermo(ThermoChem):
             if inertia:
                 self.inertia = inertia * units._amu / units.m**2
             elif atoms:
-                self.inertia = (atoms.get_moments_of_inertia()[2] *
-                                units._amu / units.m**2)
+                self.inertia = (
+                    atoms.get_moments_of_inertia()[2] * units._amu / units.m**2
+                )
         else:
-            raise RuntimeError('Either mass and inertia of the '
-                               'adsorbate must be specified or '
-                               'atoms must be specified.')
+            raise RuntimeError(
+                'Either mass and inertia of the '
+                'adsorbate must be specified or '
+                'atoms must be specified.'
+            )
 
         # Calculate hindered translational and rotational frequencies
-        self.freq_t = np.sqrt(self.trans_barrier_energy / (2 * self.mass *
-                                                           self.area))
-        self.freq_r = 1. / (2 * np.pi) * np.sqrt(self.rotationalminima**2 *
-                                                 self.rot_barrier_energy /
-                                                 (2 * self.inertia))
+        self.freq_t = np.sqrt(
+            self.trans_barrier_energy / (2 * self.mass * self.area)
+        )
+        self.freq_r = (
+            1.0
+            / (2 * np.pi)
+            * np.sqrt(
+                self.rotationalminima**2
+                * self.rot_barrier_energy
+                / (2 * self.inertia)
+            )
+        )
 
     def get_internal_energy(self, temperature, verbose=True):
         """Returns the internal energy (including the zero point energy),
@@ -277,7 +297,7 @@ class HinderedThermo(ThermoChem):
         write('Internal energy components at T = %.2f K:' % temperature)
         write('=' * 31)
 
-        U = 0.
+        U = 0.0
 
         write(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
@@ -285,10 +305,13 @@ class HinderedThermo(ThermoChem):
         # Translational Energy
         T_t = units._k * temperature / (units._hplanck * self.freq_t)
         R_t = self.trans_barrier_energy / (units._hplanck * self.freq_t)
-        dU_t = 2 * (-1. / 2 - 1. / T_t / (2 + 16 * R_t) + R_t / 2 / T_t -
-                    R_t / 2 / T_t *
-                    iv(1, R_t / 2 / T_t) / iv(0, R_t / 2 / T_t) +
-                    1. / T_t / (np.exp(1. / T_t) - 1))
+        dU_t = 2 * (
+            -1.0 / 2
+            - 1.0 / T_t / (2 + 16 * R_t)
+            + R_t / 2 / T_t
+            - R_t / 2 / T_t * iv(1, R_t / 2 / T_t) / iv(0, R_t / 2 / T_t)
+            + 1.0 / T_t / (np.exp(1.0 / T_t) - 1)
+        )
         dU_t *= units.kB * temperature
         write(fmt % ('E_trans', dU_t))
         U += dU_t
@@ -296,10 +319,13 @@ class HinderedThermo(ThermoChem):
         # Rotational Energy
         T_r = units._k * temperature / (units._hplanck * self.freq_r)
         R_r = self.rot_barrier_energy / (units._hplanck * self.freq_r)
-        dU_r = (-1. / 2 - 1. / T_r / (2 + 16 * R_r) + R_r / 2 / T_r -
-                R_r / 2 / T_r *
-                iv(1, R_r / 2 / T_r) / iv(0, R_r / 2 / T_r) +
-                1. / T_r / (np.exp(1. / T_r) - 1))
+        dU_r = (
+            -1.0 / 2
+            - 1.0 / T_r / (2 + 16 * R_r)
+            + R_r / 2 / T_r
+            - R_r / 2 / T_r * iv(1, R_r / 2 / T_r) / iv(0, R_r / 2 / T_r)
+            + 1.0 / T_r / (np.exp(1.0 / T_r) - 1)
+        )
         dU_r *= units.kB * temperature
         write(fmt % ('E_rot', dU_r))
         U += dU_r
@@ -323,8 +349,8 @@ class HinderedThermo(ThermoChem):
         """Returns the zero point energy, in eV, in the hindered
         translator and hindered rotor model"""
 
-        zpe_t = 2 * (1. / 2 * self.freq_t * units._hplanck / units._e)
-        zpe_r = 1. / 2 * self.freq_r * units._hplanck / units._e
+        zpe_t = 2 * (1.0 / 2 * self.freq_t * units._hplanck / units._e)
+        zpe_r = 1.0 / 2 * self.freq_r * units._hplanck / units._e
         zpe_v = self.get_ZPE_correction()
         zpe = zpe_t + zpe_r + zpe_v
         return zpe
@@ -342,17 +368,19 @@ class HinderedThermo(ThermoChem):
         write('=' * 49)
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
-        S = 0.
+        S = 0.0
 
         # Translational Entropy
         T_t = units._k * temperature / (units._hplanck * self.freq_t)
         R_t = self.trans_barrier_energy / (units._hplanck * self.freq_t)
-        S_t = 2 * (-1. / 2 + 1. / 2 * np.log(np.pi * R_t / T_t) -
-                   R_t / 2 / T_t *
-                   iv(1, R_t / 2 / T_t) / iv(0, R_t / 2 / T_t) +
-                   np.log(iv(0, R_t / 2 / T_t)) +
-                   1. / T_t / (np.exp(1. / T_t) - 1) -
-                   np.log(1 - np.exp(-1. / T_t)))
+        S_t = 2 * (
+            -1.0 / 2
+            + 1.0 / 2 * np.log(np.pi * R_t / T_t)
+            - R_t / 2 / T_t * iv(1, R_t / 2 / T_t) / iv(0, R_t / 2 / T_t)
+            + np.log(iv(0, R_t / 2 / T_t))
+            + 1.0 / T_t / (np.exp(1.0 / T_t) - 1)
+            - np.log(1 - np.exp(-1.0 / T_t))
+        )
         S_t *= units.kB
         write(fmt % ('S_trans', S_t, S_t * temperature))
         S += S_t
@@ -360,12 +388,15 @@ class HinderedThermo(ThermoChem):
         # Rotational Entropy
         T_r = units._k * temperature / (units._hplanck * self.freq_r)
         R_r = self.rot_barrier_energy / (units._hplanck * self.freq_r)
-        S_r = (-1. / 2 + 1. / 2 * np.log(np.pi * R_r / T_r) -
-               np.log(self.symmetry) -
-               R_r / 2 / T_r * iv(1, R_r / 2 / T_r) / iv(0, R_r / 2 / T_r) +
-               np.log(iv(0, R_r / 2 / T_r)) +
-               1. / T_r / (np.exp(1. / T_r) - 1) -
-               np.log(1 - np.exp(-1. / T_r)))
+        S_r = (
+            -1.0 / 2
+            + 1.0 / 2 * np.log(np.pi * R_r / T_r)
+            - np.log(self.symmetry)
+            - R_r / 2 / T_r * iv(1, R_r / 2 / T_r) / iv(0, R_r / 2 / T_r)
+            + np.log(iv(0, R_r / 2 / T_r))
+            + 1.0 / T_r / (np.exp(1.0 / T_r) - 1)
+            - np.log(1 - np.exp(-1.0 / T_r))
+        )
         S_r *= units.kB
         write(fmt % ('S_rot', S_r, S_r * temperature))
         S += S_r
@@ -376,8 +407,9 @@ class HinderedThermo(ThermoChem):
         S += S_v
 
         # Concentration Related Entropy
-        N_over_A = np.exp(1. / 3) * (10.0**5 /
-                                     (units._k * temperature))**(2. / 3)
+        N_over_A = np.exp(1.0 / 3) * (10.0**5 / (units._k * temperature)) ** (
+            2.0 / 3
+        )
         S_c = 1 - np.log(N_over_A) - np.log(self.area)
         S_c *= units.kB
         write(fmt % ('S_con', S_c, S_c * temperature))
@@ -458,9 +490,17 @@ class IdealGasThermo(ThermoChem):
         any imaginary frequencies remain after the 3N-5/3N-6 cut.
     """
 
-    def __init__(self, vib_energies, geometry, potentialenergy=0.,
-                 atoms=None, symmetrynumber=None, spin=None, natoms=None,
-                 ignore_imag_modes=False):
+    def __init__(
+        self,
+        vib_energies,
+        geometry,
+        potentialenergy=0.0,
+        atoms=None,
+        symmetrynumber=None,
+        spin=None,
+        natoms=None,
+        ignore_imag_modes=False,
+    ):
         self.potentialenergy = potentialenergy
         self.geometry = geometry
         self.atoms = atoms
@@ -478,13 +518,13 @@ class IdealGasThermo(ThermoChem):
         # Cut the vibrations to those needed from the geometry.
         if natoms:
             if geometry == 'nonlinear':
-                vib_energies = vib_energies[-(3 * natoms - 6):]
+                vib_energies = vib_energies[-(3 * natoms - 6) :]
             elif geometry == 'linear':
-                vib_energies = vib_energies[-(3 * natoms - 5):]
+                vib_energies = vib_energies[-(3 * natoms - 5) :]
             elif geometry == 'monatomic':
                 vib_energies = []
             else:
-                raise ValueError(f"Unsupported geometry: {geometry}")
+                raise ValueError(f'Unsupported geometry: {geometry}')
 
         # Check for imaginary frequencies.
         vib_energies, n_imag = _clean_vib_energies(
@@ -505,7 +545,7 @@ class IdealGasThermo(ThermoChem):
         write('Enthalpy components at T = %.2f K:' % temperature)
         write('=' * 31)
 
-        H = 0.
+        H = 0.0
 
         write(fmt % ('E_pot', self.potentialenergy))
         H += self.potentialenergy
@@ -514,16 +554,16 @@ class IdealGasThermo(ThermoChem):
         write(fmt % ('E_ZPE', zpe))
         H += zpe
 
-        Cv_t = 3. / 2. * units.kB  # translational heat capacity (3-d gas)
+        Cv_t = 3.0 / 2.0 * units.kB  # translational heat capacity (3-d gas)
         write(fmt % ('Cv_trans (0->T)', Cv_t * temperature))
         H += Cv_t * temperature
 
         if self.geometry == 'nonlinear':  # rotational heat capacity
-            Cv_r = 3. / 2. * units.kB
+            Cv_r = 3.0 / 2.0 * units.kB
         elif self.geometry == 'linear':
             Cv_r = units.kB
         elif self.geometry == 'monatomic':
-            Cv_r = 0.
+            Cv_r = 0.0
         write(fmt % ('Cv_rot (0->T)', Cv_r * temperature))
         H += Cv_r * temperature
 
@@ -545,14 +585,18 @@ class IdealGasThermo(ThermoChem):
         at a specified temperature (K) and pressure (Pa)."""
 
         if self.atoms is None or self.sigma is None or self.spin is None:
-            raise RuntimeError('atoms, symmetrynumber, and spin must be '
-                               'specified for entropy and free energy '
-                               'calculations.')
+            raise RuntimeError(
+                'atoms, symmetrynumber, and spin must be '
+                'specified for entropy and free energy '
+                'calculations.'
+            )
         self.verbose = verbose
         write = self._vprint
         fmt = '%-15s%13.7f eV/K%13.3f eV'
-        write('Entropy components at T = %.2f K and P = %.1f Pa:' %
-              (temperature, pressure))
+        write(
+            'Entropy components at T = %.2f K and P = %.1f Pa:'
+            % (temperature, pressure)
+        )
         write('=' * 49)
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
@@ -560,8 +604,9 @@ class IdealGasThermo(ThermoChem):
 
         # Translational entropy (term inside the log is in SI units).
         mass = sum(self.atoms.get_masses()) * units._amu  # kg/molecule
-        S_t = (2 * np.pi * mass * units._k *
-               temperature / units._hplanck**2)**(3.0 / 2)
+        S_t = (
+            2 * np.pi * mass * units._k * temperature / units._hplanck**2
+        ) ** (3.0 / 2)
         S_t *= units._k * temperature / self.referencepressure
         S_t = units.kB * (np.log(S_t) + 5.0 / 2.0)
         write(fmt % ('S_trans (1 bar)', S_t, S_t * temperature))
@@ -571,19 +616,33 @@ class IdealGasThermo(ThermoChem):
         if self.geometry == 'monatomic':
             S_r = 0.0
         elif self.geometry == 'nonlinear':
-            inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                        (10.0**10)**2)  # kg m^2
+            inertias = (
+                self.atoms.get_moments_of_inertia()
+                * units._amu
+                / (10.0**10) ** 2
+            )  # kg m^2
             S_r = np.sqrt(np.pi * np.prod(inertias)) / self.sigma
-            S_r *= (8.0 * np.pi**2 * units._k * temperature /
-                    units._hplanck**2)**(3.0 / 2.0)
+            S_r *= (
+                8.0 * np.pi**2 * units._k * temperature / units._hplanck**2
+            ) ** (3.0 / 2.0)
             S_r = units.kB * (np.log(S_r) + 3.0 / 2.0)
         elif self.geometry == 'linear':
-            inertias = (self.atoms.get_moments_of_inertia() * units._amu /
-                        (10.0**10)**2)  # kg m^2
+            inertias = (
+                self.atoms.get_moments_of_inertia()
+                * units._amu
+                / (10.0**10) ** 2
+            )  # kg m^2
             inertia = max(inertias)  # should be two identical and one zero
-            S_r = (8 * np.pi**2 * inertia * units._k * temperature /
-                   self.sigma / units._hplanck**2)
-            S_r = units.kB * (np.log(S_r) + 1.)
+            S_r = (
+                8
+                * np.pi**2
+                * inertia
+                * units._k
+                * temperature
+                / self.sigma
+                / units._hplanck**2
+            )
+            S_r = units.kB * (np.log(S_r) + 1.0)
         write(fmt % ('S_rot', S_r, S_r * temperature))
         S += S_r
 
@@ -598,7 +657,7 @@ class IdealGasThermo(ThermoChem):
         S += S_v
 
         # Pressure correction to translational entropy.
-        S_p = - units.kB * np.log(pressure / self.referencepressure)
+        S_p = -units.kB * np.log(pressure / self.referencepressure)
         write(fmt % ('S (1 bar -> P)', S_p, S_p * temperature))
         S += S_p
 
@@ -620,8 +679,10 @@ class IdealGasThermo(ThermoChem):
         G = H - temperature * S
 
         write('')
-        write('Free energy components at T = %.2f K and P = %.1f Pa:' %
-              (temperature, pressure))
+        write(
+            'Free energy components at T = %.2f K and P = %.1f Pa:'
+            % (temperature, pressure)
+        )
         write('=' * 23)
         fmt = '%5s%15.3f eV'
         write(fmt % ('H', H))
@@ -664,8 +725,13 @@ class CrystalThermo(ThermoChem):
         per-unit-cell basis.
     """
 
-    def __init__(self, phonon_DOS, phonon_energies,
-                 formula_units=None, potentialenergy=0.):
+    def __init__(
+        self,
+        phonon_DOS,
+        phonon_energies,
+        formula_units=None,
+        potentialenergy=0.0,
+    ):
         self.phonon_energies = phonon_energies
         self.phonon_DOS = phonon_DOS
 
@@ -684,25 +750,29 @@ class CrystalThermo(ThermoChem):
         write = self._vprint
         fmt = '%-15s%13.4f eV'
         if self.formula_units == 0:
-            write('Internal energy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+            write(
+                'Internal energy components at '
+                'T = %.2f K,\non a per-unit-cell basis:' % temperature
+            )
         else:
-            write('Internal energy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+            write(
+                'Internal energy components at '
+                'T = %.2f K,\non a per-formula-unit basis:' % temperature
+            )
         write('=' * 31)
 
-        U = 0.
+        U = 0.0
 
         omega_e = self.phonon_energies
         dos_e = self.phonon_DOS
-        if omega_e[0] == 0.:
+        if omega_e[0] == 0.0:
             omega_e = np.delete(omega_e, 0)
             dos_e = np.delete(dos_e, 0)
 
         write(fmt % ('E_pot', self.potentialenergy))
         U += self.potentialenergy
 
-        zpe_list = omega_e / 2.
+        zpe_list = omega_e / 2.0
         if self.formula_units == 0:
             zpe = np.trapz(zpe_list * dos_e, omega_e)
         else:
@@ -710,8 +780,8 @@ class CrystalThermo(ThermoChem):
         write(fmt % ('E_ZPE', zpe))
         U += zpe
 
-        B = 1. / (units.kB * temperature)
-        E_vib = omega_e / (np.exp(omega_e * B) - 1.)
+        B = 1.0 / (units.kB * temperature)
+        E_vib = omega_e / (np.exp(omega_e * B) - 1.0)
         if self.formula_units == 0:
             E_phonon = np.trapz(E_vib * dos_e, omega_e)
         else:
@@ -732,23 +802,28 @@ class CrystalThermo(ThermoChem):
         write = self._vprint
         fmt = '%-15s%13.7f eV/K%13.4f eV'
         if self.formula_units == 0:
-            write('Entropy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+            write(
+                'Entropy components at '
+                'T = %.2f K,\non a per-unit-cell basis:' % temperature
+            )
         else:
-            write('Entropy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+            write(
+                'Entropy components at '
+                'T = %.2f K,\non a per-formula-unit basis:' % temperature
+            )
         write('=' * 49)
         write('%15s%13s     %13s' % ('', 'S', 'T*S'))
 
         omega_e = self.phonon_energies
         dos_e = self.phonon_DOS
-        if omega_e[0] == 0.:
+        if omega_e[0] == 0.0:
             omega_e = np.delete(omega_e, 0)
             dos_e = np.delete(dos_e, 0)
 
-        B = 1. / (units.kB * temperature)
-        S_vib = (omega_e / (temperature * (np.exp(omega_e * B) - 1.)) -
-                 units.kB * np.log(1. - np.exp(-omega_e * B)))
+        B = 1.0 / (units.kB * temperature)
+        S_vib = omega_e / (
+            temperature * (np.exp(omega_e * B) - 1.0)
+        ) - units.kB * np.log(1.0 - np.exp(-omega_e * B))
         if self.formula_units == 0:
             S = np.trapz(S_vib * dos_e, omega_e)
         else:
@@ -773,11 +848,15 @@ class CrystalThermo(ThermoChem):
 
         write('')
         if self.formula_units == 0:
-            write('Helmholtz free energy components at '
-                  'T = %.2f K,\non a per-unit-cell basis:' % temperature)
+            write(
+                'Helmholtz free energy components at '
+                'T = %.2f K,\non a per-unit-cell basis:' % temperature
+            )
         else:
-            write('Helmholtz free energy components at '
-                  'T = %.2f K,\non a per-formula-unit basis:' % temperature)
+            write(
+                'Helmholtz free energy components at '
+                'T = %.2f K,\non a per-formula-unit basis:' % temperature
+            )
         write('=' * 23)
         fmt = '%5s%15.4f eV'
         write(fmt % ('U', U))
@@ -817,7 +896,7 @@ def _clean_vib_energies(vib_energies, ignore_imag_modes=False):
         vib_energies = [v for v in vib_energies if np.real(v) > 0]
         n_imag = n_vib_energies - len(vib_energies)
         if n_imag > 0:
-            warn(f"{n_imag} imag modes removed", UserWarning)
+            warn(f'{n_imag} imag modes removed', UserWarning)
     else:
         if sum(np.iscomplex(vib_energies)):
             raise ValueError('Imaginary vibrational energies are present.')

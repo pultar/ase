@@ -5,15 +5,17 @@ import pytest
 
 from ase.build import bulk, molecule
 from ase.calculators.emt import EMT
-from ase.calculators.subprocesscalculator import (MPICommand,
-                                                  NamedPackedCalculator,
-                                                  ParallelDispatch,
-                                                  gpaw_process)
+from ase.calculators.subprocesscalculator import (
+    MPICommand,
+    NamedPackedCalculator,
+    ParallelDispatch,
+    gpaw_process,
+)
 from ase.optimize import BFGS
 
 
 def get_fmax(forces):
-    return max((forces**2).sum(axis=1)**0.5)
+    return max((forces**2).sum(axis=1) ** 0.5)
 
 
 @pytest.fixture()
@@ -27,8 +29,9 @@ def assert_results_equal_to_ordinary_emt(atoms):
     atoms1 = atoms.copy()
     atoms1.calc = EMT()
 
-    assert (atoms.get_potential_energy()
-            == pytest.approx(atoms1.get_potential_energy()))
+    assert atoms.get_potential_energy() == pytest.approx(
+        atoms1.get_potential_energy()
+    )
     assert atoms.get_forces() == pytest.approx(atoms1.get_forces())
     assert atoms.get_stress() == pytest.approx(atoms1.get_stress())
 

@@ -12,7 +12,8 @@ from ase import Atoms
 _tf_table = {
     '': True,  # Just the keyword is equivalent to True
     'True': True,
-    'False': False}
+    'False': False,
+}
 
 
 def _parse_tss_block(value, scaled=False):
@@ -26,19 +27,24 @@ def _parse_tss_block(value, scaled=False):
     if not is_atoms:
         if not is_strlist:
             # Invalid!
-            raise TypeError('castep.cell.positions_abs/frac_intermediate/'
-                            'product expects Atoms object or list of strings')
+            raise TypeError(
+                'castep.cell.positions_abs/frac_intermediate/'
+                'product expects Atoms object or list of strings'
+            )
 
         # First line must be Angstroms, or nothing
         has_units = len(value[0].strip().split()) == 1
         if (not scaled) and has_units and value[0].strip() != 'ang':
-            raise RuntimeError('Only ang units currently supported in castep.'
-                               'cell.positions_abs_intermediate/product')
+            raise RuntimeError(
+                'Only ang units currently supported in castep.'
+                'cell.positions_abs_intermediate/product'
+            )
         return '\n'.join(map(str.strip, value))
     else:
         text_block = '' if scaled else 'ang\n'
-        positions = (value.get_scaled_positions() if scaled else
-                     value.get_positions())
+        positions = (
+            value.get_scaled_positions() if scaled else value.get_positions()
+        )
         symbols = value.get_chemical_symbols()
         for s, p in zip(symbols, positions):
             text_block += '    {} {:.3f} {:.3f} {:.3f}\n'.format(s, *p)
@@ -47,7 +53,7 @@ def _parse_tss_block(value, scaled=False):
 
 
 class CastepOption:
-    """"A CASTEP option. It handles basic conversions from string to its value
+    """ "A CASTEP option. It handles basic conversions from string to its value
     type."""
 
     default_convert_types = {
@@ -59,11 +65,17 @@ class CastepOption:
         'integer vector': 'int_vector',
         'real vector': 'float_vector',
         'physical': 'float_physical',
-        'block': 'block'
+        'block': 'block',
     }
 
-    def __init__(self, keyword, level, option_type, value=None,
-                 docstring='No information available'):
+    def __init__(
+        self,
+        keyword,
+        level,
+        option_type,
+        value=None,
+        docstring='No information available',
+    ):
         self.keyword = keyword
         self.level = level
         self.type = option_type
@@ -72,10 +84,12 @@ class CastepOption:
 
     @property
     def value(self):
-
         if self._value is not None:
-            if self.type.lower() in ('integer vector', 'real vector',
-                                     'physical'):
+            if self.type.lower() in (
+                'integer vector',
+                'real vector',
+                'physical',
+            ):
                 return ' '.join(map(str, self._value))
             elif self.type.lower() in ('boolean (logical)', 'defined'):
                 return str(self._value).upper()
@@ -89,7 +103,6 @@ class CastepOption:
 
     @value.setter  # type: ignore[attr-defined, no-redef]
     def value(self, val):
-
         if val is None:
             self.clear()
             return
@@ -187,7 +200,6 @@ class CastepOption:
 
     @staticmethod
     def _parse_block(value):
-
         if isinstance(value, str):
             return value
         elif hasattr(value, '__getitem__'):
@@ -197,11 +209,13 @@ class CastepOption:
 
     def __repr__(self):
         if self._value:
-            expr = ('Option: {keyword}({type}, {level}):\n{_value}\n'
-                    ).format(**self.__dict__)
+            expr = ('Option: {keyword}({type}, {level}):\n{_value}\n').format(
+                **self.__dict__
+            )
         else:
-            expr = ('Option: {keyword}[unset]({type}, {level})'
-                    ).format(**self.__dict__)
+            expr = ('Option: {keyword}[unset]({type}, {level})').format(
+                **self.__dict__
+            )
         return expr
 
     def __eq__(self, other):
@@ -230,7 +244,6 @@ class CastepOptionDict:
 
 
 class CastepInputFile:
-
     """Master class for CastepParam and CastepCell to inherit from"""
 
     _keyword_conflicts: List[Set[str]] = []
@@ -252,7 +265,9 @@ class CastepInputFile:
         # Compile a dictionary for quick check of conflict sets
         self._conflict_dict = {
             kw: set(cset).difference({kw})
-            for cset in self._keyword_conflicts for kw in cset}
+            for cset in self._keyword_conflicts
+            for kw in cset
+        }
 
     def __repr__(self):
         expr = ''
@@ -260,7 +275,7 @@ class CastepInputFile:
         for key, option in sorted(self._options.items()):
             if option.value is not None:
                 is_default = False
-                expr += ('%20s : %s\n' % (key, option.value))
+                expr += '%20s : %s\n' % (key, option.value)
         if is_default:
             expr = 'Default\n'
 
@@ -268,38 +283,40 @@ class CastepInputFile:
         return expr
 
     def __setattr__(self, attr, value):
-
         # Hidden attributes are treated normally
         if attr.startswith('_'):
             self.__dict__[attr] = value
             return
 
         if attr not in self._options.keys():
-
             if self._perm > 0:
                 # Do we consider it a string or a block?
                 is_str = isinstance(value, str)
                 is_block = False
-                if ((hasattr(value, '__getitem__') and not is_str)
-                        or (is_str and len(value.split('\n')) > 1)):
+                if (hasattr(value, '__getitem__') and not is_str) or (
+                    is_str and len(value.split('\n')) > 1
+                ):
                     is_block = True
 
             if self._perm == 0:
-                similars = difflib.get_close_matches(attr,
-                                                     self._options.keys())
+                similars = difflib.get_close_matches(attr, self._options.keys())
                 if similars:
                     raise RuntimeError(
-                        f'Option "{attr}" not known! You mean "{similars[0]}"?')
+                        f'Option "{attr}" not known! You mean "{similars[0]}"?'
+                    )
                 else:
                     raise RuntimeError(f'Option "{attr}" is not known!')
             elif self._perm == 1:
-                warnings.warn(('Option "%s" is not known and will '
-                               'be added as a %s') % (attr,
-                                                      ('block' if is_block else
-                                                       'string')))
+                warnings.warn(
+                    ('Option "%s" is not known and will ' 'be added as a %s')
+                    % (attr, ('block' if is_block else 'string'))
+                )
             attr = attr.lower()
-            opt = CastepOption(keyword=attr, level='Unknown',
-                               option_type='block' if is_block else 'string')
+            opt = CastepOption(
+                keyword=attr,
+                level='Unknown',
+                option_type='block' if is_block else 'string',
+            )
             self._options[attr] = opt
             self.__dict__[attr] = opt
         else:
@@ -316,11 +333,12 @@ class CastepInputFile:
         if value is not None:
             cset = self._conflict_dict.get(attr.lower(), {})
             for c in cset:
-                if (c in self._options and self._options[c].value):
+                if c in self._options and self._options[c].value:
                     warnings.warn(
                         'option "{attr}" conflicts with "{conflict}" in '
                         'calculator. Setting "{conflict}" to '
-                        'None.'.format(attr=attr, conflict=c))
+                        'None.'.format(attr=attr, conflict=c)
+                    )
                     self._options[c].value = None
 
         if hasattr(self, attrparse):
@@ -335,14 +353,18 @@ class CastepInputFile:
         if self._perm == 1:
             warnings.warn(f'Option {(name)} is not known, returning None')
 
-        return CastepOption(keyword='none', level='Unknown',
-                            option_type='string', value=None)
+        return CastepOption(
+            keyword='none', level='Unknown', option_type='string', value=None
+        )
 
     def get_attr_dict(self, raw=False, types=False):
         """Settings that go into .param file in a traditional dict"""
 
-        attrdict = {k: o.raw_value if raw else o.value
-                    for k, o in self._options.items() if o.value is not None}
+        attrdict = {
+            k: o.raw_value if raw else o.value
+            for k, o in self._options.items()
+            if o.value is not None
+        }
 
         if types:
             for key, val in attrdict.items():
@@ -354,12 +376,15 @@ class CastepInputFile:
 class CastepParam(CastepInputFile):
     """CastepParam abstracts the settings that go into the .param file"""
 
-    _keyword_conflicts = [{'cut_off_energy', 'basis_precision'}, ]
+    _keyword_conflicts = [
+        {'cut_off_energy', 'basis_precision'},
+    ]
 
     def __init__(self, castep_keywords, keyword_tolerance=1):
         self._castep_version = castep_keywords.castep_version
-        CastepInputFile.__init__(self, castep_keywords.CastepParamDict(),
-                                 keyword_tolerance)
+        CastepInputFile.__init__(
+            self, castep_keywords.CastepParamDict(), keyword_tolerance
+        )
 
     @property
     def castep_version(self):
@@ -371,9 +396,11 @@ class CastepParam(CastepInputFile):
             return None  # Reset the value
         try:
             if self._options['continuation'].value:
-                warnings.warn('Cannot set reuse if continuation is set, and '
-                              'vice versa. Set the other to None, if you want '
-                              'this setting.')
+                warnings.warn(
+                    'Cannot set reuse if continuation is set, and '
+                    'vice versa. Set the other to None, if you want '
+                    'this setting.'
+                )
                 return None
         except KeyError:
             pass
@@ -384,9 +411,11 @@ class CastepParam(CastepInputFile):
             return None  # Reset the value
         try:
             if self._options['reuse'].value:
-                warnings.warn('Cannot set reuse if continuation is set, and '
-                              'vice versa. Set the other to None, if you want '
-                              'this setting.')
+                warnings.warn(
+                    'Cannot set reuse if continuation is set, and '
+                    'vice versa. Set the other to None, if you want '
+                    'this setting.'
+                )
                 return None
         except KeyError:
             pass
@@ -394,61 +423,84 @@ class CastepParam(CastepInputFile):
 
 
 class CastepCell(CastepInputFile):
-
     """CastepCell abstracts all setting that go into the .cell file"""
 
     _keyword_conflicts = [
-        {'kpoint_mp_grid', 'kpoint_mp_spacing', 'kpoint_list',
-         'kpoints_mp_grid', 'kpoints_mp_spacing', 'kpoints_list'},
-        {'bs_kpoint_mp_grid',
-         'bs_kpoint_mp_spacing',
-         'bs_kpoint_list',
-         'bs_kpoint_path',
-         'bs_kpoints_mp_grid',
-         'bs_kpoints_mp_spacing',
-         'bs_kpoints_list',
-         'bs_kpoints_path'},
-        {'spectral_kpoint_mp_grid',
-         'spectral_kpoint_mp_spacing',
-         'spectral_kpoint_list',
-         'spectral_kpoint_path',
-         'spectral_kpoints_mp_grid',
-         'spectral_kpoints_mp_spacing',
-         'spectral_kpoints_list',
-         'spectral_kpoints_path'},
-        {'phonon_kpoint_mp_grid',
-         'phonon_kpoint_mp_spacing',
-         'phonon_kpoint_list',
-         'phonon_kpoint_path',
-         'phonon_kpoints_mp_grid',
-         'phonon_kpoints_mp_spacing',
-         'phonon_kpoints_list',
-         'phonon_kpoints_path'},
-        {'fine_phonon_kpoint_mp_grid',
-         'fine_phonon_kpoint_mp_spacing',
-         'fine_phonon_kpoint_list',
-         'fine_phonon_kpoint_path'},
-        {'magres_kpoint_mp_grid',
-         'magres_kpoint_mp_spacing',
-         'magres_kpoint_list',
-         'magres_kpoint_path'},
-        {'elnes_kpoint_mp_grid',
-         'elnes_kpoint_mp_spacing',
-         'elnes_kpoint_list',
-         'elnes_kpoint_path'},
-        {'optics_kpoint_mp_grid',
-         'optics_kpoint_mp_spacing',
-         'optics_kpoint_list',
-         'optics_kpoint_path'},
-        {'supercell_kpoint_mp_grid',
-         'supercell_kpoint_mp_spacing',
-         'supercell_kpoint_list',
-         'supercell_kpoint_path'}, ]
+        {
+            'kpoint_mp_grid',
+            'kpoint_mp_spacing',
+            'kpoint_list',
+            'kpoints_mp_grid',
+            'kpoints_mp_spacing',
+            'kpoints_list',
+        },
+        {
+            'bs_kpoint_mp_grid',
+            'bs_kpoint_mp_spacing',
+            'bs_kpoint_list',
+            'bs_kpoint_path',
+            'bs_kpoints_mp_grid',
+            'bs_kpoints_mp_spacing',
+            'bs_kpoints_list',
+            'bs_kpoints_path',
+        },
+        {
+            'spectral_kpoint_mp_grid',
+            'spectral_kpoint_mp_spacing',
+            'spectral_kpoint_list',
+            'spectral_kpoint_path',
+            'spectral_kpoints_mp_grid',
+            'spectral_kpoints_mp_spacing',
+            'spectral_kpoints_list',
+            'spectral_kpoints_path',
+        },
+        {
+            'phonon_kpoint_mp_grid',
+            'phonon_kpoint_mp_spacing',
+            'phonon_kpoint_list',
+            'phonon_kpoint_path',
+            'phonon_kpoints_mp_grid',
+            'phonon_kpoints_mp_spacing',
+            'phonon_kpoints_list',
+            'phonon_kpoints_path',
+        },
+        {
+            'fine_phonon_kpoint_mp_grid',
+            'fine_phonon_kpoint_mp_spacing',
+            'fine_phonon_kpoint_list',
+            'fine_phonon_kpoint_path',
+        },
+        {
+            'magres_kpoint_mp_grid',
+            'magres_kpoint_mp_spacing',
+            'magres_kpoint_list',
+            'magres_kpoint_path',
+        },
+        {
+            'elnes_kpoint_mp_grid',
+            'elnes_kpoint_mp_spacing',
+            'elnes_kpoint_list',
+            'elnes_kpoint_path',
+        },
+        {
+            'optics_kpoint_mp_grid',
+            'optics_kpoint_mp_spacing',
+            'optics_kpoint_list',
+            'optics_kpoint_path',
+        },
+        {
+            'supercell_kpoint_mp_grid',
+            'supercell_kpoint_mp_spacing',
+            'supercell_kpoint_list',
+            'supercell_kpoint_path',
+        },
+    ]
 
     def __init__(self, castep_keywords, keyword_tolerance=1):
         self._castep_version = castep_keywords.castep_version
-        CastepInputFile.__init__(self, castep_keywords.CastepCellDict(),
-                                 keyword_tolerance)
+        CastepInputFile.__init__(
+            self, castep_keywords.CastepCellDict(), keyword_tolerance
+        )
 
     @property
     def castep_version(self):
@@ -456,7 +508,6 @@ class CastepCell(CastepInputFile):
 
     # .cell specific parsers
     def _parse_species_pot(self, value):
-
         # Single tuple
         if isinstance(value, tuple) and len(value) == 2:
             value = [value]
@@ -468,7 +519,8 @@ class CastepCell(CastepInputFile):
                     'Please specify pseudopotentials in python as '
                     'a tuple or a list of tuples formatted like: '
                     '(species, file), e.g. ("O", "path-to/O_OTFG.usp") '
-                    'Anything else will be ignored')
+                    'Anything else will be ignored'
+                )
                 return None
 
         text_block = self._options['species_pot'].value
@@ -476,25 +528,28 @@ class CastepCell(CastepInputFile):
         text_block = text_block if text_block else ''
         # Remove any duplicates
         for pp in pspots:
-            text_block = re.sub(fr'\n?\s*{pp[0]}\s+.*', '', text_block)
+            text_block = re.sub(rf'\n?\s*{pp[0]}\s+.*', '', text_block)
             if pp[1]:
                 text_block += '\n%s %s' % pp
 
         return text_block
 
     def _parse_symmetry_ops(self, value):
-        if not isinstance(value, tuple) \
-           or not len(value) == 2 \
-           or not value[0].shape[1:] == (3, 3) \
-           or not value[1].shape[1:] == (3,) \
-           or not value[0].shape[0] == value[1].shape[0]:
+        if (
+            not isinstance(value, tuple)
+            or not len(value) == 2
+            or not value[0].shape[1:] == (3, 3)
+            or not value[1].shape[1:] == (3,)
+            or not value[0].shape[0] == value[1].shape[0]
+        ):
             warnings.warn('Invalid symmetry_ops block, skipping')
             return
         # Now on to print...
         text_block = ''
         for op_i, (op_rot, op_tranls) in enumerate(zip(*value)):
-            text_block += '\n'.join([' '.join([str(x) for x in row])
-                                     for row in op_rot])
+            text_block += '\n'.join(
+                [' '.join([str(x) for x in row]) for row in op_rot]
+            )
             text_block += '\n'
             text_block += ' '.join([str(x) for x in op_tranls])
             text_block += '\n\n'
@@ -515,7 +570,6 @@ class CastepCell(CastepInputFile):
 
 
 class ConversionError(Exception):
-
     """Print customized error for options that are not converted correctly
     and point out that they are maybe not implemented, yet"""
 
@@ -527,9 +581,11 @@ class ConversionError(Exception):
 
     def __str__(self):
         contact_email = 'simon.rittmeyer@tum.de'
-        return f'Could not convert {self.attr} = {self.value} '\
-            + 'to {self.key_type}\n' \
-            + 'This means you either tried to set a value of the wrong\n'\
-            + 'type or this keyword needs some special care. Please feel\n'\
-            + 'to add it to the corresponding __setattr__ method and send\n'\
+        return (
+            f'Could not convert {self.attr} = {self.value} '
+            + 'to {self.key_type}\n'
+            + 'This means you either tried to set a value of the wrong\n'
+            + 'type or this keyword needs some special care. Please feel\n'
+            + 'to add it to the corresponding __setattr__ method and send\n'
             + f'the patch to {(contact_email)}, so we can all benefit.'
+        )

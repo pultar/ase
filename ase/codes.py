@@ -20,6 +20,7 @@ class CodeMetadata:
 
     def calculator_class(self):
         from importlib import import_module
+
         module = import_module(self.modulename)
         cls = getattr(module, self.classname)
         return cls
@@ -41,6 +42,7 @@ class CodeMetadata:
 
     def is_legacy_fileio(self):
         from ase.calculators.calculator import FileIOCalculator
+
         return issubclass(self.calculator_class(), FileIOCalculator)
 
     def is_generic_fileio(self):
@@ -52,10 +54,12 @@ class CodeMetadata:
 
     def is_calculator_oldbase(self):
         from ase.calculators.calculator import Calculator
+
         return issubclass(self.calculator_class(), Calculator)
 
     def is_base_calculator(self):
         from ase.calculators.calculator import BaseCalculator
+
         return issubclass(self.calculator_class(), BaseCalculator)
 
     def calculator_type(self):
@@ -79,6 +83,7 @@ class CodeMetadata:
         from ase.calculators.calculator import FileIOCalculator
         from ase.calculators.genericfileio import CalculatorTemplate
         from ase.config import cfg
+
         cls = self.calculator_class()
         if issubclass(cls, CalculatorTemplate):
             return cls().load_profile(cfg)
@@ -117,7 +122,6 @@ class CodeMetadata:
 
 
 def register_codes():
-
     codes = {}
 
     def reg(name, *args):
@@ -143,10 +147,16 @@ def register_codes():
     # internal: reg('eam', 'EAM', 'ase.calculators.eam.EAM')
     reg('elk', 'ELK', 'ase.calculators.elk.ELK')
     # internal: reg('emt', 'EMT potential', 'ase.calculators.emt.EMT')
-    reg('espresso', 'Quantum Espresso',
-        'ase.calculators.espresso.EspressoTemplate')
-    reg('exciting', 'Exciting',
-        'ase.calculators.exciting.exciting.ExcitingGroundStateTemplate')
+    reg(
+        'espresso',
+        'Quantum Espresso',
+        'ase.calculators.espresso.EspressoTemplate',
+    )
+    reg(
+        'exciting',
+        'Exciting',
+        'ase.calculators.exciting.exciting.ExcitingGroundStateTemplate',
+    )
     # internal: reg('ff', 'FF', 'ase.calculators.ff.ForceField')
     # fleur <- external nowadays
     reg('gamess_us', 'GAMESS-US', 'ase.calculators.gamess_us.GAMESSUS')
@@ -160,8 +170,11 @@ def register_codes():
     #             'ase.calculators.idealgas.IdealGas')
     # XXX cannot import without kimpy installed, fixme:
     # reg('kim', 'OpenKIM', 'ase.calculators.kim.kim.KIM')
-    reg('lammpslib', 'Lammps (python library)',
-        'ase.calculators.lammpslib.LAMMPSlib')
+    reg(
+        'lammpslib',
+        'Lammps (python library)',
+        'ase.calculators.lammpslib.LAMMPSlib',
+    )
     reg('lammpsrun', 'Lammps (external)', 'ase.calculators.lammpsrun.LAMMPS')
     # internal: reg('lj', 'Lennard–Jones potential',
     #             'ase.calculators.lj.LennardJones')
@@ -194,6 +207,7 @@ codes = register_codes()
 
 def list_codes(names):
     from ase.config import cfg
+
     cfg.print_header()
     print()
 
@@ -209,6 +223,7 @@ def list_codes(names):
 
 if __name__ == '__main__':
     import sys
+
     names = sys.argv[1:]
     if not names:
         names = [*codes]

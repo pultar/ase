@@ -34,28 +34,36 @@ commands = [
     ('reciprocal', 'ase.cli.reciprocal'),
     ('completion', 'ase.cli.completion'),
     ('diff', 'ase.cli.diff'),
-    ('exec', 'ase.cli.exec')
+    ('exec', 'ase.cli.exec'),
 ]
 
 
-def main(prog='ase', description='ASE command line tool.',
-         version=__version__, commands=commands, hook=None, args=None):
-    parser = argparse.ArgumentParser(prog=prog,
-                                     description=description,
-                                     formatter_class=Formatter)
-    parser.add_argument('--version', action='version',
-                        version=f'%(prog)s-{version}')
+def main(
+    prog='ase',
+    description='ASE command line tool.',
+    version=__version__,
+    commands=commands,
+    hook=None,
+    args=None,
+):
+    parser = argparse.ArgumentParser(
+        prog=prog, description=description, formatter_class=Formatter
+    )
+    parser.add_argument(
+        '--version', action='version', version=f'%(prog)s-{version}'
+    )
     parser.add_argument('-T', '--traceback', action='store_true')
-    subparsers = parser.add_subparsers(title='Sub-commands',
-                                       dest='command')
+    subparsers = parser.add_subparsers(title='Sub-commands', dest='command')
 
-    subparser = subparsers.add_parser('help',
-                                      description='Help',
-                                      help='Help for sub-command.')
-    subparser.add_argument('helpcommand',
-                           nargs='?',
-                           metavar='sub-command',
-                           help='Provide help for sub-command.')
+    subparser = subparsers.add_parser(
+        'help', description='Help', help='Help for sub-command.'
+    )
+    subparser.add_argument(
+        'helpcommand',
+        nargs='?',
+        metavar='sub-command',
+        help='Provide help for sub-command.',
+    )
 
     functions = {}
     parsers = {}
@@ -75,10 +83,8 @@ def main(prog='ase', description='ASE command line tool.',
                 short, body = parts
                 long = short + '\n' + textwrap.dedent(body)
         subparser = subparsers.add_parser(
-            command,
-            formatter_class=Formatter,
-            help=short,
-            description=long)
+            command, formatter_class=Formatter, help=short, description=long
+        )
         cmd.add_arguments(subparser)
         functions[command] = cmd.run
         parsers[command] = subparser
@@ -111,8 +117,9 @@ def main(prog='ase', description='ASE command line tool.',
                 raise
             else:
                 l1 = f'{x.__class__.__name__}: {x}\n'
-                l2 = ('To get a full traceback, use: {} -T {} ...'
-                      .format(prog, args.command))
+                l2 = 'To get a full traceback, use: {} -T {} ...'.format(
+                    prog, args.command
+                )
                 parser.error(l1 + l2)
 
 
@@ -127,10 +134,15 @@ class Formatter(argparse.HelpFormatter):
             if block[0] == '*':
                 # List items:
                 for item in block[2:].split('\n* '):
-                    out += textwrap.fill(item,
-                                         width=width - 2,
-                                         initial_indent='* ',
-                                         subsequent_indent='  ') + '\n'
+                    out += (
+                        textwrap.fill(
+                            item,
+                            width=width - 2,
+                            initial_indent='* ',
+                            subsequent_indent='  ',
+                        )
+                        + '\n'
+                    )
             elif block[0] == ' ':
                 # Indented literal block:
                 out += block + '\n'

@@ -15,8 +15,12 @@ def _calculate(code, name):
         return atoms.get_potential_energy()
 
 
-omx_par = {'definition_of_atomic_species': [['C', 'C6.0', 'C_CA19'],
-                                            ['H', 'H5.0', 'H_CA19']]}
+omx_par = {
+    'definition_of_atomic_species': [
+        ['C', 'C6.0', 'C_CA19'],
+        ['H', 'H5.0', 'H_CA19'],
+    ]
+}
 
 
 @pytest.mark.calculator_lite()
@@ -24,12 +28,25 @@ omx_par = {'definition_of_atomic_species': [['C', 'C6.0', 'C_CA19'],
 @calc('aims')
 @calc('cp2k')
 @calc('espresso')
-@calc('gpaw', symmetry='off', mode='pw', txt='gpaw.txt', mixer={'beta': 0.6},
-      marks=[filterwarnings('ignore:.*?ignore_bad_restart_file'),
-             filterwarnings('ignore:convert_string_to_fd')])
+@calc(
+    'gpaw',
+    symmetry='off',
+    mode='pw',
+    txt='gpaw.txt',
+    mixer={'beta': 0.6},
+    marks=[
+        filterwarnings('ignore:.*?ignore_bad_restart_file'),
+        filterwarnings('ignore:convert_string_to_fd'),
+    ],
+)
 @calc('nwchem')
-@calc('octopus', Spacing='0.25 * angstrom', BoxShape='minimum',
-      convreldens=1e-3, Radius='3.5 * angstrom')
+@calc(
+    'octopus',
+    Spacing='0.25 * angstrom',
+    BoxShape='minimum',
+    convreldens=1e-3,
+    Radius='3.5 * angstrom',
+)
 @calc('openmx', **omx_par)
 @calc('siesta', marks=pytest.mark.xfail)
 @calc('gamess_us', label='ch4')

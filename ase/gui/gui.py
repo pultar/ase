@@ -26,10 +26,7 @@ class GUI(View, Status):
     ARROWKEY_MOVE = 1
     ARROWKEY_ROTATE = 2
 
-    def __init__(self, images=None,
-                 rotations='',
-                 show_bonds=False, expr=None):
-
+    def __init__(self, images=None, rotations='', show_bonds=False, expr=None):
         if not isinstance(images, Images):
             images = Images(images)
 
@@ -42,12 +39,17 @@ class GUI(View, Status):
 
         menu = self.get_menu_data()
 
-        self.window = ui.ASEGUIWindow(close=self.exit, menu=menu,
-                                      config=self.config, scroll=self.scroll,
-                                      scroll_event=self.scroll_event,
-                                      press=self.press, move=self.move,
-                                      release=self.release,
-                                      resize=self.resize)
+        self.window = ui.ASEGUIWindow(
+            close=self.exit,
+            menu=menu,
+            config=self.config,
+            scroll=self.scroll,
+            scroll_event=self.scroll_event,
+            press=self.press,
+            move=self.move,
+            release=self.release,
+            resize=self.resize,
+        )
 
         View.__init__(self, rotations)
         Status.__init__(self)
@@ -105,10 +107,9 @@ class GUI(View, Status):
         self.draw()
 
     def step(self, key):
-        d = {'Home': -10000000,
-             'Page-Up': -1,
-             'Page-Down': 1,
-             'End': 10000000}[key]
+        d = {'Home': -10000000, 'Page-Up': -1, 'Page-Down': 1, 'End': 10000000}[
+            key
+        ]
         i = max(0, min(len(self.images) - 1, self.frame + d))
         self.set_frame(i)
         if self.movie_window is not None:
@@ -151,10 +152,12 @@ class GUI(View, Status):
         # Bug: Simultaneous CTRL + shift is the same as just CTRL.
         # Therefore movement in Z direction does not support the
         # shift modifier.
-        dxdydz = {'up': (0, 1 - CTRL, CTRL),
-                  'down': (0, -1 + CTRL, -CTRL),
-                  'right': (1, 0, 0),
-                  'left': (-1, 0, 0)}.get(event.key, None)
+        dxdydz = {
+            'up': (0, 1 - CTRL, CTRL),
+            'down': (0, -1 + CTRL, -CTRL),
+            'right': (1, 0, 0),
+            'left': (-1, 0, 0),
+        }.get(event.key, None)
 
         # Get scroll direction using shift + right mouse button
         # event.type == '6' is mouse motion, see:
@@ -162,7 +165,7 @@ class GUI(View, Status):
         if event.type == '6':
             cur_pos = np.array([event.x, -event.y])
             # Continue scroll if button has not been released
-            if self.prev_pos is None or time() - self.last_scroll_time > .5:
+            if self.prev_pos is None or time() - self.last_scroll_time > 0.5:
                 self.prev_pos = cur_pos
                 self.last_scroll_time = time()
             else:
@@ -179,12 +182,12 @@ class GUI(View, Status):
             vec *= 0.1
 
         if self.arrowkey_mode == self.ARROWKEY_MOVE:
-            self.atoms.positions[self.move_atoms_mask[:len(self.atoms)]] += vec
+            self.atoms.positions[self.move_atoms_mask[: len(self.atoms)]] += vec
             self.set_frame()
         elif self.arrowkey_mode == self.ARROWKEY_ROTATE:
             # For now we use atoms.rotate having the simplest interface.
             # (Better to use something more minimalistic, obviously.)
-            mask = self.move_atoms_mask[:len(self.atoms)]
+            mask = self.move_atoms_mask[: len(self.atoms)]
             center = self.atoms.positions[mask].mean(axis=0)
             tmp_atoms = self.atoms[mask]
             tmp_atoms.positions -= center
@@ -204,13 +207,15 @@ class GUI(View, Status):
 
     def delete_selected_atoms(self, widget=None, data=None):
         import ase.gui.ui as ui
+
         nselected = sum(self.images.selected)
-        if nselected and ui.ask_question(_('Delete atoms'),
-                                         _('Delete selected atoms?')):
+        if nselected and ui.ask_question(
+            _('Delete atoms'), _('Delete selected atoms?')
+        ):
             self.really_delete_selected_atoms()
 
     def really_delete_selected_atoms(self):
-        mask = self.images.selected[:len(self.atoms)]
+        mask = self.images.selected[: len(self.atoms)]
         del self.atoms[mask]
 
         # Will remove selection in other images, too
@@ -220,6 +225,7 @@ class GUI(View, Status):
 
     def constraints_window(self):
         from ase.gui.constraints import Constraints
+
         return Constraints(self)
 
     def select_all(self, key=None):
@@ -244,18 +250,22 @@ class GUI(View, Status):
 
     def movie(self):
         from ase.gui.movie import Movie
+
         self.movie_window = Movie(self)
 
     def plot_graphs(self, key=None, expr=None, ignore_if_nan=False):
         from ase.gui.graphs import Graphs
+
         g = Graphs(self)
         if expr is not None:
             g.plot(expr=expr, ignore_if_nan=ignore_if_nan)
 
     def pipe(self, task, data):
-        process = subprocess.Popen([sys.executable, '-m', 'ase.gui.pipe'],
-                                   stdout=subprocess.PIPE,
-                                   stdin=subprocess.PIPE)
+        process = subprocess.Popen(
+            [sys.executable, '-m', 'ase.gui.pipe'],
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+        )
         pickle.dump((task, data), process.stdin)
         process.stdin.close()
         # Either process writes a line, or it crashes and line becomes ''
@@ -274,11 +284,17 @@ class GUI(View, Status):
 
     def neb(self):
         from ase.utils.forcecurve import fit_images
+
         try:
             forcefit = fit_images(self.images)
         except Exception as err:
-            self.bad_plot(err, _('Images must have energies and forces, '
-                                 'and atoms must not be stationary.'))
+            self.bad_plot(
+                err,
+                _(
+                    'Images must have energies and forces, '
+                    'and atoms must not be stationary.'
+                ),
+            )
         else:
             self.pipe('neb', forcefit)
 
@@ -287,11 +303,13 @@ class GUI(View, Status):
             v = [abs(np.linalg.det(atoms.cell)) for atoms in self.images]
             e = [self.images.get_energy(a) for a in self.images]
             from ase.eos import EquationOfState
+
             eos = EquationOfState(v, e)
             plotdata = eos.getplotdata()
         except Exception as err:
-            self.bad_plot(err, _('Images must have energies '
-                                 'and varying cell.'))
+            self.bad_plot(
+                err, _('Images must have energies ' 'and varying cell.')
+            )
         else:
             self.pipe('eos', plotdata)
 
@@ -319,18 +337,22 @@ class GUI(View, Status):
 
     def modify_atoms(self, key=None):
         from ase.gui.modify import ModifyAtoms
+
         return ModifyAtoms(self)
 
     def add_atoms(self, key=None):
         from ase.gui.add import AddAtoms
+
         return AddAtoms(self)
 
     def cell_editor(self, key=None):
         from ase.gui.celleditor import CellEditor
+
         return CellEditor(self)
 
     def quick_info_window(self, key=None):
         from ase.gui.quickinfo import info
+
         info_win = ui.Window(_('Quick Info'), wmtype='utility')
         info_win.add(info(self))
 
@@ -341,6 +363,7 @@ class GUI(View, Status):
                 # Only update if we exist
                 window.things[0].text = info(self)
             return exists
+
         self.attach(update, info_win)
         return info_win
 
@@ -399,15 +422,17 @@ class GUI(View, Status):
 
     def external_viewer(self, name):
         from ase.visualize import view
+
         return view(list(self.images), viewer=name)
 
     def selected_atoms(self):
-        selection_mask = self.images.selected[:len(self.atoms)]
+        selection_mask = self.images.selected[: len(self.atoms)]
         return self.atoms[selection_mask]
 
     @property
     def clipboard(self):
         from ase.gui.clipboard import AtomsClipboard
+
         return AtomsClipboard(self.window.win)
 
     def cut_atoms_to_clipboard(self, event=None):
@@ -425,7 +450,8 @@ class GUI(View, Status):
             ui.error(
                 'Cannot paste atoms',
                 'Pasting currently works only with the ASE JSON format.\n\n'
-                f'Original error:\n\n{err}')
+                f'Original error:\n\n{err}',
+            )
             return
 
         if self.atoms == Atoms():
@@ -454,13 +480,12 @@ class GUI(View, Status):
         atoms += new_atoms
 
         if len(atoms) > self.images.maxnatoms:
-            self.images.initialize(list(self.images),
-                                   self.images.filenames)
+            self.images.initialize(list(self.images), self.images.filenames)
 
         selected = self.images.selected
         selected[:] = False
         # 'selected' array may be longer than current atoms
-        selected[len(atoms) - len(new_atoms):len(atoms)] = True
+        selected[len(atoms) - len(new_atoms) : len(atoms)] = True
 
         self.set_frame()
         self.draw()
@@ -468,126 +493,192 @@ class GUI(View, Status):
     def get_menu_data(self):
         M = ui.MenuItem
         return [
-            (_('_File'),
-             [M(_('_Open'), self.open, 'Ctrl+O'),
-              M(_('_New'), self.new, 'Ctrl+N'),
-              M(_('_Save'), self.save, 'Ctrl+S'),
-              M('---'),
-              M(_('_Quit'), self.exit, 'Ctrl+Q')]),
-
-            (_('_Edit'),
-             [M(_('Select _all'), self.select_all),
-              M(_('_Invert selection'), self.invert_selection),
-              M(_('Select _constrained atoms'), self.select_constrained_atoms),
-              M(_('Select _immobile atoms'), self.select_immobile_atoms),
-              # M('---'),
-              M(_('_Cut'), self.cut_atoms_to_clipboard, 'Ctrl+X'),
-              M(_('_Copy'), self.copy_atoms_to_clipboard, 'Ctrl+C'),
-              M(_('_Paste'), self.paste_atoms_from_clipboard, 'Ctrl+V'),
-              M('---'),
-              M(_('Hide selected atoms'), self.hide_selected),
-              M(_('Show selected atoms'), self.show_selected),
-              M('---'),
-              M(_('_Modify'), self.modify_atoms, 'Ctrl+Y'),
-              M(_('_Add atoms'), self.add_atoms, 'Ctrl+A'),
-              M(_('_Delete selected atoms'), self.delete_selected_atoms,
-                'Backspace'),
-              M(_('Edit _cell'), self.cell_editor, 'Ctrl+E'),
-              M('---'),
-              M(_('_First image'), self.step, 'Home'),
-              M(_('_Previous image'), self.step, 'Page-Up'),
-              M(_('_Next image'), self.step, 'Page-Down'),
-              M(_('_Last image'), self.step, 'End'),
-              M(_('Append image copy'), self.copy_image)]),
-
-            (_('_View'),
-             [M(_('Show _unit cell'), self.toggle_show_unit_cell, 'Ctrl+U',
-                value=self.config['show_unit_cell']),
-              M(_('Show _axes'), self.toggle_show_axes,
-                value=self.config['show_axes']),
-              M(_('Show _bonds'), self.toggle_show_bonds, 'Ctrl+B',
-                value=self.config['show_bonds']),
-              M(_('Show _velocities'), self.toggle_show_velocities, 'Ctrl+G',
-                value=False),
-              M(_('Show _forces'), self.toggle_show_forces, 'Ctrl+F',
-                value=False),
-              M(_('Show _Labels'), self.show_labels,
-                choices=[_('_None'),
-                         _('Atom _Index'),
-                         _('_Magnetic Moments'),  # XXX check if exist
-                         _('_Element Symbol'),
-                         _('_Initial Charges'),  # XXX check if exist
-                         ]),
-              M('---'),
-              M(_('Quick Info ...'), self.quick_info_window, 'Ctrl+I'),
-              M(_('Repeat ...'), self.repeat_window, 'R'),
-              M(_('Rotate ...'), self.rotate_window),
-              M(_('Colors ...'), self.colors_window, 'C'),
-              # TRANSLATORS: verb
-              M(_('Focus'), self.focus, 'F'),
-              M(_('Zoom in'), self.zoom, '+'),
-              M(_('Zoom out'), self.zoom, '-'),
-              M(_('Change View'),
-                submenu=[
-                    M(_('Reset View'), self.reset_view, '='),
-                    M(_('xy-plane'), self.set_view, 'Z'),
-                    M(_('yz-plane'), self.set_view, 'X'),
-                    M(_('zx-plane'), self.set_view, 'Y'),
-                    M(_('yx-plane'), self.set_view, 'Alt+Z'),
-                    M(_('zy-plane'), self.set_view, 'Alt+X'),
-                    M(_('xz-plane'), self.set_view, 'Alt+Y'),
-                    M(_('a2,a3-plane'), self.set_view, '1'),
-                    M(_('a3,a1-plane'), self.set_view, '2'),
-                    M(_('a1,a2-plane'), self.set_view, '3'),
-                    M(_('a3,a2-plane'), self.set_view, 'Alt+1'),
-                    M(_('a1,a3-plane'), self.set_view, 'Alt+2'),
-                    M(_('a2,a1-plane'), self.set_view, 'Alt+3')]),
-              M(_('Settings ...'), self.settings),
-              M('---'),
-              M(_('VMD'), partial(self.external_viewer, 'vmd')),
-              M(_('RasMol'), partial(self.external_viewer, 'rasmol')),
-              M(_('xmakemol'), partial(self.external_viewer, 'xmakemol')),
-              M(_('avogadro'), partial(self.external_viewer, 'avogadro'))]),
-
-            (_('_Tools'),
-             [M(_('Graphs ...'), self.plot_graphs),
-              M(_('Movie ...'), self.movie),
-              M(_('Constraints ...'), self.constraints_window),
-              M(_('Render scene ...'), self.render_window),
-              M(_('_Move selected atoms'), self.toggle_move_mode, 'Ctrl+M'),
-              M(_('_Rotate selected atoms'), self.toggle_rotate_mode,
-                'Ctrl+R'),
-              M(_('NE_B plot'), self.neb),
-              M(_('B_ulk Modulus'), self.bulk_modulus),
-              M(_('Reciprocal space ...'), self.reciprocal)]),
-
+            (
+                _('_File'),
+                [
+                    M(_('_Open'), self.open, 'Ctrl+O'),
+                    M(_('_New'), self.new, 'Ctrl+N'),
+                    M(_('_Save'), self.save, 'Ctrl+S'),
+                    M('---'),
+                    M(_('_Quit'), self.exit, 'Ctrl+Q'),
+                ],
+            ),
+            (
+                _('_Edit'),
+                [
+                    M(_('Select _all'), self.select_all),
+                    M(_('_Invert selection'), self.invert_selection),
+                    M(
+                        _('Select _constrained atoms'),
+                        self.select_constrained_atoms,
+                    ),
+                    M(_('Select _immobile atoms'), self.select_immobile_atoms),
+                    # M('---'),
+                    M(_('_Cut'), self.cut_atoms_to_clipboard, 'Ctrl+X'),
+                    M(_('_Copy'), self.copy_atoms_to_clipboard, 'Ctrl+C'),
+                    M(_('_Paste'), self.paste_atoms_from_clipboard, 'Ctrl+V'),
+                    M('---'),
+                    M(_('Hide selected atoms'), self.hide_selected),
+                    M(_('Show selected atoms'), self.show_selected),
+                    M('---'),
+                    M(_('_Modify'), self.modify_atoms, 'Ctrl+Y'),
+                    M(_('_Add atoms'), self.add_atoms, 'Ctrl+A'),
+                    M(
+                        _('_Delete selected atoms'),
+                        self.delete_selected_atoms,
+                        'Backspace',
+                    ),
+                    M(_('Edit _cell'), self.cell_editor, 'Ctrl+E'),
+                    M('---'),
+                    M(_('_First image'), self.step, 'Home'),
+                    M(_('_Previous image'), self.step, 'Page-Up'),
+                    M(_('_Next image'), self.step, 'Page-Down'),
+                    M(_('_Last image'), self.step, 'End'),
+                    M(_('Append image copy'), self.copy_image),
+                ],
+            ),
+            (
+                _('_View'),
+                [
+                    M(
+                        _('Show _unit cell'),
+                        self.toggle_show_unit_cell,
+                        'Ctrl+U',
+                        value=self.config['show_unit_cell'],
+                    ),
+                    M(
+                        _('Show _axes'),
+                        self.toggle_show_axes,
+                        value=self.config['show_axes'],
+                    ),
+                    M(
+                        _('Show _bonds'),
+                        self.toggle_show_bonds,
+                        'Ctrl+B',
+                        value=self.config['show_bonds'],
+                    ),
+                    M(
+                        _('Show _velocities'),
+                        self.toggle_show_velocities,
+                        'Ctrl+G',
+                        value=False,
+                    ),
+                    M(
+                        _('Show _forces'),
+                        self.toggle_show_forces,
+                        'Ctrl+F',
+                        value=False,
+                    ),
+                    M(
+                        _('Show _Labels'),
+                        self.show_labels,
+                        choices=[
+                            _('_None'),
+                            _('Atom _Index'),
+                            _('_Magnetic Moments'),  # XXX check if exist
+                            _('_Element Symbol'),
+                            _('_Initial Charges'),  # XXX check if exist
+                        ],
+                    ),
+                    M('---'),
+                    M(_('Quick Info ...'), self.quick_info_window, 'Ctrl+I'),
+                    M(_('Repeat ...'), self.repeat_window, 'R'),
+                    M(_('Rotate ...'), self.rotate_window),
+                    M(_('Colors ...'), self.colors_window, 'C'),
+                    # TRANSLATORS: verb
+                    M(_('Focus'), self.focus, 'F'),
+                    M(_('Zoom in'), self.zoom, '+'),
+                    M(_('Zoom out'), self.zoom, '-'),
+                    M(
+                        _('Change View'),
+                        submenu=[
+                            M(_('Reset View'), self.reset_view, '='),
+                            M(_('xy-plane'), self.set_view, 'Z'),
+                            M(_('yz-plane'), self.set_view, 'X'),
+                            M(_('zx-plane'), self.set_view, 'Y'),
+                            M(_('yx-plane'), self.set_view, 'Alt+Z'),
+                            M(_('zy-plane'), self.set_view, 'Alt+X'),
+                            M(_('xz-plane'), self.set_view, 'Alt+Y'),
+                            M(_('a2,a3-plane'), self.set_view, '1'),
+                            M(_('a3,a1-plane'), self.set_view, '2'),
+                            M(_('a1,a2-plane'), self.set_view, '3'),
+                            M(_('a3,a2-plane'), self.set_view, 'Alt+1'),
+                            M(_('a1,a3-plane'), self.set_view, 'Alt+2'),
+                            M(_('a2,a1-plane'), self.set_view, 'Alt+3'),
+                        ],
+                    ),
+                    M(_('Settings ...'), self.settings),
+                    M('---'),
+                    M(_('VMD'), partial(self.external_viewer, 'vmd')),
+                    M(_('RasMol'), partial(self.external_viewer, 'rasmol')),
+                    M(_('xmakemol'), partial(self.external_viewer, 'xmakemol')),
+                    M(_('avogadro'), partial(self.external_viewer, 'avogadro')),
+                ],
+            ),
+            (
+                _('_Tools'),
+                [
+                    M(_('Graphs ...'), self.plot_graphs),
+                    M(_('Movie ...'), self.movie),
+                    M(_('Constraints ...'), self.constraints_window),
+                    M(_('Render scene ...'), self.render_window),
+                    M(
+                        _('_Move selected atoms'),
+                        self.toggle_move_mode,
+                        'Ctrl+M',
+                    ),
+                    M(
+                        _('_Rotate selected atoms'),
+                        self.toggle_rotate_mode,
+                        'Ctrl+R',
+                    ),
+                    M(_('NE_B plot'), self.neb),
+                    M(_('B_ulk Modulus'), self.bulk_modulus),
+                    M(_('Reciprocal space ...'), self.reciprocal),
+                ],
+            ),
             # TRANSLATORS: Set up (i.e. build) surfaces, nanoparticles, ...
-            (_('_Setup'),
-             [M(_('_Surface slab'), self.surface_window, disabled=False),
-              M(_('_Nanoparticle'),
-                self.nanoparticle_window),
-              M(_('Nano_tube'), self.nanotube_window)]),
-
+            (
+                _('_Setup'),
+                [
+                    M(_('_Surface slab'), self.surface_window, disabled=False),
+                    M(_('_Nanoparticle'), self.nanoparticle_window),
+                    M(_('Nano_tube'), self.nanotube_window),
+                ],
+            ),
             # (_('_Calculate'),
             # [M(_('Set _Calculator'), self.calculator_window, disabled=True),
             #  M(_('_Energy and Forces'), self.energy_window, disabled=True),
             #  M(_('Energy Minimization'), self.energy_minimize_window,
             #    disabled=True)]),
-
-            (_('_Help'),
-             [M(_('_About'), partial(ui.about, 'ASE-GUI',
-                                     version=__version__,
-                                     webpage='https://wiki.fysik.dtu.dk/'
-                                     'ase/ase/gui/gui.html')),
-              M(_('Webpage ...'), webpage)])]
+            (
+                _('_Help'),
+                [
+                    M(
+                        _('_About'),
+                        partial(
+                            ui.about,
+                            'ASE-GUI',
+                            version=__version__,
+                            webpage='https://wiki.fysik.dtu.dk/'
+                            'ase/ase/gui/gui.html',
+                        ),
+                    ),
+                    M(_('Webpage ...'), webpage),
+                ],
+            ),
+        ]
 
     def attach(self, function, *args, **kwargs):
         self.observers.append((function, args, kwargs))
 
     def call_observers(self):
         # Use function return value to determine if we keep observer
-        self.observers = [(function, args, kwargs) for (function, args, kwargs)
-                          in self.observers if function(*args, **kwargs)]
+        self.observers = [
+            (function, args, kwargs)
+            for (function, args, kwargs) in self.observers
+            if function(*args, **kwargs)
+        ]
 
     def repeat_poll(self, callback, ms, ensure_update=True):
         """Invoke callback(gui=self) every ms milliseconds.
@@ -636,4 +727,5 @@ class GUI(View, Status):
 
 def webpage():
     import webbrowser
+
     webbrowser.open('https://wiki.fysik.dtu.dk/ase/ase/gui/gui.html')

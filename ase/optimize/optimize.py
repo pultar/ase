@@ -1,4 +1,5 @@
-"""Structure optimization. """
+"""Structure optimization."""
+
 import time
 import warnings
 from collections.abc import Callable
@@ -54,7 +55,8 @@ class OptimizableAtoms(Optimizable):
     def get_potential_energy(self):
         force_consistent = self._use_force_consistent_energy
         return self.atoms.get_potential_energy(
-            force_consistent=force_consistent)
+            force_consistent=force_consistent
+        )
 
     def iterimages(self):
         # XXX document purpose of iterimages
@@ -119,10 +121,11 @@ class Dynamics(IOContext):
         if trajectory is not None:
             if isinstance(trajectory, str):
                 from ase.io.trajectory import Trajectory
-                mode = "a" if append_trajectory else "w"
-                trajectory = self.closelater(Trajectory(
-                    trajectory, mode=mode, master=master, comm=comm
-                ))
+
+                mode = 'a' if append_trajectory else 'w'
+                trajectory = self.closelater(
+                    Trajectory(trajectory, mode=mode, master=master, comm=comm)
+                )
             self.attach(trajectory, atoms=self.optimizable)
 
         self.trajectory = trajectory
@@ -173,7 +176,7 @@ class Dynamics(IOContext):
         arguments *args* and keyword arguments *kwargs*.  This is
         currently zero indexed."""
 
-        if hasattr(function, "set_description"):
+        if hasattr(function, 'set_description'):
             d = self.todict()
             d.update(interval=interval)
             function.set_description(d)
@@ -277,18 +280,18 @@ class Dynamics(IOContext):
         return converged
 
     def converged(self):
-        """" a dummy function as placeholder for a real criterion, e.g. in
-        Optimizer """
+        """ " a dummy function as placeholder for a real criterion, e.g. in
+        Optimizer"""
         return False
 
     def log(self, *args):
-        """ a dummy function as placeholder for a real logger, e.g. in
-        Optimizer """
+        """a dummy function as placeholder for a real logger, e.g. in
+        Optimizer"""
         return True
 
     def step(self):
         """this needs to be implemented by subclasses"""
-        raise RuntimeError("step not implemented.")
+        raise RuntimeError('step not implemented.')
 
 
 class Optimizer(Dynamics):
@@ -352,7 +355,8 @@ class Optimizer(Dynamics):
             trajectory=trajectory,
             append_trajectory=append_trajectory,
             master=master,
-            comm=comm)
+            comm=comm,
+        )
 
         self.restart = restart
 
@@ -373,19 +377,19 @@ class Optimizer(Dynamics):
             'force_consistent keyword is deprecated and will '
             'be ignored.  This will raise an error in future versions '
             'of ASE.',
-            FutureWarning)
+            FutureWarning,
+        )
 
     def read(self):
         raise NotImplementedError
 
     def todict(self):
         description = {
-            "type": "optimization",
-            "optimizer": self.__class__.__name__,
+            'type': 'optimization',
+            'optimizer': self.__class__.__name__,
         }
         # add custom attributes from subclasses
-        for attr in ('maxstep', 'alpha', 'max_steps', 'restart',
-                     'fmax'):
+        for attr in ('maxstep', 'alpha', 'max_steps', 'restart', 'fmax'):
             if hasattr(self, attr):
                 description.update({attr: getattr(self, attr)})
         return description
@@ -438,44 +442,49 @@ class Optimizer(Dynamics):
     def log(self, forces=None):
         if forces is None:
             forces = self.optimizable.get_forces()
-        fmax = sqrt((forces ** 2).sum(axis=1).max())
+        fmax = sqrt((forces**2).sum(axis=1).max())
         e = self.optimizable.get_potential_energy()
         T = time.localtime()
         if self.logfile is not None:
             name = self.__class__.__name__
             if self.nsteps == 0:
-                args = (" " * len(name), "Step", "Time", "Energy", "fmax")
-                msg = "%s  %4s %8s %15s  %12s\n" % args
+                args = (' ' * len(name), 'Step', 'Time', 'Energy', 'fmax')
+                msg = '%s  %4s %8s %15s  %12s\n' % args
                 self.logfile.write(msg)
 
             args = (name, self.nsteps, T[3], T[4], T[5], e, fmax)
-            msg = "%s:  %3d %02d:%02d:%02d %15.6f %15.6f\n" % args
+            msg = '%s:  %3d %02d:%02d:%02d %15.6f %15.6f\n' % args
             self.logfile.write(msg)
             self.logfile.flush()
 
     def dump(self, data):
         from ase.io.jsonio import write_json
+
         if self.comm.rank == 0 and self.restart is not None:
             with open(self.restart, 'w') as fd:
                 write_json(fd, data)
 
     def load(self):
         from ase.io.jsonio import read_json
+
         with open(self.restart) as fd:
             try:
                 from ase.optimize import BFGS
+
                 if not isinstance(self, BFGS) and isinstance(
                     self.atoms, UnitCellFilter
                 ):
                     warnings.warn(
-                        "WARNING: restart function is untested and may result "
-                        "in unintended behavior. Namely orig_cell is not "
-                        "loaded in the UnitCellFilter. Please test on your own"
-                        " to ensure consistent results."
+                        'WARNING: restart function is untested and may result '
+                        'in unintended behavior. Namely orig_cell is not '
+                        'loaded in the UnitCellFilter. Please test on your own'
+                        ' to ensure consistent results.'
                     )
                 return read_json(fd, always_array=False)
             except Exception as ex:
-                msg = ('Could not decode restart file as JSON.  '
-                       'You may need to delete the restart file '
-                       f'{self.restart}')
+                msg = (
+                    'Could not decode restart file as JSON.  '
+                    'You may need to delete the restart file '
+                    f'{self.restart}'
+                )
                 raise RestartError(msg) from ex

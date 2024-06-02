@@ -502,8 +502,7 @@ class BaseCalculator(GetPropertiesMixin):
         return props
 
     @abstractmethod
-    def calculate(self, atoms, properties, system_changes):
-        ...
+    def calculate(self, atoms, properties, system_changes): ...
 
     def check_state(self, atoms, tol=1e-15):
         """Check for any system changes since last calculation."""
@@ -980,6 +979,7 @@ class FileIORules:
 
     Currently names can contain "{prefix}" which will be substituted by
     calc.prefix.  This will go away if/when we can remove prefix."""
+
     extend_argv: Sequence[str] = tuple()
     stdin_name: Optional[str] = None
     stdout_name: Optional[str] = None
@@ -1023,8 +1023,10 @@ class StandardProfile:
             self._call(calc, subprocess.check_call)
         except subprocess.CalledProcessError as err:
             directory = Path(calc.directory).resolve()
-            msg = (f'Calculator {calc.name} failed with args {err.args} '
-                   f'in directory {directory}')
+            msg = (
+                f'Calculator {calc.name} failed with args {err.args} '
+                f'in directory {directory}'
+            )
             raise CalculationFailed(msg) from err
 
     def execute_nonblocking(self, calc):
@@ -1058,9 +1060,8 @@ class StandardProfile:
             argv = [*self._split_command, *fileio_rules.extend_argv]
             argv = [arg.format(prefix=calc.prefix) for arg in argv]
             return subprocess_function(
-                argv, cwd=directory,
-                stdout=stdout_fd,
-                stdin=stdin_fd)
+                argv, cwd=directory, stdout=stdout_fd, stdin=stdin_fd
+            )
 
 
 class FileIOCalculator(Calculator):
@@ -1100,8 +1101,9 @@ class FileIOCalculator(Calculator):
             Command used to start calculation.
         """
 
-        super().__init__(restart, ignore_bad_restart_file, label, atoms,
-                         **kwargs)
+        super().__init__(
+            restart, ignore_bad_restart_file, label, atoms, **kwargs
+        )
 
         if profile is None:
             profile = self._initialize_profile(command)
@@ -1137,7 +1139,8 @@ class FileIOCalculator(Calculator):
             command = section['command']
         except KeyError:
             raise BadConfiguration(
-                f'No command field in {section_name!r} section')
+                f'No command field in {section_name!r} section'
+            )
 
         return StandardProfile(command, configvars)
 
@@ -1157,7 +1160,8 @@ class FileIOCalculator(Calculator):
         if command is None:
             raise EnvironmentError(
                 f'No configuration of {self.name}.  '
-                f'Missing section [{self.name}] in configuration')
+                f'Missing section [{self.name}] in configuration'
+            )
 
         return OldShellProfile(command)
 

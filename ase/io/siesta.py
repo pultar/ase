@@ -1,4 +1,5 @@
 """Helper functions for read_fdf."""
+
 from pathlib import Path
 from re import compile
 
@@ -20,9 +21,7 @@ def _is_block(val):
     # Tell whether value is a block-value or an ordinary value.
     # A block is represented as a list of lists of strings,
     # and a ordinary value is represented as a list of strings
-    if isinstance(val, list) and \
-       len(val) > 0 and \
-       isinstance(val[0], list):
+    if isinstance(val, list) and len(val) > 0 and isinstance(val[0], list):
         return True
     return False
 
@@ -58,8 +57,9 @@ def _read_fdf_lines(file):
                 # "%block label < filename" means that the block contents
                 # should be read from filename
                 if len(w) != 2:
-                    raise OSError('Bad %%block-statement "%s < %s"' %
-                                  (L, fname))
+                    raise OSError(
+                        'Bad %%block-statement "%s < %s"' % (L, fname)
+                    )
                 label = lbz(w[1])
                 lines.append('%%block %s' % label)
                 lines += _get_stripped_lines(open(fname))
@@ -75,8 +75,9 @@ def _read_fdf_lines(file):
                         lines += [' '.join(x) for x in fdf[label]]
                         lines.append('%%endblock %s' % label)
                     else:
-                        lines.append('{} {}'.format(
-                            label, ' '.join(fdf[label])))
+                        lines.append(
+                            '{} {}'.format(label, ' '.join(fdf[label]))
+                        )
                 # else:
                 #    label unresolved!
                 #    One should possibly issue a warning about this!
@@ -151,8 +152,10 @@ def read_fdf(fname):
                 content = []
                 while True:
                     if len(lines) == 0:
-                        raise OSError('Unexpected EOF reached in %s, '
-                                      'un-ended block %s' % (fname, label))
+                        raise OSError(
+                            'Unexpected EOF reached in %s, '
+                            'un-ended block %s' % (fname, label)
+                        )
                     w = lines.pop(0).split()
                     if lbz(w[0]) == '%endblock':
                         break
@@ -192,10 +195,9 @@ def read_struct_out(fd):
         numbers[i] = int(tokens[1])
         scaled_positions[i] = np.array(tokens[2:5], float)
 
-    return Atoms(numbers,
-                 cell=cell,
-                 pbc=True,
-                 scaled_positions=scaled_positions)
+    return Atoms(
+        numbers, cell=cell, pbc=True, scaled_positions=scaled_positions
+    )
 
 
 def read_siesta_xv(fd):
@@ -220,7 +222,6 @@ def read_siesta_xv(fd):
     vectors = np.array(vectors)
     atomnumbers = np.array(atomnumbers)
     xyz = np.array(xyz)
-    atoms = Atoms(numbers=atomnumbers, positions=xyz, cell=vectors,
-                  pbc=True)
+    atoms = Atoms(numbers=atomnumbers, positions=xyz, cell=vectors, pbc=True)
     assert natoms == len(atoms)
     return atoms

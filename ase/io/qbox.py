@@ -53,9 +53,7 @@ def read_qbox(f, index=-1):
         # Compile them into a dictionary
         for name, symbol, mass, number in zip(names, symbols, masses, numbers):
             spec_data = dict(
-                symbol=symbol,
-                mass=float(mass),
-                number=float(number)
+                symbol=symbol, mass=float(mass), number=float(number)
             )
             species[name] = spec_data
     else:
@@ -67,7 +65,8 @@ def read_qbox(f, index=-1):
             spec_data = dict(
                 symbol=spec.find('symbol').text,
                 mass=float(spec.find('mass').text),
-                number=int(spec.find('atomic_number').text))
+                number=int(spec.find('atomic_number').text),
+            )
             species[name] = spec_data
 
     # Find all of the frames
@@ -111,7 +110,6 @@ def _find_blocks(fp, tag, stopwords='[qbox]'):
     cur_block = []  # Block being filled
     in_block = False  # Whether we are currently parsing
     for line in fp:
-
         # Check if the block has started
         if start_tag in line:
             if in_block:
@@ -134,8 +132,9 @@ def _find_blocks(fp, tag, stopwords='[qbox]'):
                 cur_block = []
                 in_block = False
             else:
-                raise Exception('Parsing failed: End tag found before start '
-                                'tag')
+                raise Exception(
+                    'Parsing failed: End tag found before start ' 'tag'
+                )
 
     # Join strings in a block into a single string
     blocks = [''.join(b) for b in blocks]
@@ -159,7 +158,7 @@ def _parse_frame(tree, species):
         Atoms object describing this iteration"""
 
     # Load in data about the system
-    energy = float(tree.find("etotal").text)
+    energy = float(tree.find('etotal').text)
 
     # Load in data about the cell
     unitcell = tree.find('atomset').find('unit_cell')
@@ -171,8 +170,10 @@ def _parse_frame(tree, species):
     if stress_tree is None:
         stresses = None
     else:
-        stresses = [float(stress_tree.find(f'sigma_{x}').text)
-                    for x in ['xx', 'yy', 'zz', 'yz', 'xz', 'xy']]
+        stresses = [
+            float(stress_tree.find(f'sigma_{x}').text)
+            for x in ['xx', 'yy', 'zz', 'yz', 'xz', 'xy']
+        ]
 
     # Create the Atoms object
     atoms = Atoms(pbc=True, cell=cell)
@@ -188,8 +189,7 @@ def _parse_frame(tree, species):
         # Get data about position / velocity / force
         pos = [float(x) for x in atom.find('position').text.split()]
         force = [float(x) for x in atom.find('force').text.split()]
-        momentum = [float(x) * mass
-                    for x in atom.find('velocity').text.split()]
+        momentum = [float(x) * mass for x in atom.find('velocity').text.split()]
 
         # Create the objects
         atom = Atom(symbol=symbol, mass=mass, position=pos, momentum=momentum)
@@ -197,8 +197,9 @@ def _parse_frame(tree, species):
         forces.append(force)
 
     # Create the calculator object that holds energy/forces
-    calc = SinglePointCalculator(atoms,
-                                 energy=energy, forces=forces, stress=stresses)
+    calc = SinglePointCalculator(
+        atoms, energy=energy, forces=forces, stress=stresses
+    )
     atoms.calc = calc
 
     return atoms

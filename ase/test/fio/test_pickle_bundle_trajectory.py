@@ -10,8 +10,10 @@ from ase.calculators.calculator import compare_atoms
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms
 from ase.io import read, write
-from ase.io.bundletrajectory import (BundleTrajectory,
-                                     print_bundletrajectory_info)
+from ase.io.bundletrajectory import (
+    BundleTrajectory,
+    print_bundletrajectory_info,
+)
 from ase.io.pickletrajectory import PickleTrajectory
 
 trajname = 'pickletraj.traj'
@@ -75,8 +77,10 @@ def test_write_read_pickle(images, trajfile):
     assert_images_equal(images, images1)
 
 
-@pytest.mark.xfail(reason='bug: writes initial magmoms but reads magmoms '
-                   'as part of calculator')
+@pytest.mark.xfail(
+    reason='bug: writes initial magmoms but reads magmoms '
+    'as part of calculator'
+)
 def test_write_read_bundle(images, bundletraj):
     images1 = read(bundletraj, ':')
     assert_images_equal(images, images1)
@@ -132,7 +136,8 @@ def test_bundletrajectory_info(images, bundletraj, capsys):
     assert expected_substring in output
 
     # Same thing but via main():
-    output2 = check_output([sys.executable,
-                            '-m', 'ase.io.bundletrajectory', bundletraj],
-                           encoding='ascii')
+    output2 = check_output(
+        [sys.executable, '-m', 'ase.io.bundletrajectory', bundletraj],
+        encoding='ascii',
+    )
     assert expected_substring in output2

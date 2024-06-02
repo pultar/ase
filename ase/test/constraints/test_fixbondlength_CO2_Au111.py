@@ -15,9 +15,14 @@ from ase.optimize import BFGS
 def test_CO2_Au111(wrap, testdir):
     zpos = cos(134.3 / 2.0 * pi / 180.0) * 1.197
     xpos = sin(134.3 / 2.0 * pi / 180.0) * 1.19
-    co2 = Atoms('COO', positions=[(-xpos + 1.2, 0, -zpos),
-                                  (-xpos + 1.2, -1.1, -zpos),
-                                  (-xpos + 1.2, 1.1, -zpos)])
+    co2 = Atoms(
+        'COO',
+        positions=[
+            (-xpos + 1.2, 0, -zpos),
+            (-xpos + 1.2, -1.1, -zpos),
+            (-xpos + 1.2, 1.1, -zpos),
+        ],
+    )
 
     slab = fcc111('Au', size=(2, 2, 4), vacuum=2 * 5, orthogonal=True)
     slab.center()

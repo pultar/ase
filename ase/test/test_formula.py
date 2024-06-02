@@ -13,8 +13,7 @@ def test_formula_things():
     assert Formula('HHOOOUO').format('reduce') == 'H2O3UO'
 
 
-@pytest.mark.parametrize('f',
-                         ['SiC', 'MoS2', 'GaAs', 'CO', 'NH3'])
+@pytest.mark.parametrize('f', ['SiC', 'MoS2', 'GaAs', 'CO', 'NH3'])
 def test_periodic(f):
     for fmt in ['ab2', 'a2b', 'periodic']:
         assert Formula(f, format=fmt).format('periodic') == f
@@ -43,8 +42,9 @@ def test_formula():
                 if empirical and mode in ['all', 'reduce']:
                     continue
                 atoms = Atoms(sym)
-                formula = atoms.get_chemical_formula(mode=mode,
-                                                     empirical=empirical)
+                formula = atoms.get_chemical_formula(
+                    mode=mode, empirical=empirical
+                )
                 atoms2 = Atoms(formula)
                 print(repr(sym), '->', repr(formula))
                 n1 = np.sort(atoms.numbers)
@@ -65,8 +65,8 @@ def test_formula_on_formula():
 
 
 @pytest.mark.parametrize(
-    'x',
-    ['H2O', '10H2O', '2(CuO2(H2O)2)10', 'Cu20+H2', 'H' * 15, 'AuBC2', ''])
+    'x', ['H2O', '10H2O', '2(CuO2(H2O)2)10', 'Cu20+H2', 'H' * 15, 'AuBC2', '']
+)
 def test_formulas(x):
     f = Formula(x)
     y = str(f)

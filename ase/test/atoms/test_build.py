@@ -4,7 +4,6 @@ from ase import Atom, Atoms
 
 
 def test_build():
-
     a = Atoms([Atom('Cu')])
     a.positions[:] += 1.0
     print(a.get_positions(), a.positions)

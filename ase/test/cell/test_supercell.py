@@ -10,12 +10,12 @@ a = 4.1
 
 @pytest.fixture()
 def atoms():
-    atoms = bulk("Au", a=a)
+    atoms = bulk('Au', a=a)
     return atoms
 
 
 def test_supercell(atoms):
-    assert atoms.cell.get_bravais_lattice().name == "FCC"
+    assert atoms.cell.get_bravais_lattice().name == 'FCC'
 
     # Since FCC and BCC are reciprocal, their product is cubic:
     P = BCC(2.0).tocell()
@@ -28,11 +28,11 @@ def test_supercell(atoms):
     assert len(cubatoms) == 4
     assert cubatoms.cell.orthorhombic
     assert np.allclose(cubatoms.cell.lengths(), a)
-    assert cubatoms.cell.get_bravais_lattice().name == "CUB"
+    assert cubatoms.cell.get_bravais_lattice().name == 'CUB'
 
 
 def test_bcc_to_cub_transformation():
-    bcc = bulk("Fe", a=a)
+    bcc = bulk('Fe', a=a)
     P = FCC(2.0).tocell()
     assert np.allclose(np.linalg.det(P), 2)
     cubatoms = make_supercell(bcc, P)
@@ -44,7 +44,7 @@ def getenergy(atoms, eref=None):
     e = atoms.get_potential_energy() / len(atoms)
     if eref is not None:
         err = abs(e - eref)
-        print("natoms", len(atoms), "err", err)
+        print('natoms', len(atoms), 'err', err)
         assert err < 1e-12, err
     return e
 
@@ -77,7 +77,7 @@ def test_random_transformations(atoms):
 
 
 def test_supercell_issue_938(atoms):
-    assert atoms.cell.get_bravais_lattice().name == "FCC"
+    assert atoms.cell.get_bravais_lattice().name == 'FCC'
 
     # Since FCC and BCC are reciprocal, their product is cubic:
     P = BCC(2.0).tocell()

@@ -5,7 +5,6 @@ from ase.io import iread
 
 
 def test_nomad(datadir):
-
     path = datadir / 'nomad-images.nomad-json'
     images = list(iread(path))
     assert len(images) == 3

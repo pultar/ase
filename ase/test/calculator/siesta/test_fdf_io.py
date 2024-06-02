@@ -7,7 +7,6 @@ from ase.io.siesta import _read_fdf_lines
 @pytest.mark.calculator_lite()
 @pytest.mark.calculator('siesta')
 def test_fdf_io(factory):
-
     atoms = bulk('Ti')
     calc = factory.calc()
     atoms.calc = calc

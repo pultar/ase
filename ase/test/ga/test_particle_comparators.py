@@ -13,7 +13,6 @@ def make_ico(sym):
 
 
 def test_particle_comparators(seed):
-
     # set up the random number generator
     rng = np.random.RandomState(seed)
 
@@ -38,5 +37,5 @@ def test_particle_comparators(seed):
     hard_comp = NNMatComparator(d=100)
     assert hard_comp.looks_like(ico1, a3)
 
-    soft_comp = NNMatComparator(d=.0001)
+    soft_comp = NNMatComparator(d=0.0001)
     assert not soft_comp.looks_like(ico1, a3)

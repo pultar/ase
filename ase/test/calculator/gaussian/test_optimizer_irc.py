@@ -8,11 +8,11 @@ from ase.optimize import LBFGS
 
 @pytest.fixture()
 def atoms():
-    return Atoms('CHO',
-                 [[0.0, 0.0, 0.0],
-                  [0.0, 0.0, 1.35],
-                  [1.178513, 0.0, -0.416662]],
-                 magmoms=[0.5, 0.0, 0.5])
+    return Atoms(
+        'CHO',
+        [[0.0, 0.0, 0.0], [0.0, 0.0, 1.35], [1.178513, 0.0, -0.416662]],
+        magmoms=[0.5, 0.0, 0.5],
+    )
 
 
 def get_calc(**kwargs):
@@ -32,7 +32,7 @@ def test_optimizer(atoms, gaussian_factory):
     with LBFGS(atoms) as opt_ase:
         opt_ase.run(fmax=1e-2)
     e_aseopt = atoms.get_potential_energy()
-    assert e_gaussopt - e_aseopt == pytest.approx(0., abs=1e-3)
+    assert e_gaussopt - e_aseopt == pytest.approx(0.0, abs=1e-3)
 
 
 def test_irc(atoms, gaussian_factory):

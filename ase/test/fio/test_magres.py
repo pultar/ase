@@ -6,7 +6,6 @@ from ase.io import read, write
 
 
 def test_magres():
-
     # Test with fictional data
     si2 = bulk('Si')
 
@@ -19,19 +18,20 @@ def test_magres():
     calc.results['sus'] = np.eye(3) * 2
     si2.calc = calc
 
-    si2.info['magres_units'] = {'ms': 'ppm',
-                                'efg': 'au',
-                                'sus': '10^-6.cm^3.mol^-1'}
+    si2.info['magres_units'] = {
+        'ms': 'ppm',
+        'efg': 'au',
+        'sus': '10^-6.cm^3.mol^-1',
+    }
 
     write('si2_test.magres', si2)
     si2 = read('si2_test.magres')
 
-    assert (np.trace(si2.get_array('ms')[0]) == 3)
-    assert (np.all(np.isclose(si2.get_array('efg')[:, 2, 2], -2)))
-    assert (np.all(np.isclose(si2.calc.results['sus'], np.eye(3) * 2)))
+    assert np.trace(si2.get_array('ms')[0]) == 3
+    assert np.all(np.isclose(si2.get_array('efg')[:, 2, 2], -2))
+    assert np.all(np.isclose(si2.calc.results['sus'], np.eye(3) * 2))
 
 
 def test_magres_large(datadir):
-
     # Test with big structure
-    assert len(read(datadir / "large_atoms.magres")) == 240
+    assert len(read(datadir / 'large_atoms.magres')) == 240

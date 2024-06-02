@@ -32,11 +32,13 @@ def url(mysql_port):
         # DB_NAME = os.environ.get('MYSQL_DB_NAME', None)
 
     if db_url is None:
-        msg = ('Not on GitLab CI server. To run this test '
-               'host, username, password and database name '
-               'must be in the environment variables '
-               'MYSQL_HOST, MYSQL_USER, MYSQL_PASSWD and '
-               'MYSQL_DB_NAME, respectively.')
+        msg = (
+            'Not on GitLab CI server. To run this test '
+            'host, username, password and database name '
+            'must be in the environment variables '
+            'MYSQL_HOST, MYSQL_USER, MYSQL_PASSWD and '
+            'MYSQL_DB_NAME, respectively.'
+        )
         pytest.skip(msg)
     return db_url
 

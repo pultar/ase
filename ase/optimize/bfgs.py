@@ -62,15 +62,23 @@ class BFGS(Optimizer):
             self.maxstep = maxstep
 
         if self.maxstep > 1.0:
-            warnings.warn('You are using a *very* large value for '
-                          'the maximum step size: %.1f Å' % self.maxstep)
+            warnings.warn(
+                'You are using a *very* large value for '
+                'the maximum step size: %.1f Å' % self.maxstep
+            )
 
         self.alpha = alpha
         if self.alpha is None:
             self.alpha = self.defaults['alpha']
-        Optimizer.__init__(self, atoms=atoms, restart=restart,
-                           logfile=logfile, trajectory=trajectory,
-                           master=master, append_trajectory=append_trajectory)
+        Optimizer.__init__(
+            self,
+            atoms=atoms,
+            restart=restart,
+            logfile=logfile,
+            trajectory=trajectory,
+            master=master,
+            append_trajectory=append_trajectory,
+        )
 
     def initialize(self):
         # initial hessian
@@ -83,8 +91,13 @@ class BFGS(Optimizer):
     def read(self):
         file = self.load()
         if len(file) == 5:
-            (self.H, self.pos0, self.forces0, self.maxstep,
-             self.atoms.orig_cell) = file
+            (
+                self.H,
+                self.pos0,
+                self.forces0,
+                self.maxstep,
+                self.atoms.orig_cell,
+            ) = file
         else:
             self.H, self.pos0, self.forces0, self.maxstep = file
 
@@ -99,8 +112,15 @@ class BFGS(Optimizer):
         dpos = self.determine_step(dpos, steplengths)
         optimizable.set_positions(pos + dpos)
         if isinstance(self.atoms, UnitCellFilter):
-            self.dump((self.H, self.pos0, self.forces0, self.maxstep,
-                       self.atoms.orig_cell))
+            self.dump(
+                (
+                    self.H,
+                    self.pos0,
+                    self.forces0,
+                    self.maxstep,
+                    self.atoms.orig_cell,
+                )
+            )
         else:
             self.dump((self.H, self.pos0, self.forces0, self.maxstep))
 
@@ -122,7 +142,7 @@ class BFGS(Optimizer):
         #         self.logfile.flush()
 
         dpos = np.dot(V, np.dot(forces, V) / np.fabs(omega)).reshape((-1, 3))
-        steplengths = (dpos**2).sum(1)**0.5
+        steplengths = (dpos**2).sum(1) ** 0.5
         self.pos0 = pos.flat.copy()
         self.forces0 = forces.copy()
         return dpos, steplengths
@@ -165,6 +185,7 @@ class BFGS(Optimizer):
         """Initialize hessian from old trajectory."""
         if isinstance(traj, str):
             from ase.io.trajectory import Trajectory
+
             traj = Trajectory(traj, 'r')
         self.H = None
         atoms = traj[0]

@@ -30,7 +30,7 @@ def test_cutoff_skin(KIM, testdir):
     had failed to ever register as a neighbor, then we'll get zero once
     again.
     """
-    calc = KIM("ex_model_Ar_P_Morse_07C")
+    calc = KIM('ex_model_Ar_P_Morse_07C')
 
     # Create dimer with separation just beyond cutoff distance.  We *want*
     # these atoms to register as neighbors of one another since they fall
@@ -38,7 +38,7 @@ def test_cutoff_skin(KIM, testdir):
     model_cutoff = 8.15
     skin_distance = 0.2 * model_cutoff
     distance_orig = model_cutoff + 0.1 * skin_distance
-    atoms = Atoms("Ar2", positions=[[0, 0, 0], [distance_orig, 0, 0]])
+    atoms = Atoms('Ar2', positions=[[0, 0, 0], [distance_orig, 0, 0]])
     atoms.calc = calc
 
     # Get energy -- should be zero

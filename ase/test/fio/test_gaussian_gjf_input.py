@@ -7,6 +7,7 @@ Notes
 -----
 * 23/5/24 -> Wrote test for testing the charge and mutliplicity inputs.
 """
+
 import warnings
 from io import StringIO
 import pytest
@@ -65,7 +66,7 @@ FRAGMENT_GJF_FILE_SUFFIX = """
 
 
 # This is the original charge and multiplicity format.
-ORIGINAL_CHARGE_MULTIPLICITY = "0 1"
+ORIGINAL_CHARGE_MULTIPLICITY = '0 1'
 
 
 # This is the fragment charge and multiplicity format that should work.
@@ -102,16 +103,18 @@ FRAGMENT_CHARGE_MULTIPLICITY_FAIL_4 = '0 1 0 1 0 1 0'
 def _quiet_parse(input_string):
     """Contains the code for reading in the Gaussian input file into ASE."""
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=UserWarning)
-        return read(StringIO(input_string), format="gaussian-in")
+        warnings.simplefilter('ignore', category=UserWarning)
+        return read(StringIO(input_string), format='gaussian-in')
 
 
 @pytest.fixture()
 def reference_system():
     """This is the reference system to compare tests to."""
-    return _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                        ORIGINAL_CHARGE_MULTIPLICITY +
-                        ORIGINAL_GJF_FILE_SUFFIX)
+    return _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + ORIGINAL_CHARGE_MULTIPLICITY
+        + ORIGINAL_GJF_FILE_SUFFIX
+    )
 
 
 # -----------------------------------------------------------
@@ -120,9 +123,11 @@ def reference_system():
 def test_original_gjf_success(reference_system):
     """Test to make sure an example gjf file that has been written
     correctly is being read in correctly."""
-    atoms = _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                         ORIGINAL_CHARGE_MULTIPLICITY +
-                         ORIGINAL_GJF_FILE_SUFFIX)
+    atoms = _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + ORIGINAL_CHARGE_MULTIPLICITY
+        + ORIGINAL_GJF_FILE_SUFFIX
+    )
     assert compare_atoms(atoms, reference_system) == []
 
 
@@ -132,36 +137,44 @@ def test_original_gjf_success(reference_system):
 def test_fragment_gjf_success_1(reference_system):
     """Test to make sure the first example gjf file that has been written
     correctly and contains fragments is being read in correctly."""
-    atoms = _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                         FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_1 +
-                         FRAGMENT_GJF_FILE_SUFFIX)
+    atoms = _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_1
+        + FRAGMENT_GJF_FILE_SUFFIX
+    )
     assert compare_atoms(atoms, reference_system) == []
 
 
 def test_fragment_gjf_success_2(reference_system):
     """Test to make sure the second example gjf file that has been written
     correctly and contains fragments is being read in correctly."""
-    atoms = _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                         FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_2 +
-                         FRAGMENT_GJF_FILE_SUFFIX)
+    atoms = _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_2
+        + FRAGMENT_GJF_FILE_SUFFIX
+    )
     assert compare_atoms(atoms, reference_system) == []
 
 
 def test_fragment_gjf_success_3(reference_system):
     """Test to make sure the third example gjf file that has been written
     correctly and contains fragments is being read in correctly."""
-    atoms = _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                         FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_3 +
-                         FRAGMENT_GJF_FILE_SUFFIX)
+    atoms = _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_3
+        + FRAGMENT_GJF_FILE_SUFFIX
+    )
     assert compare_atoms(atoms, reference_system) == []
 
 
 def test_fragment_gjf_success_4(reference_system):
     """Test to make sure the fourth example gjf file that has been written
     correctly and contains fragments is being read in correctly."""
-    atoms = _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                         FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_4 +
-                         FRAGMENT_GJF_FILE_SUFFIX)
+    atoms = _quiet_parse(
+        ORIGINAL_GJF_FILE_PREFIX
+        + FRAGMENT_CHARGE_MULTIPLICITY_SUCCESS_4
+        + FRAGMENT_GJF_FILE_SUFFIX
+    )
     assert compare_atoms(atoms, reference_system) == []
 
 
@@ -172,18 +185,22 @@ def test_original_gjf_fail_1():
     """Test to make sure the first example gjf file that is expected to fail
     does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     ORIGINAL_CHARGE_MULTIPLICITY_FAIL_1 +
-                     ORIGINAL_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + ORIGINAL_CHARGE_MULTIPLICITY_FAIL_1
+            + ORIGINAL_GJF_FILE_SUFFIX
+        )
 
 
 def test_original_gjf_fail_2():
     """Test to make sure the second example gjf file that is expected to fail
     does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     ORIGINAL_CHARGE_MULTIPLICITY_FAIL_2 +
-                     ORIGINAL_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + ORIGINAL_CHARGE_MULTIPLICITY_FAIL_2
+            + ORIGINAL_GJF_FILE_SUFFIX
+        )
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -193,36 +210,44 @@ def test_fragment_gjf_fail_1():
     """Test to make sure the first example gjf file that is expected to fail
     and contains fragments does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     FRAGMENT_CHARGE_MULTIPLICITY_FAIL_1 +
-                     FRAGMENT_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + FRAGMENT_CHARGE_MULTIPLICITY_FAIL_1
+            + FRAGMENT_GJF_FILE_SUFFIX
+        )
 
 
 def test_fragment_gjf_fail_2():
     """Test to make sure the second example gjf file that is expected to fail
     and contains fragments does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     FRAGMENT_CHARGE_MULTIPLICITY_FAIL_2 +
-                     FRAGMENT_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + FRAGMENT_CHARGE_MULTIPLICITY_FAIL_2
+            + FRAGMENT_GJF_FILE_SUFFIX
+        )
 
 
 def test_fragment_gjf_fail_3():
     """Test to make sure the third example gjf file that is expected to fail
     and contains fragments does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     FRAGMENT_CHARGE_MULTIPLICITY_FAIL_3 +
-                     FRAGMENT_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + FRAGMENT_CHARGE_MULTIPLICITY_FAIL_3
+            + FRAGMENT_GJF_FILE_SUFFIX
+        )
 
 
 def test_fragment_gjf_fail_4():
     """Test to make sure the fourth example gjf file that is expected to fail
     and contains fragments does infact fail based on the ParseError."""
     with pytest.raises(ParseError):
-        _quiet_parse(ORIGINAL_GJF_FILE_PREFIX +
-                     FRAGMENT_CHARGE_MULTIPLICITY_FAIL_4 +
-                     FRAGMENT_GJF_FILE_SUFFIX)
+        _quiet_parse(
+            ORIGINAL_GJF_FILE_PREFIX
+            + FRAGMENT_CHARGE_MULTIPLICITY_FAIL_4
+            + FRAGMENT_GJF_FILE_SUFFIX
+        )
 
 
 # -----------------------------------------------------------

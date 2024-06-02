@@ -16,7 +16,6 @@ VMD (http://www.ks.uiuc.edu/Research/vmd/)
 or Ovito (http://www.ovito.org/, starting with version 2.3).
 """
 
-
 import collections
 import os
 import warnings
@@ -56,14 +55,30 @@ class NetCDFTrajectory:
     _cell_lengths_var = 'cell_lengths'
     _cell_angles_var = 'cell_angles'
 
-    _default_vars = reduce(lambda x, y: x + y,
-                           [_numbers_var, [_positions_var], [_velocities_var],
-                            [_cell_origin_var], [_cell_lengths_var],
-                            [_cell_angles_var]])
+    _default_vars = reduce(
+        lambda x, y: x + y,
+        [
+            _numbers_var,
+            [_positions_var],
+            [_velocities_var],
+            [_cell_origin_var],
+            [_cell_lengths_var],
+            [_cell_angles_var],
+        ],
+    )
 
-    def __init__(self, filename, mode='r', atoms=None, types_to_numbers=None,
-                 double=True, netcdf_format='NETCDF3_CLASSIC', keep_open=True,
-                 index_var='id', chunk_size=1000000):
+    def __init__(
+        self,
+        filename,
+        mode='r',
+        atoms=None,
+        types_to_numbers=None,
+        double=True,
+        netcdf_format='NETCDF3_CLASSIC',
+        keep_open=True,
+        index_var='id',
+        chunk_size=1000000,
+    ):
         """
         A NetCDFTrajectory can be created in read, write or append mode.
 
@@ -128,7 +143,7 @@ class NetCDFTrajectory:
         self.chunk_size = chunk_size
 
         self.numbers = None
-        self.pre_observers = []   # Callback functions before write
+        self.pre_observers = []  # Callback functions before write
         self.post_observers = []  # Callback functions after write are called
 
         self.has_header = False
@@ -182,12 +197,14 @@ class NetCDFTrajectory:
         For internal use only.
         """
         import netCDF4
+
         if self.nc is not None:
             return
         if self.mode == 'a' and not os.path.exists(self.filename):
             self.mode = 'w'
-        self.nc = netCDF4.Dataset(self.filename, self.mode,
-                                  format=self.netcdf_format)
+        self.nc = netCDF4.Dataset(
+            self.filename, self.mode, format=self.netcdf_format
+        )
 
         self.frame = 0
         if self.mode == 'r' or self.mode == 'a':
@@ -273,18 +290,22 @@ class NetCDFTrajectory:
         self._get_variable(self._positions_var)[i] = atoms.get_positions()
         if atoms.has('momenta'):
             self._add_velocities()
-            self._get_variable(self._velocities_var)[i] = \
+            self._get_variable(self._velocities_var)[i] = (
                 atoms.get_momenta() / atoms.get_masses().reshape(-1, 1)
+            )
         a, b, c, alpha, beta, gamma = atoms.cell.cellpar()
         if np.any(np.logical_not(atoms.pbc)):
-            warnings.warn('Atoms have nonperiodic directions. Cell lengths in '
-                          'these directions are lost and will be '
-                          'shrink-wrapped when reading the NetCDF file.')
+            warnings.warn(
+                'Atoms have nonperiodic directions. Cell lengths in '
+                'these directions are lost and will be '
+                'shrink-wrapped when reading the NetCDF file.'
+            )
         cell_lengths = np.array([a, b, c]) * atoms.pbc
         self._get_variable(self._cell_lengths_var)[i] = cell_lengths
         self._get_variable(self._cell_angles_var)[i] = [alpha, beta, gamma]
-        self._get_variable(self._cell_origin_var)[i] = \
+        self._get_variable(self._cell_origin_var)[i] = (
             atoms.get_celldisp().reshape(3)
+        )
         if arrays is not None:
             for array in arrays:
                 data = atoms.get_array(array)
@@ -292,9 +313,11 @@ class NetCDFTrajectory:
                     # This field exists but is per file data. Check that the
                     # data remains consistent.
                     if np.any(self._get_variable(array) != data):
-                        raise ValueError('Trying to write Atoms object with '
-                                         'incompatible data for the {} '
-                                         'array.'.format(array))
+                        raise ValueError(
+                            'Trying to write Atoms object with '
+                            'incompatible data for the {} '
+                            'array.'.format(array)
+                        )
                 else:
                     self._add_array(atoms, array, data.dtype, data.shape)
                     self._get_variable(array)[i] = data
@@ -317,9 +340,11 @@ class NetCDFTrajectory:
                 # This field exists but is per file data. Check that the
                 # data remains consistent.
                 if np.any(self._get_variable(array) != data):
-                    raise ValueError('Trying to write Atoms object with '
-                                     'incompatible data for the {} '
-                                     'array.'.format(array))
+                    raise ValueError(
+                        'Trying to write Atoms object with '
+                        'incompatible data for the {} '
+                        'array.'.format(array)
+                    )
             else:
                 self._add_array(atoms, array, data.dtype, data.shape)
                 self._get_variable(array)[frame] = data
@@ -331,7 +356,7 @@ class NetCDFTrajectory:
         self.nc.ConventionVersion = '1.0'
         self.nc.program = 'ASE'
         self.nc.programVersion = ase.__version__
-        self.nc.title = "MOL"
+        self.nc.title = 'MOL'
 
         if self._frame_dim not in self.nc.dimensions:
             self.nc.createDimension(self._frame_dim, None)
@@ -348,43 +373,68 @@ class NetCDFTrajectory:
 
         # Self-describing variables from AMBER convention
         if not self._has_variable(self._spatial_var):
-            self.nc.createVariable(self._spatial_var, 'S1',
-                                   (self._spatial_dim,))
+            self.nc.createVariable(
+                self._spatial_var, 'S1', (self._spatial_dim,)
+            )
             self.nc.variables[self._spatial_var][:] = ['x', 'y', 'z']
         if not self._has_variable(self._cell_spatial_var):
-            self.nc.createVariable(self._cell_spatial_dim, 'S1',
-                                   (self._cell_spatial_dim,))
+            self.nc.createVariable(
+                self._cell_spatial_dim, 'S1', (self._cell_spatial_dim,)
+            )
             self.nc.variables[self._cell_spatial_var][:] = ['a', 'b', 'c']
         if not self._has_variable(self._cell_angular_var):
-            self.nc.createVariable(self._cell_angular_var, 'S1',
-                                   (self._cell_angular_dim, self._label_dim,))
+            self.nc.createVariable(
+                self._cell_angular_var,
+                'S1',
+                (
+                    self._cell_angular_dim,
+                    self._label_dim,
+                ),
+            )
             self.nc.variables[self._cell_angular_var][0] = [x for x in 'alpha']
             self.nc.variables[self._cell_angular_var][1] = [x for x in 'beta ']
             self.nc.variables[self._cell_angular_var][2] = [x for x in 'gamma']
 
         if not self._has_variable(self._numbers_var):
-            self.nc.createVariable(self._numbers_var[0], 'i',
-                                   (self._frame_dim, self._atom_dim,))
+            self.nc.createVariable(
+                self._numbers_var[0],
+                'i',
+                (
+                    self._frame_dim,
+                    self._atom_dim,
+                ),
+            )
         if not self._has_variable(self._positions_var):
-            self.nc.createVariable(self._positions_var, 'f4',
-                                   (self._frame_dim, self._atom_dim,
-                                    self._spatial_dim))
+            self.nc.createVariable(
+                self._positions_var,
+                'f4',
+                (self._frame_dim, self._atom_dim, self._spatial_dim),
+            )
             self.nc.variables[self._positions_var].units = 'Angstrom'
-            self.nc.variables[self._positions_var].scale_factor = 1.
+            self.nc.variables[self._positions_var].scale_factor = 1.0
         if not self._has_variable(self._cell_lengths_var):
-            self.nc.createVariable(self._cell_lengths_var, 'd',
-                                   (self._frame_dim, self._cell_spatial_dim))
+            self.nc.createVariable(
+                self._cell_lengths_var,
+                'd',
+                (self._frame_dim, self._cell_spatial_dim),
+            )
             self.nc.variables[self._cell_lengths_var].units = 'Angstrom'
-            self.nc.variables[self._cell_lengths_var].scale_factor = 1.
+            self.nc.variables[self._cell_lengths_var].scale_factor = 1.0
         if not self._has_variable(self._cell_angles_var):
-            self.nc.createVariable(self._cell_angles_var, 'd',
-                                   (self._frame_dim, self._cell_angular_dim))
+            self.nc.createVariable(
+                self._cell_angles_var,
+                'd',
+                (self._frame_dim, self._cell_angular_dim),
+            )
             self.nc.variables[self._cell_angles_var].units = 'degree'
         if not self._has_variable(self._cell_origin_var):
-            self.nc.createVariable(self._cell_origin_var, 'd',
-                                   (self._frame_dim, self._cell_spatial_dim))
+            self.nc.createVariable(
+                self._cell_origin_var,
+                'd',
+                (self._frame_dim, self._cell_spatial_dim),
+            )
             self.nc.variables[self._cell_origin_var].units = 'Angstrom'
-            self.nc.variables[self._cell_origin_var].scale_factor = 1.
+            self.nc.variables[self._cell_origin_var].scale_factor = 1.0
 
     def _add_time(self):
         if not self._has_variable(self._time_var):
@@ -392,12 +442,15 @@ class NetCDFTrajectory:
 
     def _add_velocities(self):
         if not self._has_variable(self._velocities_var):
-            self.nc.createVariable(self._velocities_var, 'f4',
-                                   (self._frame_dim, self._atom_dim,
-                                    self._spatial_dim))
-            self.nc.variables[self._positions_var].units = \
-                'Angstrom/Femtosecond'
-            self.nc.variables[self._positions_var].scale_factor = 1.
+            self.nc.createVariable(
+                self._velocities_var,
+                'f4',
+                (self._frame_dim, self._atom_dim, self._spatial_dim),
+            )
+            self.nc.variables[
+                self._positions_var
+            ].units = 'Angstrom/Femtosecond'
+            self.nc.variables[self._positions_var].scale_factor = 1.0
 
     def _add_array(self, atoms, array_name, type, shape):
         if not self._has_variable(array_name):
@@ -413,8 +466,10 @@ class NetCDFTrajectory:
                         self.nc.createDimension(self._Voigt_dim, 6)
                     dims += [self._Voigt_dim]
                 else:
-                    raise TypeError("Don't know how to dump array of shape {}"
-                                    " into NetCDF trajectory.".format(shape))
+                    raise TypeError(
+                        "Don't know how to dump array of shape {}"
+                        ' into NetCDF trajectory.'.format(shape)
+                    )
             if hasattr(type, 'char'):
                 t = self.dtype_conv.get(type.char, type)
             else:
@@ -429,13 +484,16 @@ class NetCDFTrajectory:
             if exc:
                 raise RuntimeError(
                     'None of the variables {} was found in the '
-                    'NetCDF trajectory.'.format(', '.join(name)))
+                    'NetCDF trajectory.'.format(', '.join(name))
+                )
         else:
             if name in self.nc.variables:
                 return self.nc.variables[name]
             if exc:
-                raise RuntimeError('Variables {} was found in the NetCDF '
-                                   'trajectory.'.format(name))
+                raise RuntimeError(
+                    'Variables {} was found in the NetCDF '
+                    'trajectory.'.format(name)
+                )
         return None
 
     def _has_variable(self, name):
@@ -460,8 +518,9 @@ class NetCDFTrajectory:
                 # If this is a large data set, only read chunks from it to
                 # reduce memory footprint of the NetCDFTrajectory reader.
                 for i in range((s - 1) // self.chunk_size + 1):
-                    sl = slice(i * self.chunk_size,
-                               min((i + 1) * self.chunk_size, s))
+                    sl = slice(
+                        i * self.chunk_size, min((i + 1) * self.chunk_size, s)
+                    )
                     data[index[sl]] = var[frame, sl]
         else:
             data = np.zeros(var.shape, dtype=var.dtype)
@@ -472,8 +531,9 @@ class NetCDFTrajectory:
                 # If this is a large data set, only read chunks from it to
                 # reduce memory footprint of the NetCDFTrajectory reader.
                 for i in range((s - 1) // self.chunk_size + 1):
-                    sl = slice(i * self.chunk_size,
-                               min((i + 1) * self.chunk_size, s))
+                    sl = slice(
+                        i * self.chunk_size, min((i + 1) * self.chunk_size, s)
+                    )
                     data[index[sl]] = var[sl]
         return data
 
@@ -507,20 +567,23 @@ class NetCDFTrajectory:
         N = self._len()
         if 0 <= i < N:
             # Non-periodic boundaries have cell_length == 0.0
-            cell_lengths = \
-                np.array(self.nc.variables[self._cell_lengths_var][i][:])
+            cell_lengths = np.array(
+                self.nc.variables[self._cell_lengths_var][i][:]
+            )
             pbc = np.abs(cell_lengths > 1e-6)
 
             # Do we have a cell origin?
             if self._has_variable(self._cell_origin_var):
                 origin = np.array(
-                    self.nc.variables[self._cell_origin_var][i][:])
+                    self.nc.variables[self._cell_origin_var][i][:]
+                )
             else:
                 origin = np.zeros([3], dtype=float)
 
             # Do we have an index variable?
-            if (self.index_var is not None and
-                    self._has_variable(self.index_var)):
+            if self.index_var is not None and self._has_variable(
+                self.index_var
+            ):
                 index = np.array(self.nc.variables[self.index_var][i][:])
                 # The index variable can be non-consecutive, we here construct
                 # a consecutive one.
@@ -530,8 +593,9 @@ class NetCDFTrajectory:
                 consecutive_index = np.arange(self.n_atoms)
 
             # Read element numbers
-            self.numbers = self._get_data(self._numbers_var, i,
-                                          consecutive_index, exc=False)
+            self.numbers = self._get_data(
+                self._numbers_var, i, consecutive_index, exc=False
+            )
             if self.numbers is None:
                 self.numbers = np.ones(self.n_atoms, dtype=int)
             if self.types_to_numbers is not None:
@@ -543,8 +607,9 @@ class NetCDFTrajectory:
             self.masses = atomic_masses[self.numbers]
 
             # Read positions
-            positions = self._get_data(self._positions_var, i,
-                                       consecutive_index)
+            positions = self._get_data(
+                self._positions_var, i, consecutive_index
+            )
 
             # Determine cell size for non-periodic directions from shrink
             # wrapped cell.
@@ -554,13 +619,14 @@ class NetCDFTrajectory:
 
             # Construct cell shape from cell lengths and angles
             cell = cellpar_to_cell(
-                list(cell_lengths) +
-                list(self.nc.variables[self._cell_angles_var][i])
+                list(cell_lengths)
+                + list(self.nc.variables[self._cell_angles_var][i])
             )
 
             # Compute momenta from velocities (if present)
-            momenta = self._get_data(self._velocities_var, i,
-                                     consecutive_index, exc=False)
+            momenta = self._get_data(
+                self._velocities_var, i, consecutive_index, exc=False
+            )
             if momenta is not None:
                 momenta *= self.masses.reshape(-1, 1)
 
@@ -577,16 +643,18 @@ class NetCDFTrajectory:
                 momenta=momenta,
                 masses=self.masses,
                 pbc=pbc,
-                info=info
+                info=info,
             )
 
             # Attach additional arrays found in the NetCDF file
             for name in self.extra_per_frame_vars:
-                atoms.set_array(name, self._get_data(name, i,
-                                                     consecutive_index))
+                atoms.set_array(
+                    name, self._get_data(name, i, consecutive_index)
+                )
             for name in self.extra_per_file_vars:
-                atoms.set_array(name, self._get_data(name, i,
-                                                     consecutive_index))
+                atoms.set_array(
+                    name, self._get_data(name, i, consecutive_index)
+                )
             self._close()
             return atoms
 

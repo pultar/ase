@@ -12,7 +12,7 @@ def mysql_port():
 
 @pytest.fixture()
 def get_db_name(mysql_port):
-    """ Fixture that returns a function to get the test db name
+    """Fixture that returns a function to get the test db name
     for the different supported db types.
 
     Args:
@@ -21,6 +21,7 @@ def get_db_name(mysql_port):
         clean_db (bool): Whether to clean all entries from the db. Useful
             for reusing the database across multiple tests. Defaults to True.
     """
+
     def _func(dbtype, clean_db=True):
         name = None
 
@@ -57,7 +58,7 @@ def get_db_name(mysql_port):
             pytest.skip('Test requires environment variables')
 
         if clean_db:
-            if dbtype in ["postgresql", "mysql", "mariadb"]:
+            if dbtype in ['postgresql', 'mysql', 'mariadb']:
                 c = connect(name)
                 c.delete([row.id for row in c.select()])
 

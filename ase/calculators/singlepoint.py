@@ -1,8 +1,11 @@
 import numpy as np
 
-from ase.calculators.calculator import (Calculator,
-                                        PropertyNotImplementedError,
-                                        PropertyNotPresent, all_properties)
+from ase.calculators.calculator import (
+    Calculator,
+    PropertyNotImplementedError,
+    PropertyNotPresent,
+    all_properties,
+)
 from ase.outputs import Properties
 from ase.utils import lazyproperty
 
@@ -47,7 +50,8 @@ class SinglePointCalculator(Calculator):
         if name not in self.results or self.check_state(atoms):
             if allow_calculation:
                 raise PropertyNotImplementedError(
-                    f'The property "{name}" is not available.')
+                    f'The property "{name}" is not available.'
+                )
             return None
 
         result = self.results[name]
@@ -81,17 +85,27 @@ def arrays_to_kpoints(eigenvalues, occupations, weights):
     for s in range(nspins):
         for k in range(nkpts):
             kpt = SinglePointKPoint(
-                weight=weights[k], s=s, k=k,
-                eps_n=eigenvalues[s, k], f_n=occupations[s, k])
+                weight=weights[k],
+                s=s,
+                k=k,
+                eps_n=eigenvalues[s, k],
+                f_n=occupations[s, k],
+            )
             kpts.append(kpt)
     return kpts
 
 
 class SinglePointDFTCalculator(SinglePointCalculator):
-    def __init__(self, atoms,
-                 efermi=None, bzkpts=None, ibzkpts=None, bz2ibz=None,
-                 kpts=None,
-                 **results):
+    def __init__(
+        self,
+        atoms,
+        efermi=None,
+        bzkpts=None,
+        ibzkpts=None,
+        bz2ibz=None,
+        kpts=None,
+        **results,
+    ):
         self.bz_kpts = bzkpts
         self.ibz_kpts = ibzkpts
         self.bz2ibz = bz2ibz
@@ -153,7 +167,7 @@ class SinglePointDFTCalculator(SinglePointCalculator):
         return None
 
     def get_k_point_weights(self):
-        """ Retunrs the weights of the k points """
+        """Retunrs the weights of the k points"""
         if self.kpts is not None:
             weights = []
             for kpoint in self.kpts:
@@ -200,8 +214,8 @@ class SinglePointDFTCalculator(SinglePointCalculator):
             raise RuntimeError(f'No k-point with spin {spin}')
         if self.eFermi is None:
             raise RuntimeError('Fermi level is not available')
-        eH = -1.e32
-        eL = 1.e32
+        eH = -1.0e32
+        eL = 1.0e32
         for kpt in self.kpts:
             if kpt.s == spin:
                 for e in kpt.eps_n:
@@ -224,6 +238,7 @@ def propertygetter(func):
         if value is None:
             raise PropertyNotPresent(func.__name__)
         return value
+
     return lazyproperty(getter)
 
 
@@ -275,8 +290,13 @@ class OutputPropertyWrapper:
 
     def properties(self) -> Properties:
         dct = {}
-        for name in ['eigenvalues', 'occupations', 'fermi_level',
-                     'kpoint_weights', 'ibz_kpoints']:
+        for name in [
+            'eigenvalues',
+            'occupations',
+            'fermi_level',
+            'kpoint_weights',
+            'ibz_kpoints',
+        ]:
             try:
                 value = getattr(self, name)
             except PropertyNotPresent:

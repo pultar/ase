@@ -69,8 +69,11 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         add = parser.add_argument
-        add('name', metavar='input-file',
-            help='Input file containing unit cell.')
+        add(
+            'name',
+            metavar='input-file',
+            help='Input file containing unit cell.',
+        )
         add('output', nargs='?', help='Write plot to file (.png, .svg, ...).')
 
     @staticmethod

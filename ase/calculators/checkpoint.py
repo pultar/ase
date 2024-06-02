@@ -86,12 +86,19 @@ class Checkpoint:
             except NoCheckpoint:
                 retvals = func(*args, **kwargs)
                 if isinstance(retvals, tuple):
-                    self.save(*retvals, atoms=atoms,
-                              checkpoint_func_name=checkpoint_func_name)
+                    self.save(
+                        *retvals,
+                        atoms=atoms,
+                        checkpoint_func_name=checkpoint_func_name,
+                    )
                 else:
-                    self.save(retvals, atoms=atoms,
-                              checkpoint_func_name=checkpoint_func_name)
+                    self.save(
+                        retvals,
+                        atoms=atoms,
+                        checkpoint_func_name=checkpoint_func_name,
+                    )
             return retvals
+
         return decorated_func
 
     def _increase_checkpoint_id(self):
@@ -99,14 +106,16 @@ class Checkpoint:
             self.checkpoint_id += [1]
         else:
             self.checkpoint_id[-1] += 1
-        self.logfile.write('Entered checkpoint region '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            'Entered checkpoint region ' '{}.\n'.format(self.checkpoint_id)
+        )
 
         self.in_checkpointed_region = True
 
     def _decrease_checkpoint_id(self):
-        self.logfile.write('Leaving checkpoint region '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            'Leaving checkpoint region ' '{}.\n'.format(self.checkpoint_id)
+        )
         if not self.in_checkpointed_region:
             self.checkpoint_id = self.checkpoint_id[:-1]
             assert len(self.checkpoint_id) >= 1
@@ -143,8 +152,7 @@ class Checkpoint:
             data = dbentry.data
             atomsi = data['checkpoint_atoms_args_index']
             i = 0
-            while (i == atomsi or
-                   f'{self._value_prefix}{i}' in data):
+            while i == atomsi or f'{self._value_prefix}{i}' in data:
                 if i == atomsi:
                     newatoms = dbentry.toatoms()
                     if atoms is not None:
@@ -155,8 +163,11 @@ class Checkpoint:
                     retvals += [data[f'{self._value_prefix}{i}']]
                 i += 1
 
-        self.logfile.write('Successfully restored checkpoint '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            'Successfully restored checkpoint ' '{}.\n'.format(
+                self.checkpoint_id
+            )
+        )
         self._decrease_checkpoint_id()
         if len(retvals) == 1:
             return retvals[0]
@@ -164,8 +175,7 @@ class Checkpoint:
             return tuple(retvals)
 
     def _flush(self, *args, **kwargs):
-        data = {f'{self._value_prefix}{i}': v
-                for i, v in enumerate(args)}
+        data = {f'{self._value_prefix}{i}': v for i, v in enumerate(args)}
 
         try:
             atomsi = [isinstance(v, ase.Atoms) for v in args].index(True)
@@ -192,11 +202,13 @@ class Checkpoint:
                 del db[dbentry.id]
             except KeyError:
                 pass
-            db.write(atoms, checkpoint_id=self._mangled_checkpoint_id(),
-                     data=data)
+            db.write(
+                atoms, checkpoint_id=self._mangled_checkpoint_id(), data=data
+            )
 
-        self.logfile.write('Successfully stored checkpoint '
-                           '{}.\n'.format(self.checkpoint_id))
+        self.logfile.write(
+            'Successfully stored checkpoint ' '{}.\n'.format(self.checkpoint_id)
+        )
 
     def flush(self, *args, **kwargs):
         """
@@ -221,10 +233,12 @@ class Checkpoint:
 
 
 def atoms_almost_equal(a, b, tol=1e-9):
-    return (np.abs(a.positions - b.positions).max() < tol and
-            (a.numbers == b.numbers).all() and
-            np.abs(a.cell - b.cell).max() < tol and
-            (a.pbc == b.pbc).all())
+    return (
+        np.abs(a.positions - b.positions).max() < tol
+        and (a.numbers == b.numbers).all()
+        and np.abs(a.cell - b.cell).max() < tol
+        and (a.pbc == b.pbc).all()
+    )
 
 
 class CheckpointCalculator(Calculator):
@@ -244,6 +258,7 @@ class CheckpointCalculator(Calculator):
         # 1st time, does calc, writes to checkfile
         # subsequent runs, reads from checkpoint file
     """
+
     implemented_properties = ase.calculators.calculator.all_properties
     default_parameters: Dict[str, Any] = {}
     name = 'CheckpointCalculator'
@@ -253,7 +268,8 @@ class CheckpointCalculator(Calculator):
         'energies': 'get_potential_energies',
         'forces': 'get_forces',
         'stress': 'get_stress',
-        'stresses': 'get_stresses'}
+        'stresses': 'get_stresses',
+    }
 
     def __init__(self, calculator, db='checkpoints.db', logfile=None):
         Calculator.__init__(self)
@@ -271,10 +287,13 @@ class CheckpointCalculator(Calculator):
             try:
                 assert atoms_almost_equal(atoms, prev_atoms)
             except AssertionError:
-                raise AssertionError('mismatch between current atoms and '
-                                     'those read from checkpoint file')
-            self.logfile.write('retrieved results for {} from checkpoint\n'
-                               .format(properties))
+                raise AssertionError(
+                    'mismatch between current atoms and '
+                    'those read from checkpoint file'
+                )
+            self.logfile.write(
+                'retrieved results for {} from checkpoint\n'.format(properties)
+            )
             # save results in calculator for next time
             if isinstance(self.calculator, Calculator):
                 if not hasattr(self.calculator, 'results'):
@@ -282,14 +301,17 @@ class CheckpointCalculator(Calculator):
                 self.calculator.results.update(dict(zip(properties, results)))
         except NoCheckpoint:
             if isinstance(self.calculator, Calculator):
-                self.logfile.write('doing calculation of {} with new-style '
-                                   'calculator interface\n'.format(properties))
+                self.logfile.write(
+                    'doing calculation of {} with new-style '
+                    'calculator interface\n'.format(properties)
+                )
                 self.calculator.calculate(atoms, properties, system_changes)
-                results = [self.calculator.results[prop]
-                           for prop in properties]
+                results = [self.calculator.results[prop] for prop in properties]
             else:
-                self.logfile.write('doing calculation of {} with old-style '
-                                   'calculator interface\n'.format(properties))
+                self.logfile.write(
+                    'doing calculation of {} with old-style '
+                    'calculator interface\n'.format(properties)
+                )
                 results = []
                 for prop in properties:
                     method_name = self.property_to_method_name[prop]

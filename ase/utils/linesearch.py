@@ -7,7 +7,6 @@ pymax = max
 
 class LineSearch:
     def __init__(self, xtol=1e-14):
-
         self.xtol = xtol
         self.task = 'START'
         self.isave = np.zeros((2,), np.intc)
@@ -17,9 +16,24 @@ class LineSearch:
         self.case = 0
         self.old_stp = 0
 
-    def _line_search(self, func, myfprime, xk, pk, gfk, old_fval, old_old_fval,
-                     maxstep=.2, c1=.23, c2=0.46, xtrapl=1.1, xtrapu=4.,
-                     stpmax=50., stpmin=1e-8, args=()):
+    def _line_search(
+        self,
+        func,
+        myfprime,
+        xk,
+        pk,
+        gfk,
+        old_fval,
+        old_old_fval,
+        maxstep=0.2,
+        c1=0.23,
+        c2=0.46,
+        xtrapl=1.1,
+        xtrapu=4.0,
+        stpmax=50.0,
+        stpmin=1e-8,
+        args=(),
+    ):
         self.stpmin = stpmin
         self.pk = pk
         # ??? p_size = np.sqrt((pk **2).sum())
@@ -32,7 +46,7 @@ class LineSearch:
         self.dim = len(pk)
         self.gms = np.sqrt(self.dim) * maxstep
         # alpha1 = pymin(maxstep,1.01*2*(phi0-old_old_fval)/derphi0)
-        alpha1 = 1.
+        alpha1 = 1.0
         self.no_update = False
 
         if isinstance(myfprime, type(())):
@@ -50,9 +64,9 @@ class LineSearch:
         self.steps = []
 
         while True:
-            stp = self.step(alpha1, phi0, derphi0, c1, c2,
-                            self.xtol,
-                            self.isave, self.dsave)
+            stp = self.step(
+                alpha1, phi0, derphi0, c1, c2, self.xtol, self.isave, self.dsave
+            )
 
             if self.task[:2] == 'FG':
                 alpha1 = stp
@@ -104,13 +118,13 @@ class LineSearch:
             ginit = g
             gtest = c1 * ginit
             width = self.stpmax - self.stpmin
-            width1 = width / .5
-#           The variables stx, fx, gx contain the values of the step,
-#           function, and derivative at the best step.
-#           The variables sty, fy, gy contain the values of the step,
-#           function, and derivative at sty.
-#           The variables stp, f, g contain the values of the step,
-#           function, and derivative at stp.
+            width1 = width / 0.5
+            #           The variables stx, fx, gx contain the values of the step,
+            #           function, and derivative at the best step.
+            #           The variables sty, fy, gy contain the values of the step,
+            #           function, and derivative at sty.
+            #           The variables stp, f, g contain the values of the step,
+            #           function, and derivative at stp.
             stx = 0
             fx = finit
             gx = ginit
@@ -120,9 +134,24 @@ class LineSearch:
             stmin = 0
             stmax = stp + self.xtrapu * stp
             self.task = 'FG'
-            self.save((stage, ginit, gtest, gx,
-                       gy, finit, fx, fy, stx, sty,
-                       stmin, stmax, width, width1))
+            self.save(
+                (
+                    stage,
+                    ginit,
+                    gtest,
+                    gx,
+                    gy,
+                    finit,
+                    fx,
+                    fy,
+                    stx,
+                    sty,
+                    stmin,
+                    stmax,
+                    width,
+                    width1,
+                )
+            )
             stp = self.determine_step(stp)
             # return stp, f, g
             return stp
@@ -132,16 +161,29 @@ class LineSearch:
             else:
                 self.bracket = False
             stage = self.isave[1]
-            (ginit, gtest, gx, gy, finit, fx, fy, stx, sty, stmin, stmax,
-             width, width1) = self.dsave
+            (
+                ginit,
+                gtest,
+                gx,
+                gy,
+                finit,
+                fx,
+                fy,
+                stx,
+                sty,
+                stmin,
+                stmax,
+                width,
+                width1,
+            ) = self.dsave
 
-#           If psi(stp) <= 0 and f'(stp) >= 0 for some step, then the
-#           algorithm enters the second stage.
+            #           If psi(stp) <= 0 and f'(stp) >= 0 for some step, then the
+            #           algorithm enters the second stage.
             ftest = finit + stp * gtest
-            if stage == 1 and f < ftest and g >= 0.:
+            if stage == 1 and f < ftest and g >= 0.0:
                 stage = 2
 
-#           Test for warnings.
+            #           Test for warnings.
             if self.bracket and (stp <= stmin or stp >= stmax):
                 self.task = 'WARNING: ROUNDING ERRORS PREVENT PROGRESS'
             if self.bracket and stmax - stmin <= self.xtol * stmax:
@@ -151,23 +193,38 @@ class LineSearch:
             if stp == self.stpmin and (f > ftest or g >= gtest):
                 self.task = 'WARNING: STP = minstep'
 
-#           Test for convergence.
-            if f <= ftest and abs(g) <= c2 * (- ginit):
+            #           Test for convergence.
+            if f <= ftest and abs(g) <= c2 * (-ginit):
                 self.task = 'CONVERGENCE'
 
-#           Test for termination.
+            #           Test for termination.
             if self.task[:4] == 'WARN' or self.task[:4] == 'CONV':
-                self.save((stage, ginit, gtest, gx,
-                           gy, finit, fx, fy, stx, sty,
-                           stmin, stmax, width, width1))
+                self.save(
+                    (
+                        stage,
+                        ginit,
+                        gtest,
+                        gx,
+                        gy,
+                        finit,
+                        fx,
+                        fy,
+                        stx,
+                        sty,
+                        stmin,
+                        stmax,
+                        width,
+                        width1,
+                    )
+                )
                 # return stp, f, g
                 return stp
 
-#              A modified function is used to predict the step during the
-#              first stage if a lower function value has been obtained but
-#              the decrease is not sufficient.
+            #              A modified function is used to predict the step during the
+            #              first stage if a lower function value has been obtained but
+            #              the decrease is not sufficient.
             # if stage == 1 and f <= fx and f > ftest:
-#           #    Define the modified function and derivative values.
+            #           #    Define the modified function and derivative values.
             #    fm =f - stp * gtest
             #    fxm = fx - stx * gtest
             #    fym = fy - sty * gtest
@@ -175,12 +232,12 @@ class LineSearch:
             #    gxm = gx - gtest
             #    gym = gy - gtest
 
-#               Call step to update stx, sty, and to compute the new step.
+            #               Call step to update stx, sty, and to compute the new step.
             #    stx, sty, stp, gxm, fxm, gym, fym = self.update (stx, fxm, gxm, sty,
             #                                        fym, gym, stp, fm, gm,
             #                                        stmin, stmax)
 
-#           #    Reset the function and derivative values for f.
+            #           #    Reset the function and derivative values for f.
 
             #    fx = fxm + stx * gtest
             #    fy = fym + sty * gtest
@@ -188,22 +245,21 @@ class LineSearch:
             #    gy = gym + gtest
 
             # else:
-#           Call step to update stx, sty, and to compute the new step.
+            #           Call step to update stx, sty, and to compute the new step.
 
-            stx, sty, stp, gx, fx, gy, fy = self.update(stx, fx, gx, sty,
-                                                        fy, gy, stp, f, g,
-                                                        stmin, stmax)
+            stx, sty, stp, gx, fx, gy, fy = self.update(
+                stx, fx, gx, sty, fy, gy, stp, f, g, stmin, stmax
+            )
 
-
-#           Decide if a bisection step is needed.
+            #           Decide if a bisection step is needed.
 
             if self.bracket:
-                if abs(sty - stx) >= .66 * width1:
-                    stp = stx + .5 * (sty - stx)
+                if abs(sty - stx) >= 0.66 * width1:
+                    stp = stx + 0.5 * (sty - stx)
                 width1 = width
                 width = abs(sty - stx)
 
-#           Set the minimum and maximum steps allowed for stp.
+            #           Set the minimum and maximum steps allowed for stp.
 
             if self.bracket:
                 stmin = min(stx, sty)
@@ -212,64 +268,80 @@ class LineSearch:
                 stmin = stp + self.xtrapl * (stp - stx)
                 stmax = stp + self.xtrapu * (stp - stx)
 
-#           Force the step to be within the bounds maxstep and minstep.
+            #           Force the step to be within the bounds maxstep and minstep.
 
             stp = max(stp, self.stpmin)
             stp = min(stp, self.stpmax)
 
-            if (stx == stp and stp == self.stpmax and stmin > self.stpmax):
+            if stx == stp and stp == self.stpmax and stmin > self.stpmax:
                 self.no_update = True
-#           If further progress is not possible, let stp be the best
-#           point obtained during the search.
+            #           If further progress is not possible, let stp be the best
+            #           point obtained during the search.
 
-            if (self.bracket and stp < stmin or stp >= stmax) \
-               or (self.bracket and stmax - stmin < self.xtol * stmax):
+            if (self.bracket and stp < stmin or stp >= stmax) or (
+                self.bracket and stmax - stmin < self.xtol * stmax
+            ):
                 stp = stx
 
-#           Obtain another function and derivative.
+            #           Obtain another function and derivative.
 
             self.task = 'FG'
-            self.save((stage, ginit, gtest, gx,
-                       gy, finit, fx, fy, stx, sty,
-                       stmin, stmax, width, width1))
+            self.save(
+                (
+                    stage,
+                    ginit,
+                    gtest,
+                    gx,
+                    gy,
+                    finit,
+                    fx,
+                    fy,
+                    stx,
+                    sty,
+                    stmin,
+                    stmax,
+                    width,
+                    width1,
+                )
+            )
             return stp
 
-    def update(self, stx, fx, gx, sty, fy, gy, stp, fp, gp,
-               stpmin, stpmax):
+    def update(self, stx, fx, gx, sty, fy, gy, stp, fp, gp, stpmin, stpmax):
         sign = gp * (gx / abs(gx))
 
-#       First case: A higher function value. The minimum is bracketed.
-#       If the cubic step is closer to stx than the quadratic step, the
-#       cubic step is taken, otherwise the average of the cubic and
-#       quadratic steps is taken.
+        #       First case: A higher function value. The minimum is bracketed.
+        #       If the cubic step is closer to stx than the quadratic step, the
+        #       cubic step is taken, otherwise the average of the cubic and
+        #       quadratic steps is taken.
         if fp > fx:  # case1
             self.case = 1
-            theta = 3. * (fx - fp) / (stp - stx) + gx + gp
+            theta = 3.0 * (fx - fp) / (stp - stx) + gx + gp
             s = max(abs(theta), abs(gx), abs(gp))
-            gamma = s * np.sqrt((theta / s) ** 2. - (gx / s) * (gp / s))
+            gamma = s * np.sqrt((theta / s) ** 2.0 - (gx / s) * (gp / s))
             if stp < stx:
                 gamma = -gamma
             p = (gamma - gx) + theta
             q = ((gamma - gx) + gamma) + gp
             r = p / q
             stpc = stx + r * (stp - stx)
-            stpq = stx + ((gx / ((fx - fp) / (stp - stx) + gx)) / 2.) \
-                * (stp - stx)
-            if (abs(stpc - stx) < abs(stpq - stx)):
+            stpq = stx + ((gx / ((fx - fp) / (stp - stx) + gx)) / 2.0) * (
+                stp - stx
+            )
+            if abs(stpc - stx) < abs(stpq - stx):
                 stpf = stpc
             else:
-                stpf = stpc + (stpq - stpc) / 2.
+                stpf = stpc + (stpq - stpc) / 2.0
 
             self.bracket = True
 
-#       Second case: A lower function value and derivatives of opposite
-#       sign. The minimum is bracketed. If the cubic step is farther from
-#       stp than the secant step, the cubic step is taken, otherwise the
-#       secant step is taken.
+        #       Second case: A lower function value and derivatives of opposite
+        #       sign. The minimum is bracketed. If the cubic step is farther from
+        #       stp than the secant step, the cubic step is taken, otherwise the
+        #       secant step is taken.
 
         elif sign < 0:  # case2
             self.case = 2
-            theta = 3. * (fx - fp) / (stp - stx) + gx + gp
+            theta = 3.0 * (fx - fp) / (stp - stx) + gx + gp
             s = max(abs(theta), abs(gx), abs(gp))
             gamma = s * np.sqrt((theta / s) ** 2 - (gx / s) * (gp / s))
             if stp > stx:
@@ -279,35 +351,37 @@ class LineSearch:
             r = p / q
             stpc = stp + r * (stx - stp)
             stpq = stp + (gp / (gp - gx)) * (stx - stp)
-            if (abs(stpc - stp) > abs(stpq - stp)):
+            if abs(stpc - stp) > abs(stpq - stp):
                 stpf = stpc
             else:
                 stpf = stpq
             self.bracket = True
 
-#       Third case: A lower function value, derivatives of the same sign,
-#       and the magnitude of the derivative decreases.
+        #       Third case: A lower function value, derivatives of the same sign,
+        #       and the magnitude of the derivative decreases.
 
         elif abs(gp) < abs(gx):  # case3
             self.case = 3
-#           The cubic step is computed only if the cubic tends to infinity
-#           in the direction of the step or if the minimum of the cubic
-#           is beyond stp. Otherwise the cubic step is defined to be the
-#           secant step.
+            #           The cubic step is computed only if the cubic tends to infinity
+            #           in the direction of the step or if the minimum of the cubic
+            #           is beyond stp. Otherwise the cubic step is defined to be the
+            #           secant step.
 
-            theta = 3. * (fx - fp) / (stp - stx) + gx + gp
+            theta = 3.0 * (fx - fp) / (stp - stx) + gx + gp
             s = max(abs(theta), abs(gx), abs(gp))
 
-#           The case gamma = 0 only arises if the cubic does not tend
-#           to infinity in the direction of the step.
+            #           The case gamma = 0 only arises if the cubic does not tend
+            #           to infinity in the direction of the step.
 
-            gamma = s * np.sqrt(max(0., (theta / s) ** 2 - (gx / s) * (gp / s)))
+            gamma = s * np.sqrt(
+                max(0.0, (theta / s) ** 2 - (gx / s) * (gp / s))
+            )
             if stp > stx:
                 gamma = -gamma
             p = (gamma - gp) + theta
             q = (gamma + (gx - gp)) + gamma
             r = p / q
-            if r < 0. and gamma != 0:
+            if r < 0.0 and gamma != 0:
                 stpc = stp + r * (stx - stp)
             elif stp > stx:
                 stpc = stpmax
@@ -316,7 +390,6 @@ class LineSearch:
             stpq = stp + (gp / (gp - gx)) * (stx - stp)
 
             if self.bracket:
-
                 #               A minimizer has been bracketed. If the cubic step is
                 #               closer to stp than the secant step, the cubic step is
                 #               taken, otherwise the secant step is taken.
@@ -326,11 +399,10 @@ class LineSearch:
                 else:
                     stpf = stpq
                 if stp > stx:
-                    stpf = min(stp + .66 * (sty - stp), stpf)
+                    stpf = min(stp + 0.66 * (sty - stp), stpf)
                 else:
-                    stpf = max(stp + .66 * (sty - stp), stpf)
+                    stpf = max(stp + 0.66 * (sty - stp), stpf)
             else:
-
                 #               A minimizer has not been bracketed. If the cubic step is
                 #               farther from stp than the secant step, the cubic step is
                 #               taken, otherwise the secant step is taken.
@@ -342,15 +414,15 @@ class LineSearch:
                 stpf = min(stpmax, stpf)
                 stpf = max(stpmin, stpf)
 
-#       Fourth case: A lower function value, derivatives of the same sign,
-#       and the magnitude of the derivative does not decrease. If the
-#       minimum is not bracketed, the step is either minstep or maxstep,
-#       otherwise the cubic step is taken.
+        #       Fourth case: A lower function value, derivatives of the same sign,
+        #       and the magnitude of the derivative does not decrease. If the
+        #       minimum is not bracketed, the step is either minstep or maxstep,
+        #       otherwise the cubic step is taken.
 
         else:  # case4
             self.case = 4
             if self.bracket:
-                theta = 3. * (fp - fy) / (sty - stp) + gy + gp
+                theta = 3.0 * (fp - fy) / (sty - stp) + gy + gp
                 s = max(abs(theta), abs(gy), abs(gp))
                 gamma = s * np.sqrt((theta / s) ** 2 - (gy / s) * (gp / s))
                 if stp > sty:
@@ -365,7 +437,7 @@ class LineSearch:
             else:
                 stpf = stpmin
 
-#       Update the interval which contains a minimizer.
+        #       Update the interval which contains a minimizer.
 
         if fp > fx:
             sty = stp
@@ -379,7 +451,7 @@ class LineSearch:
             stx = stp
             fx = fp
             gx = gp
-#       Compute the new step.
+        #       Compute the new step.
 
         stp = self.determine_step(stpf)
 
@@ -388,7 +460,7 @@ class LineSearch:
     def determine_step(self, stp):
         dr = stp - self.old_stp
         x = np.reshape(self.pk, (-1, 3))
-        steplengths = ((dr * x)**2).sum(1)**0.5
+        steplengths = ((dr * x) ** 2).sum(1) ** 0.5
         maxsteplength = pymax(steplengths)
         if maxsteplength >= self.maxstep:
             dr *= self.maxstep / maxsteplength

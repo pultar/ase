@@ -1,4 +1,5 @@
 """Tests for `read_bands`."""
+
 import io
 
 import numpy as np

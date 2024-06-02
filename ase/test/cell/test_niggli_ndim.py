@@ -60,6 +60,7 @@ def test_niggli_atoms_ndim(npbc, perm):
 def test_no_nonorthogonal_niggli():
     from ase.build import bulk
     from ase.build import niggli_reduce
+
     atoms = bulk('Au')
     atoms.pbc[1] = False
     with pytest.raises(ValueError, match='Non-orthogonal'):

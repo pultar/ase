@@ -31,8 +31,13 @@ def check(name, xsf_text, check_data):
     # Now write the same system back out:
     outfname = 'out.%s' % fname
     if check_data:
-        write(outfname, images, data=array,
-              origin=origin, span_vectors=span_vectors)
+        write(
+            outfname,
+            images,
+            data=array,
+            origin=origin,
+            span_vectors=span_vectors,
+        )
     else:
         write(outfname, images)
 
@@ -55,31 +60,42 @@ def check(name, xsf_text, check_data):
     # So do that:
     outfname2 = 'doubleout.%s' % fname
     if check_data:
-        write(outfname2, images2, data=array2,
-              origin=origin2, span_vectors=span_vectors2)
+        write(
+            outfname2,
+            images2,
+            data=array2,
+            origin=origin2,
+            span_vectors=span_vectors2,
+        )
     else:
         write(outfname2, images2)
     assert Path(outfname).read_text() == Path(outfname2).read_text()
 
 
 def test_xsf_spec():
-    files = {'01-comments': f1,
-             '02-atoms': f2,
-             '03-periodic': f3,
-             '04-forces-atoms': f4,
-             '05-forces-slab': f5,
-             '06-anim-atoms': f6,
-             '07-anim-crystal-fixcell': f7,
-             '08-anim-crystal-varcell': f8}
+    files = {
+        '01-comments': f1,
+        '02-atoms': f2,
+        '03-periodic': f3,
+        '04-forces-atoms': f4,
+        '05-forces-slab': f5,
+        '06-anim-atoms': f6,
+        '07-anim-crystal-fixcell': f7,
+        '08-anim-crystal-varcell': f8,
+    }
 
     names = sorted(files.keys())
 
     for name in names:
         check(name, files[name], check_data=False)
-        check('%s-ignore-datagrid' % name, files[name] + datagrid,
-              check_data=False)
-        check('%s-read-datagrid' % name, files[name] + datagrid,
-              check_data=True)
+        check(
+            '%s-ignore-datagrid' % name,
+            files[name] + datagrid,
+            check_data=False,
+        )
+        check(
+            '%s-read-datagrid' % name, files[name] + datagrid, check_data=True
+        )
 
 
 f1 = """

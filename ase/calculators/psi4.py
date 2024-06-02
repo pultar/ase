@@ -2,6 +2,7 @@
 authors: Ben Comer (Georgia Tech), Xiangyun (Ray) Lei (Georgia Tech)
 
 """
+
 import json
 import multiprocessing
 import os
@@ -11,8 +12,13 @@ from io import StringIO
 import numpy as np
 
 from ase import io
-from ase.calculators.calculator import (Calculator, CalculatorSetupError,
-                                        InputError, ReadError, all_changes)
+from ase.calculators.calculator import (
+    Calculator,
+    CalculatorSetupError,
+    InputError,
+    ReadError,
+    all_changes,
+)
 from ase.config import cfg
 from ase.units import Bohr, Hartree
 
@@ -28,21 +34,36 @@ class Psi4(Calculator):
     also note that you can always use the in-built psi4 module through:
     calc.psi4
     """
+
     implemented_properties = ['energy', 'forces']
     discard_results_on_any_change = True
 
     default_parameters = {
-        "basis": "aug-cc-pvtz",
-        "method": "hf",
-        'symmetry': 'c1'}
+        'basis': 'aug-cc-pvtz',
+        'method': 'hf',
+        'symmetry': 'c1',
+    }
 
-    def __init__(self, restart=None, ignore_bad_restart=False,
-                 label='psi4-calc', atoms=None, command=None,
-                 **kwargs):
-        Calculator.__init__(self, restart=restart,
-                            ignore_bad_restart=ignore_bad_restart, label=label,
-                            atoms=atoms, command=command, **kwargs)
+    def __init__(
+        self,
+        restart=None,
+        ignore_bad_restart=False,
+        label='psi4-calc',
+        atoms=None,
+        command=None,
+        **kwargs,
+    ):
+        Calculator.__init__(
+            self,
+            restart=restart,
+            ignore_bad_restart=ignore_bad_restart,
+            label=label,
+            atoms=atoms,
+            command=command,
+            **kwargs,
+        )
         import psi4
+
         self.psi4 = psi4
         # perform initial setup of psi4 python API
         self.set_psi4(atoms=atoms)
@@ -64,8 +85,7 @@ class Psi4(Calculator):
 
         # Input spin settings
         if self.parameters.get('reference') is not None:
-            self.psi4.set_options({'reference':
-                                   self.parameters['reference']})
+            self.psi4.set_options({'reference': self.parameters['reference']})
         # Memory
         if self.parameters.get('memory') is not None:
             self.psi4.set_memory(self.parameters['memory'])
@@ -78,9 +98,11 @@ class Psi4(Calculator):
 
         # deal with some ASE specific inputs
         if 'kpts' in self.parameters:
-            raise InputError('psi4 is a non-periodic code, and thus does not'
-                             ' require k-points. Please remove this '
-                             'argument.')
+            raise InputError(
+                'psi4 is a non-periodic code, and thus does not'
+                ' require k-points. Please remove this '
+                'argument.'
+            )
 
         if self.parameters['method'] == 'LDA':
             # svwn is equivalent to LDA
@@ -90,14 +112,18 @@ class Psi4(Calculator):
             raise InputError('psi4 does not support the keyword "nbands"')
 
         if 'smearing' in self.parameters:
-            raise InputError('Finite temperature DFT is not implemented in'
-                             ' psi4 currently, thus a smearing argument '
-                             'cannot be utilized. please remove this '
-                             'argument')
+            raise InputError(
+                'Finite temperature DFT is not implemented in'
+                ' psi4 currently, thus a smearing argument '
+                'cannot be utilized. please remove this '
+                'argument'
+            )
 
         if 'xc' in self.parameters:
-            raise InputError('psi4 does not accept the `xc` argument please'
-                             ' use the `method` argument instead')
+            raise InputError(
+                'psi4 does not accept the `xc` argument please'
+                ' use the `method` argument instead'
+            )
 
         if atoms is None:
             if self.atoms is None:
@@ -117,8 +143,10 @@ class Psi4(Calculator):
         if mult is None:
             mult = 1
             if charge is not None:
-                warnings.warn('A charge was provided without a spin '
-                              'multiplicity. A multiplicity of 1 is assumed')
+                warnings.warn(
+                    'A charge was provided without a spin '
+                    'multiplicity. A multiplicity of 1 is assumed'
+                )
         if charge is None:
             charge = 0
 
@@ -130,8 +158,7 @@ class Psi4(Calculator):
         self.molecule = self.psi4.geometry('\n'.join(geom))
 
     def read(self, label):
-        """Read psi4 outputs made from this ASE calculator
-        """
+        """Read psi4 outputs made from this ASE calculator"""
         filename = label + '.dat'
         if not os.path.isfile(filename):
             raise ReadError('Could not find the psi4 output file: ' + filename)
@@ -139,12 +166,14 @@ class Psi4(Calculator):
         with open(filename) as fd:
             txt = fd.read()
         if '!ASE Information\n' not in txt:
-            raise Exception('The output file {} could not be read because '
-                            'the file does not contain the "!ASE Information"'
-                            ' lines inserted by this calculator. This likely'
-                            ' means the output file was not made using this '
-                            'ASE calculator or has since been modified and '
-                            'thus cannot be read.'.format(filename))
+            raise Exception(
+                'The output file {} could not be read because '
+                'the file does not contain the "!ASE Information"'
+                ' lines inserted by this calculator. This likely'
+                ' means the output file was not made using this '
+                'ASE calculator or has since been modified and '
+                'thus cannot be read.'.format(filename)
+            )
         info = txt.split('!ASE Information\n')[1]
         info = info.split('!')[0]
         saved_dict = json.loads(info)
@@ -157,13 +186,18 @@ class Psi4(Calculator):
         if 'forces' in self.results:
             self.results['forces'] = np.array(self.results['forces'])
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes, symmetry='c1'):
-
+    def calculate(
+        self,
+        atoms=None,
+        properties=['energy'],
+        system_changes=all_changes,
+        symmetry='c1',
+    ):
         Calculator.calculate(self, atoms=atoms)
         if self.atoms is None:
-            raise CalculatorSetupError('An Atoms object must be provided to '
-                                       'perform a calculation')
+            raise CalculatorSetupError(
+                'An Atoms object must be provided to ' 'perform a calculation'
+            )
         atoms = self.atoms
 
         if atoms.get_initial_magnetic_moments().any():
@@ -171,8 +205,7 @@ class Psi4(Calculator):
             self.parameters['multiplicity'] = None
         # this inputs all the settings into psi4
         self.set_psi4(atoms=atoms)
-        self.psi4.core.set_output_file(self.label + '.dat',
-                                       False)
+        self.psi4.core.set_output_file(self.label + '.dat', False)
 
         # Set up the method
         method = self.parameters['method']
@@ -180,8 +213,9 @@ class Psi4(Calculator):
 
         # Do the calculations
         if 'forces' in properties:
-            grad, wf = self.psi4.driver.gradient(f'{method}/{basis}',
-                                                 return_wfn=True)
+            grad, wf = self.psi4.driver.gradient(
+                f'{method}/{basis}', return_wfn=True
+            )
             # energy comes for free
             energy = wf.energy()
             self.results['energy'] = energy * Hartree
@@ -189,8 +223,9 @@ class Psi4(Calculator):
             # also note that the gradient is -1 * forces
             self.results['forces'] = -1 * np.array(grad) * Hartree / Bohr
         elif 'energy' in properties:
-            energy = self.psi4.energy(f'{method}/{basis}',
-                                      molecule=self.molecule)
+            energy = self.psi4.energy(
+                f'{method}/{basis}', molecule=self.molecule
+            )
             # convert to eV
             self.results['energy'] = energy * Hartree
 
@@ -204,9 +239,11 @@ class Psi4(Calculator):
         save_results = self.results.copy()
         if 'forces' in save_results:
             save_results['forces'] = save_results['forces'].tolist()
-        save_dict = {'parameters': self.parameters,
-                     'results': save_results,
-                     'atoms': json_atoms}
+        save_dict = {
+            'parameters': self.parameters,
+            'results': save_results,
+            'atoms': json_atoms,
+        }
         self.psi4.core.print_out('!ASE Information\n')
         self.psi4.core.print_out(json.dumps(save_dict))
         self.psi4.core.print_out('!')

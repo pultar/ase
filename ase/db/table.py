@@ -4,13 +4,26 @@ import numpy as np
 
 from ase.db.core import float_to_time_string, now
 
-all_columns = ('id', 'age', 'user', 'formula', 'calculator',
-               'energy', 'natoms', 'fmax', 'pbc', 'volume',
-               'charge', 'mass', 'smax', 'magmom')
+all_columns = (
+    'id',
+    'age',
+    'user',
+    'formula',
+    'calculator',
+    'energy',
+    'natoms',
+    'fmax',
+    'pbc',
+    'volume',
+    'charge',
+    'mass',
+    'smax',
+    'magmom',
+)
 
 
 def get_sql_columns(columns):
-    """ Map the names of table columns to names of columns in
+    """Map the names of table columns to names of columns in
     the SQL tables"""
     sql_columns = list(columns)
     if 'age' in columns:
@@ -48,7 +61,7 @@ def plural(n, word):
 def cut(txt, length):
     if len(txt) <= length or length == 0:
         return txt
-    return txt[:length - 3] + '...'
+    return txt[: length - 3] + '...'
 
 
 def cutlist(lst, length):
@@ -70,17 +83,25 @@ class Table:
         self.unique_key = unique_key
         self.addcolumns: Optional[List[str]] = None
 
-    def select(self, query, columns, sort, limit, offset,
-               show_empty_columns=False):
+    def select(
+        self, query, columns, sort, limit, offset, show_empty_columns=False
+    ):
         """Query datatbase and create rows."""
         sql_columns = get_sql_columns(columns)
         self.limit = limit
         self.offset = offset
-        self.rows = [Row(row, columns, self.unique_key)
-                     for row in self.connection.select(
-                         query, verbosity=self.verbosity,
-                         limit=limit, offset=offset, sort=sort,
-                         include_data=False, columns=sql_columns)]
+        self.rows = [
+            Row(row, columns, self.unique_key)
+            for row in self.connection.select(
+                query,
+                verbosity=self.verbosity,
+                limit=limit,
+                offset=offset,
+                sort=sort,
+                include_data=False,
+                columns=sql_columns,
+            )
+        ]
 
         self.columns = list(columns)
 
@@ -113,19 +134,25 @@ class Table:
 
     def write(self, query=None):
         self.format()
-        L = [[len(s) for s in row.strings]
-             for row in self.rows]
+        L = [[len(s) for s in row.strings] for row in self.rows]
         L.append([len(c) for c in self.columns])
         N = np.max(L, axis=0)
 
         fmt = '{:{align}{width}}'
         if self.verbosity > 0:
-            print('|'.join(fmt.format(c, align='<>'[a], width=w)
-                           for c, a, w in zip(self.columns, self.right, N)))
+            print(
+                '|'.join(
+                    fmt.format(c, align='<>'[a], width=w)
+                    for c, a, w in zip(self.columns, self.right, N)
+                )
+            )
         for row in self.rows:
-            print('|'.join(fmt.format(c, align='<>'[a], width=w)
-                           for c, a, w in
-                           zip(row.strings, self.right, N)))
+            print(
+                '|'.join(
+                    fmt.format(c, align='<>'[a], width=w)
+                    for c, a, w in zip(row.strings, self.right, N)
+                )
+            )
 
         if self.verbosity == 0:
             return

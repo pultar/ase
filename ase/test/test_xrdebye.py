@@ -8,16 +8,23 @@ import pytest
 from ase.cluster.cubic import FaceCenteredCubic
 from ase.utils.xrdebye import XrDebye, wavelengths
 
-tolerance = 1E-5
+tolerance = 1e-5
 
 
 @pytest.fixture()
 def xrd():
     # test system -- cluster of 587 silver atoms
-    atoms = FaceCenteredCubic('Ag', [(1, 0, 0), (1, 1, 0), (1, 1, 1)],
-                              [6, 8, 8], 4.09)
-    return XrDebye(atoms=atoms, wavelength=wavelengths['CuKa1'], damping=0.04,
-                   method='Iwasa', alpha=1.01, warn=True)
+    atoms = FaceCenteredCubic(
+        'Ag', [(1, 0, 0), (1, 1, 0), (1, 1, 1)], [6, 8, 8], 4.09
+    )
+    return XrDebye(
+        atoms=atoms,
+        wavelength=wavelengths['CuKa1'],
+        damping=0.04,
+        method='Iwasa',
+        alpha=1.01,
+        warn=True,
+    )
 
 
 def test_get(xrd):
@@ -35,10 +42,8 @@ def test_xrd(testdir, xrd):
 
 
 def test_saxs_and_files(testdir, figure, xrd):
-    expected = np.array([372650934.006398, 280252013.563702,
-                         488123.103628])
-    obtained = xrd.calc_pattern(x=np.array([0.021, 0.09, 0.53]),
-                                mode='SAXS')
+    expected = np.array([372650934.006398, 280252013.563702, 488123.103628])
+    obtained = xrd.calc_pattern(x=np.array([0.021, 0.09, 0.53]), mode='SAXS')
     assert np.allclose(obtained, expected, rtol=tolerance)
 
     # (Admittedly these tests are a little bit toothless)

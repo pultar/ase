@@ -2,7 +2,7 @@
 from the ones used in ase).  Mapping is therefore necessary.
 
 See: https://lammps.sandia.gov/doc/units.html
- """
+"""
 
 from ase import units
 
@@ -15,7 +15,7 @@ DIM = 3.0
 
 UNITSETS = {}
 
-UNITSETS["ASE"] = dict(
+UNITSETS['ASE'] = dict(
     mass=1.0 / units.kg,
     distance=1.0 / units.m,
     time=1.0 / units.second,
@@ -26,7 +26,7 @@ UNITSETS["ASE"] = dict(
     charge=1.0 / units.C,
 )
 
-UNITSETS["real"] = dict(
+UNITSETS['real'] = dict(
     mass=u.gram_per_mole_si,
     distance=u.angstrom_si,
     time=u.femtosecond_si,
@@ -40,10 +40,10 @@ UNITSETS["real"] = dict(
     charge=u.e_si,
     dipole=u.electron_angstrom_si,
     electric_field=u.volt_per_angstrom_si,
-    density=u.gram_si / u.centimeter_si ** DIM,
+    density=u.gram_si / u.centimeter_si**DIM,
 )
 
-UNITSETS["metal"] = dict(
+UNITSETS['metal'] = dict(
     mass=u.gram_per_mole_si,
     distance=u.angstrom_si,
     time=u.picosecond_si,
@@ -57,10 +57,10 @@ UNITSETS["metal"] = dict(
     charge=u.e_si,
     dipole=u.electron_angstrom_si,
     electric_field=u.volt_per_angstrom_si,
-    density=u.gram_si / u.centimeter_si ** DIM,
+    density=u.gram_si / u.centimeter_si**DIM,
 )
 
-UNITSETS["si"] = dict(
+UNITSETS['si'] = dict(
     mass=u.kilogram_si,
     distance=u.meter_si,
     time=u.second_si,
@@ -74,10 +74,10 @@ UNITSETS["si"] = dict(
     charge=u.coulomb_si,
     dipole=u.coulomb_meter_si,
     electric_field=u.volt_per_meter_si,
-    density=u.kilogram_si / u.meter_si ** DIM,
+    density=u.kilogram_si / u.meter_si**DIM,
 )
 
-UNITSETS["cgs"] = dict(
+UNITSETS['cgs'] = dict(
     mass=u.gram_si,
     distance=u.centimeter_si,
     time=u.second_si,
@@ -91,10 +91,10 @@ UNITSETS["cgs"] = dict(
     charge=u.statcoulomb_si,  # or esu (4.8032044e-10 is a proton)
     dipole=u.statcoulomb_centimeter_si,  # =u. 10^18 debye,
     electric_field=u.statvolt_per_centimeter_si,  # or dyne / esu
-    density=u.gram_si / (u.centimeter_si ** DIM),
+    density=u.gram_si / (u.centimeter_si**DIM),
 )
 
-UNITSETS["electron"] = dict(
+UNITSETS['electron'] = dict(
     mass=u.amu_si,
     distance=u.bohr_si,
     time=u.femtosecond_si,
@@ -108,7 +108,7 @@ UNITSETS["electron"] = dict(
     electric_field=u.volt_per_centimeter_si,
 )
 
-UNITSETS["micro"] = dict(
+UNITSETS['micro'] = dict(
     mass=u.picogram_si,
     distance=u.micrometer_si,
     time=u.microsecond_si,
@@ -125,7 +125,7 @@ UNITSETS["micro"] = dict(
     density=u.picogram_si / (u.micrometer_si) ** DIM,
 )
 
-UNITSETS["nano"] = dict(
+UNITSETS['nano'] = dict(
     mass=u.attogram_si,
     distance=u.nanometer_si,
     time=u.nanosecond_si,
@@ -139,7 +139,7 @@ UNITSETS["nano"] = dict(
     charge=u.e_si,  # multiple of electron charge (1.0 is a proton)
     dipole=u.electron_nanometer_si,
     electric_field=u.volt_si / u.nanometer_si,
-    density=u.attogram_si / u.nanometer_si ** DIM,
+    density=u.attogram_si / u.nanometer_si**DIM,
 )
 
 

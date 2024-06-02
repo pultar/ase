@@ -8,7 +8,7 @@ from ase.io import read
 
 
 def parse_geometry(filename):
-    '''Read atoms geometry from ACE-Molecule log file and put it to self.data.
+    """Read atoms geometry from ACE-Molecule log file and put it to self.data.
     Parameters
     ==========
     filename: ACE-Molecule log file.
@@ -18,7 +18,7 @@ def parse_geometry(filename):
     Dictionary of parsed geometry data.
     retval["Atomic_numbers"]: list of atomic numbers
     retval["Positions"]: list of [x, y, z] coordinates for each atoms.
-    '''
+    """
     with open(filename) as fd:
         lines = fd.readlines()
         start_line = 0
@@ -38,11 +38,11 @@ def parse_geometry(filename):
             xyz = [float(n) for n in lines[i].split()[1:4]]
             positions.append(xyz)
 
-        return {"Atomic_numbers": atoms, "Positions": positions}
+        return {'Atomic_numbers': atoms, 'Positions': positions}
 
 
 def read_acemolecule_out(filename):
-    '''Interface to ACEMoleculeReader, return values for corresponding quantity
+    """Interface to ACEMoleculeReader, return values for corresponding quantity
 
     Parameters
     ==========
@@ -60,16 +60,16 @@ def read_acemolecule_out(filename):
        returns force of each atoms as numpy array of shape (natoms, 3).
      - quantity = 'atoms':
        returns ASE atoms object.
-    '''
+    """
     data = parse_geometry(filename)
-    atom_symbol = np.array(data["Atomic_numbers"])
-    positions = np.array(data["Positions"])
+    atom_symbol = np.array(data['Atomic_numbers'])
+    positions = np.array(data['Positions'])
     atoms = Atoms(atom_symbol, positions=positions)
     energy = None
     forces = None
     excitation_energy = None
-#    results = {}
-#    if len(results)<1:
+    #    results = {}
+    #    if len(results)<1:
     with open(filename) as fd:
         lines = fd.readlines()
 
@@ -109,7 +109,7 @@ def read_acemolecule_out(filename):
 
 
 def read_acemolecule_input(filename):
-    '''Reads a ACE-Molecule input file
+    """Reads a ACE-Molecule input file
     Parameters
     ==========
     filename: ACE-Molecule input file name
@@ -117,7 +117,7 @@ def read_acemolecule_input(filename):
     Returns
     =======
     ASE atoms object containing geometry only.
-    '''
+    """
     with open(filename) as fd:
         for line in fd:
             if len(line.split('GeometryFilename')) > 1:

@@ -38,8 +38,9 @@ def test_add_candidates(tmp_path):
     set_raw_score(slab3, 3)
     db.add_relaxed_step(slab3)
 
-    slab4 = OffspringCreator.initialize_individual(slab1,
-                                                   fcc111('Au', size=(2, 2, 2)))
+    slab4 = OffspringCreator.initialize_individual(
+        slab1, fcc111('Au', size=(2, 2, 2))
+    )
     set_raw_score(slab4, 67)
     db.add_relaxed_candidate(slab4)
     assert slab4.info['confid'] == 7

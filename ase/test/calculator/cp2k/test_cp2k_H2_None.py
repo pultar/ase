@@ -49,7 +49,7 @@ def test_h2_none(cp2k_factory):
         stress_tensor=False,
         xc=None,
         label='test_H2_inp',
-        inp=inp
+        inp=inp,
     )
     h2 = molecule('H2', calculator=calc)
     h2.center(vacuum=2.0)

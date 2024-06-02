@@ -4,8 +4,13 @@ import numpy as np
 
 import ase.gui.ui as ui
 from ase.gui.i18n import _
-from ase.io.formats import (filetype, get_ioformat, parse_filename,
-                            string2index, write)
+from ase.io.formats import (
+    filetype,
+    get_ioformat,
+    parse_filename,
+    string2index,
+    write,
+)
 
 text = _("""\
 Append name with "@n" in order to write image
@@ -56,13 +61,15 @@ def save_dialog(gui, filename=None):
         extra['show_unit_cell'] = gui.window['toggle-show-unit-cell']
         extra['bbox'] = bbox
         colors = gui.get_colors(rgb=True)
-        extra['colors'] = [rgb for rgb, visible
-                           in zip(colors, gui.images.visible)
-                           if visible]
+        extra['colors'] = [
+            rgb for rgb, visible in zip(colors, gui.images.visible) if visible
+        ]
         remove_hidden = True
 
-    images = [gui.images.get_atoms(i, remove_hidden=remove_hidden)
-              for i in range(*index.indices(len(gui.images)))]
+    images = [
+        gui.images.get_atoms(i, remove_hidden=remove_hidden)
+        for i in range(*index.indices(len(gui.images)))
+    ]
 
     if len(images) > 1 and io.single:
         # We want to write multiple images, but the file format does not
@@ -77,5 +84,6 @@ def save_dialog(gui, filename=None):
             write(filename, images, **extra)
         except Exception as err:
             from ase.gui.ui import showerror
+
             showerror(_('Error'), err)
             raise

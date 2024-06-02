@@ -1,4 +1,5 @@
 """Test phasediagram code."""
+
 import pytest
 
 from ase.phasediagram import PhaseDiagram
@@ -6,11 +7,13 @@ from ase.phasediagram import PhaseDiagram
 
 def test_phasediagram():
     """Test example from docs."""
-    refs = [('Cu', 0.0),
-            ('Au', 0.0),
-            ('CuAu2', -0.2),
-            ('CuAu', -0.5),
-            ('Cu2Au', -0.7)]
+    refs = [
+        ('Cu', 0.0),
+        ('Au', 0.0),
+        ('CuAu2', -0.2),
+        ('CuAu', -0.5),
+        ('Cu2Au', -0.7),
+    ]
     pd = PhaseDiagram(refs)
     energy, indices, coefs = pd.decompose('Cu3Au')
     assert energy == pytest.approx(-0.7)
@@ -20,8 +23,7 @@ def test_phasediagram():
 
 def test_phasediagram_1d():
     """Test 1D case."""
-    refs = [('Cu', 0.0),
-            ('Cu', 0.1)]
+    refs = [('Cu', 0.0), ('Cu', 0.1)]
     pd = PhaseDiagram(refs)
     energy, indices, coefs = pd.decompose('Cu')
     assert energy == pytest.approx(0.0)
@@ -88,4 +90,5 @@ refs3d = {
     'I4': ({'I': 4}, 0.0),
     'Mg12': ({'Mg': 12}, 0.0),
     'Mg2Cu4': ({'Cu': 4, 'Mg': 2}, -0.9341752322551926),
-    'MgI2': ({'I': 2, 'Mg': 1}, -3.2449179691304515)}
+    'MgI2': ({'I': 2, 'Mg': 1}, -3.2449179691304515),
+}

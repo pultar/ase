@@ -29,8 +29,10 @@ def test_turbomole_default(default_params):
 
 def test_execute_good():
     python = sys.executable
-    code = ('import sys; print(\"ended normally\", file=sys.stderr);'
-            'print(\"Hello world\")')
+    code = (
+        'import sys; print("ended normally", file=sys.stderr);'
+        'print("Hello world")'
+    )
     stdout_file = execute([python, '-c', code])
     with open(stdout_file) as fd:
         assert fd.read() == 'Hello world' + '\n'
@@ -39,5 +41,5 @@ def test_execute_good():
 def test_execute_fail():
     python = sys.executable
     with pytest.raises(OSError) as err:
-        execute([python, '-c', 'print(\"Hello world\")'])
+        execute([python, '-c', 'print("Hello world")'])
     assert 'Turbomole error' in str(err.value)

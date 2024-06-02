@@ -86,8 +86,10 @@ def check_apply(precon, system):
     forces = atoms.get_forces().reshape(-1)
     precon_forces, residual = precon.apply(forces, atoms)
     residual_P = np.linalg.norm(precon_forces, np.inf)
-    print(f'|F| = {residual:.3f} '
-          f'|F|_P = {np.linalg.norm(precon_forces, np.inf):.3f}')
+    print(
+        f'|F| = {residual:.3f} '
+        f'|F|_P = {np.linalg.norm(precon_forces, np.inf):.3f}'
+    )
 
     # force norm should not get much bigger when we precondition:
     # in this case all norms get smaller, but this will not be true in general

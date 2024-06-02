@@ -7,6 +7,7 @@ P.M. Larsen, M. Pandey, M. Strange, and K. W. Jacobsen
 Phys. Rev. Materials 3 034003, 2019
 https://doi.org/10.1103/PhysRevMaterials.3.034003
 """
+
 from collections import namedtuple
 
 import numpy as np
@@ -18,10 +19,10 @@ KInterval = namedtuple('KInterval', 'dimtype score a b h components cdim')
 
 
 def f(x):
-    if x == float("inf"):
+    if x == float('inf'):
         return 1
     k = 1 / 0.15**2
-    return k * max(0, x - 1)**2 / (1. + k * max(0, x - 1)**2)
+    return k * max(0, x - 1) ** 2 / (1.0 + k * max(0, x - 1) ** 2)
 
 
 def calculate_score(a, b):
@@ -42,8 +43,15 @@ def build_kinterval(a, b, h, components, cdim, score=None):
     if score is None:
         score = calculate_score(a, b)
 
-    return KInterval(dimtype=build_dimtype(h), score=score,
-                     a=a, b=b, h=h, components=components, cdim=cdim)
+    return KInterval(
+        dimtype=build_dimtype(h),
+        score=score,
+        a=a,
+        b=b,
+        h=h,
+        components=components,
+        cdim=cdim,
+    )
 
 
 def merge_intervals(intervals):
@@ -70,8 +78,9 @@ def merge_intervals(intervals):
         amin = min(e.a for e in relevant)
         bmax = max(e.b for e in relevant)
         best = max(relevant, key=lambda x: x.score)
-        merged = build_kinterval(amin, bmax, best.h, best.components,
-                                 best.cdim, score=combined_score)
+        merged = build_kinterval(
+            amin, bmax, best.h, best.components, best.cdim, score=combined_score
+        )
         merged_intervals.append(merged)
     return merged_intervals
 
@@ -79,8 +88,9 @@ def merge_intervals(intervals):
 def build_kintervals(atoms, method_name):
     """The interval analysis is performed by inserting bonds one at a time
     until the component analysis finds a single component."""
-    method = {'RDA': rank_determination.RDA,
-              'TSA': topology_scaling.TSA}[method_name]
+    method = {'RDA': rank_determination.RDA, 'TSA': topology_scaling.TSA}[
+        method_name
+    ]
 
     assert all(e in [0, 1] for e in atoms.pbc)
     num_atoms = len(atoms)
@@ -100,10 +110,10 @@ def build_kintervals(atoms, method_name):
     end_state = tuple(end_state)
 
     # Insert each new bond into the component graph.
-    for (k, i, j, offset) in next_bond(atoms):
+    for k, i, j, offset in next_bond(atoms):
         calc.insert_bond(i, j, offset)
         h = calc.check()
-        if h == hprev:    # Test if any components were merged
+        if h == hprev:  # Test if any components were merged
             continue
 
         components, cdim = calc.get_components()
@@ -111,8 +121,9 @@ def build_kintervals(atoms, method_name):
         # If any components were merged, create a new interval
         if k != kprev:
             # Only keep intervals of non-zero width
-            intervals.append(build_kinterval(kprev, k, hprev,
-                                             components_prev, cdim_prev))
+            intervals.append(
+                build_kinterval(kprev, k, hprev, components_prev, cdim_prev)
+            )
         kprev = k
         hprev = h
         components_prev = components
@@ -120,8 +131,9 @@ def build_kintervals(atoms, method_name):
 
         # Stop once all components are merged
         if h == end_state:
-            intervals.append(build_kinterval(k, float("inf"), h,
-                                             components, cdim))
+            intervals.append(
+                build_kinterval(k, float('inf'), h, components, cdim)
+            )
             return intervals
 
 

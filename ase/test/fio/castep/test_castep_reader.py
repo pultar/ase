@@ -1,4 +1,5 @@
 """Tests for the Castep.read method"""
+
 from io import StringIO
 
 import numpy as np
@@ -286,8 +287,9 @@ def test_fractional_coordinates():
     out = StringIO(FRACTIONAL_COORDINATES)
     out.readline()
     out.readline()
-    species, custom_species, positions_frac = \
-        _read_fractional_coordinates(out, 2)
+    species, custom_species, positions_frac = _read_fractional_coordinates(
+        out, 2
+    )
     positions_frac_ref = [
         [-0.000000, -0.000000, -0.000000],
         [+0.249983, +0.249983, +0.254121],
@@ -638,6 +640,11 @@ def test_md_images(datadir):
     np.testing.assert_array_almost_equal(atoms.get_forces(), forces_ref)
 
     stress_ref = [
-        +0.390672, +0.388091, +0.385978, -0.276337, -0.061901, -0.144025,
+        +0.390672,
+        +0.388091,
+        +0.385978,
+        -0.276337,
+        -0.061901,
+        -0.144025,
     ]
     np.testing.assert_array_almost_equal(atoms.get_stress() / GPa, stress_ref)

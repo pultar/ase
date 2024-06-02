@@ -13,8 +13,12 @@ on KIM, visit https://openkim.org.
 """
 
 from . import kimpy_wrappers
-from .calculators import (ASAPCalculator, KIMCalculator, LAMMPSLibCalculator,
-                          LAMMPSRunCalculator)
+from .calculators import (
+    ASAPCalculator,
+    KIMCalculator,
+    LAMMPSLibCalculator,
+    LAMMPSRunCalculator,
+)
 from .exceptions import KIMCalculatorError
 
 
@@ -110,21 +114,21 @@ def KIM(model_name, simulator=None, options=None, debug=False):
 
     # If this is a KIM Portable Model (supports KIM API), return
     # support through a KIM-compliant simulator
-    model_type = "pm" if _is_portable_model(model_name) else "sm"
+    model_type = 'pm' if _is_portable_model(model_name) else 'sm'
 
-    if model_type == "pm":
+    if model_type == 'pm':
         if simulator is None:  # Default
-            simulator = "kimmodel"
+            simulator = 'kimmodel'
 
-        if simulator == "kimmodel":
+        if simulator == 'kimmodel':
             return KIMCalculator(model_name, options, debug)
 
-        elif simulator == "asap":
+        elif simulator == 'asap':
             return ASAPCalculator(
                 model_name, model_type, options=options, verbose=debug
             )
 
-        elif simulator == "lammpsrun":
+        elif simulator == 'lammpsrun':
             supported_species = get_model_supported_species(model_name)
 
             # Return LAMMPS calculator
@@ -132,7 +136,7 @@ def KIM(model_name, simulator=None, options=None, debug=False):
                 model_name, model_type, supported_species, options, debug
             )
 
-        elif simulator == "lammpslib":
+        elif simulator == 'lammpslib':
             raise KIMCalculatorError(
                 '"lammpslib" calculator does not support KIM Portable Models. '
                 'Try using the "lammpsrun" calculator.'
@@ -147,16 +151,14 @@ def KIM(model_name, simulator=None, options=None, debug=False):
     # If we get to here, the model is a KIM Simulator Model
     #######################################################
     with kimpy_wrappers.SimulatorModel(model_name) as sm:
-
         # Handle default behavior for 'simulator'
         if simulator is None:
-            if sm.simulator_name == "ASAP":
-                simulator = "asap"
-            elif sm.simulator_name == "LAMMPS":
-                simulator = "lammpslib"
+            if sm.simulator_name == 'ASAP':
+                simulator = 'asap'
+            elif sm.simulator_name == 'LAMMPS':
+                simulator = 'lammpslib'
 
-        if sm.simulator_name == "ASAP":
-
+        if sm.simulator_name == 'ASAP':
             return ASAPCalculator(
                 model_name,
                 model_type,
@@ -166,10 +168,8 @@ def KIM(model_name, simulator=None, options=None, debug=False):
                 supported_units=sm.supported_units,
             )
 
-        elif sm.simulator_name == "LAMMPS":
-
-            if simulator == "lammpsrun":
-
+        elif sm.simulator_name == 'LAMMPS':
+            if simulator == 'lammpsrun':
                 return LAMMPSRunCalculator(
                     model_name,
                     model_type,
@@ -180,10 +180,12 @@ def KIM(model_name, simulator=None, options=None, debug=False):
                     supported_units=sm.supported_units,
                 )
 
-            elif simulator == "lammpslib":
+            elif simulator == 'lammpslib':
                 return LAMMPSLibCalculator(
-                    model_name, sm.supported_species, sm.supported_units,
-                    options
+                    model_name,
+                    sm.supported_species,
+                    sm.supported_units,
+                    options,
                 )
 
             else:
@@ -206,8 +208,9 @@ def _is_portable_model(model_name):
     with kimpy_wrappers.ModelCollections() as col:
         model_type = col.get_item_type(model_name)
 
-    return (model_type ==
-            kimpy_wrappers.wrappers.collection_item_type_portableModel)
+    return (
+        model_type == kimpy_wrappers.wrappers.collection_item_type_portableModel
+    )
 
 
 def get_model_supported_species(model_name):

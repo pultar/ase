@@ -33,7 +33,7 @@ class OutputReader:
         return resolve_band_structure(bandpath, kpts, energies, efermi)
 
     def read_number_of_grid_points(self):
-        """Read number of grid points from SIESTA's text-output file. """
+        """Read number of grid points from SIESTA's text-output file."""
 
         fname = self.directory / f'{self.prefix}.out'
         with open(fname) as fd:
@@ -45,8 +45,7 @@ class OutputReader:
         raise RuntimeError
 
     def read_energy(self):
-        """Read energy from SIESTA's text-output file.
-        """
+        """Read energy from SIESTA's text-output file."""
         text = self._prefixed('out').read_text().lower()
 
         assert 'final energy' in text
@@ -64,8 +63,7 @@ class OutputReader:
         return {'energy': energy, 'free_energy': free_energy}
 
     def read_forces_stress(self):
-        """Read the forces and stress from the FORCE_STRESS file.
-        """
+        """Read the forces and stress from the FORCE_STRESS file."""
         fname = self.directory / 'FORCE_STRESS'
         with open(fname) as fd:
             lines = fd.readlines()
@@ -79,8 +77,15 @@ class OutputReader:
 
         results = {}
         results['stress'] = np.array(
-            [stress[0, 0], stress[1, 1], stress[2, 2],
-             stress[1, 2], stress[0, 2], stress[0, 1]])
+            [
+                stress[0, 0],
+                stress[1, 1],
+                stress[2, 2],
+                stress[1, 2],
+                stress[0, 2],
+                stress[0, 1],
+            ]
+        )
 
         results['stress'] *= Ry / Bohr**3
 
@@ -94,15 +99,14 @@ class OutputReader:
         return results
 
     def read_eigenvalues(self):
-        """ A robust procedure using the suggestion by Federico Marchesin """
+        """A robust procedure using the suggestion by Federico Marchesin"""
 
         file_name = self._prefixed('EIG')
         try:
             with open(file_name) as fd:
                 fermi_energy = float(fd.readline())
                 n, num_hamilton_dim, nkp = map(int, fd.readline().split())
-                _ee = np.split(
-                    np.array(fd.read().split()).astype(float), nkp)
+                _ee = np.split(np.array(fd.read().split()).astype(float), nkp)
         except OSError:
             return {}
 
@@ -120,7 +124,7 @@ class OutputReader:
         return {'eigenvalues': eig_array, 'fermi_energy': fermi_energy}
 
     def read_kpoints(self):
-        """ Reader of the .KP files """
+        """Reader of the .KP files"""
 
         fname = self._prefixed('KP')
         try:
@@ -141,7 +145,7 @@ class OutputReader:
         return {'kpoints': kpoints, 'kpoint_weights': kweights}
 
     def read_dipole(self):
-        """Read dipole moment. """
+        """Read dipole moment."""
         dipole = np.zeros([1, 3])
         with open(self._prefixed('out')) as fd:
             for line in fd:
@@ -197,6 +201,7 @@ def resolve_band_structure(path, kpts, energies, efermi):
     # Also we should perhaps verify the cell.  If we had the cell, we
     # could construct the bandpath from scratch (i.e., pure outputs).
     from ase.spectrum.band_structure import BandStructure
+
     ksn2e = energies
     skn2e = np.swapaxes(ksn2e, 0, 1)
     bs = BandStructure(path, skn2e, reference=efermi)

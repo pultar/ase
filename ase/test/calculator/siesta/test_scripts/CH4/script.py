@@ -13,13 +13,19 @@ try:
     bud = read(traj)
     assert not isinstance(bud, list)
 except FileNotFoundError:
-    bud = Atoms('CH4', np.array([
-        [0.000000, 0.000000, 0.100000],
-        [0.682793, 0.682793, 0.682793],
-        [-0.682793, -0.682793, 0.68279],
-        [-0.682793, 0.682793, -0.682793],
-        [0.682793, -0.682793, -0.682793]]),
-        cell=[10, 10, 10])
+    bud = Atoms(
+        'CH4',
+        np.array(
+            [
+                [0.000000, 0.000000, 0.100000],
+                [0.682793, 0.682793, 0.682793],
+                [-0.682793, -0.682793, 0.68279],
+                [-0.682793, 0.682793, -0.682793],
+                [0.682793, -0.682793, -0.682793],
+            ]
+        ),
+        cell=[10, 10, 10],
+    )
 
 c_basis = """2 nodes 1.00
 0 1 S 0.20 P 1 0.20 6.00
@@ -37,12 +43,15 @@ calc = Siesta(
     mesh_cutoff=300 * Ry,
     species=[species],
     restart='ch4.XV',
-    fdf_arguments={'DM.Tolerance': 1E-5,
-                   'DM.MixingWeight': 0.15,
-                   'DM.NumberPulay': 3,
-                   'MaxSCFIterations': 200,
-                   'ElectronicTemperature': (0.02585, 'eV'),  # 300 K
-                   'SaveElectrostaticPotential': True})
+    fdf_arguments={
+        'DM.Tolerance': 1e-5,
+        'DM.MixingWeight': 0.15,
+        'DM.NumberPulay': 3,
+        'MaxSCFIterations': 200,
+        'ElectronicTemperature': (0.02585, 'eV'),  # 300 K
+        'SaveElectrostaticPotential': True,
+    },
+)
 
 bud.calc = calc
 dyn = QuasiNewton(bud, trajectory=traj)

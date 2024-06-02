@@ -3,8 +3,13 @@ from numpy import linalg
 
 from ase.transport.greenfunction import GreenFunction
 from ase.transport.selfenergy import BoxProbe, LeadSelfEnergy
-from ase.transport.tools import (cutcoupling, dagger, fermidistribution,
-                                 rotate_matrix, subdiagonalize)
+from ase.transport.tools import (
+    cutcoupling,
+    dagger,
+    fermidistribution,
+    rotate_matrix,
+    subdiagonalize,
+)
 from ase.units import kB
 
 
@@ -84,26 +89,28 @@ class TransportCalculator:
         """
 
         # The default values for all extra keywords
-        self.input_parameters = {'energies': None,
-                                 'h': None,
-                                 'h1': None,
-                                 'h2': None,
-                                 's': None,
-                                 's1': None,
-                                 's2': None,
-                                 'hc1': None,
-                                 'hc2': None,
-                                 'sc1': None,
-                                 'sc2': None,
-                                 'box': None,
-                                 'align_bf': None,
-                                 'eta1': 1e-5,
-                                 'eta2': 1e-5,
-                                 'eta': 1e-5,
-                                 'logfile': None,
-                                 'eigenchannels': 0,
-                                 'dos': False,
-                                 'pdos': []}
+        self.input_parameters = {
+            'energies': None,
+            'h': None,
+            'h1': None,
+            'h2': None,
+            's': None,
+            's1': None,
+            's2': None,
+            'hc1': None,
+            'hc2': None,
+            'sc1': None,
+            'sc2': None,
+            'box': None,
+            'align_bf': None,
+            'eta1': 1e-5,
+            'eta2': 1e-5,
+            'eta': 1e-5,
+            'logfile': None,
+            'eigenchannels': 0,
+            'dos': False,
+            'pdos': [],
+        }
 
         self.initialized = False  # Changed Hamiltonians?
         self.uptodate = False  # Changed energy grid?
@@ -111,9 +118,23 @@ class TransportCalculator:
 
     def set(self, **kwargs):
         for key in kwargs:
-            if key in ['h', 'h1', 'h2', 'hc1', 'hc2',
-                       's', 's1', 's2', 'sc1', 'sc2',
-                       'eta', 'eta1', 'eta2', 'align_bf', 'box']:
+            if key in [
+                'h',
+                'h1',
+                'h2',
+                'hc1',
+                'hc2',
+                's',
+                's1',
+                's2',
+                'sc1',
+                'sc2',
+                'eta',
+                'eta1',
+                'eta2',
+                'align_bf',
+                'box',
+            ]:
                 self.initialized = False
                 self.uptodate = False
                 break
@@ -125,6 +146,7 @@ class TransportCalculator:
         self.input_parameters.update(kwargs)
         log = self.input_parameters['logfile']
         if log is None:
+
             class Trash:
                 def write(self, s):
                     pass
@@ -135,6 +157,7 @@ class TransportCalculator:
             self.log = Trash()
         elif log == '-':
             from sys import stdout
+
             self.log = stdout
         elif 'logfile' in kwargs:
             self.log = open(log, 'w')
@@ -168,13 +191,13 @@ class TransportCalculator:
         pl1 = len(p['h1']) // 2
         pl2 = len(p['h2']) // 2
         h1_ii = p['h1'][:pl1, :pl1]
-        h1_ij = p['h1'][:pl1, pl1:2 * pl1]
+        h1_ij = p['h1'][:pl1, pl1 : 2 * pl1]
         s1_ii = p['s1'][:pl1, :pl1]
-        s1_ij = p['s1'][:pl1, pl1:2 * pl1]
+        s1_ij = p['s1'][:pl1, pl1 : 2 * pl1]
         h2_ii = p['h2'][:pl2, :pl2]
-        h2_ij = p['h2'][pl2: 2 * pl2, :pl2]
+        h2_ij = p['h2'][pl2 : 2 * pl2, :pl2]
         s2_ii = p['s2'][:pl2, :pl2]
-        s2_ij = p['s2'][pl2: 2 * pl2, :pl2]
+        s2_ij = p['s2'][pl2 : 2 * pl2, :pl2]
 
         if p['hc1'] is None:
             nbf = len(h_mm)
@@ -209,35 +232,43 @@ class TransportCalculator:
 
         align_bf = p['align_bf']
         if align_bf is not None:
-            diff = ((h_mm[align_bf, align_bf] - h1_ii[align_bf, align_bf]) /
-                    s_mm[align_bf, align_bf])
-            print('# Aligning scat. H to left lead H. diff=', diff,
-                  file=self.log)
+            diff = (
+                h_mm[align_bf, align_bf] - h1_ii[align_bf, align_bf]
+            ) / s_mm[align_bf, align_bf]
+            print(
+                '# Aligning scat. H to left lead H. diff=', diff, file=self.log
+            )
             h_mm -= diff * s_mm
 
         # Setup lead self-energies
         # All infinitesimals must be > 0
         assert np.all(np.array((p['eta'], p['eta1'], p['eta2'])) > 0.0)
-        self.selfenergies = [LeadSelfEnergy((h1_ii, s1_ii),
-                                            (h1_ij, s1_ij),
-                                            (h1_im, s1_im),
-                                            p['eta1']),
-                             LeadSelfEnergy((h2_ii, s2_ii),
-                                            (h2_ij, s2_ij),
-                                            (h2_im, s2_im),
-                                            p['eta2'])]
+        self.selfenergies = [
+            LeadSelfEnergy(
+                (h1_ii, s1_ii), (h1_ij, s1_ij), (h1_im, s1_im), p['eta1']
+            ),
+            LeadSelfEnergy(
+                (h2_ii, s2_ii), (h2_ij, s2_ij), (h2_im, s2_im), p['eta2']
+            ),
+        ]
         box = p['box']
         if box is not None:
             print('Using box probe!')
             self.selfenergies.append(
-                BoxProbe(eta=box[0], a=box[1], b=box[2], energies=box[3],
-                         S=s_mm, T=0.3))
+                BoxProbe(
+                    eta=box[0],
+                    a=box[1],
+                    b=box[2],
+                    energies=box[3],
+                    S=s_mm,
+                    T=0.3,
+                )
+            )
 
         # setup scattering green function
-        self.greenfunction = GreenFunction(selfenergies=self.selfenergies,
-                                           H=h_mm,
-                                           S=s_mm,
-                                           eta=p['eta'])
+        self.greenfunction = GreenFunction(
+            selfenergies=self.selfenergies, H=h_mm, S=s_mm, eta=p['eta']
+        )
 
         self.initialized = True
 
@@ -279,8 +310,9 @@ class TransportCalculator:
                 self.dos_e[e] = self.greenfunction.dos(energy)
 
             if pdos != []:
-                self.pdos_ne[:, e] = np.take(self.greenfunction.pdos(energy),
-                                             pdos)
+                self.pdos_ne[:, e] = np.take(
+                    self.greenfunction.pdos(energy), pdos
+                )
 
         self.uptodate = True
 
@@ -303,13 +335,14 @@ class TransportCalculator:
         hprincipal = self.greenfunction.H.real.diagonal[:pl1]
 
         import pylab as pl
+
         pl.plot(hlead, label='lead')
         pl.plot(hprincipal, label='principal layer')
         pl.axis('tight')
         pl.show()
 
-    def get_current(self, bias, T=0., E=None, T_e=None, spinpol=False):
-        '''Returns the current as a function of the
+    def get_current(self, bias, T=0.0, E=None, T_e=None, spinpol=False):
+        """Returns the current as a function of the
         bias voltage.
 
         **Parameters:**
@@ -342,15 +375,16 @@ class TransportCalculator:
         >> plt.ylabel('I [A]')
         >> plt.show()
 
-        '''
+        """
         if E is not None:
             if T_e is None:
                 self.energies = E
                 self.uptodate = False
                 T_e = self.get_transmission().copy()
         else:
-            assert self.uptodate, ('Energy grid and transmission function '
-                                   'not defined.')
+            assert self.uptodate, (
+                'Energy grid and transmission function ' 'not defined.'
+            )
             E = self.energies.copy()
             T_e = self.T_e.copy()
 
@@ -359,11 +393,11 @@ class TransportCalculator:
             E = E[:, np.newaxis]
             T_e = T_e[:, np.newaxis]
 
-        fl = fermidistribution(E - bias / 2., kB * T)
-        fr = fermidistribution(E + bias / 2., kB * T)
+        fl = fermidistribution(E - bias / 2.0, kB * T)
+        fr = fermidistribution(E + bias / 2.0, kB * T)
 
         if spinpol:
-            return .5 * np.trapz((fl - fr) * T_e, x=E, axis=0)
+            return 0.5 * np.trapz((fl - fr) * T_e, x=E, axis=0)
         else:
             return np.trapz((fl - fr) * T_e, x=E, axis=0)
 

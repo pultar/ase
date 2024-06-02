@@ -2,8 +2,12 @@ import pytest
 
 from ase.build import molecule
 from ase.calculators.emt import EMT
-from ase.constraints import (ExternalForce, FixBondLength, MirrorForce,
-                             MirrorTorque)
+from ase.constraints import (
+    ExternalForce,
+    FixBondLength,
+    MirrorForce,
+    MirrorTorque,
+)
 from ase.optimize import FIRE
 
 
@@ -11,7 +15,7 @@ from ase.optimize import FIRE
 def test_mirror():
     atoms = molecule('cyclobutene')
     dist = atoms.get_distance(0, 1)
-    con1 = MirrorForce(2, 3, max_dist=5., fmax=0.05)
+    con1 = MirrorForce(2, 3, max_dist=5.0, fmax=0.05)
     con2 = FixBondLength(0, 1)
     atoms.set_constraint([con1, con2])
     atoms.calc = EMT()

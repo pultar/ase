@@ -40,14 +40,14 @@ Fri Oct  8 14:58:44 CEST 2021
 
 def test_cube_writing():
     d = 1.104  # N2 bondlength
-    at = Atoms("N2", [(0, 0, 0), (0, 0, d * Bohr)])
+    at = Atoms('N2', [(0, 0, 0), (0, 0, d * Bohr)])
 
     dummydata = np.arange(8).reshape((2, 2, 2))
     origin_in = (42 * Bohr, 0, 0)
-    comment_regex = r"(Cube file from ASE, written on )([a-zA-Z ])*([0-9: ])*"
+    comment_regex = r'(Cube file from ASE, written on )([a-zA-Z ])*([0-9: ])*'
 
     # create output
-    with tempfile.NamedTemporaryFile(mode="r+") as outfil:
+    with tempfile.NamedTemporaryFile(mode='r+') as outfil:
         write_cube(outfil, at, data=dummydata, origin=origin_in)
         # reset read head
         outfil.seek(0)
@@ -57,13 +57,15 @@ def test_cube_writing():
         assert re.match(comment_regex, comment_line)
 
         # Check constant string
-        assert outfil.readline() == ("OUTER LOOP: X, MIDDLE LOOP: Y, "
-                                     "INNER LOOP: Z\n")
+        assert outfil.readline() == (
+            'OUTER LOOP: X, MIDDLE LOOP: Y, ' 'INNER LOOP: Z\n'
+        )
 
         # Check origin
         origin_from_file = outfil.readline().split()[1:]
         origin_from_file = tuple(
-            map(lambda p: float(p) * Bohr, origin_from_file))
+            map(lambda p: float(p) * Bohr, origin_from_file)
+        )
         assert origin_from_file == origin_in
 
         # skip three lines
@@ -73,20 +75,20 @@ def test_cube_writing():
 
         # check Atoms and positions
         atom1 = outfil.readline().split()
-        assert atom1 == ["7", "0.000000", "0.000000", "0.000000", "0.000000"]
+        assert atom1 == ['7', '0.000000', '0.000000', '0.000000', '0.000000']
         atom2 = outfil.readline().split()
-        assert atom2 == ["7", "0.000000", "0.000000",
-                         "0.000000", f"{d:.6f}"]
+        assert atom2 == ['7', '0.000000', '0.000000', '0.000000', f'{d:.6f}']
 
         # Check data
         data_lines = list(
-            map(lambda l: float(l.rstrip("\n")), outfil.readlines()))
+            map(lambda l: float(l.rstrip('\n')), outfil.readlines())
+        )
         for idx, line in enumerate(data_lines):
             assert float(idx) == line
 
 
 def test_cube_reading():
-    with tempfile.NamedTemporaryFile(mode="r+") as cubefil:
+    with tempfile.NamedTemporaryFile(mode='r+') as cubefil:
         # Write data to a file
         cubefil.write(file_content)
         cubefil.seek(0)
@@ -103,24 +105,24 @@ def test_cube_reading():
         assert result[DATA].shape == (5, 3, 5)
 
         # check spacing
-        assert result["spacing"].shape == (3, 3)
+        assert result['spacing'].shape == (3, 3)
         # check that values are on the diagonal (correctness of order in
         # reading)
         npt.assert_almost_equal(
-            result["spacing"].diagonal() / Bohr,
+            result['spacing'].diagonal() / Bohr,
             np.array([1.889726, 1.889726, 0.000000]),
         )
         # check that sum is only 1.889726 for every column (correctness of
         # value)
         npt.assert_almost_equal(
-            result["spacing"].sum(axis=0) / Bohr,
+            result['spacing'].sum(axis=0) / Bohr,
             np.array([1.889726, 1.889726, 0.000000]),
         )
 
         # check origin
-        assert result["origin"].shape == (3,)
+        assert result['origin'].shape == (3,)
         npt.assert_almost_equal(
-            result["origin"], np.array([-3.779452, -1.889726, -3.779452]) * Bohr
+            result['origin'], np.array([-3.779452, -1.889726, -3.779452]) * Bohr
         )
 
         # check PBC
@@ -159,7 +161,7 @@ file_content_multiple = """ Benzene_Opt_Freq_B3LYP_6_31G_d_p_ MO=HOMO,LUMO
 
 
 def test_cube_reading_multiple():
-    with tempfile.NamedTemporaryFile(mode="r+") as cubefil:
+    with tempfile.NamedTemporaryFile(mode='r+') as cubefil:
         # Write data to a file
         cubefil.write(file_content_multiple)
         cubefil.seek(0)
@@ -168,7 +170,7 @@ def test_cube_reading_multiple():
         result = read_cube(cubefil)
         npt.assert_equal(
             result[ATOMS].get_atomic_numbers(),
-            [6, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1]
+            [6, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1],
         )
 
         assert isinstance(result, dict)
@@ -177,35 +179,35 @@ def test_cube_reading_multiple():
         assert result[DATA].shape == (3, 3, 3)
 
         # and datas
-        assert len(result["datas"]) == 2
+        assert len(result['datas']) == 2
         assert (
             result[DATA].shape
-            == result["datas"][0].shape
-            == result["datas"][1].shape
+            == result['datas'][0].shape
+            == result['datas'][1].shape
         )
 
         # check labels
-        assert result["labels"] == [21, 22]
+        assert result['labels'] == [21, 22]
 
         # check spacing
-        assert result["spacing"].shape == (3, 3)
+        assert result['spacing'].shape == (3, 3)
         # check that values are on the diagonal
         # (correctness of order in reading)
         npt.assert_almost_equal(
-            result["spacing"].diagonal() / Bohr,
+            result['spacing'].diagonal() / Bohr,
             np.array([8.063676, 8.063676, 8.063676]),
         )
         # check that sum is only 8.063676 for every column
         # (correctness of value)
         npt.assert_almost_equal(
-            result["spacing"].sum(axis=0) / Bohr,
+            result['spacing'].sum(axis=0) / Bohr,
             np.array([8.063676, 8.063676, 8.063676]),
         )
 
         # check origin
-        assert result["origin"].shape == (3,)
+        assert result['origin'].shape == (3,)
         npt.assert_almost_equal(
-            result["origin"], np.array([-8.797610, -9.151024, -6.512752]) * Bohr
+            result['origin'], np.array([-8.797610, -9.151024, -6.512752]) * Bohr
         )
 
         # check PBC
@@ -214,7 +216,7 @@ def test_cube_reading_multiple():
 
 
 def test_reading_using_io():
-    with tempfile.NamedTemporaryFile(mode="r+") as cubefil:
+    with tempfile.NamedTemporaryFile(mode='r+') as cubefil:
         # Write data to a file
         cubefil.write(file_content)
         cubefil.seek(0)
@@ -226,5 +228,6 @@ def test_reading_using_io():
         assert result[0].shape == (5, 3, 5)
 
         assert isinstance(result[1], Atoms)
-        npt.assert_equal(result[1].get_atomic_numbers(),
-                         np.array([6, 1, 1, 1, 1]))
+        npt.assert_equal(
+            result[1].get_atomic_numbers(), np.array([6, 1, 1, 1, 1])
+        )

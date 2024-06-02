@@ -1,135 +1,129 @@
-'''
+"""
 Conversion of text from a Crystallographic Information File (CIF) format to
 unicode. CIF text is neither unicode nor bibtex/latex code.
 
 Rules for character formatting in CIF files are specified at:
 https://www.iucr.org/resources/cif/spec/version1.1/semantics
-'''
+"""
 
 import html
 import re
 
 subs_dict = {
-    '\r': '',            # Windows line ending
-    '\t': ' ',           # tabs
-
-    r'\a': '\u03b1',    # alpha
-    r'\b': '\u03b2',    # beta
-    r'\g': '\u03b3',    # gamma
-    r'\d': '\u03b4',    # delta
-    r'\e': '\u03b5',    # epsilon
-    r'\z': '\u03b6',    # zeta
-    r'\h': '\u03b7',    # eta
-    r'\q': '\u03b8',    # theta
-    r'\i': '\u03b9',    # iota
-    r'\k': '\u03ba',    # kappa
-    r'\l': '\u03bb',    # lambda
-    r'\m': '\u03bc',    # mu
-    r'\n': '\u03bd',    # nu
-    r'\x': '\u03be',    # xi
-    r'\o': '\u03bf',    # omicron
-    r'\p': '\u03c0',    # pi
-    r'\r': '\u03c1',    # rho
-    r'\s': '\u03c3',    # sigma
-    r'\t': '\u03c4',    # tau
-    r'\u': '\u03c5',    # upsilon
-    r'\f': '\u03c6',    # phi
-    r'\c': '\u03c7',    # chi
-    r'\y': '\u03c8',    # psi
-    r'\w': '\u03c9',    # omega
-    r'\A': '\u0391',    # Alpha
-    r'\B': '\u0392',    # Beta
-    r'\G': '\u0393',    # Gamma
-    r'\D': '\u0394',    # Delta
-    r'\E': '\u0395',    # Epsilon
-    r'\Z': '\u0396',    # Zeta
-    r'\H': '\u0397',    # Eta
-    r'\Q': '\u0398',    # Theta
-    r'\I': '\u0399',    # Ioto
-    r'\K': '\u039a',    # Kappa
-    r'\L': '\u039b',    # Lambda
-    r'\M': '\u039c',    # Mu
-    r'\N': '\u039d',    # Nu
-    r'\X': '\u039e',    # Xi
-    r'\O': '\u039f',    # Omicron
-    r'\P': '\u03a0',    # Pi
-    r'\R': '\u03a1',    # Rho
-    r'\S': '\u03a3',    # Sigma
-    r'\T': '\u03a4',    # Tau
-    r'\U': '\u03a5',    # Upsilon
-    r'\F': '\u03a6',    # Phi
-    r'\C': '\u03a7',    # Chi
-    r'\Y': '\u03a8',    # Psi
-    r'\W': '\u03a9',    # Omega
-
-    r'\%a': '\u00e5',   # a-ring
-    r'\/o': '\u00f8',   # o-slash
-    r'\?i': '\u0131',   # dotless i
-    r'\/l': '\u0142',   # Polish l
-    r'\&s': '\u00df',   # German eszett
-    r'\/d': '\u0111',   # barred d
-
-    r'\%A': '\u00c5',   # A-ring
-    r'\/O': '\u00d8',   # O-slash
-    r'\?I': 'I',         # dotless I
-    r'\/L': '\u0141',   # Polish L
-    r'\&S': '\u1e9e',   # German Eszett
-    r'\/D': '\u0110',   # barred D
-
-    r'\%': '\u00b0',           # degree
-    r'--': '\u2013',           # dash
-    r'---': '\u2014',          # single bond
-    r'\\db': '\u003d',         # double bond
-    r'\\tb': '\u2261',         # triple bond
-    r'\\ddb': '\u2248',        # delocalized double bond
+    '\r': '',  # Windows line ending
+    '\t': ' ',  # tabs
+    r'\a': '\u03b1',  # alpha
+    r'\b': '\u03b2',  # beta
+    r'\g': '\u03b3',  # gamma
+    r'\d': '\u03b4',  # delta
+    r'\e': '\u03b5',  # epsilon
+    r'\z': '\u03b6',  # zeta
+    r'\h': '\u03b7',  # eta
+    r'\q': '\u03b8',  # theta
+    r'\i': '\u03b9',  # iota
+    r'\k': '\u03ba',  # kappa
+    r'\l': '\u03bb',  # lambda
+    r'\m': '\u03bc',  # mu
+    r'\n': '\u03bd',  # nu
+    r'\x': '\u03be',  # xi
+    r'\o': '\u03bf',  # omicron
+    r'\p': '\u03c0',  # pi
+    r'\r': '\u03c1',  # rho
+    r'\s': '\u03c3',  # sigma
+    r'\t': '\u03c4',  # tau
+    r'\u': '\u03c5',  # upsilon
+    r'\f': '\u03c6',  # phi
+    r'\c': '\u03c7',  # chi
+    r'\y': '\u03c8',  # psi
+    r'\w': '\u03c9',  # omega
+    r'\A': '\u0391',  # Alpha
+    r'\B': '\u0392',  # Beta
+    r'\G': '\u0393',  # Gamma
+    r'\D': '\u0394',  # Delta
+    r'\E': '\u0395',  # Epsilon
+    r'\Z': '\u0396',  # Zeta
+    r'\H': '\u0397',  # Eta
+    r'\Q': '\u0398',  # Theta
+    r'\I': '\u0399',  # Ioto
+    r'\K': '\u039a',  # Kappa
+    r'\L': '\u039b',  # Lambda
+    r'\M': '\u039c',  # Mu
+    r'\N': '\u039d',  # Nu
+    r'\X': '\u039e',  # Xi
+    r'\O': '\u039f',  # Omicron
+    r'\P': '\u03a0',  # Pi
+    r'\R': '\u03a1',  # Rho
+    r'\S': '\u03a3',  # Sigma
+    r'\T': '\u03a4',  # Tau
+    r'\U': '\u03a5',  # Upsilon
+    r'\F': '\u03a6',  # Phi
+    r'\C': '\u03a7',  # Chi
+    r'\Y': '\u03a8',  # Psi
+    r'\W': '\u03a9',  # Omega
+    r'\%a': '\u00e5',  # a-ring
+    r'\/o': '\u00f8',  # o-slash
+    r'\?i': '\u0131',  # dotless i
+    r'\/l': '\u0142',  # Polish l
+    r'\&s': '\u00df',  # German eszett
+    r'\/d': '\u0111',  # barred d
+    r'\%A': '\u00c5',  # A-ring
+    r'\/O': '\u00d8',  # O-slash
+    r'\?I': 'I',  # dotless I
+    r'\/L': '\u0141',  # Polish L
+    r'\&S': '\u1e9e',  # German Eszett
+    r'\/D': '\u0110',  # barred D
+    r'\%': '\u00b0',  # degree
+    r'--': '\u2013',  # dash
+    r'---': '\u2014',  # single bond
+    r'\\db': '\u003d',  # double bond
+    r'\\tb': '\u2261',  # triple bond
+    r'\\ddb': '\u2248',  # delocalized double bond
     r'\\sim': '~',
     r'\\simeq': '\u2243',
-    r'\\infty': '\u221e',      # infinity
-
+    r'\\infty': '\u221e',  # infinity
     r'\\times': '\u00d7',
-    r'+-': '\u00b1',           # plusminus
-    r'-+': '\u2213',           # minusplus
+    r'+-': '\u00b1',  # plusminus
+    r'-+': '\u2213',  # minusplus
     r'\\square': '\u25a0',
     r'\\neq': '\u2660',
     r'\\rangle': '\u3009',
     r'\\langle': '\u3008',
     r'\\rightarrow': '\u2192',
     r'\\leftarrow': '\u2190',
-
-    r"\'A": '\u00c1',  # A acute
-    r"\'E": '\u00c9',  # E acute
-    r"\'I": '\u00cd',  # I acute
-    r"\'O": '\u00d3',  # O acute
-    r"\'U": '\u00da',  # U acute
-    r"\'Y": '\u00dd',  # Y acute
-    r"\'a": '\u00e1',  # a acute
-    r"\'e": '\u00e9',  # e acute
-    r"\'i": '\u00ed',  # i acute
-    r"\'o": '\u00f3',  # o acute
-    r"\'u": '\u00fa',  # u acute
-    r"\'y": '\u00fd',  # y acute
-    r"\'C": '\u0106',  # C acute
-    r"\'c": '\u0107',  # c acute
-    r"\'L": '\u0139',  # L acute
-    r"\'l": '\u013a',  # l acute
-    r"\'N": '\u0143',  # N acute
-    r"\'n": '\u0144',  # n acute
-    r"\'R": '\u0154',  # R acute
-    r"\'r": '\u0155',  # r acute
-    r"\'S": '\u015a',  # S acute
-    r"\'s": '\u015b',  # s acute
-    r"\'Z": '\u0179',  # Z acute
-    r"\'z": '\u017a',  # z acute
-    r"\'G": '\u01f4',  # G acute
-    r"\'g": '\u01f5',  # g acute
-    r"\'K": '\u1e30',  # K acute
-    r"\'k": '\u1e31',  # k acute
-    r"\'M": '\u1e3e',  # M acute
-    r"\'m": '\u1e3f',  # m acute
-    r"\'P": '\u1e54',  # P acute
-    r"\'p": '\u1e55',  # p acute
-    r"\'W": '\u1e82',  # W acute
-    r"\'w": '\u1e83',  # w acute
+    r'\'A': '\u00c1',  # A acute
+    r'\'E': '\u00c9',  # E acute
+    r'\'I': '\u00cd',  # I acute
+    r'\'O': '\u00d3',  # O acute
+    r'\'U': '\u00da',  # U acute
+    r'\'Y': '\u00dd',  # Y acute
+    r'\'a': '\u00e1',  # a acute
+    r'\'e': '\u00e9',  # e acute
+    r'\'i': '\u00ed',  # i acute
+    r'\'o': '\u00f3',  # o acute
+    r'\'u': '\u00fa',  # u acute
+    r'\'y': '\u00fd',  # y acute
+    r'\'C': '\u0106',  # C acute
+    r'\'c': '\u0107',  # c acute
+    r'\'L': '\u0139',  # L acute
+    r'\'l': '\u013a',  # l acute
+    r'\'N': '\u0143',  # N acute
+    r'\'n': '\u0144',  # n acute
+    r'\'R': '\u0154',  # R acute
+    r'\'r': '\u0155',  # r acute
+    r'\'S': '\u015a',  # S acute
+    r'\'s': '\u015b',  # s acute
+    r'\'Z': '\u0179',  # Z acute
+    r'\'z': '\u017a',  # z acute
+    r'\'G': '\u01f4',  # G acute
+    r'\'g': '\u01f5',  # g acute
+    r'\'K': '\u1e30',  # K acute
+    r'\'k': '\u1e31',  # k acute
+    r'\'M': '\u1e3e',  # M acute
+    r'\'m': '\u1e3f',  # m acute
+    r'\'P': '\u1e54',  # P acute
+    r'\'p': '\u1e55',  # p acute
+    r'\'W': '\u1e82',  # W acute
+    r'\'w': '\u1e83',  # w acute
     r'\;A': '\u0104',  # A ogonek
     r'\;a': '\u0105',  # a ogonek
     r'\;E': '\u0118',  # E ogonek
@@ -371,7 +365,6 @@ subscript_dict = {
 
 
 def replace_subscript(s: str, subscript=True) -> str:
-
     target = '~'
     rdict = subscript_dict
     if not subscript:

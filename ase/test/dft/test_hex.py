@@ -8,9 +8,11 @@ from ase.dft.kpoints import get_special_points
 def test_hex():
     """Test band structure from different variations of hexagonal cells."""
     firsttime = True
-    for cell in [[[1, 0, 0], [0.5, 3**0.5 / 2, 0], [0, 0, 1]],
-                 [[1, 0, 0], [-0.5, 3**0.5 / 2, 0], [0, 0, 1]],
-                 [[0.5, -3**0.5 / 2, 0], [0.5, 3**0.5 / 2, 0], [0, 0, 1]]]:
+    for cell in [
+        [[1, 0, 0], [0.5, 3**0.5 / 2, 0], [0, 0, 1]],
+        [[1, 0, 0], [-0.5, 3**0.5 / 2, 0], [0, 0, 1]],
+        [[0.5, -(3**0.5) / 2, 0], [0.5, 3**0.5 / 2, 0], [0, 0, 1]],
+    ]:
         a = Atoms(cell=cell, pbc=True)
         a.cell *= 3
         a.calc = FreeElectrons(nvalence=1, kpts={'path': 'GMKG'})
@@ -31,7 +33,9 @@ def test_hex():
             e_skn1 = e_skn
             firsttime = False
         else:
-            for d in [coords - coords1,
-                      labelcoords - labelcoords1,
-                      e_skn - e_skn1]:
+            for d in [
+                coords - coords1,
+                labelcoords - labelcoords1,
+                e_skn - e_skn1,
+            ]:
                 assert abs(d).max() < 1e-13

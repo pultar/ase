@@ -25,7 +25,7 @@ def file(request, testdir):
     return file
 
 
-@pytest.mark.parametrize("display_all", [False, True])
+@pytest.mark.parametrize('display_all', [False, True])
 def test_single(cli, file, display_all):
     if display_all:
         output = cli.ase('dimensionality', '--display-all', file)

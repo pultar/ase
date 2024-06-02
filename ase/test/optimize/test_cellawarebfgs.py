@@ -12,10 +12,11 @@ from ase.units import GPa
 
 def test_rattle_supercell_old():
     """
-       The default len(atoms) to exp_cell_factor acts as a preconditioner
-       and therefore makes the repeat unit cell of rattled atoms to converge
-       in different number of steps.
+    The default len(atoms) to exp_cell_factor acts as a preconditioner
+    and therefore makes the repeat unit cell of rattled atoms to converge
+    in different number of steps.
     """
+
     def relax(atoms):
         atoms.calc = EMT()
         relax = BFGS(FrechetCellFilter(atoms), alpha=70)
@@ -33,16 +34,19 @@ def test_rattle_supercell_old():
 
 def relax(atoms):
     atoms.calc = EMT()
-    relax = CellAwareBFGS(FrechetCellFilter(atoms, exp_cell_factor=1.0),
-                          alpha=70, long_output=True)
+    relax = CellAwareBFGS(
+        FrechetCellFilter(atoms, exp_cell_factor=1.0),
+        alpha=70,
+        long_output=True,
+    )
     relax.run(fmax=0.005, smax=0.00005)
     return relax.nsteps
 
 
 def test_rattle_supercell():
     """
-       Make sure that relaxing a rattled cell converges in the same number
-       of iterations than a corresponding supercell with CellAwareBFGS.
+    Make sure that relaxing a rattled cell converges in the same number
+    of iterations than a corresponding supercell with CellAwareBFGS.
     """
     atoms = bulk('Au')
     atoms *= (2, 1, 1)
@@ -56,22 +60,23 @@ def test_rattle_supercell():
 @pytest.mark.parametrize('filt', [FrechetCellFilter, UnitCellFilter])
 def test_cellaware_bfgs_2d(filt):
     """
-       Make sure that the mask works with CellAwareBFGS
-       by requiring that cell vectors on suppressed col and row remain
-       unchanged.
+    Make sure that the mask works with CellAwareBFGS
+    by requiring that cell vectors on suppressed col and row remain
+    unchanged.
     """
     atoms = fcc110('Au', size=(2, 2, 3), vacuum=4)
     orig_cell = atoms.cell.copy()
-    atoms.cell = atoms.cell @ np.array([[1.0, 0.05, 0],
-                                        [0.0, 1.0, 0.0],
-                                        [0.0, 0.0, 1.0]])
+    atoms.cell = atoms.cell @ np.array(
+        [[1.0, 0.05, 0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    )
     atoms.calc = EMT()
     if filt == FrechetCellFilter:
         dct = dict(exp_cell_factor=1.0)
     else:
         dct = dict(cell_factor=1.0)
-    relax = CellAwareBFGS(filt(atoms, mask=[1, 1, 0, 0, 0, 1], **dct),
-                          alpha=70, long_output=True)
+    relax = CellAwareBFGS(
+        filt(atoms, mask=[1, 1, 0, 0, 0, 1], **dct), alpha=70, long_output=True
+    )
     relax.run(fmax=0.05)
     assert np.allclose(atoms.cell[2, :], orig_cell[2, :])
     assert np.allclose(atoms.cell[:, 2], orig_cell[:, 2])
@@ -79,16 +84,19 @@ def test_cellaware_bfgs_2d(filt):
 
 def test_cellaware_bfgs():
     """
-       Make sure that a supercell relaxes in same number of steps as the
-       unit cell with CellAwareBFGS.
+    Make sure that a supercell relaxes in same number of steps as the
+    unit cell with CellAwareBFGS.
     """
     steps = []
     for scale in [1, 2]:
         atoms = bulk('Au')
         atoms *= scale
         atoms.calc = EMT()
-        relax = CellAwareBFGS(FrechetCellFilter(atoms, exp_cell_factor=1.0),
-                              alpha=70, long_output=True)
+        relax = CellAwareBFGS(
+            FrechetCellFilter(atoms, exp_cell_factor=1.0),
+            alpha=70,
+            long_output=True,
+        )
         relax.run()
         steps.append(relax.nsteps)
     assert steps[0] == steps[1]
@@ -96,13 +104,13 @@ def test_cellaware_bfgs():
 
 def test_elasticity_tensor():
     """
-       Calculate the exact elasticity tensor. Create an optimizer with
-       that exact hessian, and deform it slightly and verify that within
-       the quadratic reqion, it only takes one step to get back.
+    Calculate the exact elasticity tensor. Create an optimizer with
+    that exact hessian, and deform it slightly and verify that within
+    the quadratic reqion, it only takes one step to get back.
 
-       Also verify, that we really set rotation_supression eigenvalues
-       to alpha, and that CellAwareBFGS can approximatily build that exact
-       Hessian within 10% tolerance.
+    Also verify, that we really set rotation_supression eigenvalues
+    to alpha, and that CellAwareBFGS can approximatily build that exact
+    Hessian within 10% tolerance.
     """
     atoms = bulk('Au')
     atoms *= 2
@@ -112,9 +120,13 @@ def test_elasticity_tensor():
 
     # d = 0.01
     # deformation = np.eye(3) + d * (np.random.rand(3, 3) - 0.5)
-    deformation = np.array([[9.99163386e-01, -8.49034327e-04, -3.1448271e-03],
-                            [3.25727960e-03, 9.98723923e-01, 2.76098324e-03],
-                            [9.85751768e-04, 4.61517003e-03, 9.95895994e-01]])
+    deformation = np.array(
+        [
+            [9.99163386e-01, -8.49034327e-04, -3.1448271e-03],
+            [3.25727960e-03, 9.98723923e-01, 2.76098324e-03],
+            [9.85751768e-04, 4.61517003e-03, 9.95895994e-01],
+        ]
+    )
     atoms.set_cell(atoms.get_cell() @ deformation, scale_atoms=True)
 
     def ExactHessianBFGS(atoms, C_ijkl, alpha=70):
@@ -137,8 +149,11 @@ def test_elasticity_tensor():
 
     # Make sure we can approximate the elasticity tensor within 10%
     # using the CellAwareBFGS
-    tmp = CellAwareBFGS(FrechetCellFilter(atoms, exp_cell_factor=1.0),
-                        bulk_modulus=175 * GPa, poisson_ratio=0.46)
+    tmp = CellAwareBFGS(
+        FrechetCellFilter(atoms, exp_cell_factor=1.0),
+        bulk_modulus=175 * GPa,
+        poisson_ratio=0.46,
+    )
     for a, b in zip(rlx.H0[-9:, -9:].ravel(), tmp.H0[-9:, -9:].ravel()):
         if abs(a) > 0.001:
             print(a, b)

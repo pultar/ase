@@ -38,11 +38,14 @@ def read_elk(fd):
             continue
         if line.startswith('avec'):
             cell = np.array(
-                [[float(v) * scale[1] for v in lines[n + 1].split()],
-                 [float(v) * scale[2] for v in lines[n + 2].split()],
-                 [float(v) * scale[3] for v in lines[n + 3].split()]])
+                [
+                    [float(v) * scale[1] for v in lines[n + 1].split()],
+                    [float(v) * scale[2] for v in lines[n + 2].split()],
+                    [float(v) * scale[3] for v in lines[n + 3].split()],
+                ]
+            )
         if line.startswith('atoms'):
-            lines1 = lines[n + 1:]  # start subsearch
+            lines1 = lines[n + 1 :]  # start subsearch
             spfname = []
             natoms = []
             atpos = []
@@ -57,11 +60,12 @@ def read_elk(fd):
                     natoms.append(natomsnow)
                     atposnow = []
                     bfcmtnow = []
-                    for line in lines1[n1 + 2:n1 + 2 + natomsnow]:
+                    for line in lines1[n1 + 2 : n1 + 2 + natomsnow]:
                         atposnow.append([float(v) for v in line.split()[0:3]])
                         if len(line.split()) == 6:  # bfcmt present
                             bfcmtnow.append(
-                                [float(v) for v in line.split()[3:]])
+                                [float(v) for v in line.split()[3:]]
+                            )
                     atpos.append(atposnow)
                     bfcmt.append(bfcmtnow)
     # symbols, positions, magmoms based on ELK spfname, atpos, and bfcmt
@@ -105,8 +109,7 @@ def write_elk_in(fd, atoms, parameters=None):
         if 'kpts' in parameters:
             raise RuntimeError("You can't use both 'autokpt' and 'kpts'!")
         if 'ngridk' in parameters:
-            raise RuntimeError(
-                "You can't use both 'autokpt' and 'ngridk'!")
+            raise RuntimeError("You can't use both 'autokpt' and 'ngridk'!")
     if 'ngridk' in parameters:
         if 'kpts' in parameters:
             raise RuntimeError("You can't use both 'ngridk' and 'kpts'!")
@@ -114,28 +117,31 @@ def write_elk_in(fd, atoms, parameters=None):
     if parameters.get('autoswidth'):
         if 'smearing' in parameters:
             raise RuntimeError(
-                "You can't use both 'autoswidth' and 'smearing'!")
+                "You can't use both 'autoswidth' and 'smearing'!"
+            )
         if 'swidth' in parameters:
-            raise RuntimeError(
-                "You can't use both 'autoswidth' and 'swidth'!")
+            raise RuntimeError("You can't use both 'autoswidth' and 'swidth'!")
 
     inp = {}
     inp.update(parameters)
 
     if 'xc' in parameters:
-        xctype = {'LDA': 3,  # PW92
-                  'PBE': 20,
-                  'REVPBE': 21,
-                  'PBESOL': 22,
-                  'WC06': 26,
-                  'AM05': 30,
-                  'mBJLDA': (100, 208, 12)}[parameters['xc']]
+        xctype = {
+            'LDA': 3,  # PW92
+            'PBE': 20,
+            'REVPBE': 21,
+            'PBESOL': 22,
+            'WC06': 26,
+            'AM05': 30,
+            'mBJLDA': (100, 208, 12),
+        }[parameters['xc']]
         inp['xctype'] = xctype
         del inp['xc']
 
     if 'kpts' in parameters:
         # XXX should generalize kpts handling.
         from ase.calculators.calculator import kpts2mp
+
         mp = kpts2mp(atoms, parameters['kpts'])
         inp['ngridk'] = tuple(mp)
         vkloff = []  # is this below correct?
@@ -152,9 +158,10 @@ def write_elk_in(fd, atoms, parameters=None):
         if name == 'methfessel-paxton':
             stype = parameters.smearing[2]
         else:
-            stype = {'gaussian': 0,
-                     'fermi-dirac': 3,
-                     }[name]
+            stype = {
+                'gaussian': 0,
+                'fermi-dirac': 3,
+            }[name]
         inp['stype'] = stype
         inp['swidth'] = parameters.smearing[1]
         del inp['smearing']
@@ -184,8 +191,8 @@ def write_elk_in(fd, atoms, parameters=None):
     species = {}
     symbols = []
     for a, (symbol, m) in enumerate(
-        zip(atoms.get_chemical_symbols(),
-            atoms.get_initial_magnetic_moments())):
+        zip(atoms.get_chemical_symbols(), atoms.get_initial_magnetic_moments())
+    ):
         if symbol in species:
             species[symbol].append((a, m))
         else:
@@ -198,8 +205,9 @@ def write_elk_in(fd, atoms, parameters=None):
         fd.write(f"'{symbol}.in' : spfname\n")
         fd.write('%d\n' % len(species[symbol]))
         for a, m in species[symbol]:
-            fd.write('%.14f %.14f %.14f 0.0 0.0 %.14f\n' %
-                     (tuple(scaled[a]) + (m,)))
+            fd.write(
+                '%.14f %.14f %.14f 0.0 0.0 %.14f\n' % (tuple(scaled[a]) + (m,))
+            )
 
     # if sppath is present in elk.in it overwrites species blocks!
 
@@ -319,7 +327,6 @@ def parse_elk_info(fd):
 
 
 def parse_elk_eigval(fd):
-
     def match_int(line, word):
         number, colon, word1 = line.split()
         assert word1 == word

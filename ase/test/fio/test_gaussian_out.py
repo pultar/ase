@@ -1,4 +1,5 @@
 """Tests for the gaussian-out format."""
+
 from io import StringIO
 
 import numpy as np
@@ -122,20 +123,29 @@ BUF_F2_RHF = r"""
  SCF Done:  E(RHF) =  -198.700044583     A.U. after    8 cycles
 """
 
-BUF_F2_MP2 = BUF_F2_RHF + r"""
+BUF_F2_MP2 = (
+    BUF_F2_RHF
+    + r"""
 ...
  E2 =    -0.4264521750D+00 EUMP2 =    -0.19912649675787D+03
 """
+)
 
-BUF_F2_CCSD = BUF_F2_MP2 + r"""
+BUF_F2_CCSD = (
+    BUF_F2_MP2
+    + r"""
 ...
  Wavefunction amplitudes converged. E(Corr)=     -199.13391098
 """
+)
 
-BUF_F2_CCSD_T = BUF_F2_CCSD + r"""
+BUF_F2_CCSD_T = (
+    BUF_F2_CCSD
+    + r"""
 ...
  CCSD(T)= -0.19914648303D+03
 """
+)
 
 BUF_H2O_OPT = r""" Entering Gaussian System, Link 0=g16
  Initial command:
@@ -254,11 +264,15 @@ def test_gaussian_out_l601():
     buf = BUF_H2O + BUF_H2O_MULLIKEN + BUF_H2O_L601_DIPOLE
     atoms = read(StringIO(buf), format='gaussian-out')
     assert str(atoms.symbols) == 'OH2'
-    assert atoms.positions == pytest.approx(np.array([
-        [+0.000000, +0.000000, +0.119262],
-        [+0.000000, +0.763239, -0.477047],
-        [+0.000000, -0.763239, -0.477047],
-    ]))
+    assert atoms.positions == pytest.approx(
+        np.array(
+            [
+                [+0.000000, +0.000000, +0.119262],
+                [+0.000000, +0.763239, -0.477047],
+                [+0.000000, -0.763239, -0.477047],
+            ]
+        )
+    )
     assert not any(atoms.pbc)
     assert atoms.cell.rank == 0
 
@@ -279,14 +293,20 @@ def test_gaussian_out_l716():
     """
     atoms = read(StringIO(BUF_H2O + BUF_H2O_L716), format='gaussian-out')
     forces = atoms.get_forces()
-    assert forces / (units.Ha / units.Bohr) == pytest.approx(np.array([
-        [-0.000000000, -0.000000000, -0.036558637],
-        [-0.000000000, -0.003968101, +0.018279318],
-        [+0.000000000, +0.003968101, +0.018279318],
-    ]))
-    assert atoms.get_dipole_moment() / units.Bohr == pytest.approx(np.array(
-        [+3.27065103e-16, -1.33226763e-15, -1.03989005e+00],
-    ))
+    assert forces / (units.Ha / units.Bohr) == pytest.approx(
+        np.array(
+            [
+                [-0.000000000, -0.000000000, -0.036558637],
+                [-0.000000000, -0.003968101, +0.018279318],
+                [+0.000000000, +0.003968101, +0.018279318],
+            ]
+        )
+    )
+    assert atoms.get_dipole_moment() / units.Bohr == pytest.approx(
+        np.array(
+            [+3.27065103e-16, -1.33226763e-15, -1.03989005e00],
+        )
+    )
 
 
 def test_gaussian_out_lowdin():
@@ -327,29 +347,29 @@ def test_spin_polarized():
 
 def test_mp2():
     """Test if the MP2 energy is parsed correctly."""
-    atoms = read(StringIO(BUF_F2_MP2), format="gaussian-out")
+    atoms = read(StringIO(BUF_F2_MP2), format='gaussian-out')
     energy = atoms.get_potential_energy()
-    assert energy / units.Ha == pytest.approx(-0.19912649675787e+03)
+    assert energy / units.Ha == pytest.approx(-0.19912649675787e03)
 
 
 def test_ccsd():
     """Test if the CCSD energy is parsed correctly."""
-    atoms = read(StringIO(BUF_F2_CCSD), format="gaussian-out")
+    atoms = read(StringIO(BUF_F2_CCSD), format='gaussian-out')
     energy = atoms.get_potential_energy()
     assert energy / units.Ha == pytest.approx(-199.13391098)
 
 
 def test_ccsd_t():
     """Test if the CCSD(T) energy is parsed correctly."""
-    atoms = read(StringIO(BUF_F2_CCSD_T), format="gaussian-out")
+    atoms = read(StringIO(BUF_F2_CCSD_T), format='gaussian-out')
     energy = atoms.get_potential_energy()
-    assert energy / units.Ha == pytest.approx(-0.19914648303e+03)
+    assert energy / units.Ha == pytest.approx(-0.19914648303e03)
 
 
 def test_gaussian_opt():
     """Test if we determine the correct number of geometries in the output
     produced during optimization"""
-    atoms = read(StringIO(BUF_H2O_OPT), format="gaussian-out", index=':')
+    atoms = read(StringIO(BUF_H2O_OPT), format='gaussian-out', index=':')
     assert len(atoms) == 2
 
     # Ensure the energy and forces were parsed and differ

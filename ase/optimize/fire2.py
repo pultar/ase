@@ -46,7 +46,7 @@ class FIRE2(Optimizer):
         master: Optional[bool] = None,
         position_reset_callback: Optional[Callable] = None,
         force_consistent=Optimizer._deprecated,
-        use_abc: Optional[bool] = False
+        use_abc: Optional[bool] = False,
     ):
         """Parameters:
 
@@ -118,9 +118,16 @@ class FIRE2(Optimizer):
             used (ABC-FIRE).
             Default value is False.
 
-       """
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+        """
+        Optimizer.__init__(
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master,
+            force_consistent=force_consistent,
+        )
 
         self.dt = dt
 
@@ -129,7 +136,7 @@ class FIRE2(Optimizer):
         if maxstep is not None:
             self.maxstep = maxstep
         else:
-            self.maxstep = self.defaults["maxstep"]
+            self.maxstep = self.defaults['maxstep']
 
         self.dtmax = dtmax
         self.dtmin = dtmin
@@ -157,10 +164,8 @@ class FIRE2(Optimizer):
         if self.v is None:
             self.v = np.zeros((len(optimizable), 3))
         else:
-
             vf = np.vdot(f, self.v)
             if vf > 0.0:
-
                 self.Nsteps += 1
                 if self.Nsteps > self.Nmin:
                     self.dt = min(self.dt * self.finc, self.dtmax)
@@ -170,7 +175,7 @@ class FIRE2(Optimizer):
                 self.dt = max(self.dt * self.fdec, self.dtmin)
                 self.a = self.astart
 
-                dr = - 0.5 * self.dt * self.v
+                dr = -0.5 * self.dt * self.v
                 r = optimizable.get_positions()
                 optimizable.set_positions(r + dr)
                 self.v[:] *= 0.0
@@ -181,9 +186,10 @@ class FIRE2(Optimizer):
 
         if self.use_abc:
             self.a = max(self.a, 1e-10)
-            abc_multiplier = 1. / (1. - (1. - self.a)**(self.Nsteps + 1))
-            v_mix = ((1.0 - self.a) * self.v + self.a * f / np.sqrt(
-                np.vdot(f, f)) * np.sqrt(np.vdot(self.v, self.v)))
+            abc_multiplier = 1.0 / (1.0 - (1.0 - self.a) ** (self.Nsteps + 1))
+            v_mix = (1.0 - self.a) * self.v + self.a * f / np.sqrt(
+                np.vdot(f, f)
+            ) * np.sqrt(np.vdot(self.v, self.v))
             self.v = abc_multiplier * v_mix
 
             # Verifying if the maximum distance an atom
@@ -192,18 +198,19 @@ class FIRE2(Optimizer):
             if np.all(self.v):
                 v_tmp = []
                 for car_dir in range(3):
-                    v_i = np.where(np.abs(self.v[:, car_dir]) *
-                                   self.dt > self.maxstep,
-                                   (self.maxstep / self.dt) *
-                                   (self.v[:, car_dir] /
-                                   np.abs(self.v[:, car_dir])),
-                                   self.v[:, car_dir])
+                    v_i = np.where(
+                        np.abs(self.v[:, car_dir]) * self.dt > self.maxstep,
+                        (self.maxstep / self.dt)
+                        * (self.v[:, car_dir] / np.abs(self.v[:, car_dir])),
+                        self.v[:, car_dir],
+                    )
                     v_tmp.append(v_i)
                 self.v = np.array(v_tmp).T
 
         else:
-            self.v = ((1.0 - self.a) * self.v + self.a * f / np.sqrt(
-                np.vdot(f, f)) * np.sqrt(np.vdot(self.v, self.v)))
+            self.v = (1.0 - self.a) * self.v + self.a * f / np.sqrt(
+                np.vdot(f, f)
+            ) * np.sqrt(np.vdot(self.v, self.v))
 
         dr = self.dt * self.v
 

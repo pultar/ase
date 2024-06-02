@@ -7,7 +7,6 @@ TEST_N = 200
 
 
 def axang_rotm(u, theta):
-
     u = np.array(u, float)
     u /= np.linalg.norm(u)
 
@@ -15,8 +14,11 @@ def axang_rotm(u, theta):
     ucpm = np.array([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])
 
     # Rotation matrix
-    rotm = (np.cos(theta) * np.identity(3) + np.sin(theta) * ucpm +
-            (1 - np.cos(theta)) * np.kron(u[:, None], u[None, :]))
+    rotm = (
+        np.cos(theta) * np.identity(3)
+        + np.sin(theta) * ucpm
+        + (1 - np.cos(theta)) * np.kron(u[:, None], u[None, :])
+    )
 
     return rotm
 
@@ -30,7 +32,6 @@ def rand_rotm(rng=np.random.RandomState(0)):
 
 
 def eulang_rotm(a, b, c, mode='zyz'):
-
     rota = axang_rotm([0, 0, 1], a)
     rotc = axang_rotm([0, 0, 1], c)
 
@@ -48,7 +49,6 @@ def rng():
 
 
 def test_quaternions_rotations(rng):
-
     # First: test that rotations DO work
     for _ in range(TEST_N):
         # n random tests
@@ -68,11 +68,10 @@ def test_quaternions_rotations(rng):
 
 
 def test_quaternions_gimbal(rng):
-
     # Second: test the special case of a PI rotation
 
     rotm = np.identity(3)
-    rotm[:2, :2] *= -1               # Rotate PI around z axis
+    rotm[:2, :2] *= -1  # Rotate PI around z axis
 
     q = Quaternion.from_matrix(rotm)
 
@@ -80,7 +79,6 @@ def test_quaternions_gimbal(rng):
 
 
 def test_quaternions_overload(rng):
-
     # Third: test compound rotations and operator overload
     for _ in range(TEST_N):
         rotm1 = rand_rotm(rng)
@@ -89,8 +87,7 @@ def test_quaternions_overload(rng):
         q1 = Quaternion.from_matrix(rotm1)
         q2 = Quaternion.from_matrix(rotm2)
 
-        assert np.allclose(np.dot(rotm2, rotm1),
-                           (q2 * q1).rotation_matrix())
+        assert np.allclose(np.dot(rotm2, rotm1), (q2 * q1).rotation_matrix())
         # Now test this with a vector
         v = rng.random(3)
 
@@ -119,7 +116,6 @@ def test_quaternions_euler(rng: np.random.RandomState, mode: str):
 
 
 def test_quaternions_rotm(rng):
-
     # Fifth: test that conversion back to rotation matrices works properly
     for _ in range(TEST_N):
         rotm1 = rand_rotm(rng)
@@ -135,7 +131,6 @@ def test_quaternions_rotm(rng):
 
 
 def test_quaternions_axang(rng):
-
     # Sixth: test conversion to axis + angle
     q = Quaternion()
     n, theta = q.axis_angle()
@@ -153,17 +148,20 @@ def test_quaternions_axang(rng):
 
 
 @pytest.mark.parametrize(
-    'q,euler_angles,mode,rotation_matrix,axis,angle', [
+    'q,euler_angles,mode,rotation_matrix,axis,angle',
+    [
         # pi/2 rotation along z axis
         (
             np.array([np.cos(np.pi / 4), 0, 0, np.sin(np.pi / 4)]),
             np.array([0, 0, np.pi / 2]),  # We use alpha=0 for singular case
             'zyz',
-            np.array([
-                [0, -1, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-            ]),
+            np.array(
+                [
+                    [0, -1, 0],
+                    [1, 0, 0],
+                    [0, 0, 1],
+                ]
+            ),
             np.array([0, 0, 1]),
             np.pi / 2,
         ),
@@ -172,15 +170,17 @@ def test_quaternions_axang(rng):
             np.array([np.cos(np.pi / 4), np.sin(np.pi / 4), 0, 0]),
             np.array([np.pi / 2, np.pi / 2, -np.pi / 2]),
             'zyz',
-            np.array([
-                [1, 0, 0],
-                [0, 0, -1],
-                [0, 1, 0],
-            ]),
+            np.array(
+                [
+                    [1, 0, 0],
+                    [0, 0, -1],
+                    [0, 1, 0],
+                ]
+            ),
             np.array([1, 0, 0]),
             np.pi / 2,
         ),
-    ]
+    ],
 )
 def test_quaternions_special_cases(
     q, euler_angles, mode, rotation_matrix, axis, angle

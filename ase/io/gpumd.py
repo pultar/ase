@@ -17,8 +17,15 @@ def find_nearest_value(array, value):
     return array[idx]
 
 
-def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
-                groupings=None, use_triclinic=False, species=None):
+def write_gpumd(
+    fd,
+    atoms,
+    maximum_neighbors=None,
+    cutoff=None,
+    groupings=None,
+    use_triclinic=False,
+    species=None,
+):
     """
     Writes atoms into GPUMD input format.
 
@@ -71,11 +78,14 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
             raise ValueError('There can be no more than 3 grouping methods!')
         for g, grouping in enumerate(groupings):
             all_indices = [i for group in grouping for i in group]
-            if len(all_indices) != len(atoms) or\
-                    set(all_indices) != set(range(len(atoms))):
-                raise ValueError('The indices listed in grouping method {} are'
-                                 ' not compatible with the input'
-                                 ' structure!'.format(g))
+            if len(all_indices) != len(atoms) or set(all_indices) != set(
+                range(len(atoms))
+            ):
+                raise ValueError(
+                    'The indices listed in grouping method {} are'
+                    ' not compatible with the input'
+                    ' structure!'.format(g)
+                )
 
     # If not specified, estimate the maximum_neighbors
     if maximum_neighbors is None:
@@ -87,8 +97,9 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
             nl.update(atoms)
             maximum_neighbors = 0
             for atom in atoms:
-                maximum_neighbors = max(maximum_neighbors,
-                                        len(nl.get_neighbors(atom.index)[0]))
+                maximum_neighbors = max(
+                    maximum_neighbors, len(nl.get_neighbors(atom.index)[0])
+                )
             maximum_neighbors *= 2
             maximum_neighbors = min(maximum_neighbors, 1024)
 
@@ -98,15 +109,28 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
         triclinic = 0
     else:
         triclinic = 1
-    lines.append('{} {} {} {} {} {}'.format(len(atoms), maximum_neighbors,
-                                            cutoff, triclinic, has_velocity,
-                                            number_of_grouping_methods))
+    lines.append(
+        '{} {} {} {} {} {}'.format(
+            len(atoms),
+            maximum_neighbors,
+            cutoff,
+            triclinic,
+            has_velocity,
+            number_of_grouping_methods,
+        )
+    )
     if triclinic:
-        lines.append((' {}' * 12)[1:].format(*atoms.pbc.astype(int),
-                                             *atoms.cell[:].flatten()))
+        lines.append(
+            (' {}' * 12)[1:].format(
+                *atoms.pbc.astype(int), *atoms.cell[:].flatten()
+            )
+        )
     else:
-        lines.append((' {}' * 6)[1:].format(*atoms.pbc.astype(int),
-                                            *atoms.cell.lengths()))
+        lines.append(
+            (' {}' * 6)[1:].format(
+                *atoms.pbc.astype(int), *atoms.cell.lengths()
+            )
+        )
 
     # Create symbols-to-type map, i.e. integers starting at 0
     if not species:
@@ -115,10 +139,11 @@ def write_gpumd(fd, atoms, maximum_neighbors=None, cutoff=None,
             if symbol not in symbol_type_map:
                 symbol_type_map[symbol] = len(symbol_type_map)
     else:
-        if any(sym not in species
-               for sym in set(atoms.get_chemical_symbols())):
-            raise ValueError('The species list does not contain all chemical '
-                             'species that are present in the atoms object.')
+        if any(sym not in species for sym in set(atoms.get_chemical_symbols())):
+            raise ValueError(
+                'The species list does not contain all chemical '
+                'species that are present in the atoms object.'
+            )
         else:
             symbol_type_map = {symbol: i for i, symbol in enumerate(species)}
 
@@ -176,8 +201,7 @@ def load_xyz_input_gpumd(fd, species=None, isotope_masses=None):
     # Parse first line
     first_line = next(fd)
     input_parameters = {}
-    keys = ['N', 'M', 'cutoff', 'triclinic', 'has_velocity',
-            'num_of_groups']
+    keys = ['N', 'M', 'cutoff', 'triclinic', 'has_velocity', 'num_of_groups']
     types = [float if key == 'cutoff' else int for key in keys]
     for k, (key, typ) in enumerate(zip(keys, types)):
         input_parameters[key] = typ(first_line.split()[k])
@@ -193,8 +217,11 @@ def load_xyz_input_gpumd(fd, species=None, isotope_masses=None):
 
     # Parse all remaining rows
     n_rows = input_parameters['N']
-    n_columns = 5 + input_parameters['has_velocity'] * 3 +\
-        input_parameters['num_of_groups']
+    n_columns = (
+        5
+        + input_parameters['has_velocity'] * 3
+        + input_parameters['num_of_groups']
+    )
     rest_lines = [next(fd) for _ in range(n_rows)]
     rest_arr = np.array([line.split() for line in rest_lines])
     assert rest_arr.shape == (n_rows, n_columns)
@@ -208,26 +235,33 @@ def load_xyz_input_gpumd(fd, species=None, isotope_masses=None):
     if species is None:
         type_symbol_map = {}
     if isotope_masses is not None:
-        mass_symbols = {mass: symbol for symbol, masses in
-                        isotope_masses.items() for mass in masses}
+        mass_symbols = {
+            mass: symbol
+            for symbol, masses in isotope_masses.items()
+            for mass in masses
+        }
     symbols = []
     for atom_type, mass in zip(atom_types, masses):
         if species is None:
             if atom_type not in type_symbol_map:
                 if isotope_masses is not None:
                     nearest_value = find_nearest_value(
-                        list(mass_symbols.keys()), mass)
+                        list(mass_symbols.keys()), mass
+                    )
                     symbol = mass_symbols[nearest_value]
                 else:
                     symbol = chemical_symbols[
-                        find_nearest_index(atomic_masses, mass)]
+                        find_nearest_index(atomic_masses, mass)
+                    ]
                 type_symbol_map[atom_type] = symbol
             else:
                 symbol = type_symbol_map[atom_type]
         else:
             if atom_type > len(species):
-                raise Exception('There is no entry for atom type {} in the '
-                                'species list!'.format(atom_type))
+                raise Exception(
+                    'There is no entry for atom type {} in the '
+                    'species list!'.format(atom_type)
+                )
             symbol = species[atom_type]
         symbols.append(symbol)
 
@@ -235,8 +269,9 @@ def load_xyz_input_gpumd(fd, species=None, isotope_masses=None):
         species = [type_symbol_map[i] for i in sorted(type_symbol_map.keys())]
 
     # Create the Atoms object
-    atoms = Atoms(symbols=symbols, positions=positions, masses=masses, pbc=pbc,
-                  cell=cell)
+    atoms = Atoms(
+        symbols=symbols, positions=positions, masses=masses, pbc=pbc, cell=cell
+    )
     if input_parameters['has_velocity']:
         velocities = rest_arr[:, 5:8].astype(float)
         atoms.set_velocities(velocities)

@@ -33,7 +33,7 @@ def niggli_reduce_cell(cell, epsfactor=None):
         epsfactor = 1e-5
 
     vol_normalization_exponent = 1 if npbc == 0 else 1 / npbc
-    vol_normalization = cell.complete().volume**vol_normalization_exponent
+    vol_normalization = cell.complete().volume ** vol_normalization_exponent
     eps = epsfactor * vol_normalization
 
     g0 = cellvector_products(cell)
@@ -94,14 +94,12 @@ def _niggli_reduce(g0, eps):
         return not (lt(x, y, eps) or gt(x, y, eps))
 
     for _ in range(10000):
-        if (gt(g[0], g[1])
-                or (eq(g[0], g[1]) and gt(abs(g[3]), abs(g[4])))):
+        if gt(g[0], g[1]) or (eq(g[0], g[1]) and gt(abs(g[3]), abs(g[4]))):
             C = C @ (-I3[[1, 0, 2]])
             D = I6[[1, 0, 2, 4, 3, 5]] @ D
             g = D @ g0
             continue
-        elif (gt(g[1], g[2])
-                or (eq(g[1], g[2]) and gt(abs(g[4]), abs(g[5])))):
+        elif gt(g[1], g[2]) or (eq(g[1], g[2]) and gt(abs(g[4]), abs(g[5]))):
             C = C @ (-I3[[0, 2, 1]])
             D = I6[[0, 2, 1, 3, 5, 4]] @ D
             g = D @ g0
@@ -119,9 +117,11 @@ def _niggli_reduce(g0, eps):
         D[5] *= ijk[0] * ijk[1]
         g = D @ g0
 
-        if (gt(abs(g[3]), g[1])
-                or (eq(g[3], g[1]) and lt(2 * g[4], g[5]))
-                or (eq(g[3], -g[1]) and lt(g[5], 0))):
+        if (
+            gt(abs(g[3]), g[1])
+            or (eq(g[3], g[1]) and lt(2 * g[4], g[5]))
+            or (eq(g[3], -g[1]) and lt(g[5], 0))
+        ):
             s = int(np.sign(g[3]))
 
             A = I3.copy()
@@ -135,9 +135,11 @@ def _niggli_reduce(g0, eps):
             B[4, 5] = -s
             D = B @ D
             g = D @ g0
-        elif (gt(abs(g[4]), g[0])
-                or (eq(g[4], g[0]) and lt(2 * g[3], g[5]))
-                or (eq(g[4], -g[0]) and lt(g[5], 0))):
+        elif (
+            gt(abs(g[4]), g[0])
+            or (eq(g[4], g[0]) and lt(2 * g[3], g[5]))
+            or (eq(g[4], -g[0]) and lt(g[5], 0))
+        ):
             s = int(np.sign(g[4]))
 
             A = I3.copy()
@@ -151,9 +153,11 @@ def _niggli_reduce(g0, eps):
             B[4, 0] = -2 * s
             D = B @ D
             g = D @ g0
-        elif (gt(abs(g[5]), g[0])
-                or (eq(g[5], g[0]) and lt(2 * g[3], g[4]))
-                or (eq(g[5], -g[0]) and lt(g[4], 0))):
+        elif (
+            gt(abs(g[5]), g[0])
+            or (eq(g[5], g[0]) and lt(2 * g[3], g[4]))
+            or (eq(g[5], -g[0]) and lt(g[4], 0))
+        ):
             s = int(np.sign(g[5]))
 
             A = I3.copy()
@@ -167,9 +171,9 @@ def _niggli_reduce(g0, eps):
             B[5, 0] = -2 * s
             D = B @ D
             g = D @ g0
-        elif (lt(g[[0, 1, 3, 4, 5]].sum(), 0)
-                or (eq(g[[0, 1, 3, 4, 5]].sum(), 0)
-                    and gt(2 * (g[0] + g[4]) + g[5], 0))):
+        elif lt(g[[0, 1, 3, 4, 5]].sum(), 0) or (
+            eq(g[[0, 1, 3, 4, 5]].sum(), 0) and gt(2 * (g[0] + g[4]) + g[5], 0)
+        ):
             A = I3.copy()
             A[:, 2] = 1
             C = C @ A
@@ -185,9 +189,10 @@ def _niggli_reduce(g0, eps):
         else:
             break
     else:
-        raise RuntimeError('Niggli reduction not done in 10000 steps!\n'
-                           'g={}\n'
-                           'operation={}'
-                           .format(g.tolist(), C.tolist()))
+        raise RuntimeError(
+            'Niggli reduction not done in 10000 steps!\n'
+            'g={}\n'
+            'operation={}'.format(g.tolist(), C.tolist())
+        )
 
     return g, C

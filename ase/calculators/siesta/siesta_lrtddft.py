@@ -27,8 +27,10 @@ class SiestaLRTDDFT:
         try:
             from pynao import tddft_iter
         except ModuleNotFoundError as err:
-            msg = ("running lrtddft with Siesta calculator "
-                   "requires pynao package")
+            msg = (
+                'running lrtddft with Siesta calculator '
+                'requires pynao package'
+            )
             raise ModuleNotFoundError(msg) from err
 
         self.initialize = initialize
@@ -36,8 +38,8 @@ class SiestaLRTDDFT:
         self.tddft = None
 
         # convert iter_broadening to Ha
-        if "iter_broadening" in self.lrtddft_params:
-            self.lrtddft_params["iter_broadening"] /= un.Ha
+        if 'iter_broadening' in self.lrtddft_params:
+            self.lrtddft_params['iter_broadening'] /= un.Ha
 
         if self.initialize:
             self.tddft = tddft_iter(**self.lrtddft_params)
@@ -54,20 +56,23 @@ class SiestaLRTDDFT:
         """
         from ase.calculators.siesta import Siesta
 
-        if "fdf_arguments" not in kw.keys():
-            kw["fdf_arguments"] = {"COOP.Write": True,
-                                   "WriteDenchar": True,
-                                   "XML.Write": True}
+        if 'fdf_arguments' not in kw.keys():
+            kw['fdf_arguments'] = {
+                'COOP.Write': True,
+                'WriteDenchar': True,
+                'XML.Write': True,
+            }
         else:
-            for param in ["COOP.Write", "WriteDenchar", "XML.Write"]:
-                kw["fdf_arguments"][param] = True
+            for param in ['COOP.Write', 'WriteDenchar', 'XML.Write']:
+                kw['fdf_arguments'][param] = True
 
         siesta = Siesta(**kw)
         atoms.calc = siesta
         atoms.get_potential_energy()
 
-    def get_polarizability(self, omega, Eext=np.array(
-            [1.0, 1.0, 1.0]), inter=True):
+    def get_polarizability(
+        self, omega, Eext=np.array([1.0, 1.0, 1.0]), inter=True
+    ):
         """
         Calculate the polarizability of a molecule via linear response TDDFT
         calculation.
@@ -120,7 +125,7 @@ class SiestaLRTDDFT:
         elif isinstance(omega, np.ndarray):
             freq = omega
         else:
-            raise ValueError("omega soulf")
+            raise ValueError('omega soulf')
 
         freq_cmplx = freq / un.Ha + 1j * self.tddft.eps
         if inter:
@@ -166,7 +171,8 @@ class RamanCalculatorInterface(SiestaLRTDDFT, StaticPolarizabilityCalculator):
             calculator
         """
         pmat = self.get_polarizability(
-            self.omega, Eext=np.array([1.0, 1.0, 1.0]))
+            self.omega, Eext=np.array([1.0, 1.0, 1.0])
+        )
 
         # Specific for raman calls, it expects just the tensor for a single
         # frequency and need only the real part
@@ -194,7 +200,7 @@ def pol2cross_sec(p, omg):
     sigma (np array): cross section in nm**2
     """
 
-    c = 1 / un.alpha                      # speed of the light in au
-    omg /= un.Ha                          # to convert from eV to Hartree
-    sigma = 4 * np.pi * omg * p / (c)     # bohr**2
-    return sigma * (0.1 * un.Bohr)**2     # nm**2
+    c = 1 / un.alpha  # speed of the light in au
+    omg /= un.Ha  # to convert from eV to Hartree
+    sigma = 4 * np.pi * omg * p / (c)  # bohr**2
+    return sigma * (0.1 * un.Bohr) ** 2  # nm**2

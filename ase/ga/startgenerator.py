@@ -1,11 +1,15 @@
 """Tools for generating new random starting candidates."""
+
 import numpy as np
 
 from ase import Atoms
 from ase.build import molecule
 from ase.data import atomic_numbers
-from ase.ga.utilities import (atoms_too_close, atoms_too_close_two_sets,
-                              closest_distances_generator)
+from ase.ga.utilities import (
+    atoms_too_close,
+    atoms_too_close_two_sets,
+    closest_distances_generator,
+)
 
 
 class StartGenerator:
@@ -138,11 +142,20 @@ class StartGenerator:
         By default numpy.random.
     """
 
-    def __init__(self, slab, blocks, blmin, number_of_variable_cell_vectors=0,
-                 box_to_place_in=None, box_volume=None, splits=None,
-                 cellbounds=None, test_dist_to_slab=True, test_too_far=True,
-                 rng=np.random):
-
+    def __init__(
+        self,
+        slab,
+        blocks,
+        blmin,
+        number_of_variable_cell_vectors=0,
+        box_to_place_in=None,
+        box_volume=None,
+        splits=None,
+        cellbounds=None,
+        test_dist_to_slab=True,
+        test_too_far=True,
+        rng=np.random,
+    ):
         self.slab = slab
 
         self.blocks = []
@@ -180,8 +193,8 @@ class StartGenerator:
         else:
             numbers = np.unique([b.get_atomic_numbers() for b in self.blocks])
             self.blmin = closest_distances_generator(
-                numbers,
-                ratio_of_covalent_radii=blmin)
+                numbers, ratio_of_covalent_radii=blmin
+            )
 
         self.number_of_variable_cell_vectors = number_of_variable_cell_vectors
         assert self.number_of_variable_cell_vectors in range(4)
@@ -195,7 +208,7 @@ class StartGenerator:
             assert self.slab.pbc[i], msg
 
         if box_to_place_in is None:
-            p0 = np.array([0., 0., 0.])
+            p0 = np.array([0.0, 0.0, 0.0])
             cell = self.slab.get_cell()
             self.box_to_place_in = [p0, [cell[0, :], cell[1, :], cell[2, :]]]
         else:
@@ -212,7 +225,7 @@ class StartGenerator:
         if splits is None:
             splits = {(1,): 1}
         tot = sum(v for v in splits.values())
-        self.splits = {k: v * 1. / tot for k, v in splits.items()}
+        self.splits = {k: v * 1.0 / tot for k, v in splits.items()}
 
         self.cellbounds = cellbounds
         self.test_too_far = test_too_far
@@ -277,7 +290,7 @@ class StartGenerator:
         nrep = int(np.prod(repeat))
         blocks, ids, surplus = [], [], []
         for i, (block, count) in enumerate(self.blocks):
-            count_part = int(np.ceil(count * 1. / nrep))
+            count_part = int(np.ceil(count * 1.0 / nrep))
             blocks.extend([block] * count_part)
             surplus.append(nrep * count_part - count)
             ids.extend([i] * count_part)
@@ -315,8 +328,9 @@ class StartGenerator:
                     if len(atoms) > 1:
                         # Apply a random rotation to multi-atom blocks
                         phi, theta, psi = 360 * self.rng.random(3)
-                        atoms.euler_rotate(phi=phi, theta=0.5 * theta, psi=psi,
-                                           center=pos)
+                        atoms.euler_rotate(
+                            phi=phi, theta=0.5 * theta, psi=psi, center=pos
+                        )
 
                     if not atoms_too_close_two_sets(cand, atoms, blmin):
                         cand += atoms
@@ -338,7 +352,7 @@ class StartGenerator:
 
             tags_full = cand_full.get_tags()
             for i in range(nrep):
-                tags_full[len(cand) * i:len(cand) * (i + 1)] += i * N_blocks
+                tags_full[len(cand) * i : len(cand) * (i + 1)] += i * N_blocks
             cand_full.set_tags(tags_full)
 
             cand = Atoms('', cell=cell, pbc=pbc)
@@ -365,8 +379,9 @@ class StartGenerator:
 
             # By construction, the minimal interatomic distances
             # within the structure should already be respected
-            assert not atoms_too_close(cand, blmin, use_tags=True), \
-                'This is not supposed to happen; please report this bug'
+            assert not atoms_too_close(
+                cand, blmin, use_tags=True
+            ), 'This is not supposed to happen; please report this bug'
 
             if self.test_dist_to_slab and len(self.slab) > 0:
                 if atoms_too_close_two_sets(self.slab, cand, blmin):
@@ -379,17 +394,17 @@ class StartGenerator:
                     too_far = True
                     indices_i = np.where(tags == tag)[0]
                     indices_j = np.where(tags != tag)[0]
-                    too_far = not atoms_too_close_two_sets(cand[indices_i],
-                                                           cand[indices_j],
-                                                           blmin_too_far)
+                    too_far = not atoms_too_close_two_sets(
+                        cand[indices_i], cand[indices_j], blmin_too_far
+                    )
 
                     if too_far and len(self.slab) > 0:
                         # the block is too far from the rest
                         # but might still be sufficiently
                         # close to the slab
-                        too_far = not atoms_too_close_two_sets(cand[indices_i],
-                                                               self.slab,
-                                                               blmin_too_far)
+                        too_far = not atoms_too_close_two_sets(
+                            cand[indices_i], self.slab, blmin_too_far
+                        )
                     if too_far:
                         break
                 else:
@@ -436,7 +451,7 @@ class StartGenerator:
         # that we need in order to ensure that
         # an added atom or molecule will never
         # be 'too close to itself'
-        Lmin = 0.
+        Lmin = 0.0
         for atoms, count in self.blocks:
             dist = atoms.get_all_distances(mic=False, vector=False)
             num = atoms.get_atomic_numbers()
@@ -472,8 +487,8 @@ class StartGenerator:
             if self.number_of_variable_cell_vectors > 0:
                 volume = abs(np.linalg.det(cell))
                 scaling = self.box_volume / volume
-                scaling **= 1. / self.number_of_variable_cell_vectors
-                cell[:self.number_of_variable_cell_vectors] *= scaling
+                scaling **= 1.0 / self.number_of_variable_cell_vectors
+                cell[: self.number_of_variable_cell_vectors] *= scaling
 
             for i in range(self.number_of_variable_cell_vectors, 3):
                 cell[i] = self.slab.get_cell()[i]

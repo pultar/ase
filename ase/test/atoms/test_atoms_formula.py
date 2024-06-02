@@ -4,7 +4,6 @@ from ase.build import add_adsorbate, fcc111
 
 
 def test_atoms_formula():
-
     # some random system
     slab = fcc111('Al', size=(2, 2, 3))
     add_adsorbate(slab, 'C', 2.5, 'bridge')

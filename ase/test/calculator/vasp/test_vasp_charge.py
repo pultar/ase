@@ -27,12 +27,9 @@ def test_vasp_charge(factory, system, expected_nelect_from_vasp):
     """
 
     # Dummy calculation to let VASP determine default number of electrons
-    calc = factory.calc(xc='LDA',
-                        nsw=-1,
-                        ibrion=-1,
-                        nelm=1,
-                        lwave=False,
-                        lcharg=False)
+    calc = factory.calc(
+        xc='LDA', nsw=-1, ibrion=-1, nelm=1, lwave=False, lcharg=False
+    )
     system.calc = calc
     system.get_potential_energy()
 
@@ -56,13 +53,15 @@ def test_vasp_minus_charge(factory, system, expected_nelect_from_vasp):
     # Compare VASP's output nelect from before minus charge to default nelect
     # determined by us minus charge
     charge = -2
-    calc = factory.calc(xc='LDA',
-                        nsw=-1,
-                        ibrion=-1,
-                        nelm=1,
-                        lwave=False,
-                        lcharg=False,
-                        charge=charge)
+    calc = factory.calc(
+        xc='LDA',
+        nsw=-1,
+        ibrion=-1,
+        nelm=1,
+        lwave=False,
+        lcharg=False,
+        charge=charge,
+    )
     calc.initialize(system)
     calc.write_input(system)
     calc.read_incar('INCAR')
@@ -70,19 +69,22 @@ def test_vasp_minus_charge(factory, system, expected_nelect_from_vasp):
 
 
 @calc('vasp')
-def test_vasp_nelect_charge_conflict(factory, system,
-                                     expected_nelect_from_vasp):
+def test_vasp_nelect_charge_conflict(
+    factory, system, expected_nelect_from_vasp
+):
     # Test that conflicts between explicitly given nelect and charge are
     # detected
     charge = -2
-    calc = factory.calc(xc='LDA',
-                        nsw=-1,
-                        ibrion=-1,
-                        nelm=1,
-                        lwave=False,
-                        lcharg=False,
-                        nelect=expected_nelect_from_vasp - charge + 1,
-                        charge=charge)
+    calc = factory.calc(
+        xc='LDA',
+        nsw=-1,
+        ibrion=-1,
+        nelm=1,
+        lwave=False,
+        lcharg=False,
+        nelect=expected_nelect_from_vasp - charge + 1,
+        charge=charge,
+    )
     system.calc = calc
     with pytest.raises(ValueError):
         system.get_potential_energy()
@@ -91,13 +93,9 @@ def test_vasp_nelect_charge_conflict(factory, system,
 @calc('vasp')
 def test_vasp_nelect_no_write(factory, system):
     # Test that nothing is written if charge is 0 and nelect not given
-    calc = factory.calc(xc='LDA',
-                        nsw=-1,
-                        ibrion=-1,
-                        nelm=1,
-                        lwave=False,
-                        lcharg=False,
-                        charge=0)
+    calc = factory.calc(
+        xc='LDA', nsw=-1, ibrion=-1, nelm=1, lwave=False, lcharg=False, charge=0
+    )
     calc.initialize(system)
     calc.write_input(system)
     calc.read_incar('INCAR')
@@ -107,12 +105,14 @@ def test_vasp_nelect_no_write(factory, system):
 @calc('vasp')
 def test_vasp_nelect(factory, system):
     # Test that explicitly given nelect still works as expected
-    calc = factory.calc(xc='LDA',
-                        nsw=-1,
-                        ibrion=-1,
-                        nelm=1,
-                        lwave=False,
-                        lcharg=False,
-                        nelect=15)
+    calc = factory.calc(
+        xc='LDA',
+        nsw=-1,
+        ibrion=-1,
+        nelm=1,
+        lwave=False,
+        lcharg=False,
+        nelect=15,
+    )
     calc.calculate(system)
     assert calc.get_number_of_electrons() == 15

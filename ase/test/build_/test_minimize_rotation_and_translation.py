@@ -4,7 +4,6 @@ from ase.build import bulk, minimize_rotation_and_translation, molecule
 
 
 def test_with_pbc():
-
     atoms_start = bulk('Cu', 'fcc', a=3.6, cubic=True)
     # regardless of the structure, we want the test
     # contained in the first cell for the position test at the end
@@ -24,7 +23,6 @@ def test_with_pbc():
 
 
 def test_without_pbc():
-
     atoms_start = molecule('NH3')
     atoms_end = atoms_start.copy()
 

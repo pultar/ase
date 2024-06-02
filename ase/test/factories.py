@@ -16,8 +16,10 @@ from ase.calculators.dftb import Dftb
 from ase.calculators.dftd3 import DFTD3
 from ase.calculators.elk import ELK
 from ase.calculators.espresso import Espresso, EspressoTemplate
-from ase.calculators.exciting.exciting import (ExcitingGroundStateCalculator,
-                                               ExcitingGroundStateTemplate)
+from ase.calculators.exciting.exciting import (
+    ExcitingGroundStateCalculator,
+    ExcitingGroundStateTemplate,
+)
 from ase.calculators.genericfileio import read_stdout
 from ase.calculators.gromacs import Gromacs, get_gromacs_version
 from ase.calculators.mopac import MOPAC
@@ -179,6 +181,7 @@ class AsapFactory:
 
     def _asap3(self):
         import asap3
+
         return asap3
 
     def calc(self, **kwargs):
@@ -278,13 +281,15 @@ class EspressoFactory:
         return pseudopotentials
 
     def calc(self, **kwargs):
-        input_data = Namelist(kwargs.pop("input_data", None))
+        input_data = Namelist(kwargs.pop('input_data', None))
         input_data.to_nested()
-        input_data["system"].setdefault("ecutwfc", 22.05)
+        input_data['system'].setdefault('ecutwfc', 22.05)
 
         return Espresso(
-            profile=self.profile, pseudopotentials=self.pseudopotentials,
-            input_data=input_data, **kwargs
+            profile=self.profile,
+            pseudopotentials=self.pseudopotentials,
+            input_data=input_data,
+            **kwargs,
         )
 
     def socketio(self, unixsocket, **kwargs):
@@ -508,6 +513,7 @@ class OpenMXFactory:
 class OctopusFactory:
     def __init__(self, cfg):
         from ase.calculators.octopus import OctopusTemplate
+
         self.profile = OctopusTemplate().load_profile(cfg)
 
     def version(self):
@@ -515,6 +521,7 @@ class OctopusFactory:
 
     def calc(self, **kwargs):
         from ase.calculators.octopus import Octopus
+
         return Octopus(profile=self.profile, **kwargs)
 
 
@@ -572,8 +579,9 @@ class NWChemFactory:
         self.profile = NWChem.load_argv_profile(cfg, 'nwchem')
 
     def version(self):
-        stdout = read_stdout(self.profile._split_command,
-                             createfile='nwchem.nw')
+        stdout = read_stdout(
+            self.profile._split_command, createfile='nwchem.nw'
+        )
         match = re.search(
             r'Northwest Computational Chemistry Package \(NWChem\) (\S+)',
             stdout,
@@ -656,6 +664,7 @@ class Factories:
         why_not = {}
 
         from ase.calculators.calculator import BadConfiguration
+
         for name, cls in factory_classes.items():
             try:
                 factories[name] = cls(cfg)
@@ -678,7 +687,8 @@ class Factories:
             # auto can only work with calculators whose configuration
             # we actually control, so no legacy factories
             requested_calculators |= (
-                set(self.factories) - legacy_factory_calculator_names)
+                set(self.factories) - legacy_factory_calculator_names
+            )
 
         self.requested_calculators = requested_calculators
 

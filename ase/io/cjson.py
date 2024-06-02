@@ -2,6 +2,7 @@
 
 https://wiki.openchemistry.org/Chemical_JSON
 """
+
 import json
 
 import numpy as np
@@ -12,8 +13,9 @@ from ase.cell import Cell
 
 # contract and lower case string
 def contract(dictionary):
-    dcopy = {key.replace(' ', '').lower(): dictionary[key] for key in
-             dictionary}
+    dcopy = {
+        key.replace(' ', '').lower(): dictionary[key] for key in dictionary
+    }
     return dcopy
 
 

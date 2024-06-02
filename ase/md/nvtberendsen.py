@@ -1,4 +1,5 @@
 """Berendsen NVT dynamics class."""
+
 from typing import IO, Optional, Union
 
 import numpy as np
@@ -69,14 +70,21 @@ class NVTBerendsen(MolecularDynamics):
 
         """
 
-        MolecularDynamics.__init__(self, atoms, timestep, trajectory,
-                                   logfile, loginterval,
-                                   append_trajectory=append_trajectory)
+        MolecularDynamics.__init__(
+            self,
+            atoms,
+            timestep,
+            trajectory,
+            logfile,
+            loginterval,
+            append_trajectory=append_trajectory,
+        )
         if taut is None:
             raise TypeError("Missing 'taut' argument.")
         self.taut = taut
-        self.temperature = self._process_temperature(temperature,
-                                                     temperature_K, 'K')
+        self.temperature = self._process_temperature(
+            temperature, temperature_K, 'K'
+        )
 
         self.fix_com = fixcm  # will the center of mass be held fixed?
         self.communicator = communicator
@@ -88,8 +96,9 @@ class NVTBerendsen(MolecularDynamics):
         return self.taut
 
     def set_temperature(self, temperature=None, *, temperature_K=None):
-        self.temperature = self._process_temperature(temperature,
-                                                     temperature_K, 'K')
+        self.temperature = self._process_temperature(
+            temperature, temperature_K, 'K'
+        )
 
     def get_temperature(self):
         return self.temperature
@@ -101,13 +110,13 @@ class NVTBerendsen(MolecularDynamics):
         return self.dt
 
     def scale_velocities(self):
-        """ Do the NVT Berendsen velocity scaling """
+        """Do the NVT Berendsen velocity scaling"""
         tautscl = self.dt / self.taut
         old_temperature = self.atoms.get_temperature()
 
-        scl_temperature = np.sqrt(1.0 +
-                                  (self.temperature / old_temperature - 1.0) *
-                                  tautscl)
+        scl_temperature = np.sqrt(
+            1.0 + (self.temperature / old_temperature - 1.0) * tautscl
+        )
         # Limit the velocity scaling to reasonable values
         if scl_temperature > 1.1:
             scl_temperature = 1.1
@@ -139,8 +148,9 @@ class NVTBerendsen(MolecularDynamics):
             p = p - psum
 
         self.atoms.set_positions(
-            self.atoms.get_positions() +
-            self.dt * p / self.atoms.get_masses()[:, np.newaxis])
+            self.atoms.get_positions()
+            + self.dt * p / self.atoms.get_masses()[:, np.newaxis]
+        )
 
         # We need to store the momenta on the atoms before calculating
         # the forces, as in a parallel Asap calculation atoms may

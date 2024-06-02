@@ -10,12 +10,12 @@ class DatabaseProject:
 
     For historical reasons called a "Project".
     """
+
     _ase_templates = Path('ase/db/templates')
 
-    def __init__(self, name, title, *,
-                 key_descriptions,
-                 database,
-                 default_columns):
+    def __init__(
+        self, name, title, *, key_descriptions, database, default_columns
+    ):
         self.name = name
         self.title = title
         self.uid_key = 'id'
@@ -31,7 +31,8 @@ class DatabaseProject:
 
         key_descriptions = {
             **{key: KeyDescription(key) for key in all_keys},
-            **key_descriptions}
+            **key_descriptions,
+        }
 
         for key, value in key_descriptions.items():
             assert isinstance(key, str), type(key)
@@ -77,7 +78,8 @@ class DatabaseProject:
             title='test',
             key_descriptions={},
             database=DummyDatabase(),  # XXX
-            default_columns=[])
+            default_columns=[],
+        )
         _kwargs.update(kwargs)
         return cls(**_kwargs)
 
@@ -93,4 +95,5 @@ class DatabaseProject:
             title=database.metadata.get('title', ''),
             key_descriptions=get_key_descriptions(),
             database=database,
-            default_columns=all_columns)
+            default_columns=all_columns,
+        )

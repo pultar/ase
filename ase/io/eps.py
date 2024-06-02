@@ -5,10 +5,17 @@ from ase.utils import writer
 
 
 class EPS(PlottingVariables):
-    def __init__(self, atoms,
-                 rotation='', radii=None,
-                 bbox=None, colors=None, scale=20, maxwidth=500,
-                 **kwargs):
+    def __init__(
+        self,
+        atoms,
+        rotation='',
+        radii=None,
+        bbox=None,
+        colors=None,
+        scale=20,
+        maxwidth=500,
+        **kwargs,
+    ):
         """Encapsulated PostScript writer.
 
         show_unit_cell: int
@@ -16,10 +23,16 @@ class EPS(PlottingVariables):
             2: Show unit cell and make sure all of it is visible.
         """
         PlottingVariables.__init__(
-            self, atoms, rotation=rotation,
-            radii=radii, bbox=bbox, colors=colors, scale=scale,
+            self,
+            atoms,
+            rotation=rotation,
+            radii=radii,
+            bbox=bbox,
+            colors=colors,
+            scale=scale,
             maxwidth=maxwidth,
-            **kwargs)
+            **kwargs,
+        )
 
     def write(self, fd):
         renderer = self._renderer(fd)
@@ -52,6 +65,7 @@ class EPS(PlottingVariables):
     def _renderer(self, fd):
         # Subclass can override
         from matplotlib.backends.backend_ps import RendererPS
+
         return RendererPS(self.w, self.h, fd)
 
     def write_body(self, fd, renderer):
@@ -88,19 +102,19 @@ psDefs = [
     # Note that this cannot be bound to /d, because when embedding a Type3 font
     # we may want to define a "d" glyph using "/d{...} d" which would locally
     # overwrite the definition.
-    "/_d { bind def } bind def",
+    '/_d { bind def } bind def',
     # x y  *m*  -
-    "/m { moveto } _d",
+    '/m { moveto } _d',
     # x y  *l*  -
-    "/l { lineto } _d",
+    '/l { lineto } _d',
     # x y  *r*  -
-    "/r { rlineto } _d",
+    '/r { rlineto } _d',
     # x1 y1 x2 y2 x y *c*  -
-    "/c { curveto } _d",
+    '/c { curveto } _d',
     # *cl*  -
-    "/cl { closepath } _d",
+    '/cl { closepath } _d',
     # *ce*  -
-    "/ce { closepath eofill } _d",
+    '/ce { closepath eofill } _d',
     # w h x y  *box*  -
     """/box {
       m
@@ -116,5 +130,5 @@ psDefs = [
       newpath
     } _d""",
     # wx wy llx lly urx ury  *setcachedevice*  -
-    "/sc { setcachedevice } _d",
+    '/sc { setcachedevice } _d',
 ]

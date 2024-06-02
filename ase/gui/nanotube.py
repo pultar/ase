@@ -1,6 +1,4 @@
-"""Window for setting up Carbon nanotubes and similar tubes.
-"""
-
+"""Window for setting up Carbon nanotubes and similar tubes."""
 
 import ase.gui.ui as ui
 from ase.build import nanotube
@@ -20,8 +18,10 @@ from ase.build import nanotube
 atoms = nanotube({n}, {m}, length={length}, bond={bl:.3f}, symbol='{symb}')
 """
 
-label_template = _('{natoms} atoms, diameter: {diameter:.3f} Å, '
-                   'total length: {total_length:.3f} Å')
+label_template = _(
+    '{natoms} atoms, diameter: {diameter:.3f} Å, '
+    'total length: {total_length:.3f} Å'
+)
 
 
 class SetupNanotube:
@@ -38,17 +38,17 @@ class SetupNanotube:
         win = self.win = ui.Window(_('Nanotube'), wmtype='utility')
         win.add(ui.Text(introtext))
         win.add(self.element)
-        win.add([_('Bond length: '),
-                 self.bondlength,
-                 _('Å')])
+        win.add([_('Bond length: '), self.bondlength, _('Å')])
         win.add(_('Select roll-up vector (n,m) and tube length:'))
-        win.add(['n:', self.n,
-                 'm:', self.m,
-                 _('Length:'), self.length])
+        win.add(['n:', self.n, 'm:', self.m, _('Length:'), self.length])
         win.add(self.description)
-        win.add([pybutton(_('Creating a nanoparticle.'), self.make),
-                 ui.Button(_('Apply'), self.apply),
-                 ui.Button(_('OK'), self.ok)])
+        win.add(
+            [
+                pybutton(_('Creating a nanoparticle.'), self.make),
+                ui.Button(_('Apply'), self.apply),
+                ui.Button(_('OK'), self.ok),
+            ]
+        )
 
         self.gui = gui
         self.atoms = None
@@ -69,7 +69,8 @@ class SetupNanotube:
         label = label_template.format(
             natoms=len(self.atoms),
             total_length=self.atoms.cell[2, 2],
-            diameter=self.atoms.cell[0, 0] / 2)
+            diameter=self.atoms.cell[0, 0] / 2,
+        )
         self.description.text = label
         return py_template.format(n=n, m=m, length=length, symb=symbol, bl=bl)
 
@@ -79,9 +80,13 @@ class SetupNanotube:
             self.gui.new_atoms(self.atoms)
             return True
         else:
-            ui.error(_('No valid atoms.'),
-                     _('You have not (yet) specified a consistent '
-                       'set of parameters.'))
+            ui.error(
+                _('No valid atoms.'),
+                _(
+                    'You have not (yet) specified a consistent '
+                    'set of parameters.'
+                ),
+            )
             return False
 
     def ok(self, *args):

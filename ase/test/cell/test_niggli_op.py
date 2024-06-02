@@ -4,7 +4,6 @@ from ase.cell import Cell
 
 
 def test_niggli_op():
-
     rng = np.random.RandomState(3)
 
     for _ in range(5):

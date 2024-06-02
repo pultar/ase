@@ -2,6 +2,7 @@
 
 See https://en.wikipedia.org/wiki/Chemical_table_file#SDF
 """
+
 from typing import TextIO
 
 from ase.atoms import Atoms

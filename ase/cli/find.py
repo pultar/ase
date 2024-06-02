@@ -17,21 +17,36 @@ class CLICommand:
     def add_arguments(parser):
         parser.add_argument('folder', help='Folder to look in.')
         parser.add_argument(
-            'query', nargs='?',
+            'query',
+            nargs='?',
             help='Examples: More than 2 hydrogens and no silver: "H>2,Ag=0". '
             'More than 1000 atoms: "natoms>1000". '
-            'Slab geometry containing Cu and Ni: "pbc=TTF,Cu,Ni".')
-        parser.add_argument('-v', '--verbose', action='store_true',
-                            help='More output.')
-        parser.add_argument('-l', '--long', action='store_true',
-                            help='Show also periodic boundary conditions, '
-                            'chemical formula and filetype.')
-        parser.add_argument('-i', '--include', help='Include only filenames '
-                            'ending with given strings.  Example: '
-                            '"-i .xyz,.traj".')
-        parser.add_argument('-x', '--exclude', help='Exclude filenames '
-                            'ending with given strings.  Example: '
-                            '"-x .cif".')
+            'Slab geometry containing Cu and Ni: "pbc=TTF,Cu,Ni".',
+        )
+        parser.add_argument(
+            '-v', '--verbose', action='store_true', help='More output.'
+        )
+        parser.add_argument(
+            '-l',
+            '--long',
+            action='store_true',
+            help='Show also periodic boundary conditions, '
+            'chemical formula and filetype.',
+        )
+        parser.add_argument(
+            '-i',
+            '--include',
+            help='Include only filenames '
+            'ending with given strings.  Example: '
+            '"-i .xyz,.traj".',
+        )
+        parser.add_argument(
+            '-x',
+            '--exclude',
+            help='Exclude filenames '
+            'ending with given strings.  Example: '
+            '"-x .cif".',
+        )
 
     @staticmethod
     def run(args):
@@ -52,11 +67,14 @@ def main(args):
         format, row = check(path, query, args.verbose)
         if format:
             if args.long:
-                print('{} {:10} {:15} {}'
-                      .format(''.join(str(p) for p in row.pbc.astype(int)),
-                              row.formula,
-                              format,
-                              path))
+                print(
+                    '{} {:10} {:15} {}'.format(
+                        ''.join(str(p) for p in row.pbc.astype(int)),
+                        row.formula,
+                        format,
+                        path,
+                    )
+                )
             else:
                 print(path)
 

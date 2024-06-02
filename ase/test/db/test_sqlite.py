@@ -5,7 +5,7 @@ import pytest
 from ase.db import connect
 
 pytestmark = pytest.mark.usefixtures('testdir')
-db_name = "test_vacuum.db"
+db_name = 'test_vacuum.db'
 
 
 def write_entries_to_db(db, n_entries_db=30):

@@ -5,8 +5,7 @@ from ase.cell import Cell
 
 
 def test_standard_form():
-
-    TOL = 1E-10
+    TOL = 1e-10
     rng = np.random.RandomState(0)
 
     for _ in range(20):

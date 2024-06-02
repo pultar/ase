@@ -301,11 +301,14 @@ def test_res():
     assert res.atoms.get_chemical_formula() == 'FSi'
     assert len(res.atoms) == 2
 
-    struct = Atoms(cell=[2.5, 3.5, 7.0],
-                   symbols=['Na', 'Cl'],
-                   positions=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    struct = Atoms(
+        cell=[2.5, 3.5, 7.0],
+        symbols=['Na', 'Cl'],
+        positions=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
     res = Res(struct)
     res_string = str(res)
     lines = res_string.splitlines()
-    assert lines[1] == ('CELL 1.0 2.500000 3.500000 7.000000 '
-                        '90.000000 90.000000 90.000000')
+    assert lines[1] == (
+        'CELL 1.0 2.500000 3.500000 7.000000 ' '90.000000 90.000000 90.000000'
+    )

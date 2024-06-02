@@ -28,8 +28,8 @@ def test_update_neighbor_parameters(KIM):
     # would always change when the cutoff changes, even if the neighbor lists
     # remained the same.
     calc = KIM(
-        "LennardJones612_UniversalShifted__MO_959249795837_003",
-        options={"neigh_skin_ratio": 0.0},
+        'LennardJones612_UniversalShifted__MO_959249795837_003',
+        options={'neigh_skin_ratio': 0.0},
     )
     calc.set_parameters(shift=[0, 0])
 
@@ -37,14 +37,11 @@ def test_update_neighbor_parameters(KIM):
     # one used for Mo.  This is necessary because we want to control the
     # influence distance, which is the maximum of all of the cutoffs.
     Mo_cutoff_index = 4879
-    Mo_cutoff = calc.get_parameters(cutoffs=Mo_cutoff_index)["cutoffs"][1]
-    cutoffs_extent = calc.parameters_metadata()["cutoffs"]["extent"]
+    Mo_cutoff = calc.get_parameters(cutoffs=Mo_cutoff_index)['cutoffs'][1]
+    cutoffs_extent = calc.parameters_metadata()['cutoffs']['extent']
     calc.set_parameters(
-        cutoffs=[
-            list(
-                range(cutoffs_extent)),
-            [0.0] *
-            cutoffs_extent])
+        cutoffs=[list(range(cutoffs_extent)), [0.0] * cutoffs_extent]
+    )
     calc.set_parameters(cutoffs=[Mo_cutoff_index, Mo_cutoff])
 
     # Create trimer such that nearest neighbor interactions occur:  each of the
@@ -58,15 +55,16 @@ def test_update_neighbor_parameters(KIM):
         [0, 0, nearest_neighbor_separation],
         [0, 0, 2 * nearest_neighbor_separation],
     ]
-    trimer = Atoms("Mo" * 3, positions=pos)
+    trimer = Atoms('Mo' * 3, positions=pos)
     trimer.calc = calc
 
     eng_orig = trimer.get_potential_energy()
 
     # Update the cutoff parameter so that the end atoms will interact with one
     # another
-    long_cutoff = 1.1 * \
-        np.linalg.norm(np.array(pos[2][:]) - np.array(pos[0][:]))
+    long_cutoff = 1.1 * np.linalg.norm(
+        np.array(pos[2][:]) - np.array(pos[0][:])
+    )
     calc.set_parameters(cutoffs=[Mo_cutoff_index, long_cutoff])
 
     # Energy of the trimer after modifying cutoff

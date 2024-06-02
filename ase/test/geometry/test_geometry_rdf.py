@@ -5,8 +5,12 @@ from ase.build.bulk import bulk
 from ase.build.molecule import molecule
 from ase.calculators.emt import EMT
 from ase.cluster import Icosahedron
-from ase.geometry.rdf import (CellTooSmall, VolumeNotDefined, get_rdf,
-                              get_volume_estimate)
+from ase.geometry.rdf import (
+    CellTooSmall,
+    VolumeNotDefined,
+    get_rdf,
+    get_volume_estimate,
+)
 from ase.lattice.compounds import L1_2
 from ase.optimize.fire import FIRE
 
@@ -46,27 +50,37 @@ def test_rdf_compute():
     with FIRE(atoms, logfile=None) as opt:
         opt.run(fmax=0.05)
 
-    rmax = 8.
+    rmax = 8.0
     nbins = 5
     rdf, dists = get_rdf(atoms, rmax, nbins)
     calc_dists = np.arange(rmax / (2 * nbins), rmax, rmax / nbins)
     assert all(abs(dists - calc_dists) < eps)
-    reference_rdf1 = [0., 0.84408157, 0.398689, 0.23748934, 0.15398546]
+    reference_rdf1 = [0.0, 0.84408157, 0.398689, 0.23748934, 0.15398546]
     assert all(abs(rdf - reference_rdf1) < eps)
 
     dm = atoms.get_all_distances()
     s = np.zeros(5)
     for c in [(29, 29), (29, 79), (79, 29), (79, 79)]:
         inv_norm = len(np.where(atoms.numbers == c[0])[0]) / len(atoms)
-        s += get_rdf(atoms, rmax, nbins, elements=c,
-                     distance_matrix=dm, no_dists=True) * inv_norm
+        s += (
+            get_rdf(
+                atoms,
+                rmax,
+                nbins,
+                elements=c,
+                distance_matrix=dm,
+                no_dists=True,
+            )
+            * inv_norm
+        )
     assert all(abs(s - reference_rdf1) < eps)
 
-    AuAu = get_rdf(atoms, rmax, nbins, elements=(79, 79),
-                   distance_matrix=dm, no_dists=True)
-    assert all(abs(AuAu[-2:] - [0.12126445, 0.]) < eps)
+    AuAu = get_rdf(
+        atoms, rmax, nbins, elements=(79, 79), distance_matrix=dm, no_dists=True
+    )
+    assert all(abs(AuAu[-2:] - [0.12126445, 0.0]) < eps)
 
     bulk = L1_2(['Au', 'Cu'], size=(3, 3, 3), latticeconstant=2 * np.sqrt(2))
     rdf = get_rdf(bulk, 4.2, 5)[0]
-    reference_rdf2 = [0., 0., 1.43905094, 0.36948605, 1.34468694]
+    reference_rdf2 = [0.0, 0.0, 1.43905094, 0.36948605, 1.34468694]
     assert all(abs(rdf - reference_rdf2) < eps)

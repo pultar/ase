@@ -1,12 +1,15 @@
 """Effective medium theory potential."""
+
 from collections import defaultdict
 from math import log, sqrt
 
 import numpy as np
 
-from ase.calculators.calculator import (Calculator,
-                                        PropertyNotImplementedError,
-                                        all_changes)
+from ase.calculators.calculator import (
+    Calculator,
+    PropertyNotImplementedError,
+    all_changes,
+)
 from ase.data import atomic_numbers, chemical_symbols
 from ase.neighborlist import NeighborList
 from ase.units import Bohr
@@ -25,7 +28,8 @@ parameters = {
     'H': (-3.21, 1.31, 0.132, 2.652, 2.790, 3.892, 0.00547),
     'C': (-3.50, 1.81, 0.332, 1.652, 2.790, 1.892, 0.01322),
     'N': (-5.10, 1.88, 0.132, 1.652, 2.790, 1.892, 0.01222),
-    'O': (-4.60, 1.95, 0.332, 1.652, 2.790, 1.892, 0.00850)}
+    'O': (-4.60, 1.95, 0.332, 1.652, 2.790, 1.892, 0.00850),
+}
 
 beta = 1.809  # (16 * pi / 3)**(1.0 / 3) / 2**0.5, preserve historical rounding
 
@@ -59,8 +63,16 @@ class EMT(Calculator):
     .. [1] K. W. Jacobsen, P. Stoltze, and J. K. Nørskov,
        Surf. Sci. 366, 394 (1996).
     """
-    implemented_properties = ['energy', 'free_energy', 'energies', 'forces',
-                              'stress', 'magmom', 'magmoms']
+
+    implemented_properties = [
+        'energy',
+        'free_energy',
+        'energies',
+        'forces',
+        'stress',
+        'magmom',
+        'magmoms',
+    ]
 
     nolabel = True
 
@@ -104,8 +116,11 @@ class EMT(Calculator):
         self.stress = np.empty((3, 3))
         self.deds = np.empty(len(atoms))
 
-        self.nl = NeighborList([0.5 * self.rc_list] * len(atoms),
-                               self_interaction=False, bothways=True)
+        self.nl = NeighborList(
+            [0.5 * self.rc_list] * len(atoms),
+            self_interaction=False,
+            bothways=True,
+        )
 
     def _calc_cutoff(self, atoms):
         """Calculate parameters of the logistic smoothing function etc.
@@ -167,8 +182,9 @@ class EMT(Calculator):
         gamma2 = x @ np.exp(-kappa / beta * (r - beta * s0))
         return gamma1, gamma2
 
-    def calculate(self, atoms=None, properties=['energy'],
-                  system_changes=all_changes):
+    def calculate(
+        self, atoms=None, properties=['energy'], system_changes=all_changes
+    ):
         Calculator.calculate(self, atoms, properties, system_changes)
 
         if 'numbers' in system_changes:

@@ -4,7 +4,6 @@ from ase.parallel import world
 
 
 def test_parallel():
-
     n = world.rank + 1
     a = Atoms('H' * n)
     name = f'H{n}.xyz'

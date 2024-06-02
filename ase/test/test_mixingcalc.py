@@ -4,9 +4,13 @@ import pytest
 from ase.build import fcc111
 from ase.calculators.calculator import CalculatorSetupError
 from ase.calculators.emt import EMT
-from ase.calculators.mixing import (AverageCalculator,
-                                    LinearCombinationCalculator,
-                                    MixedCalculator, Mixer, SumCalculator)
+from ase.calculators.mixing import (
+    AverageCalculator,
+    LinearCombinationCalculator,
+    MixedCalculator,
+    Mixer,
+    SumCalculator,
+)
 from ase.constraints import FixAtoms
 
 
@@ -16,7 +20,7 @@ def test_mixingcalc():
     """
 
     # Calculate reference values:
-    atoms = fcc111("Cu", (2, 2, 1), vacuum=10.0)
+    atoms = fcc111('Cu', (2, 2, 1), vacuum=10.0)
     atoms[0].x += 0.2
 
     # First run the test with EMT similarly to the test of the single point

@@ -28,15 +28,20 @@ def _write_block(name, args):
 def _write_geom(atoms, basis_spec):
     out = [' $DATA', atoms.get_chemical_formula(), 'C1']
     for i, atom in enumerate(atoms):
-        out.append('{:<3} {:>3} {:20.13e} {:20.13e} {:20.13e}'
-                   .format(atom.symbol, atom.number, *atom.position))
+        out.append(
+            '{:<3} {:>3} {:20.13e} {:20.13e} {:20.13e}'.format(
+                atom.symbol, atom.number, *atom.position
+            )
+        )
         if basis_spec is not None:
             basis = basis_spec.get(i)
             if basis is None:
                 basis = basis_spec.get(atom.symbol)
             if basis is None:
-                raise ValueError('Could not find an appropriate basis set '
-                                 'for atom number {}!'.format(i))
+                raise ValueError(
+                    'Could not find an appropriate basis set '
+                    'for atom number {}!'.format(i)
+                )
             out += [basis, '']
     out.append(' $END')
     return '\n'.join(out)
@@ -50,8 +55,10 @@ def _write_ecp(atoms, ecp):
         elif symbol in ecp:
             out.append(ecp[symbol])
         else:
-            raise ValueError('Could not find an appropriate ECP for '
-                             'atom number {}!'.format(i))
+            raise ValueError(
+                'Could not find an appropriate ECP for '
+                'atom number {}!'.format(i)
+            )
     out.append(' $END')
     return '\n'.join(out)
 
@@ -104,8 +111,9 @@ def write_gamess_us_in(fd, atoms, properties=None, **params):
         # We assume they are passing a per-atom basis if the keys of the
         # basis dict are atom symbols, or if they are atom indices, or
         # a mixture of both.
-        if (keys.intersection(set(atoms.symbols))
-                or any(map(lambda x: isinstance(x, int), keys))):
+        if keys.intersection(set(atoms.symbols)) or any(
+            map(lambda x: isinstance(x, int), keys)
+        ):
             basis_spec = params.pop('basis')
 
     out = [_write_block('contrl', contrl)]
@@ -173,8 +181,9 @@ def read_gamess_us_out(fd):
             dipole = np.array(list(map(float, fd.readline().split()[:3])))
             dipole *= Debye
 
-    atoms.calc = SinglePointCalculator(atoms, energy=energy,
-                                       forces=forces, dipole=dipole)
+    atoms.calc = SinglePointCalculator(
+        atoms, energy=energy, forces=forces, dipole=dipole
+    )
     return atoms
 
 
@@ -217,8 +226,9 @@ def read_gamess_us_punch(fd):
                 grad.append(list(map(float, atom.group(3, 4, 5))))
             forces = -np.array(grad) * Hartree / Bohr
 
-    atoms.calc = SinglePointCalculator(atoms, energy=energy, forces=forces,
-                                       dipole=dipole)
+    atoms.calc = SinglePointCalculator(
+        atoms, energy=energy, forces=forces, dipole=dipole
+    )
 
     return atoms
 

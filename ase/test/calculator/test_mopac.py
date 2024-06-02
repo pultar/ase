@@ -12,9 +12,10 @@ from ase.optimize import BFGS
 def test_mopac(mopac_factory):
     """Test H2 molecule atomization with MOPAC."""
     # Unrestricted Hartree-Fock; enable magmom calc
-    h2 = molecule('H2',
-                  calculator=mopac_factory.calc(label='h2',
-                                                task='1SCF GRADIENTS UHF'))
+    h2 = molecule(
+        'H2',
+        calculator=mopac_factory.calc(label='h2', task='1SCF GRADIENTS UHF'),
+    )
     with Trajectory('h2.traj', mode='w') as traj:
         BFGS(h2, trajectory=traj).run(fmax=0.01)
     e2 = h2.get_potential_energy()
@@ -28,8 +29,9 @@ def test_mopac(mopac_factory):
     print(d, ea)
     assert abs(d - 0.759) < 0.001
     assert abs(ea - 5.907) < 0.001
-    h2o = molecule('H2O', calculator=mopac_factory.calc(label='h2o',
-                                                        tasks='GRADIENTS'))
+    h2o = molecule(
+        'H2O', calculator=mopac_factory.calc(label='h2o', tasks='GRADIENTS')
+    )
     h2o.get_potential_energy()
     print('dipole:', h2o.get_dipole_moment())
     atoms = MOPAC.read_atoms('h2', profile=h2o.calc.profile)

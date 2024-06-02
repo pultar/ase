@@ -32,8 +32,11 @@ from pathlib import Path
 import numpy as np
 
 from ase import Atoms
-from ase.calculators.calculator import (BaseCalculator, compare_atoms,
-                                        kpts2sizeandoffsets)
+from ase.calculators.calculator import (
+    BaseCalculator,
+    compare_atoms,
+    kpts2sizeandoffsets,
+)
 from ase.config import cfg
 from ase.dft.kpoints import BandPath
 from ase.io.castep import read_bands, read_param
@@ -41,17 +44,14 @@ from ase.io.castep.castep_input_file import CastepCell, CastepParam
 from ase.io.castep.castep_reader import read_castep_castep
 from ase.parallel import paropen
 
-__all__ = [
-    'Castep',
-    'CastepCell',
-    'CastepParam',
-    'create_castep_keywords']
+__all__ = ['Castep', 'CastepCell', 'CastepParam', 'create_castep_keywords']
 
 # A convenient table to avoid the previously used "eval"
 _tf_table = {
     '': True,  # Just the keyword is equivalent to True
     'True': True,
-    'False': False}
+    'False': False,
+}
 
 
 def _self_getter(getf):
@@ -59,7 +59,6 @@ def _self_getter(getf):
     # getter function, self.atoms is used instead
 
     def decor_getf(self, atoms=None, *args, **kwargs):
-
         if atoms is None:
             atoms = self.atoms
 
@@ -70,340 +69,340 @@ def _self_getter(getf):
 
 class Castep(BaseCalculator):
     r"""
-CASTEP Interface Documentation
+    CASTEP Interface Documentation
 
 
-Introduction
-============
-
-CASTEP_ [1]_ W_ is a software package which uses density functional theory to
-provide a good atomic-level description of all manner of materials and
-molecules. CASTEP can give information about total energies, forces and
-stresses on an atomic system, as well as calculating optimum geometries, band
-structures, optical spectra, phonon spectra and much more. It can also perform
-molecular dynamics simulations.
-
-The CASTEP calculator interface class offers intuitive access to all CASTEP
-settings and most results. All CASTEP specific settings are accessible via
-attribute access (*i.e*. ``calc.param.keyword = ...`` or
-``calc.cell.keyword = ...``)
-
-
-Getting Started:
-================
-
-Set the environment variables appropriately for your system::
-
-    export CASTEP_COMMAND=' ... '
-    export CASTEP_PP_PATH=' ... '
-
-Note: alternatively to CASTEP_PP_PATH one can set PSPOT_DIR
-as CASTEP consults this by default, i.e.::
-
-    export PSPOT_DIR=' ... '
+    Introduction
+    ============
+
+    CASTEP_ [1]_ W_ is a software package which uses density functional theory to
+    provide a good atomic-level description of all manner of materials and
+    molecules. CASTEP can give information about total energies, forces and
+    stresses on an atomic system, as well as calculating optimum geometries, band
+    structures, optical spectra, phonon spectra and much more. It can also perform
+    molecular dynamics simulations.
+
+    The CASTEP calculator interface class offers intuitive access to all CASTEP
+    settings and most results. All CASTEP specific settings are accessible via
+    attribute access (*i.e*. ``calc.param.keyword = ...`` or
+    ``calc.cell.keyword = ...``)
+
+
+    Getting Started:
+    ================
+
+    Set the environment variables appropriately for your system::
+
+        export CASTEP_COMMAND=' ... '
+        export CASTEP_PP_PATH=' ... '
+
+    Note: alternatively to CASTEP_PP_PATH one can set PSPOT_DIR
+    as CASTEP consults this by default, i.e.::
+
+        export PSPOT_DIR=' ... '
 
 
-Running the Calculator
-======================
+    Running the Calculator
+    ======================
 
-The default initialization command for the CASTEP calculator is
-
-.. class:: Castep(directory='CASTEP', label='castep')
+    The default initialization command for the CASTEP calculator is
+
+    .. class:: Castep(directory='CASTEP', label='castep')
 
-To do a minimal run one only needs to set atoms, this will use all
-default settings of CASTEP, meaning LDA, singlepoint, etc..
-
-With a generated *castep_keywords.json* in place all options are accessible
-by inspection, *i.e.* tab-completion. This works best when using ``ipython``.
-All options can be accessed via ``calc.param.<TAB>`` or ``calc.cell.<TAB>``
-and documentation is printed with ``calc.param.<keyword> ?`` or
-``calc.cell.<keyword> ?``. All options can also be set directly
-using ``calc.keyword = ...`` or ``calc.KEYWORD = ...`` or even
-``ialc.KeYwOrD`` or directly as named arguments in the call to the constructor
-(*e.g.* ``Castep(task='GeometryOptimization')``).
-If using this calculator on a machine without CASTEP, one might choose to copy
-a *castep_keywords.json* file generated elsewhere in order to access this
-feature: the file will be used if located in the working directory,
-*$HOME/.ase/* or *ase/ase/calculators/* within the ASE library. The file should
-be generated the first time it is needed, but you can generate a new keywords
-file in the currect directory with ``python -m ase.calculators.castep``.
-
-All options that go into the ``.param`` file are held in an ``CastepParam``
-instance, while all options that go into the ``.cell`` file and don't belong
-to the atoms object are held in an ``CastepCell`` instance. Each instance can
-be created individually and can be added to calculators by attribute
-assignment, *i.e.* ``calc.param = param`` or ``calc.cell = cell``.
-
-All internal variables of the calculator start with an underscore (_).
-All cell attributes that clearly belong into the atoms object are blocked.
-Setting ``calc.atoms_attribute`` (*e.g.* ``= positions``) is sent directly to
-the atoms object.
-
-
-Arguments:
-==========
-
-=========================  ====================================================
-Keyword                    Description
-=========================  ====================================================
-``directory``              The relative path where all input and output files
-                           will be placed. If this does not exist, it will be
-                           created.  Existing directories will be moved to
-                           directory-TIMESTAMP unless self._rename_existing_dir
-                           is set to false.
-
-``label``                  The prefix of .param, .cell, .castep, etc. files.
-
-``castep_command``         Command to run castep. Can also be set via the bash
-                           environment variable ``CASTEP_COMMAND``. If none is
-                           given or found, will default to ``castep``
-
-``check_castep_version``   Boolean whether to check if the installed castep
-                           version matches the version from which the available
-                           options were deduced. Defaults to ``False``.
-
-``castep_pp_path``         The path where the pseudopotentials are stored. Can
-                           also be set via the bash environment variables
-                           ``PSPOT_DIR`` (preferred) and ``CASTEP_PP_PATH``.
-                           Will default to the current working directory if
-                           none is given or found. Note that pseudopotentials
-                           may be generated on-the-fly if they are not found.
-
-``find_pspots``            Boolean whether to search for pseudopotentials in
-                           ``<castep_pp_path>`` or not. If activated, files in
-                           this directory will be checked for typical names. If
-                           files are not found, they will be generated on the
-                           fly, depending on the ``_build_missing_pspots``
-                           value.  A RuntimeError will be raised in case
-                           multiple files per element are found. Defaults to
-                           ``False``.
-``keyword_tolerance``      Integer to indicate the level of tolerance to apply
-                           validation of any parameters set in the CastepCell
-                           or CastepParam objects against the ones found in
-                           castep_keywords. Levels are as following:
-
-                           0 = no tolerance, keywords not found in
-                           castep_keywords will raise an exception
-
-                           1 = keywords not found will be accepted but produce
-                           a warning (default)
-
-                           2 = keywords not found will be accepted silently
-
-                           3 = no attempt is made to look for
-                           castep_keywords.json at all
-``castep_keywords``        Can be used to pass a CastepKeywords object that is
-                           then used with no attempt to actually load a
-                           castep_keywords.json file. Most useful for debugging
-                           and testing purposes.
-
-=========================  ====================================================
-
-
-Additional Settings
-===================
-
-=========================  ====================================================
-Internal Setting           Description
-=========================  ====================================================
-``_castep_command``        (``=castep``): the actual shell command used to
-                           call CASTEP.
-
-``_check_checkfile``       (``=True``): this makes write_param() only
-                           write a continue or reuse statement if the
-                           addressed .check or .castep_bin file exists in the
-                           directory.
-
-``_copy_pspots``           (``=False``): if set to True the calculator will
-                           actually copy the needed pseudo-potential (\*.usp)
-                           file, usually it will only create symlinks.
-
-``_link_pspots``           (``=True``): if set to True the calculator will
-                           actually will create symlinks to the needed pseudo
-                           potentials. Set this option (and ``_copy_pspots``)
-                           to False if you rather want to access your pseudo
-                           potentials using the PSPOT_DIR environment variable
-                           that is read by CASTEP.
-                           *Note:* This option has no effect if ``copy_pspots``
-                           is True..
-
-``_build_missing_pspots``  (``=True``): if set to True, castep will generate
-                           missing pseudopotentials on the fly. If not, a
-                           RuntimeError will be raised if not all files were
-                           found.
-
-``_export_settings``       (``=True``): if this is set to
-                           True, all calculator internal settings shown here
-                           will be included in the .param in a comment line (#)
-                           and can be read again by merge_param. merge_param
-                           can be forced to ignore this directive using the
-                           optional argument ``ignore_internal_keys=True``.
-
-``_force_write``           (``=True``): this controls wether the \*cell and
-                           \*param will be overwritten.
-
-``_prepare_input_only``    (``=False``): If set to True, the calculator will
-                           create \*cell und \*param file but not
-                           start the calculation itself.
-                           If this is used to prepare jobs locally
-                           and run on a remote cluster it is recommended
-                           to set ``_copy_pspots = True``.
-
-``_castep_pp_path``        (``='.'``) : the place where the calculator
-                           will look for pseudo-potential files.
-
-``_find_pspots``           (``=False``): if set to True, the calculator will
-                           try to find the respective pseudopotentials from
-                           <_castep_pp_path>. As long as there are no multiple
-                           files per element in this directory, the auto-detect
-                           feature should be very robust. Raises a RuntimeError
-                           if required files are not unique (multiple files per
-                           element). Non existing pseudopotentials will be
-                           generated, though this could be dangerous.
-
-``_rename_existing_dir``   (``=True``) : when using a new instance
-                           of the calculator, this will move directories out of
-                           the way that would be overwritten otherwise,
-                           appending a date string.
-
-``_set_atoms``             (``=False``) : setting this to True will overwrite
-                           any atoms object previously attached to the
-                           calculator when reading a \.castep file.  By de-
-                           fault, the read() function will only create a new
-                           atoms object if none has been attached and other-
-                           wise try to assign forces etc. based on the atom's
-                           positions.  ``_set_atoms=True`` could be necessary
-                           if one uses CASTEP's internal geometry optimization
-                           (``calc.param.task='GeometryOptimization'``)
-                           because then the positions get out of sync.
-                           *Warning*: this option is generally not recommended
-                           unless one knows one really needs it. There should
-                           never be any need, if CASTEP is used as a
-                           single-point calculator.
-
-``_track_output``          (``=False``) : if set to true, the interface
-                           will append a number to the label on all input
-                           and output files, where n is the number of calls
-                           to this instance. *Warning*: this setting may con-
-                           sume a lot more disk space because of the additio-
-                           nal \*check files.
-
-``_try_reuse``             (``=_track_output``) : when setting this, the in-
-                           terface will try to fetch the reuse file from the
-                           previous run even if _track_output is True. By de-
-                           fault it is equal to _track_output, but may be
-                           overridden.
-
-                           Since this behavior may not always be desirable for
-                           single-point calculations. Regular reuse for *e.g.*
-                           a geometry-optimization can be achieved by setting
-                           ``calc.param.reuse = True``.
-
-``_pedantic``              (``=False``) if set to true, the calculator will
-                           inform about settings probably wasting a lot of CPU
-                           time or causing numerical inconsistencies.
-
-=========================  ====================================================
-
-Special features:
-=================
-
-
-``.dryrun_ok()``
-  Runs ``castep_command seed -dryrun`` in a temporary directory return True if
-  all variables initialized ok. This is a fast way to catch errors in the
-  input. Afterwards _kpoints_used is set.
-
-``.merge_param()``
-  Takes a filename or filehandler of a .param file or CastepParam instance and
-  merges it into the current calculator instance, overwriting current settings
-
-``.keyword.clear()``
-  Can be used on any option like ``calc.param.keyword.clear()`` or
-  ``calc.cell.keyword.clear()`` to return to the CASTEP default.
-
-``.initialize()``
-  Creates all needed input in the ``_directory``. This can then copied to and
-  run in a place without ASE or even python.
-
-``.set_pspot('<library>')``
-  This automatically sets the pseudo-potential for all present species to
-  ``<Species>_<library>.usp``. Make sure that ``_castep_pp_path`` is set
-  correctly. Note that there is no check, if the file actually exists. If it
-  doesn't castep will crash! You may want to use ``find_pspots()`` instead.
-
-``.find_pspots(pspot=<library>, suffix=<suffix>)``
-  This automatically searches for pseudopotentials of type
-  ``<Species>_<library>.<suffix>`` or ``<Species>-<library>.<suffix>`` in
-  ``castep_pp_path` (make sure this is set correctly). Note that ``<Species>``
-  will be searched for case insensitive.  Regular expressions are accepted, and
-  arguments ``'*'`` will be regarded as bash-like wildcards. Defaults are any
-  ``<library>`` and any ``<suffix>`` from ``['usp', 'UPF', 'recpot']``. If you
-  have well-organized folders with pseudopotentials of one kind, this should
-  work with the defaults.
-
-``print(calc)``
-  Prints a short summary of the calculator settings and atoms.
-
-``ase.io.castep.read_seed('path-to/seed')``
-  Given you have a combination of seed.{param,cell,castep} this will return an
-  atoms object with the last ionic positions in the .castep file and all other
-  settings parsed from the .cell and .param file. If no .castep file is found
-  the positions are taken from the .cell file. The output directory will be
-  set to the same directory, only the label is preceded by 'copy_of\_'  to
-  avoid overwriting.
-
-``.set_kpts(kpoints)``
-  This is equivalent to initialising the calculator with
-  ``calc = Castep(kpts=kpoints)``. ``kpoints`` can be specified in many
-  convenient forms: simple Monkhorst-Pack grids can be specified e.g.
-  ``(2, 2, 3)`` or ``'2 2 3'``; lists of specific weighted k-points can be
-  given in reciprocal lattice coordinates e.g.
-  ``[[0, 0, 0, 0.25], [0.25, 0.25, 0.25, 0.75]]``; a dictionary syntax is
-  available for more complex requirements e.g.
-  ``{'size': (2, 2, 2), 'gamma': True}`` will give a Gamma-centered 2x2x2 M-P
-  grid, ``{'density': 10, 'gamma': False, 'even': False}`` will give a mesh
-  with density of at least 10 Ang (based on the unit cell of currently-attached
-  atoms) with an odd number of points in each direction and avoiding the Gamma
-  point.
-
-``.set_bandpath(bandpath)``
-  This is equivalent to initialialising the calculator with
-  ``calc=Castep(bandpath=bandpath)`` and may be set simultaneously with *kpts*.
-  It allows an electronic band structure path to be set up using ASE BandPath
-  objects. This enables a band structure calculation to be set up conveniently
-  using e.g. calc.set_bandpath(atoms.cell.bandpath().interpolate(npoints=200))
-
-``.band_structure(bandfile=None)``
-  Read a band structure from _seedname.bands_ file. This returns an ase
-  BandStructure object which may be plotted with e.g.
-  ``calc.band_structure().plot()``
-
-Notes/Issues:
-==============
-
-* Currently *only* the FixAtoms *constraint* is fully supported for reading and
-  writing. There is some experimental support for the FixCartesian constraint.
-
-* There is no support for the CASTEP *unit system*. Units of eV and Angstrom
-  are used throughout. In particular when converting total energies from
-  different calculators, one should check that the same CODATA_ version is
-  used for constants and conversion factors, respectively.
-
-.. _CASTEP: http://www.castep.org/
-
-.. _W: https://en.wikipedia.org/wiki/CASTEP
-
-.. _CODATA: https://physics.nist.gov/cuu/Constants/index.html
-
-.. [1] S. J. Clark, M. D. Segall, C. J. Pickard, P. J. Hasnip, M. J. Probert,
-       K. Refson, M. C. Payne Zeitschrift für Kristallographie 220(5-6)
-       pp.567- 570 (2005) PDF_.
-
-.. _PDF: http://www.tcm.phy.cam.ac.uk/castep/papers/ZKristallogr_2005.pdf
-
-
-End CASTEP Interface Documentation
+    To do a minimal run one only needs to set atoms, this will use all
+    default settings of CASTEP, meaning LDA, singlepoint, etc..
+
+    With a generated *castep_keywords.json* in place all options are accessible
+    by inspection, *i.e.* tab-completion. This works best when using ``ipython``.
+    All options can be accessed via ``calc.param.<TAB>`` or ``calc.cell.<TAB>``
+    and documentation is printed with ``calc.param.<keyword> ?`` or
+    ``calc.cell.<keyword> ?``. All options can also be set directly
+    using ``calc.keyword = ...`` or ``calc.KEYWORD = ...`` or even
+    ``ialc.KeYwOrD`` or directly as named arguments in the call to the constructor
+    (*e.g.* ``Castep(task='GeometryOptimization')``).
+    If using this calculator on a machine without CASTEP, one might choose to copy
+    a *castep_keywords.json* file generated elsewhere in order to access this
+    feature: the file will be used if located in the working directory,
+    *$HOME/.ase/* or *ase/ase/calculators/* within the ASE library. The file should
+    be generated the first time it is needed, but you can generate a new keywords
+    file in the currect directory with ``python -m ase.calculators.castep``.
+
+    All options that go into the ``.param`` file are held in an ``CastepParam``
+    instance, while all options that go into the ``.cell`` file and don't belong
+    to the atoms object are held in an ``CastepCell`` instance. Each instance can
+    be created individually and can be added to calculators by attribute
+    assignment, *i.e.* ``calc.param = param`` or ``calc.cell = cell``.
+
+    All internal variables of the calculator start with an underscore (_).
+    All cell attributes that clearly belong into the atoms object are blocked.
+    Setting ``calc.atoms_attribute`` (*e.g.* ``= positions``) is sent directly to
+    the atoms object.
+
+
+    Arguments:
+    ==========
+
+    =========================  ====================================================
+    Keyword                    Description
+    =========================  ====================================================
+    ``directory``              The relative path where all input and output files
+                               will be placed. If this does not exist, it will be
+                               created.  Existing directories will be moved to
+                               directory-TIMESTAMP unless self._rename_existing_dir
+                               is set to false.
+
+    ``label``                  The prefix of .param, .cell, .castep, etc. files.
+
+    ``castep_command``         Command to run castep. Can also be set via the bash
+                               environment variable ``CASTEP_COMMAND``. If none is
+                               given or found, will default to ``castep``
+
+    ``check_castep_version``   Boolean whether to check if the installed castep
+                               version matches the version from which the available
+                               options were deduced. Defaults to ``False``.
+
+    ``castep_pp_path``         The path where the pseudopotentials are stored. Can
+                               also be set via the bash environment variables
+                               ``PSPOT_DIR`` (preferred) and ``CASTEP_PP_PATH``.
+                               Will default to the current working directory if
+                               none is given or found. Note that pseudopotentials
+                               may be generated on-the-fly if they are not found.
+
+    ``find_pspots``            Boolean whether to search for pseudopotentials in
+                               ``<castep_pp_path>`` or not. If activated, files in
+                               this directory will be checked for typical names. If
+                               files are not found, they will be generated on the
+                               fly, depending on the ``_build_missing_pspots``
+                               value.  A RuntimeError will be raised in case
+                               multiple files per element are found. Defaults to
+                               ``False``.
+    ``keyword_tolerance``      Integer to indicate the level of tolerance to apply
+                               validation of any parameters set in the CastepCell
+                               or CastepParam objects against the ones found in
+                               castep_keywords. Levels are as following:
+
+                               0 = no tolerance, keywords not found in
+                               castep_keywords will raise an exception
+
+                               1 = keywords not found will be accepted but produce
+                               a warning (default)
+
+                               2 = keywords not found will be accepted silently
+
+                               3 = no attempt is made to look for
+                               castep_keywords.json at all
+    ``castep_keywords``        Can be used to pass a CastepKeywords object that is
+                               then used with no attempt to actually load a
+                               castep_keywords.json file. Most useful for debugging
+                               and testing purposes.
+
+    =========================  ====================================================
+
+
+    Additional Settings
+    ===================
+
+    =========================  ====================================================
+    Internal Setting           Description
+    =========================  ====================================================
+    ``_castep_command``        (``=castep``): the actual shell command used to
+                               call CASTEP.
+
+    ``_check_checkfile``       (``=True``): this makes write_param() only
+                               write a continue or reuse statement if the
+                               addressed .check or .castep_bin file exists in the
+                               directory.
+
+    ``_copy_pspots``           (``=False``): if set to True the calculator will
+                               actually copy the needed pseudo-potential (\*.usp)
+                               file, usually it will only create symlinks.
+
+    ``_link_pspots``           (``=True``): if set to True the calculator will
+                               actually will create symlinks to the needed pseudo
+                               potentials. Set this option (and ``_copy_pspots``)
+                               to False if you rather want to access your pseudo
+                               potentials using the PSPOT_DIR environment variable
+                               that is read by CASTEP.
+                               *Note:* This option has no effect if ``copy_pspots``
+                               is True..
+
+    ``_build_missing_pspots``  (``=True``): if set to True, castep will generate
+                               missing pseudopotentials on the fly. If not, a
+                               RuntimeError will be raised if not all files were
+                               found.
+
+    ``_export_settings``       (``=True``): if this is set to
+                               True, all calculator internal settings shown here
+                               will be included in the .param in a comment line (#)
+                               and can be read again by merge_param. merge_param
+                               can be forced to ignore this directive using the
+                               optional argument ``ignore_internal_keys=True``.
+
+    ``_force_write``           (``=True``): this controls wether the \*cell and
+                               \*param will be overwritten.
+
+    ``_prepare_input_only``    (``=False``): If set to True, the calculator will
+                               create \*cell und \*param file but not
+                               start the calculation itself.
+                               If this is used to prepare jobs locally
+                               and run on a remote cluster it is recommended
+                               to set ``_copy_pspots = True``.
+
+    ``_castep_pp_path``        (``='.'``) : the place where the calculator
+                               will look for pseudo-potential files.
+
+    ``_find_pspots``           (``=False``): if set to True, the calculator will
+                               try to find the respective pseudopotentials from
+                               <_castep_pp_path>. As long as there are no multiple
+                               files per element in this directory, the auto-detect
+                               feature should be very robust. Raises a RuntimeError
+                               if required files are not unique (multiple files per
+                               element). Non existing pseudopotentials will be
+                               generated, though this could be dangerous.
+
+    ``_rename_existing_dir``   (``=True``) : when using a new instance
+                               of the calculator, this will move directories out of
+                               the way that would be overwritten otherwise,
+                               appending a date string.
+
+    ``_set_atoms``             (``=False``) : setting this to True will overwrite
+                               any atoms object previously attached to the
+                               calculator when reading a \.castep file.  By de-
+                               fault, the read() function will only create a new
+                               atoms object if none has been attached and other-
+                               wise try to assign forces etc. based on the atom's
+                               positions.  ``_set_atoms=True`` could be necessary
+                               if one uses CASTEP's internal geometry optimization
+                               (``calc.param.task='GeometryOptimization'``)
+                               because then the positions get out of sync.
+                               *Warning*: this option is generally not recommended
+                               unless one knows one really needs it. There should
+                               never be any need, if CASTEP is used as a
+                               single-point calculator.
+
+    ``_track_output``          (``=False``) : if set to true, the interface
+                               will append a number to the label on all input
+                               and output files, where n is the number of calls
+                               to this instance. *Warning*: this setting may con-
+                               sume a lot more disk space because of the additio-
+                               nal \*check files.
+
+    ``_try_reuse``             (``=_track_output``) : when setting this, the in-
+                               terface will try to fetch the reuse file from the
+                               previous run even if _track_output is True. By de-
+                               fault it is equal to _track_output, but may be
+                               overridden.
+
+                               Since this behavior may not always be desirable for
+                               single-point calculations. Regular reuse for *e.g.*
+                               a geometry-optimization can be achieved by setting
+                               ``calc.param.reuse = True``.
+
+    ``_pedantic``              (``=False``) if set to true, the calculator will
+                               inform about settings probably wasting a lot of CPU
+                               time or causing numerical inconsistencies.
+
+    =========================  ====================================================
+
+    Special features:
+    =================
+
+
+    ``.dryrun_ok()``
+      Runs ``castep_command seed -dryrun`` in a temporary directory return True if
+      all variables initialized ok. This is a fast way to catch errors in the
+      input. Afterwards _kpoints_used is set.
+
+    ``.merge_param()``
+      Takes a filename or filehandler of a .param file or CastepParam instance and
+      merges it into the current calculator instance, overwriting current settings
+
+    ``.keyword.clear()``
+      Can be used on any option like ``calc.param.keyword.clear()`` or
+      ``calc.cell.keyword.clear()`` to return to the CASTEP default.
+
+    ``.initialize()``
+      Creates all needed input in the ``_directory``. This can then copied to and
+      run in a place without ASE or even python.
+
+    ``.set_pspot('<library>')``
+      This automatically sets the pseudo-potential for all present species to
+      ``<Species>_<library>.usp``. Make sure that ``_castep_pp_path`` is set
+      correctly. Note that there is no check, if the file actually exists. If it
+      doesn't castep will crash! You may want to use ``find_pspots()`` instead.
+
+    ``.find_pspots(pspot=<library>, suffix=<suffix>)``
+      This automatically searches for pseudopotentials of type
+      ``<Species>_<library>.<suffix>`` or ``<Species>-<library>.<suffix>`` in
+      ``castep_pp_path` (make sure this is set correctly). Note that ``<Species>``
+      will be searched for case insensitive.  Regular expressions are accepted, and
+      arguments ``'*'`` will be regarded as bash-like wildcards. Defaults are any
+      ``<library>`` and any ``<suffix>`` from ``['usp', 'UPF', 'recpot']``. If you
+      have well-organized folders with pseudopotentials of one kind, this should
+      work with the defaults.
+
+    ``print(calc)``
+      Prints a short summary of the calculator settings and atoms.
+
+    ``ase.io.castep.read_seed('path-to/seed')``
+      Given you have a combination of seed.{param,cell,castep} this will return an
+      atoms object with the last ionic positions in the .castep file and all other
+      settings parsed from the .cell and .param file. If no .castep file is found
+      the positions are taken from the .cell file. The output directory will be
+      set to the same directory, only the label is preceded by 'copy_of\_'  to
+      avoid overwriting.
+
+    ``.set_kpts(kpoints)``
+      This is equivalent to initialising the calculator with
+      ``calc = Castep(kpts=kpoints)``. ``kpoints`` can be specified in many
+      convenient forms: simple Monkhorst-Pack grids can be specified e.g.
+      ``(2, 2, 3)`` or ``'2 2 3'``; lists of specific weighted k-points can be
+      given in reciprocal lattice coordinates e.g.
+      ``[[0, 0, 0, 0.25], [0.25, 0.25, 0.25, 0.75]]``; a dictionary syntax is
+      available for more complex requirements e.g.
+      ``{'size': (2, 2, 2), 'gamma': True}`` will give a Gamma-centered 2x2x2 M-P
+      grid, ``{'density': 10, 'gamma': False, 'even': False}`` will give a mesh
+      with density of at least 10 Ang (based on the unit cell of currently-attached
+      atoms) with an odd number of points in each direction and avoiding the Gamma
+      point.
+
+    ``.set_bandpath(bandpath)``
+      This is equivalent to initialialising the calculator with
+      ``calc=Castep(bandpath=bandpath)`` and may be set simultaneously with *kpts*.
+      It allows an electronic band structure path to be set up using ASE BandPath
+      objects. This enables a band structure calculation to be set up conveniently
+      using e.g. calc.set_bandpath(atoms.cell.bandpath().interpolate(npoints=200))
+
+    ``.band_structure(bandfile=None)``
+      Read a band structure from _seedname.bands_ file. This returns an ase
+      BandStructure object which may be plotted with e.g.
+      ``calc.band_structure().plot()``
+
+    Notes/Issues:
+    ==============
+
+    * Currently *only* the FixAtoms *constraint* is fully supported for reading and
+      writing. There is some experimental support for the FixCartesian constraint.
+
+    * There is no support for the CASTEP *unit system*. Units of eV and Angstrom
+      are used throughout. In particular when converting total energies from
+      different calculators, one should check that the same CODATA_ version is
+      used for constants and conversion factors, respectively.
+
+    .. _CASTEP: http://www.castep.org/
+
+    .. _W: https://en.wikipedia.org/wiki/CASTEP
+
+    .. _CODATA: https://physics.nist.gov/cuu/Constants/index.html
+
+    .. [1] S. J. Clark, M. D. Segall, C. J. Pickard, P. J. Hasnip, M. J. Probert,
+           K. Refson, M. C. Payne Zeitschrift für Kristallographie 220(5-6)
+           pp.567- 570 (2005) PDF_.
+
+    .. _PDF: http://www.tcm.phy.cam.ac.uk/castep/papers/ZKristallogr_2005.pdf
+
+
+    End CASTEP Interface Documentation
     """
 
     # Class attributes !
@@ -418,7 +417,8 @@ End CASTEP Interface Documentation
         'positions_abs_intermediate',
         'positions_frac',
         'positions_frac_final',
-        'positions_frac_intermediate']
+        'positions_frac_intermediate',
+    ]
 
     atoms_obj_keys = [
         'dipole',
@@ -429,7 +429,8 @@ End CASTEP Interface Documentation
         'nbands',
         'positions',
         'stress',
-        'pressure']
+        'pressure',
+    ]
 
     internal_keys = [
         '_castep_command',
@@ -448,7 +449,8 @@ End CASTEP Interface Documentation
         '_set_atoms',
         '_track_output',
         '_try_reuse',
-        '_pedantic']
+        '_pedantic',
+    ]
 
     implemented_properties = [
         'energy',
@@ -474,22 +476,28 @@ End CASTEP Interface Documentation
         'hirshfeld_magmoms',
     ]
 
-    def __init__(self, directory='CASTEP', label='castep',
-                 castep_command=None, check_castep_version=False,
-                 castep_pp_path=None, find_pspots=False, keyword_tolerance=1,
-                 castep_keywords=None, **kwargs):
-
+    def __init__(
+        self,
+        directory='CASTEP',
+        label='castep',
+        castep_command=None,
+        check_castep_version=False,
+        castep_pp_path=None,
+        find_pspots=False,
+        keyword_tolerance=1,
+        castep_keywords=None,
+        **kwargs,
+    ):
         self.results = {}
 
         from ase.io.castep import write_cell
+
         self._write_cell = write_cell
 
         if castep_keywords is None:
-            castep_keywords = CastepKeywords(make_param_dict(),
-                                             make_cell_dict(),
-                                             [],
-                                             [],
-                                             0)
+            castep_keywords = CastepKeywords(
+                make_param_dict(), make_cell_dict(), [], [], 0
+            )
             if keyword_tolerance < 3:
                 try:
                     castep_keywords = import_castep_keywords(castep_command)
@@ -501,10 +509,12 @@ End CASTEP Interface Documentation
 
         self._kw_tol = keyword_tolerance
         keyword_tolerance = max(keyword_tolerance, 2)  # 3 not accepted below
-        self.param = CastepParam(castep_keywords,
-                                 keyword_tolerance=keyword_tolerance)
-        self.cell = CastepCell(castep_keywords,
-                               keyword_tolerance=keyword_tolerance)
+        self.param = CastepParam(
+            castep_keywords, keyword_tolerance=keyword_tolerance
+        )
+        self.cell = CastepCell(
+            castep_keywords, keyword_tolerance=keyword_tolerance
+        )
 
         ###################################
         # Calculator state variables      #
@@ -586,9 +596,12 @@ End CASTEP Interface Documentation
             if local_castep_version != self._castep_version:
                 warnings.warn(
                     'The options module was generated from version %s '
-                    'while your are currently using CASTEP version %s' %
-                    (self._castep_version,
-                     get_castep_version(self._castep_command)))
+                    'while your are currently using CASTEP version %s'
+                    % (
+                        self._castep_version,
+                        get_castep_version(self._castep_command),
+                    )
+                )
                 self._castep_version = local_castep_version
 
         # processes optional arguments in kw style
@@ -634,9 +647,9 @@ End CASTEP Interface Documentation
 
         # Get definitions of high-symmetry points
         special_points = self.atoms.cell.bandpath(npoints=0).special_points
-        bandpath = BandPath(self.atoms.cell,
-                            kpts=kpts,
-                            special_points=special_points)
+        bandpath = BandPath(
+            self.atoms.cell, kpts=kpts, special_points=special_points
+        )
         return BandStructure(bandpath, eigenvalues, reference=efermi)
 
     def set_bandpath(self, bandpath):
@@ -655,10 +668,17 @@ End CASTEP Interface Documentation
         """
 
         def clear_bs_keywords():
-            bs_keywords = product({'bs_kpoint', 'bs_kpoints'},
-                                  {'path', 'path_spacing',
-                                   'list',
-                                   'mp_grid', 'mp_spacing', 'mp_offset'})
+            bs_keywords = product(
+                {'bs_kpoint', 'bs_kpoints'},
+                {
+                    'path',
+                    'path_spacing',
+                    'list',
+                    'mp_grid',
+                    'mp_spacing',
+                    'mp_offset',
+                },
+            )
             for bs_tag in bs_keywords:
                 setattr(self.cell, '_'.join(bs_tag), None)
 
@@ -666,11 +686,14 @@ End CASTEP Interface Documentation
             clear_bs_keywords()
         elif isinstance(bandpath, BandPath):
             clear_bs_keywords()
-            self.cell.bs_kpoint_list = [' '.join(map(str, row))
-                                        for row in bandpath.kpts]
+            self.cell.bs_kpoint_list = [
+                ' '.join(map(str, row)) for row in bandpath.kpts
+            ]
         else:
-            raise TypeError('Band structure path must be an '
-                            'ase.dft.kpoint.BandPath object')
+            raise TypeError(
+                'Band structure path must be an '
+                'ase.dft.kpoint.BandPath object'
+            )
 
     def set_kpts(self, kpts):
         """Set k-point mesh/path using a str, tuple or ASE features
@@ -707,9 +730,10 @@ End CASTEP Interface Documentation
         """
 
         def clear_mp_keywords():
-            mp_keywords = product({'kpoint', 'kpoints'},
-                                  {'mp_grid', 'mp_offset',
-                                   'mp_spacing', 'list'})
+            mp_keywords = product(
+                {'kpoint', 'kpoints'},
+                {'mp_grid', 'mp_offset', 'mp_spacing', 'list'},
+            )
             for kp_tag in mp_keywords:
                 setattr(self.cell, '_'.join(kp_tag), None)
 
@@ -723,12 +747,13 @@ End CASTEP Interface Documentation
         #       [-0.5,  0,  -0.5,  0.375],
         #       [-0.5, -0.5, -0.5, 0.125]]
 
-        elif (isinstance(kpts, (tuple, list))
-              and isinstance(kpts[0], (tuple, list))):
-
+        elif isinstance(kpts, (tuple, list)) and isinstance(
+            kpts[0], (tuple, list)
+        ):
             if not all(map((lambda row: len(row) == 4), kpts)):
                 raise ValueError(
-                    'In explicit kpt list each row should have 4 elements')
+                    'In explicit kpt list each row should have 4 elements'
+                )
 
             clear_mp_keywords()
             self.cell.kpoint_list = [' '.join(map(str, row)) for row in kpts]
@@ -737,10 +762,10 @@ End CASTEP Interface Documentation
         # i.e. the internal format of calc.kpoint_list split on \n
         # e.g. ['0 0 0 0.125', '0 -0.5 0 0.375', '-0.5 0 -0.5 0.375']
         elif isinstance(kpts, (tuple, list)) and isinstance(kpts[0], str):
-
             if not all(map((lambda row: len(row.split()) == 4), kpts)):
                 raise ValueError(
-                    'In explicit kpt list each row should have 4 elements')
+                    'In explicit kpt list each row should have 4 elements'
+                )
 
             clear_mp_keywords()
             self.cell.kpoint_list = kpts
@@ -761,10 +786,13 @@ End CASTEP Interface Documentation
         elif isinstance(kpts, dict):
             kpts = kpts.copy()
 
-            if (kpts.get('spacing') is not None
-                    and kpts.get('density') is not None):
+            if (
+                kpts.get('spacing') is not None
+                and kpts.get('density') is not None
+            ):
                 raise ValueError(
-                    'Cannot set kpts spacing and density simultaneously.')
+                    'Cannot set kpts spacing and density simultaneously.'
+                )
             else:
                 if kpts.get('spacing') is not None:
                     kpts = kpts.copy()
@@ -844,18 +872,24 @@ End CASTEP Interface Documentation
 
         # Read in eigenvalues from bands file
         bands_file = castep_file[:-7] + '.bands'
-        if (self.param.task.value is not None
-                and self.param.task.value.lower() == 'bandstructure'):
+        if (
+            self.param.task.value is not None
+            and self.param.task.value.lower() == 'bandstructure'
+        ):
             self._band_structure = self.band_structure(bandfile=bands_file)
         else:
             try:
-                (self._ibz_kpts,
-                 self._ibz_weights,
-                 self._eigenvalues,
-                 self._efermi) = read_bands(bands_file)
+                (
+                    self._ibz_kpts,
+                    self._ibz_weights,
+                    self._eigenvalues,
+                    self._efermi,
+                ) = read_bands(bands_file)
             except FileNotFoundError:
-                warnings.warn('Could not load .bands file, eigenvalues and '
-                              'Fermi energy are unknown')
+                warnings.warn(
+                    'Could not load .bands file, eigenvalues and '
+                    'Fermi energy are unknown'
+                )
 
     # TODO: deprecate once inheriting BaseCalculator
     def get_hirsh_volrat(self):
@@ -905,10 +939,9 @@ End CASTEP Interface Documentation
         # and `self._label`, as one would expect
         self._label = label
 
-    def set_pspot(self, pspot, elems=None,
-                  notelems=None,
-                  clear=True,
-                  suffix='usp'):
+    def set_pspot(
+        self, pspot, elems=None, notelems=None, clear=True, suffix='usp'
+    ):
         """Quickly set all pseudo-potentials: Usually CASTEP psp are named
         like <Elem>_<pspot>.<suffix> so this function function only expects
         the <LibraryName>. It then clears any previous pseudopotential
@@ -925,11 +958,13 @@ End CASTEP Interface Documentation
         """
         if self._find_pspots:
             if self._pedantic:
-                warnings.warn('Warning: <_find_pspots> = True. '
-                              'Do you really want to use `set_pspots()`? '
-                              'This does not check whether the PP files exist. '
-                              'You may rather want to use `find_pspots()` with '
-                              'the same <pspot>.')
+                warnings.warn(
+                    'Warning: <_find_pspots> = True. '
+                    'Do you really want to use `set_pspots()`? '
+                    'This does not check whether the PP files exist. '
+                    'You may rather want to use `find_pspots()` with '
+                    'the same <pspot>.'
+                )
 
         if clear and not elems and not notelems:
             self.cell.species_pot.clear()
@@ -940,8 +975,14 @@ End CASTEP Interface Documentation
                 continue
             self.cell.species_pot = (elem, f'{elem}_{pspot}.{suffix}')
 
-    def find_pspots(self, pspot='.+', elems=None,
-                    notelems=None, clear=True, suffix='(usp|UPF|recpot)'):
+    def find_pspots(
+        self,
+        pspot='.+',
+        elems=None,
+        notelems=None,
+        clear=True,
+        suffix='(usp|UPF|recpot)',
+    ):
         r"""Quickly find and set all pseudo-potentials by searching in
         castep_pp_path:
 
@@ -975,8 +1016,10 @@ End CASTEP Interface Documentation
         if not os.path.isdir(self._castep_pp_path):
             if self._pedantic:
                 warnings.warn(
-                    'Cannot search directory: {} Folder does not exist'
-                    .format(self._castep_pp_path))
+                    'Cannot search directory: {} Folder does not exist'.format(
+                        self._castep_pp_path
+                    )
+                )
             return
 
         # translate the bash wildcard syntax to regex
@@ -995,27 +1038,33 @@ End CASTEP Interface Documentation
                 continue
             if notelems is not None and elem in notelems:
                 continue
-            p = pattern.format(elem=elem,
-                               elem_upper=elem.upper(),
-                               elem_lower=elem.lower(),
-                               pspot=pspot,
-                               suffix=suffix)
+            p = pattern.format(
+                elem=elem,
+                elem_upper=elem.upper(),
+                elem_lower=elem.lower(),
+                pspot=pspot,
+                suffix=suffix,
+            )
             pps = []
             for f in os.listdir(self._castep_pp_path):
                 if re.match(p, f):
                     pps.append(f)
             if not pps:
                 if self._pedantic:
-                    warnings.warn('Pseudopotential for species {} not found!'
-                                  .format(elem))
+                    warnings.warn(
+                        'Pseudopotential for species {} not found!'.format(elem)
+                    )
             elif len(pps) != 1:
                 raise RuntimeError(
-                    'Pseudopotential for species ''{} not unique!\n'
-                    .format(elem)
-                    + 'Found the following files in {}\n'
-                    .format(self._castep_pp_path)
-                    + '\n'.join([f'    {pp}' for pp in pps]) +
-                    '\nConsider a stricter search pattern in `find_pspots()`.')
+                    'Pseudopotential for species ' '{} not unique!\n'.format(
+                        elem
+                    )
+                    + 'Found the following files in {}\n'.format(
+                        self._castep_pp_path
+                    )
+                    + '\n'.join([f'    {pp}' for pp in pps])
+                    + '\nConsider a stricter search pattern in `find_pspots()`.'
+                )
             else:
                 self.cell.species_pot = (elem, pps[0])
 
@@ -1034,14 +1083,14 @@ End CASTEP Interface Documentation
     @_self_getter
     def get_free_energy(self, atoms):
         """Run CASTEP calculation if needed and return free energy.
-           Only defined with smearing."""
+        Only defined with smearing."""
         self.update(atoms)
         return self.results.get('free_energy_without_dispersion_correction')
 
     @_self_getter
     def get_0K_energy(self, atoms):
         """Run CASTEP calculation if needed and return 0K energy.
-           Only defined with smearing."""
+        Only defined with smearing."""
         self.update(atoms)
         return self.results.get('energy_zero_without_dispersion_correction')
 
@@ -1148,13 +1197,15 @@ End CASTEP Interface Documentation
                     'You have not set e.g. calc.param.reuse = True. '
                     'Reusing a previous calculation may save CPU time! '
                     'The interface will make sure by default, .check exists. '
-                    'file before adding this statement to the .param file.')
+                    'file before adding this statement to the .param file.'
+                )
         if self.param.num_dump_cycles.value is None:
             if self._pedantic:
                 warnings.warn(
                     'You have not set e.g. calc.param.num_dump_cycles = 0. '
                     'This can save you a lot of disk space. One only needs '
-                    '*wvfn* if electronic convergence is not achieved.')
+                    '*wvfn* if electronic convergence is not achieved.'
+                )
         from ase.io.castep import write_param
 
         if atoms is None:
@@ -1167,17 +1218,21 @@ End CASTEP Interface Documentation
 
         # if we have new instance of the calculator,
         # move existing results out of the way, first
-        if (os.path.isdir(self._directory)
-                and self._calls == 0
-                and self._rename_existing_dir):
+        if (
+            os.path.isdir(self._directory)
+            and self._calls == 0
+            and self._rename_existing_dir
+        ):
             if os.listdir(self._directory) == []:
                 os.rmdir(self._directory)
             else:
                 # rename appending creation date of the directory
                 ctime = time.localtime(os.lstat(self._directory).st_ctime)
-                os.rename(self._directory, '%s.bak-%s' %
-                          (self._directory,
-                           time.strftime('%Y%m%d-%H%M%S', ctime)))
+                os.rename(
+                    self._directory,
+                    '%s.bak-%s'
+                    % (self._directory, time.strftime('%Y%m%d-%H%M%S', ctime)),
+                )
 
         # create work directory
         if not os.path.isdir(self._directory):
@@ -1203,18 +1258,24 @@ End CASTEP Interface Documentation
         self._castep_file = self._abs_path(f'{self._seed}.castep')
 
         # write out the input file
-        self._write_cell(self._abs_path(f'{self._seed}.cell'),
-                         self.atoms, castep_cell=self.cell,
-                         force_write=force_write)
+        self._write_cell(
+            self._abs_path(f'{self._seed}.cell'),
+            self.atoms,
+            castep_cell=self.cell,
+            force_write=force_write,
+        )
 
         if self._export_settings:
             interface_options = self._opt
         else:
             interface_options = None
-        write_param(self._abs_path(f'{self._seed}.param'), self.param,
-                    check_checkfile=self._check_checkfile,
-                    force_write=force_write,
-                    interface_options=interface_options,)
+        write_param(
+            self._abs_path(f'{self._seed}.param'),
+            self.param,
+            check_checkfile=self._check_checkfile,
+            force_write=force_write,
+            interface_options=interface_options,
+        )
 
     def _build_castep_seed(self):
         """Abstracts to construction of the final castep <seed>
@@ -1237,9 +1298,10 @@ End CASTEP Interface Documentation
         self._calls += 1
 
         # run castep itself
-        stdout, stderr = shell_stdouterr('{} {}'.format(self._castep_command,
-                                                        self._seed),
-                                         cwd=self._directory)
+        stdout, stderr = shell_stdouterr(
+            '{} {}'.format(self._castep_command, self._seed),
+            cwd=self._directory,
+        )
         if stdout:
             print(f'castep call stdout:\n{stdout}')
         if stderr:
@@ -1301,12 +1363,14 @@ End CASTEP Interface Documentation
             # internal variables all start with _
             # let's check first if they are close but not identical
             # to one of the switches, that the user accesses directly
-            similars = difflib.get_close_matches(attr, self.internal_keys,
-                                                 cutoff=0.9)
+            similars = difflib.get_close_matches(
+                attr, self.internal_keys, cutoff=0.9
+            )
             if attr not in self.internal_keys and similars:
                 warnings.warn(
                     'Warning: You probably tried one of: '
-                    f'{similars} but typed {attr}')
+                    f'{similars} but typed {attr}'
+                )
             if attr in self.internal_keys:
                 self._opt[attr] = value
                 if attr == '_track_output':
@@ -1319,7 +1383,8 @@ End CASTEP Interface Documentation
                                 'also switched _try_reuse on, which will '
                                 'try to find the last check file. Set '
                                 '_try_reuse = False, if you need '
-                                'really separate calculations')
+                                'really separate calculations'
+                            )
                     elif '_try_reuse' in self._opt and self._try_reuse:
                         self._try_reuse = False
                         if self._pedantic:
@@ -1330,14 +1395,15 @@ End CASTEP Interface Documentation
         elif attr in ['atoms', 'cell', 'param', 'results']:
             if value is not None:
                 if attr == 'atoms' and not isinstance(value, Atoms):
-                    raise TypeError(
-                        f'{value} is not an instance of Atoms.')
+                    raise TypeError(f'{value} is not an instance of Atoms.')
                 elif attr == 'cell' and not isinstance(value, CastepCell):
                     raise TypeError(
-                        f'{value} is not an instance of CastepCell.')
+                        f'{value} is not an instance of CastepCell.'
+                    )
                 elif attr == 'param' and not isinstance(value, CastepParam):
                     raise TypeError(
-                        f'{value} is not an instance of CastepParam.')
+                        f'{value} is not an instance of CastepParam.'
+                    )
             # These 3 are accepted right-away, no matter what
             self.__dict__[attr] = value
             return
@@ -1349,29 +1415,35 @@ End CASTEP Interface Documentation
         elif attr in self.atoms_keys:
             # CASTEP keywords that should go into the atoms object
             # itself are blocked
-            warnings.warn('Ignoring setings of "%s", since this has to be set '
-                          'through the atoms object' % attr)
+            warnings.warn(
+                'Ignoring setings of "%s", since this has to be set '
+                'through the atoms object' % attr
+            )
             return
 
         attr = attr.lower()
-        if attr not in (list(self.cell._options.keys())
-                        + list(self.param._options.keys())):
+        if attr not in (
+            list(self.cell._options.keys()) + list(self.param._options.keys())
+        ):
             # what is left now should be meant to be a castep keyword
             # so we first check if it defined, and if not offer some error
             # correction
             if self._kw_tol == 0:
                 similars = difflib.get_close_matches(
-                    attr,
-                    self.cell._options.keys() + self.param._options.keys())
+                    attr, self.cell._options.keys() + self.param._options.keys()
+                )
                 if similars:
                     raise RuntimeError(
-                        f'Option "{attr}" not known! You mean "{similars[0]}"?')
+                        f'Option "{attr}" not known! You mean "{similars[0]}"?'
+                    )
                 else:
                     raise RuntimeError(f'Option "{attr}" is not known!')
             else:
-                warnings.warn('Option "%s" is not known - please set any new'
-                              ' options directly in the .cell or .param '
-                              'objects' % attr)
+                warnings.warn(
+                    'Option "%s" is not known - please set any new'
+                    ' options directly in the .cell or .param '
+                    'objects' % attr
+                )
                 return
 
         # here we know it must go into one of the component param or cell
@@ -1381,8 +1453,10 @@ End CASTEP Interface Documentation
         elif attr in self.cell._options.keys():
             comp = 'cell'
         else:
-            raise RuntimeError('Programming error: could not attach '
-                               'the keyword to an input file')
+            raise RuntimeError(
+                'Programming error: could not attach '
+                'the keyword to an input file'
+            )
 
         self.__dict__[comp].__setattr__(attr, value)
 
@@ -1404,24 +1478,25 @@ End CASTEP Interface Documentation
             param_file = param
 
             # look before you leap...
-            attributes = ['name',
-                          'close'
-                          'readlines']
+            attributes = ['name', 'close' 'readlines']
 
             for attr in attributes:
                 if not hasattr(param_file, attr):
-                    raise TypeError('"param" is neither CastepParam nor str '
-                                    'nor valid fileobj')
+                    raise TypeError(
+                        '"param" is neither CastepParam nor str '
+                        'nor valid fileobj'
+                    )
 
             param = param_file.name
             _close = False
 
-        self, int_opts = read_param(fd=param_file, calc=self,
-                                    get_interface_options=True)
+        self, int_opts = read_param(
+            fd=param_file, calc=self, get_interface_options=True
+        )
 
         # Add the interface options
         for k, val in int_opts.items():
-            if (k in self.internal_keys and not ignore_internal_keys):
+            if k in self.internal_keys and not ignore_internal_keys:
                 if val in _tf_table:
                     val = _tf_table[val]
                 self._opt[k] = val
@@ -1440,20 +1515,25 @@ End CASTEP Interface Documentation
         self._fetch_pspots(temp_dir)
         seed = 'dryrun'
 
-        self._write_cell(os.path.join(temp_dir, f'{seed}.cell'),
-                         self.atoms, castep_cell=self.cell)
+        self._write_cell(
+            os.path.join(temp_dir, f'{seed}.cell'),
+            self.atoms,
+            castep_cell=self.cell,
+        )
         # This part needs to be modified now that we rely on the new formats.py
         # interface
         if not os.path.isfile(os.path.join(temp_dir, f'{seed}.cell')):
             warnings.warn(f'{seed}.cell not written - aborting dryrun')
             return None
-        write_param(os.path.join(temp_dir, f'{seed}.param'), self.param, )
+        write_param(
+            os.path.join(temp_dir, f'{seed}.param'),
+            self.param,
+        )
 
-        stdout, stderr = shell_stdouterr(('{} {} {}'.format(
-            self._castep_command,
-            seed,
-            dryrun_flag)),
-            cwd=temp_dir)
+        stdout, stderr = shell_stdouterr(
+            ('{} {} {}'.format(self._castep_command, seed, dryrun_flag)),
+            cwd=temp_dir,
+        )
 
         if stdout:
             print(stdout)
@@ -1461,8 +1541,9 @@ End CASTEP Interface Documentation
             print(stderr)
         with open(os.path.join(temp_dir, f'{seed}.castep')) as result_file:
             txt = result_file.read()
-            ok_string = (r'.*DRYRUN finished.*No problems found with input '
-                         r'files.*')
+            ok_string = (
+                r'.*DRYRUN finished.*No problems found with input ' r'files.*'
+            )
             match = re.match(ok_string, txt, re.DOTALL)
 
             m = re.search(r'Number of kpoints used =\s*([0-9]+)', txt)
@@ -1470,7 +1551,8 @@ End CASTEP Interface Documentation
                 self._kpoints = int(m.group(1))
             else:
                 warnings.warn(
-                    'Couldn\'t fetch number of kpoints from dryrun CASTEP file')
+                    "Couldn't fetch number of kpoints from dryrun CASTEP file"
+                )
 
             err_file = os.path.join(temp_dir, f'{seed}.0001.err')
             if match is None and os.path.exists(err_file):
@@ -1482,12 +1564,12 @@ End CASTEP Interface Documentation
         return match is not None
 
     def _fetch_pspots(self, directory=None):
-        """Put all specified pseudo-potentials into the working directory.
-        """
+        """Put all specified pseudo-potentials into the working directory."""
         # should be a '==' right? Otherwise setting _castep_pp_path is not
         # honored.
-        if (not cfg.get('PSPOT_DIR', None)
-                and self._castep_pp_path == os.path.abspath('.')):
+        if not cfg.get(
+            'PSPOT_DIR', None
+        ) and self._castep_pp_path == os.path.abspath('.'):
             # By default CASTEP consults the environment variable
             # PSPOT_DIR. If this contains a list of colon separated
             # directories it will check those directories for pseudo-
@@ -1520,16 +1602,19 @@ End CASTEP Interface Documentation
                             'CASTEP will now generate an on-the-fly '
                             'potentials. '
                             'For sake of numerical consistency and efficiency '
-                            'this is discouraged.' % species)
+                            'this is discouraged.' % species
+                        )
                 else:
                     raise RuntimeError(
-                        f'Warning: you have no PP specified for {species}.')
+                        f'Warning: you have no PP specified for {species}.'
+                    )
         if self.cell.species_pot.value:
-            for (species, pspot) in pspots.items():
+            for species, pspot in pspots.items():
                 orig_pspot_file = os.path.join(self._castep_pp_path, pspot)
                 cp_pspot_file = os.path.join(directory, pspot)
-                if (os.path.exists(orig_pspot_file)
-                        and not os.path.exists(cp_pspot_file)):
+                if os.path.exists(orig_pspot_file) and not os.path.exists(
+                    cp_pspot_file
+                ):
                     if self._copy_pspots:
                         shutil.copy(orig_pspot_file, directory)
                     elif self._link_pspots:
@@ -1539,10 +1624,12 @@ End CASTEP Interface Documentation
                             warnings.warn(ppwarning)
 
 
-ppwarning = ('Warning: PP files have neither been '
-             'linked nor copied to the working directory. Make '
-             'sure to set the evironment variable PSPOT_DIR '
-             'accordingly!')
+ppwarning = (
+    'Warning: PP files have neither been '
+    'linked nor copied to the working directory. Make '
+    'sure to set the evironment variable PSPOT_DIR '
+    'accordingly!'
+)
 
 
 def _get_indices_to_sort_back(symbols, species):
@@ -1562,10 +1649,11 @@ def _get_indices_to_sort_back(symbols, species):
 
 def get_castep_version(castep_command):
     """This returns the version number as printed in the CASTEP banner.
-       For newer CASTEP versions ( > 6.1) the --version command line option
-       has been added; this will be attempted first.
+    For newer CASTEP versions ( > 6.1) the --version command line option
+    has been added; this will be attempted first.
     """
     import tempfile
+
     with tempfile.TemporaryDirectory() as temp_dir:
         return _get_castep_version(castep_command, temp_dir)
 
@@ -1573,19 +1661,23 @@ def get_castep_version(castep_command):
 def _get_castep_version(castep_command, temp_dir):
     jname = 'dummy_jobname'
     stdout, stderr = '', ''
-    fallback_version = 16.  # CASTEP 16.0 and 16.1 report version wrongly
+    fallback_version = 16.0  # CASTEP 16.0 and 16.1 report version wrongly
     try:
         stdout, stderr = subprocess.Popen(
             castep_command.split() + ['--version'],
             stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE, cwd=temp_dir,
-            universal_newlines=True).communicate()
+            stdout=subprocess.PIPE,
+            cwd=temp_dir,
+            universal_newlines=True,
+        ).communicate()
         if 'CASTEP version' not in stdout:
             stdout, stderr = subprocess.Popen(
                 castep_command.split() + [jname],
                 stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE, cwd=temp_dir,
-                universal_newlines=True).communicate()
+                stdout=subprocess.PIPE,
+                cwd=temp_dir,
+                universal_newlines=True,
+            ).communicate()
     except Exception:  # XXX Which kind of exception?
         msg = ''
         msg += 'Could not determine the version of your CASTEP binary \n'
@@ -1614,8 +1706,13 @@ def _get_castep_version(castep_command, temp_dir):
                 return fallback_version
 
 
-def create_castep_keywords(castep_command, filename='castep_keywords.json',
-                           force_write=True, path='.', fetch_only=None):
+def create_castep_keywords(
+    castep_command,
+    filename='castep_keywords.json',
+    force_write=True,
+    path='.',
+    fetch_only=None,
+):
     """This function allows to fetch all available keywords from stdout
     of an installed castep binary. It furthermore collects the documentation
     to harness the power of (ipython) inspection and type for some basic
@@ -1630,9 +1727,11 @@ def create_castep_keywords(castep_command, filename='castep_keywords.json',
     filepath = os.path.join(path, filename)
 
     if os.path.exists(filepath) and not force_write:
-        warnings.warn('CASTEP Options Module file exists. '
-                      'You can overwrite it by calling '
-                      'python castep.py -f [CASTEP_COMMAND].')
+        warnings.warn(
+            'CASTEP Options Module file exists. '
+            'You can overwrite it by calling '
+            'python castep.py -f [CASTEP_COMMAND].'
+        )
         return False
 
     # Not saving directly to file her to prevent half-generated files
@@ -1669,9 +1768,13 @@ def create_castep_keywords(castep_command, filename='castep_keywords.json',
         doc, _ = shell_stdouterr(f'{castep_command} -help {option}')
 
         # Stand Back! I know regular expressions (http://xkcd.com/208/) :-)
-        match = re.match(r'(?P<before_type>.*)Type: (?P<type>.+?)\s+'
-                         + r'Level: (?P<level>[^ ]+)\n\s*\n'
-                         + r'(?P<doc>.*?)(\n\s*\n|$)', doc, re.DOTALL)
+        match = re.match(
+            r'(?P<before_type>.*)Type: (?P<type>.+?)\s+'
+            + r'Level: (?P<level>[^ ]+)\n\s*\n'
+            + r'(?P<doc>.*?)(\n\s*\n|$)',
+            doc,
+            re.DOTALL,
+        )
 
         processed_n += 1
 
@@ -1686,8 +1789,10 @@ def create_castep_keywords(castep_command, filename='castep_keywords.json',
             if re.findall(r'CELL keywords:\n\n\s?None found', doc):
                 suffix = 'param'
             if suffix is None:
-                warnings.warn('%s -> not assigned to either'
-                              ' CELL or PARAMETERS keywords' % option)
+                warnings.warn(
+                    '%s -> not assigned to either'
+                    ' CELL or PARAMETERS keywords' % option
+                )
 
             option = option.lower()
             mtyp = match.get('type', None)
@@ -1711,16 +1816,18 @@ def create_castep_keywords(castep_command, filename='castep_keywords.json',
                 'keyword': option,
                 'option_type': mtyp,
                 'level': mlvl,
-                'docstring': mdoc
+                'docstring': mdoc,
             }
 
             processed_n += 1
 
             frac = (o_i + 1.0) / to_process
-            sys.stdout.write('\rProcessed: [{}] {:>3.0f}%'.format(
-                             '#' * int(frac * 20) + ' '
-                             * (20 - int(frac * 20)),
-                             100 * frac))
+            sys.stdout.write(
+                '\rProcessed: [{}] {:>3.0f}%'.format(
+                    '#' * int(frac * 20) + ' ' * (20 - int(frac * 20)),
+                    100 * frac,
+                )
+            )
             sys.stdout.flush()
 
         else:
@@ -1739,9 +1846,10 @@ def create_castep_keywords(castep_command, filename='castep_keywords.json',
     return True
 
 
-CastepKeywords = namedtuple('CastepKeywords',
-                            ['CastepParamDict', 'CastepCellDict',
-                             'types', 'levels', 'castep_version'])
+CastepKeywords = namedtuple(
+    'CastepKeywords',
+    ['CastepParamDict', 'CastepCellDict', 'types', 'levels', 'castep_version'],
+)
 
 # We keep this just for naming consistency with older versions
 
@@ -1800,22 +1908,26 @@ def shell_stdouterr(raw_command, cwd=None):
     """Abstracts the standard call of the commandline, when
     we are only interested in the stdout and stderr
     """
-    stdout, stderr = subprocess.Popen(raw_command,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      universal_newlines=True,
-                                      shell=True, cwd=cwd).communicate()
+    stdout, stderr = subprocess.Popen(
+        raw_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        shell=True,
+        cwd=cwd,
+    ).communicate()
     return stdout.strip(), stderr.strip()
 
 
-def import_castep_keywords(castep_command='',
-                           filename='castep_keywords.json',
-                           path='.'):
+def import_castep_keywords(
+    castep_command='', filename='castep_keywords.json', path='.'
+):
     """Search for castep keywords JSON in multiple paths"""
 
     config_paths = ('~/.ase', '~/.config/ase')
-    searchpaths = [path] + [os.path.expanduser(config_path)
-                            for config_path in config_paths]
+    searchpaths = [path] + [
+        os.path.expanduser(config_path) for config_path in config_paths
+    ]
     try:
         keywords_file = sum(
             (glob.glob(os.path.join(sp, filename)) for sp in searchpaths), []
@@ -1830,14 +1942,16 @@ def import_castep_keywords(castep_command='',
     the CASTEP code. Consequently, avoiding licensing issues (CASTEP is
     distributed commercially by Biovia), we consider it wise not to
     provide the file in the first place.""")
-        create_castep_keywords(get_castep_command(castep_command),
-                               filename=filename, path=path)
+        create_castep_keywords(
+            get_castep_command(castep_command), filename=filename, path=path
+        )
         keywords_file = Path(path).absolute() / filename
 
         warnings.warn(
             f'Stored castep keywords dictionary as {keywords_file}. '
             f'Copy it to {Path(config_paths[0]).expanduser() / filename} for '
-            r'user installation.')
+            r'user installation.'
+        )
 
     # Now create the castep_keywords object proper
     with open(keywords_file) as fd:
@@ -1847,9 +1961,13 @@ def import_castep_keywords(castep_command='',
     param_dict = make_param_dict(kwdata['param'])
     cell_dict = make_cell_dict(kwdata['cell'])
 
-    castep_keywords = CastepKeywords(param_dict, cell_dict,
-                                     kwdata['types'], kwdata['levels'],
-                                     kwdata['castep_version'])
+    castep_keywords = CastepKeywords(
+        param_dict,
+        cell_dict,
+        kwdata['types'],
+        kwdata['levels'],
+        kwdata['castep_version'],
+    )
 
     return castep_keywords
 
@@ -1862,22 +1980,29 @@ if __name__ == '__main__':
         'For system wide usage, it can be copied into an ase installation '
         'at ASE/calculators. '
         'This castep_keywords.json usually only needs to be generated once '
-        'for a CASTEP binary/CASTEP version.' % os.getcwd())
+        'for a CASTEP binary/CASTEP version.' % os.getcwd()
+    )
 
     import optparse
+
     parser = optparse.OptionParser()
     parser.add_option(
-        '-f', '--force-write', dest='force_write',
-        help='Force overwriting existing castep_keywords.json', default=False,
-        action='store_true')
+        '-f',
+        '--force-write',
+        dest='force_write',
+        help='Force overwriting existing castep_keywords.json',
+        default=False,
+        action='store_true',
+    )
     (options, args) = parser.parse_args()
 
     if args:
         opt_castep_command = ''.join(args)
     else:
         opt_castep_command = ''
-    generated = create_castep_keywords(get_castep_command(opt_castep_command),
-                                       force_write=options.force_write)
+    generated = create_castep_keywords(
+        get_castep_command(opt_castep_command), force_write=options.force_write
+    )
 
     if generated:
         try:
@@ -1885,6 +2010,7 @@ if __name__ == '__main__':
                 json.load(fd)
         except Exception as e:
             warnings.warn(
-                f'{e} Ooops, something went wrong with the CASTEP keywords')
+                f'{e} Ooops, something went wrong with the CASTEP keywords'
+            )
         else:
             warnings.warn('Import works. Looking good!')

@@ -16,9 +16,14 @@ import ase.io
 from ase import Atoms
 from ase.calculators.calculator import compare_atoms
 from ase.constraints import FixAtoms, FixCartesian, FixScaled
-from ase.io.espresso import (get_atomic_species, parse_position_line,
-                             read_espresso_in, read_fortran_namelist,
-                             write_espresso_in, write_fortran_namelist)
+from ase.io.espresso import (
+    get_atomic_species,
+    parse_position_line,
+    read_espresso_in,
+    read_fortran_namelist,
+    write_espresso_in,
+    write_fortran_namelist,
+)
 
 # This file is parsed correctly by pw.x, even though things are
 # scattered all over the place with some namelist edge cases
@@ -285,8 +290,9 @@ def test_pw_input():
 
     pw_input_atoms = ase.io.read('pw_input.pwi', format='espresso-in')
     assert len(pw_input_atoms) == 8
-    assert (pw_input_atoms.get_initial_magnetic_moments()
-            == pytest.approx([5.12, 5.12, 5.12, 5.12, 5.12, 5.12, 0., 0.]))
+    assert pw_input_atoms.get_initial_magnetic_moments() == pytest.approx(
+        [5.12, 5.12, 5.12, 5.12, 5.12, 5.12, 0.0, 0.0]
+    )
 
 
 def test_get_atomic_species():
@@ -296,14 +302,21 @@ def test_get_atomic_species():
         pw_input_f.write(pw_input_text)
     with open('pw_input.pwi') as pw_input_f:
         data, card_lines = read_fortran_namelist(pw_input_f)
-        species_card = get_atomic_species(card_lines,
-                                          n_species=data['system']['ntyp'])
+        species_card = get_atomic_species(
+            card_lines, n_species=data['system']['ntyp']
+        )
 
     assert len(species_card) == 2
     assert species_card[0] == (
-        "H", pytest.approx(1.008), "H.pbe-rrkjus_psl.0.1.UPF")
+        'H',
+        pytest.approx(1.008),
+        'H.pbe-rrkjus_psl.0.1.UPF',
+    )
     assert species_card[1] == (
-        "Fe", pytest.approx(55.845), "Fe.pbe-spn-rrkjus_psl.0.2.1.UPF")
+        'Fe',
+        pytest.approx(55.845),
+        'Fe.pbe-spn-rrkjus_psl.0.2.1.UPF',
+    )
 
 
 def test_pw_output():
@@ -330,19 +343,49 @@ def test_pw_parse_line():
       1002           Sb  tau(1002) = (   1.7473015   0.8808452   0.4643440  )
       1003           Sb  tau(1003) = (   1.6935189   0.8516434   0.5166693  )
 """
-    x_result = [1.4749849, 1.4212023, 1.5430640, 1.4892815, 1.6111432,
-                1.5573606, 1.6792223, 1.6254398, 1.7473015, 1.6935189]
-    y_result = [0.7329881, 0.7037863, 0.7699524, 0.7407506, 0.8069166,
-                0.7777148, 0.8438809, 0.8146791, 0.8808452, 0.8516434]
-    z_result = [0.0719387, 0.1242640, 0.1700400, 0.2223653, 0.2681414,
-                0.3204667, 0.3662427, 0.4185680, 0.4643440, 0.5166693]
+    x_result = [
+        1.4749849,
+        1.4212023,
+        1.5430640,
+        1.4892815,
+        1.6111432,
+        1.5573606,
+        1.6792223,
+        1.6254398,
+        1.7473015,
+        1.6935189,
+    ]
+    y_result = [
+        0.7329881,
+        0.7037863,
+        0.7699524,
+        0.7407506,
+        0.8069166,
+        0.7777148,
+        0.8438809,
+        0.8146791,
+        0.8808452,
+        0.8516434,
+    ]
+    z_result = [
+        0.0719387,
+        0.1242640,
+        0.1700400,
+        0.2223653,
+        0.2681414,
+        0.3204667,
+        0.3662427,
+        0.4185680,
+        0.4643440,
+        0.5166693,
+    ]
 
     for i, line in enumerate(txt.splitlines()):
         sym, x, y, z = parse_position_line(line)
         if i == 0:
-            assert sym == "Pt"
+            assert sym == 'Pt'
         else:
-            assert sym == "Sb"
+            assert sym == 'Sb'
         assert abs(x - x_result[i]) < 1e-7
         assert abs(y - y_result[i]) < 1e-7
         assert abs(z - z_result[i]) < 1e-7
@@ -358,8 +401,9 @@ def test_pw_results_required():
     assert 'energy' in pw_output_traj[-1].calc.results
     assert len(pw_output_traj) == 2
     # include un-calculated final config
-    pw_output_traj = ase.io.read('pw_output.pwo', index=':',
-                                 results_required=False)
+    pw_output_traj = ase.io.read(
+        'pw_output.pwo', index=':', results_required=False
+    )
     assert len(pw_output_traj) == 3
     assert 'energy' not in pw_output_traj[-1].calc.results
     # get default index=-1 with results
@@ -373,8 +417,9 @@ def test_pw_results_required():
 def test_pw_input_write():
     """Write a structure and read it back."""
     bulk = ase.build.bulk('NiO', 'rocksalt', 4.813, cubic=True)
-    bulk.set_initial_magnetic_moments([2.2 if atom.symbol == 'Ni' else 0.0
-                                       for atom in bulk])
+    bulk.set_initial_magnetic_moments(
+        [2.2 if atom.symbol == 'Ni' else 0.0 for atom in bulk]
+    )
 
     fh = 'espresso_test.pwi'
     pseudos = {'Ni': 'potato', 'O': 'orange'}
@@ -383,21 +428,25 @@ def test_pw_input_write():
     readback = read_espresso_in('espresso_test.pwi')
     assert np.allclose(bulk.positions, readback.positions)
 
-    sections = {'system': {
-        'lda_plus_u': True,
-        'Hubbard_U(1)': 4.0,
-        'Hubbard_U(2)': 0.0}}
-    write_espresso_in(fh, bulk, sections, pseudopotentials=pseudos,
-                      additional_cards=["test1", "test2", "test3"])
+    sections = {
+        'system': {'lda_plus_u': True, 'Hubbard_U(1)': 4.0, 'Hubbard_U(2)': 0.0}
+    }
+    write_espresso_in(
+        fh,
+        bulk,
+        sections,
+        pseudopotentials=pseudos,
+        additional_cards=['test1', 'test2', 'test3'],
+    )
 
     readback = read_espresso_in('espresso_test.pwi')
 
     with open('espresso_test.pwi') as f:
         _, cards = read_fortran_namelist(f)
 
-        assert "K_POINTS gamma" in cards
-        assert cards[-3] == "test1"
-        assert cards[-1] == "test3"
+        assert 'K_POINTS gamma' in cards
+        assert cards[-3] == 'test1'
+        assert cards[-1] == 'test3'
 
     assert np.allclose(bulk.positions, readback.positions)
 
@@ -409,19 +458,28 @@ def test_pw_input_write_nested_flat():
     fh = 'espresso_test.pwi'
     pseudos = {'Fe': 'carrot'}
 
-    input_data = {"control": {"calculation": "scf"},
-                  "unused_keyword1": "unused_value1",
-                  "used_sections": {"used_keyword1": "used_value1"}
-                  }
+    input_data = {
+        'control': {'calculation': 'scf'},
+        'unused_keyword1': 'unused_value1',
+        'used_sections': {'used_keyword1': 'used_value1'},
+    }
 
     with pytest.raises(DeprecationWarning):
-        write_espresso_in(fh, bulk, input_data=input_data,
-                          pseudopotentials=pseudos,
-                          mixing_mode="local-TF")
+        write_espresso_in(
+            fh,
+            bulk,
+            input_data=input_data,
+            pseudopotentials=pseudos,
+            mixing_mode='local-TF',
+        )
 
-    write_espresso_in(fh, bulk, input_data=input_data,
-                      pseudopotentials=pseudos,
-                      unusedkwarg="unused")
+    write_espresso_in(
+        fh,
+        bulk,
+        input_data=input_data,
+        pseudopotentials=pseudos,
+        unusedkwarg='unused',
+    )
 
     with open(fh) as f:
         new_atoms = read_espresso_in(f)
@@ -430,7 +488,7 @@ def test_pw_input_write_nested_flat():
 
     read_string = readback[0].to_string()
 
-    assert "&USED_SECTIONS\n" in read_string
+    assert '&USED_SECTIONS\n' in read_string
     assert "   used_keyword1    = 'used_value1'\n" in read_string
     assert np.allclose(bulk.positions, new_atoms.positions)
 
@@ -438,42 +496,42 @@ def test_pw_input_write_nested_flat():
 def test_write_fortran_namelist_any():
     fd = io.StringIO()
     input_data = {
-        "environ": {"environ_type": "vacuum"},
-        "electrostatic": {"tol": 1e-10, "mix": 0.5},
-        "boundary": {"solvent_mode": "full"}
+        'environ': {'environ_type': 'vacuum'},
+        'electrostatic': {'tol': 1e-10, 'mix': 0.5},
+        'boundary': {'solvent_mode': 'full'},
     }
 
     additional_cards = [
-        "EXTERNAL_CHARGES (bohr)",
-        "-0.5 0. 0. 25.697 1.0 2 3",
-        "-0.5 0. 0. 20.697 1.0 2 3"
+        'EXTERNAL_CHARGES (bohr)',
+        '-0.5 0. 0. 25.697 1.0 2 3',
+        '-0.5 0. 0. 20.697 1.0 2 3',
     ]
 
     write_fortran_namelist(fd, input_data, additional_cards=additional_cards)
     result = fd.getvalue()
 
     expected = (
-        "&ENVIRON\n"
+        '&ENVIRON\n'
         "   environ_type     = 'vacuum'\n"
-        "/\n"
-        "&ELECTROSTATIC\n"
-        "   tol              = 1e-10\n"
-        "   mix              = 0.5\n"
-        "/\n"
-        "&BOUNDARY\n"
+        '/\n'
+        '&ELECTROSTATIC\n'
+        '   tol              = 1e-10\n'
+        '   mix              = 0.5\n'
+        '/\n'
+        '&BOUNDARY\n'
         "   solvent_mode     = 'full'\n"
-        "/\n"
-        "EXTERNAL_CHARGES (bohr)\n"
-        "-0.5 0. 0. 25.697 1.0 2 3\n"
-        "-0.5 0. 0. 20.697 1.0 2 3\n"
-        "EOF"
+        '/\n'
+        'EXTERNAL_CHARGES (bohr)\n'
+        '-0.5 0. 0. 25.697 1.0 2 3\n'
+        '-0.5 0. 0. 20.697 1.0 2 3\n'
+        'EOF'
     )
 
     assert result == expected
-    assert "ENVIRON" in result
-    assert "ELECTROSTATIC" in result
-    assert "BOUNDARY" in result
-    assert result.endswith("EOF")
+    assert 'ENVIRON' in result
+    assert 'ELECTROSTATIC' in result
+    assert 'BOUNDARY' in result
+    assert result.endswith('EOF')
     fd.seek(0)
     reread = read_fortran_namelist(fd)
     assert reread[1][:-1] == additional_cards
@@ -483,20 +541,21 @@ def test_write_fortran_namelist_any():
 def test_write_fortran_namelist_pw():
     fd = io.StringIO()
     input_data = {
-        "calculation": "scf",
-        "ecutwfc": 30.0,
-        "ibrav": 0,
-        "nat": 10,
-        "nbnd": 8,
-        "conv_thr": 1e-6,
-        "random": True}
-    binary = "pw"
+        'calculation': 'scf',
+        'ecutwfc': 30.0,
+        'ibrav': 0,
+        'nat': 10,
+        'nbnd': 8,
+        'conv_thr': 1e-6,
+        'random': True,
+    }
+    binary = 'pw'
     write_fortran_namelist(fd, input_data, binary)
     result = fd.getvalue()
-    assert "scf" in result
-    assert "ibrav" in result
-    assert "conv_thr" in result
-    assert result.endswith("EOF")
+    assert 'scf' in result
+    assert 'ibrav' in result
+    assert 'conv_thr' in result
+    assert result.endswith('EOF')
     fd.seek(0)
     reread = read_fortran_namelist(fd)
     assert reread != input_data
@@ -505,73 +564,72 @@ def test_write_fortran_namelist_pw():
 def test_write_fortran_namelist_fields():
     fd = io.StringIO()
     input_data = {
-        "INPUT": {
-            "amass": 28.0855,
-            "niter_ph": 50,
-            "tr2_ph": 1e-6,
-            "flfrc": "silicon.fc"},
+        'INPUT': {
+            'amass': 28.0855,
+            'niter_ph': 50,
+            'tr2_ph': 1e-6,
+            'flfrc': 'silicon.fc',
+        },
     }
-    binary = "q2r"
+    binary = 'q2r'
     write_fortran_namelist(
-        fd,
-        input_data,
-        binary,
-        additional_cards="test1\ntest2\ntest3\n")
+        fd, input_data, binary, additional_cards='test1\ntest2\ntest3\n'
+    )
     result = fd.getvalue()
-    expected = ("&INPUT\n"
-                "   flfrc            = 'silicon.fc'\n"
-                "   amass            = 28.0855\n"
-                "   niter_ph         = 50\n"
-                "   tr2_ph           = 1e-06\n"
-                "/\n"
-                "test1\n"
-                "test2\n"
-                "test3\n"
-                "EOF")
+    expected = (
+        '&INPUT\n'
+        "   flfrc            = 'silicon.fc'\n"
+        '   amass            = 28.0855\n'
+        '   niter_ph         = 50\n'
+        '   tr2_ph           = 1e-06\n'
+        '/\n'
+        'test1\n'
+        'test2\n'
+        'test3\n'
+        'EOF'
+    )
     assert result == expected
 
 
 def test_write_fortran_namelist_list_fields():
     fd = io.StringIO()
     input_data = {
-        "PRESS_AI": {
-            "amass": 28.0855,
-            "niter_ph": 50,
-            "tr2_ph": 1e-6,
-            "flfrc": "silicon.fc"},
+        'PRESS_AI': {
+            'amass': 28.0855,
+            'niter_ph': 50,
+            'tr2_ph': 1e-6,
+            'flfrc': 'silicon.fc',
+        },
     }
-    binary = "cp"
+    binary = 'cp'
     write_fortran_namelist(
-        fd,
-        input_data,
-        binary,
-        additional_cards=[
-            "test1",
-            "test2",
-            "test3"])
+        fd, input_data, binary, additional_cards=['test1', 'test2', 'test3']
+    )
     result = fd.getvalue()
-    expected = ("&CONTROL\n"
-                "/\n"
-                "&SYSTEM\n"
-                "/\n"
-                "&ELECTRONS\n"
-                "/\n"
-                "&IONS\n"
-                "/\n"
-                "&CELL\n"
-                "/\n"
-                "&PRESS_AI\n"
-                "   amass            = 28.0855\n"
-                "   niter_ph         = 50\n"
-                "   tr2_ph           = 1e-06\n"
-                "   flfrc            = 'silicon.fc'\n"
-                "/\n"
-                "&WANNIER\n"
-                "/\n"
-                "test1\n"
-                "test2\n"
-                "test3\n"
-                "EOF")
+    expected = (
+        '&CONTROL\n'
+        '/\n'
+        '&SYSTEM\n'
+        '/\n'
+        '&ELECTRONS\n'
+        '/\n'
+        '&IONS\n'
+        '/\n'
+        '&CELL\n'
+        '/\n'
+        '&PRESS_AI\n'
+        '   amass            = 28.0855\n'
+        '   niter_ph         = 50\n'
+        '   tr2_ph           = 1e-06\n'
+        "   flfrc            = 'silicon.fc'\n"
+        '/\n'
+        '&WANNIER\n'
+        '/\n'
+        'test1\n'
+        'test2\n'
+        'test3\n'
+        'EOF'
+    )
     assert result == expected
 
 
@@ -590,7 +648,7 @@ class TestConstraints:
     @staticmethod
     def _make_atoms_ref():
         """water molecule"""
-        atoms = ase.build.molecule("H2O")
+        atoms = ase.build.molecule('H2O')
         atoms.cell = 10.0 * np.eye(3)
         atoms.pbc = True
         atoms.set_initial_magnetic_moments(len(atoms) * [0.0])
@@ -601,8 +659,8 @@ class TestConstraints:
         atoms_ref.set_constraint(constraint)
 
         pseudopotentials = {
-            "H": "h_lda_v1.2.uspp.F.UPF",
-            "O": "o_lda_v1.2.uspp.F.UPF",
+            'H': 'h_lda_v1.2.uspp.F.UPF',
+            'O': 'o_lda_v1.2.uspp.F.UPF',
         }
         buf = io.StringIO()
         write_espresso_in(buf, atoms_ref, pseudopotentials=pseudopotentials)

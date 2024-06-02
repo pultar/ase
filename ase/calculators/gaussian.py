@@ -19,14 +19,16 @@ class GaussianDynamics:
             self.calc = calc
         else:
             if self.atoms.calc is None:
-                raise ValueError("{} requires a valid Gaussian calculator "
-                                 "object!".format(self.__class__.__name__))
+                raise ValueError(
+                    '{} requires a valid Gaussian calculator ' 'object!'.format(
+                        self.__class__.__name__
+                    )
+                )
 
             self.calc = self.atoms.calc
 
     def todict(self):
-        return {'type': self.calctype,
-                'optimizer': self.__class__.__name__}
+        return {'type': self.calctype, 'optimizer': self.__class__.__name__}
 
     def delete_keywords(self, kwargs):
         """removes list of keywords (delete) from kwargs"""
@@ -99,16 +101,22 @@ class Gaussian(FileIOCalculator):
     discard_results_on_any_change = True
 
     fileio_rules = FileIOCalculator.ruleset(
-        stdin_name='{prefix}.com',
-        stdout_name='{prefix}.log')
+        stdin_name='{prefix}.com', stdout_name='{prefix}.log'
+    )
 
     def __init__(self, *args, label='Gaussian', **kwargs):
         super().__init__(*args, label=label, **kwargs)
 
     def write_input(self, atoms, properties=None, system_changes=None):
         super().write_input(atoms, properties, system_changes)
-        write(self.label + '.com', atoms, properties=properties,
-              format='gaussian-in', parallel=False, **self.parameters)
+        write(
+            self.label + '.com',
+            atoms,
+            properties=properties,
+            format='gaussian-in',
+            parallel=False,
+            **self.parameters,
+        )
 
     def read_results(self):
         output = read(self.label + '.log', format='gaussian-out')

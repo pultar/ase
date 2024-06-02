@@ -3,6 +3,7 @@ Exceptions for the general error types that can occur either while
 setting up the calculator, which requires constructing KIM API C++
 objects, or while running a simulation
 """
+
 from ase.calculators.calculator import CalculatorError
 
 

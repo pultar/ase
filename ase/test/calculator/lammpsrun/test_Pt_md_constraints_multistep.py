@@ -20,13 +20,23 @@ def test_Pt_md_constraints_multistep(factory):
     with factory.calc(specorder=['Pt'], files=files, **params) as calc:
         slab.calc = calc
 
-        assert_allclose(slab.get_potential_energy(), -110.3455014595596,
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            slab.get_potential_energy(),
+            -110.3455014595596,
+            atol=1e-4,
+            rtol=1e-4,
+        )
 
-        params['group'] = ['lower_atoms id '
-                           + ' '.join([str(i + 1) for i,
-                                      tag in enumerate(slab.get_tags())
-                                       if tag >= 4])]
+        params['group'] = [
+            'lower_atoms id '
+            + ' '.join(
+                [
+                    str(i + 1)
+                    for i, tag in enumerate(slab.get_tags())
+                    if tag >= 4
+                ]
+            )
+        ]
         params['fix'] = ['freeze_lower_atoms lower_atoms setforce 0.0 0.0 0.0']
         params['run'] = 100
         params['timestep'] = 0.0005
@@ -40,7 +50,10 @@ def test_Pt_md_constraints_multistep(factory):
 
         Ek = calc.atoms.copy().get_kinetic_energy()
         assert_allclose(Ek, 0.1014556059885532, atol=1e-4, rtol=1e-4)
-        assert_allclose(Ek, calc.thermo_content[-1]['ke'],
-                        atol=1e-4, rtol=1e-4)
-        assert_allclose(slab.get_potential_energy(), -110.4469605087525,
-                        atol=1e-4, rtol=1e-4)
+        assert_allclose(Ek, calc.thermo_content[-1]['ke'], atol=1e-4, rtol=1e-4)
+        assert_allclose(
+            slab.get_potential_energy(),
+            -110.4469605087525,
+            atol=1e-4,
+            rtol=1e-4,
+        )

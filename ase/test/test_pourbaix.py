@@ -1,4 +1,5 @@
 """Test Pourbaix diagram."""
+
 import numpy as np
 import pytest
 
@@ -21,5 +22,12 @@ def test_pourbaix():
     print(d, names, text)
     assert d.shape == (3, 11)
     assert np.ptp(d) == 6
-    assert names == ['Zn', 'ZnO2(aq)', 'Zn++(aq)', 'HZnO2-(aq)',
-                     'ZnOH+(aq)', 'ZnO', 'ZnO2--(aq)']
+    assert names == [
+        'Zn',
+        'ZnO2(aq)',
+        'Zn++(aq)',
+        'HZnO2-(aq)',
+        'ZnOH+(aq)',
+        'ZnO',
+        'ZnO2--(aq)',
+    ]

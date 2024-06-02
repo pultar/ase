@@ -18,6 +18,7 @@ class CLICommand:
 
     Will show the command that needs to be added to your '~/.bashrc file.
     """
+
     cmd = f'complete -o default -C "{sys.executable} {path}" ase'
 
     @staticmethod
@@ -30,9 +31,9 @@ class CLICommand:
         print(cmd)
 
 
-def update(path: Path,
-           subcommands: List[Tuple[str, str]],
-           test: bool = False) -> None:
+def update(
+    path: Path, subcommands: List[Tuple[str, str]], test: bool = False
+) -> None:
     """Update commands dict in complete.py.
 
     Use test=True to test that no changes are needed.
@@ -51,8 +52,7 @@ def update(path: Path,
             dct[command] = []
 
         def add_argument(self, *args, **kwargs):
-            dct[command].extend(arg for arg in args
-                                if arg.startswith('-'))
+            dct[command].extend(arg for arg in args if arg.startswith('-'))
 
         def add_mutually_exclusive_group(self, required=False):
             return self
@@ -65,10 +65,14 @@ def update(path: Path,
     for command, opts in sorted(dct.items()):
         txt += "\n    '" + command + "':\n        ["
         if opts:
-            txt += '\n'.join(textwrap.wrap("'" + "', '".join(opts) + "'],",
-                                           width=65,
-                                           break_on_hyphens=False,
-                                           subsequent_indent='         '))
+            txt += '\n'.join(
+                textwrap.wrap(
+                    "'" + "', '".join(opts) + "'],",
+                    width=65,
+                    break_on_hyphens=False,
+                    subsequent_indent='         ',
+                )
+            )
         else:
             txt += '],'
     txt = txt[:-1] + '}\n'
@@ -80,12 +84,13 @@ def update(path: Path,
     b = lines.index('# End of computer generated data\n')
 
     if test:
-        if ''.join(lines[a + 1:b]) != txt:
+        if ''.join(lines[a + 1 : b]) != txt:
             raise ValueError(
                 'Please update ase/cli/complete.py using '
-                '"python3 -m ase.cli.completion".')
+                '"python3 -m ase.cli.completion".'
+            )
     else:
-        lines[a + 1:b] = [txt]
+        lines[a + 1 : b] = [txt]
         new = path.with_name('complete.py.new')
         with new.open('w') as fd:
             print(''.join(lines), end='', file=fd)
@@ -95,4 +100,5 @@ def update(path: Path,
 
 if __name__ == '__main__':
     from ase.cli.main import commands
+
     update(path, commands)

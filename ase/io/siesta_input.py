@@ -1,4 +1,5 @@
 """SiestaInput"""
+
 import warnings
 
 import numpy as np
@@ -9,6 +10,7 @@ from ase.constraints import FixAtoms, FixCartesian, FixedLine, FixedPlane
 
 class SiestaInput:
     """SiestaInput"""
+
     @classmethod
     def is_along_cartesian(cls, norm_dir: np.ndarray) -> bool:
         """Return whether `norm_dir` is along a Cartesian coordidate."""
@@ -63,14 +65,14 @@ class SiestaInput:
         # up a default species  from the general default parameters.
         tags = atoms.get_tags()
         default_species = [
-            s for s in species
-            if (s['tag'] is None) and s['symbol'] in atoms.symbols]
+            s
+            for s in species
+            if (s['tag'] is None) and s['symbol'] in atoms.symbols
+        ]
         default_symbols = [s['symbol'] for s in default_species]
         for symbol in atoms.symbols:
             if symbol not in default_symbols:
-                spec = Species(symbol=symbol,
-                               basis_set=basis_set,
-                               tag=None)
+                spec = Species(symbol=symbol, basis_set=basis_set, tag=None)
                 default_species.append(spec)
                 default_symbols.append(symbol)
         assert len(default_species) == len(set(atoms.symbols))
@@ -98,7 +100,7 @@ class SiestaInput:
 
     @classmethod
     def make_xyz_constraints(cls, atoms: Atoms):
-        """ Create coordinate-resolved list of constraints [natoms, 0:3]
+        """Create coordinate-resolved list of constraints [natoms, 0:3]
         The elements of the list must be integers 0 or 1
           1 -- means that the coordinate will be updated during relaxation
           0 -- mains that the coordinate will be fixed during relaxation

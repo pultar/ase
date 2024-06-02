@@ -24,9 +24,9 @@ def _forbid_maxmove(args: List, kwargs: Dict[str, Any]) -> bool:
         return to_pop
 
     if len(args) > maxstep_index and args[maxstep_index] is None:
-        value = args[maxstep_index] = _pop_arg("maxmove")
-    elif kwargs.get("maxstep", None) is None:
-        value = kwargs["maxstep"] = _pop_arg("maxmove")
+        value = args[maxstep_index] = _pop_arg('maxmove')
+    elif kwargs.get('maxstep', None) is None:
+        value = kwargs['maxstep'] = _pop_arg('maxmove')
     else:
         return False
 
@@ -35,7 +35,7 @@ def _forbid_maxmove(args: List, kwargs: Dict[str, Any]) -> bool:
 
 class FIRE(Optimizer):
     @deprecated(
-        "Use of `maxmove` is deprecated. Use `maxstep` instead.",
+        'Use of `maxmove` is deprecated. Use `maxstep` instead.',
         category=FutureWarning,
         callback=_forbid_maxmove,
     )
@@ -136,8 +136,15 @@ class FIRE(Optimizer):
         .. deprecated:: 3.19.3
             Use of ``maxmove`` is deprecated; please use ``maxstep``.
         """
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+        Optimizer.__init__(
+            self,
+            atoms,
+            restart,
+            logfile,
+            trajectory,
+            master,
+            force_consistent=force_consistent,
+        )
 
         self.dt = dt
 
@@ -146,7 +153,7 @@ class FIRE(Optimizer):
         if maxstep is not None:
             self.maxstep = maxstep
         else:
-            self.maxstep = self.defaults["maxstep"]
+            self.maxstep = self.defaults['maxstep']
 
         self.dtmax = dtmax
         self.Nmin = Nmin
@@ -185,8 +192,8 @@ class FIRE(Optimizer):
                     # If not, reset to old positions...
                     if self.position_reset_callback is not None:
                         self.position_reset_callback(
-                            optimizable, self.r_last, e,
-                            self.e_last)
+                            optimizable, self.r_last, e, self.e_last
+                        )
                     optimizable.set_positions(self.r_last)
                     is_uphill = True
                 self.e_last = optimizable.get_potential_energy()
@@ -196,7 +203,8 @@ class FIRE(Optimizer):
             vf = np.vdot(f, self.v)
             if vf > 0.0 and not is_uphill:
                 self.v = (1.0 - self.a) * self.v + self.a * f / np.sqrt(
-                    np.vdot(f, f)) * np.sqrt(np.vdot(self.v, self.v))
+                    np.vdot(f, f)
+                ) * np.sqrt(np.vdot(self.v, self.v))
                 if self.Nsteps > self.Nmin:
                     self.dt = min(self.dt * self.finc, self.dtmax)
                     self.a *= self.fa
